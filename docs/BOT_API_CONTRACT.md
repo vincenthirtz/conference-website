@@ -107,6 +107,16 @@ stashes it on `req.botContext.tenantId`. The `x-tenant-id` header is now
   read it. When a cross-tenant route returns a list, every row exposes
   its own `tenantId` so the bot can dispatch per-row. Every other
   `/api/bot/v1/*` route enforces tenant scoping.
+- **Intentionally global tables (not yet tenant-scoped):**
+  - `user_discord_links` — global by design (one Discord account ↔ one site
+    account across all tenants).
+  - `support_tickets` — **intentionally global**. The table has **no
+    `tenant_id` column**, so `/api/admin/support/tickets` (and its aggregate
+    counts) returns every tenant's tickets to any `manager`+. On this
+    mono-tenant instance that is the desired behaviour and support stays
+    tenant-agnostic on purpose. **Day a 2nd tenant is onboarded:** add
+    `tenant_id` to `support_tickets` (+ backfill migration) and scope the list
+    query **and** the count aggregates by the staff context tenant.
 
 ### Error codes
 
@@ -710,6 +720,51 @@ deux rows).
 ```
 
 **Errors** : `400` (body invalide), `401`, `500`.
+
+#### `GET /api/admin/moderation/blacklist/alerts` (Lecture admin du journal)
+
+Pendant admin (dashboard staff) du POST bot ci-dessus : liste paginée du journal
+des alertes de détection pour le tenant courant. La table `blacklist_alerts` est
+service-role only (RLS default-deny) → l'endpoint passe par `supabaseAdmin` et
+scope explicitement par `tenant_id`. Lecture réservée au rôle `manager`.
+
+**Auth** : session staff (`withStaffRoute(handler, 'manager')`).
+
+**Rate limit** : 60/min (`admin-blacklist-alerts`).
+
+**Query** — tous optionnels, validés par zod :
+
+- `limit` _(1..200, défaut 50)_ — taille de page.
+- `before` _(ISO timestamp)_ — curseur descendant sur `created_at`.
+- `strength` _(`strong | soft`)_ — filtre force.
+- `source` _(`bot_scan | bot_member_add | registration`)_ — filtre source (inclut
+  les alertes émises par le flux d'inscription site).
+- `discordUserId` _(string)_ — filtre par membre.
+
+**Response 200**
+
+```json
+{
+  "alerts": [
+    {
+      "id": "uuid",
+      "createdAt": "2026-06-29T18:42:00.000Z",
+      "discordUserId": "1234567890",
+      "battleTag": null,
+      "displayName": null,
+      "matchedOn": "battle_tag",
+      "strength": "strong",
+      "source": "bot_scan",
+      "context": null,
+      "reason": null,
+      "blacklistEntryId": "uuid"
+    }
+  ],
+  "nextCursor": "2026-06-29T18:30:00.000Z"
+}
+```
+
+**Errors** : `400` (query invalide), `401`, `403`, `500`.
 
 ### Autocomplete (Discord choice-pickers)
 

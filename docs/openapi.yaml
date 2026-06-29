@@ -6827,6 +6827,37 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+  /api/bot/v1/moderation/blacklist-alert:
+    post:
+      tags:
+        - bot/misc
+      summary: Enregistre une alerte de detection blacklist (scan / arrivee membre).
+      operationId: botCreateBlacklistAlert
+      description: >-
+        Le bot rapporte une detection blacklist (pas d'acteur staff).
+        Idempotent via Idempotency-Key.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "201":
+          description: Alerte enregistree.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  alert:
+                    type: object
+                    additionalProperties: true
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
   /api/bot/v1/staff-logs:
     get:
       tags:
@@ -9749,6 +9780,64 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+  /api/admin/moderation/blacklist/alerts:
+    get:
+      summary: List blacklist detection alerts for the current tenant (cursor paginated).
+      operationId: adminListBlacklistAlerts
+      tags:
+        - admin/content
+      security:
+        - StaffSession: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+        - name: before
+          in: query
+          description: ISO timestamp cursor (descending on created_at).
+          schema:
+            type: string
+            format: date-time
+        - name: strength
+          in: query
+          schema:
+            type: string
+            enum: [strong, soft]
+        - name: source
+          in: query
+          schema:
+            type: string
+            enum: [bot_scan, bot_member_add, registration]
+        - name: discordUserId
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Blacklist alerts page.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  alerts:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+                  nextCursor:
+                    type: string
+                    nullable: true
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
   /api/admin/news:
     get:
       summary: List news posts (admin view, includes drafts).
