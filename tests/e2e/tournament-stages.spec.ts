@@ -1,5 +1,9 @@
 import { test, expect } from '@playwright/test';
-import { supabaseTestClient } from '../utils/supabaseTestClient';
+import {
+  supabaseTestClient,
+  seedTournament,
+  DEFAULT_TENANT_ID,
+} from '../utils/supabaseTestClient';
 import slugify from 'slugify';
 
 const TS = Date.now();
@@ -13,24 +17,14 @@ test.describe('Tournament stages CRUD (direct supabase)', () => {
   test.beforeAll(async () => {
     if (!supabaseTestClient) return;
     const slug = slugify(TOURNAMENT_NAME, { lower: true, strict: true });
-    const { data, error } = await supabaseTestClient
-      .from('tournaments')
-      .insert({
-        name: TOURNAMENT_NAME,
-        slug,
-        status: 'draft',
-        game: 'overwatch',
-      })
-      .select('id')
-      .maybeSingle();
-    expect(error).toBeNull();
-    tournamentId = data!.id;
+    tournamentId = await seedTournament({ name: TOURNAMENT_NAME, slug });
+    expect(tournamentId).not.toBeNull();
   });
 
   test.afterAll(async () => {
     if (!supabaseTestClient || !tournamentId) return;
     await supabaseTestClient
-      .from('stages')
+      .from('tournament_stages')
       .delete()
       .eq('tournament_id', tournamentId);
     await supabaseTestClient
@@ -43,9 +37,10 @@ test.describe('Tournament stages CRUD (direct supabase)', () => {
     if (!supabaseTestClient || !tournamentId) return;
 
     const { data, error } = await supabaseTestClient
-      .from('stages')
+      .from('tournament_stages')
       .insert({
         tournament_id: tournamentId,
+        tenant_id: DEFAULT_TENANT_ID,
         name: 'Phase de groupes',
         stage_type: 'group',
         order_index: 0,
@@ -71,10 +66,11 @@ test.describe('Tournament stages CRUD (direct supabase)', () => {
       { name: 'Grande finale', stage_type: 'showmatch', order_index: 3 },
     ];
 
-    const { error } = await supabaseTestClient.from('stages').insert(
+    const { error } = await supabaseTestClient.from('tournament_stages').insert(
       stages.map((s) => ({
         ...s,
         tournament_id: tournamentId,
+        tenant_id: DEFAULT_TENANT_ID,
         is_active: false,
         is_public: false,
       }))
@@ -83,7 +79,7 @@ test.describe('Tournament stages CRUD (direct supabase)', () => {
     expect(error).toBeNull();
 
     const { data } = await supabaseTestClient
-      .from('stages')
+      .from('tournament_stages')
       .select('name, order_index')
       .eq('tournament_id', tournamentId)
       .order('order_index', { ascending: true });
@@ -97,14 +93,14 @@ test.describe('Tournament stages CRUD (direct supabase)', () => {
     if (!supabaseTestClient || !tournamentId) return;
 
     const { data: stage } = await supabaseTestClient
-      .from('stages')
+      .from('tournament_stages')
       .select('id')
       .eq('tournament_id', tournamentId)
       .eq('name', 'Bracket principal')
       .maybeSingle();
 
     const { data: updated, error } = await supabaseTestClient
-      .from('stages')
+      .from('tournament_stages')
       .update({ name: 'Winners bracket', is_active: true, is_public: true })
       .eq('id', stage!.id)
       .select('name, is_active, is_public')
@@ -120,21 +116,21 @@ test.describe('Tournament stages CRUD (direct supabase)', () => {
     if (!supabaseTestClient || !tournamentId) return;
 
     const { data: stage } = await supabaseTestClient
-      .from('stages')
+      .from('tournament_stages')
       .select('id')
       .eq('tournament_id', tournamentId)
       .eq('name', 'Grande finale')
       .maybeSingle();
 
     const { error } = await supabaseTestClient
-      .from('stages')
+      .from('tournament_stages')
       .delete()
       .eq('id', stage!.id);
 
     expect(error).toBeNull();
 
     const { data: remaining } = await supabaseTestClient
-      .from('stages')
+      .from('tournament_stages')
       .select('name')
       .eq('tournament_id', tournamentId);
 

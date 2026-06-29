@@ -32,7 +32,7 @@ test.describe('Stage completion & swiss rounds (direct supabase)', () => {
 
     // Stage 1 - swiss
     const { data: s1 } = await supabaseTestClient
-      .from('stages')
+      .from('tournament_stages')
       .insert({
         tournament_id: tournamentId,
         name: 'Swiss Phase',
@@ -48,7 +48,7 @@ test.describe('Stage completion & swiss rounds (direct supabase)', () => {
 
     // Stage 2 - bracket (next stage)
     const { data: s2 } = await supabaseTestClient
-      .from('stages')
+      .from('tournament_stages')
       .insert({
         tournament_id: tournamentId,
         name: 'Bracket Phase',
@@ -84,7 +84,7 @@ test.describe('Stage completion & swiss rounds (direct supabase)', () => {
       .delete()
       .eq('tournament_id', tournamentId);
     await supabaseTestClient
-      .from('stages')
+      .from('tournament_stages')
       .delete()
       .eq('tournament_id', tournamentId);
     await supabaseTestClient
@@ -187,7 +187,7 @@ test.describe('Stage completion & swiss rounds (direct supabase)', () => {
     if (!supabaseTestClient || !tournamentId) return;
 
     const { data: stages } = await supabaseTestClient
-      .from('stages')
+      .from('tournament_stages')
       .select('id, name, order_index, stage_type')
       .eq('tournament_id', tournamentId)
       .order('order_index', { ascending: true });
@@ -204,14 +204,14 @@ test.describe('Stage completion & swiss rounds (direct supabase)', () => {
 
     // Get current stage
     const { data: current } = await supabaseTestClient
-      .from('stages')
+      .from('tournament_stages')
       .select('id, order_index')
       .eq('id', stage1Id)
       .maybeSingle();
 
     // Find next stage
     const { data: next } = await supabaseTestClient
-      .from('stages')
+      .from('tournament_stages')
       .select('id, name, stage_type')
       .eq('tournament_id', tournamentId)
       .gt('order_index', current!.order_index)
@@ -229,7 +229,7 @@ test.describe('Stage completion & swiss rounds (direct supabase)', () => {
     if (!supabaseTestClient || !stage1Id) return;
 
     const { data: stage } = await supabaseTestClient
-      .from('stages')
+      .from('tournament_stages')
       .select('settings')
       .eq('id', stage1Id)
       .maybeSingle();

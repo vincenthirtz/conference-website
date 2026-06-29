@@ -20,6 +20,54 @@ export const supabaseTestClient = envReady
   ? createClient(supabaseUrl, serviceRoleKey)
   : null;
 
+/**
+ * Default tenant UUID — the "conference" tenant. Mirrors `DEFAULT_TENANT_ID`
+ * in `utils/tenant.ts` (same env override, same hardcoded fallback). Several
+ * tables (incl. `tournaments`) now carry a NOT NULL `tenant_id` after the
+ * multi-tenant migration, so any direct-supabase seed MUST set it. Use this
+ * constant (or `seedTournament`) instead of inlining a literal UUID.
+ */
+export const DEFAULT_TENANT_ID: string =
+  process.env.DEFAULT_TENANT_ID || 'ce69a726-773e-4d12-b5eb-d2503aa752b4';
+
+/**
+ * Insert a tournament fixture scoped to the default tenant and return its id.
+ * Centralises the `tenant_id` requirement so specs don't each re-discover the
+ * NOT NULL constraint. Extra columns can be passed via `overrides`.
+ * Returns `null` when service-role env is missing (caller should be skipped).
+ */
+export async function seedTournament(
+  fields: {
+    name: string;
+    slug: string;
+    status?: string;
+    game?: string;
+  } & Record<string, unknown>
+): Promise<string | null> {
+  if (!supabaseTestClient) return null;
+  const {
+    name,
+    slug,
+    status = 'draft',
+    game = 'overwatch',
+    ...overrides
+  } = fields;
+  const { data, error } = await supabaseTestClient
+    .from('tournaments')
+    .insert({
+      name,
+      slug,
+      status,
+      game,
+      tenant_id: DEFAULT_TENANT_ID,
+      ...overrides,
+    })
+    .select('id')
+    .maybeSingle();
+  if (error) throw error;
+  return data!.id as string;
+}
+
 export async function createTestUser(email: string, password: string) {
   if (!supabaseTestClient) return null;
   const { data, error } = await supabaseTestClient.auth.admin.createUser({

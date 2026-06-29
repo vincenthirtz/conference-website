@@ -378,6 +378,100 @@ describe('GET /api/admin/support/tickets', () => {
     expect((res.body as any).total).toBe(2);
   });
 
+  it('returns global aggregate counts over the whole set (not the page)', async () => {
+    // 3 open, 1 resolved, 1 closed; high severity: t1 (open, active) and t5
+    // (closed → NOT counted in high_severity because it is not actionable).
+    store.support_tickets = [
+      {
+        id: 't1',
+        status: 'open',
+        severity: 'high',
+        category: 'dispute',
+        created_at: '2026-04-01',
+      },
+      {
+        id: 't2',
+        status: 'open',
+        severity: 'low',
+        category: 'other',
+        created_at: '2026-04-02',
+      },
+      {
+        id: 't3',
+        status: 'open',
+        severity: 'medium',
+        category: 'other',
+        created_at: '2026-04-03',
+      },
+      {
+        id: 't4',
+        status: 'resolved',
+        severity: 'low',
+        category: 'other',
+        created_at: '2026-04-04',
+      },
+      {
+        id: 't5',
+        status: 'closed',
+        severity: 'high',
+        category: 'dispute',
+        created_at: '2026-04-05',
+      },
+    ] as any;
+    const res = makeRes();
+    // Force a tiny page so we prove counts are NOT derived from the page slice.
+    await supportTicketsHandler(makeReq({ query: { limit: '1' } }, true), res);
+    expect(res.statusCode).toBe(200);
+    const body = res.body as any;
+    expect(body.tickets).toHaveLength(1); // page is limited…
+    expect(body.counts).toEqual({
+      total: 5, // …but counts span the full set
+      open: 3,
+      high_severity: 1, // t1 only; t5 is closed → excluded
+      resolved: 2, // resolved + closed
+    });
+  });
+
+  it('aggregate counts respect the active filters', async () => {
+    store.support_tickets = [
+      {
+        id: 't1',
+        status: 'open',
+        severity: 'high',
+        category: 'dispute',
+        created_at: '2026-04-01',
+      },
+      {
+        id: 't2',
+        status: 'open',
+        severity: 'high',
+        category: 'technical',
+        created_at: '2026-04-02',
+      },
+      {
+        id: 't3',
+        status: 'resolved',
+        severity: 'high',
+        category: 'dispute',
+        created_at: '2026-04-03',
+      },
+    ] as any;
+    const res = makeRes();
+    // Filter to category=dispute → t1 (open) + t3 (resolved).
+    await supportTicketsHandler(
+      makeReq({ query: { category: 'dispute' } }, true),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    const body = res.body as any;
+    expect(body.counts).toEqual({
+      total: 2,
+      open: 1, // t1
+      high_severity: 1, // t1 (t3 resolved → excluded)
+      resolved: 1, // t3
+    });
+  });
+
   it('filters by status', async () => {
     store.support_tickets = [
       {
@@ -522,7 +616,9 @@ describe('GET /api/admin/support/tickets', () => {
     // assert the search param does not disturb the status filter / paging.
     await supportTicketsHandler(
       makeReq(
-        { query: { search: 'litige', status: 'open', limit: '10', offset: '0' } },
+        {
+          query: { search: 'litige', status: 'open', limit: '10', offset: '0' },
+        },
         true
       ),
       res

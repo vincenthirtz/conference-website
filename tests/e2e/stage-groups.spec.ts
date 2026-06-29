@@ -34,7 +34,7 @@ test.describe('Stage groups & pool management (direct supabase)', () => {
 
     // Create group stage
     const { data: s } = await supabaseTestClient
-      .from('stages')
+      .from('tournament_stages')
       .insert({
         tournament_id: tournamentId,
         name: 'Phase de poules',
@@ -84,7 +84,7 @@ test.describe('Stage groups & pool management (direct supabase)', () => {
         .delete()
         .eq('stage_id', stageId);
     await supabaseTestClient
-      .from('stages')
+      .from('tournament_stages')
       .delete()
       .eq('tournament_id', tournamentId);
     await supabaseTestClient
@@ -105,7 +105,7 @@ test.describe('Stage groups & pool management (direct supabase)', () => {
     };
 
     const { error } = await supabaseTestClient
-      .from('stages')
+      .from('tournament_stages')
       .update({
         settings: { num_groups: 2, group_assignments: groupAssignments },
       })
@@ -114,7 +114,7 @@ test.describe('Stage groups & pool management (direct supabase)', () => {
     expect(error).toBeNull();
 
     const { data: stage } = await supabaseTestClient
-      .from('stages')
+      .from('tournament_stages')
       .select('settings')
       .eq('id', stageId)
       .maybeSingle();

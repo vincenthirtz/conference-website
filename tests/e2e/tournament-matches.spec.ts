@@ -32,7 +32,7 @@ test.describe('Tournament matches CRUD (direct supabase)', () => {
 
     // Create stage
     const { data: s } = await supabaseTestClient
-      .from('stages')
+      .from('tournament_stages')
       .insert({
         tournament_id: tournamentId,
         name: 'Bracket',
@@ -68,7 +68,7 @@ test.describe('Tournament matches CRUD (direct supabase)', () => {
       .delete()
       .eq('tournament_id', tournamentId);
     await supabaseTestClient
-      .from('stages')
+      .from('tournament_stages')
       .delete()
       .eq('tournament_id', tournamentId);
     await supabaseTestClient

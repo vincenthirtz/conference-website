@@ -1,5 +1,9 @@
 import { test, expect } from '@playwright/test';
-import { supabaseTestClient } from '../utils/supabaseTestClient';
+import {
+  supabaseTestClient,
+  seedTournament,
+  DEFAULT_TENANT_ID,
+} from '../utils/supabaseTestClient';
 import slugify from 'slugify';
 
 const TS = Date.now();
@@ -13,18 +17,8 @@ test.describe('Tournament map pool CRUD (direct supabase)', () => {
   test.beforeAll(async () => {
     if (!supabaseTestClient) return;
     const slug = slugify(TOURNAMENT_NAME, { lower: true, strict: true });
-    const { data, error } = await supabaseTestClient
-      .from('tournaments')
-      .insert({
-        name: TOURNAMENT_NAME,
-        slug,
-        status: 'draft',
-        game: 'overwatch',
-      })
-      .select('id')
-      .maybeSingle();
-    expect(error).toBeNull();
-    tournamentId = data!.id;
+    tournamentId = await seedTournament({ name: TOURNAMENT_NAME, slug });
+    expect(tournamentId).not.toBeNull();
   });
 
   test.afterAll(async () => {
@@ -46,6 +40,7 @@ test.describe('Tournament map pool CRUD (direct supabase)', () => {
       .from('tournament_maps')
       .insert({
         tournament_id: tournamentId,
+        tenant_id: DEFAULT_TENANT_ID,
         map_name: 'Busan',
         map_type: 'control',
         image_url: 'https://example.com/busan.jpg',
@@ -91,6 +86,7 @@ test.describe('Tournament map pool CRUD (direct supabase)', () => {
       mapsToAdd.map((m) => ({
         ...m,
         tournament_id: tournamentId,
+        tenant_id: DEFAULT_TENANT_ID,
         enabled: true,
       }))
     );
@@ -214,6 +210,7 @@ test.describe('Tournament map pool CRUD (direct supabase)', () => {
       newPool.map((m) => ({
         ...m,
         tournament_id: tournamentId,
+        tenant_id: DEFAULT_TENANT_ID,
         enabled: true,
       }))
     );
