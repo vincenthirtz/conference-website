@@ -14,7 +14,9 @@ import {
 import { supabaseAdmin } from '@/utils/supabase';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
+import Modal from '@/components/admin/Modal';
 import Breadcrumb from '@/components/admin/Breadcrumb';
 import { useToast } from '@/components/Toast';
 import type { MatchStatus } from '@/types/admin';
@@ -476,6 +478,10 @@ function AdminTournamentPage({
   const router = useRouter();
   const { id } = router.query;
   const { mutate: mutateIdempotent } = useIdempotentMutation();
+  const { mutate: notifyMutate } = useIdempotentMutation();
+  const { mutate: addTeamMutate } = useIdempotentMutation();
+  const { mutate: createStageMutate } = useIdempotentMutation();
+  const { adminFetch, adminFetchJson } = useAdminFetch();
 
   const [loading, setLoading] = useState(!initialData);
   const [tournament, setTournament] = useState<Tournament | null>(
@@ -588,9 +594,8 @@ function AdminTournamentPage({
     if (!id || notifyingCaptains) return;
     setNotifyingCaptains(true);
     try {
-      const res = await fetch('/api/admin/tournaments/notify-captains', {
+      const res = await notifyMutate('/api/admin/tournaments/notify-captains', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tournamentId: id }),
       });
       const json = await res.json().catch(() => ({}));
@@ -601,19 +606,19 @@ function AdminTournamentPage({
       const errCount = json.errors?.length ?? 0;
       const baseMsg = `${json.notified ?? 0} responsable(s) notifie(s) (${json.emailsSent ?? 0} email(s), ${json.messagesSent ?? 0} message(s)).`;
       if (errCount > 0) {
-        addToast(`${baseMsg} ${errCount} erreur(s) — voir /admin/logs.`, 'info');
+        addToast(
+          `${baseMsg} ${errCount} erreur(s) — voir /admin/logs.`,
+          'info'
+        );
       } else {
         addToast(baseMsg, 'success');
       }
     } catch (err: unknown) {
-      addToast(
-        (err as Error)?.message || 'Echec de la notification',
-        'error'
-      );
+      addToast((err as Error)?.message || 'Echec de la notification', 'error');
     } finally {
       setNotifyingCaptains(false);
     }
-  }, [id, notifyingCaptains, addToast]);
+  }, [id, notifyingCaptains, addToast, notifyMutate]);
 
   const fetchTournament = useCallback(async () => {
     if (!id) return;
@@ -621,25 +626,22 @@ function AdminTournamentPage({
     setErrorMsg(null);
 
     try {
-      const res = await fetch(`/api/admin/tournament/${id}`);
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || 'Impossible de charger le tournoi');
-      }
-      const json: ApiResponse = await res.json();
+      const json = await adminFetchJson<ApiResponse>(
+        `/api/admin/tournament/${id}`
+      );
       setTournament(json.tournament);
     } catch (err: unknown) {
       setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, adminFetchJson]);
 
   const fetchStages = useCallback(async () => {
     if (!id) return;
     setLoadingStages(true);
     try {
-      const res = await fetch(`/api/admin/tournament/${id}/stages`);
+      const res = await adminFetch(`/api/admin/tournament/${id}/stages`);
       if (res.ok) {
         const json = await res.json();
         setStages(json.stages || []);
@@ -649,13 +651,13 @@ function AdminTournamentPage({
     } finally {
       setLoadingStages(false);
     }
-  }, [id]);
+  }, [id, adminFetch]);
 
   const fetchTournamentTeams = useCallback(async () => {
     if (!id) return;
     setLoadingTeams(true);
     try {
-      const res = await fetch(`/api/admin/tournament/${id}/teams`);
+      const res = await adminFetch(`/api/admin/tournament/${id}/teams`);
       if (res.ok) {
         const json = await res.json();
         setTournamentTeams(json.teams || []);
@@ -665,11 +667,11 @@ function AdminTournamentPage({
     } finally {
       setLoadingTeams(false);
     }
-  }, [id]);
+  }, [id, adminFetch]);
 
   const fetchAllTeams = useCallback(async () => {
     try {
-      const res = await fetch('/api/admin/teams?limit=200');
+      const res = await adminFetch('/api/admin/teams?limit=200');
       if (res.ok) {
         const json = await res.json();
         setAllTeams(json.teams || []);
@@ -677,13 +679,13 @@ function AdminTournamentPage({
     } catch {
       // Silently fail
     }
-  }, []);
+  }, [adminFetch]);
 
   const fetchRecentMatches = useCallback(async () => {
     if (!id) return;
     setLoadingMatches(true);
     try {
-      const res = await fetch(
+      const res = await adminFetch(
         `/api/admin/tournament/${id}/matches?limit=3&includeTeams=1`
       );
       if (res.ok) {
@@ -695,12 +697,12 @@ function AdminTournamentPage({
     } finally {
       setLoadingMatches(false);
     }
-  }, [id]);
+  }, [id, adminFetch]);
 
   const fetchStatusGuards = useCallback(async () => {
     if (!id) return;
     try {
-      const res = await fetch(`/api/admin/tournament/${id}/status-guards`);
+      const res = await adminFetch(`/api/admin/tournament/${id}/status-guards`);
       if (res.ok) {
         const json = await res.json();
         setStatusGuards(json.guards || []);
@@ -708,13 +710,13 @@ function AdminTournamentPage({
     } catch {
       // Silently fail
     }
-  }, [id]);
+  }, [id, adminFetch]);
 
   const fetchConflicts = useCallback(async () => {
     if (!id) return;
     setLoadingConflicts(true);
     try {
-      const res = await fetch(`/api/admin/tournament/${id}/conflicts`);
+      const res = await adminFetch(`/api/admin/tournament/${id}/conflicts`);
       if (res.ok) {
         const json = await res.json();
         setConflicts(json.conflicts || []);
@@ -724,7 +726,7 @@ function AdminTournamentPage({
     } finally {
       setLoadingConflicts(false);
     }
-  }, [id]);
+  }, [id, adminFetch]);
 
   async function handleCloneTournament() {
     if (!id || cloning) return;
@@ -785,17 +787,13 @@ function AdminTournamentPage({
     setErrorMsg(null);
 
     try {
-      const res = await fetch(`/api/admin/tournament/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus }),
-      });
-
-      const json = await res.json();
-
-      if (!res.ok) {
-        throw new Error(json.error || 'Impossible de modifier le statut');
-      }
+      const json = await adminFetchJson<ApiResponse>(
+        `/api/admin/tournament/${id}`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({ status: newStatus }),
+        }
+      );
 
       setTournament(json.tournament);
       addToast(`Statut modifié : ${statusLabel(newStatus)}`, 'success');
@@ -813,9 +811,8 @@ function AdminTournamentPage({
     setErrorMsg(null);
 
     try {
-      const res = await fetch(`/api/admin/tournament/${id}/teams`, {
+      const res = await addTeamMutate(`/api/admin/tournament/${id}/teams`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           team_id: selectedTeamId,
           seed: teamSeed ? parseInt(teamSeed, 10) : null,
@@ -848,17 +845,12 @@ function AdminTournamentPage({
     if (!pendingRemoveTeamId) return;
 
     try {
-      const res = await fetch(
+      await adminFetchJson(
         `/api/admin/tournament/${id}/teams/${pendingRemoveTeamId}`,
         {
           method: 'DELETE',
         }
       );
-
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || "Impossible de retirer l'équipe");
-      }
 
       addToast('Équipe retirée', 'success');
       fetchTournamentTeams();
@@ -881,9 +873,8 @@ function AdminTournamentPage({
     let failCount = 0;
     for (let i = 0; i < teamIds.length; i++) {
       try {
-        const res = await fetch(`/api/admin/tournament/${id}/teams`, {
+        const res = await addTeamMutate(`/api/admin/tournament/${id}/teams`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ team_id: teamIds[i] }),
         });
 
@@ -918,15 +909,17 @@ function AdminTournamentPage({
     setErrorMsg(null);
 
     try {
-      const res = await fetch(`/api/admin/tournament/${id}/stages`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: newStageName.trim(),
-          stage_type: newStageType,
-          order_index: stages.length,
-        }),
-      });
+      const res = await createStageMutate(
+        `/api/admin/tournament/${id}/stages`,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            name: newStageName.trim(),
+            stage_type: newStageType,
+            order_index: stages.length,
+          }),
+        }
+      );
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
@@ -2147,67 +2140,70 @@ function AdminTournamentPage({
       </div>
 
       {/* Add Team Modal */}
-      {showAddTeamModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-neutral-800 border border-neutral-700 rounded-2xl p-6 w-full max-w-md shadow-2xl">
-            <h3 className="text-lg font-semibold mb-4">Ajouter une équipe</h3>
+      <Modal
+        open={showAddTeamModal}
+        onClose={() => {
+          setShowAddTeamModal(false);
+          setSelectedTeamId('');
+          setTeamSeed('');
+        }}
+        title="Ajouter une équipe"
+        footer={
+          <>
+            <button
+              onClick={() => {
+                setShowAddTeamModal(false);
+                setSelectedTeamId('');
+                setTeamSeed('');
+              }}
+              className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
+            >
+              Annuler
+            </button>
+            <button
+              onClick={handleAddTeam}
+              disabled={!selectedTeamId || addingTeam}
+              className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {addingTeam ? 'Ajout...' : 'Ajouter'}
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm text-neutral-400 mb-1">
+              Équipe
+            </label>
+            <select
+              value={selectedTeamId}
+              onChange={(e) => setSelectedTeamId(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Sélectionner une équipe...</option>
+              {availableTeamsToAdd.map((team) => (
+                <option key={team.id} value={team.id}>
+                  {team.name}
+                </option>
+              ))}
+            </select>
+          </div>
 
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm text-neutral-400 mb-1">
-                  Équipe
-                </label>
-                <select
-                  value={selectedTeamId}
-                  onChange={(e) => setSelectedTeamId(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Sélectionner une équipe...</option>
-                  {availableTeamsToAdd.map((team) => (
-                    <option key={team.id} value={team.id}>
-                      {team.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm text-neutral-400 mb-1">
-                  Seed (optionnel)
-                </label>
-                <input
-                  type="number"
-                  value={teamSeed}
-                  onChange={(e) => setTeamSeed(e.target.value)}
-                  placeholder="1, 2, 3..."
-                  min={1}
-                  className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2 mt-6">
-              <button
-                onClick={() => {
-                  setShowAddTeamModal(false);
-                  setSelectedTeamId('');
-                  setTeamSeed('');
-                }}
-                className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={handleAddTeam}
-                disabled={!selectedTeamId || addingTeam}
-                className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {addingTeam ? 'Ajout...' : 'Ajouter'}
-              </button>
-            </div>
+          <div>
+            <label className="block text-sm text-neutral-400 mb-1">
+              Seed (optionnel)
+            </label>
+            <input
+              type="number"
+              value={teamSeed}
+              onChange={(e) => setTeamSeed(e.target.value)}
+              placeholder="1, 2, 3..."
+              min={1}
+              className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
           </div>
         </div>
-      )}
+      </Modal>
 
       {/* Status Regression Confirm Dialog */}
       {showStatusConfirm && pendingStatusValue && (
@@ -2247,204 +2243,214 @@ function AdminTournamentPage({
       )}
 
       {/* Bulk Add Teams Modal */}
-      {showBulkAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-neutral-800 border border-neutral-700 rounded-2xl p-6 w-full max-w-lg shadow-2xl">
-            <h3 className="text-lg font-semibold mb-4">
-              Ajouter plusieurs équipes
-            </h3>
+      <Modal
+        open={showBulkAddModal}
+        onClose={() => {
+          if (bulkAdding) return;
+          setShowBulkAddModal(false);
+          setBulkSelectedTeamIds(new Set());
+          setBulkSearchFilter('');
+        }}
+        title="Ajouter plusieurs équipes"
+        size="lg"
+        disableBackdropClose={bulkAdding}
+        disableEscapeClose={bulkAdding}
+        footer={
+          <>
+            <button
+              onClick={() => {
+                setShowBulkAddModal(false);
+                setBulkSelectedTeamIds(new Set());
+                setBulkSearchFilter('');
+              }}
+              disabled={bulkAdding}
+              className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors disabled:opacity-50"
+            >
+              Annuler
+            </button>
+            <button
+              onClick={handleBulkAddTeams}
+              disabled={bulkSelectedTeamIds.size === 0 || bulkAdding}
+              className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {bulkAdding
+                ? `Ajout... (${bulkProgress.done}/${bulkProgress.total})`
+                : `Ajouter ${bulkSelectedTeamIds.size > 0 ? `(${bulkSelectedTeamIds.size})` : ''}`}
+            </button>
+          </>
+        }
+      >
+        <>
+          {/* Search filter */}
+          <input
+            type="text"
+            value={bulkSearchFilter}
+            onChange={(e) => setBulkSearchFilter(e.target.value)}
+            placeholder="Rechercher une équipe..."
+            className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3 text-sm"
+          />
 
-            {/* Search filter */}
-            <input
-              type="text"
-              value={bulkSearchFilter}
-              onChange={(e) => setBulkSearchFilter(e.target.value)}
-              placeholder="Rechercher une équipe..."
-              className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3 text-sm"
-            />
-
-            {/* Select all / deselect all */}
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs text-neutral-400">
-                {bulkSelectedTeamIds.size} équipe(s) sélectionnée(s)
-              </span>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const filtered = availableTeamsToAdd
-                      .filter((t) =>
-                        t.name
-                          .toLowerCase()
-                          .includes(bulkSearchFilter.toLowerCase())
-                      )
-                      .map((t) => t.id);
-                    setBulkSelectedTeamIds(new Set(filtered));
-                  }}
-                  className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
-                >
-                  Tout sélectionner
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setBulkSelectedTeamIds(new Set())}
-                  className="text-xs text-neutral-400 hover:text-neutral-300 transition-colors"
-                >
-                  Tout désélectionner
-                </button>
-              </div>
+          {/* Select all / deselect all */}
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs text-neutral-400">
+              {bulkSelectedTeamIds.size} équipe(s) sélectionnée(s)
+            </span>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const filtered = availableTeamsToAdd
+                    .filter((t) =>
+                      t.name
+                        .toLowerCase()
+                        .includes(bulkSearchFilter.toLowerCase())
+                    )
+                    .map((t) => t.id);
+                  setBulkSelectedTeamIds(new Set(filtered));
+                }}
+                className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+              >
+                Tout sélectionner
+              </button>
+              <button
+                type="button"
+                onClick={() => setBulkSelectedTeamIds(new Set())}
+                className="text-xs text-neutral-400 hover:text-neutral-300 transition-colors"
+              >
+                Tout désélectionner
+              </button>
             </div>
+          </div>
 
-            {/* Team checkbox list */}
-            <div className="max-h-64 overflow-y-auto space-y-1 mb-4 border border-neutral-700 rounded-lg p-2">
-              {availableTeamsToAdd
-                .filter((t) =>
-                  t.name.toLowerCase().includes(bulkSearchFilter.toLowerCase())
-                )
-                .map((team) => (
-                  <label
-                    key={team.id}
-                    className="flex items-center gap-3 px-2 py-1.5 rounded-lg hover:bg-neutral-700/50 cursor-pointer transition-colors"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={bulkSelectedTeamIds.has(team.id)}
-                      onChange={(e) => {
-                        const next = new Set(bulkSelectedTeamIds);
-                        if (e.target.checked) {
-                          next.add(team.id);
-                        } else {
-                          next.delete(team.id);
-                        }
-                        setBulkSelectedTeamIds(next);
-                      }}
-                      className="rounded border-neutral-600 bg-neutral-700 text-blue-500 focus:ring-blue-500 focus:ring-offset-0"
-                    />
-                    {team.logo_url && (
-                      <Image
-                        src={team.logo_url}
-                        alt=""
-                        width={20}
-                        height={20}
-                        className="w-5 h-5 rounded object-cover"
-                      />
-                    )}
-                    <span className="text-sm">{team.name}</span>
-                  </label>
-                ))}
-              {availableTeamsToAdd.filter((t) =>
+          {/* Team checkbox list */}
+          <div className="max-h-64 overflow-y-auto space-y-1 mb-4 border border-neutral-700 rounded-lg p-2">
+            {availableTeamsToAdd
+              .filter((t) =>
                 t.name.toLowerCase().includes(bulkSearchFilter.toLowerCase())
-              ).length === 0 && (
-                <div className="text-neutral-500 text-sm text-center py-4">
-                  Aucune équipe disponible
-                </div>
-              )}
-            </div>
-
-            {/* Progress indicator */}
-            {bulkAdding && (
-              <div className="mb-4">
-                <div className="flex items-center gap-2 text-xs text-neutral-400 mb-1">
-                  <div className="w-3 h-3 border border-neutral-500 border-t-white rounded-full animate-spin" />
-                  Ajout en cours... {bulkProgress.done}/{bulkProgress.total}
-                </div>
-                <div className="w-full bg-neutral-700 rounded-full h-1.5">
-                  <div
-                    className="bg-blue-500 h-1.5 rounded-full transition-all"
-                    style={{
-                      width: `${bulkProgress.total > 0 ? (bulkProgress.done / bulkProgress.total) * 100 : 0}%`,
+              )
+              .map((team) => (
+                <label
+                  key={team.id}
+                  className="flex items-center gap-3 px-2 py-1.5 rounded-lg hover:bg-neutral-700/50 cursor-pointer transition-colors"
+                >
+                  <input
+                    type="checkbox"
+                    checked={bulkSelectedTeamIds.has(team.id)}
+                    onChange={(e) => {
+                      const next = new Set(bulkSelectedTeamIds);
+                      if (e.target.checked) {
+                        next.add(team.id);
+                      } else {
+                        next.delete(team.id);
+                      }
+                      setBulkSelectedTeamIds(next);
                     }}
+                    className="rounded border-neutral-600 bg-neutral-700 text-blue-500 focus:ring-blue-500 focus:ring-offset-0"
                   />
-                </div>
+                  {team.logo_url && (
+                    <Image
+                      src={team.logo_url}
+                      alt=""
+                      width={20}
+                      height={20}
+                      className="w-5 h-5 rounded object-cover"
+                    />
+                  )}
+                  <span className="text-sm">{team.name}</span>
+                </label>
+              ))}
+            {availableTeamsToAdd.filter((t) =>
+              t.name.toLowerCase().includes(bulkSearchFilter.toLowerCase())
+            ).length === 0 && (
+              <div className="text-neutral-500 text-sm text-center py-4">
+                Aucune équipe disponible
               </div>
             )}
-
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => {
-                  setShowBulkAddModal(false);
-                  setBulkSelectedTeamIds(new Set());
-                  setBulkSearchFilter('');
-                }}
-                disabled={bulkAdding}
-                className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors disabled:opacity-50"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={handleBulkAddTeams}
-                disabled={bulkSelectedTeamIds.size === 0 || bulkAdding}
-                className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {bulkAdding
-                  ? `Ajout... (${bulkProgress.done}/${bulkProgress.total})`
-                  : `Ajouter ${bulkSelectedTeamIds.size > 0 ? `(${bulkSelectedTeamIds.size})` : ''}`}
-              </button>
-            </div>
           </div>
-        </div>
-      )}
 
-      {/* New Stage Modal */}
-      {showNewStageModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-neutral-800 border border-neutral-700 rounded-2xl p-6 w-full max-w-md shadow-2xl">
-            <h3 className="text-lg font-semibold mb-4">Créer une phase</h3>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm text-neutral-400 mb-1">
-                  Nom de la phase
-                </label>
-                <input
-                  type="text"
-                  value={newStageName}
-                  onChange={(e) => setNewStageName(e.target.value)}
-                  placeholder="Ex: Phase de groupes, Playoffs..."
-                  className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500"
+          {/* Progress indicator */}
+          {bulkAdding && (
+            <div className="mb-4">
+              <div className="flex items-center gap-2 text-xs text-neutral-400 mb-1">
+                <div className="w-3 h-3 border border-neutral-500 border-t-white rounded-full animate-spin" />
+                Ajout en cours... {bulkProgress.done}/{bulkProgress.total}
+              </div>
+              <div className="w-full bg-neutral-700 rounded-full h-1.5">
+                <div
+                  className="bg-blue-500 h-1.5 rounded-full transition-all"
+                  style={{
+                    width: `${bulkProgress.total > 0 ? (bulkProgress.done / bulkProgress.total) * 100 : 0}%`,
+                  }}
                 />
               </div>
-
-              <div>
-                <label className="block text-sm text-neutral-400 mb-1">
-                  Type de phase
-                </label>
-                <select
-                  value={newStageType}
-                  onChange={(e) => setNewStageType(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                >
-                  {STAGE_TYPE_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
             </div>
+          )}
+        </>
+      </Modal>
 
-            <div className="flex justify-end gap-2 mt-6">
-              <button
-                onClick={() => {
-                  setShowNewStageModal(false);
-                  setNewStageName('');
-                  setNewStageType('bracket');
-                }}
-                className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={handleCreateStage}
-                disabled={!newStageName.trim() || creatingStage}
-                className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {creatingStage ? 'Création...' : 'Créer'}
-              </button>
-            </div>
+      {/* New Stage Modal */}
+      <Modal
+        open={showNewStageModal}
+        onClose={() => {
+          setShowNewStageModal(false);
+          setNewStageName('');
+          setNewStageType('bracket');
+        }}
+        title="Créer une phase"
+        footer={
+          <>
+            <button
+              onClick={() => {
+                setShowNewStageModal(false);
+                setNewStageName('');
+                setNewStageType('bracket');
+              }}
+              className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
+            >
+              Annuler
+            </button>
+            <button
+              onClick={handleCreateStage}
+              disabled={!newStageName.trim() || creatingStage}
+              className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {creatingStage ? 'Création...' : 'Créer'}
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm text-neutral-400 mb-1">
+              Nom de la phase
+            </label>
+            <input
+              type="text"
+              value={newStageName}
+              onChange={(e) => setNewStageName(e.target.value)}
+              placeholder="Ex: Phase de groupes, Playoffs..."
+              className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm text-neutral-400 mb-1">
+              Type de phase
+            </label>
+            <select
+              value={newStageType}
+              onChange={(e) => setNewStageType(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500"
+            >
+              {STAGE_TYPE_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
-      )}
+      </Modal>
 
       {/* Clone Confirm Dialog */}
       {showCloneConfirm && (
@@ -2461,167 +2467,151 @@ function AdminTournamentPage({
       )}
 
       {/* Conflicts Modal */}
-      {showConflicts && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-neutral-800 border border-neutral-700 rounded-2xl p-6 w-full max-w-2xl shadow-2xl max-h-[80vh] flex flex-col">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold flex items-center gap-2">
-                <svg
-                  className="w-5 h-5 text-amber-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                  />
-                </svg>
-                Rapport de conflits
-              </h3>
-              <button
-                onClick={() => setShowConflicts(false)}
-                className="p-1.5 rounded-lg hover:bg-neutral-700 transition-colors"
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
+      <Modal
+        open={showConflicts}
+        onClose={() => {
+          setShowConflicts(false);
+          setConflicts(null);
+        }}
+        size="2xl"
+        panelClassName="max-h-[80vh]"
+        title={
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <svg
+              className="w-5 h-5 text-amber-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+              />
+            </svg>
+            Rapport de conflits
+          </h3>
+        }
+        footer={
+          <>
+            <button
+              onClick={() => {
+                setShowConflicts(false);
+                setConflicts(null);
+              }}
+              className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
+            >
+              Fermer
+            </button>
+            <button
+              onClick={fetchConflicts}
+              disabled={loadingConflicts}
+              className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors disabled:opacity-50"
+            >
+              {loadingConflicts ? 'Analyse...' : 'Re-analyser'}
+            </button>
+          </>
+        }
+      >
+        {loadingConflicts ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="w-6 h-6 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
+          </div>
+        ) : conflicts === null ? (
+          <div className="text-neutral-400 text-sm py-8 text-center">
+            Erreur lors du chargement des conflits.
+          </div>
+        ) : conflicts.length === 0 ? (
+          <div className="flex flex-col items-center py-12 text-center">
+            <svg
+              className="w-12 h-12 text-emerald-400 mb-3"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <p className="text-emerald-300 font-medium">
+              Aucun conflit détecté
+            </p>
+            <p className="text-neutral-500 text-xs mt-1">
+              Aucune équipe ne joue deux matchs en même temps.
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-y-auto flex-1 space-y-3 pr-1">
+            <div className="text-sm text-amber-300 bg-amber-900/30 border border-amber-500/20 rounded-lg px-3 py-2 mb-3">
+              {conflicts.length} conflit{conflicts.length > 1 ? 's' : ''}{' '}
+              détecté{conflicts.length > 1 ? 's' : ''}
             </div>
-
-            {loadingConflicts ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="w-6 h-6 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
-              </div>
-            ) : conflicts === null ? (
-              <div className="text-neutral-400 text-sm py-8 text-center">
-                Erreur lors du chargement des conflits.
-              </div>
-            ) : conflicts.length === 0 ? (
-              <div className="flex flex-col items-center py-12 text-center">
-                <svg
-                  className="w-12 h-12 text-emerald-400 mb-3"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                <p className="text-emerald-300 font-medium">
-                  Aucun conflit détecté
-                </p>
-                <p className="text-neutral-500 text-xs mt-1">
-                  Aucune équipe ne joue deux matchs en même temps.
-                </p>
-              </div>
-            ) : (
-              <div className="overflow-y-auto flex-1 space-y-3 pr-1">
-                <div className="text-sm text-amber-300 bg-amber-900/30 border border-amber-500/20 rounded-lg px-3 py-2 mb-3">
-                  {conflicts.length} conflit{conflicts.length > 1 ? 's' : ''}{' '}
-                  détecté{conflicts.length > 1 ? 's' : ''}
+            {conflicts.map((c, i) => (
+              <div
+                key={i}
+                className="bg-neutral-900/70 border border-red-500/20 rounded-xl p-4 space-y-2"
+              >
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="px-2 py-0.5 rounded-full text-xs bg-red-500/20 text-red-300 border border-red-500/30">
+                    Chevauchement {c.overlap_minutes} min
+                  </span>
+                  <span className="font-medium text-white">{c.team_name}</span>
                 </div>
-                {conflicts.map((c, i) => (
-                  <div
-                    key={i}
-                    className="bg-neutral-900/70 border border-red-500/20 rounded-xl p-4 space-y-2"
-                  >
-                    <div className="flex items-center gap-2 text-sm">
-                      <span className="px-2 py-0.5 rounded-full text-xs bg-red-500/20 text-red-300 border border-red-500/30">
-                        Chevauchement {c.overlap_minutes} min
-                      </span>
-                      <span className="font-medium text-white">
-                        {c.team_name}
-                      </span>
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div className="bg-neutral-800/50 rounded-lg p-2.5">
+                    <div className="text-neutral-500 mb-1">Match A</div>
+                    <div className="text-neutral-300">
+                      {c.match_a.stage_name && (
+                        <span>{c.match_a.stage_name} · </span>
+                      )}
+                      {c.match_a.round_number && (
+                        <span>Round {c.match_a.round_number}</span>
+                      )}
                     </div>
-                    <div className="grid grid-cols-2 gap-3 text-xs">
-                      <div className="bg-neutral-800/50 rounded-lg p-2.5">
-                        <div className="text-neutral-500 mb-1">Match A</div>
-                        <div className="text-neutral-300">
-                          {c.match_a.stage_name && (
-                            <span>{c.match_a.stage_name} · </span>
-                          )}
-                          {c.match_a.round_number && (
-                            <span>Round {c.match_a.round_number}</span>
-                          )}
-                        </div>
-                        <div className="text-neutral-400 mt-1">
-                          {new Date(c.match_a.scheduled_at).toLocaleString(
-                            'fr-FR',
-                            { dateStyle: 'short', timeStyle: 'short' }
-                          )}
-                          {' → '}
-                          {new Date(c.match_a.estimated_end).toLocaleTimeString(
-                            'fr-FR',
-                            { hour: '2-digit', minute: '2-digit' }
-                          )}
-                        </div>
-                      </div>
-                      <div className="bg-neutral-800/50 rounded-lg p-2.5">
-                        <div className="text-neutral-500 mb-1">Match B</div>
-                        <div className="text-neutral-300">
-                          {c.match_b.stage_name && (
-                            <span>{c.match_b.stage_name} · </span>
-                          )}
-                          {c.match_b.round_number && (
-                            <span>Round {c.match_b.round_number}</span>
-                          )}
-                        </div>
-                        <div className="text-neutral-400 mt-1">
-                          {new Date(c.match_b.scheduled_at).toLocaleString(
-                            'fr-FR',
-                            { dateStyle: 'short', timeStyle: 'short' }
-                          )}
-                          {' → '}
-                          {new Date(c.match_b.estimated_end).toLocaleTimeString(
-                            'fr-FR',
-                            { hour: '2-digit', minute: '2-digit' }
-                          )}
-                        </div>
-                      </div>
+                    <div className="text-neutral-400 mt-1">
+                      {new Date(c.match_a.scheduled_at).toLocaleString(
+                        'fr-FR',
+                        { dateStyle: 'short', timeStyle: 'short' }
+                      )}
+                      {' → '}
+                      {new Date(c.match_a.estimated_end).toLocaleTimeString(
+                        'fr-FR',
+                        { hour: '2-digit', minute: '2-digit' }
+                      )}
                     </div>
                   </div>
-                ))}
+                  <div className="bg-neutral-800/50 rounded-lg p-2.5">
+                    <div className="text-neutral-500 mb-1">Match B</div>
+                    <div className="text-neutral-300">
+                      {c.match_b.stage_name && (
+                        <span>{c.match_b.stage_name} · </span>
+                      )}
+                      {c.match_b.round_number && (
+                        <span>Round {c.match_b.round_number}</span>
+                      )}
+                    </div>
+                    <div className="text-neutral-400 mt-1">
+                      {new Date(c.match_b.scheduled_at).toLocaleString(
+                        'fr-FR',
+                        { dateStyle: 'short', timeStyle: 'short' }
+                      )}
+                      {' → '}
+                      {new Date(c.match_b.estimated_end).toLocaleTimeString(
+                        'fr-FR',
+                        { hour: '2-digit', minute: '2-digit' }
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
-            )}
-
-            <div className="flex justify-end gap-2 mt-4 pt-3 border-t border-neutral-700">
-              <button
-                onClick={() => {
-                  setShowConflicts(false);
-                  setConflicts(null);
-                }}
-                className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
-              >
-                Fermer
-              </button>
-              <button
-                onClick={fetchConflicts}
-                disabled={loadingConflicts}
-                className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors disabled:opacity-50"
-              >
-                {loadingConflicts ? 'Analyse...' : 'Re-analyser'}
-              </button>
-            </div>
+            ))}
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
     </>
   );
 }

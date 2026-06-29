@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import Button from '@/components/Buttons/button';
 import { withStaffPage } from '@/utils/staff';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 import Breadcrumb from '@/components/admin/Breadcrumb';
 
 type StaffShape = {
@@ -45,6 +46,7 @@ export const getServerSideProps = withStaffPage('manager');
 function AdminTeamDetailPage({ staff }: StaffProps) {
   const router = useRouter();
   const { teamId } = router.query as { teamId?: string };
+  const { adminFetchJson } = useAdminFetch();
 
   const [team, setTeam] = useState<TeamRow | null>(null);
   const [members, setMembers] = useState<TeamMemberRow[]>([]);
@@ -64,11 +66,9 @@ function AdminTeamDetailPage({ staff }: StaffProps) {
     setLoading(true);
     setErrorMsg(null);
     try {
-      const res = await fetch(`/api/admin/teams/${teamId}`);
-      const json = await res.json();
-      if (!res.ok || json.error) {
-        throw new Error(json.error || "Impossible de charger l'équipe");
-      }
+      const json = await adminFetchJson<{ team: typeof team }>(
+        `/api/admin/teams/${teamId}`
+      );
       setTeam(json.team);
     } catch (err: unknown) {
       setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
@@ -82,11 +82,9 @@ function AdminTeamDetailPage({ staff }: StaffProps) {
     setMembersLoading(true);
     setMembersError(null);
     try {
-      const res = await fetch(`/api/admin/teams/${teamId}/members`);
-      const json = await res.json();
-      if (!res.ok || json.error) {
-        throw new Error(json.error || 'Impossible de charger les membres');
-      }
+      const json = await adminFetchJson<{ members?: typeof members }>(
+        `/api/admin/teams/${teamId}/members`
+      );
       setMembers(json.members || []);
     } catch (err: unknown) {
       setMembersError((err as Error)?.message ?? 'Erreur inattendue');

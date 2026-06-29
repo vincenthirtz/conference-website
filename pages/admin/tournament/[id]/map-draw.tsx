@@ -7,6 +7,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { sanitizeUrl } from '@/utils/apiHelpers';
 
 function escapeHtml(value: string | null | undefined): string {
@@ -91,6 +92,7 @@ function AdminMapDrawPage(_: StaffProps) {
   const router = useRouter();
   const { id } = router.query;
   const tournamentId = Array.isArray(id) ? id[0] : id;
+  const { adminFetchJson } = useAdminFetch();
 
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -122,12 +124,10 @@ function AdminMapDrawPage(_: StaffProps) {
     setLoading(true);
     setErrorMsg(null);
     try {
-      const res = await fetch(`/api/tournament/${tournamentId}/maps`);
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || 'Impossible de charger les maps');
-      }
-      const json = await res.json();
+      const json = await adminFetchJson<{
+        maps?: TournamentMapRow[];
+        tournament?: TournamentMini | null;
+      }>(`/api/tournament/${tournamentId}/maps`);
       const enabledMaps = (json.maps || []).filter(
         (m: TournamentMapRow) => m.enabled
       );

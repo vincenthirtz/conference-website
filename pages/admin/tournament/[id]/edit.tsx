@@ -6,6 +6,8 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import Breadcrumb from '@/components/admin/Breadcrumb';
 import type { StaffProps, Tournament } from '@/types/admin';
 import { TOURNAMENT_TIMEZONES } from '@/utils/timezone';
@@ -24,6 +26,8 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const { addToast } = useToast();
+  const { adminFetchJson } = useAdminFetch();
+  const { mutate: uploadRules } = useIdempotentMutation();
 
   const [formReady, setFormReady] = useState(false);
 
@@ -110,9 +114,8 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
         reader.readAsDataURL(file);
       });
 
-      const res = await fetch('/api/admin/upload', {
+      const res = await uploadRules('/api/admin/upload', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           data: dataUrl,
           mimeType: 'application/pdf',
@@ -145,12 +148,9 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
     setErrorMsg(null);
 
     try {
-      const res = await fetch(`/api/admin/tournament/${id}`);
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || 'Impossible de charger le tournoi');
-      }
-      const json: ApiResponse = await res.json();
+      const json = await adminFetchJson<ApiResponse>(
+        `/api/admin/tournament/${id}`
+      );
       const t = json.tournament;
 
       // Pré-remplir le formulaire
@@ -259,22 +259,10 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
     };
 
     try {
-      const res = await fetch(`/api/admin/tournament/${id}`, {
+      await adminFetchJson(`/api/admin/tournament/${id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify(payload),
       });
-
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(
-          json.error || 'Erreur lors de la mise à jour du tournoi'
-        );
-      }
-
-      await res.json(); // contient { tournament: ... } mais on n'en a pas strictement besoin ici
 
       addToast('Tournoi mis à jour avec succès.', 'success');
       // On peut éventuellement recharger les données

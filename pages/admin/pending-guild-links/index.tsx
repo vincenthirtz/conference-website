@@ -6,6 +6,7 @@ import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import AlertBanner from '@/components/admin/AlertBanner';
+import Modal from '@/components/admin/Modal';
 import Breadcrumb from '@/components/admin/Breadcrumb';
 import EmptyState from '@/components/admin/EmptyState';
 import LoadingSpinner from '@/components/admin/LoadingSpinner';
@@ -92,7 +93,8 @@ function AdminPendingGuildLinksPage(_props: Props) {
     setModal({
       guild,
       mode: 'existing',
-      selectedTenantId: tenants.find((t: AccessibleTenant) => t.is_active)?.id ?? '',
+      selectedTenantId:
+        tenants.find((t: AccessibleTenant) => t.is_active)?.id ?? '',
       newSlug: '',
       newName: '',
       saving: false,
@@ -154,7 +156,7 @@ function AdminPendingGuildLinksPage(_props: Props) {
           ? {
               ...prev,
               saving: false,
-              error: (err as Error)?.message ?? 'Échec de l\'attribution.',
+              error: (err as Error)?.message ?? "Échec de l'attribution.",
             }
           : null
       );
@@ -165,16 +167,15 @@ function AdminPendingGuildLinksPage(_props: Props) {
     const ok = await confirm({
       title: `Rejeter ${guild.guild_name ?? guild.guild_id} ?`,
       subtitle:
-        'La demande sera supprimée de la file. Le bot sera ignoré tant qu\'il n\'aura pas re-demandé.',
+        "La demande sera supprimée de la file. Le bot sera ignoré tant qu'il n'aura pas re-demandé.",
       variant: 'danger',
       confirmLabel: 'Rejeter',
     });
     if (!ok) return;
     try {
-      await mutateJson(
-        `/api/admin/pending-guild-links/${guild.guild_id}`,
-        { method: 'DELETE' }
-      );
+      await mutateJson(`/api/admin/pending-guild-links/${guild.guild_id}`, {
+        method: 'DELETE',
+      });
       addToast('Demande rejetée.', 'success');
       await fetchData();
     } catch (err) {
@@ -204,8 +205,8 @@ function AdminPendingGuildLinksPage(_props: Props) {
             </h1>
             <p className="mt-1 text-sm text-neutral-400">
               Quand le bot rejoint un serveur sans tenant assigné, le serveur
-              attend ici qu&apos;un staff l&apos;attribue à un tenant
-              existant ou crée un nouveau tenant.
+              attend ici qu&apos;un staff l&apos;attribue à un tenant existant
+              ou crée un nouveau tenant.
             </p>
           </div>
 
@@ -281,137 +282,134 @@ function AdminPendingGuildLinksPage(_props: Props) {
           </section>
         </div>
 
-        {modal && (
-          <div
-            className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 p-4"
-            role="dialog"
-            aria-modal="true"
-          >
-            <div className="w-full max-w-lg bg-neutral-900 border border-neutral-700 rounded-2xl shadow-2xl">
-              <div className="px-6 py-4 border-b border-neutral-800">
-                <h2 className="text-lg font-semibold text-white">
-                  Attribuer {modal.guild.guild_name ?? modal.guild.guild_id}
-                </h2>
-                <p className="text-xs text-neutral-500 mt-0.5">
-                  Choisis un tenant existant ou crée-en un nouveau.
-                </p>
+        <Modal
+          open={Boolean(modal)}
+          onClose={closeModal}
+          zIndexClassName="z-[200]"
+          backdropClassName="bg-black/70"
+          panelChromeClassName="bg-neutral-900 border border-neutral-700 rounded-2xl shadow-2xl"
+          size="lg"
+          title={
+            <h2 className="text-lg font-semibold text-white">
+              Attribuer {modal?.guild.guild_name ?? modal?.guild.guild_id}
+            </h2>
+          }
+          subtitle="Choisis un tenant existant ou crée-en un nouveau."
+          footer={
+            <>
+              <button
+                type="button"
+                onClick={closeModal}
+                className="px-4 py-2 rounded-lg border border-neutral-600 text-sm hover:bg-neutral-800 transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={submitClaim}
+                disabled={modal?.saving}
+                className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-sm font-medium text-white disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {modal?.saving ? 'Attribution…' : 'Attribuer'}
+              </button>
+            </>
+          }
+        >
+          {modal && (
+            <div className="space-y-4">
+              <AlertBanner message={modal.error} />
+
+              <div className="flex gap-2">
+                {(['existing', 'new'] as const).map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => setModal({ ...modal, mode: m })}
+                    className={`flex-1 px-3 py-2 rounded-lg text-sm transition-colors ${
+                      modal.mode === m
+                        ? 'bg-purple-600 text-white'
+                        : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
+                    }`}
+                  >
+                    {m === 'existing' ? 'Tenant existant' : 'Nouveau tenant'}
+                  </button>
+                ))}
               </div>
 
-              <div className="px-6 py-4 space-y-4">
-                <AlertBanner message={modal.error} />
-
-                <div className="flex gap-2">
-                  {(['existing', 'new'] as const).map((m) => (
-                    <button
-                      key={m}
-                      type="button"
-                      onClick={() => setModal({ ...modal, mode: m })}
-                      className={`flex-1 px-3 py-2 rounded-lg text-sm transition-colors ${
-                        modal.mode === m
-                          ? 'bg-purple-600 text-white'
-                          : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
-                      }`}
-                    >
-                      {m === 'existing'
-                        ? 'Tenant existant'
-                        : 'Nouveau tenant'}
-                    </button>
-                  ))}
+              {modal.mode === 'existing' ? (
+                <div>
+                  <label
+                    htmlFor="claim-tenant-select"
+                    className="block text-xs font-medium text-neutral-400 mb-1"
+                  >
+                    Tenant
+                  </label>
+                  <select
+                    id="claim-tenant-select"
+                    value={modal.selectedTenantId}
+                    onChange={(e) =>
+                      setModal({
+                        ...modal,
+                        selectedTenantId: e.target.value,
+                      })
+                    }
+                    className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  >
+                    <option value="">— sélectionner —</option>
+                    {tenants.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.slug} — {t.name}
+                        {!t.is_active ? ' (archivé)' : ''}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-
-                {modal.mode === 'existing' ? (
+              ) : (
+                <div className="space-y-3">
                   <div>
                     <label
-                      htmlFor="claim-tenant-select"
+                      htmlFor="claim-new-slug"
                       className="block text-xs font-medium text-neutral-400 mb-1"
                     >
-                      Tenant
+                      Slug (kebab-case)
                     </label>
-                    <select
-                      id="claim-tenant-select"
-                      value={modal.selectedTenantId}
+                    <input
+                      id="claim-new-slug"
+                      type="text"
+                      value={modal.newSlug}
                       onChange={(e) =>
                         setModal({
                           ...modal,
-                          selectedTenantId: e.target.value,
+                          newSlug: e.target.value.toLowerCase(),
                         })
                       }
-                      className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      placeholder="mon-evenement"
+                      className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-600 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+                  <div>
+                    <label
+                      htmlFor="claim-new-name"
+                      className="block text-xs font-medium text-neutral-400 mb-1"
                     >
-                      <option value="">— sélectionner —</option>
-                      {tenants.map((t) => (
-                        <option key={t.id} value={t.id}>
-                          {t.slug} — {t.name}
-                          {!t.is_active ? ' (archivé)' : ''}
-                        </option>
-                      ))}
-                    </select>
+                      Nom
+                    </label>
+                    <input
+                      id="claim-new-name"
+                      type="text"
+                      value={modal.newName}
+                      onChange={(e) =>
+                        setModal({ ...modal, newName: e.target.value })
+                      }
+                      placeholder="Mon événement"
+                      className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
                   </div>
-                ) : (
-                  <div className="space-y-3">
-                    <div>
-                      <label
-                        htmlFor="claim-new-slug"
-                        className="block text-xs font-medium text-neutral-400 mb-1"
-                      >
-                        Slug (kebab-case)
-                      </label>
-                      <input
-                        id="claim-new-slug"
-                        type="text"
-                        value={modal.newSlug}
-                        onChange={(e) =>
-                          setModal({
-                            ...modal,
-                            newSlug: e.target.value.toLowerCase(),
-                          })
-                        }
-                        placeholder="mon-evenement"
-                        className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-600 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-purple-500"
-                      />
-                    </div>
-                    <div>
-                      <label
-                        htmlFor="claim-new-name"
-                        className="block text-xs font-medium text-neutral-400 mb-1"
-                      >
-                        Nom
-                      </label>
-                      <input
-                        id="claim-new-name"
-                        type="text"
-                        value={modal.newName}
-                        onChange={(e) =>
-                          setModal({ ...modal, newName: e.target.value })
-                        }
-                        placeholder="Mon événement"
-                        className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="px-6 py-4 border-t border-neutral-800 flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={closeModal}
-                  className="px-4 py-2 rounded-lg border border-neutral-600 text-sm hover:bg-neutral-800 transition-colors"
-                >
-                  Annuler
-                </button>
-                <button
-                  type="button"
-                  onClick={submitClaim}
-                  disabled={modal.saving}
-                  className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-sm font-medium text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {modal.saving ? 'Attribution…' : 'Attribuer'}
-                </button>
-              </div>
+                </div>
+              )}
             </div>
-          </div>
-        )}
+          )}
+        </Modal>
 
         {dialog}
       </div>

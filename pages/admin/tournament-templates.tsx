@@ -7,6 +7,8 @@ import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import {
   TOURNAMENT_TEMPLATES,
   type TournamentTemplate,
@@ -50,6 +52,8 @@ function AdminTournamentTemplatesPage({ staff }: StaffProps) {
   const router = useRouter();
   const { addToast } = useToast();
   const { confirm, dialog } = useConfirmDialog();
+  const { adminFetchJson } = useAdminFetch();
+  const { mutateJson: createTemplate } = useIdempotentMutation();
 
   const [customTemplates, setCustomTemplates] = useState<TournamentTemplate[]>(
     []
@@ -71,9 +75,9 @@ function AdminTournamentTemplatesPage({ staff }: StaffProps) {
     setLoading(true);
     setErrorMsg(null);
     try {
-      const res = await fetch('/api/admin/tournament-templates');
-      if (!res.ok) throw new Error('Erreur lors du chargement');
-      const json = await res.json();
+      const json = await adminFetchJson<{ templates?: TournamentTemplate[] }>(
+        '/api/admin/tournament-templates'
+      );
       setCustomTemplates(json.templates || []);
     } catch (err: unknown) {
       setErrorMsg((err as Error)?.message || 'Erreur inattendue');
@@ -103,20 +107,14 @@ function AdminTournamentTemplatesPage({ staff }: StaffProps) {
 
     setCreating(true);
     try {
-      const res = await fetch('/api/admin/tournament-templates', {
+      await createTemplate('/api/admin/tournament-templates', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: newName.trim(),
           description: newDesc.trim(),
           stages: validStages,
         }),
       });
-
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || 'Erreur lors de la creation');
-      }
 
       addToast('Template cree avec succes.', 'success');
       setNewName('');
@@ -143,16 +141,10 @@ function AdminTournamentTemplatesPage({ staff }: StaffProps) {
     setErrorMsg(null);
 
     try {
-      const res = await fetch('/api/admin/tournament-templates', {
+      await adminFetchJson('/api/admin/tournament-templates', {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ templateId }),
       });
-
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || 'Erreur lors de la suppression');
-      }
 
       addToast('Template supprime.', 'success');
       fetchCustomTemplates();

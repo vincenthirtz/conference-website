@@ -1,10 +1,12 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import linksConfig from '@/config/links.json';
 import type { LinkItem } from '@/types/types';
 import type { AdminLink } from '@/types/components';
 import { formatStaffRoleLabel, type StaffRole } from '@/utils/staff';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useRealtimeChannel } from '@/hooks/useRealtimeChannel';
 
 // TenantSwitcher intentionally not rendered here: on the
 // conference-website domain the active tenant is always DEFAULT_TENANT_ID
@@ -54,35 +56,68 @@ export default function AdminTopBar({
   const menuAreaRef = useRef<HTMLDivElement>(null);
 
   const [alertsCount, setAlertsCount] = useState<number | null>(null);
+  const { adminFetchJson } = useAdminFetch();
 
-  useEffect(() => {
-    let cancelled = false;
-    async function poll() {
-      try {
-        const res = await fetch('/api/admin/alerts-summary');
-        if (!res.ok) return;
-        const json = await res.json();
-        if (!cancelled && typeof json?.total === 'number') {
-          setAlertsCount(json.total);
-        }
-      } catch {
-        // silent — pas d'incidence sur l'UX si ça plante
+  // Récupère le compteur d'alertes via le hook sanctionné : Bearer token
+  // automatique + redirection 401. On reste silencieux sur erreur : un badge
+  // absent ne doit jamais casser la navbar. adminFetchJson est stable
+  // (useCallback côté hook), donc refreshAlerts l'est aussi.
+  const refreshAlerts = useCallback(async () => {
+    try {
+      const json = await adminFetchJson<{ total?: unknown }>(
+        '/api/admin/alerts-summary',
+        // Pas de redirection login depuis la navbar : si la session a expiré,
+        // on laisse le badge tel quel plutôt que de kicker l'utilisateur.
+        { skipAuthRedirect: true }
+      );
+      if (typeof json?.total === 'number') {
+        setAlertsCount(json.total);
       }
+    } catch {
+      // silent — pas d'incidence sur l'UX si ça plante
     }
-    poll();
+  }, [adminFetchJson]);
+
+  // Polling de secours (et premier chargement). L'intervalle est volontairement
+  // réduit à 60s : le realtime ci-dessous couvre la latence sur les alertes
+  // critiques, le poll sert de filet en cas de souscription indisponible.
+  useEffect(() => {
+    let active = true;
+    const run = () => {
+      if (active) refreshAlerts();
+    };
+    run();
     const interval = setInterval(() => {
       if (
         typeof document !== 'undefined' &&
         document.visibilityState !== 'visible'
       )
         return;
-      poll();
-    }, 90_000);
+      run();
+    }, 60_000);
     return () => {
-      cancelled = true;
+      active = false;
       clearInterval(interval);
     };
-  }, []);
+  }, [refreshAlerts]);
+
+  // Réactivité immédiate sur les alertes critiques via Supabase Realtime :
+  // un nouveau litige (matches.status -> 'disputed') ou un ticket support
+  // haute sévérité (support_tickets) déclenche un refresh sans attendre le
+  // prochain poll. Dégradation gracieuse : si la souscription échoue ou que
+  // le realtime est indisponible, le polling 60s reste actif.
+  useRealtimeChannel({
+    channel: 'admin-topbar-alerts-matches',
+    table: 'matches',
+    event: 'UPDATE',
+    onChange: refreshAlerts,
+  });
+  useRealtimeChannel({
+    channel: 'admin-topbar-alerts-support',
+    table: 'support_tickets',
+    event: '*',
+    onChange: refreshAlerts,
+  });
 
   useEffect(() => {
     if (!openMenu) return;
@@ -210,21 +245,36 @@ export default function AdminTopBar({
                 className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-medium text-neutral-300 transition-all hover:bg-white/[0.06] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
               >
                 {link.title}
-                {showBadge && (
+                {isCurrentTournament && (
+                  // Région live persistante : on l'annonce poliment dès que le
+                  // compteur change (apparition, variation, disparition).
+                  // aria-atomic=true => l'intégralité du libellé est relue, pas
+                  // juste le delta. Présente même sans badge pour que la
+                  // disparition des alertes soit aussi annoncée.
                   <span
-                    title={`${alertsCount} alerte${alertsCount! > 1 ? 's' : ''} active${alertsCount! > 1 ? 's' : ''}`}
-                    className={`relative inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold leading-none ${
-                      alertsCount! >= 5
-                        ? 'bg-red-500 text-white shadow-[0_0_0_2px_rgba(239,68,68,0.25)]'
-                        : 'bg-amber-500 text-neutral-950 shadow-[0_0_0_2px_rgba(245,158,11,0.25)]'
-                    }`}
+                    aria-live="polite"
+                    aria-atomic="true"
+                    className="contents"
                   >
-                    {alertsCount! >= 5 && (
-                      <span className="absolute inset-0 animate-ping rounded-full bg-red-500/60" />
+                    {showBadge && (
+                      <span
+                        title={`${alertsCount} alerte${alertsCount! > 1 ? 's' : ''} active${alertsCount! > 1 ? 's' : ''}`}
+                        aria-label={`${alertsCount} alerte${alertsCount! > 1 ? 's' : ''} active${alertsCount! > 1 ? 's' : ''}`}
+                        role="status"
+                        className={`relative inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold leading-none ${
+                          alertsCount! >= 5
+                            ? 'bg-red-500 text-white shadow-[0_0_0_2px_rgba(239,68,68,0.25)]'
+                            : 'bg-amber-500 text-neutral-950 shadow-[0_0_0_2px_rgba(245,158,11,0.25)]'
+                        }`}
+                      >
+                        {alertsCount! >= 5 && (
+                          <span className="absolute inset-0 animate-ping rounded-full bg-red-500/60" />
+                        )}
+                        <span aria-hidden className="relative">
+                          {alertsCount! > 99 ? '99+' : alertsCount}
+                        </span>
+                      </span>
                     )}
-                    <span className="relative">
-                      {alertsCount! > 99 ? '99+' : alertsCount}
-                    </span>
                   </span>
                 )}
               </Link>

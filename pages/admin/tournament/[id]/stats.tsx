@@ -6,6 +6,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 
 type StaffShape = {
   id: string;
@@ -82,6 +83,7 @@ export const getServerSideProps = withStaffPage('manager');
 
 function AdminTournamentStatsPage({ staff }: StaffProps) {
   const router = useRouter();
+  const { adminFetchJson } = useAdminFetch();
   const { id } = router.query;
 
   const [loading, setLoading] = useState(true);
@@ -95,14 +97,9 @@ function AdminTournamentStatsPage({ staff }: StaffProps) {
     setErrorMsg(null);
 
     try {
-      const res = await fetch(`/api/admin/tournament/${id}/stats`);
-
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || 'Impossible de charger les statistiques');
-      }
-
-      const json: TournamentStats = await res.json();
+      const json = await adminFetchJson<TournamentStats>(
+        `/api/admin/tournament/${id}/stats`
+      );
       setStats(json);
     } catch (err: unknown) {
       setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');

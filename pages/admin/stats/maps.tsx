@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 
 type StaffShape = {
   id: string;
@@ -55,6 +56,7 @@ function rankBadge(rank: number) {
 
 function AdminMapsStatsPage({}: StaffProps) {
   const router = useRouter();
+  const { adminFetchJson } = useAdminFetch();
 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -89,13 +91,9 @@ function AdminMapsStatsPage({}: StaffProps) {
       if (sortBy) params.set('sortBy', sortBy);
       if (sortDir) params.set('sortDir', sortDir);
 
-      const res = await fetch('/api/admin/stats/maps?' + params.toString());
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || 'Impossible de charger les stats maps');
-      }
-
-      const json: MapStatsApiResponse = await res.json();
+      const json = await adminFetchJson<MapStatsApiResponse>(
+        '/api/admin/stats/maps?' + params.toString()
+      );
       setStats(json.stats || []);
       setTotal(typeof json.total === 'number' ? json.total : null);
     } catch (err: unknown) {

@@ -8,6 +8,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import type { StaffProps } from '@/types/admin';
@@ -53,6 +54,7 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
   const router = useRouter();
   const { stageId } = router.query;
   const { addToast } = useToast();
+  const { adminFetch, adminFetchJson } = useAdminFetch();
   const { mutate: mutateIdempotent } = useIdempotentMutation();
 
   const [loading, setLoading] = useState(true);
@@ -100,23 +102,20 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
     setErrorMsg(null);
 
     try {
-      const res = await fetch(`/api/admin/stages/${stageId}/groups`);
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || 'Erreur lors du chargement des groupes');
-      }
-      const json: GroupsApiResponse = await res.json();
+      const json = await adminFetchJson<GroupsApiResponse>(
+        `/api/admin/stages/${stageId}/groups`
+      );
       setGroups(json.groups);
       setUnassigned(json.unassigned);
 
       // Fetch stage info
-      const stageRes = await fetch(`/api/admin/stages/${stageId}`);
+      const stageRes = await adminFetch(`/api/admin/stages/${stageId}`);
       if (stageRes.ok) {
         const stageJson = await stageRes.json();
         setStageName(stageJson.stage?.name || '');
         setTournamentId(stageJson.stage?.tournament_id || '');
         if (stageJson.stage?.tournament_id) {
-          const tRes = await fetch(
+          const tRes = await adminFetch(
             `/api/admin/tournament/${stageJson.stage.tournament_id}`
           );
           if (tRes.ok) {
@@ -130,7 +129,7 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
     } finally {
       setLoading(false);
     }
-  }, [stageId]);
+  }, [stageId, adminFetch, adminFetchJson]);
 
   useEffect(() => {
     if (stageId) fetchGroups();
@@ -139,7 +138,7 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
   const fetchStandings = useCallback(async () => {
     if (!stageId) return;
     try {
-      const res = await fetch(`/api/admin/stages/${stageId}/standings`);
+      const res = await adminFetch(`/api/admin/stages/${stageId}/standings`);
       if (!res.ok) return;
       const json = await res.json();
       if (json.grouped?.groups) {
@@ -148,7 +147,7 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
     } catch {
       // best-effort, no toast
     }
-  }, [stageId]);
+  }, [stageId, adminFetch]);
 
   useEffect(() => {
     if (stageId) fetchStandings();
@@ -284,16 +283,10 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
         assignments.push({ teamId: team.teamId, groupKey: null });
       }
 
-      const res = await fetch(`/api/admin/stages/${stageId}/groups`, {
+      await adminFetchJson(`/api/admin/stages/${stageId}/groups`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ assignments }),
       });
-
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || 'Erreur lors de la sauvegarde');
-      }
 
       addToast('Groupes sauvegardés avec succès', 'success');
     } catch (err: unknown) {
@@ -310,18 +303,13 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
     setErrorMsg(null);
 
     try {
-      const res = await fetch(`/api/admin/stages/${stageId}/groups`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ numGroups, method: distMethod }),
-      });
-
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || 'Erreur lors de la distribution');
-      }
-
-      const json = await res.json();
+      const json = await adminFetchJson<GroupsApiResponse>(
+        `/api/admin/stages/${stageId}/groups`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ numGroups, method: distMethod }),
+        }
+      );
       setGroups(json.groups);
       setUnassigned(json.unassigned || []);
       addToast(`Equipes distribuées en ${numGroups} poule(s)`, 'success');

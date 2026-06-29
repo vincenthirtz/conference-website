@@ -6,6 +6,7 @@ import { supabaseClient } from '@/utils/supabase';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import ConfirmDialog from '@/components/admin/ConfirmDialog';
 
 import { logger } from '../../utils/logger';
 type StaffShape = {
@@ -232,7 +233,6 @@ function AdminProfilePage({ staff }: Props) {
       setDataError((err as Error)?.message || 'Erreur lors de la suppression.');
     } finally {
       setDeleting(false);
-      setDeleteConfirm(false);
     }
   };
 
@@ -637,38 +637,15 @@ function AdminProfilePage({ staff }: Props) {
                 (droit d&apos;accès RGPD).
               </p>
 
-              {!deleteConfirm ? (
-                <button
-                  onClick={() => setDeleteConfirm(true)}
-                  className="w-full px-4 py-2.5 rounded-xl border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-300 text-sm font-medium transition-colors"
-                >
-                  Supprimer mon compte
-                </button>
-              ) : (
-                <div className="rounded-xl border border-red-500/40 bg-red-900/30 p-4 space-y-3">
-                  <p className="text-sm text-red-200">
-                    Cette action est <strong>irréversible</strong>. Toutes tes
-                    données, ton rôle staff et tes appartenances seront
-                    définitivement supprimés.
-                  </p>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={handleDeleteAccount}
-                      disabled={deleting}
-                      className="flex-1 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors"
-                    >
-                      {deleting ? 'Suppression…' : 'Confirmer la suppression'}
-                    </button>
-                    <button
-                      onClick={() => setDeleteConfirm(false)}
-                      disabled={deleting}
-                      className="px-4 py-2.5 rounded-xl border border-neutral-600 bg-neutral-700 hover:bg-neutral-600 text-sm transition-colors"
-                    >
-                      Annuler
-                    </button>
-                  </div>
-                </div>
-              )}
+              <button
+                onClick={() => {
+                  setDataError(null);
+                  setDeleteConfirm(true);
+                }}
+                className="w-full px-4 py-2.5 rounded-xl border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-300 text-sm font-medium transition-colors"
+              >
+                Supprimer mon compte
+              </button>
               <p className="text-xs text-neutral-500 mt-3">
                 Droit à l&apos;oubli RGPD — ton compte et toutes tes données
                 seront supprimés définitivement.
@@ -694,6 +671,30 @@ function AdminProfilePage({ staff }: Props) {
           </div>
         </div>
       </div>
+
+      {deleteConfirm && (
+        <ConfirmDialog
+          title="Supprimer mon compte"
+          subtitle="Droit à l’oubli RGPD"
+          variant="danger"
+          loading={deleting}
+          confirmLabel="Confirmer la suppression"
+          confirmingLabel="Suppression…"
+          cancelLabel="Annuler"
+          errorMsg={dataError}
+          onCancel={() => {
+            if (deleting) return;
+            setDeleteConfirm(false);
+            setDataError(null);
+          }}
+          onConfirm={handleDeleteAccount}
+        >
+          <p className="text-sm text-red-200">
+            Cette action est <strong>irréversible</strong>. Toutes tes données,
+            ton rôle staff et tes appartenances seront définitivement supprimés.
+          </p>
+        </ConfirmDialog>
+      )}
     </>
   );
 }

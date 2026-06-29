@@ -6,6 +6,7 @@ import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import LogoUpload from '@/components/admin/LogoUpload';
 import { useToast } from '@/components/Toast';
+import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { supabaseAdmin } from '@/utils/supabase';
 import {
   loadTeamRolesFromSupabase,
@@ -49,6 +50,7 @@ export const getServerSideProps = withStaffPage<{ teamRoles: TeamRole[] }>(
 function AdminNewTeamPage({ staff, teamRoles }: StaffProps) {
   const router = useRouter();
   const { addToast } = useToast();
+  const { mutateJson } = useIdempotentMutation();
 
   // Infos equipe
   const [name, setName] = useState('');
@@ -112,18 +114,10 @@ function AdminNewTeamPage({ staff, teamRoles }: StaffProps) {
           })),
       };
 
-      const res = await fetch('/api/admin/teams', {
+      const json = await mutateJson<CreateTeamResponse>('/api/admin/teams', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || "Impossible de creer l'equipe");
-      }
-
-      const json: CreateTeamResponse = await res.json();
       addToast('Equipe creee avec succes', 'success');
 
       if (json.team?.id) {

@@ -8,7 +8,9 @@ import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 import Breadcrumb from '@/components/admin/Breadcrumb';
+import Modal from '@/components/admin/Modal';
 import {
   TOURNAMENT_TEMPLATES,
   type TournamentTemplate,
@@ -49,6 +51,7 @@ function StagesPage(_: StaffProps) {
   const { id } = router.query;
   const tournamentId = Array.isArray(id) ? id[0] : id;
   const { mutate: mutateIdempotent } = useIdempotentMutation();
+  const { adminFetch, adminFetchJson } = useAdminFetch();
 
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -79,18 +82,13 @@ function StagesPage(_: StaffProps) {
     setErrorMsg(null);
     try {
       // Fetch stages
-      const stagesRes = await fetch(
+      const stagesJson = await adminFetchJson<{ stages?: typeof stages }>(
         `/api/admin/tournament/${tournamentId}/stages`
       );
-      if (!stagesRes.ok) {
-        const json = await stagesRes.json().catch(() => ({}));
-        throw new Error(json.error || 'Impossible de charger les phases');
-      }
-      const stagesJson = await stagesRes.json();
       setStages(stagesJson.stages || []);
 
       // Fetch tournament name
-      const tournamentRes = await fetch(
+      const tournamentRes = await adminFetch(
         `/api/admin/tournament/${tournamentId}`
       );
       if (tournamentRes.ok) {
@@ -139,16 +137,13 @@ function StagesPage(_: StaffProps) {
         id: s.id,
         order_index: s.order_index ?? 0,
       }));
-      const res = await fetch(`/api/admin/tournament/${tournamentId}/stages`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ stages: payload }),
-      });
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || "Impossible d'enregistrer l'ordre");
-      }
-      const json = await res.json();
+      const json = await adminFetchJson<{ stages?: typeof stages }>(
+        `/api/admin/tournament/${tournamentId}/stages`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({ stages: payload }),
+        }
+      );
       setStages(json.stages || []);
       setOrderChanged(false);
       setReorderMode(false);
@@ -163,7 +158,7 @@ function StagesPage(_: StaffProps) {
     setShowTemplateModal(true);
     setSelectedTemplate(null);
     try {
-      const res = await fetch('/api/admin/tournament-templates');
+      const res = await adminFetch('/api/admin/tournament-templates');
       if (res.ok) {
         const json = await res.json();
         setCustomTemplates(json.templates || []);
@@ -408,68 +403,66 @@ function StagesPage(_: StaffProps) {
       </div>
 
       {/* Template Append Modal */}
-      {showTemplateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-neutral-800 border border-neutral-700 rounded-2xl p-6 w-full max-w-lg shadow-2xl">
-            <h3 className="text-lg font-semibold mb-2">
-              Ajouter un bloc template
-            </h3>
-            <p className="text-xs text-neutral-400 mb-4">
-              Les phases du template seront ajoutées après les phases
-              existantes.
-            </p>
-
-            <div className="grid gap-2 max-h-72 overflow-y-auto pr-1 mb-4">
-              {[...TOURNAMENT_TEMPLATES, ...customTemplates].map((tpl) => (
-                <button
-                  key={tpl.id}
-                  type="button"
-                  onClick={() => setSelectedTemplate(tpl)}
-                  className={`p-3 rounded-xl border text-left transition-all ${
-                    selectedTemplate?.id === tpl.id
-                      ? 'bg-blue-600/20 border-blue-500/50 ring-1 ring-blue-500/30'
-                      : 'bg-neutral-900/50 border-neutral-700 hover:bg-neutral-800 hover:border-neutral-600'
-                  }`}
-                >
-                  <div className="font-medium text-sm">{tpl.name}</div>
-                  <div className="text-xs text-neutral-400 mt-0.5">
-                    {tpl.description}
-                  </div>
-                  <div className="flex flex-wrap gap-1.5 mt-2">
-                    {tpl.stages.map((s, i) => (
-                      <span
-                        key={i}
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-medium border ${stageTypeBadge(s.stage_type)}`}
-                      >
-                        {s.name}
-                      </span>
-                    ))}
-                  </div>
-                </button>
-              ))}
-            </div>
-
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => {
-                  setShowTemplateModal(false);
-                  setSelectedTemplate(null);
-                }}
-                className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={handleAppendTemplate}
-                disabled={!selectedTemplate || applyingTemplate}
-                className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {applyingTemplate ? 'Application...' : 'Ajouter les phases'}
-              </button>
-            </div>
-          </div>
+      <Modal
+        open={showTemplateModal}
+        onClose={() => {
+          setShowTemplateModal(false);
+          setSelectedTemplate(null);
+        }}
+        title="Ajouter un bloc template"
+        subtitle="Les phases du template seront ajoutées après les phases existantes."
+        size="lg"
+        footer={
+          <>
+            <button
+              onClick={() => {
+                setShowTemplateModal(false);
+                setSelectedTemplate(null);
+              }}
+              className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
+            >
+              Annuler
+            </button>
+            <button
+              onClick={handleAppendTemplate}
+              disabled={!selectedTemplate || applyingTemplate}
+              className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {applyingTemplate ? 'Application...' : 'Ajouter les phases'}
+            </button>
+          </>
+        }
+      >
+        <div className="grid gap-2 max-h-72 overflow-y-auto pr-1">
+          {[...TOURNAMENT_TEMPLATES, ...customTemplates].map((tpl) => (
+            <button
+              key={tpl.id}
+              type="button"
+              onClick={() => setSelectedTemplate(tpl)}
+              className={`p-3 rounded-xl border text-left transition-all ${
+                selectedTemplate?.id === tpl.id
+                  ? 'bg-blue-600/20 border-blue-500/50 ring-1 ring-blue-500/30'
+                  : 'bg-neutral-900/50 border-neutral-700 hover:bg-neutral-800 hover:border-neutral-600'
+              }`}
+            >
+              <div className="font-medium text-sm">{tpl.name}</div>
+              <div className="text-xs text-neutral-400 mt-0.5">
+                {tpl.description}
+              </div>
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {tpl.stages.map((s, i) => (
+                  <span
+                    key={i}
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-medium border ${stageTypeBadge(s.stage_type)}`}
+                  >
+                    {s.name}
+                  </span>
+                ))}
+              </div>
+            </button>
+          ))}
         </div>
-      )}
+      </Modal>
     </>
   );
 }

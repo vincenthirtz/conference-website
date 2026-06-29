@@ -4,8 +4,11 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Image from 'next/image';
 import { withStaffPage } from '@/utils/staff';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
 import Breadcrumb from '@/components/admin/Breadcrumb';
+import Modal from '@/components/admin/Modal';
 import LogoUpload from '@/components/admin/LogoUpload';
 import { supabaseAdmin } from '@/utils/supabase';
 import {
@@ -55,6 +58,9 @@ function AdminEditTeamPage({
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const { addToast } = useToast();
+  const { adminFetch, adminFetchJson } = useAdminFetch();
+  const { mutate: addMemberMutate } = useIdempotentMutation();
+  const { mutate: registerTournamentMutate } = useIdempotentMutation();
 
   const [team, setTeam] = useState<TeamRow | null>(null);
   const [members, setMembers] = useState<TeamMemberRow[]>([]);
@@ -154,11 +160,9 @@ function AdminEditTeamPage({
     setErrorMsg(null);
 
     try {
-      const res = await fetch(`/api/admin/teams/${teamId}`);
-      const json = await res.json();
-      if (!res.ok || json.error) {
-        throw new Error(json.error || "Impossible de charger l'équipe");
-      }
+      const json = await adminFetchJson<{ team: TeamRow }>(
+        `/api/admin/teams/${teamId}`
+      );
 
       const t: TeamRow = json.team;
       setTeam(t);
@@ -178,13 +182,13 @@ function AdminEditTeamPage({
     } finally {
       setLoading(false);
     }
-  }, [teamId]);
+  }, [teamId, adminFetchJson]);
 
   const fetchMembers = useCallback(async () => {
     if (!teamId) return;
     setMembersLoading(true);
     try {
-      const res = await fetch(`/api/admin/teams/${teamId}/members`);
+      const res = await adminFetch(`/api/admin/teams/${teamId}/members`);
       const json = await res.json();
       if (res.ok && !json.error) {
         setMembers(json.members || []);
@@ -194,13 +198,13 @@ function AdminEditTeamPage({
     } finally {
       setMembersLoading(false);
     }
-  }, [teamId]);
+  }, [teamId, adminFetch]);
 
   const fetchTournaments = useCallback(async () => {
     if (!teamId) return;
     setTournamentsLoading(true);
     try {
-      const res = await fetch(`/api/admin/teams/${teamId}/tournaments`);
+      const res = await adminFetch(`/api/admin/teams/${teamId}/tournaments`);
       const json = await res.json();
       if (res.ok && !json.error) {
         setRegisteredTournaments(json.registered || []);
@@ -211,7 +215,7 @@ function AdminEditTeamPage({
     } finally {
       setTournamentsLoading(false);
     }
-  }, [teamId]);
+  }, [teamId, adminFetch]);
 
   useEffect(() => {
     if (!teamId) return;
@@ -241,16 +245,13 @@ function AdminEditTeamPage({
         is_active: isActive,
       };
 
-      const res = await fetch(`/api/admin/teams/${teamId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      const json = await res.json();
-      if (!res.ok || json.error) {
-        throw new Error(json.error || 'Échec de la mise à jour');
-      }
+      const json = await adminFetchJson<{ team: TeamRow }>(
+        `/api/admin/teams/${teamId}`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify(payload),
+        }
+      );
 
       addToast('Équipe mise à jour', 'success');
       setTeam(json.team);
@@ -266,11 +267,13 @@ function AdminEditTeamPage({
     setTournamentsLoading(true);
 
     try {
-      const res = await fetch(`/api/admin/teams/${teamId}/tournaments`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tournamentId: selectedTournamentId }),
-      });
+      const res = await registerTournamentMutate(
+        `/api/admin/teams/${teamId}/tournaments`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ tournamentId: selectedTournamentId }),
+        }
+      );
 
       const json = await res.json();
       if (!res.ok || json.error) {
@@ -292,9 +295,8 @@ function AdminEditTeamPage({
 
     setTournamentsLoading(true);
     try {
-      const res = await fetch(`/api/admin/teams/${teamId}/tournaments`, {
+      const res = await adminFetch(`/api/admin/teams/${teamId}/tournaments`, {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tournamentId }),
       });
 
@@ -394,9 +396,8 @@ function AdminEditTeamPage({
     setMemberError(null);
 
     try {
-      const res = await fetch(`/api/admin/teams/${teamId}/members`, {
+      const res = await addMemberMutate(`/api/admin/teams/${teamId}/members`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: memberForm.email.trim() || undefined,
           userId: memberForm.userId.trim() || undefined,
@@ -429,9 +430,8 @@ function AdminEditTeamPage({
     setMemberError(null);
 
     try {
-      const res = await fetch(`/api/admin/teams/${teamId}/members`, {
+      await adminFetchJson(`/api/admin/teams/${teamId}/members`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           memberId: editingMember.id,
           role: memberForm.role.trim() || 'player',
@@ -439,11 +439,6 @@ function AdminEditTeamPage({
           isSubstitute: memberForm.isSubstitute,
         }),
       });
-
-      const json = await res.json();
-      if (!res.ok || json.error) {
-        throw new Error(json.error || 'Impossible de modifier le membre');
-      }
 
       setShowEditMemberModal(false);
       setEditingMember(null);
@@ -464,9 +459,8 @@ function AdminEditTeamPage({
       return;
 
     try {
-      const res = await fetch(`/api/admin/teams/${teamId}/members`, {
+      const res = await adminFetch(`/api/admin/teams/${teamId}/members`, {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ memberId: member.id }),
       });
 
@@ -490,16 +484,13 @@ function AdminEditTeamPage({
       return;
 
     try {
-      const res = await fetch(`/api/admin/teams/${teamId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ captain_id: member.user_id }),
-      });
-
-      const json = await res.json();
-      if (!res.ok || json.error) {
-        throw new Error(json.error || 'Impossible de définir le capitaine');
-      }
+      const json = await adminFetchJson<{ team: TeamRow }>(
+        `/api/admin/teams/${teamId}`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({ captain_id: member.user_id }),
+        }
+      );
 
       setTeam(json.team);
       addToast('Capitaine défini', 'success');
@@ -512,19 +503,13 @@ function AdminEditTeamPage({
     if (!teamId) return;
 
     try {
-      const res = await fetch(`/api/admin/teams/${teamId}/members`, {
+      await adminFetchJson(`/api/admin/teams/${teamId}/members`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           memberId: memberA.id,
           swapWithMemberId: memberB.id,
         }),
       });
-
-      const json = await res.json();
-      if (!res.ok || json.error) {
-        throw new Error(json.error || "Impossible d'échanger les membres");
-      }
 
       setSwapSource(null);
       addToast('Échange effectué', 'success');
@@ -549,19 +534,17 @@ function AdminEditTeamPage({
     setBulkBusy(true);
     setErrorMsg(null);
     try {
-      const res = await fetch(`/api/admin/teams/${teamId}/roster-bulk`, {
+      const json = await adminFetchJson<{
+        successCount?: number;
+        failureCount?: number;
+      }>(`/api/admin/teams/${teamId}/roster-bulk`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           operation,
           memberIds: Array.from(selectedIds),
           ...extra,
         }),
       });
-      const json = await res.json();
-      if (!res.ok || json.error) {
-        throw new Error(json.error || "Échec de l'action groupée");
-      }
       const { successCount = 0, failureCount = 0 } = json;
       addToast(
         failureCount > 0
@@ -642,15 +625,13 @@ function AdminEditTeamPage({
     setImportBusy(true);
     setErrorMsg(null);
     try {
-      const res = await fetch(`/api/admin/teams/${teamId}/roster-bulk`, {
+      const json = await adminFetchJson<{
+        successCount?: number;
+        failureCount?: number;
+      }>(`/api/admin/teams/${teamId}/roster-bulk`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ operation: 'import_battle_tags', items }),
       });
-      const json = await res.json();
-      if (!res.ok || json.error) {
-        throw new Error(json.error || "Échec de l'import");
-      }
       const { successCount = 0, failureCount = 0 } = json;
       addToast(
         failureCount > 0
@@ -1786,84 +1767,62 @@ function AdminEditTeamPage({
       </div>
 
       {/* Add Member Modal */}
-      {showAddMemberModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4"
-          onClick={() => setShowAddMemberModal(false)}
-        >
-          <div
-            className="bg-gradient-to-b from-neutral-800 to-neutral-900 border border-neutral-700 rounded-2xl w-full max-w-2xl shadow-2xl ring-1 ring-emerald-500/10 max-h-[90vh] flex flex-col overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div className="flex items-start justify-between gap-4 px-6 py-5 border-b border-neutral-700/70 bg-neutral-900/40">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center flex-shrink-0">
-                  <svg
-                    className="w-5 h-5 text-emerald-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"
-                    />
-                  </svg>
-                </div>
-                <div className="min-w-0">
-                  <h3 className="text-lg font-semibold text-white">
-                    Ajouter un joueur
-                  </h3>
-                  <p className="text-xs text-neutral-400 mt-0.5">
-                    Recherchez un membre existant ou saisissez ses informations
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowAddMemberModal(false)}
-                className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-700 transition-colors flex-shrink-0"
-                aria-label="Fermer"
+      <Modal
+        open={showAddMemberModal}
+        onClose={() => setShowAddMemberModal(false)}
+        size="2xl"
+        backdropClassName="bg-black/70 backdrop-blur-md"
+        panelChromeClassName="bg-gradient-to-b from-neutral-800 to-neutral-900 border border-neutral-700 rounded-2xl shadow-2xl ring-1 ring-emerald-500/10 overflow-hidden"
+        panelClassName="max-h-[90vh]"
+        title={
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center flex-shrink-0">
+              <svg
+                className="w-5 h-5 text-emerald-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
               >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"
+                />
+              </svg>
             </div>
-
-            {/* Body */}
-            <div className="px-6 py-5 overflow-y-auto flex-1 space-y-5">
-              {/* Search section */}
-              <div className="relative">
-                <label className="block text-sm font-medium text-neutral-200 mb-1.5">
-                  Rechercher un joueur existant
-                </label>
-                <p className="text-xs text-neutral-500 mb-2">
-                  Par email, nom ou BattleTag
-                </p>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => handleSearchPlayers(e.target.value)}
-                    className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-neutral-900/70 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500/60 text-sm placeholder:text-neutral-500 transition-colors"
-                    placeholder="Tapez au moins 2 caractères..."
-                  />
+            <div className="min-w-0">
+              <h3 className="text-lg font-semibold text-white">
+                Ajouter un joueur
+              </h3>
+              <p className="text-xs text-neutral-400 mt-0.5">
+                Recherchez un membre existant ou saisissez ses informations
+              </p>
+            </div>
+          </div>
+        }
+        footer={
+          <>
+            <button
+              onClick={() => setShowAddMemberModal(false)}
+              className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
+            >
+              Annuler
+            </button>
+            <button
+              onClick={handleAddMember}
+              disabled={memberSaving}
+              className="px-5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg shadow-emerald-900/40"
+            >
+              {memberSaving ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Ajout...
+                </>
+              ) : (
+                <>
                   <svg
-                    className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400"
+                    className="w-4 h-4"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -1872,369 +1831,248 @@ function AdminEditTeamPage({
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       strokeWidth={2}
-                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                      d="M12 4v16m8-8H4"
                     />
                   </svg>
-                  {searchLoading && (
-                    <div className="absolute right-3.5 top-1/2 -translate-y-1/2">
-                      <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-                    </div>
-                  )}
-                </div>
-
-                {/* Search results dropdown */}
-                {showSearchResults && (
-                  <div className="absolute z-10 w-full mt-1.5 bg-neutral-900 border border-neutral-700 rounded-xl shadow-2xl max-h-60 overflow-y-auto ring-1 ring-black/40">
-                    {searchResults.length === 0 && !searchLoading ? (
-                      <div className="px-4 py-3 text-sm text-neutral-400 text-center">
-                        Aucun résultat trouvé
-                      </div>
-                    ) : (
-                      searchResults.map((player) => (
-                        <button
-                          key={player.id}
-                          type="button"
-                          onClick={() => selectPlayer(player)}
-                          className="w-full px-3 py-2.5 text-left hover:bg-neutral-700/70 transition-colors flex items-center gap-3 border-b border-neutral-800 last:border-b-0"
-                        >
-                          <div className="w-9 h-9 rounded-lg bg-neutral-700 flex items-center justify-center flex-shrink-0">
-                            <svg
-                              className="w-4 h-4 text-neutral-400"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                              />
-                            </svg>
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="text-sm font-medium truncate text-white">
-                              {player.battle_tag ||
-                                player.display_name ||
-                                player.email ||
-                                'Joueur'}
-                            </div>
-                            <div className="text-xs text-neutral-400 truncate">
-                              {player.email}
-                              {player.team_name && (
-                                <span className="ml-2 text-amber-400">
-                                  Équipe: {player.team_name}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </button>
-                      ))
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* OR separator */}
-              <div className="flex items-center gap-3" aria-hidden="true">
-                <div className="flex-1 h-px bg-neutral-700" />
-                <span className="text-xs font-medium uppercase tracking-wider text-neutral-500">
-                  ou saisir manuellement
-                </span>
-                <div className="flex-1 h-px bg-neutral-700" />
-              </div>
-
-              {/* Manual entry */}
-              <div className="rounded-xl bg-neutral-900/40 border border-neutral-700/60 p-4 space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-neutral-200 mb-1.5">
-                      Email utilisateur
-                    </label>
-                    <input
-                      type="email"
-                      value={memberForm.email}
-                      onChange={(e) =>
-                        setMemberForm({ ...memberForm, email: e.target.value })
-                      }
-                      className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500/60 text-sm placeholder:text-neutral-500 transition-colors"
-                      placeholder="user@email.com"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-neutral-200 mb-1.5">
-                      Ou User ID
-                    </label>
-                    <input
-                      type="text"
-                      value={memberForm.userId}
-                      onChange={(e) =>
-                        setMemberForm({ ...memberForm, userId: e.target.value })
-                      }
-                      className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500/60 text-sm font-mono placeholder:text-neutral-500 transition-colors"
-                      placeholder="UUID"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-neutral-200 mb-1.5">
-                    BattleTag <span className="text-red-400">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={memberForm.battleTag}
-                    onChange={(e) =>
-                      setMemberForm({
-                        ...memberForm,
-                        battleTag: e.target.value,
-                      })
-                    }
-                    className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500/60 text-sm placeholder:text-neutral-500 transition-colors"
-                    placeholder="Pseudo#1234"
-                  />
-                  <p className="text-xs text-neutral-500 mt-1.5">
-                    Format : Pseudo#0000
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-neutral-200 mb-1.5">
-                    Rôle dans l&apos;équipe
-                  </label>
-                  <select
-                    value={memberForm.role}
-                    onChange={(e) =>
-                      setMemberForm({ ...memberForm, role: e.target.value })
-                    }
-                    className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500/60 text-sm placeholder:text-neutral-500 transition-colors"
-                  >
-                    {teamRoles.map((r) => (
-                      <option key={r.value} value={r.value}>
-                        {r.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Status toggles */}
-              <div>
-                <label className="block text-sm font-medium text-neutral-200 mb-2">
-                  Statut
-                </label>
-                <div className="grid grid-cols-2 gap-3">
-                  <label
-                    className={`relative flex items-center gap-3 px-3 py-2.5 rounded-xl border cursor-pointer transition-all ${
-                      memberForm.setCaptain
-                        ? 'bg-amber-500/10 border-amber-500/60 ring-1 ring-amber-500/40'
-                        : 'bg-neutral-900/40 border-neutral-700 hover:border-neutral-600'
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={memberForm.setCaptain}
-                      onChange={(e) =>
-                        setMemberForm({
-                          ...memberForm,
-                          setCaptain: e.target.checked,
-                          isSubstitute: false,
-                        })
-                      }
-                      className="sr-only"
-                    />
-                    <div
-                      className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                        memberForm.setCaptain
-                          ? 'bg-amber-500/20 text-amber-300'
-                          : 'bg-neutral-800 text-neutral-500'
-                      }`}
-                    >
-                      <svg
-                        className="w-4 h-4"
-                        fill="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path d="M12 2l2.39 7.36H22l-6.18 4.49L18.21 22 12 17.27 5.79 22l2.39-8.15L2 9.36h7.61z" />
-                      </svg>
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="text-sm font-medium text-white">
-                        Capitaine
-                      </div>
-                      <div className="text-xs text-neutral-400">
-                        Chef d&apos;équipe
-                      </div>
-                    </div>
-                  </label>
-
-                  <label
-                    className={`relative flex items-center gap-3 px-3 py-2.5 rounded-xl border cursor-pointer transition-all ${
-                      memberForm.isSubstitute
-                        ? 'bg-blue-500/10 border-blue-500/60 ring-1 ring-blue-500/40'
-                        : 'bg-neutral-900/40 border-neutral-700 hover:border-neutral-600'
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={memberForm.isSubstitute}
-                      onChange={(e) =>
-                        setMemberForm({
-                          ...memberForm,
-                          isSubstitute: e.target.checked,
-                          setCaptain: false,
-                        })
-                      }
-                      className="sr-only"
-                    />
-                    <div
-                      className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                        memberForm.isSubstitute
-                          ? 'bg-blue-500/20 text-blue-300'
-                          : 'bg-neutral-800 text-neutral-500'
-                      }`}
-                    >
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
-                        />
-                      </svg>
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="text-sm font-medium text-white">
-                        Remplaçant
-                      </div>
-                      <div className="text-xs text-neutral-400">
-                        Joueur de réserve
-                      </div>
-                    </div>
-                  </label>
-                </div>
-              </div>
-
-              {memberError && (
-                <div className="rounded-lg bg-red-900/40 border border-red-500/50 px-3 py-2.5 text-sm text-red-200 flex items-start gap-2">
-                  <svg
-                    className="w-4 h-4 mt-0.5 flex-shrink-0"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                  <span>{memberError}</span>
+                  Ajouter le joueur
+                </>
+              )}
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-5">
+          {/* Search section */}
+          <div className="relative">
+            <label className="block text-sm font-medium text-neutral-200 mb-1.5">
+              Rechercher un joueur existant
+            </label>
+            <p className="text-xs text-neutral-500 mb-2">
+              Par email, nom ou BattleTag
+            </p>
+            <div className="relative">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => handleSearchPlayers(e.target.value)}
+                className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-neutral-900/70 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500/60 text-sm placeholder:text-neutral-500 transition-colors"
+                placeholder="Tapez au moins 2 caractères..."
+              />
+              <svg
+                className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </svg>
+              {searchLoading && (
+                <div className="absolute right-3.5 top-1/2 -translate-y-1/2">
+                  <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
                 </div>
               )}
             </div>
 
-            {/* Footer */}
-            <div className="flex justify-end gap-2 px-6 py-4 border-t border-neutral-700/70 bg-neutral-900/40">
-              <button
-                onClick={() => setShowAddMemberModal(false)}
-                className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={handleAddMember}
-                disabled={memberSaving}
-                className="px-5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg shadow-emerald-900/40"
-              >
-                {memberSaving ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Ajout...
-                  </>
+            {/* Search results dropdown */}
+            {showSearchResults && (
+              <div className="absolute z-10 w-full mt-1.5 bg-neutral-900 border border-neutral-700 rounded-xl shadow-2xl max-h-60 overflow-y-auto ring-1 ring-black/40">
+                {searchResults.length === 0 && !searchLoading ? (
+                  <div className="px-4 py-3 text-sm text-neutral-400 text-center">
+                    Aucun résultat trouvé
+                  </div>
                 ) : (
-                  <>
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
+                  searchResults.map((player) => (
+                    <button
+                      key={player.id}
+                      type="button"
+                      onClick={() => selectPlayer(player)}
+                      className="w-full px-3 py-2.5 text-left hover:bg-neutral-700/70 transition-colors flex items-center gap-3 border-b border-neutral-800 last:border-b-0"
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 4v16m8-8H4"
-                      />
-                    </svg>
-                    Ajouter le joueur
-                  </>
+                      <div className="w-9 h-9 rounded-lg bg-neutral-700 flex items-center justify-center flex-shrink-0">
+                        <svg
+                          className="w-4 h-4 text-neutral-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                          />
+                        </svg>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm font-medium truncate text-white">
+                          {player.battle_tag ||
+                            player.display_name ||
+                            player.email ||
+                            'Joueur'}
+                        </div>
+                        <div className="text-xs text-neutral-400 truncate">
+                          {player.email}
+                          {player.team_name && (
+                            <span className="ml-2 text-amber-400">
+                              Équipe: {player.team_name}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </button>
+                  ))
                 )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Edit Member Modal */}
-      {showEditMemberModal && editingMember && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-neutral-800 border border-neutral-700 rounded-2xl p-6 w-full max-w-md shadow-2xl">
-            <h3 className="text-lg font-semibold mb-4">Modifier le membre</h3>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm text-neutral-400 mb-1">
-                  User ID
-                </label>
-                <div className="font-mono text-xs bg-neutral-900 px-3 py-2 rounded-lg border border-neutral-700 break-all">
-                  {editingMember.user_id}
-                </div>
               </div>
+            )}
+          </div>
 
+          {/* OR separator */}
+          <div className="flex items-center gap-3" aria-hidden="true">
+            <div className="flex-1 h-px bg-neutral-700" />
+            <span className="text-xs font-medium uppercase tracking-wider text-neutral-500">
+              ou saisir manuellement
+            </span>
+            <div className="flex-1 h-px bg-neutral-700" />
+          </div>
+
+          {/* Manual entry */}
+          <div className="rounded-xl bg-neutral-900/40 border border-neutral-700/60 p-4 space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm text-neutral-400 mb-1">
-                  BattleTag
+                <label className="block text-sm font-medium text-neutral-200 mb-1.5">
+                  Email utilisateur
                 </label>
                 <input
-                  type="text"
-                  value={memberForm.battleTag}
+                  type="email"
+                  value={memberForm.email}
                   onChange={(e) =>
-                    setMemberForm({ ...memberForm, battleTag: e.target.value })
+                    setMemberForm({ ...memberForm, email: e.target.value })
                   }
-                  className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                  placeholder="Pseudo#1234"
+                  className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500/60 text-sm placeholder:text-neutral-500 transition-colors"
+                  placeholder="user@email.com"
                 />
               </div>
 
               <div>
-                <label className="block text-sm text-neutral-400 mb-1">
-                  Rôle
+                <label className="block text-sm font-medium text-neutral-200 mb-1.5">
+                  Ou User ID
                 </label>
-                <select
-                  value={memberForm.role}
+                <input
+                  type="text"
+                  value={memberForm.userId}
                   onChange={(e) =>
-                    setMemberForm({ ...memberForm, role: e.target.value })
+                    setMemberForm({ ...memberForm, userId: e.target.value })
                   }
-                  className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                >
-                  {teamRoles.map((r) => (
-                    <option key={r.value} value={r.value}>
-                      {r.label}
-                    </option>
-                  ))}
-                </select>
+                  className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500/60 text-sm font-mono placeholder:text-neutral-500 transition-colors"
+                  placeholder="UUID"
+                />
               </div>
+            </div>
 
-              <label className="flex items-center gap-2 text-sm">
+            <div>
+              <label className="block text-sm font-medium text-neutral-200 mb-1.5">
+                BattleTag <span className="text-red-400">*</span>
+              </label>
+              <input
+                type="text"
+                required
+                value={memberForm.battleTag}
+                onChange={(e) =>
+                  setMemberForm({
+                    ...memberForm,
+                    battleTag: e.target.value,
+                  })
+                }
+                className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500/60 text-sm placeholder:text-neutral-500 transition-colors"
+                placeholder="Pseudo#1234"
+              />
+              <p className="text-xs text-neutral-500 mt-1.5">
+                Format : Pseudo#0000
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-neutral-200 mb-1.5">
+                Rôle dans l&apos;équipe
+              </label>
+              <select
+                value={memberForm.role}
+                onChange={(e) =>
+                  setMemberForm({ ...memberForm, role: e.target.value })
+                }
+                className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500/60 text-sm placeholder:text-neutral-500 transition-colors"
+              >
+                {teamRoles.map((r) => (
+                  <option key={r.value} value={r.value}>
+                    {r.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Status toggles */}
+          <div>
+            <label className="block text-sm font-medium text-neutral-200 mb-2">
+              Statut
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <label
+                className={`relative flex items-center gap-3 px-3 py-2.5 rounded-xl border cursor-pointer transition-all ${
+                  memberForm.setCaptain
+                    ? 'bg-amber-500/10 border-amber-500/60 ring-1 ring-amber-500/40'
+                    : 'bg-neutral-900/40 border-neutral-700 hover:border-neutral-600'
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={memberForm.setCaptain}
+                  onChange={(e) =>
+                    setMemberForm({
+                      ...memberForm,
+                      setCaptain: e.target.checked,
+                      isSubstitute: false,
+                    })
+                  }
+                  className="sr-only"
+                />
+                <div
+                  className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                    memberForm.setCaptain
+                      ? 'bg-amber-500/20 text-amber-300'
+                      : 'bg-neutral-800 text-neutral-500'
+                  }`}
+                >
+                  <svg
+                    className="w-4 h-4"
+                    fill="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path d="M12 2l2.39 7.36H22l-6.18 4.49L18.21 22 12 17.27 5.79 22l2.39-8.15L2 9.36h7.61z" />
+                  </svg>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-medium text-white">
+                    Capitaine
+                  </div>
+                  <div className="text-xs text-neutral-400">
+                    Chef d&apos;équipe
+                  </div>
+                </div>
+              </label>
+
+              <label
+                className={`relative flex items-center gap-3 px-3 py-2.5 rounded-xl border cursor-pointer transition-all ${
+                  memberForm.isSubstitute
+                    ? 'bg-blue-500/10 border-blue-500/60 ring-1 ring-blue-500/40'
+                    : 'bg-neutral-900/40 border-neutral-700 hover:border-neutral-600'
+                }`}
+              >
                 <input
                   type="checkbox"
                   checked={memberForm.isSubstitute}
@@ -2242,213 +2080,311 @@ function AdminEditTeamPage({
                     setMemberForm({
                       ...memberForm,
                       isSubstitute: e.target.checked,
+                      setCaptain: false,
                     })
                   }
-                  className="h-4 w-4 rounded border-neutral-600 bg-neutral-700"
+                  className="sr-only"
                 />
-                <span>Remplaçant</span>
-              </label>
-
-              {memberError && (
-                <div className="rounded-lg bg-red-900/40 border border-red-500/50 px-3 py-2 text-sm text-red-200">
-                  {memberError}
+                <div
+                  className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                    memberForm.isSubstitute
+                      ? 'bg-blue-500/20 text-blue-300'
+                      : 'bg-neutral-800 text-neutral-500'
+                  }`}
+                >
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
+                    />
+                  </svg>
                 </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-medium text-white">
+                    Remplaçant
+                  </div>
+                  <div className="text-xs text-neutral-400">
+                    Joueur de réserve
+                  </div>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          {memberError && (
+            <div className="rounded-lg bg-red-900/40 border border-red-500/50 px-3 py-2.5 text-sm text-red-200 flex items-start gap-2">
+              <svg
+                className="w-4 h-4 mt-0.5 flex-shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <span>{memberError}</span>
+            </div>
+          )}
+        </div>
+      </Modal>
+
+      {/* Edit Member Modal */}
+      <Modal
+        open={Boolean(showEditMemberModal && editingMember)}
+        onClose={() => {
+          setShowEditMemberModal(false);
+          setEditingMember(null);
+        }}
+        title="Modifier le membre"
+        footer={
+          <>
+            <button
+              onClick={() => {
+                setShowEditMemberModal(false);
+                setEditingMember(null);
+              }}
+              className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
+            >
+              Annuler
+            </button>
+            <button
+              onClick={handleEditMember}
+              disabled={memberSaving}
+              className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {memberSaving && (
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               )}
+              {memberSaving ? 'Enregistrement...' : 'Enregistrer'}
+            </button>
+          </>
+        }
+      >
+        {editingMember && (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm text-neutral-400 mb-1">
+                User ID
+              </label>
+              <div className="font-mono text-xs bg-neutral-900 px-3 py-2 rounded-lg border border-neutral-700 break-all">
+                {editingMember.user_id}
+              </div>
             </div>
 
-            <div className="flex justify-end gap-2 mt-6">
+            <div>
+              <label className="block text-sm text-neutral-400 mb-1">
+                BattleTag
+              </label>
+              <input
+                type="text"
+                value={memberForm.battleTag}
+                onChange={(e) =>
+                  setMemberForm({ ...memberForm, battleTag: e.target.value })
+                }
+                className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                placeholder="Pseudo#1234"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm text-neutral-400 mb-1">
+                Rôle
+              </label>
+              <select
+                value={memberForm.role}
+                onChange={(e) =>
+                  setMemberForm({ ...memberForm, role: e.target.value })
+                }
+                className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              >
+                {teamRoles.map((r) => (
+                  <option key={r.value} value={r.value}>
+                    {r.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={memberForm.isSubstitute}
+                onChange={(e) =>
+                  setMemberForm({
+                    ...memberForm,
+                    isSubstitute: e.target.checked,
+                  })
+                }
+                className="h-4 w-4 rounded border-neutral-600 bg-neutral-700"
+              />
+              <span>Remplaçant</span>
+            </label>
+
+            {memberError && (
+              <div className="rounded-lg bg-red-900/40 border border-red-500/50 px-3 py-2 text-sm text-red-200">
+                {memberError}
+              </div>
+            )}
+          </div>
+        )}
+      </Modal>
+
+      {/* Import BattleTags Modal */}
+      <Modal
+        open={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        size="2xl"
+        backdropClassName="bg-black/70 backdrop-blur-md"
+        panelChromeClassName="bg-gradient-to-b from-neutral-800 to-neutral-900 border border-neutral-700 rounded-2xl shadow-2xl overflow-hidden"
+        panelClassName="max-h-[90vh]"
+        dataTestId="import-modal"
+        title={
+          <h3 className="text-lg font-semibold text-white">
+            Importer des BattleTags
+          </h3>
+        }
+        subtitle={
+          <>
+            Une ligne par membre :{' '}
+            <code className="font-mono">identifiant,BattleTag#1234</code>
+            <br />
+            L&apos;identifiant peut être un BattleTag actuel, un User ID ou un
+            ID de membre.
+          </>
+        }
+        footer={
+          <div className="flex items-center justify-between gap-2 w-full">
+            <span className="text-xs text-neutral-400">
+              {importPreview
+                ? `${importPreview.filter((l) => l.status === 'matched').length} à appliquer`
+                : ''}
+            </span>
+            <div className="flex gap-2">
               <button
-                onClick={() => {
-                  setShowEditMemberModal(false);
-                  setEditingMember(null);
-                }}
+                onClick={() => setShowImportModal(false)}
                 className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
               >
                 Annuler
               </button>
               <button
-                onClick={handleEditMember}
-                disabled={memberSaving}
-                className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                onClick={applyImport}
+                disabled={
+                  importBusy ||
+                  !importPreview ||
+                  importPreview.filter((l) => l.status === 'matched').length ===
+                    0
+                }
+                data-testid="import-apply-btn"
+                className="px-5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
-                {memberSaving && (
+                {importBusy && (
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 )}
-                {memberSaving ? 'Enregistrement...' : 'Enregistrer'}
+                Appliquer les BattleTags
               </button>
             </div>
           </div>
-        </div>
-      )}
+        }
+      >
+        <div className="space-y-4">
+          <textarea
+            value={importText}
+            onChange={(e) => {
+              setImportText(e.target.value);
+              setImportPreview(null);
+            }}
+            data-testid="import-textarea"
+            className="w-full px-3 py-2 rounded-lg bg-neutral-900/70 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono min-h-[140px] resize-y"
+            placeholder={'Old#1234,New#5678\nuuid-du-membre,Pseudo#0001'}
+          />
 
-      {/* Import BattleTags Modal */}
-      {showImportModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4"
-          onClick={() => setShowImportModal(false)}
-        >
-          <div
-            className="bg-gradient-to-b from-neutral-800 to-neutral-900 border border-neutral-700 rounded-2xl w-full max-w-2xl shadow-2xl max-h-[90vh] flex flex-col overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-            data-testid="import-modal"
+          <button
+            onClick={buildImportPreview}
+            disabled={!importText.trim()}
+            data-testid="import-preview-btn"
+            className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors"
           >
-            <div className="flex items-start justify-between gap-4 px-6 py-5 border-b border-neutral-700/70 bg-neutral-900/40">
-              <div>
-                <h3 className="text-lg font-semibold text-white">
-                  Importer des BattleTags
-                </h3>
-                <p className="text-xs text-neutral-400 mt-0.5">
-                  Une ligne par membre :{' '}
-                  <code className="font-mono">identifiant,BattleTag#1234</code>
-                  <br />
-                  L&apos;identifiant peut être un BattleTag actuel, un User ID
-                  ou un ID de membre.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowImportModal(false)}
-                className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-700 transition-colors flex-shrink-0"
-                aria-label="Fermer"
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
-            </div>
+            Prévisualiser
+          </button>
 
-            <div className="px-6 py-5 overflow-y-auto flex-1 space-y-4">
-              <textarea
-                value={importText}
-                onChange={(e) => {
-                  setImportText(e.target.value);
-                  setImportPreview(null);
-                }}
-                data-testid="import-textarea"
-                className="w-full px-3 py-2 rounded-lg bg-neutral-900/70 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono min-h-[140px] resize-y"
-                placeholder={'Old#1234,New#5678\nuuid-du-membre,Pseudo#0001'}
-              />
-
-              <button
-                onClick={buildImportPreview}
-                disabled={!importText.trim()}
-                data-testid="import-preview-btn"
-                className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors"
-              >
-                Prévisualiser
-              </button>
-
-              {importPreview && (
-                <div
-                  className="rounded-xl border border-neutral-700 overflow-hidden"
-                  data-testid="import-preview"
-                >
-                  <table className="w-full text-sm">
-                    <thead className="bg-neutral-900/60 text-neutral-400 text-xs uppercase">
-                      <tr>
-                        <th className="text-left px-3 py-2">Identifiant</th>
-                        <th className="text-left px-3 py-2">BattleTag</th>
-                        <th className="text-left px-3 py-2">Statut</th>
+          {importPreview && (
+            <div
+              className="rounded-xl border border-neutral-700 overflow-hidden"
+              data-testid="import-preview"
+            >
+              <table className="w-full text-sm">
+                <thead className="bg-neutral-900/60 text-neutral-400 text-xs uppercase">
+                  <tr>
+                    <th className="text-left px-3 py-2">Identifiant</th>
+                    <th className="text-left px-3 py-2">BattleTag</th>
+                    <th className="text-left px-3 py-2">Statut</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {importPreview.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={3}
+                        className="px-3 py-4 text-center text-neutral-500"
+                      >
+                        Aucune ligne
+                      </td>
+                    </tr>
+                  ) : (
+                    importPreview.map((line, i) => (
+                      <tr
+                        key={i}
+                        className="border-t border-neutral-800"
+                        data-testid={`import-row-${line.status}`}
+                      >
+                        <td className="px-3 py-2 font-mono text-xs text-neutral-300 truncate max-w-[200px]">
+                          {line.memberLabel || line.key || '—'}
+                        </td>
+                        <td className="px-3 py-2 font-mono text-xs">
+                          {line.tag || '—'}
+                        </td>
+                        <td className="px-3 py-2">
+                          {line.status === 'matched' && (
+                            <span className="px-2 py-0.5 rounded-full text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                              Trouvé
+                            </span>
+                          )}
+                          {line.status === 'invalid' && (
+                            <span className="px-2 py-0.5 rounded-full text-xs bg-red-500/20 text-red-300 border border-red-500/30">
+                              Format invalide
+                            </span>
+                          )}
+                          {line.status === 'not-found' && (
+                            <span className="px-2 py-0.5 rounded-full text-xs bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                              Introuvable
+                            </span>
+                          )}
+                          {line.status === 'empty' && (
+                            <span className="px-2 py-0.5 rounded-full text-xs bg-neutral-700 text-neutral-400 border border-neutral-600">
+                              Ligne incomplète
+                            </span>
+                          )}
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {importPreview.length === 0 ? (
-                        <tr>
-                          <td
-                            colSpan={3}
-                            className="px-3 py-4 text-center text-neutral-500"
-                          >
-                            Aucune ligne
-                          </td>
-                        </tr>
-                      ) : (
-                        importPreview.map((line, i) => (
-                          <tr
-                            key={i}
-                            className="border-t border-neutral-800"
-                            data-testid={`import-row-${line.status}`}
-                          >
-                            <td className="px-3 py-2 font-mono text-xs text-neutral-300 truncate max-w-[200px]">
-                              {line.memberLabel || line.key || '—'}
-                            </td>
-                            <td className="px-3 py-2 font-mono text-xs">
-                              {line.tag || '—'}
-                            </td>
-                            <td className="px-3 py-2">
-                              {line.status === 'matched' && (
-                                <span className="px-2 py-0.5 rounded-full text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                                  Trouvé
-                                </span>
-                              )}
-                              {line.status === 'invalid' && (
-                                <span className="px-2 py-0.5 rounded-full text-xs bg-red-500/20 text-red-300 border border-red-500/30">
-                                  Format invalide
-                                </span>
-                              )}
-                              {line.status === 'not-found' && (
-                                <span className="px-2 py-0.5 rounded-full text-xs bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                                  Introuvable
-                                </span>
-                              )}
-                              {line.status === 'empty' && (
-                                <span className="px-2 py-0.5 rounded-full text-xs bg-neutral-700 text-neutral-400 border border-neutral-600">
-                                  Ligne incomplète
-                                </span>
-                              )}
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-
-            <div className="flex items-center justify-between gap-2 px-6 py-4 border-t border-neutral-700/70 bg-neutral-900/40">
-              <span className="text-xs text-neutral-400">
-                {importPreview
-                  ? `${importPreview.filter((l) => l.status === 'matched').length} à appliquer`
-                  : ''}
-              </span>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setShowImportModal(false)}
-                  className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
-                >
-                  Annuler
-                </button>
-                <button
-                  onClick={applyImport}
-                  disabled={
-                    importBusy ||
-                    !importPreview ||
-                    importPreview.filter((l) => l.status === 'matched')
-                      .length === 0
-                  }
-                  data-testid="import-apply-btn"
-                  className="px-5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                >
-                  {importBusy && (
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ))
                   )}
-                  Appliquer les BattleTags
-                </button>
-              </div>
+                </tbody>
+              </table>
             </div>
-          </div>
+          )}
         </div>
-      )}
+      </Modal>
     </>
   );
 }

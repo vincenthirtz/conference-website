@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useAdminResource } from '@/hooks/useAdminResource';
 
 type CommentRow = {
   id: string;
@@ -41,66 +43,51 @@ function formatDate(d: string | null) {
   }
 }
 
-function AdminCommentsPage({ staff }: Props) {
-  const [comments, setComments] = useState<CommentRow[]>([]);
-  const [total, setTotal] = useState<number | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+function AdminCommentsPage(_props: Props) {
   const { addToast } = useToast();
+  const { adminFetchJson } = useAdminFetch();
   const [search, setSearch] = useState('');
-  const [limit] = useState(30);
-  const [offset, setOffset] = useState(0);
   const [editing, setEditing] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<CommentRow | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [mutationError, setMutationError] = useState<string | null>(null);
 
-  const fetchComments = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const params = new URLSearchParams();
-      params.set('limit', String(limit));
-      params.set('offset', String(offset));
-      params.set('includeTotal', '1');
-      if (search.trim()) params.set('search', search.trim());
+  const {
+    data: comments,
+    total,
+    loading,
+    error: fetchError,
+    refresh,
+    offset,
+    limit,
+    setOffset,
+    nextPage,
+    prevPage,
+  } = useAdminResource<CommentRow, ApiList>('/api/admin/comments', {
+    limit: 30,
+    query: search,
+    select: (res) => res.comments || [],
+    selectTotal: (res) => res.total ?? null,
+  });
 
-      const res = await fetch(`/api/admin/comments?${params.toString()}`);
-      const json: ApiList = await res.json();
-      if (!res.ok) {
-        throw new Error((json as any)?.error || 'Erreur chargement');
-      }
-      setComments(json.comments || []);
-      setTotal(json.total ?? null);
-    } catch (err: unknown) {
-      setError((err as Error)?.message || 'Erreur chargement');
-    } finally {
-      setLoading(false);
-    }
-  }, [limit, offset, search]);
-
-  useEffect(() => {
-    fetchComments();
-  }, [fetchComments]);
+  const error = mutationError ?? fetchError;
 
   const handleDelete = async (comment: CommentRow) => {
     setDeleting(true);
-    setError(null);
+    setMutationError(null);
     try {
-      const res = await fetch('/api/admin/comments', {
+      await adminFetchJson('/api/admin/comments', {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: comment.id }),
       });
-      if (!res.ok) {
-        const json = await res.json().catch(() => null);
-        throw new Error(json?.error || 'Suppression impossible');
-      }
       setDeleteTarget(null);
       addToast('Commentaire supprimé', 'success');
-      fetchComments();
+      refresh();
     } catch (err: unknown) {
-      setError((err as Error)?.message || 'Erreur lors de la suppression');
+      setMutationError(
+        (err as Error)?.message || 'Erreur lors de la suppression'
+      );
     } finally {
       setDeleting(false);
     }
@@ -109,26 +96,23 @@ function AdminCommentsPage({ staff }: Props) {
   const handleSave = async (c: CommentRow) => {
     const newContent = editing[c.id] ?? c.content;
     setSaving(c.id);
-    setError(null);
+    setMutationError(null);
     try {
-      const res = await fetch('/api/admin/comments', {
+      await adminFetchJson('/api/admin/comments', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: c.id, content: newContent }),
       });
-      const json = await res.json();
-      if (!res.ok) {
-        throw new Error(json?.error || 'Mise à jour impossible');
-      }
       setEditing((prev) => {
         const next = { ...prev };
         delete next[c.id];
         return next;
       });
       addToast('Commentaire mis à jour', 'success');
-      fetchComments();
+      refresh();
     } catch (err: unknown) {
-      setError((err as Error)?.message || 'Erreur lors de la mise à jour');
+      setMutationError(
+        (err as Error)?.message || 'Erreur lors de la mise à jour'
+      );
     } finally {
       setSaving(null);
     }
@@ -137,7 +121,6 @@ function AdminCommentsPage({ staff }: Props) {
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setOffset(0);
-    fetchComments();
   };
 
   return (
@@ -425,7 +408,7 @@ function AdminCommentsPage({ staff }: Props) {
               <button
                 type="button"
                 disabled={offset === 0 || loading}
-                onClick={() => setOffset(Math.max(0, offset - limit))}
+                onClick={prevPage}
                 className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 <svg
@@ -454,7 +437,7 @@ function AdminCommentsPage({ staff }: Props) {
                 disabled={
                   loading || (total !== null && offset + limit >= total)
                 }
-                onClick={() => setOffset(offset + limit)}
+                onClick={nextPage}
                 className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 Suivant

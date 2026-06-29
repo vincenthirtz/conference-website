@@ -6,6 +6,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
+import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import Breadcrumb from '@/components/admin/Breadcrumb';
@@ -39,6 +40,7 @@ function AdminBracketPage(_: StaffProps) {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const { addToast } = useToast();
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
+  const { mutate: generateBracket } = useIdempotentMutation();
 
   // Vérifier s'il y a déjà des matchs bracket
   useEffect(() => {
@@ -82,19 +84,21 @@ function AdminBracketPage(_: StaffProps) {
     setErrorMsg(null);
 
     try {
-      const res = await fetch(`/api/admin/tournament/${tournamentId}/bracket`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action:
-            bracketType === 'double' ? 'generate_double_elim' : 'generate',
-          size,
-          bestOf,
-          startDate: startDate || undefined,
-          intervalMinutes,
-          ...(bracketType === 'double' ? { grandFinalReset } : {}),
-        }),
-      });
+      const res = await generateBracket(
+        `/api/admin/tournament/${tournamentId}/bracket`,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            action:
+              bracketType === 'double' ? 'generate_double_elim' : 'generate',
+            size,
+            bestOf,
+            startDate: startDate || undefined,
+            intervalMinutes,
+            ...(bracketType === 'double' ? { grandFinalReset } : {}),
+          }),
+        }
+      );
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));

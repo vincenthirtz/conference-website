@@ -8,6 +8,8 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
 import type { StaffProps } from '@/types/admin';
 
@@ -95,6 +97,8 @@ function CheckinStatusPage(_: StaffProps) {
   const { id } = router.query;
   const tournamentId = Array.isArray(id) ? id[0] : id;
   const { addToast } = useToast();
+  const { adminFetchJson } = useAdminFetch();
+  const { mutate: processCheckin } = useIdempotentMutation();
 
   const [rows, setRows] = useState<CheckinRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -107,19 +111,16 @@ function CheckinStatusPage(_: StaffProps) {
     setLoading(true);
     setErrorMsg(null);
     try {
-      const res = await fetch(`/api/admin/tournament/${tournamentId}/checkin`);
-      if (!res.ok) {
-        const j = await res.json().catch(() => ({}));
-        throw new Error(j.error || 'Erreur de chargement');
-      }
-      const json: ApiResponse = await res.json();
+      const json = await adminFetchJson<ApiResponse>(
+        `/api/admin/tournament/${tournamentId}/checkin`
+      );
       setRows(json.matches || []);
     } catch (err) {
       setErrorMsg((err as Error).message);
     } finally {
       setLoading(false);
     }
-  }, [tournamentId]);
+  }, [tournamentId, adminFetchJson]);
 
   useEffect(() => {
     fetchData();
@@ -129,9 +130,10 @@ function CheckinStatusPage(_: StaffProps) {
     if (!tournamentId) return;
     setProcessing(true);
     try {
-      const res = await fetch(`/api/admin/tournament/${tournamentId}/checkin`, {
-        method: 'POST',
-      });
+      const res = await processCheckin(
+        `/api/admin/tournament/${tournamentId}/checkin`,
+        { method: 'POST' }
+      );
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json.error || 'Échec');
       addToast(

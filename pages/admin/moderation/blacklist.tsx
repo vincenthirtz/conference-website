@@ -14,6 +14,8 @@ import Head from 'next/head';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import type { StaffProps } from '@/types/admin';
 import { useUrlFilters } from '@/utils/useUrlFilters';
 
@@ -80,6 +82,8 @@ export const getServerSideProps = withStaffPage('manager');
 function AdminBlacklistPage(_: StaffProps) {
   const { addToast } = useToast();
   const { confirm, dialog } = useConfirmDialog();
+  const { adminFetchJson } = useAdminFetch();
+  const { mutateJson: createMutateJson } = useIdempotentMutation();
   const { filters, setFilters } = useUrlFilters(FILTER_KEYS);
 
   const [entries, setEntries] = useState<BlacklistEntry[]>([]);
@@ -132,11 +136,10 @@ function AdminBlacklistPage(_: StaffProps) {
     if (searchFilter) params.set('search', searchFilter);
     if (activeFilter) params.set('active', activeFilter);
     try {
-      const res = await fetch(
-        `/api/admin/moderation/blacklist?${params.toString()}`
-      );
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'Erreur');
+      const json = await adminFetchJson<{
+        items?: BlacklistEntry[];
+        total?: number;
+      }>(`/api/admin/moderation/blacklist?${params.toString()}`);
       setEntries(json.items || []);
       setTotal(typeof json.total === 'number' ? json.total : null);
     } catch (err) {
@@ -144,7 +147,7 @@ function AdminBlacklistPage(_: StaffProps) {
     } finally {
       setLoading(false);
     }
-  }, [searchFilter, activeFilter]);
+  }, [searchFilter, activeFilter, adminFetchJson]);
 
   useEffect(() => {
     fetchEntries();
@@ -164,11 +167,10 @@ function AdminBlacklistPage(_: StaffProps) {
       if (alertSource) params.set('source', alertSource);
 
       try {
-        const res = await fetch(
-          `/api/admin/moderation/blacklist/alerts?${params.toString()}`
-        );
-        const json = await res.json();
-        if (!res.ok) throw new Error(json.error || 'Erreur');
+        const json = await adminFetchJson<{
+          alerts?: BlacklistAlert[];
+          nextCursor?: string | null;
+        }>(`/api/admin/moderation/blacklist/alerts?${params.toString()}`);
         const page: BlacklistAlert[] = json.alerts || [];
         setAlerts((prev) => (isMore ? [...prev, ...page] : page));
         setAlertsCursor(json.nextCursor ?? null);
@@ -179,7 +181,7 @@ function AdminBlacklistPage(_: StaffProps) {
         else setAlertsLoading(false);
       }
     },
-    [alertStrength, alertSource]
+    [alertStrength, alertSource, adminFetchJson]
   );
 
   // Recharge depuis le début quand un filtre d'alerte change.
@@ -215,13 +217,10 @@ function AdminBlacklistPage(_: StaffProps) {
       if (form.reason.trim()) body.reason = form.reason.trim();
       if (form.notes.trim()) body.notes = form.notes.trim();
 
-      const res = await fetch('/api/admin/moderation/blacklist', {
+      await createMutateJson('/api/admin/moderation/blacklist', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'Erreur');
       addToast('Entrée ajoutée à la blacklist.', 'success');
       setForm({
         battle_tag: '',
@@ -241,13 +240,10 @@ function AdminBlacklistPage(_: StaffProps) {
   async function toggleActive(entry: BlacklistEntry) {
     setBusyId(entry.id);
     try {
-      const res = await fetch(`/api/admin/moderation/blacklist/${entry.id}`, {
+      await adminFetchJson(`/api/admin/moderation/blacklist/${entry.id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ active: !entry.active }),
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'Erreur');
       addToast(
         entry.active ? 'Entrée désactivée.' : 'Entrée réactivée.',
         'success'
@@ -279,16 +275,16 @@ function AdminBlacklistPage(_: StaffProps) {
   async function saveEdit(entry: BlacklistEntry) {
     setSavingEdit(true);
     try {
-      const res = await fetch(`/api/admin/moderation/blacklist/${entry.id}`, {
+      const json = await adminFetchJson<{
+        reason?: string | null;
+        notes?: string | null;
+      }>(`/api/admin/moderation/blacklist/${entry.id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           reason: editReason.trim() || null,
           notes: editNotes.trim() || null,
         }),
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'Erreur');
       addToast('Entrée mise à jour.', 'success');
       setEntries((prev) =>
         prev.map((e) =>
@@ -325,13 +321,9 @@ function AdminBlacklistPage(_: StaffProps) {
 
     setBusyId(entry.id);
     try {
-      const res = await fetch(`/api/admin/moderation/blacklist/${entry.id}`, {
+      await adminFetchJson(`/api/admin/moderation/blacklist/${entry.id}`, {
         method: 'DELETE',
       });
-      if (!res.ok && res.status !== 204) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || 'Erreur');
-      }
       addToast('Entrée supprimée.', 'success');
       setEntries((prev) => prev.filter((e) => e.id !== entry.id));
       setTotal((t) => (typeof t === 'number' ? Math.max(0, t - 1) : t));

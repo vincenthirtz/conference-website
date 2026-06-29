@@ -9,6 +9,8 @@ import LoadingSpinner from '@/components/admin/LoadingSpinner';
 import EmptyState from '@/components/admin/EmptyState';
 import type { StaffProps } from '@/types/admin';
 import { useUrlFilters } from '@/utils/useUrlFilters';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 
 type Severity = 'low' | 'medium' | 'high';
 type Category = 'dispute' | 'behavior' | 'technical' | 'other';
@@ -33,6 +35,15 @@ type Ticket = {
   discord_username: string | null;
   created_at: string;
   updated_at: string;
+};
+
+// Aggregate counts computed server-side over the WHOLE filtered set (not just
+// the current page) so the dashboard cards stay accurate beyond 50 tickets.
+type TicketCounts = {
+  total: number;
+  open: number;
+  high_severity: number;
+  resolved: number;
 };
 
 const FILTER_KEYS = ['status', 'severity', 'category', 'search'] as const;
@@ -93,12 +104,29 @@ function statusBadge(status: Status): string {
 
 export const getServerSideProps = withStaffPage('manager');
 
+type TicketsResponse = {
+  tickets?: Ticket[];
+  total?: number;
+  counts?: {
+    total?: number | string;
+    open?: number | string;
+    high_severity?: number | string;
+    resolved?: number | string;
+  };
+};
+
+type TicketUpdateResponse = { ticket: Ticket };
+
 function AdminSupportPage(_: StaffProps) {
   const { addToast } = useToast();
   const { filters, setFilters } = useUrlFilters(FILTER_KEYS);
+  const { adminFetchJson } = useAdminFetch();
+  const { mutate: blacklistMutate, regenerate: regenerateBlacklistKey } =
+    useIdempotentMutation({ autoRegenerateOnSuccess: false });
 
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [total, setTotal] = useState<number | null>(null);
+  const [counts, setCounts] = useState<TicketCounts | null>(null);
   const [offset, setOffset] = useState(0);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -148,19 +176,27 @@ function AdminSupportPage(_: StaffProps) {
     params.set('limit', String(PAGE_SIZE));
     params.set('offset', String(offset));
     try {
-      const res = await fetch(
+      const json = await adminFetchJson<TicketsResponse>(
         `/api/admin/support/tickets?${params.toString()}`
       );
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'Erreur');
       setTickets(json.tickets || []);
       setTotal(typeof json.total === 'number' ? json.total : null);
+      setCounts(
+        json.counts && typeof json.counts === 'object'
+          ? {
+              total: Number(json.counts.total) || 0,
+              open: Number(json.counts.open) || 0,
+              high_severity: Number(json.counts.high_severity) || 0,
+              resolved: Number(json.counts.resolved) || 0,
+            }
+          : null
+      );
     } catch (err) {
       setErrorMsg((err as Error).message);
     } finally {
       setLoading(false);
     }
-  }, [status, severity, category, search, offset]);
+  }, [status, severity, category, search, offset, adminFetchJson]);
 
   useEffect(() => {
     fetchTickets();
@@ -214,11 +250,20 @@ function AdminSupportPage(_: StaffProps) {
             body.display_name = value;
           }
           try {
-            const res = await fetch('/api/admin/moderation/blacklist', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(body),
-            });
+            // One idempotency key per pseudo so a transparent network retry
+            // can't double-insert the same blacklist entry.
+            const idempotencyKey = regenerateBlacklistKey();
+            const res = await blacklistMutate(
+              '/api/admin/moderation/blacklist',
+              {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Idempotency-Key': idempotencyKey,
+                },
+                body: JSON.stringify(body),
+              }
+            );
             return res.ok;
           } catch {
             return false;
@@ -251,13 +296,13 @@ function AdminSupportPage(_: StaffProps) {
     try {
       const body: Record<string, unknown> = { status: newStatus };
       if (note !== undefined) body.resolution_note = note;
-      const res = await fetch(`/api/admin/support/tickets/${selected.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'Erreur');
+      const json = await adminFetchJson<TicketUpdateResponse>(
+        `/api/admin/support/tickets/${selected.id}`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify(body),
+        }
+      );
       addToast('Ticket mis à jour', 'success');
       setSelected(json.ticket);
       await fetchTickets();
@@ -268,18 +313,14 @@ function AdminSupportPage(_: StaffProps) {
     }
   }
 
+  // Cards reflect the server-computed aggregates over the FULL filtered result
+  // set (not just the current page of ≤50). Falls back to the page count while
+  // the first response is in flight or if `counts` is absent.
   const stats = {
-    total: tickets.length,
-    open: tickets.filter((t) => t.status === 'open').length,
-    high: tickets.filter(
-      (t) =>
-        t.severity === 'high' &&
-        t.status !== 'resolved' &&
-        t.status !== 'closed'
-    ).length,
-    resolved: tickets.filter(
-      (t) => t.status === 'resolved' || t.status === 'closed'
-    ).length,
+    total: counts ? counts.total : (total ?? tickets.length),
+    open: counts ? counts.open : 0,
+    high: counts ? counts.high_severity : 0,
+    resolved: counts ? counts.resolved : 0,
   };
 
   return (
@@ -391,10 +432,7 @@ function AdminSupportPage(_: StaffProps) {
           )}
 
           {loading ? (
-            <LoadingSpinner
-              className="py-20"
-              label="Chargement des tickets…"
-            />
+            <LoadingSpinner className="py-20" label="Chargement des tickets…" />
           ) : tickets.length === 0 ? (
             <EmptyState
               title="Aucun ticket à afficher"

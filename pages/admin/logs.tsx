@@ -5,6 +5,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 
 import { logger } from '../../utils/logger';
 type StaffShape = {
@@ -74,6 +75,7 @@ function shortId(id: string | null | undefined) {
 
 function AdminLogsPage({ staff }: StaffProps) {
   const router = useRouter();
+  const { adminFetch, adminFetchJson } = useAdminFetch();
 
   const [logs, setLogs] = useState<StaffLog[]>([]);
   const [total, setTotal] = useState<number | null>(null);
@@ -119,7 +121,7 @@ function AdminLogsPage({ staff }: StaffProps) {
   async function fetchTournaments() {
     try {
       setLoadingTournaments(true);
-      const res = await fetch('/api/admin/tournaments?limit=200');
+      const res = await adminFetch('/api/admin/tournaments?limit=200');
       if (!res.ok) return;
       const json: TournamentsApiResponse = await res.json();
       setTournaments(json.tournaments || []);
@@ -150,13 +152,9 @@ function AdminLogsPage({ staff }: StaffProps) {
       if (fromDate) params.set('from', fromDate);
       if (toDate) params.set('to', toDate);
 
-      const res = await fetch('/api/admin/logs?' + params.toString());
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || 'Impossible de charger les logs');
-      }
-
-      const json: LogsApiResponse = await res.json();
+      const json = await adminFetchJson<LogsApiResponse>(
+        '/api/admin/logs?' + params.toString()
+      );
       setLogs(json.logs || []);
       setTotal(typeof json.total === 'number' ? json.total : null);
     } catch (err: unknown) {

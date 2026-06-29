@@ -6,8 +6,11 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import type { MatchStatus } from '@/types/admin';
 import MatchHistoryDrawer from '@/components/admin/MatchHistoryDrawer';
+import Modal from '@/components/admin/Modal';
 
 type TeamMini = {
   id: string;
@@ -139,6 +142,8 @@ function MatchViewPage(_: StaffProps) {
   const router = useRouter();
   const { matchId } = router.query;
   const matchIdStr = Array.isArray(matchId) ? matchId[0] : matchId;
+  const { adminFetchJson } = useAdminFetch();
+  const { mutateJson: openDisputeMutate } = useIdempotentMutation();
 
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -174,13 +179,10 @@ function MatchViewPage(_: StaffProps) {
     setDisputeBusy(true);
     setDisputeMsg(null);
     try {
-      const res = await fetch(`/api/admin/matches/${matchIdStr}/dispute`, {
+      await openDisputeMutate(`/api/admin/matches/${matchIdStr}/dispute`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reason: disputeReason.trim() }),
       });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json.error || 'Erreur ouverture dispute');
       setShowOpenDispute(false);
       setDisputeReason('');
       await fetchMatch();
@@ -213,13 +215,10 @@ function MatchViewPage(_: StaffProps) {
         body.team1Score = Number(resolveTeam1Score);
         body.team2Score = Number(resolveTeam2Score);
       }
-      const res = await fetch(`/api/admin/matches/${matchIdStr}/dispute`, {
+      await adminFetchJson(`/api/admin/matches/${matchIdStr}/dispute`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json.error || 'Erreur résolution');
       setShowResolveDispute(false);
       setResolveText('');
       setResolveTeam1Score('');
@@ -241,12 +240,10 @@ function MatchViewPage(_: StaffProps) {
     setDisputeBusy(true);
     setDisputeMsg(null);
     try {
-      const res = await fetch(
+      await adminFetchJson(
         `/api/admin/matches/${matchIdStr}/dispute?resumeStatus=pending`,
         { method: 'DELETE' }
       );
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json.error || 'Erreur annulation');
       await fetchMatch();
     } catch (e: unknown) {
       setDisputeMsg((e as Error).message || 'Erreur annulation');
@@ -260,14 +257,9 @@ function MatchViewPage(_: StaffProps) {
     setErrorMsg(null);
     try {
       if (!matchIdStr) throw new Error('Match ID manquant');
-      const res = await fetch(
+      const json = await adminFetchJson<{ match: MatchRow }>(
         `/api/admin/matches/${matchIdStr}?includeGames=1`
       );
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || 'Impossible de charger le match');
-      }
-      const json = await res.json();
       setMatch(json.match as MatchRow);
     } catch (err: unknown) {
       setErrorMsg((err as Error)?.message || 'Erreur de chargement');
@@ -573,56 +565,78 @@ function MatchViewPage(_: StaffProps) {
         />
       )}
 
-      {showOpenDispute && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-neutral-900 border border-neutral-700 rounded-2xl p-6 w-full max-w-lg shadow-2xl">
-            <h3 className="text-lg font-semibold mb-1">Ouvrir une dispute</h3>
-            <p className="text-xs text-neutral-400 mb-4">
-              Le match passera en statut « disputed ». Tant qu&apos;il y est, le
-              score ne peut pas être modifié et la propagation bracket est
-              bloquée.
-            </p>
-            <label className="block text-sm mb-1 text-neutral-300">Motif</label>
-            <textarea
-              value={disputeReason}
-              onChange={(e) => setDisputeReason(e.target.value)}
-              rows={5}
-              maxLength={2000}
-              placeholder="Ex : score contesté par l'équipe X, capture d'écran fournie..."
-              className="w-full px-3 py-2 rounded bg-neutral-800 border border-neutral-700 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
-            />
-            {disputeMsg && (
-              <p className="text-sm text-red-300 mt-2">{disputeMsg}</p>
-            )}
-            <div className="flex justify-end gap-2 mt-4">
-              <button
-                onClick={() => setShowOpenDispute(false)}
-                disabled={disputeBusy}
-                className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium disabled:opacity-50"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={openDispute}
-                disabled={disputeBusy || disputeReason.trim().length === 0}
-                className="px-4 py-2 rounded-lg bg-orange-600 hover:bg-orange-500 text-sm font-medium disabled:opacity-50"
-              >
-                {disputeBusy ? 'Ouverture...' : 'Ouvrir la dispute'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Modal
+        open={showOpenDispute}
+        onClose={() => setShowOpenDispute(false)}
+        disableEscapeClose={disputeBusy}
+        disableBackdropClose={disputeBusy}
+        panelChromeClassName="bg-neutral-900 border border-neutral-700 rounded-2xl shadow-2xl"
+        size="lg"
+        title="Ouvrir une dispute"
+        subtitle="Le match passera en statut « disputed ». Tant qu'il y est, le score ne peut pas être modifié et la propagation bracket est bloquée."
+        footer={
+          <>
+            <button
+              onClick={() => setShowOpenDispute(false)}
+              disabled={disputeBusy}
+              className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium disabled:opacity-50"
+            >
+              Annuler
+            </button>
+            <button
+              onClick={openDispute}
+              disabled={disputeBusy || disputeReason.trim().length === 0}
+              className="px-4 py-2 rounded-lg bg-orange-600 hover:bg-orange-500 text-sm font-medium disabled:opacity-50"
+            >
+              {disputeBusy ? 'Ouverture...' : 'Ouvrir la dispute'}
+            </button>
+          </>
+        }
+      >
+        <label className="block text-sm mb-1 text-neutral-300">Motif</label>
+        <textarea
+          value={disputeReason}
+          onChange={(e) => setDisputeReason(e.target.value)}
+          rows={5}
+          maxLength={2000}
+          placeholder="Ex : score contesté par l'équipe X, capture d'écran fournie..."
+          className="w-full px-3 py-2 rounded bg-neutral-800 border border-neutral-700 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+        />
+        {disputeMsg && (
+          <p className="text-sm text-red-300 mt-2">{disputeMsg}</p>
+        )}
+      </Modal>
 
-      {showResolveDispute && match && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-neutral-900 border border-neutral-700 rounded-2xl p-6 w-full max-w-lg shadow-2xl">
-            <h3 className="text-lg font-semibold mb-1">Résoudre la dispute</h3>
-            <p className="text-xs text-neutral-400 mb-4">
-              Saisis la décision finale. Tu peux corriger le score si nécessaire
-              — la propagation bracket sera relancée automatiquement.
-            </p>
-
+      <Modal
+        open={Boolean(showResolveDispute && match)}
+        onClose={() => setShowResolveDispute(false)}
+        disableEscapeClose={disputeBusy}
+        disableBackdropClose={disputeBusy}
+        panelChromeClassName="bg-neutral-900 border border-neutral-700 rounded-2xl shadow-2xl"
+        size="lg"
+        title="Résoudre la dispute"
+        subtitle="Saisis la décision finale. Tu peux corriger le score si nécessaire — la propagation bracket sera relancée automatiquement."
+        footer={
+          <>
+            <button
+              onClick={() => setShowResolveDispute(false)}
+              disabled={disputeBusy}
+              className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium disabled:opacity-50"
+            >
+              Annuler
+            </button>
+            <button
+              onClick={resolveDispute}
+              disabled={disputeBusy || resolveText.trim().length === 0}
+              className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-sm font-medium disabled:opacity-50"
+            >
+              {disputeBusy ? 'Résolution...' : 'Appliquer la décision'}
+            </button>
+          </>
+        }
+      >
+        {match && (
+          <>
             <label className="block text-sm mb-1 text-neutral-300">
               Décision
             </label>
@@ -686,26 +700,9 @@ function MatchViewPage(_: StaffProps) {
             {disputeMsg && (
               <p className="text-sm text-red-300 mt-2">{disputeMsg}</p>
             )}
-
-            <div className="flex justify-end gap-2 mt-4">
-              <button
-                onClick={() => setShowResolveDispute(false)}
-                disabled={disputeBusy}
-                className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium disabled:opacity-50"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={resolveDispute}
-                disabled={disputeBusy || resolveText.trim().length === 0}
-                className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-sm font-medium disabled:opacity-50"
-              >
-                {disputeBusy ? 'Résolution...' : 'Appliquer la décision'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </Modal>
     </>
   );
 }

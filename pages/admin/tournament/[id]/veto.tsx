@@ -6,6 +6,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import type { VetoFlowStep, VetoStep, MatchVetoState } from '@/types/veto';
@@ -114,6 +115,7 @@ function AdminVetoPage({ staff }: StaffProps) {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const { addToast } = useToast();
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
+  const { adminFetch } = useAdminFetch();
   const [maps, setMaps] = useState<TournamentMapRow[]>([]);
   const [tournamentName, setTournamentName] = useState<string>('Tournoi');
 
@@ -144,7 +146,7 @@ function AdminVetoPage({ staff }: StaffProps) {
     setErrorMsg(null);
     try {
       // Fetch maps
-      const mapsRes = await fetch(`/api/tournament/${tournamentId}/maps`);
+      const mapsRes = await adminFetch(`/api/tournament/${tournamentId}/maps`);
       if (mapsRes.ok) {
         const json = await mapsRes.json();
         setMaps((json.maps || []).filter((m: TournamentMapRow) => m.enabled));
@@ -152,7 +154,7 @@ function AdminVetoPage({ staff }: StaffProps) {
       }
 
       // Fetch matches (pending or ongoing, with both teams assigned)
-      const matchesRes = await fetch(
+      const matchesRes = await adminFetch(
         `/api/admin/tournament/${tournamentId}/matches?limit=100`
       );
       if (matchesRes.ok) {
@@ -186,7 +188,7 @@ function AdminVetoPage({ staff }: StaffProps) {
 
   async function fetchVetoState(matchId: string) {
     try {
-      const res = await fetch(`/api/admin/matches/${matchId}/veto`);
+      const res = await adminFetch(`/api/admin/matches/${matchId}/veto`);
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
         throw new Error(json.error || 'Impossible de charger le veto');
@@ -226,16 +228,18 @@ function AdminVetoPage({ staff }: StaffProps) {
       }
 
       try {
-        const res = await fetch(`/api/admin/matches/${selectedMatchId}/veto`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: currentFlowStep.action,
-            team_id: teamId,
-            map_name: mapName,
-            map_type: mapType,
-          }),
-        });
+        const res = await adminFetch(
+          `/api/admin/matches/${selectedMatchId}/veto`,
+          {
+            method: 'POST',
+            body: JSON.stringify({
+              action: currentFlowStep.action,
+              team_id: teamId,
+              map_name: mapName,
+              map_type: mapType,
+            }),
+          }
+        );
 
         if (!res.ok) {
           const json = await res.json().catch(() => ({}));
@@ -271,7 +275,7 @@ function AdminVetoPage({ staff }: StaffProps) {
         setSubmitting(false);
       }
     },
-    [vetoState, selectedMatchId, addToast]
+    [vetoState, selectedMatchId, addToast, adminFetch]
   );
 
   const handleReset = useCallback(async () => {
@@ -290,9 +294,12 @@ function AdminVetoPage({ staff }: StaffProps) {
     setErrorMsg(null);
 
     try {
-      const res = await fetch(`/api/admin/matches/${selectedMatchId}/veto`, {
-        method: 'DELETE',
-      });
+      const res = await adminFetch(
+        `/api/admin/matches/${selectedMatchId}/veto`,
+        {
+          method: 'DELETE',
+        }
+      );
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
@@ -314,7 +321,7 @@ function AdminVetoPage({ staff }: StaffProps) {
     } finally {
       setSubmitting(false);
     }
-  }, [selectedMatchId, addToast, confirm]);
+  }, [selectedMatchId, addToast, confirm, adminFetch]);
 
   const handleUnlock = useCallback(async () => {
     if (!selectedMatchId || !canUnlockVeto) return;
@@ -329,20 +336,19 @@ function AdminVetoPage({ staff }: StaffProps) {
     if (!ok) return;
 
     const reason = window
-      .prompt(
-        'Raison du déverrouillage (optionnel, max 500 chars) :',
-        ''
-      )
+      .prompt('Raison du déverrouillage (optionnel, max 500 chars) :', '')
       ?.trim();
 
     setSubmitting(true);
     setErrorMsg(null);
     try {
-      const res = await fetch(`/api/admin/matches/${selectedMatchId}/veto`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ unlock: true, reason: reason || undefined }),
-      });
+      const res = await adminFetch(
+        `/api/admin/matches/${selectedMatchId}/veto`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({ unlock: true, reason: reason || undefined }),
+        }
+      );
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
         throw new Error(json.error || 'Échec du déverrouillage');
@@ -354,7 +360,7 @@ function AdminVetoPage({ staff }: StaffProps) {
     } finally {
       setSubmitting(false);
     }
-  }, [selectedMatchId, addToast, confirm, canUnlockVeto]);
+  }, [selectedMatchId, addToast, confirm, canUnlockVeto, adminFetch]);
 
   // Compute used maps in current veto
   const usedMapNames = new Set((vetoState?.steps || []).map((s) => s.map_name));

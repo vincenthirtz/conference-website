@@ -5,6 +5,8 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 
 type StaffShape = {
   id: string;
@@ -58,6 +60,8 @@ export const getServerSideProps = withStaffPage('manager');
 function AdminStageCreatePage({ staff }: StaffProps) {
   const router = useRouter();
   const { addToast } = useToast();
+  const { adminFetchJson } = useAdminFetch();
+  const { mutateJson } = useIdempotentMutation();
 
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [loadingTournaments, setLoadingTournaments] = useState(true);
@@ -104,14 +108,9 @@ function AdminStageCreatePage({ staff }: StaffProps) {
     setLoadingTournaments(true);
     setErrorMsg(null);
     try {
-      const res = await fetch('/api/admin/tournaments?limit=200');
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(
-          json.error || 'Impossible de charger la liste des tournois'
-        );
-      }
-      const json: TournamentsApiResponse = await res.json();
+      const json = await adminFetchJson<TournamentsApiResponse>(
+        '/api/admin/tournaments?limit=200'
+      );
       setTournaments(json.tournaments || []);
     } catch (err: unknown) {
       setErrorMsg(
@@ -194,21 +193,13 @@ function AdminStageCreatePage({ staff }: StaffProps) {
     try {
       // On s'aligne sur le pattern utilisé côté API:
       // POST /api/admin/tournament/[id]/stages
-      const res = await fetch(
+      const json = await mutateJson<CreateStageResponse>(
         `/api/admin/tournament/${form.tournamentId}/stages`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ stage: payload }),
         }
       );
-
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || 'Erreur lors de la création de la phase');
-      }
-
-      const json: CreateStageResponse = await res.json();
       const created = json.stage;
 
       addToast('Phase créée avec succès.', 'success');

@@ -5,6 +5,7 @@ import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
+import Modal from '@/components/admin/Modal';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { BATTLE_TAG_REGEX } from '@/utils/teams/addMember';
 
@@ -144,7 +145,7 @@ function MyTeamPage({ staff }: StaffProps) {
     if (!isStaffAdmin) return;
     setLoadingAllTeams(true);
     try {
-      const res = await fetch('/api/admin/teams?limit=500&includeTotal=0');
+      const res = await adminFetch('/api/admin/teams?limit=500&includeTotal=0');
       if (res.ok) {
         const json = await res.json();
         setAllTeams(json.teams || []);
@@ -154,7 +155,7 @@ function MyTeamPage({ staff }: StaffProps) {
     } finally {
       setLoadingAllTeams(false);
     }
-  }, [isStaffAdmin]);
+  }, [isStaffAdmin, adminFetch]);
 
   useEffect(() => {
     loadAllTeams();
@@ -548,7 +549,7 @@ function MyTeamPage({ staff }: StaffProps) {
         });
         if (!r2.ok) {
           const j = await r2.json().catch(() => ({}));
-          addToast(j?.error || "Echange partiel : verifie le roster.", 'error');
+          addToast(j?.error || 'Echange partiel : verifie le roster.', 'error');
           return;
         }
       }
@@ -743,9 +744,7 @@ function MyTeamPage({ staff }: StaffProps) {
                   <div className="text-xs text-neutral-400 truncate">
                     {m.role || 'joueur'}
                     {m.battle_tag && !isEditingTag && (
-                      <span className="text-blue-400 ml-2">
-                        {m.battle_tag}
-                      </span>
+                      <span className="text-blue-400 ml-2">{m.battle_tag}</span>
                     )}
                   </div>
                 </div>
@@ -826,29 +825,31 @@ function MyTeamPage({ staff }: StaffProps) {
                             />
                           </svg>
                         </button>
-                        {!isCaptain && data?.members && data.members.length > 1 && (
-                          <button
-                            type="button"
-                            title="Lancer un echange titulaire/remplaçant"
-                            data-testid={`start-swap-${m.id}`}
-                            onClick={() => setSwapSourceId(m.id)}
-                            className="p-1.5 rounded-lg hover:bg-neutral-700 text-neutral-400 hover:text-white transition-colors"
-                          >
-                            <svg
-                              className="w-4 h-4"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
+                        {!isCaptain &&
+                          data?.members &&
+                          data.members.length > 1 && (
+                            <button
+                              type="button"
+                              title="Lancer un echange titulaire/remplaçant"
+                              data-testid={`start-swap-${m.id}`}
+                              onClick={() => setSwapSourceId(m.id)}
+                              className="p-1.5 rounded-lg hover:bg-neutral-700 text-neutral-400 hover:text-white transition-colors"
                             >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
-                              />
-                            </svg>
-                          </button>
-                        )}
+                              <svg
+                                className="w-4 h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
+                                />
+                              </svg>
+                            </button>
+                          )}
                         {!isCaptain && m.user_id && (
                           <button
                             type="button"
@@ -1501,12 +1502,25 @@ function MyTeamPage({ staff }: StaffProps) {
       {dialog}
 
       {/* Add Member Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-neutral-800 border border-neutral-700 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
-            <div className="p-4 border-b border-neutral-700 flex items-center justify-between">
-              <h3 className="text-lg font-semibold">Ajouter un membre</h3>
+      <Modal
+        open={showAddModal}
+        onClose={() => {
+          setShowAddModal(false);
+          setSelectedPlayer(null);
+          setSearchQuery('');
+          setSearchResults([]);
+          setNewMemberBattleTag('');
+          setNewMemberRole('player');
+        }}
+        size="lg"
+        backdropClassName="bg-black/70 backdrop-blur-sm"
+        panelClassName="max-h-[90vh] overflow-hidden"
+        title="Ajouter un membre"
+        footer={
+          selectedPlayer ? (
+            <>
               <button
+                type="button"
                 onClick={() => {
                   setShowAddModal(false);
                   setSelectedPlayer(null);
@@ -1515,216 +1529,183 @@ function MyTeamPage({ staff }: StaffProps) {
                   setNewMemberBattleTag('');
                   setNewMemberRole('player');
                 }}
-                className="p-2 rounded-xl hover:bg-neutral-700 text-neutral-400 hover:text-white transition-colors"
+                className="px-4 py-2.5 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
               >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
+                Annuler
               </button>
-            </div>
+              <button
+                type="button"
+                onClick={handleAddMember}
+                disabled={addingMember || !newMemberBattleTag}
+                className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {addingMember ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Ajout...
+                  </>
+                ) : (
+                  'Ajouter'
+                )}
+              </button>
+            </>
+          ) : undefined
+        }
+      >
+        <div className="space-y-4">
+          {!selectedPlayer ? (
+            <>
+              {/* Search input */}
+              <div>
+                <label className="block text-sm text-neutral-400 mb-1">
+                  Rechercher par email ou BattleTag
+                </label>
+                <div className="relative">
+                  <svg
+                    className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                    />
+                  </svg>
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="email@example.com ou Pseudo#1234"
+                    className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    autoFocus
+                  />
+                </div>
+              </div>
 
-            <div className="p-4 space-y-4 overflow-y-auto flex-1">
-              {!selectedPlayer ? (
-                <>
-                  {/* Search input */}
-                  <div>
-                    <label className="block text-sm text-neutral-400 mb-1">
-                      Rechercher par email ou BattleTag
-                    </label>
-                    <div className="relative">
-                      <svg
-                        className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                        />
-                      </svg>
-                      <input
-                        type="text"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="email@example.com ou Pseudo#1234"
-                        className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                        autoFocus
-                      />
+              {/* Search results */}
+              <div className="space-y-2">
+                {searchLoading && (
+                  <div className="flex items-center gap-2 text-neutral-400 text-sm py-4">
+                    <div className="w-4 h-4 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
+                    Recherche...
+                  </div>
+                )}
+                {!searchLoading &&
+                  searchQuery.length >= 2 &&
+                  searchResults.length === 0 && (
+                    <div className="text-neutral-400 text-sm py-4 text-center">
+                      Aucun resultat
                     </div>
-                  </div>
-
-                  {/* Search results */}
-                  <div className="space-y-2">
-                    {searchLoading && (
-                      <div className="flex items-center gap-2 text-neutral-400 text-sm py-4">
-                        <div className="w-4 h-4 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
-                        Recherche...
-                      </div>
-                    )}
-                    {!searchLoading &&
-                      searchQuery.length >= 2 &&
-                      searchResults.length === 0 && (
-                        <div className="text-neutral-400 text-sm py-4 text-center">
-                          Aucun resultat
-                        </div>
-                      )}
-                    {searchResults.map((player) => (
-                      <button
-                        key={player.id}
-                        onClick={() => {
-                          setSelectedPlayer(player);
-                          if (player.battle_tag) {
-                            setNewMemberBattleTag(player.battle_tag);
-                          }
-                        }}
-                        disabled={player.has_team}
-                        className={`w-full text-left p-3 rounded-xl border transition-colors ${
-                          player.has_team
-                            ? 'bg-neutral-900/30 border-neutral-700 opacity-50 cursor-not-allowed'
-                            : 'bg-neutral-900/50 border-neutral-700/50 hover:border-blue-500/50 hover:bg-neutral-800/50'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <div className="font-medium text-white">
-                              {player.display_name ||
-                                player.email ||
-                                'Utilisateur'}
-                            </div>
-                            {player.email && player.display_name && (
-                              <div className="text-xs text-neutral-400">
-                                {player.email}
-                              </div>
-                            )}
-                            {player.battle_tag && (
-                              <div className="text-xs text-blue-400">
-                                {player.battle_tag}
-                              </div>
-                            )}
-                          </div>
-                          {player.has_team && (
-                            <span className="text-xs bg-red-500/20 text-red-300 px-2 py-0.5 rounded-lg border border-red-500/30">
-                              Deja en equipe
-                            </span>
-                          )}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <>
-                  {/* Selected player form */}
-                  <div className="bg-neutral-900/50 rounded-xl p-4 border border-blue-500/30">
+                  )}
+                {searchResults.map((player) => (
+                  <button
+                    key={player.id}
+                    onClick={() => {
+                      setSelectedPlayer(player);
+                      if (player.battle_tag) {
+                        setNewMemberBattleTag(player.battle_tag);
+                      }
+                    }}
+                    disabled={player.has_team}
+                    className={`w-full text-left p-3 rounded-xl border transition-colors ${
+                      player.has_team
+                        ? 'bg-neutral-900/30 border-neutral-700 opacity-50 cursor-not-allowed'
+                        : 'bg-neutral-900/50 border-neutral-700/50 hover:border-blue-500/50 hover:bg-neutral-800/50'
+                    }`}
+                  >
                     <div className="flex items-center justify-between">
                       <div>
                         <div className="font-medium text-white">
-                          {selectedPlayer.display_name ||
-                            selectedPlayer.email ||
-                            'Utilisateur'}
+                          {player.display_name || player.email || 'Utilisateur'}
                         </div>
-                        {selectedPlayer.email && (
+                        {player.email && player.display_name && (
                           <div className="text-xs text-neutral-400">
-                            {selectedPlayer.email}
+                            {player.email}
+                          </div>
+                        )}
+                        {player.battle_tag && (
+                          <div className="text-xs text-blue-400">
+                            {player.battle_tag}
                           </div>
                         )}
                       </div>
-                      <button
-                        onClick={() => setSelectedPlayer(null)}
-                        className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
-                      >
-                        Changer
-                      </button>
+                      {player.has_team && (
+                        <span className="text-xs bg-red-500/20 text-red-300 px-2 py-0.5 rounded-lg border border-red-500/30">
+                          Deja en equipe
+                        </span>
+                      )}
                     </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm text-neutral-300 mb-1">
-                      BattleTag <span className="text-red-400">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={newMemberBattleTag}
-                      onChange={(e) => setNewMemberBattleTag(e.target.value)}
-                      placeholder="Pseudo#1234"
-                      className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                    />
-                    <p className="text-xs text-neutral-500 mt-1">
-                      Format: Pseudo#0000 (2+ caracteres + # + 3-6 chiffres)
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm text-neutral-300 mb-1">
-                      Role
-                    </label>
-                    <select
-                      value={newMemberRole}
-                      onChange={(e) => setNewMemberRole(e.target.value)}
-                      className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                    >
-                      <option value="player">Joueur</option>
-                      <option value="tank">Tank</option>
-                      <option value="dps">DPS</option>
-                      <option value="support">Support</option>
-                      <option value="flex">Flex</option>
-                      <option value="coach">Coach</option>
-                      <option value="manager">Manager</option>
-                    </select>
-                  </div>
-                </>
-              )}
-            </div>
-
-            {selectedPlayer && (
-              <div className="p-4 border-t border-neutral-700 flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowAddModal(false);
-                    setSelectedPlayer(null);
-                    setSearchQuery('');
-                    setSearchResults([]);
-                    setNewMemberBattleTag('');
-                    setNewMemberRole('player');
-                  }}
-                  className="px-4 py-2.5 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
-                >
-                  Annuler
-                </button>
-                <button
-                  type="button"
-                  onClick={handleAddMember}
-                  disabled={addingMember || !newMemberBattleTag}
-                  className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                >
-                  {addingMember ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Ajout...
-                    </>
-                  ) : (
-                    'Ajouter'
-                  )}
-                </button>
+                  </button>
+                ))}
               </div>
-            )}
-          </div>
+            </>
+          ) : (
+            <>
+              {/* Selected player form */}
+              <div className="bg-neutral-900/50 rounded-xl p-4 border border-blue-500/30">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-medium text-white">
+                      {selectedPlayer.display_name ||
+                        selectedPlayer.email ||
+                        'Utilisateur'}
+                    </div>
+                    {selectedPlayer.email && (
+                      <div className="text-xs text-neutral-400">
+                        {selectedPlayer.email}
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => setSelectedPlayer(null)}
+                    className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
+                  >
+                    Changer
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm text-neutral-300 mb-1">
+                  BattleTag <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={newMemberBattleTag}
+                  onChange={(e) => setNewMemberBattleTag(e.target.value)}
+                  placeholder="Pseudo#1234"
+                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                />
+                <p className="text-xs text-neutral-500 mt-1">
+                  Format: Pseudo#0000 (2+ caracteres + # + 3-6 chiffres)
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm text-neutral-300 mb-1">
+                  Role
+                </label>
+                <select
+                  value={newMemberRole}
+                  onChange={(e) => setNewMemberRole(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                >
+                  <option value="player">Joueur</option>
+                  <option value="tank">Tank</option>
+                  <option value="dps">DPS</option>
+                  <option value="support">Support</option>
+                  <option value="flex">Flex</option>
+                  <option value="coach">Coach</option>
+                  <option value="manager">Manager</option>
+                </select>
+              </div>
+            </>
+          )}
         </div>
-      )}
+      </Modal>
     </>
   );
 }

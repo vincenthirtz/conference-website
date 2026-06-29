@@ -6,6 +6,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
@@ -139,6 +140,7 @@ function AdminSwissStagePage({ staff }: StaffProps) {
   const router = useRouter();
   const { stageId } = router.query;
   const { addToast } = useToast();
+  const { adminFetchJson } = useAdminFetch();
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
   const { mutate: mutateIdempotent } = useIdempotentMutation();
 
@@ -179,15 +181,9 @@ function AdminSwissStagePage({ staff }: StaffProps) {
     try {
       // Endpoint Swiss global (standings + rounds)
       // Adapte si tu as choisi un autre nom : /swiss, /standings, etc.
-      const res = await fetch(`/api/admin/stages/${stageId}/swiss`);
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(
-          json.error || 'Impossible de charger les données Swiss'
-        );
-      }
-
-      const json: SwissApiResponse = await res.json();
+      const json = await adminFetchJson<SwissApiResponse>(
+        `/api/admin/stages/${stageId}/swiss`
+      );
       setStage(json.stage);
       setTournament(json.tournament ?? null);
       setStandings(json.standings || []);

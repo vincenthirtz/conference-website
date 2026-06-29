@@ -4,6 +4,8 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
 
 import { logger } from '../../../../utils/logger';
@@ -72,6 +74,8 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
   const router = useRouter();
   const { stageId } = router.query;
   const { addToast } = useToast();
+  const { adminFetchJson } = useAdminFetch();
+  const { mutateJson: addTeamMutate } = useIdempotentMutation();
 
   const [loading, setLoading] = useState(true);
   const [loadingTeams, setLoadingTeams] = useState(false);
@@ -119,14 +123,9 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
     setErrorMsg(null);
 
     try {
-      const res = await fetch(`/api/admin/stages/${stageId}/teams`);
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(
-          json.error || 'Impossible de charger les équipes de la phase'
-        );
-      }
-      const json: StageTeamsApiResponse = await res.json();
+      const json = await adminFetchJson<StageTeamsApiResponse>(
+        `/api/admin/stages/${stageId}/teams`
+      );
       setStage(json.stage);
       setTournament(json.tournament);
       setStageTeams(json.teams || []);
@@ -153,11 +152,9 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
   async function fetchTournamentTeams(tournamentId: string) {
     setLoadingTeams(true);
     try {
-      const res = await fetch(`/api/admin/tournament/${tournamentId}/teams`);
-      if (!res.ok) {
-        throw new Error('Impossible de charger les équipes du tournoi');
-      }
-      const json: TournamentTeamsApiResponse = await res.json();
+      const json = await adminFetchJson<TournamentTeamsApiResponse>(
+        `/api/admin/tournament/${tournamentId}/teams`
+      );
       setTournamentTeams(json.teams || []);
     } catch (err) {
       logger.error('fetchTournamentTeams error', err);
@@ -185,23 +182,14 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
     const seed = addSeed.trim() !== '' ? Number(addSeed) : null;
 
     try {
-      const res = await fetch(`/api/admin/stages/${stageId}/teams`, {
+      await addTeamMutate(`/api/admin/stages/${stageId}/teams`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({
           teamId: addTeamId,
           seed,
         }),
       });
 
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || "Erreur lors de l'ajout de l'équipe");
-      }
-
-      await res.json();
       addToast('Équipe ajoutée à la phase.', 'info');
       setAddTeamId('');
       setAddSeed('');
@@ -221,18 +209,10 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
     setErrorMsg(null);
 
     try {
-      const res = await fetch(`/api/admin/stages/${stageId}/teams`, {
+      await adminFetchJson(`/api/admin/stages/${stageId}/teams`, {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({ teamId }),
       });
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || "Erreur lors du retrait de l'équipe");
-      }
-      await res.json();
       addToast('Équipe retirée de la phase.', 'info');
       fetchStageTeams();
     } catch (err: unknown) {
@@ -260,21 +240,13 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
     setErrorMsg(null);
 
     try {
-      const res = await fetch(`/api/admin/stages/${stageId}/teams`, {
+      await adminFetchJson(`/api/admin/stages/${stageId}/teams`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({
           teamId,
           seed,
         }),
       });
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || 'Erreur lors de la mise à jour du seed');
-      }
-      await res.json();
       addToast('Seed mis à jour.', 'info');
       fetchStageTeams();
     } catch (err: unknown) {
@@ -303,20 +275,13 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
     setErrorMsg(null);
 
     try {
-      const res = await fetch(`/api/admin/stages/${stageId}/teams`, {
+      const json = await adminFetchJson<{
+        results?: { success?: boolean }[];
+      }>(`/api/admin/stages/${stageId}/teams`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ seeds }),
       });
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(
-          json.error || 'Erreur lors de la mise à jour des seeds'
-        );
-      }
-      const json = await res.json();
-      const successCount =
-        json.results?.filter((r: any) => r.success).length ?? 0;
+      const successCount = json.results?.filter((r) => r.success).length ?? 0;
       addToast(
         `Seeds mis à jour pour ${successCount} équipe${successCount > 1 ? 's' : ''}.`,
         'info'
@@ -377,16 +342,10 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
     setErrorMsg(null);
 
     try {
-      const res = await fetch(`/api/admin/stages/${stageId}/teams`, {
+      await adminFetchJson(`/api/admin/stages/${stageId}/teams`, {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ teamIds: Array.from(selectedTeamIds) }),
       });
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || 'Erreur lors du retrait en masse');
-      }
-      await res.json();
       addToast(
         `${count} équipe${count > 1 ? 's' : ''} retirée${count > 1 ? 's' : ''} de la phase.`,
         'info'

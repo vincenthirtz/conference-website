@@ -10,6 +10,7 @@ import {
 import { useToast } from '@/components/Toast';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import Modal from '@/components/admin/Modal';
 
 import { logger } from '../../../utils/logger';
 type StaffShape = {
@@ -108,10 +109,7 @@ function isTargetProtected(targetRole: string | null): boolean {
   return r === 'owner' || r === 'admin';
 }
 
-function canGrantRole(
-  requesterRole: string | null,
-  role: string
-): boolean {
+function canGrantRole(requesterRole: string | null, role: string): boolean {
   if (requesterRole === 'owner') return true;
   const isStaffRole = (STAFF_ROLES as readonly string[]).includes(role);
   if (!isStaffRole) return true; // member/player : révocation toujours permise
@@ -206,10 +204,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
     // Garde UI miroir de l'API : ne pas même tenter une action qui sera
     // refusée 403 côté serveur (modifier un owner/admin, ou octroyer un rôle
     // >= au sien sans être owner).
-    if (
-      isTargetProtected(previousRole) &&
-      staff.role !== 'owner'
-    ) {
+    if (isTargetProtected(previousRole) && staff.role !== 'owner') {
       addToast(
         'Seul un owner peut modifier un compte owner ou admin.',
         'error'
@@ -845,161 +840,157 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
       </div>
 
       {/* Edit User Modal */}
-      {editingUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-neutral-800 border border-neutral-700 rounded-2xl p-6 w-full max-w-md shadow-2xl">
-            <h3 className="text-lg font-semibold mb-2">
-              Modifier l&apos;utilisateur
-            </h3>
-            <p className="text-sm text-neutral-400 mb-4">
-              {editingUser.email || editingUser.id}
-            </p>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm text-neutral-400 mb-1">
-                  Nom affiché
-                </label>
-                <input
-                  type="text"
-                  value={editDisplayName}
-                  onChange={(e) => setEditDisplayName(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                  placeholder="Nom affiché"
-                />
-              </div>
-
-              {editError && (
-                <div className="rounded-lg bg-red-900/40 border border-red-500/50 px-3 py-2 text-sm text-red-200">
-                  {editError}
-                </div>
+      <Modal
+        open={Boolean(editingUser)}
+        onClose={() => setEditingUser(null)}
+        title="Modifier l'utilisateur"
+        subtitle={editingUser?.email || editingUser?.id}
+        footer={
+          <>
+            <button
+              onClick={() => setEditingUser(null)}
+              className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
+            >
+              Annuler
+            </button>
+            <button
+              onClick={saveEditUser}
+              disabled={editSaving}
+              className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {editSaving && (
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               )}
-            </div>
-
-            <div className="flex justify-end gap-2 mt-6">
-              <button
-                onClick={() => setEditingUser(null)}
-                className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={saveEditUser}
-                disabled={editSaving}
-                className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                {editSaving && (
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                )}
-                {editSaving ? 'Enregistrement...' : 'Enregistrer'}
-              </button>
-            </div>
+              {editSaving ? 'Enregistrement...' : 'Enregistrer'}
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm text-neutral-400 mb-1">
+              Nom affiché
+            </label>
+            <input
+              type="text"
+              value={editDisplayName}
+              onChange={(e) => setEditDisplayName(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              placeholder="Nom affiché"
+            />
           </div>
+
+          {editError && (
+            <div className="rounded-lg bg-red-900/40 border border-red-500/50 px-3 py-2 text-sm text-red-200">
+              {editError}
+            </div>
+          )}
         </div>
-      )}
+      </Modal>
 
       {/* Delete Confirmation Modal */}
-      {deletingUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-neutral-800 border border-neutral-700 rounded-2xl p-6 w-full max-w-md shadow-2xl">
-            <h3 className="text-lg font-semibold mb-2 text-red-400">
-              Supprimer l&apos;utilisateur
-            </h3>
-            <p className="text-sm text-neutral-300 mb-2">
-              Êtes-vous sûr de vouloir supprimer cet utilisateur ?
-            </p>
-            <div className="bg-neutral-900/50 rounded-lg px-3 py-2 mb-4">
-              <p className="text-sm font-medium text-white">
-                {deletingUser.display_name || 'Utilisateur'}
-              </p>
-              <p className="text-xs text-neutral-400 font-mono">
-                {deletingUser.email || deletingUser.id}
-              </p>
-            </div>
-            <p className="text-xs text-red-300 mb-4">
-              Cette action est irréversible. Le compte, ses appartenances aux
-              équipes et son accès staff seront supprimés.
-            </p>
-
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => setDeletingUser(null)}
-                className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={deleteUser}
-                disabled={deleteLoading}
-                className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                {deleteLoading && (
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                )}
-                {deleteLoading ? 'Suppression...' : 'Supprimer'}
-              </button>
-            </div>
-          </div>
+      <Modal
+        open={Boolean(deletingUser)}
+        onClose={() => setDeletingUser(null)}
+        title={
+          <h3 className="text-lg font-semibold text-red-400">
+            Supprimer l&apos;utilisateur
+          </h3>
+        }
+        footer={
+          <>
+            <button
+              onClick={() => setDeletingUser(null)}
+              className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
+            >
+              Annuler
+            </button>
+            <button
+              onClick={deleteUser}
+              disabled={deleteLoading}
+              className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {deleteLoading && (
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              )}
+              {deleteLoading ? 'Suppression...' : 'Supprimer'}
+            </button>
+          </>
+        }
+      >
+        <p className="text-sm text-neutral-300 mb-2">
+          Êtes-vous sûr de vouloir supprimer cet utilisateur ?
+        </p>
+        <div className="bg-neutral-900/50 rounded-lg px-3 py-2 mb-4">
+          <p className="text-sm font-medium text-white">
+            {deletingUser?.display_name || 'Utilisateur'}
+          </p>
+          <p className="text-xs text-neutral-400 font-mono">
+            {deletingUser?.email || deletingUser?.id}
+          </p>
         </div>
-      )}
+        <p className="text-xs text-red-300">
+          Cette action est irréversible. Le compte, ses appartenances aux
+          équipes et son accès staff seront supprimés.
+        </p>
+      </Modal>
 
       {/* Battle Tag Edit Modal */}
-      {editingBattleTag && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-neutral-800 border border-neutral-700 rounded-2xl p-6 w-full max-w-md shadow-2xl">
-            <h3 className="text-lg font-semibold mb-2">
-              Modifier le BattleTag
-            </h3>
-            <p className="text-sm text-neutral-400 mb-4">
-              Équipe :{' '}
-              <span className="text-white">{editingBattleTag.teamName}</span>
-            </p>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm text-neutral-400 mb-1">
-                  BattleTag
-                </label>
-                <input
-                  type="text"
-                  value={newBattleTag}
-                  onChange={(e) => setNewBattleTag(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                  placeholder="Pseudo#1234"
-                />
-                <p className="text-xs text-neutral-500 mt-1">
-                  Format : Pseudo#0000 (alphanumérique + # + 3 à 6 chiffres)
-                </p>
-              </div>
-
-              {battleTagError && (
-                <div className="rounded-lg bg-red-900/40 border border-red-500/50 px-3 py-2 text-sm text-red-200">
-                  {battleTagError}
-                </div>
+      <Modal
+        open={Boolean(editingBattleTag)}
+        onClose={() => setEditingBattleTag(null)}
+        title="Modifier le BattleTag"
+        subtitle={
+          <>
+            Équipe :{' '}
+            <span className="text-white">{editingBattleTag?.teamName}</span>
+          </>
+        }
+        footer={
+          <>
+            <button
+              onClick={() => setEditingBattleTag(null)}
+              className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
+            >
+              Annuler
+            </button>
+            <button
+              onClick={saveBattleTag}
+              disabled={battleTagSaving}
+              className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {battleTagSaving && (
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               )}
-            </div>
-
-            <div className="flex justify-end gap-2 mt-6">
-              <button
-                onClick={() => setEditingBattleTag(null)}
-                className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={saveBattleTag}
-                disabled={battleTagSaving}
-                className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                {battleTagSaving && (
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                )}
-                {battleTagSaving ? 'Enregistrement...' : 'Enregistrer'}
-              </button>
-            </div>
+              {battleTagSaving ? 'Enregistrement...' : 'Enregistrer'}
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm text-neutral-400 mb-1">
+              BattleTag
+            </label>
+            <input
+              type="text"
+              value={newBattleTag}
+              onChange={(e) => setNewBattleTag(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              placeholder="Pseudo#1234"
+            />
+            <p className="text-xs text-neutral-500 mt-1">
+              Format : Pseudo#0000 (alphanumérique + # + 3 à 6 chiffres)
+            </p>
           </div>
+
+          {battleTagError && (
+            <div className="rounded-lg bg-red-900/40 border border-red-500/50 px-3 py-2 text-sm text-red-200">
+              {battleTagError}
+            </div>
+          )}
         </div>
-      )}
+      </Modal>
     </>
   );
 }

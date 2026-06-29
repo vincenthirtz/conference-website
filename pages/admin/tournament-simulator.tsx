@@ -5,6 +5,7 @@ import { useState, useCallback, useMemo, useRef } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { withStaffPage } from '@/utils/staff';
+import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
 import type { MatchStatus, FormatType, StageType } from '@/types/admin';
 import type { MatchForGraph } from '@/types/bracket';
@@ -78,6 +79,7 @@ type SimHistoryEntry = {
 const MAX_HISTORY = 20;
 function TournamentSimulatorPage() {
   const { addToast } = useToast();
+  const { mutate: simMutate } = useIdempotentMutation();
   const importFileRef = useRef<HTMLInputElement>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const [animating, setAnimating] = useState(false);
@@ -1009,9 +1011,8 @@ function TournamentSimulatorPage() {
       const tournamentName = `Tournoi Sim ${new Date().toLocaleDateString('fr-FR')}`;
 
       // Step 1: Create tournament
-      const tRes = await fetch('/api/admin/tournaments', {
+      const tRes = await simMutate('/api/admin/tournaments', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: tournamentName,
           format_type: config.formatType,
@@ -1035,9 +1036,8 @@ function TournamentSimulatorPage() {
       // Step 2: Register teams (only real teams with valid UUIDs)
       const realTeamIds = teams.filter((t) => !t.id.startsWith('sim-'));
       for (const t of realTeamIds) {
-        await fetch(`/api/admin/tournament/${tournamentId}/teams`, {
+        await simMutate(`/api/admin/tournament/${tournamentId}/teams`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ team_id: t.id, seed: t.seed }),
         });
       }
@@ -1045,11 +1045,10 @@ function TournamentSimulatorPage() {
       // Step 3: Create stages
       for (let sIdx = 0; sIdx < stages.length; sIdx++) {
         const simStage = stages[sIdx];
-        const stageRes = await fetch(
+        const stageRes = await simMutate(
           `/api/admin/tournament/${tournamentId}/stages`,
           {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               name: simStage.name,
               stage_type: simStage.stage_type,
@@ -1081,9 +1080,8 @@ function TournamentSimulatorPage() {
         }));
 
         if (matchPayloads.length > 0) {
-          await fetch(`/api/admin/tournament/${tournamentId}/matches`, {
+          await simMutate(`/api/admin/tournament/${tournamentId}/matches`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ matches: matchPayloads }),
           });
         }
@@ -1097,7 +1095,7 @@ function TournamentSimulatorPage() {
     } finally {
       setCreatingTournament(false);
     }
-  }, [generated, teams, stages, config]);
+  }, [generated, teams, stages, config, simMutate]);
 
   /** Build bracket graph from SimMatches using production utils.
    *  Used for graph validation and layout computation. */

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 
 import { logger } from '../../../utils/logger';
 type StaffShape = {
@@ -84,6 +85,7 @@ function formatDateTime(iso: string | null) {
 
 function AdminTeamsStatsPage({ staff }: StaffProps) {
   const router = useRouter();
+  const { adminFetch, adminFetchJson } = useAdminFetch();
 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -116,7 +118,7 @@ function AdminTeamsStatsPage({ staff }: StaffProps) {
   async function fetchTournaments() {
     try {
       setLoadingTournaments(true);
-      const res = await fetch('/api/admin/tournaments?limit=200');
+      const res = await adminFetch('/api/admin/tournaments?limit=200');
       if (!res.ok) return;
       const json: TournamentsApiResponse = await res.json();
       setTournaments(json.tournaments || []);
@@ -141,15 +143,9 @@ function AdminTeamsStatsPage({ staff }: StaffProps) {
       if (sortBy) params.set('sortBy', sortBy);
       if (sortDir) params.set('sortDir', sortDir);
 
-      const res = await fetch('/api/admin/stats/teams?' + params.toString());
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(
-          json.error || 'Impossible de charger les stats équipes'
-        );
-      }
-
-      const json: TeamStatsApiResponse = await res.json();
+      const json = await adminFetchJson<TeamStatsApiResponse>(
+        '/api/admin/stats/teams?' + params.toString()
+      );
       setStats(json.stats || []);
       setTotal(typeof json.total === 'number' ? json.total : null);
     } catch (err: unknown) {

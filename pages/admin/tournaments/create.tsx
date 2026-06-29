@@ -8,6 +8,7 @@ import {
   type TournamentTemplate,
 } from '@/config/tournament-templates';
 import { useAutoSave } from '@/utils/useAutoSave';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import DraftBanner from '@/components/admin/DraftBanner';
 import AutoSaveIndicator from '@/components/admin/AutoSaveIndicator';
@@ -59,17 +60,19 @@ export const getServerSideProps = withStaffPage('manager');
 
 function AdminTournamentCreatePage({ staff }: Props) {
   const router = useRouter();
+  const { adminFetch } = useAdminFetch();
   const { mutate: mutateIdempotent } = useIdempotentMutation();
+  const { mutate: createTournament } = useIdempotentMutation();
   const [customTemplates, setCustomTemplates] = useState<TournamentTemplate[]>(
     []
   );
 
   useEffect(() => {
-    fetch('/api/admin/tournament-templates')
+    adminFetch('/api/admin/tournament-templates')
       .then((r) => r.json())
       .then((json) => setCustomTemplates(json.templates || []))
       .catch(() => {});
-  }, []);
+  }, [adminFetch]);
 
   const [form, setForm] = useState<{
     name: string;
@@ -171,11 +174,8 @@ function AdminTournamentCreatePage({ staff }: Props) {
     };
 
     try {
-      const res = await fetch('/api/admin/tournaments', {
+      const res = await createTournament('/api/admin/tournaments', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify(payload),
       });
 

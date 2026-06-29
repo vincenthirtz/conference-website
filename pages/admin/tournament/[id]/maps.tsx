@@ -7,6 +7,9 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
+import Modal from '@/components/admin/Modal';
 import { getGame, type GameDef } from '@/config/games';
 
 type StaffShape = {
@@ -66,6 +69,9 @@ function AdminTournamentMapsPage(_: StaffProps) {
   const router = useRouter();
   const { id } = router.query;
   const tournamentId = Array.isArray(id) ? id[0] : id;
+  const { adminFetchJson } = useAdminFetch();
+  const { mutate: addMapMutate } = useIdempotentMutation();
+  const { mutate: addAllMapsMutate } = useIdempotentMutation();
 
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -106,12 +112,9 @@ function AdminTournamentMapsPage(_: StaffProps) {
     setLoading(true);
     setErrorMsg(null);
     try {
-      const res = await fetch(`/api/tournament/${tournamentId}/maps`);
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || 'Impossible de charger les maps');
-      }
-      const json: ApiResponse = await res.json();
+      const json = await adminFetchJson<ApiResponse>(
+        `/api/tournament/${tournamentId}/maps`
+      );
       setMaps(json.maps || []);
       setTournament(json.tournament ?? null);
     } catch (err: unknown) {
@@ -155,9 +158,8 @@ function AdminTournamentMapsPage(_: StaffProps) {
     setErrorMsg(null);
 
     try {
-      const res = await fetch(`/api/tournament/${tournamentId}/maps`, {
+      const res = await addMapMutate(`/api/tournament/${tournamentId}/maps`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           map_name: mapName,
           map_type: mapType,
@@ -195,15 +197,10 @@ function AdminTournamentMapsPage(_: StaffProps) {
     setErrorMsg(null);
 
     try {
-      const res = await fetch(
+      await adminFetchJson(
         `/api/tournament/${tournamentId}/maps?mapId=${mapId}`,
         { method: 'DELETE' }
       );
-
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || 'Erreur lors de la suppression');
-      }
 
       // Recharger la liste
       await fetchMaps();
@@ -226,14 +223,9 @@ function AdminTournamentMapsPage(_: StaffProps) {
     setErrorMsg(null);
 
     try {
-      const res = await fetch(`/api/tournament/${tournamentId}/maps`, {
+      await adminFetchJson(`/api/tournament/${tournamentId}/maps`, {
         method: 'DELETE',
       });
-
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || 'Erreur lors de la suppression');
-      }
 
       await fetchMaps();
     } catch (err: unknown) {
@@ -285,11 +277,10 @@ function AdminTournamentMapsPage(_: StaffProps) {
         imageUrl = await base64Promise;
       }
 
-      const res = await fetch(
+      await adminFetchJson(
         `/api/tournament/${tournamentId}/maps?mapId=${editingMap.id}`,
         {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             map_name: editMapName,
             map_type: editMapType,
@@ -297,11 +288,6 @@ function AdminTournamentMapsPage(_: StaffProps) {
           }),
         }
       );
-
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || 'Erreur lors de la mise à jour');
-      }
 
       // Fermer le modal et recharger
       setEditingMap(null);
@@ -317,9 +303,7 @@ function AdminTournamentMapsPage(_: StaffProps) {
     if (!tournamentId) return;
     if (!gameDef || !gameDef.hasMapVeto) return;
     if (
-      !confirm(
-        `Ajouter toutes les maps ${gameDef.label} manquantes au pool ?`
-      )
+      !confirm(`Ajouter toutes les maps ${gameDef.label} manquantes au pool ?`)
     )
       return;
 
@@ -357,11 +341,13 @@ function AdminTournamentMapsPage(_: StaffProps) {
         })),
       ];
 
-      const res = await fetch(`/api/tournament/${tournamentId}/maps`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ maps: allMaps }),
-      });
+      const res = await addAllMapsMutate(
+        `/api/tournament/${tournamentId}/maps`,
+        {
+          method: 'PUT',
+          body: JSON.stringify({ maps: allMaps }),
+        }
+      );
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
@@ -692,122 +678,113 @@ function AdminTournamentMapsPage(_: StaffProps) {
           )}
 
           {/* Modal d'édition */}
-          {editingMap && (
-            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-              <div className="bg-neutral-900 rounded-xl border border-white/10 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                <div className="p-6">
-                  <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-xl font-semibold">Éditer la map</h2>
-                    <button
-                      onClick={() => setEditingMap(null)}
-                      className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-sm transition-colors"
-                    >
-                      ✕
-                    </button>
-                  </div>
+          <Modal
+            open={Boolean(editingMap)}
+            onClose={() => setEditingMap(null)}
+            title={<h2 className="text-xl font-semibold">Éditer la map</h2>}
+            size="2xl"
+            backdropClassName="bg-black/50 backdrop-blur-sm"
+            panelChromeClassName="bg-neutral-900 rounded-xl border border-white/10"
+            footer={
+              <>
+                <button
+                  onClick={() => setEditingMap(null)}
+                  className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/15 text-white text-sm transition-colors"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={handleUpdateMap}
+                  disabled={updating}
+                  className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-medium text-sm transition-colors"
+                >
+                  {updating ? 'Mise à jour…' : 'Enregistrer'}
+                </button>
+              </>
+            }
+          >
+            <div className="space-y-4">
+              {/* Nom de la map */}
+              <div>
+                <label className="block text-sm text-gray-300 mb-2">
+                  Nom de la map
+                </label>
+                <input
+                  type="text"
+                  value={editMapName}
+                  onChange={(e) => setEditMapName(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white"
+                />
+              </div>
 
-                  <div className="space-y-4">
-                    {/* Nom de la map */}
-                    <div>
-                      <label className="block text-sm text-gray-300 mb-2">
-                        Nom de la map
-                      </label>
-                      <input
-                        type="text"
-                        value={editMapName}
-                        onChange={(e) => setEditMapName(e.target.value)}
-                        className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white"
-                      />
-                    </div>
+              {/* Type de map */}
+              <div>
+                <label className="block text-sm text-gray-300 mb-2">
+                  Type de map
+                </label>
+                <select
+                  value={editMapType}
+                  onChange={(e) => setEditMapType(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white"
+                >
+                  <option value="control">Contrôle</option>
+                  <option value="escort">Convoi</option>
+                  <option value="hybrid">Hybride</option>
+                  <option value="push">Push</option>
+                </select>
+              </div>
 
-                    {/* Type de map */}
-                    <div>
-                      <label className="block text-sm text-gray-300 mb-2">
-                        Type de map
-                      </label>
-                      <select
-                        value={editMapType}
-                        onChange={(e) => setEditMapType(e.target.value)}
-                        className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white"
-                      >
-                        <option value="control">Contrôle</option>
-                        <option value="escort">Convoi</option>
-                        <option value="hybrid">Hybride</option>
-                        <option value="push">Push</option>
-                      </select>
-                    </div>
-
-                    {/* Preview de l'image actuelle */}
-                    {editImagePreview && (
-                      <div>
-                        <label className="block text-sm text-gray-300 mb-2">
-                          Aperçu de l&apos;image
-                        </label>
-                        <div className="relative w-full h-48 rounded-lg overflow-hidden bg-gradient-to-b from-purple-900/20 to-transparent">
-                          <img
-                            src={editImagePreview}
-                            alt="Preview"
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Upload d'image */}
-                    <div>
-                      <label className="block text-sm text-gray-300 mb-2">
-                        Changer l&apos;image
-                      </label>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleImageFileChange}
-                        className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-purple-600 file:text-white file:cursor-pointer hover:file:bg-purple-700"
-                      />
-                      <p className="text-xs text-gray-400 mt-1">
-                        Format accepté : JPG, PNG, WebP (max 5 MB)
-                      </p>
-                    </div>
-
-                    {/* URL alternative */}
-                    <div>
-                      <label className="block text-sm text-gray-300 mb-2">
-                        Ou entrer une URL d&apos;image
-                      </label>
-                      <input
-                        type="text"
-                        value={editMapImage}
-                        onChange={(e) => {
-                          setEditMapImage(e.target.value);
-                          setEditImagePreview(e.target.value);
-                          setEditImageFile(null);
-                        }}
-                        className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white"
-                        placeholder="https://exemple.com/image.jpg"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Boutons */}
-                  <div className="mt-6 flex gap-2">
-                    <button
-                      onClick={handleUpdateMap}
-                      disabled={updating}
-                      className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-medium text-sm transition-colors"
-                    >
-                      {updating ? 'Mise à jour…' : 'Enregistrer'}
-                    </button>
-                    <button
-                      onClick={() => setEditingMap(null)}
-                      className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/15 text-white text-sm transition-colors"
-                    >
-                      Annuler
-                    </button>
+              {/* Preview de l'image actuelle */}
+              {editImagePreview && (
+                <div>
+                  <label className="block text-sm text-gray-300 mb-2">
+                    Aperçu de l&apos;image
+                  </label>
+                  <div className="relative w-full h-48 rounded-lg overflow-hidden bg-gradient-to-b from-purple-900/20 to-transparent">
+                    <img
+                      src={editImagePreview}
+                      alt="Preview"
+                      className="w-full h-full object-cover"
+                    />
                   </div>
                 </div>
+              )}
+
+              {/* Upload d'image */}
+              <div>
+                <label className="block text-sm text-gray-300 mb-2">
+                  Changer l&apos;image
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageFileChange}
+                  className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-purple-600 file:text-white file:cursor-pointer hover:file:bg-purple-700"
+                />
+                <p className="text-xs text-gray-400 mt-1">
+                  Format accepté : JPG, PNG, WebP (max 5 MB)
+                </p>
+              </div>
+
+              {/* URL alternative */}
+              <div>
+                <label className="block text-sm text-gray-300 mb-2">
+                  Ou entrer une URL d&apos;image
+                </label>
+                <input
+                  type="text"
+                  value={editMapImage}
+                  onChange={(e) => {
+                    setEditMapImage(e.target.value);
+                    setEditImagePreview(e.target.value);
+                    setEditImageFile(null);
+                  }}
+                  className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white"
+                  placeholder="https://exemple.com/image.jpg"
+                />
               </div>
             </div>
-          )}
+          </Modal>
         </div>
       </div>
     </>

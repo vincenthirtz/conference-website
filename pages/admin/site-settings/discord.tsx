@@ -9,6 +9,7 @@ import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 import {
   DISCORD_CHANNEL_TYPES,
   DISCORD_CHANNEL_META,
@@ -58,6 +59,7 @@ function DiscordGlobalConfigPage(_: StaffProps) {
   const router = useRouter();
   const { addToast } = useToast();
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
+  const { adminFetchJson } = useAdminFetch();
 
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<ApiResponse | null>(null);
@@ -70,12 +72,9 @@ function DiscordGlobalConfigPage(_: StaffProps) {
     setLoading(true);
     setErrorMsg(null);
     try {
-      const res = await fetch('/api/admin/site-settings/discord-webhooks');
-      if (!res.ok) {
-        const j = await res.json().catch(() => ({}));
-        throw new Error(j.error || 'Impossible de charger les webhooks');
-      }
-      const json: ApiResponse = await res.json();
+      const json = await adminFetchJson<ApiResponse>(
+        '/api/admin/site-settings/discord-webhooks'
+      );
       setData(json);
 
       // Hydrate les drafts depuis les globals existants
@@ -95,7 +94,7 @@ function DiscordGlobalConfigPage(_: StaffProps) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [adminFetchJson]);
 
   useEffect(() => {
     fetchData();
@@ -110,9 +109,8 @@ function DiscordGlobalConfigPage(_: StaffProps) {
 
     setSaving((s) => ({ ...s, [channelType]: true }));
     try {
-      const res = await fetch('/api/admin/site-settings/discord-webhooks', {
+      await adminFetchJson('/api/admin/site-settings/discord-webhooks', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           channelType,
           webhookUrl: draft.webhookUrl.trim(),
@@ -120,8 +118,6 @@ function DiscordGlobalConfigPage(_: StaffProps) {
           isActive: draft.isActive,
         }),
       });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json.error || 'Echec de la sauvegarde');
       addToast('Webhook global enregistre', 'success');
       await fetchData();
     } catch (err) {
@@ -135,7 +131,7 @@ function DiscordGlobalConfigPage(_: StaffProps) {
     const ok = await confirm({
       title: `Supprimer le webhook global "${DISCORD_CHANNEL_META[channelType].label}" ?`,
       subtitle:
-        'Les tournois qui n\'ont pas leur propre configuration n\'auront plus aucune notification pour ce type de channel.',
+        "Les tournois qui n'ont pas leur propre configuration n'auront plus aucune notification pour ce type de channel.",
       variant: 'danger',
       confirmLabel: 'Supprimer',
     });
@@ -143,14 +139,10 @@ function DiscordGlobalConfigPage(_: StaffProps) {
 
     setSaving((s) => ({ ...s, [channelType]: true }));
     try {
-      const res = await fetch(
+      await adminFetchJson(
         `/api/admin/site-settings/discord-webhooks?channelType=${channelType}`,
         { method: 'DELETE' }
       );
-      if (!res.ok) {
-        const j = await res.json().catch(() => ({}));
-        throw new Error(j.error || 'Echec de la suppression');
-      }
       addToast('Webhook global supprime', 'success');
       setDrafts((d) => ({
         ...d,
@@ -166,13 +158,10 @@ function DiscordGlobalConfigPage(_: StaffProps) {
 
   async function test(channelType: DiscordChannelType) {
     try {
-      const res = await fetch('/api/admin/site-settings/discord-test', {
+      await adminFetchJson('/api/admin/site-settings/discord-test', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ channelType }),
       });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json.error || 'Echec du test');
       addToast('Message de test envoye', 'success');
     } catch (err) {
       addToast((err as Error).message, 'error');
@@ -351,7 +340,7 @@ function DiscordGlobalConfigPage(_: StaffProps) {
                         title={
                           existing
                             ? undefined
-                            : 'Enregistre d\'abord la configuration pour pouvoir la tester'
+                            : "Enregistre d'abord la configuration pour pouvoir la tester"
                         }
                         className="px-4 py-2 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors disabled:opacity-50"
                       >

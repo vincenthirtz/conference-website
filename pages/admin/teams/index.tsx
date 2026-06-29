@@ -7,17 +7,16 @@ import { withStaffPage } from '@/utils/staff';
 import { supabaseAdmin } from '@/utils/supabase';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 import {
   useIdempotentMutation,
   BgSyncQueuedError,
 } from '@/hooks/useIdempotentMutation';
 import EmptyState from '@/components/admin/EmptyState';
+import Modal from '@/components/admin/Modal';
 import { SkeletonListRow } from '@/components/admin/Skeleton';
 import { useUrlFilters } from '@/utils/useUrlFilters';
-import {
-  escapePostgrestValue,
-  sanitizeSearch,
-} from '@/utils/apiHelpers';
+import { escapePostgrestValue, sanitizeSearch } from '@/utils/apiHelpers';
 import type { TeamRow } from '@/types/admin';
 
 import { logger } from '../../../utils/logger';
@@ -57,6 +56,8 @@ function AdminTeamsListPage({
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
   const { mutateJson: mutateDelete } = useIdempotentMutation();
   const { mutateJson: mutateBulk } = useIdempotentMutation();
+  const { mutate: mutateImport } = useIdempotentMutation();
+  const { adminFetch, adminFetchJson } = useAdminFetch();
   const router = useRouter();
   const { filters, setFilter, setFilters } = useUrlFilters(FILTER_KEYS);
 
@@ -80,7 +81,7 @@ function AdminTeamsListPage({
   const loadTournaments = useCallback(async () => {
     if (tournamentsLoaded) return;
     try {
-      const res = await fetch('/api/admin/tournaments?limit=200');
+      const res = await adminFetch('/api/admin/tournaments?limit=200');
       if (res.ok) {
         const json = await res.json();
         setTournamentOptions(
@@ -95,7 +96,7 @@ function AdminTeamsListPage({
     } finally {
       setTournamentsLoaded(true);
     }
-  }, [tournamentsLoaded]);
+  }, [tournamentsLoaded, adminFetch]);
 
   // Bulk selection
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -204,8 +205,7 @@ function AdminTeamsListPage({
     } else if (bulkAction === 'deactivate') {
       const ok = await confirm({
         title: `Desactiver ${selected.size} equipe(s) ?`,
-        subtitle:
-          'Elles ne pourront plus etre listees publiquement.',
+        subtitle: 'Elles ne pourront plus etre listees publiquement.',
         variant: 'warning',
         confirmLabel: 'Desactiver',
       });
@@ -272,9 +272,8 @@ function AdminTeamsListPage({
           setImporting(false);
           return;
         }
-        res = await fetch('/api/admin/teams/import-csv', {
+        res = await mutateImport('/api/admin/teams/import-csv', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             csv: csvText,
             tournamentId: importTournamentId || undefined,
@@ -285,9 +284,8 @@ function AdminTeamsListPage({
           setImporting(false);
           return;
         }
-        res = await fetch('/api/admin/teams/import-platform', {
+        res = await mutateImport('/api/admin/teams/import-platform', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             source: activeTab,
             sourceRef: platformRef,
@@ -332,7 +330,7 @@ function AdminTeamsListPage({
       ];
       const fetched = await Promise.all(
         keys.map((k) =>
-          fetch(`/api/admin/site-settings/${k}`)
+          adminFetch(`/api/admin/site-settings/${k}`)
             .then((r) => (r.ok ? r.json() : null))
             .catch(() => null)
         )
@@ -371,15 +369,10 @@ function AdminTeamsListPage({
       ];
 
       for (const entry of entries) {
-        const res = await fetch('/api/admin/site-settings', {
+        await adminFetchJson('/api/admin/site-settings', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(entry),
         });
-        if (!res.ok) {
-          const json = await res.json().catch(() => ({}));
-          throw new Error(json.error || `Échec sauvegarde ${entry.key}`);
-        }
       }
       addToast('Clés API enregistrées.', 'success');
       setShowApiKeysModal(false);
@@ -862,35 +855,73 @@ function AdminTeamsListPage({
       </div>
 
       {/* Delete Modal */}
-      {deleteTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-neutral-800 border border-neutral-700 rounded-2xl p-6 w-full max-w-md shadow-2xl">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-red-900/50 flex items-center justify-center">
-                <svg
-                  className="w-5 h-5 text-red-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                  />
-                </svg>
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold">
-                  Supprimer l&apos;équipe ?
-                </h3>
-                <p className="text-sm text-neutral-400">
-                  Cette action est irréversible
-                </p>
-              </div>
+      <Modal
+        open={Boolean(deleteTarget)}
+        onClose={() => setDeleteTarget(null)}
+        disableEscapeClose={deleting}
+        disableBackdropClose={deleting}
+        showCloseButton={false}
+        title={
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-red-900/50 flex items-center justify-center">
+              <svg
+                className="w-5 h-5 text-red-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                />
+              </svg>
             </div>
-
+            <div>
+              <h3 className="text-lg font-semibold">
+                Supprimer l&apos;équipe ?
+              </h3>
+              <p className="text-sm text-neutral-400">
+                Cette action est irréversible
+              </p>
+            </div>
+          </div>
+        }
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setDeleteTarget(null)}
+              className="px-4 py-2.5 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
+              disabled={deleting}
+            >
+              Annuler
+            </button>
+            <button
+              type="button"
+              onClick={() => deleteTarget && handleDelete(deleteTarget)}
+              disabled={deleting}
+              className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2 ${
+                deleting
+                  ? 'bg-red-800 cursor-not-allowed'
+                  : 'bg-red-600 hover:bg-red-500'
+              }`}
+            >
+              {deleting ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Suppression...
+                </>
+              ) : (
+                'Supprimer'
+              )}
+            </button>
+          </>
+        }
+      >
+        {deleteTarget && (
+          <>
             <p className="text-sm text-neutral-300 mb-4 bg-neutral-900/50 rounded-xl p-3">
               Cela désactive l&apos;équipe (suppression soft). Continuer pour{' '}
               <span className="font-semibold text-white">
@@ -900,7 +931,7 @@ function AdminTeamsListPage({
             </p>
 
             {errorMsg && (
-              <div className="mb-4 rounded-xl bg-red-900/40 border border-red-500/50 px-3 py-2 text-sm flex items-center gap-2">
+              <div className="rounded-xl bg-red-900/40 border border-red-500/50 px-3 py-2 text-sm flex items-center gap-2">
                 <svg
                   className="w-4 h-4 text-red-400 flex-shrink-0"
                   fill="currentColor"
@@ -922,39 +953,9 @@ function AdminTeamsListPage({
                 </button>
               </div>
             )}
-
-            <div className="flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setDeleteTarget(null)}
-                className="px-4 py-2.5 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
-                disabled={deleting}
-              >
-                Annuler
-              </button>
-              <button
-                type="button"
-                onClick={() => handleDelete(deleteTarget)}
-                disabled={deleting}
-                className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2 ${
-                  deleting
-                    ? 'bg-red-800 cursor-not-allowed'
-                    : 'bg-red-600 hover:bg-red-500'
-                }`}
-              >
-                {deleting ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Suppression...
-                  </>
-                ) : (
-                  'Supprimer'
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </Modal>
       {/* Import Modal (CSV + plateformes) */}
       {showImportModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
@@ -1341,58 +1342,61 @@ function AdminTeamsListPage({
   );
 }
 
-export const getServerSideProps = withStaffPage('manager', async (ctx, staffCtx) => {
-  const { query } = ctx;
-  const search = sanitizeSearch(query.search);
-  const isActive = typeof query.isActive === 'string' ? query.isActive : '';
-  const tournamentId =
-    typeof query.tournamentId === 'string' ? query.tournamentId : '';
-  const offset = Math.max(0, Number(query.offset) || 0);
+export const getServerSideProps = withStaffPage(
+  'manager',
+  async (ctx, staffCtx) => {
+    const { query } = ctx;
+    const search = sanitizeSearch(query.search);
+    const isActive = typeof query.isActive === 'string' ? query.isActive : '';
+    const tournamentId =
+      typeof query.tournamentId === 'string' ? query.tournamentId : '';
+    const offset = Math.max(0, Number(query.offset) || 0);
 
-  if (!supabaseAdmin) {
-    return { teams: [], total: null, errorMsg: 'Service indisponible' };
-  }
-
-  const { tenantId } = staffCtx;
-
-  let q = supabaseAdmin
-    .from('teams')
-    .select('*', { count: 'exact' })
-    .eq('tenant_id', tenantId)
-    .order('created_at', { ascending: false })
-    .range(offset, offset + LIMIT - 1);
-
-  if (isActive === 'true') q = q.eq('is_active', true);
-  if (isActive === 'false') q = q.eq('is_active', false);
-  if (search) {
-    const s = `%${escapePostgrestValue(search)}%`;
-    q = q.or(`name.ilike.${s},slug.ilike.${s},short_name.ilike.${s}`);
-  }
-  if (tournamentId) {
-    const { data: regs } = await supabaseAdmin
-      .from('tournament_teams')
-      .select('team_id')
-      .eq('tenant_id', tenantId)
-      .eq('tournament_id', tournamentId);
-    const teamIds = (regs || []).map((r) => r.team_id).filter(Boolean);
-    if (teamIds.length === 0) {
-      return { teams: [], total: 0, errorMsg: null };
+    if (!supabaseAdmin) {
+      return { teams: [], total: null, errorMsg: 'Service indisponible' };
     }
-    q = q.in('id', teamIds);
+
+    const { tenantId } = staffCtx;
+
+    let q = supabaseAdmin
+      .from('teams')
+      .select('*', { count: 'exact' })
+      .eq('tenant_id', tenantId)
+      .order('created_at', { ascending: false })
+      .range(offset, offset + LIMIT - 1);
+
+    if (isActive === 'true') q = q.eq('is_active', true);
+    if (isActive === 'false') q = q.eq('is_active', false);
+    if (search) {
+      const s = `%${escapePostgrestValue(search)}%`;
+      q = q.or(`name.ilike.${s},slug.ilike.${s},short_name.ilike.${s}`);
+    }
+    if (tournamentId) {
+      const { data: regs } = await supabaseAdmin
+        .from('tournament_teams')
+        .select('team_id')
+        .eq('tenant_id', tenantId)
+        .eq('tournament_id', tournamentId);
+      const teamIds = (regs || []).map((r) => r.team_id).filter(Boolean);
+      if (teamIds.length === 0) {
+        return { teams: [], total: 0, errorMsg: null };
+      }
+      q = q.in('id', teamIds);
+    }
+
+    const { data, error, count } = await q;
+
+    if (error) {
+      logger.error('admin teams SSR error:', error);
+      return { teams: [], total: null, errorMsg: 'Erreur lors du chargement' };
+    }
+
+    return {
+      teams: (data || []) as TeamRow[],
+      total: typeof count === 'number' ? count : null,
+      errorMsg: null,
+    };
   }
-
-  const { data, error, count } = await q;
-
-  if (error) {
-    logger.error('admin teams SSR error:', error);
-    return { teams: [], total: null, errorMsg: 'Erreur lors du chargement' };
-  }
-
-  return {
-    teams: (data || []) as TeamRow[],
-    total: typeof count === 'number' ? count : null,
-    errorMsg: null,
-  };
-});
+);
 
 export default AdminTeamsListPage;

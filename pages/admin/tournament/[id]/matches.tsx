@@ -9,6 +9,7 @@ import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 import Breadcrumb from '@/components/admin/Breadcrumb';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
 import type {
@@ -103,6 +104,8 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
   const router = useRouter();
   const { id } = router.query;
   const { mutate: mutateIdempotent } = useIdempotentMutation();
+  const { mutate: csvImportMutate } = useIdempotentMutation();
+  const { adminFetch, adminFetchJson } = useAdminFetch();
 
   const [loading, setLoading] = useState(true);
   const [matches, setMatches] = useState<Match[]>([]);
@@ -335,16 +338,9 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
         );
       if (search.trim()) params.set('search', search.trim());
 
-      const res = await fetch(
+      const json = await adminFetchJson<MatchesApiResponse>(
         `/api/admin/tournament/${id}/matches?` + params.toString()
       );
-
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || 'Impossible de charger les matches');
-      }
-
-      const json: MatchesApiResponse = await res.json();
       setTournament(json.tournament);
       setStages(json.stages || []);
       setMatches(json.matches || []);
@@ -452,9 +448,8 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
     setErrorMsg(null);
 
     try {
-      const res = await fetch(`/api/admin/matches/${matchId}`, {
+      await adminFetchJson(`/api/admin/matches/${matchId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           mode: 'score',
           team1Score: Number(qs1),
@@ -462,11 +457,6 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
           propagate: true,
         }),
       });
-
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || 'Erreur lors de la mise à jour du score');
-      }
 
       setQuickScoreId(null);
       fetchMatches();
@@ -540,10 +530,13 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
     setErrorMsg(null);
 
     try {
-      const res = await mutateIdempotent(`/api/admin/stages/${stageFilter}/bulk-matches`, {
-        method: 'PATCH',
-        body: JSON.stringify({ schedules }),
-      });
+      const res = await mutateIdempotent(
+        `/api/admin/stages/${stageFilter}/bulk-matches`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({ schedules }),
+        }
+      );
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
@@ -592,13 +585,16 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
     setErrorMsg(null);
 
     try {
-      const res = await mutateIdempotent(`/api/admin/stages/${stageFilter}/bulk-matches`, {
-        method: 'DELETE',
-        body: JSON.stringify({
-          matchIds: Array.from(selectedMatchIds),
-          hard,
-        }),
-      });
+      const res = await mutateIdempotent(
+        `/api/admin/stages/${stageFilter}/bulk-matches`,
+        {
+          method: 'DELETE',
+          body: JSON.stringify({
+            matchIds: Array.from(selectedMatchIds),
+            hard,
+          }),
+        }
+      );
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
@@ -646,13 +642,16 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
     setErrorMsg(null);
 
     try {
-      const res = await mutateIdempotent(`/api/admin/stages/${stageFilter}/bulk-matches`, {
-        method: 'PUT',
-        body: JSON.stringify({
-          matchIds: Array.from(selectedMatchIds),
-          fields,
-        }),
-      });
+      const res = await mutateIdempotent(
+        `/api/admin/stages/${stageFilter}/bulk-matches`,
+        {
+          method: 'PUT',
+          body: JSON.stringify({
+            matchIds: Array.from(selectedMatchIds),
+            fields,
+          }),
+        }
+      );
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
@@ -724,7 +723,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
 
     try {
       // Resolve team names to IDs
-      const teamsRes = await fetch(`/api/admin/tournament/${id}/teams`);
+      const teamsRes = await adminFetch(`/api/admin/tournament/${id}/teams`);
       if (!teamsRes.ok) throw new Error('Impossible de charger les équipes');
       const teamsJson = await teamsRes.json();
       const teams: Array<{
@@ -772,9 +771,8 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
         );
       }
 
-      const res = await fetch(`/api/admin/tournament/${id}/matches`, {
+      const res = await csvImportMutate(`/api/admin/tournament/${id}/matches`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ matches: matchPayloads }),
       });
 

@@ -10,6 +10,7 @@ import { withStaffPage } from '@/utils/staff';
 import { useUrlFilters } from '@/utils/useUrlFilters';
 import { useToast } from '@/components/Toast';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import Modal from '@/components/admin/Modal';
 
 import { logger } from '../../../utils/logger';
 
@@ -148,34 +149,37 @@ function isBattleTagFlagged(d: Demande): boolean {
   return !tag || !BATTLE_TAG_REGEX.test(tag.trim());
 }
 
-export const getServerSideProps = withStaffPage('manager', async (ctx, staffCtx) => {
-  const { query } = ctx;
-  const type = typeof query.type === 'string' ? query.type : '';
-  const statusRaw = typeof query.status === 'string' ? query.status : 'pending';
-  const tournamentId =
-    typeof query.tournamentId === 'string' ? query.tournamentId : '';
-  const searchRaw = typeof query.search === 'string' ? query.search : '';
-  const search = sanitizeSearchInput(searchRaw);
-  const from = typeof query.from === 'string' ? query.from : '';
-  const to = typeof query.to === 'string' ? query.to : '';
-  const offset = Math.max(0, Number(query.offset) || 0);
-  const orderBy =
-    query.orderBy === 'processed_at' ? 'processed_at' : 'created_at';
-  const orderDir = query.orderDir === 'asc' ? 'asc' : 'desc';
+export const getServerSideProps = withStaffPage(
+  'manager',
+  async (ctx, staffCtx) => {
+    const { query } = ctx;
+    const type = typeof query.type === 'string' ? query.type : '';
+    const statusRaw =
+      typeof query.status === 'string' ? query.status : 'pending';
+    const tournamentId =
+      typeof query.tournamentId === 'string' ? query.tournamentId : '';
+    const searchRaw = typeof query.search === 'string' ? query.search : '';
+    const search = sanitizeSearchInput(searchRaw);
+    const from = typeof query.from === 'string' ? query.from : '';
+    const to = typeof query.to === 'string' ? query.to : '';
+    const offset = Math.max(0, Number(query.offset) || 0);
+    const orderBy =
+      query.orderBy === 'processed_at' ? 'processed_at' : 'created_at';
+    const orderDir = query.orderDir === 'asc' ? 'asc' : 'desc';
 
-  if (!supabaseAdmin) {
-    return {
-      initialDemandes: [],
-      initialTotal: null,
-      tournaments: [],
-      statusCounts: EMPTY_COUNTS,
-      initialError: 'Service indisponible',
-    };
-  }
+    if (!supabaseAdmin) {
+      return {
+        initialDemandes: [],
+        initialTotal: null,
+        tournaments: [],
+        statusCounts: EMPTY_COUNTS,
+        initialError: 'Service indisponible',
+      };
+    }
 
-  const { tenantId } = staffCtx;
+    const { tenantId } = staffCtx;
 
-  const baseColumns = `
+    const baseColumns = `
     id, user_id, team_id, tournament_id, type, status,
     comment, staff_note, source, payload,
     processed_at, processed_by_staff_id,
@@ -184,153 +188,156 @@ export const getServerSideProps = withStaffPage('manager', async (ctx, staffCtx)
     tournament:tournaments!demandes_tournament_id_fkey(id, name, slug)
   `;
 
-  let q = supabaseAdmin
-    .from('demandes')
-    .select(baseColumns, { count: 'exact' })
-    .eq('tenant_id', tenantId)
-    .order(orderBy, { ascending: orderDir === 'asc' })
-    .range(offset, offset + LIMIT - 1);
-
-  if (statusRaw) q = q.eq('status', statusRaw);
-  if (type) q = q.eq('type', type);
-  if (tournamentId) q = q.eq('tournament_id', tournamentId);
-  if (from) q = q.gte('created_at', from);
-  if (to) q = q.lte('created_at', to);
-  if (search) {
-    const s = `%${search}%`;
-    q = q.or(`comment.ilike.${s},staff_note.ilike.${s},source.ilike.${s}`);
-  }
-
-  // Stats: count rows per status, applying every filter EXCEPT status,
-  // so each card shows how many match the rest of the filter set.
-  function buildStatusQuery(targetStatus: DemandeStatus) {
-    let sq = supabaseAdmin!
+    let q = supabaseAdmin
       .from('demandes')
-      .select('id', { count: 'exact', head: true })
+      .select(baseColumns, { count: 'exact' })
       .eq('tenant_id', tenantId)
-      .eq('status', targetStatus);
-    if (type) sq = sq.eq('type', type);
-    if (tournamentId) sq = sq.eq('tournament_id', tournamentId);
-    if (from) sq = sq.gte('created_at', from);
-    if (to) sq = sq.lte('created_at', to);
+      .order(orderBy, { ascending: orderDir === 'asc' })
+      .range(offset, offset + LIMIT - 1);
+
+    if (statusRaw) q = q.eq('status', statusRaw);
+    if (type) q = q.eq('type', type);
+    if (tournamentId) q = q.eq('tournament_id', tournamentId);
+    if (from) q = q.gte('created_at', from);
+    if (to) q = q.lte('created_at', to);
     if (search) {
       const s = `%${search}%`;
-      sq = sq.or(`comment.ilike.${s},staff_note.ilike.${s},source.ilike.${s}`);
+      q = q.or(`comment.ilike.${s},staff_note.ilike.${s},source.ilike.${s}`);
     }
-    return sq;
-  }
 
-  const [
-    demandesRes,
-    tournamentsRes,
-    pendingRes,
-    approvedRes,
-    rejectedRes,
-    cancelledRes,
-  ] = await Promise.all([
-    q,
-    supabaseAdmin
-      .from('tournaments')
-      .select('id, name, slug')
-      .eq('tenant_id', tenantId)
-      .order('created_at', { ascending: false })
-      .limit(200),
-    buildStatusQuery('pending'),
-    buildStatusQuery('approved'),
-    buildStatusQuery('rejected'),
-    buildStatusQuery('cancelled'),
-  ]);
+    // Stats: count rows per status, applying every filter EXCEPT status,
+    // so each card shows how many match the rest of the filter set.
+    function buildStatusQuery(targetStatus: DemandeStatus) {
+      let sq = supabaseAdmin!
+        .from('demandes')
+        .select('id', { count: 'exact', head: true })
+        .eq('tenant_id', tenantId)
+        .eq('status', targetStatus);
+      if (type) sq = sq.eq('type', type);
+      if (tournamentId) sq = sq.eq('tournament_id', tournamentId);
+      if (from) sq = sq.gte('created_at', from);
+      if (to) sq = sq.lte('created_at', to);
+      if (search) {
+        const s = `%${search}%`;
+        sq = sq.or(
+          `comment.ilike.${s},staff_note.ilike.${s},source.ilike.${s}`
+        );
+      }
+      return sq;
+    }
 
-  if (demandesRes.error) {
-    logger.error('admin demandes SSR error:', demandesRes.error);
+    const [
+      demandesRes,
+      tournamentsRes,
+      pendingRes,
+      approvedRes,
+      rejectedRes,
+      cancelledRes,
+    ] = await Promise.all([
+      q,
+      supabaseAdmin
+        .from('tournaments')
+        .select('id, name, slug')
+        .eq('tenant_id', tenantId)
+        .order('created_at', { ascending: false })
+        .limit(200),
+      buildStatusQuery('pending'),
+      buildStatusQuery('approved'),
+      buildStatusQuery('rejected'),
+      buildStatusQuery('cancelled'),
+    ]);
+
+    if (demandesRes.error) {
+      logger.error('admin demandes SSR error:', demandesRes.error);
+      return {
+        initialDemandes: [],
+        initialTotal: null,
+        tournaments: (tournamentsRes.data || []) as TournamentMini[],
+        statusCounts: EMPTY_COUNTS,
+        initialError: 'Erreur lors du chargement',
+      };
+    }
+
+    const rows = (demandesRes.data || []) as unknown as Demande[];
+
+    // Enrich user info via Supabase Auth (parallel)
+    const userIds = [
+      ...new Set(rows.map((d) => d.user_id).filter(Boolean)),
+    ] as string[];
+    const userMap = new Map<string, UserMini>();
+    await Promise.all(
+      userIds.map(async (uid) => {
+        try {
+          const { data } = await supabaseAdmin!.auth.admin.getUserById(uid);
+          if (data?.user) {
+            const meta = (data.user.user_metadata ?? {}) as Record<string, any>;
+            userMap.set(uid, {
+              id: uid,
+              email: data.user.email ?? null,
+              display_name:
+                (meta.display_name as string) ||
+                (meta.full_name as string) ||
+                data.user.email ||
+                null,
+              avatar_url: (meta.avatar_url as string) || null,
+              battle_tag: (meta.battle_tag as string) || null,
+              discord: (meta.discord as string) || null,
+            });
+          }
+        } catch {
+          // ignore individual failures
+        }
+      })
+    );
+
+    // Enrich staff handler info (single batched query)
+    const staffIds = [
+      ...new Set(rows.map((d) => d.processed_by_staff_id).filter(Boolean)),
+    ] as string[];
+    const staffMap = new Map<string, StaffMini>();
+    if (staffIds.length > 0) {
+      const { data: staffRows } = await supabaseAdmin
+        .from('staff')
+        .select('id, display_name')
+        .in('id', staffIds);
+      for (const s of staffRows || []) {
+        staffMap.set(s.id, {
+          id: s.id,
+          display_name: s.display_name ?? null,
+        });
+      }
+    }
+
+    const enriched: Demande[] = rows.map((d) => ({
+      ...d,
+      user: d.user_id ? (userMap.get(d.user_id) ?? null) : null,
+      processed_by: d.processed_by_staff_id
+        ? (staffMap.get(d.processed_by_staff_id) ?? null)
+        : null,
+    }));
+
+    const statusCounts: StatusCounts = {
+      pending: pendingRes.count ?? 0,
+      approved: approvedRes.count ?? 0,
+      rejected: rejectedRes.count ?? 0,
+      cancelled: cancelledRes.count ?? 0,
+      total:
+        (pendingRes.count ?? 0) +
+        (approvedRes.count ?? 0) +
+        (rejectedRes.count ?? 0) +
+        (cancelledRes.count ?? 0),
+    };
+
     return {
-      initialDemandes: [],
-      initialTotal: null,
+      initialDemandes: enriched,
+      initialTotal:
+        typeof demandesRes.count === 'number' ? demandesRes.count : null,
       tournaments: (tournamentsRes.data || []) as TournamentMini[],
-      statusCounts: EMPTY_COUNTS,
-      initialError: 'Erreur lors du chargement',
+      statusCounts,
+      initialError: null,
     };
   }
-
-  const rows = (demandesRes.data || []) as unknown as Demande[];
-
-  // Enrich user info via Supabase Auth (parallel)
-  const userIds = [
-    ...new Set(rows.map((d) => d.user_id).filter(Boolean)),
-  ] as string[];
-  const userMap = new Map<string, UserMini>();
-  await Promise.all(
-    userIds.map(async (uid) => {
-      try {
-        const { data } = await supabaseAdmin!.auth.admin.getUserById(uid);
-        if (data?.user) {
-          const meta = (data.user.user_metadata ?? {}) as Record<string, any>;
-          userMap.set(uid, {
-            id: uid,
-            email: data.user.email ?? null,
-            display_name:
-              (meta.display_name as string) ||
-              (meta.full_name as string) ||
-              data.user.email ||
-              null,
-            avatar_url: (meta.avatar_url as string) || null,
-            battle_tag: (meta.battle_tag as string) || null,
-            discord: (meta.discord as string) || null,
-          });
-        }
-      } catch {
-        // ignore individual failures
-      }
-    })
-  );
-
-  // Enrich staff handler info (single batched query)
-  const staffIds = [
-    ...new Set(rows.map((d) => d.processed_by_staff_id).filter(Boolean)),
-  ] as string[];
-  const staffMap = new Map<string, StaffMini>();
-  if (staffIds.length > 0) {
-    const { data: staffRows } = await supabaseAdmin
-      .from('staff')
-      .select('id, display_name')
-      .in('id', staffIds);
-    for (const s of staffRows || []) {
-      staffMap.set(s.id, {
-        id: s.id,
-        display_name: s.display_name ?? null,
-      });
-    }
-  }
-
-  const enriched: Demande[] = rows.map((d) => ({
-    ...d,
-    user: d.user_id ? (userMap.get(d.user_id) ?? null) : null,
-    processed_by: d.processed_by_staff_id
-      ? (staffMap.get(d.processed_by_staff_id) ?? null)
-      : null,
-  }));
-
-  const statusCounts: StatusCounts = {
-    pending: pendingRes.count ?? 0,
-    approved: approvedRes.count ?? 0,
-    rejected: rejectedRes.count ?? 0,
-    cancelled: cancelledRes.count ?? 0,
-    total:
-      (pendingRes.count ?? 0) +
-      (approvedRes.count ?? 0) +
-      (rejectedRes.count ?? 0) +
-      (cancelledRes.count ?? 0),
-  };
-
-  return {
-    initialDemandes: enriched,
-    initialTotal:
-      typeof demandesRes.count === 'number' ? demandesRes.count : null,
-    tournaments: (tournamentsRes.data || []) as TournamentMini[],
-    statusCounts,
-    initialError: null,
-  };
-});
+);
 
 function formatDateTime(iso: string | null) {
   if (!iso) return '—';
@@ -438,7 +445,8 @@ function AdminDemandesPage({
   const dateFrom = filters.from ?? '';
   const dateTo = filters.to ?? '';
   const offset = Math.max(0, Number(filters.offset) || 0);
-  const orderBy = filters.orderBy === 'processed_at' ? 'processed_at' : 'created_at';
+  const orderBy =
+    filters.orderBy === 'processed_at' ? 'processed_at' : 'created_at';
   const orderDir = filters.orderDir === 'asc' ? 'asc' : 'desc';
   const limit = LIMIT;
 
@@ -543,10 +551,7 @@ function AdminDemandesPage({
     setBatchProcessing(true);
     setErrorMsg(null);
     try {
-      const json = await postUpdateStatus(
-        Array.from(selected),
-        newStatus
-      );
+      const json = await postUpdateStatus(Array.from(selected), newStatus);
       addToast(
         `${json.updatedCount} demande(s) ${newStatus === 'approved' ? 'approuvée(s)' : 'refusée(s)'}.`,
         'success'
@@ -1392,9 +1397,7 @@ function AdminDemandesPage({
                           </button>
                           <button
                             type="button"
-                            onClick={() =>
-                              handleSingleAction(d.id, 'approved')
-                            }
+                            onClick={() => handleSingleAction(d.id, 'approved')}
                             disabled={isProcessing || batchProcessing}
                             title="Approuver"
                             className="p-2 rounded-lg bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/30 hover:border-emerald-500 text-xs transition-colors disabled:opacity-50"
@@ -1415,9 +1418,7 @@ function AdminDemandesPage({
                           </button>
                           <button
                             type="button"
-                            onClick={() =>
-                              handleSingleAction(d.id, 'rejected')
-                            }
+                            onClick={() => handleSingleAction(d.id, 'rejected')}
                             disabled={isProcessing || batchProcessing}
                             title="Refuser"
                             className="p-2 rounded-lg bg-red-600/20 hover:bg-red-600 text-red-300 hover:text-white border border-red-500/30 hover:border-red-500 text-xs transition-colors disabled:opacity-50"
@@ -1526,21 +1527,42 @@ function AdminDemandesPage({
       </div>
 
       {/* BattleTag fix / approve-confirm modal */}
-      {tagModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-          data-testid="battletag-modal"
-        >
-          <div className="w-full max-w-md rounded-2xl border border-neutral-700 bg-neutral-900 p-6 shadow-xl">
-            <h2 className="text-lg font-semibold text-white">
-              Corriger le BattleTag avant l&apos;approbation
-            </h2>
-            <p className="mt-1 text-sm text-neutral-400">
-              Le BattleTag de cette demande est manquant ou invalide. Corrige-le
-              ci-dessous — il sera utilisé lors de la création du membre. Tu peux
-              tout de même approuver sans corriger.
-            </p>
-            <label className="mt-4 block text-sm text-neutral-400 mb-1">
+      <Modal
+        open={Boolean(tagModal)}
+        onClose={() => setTagModal(null)}
+        backdropClassName="bg-black/60"
+        panelChromeClassName="rounded-2xl border border-neutral-700 bg-neutral-900 shadow-xl"
+        dataTestId="battletag-modal"
+        title={
+          <h2 className="text-lg font-semibold text-white">
+            Corriger le BattleTag avant l&apos;approbation
+          </h2>
+        }
+        subtitle="Le BattleTag de cette demande est manquant ou invalide. Corrige-le ci-dessous — il sera utilisé lors de la création du membre. Tu peux tout de même approuver sans corriger."
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setTagModal(null)}
+              className="px-4 py-2 rounded-xl border border-neutral-600 hover:bg-neutral-800 text-sm transition-colors"
+            >
+              Annuler
+            </button>
+            <button
+              type="button"
+              data-testid="battletag-confirm"
+              disabled={singleProcessing === tagModal?.demande.id}
+              onClick={confirmTagApproval}
+              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors disabled:opacity-50"
+            >
+              Approuver
+            </button>
+          </>
+        }
+      >
+        {tagModal && (
+          <>
+            <label className="block text-sm text-neutral-400 mb-1">
               BattleTag (format Nom#0000)
             </label>
             <input
@@ -1561,74 +1583,58 @@ function AdminDemandesPage({
                   chiffres).
                 </p>
               )}
-            <div className="mt-6 flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setTagModal(null)}
-                className="px-4 py-2 rounded-xl border border-neutral-600 hover:bg-neutral-800 text-sm transition-colors"
-              >
-                Annuler
-              </button>
-              <button
-                type="button"
-                data-testid="battletag-confirm"
-                disabled={singleProcessing === tagModal.demande.id}
-                onClick={confirmTagApproval}
-                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors disabled:opacity-50"
-              >
-                Approuver
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </Modal>
 
       {/* "Demander plus d'infos" modal */}
-      {infoModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-          data-testid="info-modal"
-        >
-          <div className="w-full max-w-md rounded-2xl border border-neutral-700 bg-neutral-900 p-6 shadow-xl">
-            <h2 className="text-lg font-semibold text-white">
-              Demander plus d&apos;infos
-            </h2>
-            <p className="mt-1 text-sm text-neutral-400">
-              La note est enregistrée sur la demande (note staff). Le statut
-              reste « en attente ».
-            </p>
-            <textarea
-              data-testid="info-note"
-              autoFocus
-              rows={4}
-              value={infoModal.note}
-              onChange={(e) =>
-                setInfoModal((m) => (m ? { ...m, note: e.target.value } : m))
-              }
-              placeholder="Ex : peux-tu confirmer ton BattleTag et ton rôle ?"
-              className="mt-4 w-full px-3 py-2.5 rounded-xl bg-neutral-800 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm"
-            />
-            <div className="mt-6 flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setInfoModal(null)}
-                className="px-4 py-2 rounded-xl border border-neutral-600 hover:bg-neutral-800 text-sm transition-colors"
-              >
-                Annuler
-              </button>
-              <button
-                type="button"
-                data-testid="info-submit"
-                disabled={infoProcessing}
-                onClick={submitRequestMoreInfo}
-                className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-sm font-medium transition-colors disabled:opacity-50"
-              >
-                Envoyer
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Modal
+        open={Boolean(infoModal)}
+        onClose={() => setInfoModal(null)}
+        backdropClassName="bg-black/60"
+        panelChromeClassName="rounded-2xl border border-neutral-700 bg-neutral-900 shadow-xl"
+        dataTestId="info-modal"
+        title={
+          <h2 className="text-lg font-semibold text-white">
+            Demander plus d&apos;infos
+          </h2>
+        }
+        subtitle="La note est enregistrée sur la demande (note staff). Le statut reste « en attente »."
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setInfoModal(null)}
+              className="px-4 py-2 rounded-xl border border-neutral-600 hover:bg-neutral-800 text-sm transition-colors"
+            >
+              Annuler
+            </button>
+            <button
+              type="button"
+              data-testid="info-submit"
+              disabled={infoProcessing}
+              onClick={submitRequestMoreInfo}
+              className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-sm font-medium transition-colors disabled:opacity-50"
+            >
+              Envoyer
+            </button>
+          </>
+        }
+      >
+        {infoModal && (
+          <textarea
+            data-testid="info-note"
+            autoFocus
+            rows={4}
+            value={infoModal.note}
+            onChange={(e) =>
+              setInfoModal((m) => (m ? { ...m, note: e.target.value } : m))
+            }
+            placeholder="Ex : peux-tu confirmer ton BattleTag et ton rôle ?"
+            className="w-full px-3 py-2.5 rounded-xl bg-neutral-800 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm"
+          />
+        )}
+      </Modal>
     </>
   );
 }

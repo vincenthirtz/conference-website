@@ -4,7 +4,9 @@ import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
+import Modal from '@/components/admin/Modal';
 
 type StaffShape = {
   id: string;
@@ -136,6 +138,7 @@ function AdminCampaignsPage(_props: Props) {
 
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
   const { mutateJson } = useIdempotentMutation();
+  const { adminFetchJson } = useAdminFetch();
   const { addToast } = useToast();
 
   const fetchCampaigns = useCallback(async () => {
@@ -145,12 +148,10 @@ function AdminCampaignsPage(_props: Props) {
       const params = new URLSearchParams();
       params.set('limit', String(limit));
       params.set('offset', String(offset));
-      const res = await fetch('/api/admin/broadcast?' + params.toString());
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || 'Impossible de charger les campagnes');
-      }
-      const json = await res.json();
+      const json = await adminFetchJson<{
+        campaigns?: CampaignSummary[];
+        total?: number;
+      }>('/api/admin/broadcast?' + params.toString());
       setCampaigns(json.campaigns || []);
       setTotal(typeof json.total === 'number' ? json.total : null);
     } catch (err: unknown) {
@@ -158,7 +159,7 @@ function AdminCampaignsPage(_props: Props) {
     } finally {
       setLoading(false);
     }
-  }, [limit, offset]);
+  }, [limit, offset, adminFetchJson]);
 
   useEffect(() => {
     fetchCampaigns();
@@ -577,6 +578,7 @@ function CampaignDrawer({
 }) {
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
   const { mutateJson } = useIdempotentMutation();
+  const { adminFetch } = useAdminFetch();
   const { addToast } = useToast();
 
   // Live HTML preview
@@ -796,9 +798,8 @@ function CampaignDrawer({
     setDryRun(null);
     setSendResult(null);
     try {
-      const res = await fetch(`/api/admin/broadcast/${campaign.id}`, {
+      const res = await adminFetch(`/api/admin/broadcast/${campaign.id}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(buildBody({ dryRun: true })),
       });
       const json = await res.json();
@@ -1303,53 +1304,50 @@ function CampaignDrawer({
         </div>
 
         {/* Confirm modal */}
-        {confirming && (
-          <div
-            className="fixed inset-0 z-[210] bg-black/70 flex items-center justify-center p-4"
-            onClick={() => !sendBusy && setConfirming(false)}
-          >
-            <div
-              className="w-full max-w-md rounded-2xl bg-neutral-900 border border-neutral-700 p-6"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <h3 className="text-lg font-semibold mb-2">
-                Confirmer l&rsquo;envoi
-              </h3>
-              <p className="text-sm text-neutral-300 mb-4">
-                Cette action va envoyer la campagne &laquo; {campaign.name}{' '}
-                &raquo; aux comptes confirm&eacute;s du site
-                {limit ? ` (limite : ${limit})` : ''}
-                {Number(offset) > 0
-                  ? `, en sautant les ${offset} premiers`
-                  : ''}
-                .
-                <br />
-                <strong>Action irr&eacute;versible.</strong>
-              </p>
-              <div className="flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setConfirming(false)}
-                  disabled={sendBusy}
-                  className="px-4 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-sm font-medium transition-colors"
-                >
-                  Annuler
-                </button>
-                <button
-                  type="button"
-                  onClick={runSend}
-                  disabled={sendBusy}
-                  className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-sm font-medium transition-colors flex items-center gap-2"
-                >
-                  {sendBusy ? (
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  ) : null}
-                  Confirmer la diffusion
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        <Modal
+          open={confirming}
+          onClose={() => setConfirming(false)}
+          disableEscapeClose={sendBusy}
+          disableBackdropClose={sendBusy}
+          zIndexClassName="z-[210]"
+          backdropClassName="bg-black/70"
+          panelChromeClassName="rounded-2xl bg-neutral-900 border border-neutral-700"
+          title={
+            <h3 className="text-lg font-semibold">Confirmer l&rsquo;envoi</h3>
+          }
+          footer={
+            <>
+              <button
+                type="button"
+                onClick={() => setConfirming(false)}
+                disabled={sendBusy}
+                className="px-4 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-sm font-medium transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={runSend}
+                disabled={sendBusy}
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-sm font-medium transition-colors flex items-center gap-2"
+              >
+                {sendBusy ? (
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : null}
+                Confirmer la diffusion
+              </button>
+            </>
+          }
+        >
+          <p className="text-sm text-neutral-300">
+            Cette action va envoyer la campagne &laquo; {campaign.name} &raquo;
+            aux comptes confirm&eacute;s du site
+            {limit ? ` (limite : ${limit})` : ''}
+            {Number(offset) > 0 ? `, en sautant les ${offset} premiers` : ''}.
+            <br />
+            <strong>Action irr&eacute;versible.</strong>
+          </p>
+        </Modal>
       </div>
     </>
   );

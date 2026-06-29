@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 
 type StaffShape = {
   id: string;
@@ -96,8 +97,12 @@ function formatDateTime(iso: string) {
   }
 }
 
+type EmailLogsResponse = { events?: BrevoEvent[] };
+type TestEmailResponse = { success?: boolean; id?: string; error?: string };
+
 function AdminEmailLogsPage({ staff }: Props) {
   const router = useRouter();
+  const { adminFetch, adminFetchJson } = useAdminFetch();
 
   const [events, setEvents] = useState<BrevoEvent[]>([]);
   const [loading, setLoading] = useState(false);
@@ -134,20 +139,24 @@ function AdminEmailLogsPage({ staff }: Props) {
       if (startDate) params.set('startDate', startDate);
       if (endDate) params.set('endDate', endDate);
 
-      const res = await fetch('/api/admin/email-logs?' + params.toString());
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || 'Impossible de charger les logs');
-      }
-
-      const json = await res.json();
+      const json = await adminFetchJson<EmailLogsResponse>(
+        '/api/admin/email-logs?' + params.toString()
+      );
       setEvents(json.events || []);
     } catch (err: unknown) {
       setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
     } finally {
       setLoading(false);
     }
-  }, [limit, offset, emailFilter, eventFilter, startDate, endDate]);
+  }, [
+    limit,
+    offset,
+    emailFilter,
+    eventFilter,
+    startDate,
+    endDate,
+    adminFetchJson,
+  ]);
 
   useEffect(() => {
     fetchEvents();
@@ -165,12 +174,11 @@ function AdminEmailLogsPage({ staff }: Props) {
     setTestResult(null);
 
     try {
-      const res = await fetch('/api/admin/test-email', {
+      const res = await adminFetch('/api/admin/test-email', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ to: testTo.trim() }),
       });
-      const json = await res.json();
+      const json: TestEmailResponse = await res.json();
       if (json.success) {
         setTestResult({ ok: true, msg: `Email envoyé (${json.id || 'ok'})` });
         setTimeout(() => fetchEvents(), 3000);

@@ -5,11 +5,9 @@ import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { supabaseAdmin } from '@/utils/supabase';
 import DeleteConfirmModal from '@/components/admin/DeleteConfirmModal';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useUrlFilters } from '@/utils/useUrlFilters';
-import {
-  escapePostgrestValue,
-  sanitizeSearch,
-} from '@/utils/apiHelpers';
+import { escapePostgrestValue, sanitizeSearch } from '@/utils/apiHelpers';
 
 import { logger } from '../../../utils/logger';
 type NewsRow = {
@@ -61,6 +59,7 @@ function formatDate(d: string | null) {
 
 function AdminNewsPage({ news, total, errorMsg: ssrError }: Props) {
   const router = useRouter();
+  const { adminFetchJson } = useAdminFetch();
   const { filters, setFilter, setFilters } = useUrlFilters(N_FILTER_KEYS);
 
   const search = filters.search ?? '';
@@ -88,13 +87,9 @@ function AdminNewsPage({ news, total, errorMsg: ssrError }: Props) {
     setDeleting(true);
     setErrorMsg(null);
     try {
-      const res = await fetch(`/api/admin/news/${item.id}`, {
+      await adminFetchJson(`/api/admin/news/${item.id}`, {
         method: 'DELETE',
       });
-      if (!res.ok) {
-        const json = await res.json().catch(() => null);
-        throw new Error(json?.error || 'Suppression impossible');
-      }
       setDeleteTarget(null);
       fetchData();
     } catch (err: unknown) {
@@ -430,47 +425,50 @@ function AdminNewsPage({ news, total, errorMsg: ssrError }: Props) {
   );
 }
 
-export const getServerSideProps = withStaffPage('admin', async (ctx, staffCtx) => {
-  const { query } = ctx;
-  const search = sanitizeSearch(query.search);
-  const status = typeof query.status === 'string' ? query.status : null;
-  const offset = Math.max(0, Number(query.offset) || 0);
+export const getServerSideProps = withStaffPage(
+  'admin',
+  async (ctx, staffCtx) => {
+    const { query } = ctx;
+    const search = sanitizeSearch(query.search);
+    const status = typeof query.status === 'string' ? query.status : null;
+    const offset = Math.max(0, Number(query.offset) || 0);
 
-  if (!supabaseAdmin) {
-    return { news: [], total: 0, errorMsg: 'Service indisponible' };
+    if (!supabaseAdmin) {
+      return { news: [], total: 0, errorMsg: 'Service indisponible' };
+    }
+
+    const { tenantId } = staffCtx;
+
+    let q = supabaseAdmin
+      .from('news')
+      .select('id, title, slug, tag, status, published_at, created_at', {
+        count: 'exact',
+      })
+      .eq('tenant_id', tenantId)
+      .order('created_at', { ascending: false })
+      .range(offset, offset + LIMIT - 1);
+
+    if (status === 'draft' || status === 'published') {
+      q = q.eq('status', status);
+    }
+    if (search) {
+      const s = `%${escapePostgrestValue(search)}%`;
+      q = q.or(`title.ilike.${s},slug.ilike.${s}`);
+    }
+
+    const { data, error, count } = await q;
+
+    if (error) {
+      logger.error('admin news SSR error:', error);
+      return { news: [], total: 0, errorMsg: 'Erreur lors du chargement' };
+    }
+
+    return {
+      news: (data || []) as NewsRow[],
+      total: typeof count === 'number' ? count : (data?.length ?? 0),
+      errorMsg: null,
+    };
   }
-
-  const { tenantId } = staffCtx;
-
-  let q = supabaseAdmin
-    .from('news')
-    .select('id, title, slug, tag, status, published_at, created_at', {
-      count: 'exact',
-    })
-    .eq('tenant_id', tenantId)
-    .order('created_at', { ascending: false })
-    .range(offset, offset + LIMIT - 1);
-
-  if (status === 'draft' || status === 'published') {
-    q = q.eq('status', status);
-  }
-  if (search) {
-    const s = `%${escapePostgrestValue(search)}%`;
-    q = q.or(`title.ilike.${s},slug.ilike.${s}`);
-  }
-
-  const { data, error, count } = await q;
-
-  if (error) {
-    logger.error('admin news SSR error:', error);
-    return { news: [], total: 0, errorMsg: 'Erreur lors du chargement' };
-  }
-
-  return {
-    news: (data || []) as NewsRow[],
-    total: typeof count === 'number' ? count : (data?.length ?? 0),
-    errorMsg: null,
-  };
-});
+);
 
 export default AdminNewsPage;

@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { supabaseAdmin } from '@/utils/supabase';
 import {
   loadTeamRolesFromSupabase,
@@ -55,6 +57,8 @@ export const getServerSideProps = withStaffPage<{ teamRoles: TeamRole[] }>(
 function AdminAddTeamMemberPage({ staff, teamRoles }: StaffProps) {
   const router = useRouter();
   const { addToast } = useToast();
+  const { adminFetch } = useAdminFetch();
+  const { mutate: addMemberMutate } = useIdempotentMutation();
 
   const [teams, setTeams] = useState<TeamOption[]>([]);
   const [loadingTeams, setLoadingTeams] = useState(false);
@@ -75,7 +79,7 @@ function AdminAddTeamMemberPage({ staff, teamRoles }: StaffProps) {
   async function loadTeams() {
     setLoadingTeams(true);
     try {
-      const res = await fetch('/api/admin/teams?limit=200&includeTotal=0');
+      const res = await adminFetch('/api/admin/teams?limit=200&includeTotal=0');
       if (!res.ok) return;
       const json: ApiTeams = await res.json();
       setTeams(json.teams || []);
@@ -109,9 +113,8 @@ function AdminAddTeamMemberPage({ staff, teamRoles }: StaffProps) {
         setCaptain,
       };
 
-      const res = await fetch('/api/admin/teams/add-member', {
+      const res = await addMemberMutate('/api/admin/teams/add-member', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 

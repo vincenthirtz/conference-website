@@ -6,6 +6,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
 import { formatDateHeader } from '@/utils/dateFormatters';
 import { STATUS_CONFIG } from '@/utils/statusConfig';
@@ -57,6 +58,7 @@ function AdminBracketBuilderPage(_: StaffProps) {
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const { addToast } = useToast();
+  const { adminFetch, adminFetchJson } = useAdminFetch();
   const [tournament, setTournament] = useState<ApiResponse['tournament']>(null);
   const [matches, setMatches] = useState<ScheduleMatch[]>([]);
   const [dirty, setDirty] = useState(false);
@@ -78,10 +80,10 @@ function AdminBracketBuilderPage(_: StaffProps) {
     setDirty(false);
     try {
       const [matchRes, teamsRes] = await Promise.all([
-        fetch(
+        adminFetch(
           `/api/admin/tournament/${id}/matches?layout=bracket&limit=512&includeGraph=1`
         ),
-        fetch(`/api/admin/tournament/${id}/teams`),
+        adminFetch(`/api/admin/tournament/${id}/teams`),
       ]);
       if (!matchRes.ok) {
         const json = await matchRes.json().catch(() => ({}));
@@ -485,9 +487,8 @@ ${day.matches
     setSaving(true);
     setErrorMsg(null);
     try {
-      const res = await fetch(`/api/admin/tournament/${id}/bracket`, {
+      const res = await adminFetch(`/api/admin/tournament/${id}/bracket`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'save',
           matches: matches.map((m) => ({
@@ -516,7 +517,9 @@ ${day.matches
   return (
     <>
       <Head>
-        <title>{tournament ? `${tournament.name} — Planning` : 'Planning tournoi'}</title>
+        <title>
+          {tournament ? `${tournament.name} — Planning` : 'Planning tournoi'}
+        </title>
       </Head>
 
       <div className="min-h-screen bg-[#0a0a0f] text-white">

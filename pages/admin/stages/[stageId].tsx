@@ -7,7 +7,9 @@ import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 import Breadcrumb from '@/components/admin/Breadcrumb';
+import Modal from '@/components/admin/Modal';
 import type { StaffProps, Stage, StageType, Tournament } from '@/types/admin';
 import AdvancementRulesEditor from '@/components/admin/AdvancementRulesEditor';
 import type { AdvancementRules } from '@/components/admin/AdvancementRulesEditor';
@@ -164,6 +166,9 @@ function AdminStagePage({ staff }: StaffProps) {
   const router = useRouter();
   const { stageId } = router.query;
   const { mutate: mutateIdempotent } = useIdempotentMutation();
+  const { mutate: autoByesMutate } = useIdempotentMutation();
+  const { mutate: advanceMutate } = useIdempotentMutation();
+  const { adminFetch, adminFetchJson } = useAdminFetch();
 
   const [stage, setStage] = useState<Stage | null>(null);
   const [tournament, setTournament] = useState<Tournament | null>(null);
@@ -271,12 +276,9 @@ function AdminStagePage({ staff }: StaffProps) {
     setErrorMsg(null);
 
     try {
-      const res = await fetch(`/api/admin/stages/${stageId}`);
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || 'Impossible de charger la phase');
-      }
-      const json: StageApiResponse = await res.json();
+      const json = await adminFetchJson<StageApiResponse>(
+        `/api/admin/stages/${stageId}`
+      );
       const s = json.stage;
       setStage(s);
       setEditForm({
@@ -292,7 +294,9 @@ function AdminStagePage({ staff }: StaffProps) {
       // Charger le tournoi parent + sibling stages
       if (s.tournament_id) {
         try {
-          const res2 = await fetch(`/api/admin/tournament/${s.tournament_id}`);
+          const res2 = await adminFetch(
+            `/api/admin/tournament/${s.tournament_id}`
+          );
           if (res2.ok) {
             const json2: TournamentApiResponse = await res2.json();
             setTournament(json2.tournament);
@@ -303,7 +307,7 @@ function AdminStagePage({ staff }: StaffProps) {
 
         // Fetch sibling stages for advancement target dropdown
         try {
-          const stagesRes = await fetch(
+          const stagesRes = await adminFetch(
             `/api/admin/tournament/${s.tournament_id}/stages`
           );
           if (stagesRes.ok) {
@@ -326,12 +330,12 @@ function AdminStagePage({ staff }: StaffProps) {
     } finally {
       setLoading(false);
     }
-  }, [stageId]);
+  }, [stageId, adminFetch, adminFetchJson]);
 
   const fetchSwissStatus = useCallback(async () => {
     if (!stageId) return;
     try {
-      const res = await fetch(`/api/admin/stages/${stageId}/swiss-status`);
+      const res = await adminFetch(`/api/admin/stages/${stageId}/swiss-status`);
       if (res.ok) {
         const json = await res.json();
         setSwissStatus(json);
@@ -339,12 +343,14 @@ function AdminStagePage({ staff }: StaffProps) {
     } catch (e) {
       logger.error('fetchSwissStatus error', e);
     }
-  }, [stageId]);
+  }, [stageId, adminFetch]);
 
   const fetchCompletionStatus = useCallback(async () => {
     if (!stageId) return;
     try {
-      const res = await fetch(`/api/admin/stages/${stageId}/completion-status`);
+      const res = await adminFetch(
+        `/api/admin/stages/${stageId}/completion-status`
+      );
       if (res.ok) {
         const json = await res.json();
         setCompletionStatus(json);
@@ -352,7 +358,7 @@ function AdminStagePage({ staff }: StaffProps) {
     } catch (e) {
       logger.error('fetchCompletionStatus error', e);
     }
-  }, [stageId]);
+  }, [stageId, adminFetch]);
 
   useEffect(() => {
     if (!stageId) return;
@@ -370,7 +376,7 @@ function AdminStagePage({ staff }: StaffProps) {
 
   async function fetchTournaments() {
     try {
-      const res = await fetch('/api/admin/tournaments?limit=100');
+      const res = await adminFetch('/api/admin/tournaments?limit=100');
       if (res.ok) {
         const json = await res.json();
         setAllTournaments(
@@ -388,18 +394,13 @@ function AdminStagePage({ staff }: StaffProps) {
     setErrorMsg(null);
 
     try {
-      const res = await fetch(`/api/admin/stages/${stageId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editForm),
-      });
-
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || 'Erreur lors de la mise à jour');
-      }
-
-      const json = await res.json();
+      const json = await adminFetchJson<StageApiResponse>(
+        `/api/admin/stages/${stageId}`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify(editForm),
+        }
+      );
       setStage(json.stage);
       setIsEditing(false);
       addToast('Phase mise à jour avec succès', 'success');
@@ -407,7 +408,7 @@ function AdminStagePage({ staff }: StaffProps) {
       // Recharger le tournoi parent si changé
       if (json.stage.tournament_id !== stage.tournament_id) {
         try {
-          const res2 = await fetch(
+          const res2 = await adminFetch(
             `/api/admin/tournament/${json.stage.tournament_id}`
           );
           if (res2.ok) {
@@ -431,11 +432,13 @@ function AdminStagePage({ staff }: StaffProps) {
     setErrorMsg(null);
 
     try {
-      const res = await fetch(`/api/admin/stages/${stageId}/auto-byes`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
-      });
+      const res = await autoByesMutate(
+        `/api/admin/stages/${stageId}/auto-byes`,
+        {
+          method: 'POST',
+          body: JSON.stringify({}),
+        }
+      );
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
@@ -506,8 +509,8 @@ function AdminStagePage({ staff }: StaffProps) {
     try {
       // Fetch standings and other stages in parallel
       const [standingsRes, stagesRes] = await Promise.all([
-        fetch(`/api/admin/stages/${stageId}/standings`),
-        fetch(`/api/admin/tournament/${stage.tournament_id}/stages`),
+        adminFetch(`/api/admin/stages/${stageId}/standings`),
+        adminFetch(`/api/admin/tournament/${stage.tournament_id}/stages`),
       ]);
 
       if (standingsRes.ok) {
@@ -595,9 +598,8 @@ function AdminStagePage({ staff }: StaffProps) {
       .map((s) => s.teamId);
 
     try {
-      const res = await fetch(`/api/admin/stages/${stageId}/advance`, {
+      const res = await advanceMutate(`/api/admin/stages/${stageId}/advance`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           targetStageId: advanceTargetStageId,
           teamIds: orderedIds,
@@ -636,7 +638,7 @@ function AdminStagePage({ staff }: StaffProps) {
     setAutoSeedPattern('standard');
 
     try {
-      const stagesRes = await fetch(
+      const stagesRes = await adminFetch(
         `/api/admin/tournament/${stage.tournament_id}/stages`
       );
       if (stagesRes.ok) {
@@ -668,13 +670,16 @@ function AdminStagePage({ staff }: StaffProps) {
     setErrorMsg(null);
 
     try {
-      const res = await mutateIdempotent(`/api/admin/stages/${stageId}/auto-seed`, {
-        method: 'POST',
-        body: JSON.stringify({
-          sourceStageId: autoSeedSourceStageId,
-          seedingPattern: autoSeedPattern,
-        }),
-      });
+      const res = await mutateIdempotent(
+        `/api/admin/stages/${stageId}/auto-seed`,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            sourceStageId: autoSeedSourceStageId,
+            seedingPattern: autoSeedPattern,
+          }),
+        }
+      );
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
@@ -1580,20 +1585,13 @@ function AdminStagePage({ staff }: StaffProps) {
                             } else {
                               delete newSettings.advancement_rules;
                             }
-                            const res = await fetch(
+                            await adminFetchJson(
                               `/api/admin/stages/${stageId}`,
                               {
                                 method: 'PATCH',
-                                headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({ settings: newSettings }),
                               }
                             );
-                            if (!res.ok) {
-                              const json = await res.json().catch(() => ({}));
-                              throw new Error(
-                                json.error || 'Erreur lors de la sauvegarde'
-                              );
-                            }
                             addToast(
                               "Regles d'avancement mises a jour.",
                               'success'
@@ -1925,469 +1923,471 @@ function AdminStagePage({ staff }: StaffProps) {
       </div>
 
       {/* Edit Modal */}
-      {isEditing && stage && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-neutral-800 border border-neutral-700 rounded-2xl p-6 w-full max-w-md shadow-2xl">
-            <h3 className="text-lg font-semibold mb-4">Modifier la phase</h3>
+      <Modal
+        open={Boolean(isEditing && stage)}
+        onClose={() => setIsEditing(false)}
+        title="Modifier la phase"
+        footer={
+          <>
+            <button
+              onClick={() => setIsEditing(false)}
+              className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
+            >
+              Annuler
+            </button>
+            <button
+              onClick={handleSaveEdit}
+              disabled={saving || !editForm.name.trim()}
+              className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {saving ? 'Enregistrement...' : 'Enregistrer'}
+            </button>
+          </>
+        }
+      >
+        {stage && (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm text-neutral-400 mb-1">
+                Nom de la phase
+              </label>
+              <input
+                type="text"
+                value={editForm.name}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, name: e.target.value })
+                }
+                className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
 
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm text-neutral-400 mb-1">
-                  Nom de la phase
-                </label>
+            <div>
+              <label className="block text-sm text-neutral-400 mb-1">
+                Tournoi rattaché
+              </label>
+              <select
+                value={editForm.tournament_id}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, tournament_id: e.target.value })
+                }
+                className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">-- Aucun --</option>
+                {allTournaments.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
                 <input
-                  type="text"
-                  value={editForm.name}
+                  type="checkbox"
+                  checked={editForm.is_active}
                   onChange={(e) =>
-                    setEditForm({ ...editForm, name: e.target.value })
+                    setEditForm({ ...editForm, is_active: e.target.checked })
                   }
-                  className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="rounded border-neutral-500 bg-neutral-700"
                 />
-              </div>
+                <span>Phase active</span>
+              </label>
 
-              <div>
-                <label className="block text-sm text-neutral-400 mb-1">
-                  Tournoi rattaché
-                </label>
-                <select
-                  value={editForm.tournament_id}
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={editForm.is_public}
                   onChange={(e) =>
-                    setEditForm({ ...editForm, tournament_id: e.target.value })
+                    setEditForm({ ...editForm, is_public: e.target.checked })
                   }
-                  className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="rounded border-neutral-500 bg-neutral-700"
+                />
+                <span>Visible publiquement</span>
+              </label>
+            </div>
+          </div>
+        )}
+      </Modal>
+      {/* Auto-Seed Modal */}
+      <Modal
+        open={Boolean(showAutoSeedModal && stage)}
+        onClose={() => setShowAutoSeedModal(false)}
+        title={
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <svg
+              className="w-5 h-5 text-purple-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
+              />
+            </svg>
+            Seeding automatique
+          </h3>
+        }
+        footer={
+          <>
+            <button
+              onClick={() => setShowAutoSeedModal(false)}
+              className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
+            >
+              Annuler
+            </button>
+            <button
+              onClick={handleAutoSeedSubmit}
+              disabled={
+                autoSeedSubmitting ||
+                !autoSeedSourceStageId ||
+                autoSeedOtherStages.length === 0
+              }
+              className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {autoSeedSubmitting ? (
+                <>
+                  <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Seeding...
+                </>
+              ) : (
+                'Appliquer le seeding'
+              )}
+            </button>
+          </>
+        }
+      >
+        {autoSeedLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="w-6 h-6 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm text-neutral-400 mb-1">
+                Stage source (classement)
+              </label>
+              {autoSeedOtherStages.length === 0 ? (
+                <p className="text-sm text-neutral-500">
+                  Aucun stage group/swiss/round-robin dans ce tournoi.
+                </p>
+              ) : (
+                <select
+                  value={autoSeedSourceStageId}
+                  onChange={(e) => setAutoSeedSourceStageId(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
                 >
-                  <option value="">-- Aucun --</option>
-                  {allTournaments.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name}
+                  {autoSeedOtherStages.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} ({s.stage_type})
                     </option>
                   ))}
                 </select>
-              </div>
+              )}
+            </div>
 
+            <div>
+              <label className="block text-sm text-neutral-400 mb-2">
+                Methode de placement
+              </label>
               <div className="space-y-2">
                 <label className="flex items-center gap-2 text-sm cursor-pointer">
                   <input
-                    type="checkbox"
-                    checked={editForm.is_active}
-                    onChange={(e) =>
-                      setEditForm({ ...editForm, is_active: e.target.checked })
-                    }
-                    className="rounded border-neutral-500 bg-neutral-700"
+                    type="radio"
+                    name="autoSeedPattern"
+                    checked={autoSeedPattern === 'standard'}
+                    onChange={() => setAutoSeedPattern('standard')}
+                    className="border-neutral-500 bg-neutral-700"
                   />
-                  <span>Phase active</span>
+                  <div>
+                    <span className="font-medium">Standard</span>
+                    <span className="text-neutral-500 ml-1">
+                      — 1vN, 2v(N-1)... evite les confrontations precoces
+                    </span>
+                  </div>
                 </label>
-
                 <label className="flex items-center gap-2 text-sm cursor-pointer">
                   <input
-                    type="checkbox"
-                    checked={editForm.is_public}
-                    onChange={(e) =>
-                      setEditForm({ ...editForm, is_public: e.target.checked })
-                    }
-                    className="rounded border-neutral-500 bg-neutral-700"
+                    type="radio"
+                    name="autoSeedPattern"
+                    checked={autoSeedPattern === 'sequential'}
+                    onChange={() => setAutoSeedPattern('sequential')}
+                    className="border-neutral-500 bg-neutral-700"
                   />
-                  <span>Visible publiquement</span>
+                  <div>
+                    <span className="font-medium">Sequentiel</span>
+                    <span className="text-neutral-500 ml-1">
+                      — 1v2, 3v4... placement lineaire
+                    </span>
+                  </div>
                 </label>
               </div>
             </div>
-
-            <div className="flex justify-end gap-2 mt-6">
-              <button
-                onClick={() => setIsEditing(false)}
-                className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={handleSaveEdit}
-                disabled={saving || !editForm.name.trim()}
-                className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {saving ? 'Enregistrement...' : 'Enregistrer'}
-              </button>
-            </div>
           </div>
-        </div>
-      )}
-      {/* Auto-Seed Modal */}
-      {showAutoSeedModal && stage && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-neutral-800 border border-neutral-700 rounded-2xl p-6 w-full max-w-md shadow-2xl">
-            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <svg
-                className="w-5 h-5 text-purple-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
-                />
-              </svg>
-              Seeding automatique
-            </h3>
-
-            {autoSeedLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="w-6 h-6 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm text-neutral-400 mb-1">
-                    Stage source (classement)
-                  </label>
-                  {autoSeedOtherStages.length === 0 ? (
-                    <p className="text-sm text-neutral-500">
-                      Aucun stage group/swiss/round-robin dans ce tournoi.
-                    </p>
-                  ) : (
-                    <select
-                      value={autoSeedSourceStageId}
-                      onChange={(e) => setAutoSeedSourceStageId(e.target.value)}
-                      className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
-                    >
-                      {autoSeedOtherStages.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.name} ({s.stage_type})
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm text-neutral-400 mb-2">
-                    Methode de placement
-                  </label>
-                  <div className="space-y-2">
-                    <label className="flex items-center gap-2 text-sm cursor-pointer">
-                      <input
-                        type="radio"
-                        name="autoSeedPattern"
-                        checked={autoSeedPattern === 'standard'}
-                        onChange={() => setAutoSeedPattern('standard')}
-                        className="border-neutral-500 bg-neutral-700"
-                      />
-                      <div>
-                        <span className="font-medium">Standard</span>
-                        <span className="text-neutral-500 ml-1">
-                          — 1vN, 2v(N-1)... evite les confrontations precoces
-                        </span>
-                      </div>
-                    </label>
-                    <label className="flex items-center gap-2 text-sm cursor-pointer">
-                      <input
-                        type="radio"
-                        name="autoSeedPattern"
-                        checked={autoSeedPattern === 'sequential'}
-                        onChange={() => setAutoSeedPattern('sequential')}
-                        className="border-neutral-500 bg-neutral-700"
-                      />
-                      <div>
-                        <span className="font-medium">Sequentiel</span>
-                        <span className="text-neutral-500 ml-1">
-                          — 1v2, 3v4... placement lineaire
-                        </span>
-                      </div>
-                    </label>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div className="flex justify-end gap-2 mt-6">
-              <button
-                onClick={() => setShowAutoSeedModal(false)}
-                className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={handleAutoSeedSubmit}
-                disabled={
-                  autoSeedSubmitting ||
-                  !autoSeedSourceStageId ||
-                  autoSeedOtherStages.length === 0
-                }
-                className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                {autoSeedSubmitting ? (
-                  <>
-                    <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Seeding...
-                  </>
-                ) : (
-                  'Appliquer le seeding'
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+        )}
+      </Modal>
 
       {/* Advance Modal */}
-      {showAdvanceModal && stage && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-neutral-800 border border-neutral-700 rounded-2xl p-6 w-full max-w-2xl shadow-2xl max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <svg
-                className="w-5 h-5 text-emerald-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+      <Modal
+        open={Boolean(showAdvanceModal && stage)}
+        onClose={() => setShowAdvanceModal(false)}
+        size="2xl"
+        panelClassName="max-h-[90vh]"
+        title={
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <svg
+              className="w-5 h-5 text-emerald-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M13 7l5 5m0 0l-5 5m5-5H6"
+              />
+            </svg>
+            Avancer des equipes
+          </h3>
+        }
+        footer={
+          <div className="flex justify-between items-center w-full">
+            <span className="text-xs text-neutral-500">
+              {advanceSelectedIds.size} equipe(s) selectionnee(s)
+            </span>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowAdvanceModal(false)}
+                className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M13 7l5 5m0 0l-5 5m5-5H6"
-                />
-              </svg>
-              Avancer des equipes
-            </h3>
+                Annuler
+              </button>
+              <button
+                onClick={handleAdvanceSubmit}
+                disabled={
+                  advanceSubmitting ||
+                  advanceSelectedIds.size === 0 ||
+                  !advanceTargetStageId
+                }
+                className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {advanceSubmitting ? (
+                  <>
+                    <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Avancement...
+                  </>
+                ) : (
+                  'Avancer'
+                )}
+              </button>
+            </div>
+          </div>
+        }
+      >
+        {advanceLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="w-6 h-6 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
+          </div>
+        ) : (
+          <div className="space-y-5">
+            {/* Target stage selector */}
+            <div>
+              <label className="block text-sm text-neutral-400 mb-1">
+                Stage cible
+              </label>
+              {advanceOtherStages.length === 0 ? (
+                <p className="text-sm text-neutral-500">
+                  Aucun autre stage dans ce tournoi.
+                </p>
+              ) : (
+                <select
+                  value={advanceTargetStageId}
+                  onChange={(e) => setAdvanceTargetStageId(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                >
+                  {advanceOtherStages.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} ({s.stage_type || 'autre'})
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
 
-            {advanceLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="w-6 h-6 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
+            {/* Criteria filters */}
+            <div className="bg-neutral-900/50 border border-neutral-700 rounded-xl p-4 space-y-3">
+              <p className="text-xs text-neutral-400 uppercase tracking-wider font-semibold mb-2">
+                Criteres de selection
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs text-neutral-500 mb-1">
+                    Top N
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={1}
+                      max={advanceStandings.length}
+                      value={advanceTopN}
+                      onChange={(e) => handleAdvanceTopN(e.target.value)}
+                      className="w-full px-3 py-1.5 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                      placeholder="N"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs text-neutral-500 mb-1">
+                    Score minimum
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    step="any"
+                    value={advanceMinScore}
+                    onChange={(e) => handleAdvanceMinScore(e.target.value)}
+                    className="w-full px-3 py-1.5 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                    placeholder="Ex: 6"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-neutral-500 mb-1">
+                    Victoires minimum
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={advanceMinWins}
+                    onChange={(e) => handleAdvanceMinWins(e.target.value)}
+                    className="w-full px-3 py-1.5 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                    placeholder="Ex: 3"
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-neutral-500">
+                {advanceSelectedIds.size} / {advanceStandings.length} equipe(s)
+                selectionnee(s)
+              </p>
+            </div>
+
+            {/* Standings table with checkboxes */}
+            {advanceStandings.length > 0 ? (
+              <div className="border border-neutral-700 rounded-xl overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-neutral-900/80 text-neutral-400 text-xs uppercase tracking-wider">
+                      <th className="px-3 py-2 text-left w-10">
+                        <input
+                          type="checkbox"
+                          checked={
+                            advanceSelectedIds.size === advanceStandings.length
+                          }
+                          onChange={() => {
+                            if (
+                              advanceSelectedIds.size ===
+                              advanceStandings.length
+                            ) {
+                              setAdvanceSelectedIds(new Set());
+                            } else {
+                              setAdvanceSelectedIds(
+                                new Set(advanceStandings.map((s) => s.teamId))
+                              );
+                            }
+                            setAdvanceTopN('');
+                          }}
+                          className="rounded border-neutral-500 bg-neutral-700"
+                        />
+                      </th>
+                      <th className="px-3 py-2 text-left">#</th>
+                      <th className="px-3 py-2 text-left">Equipe</th>
+                      <th className="px-3 py-2 text-center">V</th>
+                      <th className="px-3 py-2 text-center">D</th>
+                      <th className="px-3 py-2 text-center">N</th>
+                      <th className="px-3 py-2 text-right">Pts</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {advanceStandings.map((s) => (
+                      <tr
+                        key={s.teamId}
+                        onClick={() => toggleAdvanceTeam(s.teamId)}
+                        className={`cursor-pointer transition-colors ${
+                          advanceSelectedIds.has(s.teamId)
+                            ? 'bg-emerald-900/30'
+                            : 'hover:bg-neutral-700/50'
+                        }`}
+                      >
+                        <td className="px-3 py-2">
+                          <input
+                            type="checkbox"
+                            checked={advanceSelectedIds.has(s.teamId)}
+                            onChange={() => toggleAdvanceTeam(s.teamId)}
+                            className="rounded border-neutral-500 bg-neutral-700"
+                          />
+                        </td>
+                        <td className="px-3 py-2 text-neutral-500 font-mono text-xs">
+                          {s.rank}
+                        </td>
+                        <td className="px-3 py-2 font-medium">
+                          {s.teamName || s.teamId.slice(0, 8)}
+                        </td>
+                        <td className="px-3 py-2 text-center text-emerald-400">
+                          {s.wins}
+                        </td>
+                        <td className="px-3 py-2 text-center text-red-400">
+                          {s.losses}
+                        </td>
+                        <td className="px-3 py-2 text-center text-neutral-400">
+                          {s.draws}
+                        </td>
+                        <td className="px-3 py-2 text-right font-semibold">
+                          {s.score}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             ) : (
-              <div className="space-y-5">
-                {/* Target stage selector */}
-                <div>
-                  <label className="block text-sm text-neutral-400 mb-1">
-                    Stage cible
-                  </label>
-                  {advanceOtherStages.length === 0 ? (
-                    <p className="text-sm text-neutral-500">
-                      Aucun autre stage dans ce tournoi.
-                    </p>
-                  ) : (
-                    <select
-                      value={advanceTargetStageId}
-                      onChange={(e) => setAdvanceTargetStageId(e.target.value)}
-                      className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
-                    >
-                      {advanceOtherStages.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.name} ({s.stage_type || 'autre'})
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                </div>
-
-                {/* Criteria filters */}
-                <div className="bg-neutral-900/50 border border-neutral-700 rounded-xl p-4 space-y-3">
-                  <p className="text-xs text-neutral-400 uppercase tracking-wider font-semibold mb-2">
-                    Criteres de selection
-                  </p>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div>
-                      <label className="block text-xs text-neutral-500 mb-1">
-                        Top N
-                      </label>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="number"
-                          min={1}
-                          max={advanceStandings.length}
-                          value={advanceTopN}
-                          onChange={(e) => handleAdvanceTopN(e.target.value)}
-                          className="w-full px-3 py-1.5 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
-                          placeholder="N"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-xs text-neutral-500 mb-1">
-                        Score minimum
-                      </label>
-                      <input
-                        type="number"
-                        min={0}
-                        step="any"
-                        value={advanceMinScore}
-                        onChange={(e) => handleAdvanceMinScore(e.target.value)}
-                        className="w-full px-3 py-1.5 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
-                        placeholder="Ex: 6"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-neutral-500 mb-1">
-                        Victoires minimum
-                      </label>
-                      <input
-                        type="number"
-                        min={1}
-                        value={advanceMinWins}
-                        onChange={(e) => handleAdvanceMinWins(e.target.value)}
-                        className="w-full px-3 py-1.5 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
-                        placeholder="Ex: 3"
-                      />
-                    </div>
-                  </div>
-                  <p className="text-xs text-neutral-500">
-                    {advanceSelectedIds.size} / {advanceStandings.length}{' '}
-                    equipe(s) selectionnee(s)
-                  </p>
-                </div>
-
-                {/* Standings table with checkboxes */}
-                {advanceStandings.length > 0 ? (
-                  <div className="border border-neutral-700 rounded-xl overflow-hidden">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="bg-neutral-900/80 text-neutral-400 text-xs uppercase tracking-wider">
-                          <th className="px-3 py-2 text-left w-10">
-                            <input
-                              type="checkbox"
-                              checked={
-                                advanceSelectedIds.size ===
-                                advanceStandings.length
-                              }
-                              onChange={() => {
-                                if (
-                                  advanceSelectedIds.size ===
-                                  advanceStandings.length
-                                ) {
-                                  setAdvanceSelectedIds(new Set());
-                                } else {
-                                  setAdvanceSelectedIds(
-                                    new Set(
-                                      advanceStandings.map((s) => s.teamId)
-                                    )
-                                  );
-                                }
-                                setAdvanceTopN('');
-                              }}
-                              className="rounded border-neutral-500 bg-neutral-700"
-                            />
-                          </th>
-                          <th className="px-3 py-2 text-left">#</th>
-                          <th className="px-3 py-2 text-left">Equipe</th>
-                          <th className="px-3 py-2 text-center">V</th>
-                          <th className="px-3 py-2 text-center">D</th>
-                          <th className="px-3 py-2 text-center">N</th>
-                          <th className="px-3 py-2 text-right">Pts</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {advanceStandings.map((s) => (
-                          <tr
-                            key={s.teamId}
-                            onClick={() => toggleAdvanceTeam(s.teamId)}
-                            className={`cursor-pointer transition-colors ${
-                              advanceSelectedIds.has(s.teamId)
-                                ? 'bg-emerald-900/30'
-                                : 'hover:bg-neutral-700/50'
-                            }`}
-                          >
-                            <td className="px-3 py-2">
-                              <input
-                                type="checkbox"
-                                checked={advanceSelectedIds.has(s.teamId)}
-                                onChange={() => toggleAdvanceTeam(s.teamId)}
-                                className="rounded border-neutral-500 bg-neutral-700"
-                              />
-                            </td>
-                            <td className="px-3 py-2 text-neutral-500 font-mono text-xs">
-                              {s.rank}
-                            </td>
-                            <td className="px-3 py-2 font-medium">
-                              {s.teamName || s.teamId.slice(0, 8)}
-                            </td>
-                            <td className="px-3 py-2 text-center text-emerald-400">
-                              {s.wins}
-                            </td>
-                            <td className="px-3 py-2 text-center text-red-400">
-                              {s.losses}
-                            </td>
-                            <td className="px-3 py-2 text-center text-neutral-400">
-                              {s.draws}
-                            </td>
-                            <td className="px-3 py-2 text-right font-semibold">
-                              {s.score}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <p className="text-sm text-neutral-500">
-                    Aucune equipe ou aucun match termine dans cette phase.
-                  </p>
-                )}
-
-                {/* Seed mode */}
-                <div>
-                  <label className="block text-sm text-neutral-400 mb-2">
-                    Attribution des seeds
-                  </label>
-                  <div className="flex flex-wrap gap-3">
-                    {(['rank', 'manual', 'none'] as const).map((mode) => (
-                      <label
-                        key={mode}
-                        className="flex items-center gap-2 text-sm cursor-pointer"
-                      >
-                        <input
-                          type="radio"
-                          name="seedMode"
-                          checked={advanceSeedMode === mode}
-                          onChange={() => setAdvanceSeedMode(mode)}
-                          className="border-neutral-500 bg-neutral-700"
-                        />
-                        <span>
-                          {mode === 'rank' && 'Par classement'}
-                          {mode === 'manual' && 'Par ordre de selection'}
-                          {mode === 'none' && 'Aucun seed'}
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              </div>
+              <p className="text-sm text-neutral-500">
+                Aucune equipe ou aucun match termine dans cette phase.
+              </p>
             )}
 
-            <div className="flex justify-between items-center mt-6">
-              <span className="text-xs text-neutral-500">
-                {advanceSelectedIds.size} equipe(s) selectionnee(s)
-              </span>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setShowAdvanceModal(false)}
-                  className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
-                >
-                  Annuler
-                </button>
-                <button
-                  onClick={handleAdvanceSubmit}
-                  disabled={
-                    advanceSubmitting ||
-                    advanceSelectedIds.size === 0 ||
-                    !advanceTargetStageId
-                  }
-                  className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                >
-                  {advanceSubmitting ? (
-                    <>
-                      <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Avancement...
-                    </>
-                  ) : (
-                    'Avancer'
-                  )}
-                </button>
+            {/* Seed mode */}
+            <div>
+              <label className="block text-sm text-neutral-400 mb-2">
+                Attribution des seeds
+              </label>
+              <div className="flex flex-wrap gap-3">
+                {(['rank', 'manual', 'none'] as const).map((mode) => (
+                  <label
+                    key={mode}
+                    className="flex items-center gap-2 text-sm cursor-pointer"
+                  >
+                    <input
+                      type="radio"
+                      name="seedMode"
+                      checked={advanceSeedMode === mode}
+                      onChange={() => setAdvanceSeedMode(mode)}
+                      className="border-neutral-500 bg-neutral-700"
+                    />
+                    <span>
+                      {mode === 'rank' && 'Par classement'}
+                      {mode === 'manual' && 'Par ordre de selection'}
+                      {mode === 'none' && 'Aucun seed'}
+                    </span>
+                  </label>
+                ))}
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
     </>
   );
 }

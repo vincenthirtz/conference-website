@@ -30,6 +30,7 @@ import {
 import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import Modal from '@/components/admin/Modal';
 import type { AdminPlayerViewPayload } from '@/pages/api/admin/users/[userId]/player-view';
 
 import { logger } from '../../../../utils/logger';
@@ -283,8 +284,7 @@ function MatchRow({ match }: { match: PlayerMatch }) {
         {!upcoming && match.score && (
           <div className="flex items-center gap-3">
             <span className="tabular-nums text-2xl font-bold text-white">
-              {match.score.mine ?? '–'}{' '}
-              <span className="text-white/40">–</span>{' '}
+              {match.score.mine ?? '–'} <span className="text-white/40">–</span>{' '}
               {match.score.opponent ?? '–'}
             </span>
             <ResultBadge result={match.result} />
@@ -410,7 +410,10 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
       addToast('Nom affiché mis à jour', 'success');
       await load();
     } catch (err) {
-      addToast((err as Error)?.message || 'Erreur lors de la mise à jour.', 'error');
+      addToast(
+        (err as Error)?.message || 'Erreur lors de la mise à jour.',
+        'error'
+      );
     } finally {
       setBusy(null);
     }
@@ -452,11 +455,17 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
       if (previousRole === role) return;
 
       if (isTargetProtected(previousRole) && staff.role !== 'owner') {
-        addToast('Seul un owner peut modifier un compte owner ou admin.', 'error');
+        addToast(
+          'Seul un owner peut modifier un compte owner ou admin.',
+          'error'
+        );
         return;
       }
       if (!canGrantRole(staff.role, role)) {
-        addToast('Vous ne pouvez pas octroyer un rôle égal ou supérieur au vôtre.', 'error');
+        addToast(
+          'Vous ne pouvez pas octroyer un rôle égal ou supérieur au vôtre.',
+          'error'
+        );
         return;
       }
 
@@ -477,7 +486,10 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
         addToast('Rôle mis à jour', 'success');
         await load();
       } catch (err) {
-        addToast((err as Error)?.message || 'Erreur lors de la mise à jour du rôle.', 'error');
+        addToast(
+          (err as Error)?.message || 'Erreur lors de la mise à jour du rôle.',
+          'error'
+        );
       } finally {
         setBusy(null);
       }
@@ -531,7 +543,10 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
       addToast('Capitanat transféré', 'success');
       await load();
     } catch (err) {
-      addToast((err as Error)?.message || 'Erreur lors de la désignation.', 'error');
+      addToast(
+        (err as Error)?.message || 'Erreur lors de la désignation.',
+        'error'
+      );
     } finally {
       setBusy(null);
     }
@@ -551,7 +566,10 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
         .map((t) => ({ id: t.id, name: t.name }));
       setTeamOptions(list);
     } catch (err) {
-      addToast((err as Error)?.message || 'Erreur lors du chargement des équipes.', 'error');
+      addToast(
+        (err as Error)?.message || 'Erreur lors du chargement des équipes.',
+        'error'
+      );
     } finally {
       setTeamsLoading(false);
     }
@@ -574,7 +592,10 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
         `/api/admin/users/${encodeURIComponent(userId)}/actions`,
         {
           method: 'POST',
-          body: JSON.stringify({ action: 'transfer_team', teamId: transferTeamId }),
+          body: JSON.stringify({
+            action: 'transfer_team',
+            teamId: transferTeamId,
+          }),
         }
       );
       setTransferOpen(false);
@@ -585,7 +606,16 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
     } finally {
       setBusy(null);
     }
-  }, [userId, transferTeamId, teamOptions, headerName, confirm, adminFetchJson, addToast, load]);
+  }, [
+    userId,
+    transferTeamId,
+    teamOptions,
+    headerName,
+    confirm,
+    adminFetchJson,
+    addToast,
+    load,
+  ]);
 
   // POST /api/admin/demandes — approve / reject a pending demande.
   const processDemande = useCallback(
@@ -613,7 +643,10 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
         );
         await load();
       } catch (err) {
-        addToast((err as Error)?.message || 'Erreur lors du traitement.', 'error');
+        addToast(
+          (err as Error)?.message || 'Erreur lors du traitement.',
+          'error'
+        );
       } finally {
         setBusy(null);
       }
@@ -885,10 +918,17 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
                             >
                               {ROLE_OPTIONS.map((r) => {
                                 const grantable =
-                                  r === (data.user.role || 'member').toLowerCase() ||
+                                  r ===
+                                    (
+                                      data.user.role || 'member'
+                                    ).toLowerCase() ||
                                   canGrantRole(staff.role, r);
                                 return (
-                                  <option key={r} value={r} disabled={!grantable}>
+                                  <option
+                                    key={r}
+                                    value={r}
+                                    disabled={!grantable}
+                                  >
                                     {roleLabel(r)}
                                   </option>
                                 );
@@ -971,7 +1011,9 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
                                   <th className="px-4 py-2 font-medium">
                                     BattleTag
                                   </th>
-                                  <th className="px-4 py-2 font-medium">Rôle</th>
+                                  <th className="px-4 py-2 font-medium">
+                                    Rôle
+                                  </th>
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-neutral-700/40">
@@ -1124,10 +1166,7 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
                     value={data.notifications.checkinPending}
                     highlight
                   />
-                  <StatTile
-                    label="Total"
-                    value={data.notifications.total}
-                  />
+                  <StatTile label="Total" value={data.notifications.total} />
                 </section>
               )}
 
@@ -1216,143 +1255,138 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
       </div>
 
       {/* Edit display name modal */}
-      {editingName && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-neutral-800 border border-neutral-700 rounded-2xl p-6 w-full max-w-md shadow-2xl">
-            <h3 className="text-lg font-semibold mb-4">
-              Modifier le nom affiché
-            </h3>
-            <label className="block text-sm text-neutral-400 mb-1">
-              Nom affiché
-            </label>
-            <input
-              type="text"
-              value={nameDraft}
-              onChange={(e) => setNameDraft(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
-              placeholder="Nom affiché"
-            />
-            <div className="flex justify-end gap-2 mt-6">
-              <button
-                type="button"
-                onClick={() => setEditingName(false)}
-                className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
-              >
-                Annuler
-              </button>
-              <button
-                type="button"
-                onClick={saveName}
-                disabled={busy === 'name'}
-                className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {busy === 'name' ? 'Enregistrement…' : 'Enregistrer'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Modal
+        open={editingName}
+        onClose={() => setEditingName(false)}
+        title="Modifier le nom affiché"
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setEditingName(false)}
+              className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
+            >
+              Annuler
+            </button>
+            <button
+              type="button"
+              onClick={saveName}
+              disabled={busy === 'name'}
+              className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {busy === 'name' ? 'Enregistrement…' : 'Enregistrer'}
+            </button>
+          </>
+        }
+      >
+        <label className="block text-sm text-neutral-400 mb-1">
+          Nom affiché
+        </label>
+        <input
+          type="text"
+          value={nameDraft}
+          onChange={(e) => setNameDraft(e.target.value)}
+          className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+          placeholder="Nom affiché"
+        />
+      </Modal>
 
       {/* Edit battle tag modal */}
-      {editingTag && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-neutral-800 border border-neutral-700 rounded-2xl p-6 w-full max-w-md shadow-2xl">
-            <h3 className="text-lg font-semibold mb-4">
-              Modifier le BattleTag
-            </h3>
-            <label className="block text-sm text-neutral-400 mb-1">
-              BattleTag
-            </label>
-            <input
-              type="text"
-              value={tagDraft}
-              onChange={(e) => setTagDraft(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
-              placeholder="Pseudo#1234"
-            />
-            <p className="text-xs text-neutral-500 mt-1">
-              Format : Pseudo#0000 (alphanumérique + # + 3 à 6 chiffres)
-            </p>
-            {tagError && (
-              <div className="mt-3 rounded-lg bg-red-900/40 border border-red-500/50 px-3 py-2 text-sm text-red-200">
-                {tagError}
-              </div>
-            )}
-            <div className="flex justify-end gap-2 mt-6">
-              <button
-                type="button"
-                onClick={() => setEditingTag(false)}
-                className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
-              >
-                Annuler
-              </button>
-              <button
-                type="button"
-                onClick={saveBattleTag}
-                disabled={busy === 'tag'}
-                className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {busy === 'tag' ? 'Enregistrement…' : 'Enregistrer'}
-              </button>
-            </div>
+      <Modal
+        open={editingTag}
+        onClose={() => setEditingTag(false)}
+        title="Modifier le BattleTag"
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setEditingTag(false)}
+              className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
+            >
+              Annuler
+            </button>
+            <button
+              type="button"
+              onClick={saveBattleTag}
+              disabled={busy === 'tag'}
+              className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {busy === 'tag' ? 'Enregistrement…' : 'Enregistrer'}
+            </button>
+          </>
+        }
+      >
+        <label className="block text-sm text-neutral-400 mb-1">BattleTag</label>
+        <input
+          type="text"
+          value={tagDraft}
+          onChange={(e) => setTagDraft(e.target.value)}
+          className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+          placeholder="Pseudo#1234"
+        />
+        <p className="text-xs text-neutral-500 mt-1">
+          Format : Pseudo#0000 (alphanumérique + # + 3 à 6 chiffres)
+        </p>
+        {tagError && (
+          <div className="mt-3 rounded-lg bg-red-900/40 border border-red-500/50 px-3 py-2 text-sm text-red-200">
+            {tagError}
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
 
       {/* Transfer team modal */}
-      {transferOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-neutral-800 border border-neutral-700 rounded-2xl p-6 w-full max-w-md shadow-2xl">
-            <h3 className="text-lg font-semibold mb-4">
-              Transférer vers une autre équipe
-            </h3>
-            <label className="block text-sm text-neutral-400 mb-1">
-              Équipe de destination
-            </label>
-            {teamsLoading ? (
-              <div className="flex items-center gap-2 text-sm text-neutral-400 py-2">
-                <div className="w-4 h-4 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
-                Chargement des équipes…
-              </div>
-            ) : teamOptions.length === 0 ? (
-              <p className="text-sm text-neutral-500 py-2">
-                Aucune autre équipe disponible.
-              </p>
-            ) : (
-              <select
-                aria-label="Équipe de destination"
-                value={transferTeamId}
-                onChange={(e) => setTransferTeamId(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
-              >
-                <option value="">Sélectionner une équipe…</option>
-                {teamOptions.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
-                  </option>
-                ))}
-              </select>
-            )}
-            <div className="flex justify-end gap-2 mt-6">
-              <button
-                type="button"
-                onClick={() => setTransferOpen(false)}
-                className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
-              >
-                Annuler
-              </button>
-              <button
-                type="button"
-                onClick={transferTeam}
-                disabled={busy === 'transfer' || !transferTeamId}
-                className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {busy === 'transfer' ? 'Transfert…' : 'Transférer'}
-              </button>
-            </div>
+      <Modal
+        open={transferOpen}
+        onClose={() => setTransferOpen(false)}
+        title="Transférer vers une autre équipe"
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setTransferOpen(false)}
+              className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
+            >
+              Annuler
+            </button>
+            <button
+              type="button"
+              onClick={transferTeam}
+              disabled={busy === 'transfer' || !transferTeamId}
+              className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {busy === 'transfer' ? 'Transfert…' : 'Transférer'}
+            </button>
+          </>
+        }
+      >
+        <label className="block text-sm text-neutral-400 mb-1">
+          Équipe de destination
+        </label>
+        {teamsLoading ? (
+          <div className="flex items-center gap-2 text-sm text-neutral-400 py-2">
+            <div className="w-4 h-4 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
+            Chargement des équipes…
           </div>
-        </div>
-      )}
+        ) : teamOptions.length === 0 ? (
+          <p className="text-sm text-neutral-500 py-2">
+            Aucune autre équipe disponible.
+          </p>
+        ) : (
+          <select
+            aria-label="Équipe de destination"
+            value={transferTeamId}
+            onChange={(e) => setTransferTeamId(e.target.value)}
+            className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+          >
+            <option value="">Sélectionner une équipe…</option>
+            {teamOptions.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+        )}
+      </Modal>
     </>
   );
 }

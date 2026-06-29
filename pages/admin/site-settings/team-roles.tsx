@@ -5,6 +5,7 @@ import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 import {
   DEFAULT_TEAM_ROLES,
   TEAM_PERMISSION_CATALOG,
@@ -31,6 +32,7 @@ function AdminTeamRolesPage(_: StaffProps) {
   const router = useRouter();
   const { addToast } = useToast();
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
+  const { adminFetchJson } = useAdminFetch();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -42,12 +44,9 @@ function AdminTeamRolesPage(_: StaffProps) {
     setLoading(true);
     setErrorMsg(null);
     try {
-      const res = await fetch('/api/admin/site-settings/team-roles');
-      if (!res.ok) {
-        const j = await res.json().catch(() => ({}));
-        throw new Error(j.error || 'Impossible de charger les rôles');
-      }
-      const json: { roles: TeamRole[] } = await res.json();
+      const json = await adminFetchJson<{ roles: TeamRole[] }>(
+        '/api/admin/site-settings/team-roles'
+      );
       setSavedRoles(json.roles);
       setDrafts(toDrafts(json.roles));
     } catch (err) {
@@ -55,7 +54,7 @@ function AdminTeamRolesPage(_: StaffProps) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [adminFetchJson]);
 
   useEffect(() => {
     fetchData();
@@ -132,7 +131,9 @@ function AdminTeamRolesPage(_: StaffProps) {
     setDrafts(toDrafts(DEFAULT_TEAM_ROLES));
   };
 
-  const validate = (): { ok: true; roles: TeamRole[] } | { ok: false; error: string } => {
+  const validate = ():
+    | { ok: true; roles: TeamRole[] }
+    | { ok: false; error: string } => {
     const seen = new Set<string>();
     const cleaned: TeamRole[] = [];
     for (const d of drafts) {
@@ -174,15 +175,13 @@ function AdminTeamRolesPage(_: StaffProps) {
     }
     setSaving(true);
     try {
-      const res = await fetch('/api/admin/site-settings/team-roles', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ roles: v.roles }),
-      });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(json?.error || 'Erreur de sauvegarde');
-      }
+      const json = await adminFetchJson<{ roles?: TeamRole[] }>(
+        '/api/admin/site-settings/team-roles',
+        {
+          method: 'PUT',
+          body: JSON.stringify({ roles: v.roles }),
+        }
+      );
       setSavedRoles(json.roles || v.roles);
       setDrafts(toDrafts(json.roles || v.roles));
       addToast('Rôles sauvegardés', 'success');
@@ -314,141 +313,141 @@ function AdminTeamRolesPage(_: StaffProps) {
                     key={d._key}
                     className="bg-neutral-900/50 border border-neutral-700/50 rounded-xl p-4 space-y-4"
                   >
-                  <div className="grid gap-3 md:grid-cols-[auto,1fr,1fr,auto] items-end">
-                    <div className="flex flex-col gap-1">
-                      <button
-                        type="button"
-                        onClick={() => moveDraft(d._key, -1)}
-                        disabled={idx === 0}
-                        className="p-1 rounded text-neutral-400 hover:bg-neutral-800 disabled:opacity-30 disabled:cursor-not-allowed"
-                        title="Monter"
-                      >
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
+                    <div className="grid gap-3 md:grid-cols-[auto,1fr,1fr,auto] items-end">
+                      <div className="flex flex-col gap-1">
+                        <button
+                          type="button"
+                          onClick={() => moveDraft(d._key, -1)}
+                          disabled={idx === 0}
+                          className="p-1 rounded text-neutral-400 hover:bg-neutral-800 disabled:opacity-30 disabled:cursor-not-allowed"
+                          title="Monter"
                         >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M5 15l7-7 7 7"
-                          />
-                        </svg>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => moveDraft(d._key, 1)}
-                        disabled={idx === drafts.length - 1}
-                        className="p-1 rounded text-neutral-400 hover:bg-neutral-800 disabled:opacity-30 disabled:cursor-not-allowed"
-                        title="Descendre"
-                      >
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M19 9l-7 7-7-7"
-                          />
-                        </svg>
-                      </button>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs text-neutral-400 mb-1">
-                        Identifiant
-                      </label>
-                      <input
-                        type="text"
-                        value={d.value}
-                        onChange={(e) =>
-                          updateDraft(d._key, 'value', e.target.value)
-                        }
-                        className="w-full px-3 py-2.5 rounded-xl bg-neutral-950/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono"
-                        placeholder="player"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs text-neutral-400 mb-1">
-                        Libellé
-                      </label>
-                      <input
-                        type="text"
-                        value={d.label}
-                        onChange={(e) =>
-                          updateDraft(d._key, 'label', e.target.value)
-                        }
-                        className="w-full px-3 py-2.5 rounded-xl bg-neutral-950/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                        placeholder="Player"
-                      />
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => removeDraft(d._key)}
-                      className="p-2.5 rounded-xl hover:bg-red-900/50 text-red-400 transition-colors"
-                      title="Supprimer ce rôle"
-                    >
-                      <svg
-                        className="w-5 h-5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                        />
-                      </svg>
-                    </button>
-                  </div>
-
-                  <div>
-                    <div className="text-xs text-neutral-400 mb-2">
-                      Permissions accordées par ce rôle
-                    </div>
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      {TEAM_PERMISSION_CATALOG.map((perm) => {
-                        const checked = d.permissions.includes(perm.value);
-                        return (
-                          <label
-                            key={perm.value}
-                            className={`flex items-start gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-colors ${
-                              checked
-                                ? 'bg-emerald-500/10 border-emerald-500/50'
-                                : 'bg-neutral-950/40 border-neutral-700 hover:border-neutral-600'
-                            }`}
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
                           >
-                            <input
-                              type="checkbox"
-                              checked={checked}
-                              onChange={() =>
-                                togglePermission(d._key, perm.value)
-                              }
-                              className="mt-0.5 h-4 w-4 rounded border-neutral-600 bg-neutral-900"
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M5 15l7-7 7 7"
                             />
-                            <span className="min-w-0">
-                              <span className="block text-sm text-white">
-                                {perm.label}
-                              </span>
-                              <span className="block text-xs text-neutral-400">
-                                {perm.description}
-                              </span>
-                            </span>
-                          </label>
-                        );
-                      })}
+                          </svg>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => moveDraft(d._key, 1)}
+                          disabled={idx === drafts.length - 1}
+                          className="p-1 rounded text-neutral-400 hover:bg-neutral-800 disabled:opacity-30 disabled:cursor-not-allowed"
+                          title="Descendre"
+                        >
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M19 9l-7 7-7-7"
+                            />
+                          </svg>
+                        </button>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs text-neutral-400 mb-1">
+                          Identifiant
+                        </label>
+                        <input
+                          type="text"
+                          value={d.value}
+                          onChange={(e) =>
+                            updateDraft(d._key, 'value', e.target.value)
+                          }
+                          className="w-full px-3 py-2.5 rounded-xl bg-neutral-950/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono"
+                          placeholder="player"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs text-neutral-400 mb-1">
+                          Libellé
+                        </label>
+                        <input
+                          type="text"
+                          value={d.label}
+                          onChange={(e) =>
+                            updateDraft(d._key, 'label', e.target.value)
+                          }
+                          className="w-full px-3 py-2.5 rounded-xl bg-neutral-950/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                          placeholder="Player"
+                        />
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => removeDraft(d._key)}
+                        className="p-2.5 rounded-xl hover:bg-red-900/50 text-red-400 transition-colors"
+                        title="Supprimer ce rôle"
+                      >
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                          />
+                        </svg>
+                      </button>
                     </div>
-                  </div>
+
+                    <div>
+                      <div className="text-xs text-neutral-400 mb-2">
+                        Permissions accordées par ce rôle
+                      </div>
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        {TEAM_PERMISSION_CATALOG.map((perm) => {
+                          const checked = d.permissions.includes(perm.value);
+                          return (
+                            <label
+                              key={perm.value}
+                              className={`flex items-start gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-colors ${
+                                checked
+                                  ? 'bg-emerald-500/10 border-emerald-500/50'
+                                  : 'bg-neutral-950/40 border-neutral-700 hover:border-neutral-600'
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() =>
+                                  togglePermission(d._key, perm.value)
+                                }
+                                className="mt-0.5 h-4 w-4 rounded border-neutral-600 bg-neutral-900"
+                              />
+                              <span className="min-w-0">
+                                <span className="block text-sm text-white">
+                                  {perm.label}
+                                </span>
+                                <span className="block text-xs text-neutral-400">
+                                  {perm.description}
+                                </span>
+                              </span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>

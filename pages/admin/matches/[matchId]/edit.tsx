@@ -12,6 +12,7 @@ import MatchReadinessChecklist from '@/components/admin/MatchReadinessChecklist'
 import MatchTimeline from '@/components/admin/MatchTimeline';
 import MatchCastAssignments from '@/components/admin/MatchCastAssignments';
 import { useToast } from '@/components/Toast';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 import type {
   StaffProps,
   Match,
@@ -124,6 +125,7 @@ function AdminMatchEditPage({ staff }: StaffProps) {
   const router = useRouter();
   const { matchId } = router.query;
   const { addToast } = useToast();
+  const { adminFetch } = useAdminFetch();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -202,7 +204,9 @@ function AdminMatchEditPage({ staff }: StaffProps) {
     setErrorMsg(null);
 
     try {
-      const res = await fetch(`/api/admin/matches/${matchId}?includeGames=1`);
+      const res = await adminFetch(
+        `/api/admin/matches/${matchId}?includeGames=1`
+      );
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
         throw new Error(json.error || 'Impossible de charger le match');
@@ -280,9 +284,8 @@ function AdminMatchEditPage({ staff }: StaffProps) {
           expected_updated_at: match.updated_at ?? null,
         };
 
-      const metaRes = await fetch(`/api/admin/matches/${matchId}`, {
+      const metaRes = await adminFetch(`/api/admin/matches/${matchId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
@@ -315,9 +318,8 @@ function AdminMatchEditPage({ staff }: StaffProps) {
       // 2) Save score if provided
       const hasScore = form.team1_score !== '' && form.team2_score !== '';
       if (hasScore) {
-        const scoreRes = await fetch(`/api/admin/matches/${matchId}`, {
+        const scoreRes = await adminFetch(`/api/admin/matches/${matchId}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             mode: 'score',
             team1Score: Number(form.team1_score),
@@ -347,9 +349,8 @@ function AdminMatchEditPage({ staff }: StaffProps) {
 
       // 3) Save games if any were edited
       if (games.length > 0 || gamesLoaded) {
-        const gamesRes = await fetch(`/api/matches/${matchId}/games`, {
+        const gamesRes = await adminFetch(`/api/matches/${matchId}/games`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             games: games,
             recomputeMode: hasScore ? 'none' : 'none',
@@ -404,9 +405,8 @@ function AdminMatchEditPage({ staff }: StaffProps) {
 
     try {
       // Scores auto-calculated server-side based on match format
-      const res = await fetch(`/api/admin/matches/${matchId}`, {
+      const res = await adminFetch(`/api/admin/matches/${matchId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           mode: 'score',
           forfeit_team_id: forfeitTeamId,
@@ -1240,6 +1240,7 @@ type MvpPollData = {
 };
 
 function MvpSection({ matchId }: { matchId: string }) {
+  const { adminFetchJson } = useAdminFetch();
   const [data, setData] = useState<MvpPollData | null>(null);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<string>('');
@@ -1250,9 +1251,9 @@ function MvpSection({ matchId }: { matchId: string }) {
     setLoading(true);
     setErr(null);
     try {
-      const res = await fetch(`/api/admin/matches/${matchId}/mvp`);
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'Erreur');
+      const json = await adminFetchJson<
+        MvpPollData & { poll?: { winner_member_id?: string } }
+      >(`/api/admin/matches/${matchId}/mvp`);
       setData(json);
       if (json.poll?.winner_member_id) {
         setSelected(json.poll.winner_member_id);
@@ -1262,7 +1263,7 @@ function MvpSection({ matchId }: { matchId: string }) {
     } finally {
       setLoading(false);
     }
-  }, [matchId]);
+  }, [matchId, adminFetchJson]);
 
   useEffect(() => {
     fetchData();
@@ -1273,13 +1274,10 @@ function MvpSection({ matchId }: { matchId: string }) {
     setSaving(true);
     setErr(null);
     try {
-      const res = await fetch(`/api/admin/matches/${matchId}/mvp`, {
+      await adminFetchJson(`/api/admin/matches/${matchId}/mvp`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ winnerMemberId: selected }),
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'Erreur');
       await fetchData();
     } catch (e) {
       setErr((e as Error).message);
@@ -1292,13 +1290,9 @@ function MvpSection({ matchId }: { matchId: string }) {
     if (!confirm('Effacer le MVP enregistré ?')) return;
     setSaving(true);
     try {
-      const res = await fetch(`/api/admin/matches/${matchId}/mvp`, {
+      await adminFetchJson(`/api/admin/matches/${matchId}/mvp`, {
         method: 'DELETE',
       });
-      if (!res.ok) {
-        const j = await res.json().catch(() => ({}));
-        throw new Error(j.error || 'Erreur');
-      }
       setSelected('');
       await fetchData();
     } catch (e) {
