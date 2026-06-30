@@ -9,9 +9,15 @@
 // L'appelant est le bot lui-meme via son service account, pas un admin
 // Discord. Les writebacks sont scope-restreints aux 3 colonnes ci-dessous.
 //
-// Body : { discordThreadId?, discordScheduledEventId?, discordDisputeThreadId? }
-// Passer null pour vider un champ (utile quand le thread/event Discord a ete
-// supprime manuellement et qu'on veut autoriser le bot a en recreer un).
+// Body : { discordThreadId?, discordScheduledEventId?, discordDisputeThreadId?,
+//          discordMatchChannelId? }
+// Passer null pour vider un champ (utile quand le thread/event/salon Discord a
+// ete supprime manuellement et qu'on veut autoriser le bot a en recreer un).
+//
+// Degradation gracieuse (T4) : `discord_match_channel_id` est ajoute par une
+// migration separee qui peut ne pas encore etre appliquee au moment du deploy.
+// Si l'update echoue parce que la colonne manque (Postgres 42703), on renvoie
+// un 503 explicite plutot qu'un 500 opaque, sans impacter les 3 autres champs.
 
 import { z } from 'zod';
 import type { NextApiResponse } from 'next';
@@ -50,10 +56,21 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
 
   const body = (req.body ?? {}) as Record<string, unknown>;
 
+  // Colonnes stables (toujours presentes). Le select critique ne lit QUE
+  // celles-ci : `discord_match_channel_id` n'y est PAS ajoute pour ne pas
+  // casser le writeback des 3 champs historiques si la migration T4 n'est pas
+  // encore appliquee.
+  const STABLE_COLS =
+    'id, discord_thread_id, discord_scheduled_event_id, discord_dispute_thread_id';
+
+  // Colonne T4, ajoutee par une migration separee (peut etre absente).
+  const CHANNEL_COL = 'discord_match_channel_id';
+
   const fields: Array<[string, string]> = [
     ['discordThreadId', 'discord_thread_id'],
     ['discordScheduledEventId', 'discord_scheduled_event_id'],
     ['discordDisputeThreadId', 'discord_dispute_thread_id'],
+    ['discordMatchChannelId', CHANNEL_COL],
   ];
 
   const updates: Record<string, string | null> = {};
@@ -66,15 +83,15 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
   if (Object.keys(updates).length === 0) {
     return res.status(400).json({
       error:
-        'Aucun champ a mettre a jour (discordThreadId, discordScheduledEventId, discordDisputeThreadId).',
+        'Aucun champ a mettre a jour (discordThreadId, discordScheduledEventId, discordDisputeThreadId, discordMatchChannelId).',
     });
   }
 
+  const touchesChannel = CHANNEL_COL in updates;
+
   const { data: match, error: mErr } = await supabaseAdmin
     .from('matches')
-    .select(
-      'id, discord_thread_id, discord_scheduled_event_id, discord_dispute_thread_id'
-    )
+    .select(STABLE_COLS)
     .eq('tenant_id', req.botContext.tenantId)
     .eq('id', matchId)
     .maybeSingle();
@@ -84,16 +101,39 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
   }
   if (!match) return res.status(404).json({ error: 'Match introuvable' });
 
+  // Le select de retour inclut la colonne T4 uniquement quand on l'a touchee,
+  // de sorte qu'un PATCH des 3 champs historiques ne depend jamais d'elle.
+  const returnCols = touchesChannel
+    ? `${STABLE_COLS}, ${CHANNEL_COL}`
+    : STABLE_COLS;
+
   const { data: updated, error: upErr } = await supabaseAdmin
     .from('matches')
     .update({ ...updates, updated_at: new Date().toISOString() })
     .eq('tenant_id', req.botContext.tenantId)
     .eq('id', matchId)
-    .select(
-      'id, discord_thread_id, discord_scheduled_event_id, discord_dispute_thread_id'
-    )
+    .select(returnCols)
     .maybeSingle();
   if (upErr || !updated) {
+    // Colonne T4 absente (migration pas encore appliquee) : erreur claire,
+    // pas de 500 opaque. Postgres remonte 42703 (undefined_column).
+    if (
+      touchesChannel &&
+      ((upErr as { code?: string } | null)?.code === '42703' ||
+        /discord_match_channel_id/i.test(
+          (upErr as { message?: string })?.message ?? ''
+        ))
+    ) {
+      logger.error(
+        '[bot/match/discord] colonne discord_match_channel_id absente',
+        upErr
+      );
+      return res.status(503).json({
+        error:
+          'Champ discordMatchChannelId indisponible : migration discord_match_channel_id non appliquee.',
+        code: 'CHANNEL_COLUMN_MISSING',
+      });
+    }
     logger.error('[bot/match/discord] update error', upErr);
     return res.status(500).json({ error: 'Echec de la mise a jour' });
   }

@@ -33,6 +33,7 @@ const THREAD_ID_1 = snowflake(1);
 const THREAD_ID_2 = snowflake(2);
 const SCHEDULED_EVENT_ID = snowflake(3);
 const DISPUTE_THREAD_ID = snowflake(4);
+const MATCH_CHANNEL_ID = snowflake(5);
 
 let tournamentId: string;
 let matchId: string;
@@ -73,7 +74,8 @@ test.describe.serial('Bot match discord writeback — auth & method', () => {
   });
 });
 
-test.describe.serial('Bot match discord writeback — validation & writes', () => {
+test.describe
+  .serial('Bot match discord writeback — validation & writes', () => {
   test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
   test.beforeAll(async () => {
@@ -127,23 +129,67 @@ test.describe.serial('Bot match discord writeback — validation & writes', () =
   });
 
   test('400 si snowflake invalide', async ({ request }) => {
-    const res = await request.patch(
-      `/api/bot/v1/matches/${matchId}/discord`,
-      {
-        headers: { 'x-api-key': API_KEY! },
-        data: { discordThreadId: 'pas-un-snowflake' },
-      }
-    );
+    const res = await request.patch(`/api/bot/v1/matches/${matchId}/discord`, {
+      headers: { 'x-api-key': API_KEY! },
+      data: { discordThreadId: 'pas-un-snowflake' },
+    });
     expect(res.status()).toBe(400);
     const body = await res.json();
     expect(body.error).toMatch(/discordThreadId/i);
   });
 
-  test('400 si body vide (aucun champ Discord)', async ({ request }) => {
-    const res = await request.patch(
+  test('400 si discordMatchChannelId snowflake invalide', async ({
+    request,
+  }) => {
+    const res = await request.patch(`/api/bot/v1/matches/${matchId}/discord`, {
+      headers: { 'x-api-key': API_KEY! },
+      data: { discordMatchChannelId: 'pas-un-snowflake' },
+    });
+    expect(res.status()).toBe(400);
+    const body = await res.json();
+    expect(body.error).toMatch(/discordMatchChannelId/i);
+  });
+
+  // T4 — salon prive par match. Tolere 503 (CHANNEL_COLUMN_MISSING) tant que
+  // la migration discord_match_channel_id n'est pas appliquee : degradation
+  // gracieuse. Une fois la colonne presente, le champ se comporte comme les 3
+  // autres (accepte + clearable).
+  test('200/503 discordMatchChannelId : set puis clear', async ({
+    request,
+  }) => {
+    const setRes = await request.patch(
       `/api/bot/v1/matches/${matchId}/discord`,
-      { headers: { 'x-api-key': API_KEY! }, data: {} }
+      {
+        headers: { 'x-api-key': API_KEY! },
+        data: { discordMatchChannelId: MATCH_CHANNEL_ID },
+      }
     );
+    expect([200, 503]).toContain(setRes.status());
+    const setBody = await setRes.json();
+    if (setRes.status() === 503) {
+      expect(setBody.code).toBe('CHANNEL_COLUMN_MISSING');
+      return;
+    }
+    expect(setBody.success).toBe(true);
+    expect(setBody.match.discord_match_channel_id).toBe(MATCH_CHANNEL_ID);
+
+    const clearRes = await request.patch(
+      `/api/bot/v1/matches/${matchId}/discord`,
+      {
+        headers: { 'x-api-key': API_KEY! },
+        data: { discordMatchChannelId: null },
+      }
+    );
+    expect(clearRes.status()).toBe(200);
+    const clearBody = await clearRes.json();
+    expect(clearBody.match.discord_match_channel_id).toBeNull();
+  });
+
+  test('400 si body vide (aucun champ Discord)', async ({ request }) => {
+    const res = await request.patch(`/api/bot/v1/matches/${matchId}/discord`, {
+      headers: { 'x-api-key': API_KEY! },
+      data: {},
+    });
     expect(res.status()).toBe(400);
     const body = await res.json();
     expect(body.error).toMatch(/Aucun champ/i);
@@ -161,17 +207,14 @@ test.describe.serial('Bot match discord writeback — validation & writes', () =
   });
 
   test('200 happy path : persiste les 3 colonnes', async ({ request }) => {
-    const res = await request.patch(
-      `/api/bot/v1/matches/${matchId}/discord`,
-      {
-        headers: { 'x-api-key': API_KEY! },
-        data: {
-          discordThreadId: THREAD_ID_1,
-          discordScheduledEventId: SCHEDULED_EVENT_ID,
-          discordDisputeThreadId: DISPUTE_THREAD_ID,
-        },
-      }
-    );
+    const res = await request.patch(`/api/bot/v1/matches/${matchId}/discord`, {
+      headers: { 'x-api-key': API_KEY! },
+      data: {
+        discordThreadId: THREAD_ID_1,
+        discordScheduledEventId: SCHEDULED_EVENT_ID,
+        discordDisputeThreadId: DISPUTE_THREAD_ID,
+      },
+    });
     expect(res.status()).toBe(200);
     const body = await res.json();
     expect(body.success).toBe(true);
@@ -201,13 +244,10 @@ test.describe.serial('Bot match discord writeback — validation & writes', () =
     request,
   }) => {
     // Met a jour seulement le thread principal — les 2 autres doivent rester.
-    const res = await request.patch(
-      `/api/bot/v1/matches/${matchId}/discord`,
-      {
-        headers: { 'x-api-key': API_KEY! },
-        data: { discordThreadId: THREAD_ID_2 },
-      }
-    );
+    const res = await request.patch(`/api/bot/v1/matches/${matchId}/discord`, {
+      headers: { 'x-api-key': API_KEY! },
+      data: { discordThreadId: THREAD_ID_2 },
+    });
     expect(res.status()).toBe(200);
     const body = await res.json();
     expect(body.match).toMatchObject({
@@ -218,13 +258,10 @@ test.describe.serial('Bot match discord writeback — validation & writes', () =
   });
 
   test('200 null clear : passer null vide la colonne', async ({ request }) => {
-    const res = await request.patch(
-      `/api/bot/v1/matches/${matchId}/discord`,
-      {
-        headers: { 'x-api-key': API_KEY! },
-        data: { discordScheduledEventId: null },
-      }
-    );
+    const res = await request.patch(`/api/bot/v1/matches/${matchId}/discord`, {
+      headers: { 'x-api-key': API_KEY! },
+      data: { discordScheduledEventId: null },
+    });
     expect(res.status()).toBe(200);
     const body = await res.json();
     expect(body.match.discord_scheduled_event_id).toBeNull();

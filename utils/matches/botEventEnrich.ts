@@ -46,7 +46,32 @@ export type EnrichedMatchEvent = {
   discordThreadId: string | null;
   discordScheduledEventId: string | null;
   discordDisputeThreadId: string | null;
+  discordMatchChannelId: string | null;
 };
+
+/**
+ * Lecture defensive de `matches.discord_match_channel_id` (T4).
+ *
+ * Cette colonne est ajoutee par une migration separee qui peut ne pas encore
+ * etre appliquee quand ce code tourne (push sur work = auto-deploy). On NE
+ * l'ajoute PAS au select principal de enrichMatchEvent : un select isole en
+ * try/catch garantit qu'un echec (colonne absente) renvoie `null` sans jamais
+ * faire echouer l'enrichissement ni l'event match.* sortant.
+ */
+async function fetchMatchChannelId(matchId: string): Promise<string | null> {
+  if (!supabaseAdmin) return null;
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('matches')
+      .select('discord_match_channel_id')
+      .eq('id', matchId)
+      .maybeSingle();
+    if (error) return null;
+    return (data?.discord_match_channel_id as string | undefined) ?? null;
+  } catch {
+    return null;
+  }
+}
 
 async function fetchCaptainDiscordUserId(
   captainAuthId: string | null
@@ -101,9 +126,10 @@ export async function enrichMatchEvent(
     const tnRaw = Array.isArray(m.tournament) ? m.tournament[0] : m.tournament;
     const scRaw = Array.isArray(m.scrim) ? m.scrim[0] : m.scrim;
 
-    const [t1Captain, t2Captain] = await Promise.all([
+    const [t1Captain, t2Captain, matchChannelId] = await Promise.all([
       fetchCaptainDiscordUserId(t1Raw?.captain_id ?? null),
       fetchCaptainDiscordUserId(t2Raw?.captain_id ?? null),
+      fetchMatchChannelId(m.id),
     ]);
 
     const team1 = t1Raw
@@ -152,6 +178,7 @@ export async function enrichMatchEvent(
       discordThreadId: m.discord_thread_id ?? null,
       discordScheduledEventId: m.discord_scheduled_event_id ?? null,
       discordDisputeThreadId: m.discord_dispute_thread_id ?? null,
+      discordMatchChannelId: matchChannelId,
     };
   } catch (err) {
     logger.error('[botEventEnrich] fetch error', err);

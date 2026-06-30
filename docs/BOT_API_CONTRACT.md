@@ -312,6 +312,10 @@ Payload :
       "scrimName": "<string|null>",
       "team1": { "captainDiscordUserId": "<snowflake|null>", ... },
       "team2": { "captainDiscordUserId": "<snowflake|null>", ... },
+      "discordThreadId": "<snowflake|null>",
+      "discordScheduledEventId": "<snowflake|null>",
+      "discordDisputeThreadId": "<snowflake|null>",
+      "discordMatchChannelId": "<snowflake|null>",
       "checkinUrl1": "https://site/checkin/<token>",
       "checkinUrl2": "https://site/checkin/<token>"
     }
@@ -323,6 +327,14 @@ The bot DMs the captain of `teamSide`, posts a fresh check-in prompt
 (URL + Check-in button reusing the existing `match_checkin` reminder
 template). If `enriched.team{N}.captainDiscordUserId` is null, the bot
 logs and skips — the team probably has no linked captain.
+
+`enriched.discordMatchChannelId` (T4) provient de `enrichMatchEvent`
+(`utils/matches/botEventEnrich.ts`) et reflete
+`matches.discord_match_channel_id` (salon prive par match). Lecture
+**defensive** : si la migration n'est pas appliquee, le champ vaut `null`
+sans jamais faire echouer l'enrichissement ni l'event. Le bot s'en sert pour
+l'idempotence (savoir si le salon existe deja avant d'en creer un).
+`checkinUrl1/2` n'apparaissent que dans le payload `checkin.nudge`.
 
 #### `registration.blacklisted` (Blacklist joueurs)
 
@@ -955,6 +967,33 @@ Le caster clique le bouton "Je confirme" du DM T-30. Marque
 | [`matches/[matchId]/reset.ts`](../pages/api/bot/v1/matches/[matchId]/reset.ts)                     | POST              | yes   | `bot-match-reset`           |
 | [`matches/[matchId]/resolve-dispute.ts`](../pages/api/bot/v1/matches/[matchId]/resolve-dispute.ts) | POST              | yes   | `bot-match-resolve-dispute` |
 | [`matches/[matchId]/veto.ts`](../pages/api/bot/v1/matches/[matchId]/veto.ts)                       | GET, POST, DELETE | yes   | `bot-match-veto`            |
+
+#### `PATCH /api/bot/v1/matches/:matchId/discord`
+
+Writeback bot → site des IDs Discord natifs lies a un match, pour assurer
+l'idempotence des handlers d'event suivants (ne pas recreer un objet dont on
+a deja l'ID). **Auth** : `x-api-key` uniquement (bot service account, pas
+d'`actorDiscordUserId`).
+
+**Body** — toutes les cles sont optionnelles ; chacune accepte un snowflake
+valide **ou** `null` (pour vider la colonne). Cle absente = champ non touche.
+
+| Cle body                  | Colonne DB                      |
+| ------------------------- | ------------------------------- |
+| `discordThreadId`         | `discord_thread_id`             |
+| `discordScheduledEventId` | `discord_scheduled_event_id`    |
+| `discordDisputeThreadId`  | `discord_dispute_thread_id`     |
+| `discordMatchChannelId`   | `discord_match_channel_id` (T4) |
+
+`discordMatchChannelId` (T4 — salon prive par match via overwrite de role
+d'equipe) est ajoute par une **migration separee**. Degradation gracieuse :
+si la colonne n'est pas encore appliquee, un PATCH qui **touche ce champ**
+renvoie `503 { code: "CHANNEL_COLUMN_MISSING" }` (jamais un 500 opaque) ; les
+PATCH des 3 champs historiques ne dependent jamais de cette colonne.
+
+**Errors** : `400` (matchId invalide, snowflake invalide, body vide), `401`,
+`404` (match introuvable), `503` (`CHANNEL_COLUMN_MISSING`).
+**Rate limit** : 60/min global (`bot-match-discord`). **Idempotency** : oui.
 
 #### `GET /api/bot/v1/matches/:matchId/dispute`
 

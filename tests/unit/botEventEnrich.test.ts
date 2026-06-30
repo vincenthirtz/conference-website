@@ -61,6 +61,7 @@ describe('enrichMatchEvent', () => {
         discord_thread_id: '999000000000000000',
         discord_scheduled_event_id: null,
         discord_dispute_thread_id: null,
+        discord_match_channel_id: '888000000000000000',
         team1: TEAM_1,
         team2: TEAM_2,
         tournament: { id: 'tour-1', name: 'Spring Cup' },
@@ -90,6 +91,7 @@ describe('enrichMatchEvent', () => {
       discordThreadId: '999000000000000000',
       discordScheduledEventId: null,
       discordDisputeThreadId: null,
+      discordMatchChannelId: '888000000000000000',
     });
     expect(enriched!.team1).toEqual({
       id: 'team-1',
@@ -150,6 +152,9 @@ describe('enrichMatchEvent', () => {
     expect(enriched!.team2).toBeNull();
     expect(enriched!.team1!.captainDiscordUserId).toBeNull();
     expect(enriched!.tournamentName).toBeNull();
+    // Degradation gracieuse (T4) : la row ne porte pas la colonne
+    // discord_match_channel_id -> le champ tombe a null sans casser l'enrich.
+    expect(enriched!.discordMatchChannelId).toBeNull();
   });
 
   it('renvoie scrimName et tournamentName=null pour un match de scrim', async () => {
