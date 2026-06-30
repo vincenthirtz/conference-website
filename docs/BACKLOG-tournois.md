@@ -10,7 +10,7 @@
 
 | # | Ticket | Impact | Effort | Inspiré de |
 |---|---|---|---|---|
-| T1 | Self-report de score joueur + escalade litige | 🟥 | M | Challonge, Dragora |
+| T1 | Self-report de score joueur + escalade litige ✅ | 🟥 | M | Challonge, Dragora |
 | T2 | Auto-DQ des no-shows au check-in | 🟥 | S | start.gg, Dragora |
 | T3 | Rôles Discord auto par classement | 🟧 | S | Dragora |
 | T4 | Canal Discord privé par match | 🟧 | M | Dragora |
@@ -22,19 +22,22 @@
 
 ## P1 — à faire en priorité
 
-### T1 · Self-report de score joueur + escalade litige
+### T1 · Self-report de score joueur + escalade litige — ✅ LIVRÉ
 - **Impact / Effort** : 🟥 / M
 - **Réf concurrent** : Challonge (report orga **+ self-report** participant, vérifié 3-0) ; Dragora (boutons « I Won » / « I Lost », litiges escaladés aux modérateurs, 3-0).
 - **Problème** : aujourd'hui les scores sont saisis par le staff ; charge manuelle et goulot d'étranglement sur les gros brackets.
-- **Proposition** : permettre aux deux équipes d'un match de rapporter leur résultat depuis l'espace joueur / le bot Discord. Si les deux reports concordent → score validé automatiquement. S'ils divergent (ou time-out) → bascule sur le **système de litiges existant** (`disputes`) pour arbitrage staff.
+- **Proposition** : permettre aux deux équipes d'un match de rapporter leur résultat depuis l'espace joueur / le bot Discord. Si les deux reports concordent → score validé automatiquement. S'ils divergent (ou time-out) → bascule sur le **système de litiges existant** pour arbitrage staff.
 - **Critères d'acceptation** :
-  - [ ] Un capitaine peut soumettre un score pour un match où son équipe joue.
-  - [ ] Deux reports concordants valident le match sans intervention staff.
-  - [ ] Reports divergents → litige créé automatiquement, visible dans `/admin/disputes`.
-  - [ ] Idempotence sur la soumission (pas de double-report).
-  - [ ] Journalisation : qui a rapporté quoi, quand.
-- **Zones touchées** : `pages/api/.../matches` (report endpoint), espace capitaine, bot Discord (commande/bouton), table `disputes`, espace `/admin/matches`.
-- **Dépendances** : système de litiges (existant).
+  - [x] Un capitaine peut soumettre un score pour un match où son équipe joue → `POST /api/player/matches/[matchId]/report-score` + UI espace capitaine.
+  - [x] Deux reports concordants valident le match sans intervention staff (réutilise `applyMatchScore`, status `finalized`).
+  - [x] Reports divergents → match passe en `disputed` (visible `/admin/disputes`), status `disputed`.
+  - [x] Idempotence sur la soumission (upsert `(match_id, team_side)`, correction possible).
+  - [x] Journalisation : `match_score_reports` (reported_by_auth_user_id, reported_at).
+- **Implémentation** :
+  - DB déjà en prod : `match_score_reports` (+ RLS service-role, tenant_id) ; chemin Discord déjà livré (`/api/bot/v1/matches/[matchId]/report`). Migration anti-drift `enable_rls_match_score_reports.sql` ajoutée.
+  - API web : `pages/api/player/matches/[matchId]/report-score.ts` (Bearer capitaine, body `{team1Score,team2Score}`, réponses `awaiting_opponent`/`finalized`/`disputed`), 11 tests.
+  - UI : `pages/player/matches.tsx` + `components/player/ReportScoreModal.tsx` (Modal partagée, i18n FR+EN, conversion slot→team1/team2).
+- **Note** : le « système de litiges » = état sur `matches` (`status='disputed'` + colonnes `dispute_*` + SLA), pas une table `disputes`.
 
 ### T2 · Auto-DQ des no-shows au check-in
 - **Impact / Effort** : 🟥 / S

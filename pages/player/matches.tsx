@@ -7,6 +7,10 @@ import Link from 'next/link';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
+import ReportScoreModal, {
+  type LocalReport,
+  type ReportOutcome,
+} from '@/components/player/ReportScoreModal';
 import { useLang, type Lang } from '@/lib/i18n/LanguageProvider';
 import { useT, format } from '@/lib/i18n/useT';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
@@ -48,13 +52,23 @@ function scheduledTime(match: PlayerMatch): number {
   return match.scheduledAt ? new Date(match.scheduledAt).getTime() : 0;
 }
 
-function ResultBadge({
-  result,
-  t,
-}: {
-  result: PlayerMatch['result'];
-  t: T;
-}) {
+/** Statuts terminaux côté backend : plus rapportables par un capitaine. */
+const TERMINAL_STATUSES = new Set(['finished', 'walkover', 'cancelled']);
+
+/**
+ * Un match est rapportable si les deux équipes sont assignées (opponent connu)
+ * et que le match n'est pas clôturé. Le droit "capitaine" est vérifié côté
+ * serveur (403 sinon) — on ne le connaît pas depuis la liste.
+ */
+function isReportable(match: PlayerMatch): boolean {
+  if (!match.opponent) return false;
+  return !TERMINAL_STATUSES.has(match.status);
+}
+
+/** État local d'un report soumis durant la session (idempotence côté client). */
+type ReportState = { outcome: ReportOutcome; report: LocalReport };
+
+function ResultBadge({ result, t }: { result: PlayerMatch['result']; t: T }) {
   if (result === 'win') {
     return (
       <span className="inline-flex items-center rounded-full border border-emerald-400/30 bg-emerald-500/15 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-100">
@@ -83,15 +97,23 @@ function MatchCard({
   match,
   lang,
   t,
+  reportState,
+  onReport,
 }: {
   match: PlayerMatch;
   lang: Lang;
   t: T;
+  reportState: ReportState | null;
+  onReport: (match: PlayerMatch) => void;
 }) {
   const upcoming = isUpcoming(match);
   const checkin = match.checkin;
   const label = formatLabel(match);
   const isLive = match.status === 'ongoing';
+  const reportable = isReportable(match);
+  // Statut report dérivé : état local de session sinon statut serveur "disputed".
+  const reportOutcome: ReportOutcome | null =
+    reportState?.outcome ?? (match.status === 'disputed' ? 'disputed' : null);
 
   return (
     <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-5">
@@ -121,6 +143,16 @@ function MatchCard({
         )}
         {match.roundName && <span>{match.roundName}</span>}
         {label && <span className="tabular-nums">{label}</span>}
+        {reportOutcome === 'awaiting_opponent' && (
+          <span className="inline-flex items-center rounded-full border border-amber-400/30 bg-amber-500/15 px-2.5 py-1 text-[10px] font-semibold text-amber-100">
+            {t.badgeAwaiting}
+          </span>
+        )}
+        {reportOutcome === 'disputed' && (
+          <span className="inline-flex items-center rounded-full border border-rose-400/30 bg-rose-500/15 px-2.5 py-1 text-[10px] font-semibold text-rose-100">
+            {t.badgeDisputed}
+          </span>
+        )}
       </div>
 
       <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
@@ -195,7 +227,31 @@ function MatchCard({
             <span aria-hidden>→</span>
           </Link>
         )}
+
+        {reportable && (
+          <button
+            type="button"
+            onClick={() => onReport(match)}
+            className="inline-flex items-center gap-1 rounded-full border border-purple-400/30 bg-purple-500/10 px-4 py-2 text-sm font-medium text-purple-100 transition hover:bg-purple-500/20"
+          >
+            {reportState ? t.editReport : t.reportScore}
+            <span aria-hidden>→</span>
+          </button>
+        )}
       </div>
+
+      {reportState && (
+        <p className="mt-3 text-xs text-gray-400">
+          {reportState.outcome === 'awaiting_opponent' && t.statusAwaitingShort}
+          {reportState.outcome === 'disputed' && t.statusDisputedShort}
+          {reportState.outcome === 'finalized' && t.statusFinalized}
+          {' · '}
+          <span className="tabular-nums text-gray-300">
+            {t.myTeamLabel} {reportState.report.mine} –{' '}
+            {reportState.report.opponent} {t.opponentLabel}
+          </span>
+        </p>
+      )}
     </div>
   );
 }
@@ -214,6 +270,8 @@ function PlayerMatches() {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<PlayerMatchesPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [reports, setReports] = useState<Record<string, ReportState>>({});
+  const [activeMatch, setActiveMatch] = useState<PlayerMatch | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -234,6 +292,20 @@ function PlayerMatches() {
     if (!ready) return;
     load();
   }, [ready, load]);
+
+  const handleReported = useCallback(
+    (outcome: ReportOutcome, report: LocalReport) => {
+      const matchId = activeMatch?.id;
+      if (matchId) {
+        setReports((prev) => ({ ...prev, [matchId]: { outcome, report } }));
+      }
+      // Sur finalisation, le statut serveur change : on rafraîchit la liste.
+      if (outcome === 'finalized') {
+        load();
+      }
+    },
+    [activeMatch, load]
+  );
 
   if (authLoading || (loading && !data)) {
     return <PlayerPageSkeleton rows={3} />;
@@ -293,9 +365,7 @@ function PlayerMatches() {
 
         {!data?.team && !error ? (
           <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-8 text-center">
-            <p className="text-lg font-semibold text-white">
-              {t.noTeamTitle}
-            </p>
+            <p className="text-lg font-semibold text-white">{t.noTeamTitle}</p>
             <p className="mt-2 text-sm text-gray-400">{t.noTeamBody}</p>
             <Link
               href="/player"
@@ -306,9 +376,7 @@ function PlayerMatches() {
           </div>
         ) : data?.team && matches.length === 0 && !error ? (
           <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-8 text-center">
-            <p className="text-lg font-semibold text-white">
-              {t.noMatchTitle}
-            </p>
+            <p className="text-lg font-semibold text-white">{t.noMatchTitle}</p>
             <p className="mt-2 text-sm text-gray-400">{t.noMatchBody}</p>
           </div>
         ) : (
@@ -323,7 +391,14 @@ function PlayerMatches() {
                 </h2>
                 <div className="space-y-4">
                   {upcoming.map((m) => (
-                    <MatchCard key={m.id} match={m} lang={lang} t={t} />
+                    <MatchCard
+                      key={m.id}
+                      match={m}
+                      lang={lang}
+                      t={t}
+                      reportState={reports[m.id] ?? null}
+                      onReport={setActiveMatch}
+                    />
                   ))}
                 </div>
               </section>
@@ -339,7 +414,14 @@ function PlayerMatches() {
                 </h2>
                 <div className="space-y-4">
                   {past.map((m) => (
-                    <MatchCard key={m.id} match={m} lang={lang} t={t} />
+                    <MatchCard
+                      key={m.id}
+                      match={m}
+                      lang={lang}
+                      t={t}
+                      reportState={reports[m.id] ?? null}
+                      onReport={setActiveMatch}
+                    />
                   ))}
                 </div>
               </section>
@@ -347,6 +429,21 @@ function PlayerMatches() {
           </div>
         )}
       </main>
+
+      {activeMatch && (
+        <ReportScoreModal
+          open={!!activeMatch}
+          onClose={() => setActiveMatch(null)}
+          matchId={activeMatch.id}
+          slot={activeMatch.slot}
+          opponentName={activeMatch.opponent?.name ?? t.opponentTbd}
+          myTeamName={data?.team?.name ?? t.myTeamLabel}
+          bestOf={activeMatch.bestOf}
+          currentReport={reports[activeMatch.id]?.report ?? null}
+          t={t}
+          onReported={handleReported}
+        />
+      )}
     </div>
   );
 }
