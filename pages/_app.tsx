@@ -50,13 +50,18 @@ function MyApp({ Component, pageProps, router }: AppPropsWithSeo) {
   const isAdmin = router.pathname.startsWith('/admin');
   const isCaster = router.pathname.startsWith('/caster');
   const isPlayer = router.pathname.startsWith('/player');
+  // Embeddable surfaces (iframe) render bare: no Navbar/Footer/Toast/cookie
+  // banner/socials. They are read-only and meant to be framed by third parties.
+  const isEmbed = router.pathname.startsWith('/embed');
   // Routes "applicatives" (admin + cockpit caster + espace joueur) : pas
   // d'index. L'espace joueur est gate cote client et n'a pas de contenu
   // public a referencer — on force noindex pour eviter d'indexer des coquilles
   // vides / pages d'auth. La navbar/footer marketing restent (sauf caster qui
   // gere sa propre chrome legere — cf. /caster/login, /caster/cockpit).
   const effectiveSeo: SeoProps =
-    isAdmin || isCaster || isPlayer ? { ...seo, noindex: true } : { ...seo };
+    isAdmin || isCaster || isPlayer || isEmbed
+      ? { ...seo, noindex: true }
+      : { ...seo };
 
   const manifestHref = useMemo(() => {
     if (isAdmin) return '/admin/manifest.webmanifest';
@@ -76,43 +81,55 @@ function MyApp({ Component, pageProps, router }: AppPropsWithSeo) {
     });
   }, []);
 
+  // Bare iframe-embeddable pages: render only the page, no global chrome.
+  if (isEmbed) {
+    return (
+      <ErrorBoundary>
+        <div className={workSans.variable}>
+          <DefaultSeo {...effectiveSeo} />
+          <Component {...pageProps} />
+        </div>
+      </ErrorBoundary>
+    );
+  }
+
   return (
     <ErrorBoundary>
       <LanguageProvider>
-       <ToastProvider>
-        <div className={workSans.variable}>
-          <Head>
-            <link key="manifest" rel="manifest" href={manifestHref} />
-            {isAppScope && (
-              <meta
-                key="apple-wac"
-                name="apple-mobile-web-app-capable"
-                content="yes"
-              />
-            )}
-            {isAppScope && (
-              <meta
-                key="apple-sbs"
-                name="apple-mobile-web-app-status-bar-style"
-                content="default"
-              />
-            )}
-          </Head>
-          <DefaultSeo {...effectiveSeo} />
-          {!isCaster && <Navbar />}
-          <main id="main-content">
-            <Component {...pageProps} />
-          </main>
-          {isAdmin && <PushOptIn />}
-          {(isAdmin || isCaster) && <PWAInstallAndUpdate />}
-          {(isAdmin || isCaster) && <OfflineBanner />}
-          {!isCaster && <Footer />}
-          {!isAdmin && !isCaster && <FloatingSocials />}
-          <BackToTopButton />
-          <CookieBanner />
-          <ToastContainer />
-        </div>
-       </ToastProvider>
+        <ToastProvider>
+          <div className={workSans.variable}>
+            <Head>
+              <link key="manifest" rel="manifest" href={manifestHref} />
+              {isAppScope && (
+                <meta
+                  key="apple-wac"
+                  name="apple-mobile-web-app-capable"
+                  content="yes"
+                />
+              )}
+              {isAppScope && (
+                <meta
+                  key="apple-sbs"
+                  name="apple-mobile-web-app-status-bar-style"
+                  content="default"
+                />
+              )}
+            </Head>
+            <DefaultSeo {...effectiveSeo} />
+            {!isCaster && <Navbar />}
+            <main id="main-content">
+              <Component {...pageProps} />
+            </main>
+            {isAdmin && <PushOptIn />}
+            {(isAdmin || isCaster) && <PWAInstallAndUpdate />}
+            {(isAdmin || isCaster) && <OfflineBanner />}
+            {!isCaster && <Footer />}
+            {!isAdmin && !isCaster && <FloatingSocials />}
+            <BackToTopButton />
+            <CookieBanner />
+            <ToastContainer />
+          </div>
+        </ToastProvider>
       </LanguageProvider>
     </ErrorBoundary>
   );

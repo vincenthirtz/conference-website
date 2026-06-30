@@ -5,6 +5,17 @@ export function proxy(request: NextRequest) {
   // Generate a random nonce for each request
   const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
 
+  // T7: pages under /embed/* are public, read-only widgets (e.g. the bracket
+  // iframe at /embed/tournament/[id]/bracket) designed to be embedded on
+  // third-party sites/streams. Only this prefix may be framed by any origin;
+  // every other route keeps the strict anti-clickjacking posture below.
+  const isEmbed = request.nextUrl.pathname.startsWith('/embed');
+  // frame-ancestors: '*' allows any parent to iframe the embed pages.
+  // Everywhere else stays 'none' (no framing at all).
+  const frameAncestors = isEmbed
+    ? 'frame-ancestors *'
+    : "frame-ancestors 'none'";
+
   // Cloudflare Turnstile (anti-bot widget, /onboard pages) injects:
   //   - script depuis https://challenges.cloudflare.com/turnstile/v0/api.js
   //   - styles inline dans le widget (impossible de leur passer notre nonce)
@@ -31,7 +42,7 @@ export function proxy(request: NextRequest) {
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
-    "frame-ancestors 'none'",
+    frameAncestors,
     'upgrade-insecure-requests',
   ].join('; ');
 
@@ -43,6 +54,16 @@ export function proxy(request: NextRequest) {
 
   // Set CSP header on the response
   response.headers.set('Content-Security-Policy', csp);
+
+  // T7: X-Frame-Options (set globally to ALLOW-FROM in netlify.toml) is a
+  // legacy header that modern browsers treat as DENY/SAMEORIGIN when the value
+  // isn't a plain SAMEORIGIN/DENY — it would block third-party iframing of the
+  // embed pages regardless of CSP. Strip it for /embed/* so frame-ancestors
+  // (above) is the sole, authoritative framing policy there. Everywhere else
+  // the netlify.toml header is untouched.
+  if (isEmbed) {
+    response.headers.delete('X-Frame-Options');
+  }
 
   return response;
 }

@@ -82,6 +82,17 @@
   [headers.values]
     X-Frame-Options = "ALLOW-FROM https://www.youtube.com/"
 
+# T7: /embed/* are public read-only widgets (bracket iframe) meant to be
+# embedded on third-party sites/streams. The global X-Frame-Options above is a
+# legacy header that modern browsers treat as DENY/SAMEORIGIN for non-standard
+# values — it would block the iframe regardless of CSP. Clear it here so the
+# per-request `frame-ancestors *` set in proxy.ts is the sole framing policy
+# for this prefix. Every other route keeps the strict header above.
+[[headers]]
+  for = "/embed/*"
+  [headers.values]
+    X-Frame-Options = ""
+
 # Service Worker for /admin PWA: served from /sw.js (registered with scope '/'
 # so it can receive push events outside the /admin route). no-cache so SW
 # updates propagate quickly. Service-Worker-Allowed lifts the scope cap.

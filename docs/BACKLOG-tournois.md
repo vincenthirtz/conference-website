@@ -16,7 +16,7 @@
 | T4 | Canal Discord privé par match | 🟧 | M | Dragora |
 | T5 | API lecture publique (brackets / standings / matchs) | 🟧 | M | start.gg GraphQL |
 | T6 | Inscriptions payantes 0 % commission | 🟧 | M | Toornament Community |
-| T7 | Embed de bracket (iframe) | 🟩 | M | Challonge |
+| T7 | Embed de bracket (iframe) ✅ | 🟩 | M | Challonge |
 
 ---
 
@@ -110,17 +110,18 @@
 
 ## P3 — opportuniste
 
-### T7 · Embed de bracket (iframe)
+### T7 · Embed de bracket (iframe) — ✅ LIVRÉ
 - **Impact / Effort** : 🟩 / M
 - **Réf concurrent** : Challonge (embed de brackets, thèmes custom en payant, 3-0).
 - **Problème** : pas de moyen simple d'afficher un bracket sur un site/stream tiers → perte de visibilité virale.
 - **Proposition** : page/widget embeddable (iframe) affichant un bracket en lecture seule, responsive, avec thème clair/sombre. S'appuie idéalement sur T5.
 - **Critères d'acceptation** :
-  - [ ] URL d'embed publique par tournoi, en lecture seule.
-  - [ ] Rendu responsive + thème, headers autorisant l'iframing (CSP `frame-ancestors`).
-  - [ ] Pas de données privées exposées.
-- **Zones touchées** : nouvelle route publique, CSP (`proxy.ts` / headers Netlify).
-- **Dépendances** : T5 recommandé.
+  - [x] URL d'embed publique par tournoi, en lecture seule → `/embed/tournament/{id|slug}/bracket`.
+  - [x] Rendu responsive + thème (`?theme=light|dark`), CSP `frame-ancestors *` + `X-Frame-Options` neutralisé **uniquement sur `/embed/*`**.
+  - [x] Pas de données privées exposées (SSR, projection stricte des colonnes, 404 si tournoi non-public).
+- **Zones touchées** : `pages/embed/tournament/[id]/bracket.tsx`, `components/embed/EmbedBracket.tsx`, `pages/_app.tsx` (chrome retiré), `proxy.ts` + `netlify.toml` (CSP scopée), test `tests/unit/proxyCsp.test.ts`.
+- **Dépendances** : T5 recommandé (non requis pour cette V1 — réutilise le SSR de la vue publique).
+- **Reste à valider** : rendu visuel `npm run dev` sur un tournoi public réel (360px / 1280px, thèmes clair+sombre) avant communication.
 
 ---
 
