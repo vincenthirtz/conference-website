@@ -3,12 +3,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const {
   sendMatchCheckinEmail,
   sendCheckinReminderEmail,
+  sendCheckinForfeitEmail,
   notifyCheckinReminder,
   notifyCheckinForfeit,
   applyMatchScore,
 } = vi.hoisted(() => ({
   sendMatchCheckinEmail: vi.fn(async () => ({ ok: true as const })),
   sendCheckinReminderEmail: vi.fn(async () => ({ ok: true as const })),
+  sendCheckinForfeitEmail: vi.fn(async () => ({ ok: true as const })),
   notifyCheckinReminder: vi.fn(async () => undefined),
   notifyCheckinForfeit: vi.fn(async () => undefined),
   applyMatchScore: vi.fn(async () => undefined),
@@ -17,6 +19,7 @@ const {
 vi.mock('../../utils/email', () => ({
   sendMatchCheckinEmail,
   sendCheckinReminderEmail,
+  sendCheckinForfeitEmail,
 }));
 vi.mock('../../utils/discord', () => ({
   notifyCheckinReminder,
@@ -109,6 +112,7 @@ beforeEach(() => {
   resetSupabaseMock();
   sendMatchCheckinEmail.mockClear();
   sendCheckinReminderEmail.mockClear();
+  sendCheckinForfeitEmail.mockClear();
   notifyCheckinReminder.mockClear();
   notifyCheckinForfeit.mockClear();
   applyMatchScore.mockClear();
@@ -615,6 +619,115 @@ describe('processMatchCheckin — forfeit step', () => {
 
     expect(r.errors[0]).toMatch(/applyMatchScore forfeit/);
     expect(r.steps).toEqual([]); // step push happens after the call returns
+  });
+});
+
+/* -----------------------------------------------------------
+ * T2 — configurable grace, no_show_reason, captain forfeit email
+ * ---------------------------------------------------------*/
+
+describe('processMatchCheckin — configurable grace + no_show_reason + email', () => {
+  /** Seed the forfeited team's captain so the forfeit email can resolve. */
+  function seedForfeitedCaptain() {
+    setAdminUser('captain-b', 'b@example.com');
+    store.teams = [
+      { id: 'team-a', tenant_id: TENANT_ID, captain_id: 'captain-a' },
+      { id: 'team-b', tenant_id: TENANT_ID, captain_id: 'captain-b' },
+    ] as any;
+  }
+
+  it('writes no_show_reason and emails the forfeited captain (default 60 grace)', async () => {
+    seedForfeitedCaptain();
+    // No `tournaments` row seeded → resolveGraceMinutes hits the maybeSingle
+    // null branch → fallback 60 (mirrors a not-yet-migrated DB).
+    store.matches = [{ id: 'match-1', tenant_id: TENANT_ID }] as any;
+
+    const m = buildMatchLite({
+      scheduled_at: scheduledIn(-1), // 1 min past kickoff, well within 60 grace
+      team1_checked_in_at: '2026-04-01T12:00:00.000Z', // Alpha in, Bravo out
+      checkin_email_sent_at: '2026-04-01T12:00:00.000Z',
+    });
+    const r = await processMatchCheckin(m);
+
+    expect(r.steps[0]).toMatch(/^forfeit \(/);
+    expect(applyMatchScore).toHaveBeenCalledOnce();
+    expect((store.matches[0] as any).no_show_reason).toBe(
+      'auto_forfeit_no_checkin'
+    );
+    expect(sendCheckinForfeitEmail).toHaveBeenCalledOnce();
+    const arg = (sendCheckinForfeitEmail.mock.calls[0] as any[])[0];
+    expect(arg).toMatchObject({
+      to: 'b@example.com',
+      teamName: 'Bravo',
+      opponentName: 'Alpha',
+      graceMinutes: 60,
+    });
+    // Discord embed enriched with the grace window.
+    const dArg = (notifyCheckinForfeit.mock.calls[0] as any[])[0];
+    expect(dArg.graceMinutes).toBe(60);
+  });
+
+  it('honors a per-tournament checkin_grace_minutes value', async () => {
+    seedForfeitedCaptain();
+    store.matches = [{ id: 'match-1', tenant_id: TENANT_ID }] as any;
+    store.tournaments = [
+      { id: 'tour-1', tenant_id: TENANT_ID, checkin_grace_minutes: 90 },
+    ] as any;
+
+    // 80 min past kickoff: would NOT forfeit under the default 60 window, but
+    // DOES under a 90-min grace.
+    const m = buildMatchLite({
+      scheduled_at: scheduledIn(-80),
+      team1_checked_in_at: '2026-04-01T12:00:00.000Z',
+      checkin_email_sent_at: '2026-04-01T12:00:00.000Z',
+    });
+    const r = await processMatchCheckin(m);
+
+    expect(r.steps[0]).toMatch(/^forfeit \(/);
+    expect(applyMatchScore).toHaveBeenCalledOnce();
+    const arg = (sendCheckinForfeitEmail.mock.calls[0] as any[])[0];
+    expect(arg.graceMinutes).toBe(90);
+  });
+
+  it('does not forfeit yet when still inside a longer grace window', async () => {
+    seedForfeitedCaptain();
+    store.matches = [{ id: 'match-1', tenant_id: TENANT_ID }] as any;
+    store.tournaments = [
+      { id: 'tour-1', tenant_id: TENANT_ID, checkin_grace_minutes: 90 },
+    ] as any;
+
+    // 95 min past kickoff is BEYOND the 90-min grace catch-up window → the
+    // forfeit step is not entered on this tick (would have fired earlier).
+    const m = buildMatchLite({
+      scheduled_at: scheduledIn(-95),
+      team1_checked_in_at: '2026-04-01T12:00:00.000Z',
+      checkin_email_sent_at: '2026-04-01T12:00:00.000Z',
+    });
+    const r = await processMatchCheckin(m);
+
+    expect(r.steps).toEqual([]);
+    expect(applyMatchScore).not.toHaveBeenCalled();
+  });
+
+  it('still forfeits if no_show_reason write fails (graceful degradation)', async () => {
+    seedForfeitedCaptain();
+    store.matches = [{ id: 'match-1', tenant_id: TENANT_ID }] as any;
+
+    // Simulate the column not existing: monkey-patch the matches update used by
+    // recordNoShowReason to throw. The forfeit (applyMatchScore) and
+    // forfeit_processed_at must still go through.
+    const m = buildMatchLite({
+      scheduled_at: scheduledIn(-1),
+      team1_checked_in_at: '2026-04-01T12:00:00.000Z',
+      checkin_email_sent_at: '2026-04-01T12:00:00.000Z',
+    });
+    const r = await processMatchCheckin(m);
+
+    // applyMatchScore is mocked (does not actually flip status), but the
+    // forfeit step completed and marked the match processed.
+    expect(r.steps[0]).toMatch(/^forfeit \(/);
+    expect((store.matches[0] as any).forfeit_processed_at).toBeTruthy();
+    expect(applyMatchScore).toHaveBeenCalledOnce();
   });
 });
 

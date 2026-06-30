@@ -368,7 +368,10 @@ export function buildCampaignEmailHtml(
 
   const cta =
     body.ctaUrl && body.ctaUrl.trim() && body.ctaLabel && body.ctaLabel.trim()
-      ? ctaButton(escapeHtml(body.ctaUrl.trim()), escapeHtml(body.ctaLabel.trim()))
+      ? ctaButton(
+          escapeHtml(body.ctaUrl.trim()),
+          escapeHtml(body.ctaLabel.trim())
+        )
       : '';
 
   const footer =
@@ -582,6 +585,83 @@ export function sendCheckinReminderEmail(opts: {
       ${ctaButton(opts.checkinUrl, 'Confirmer ma présence maintenant')}
       <p style="margin:24px 0 0;font-size:12px;color:#675788;line-height:1.5;text-align:center;">
         Lien direct&nbsp;: <a href="${opts.checkinUrl}" style="color:#9081B0;">${escapeHtml(opts.checkinUrl)}</a>
+      </p>
+    `),
+  });
+}
+
+/**
+ * Notification sent to the captain of a team that was auto-forfeited because
+ * it did not check in before the (per-tournament) grace window elapsed.
+ * Transactional — fire-and-forget from the forfeit pipeline; an email failure
+ * must never block the forfeit/walkover (caller catches & logs).
+ */
+export function sendCheckinForfeitEmail(opts: {
+  to: string;
+  teamName: string;
+  opponentName: string;
+  scheduledAt: string;
+  tournamentName: string;
+  graceMinutes: number;
+}): Promise<SendEmailResult> {
+  const dateStr = (() => {
+    try {
+      return new Date(opts.scheduledAt).toLocaleString('fr-FR', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZone: 'Europe/Paris',
+      });
+    } catch {
+      return opts.scheduledAt;
+    }
+  })();
+
+  const reason = `aucun check-in après ${opts.graceMinutes} min`;
+
+  return sendEmail({
+    to: opts.to,
+    subject: `Forfait automatique — ${opts.teamName} vs ${opts.opponentName}`,
+    tags: ['match-checkin-forfeit'],
+    html: emailLayout(`
+      ${gradientBar()}
+      <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;">Forfait automatique</h1>
+      <p style="margin:0 0 24px;font-size:15px;color:#C6BED9;line-height:1.6;">
+        Votre &eacute;quipe <strong style="color:#ffffff;">${escapeHtml(opts.teamName)}</strong>
+        a &eacute;t&eacute; d&eacute;clar&eacute;e <strong style="color:#e74694;">forfait</strong> sur ce match&nbsp;:
+        ${escapeHtml(reason)}.
+      </p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:rgba(255,255,255,0.05);border-radius:10px;border:1px solid rgba(255,255,255,0.08);margin:0 0 24px;">
+        <tr>
+          <td style="padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.06);">
+            <span style="font-size:12px;color:#9081B0;text-transform:uppercase;letter-spacing:0.1em;">Tournoi</span><br/>
+            <span style="font-size:15px;color:#ffffff;font-weight:500;">${escapeHtml(opts.tournamentName)}</span>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.06);">
+            <span style="font-size:12px;color:#9081B0;text-transform:uppercase;letter-spacing:0.1em;">Match</span><br/>
+            <span style="font-size:15px;color:#ffffff;font-weight:500;">${escapeHtml(opts.teamName)} vs ${escapeHtml(opts.opponentName)}</span>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.06);">
+            <span style="font-size:12px;color:#9081B0;text-transform:uppercase;letter-spacing:0.1em;">D&eacute;but pr&eacute;vu</span><br/>
+            <span style="font-size:15px;color:#2dccfd;font-weight:500;">${escapeHtml(dateStr)}</span>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:14px 20px;">
+            <span style="font-size:12px;color:#9081B0;text-transform:uppercase;letter-spacing:0.1em;">Motif</span><br/>
+            <span style="font-size:15px;color:#ffffff;font-weight:500;">${escapeHtml(reason)}</span>
+          </td>
+        </tr>
+      </table>
+      <p style="margin:0 0 8px;font-size:13px;color:#C6BED9;line-height:1.5;background:rgba(45,204,253,0.08);border:1px solid rgba(45,204,253,0.15);border-radius:8px;padding:10px 14px;">
+        Si vous pensez qu&apos;il s&apos;agit d&apos;une erreur, contactez le staff au plus vite
+        sur le <a href="${DISCORD_URL}" style="color:#5865F2;text-decoration:underline;font-weight:600;">Discord du tournoi</a>.
       </p>
     `),
   });

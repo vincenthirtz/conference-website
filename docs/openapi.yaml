@@ -13498,6 +13498,90 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /api/admin/tournament/{id}/checkin-settings:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Read per-tournament check-in settings (grace window + no-show reasons).
+      description: >
+        Returns the check-in grace window (minutes) and a map of per-match
+        no-show reasons. Both are read defensively and fall back to defaults
+        if the check-in migration has not been applied yet.
+      operationId: adminGetTournamentCheckinSettings
+      tags:
+        - admin/tournaments
+      security:
+        - StaffSession: []
+      responses:
+        '200':
+          description: Current check-in settings.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  checkinGraceMinutes:
+                    type: integer
+                    minimum: 0
+                    maximum: 120
+                  migrated:
+                    type: boolean
+                  noShowReasons:
+                    type: object
+                    additionalProperties:
+                      type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    patch:
+      summary: Update the per-tournament check-in grace window.
+      operationId: adminUpdateTournamentCheckinSettings
+      tags:
+        - admin/tournaments
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - checkinGraceMinutes
+              properties:
+                checkinGraceMinutes:
+                  type: integer
+                  minimum: 0
+                  maximum: 120
+      responses:
+        '200':
+          description: Updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          description: Check-in migration not applied yet.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
   /api/admin/tournament/{id}/clone:
     parameters:
       - in: path

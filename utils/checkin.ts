@@ -12,7 +12,11 @@
 
 import crypto from 'crypto';
 import { supabaseAdmin } from './supabase';
-import { sendMatchCheckinEmail, sendCheckinReminderEmail } from './email';
+import {
+  sendMatchCheckinEmail,
+  sendCheckinReminderEmail,
+  sendCheckinForfeitEmail,
+} from './email';
 import { notifyCheckinReminder, notifyCheckinForfeit } from './discord';
 import { applyMatchScore } from './matches/applyScore';
 import { emitBotEvent } from './botEvents';
@@ -21,6 +25,56 @@ import { logger } from './logger';
 export const CHECKIN_OPEN_MINUTES = 60;
 export const REMINDER_30_MINUTES = 30;
 export const REMINDER_15_MINUTES = 15;
+
+// Default auto-forfeit grace window (minutes after kickoff) used as the
+// fallback whenever a tournament has no explicit `checkin_grace_minutes`.
+// Historically this equalled CHECKIN_OPEN_MINUTES (60) — we keep the value
+// identical so tournaments without the new column behave exactly as before.
+export const DEFAULT_GRACE_MINUTES = 60;
+const GRACE_MIN = 0;
+const GRACE_MAX = 120;
+
+/**
+ * Resolve the per-tournament auto-forfeit grace window (minutes).
+ *
+ * ⚠️ DÉGRADATION GRACIEUSE — `tournaments.checkin_grace_minutes` est ajoutée
+ * par une migration séparée qui peut NE PAS être appliquée en prod au moment
+ * où ce code est déployé (push sur work = auto-deploy immédiat). On NE lit donc
+ * JAMAIS cette colonne dans un select de colonnes existantes (un select d'une
+ * colonne absente fait échouer toute la requête → casserait le cron). On la lit
+ * via une requête ISOLÉE en try/catch : à la moindre erreur (colonne absente,
+ * réseau, …) OU si la valeur est null/undefined/hors plage, on retombe sur la
+ * constante DEFAULT_GRACE_MINUTES (60) — comportement identique à aujourd'hui.
+ */
+async function resolveGraceMinutes(
+  tenantId: string,
+  tournamentId: string | null
+): Promise<number> {
+  if (!supabaseAdmin || !tournamentId) return DEFAULT_GRACE_MINUTES;
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('tournaments')
+      // Select ISOLÉ et dédié : si la colonne n'existe pas encore, SEULE cette
+      // requête échoue (catch ci-dessous → fallback), pas le reste du cron.
+      .select('checkin_grace_minutes')
+      .eq('tenant_id', tenantId)
+      .eq('id', tournamentId)
+      .maybeSingle();
+
+    if (error) return DEFAULT_GRACE_MINUTES;
+
+    const raw = (data as { checkin_grace_minutes?: unknown } | null)
+      ?.checkin_grace_minutes;
+    if (typeof raw !== 'number' || !Number.isFinite(raw)) {
+      return DEFAULT_GRACE_MINUTES;
+    }
+    // Clamp into the contracted 0–120 range; out-of-range → fallback.
+    if (raw < GRACE_MIN || raw > GRACE_MAX) return DEFAULT_GRACE_MINUTES;
+    return Math.round(raw);
+  } catch {
+    return DEFAULT_GRACE_MINUTES;
+  }
+}
 
 const SITE_URL =
   process.env.SITE_URL ||
@@ -356,9 +410,21 @@ export async function processMatchCheckin(
     await runReminderStep(match, 15, result);
   }
 
-  // Step 4: T-0 — auto-forfeit (allow up to 60min late so we don't miss matches)
-  if (minutesUntil <= 0 && minutesUntil > -60 && !match.forfeit_processed_at) {
-    await runForfeitStep(match, result);
+  // Step 4: auto-forfeit. A team that hasn't checked in by kickoff is forfeited;
+  // the per-tournament grace window only widens the *catch-up* span during which
+  // the cron may still act (so a few missed ticks don't skip the match), exactly
+  // as the hard-coded `-60` upper bound did before. The grace is read via an
+  // ISOLATED query with a 60-min fallback (see resolveGraceMinutes), so a
+  // not-yet-migrated DB behaves identically to today (window [T-0, T+60]).
+  if (minutesUntil <= 0 && !match.forfeit_processed_at) {
+    const graceMinutes = await resolveGraceMinutes(
+      match.tenant_id,
+      match.tournament_id
+    );
+    const minutesSinceKickoff = -minutesUntil;
+    if (minutesSinceKickoff < graceMinutes) {
+      await runForfeitStep(match, result, graceMinutes);
+    }
   }
 
   return result;
@@ -565,9 +631,73 @@ async function runReminderStep(
   result.steps.push(`reminder_${minutes} (${pings.length} pinged)`);
 }
 
+// Canonical motif written to matches.no_show_reason on an auto-forfeit.
+export const AUTO_FORFEIT_NO_CHECKIN_REASON = 'auto_forfeit_no_checkin';
+
+/**
+ * Best-effort write of `matches.no_show_reason`.
+ *
+ * ⚠️ DÉGRADATION GRACIEUSE — `matches.no_show_reason` est ajoutée par une
+ * migration séparée qui peut NE PAS être appliquée en prod au moment du
+ * déploiement. Cette écriture est donc volontairement ISOLÉE dans son propre
+ * try/catch (et son propre UPDATE) : si la colonne n'existe pas, SEULE cette
+ * requête échoue — le forfait/walkover (applyMatchScore + forfeit_processed_at)
+ * a déjà été appliqué avant et n'est PAS affecté. On log et on continue.
+ */
+async function recordNoShowReason(
+  tenantId: string,
+  matchId: string,
+  reason: string
+): Promise<void> {
+  if (!supabaseAdmin) return;
+  try {
+    const { error } = await supabaseAdmin
+      .from('matches')
+      .update({ no_show_reason: reason })
+      .eq('tenant_id', tenantId)
+      .eq('id', matchId);
+    if (error) {
+      logger.warn('[checkin] no_show_reason write skipped:', error.message);
+    }
+  } catch (e) {
+    logger.warn('[checkin] no_show_reason write error (column missing?):', e);
+  }
+}
+
+/**
+ * Resolve the forfeited team's captain email and send the forfeit notice.
+ * Fire-and-forget: any failure is caught & logged so it never breaks the
+ * forfeit pipeline or the cron.
+ */
+async function sendForfeitEmailSafely(opts: {
+  tenantId: string;
+  teamId: string;
+  teamName: string;
+  opponentName: string;
+  scheduledAt: string;
+  tournamentName: string;
+  graceMinutes: number;
+}): Promise<void> {
+  try {
+    const email = await getCaptainEmail(opts.tenantId, opts.teamId);
+    if (!email) return;
+    await sendCheckinForfeitEmail({
+      to: email,
+      teamName: opts.teamName,
+      opponentName: opts.opponentName,
+      scheduledAt: opts.scheduledAt,
+      tournamentName: opts.tournamentName,
+      graceMinutes: opts.graceMinutes,
+    });
+  } catch (e) {
+    logger.error('[checkin] sendCheckinForfeitEmail error:', e);
+  }
+}
+
 async function runForfeitStep(
   match: MatchLite,
-  result: ProcessStepResult
+  result: ProcessStepResult,
+  graceMinutes: number = DEFAULT_GRACE_MINUTES
 ): Promise<void> {
   const team1CheckedIn = !!match.team1_checked_in_at;
   const team2CheckedIn = !!match.team2_checked_in_at;
@@ -596,6 +726,12 @@ async function runForfeitStep(
       result.errors.push(`cancel both: ${error.message}`);
       return;
     }
+    // Best-effort motif (isolated — never blocks the cancel above).
+    await recordNoShowReason(
+      match.tenant_id,
+      match.id,
+      AUTO_FORFEIT_NO_CHECKIN_REASON
+    );
     await markForfeitProcessed(match.tenant_id, match.id, result);
     result.steps.push('forfeit_both_cancelled');
     return;
@@ -624,16 +760,39 @@ async function runForfeitStep(
     return;
   }
 
+  // Best-effort motif AFTER the critical forfeit has been applied. If the
+  // column doesn't exist yet, this fails in isolation and the forfeit stands.
+  await recordNoShowReason(
+    match.tenant_id,
+    match.id,
+    AUTO_FORFEIT_NO_CHECKIN_REASON
+  );
+
   // Discord ping for the forfeit (separate from the auto match-result ping
   // that applyMatchScore triggers — this one is on the dedicated checkin
-  // channel).
+  // channel). Enriched with the grace window (optional, backwards-compatible).
   await notifyCheckinForfeit({
     tournamentId: match.tournament_id,
     matchId: match.id,
     forfeitedTeamName: forfeitedName,
     forfeitedTeamRoleId: forfeitedRoleId,
     opponentName: winnerName,
+    graceMinutes,
   }).catch((e) => logger.error('[checkin] notifyCheckinForfeit error:', e));
+
+  // Email the forfeited team's captain. Fire-and-forget — an email failure
+  // must never interrupt the cron (sendForfeitEmailSafely swallows errors).
+  if (match.scheduled_at) {
+    await sendForfeitEmailSafely({
+      tenantId: match.tenant_id,
+      teamId: forfeitTeamId,
+      teamName: forfeitedName,
+      opponentName: winnerName,
+      scheduledAt: match.scheduled_at,
+      tournamentName: match.tournament?.name || "OW Women's Cup",
+      graceMinutes,
+    });
+  }
 
   await markForfeitProcessed(match.tenant_id, match.id, result);
   result.steps.push(`forfeit (${forfeitedName} -> walkover)`);
@@ -701,7 +860,13 @@ export async function processCheckinForUpcomingMatches(opts?: {
   if (!supabaseAdmin) return summary;
 
   const now = new Date();
-  const windowStart = new Date(now.getTime() - 65 * 60_000).toISOString();
+  // Past edge must cover the widest possible auto-forfeit catch-up span: a
+  // tournament may set checkin_grace_minutes up to GRACE_MAX (120), so a match
+  // can still be forfeit-eligible up to ~that many minutes after kickoff. We
+  // scan a little beyond GRACE_MAX so a late cron tick never misses it.
+  const windowStart = new Date(
+    now.getTime() - (GRACE_MAX + 5) * 60_000
+  ).toISOString();
   const windowEnd = new Date(now.getTime() + 65 * 60_000).toISOString();
 
   let q = supabaseAdmin
