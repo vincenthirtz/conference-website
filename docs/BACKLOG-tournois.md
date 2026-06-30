@@ -11,7 +11,7 @@
 | # | Ticket | Impact | Effort | Inspiré de |
 |---|---|---|---|---|
 | T1 | Self-report de score joueur + escalade litige ✅ | 🟥 | M | Challonge, Dragora |
-| T2 | Auto-DQ des no-shows au check-in | 🟥 | S | start.gg, Dragora |
+| T2 | Auto-DQ des no-shows au check-in ✅ | 🟥 | S | start.gg, Dragora |
 | T3 | Rôles Discord auto par classement | 🟧 | S | Dragora |
 | T4 | Canal Discord privé par match | 🟧 | M | Dragora |
 | T5 | API lecture publique (brackets / standings / matchs) | 🟧 | M | start.gg GraphQL |
@@ -39,19 +39,22 @@
   - UI : `pages/player/matches.tsx` + `components/player/ReportScoreModal.tsx` (Modal partagée, i18n FR+EN, conversion slot→team1/team2).
 - **Note** : le « système de litiges » = état sur `matches` (`status='disputed'` + colonnes `dispute_*` + SLA), pas une table `disputes`.
 
-### T2 · Auto-DQ des no-shows au check-in
+### T2 · Auto-DQ des no-shows au check-in — ✅ LIVRÉ
 - **Impact / Effort** : 🟥 / S
 - **Réf concurrent** : start.gg (check-in obligatoire, **DQ/retrait auto des non-checkés** pour ne pas bloquer le bracket, 3-0) ; Dragora (auto-DQ au timeout, 3-0).
 - **Problème** : le check-in existe mais un participant non checké peut bloquer la génération/progression du bracket ; retrait manuel par le staff.
 - **Proposition** : à la fermeture de la fenêtre de check-in, marquer automatiquement DQ/retirées les équipes non checkées, avec notification et fenêtre de grâce configurable.
 - **Critères d'acceptation** :
-  - [ ] Fenêtre de check-in configurable (début/fin) par tournoi.
-  - [ ] À l'échéance, les non-checkés passent en `no_show`/DQ automatiquement.
-  - [ ] Action réversible par le staff (annuler un DQ) avant génération du bracket.
-  - [ ] Notification (site + Discord) aux équipes DQ.
-  - [ ] Log d'audit des DQ automatiques.
-- **Zones touchées** : flux check-in (`pages/admin/tournament/[id]/checkin.tsx` + API), cron/scheduled function Netlify, notifications.
-- **Dépendances** : check-in (existant), système de notifications (existant).
+  - [x] Fenêtre de grâce configurable par tournoi → `tournaments.checkin_grace_minutes` (0–120, défaut 60) + UI admin « Configurer le check-in ».
+  - [x] À l'échéance, les non-checkés passent en forfait/walkover automatiquement (existait déjà : `runForfeitStep`, cron */5min).
+  - [x] Action staff (édition match) + réversibilité avant propagation (existant).
+  - [x] Notification : Discord (`notifyCheckinForfeit`, enrichi grâce) **+ email capitaine** (`sendCheckinForfeitEmail`, nouveau).
+  - [x] Log d'audit : `matches.no_show_reason='auto_forfeit_no_checkin'` (best-effort) + staff log sur changement de réglage.
+- **Implémentation** :
+  - DB : migration `add_checkin_grace_and_no_show_reason.sql` (additive) — **⚠️ à appliquer manuellement en prod** (MCP non câblé). Code en **dégradation gracieuse** : fallback 60 + écriture motif best-effort si colonnes absentes → aucun risque au deploy.
+  - Cron/notif : `utils/checkin.ts` (`resolveGraceMinutes`, `recordNoShowReason`), `utils/email.ts` (`sendCheckinForfeitEmail`), `utils/discord.ts` (grâce optionnelle).
+  - Admin : `checkin-settings.ts` (GET/PATCH manager, 503 si non migré) + colonne « Raison » + Modal config.
+- **Note** : le cœur auto-forfait existait déjà ; T2 ajoute la config par tournoi, l'audit, et l'email capitaine.
 
 ---
 

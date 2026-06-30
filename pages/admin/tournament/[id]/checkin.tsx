@@ -11,6 +11,7 @@ import { withStaffPage } from '@/utils/staff';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
+import Modal from '@/components/admin/Modal';
 import type { StaffProps } from '@/types/admin';
 
 type CheckinRow = {
@@ -26,6 +27,23 @@ type CheckinRow = {
 };
 
 type ApiResponse = { matches: CheckinRow[] };
+
+type SettingsResponse = {
+  checkinGraceMinutes: number;
+  migrated: boolean;
+  noShowReasons: Record<string, string>;
+};
+
+const DEFAULT_GRACE_MINUTES = 60;
+
+function noShowReasonLabel(reason: string): string {
+  switch (reason) {
+    case 'auto_forfeit_no_checkin':
+      return 'Forfait auto (no check-in)';
+    default:
+      return reason;
+  }
+}
 
 export const getServerSideProps = withStaffPage('manager');
 
@@ -100,11 +118,45 @@ function CheckinStatusPage(_: StaffProps) {
   const { adminFetchJson } = useAdminFetch();
   const { mutate: processCheckin } = useIdempotentMutation();
 
+  const { mutate: saveSettings } = useIdempotentMutation();
+
   const [rows, setRows] = useState<CheckinRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [filter, setFilter] = useState<'upcoming' | 'all'>('upcoming');
+
+  const [graceMinutes, setGraceMinutes] = useState<number>(
+    DEFAULT_GRACE_MINUTES
+  );
+  const [noShowReasons, setNoShowReasons] = useState<Record<string, string>>(
+    {}
+  );
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [graceDraft, setGraceDraft] = useState<string>(
+    String(DEFAULT_GRACE_MINUTES)
+  );
+  const [savingSettings, setSavingSettings] = useState(false);
+
+  const fetchSettings = useCallback(async () => {
+    if (!tournamentId) return;
+    try {
+      const json = await adminFetchJson<SettingsResponse>(
+        `/api/admin/tournament/${tournamentId}/checkin-settings`
+      );
+      const minutes =
+        typeof json.checkinGraceMinutes === 'number'
+          ? json.checkinGraceMinutes
+          : DEFAULT_GRACE_MINUTES;
+      setGraceMinutes(minutes);
+      setGraceDraft(String(minutes));
+      setNoShowReasons(json.noShowReasons || {});
+    } catch {
+      // Non-blocking: settings are auxiliary. Keep defaults, never break the page.
+      setGraceMinutes(DEFAULT_GRACE_MINUTES);
+      setNoShowReasons({});
+    }
+  }, [tournamentId, adminFetchJson]);
 
   const fetchData = useCallback(async () => {
     if (!tournamentId) return;
@@ -124,7 +176,47 @@ function CheckinStatusPage(_: StaffProps) {
 
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+    fetchSettings();
+  }, [fetchData, fetchSettings]);
+
+  async function handleSaveSettings() {
+    if (!tournamentId) return;
+    const minutes = Number(graceDraft);
+    if (!Number.isInteger(minutes) || minutes < 0 || minutes > 120) {
+      addToast(
+        'La fenêtre de grâce doit être un entier entre 0 et 120.',
+        'error'
+      );
+      return;
+    }
+    setSavingSettings(true);
+    try {
+      const res = await saveSettings(
+        `/api/admin/tournament/${tournamentId}/checkin-settings`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ checkinGraceMinutes: minutes }),
+        }
+      );
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(
+          json.error ||
+            (res.status === 503
+              ? 'Réglage indisponible : migration check-in non appliquée.'
+              : 'Échec de la sauvegarde')
+        );
+      }
+      setGraceMinutes(minutes);
+      setSettingsOpen(false);
+      addToast('Fenêtre de grâce mise à jour.', 'success');
+    } catch (err) {
+      addToast((err as Error).message, 'error');
+    } finally {
+      setSavingSettings(false);
+    }
+  }
 
   async function processNow() {
     if (!tournamentId) return;
@@ -222,6 +314,17 @@ function CheckinStatusPage(_: StaffProps) {
               </Link>
               <button
                 type="button"
+                onClick={() => {
+                  setGraceDraft(String(graceMinutes));
+                  setSettingsOpen(true);
+                }}
+                className="px-4 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors"
+                title={`Fenêtre de grâce actuelle : ${graceMinutes} min`}
+              >
+                Configurer le check-in
+              </button>
+              <button
+                type="button"
                 onClick={fetchData}
                 className="px-4 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors"
               >
@@ -311,6 +414,7 @@ function CheckinStatusPage(_: StaffProps) {
                       <th className="px-4 py-3 text-center">T-15</th>
                       <th className="px-4 py-3 text-center">Team1</th>
                       <th className="px-4 py-3 text-center">Team2</th>
+                      <th className="px-4 py-3 text-left">Raison</th>
                       <th className="px-4 py-3 text-right">Action</th>
                     </tr>
                   </thead>
@@ -369,6 +473,17 @@ function CheckinStatusPage(_: StaffProps) {
                           <td className="px-4 py-3 text-center">
                             <CheckinDot at={r.team2.checkedInAt} />
                           </td>
+                          <td className="px-4 py-3">
+                            {noShowReasons[r.matchId] ? (
+                              <span className="inline-block px-2 py-0.5 rounded-full text-xs font-medium border bg-red-700/30 text-red-200 border-red-500/30">
+                                {noShowReasonLabel(noShowReasons[r.matchId])}
+                              </span>
+                            ) : (
+                              <span className="text-neutral-600 text-xs">
+                                —
+                              </span>
+                            )}
+                          </td>
                           <td className="px-4 py-3 text-right">
                             <Link
                               href={`/admin/matches/${r.matchId}/edit`}
@@ -393,6 +508,59 @@ function CheckinStatusPage(_: StaffProps) {
           </p>
         </div>
       </div>
+
+      <Modal
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        title="Configurer le check-in"
+        subtitle="Fenêtre de grâce avant l’auto-forfait pour non check-in."
+        size="md"
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setSettingsOpen(false)}
+              className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
+            >
+              Annuler
+            </button>
+            <button
+              type="button"
+              onClick={handleSaveSettings}
+              disabled={savingSettings}
+              className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors disabled:opacity-50"
+            >
+              {savingSettings ? 'Enregistrement...' : 'Enregistrer'}
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div>
+            <label
+              htmlFor="checkin-grace-minutes"
+              className="block text-sm font-medium text-neutral-200 mb-1"
+            >
+              Fenêtre de grâce (minutes)
+            </label>
+            <input
+              id="checkin-grace-minutes"
+              type="number"
+              min={0}
+              max={120}
+              step={1}
+              value={graceDraft}
+              onChange={(e) => setGraceDraft(e.target.value)}
+              className="w-full rounded-lg bg-neutral-900 border border-neutral-700 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <p className="text-xs text-neutral-500 mt-1.5">
+              Délai (0 à 120 min) après l’heure prévue avant de déclarer un
+              forfait automatique si une équipe ne s’est pas présentée. Défaut :{' '}
+              {DEFAULT_GRACE_MINUTES} min.
+            </p>
+          </div>
+        </div>
+      </Modal>
     </>
   );
 }
