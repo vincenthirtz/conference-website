@@ -635,6 +635,24 @@ Renvoie uniquement les entrées `active = true` du tenant, triées
 `battleTag` est stocké/normalisé en lowercase. Chaque champ identifiant peut
 être `null` (au moins un est non-null par construction).
 
+**Query `?withAlerted=1`** — au (re)démarrage, le bot joint ce flag pour
+récupérer aussi l'ensemble (distinct) des `discord_user_id` ayant **déjà fait
+l'objet d'une alerte** de détection (table `blacklist_alerts`). Il s'en sert
+pour amorcer son état « déjà alerté » et **ne pas rejouer** d'alerte après un
+restart pour des membres déjà signalés ; seules les détections réellement
+nouvelles déclenchent. La réponse ajoute alors :
+
+```json
+{
+  "blacklist": [ /* … */ ],
+  "alertedDiscordUserIds": ["1300000000000000001", "1300000000000000002"]
+}
+```
+
+- Champ **absent** si `withAlerted` n'est pas passé (rétrocompatible).
+- `alertedDiscordUserIds: null` si le lookup des alertes échoue côté site
+  (dégradation gracieuse : le bot ne suppose pas un état vide).
+
 ##### `POST` — ajoute une entrée (`/blacklist add`)
 
 **Body**

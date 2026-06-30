@@ -166,6 +166,71 @@ describe('GET /api/bot/v1/moderation/blacklist', () => {
     expect(res.statusCode).toBe(200);
     expect((res.body as any).blacklist).toEqual([]);
   });
+
+  it('sans withAlerted : pas de champ alertedDiscordUserIds (rétrocompatible)', async () => {
+    seedEntries();
+    store.blacklist_alerts = [
+      {
+        id: 'al-1',
+        tenant_id: CONFERENCE_TENANT_ID,
+        discord_user_id: '111111111111111111',
+      },
+    ] as any;
+    const res = makeRes();
+    await handler(makeReq({}, 'GET'), res);
+    expect(res.statusCode).toBe(200);
+    expect(res.body as any).not.toHaveProperty('alertedDiscordUserIds');
+  });
+
+  it('?withAlerted=1 : joint les discord_user_id déjà signalés (distinct, scope tenant)', async () => {
+    seedEntries();
+    store.blacklist_alerts = [
+      // Deux alertes pour le même membre → dédoublonnées.
+      {
+        id: 'al-1',
+        tenant_id: CONFERENCE_TENANT_ID,
+        discord_user_id: '111111111111111111',
+      },
+      {
+        id: 'al-2',
+        tenant_id: CONFERENCE_TENANT_ID,
+        discord_user_id: '111111111111111111',
+      },
+      {
+        id: 'al-3',
+        tenant_id: CONFERENCE_TENANT_ID,
+        discord_user_id: '222222222222222222',
+      },
+      // discord_user_id null → exclu.
+      {
+        id: 'al-4',
+        tenant_id: CONFERENCE_TENANT_ID,
+        discord_user_id: null,
+      },
+      // Autre tenant → exclu.
+      {
+        id: 'al-5',
+        tenant_id: OTHER_TENANT,
+        discord_user_id: '333333333333333333',
+      },
+    ] as any;
+    const res = makeRes();
+    await handler(makeReq({ query: { withAlerted: '1' } }, 'GET'), res);
+    expect(res.statusCode).toBe(200);
+    const body = res.body as any;
+    expect(Array.isArray(body.blacklist)).toBe(true);
+    const ids = [...(body.alertedDiscordUserIds as string[])].sort();
+    expect(ids).toEqual(['111111111111111111', '222222222222222222']);
+  });
+
+  it('?withAlerted=1 sans alerte → tableau vide (pas null)', async () => {
+    seedEntries();
+    store.blacklist_alerts = [] as any;
+    const res = makeRes();
+    await handler(makeReq({ query: { withAlerted: '1' } }, 'GET'), res);
+    expect(res.statusCode).toBe(200);
+    expect((res.body as any).alertedDiscordUserIds).toEqual([]);
+  });
 });
 
 /* ===========================================================================

@@ -102,7 +102,45 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
       };
     });
 
-    return res.status(200).json({ blacklist });
+    // `?withAlerted=1` → on renvoie en plus l'ensemble (distinct) des
+    // discord_user_id qui ont DÉJÀ fait l'objet d'une alerte de détection (table
+    // `blacklist_alerts`). Le bot s'en sert au démarrage pour amorcer son état
+    // « déjà alerté » : un restart ne doit PAS ré-émettre une alerte pour un
+    // membre déjà signalé avant le restart. Seules les détections réellement
+    // nouvelles (jamais alertées) déclenchent. Dégradation gracieuse : si le
+    // bot n'envoie pas le flag, on ne change rien (rétrocompatible).
+    const withAlerted =
+      req.query.withAlerted === '1' || req.query.withAlerted === 'true';
+    if (!withAlerted) {
+      return res.status(200).json({ blacklist });
+    }
+
+    const { data: alertRows, error: alertErr } = await supabaseAdmin
+      .from('blacklist_alerts')
+      .select('discord_user_id')
+      .eq('tenant_id', tenantId)
+      .not('discord_user_id', 'is', null);
+
+    if (alertErr) {
+      // Best-effort : si la lecture des alertes échoue, on renvoie quand même la
+      // blacklist (le bot retombera sur son comportement sans seed plutôt que de
+      // ne rien scanner). On signale par un ensemble null pour distinguer
+      // « vide » de « indisponible ».
+      logger.error('[bot/moderation/blacklist] alerted lookup error', alertErr);
+      return res
+        .status(200)
+        .json({ blacklist, alertedDiscordUserIds: null });
+    }
+
+    const alertedDiscordUserIds = [
+      ...new Set(
+        (alertRows ?? [])
+          .map((r) => (r as { discord_user_id: string | null }).discord_user_id)
+          .filter((v): v is string => typeof v === 'string' && v.length > 0)
+      ),
+    ];
+
+    return res.status(200).json({ blacklist, alertedDiscordUserIds });
   }
 
   if (req.method === 'POST') {

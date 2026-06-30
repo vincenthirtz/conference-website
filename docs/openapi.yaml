@@ -6793,6 +6793,17 @@ paths:
         - bot/misc
       summary: Liste les entrees blacklist actives du tenant (scan membres Discord).
       operationId: botListBlacklist
+      parameters:
+        - name: withAlerted
+          in: query
+          required: false
+          description: >-
+            Si '1' (ou 'true'), joint alertedDiscordUserIds : la liste distincte
+            des discord_user_id deja signales (table blacklist_alerts). Le bot
+            l'utilise au demarrage pour ne pas rejouer d'alerte apres un restart.
+          schema:
+            type: string
+            enum: ['1', 'true']
       responses:
         '200':
           description: Entrees blacklist actives.
@@ -6806,6 +6817,14 @@ paths:
                     items:
                       type: object
                       additionalProperties: true
+                  alertedDiscordUserIds:
+                    description: >-
+                      Present uniquement avec withAlerted. Tableau des
+                      discord_user_id deja alertes, ou null si le lookup a echoue.
+                    nullable: true
+                    type: array
+                    items:
+                      type: string
     post:
       tags:
         - bot/misc
