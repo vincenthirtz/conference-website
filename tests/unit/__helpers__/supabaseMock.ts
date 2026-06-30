@@ -264,15 +264,20 @@ class Builder {
     return this;
   }
 
-  /** Upsert: replace existing row matching `onConflict` key, or insert. */
+  /**
+   * Upsert: replace existing row matching the `onConflict` key, or insert.
+   * Supports composite conflict targets ("col_a,col_b") as PostgREST does:
+   * every listed column must match for a row to be considered the same.
+   */
   upsert(payload: Row | Row[], opts?: { onConflict?: string }) {
     const items = Array.isArray(payload) ? payload : [payload];
     const onConflict = opts?.onConflict;
     const rows = (store[this.table] ||= []);
     if (onConflict) {
+      const keys = onConflict.split(',').map((k) => k.trim());
       for (const item of items) {
-        const idx = rows.findIndex(
-          (r) => (r as any)[onConflict] === (item as any)[onConflict]
+        const idx = rows.findIndex((r) =>
+          keys.every((k) => (r as any)[k] === (item as any)[k])
         );
         if (idx >= 0) Object.assign(rows[idx], item);
         else rows.push({ ...item });
