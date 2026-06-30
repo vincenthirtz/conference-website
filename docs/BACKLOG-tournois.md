@@ -13,7 +13,7 @@
 | T1 | Self-report de score joueur + escalade litige ✅ | 🟥 | M | Challonge, Dragora |
 | T2 | Auto-DQ des no-shows au check-in ✅ | 🟥 | S | start.gg, Dragora |
 | T3 | Rôles Discord auto par classement | 🟧 | S | Dragora |
-| T4 | Canal Discord privé par match | 🟧 | M | Dragora |
+| T4 | Canal Discord privé par match ✅ | 🟧 | M | Dragora |
 | T5 | API lecture publique (brackets / standings / matchs) | 🟧 | M | start.gg GraphQL |
 | T6 | Inscriptions payantes 0 % commission | 🟧 | M | Toornament Community |
 | T7 | Embed de bracket (iframe) ✅ | 🟩 | M | Challonge |
@@ -73,18 +73,21 @@
 - **Zones touchées** : bot Discord (role-sync existant), `user_discord_links`, finalisation tournoi.
 - **Dépendances** : role-sync + `user_discord_links` (existants).
 
-### T4 · Canal Discord privé par match
+### T4 · Canal Discord privé par match — ✅ LIVRÉ (code) · ⏳ activation
 - **Impact / Effort** : 🟧 / M
 - **Réf concurrent** : Dragora (un canal privé par match, check-in + report dedans, nettoyage auto, 3-0).
 - **Problème** : la coordination des matchs se fait hors plateforme, sans trace.
 - **Proposition** : créer automatiquement un canal Discord privé par match (joueurs des 2 équipes + staff), avec check-in/report intégrés (cf. T1), puis archivage/nettoyage auto à la fin.
+- **Décisions actées** : overwrites par **rôle d'équipe** (team1/team2 + staff) ; thread public `#matchs-live` **gardé** en plus ; cleanup = **suppression du salon à `match.finished`**.
 - **Critères d'acceptation** :
-  - [ ] Canal créé à l'activation du match, accès limité aux participants + staff.
-  - [ ] Boutons report (réutilise T1) postés dans le canal.
-  - [ ] Archivage/suppression auto après clôture du match.
-  - [ ] Pas de fuite de canaux orphelins (réconciliation).
-- **Zones touchées** : bot Discord (match-thread existant), endpoints match.
-- **Dépendances** : T1 (report), match-thread (existant).
+  - [x] Canal créé sur `match.starting`, privé (deny @everyone, allow rôles team1/team2 + staff).
+  - [x] Boutons check-in + report (réutilise customId existants) postés dans le canal.
+  - [x] Suppression auto sur `match.finished`.
+  - [x] Réconciliation des salons orphelins (clear côté site).
+- **Implémentation** :
+  - Site (vague 1) : migration `matches.discord_match_channel_id`, writeback `PATCH /bot/v1/matches/[id]/discord` (`discordMatchChannelId`), enrich, reconcile, contrat — dégradation gracieuse (503 si non migré).
+  - Bot (vagues 2-4, docker-box) : `services/discord-bot/match-channel.js` + câblage `event-dispatch.js` + reconcile + config `match_channels_category_id`. **No-op si catégorie non configurée.** 253 tests bot verts.
+- **Activation prod requise** : (1) appliquer la migration `add_match_discord_channel_id.sql` ; (2) configurer `match_channels_category_id` / `MATCH_CHANNELS_CATEGORY_ID` ; (3) déployer le bot (`make prod` côté docker-box).
 
 ### T5 · API lecture publique (brackets / standings / matchs)
 - **Impact / Effort** : 🟧 / M
