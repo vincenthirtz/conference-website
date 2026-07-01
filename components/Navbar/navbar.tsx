@@ -169,9 +169,9 @@ function Navbar(): JSX.Element {
                 <Image
                   src="/img/logos/2025-logo.png"
                   alt="conference logo"
-                  width={48}
-                  height={48}
-                  className="block h-12 w-auto transition-transform duration-300 group-hover:scale-[1.04]"
+                  width={64}
+                  height={64}
+                  className="block h-16 w-auto transition-transform duration-300 group-hover:scale-[1.04]"
                   priority
                 />
               </Link>
