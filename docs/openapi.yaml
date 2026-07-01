@@ -910,7 +910,9 @@ components:
             Tenant Discord config (channel ids, role ids, forum tag ids, etc.).
             Inclut l'accueil des nouveaux arrivants : `welcome_enabled`
             (boolean, defaut false), `welcome_channel_id` (snowflake nullable),
-            `welcome_message` et `welcome_dm_message` (string nullable).
+            `welcome_message` et `welcome_dm_message` (string nullable), ainsi
+            que `member_leave_channel_id` (snowflake nullable) — salon de
+            notification des départs de membres.
             Voir `tenant_discord_config` pour la liste exhaustive.
     VetoState:
       type: object
@@ -13057,6 +13059,51 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /api/admin/tenants/{id}/discord-config/{guildId}/channels:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - in: path
+        name: guildId
+        required: true
+        schema:
+          type: string
+          pattern: ^[0-9]{17,20}$
+    get:
+      summary: List the guild's channels and roles (relayed from the bot).
+      description: |
+        Le site n'a pas d'accès Discord : relaie une requête signée HMAC au
+        bot pour lister salons + rôles du serveur (sélecteur admin). Nécessite
+        manager+ et que le guild appartienne au tenant.
+      operationId: adminGetTenantDiscordGuildInventory
+      tags:
+        - admin/tenants
+      security:
+        - StaffSession: []
+      responses:
+        '200':
+          description: Inventory (guild, channels, roles).
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Guild not linked to tenant, or bot absent from the guild.
+        '502':
+          description: Bot inventory error.
+        '503':
+          description: Bot webhook not configured or tenant secret missing.
+        '504':
+          description: Bot unreachable.
   /api/admin/tenants/{id}/rotate-secrets:
     parameters:
       - in: path

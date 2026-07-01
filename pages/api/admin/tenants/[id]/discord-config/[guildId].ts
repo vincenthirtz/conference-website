@@ -45,6 +45,8 @@ const NULLABLE_SNOWFLAKE_KEYS = [
   'disputes_forum_tag_resolved_id',
   // Accueil des nouveaux arrivants : le salon est un snowflake nullable.
   'welcome_channel_id',
+  // Départs des membres (« chan des partants ») : salon snowflake nullable.
+  'member_leave_channel_id',
 ] as const;
 
 type NullableSnowflakeKey = (typeof NULLABLE_SNOWFLAKE_KEYS)[number];

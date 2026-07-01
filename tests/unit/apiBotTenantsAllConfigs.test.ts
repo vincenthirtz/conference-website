@@ -115,6 +115,7 @@ describe('GET /api/bot/v1/tenants/all-configs', () => {
         welcome_channel_id: '333333333333333333',
         welcome_message: 'Bienvenue !',
         welcome_dm_message: null,
+        member_leave_channel_id: '444444444444444444',
         extras: { foo: 'bar' },
       },
       // Pas de row pour GUILD_B → defauts.
@@ -142,6 +143,9 @@ describe('GET /api/bot/v1/tenants/all-configs', () => {
     expect(a.discord_config.welcome_channel_id).toBe('333333333333333333');
     expect(a.discord_config.welcome_message).toBe('Bienvenue !');
     expect(a.discord_config.welcome_dm_message).toBeNull();
+    // Départs des membres (« chan des partants »).
+    expect(a.discord_config.member_leave_channel_id).toBe('444444444444444444');
+    expect(b.discord_config.member_leave_channel_id).toBeNull();
     expect(a.discord_config.extras).toEqual({ foo: 'bar' });
     // guild_id pas duplique dans discord_config.
     expect(a.discord_config).not.toHaveProperty('guild_id');

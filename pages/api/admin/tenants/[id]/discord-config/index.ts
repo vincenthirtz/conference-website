@@ -39,6 +39,8 @@ const EMPTY_CONFIG = {
   welcome_channel_id: null,
   welcome_message: null,
   welcome_dm_message: null,
+  // Départs des membres (« chan des partants »).
+  member_leave_channel_id: null,
   extras: {} as Record<string, unknown>,
 };
 
