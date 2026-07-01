@@ -481,7 +481,9 @@ function AdminDiscordConfigPage({ tenantId, guildId }: Props) {
                       )}
                     </div>
                     <p className="text-xs text-neutral-500 mt-1">
-                      ID du salon où poster le message de bienvenue
+                      ID du salon où poster la carte de bienvenue. Renseigné = le
+                      bot poste une carte enrichie (avatar de l&apos;arrivant) à
+                      chaque arrivée ; vide = pas de message public.
                     </p>
                     {invalid.welcome_channel_id && (
                       <p className="text-xs text-red-400 mt-1">
@@ -506,8 +508,9 @@ function AdminDiscordConfigPage({ tenantId, guildId }: Props) {
                       className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
                     />
                     <p className="text-xs text-neutral-500 mt-1">
-                      placeholders : {'{user}'} = mention, {'{server}'} = nom du
-                      serveur, {'{count}'} = numéro du membre
+                      Laissé vide = message enrichi par défaut. placeholders :{' '}
+                      {'{user}'} = mention, {'{server}'} = nom du serveur,{' '}
+                      {'{count}'} = numéro du membre
                     </p>
                   </div>
 
