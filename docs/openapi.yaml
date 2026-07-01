@@ -908,6 +908,9 @@ components:
           additionalProperties: true
           description: |
             Tenant Discord config (channel ids, role ids, forum tag ids, etc.).
+            Inclut l'accueil des nouveaux arrivants : `welcome_enabled`
+            (boolean, defaut false), `welcome_channel_id` (snowflake nullable),
+            `welcome_message` et `welcome_dm_message` (string nullable).
             Voir `tenant_discord_config` pour la liste exhaustive.
     VetoState:
       type: object

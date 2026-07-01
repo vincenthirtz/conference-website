@@ -34,6 +34,11 @@ const EMPTY_CONFIG = {
   disputes_forum_tag_open_id: null,
   disputes_forum_tag_pending_id: null,
   disputes_forum_tag_resolved_id: null,
+  // Accueil des nouveaux arrivants (par guild).
+  welcome_enabled: false,
+  welcome_channel_id: null,
+  welcome_message: null,
+  welcome_dm_message: null,
   extras: {} as Record<string, unknown>,
 };
 

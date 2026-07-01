@@ -377,6 +377,11 @@ describe('/api/admin/tenants/[id]/discord-config', () => {
     expect(body.configs[0].staff_role_manager_id).toBeNull();
     expect(body.configs[0].staff_role_caster_id).toBeNull();
     expect(body.configs[0].staff_log_channel_id).toBeNull();
+    // Accueil des nouveaux arrivants (defauts).
+    expect(body.configs[0].welcome_enabled).toBe(false);
+    expect(body.configs[0].welcome_channel_id).toBeNull();
+    expect(body.configs[0].welcome_message).toBeNull();
+    expect(body.configs[0].welcome_dm_message).toBeNull();
   });
 
   it('PUT 400 si guildId malforme', async () => {
@@ -461,6 +466,77 @@ describe('/api/admin/tenants/[id]/discord-config', () => {
       res
     );
     expect(res.statusCode).toBe(200);
+  });
+
+  it('PUT 400 si welcome_enabled n est pas un boolean', async () => {
+    const res = makeRes();
+    await discordConfigPut(
+      makeReq({
+        method: 'PUT',
+        query: { id: TENANT_A, guildId: GUILD_ID },
+        body: { welcome_enabled: 'yes' },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+    expect((res.body as any).code).toBe('INVALID_WELCOME_ENABLED');
+  });
+
+  it('PUT 400 si welcome_channel_id n est pas un snowflake', async () => {
+    const res = makeRes();
+    await discordConfigPut(
+      makeReq({
+        method: 'PUT',
+        query: { id: TENANT_A, guildId: GUILD_ID },
+        body: { welcome_channel_id: 'nope' },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+    expect((res.body as any).code).toBe('INVALID_SNOWFLAKE');
+    expect((res.body as any).field).toBe('welcome_channel_id');
+  });
+
+  it('PUT 400 si welcome_message n est pas une string', async () => {
+    const res = makeRes();
+    await discordConfigPut(
+      makeReq({
+        method: 'PUT',
+        query: { id: TENANT_A, guildId: GUILD_ID },
+        body: { welcome_message: 42 },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+    expect((res.body as any).code).toBe('INVALID_WELCOME_MESSAGE');
+    expect((res.body as any).field).toBe('welcome_message');
+  });
+
+  it('PUT 200 upsert config accueil (welcome_*)', async () => {
+    const res = makeRes();
+    await discordConfigPut(
+      makeReq({
+        method: 'PUT',
+        query: { id: TENANT_A, guildId: GUILD_ID },
+        body: {
+          welcome_enabled: true,
+          welcome_channel_id: '3333333333333333333',
+          welcome_message: '  Bienvenue !  ',
+          welcome_dm_message: '',
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    const row = (store.tenant_discord_config as any[]).find(
+      (r) => r.guild_id === GUILD_ID
+    );
+    expect(row.welcome_enabled).toBe(true);
+    expect(row.welcome_channel_id).toBe('3333333333333333333');
+    // Message trimme.
+    expect(row.welcome_message).toBe('Bienvenue !');
+    // Chaine vide -> null.
+    expect(row.welcome_dm_message).toBeNull();
   });
 });
 

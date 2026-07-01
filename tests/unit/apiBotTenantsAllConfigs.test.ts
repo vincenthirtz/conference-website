@@ -111,6 +111,10 @@ describe('GET /api/bot/v1/tenants/all-configs', () => {
         disputes_forum_tag_open_id: null,
         disputes_forum_tag_pending_id: null,
         disputes_forum_tag_resolved_id: null,
+        welcome_enabled: true,
+        welcome_channel_id: '333333333333333333',
+        welcome_message: 'Bienvenue !',
+        welcome_dm_message: null,
         extras: { foo: 'bar' },
       },
       // Pas de row pour GUILD_B → defauts.
@@ -133,6 +137,11 @@ describe('GET /api/bot/v1/tenants/all-configs', () => {
     expect(a.discord_config.staff_role_owner_id).toBe('777777777777777777');
     expect(a.discord_config.staff_role_admin_id).toBe('888888888888888888');
     expect(a.discord_config.staff_role_manager_id).toBeNull();
+    // Accueil des nouveaux arrivants.
+    expect(a.discord_config.welcome_enabled).toBe(true);
+    expect(a.discord_config.welcome_channel_id).toBe('333333333333333333');
+    expect(a.discord_config.welcome_message).toBe('Bienvenue !');
+    expect(a.discord_config.welcome_dm_message).toBeNull();
     expect(a.discord_config.extras).toEqual({ foo: 'bar' });
     // guild_id pas duplique dans discord_config.
     expect(a.discord_config).not.toHaveProperty('guild_id');
@@ -145,6 +154,11 @@ describe('GET /api/bot/v1/tenants/all-configs', () => {
     expect(b.discord_config.staff_role_admin_id).toBeNull();
     expect(b.discord_config.staff_role_manager_id).toBeNull();
     expect(b.discord_config.staff_role_caster_id).toBeNull();
+    // Defauts accueil (pas de row → welcome_enabled=false, reste null).
+    expect(b.discord_config.welcome_enabled).toBe(false);
+    expect(b.discord_config.welcome_channel_id).toBeNull();
+    expect(b.discord_config.welcome_message).toBeNull();
+    expect(b.discord_config.welcome_dm_message).toBeNull();
     expect(b.discord_config.extras).toEqual({});
   });
 });

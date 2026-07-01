@@ -30,6 +30,10 @@ type DiscordConfig = {
   staff_role_manager_id: string | null;
   staff_role_caster_id: string | null;
   staff_role_owner_id: string | null;
+  welcome_enabled?: boolean | null;
+  welcome_channel_id?: string | null;
+  welcome_message?: string | null;
+  welcome_dm_message?: string | null;
 };
 
 type DiscordConfigResponse = {
@@ -155,6 +159,11 @@ function AdminDiscordConfigPage({ tenantId, guildId }: Props) {
   const [saving, setSaving] = useState(false);
   // Form state — string for inputs (snowflakes or space-separated lists).
   const [form, setForm] = useState<Record<string, string>>({});
+  // Welcome section state (heterogeneous types: bool + channel + 2 textareas).
+  const [welcomeEnabled, setWelcomeEnabled] = useState(false);
+  const [welcomeChannelId, setWelcomeChannelId] = useState('');
+  const [welcomeMessage, setWelcomeMessage] = useState('');
+  const [welcomeDmMessage, setWelcomeDmMessage] = useState('');
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -181,6 +190,10 @@ function AdminDiscordConfigPage({ tenantId, guildId }: Props) {
         staff_role_manager_id: null,
         staff_role_caster_id: null,
         staff_role_owner_id: null,
+        welcome_enabled: false,
+        welcome_channel_id: null,
+        welcome_message: null,
+        welcome_dm_message: null,
       };
       setConfig(effective);
       const next: Record<string, string> = {};
@@ -193,6 +206,22 @@ function AdminDiscordConfigPage({ tenantId, guildId }: Props) {
         }
       }
       setForm(next);
+      setWelcomeEnabled(effective.welcome_enabled === true);
+      setWelcomeChannelId(
+        typeof effective.welcome_channel_id === 'string'
+          ? effective.welcome_channel_id
+          : ''
+      );
+      setWelcomeMessage(
+        typeof effective.welcome_message === 'string'
+          ? effective.welcome_message
+          : ''
+      );
+      setWelcomeDmMessage(
+        typeof effective.welcome_dm_message === 'string'
+          ? effective.welcome_dm_message
+          : ''
+      );
     } catch (err) {
       logger.error('AdminDiscordConfigPage: fetch error', err);
       setError((err as Error)?.message || 'Erreur de chargement');
@@ -220,8 +249,12 @@ function AdminDiscordConfigPage({ tenantId, guildId }: Props) {
         if (bad) errs[f.key as string] = `Snowflake invalide : ${bad}`;
       }
     }
+    const wc = welcomeChannelId.trim();
+    if (wc && !SNOWFLAKE_RE.test(wc)) {
+      errs.welcome_channel_id = 'Snowflake invalide';
+    }
     return errs;
-  }, [form]);
+  }, [form, welcomeChannelId]);
 
   const handleClear = (key: string) => {
     setForm((prev) => ({ ...prev, [key]: '' }));
@@ -245,6 +278,14 @@ function AdminDiscordConfigPage({ tenantId, guildId }: Props) {
           body[f.key as string] = raw ? splitList(raw) : null;
         }
       }
+      body.welcome_enabled = welcomeEnabled;
+      body.welcome_channel_id = welcomeChannelId.trim()
+        ? welcomeChannelId.trim()
+        : null;
+      body.welcome_message = welcomeMessage.trim() ? welcomeMessage : null;
+      body.welcome_dm_message = welcomeDmMessage.trim()
+        ? welcomeDmMessage
+        : null;
       await mutateJson(
         `/api/admin/tenants/${tenantId}/discord-config/${guildId}`,
         {
@@ -383,6 +424,114 @@ function AdminDiscordConfigPage({ tenantId, guildId }: Props) {
                   </div>
                 </section>
               ))}
+
+              <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
+                <h2 className="text-lg font-semibold text-white mb-4">
+                  Accueil des nouveaux arrivants
+                </h2>
+                <div className="space-y-4">
+                  <div>
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        id="welcome-enabled"
+                        type="checkbox"
+                        checked={welcomeEnabled}
+                        onChange={(e) => setWelcomeEnabled(e.target.checked)}
+                        className="h-4 w-4 rounded border-neutral-600 bg-neutral-900/50 text-purple-600 focus:ring-2 focus:ring-purple-500"
+                      />
+                      <span className="text-sm font-medium text-neutral-300">
+                        Activer le message de bienvenue
+                      </span>
+                    </label>
+                    <p className="text-xs text-neutral-500 mt-1">
+                      Poste automatiquement un message quand un membre rejoint le
+                      serveur.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="welcome-channel-id"
+                      className="block text-sm font-medium text-neutral-300 mb-1"
+                    >
+                      Salon d&apos;arrivée
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        id="welcome-channel-id"
+                        type="text"
+                        value={welcomeChannelId}
+                        onChange={(e) => setWelcomeChannelId(e.target.value)}
+                        placeholder="123456789012345678"
+                        className={`flex-1 px-3 py-2 rounded-lg bg-neutral-900/50 border focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm font-mono ${
+                          invalid.welcome_channel_id
+                            ? 'border-red-500/60'
+                            : 'border-neutral-600'
+                        }`}
+                      />
+                      {welcomeChannelId && (
+                        <button
+                          type="button"
+                          onClick={() => setWelcomeChannelId('')}
+                          className="px-3 py-2 rounded-lg border border-neutral-600 hover:border-neutral-500 text-xs text-neutral-300 transition-colors"
+                          title="Effacer"
+                        >
+                          Effacer
+                        </button>
+                      )}
+                    </div>
+                    <p className="text-xs text-neutral-500 mt-1">
+                      ID du salon où poster le message de bienvenue
+                    </p>
+                    {invalid.welcome_channel_id && (
+                      <p className="text-xs text-red-400 mt-1">
+                        {invalid.welcome_channel_id}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="welcome-message"
+                      className="block text-sm font-medium text-neutral-300 mb-1"
+                    >
+                      Message public
+                    </label>
+                    <textarea
+                      id="welcome-message"
+                      value={welcomeMessage}
+                      onChange={(e) => setWelcomeMessage(e.target.value)}
+                      rows={3}
+                      placeholder="Bienvenue {user} sur {server} !"
+                      className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                    />
+                    <p className="text-xs text-neutral-500 mt-1">
+                      placeholders : {'{user}'} = mention, {'{server}'} = nom du
+                      serveur, {'{count}'} = numéro du membre
+                    </p>
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="welcome-dm-message"
+                      className="block text-sm font-medium text-neutral-300 mb-1"
+                    >
+                      Message privé (DM)
+                    </label>
+                    <textarea
+                      id="welcome-dm-message"
+                      value={welcomeDmMessage}
+                      onChange={(e) => setWelcomeDmMessage(e.target.value)}
+                      rows={3}
+                      placeholder="Salut {user}, bienvenue sur {server} !"
+                      className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                    />
+                    <p className="text-xs text-neutral-500 mt-1">
+                      laissé vide = pas de DM ; mêmes placeholders
+                    </p>
+                  </div>
+                </div>
+              </section>
 
               <div className="flex gap-3">
                 <button

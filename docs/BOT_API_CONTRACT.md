@@ -1365,6 +1365,10 @@ memoire.
     "disputes_forum_tag_open_id": null,
     "disputes_forum_tag_pending_id": null,
     "disputes_forum_tag_resolved_id": null,
+    "welcome_enabled": false,
+    "welcome_channel_id": null,
+    "welcome_message": null,
+    "welcome_dm_message": null,
     "extras": {}
   }
 }
@@ -1381,6 +1385,18 @@ string[]` est remplace par 4 colonnes typees
 > SQL `staff_role_ids` est droppee. Cote bot, lire les 4 nouvelles cles dans
 > `discord_config` et choisir le role correspondant a la hierarchie
 > staff (`owner > admin > manager > caster`).
+
+> **Accueil des nouveaux arrivants** (2026-07-01) : `discord_config` expose
+> 4 nouvelles cles pour l'onboarding par serveur :
+> - `welcome_enabled` (boolean, defaut `false`) — active/desactive l'accueil.
+> - `welcome_channel_id` (snowflake nullable) — salon ou poster le message.
+> - `welcome_message` (string nullable) — gabarit du message in-channel.
+> - `welcome_dm_message` (string nullable) — gabarit du DM optionnel.
+>
+> Le bot n'accueille que si `welcome_enabled === true`. Il poste dans
+> `welcome_channel_id` si celui-ci ET `welcome_message` sont non-null, et DM
+> le nouvel arrivant si `welcome_dm_message` est non-null. Ces valeurs sont
+> editees cote site via `PUT /api/admin/tenants/:id/discord-config/:guildId`.
 
 **Errors**
 
@@ -1512,6 +1528,10 @@ sur `/by-guild/:id`.
         "staff_role_admin_id": null,
         "staff_role_manager_id": null,
         "staff_role_caster_id": null,
+        "welcome_enabled": false,
+        "welcome_channel_id": null,
+        "welcome_message": null,
+        "welcome_dm_message": null,
         "extras": {}
       }
     }

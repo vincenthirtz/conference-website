@@ -43,9 +43,15 @@ const NULLABLE_SNOWFLAKE_KEYS = [
   'disputes_forum_tag_open_id',
   'disputes_forum_tag_pending_id',
   'disputes_forum_tag_resolved_id',
+  // Accueil des nouveaux arrivants : le salon est un snowflake nullable.
+  'welcome_channel_id',
 ] as const;
 
 type NullableSnowflakeKey = (typeof NULLABLE_SNOWFLAKE_KEYS)[number];
+
+// Accueil : messages libres (nullable text) + flag booleen.
+const NULLABLE_TEXT_KEYS = ['welcome_message', 'welcome_dm_message'] as const;
+const WELCOME_MESSAGE_MAX_LEN = 2000;
 
 function validateNullableSnowflake(
   value: unknown
@@ -117,12 +123,10 @@ async function handler(
     return res.status(500).json({ error: 'Failed to verify guild link.' });
   }
   if (!link || link.tenant_id !== id) {
-    return res
-      .status(404)
-      .json({
-        error: 'Guild not linked to this tenant.',
-        code: 'GUILD_NOT_IN_TENANT',
-      });
+    return res.status(404).json({
+      error: 'Guild not linked to this tenant.',
+      code: 'GUILD_NOT_IN_TENANT',
+    });
   }
 
   const body = (req.body ?? {}) as Record<string, unknown>;
@@ -140,6 +144,41 @@ async function handler(
       });
     }
     upsertPayload[key] = typeof v === 'string' && v === '' ? null : v;
+  }
+
+  // welcome_enabled : boolean strict.
+  if ('welcome_enabled' in body) {
+    const v = body.welcome_enabled;
+    if (typeof v !== 'boolean') {
+      return res.status(400).json({
+        error: 'welcome_enabled must be a boolean.',
+        code: 'INVALID_WELCOME_ENABLED',
+        field: 'welcome_enabled',
+      });
+    }
+    upsertPayload.welcome_enabled = v;
+  }
+
+  // welcome_message / welcome_dm_message : texte libre nullable, trimme.
+  for (const key of NULLABLE_TEXT_KEYS) {
+    if (!(key in body)) continue;
+    const v = body[key];
+    if (v !== null && typeof v !== 'string') {
+      return res.status(400).json({
+        error: `${key} must be a string or null.`,
+        code: 'INVALID_WELCOME_MESSAGE',
+        field: key,
+      });
+    }
+    const trimmed = typeof v === 'string' ? v.trim() : null;
+    if (trimmed && trimmed.length > WELCOME_MESSAGE_MAX_LEN) {
+      return res.status(400).json({
+        error: `${key} must be at most ${WELCOME_MESSAGE_MAX_LEN} characters.`,
+        code: 'INVALID_WELCOME_MESSAGE',
+        field: key,
+      });
+    }
+    upsertPayload[key] = trimmed && trimmed.length > 0 ? trimmed : null;
   }
 
   if ('extras' in body) {
