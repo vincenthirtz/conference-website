@@ -182,22 +182,33 @@ export async function createTestStaff(
 export async function deleteTestStaff(email: string) {
   if (!supabaseTestClient) return;
 
-  const { data } = await supabaseTestClient.auth.admin.listUsers({
-    page: 1,
-    perPage: 100,
-  });
+  // Idempotent, orphan-proof cleanup. A crashed prior run can leave a `staff`
+  // row (unique on `email`) whose `auth_user_id` no longer resolves to a live
+  // auth user — the leftover row then trips a duplicate-key on the next
+  // createTestStaff insert. So delete by EMAIL first (independent of any
+  // auth_user_id), then remove every matching auth user (scanning all pages).
+  await supabaseTestClient.from('staff').delete().ilike('email', email);
 
-  const users = (data as any)?.users as
-    | { id: string; email?: string }[]
-    | undefined;
-  const user = users?.find(
-    (u) => u.email?.toLowerCase() === email.toLowerCase()
-  );
-
-  if (user) {
-    // Delete from staff table first
-    await supabaseTestClient.from('staff').delete().eq('auth_user_id', user.id);
-    // Then delete user
-    await supabaseTestClient.auth.admin.deleteUser(user.id);
+  const emailLc = email.toLowerCase();
+  for (let page = 1; page <= 20; page += 1) {
+    const { data } = await supabaseTestClient.auth.admin.listUsers({
+      page,
+      perPage: 200,
+    });
+    const users = (data as any)?.users as
+      | { id: string; email?: string }[]
+      | undefined;
+    if (!users || users.length === 0) break;
+    for (const u of users) {
+      if (u.email?.toLowerCase() === emailLc) {
+        // Belt-and-braces: also clear any staff row still keyed on this user.
+        await supabaseTestClient
+          .from('staff')
+          .delete()
+          .eq('auth_user_id', u.id);
+        await supabaseTestClient.auth.admin.deleteUser(u.id);
+      }
+    }
+    if (users.length < 200) break;
   }
 }

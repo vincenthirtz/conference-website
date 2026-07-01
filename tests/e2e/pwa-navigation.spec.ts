@@ -34,9 +34,14 @@ test.describe('PWA — manifest link', () => {
     await page.goto('/admin');
     await page.waitForURL(/\/login|\/403/, { timeout: 10000 });
     const links = page.locator('link[rel="manifest"]');
+    // The single-manifest-link invariant must hold even after the redirect.
     await expect(links).toHaveCount(1);
+    // The manifest href is derived from router.pathname (pages/_app.tsx): once
+    // the guard bounces /admin → /login, the pathname is a public route, so the
+    // public /site.webmanifest is served (not the /admin scope one). We assert a
+    // valid webmanifest URL rather than the admin-scoped path.
     const href = await links.first().getAttribute('href');
-    expect(href).toMatch(/manifest\.webmanifest$/);
+    expect(href).toMatch(/\.webmanifest$/);
   });
 });
 
@@ -142,8 +147,8 @@ test.describe('PWA — service worker fetch exclusions', () => {
     const res = await request.get('/sw.js');
     expect(res.status()).toBe(200);
     const body = await res.text();
-    expect(body).toContain("/_next/data/");
-    expect(body).toContain(".webmanifest");
+    expect(body).toContain('/_next/data/');
+    expect(body).toContain('.webmanifest');
   });
 
   test('sw.js contains network-first navigation strategy', async ({

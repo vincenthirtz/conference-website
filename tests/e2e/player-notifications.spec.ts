@@ -105,12 +105,12 @@ test.describe('Player notifications page', () => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
 
     await mockApiJson(page, '/api/player/notifications', counters());
-    // Start with every event enabled.
+    // The prefs endpoint returns two per-channel maps (opt-OUT push /
+    // opt-IN email) keyed by event_type — NOT an array. `push` defaults to
+    // enabled when a key is present with `true`. See NotificationPrefsGrid.
     await mockApiJson(page, '/api/player/push/prefs', {
-      prefs: [
-        { event_type: 'match.starting', enabled: true },
-        { event_type: 'match.finished', enabled: true },
-      ],
+      push: { 'match.starting': true, 'match.finished': true },
+      email: {},
     });
 
     let putBody: unknown = null;
@@ -120,9 +120,7 @@ test.describe('Player notifications page', () => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify({
-            prefs: [{ event_type: 'match.starting', enabled: false }],
-          }),
+          body: JSON.stringify({ success: true }),
         });
         return;
       }
@@ -131,18 +129,21 @@ test.describe('Player notifications page', () => {
 
     await loginPlayer(page, PLAYER_EMAIL, '/player/notifications');
 
-    // The "Match imminent" toggle (event match.starting) is on → turn it off.
-    const toggle = page.getByRole('switch', { name: 'Match imminent' });
+    // The push toggle for match.starting is on → turn it off. Its accessible
+    // name is composed as `${channel} — ${label}`, i.e. "Push — Match imminent".
+    const toggle = page.getByRole('switch', { name: 'Push — Match imminent' });
     await expect(toggle).toBeVisible({ timeout: 10000 });
     await expect(toggle).toHaveAttribute('aria-checked', 'true');
     await toggle.click();
 
-    // Success toast + correct PUT payload.
+    // Success toast + correct PUT payload (single-pref shape).
     await expect(page.getByText('Préférence enregistrée.')).toBeVisible({
       timeout: 10000,
     });
     expect(putBody).toMatchObject({
-      prefs: [{ event_type: 'match.starting', enabled: false }],
+      eventType: 'match.starting',
+      channel: 'push',
+      enabled: false,
     });
   });
 });

@@ -158,8 +158,12 @@ test.describe('Player check-in page', () => {
     await expect(submit).toBeVisible({ timeout: 10000 });
     await submit.click();
 
+    // A fresh confirmation in THIS session plays the celebratory
+    // "just confirmed" state (justConfirmed=true → t.confirmedHeading), which
+    // is "Présence confirmée ✓", not the calmer "Check-in validé" recap shown
+    // when the page loads an already-checked-in match (see pages/player/checkin.tsx).
     await expect(
-      page.getByRole('heading', { name: 'Check-in validé' })
+      page.getByRole('heading', { name: 'Présence confirmée ✓' })
     ).toBeVisible({ timeout: 10000 });
     expect(postCalled).toBe(true);
   });

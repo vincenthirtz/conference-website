@@ -74,7 +74,7 @@ test.describe('Player profile page', () => {
       .locator('section')
       .filter({ hasText: 'Modifier mon profil' });
 
-    await section.getByLabel('Nom affiche').fill('Nouveau Pseudo');
+    await section.getByLabel('Nom affiché').fill('Nouveau Pseudo');
     await section.getByLabel('BattleTag').fill('Nouveau#4242');
     await section
       .getByLabel('Avatar (URL)')
@@ -102,11 +102,15 @@ test.describe('Player profile page', () => {
       .locator('section')
       .filter({ hasText: 'Changer mon email' });
 
-    // Submit button stays disabled while the field is empty.
+    // Submit button stays disabled while the fields are empty.
     await expect(
       section.getByRole('button', { name: 'Changer mon email' })
     ).toBeDisabled();
 
+    // The email change now requires re-authentication with the current
+    // password (pages/player/profile.tsx handleEmailChange): the button only
+    // enables once BOTH the current password and a new email are provided.
+    await section.getByLabel('Mot de passe actuel').fill(PLAYER_PASSWORD);
     await section
       .getByLabel('Nouvel email')
       .fill('nouvelle+adresse@example.com');
@@ -132,6 +136,9 @@ test.describe('Player profile page', () => {
       .locator('section')
       .filter({ hasText: 'Changer mon mot de passe' });
 
+    // The current password is validated first (handlePasswordChange), so it
+    // must be present for the client-side mismatch check to be reached.
+    await section.getByLabel('Mot de passe actuel').fill(PLAYER_PASSWORD);
     await section.getByLabel('Nouveau mot de passe').fill('Password123!');
     await section.getByLabel('Confirmer le mot de passe').fill('Different123!');
     await section

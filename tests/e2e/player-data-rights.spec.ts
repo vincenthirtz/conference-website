@@ -71,17 +71,27 @@ test.describe('Player data rights (GDPR)', () => {
     });
   });
 
-  // ─── Method not allowed ───
+  // ─── Wrong HTTP methods (auth is enforced before the method guard) ───
+  //
+  // Both handlers are wrapped in withAuthRoute (utils/staff.ts), which rejects
+  // a missing/invalid token with 401 BEFORE the per-handler method check runs.
+  // For an UNauthenticated wrong-method request the response is therefore 401,
+  // not 405 — a deliberate security posture (don't leak method info pre-auth).
+  // The 405 path is still reachable, but only once authenticated.
 
-  test.describe('Wrong HTTP methods', () => {
-    test('POST /api/player/data-export returns 405', async ({ request }) => {
+  test.describe('Wrong HTTP methods (unauthenticated)', () => {
+    test('POST /api/player/data-export returns 401 (auth before method)', async ({
+      request,
+    }) => {
       const resp = await request.post(`${BASE_URL}/api/player/data-export`);
-      expect(resp.status()).toBe(405);
+      expect(resp.status()).toBe(401);
     });
 
-    test('GET /api/player/delete-account returns 405', async ({ request }) => {
+    test('GET /api/player/delete-account returns 401 (auth before method)', async ({
+      request,
+    }) => {
       const resp = await request.get(`${BASE_URL}/api/player/delete-account`);
-      expect(resp.status()).toBe(405);
+      expect(resp.status()).toBe(401);
     });
   });
 
