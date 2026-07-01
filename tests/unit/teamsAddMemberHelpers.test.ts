@@ -216,6 +216,32 @@ describe('insertTeamMember', () => {
     expect((store.team_members as any[])[0].battle_tag).toBeUndefined();
   });
 
+  it('flags is_substitute when the role is substitute', async () => {
+    const r = await insertTeamMember({
+      tenantId: TENANT_ID,
+      teamId: 'team-1',
+      userId: 'u-1',
+      role: 'substitute',
+      battleTag: 'Sub#1234',
+    });
+    expect(r.ok).toBe(true);
+    expect((store.team_members as any[])[0]).toMatchObject({
+      role: 'substitute',
+      is_substitute: true,
+    });
+  });
+
+  it('does not flag is_substitute for a plain player', async () => {
+    await insertTeamMember({
+      tenantId: TENANT_ID,
+      teamId: 'team-1',
+      userId: 'u-1',
+      role: 'player',
+      battleTag: 'Player#1234',
+    });
+    expect((store.team_members as any[])[0].is_substitute).toBeUndefined();
+  });
+
   describe('with enforceMaxPlayersPreCheck', () => {
     it('rejects with isMaxPlayersViolation when team is at limit', async () => {
       store.team_members = [

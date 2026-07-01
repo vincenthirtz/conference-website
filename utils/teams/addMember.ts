@@ -213,6 +213,9 @@ export async function insertTeamMember(
   };
   if (input.battleTag) payload.battle_tag = input.battleTag;
   if (input.specialty) payload.specialty = input.specialty;
+  // Le role `substitute` doit aussi lever is_substitute (comme update-member-role),
+  // sinon la sub n'est pas comptee comme remplacante par les vues qui lisent ce flag.
+  if (input.role === 'substitute') payload.is_substitute = true;
 
   const { data: member, error: insertErr } = await supabaseAdmin
     .from('team_members')
@@ -222,8 +225,10 @@ export async function insertTeamMember(
 
   if (insertErr) {
     const msg = insertErr.message?.toLowerCase() || '';
-    const isMaxPlayersViolation =
-      insertErr.code === '23514' || msg.includes('max_players');
+    // Ne classer comme "limite tournoi" QUE si le message evoque explicitement
+    // max_players. Le code 23514 seul est trop large : une autre contrainte CHECK
+    // (role invalide, format battle_tag) renverrait alors un message trompeur.
+    const isMaxPlayersViolation = msg.includes('max_players');
     const isDuplicate = msg.includes('duplicate') || msg.includes('unique');
 
     if (isMaxPlayersViolation) {

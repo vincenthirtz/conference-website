@@ -69,7 +69,7 @@ export const TEAM_ROLES_SETTING_KEY = 'team_roles';
 export const DEFAULT_TEAM_ROLES: TeamRole[] = [
   { value: 'player', label: 'Player', permissions: [] },
   { value: 'coach', label: 'Coach', permissions: [] },
-  { value: 'sub', label: 'Sub', permissions: [] },
+  { value: 'substitute', label: 'Sub', permissions: [] },
   {
     value: 'manager',
     label: 'Manager',
