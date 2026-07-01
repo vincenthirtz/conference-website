@@ -162,6 +162,22 @@ re-derive it from the payload:
 The bot resolves the target guild via `tenant_config.getGuildIdForTenant(tenantId)`
 (local cache amorcé au boot via `/tenants/all-configs`).
 
+### Site → bot: guild inventory (channel/role picker)
+
+Read-only companion to the webhook push, in the same direction (site → bot). The
+site has **no Discord token**, so the admin "list channels" picker relays to the
+bot, which owns the discord.js client.
+
+- **Bot endpoint**: `GET /guild-inventory?guildId=<snowflake>` on the webhook
+  server (proxied publicly as `/bot/guild-inventory`, cf. docker-box nginx).
+- **Auth**: HMAC-SHA256 of the canonical string `` `${guildId}:${timestamp}` ``
+  with the tenant's `bot_webhook_secret`, sent as `X-Webhook-Signature` +
+  `X-Webhook-Timestamp` (ISO). Anti-replay: timestamp bounded to a 5-min skew.
+- **Site caller**: [`pages/api/admin/tenants/[id]/discord-config/[guildId]/channels.ts`](../pages/api/admin/tenants/)
+  (staff `manager+`, verifies the guild belongs to the tenant before relaying).
+- **Response**: `{ guild: { id, name }, channels: [{ id, name, type, parentId, position }], roles: [{ id, name, color, position, managed }] }`.
+  `type` is the numeric Discord `ChannelType`; `@everyone` is excluded from roles.
+
 ### Outbox event catalog
 
 Event names written to `bot_event_outbox.event_name` are free-form text (no
