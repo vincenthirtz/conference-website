@@ -174,6 +174,17 @@ const tokenUserCache = new Map<
   { user: User | null; expiresAt: number }
 >();
 
+// Cookie header → user cache (60s). Sur les pages SSR admin, chaque navigation
+// Next refait un `supabase.auth.getUser()` (roundtrip GoTrue) car la requête
+// de données Next ne porte pas de header Bearer : on tombe alors dans la
+// branche cookies ci-dessous, jusqu'ici non cachée — c'était le coût dominant
+// de latence pour atteindre le back-office. On mémoïse par header cookie
+// (même session = mêmes cookies) sur la même fenêtre que `tokenUserCache`.
+const cookieUserCache = new Map<
+  string,
+  { user: User | null; expiresAt: number }
+>();
+
 async function resolveUserFromToken(token: string): Promise<User | null> {
   const now = Date.now();
   const cached = tokenUserCache.get(token);
@@ -235,26 +246,40 @@ export async function getStaffContextFromRequest(
 
   // 2) Si pas de token ou pas d'user via token → fallback cookies / SSR
   if (!user) {
-    const supabase = getServerClient(req, res);
-    const {
-      data: { user: cookieUser },
-      error: cookieError,
-    } = await supabase.auth.getUser();
+    const cookieHeader = req.headers.cookie || '';
+    const now = Date.now();
+    const cached = cookieHeader ? cookieUserCache.get(cookieHeader) : undefined;
 
-    if (cookieError) {
-      // On ignore les erreurs "Auth session missing" qui sont normales
-      const msg = (cookieError as any)?.message || '';
-      const status = (cookieError as any)?.status;
+    if (cached && cached.expiresAt > now) {
+      user = cached.user;
+    } else {
+      const supabase = getServerClient(req, res);
+      const {
+        data: { user: cookieUser },
+        error: cookieError,
+      } = await supabase.auth.getUser();
 
-      const isMissingSession =
-        msg.includes('Auth session missing') || status === 400;
+      if (cookieError) {
+        // On ignore les erreurs "Auth session missing" qui sont normales
+        const msg = (cookieError as any)?.message || '';
+        const status = (cookieError as any)?.status;
 
-      if (!isMissingSession) {
-        logger.error('getStaffContextFromRequest cookie error:', cookieError);
+        const isMissingSession =
+          msg.includes('Auth session missing') || status === 400;
+
+        if (!isMissingSession) {
+          logger.error('getStaffContextFromRequest cookie error:', cookieError);
+        }
+      }
+
+      user = cookieUser ?? null;
+      if (cookieHeader) {
+        cookieUserCache.set(cookieHeader, {
+          user,
+          expiresAt: now + TOKEN_CACHE_TTL,
+        });
       }
     }
-
-    user = cookieUser ?? null;
   }
 
   // 3) Pas d'utilisateur → pas de contexte staff

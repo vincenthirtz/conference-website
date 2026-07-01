@@ -60,7 +60,7 @@ export default function ManageTeamPage() {
   const { lang } = useLang();
   const locale = lang === 'fr' ? 'fr-FR' : 'en-US';
   const { loading: authLoading, ready } = usePlayerSession();
-  const { adminFetchJson } = useAdminFetch();
+  const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
   const {
     data: managedTeam,
     loading: teamLoading,

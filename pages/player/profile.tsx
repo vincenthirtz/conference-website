@@ -21,7 +21,7 @@ function PlayerProfile() {
   const { user, loading: authLoading } = usePlayerSession({
     redirectTo: '/login?next=/player/profile',
   });
-  const { adminFetch, adminFetchJson } = useAdminFetch();
+  const { adminFetch, adminFetchJson } = useAdminFetch({ loginPath: '/login' });
 
   const displayName =
     user?.user_metadata?.display_name ||

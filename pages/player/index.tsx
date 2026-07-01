@@ -290,7 +290,7 @@ function PlayerDashboard() {
   const tr = t as unknown as Record<string, string>;
   const { lang } = useLang();
   const { user, loading: authLoading, ready } = usePlayerSession();
-  const { adminFetchJson } = useAdminFetch();
+  const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
   const [loading, setLoading] = useState(true);
   const [team, setTeam] = useState<TeamInfo>(null);
   const [members, setMembers] = useState<TeamMemberLite[]>([]);

@@ -63,7 +63,7 @@ export default function MessagesPage() {
   const { lang } = useLang();
   const locale = lang === 'fr' ? 'fr-FR' : 'en-GB';
   const { loading: authLoading, ready } = usePlayerSession();
-  const { adminFetchJson } = useAdminFetch();
+  const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
   const { data: managedTeam, loading: teamLoading } = useManagedTeam();
   const isCaptain = managedTeam?.isCaptain ?? false;
   const isManager = managedTeam?.isManager ?? false;

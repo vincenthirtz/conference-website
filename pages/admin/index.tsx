@@ -326,19 +326,20 @@ function AdminDashboardPage({ staff }: Props) {
     setLoading(true);
     setErrorMsg(null);
     try {
-      // Alertes actionnables : source partagée avec le badge navbar.
-      const alerts = await adminFetchJson<AlertsSummary>(
-        '/api/admin/alerts-summary'
-      );
+      // Les deux agrégats sont indépendants → on les lance en parallèle pour
+      // ne pas empiler les latences (alertes = source partagée avec le badge
+      // navbar ; KPI globaux = managers+ uniquement, l'endpoint exige ce rôle).
+      // Chaque endpoint renvoie 200 même en dégradation partielle (clé à null).
+      const [alerts, summary] = await Promise.all([
+        adminFetchJson<AlertsSummary>('/api/admin/alerts-summary'),
+        canManage
+          ? adminFetchJson<Kpis>('/api/admin/overview-summary')
+          : Promise.resolve(null),
+      ]);
+
       setAlertsSummary(alerts);
 
-      // KPI globaux : managers+ uniquement (l'endpoint exige ce rôle).
-      // Un seul appel d'agrégat ; le shape correspond déjà à l'état Kpis.
-      // Le endpoint renvoie 200 même en dégradation partielle (clé à null).
-      if (canManage) {
-        const summary = await adminFetchJson<Kpis>(
-          '/api/admin/overview-summary'
-        );
+      if (summary) {
         setKpis({
           tournamentsActive: summary.tournamentsActive ?? null,
           teams: summary.teams ?? null,

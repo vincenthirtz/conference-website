@@ -7,6 +7,7 @@ import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import Button from '@/components/Buttons/button';
 import { supabaseClient, purgeSupabaseAuthStorage } from '@/utils/supabase';
+import { STAFF_CACHE_KEY } from '@/hooks/useStaffSession';
 import { useSiteSetting } from '@/hooks/useSiteSettings';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 
@@ -19,6 +20,28 @@ import { logger } from '../utils/logger';
 function safeNext(raw: unknown): string | null {
   if (typeof raw !== 'string') return null;
   return raw.startsWith('/') && !raw.startsWith('//') ? raw : null;
+}
+
+// Amorce le cache de session staff (même clé/shape que useStaffSession) à
+// partir de la réponse /api/admin/me déjà obtenue au login. Évite que la
+// navbar refasse un /api/admin/me sur la première page admin après connexion.
+function primeStaffCache(me: {
+  role?: string;
+  display_name?: string;
+  email?: string;
+}) {
+  if (typeof window === 'undefined' || !me?.role) return;
+  try {
+    sessionStorage.setItem(
+      STAFF_CACHE_KEY,
+      JSON.stringify({
+        isStaff: true,
+        staffName: me.display_name || me.email || 'Staff',
+        staffRole: me.role,
+        ts: Date.now(),
+      })
+    );
+  } catch {}
 }
 
 const LoginPage = () => {
@@ -122,9 +145,11 @@ const LoginPage = () => {
 
       if (res.ok && me?.role) {
         // ?next= valide prioritaire, sinon Captain → panel joueur, Staff → admin
-        await router.push(
-          next ?? (me.role === 'captain' ? '/player' : '/admin')
-        );
+        const target = next ?? (me.role === 'captain' ? '/player' : '/admin');
+        // Rôle staff (owner/admin/manager/caster) → on amorce le cache pour que
+        // la navbar n'ait pas à revalider le staff sur la première page admin.
+        if (me.role !== 'captain') primeStaffCache(me);
+        await router.push(target);
         return;
       }
 
