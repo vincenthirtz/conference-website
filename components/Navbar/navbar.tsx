@@ -171,7 +171,7 @@ function Navbar(): JSX.Element {
                   alt="conference logo"
                   width={150}
                   height={33}
-                  className="block pt-10 transition-transform duration-300 group-hover:scale-[1.04]"
+                  className="block transition-transform duration-300 group-hover:scale-[1.04]"
                   priority
                 />
               </Link>
