@@ -6,7 +6,7 @@ import { useSiteSetting } from '@/hooks/useSiteSettings';
 const SUGGESTIONS = [
   { label: 'Accueil', href: '/', emoji: '🏠' },
   { label: 'Tournoi', href: '/tournoi', emoji: '🏆' },
-  { label: 'Live', href: '/live', emoji: '🎥' },
+  { label: 'Ambassadrices', href: '/live', emoji: '🎥' },
   { label: 'Actualités', href: '/actualites', emoji: '📰' },
   { label: 'Plan du site', href: '/plan-du-site', emoji: '🗺️' },
   { label: 'Contact', href: '/contact', emoji: '✉️' },

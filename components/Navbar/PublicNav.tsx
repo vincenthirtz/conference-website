@@ -12,7 +12,7 @@ const HIDDEN_PUBLIC_LINKS = new Set([
   'Sponsors',
   'Jeux',
   'Actualités',
-  'Live',
+  'Ambassadrices',
 ]);
 
 type PublicNavProps = {

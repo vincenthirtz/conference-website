@@ -34,7 +34,7 @@ type SocialLink = {
 };
 
 const tournoiLinks: FooterLink[] = [
-  { label: 'Live', href: '/live', Icon: LiveIcon },
+  { label: 'Ambassadrices', href: '/live', Icon: LiveIcon },
   { label: 'Règlement', href: '/rules', Icon: RulesIcon },
   { label: 'Actualités OW', href: '/actualites', Icon: NewsIcon },
   { label: 'Plan du site', href: '/plan-du-site', Icon: SitemapIcon },

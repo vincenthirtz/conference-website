@@ -11,7 +11,7 @@ const HIDDEN_PUBLIC_LINKS = new Set([
   'Sponsors',
   'Jeux',
   'Actualités',
-  'Live',
+  'Ambassadrices',
 ]);
 
 function Chevron({ open, size = 'md' }: { open: boolean; size?: 'sm' | 'md' }) {

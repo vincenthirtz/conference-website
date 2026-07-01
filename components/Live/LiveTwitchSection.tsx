@@ -14,9 +14,20 @@ export type TwitchChannel = {
 
 type Props = {
   initialChannels?: TwitchChannel[];
+  /** Sur-titre affiché au-dessus du titre. */
+  eyebrow?: string;
+  /** Titre principal de la section. */
+  title?: string;
+  /** Sous-titre / paragraphe d'introduction. */
+  subtitle?: string;
 };
 
-export default function LiveTwitchSection({ initialChannels }: Props = {}) {
+export default function LiveTwitchSection({
+  initialChannels,
+  eyebrow = 'Live',
+  title = 'En attendant la compétition',
+  subtitle = 'Retrouvez nos chaînes partenaires, casts et analyses en attendant la compétition.',
+}: Props = {}) {
   const [twitchChannels, setTwitchChannels] = useState<TwitchChannel[]>(
     initialChannels ?? []
   );
@@ -92,14 +103,14 @@ export default function LiveTwitchSection({ initialChannels }: Props = {}) {
       className="flex items-center flex-col justify-center pt-20"
     >
       <div className="text-xl text-white font-semibold border-b-2 border-blue-400 mb-1">
-        Live
+        {eyebrow}
       </div>
       <div data-test="ticket-section" className="flex flex-col items-center ">
         <Heading
           typeStyle="heading-md"
           className="text-gradient text-center lg:mt-10"
         >
-          En attendant la compétition
+          {title}
         </Heading>
         <div className="max-w-3xl sm:w-full text-center">
           <Paragraph
@@ -107,8 +118,7 @@ export default function LiveTwitchSection({ initialChannels }: Props = {}) {
             className="mt-6"
             textColor="text-gray-200"
           >
-            Retrouvez nos chaînes partenaires, casts et analyses en attendant la
-            compétition.
+            {subtitle}
           </Paragraph>
         </div>
 
