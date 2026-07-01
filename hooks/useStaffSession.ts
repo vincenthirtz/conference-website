@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabaseClient } from '@/utils/supabase';
+import { useSession } from '@/hooks/useSession';
 import type { StaffRole } from '@/utils/staff';
 
 export const STAFF_CACHE_TTL = 2 * 60 * 1000;
@@ -146,18 +147,21 @@ export function useStaffSession(): StaffSession {
     [reset]
   );
 
+  // Piloté par l'unique SessionProvider (plus de souscription propre). On
+  // (re)valide le staff à chaque changement de session : au premier
+  // INITIAL_SESSION on autorise le cache 2 min ; sur tout autre event
+  // (SIGNED_IN / SIGNED_OUT / TOKEN_REFRESHED) on force le rafraîchissement.
+  const {
+    token: sessionToken,
+    loading: sessionLoading,
+    lastEvent,
+  } = useSession();
+
   useEffect(() => {
-    checkStaff();
-    const { data: authListener } = supabaseClient.auth.onAuthStateChange(
-      (event, session) => {
-        const forceRefresh = event !== 'INITIAL_SESSION';
-        checkStaff(session?.access_token ?? null, forceRefresh);
-      }
-    );
-    return () => {
-      authListener?.subscription?.unsubscribe();
-    };
-  }, [checkStaff]);
+    if (sessionLoading) return;
+    const forceRefresh = lastEvent != null && lastEvent !== 'INITIAL_SESSION';
+    checkStaff(sessionToken, forceRefresh);
+  }, [sessionToken, sessionLoading, lastEvent, checkStaff]);
 
   return {
     isStaff,

@@ -1,17 +1,21 @@
-// Centralised auth bootstrap for /player pages.
+// Auth bootstrap pour les pages /player.
 //
-// Every player page used to repeat the same useEffect:
+// Historiquement chaque page /player répétait le même useEffect :
 //   getSession → if !user redirect /login → setUser/setToken → loadData
 //
-// usePlayerSession returns a stable `{ user, token, loading, ready }` triple
-// and pushes the user toward `/login` (or a configurable redirect) as
-// soon as we know they're anonymous. Pages should branch on `ready` (auth
-// resolved + user present) to load data; the rest of the page can render
-// a skeleton while loading is true.
+// usePlayerSession expose un triple stable `{ user, token, loading, ready }` et
+// pousse l'utilisateur vers `/login` (ou une cible configurable) dès qu'on sait
+// qu'il est anonyme. Les pages branchent sur `ready` (auth résolue + user
+// présent) pour charger leurs données ; le reste peut afficher un skeleton tant
+// que `loading` est vrai.
+//
+// Depuis le refactor session partagée, l'auth vient de l'unique
+// SessionProvider ; ce hook ne conserve que l'effet de redirection. API
+// inchangée.
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { supabaseClient } from '@/utils/supabase';
+import { useSession } from '@/hooks/useSession';
 import type { User } from '@supabase/supabase-js';
 
 export type PlayerSession = {
@@ -32,47 +36,15 @@ type Options = {
 export function usePlayerSession(options: Options = {}): PlayerSession {
   const { redirectTo = '/login', redirect = true } = options;
   const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { user, token, loading } = useSession();
 
   useEffect(() => {
-    let mounted = true;
-
-    const apply = (next: { user: User | null; token: string | null }) => {
-      if (!mounted) return;
-      setUser(next.user);
-      setToken(next.token);
-      setLoading(false);
-      if (!next.user && redirect) {
-        router.replace(redirectTo);
-      }
-    };
-
-    supabaseClient.auth.getSession().then(({ data }) => {
-      apply({
-        user: data.session?.user ?? null,
-        token: data.session?.access_token ?? null,
-      });
-    });
-
-    const { data: sub } = supabaseClient.auth.onAuthStateChange(
-      (_event, session) => {
-        apply({
-          user: session?.user ?? null,
-          token: session?.access_token ?? null,
-        });
-      }
-    );
-
-    return () => {
-      mounted = false;
-      sub.subscription.unsubscribe();
-    };
-    // We intentionally re-run when the redirect target changes; router is
-    // stable across renders.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [redirectTo, redirect]);
+    // On ne redirige qu'une fois l'auth résolue et l'utilisateur connu anonyme.
+    if (loading) return;
+    if (!user && redirect) {
+      router.replace(redirectTo);
+    }
+  }, [loading, user, redirect, redirectTo, router]);
 
   return {
     user,
