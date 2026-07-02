@@ -91,10 +91,59 @@ export type PlayerProfileH2H = {
   games: number;
 };
 
+// ---------------------------------------------------------------------------
+// Badges / palmarès / historique de saison — dérivés par le réducteur PUR
+// utils/profile/achievements.ts. Aucun accès DB : ces shapes décrivent la
+// sortie exposée sur le profil public.
+// ---------------------------------------------------------------------------
+
+/** Niveau (rareté) d'un badge de profil. */
+export type ProfileBadgeTier = 'bronze' | 'silver' | 'gold' | 'platinum';
+
+/** Badge dérivé du parcours d'un joueur. */
+export type ProfileBadge = {
+  key: string; // identifiant stable (ex: 'champion', 'peak_elite')
+  label: string; // libellé FR court
+  description: string; // phrase FR
+  tier: ProfileBadgeTier | null;
+};
+
+/** Placement final d'une équipe dans un tournoi (palmarès). */
+export type ProfilePlacement = {
+  tournamentId: string;
+  tournamentName: string | null;
+  tournamentSlug: string | null;
+  teamId: string;
+  teamName: string | null;
+  rank: number; // rang final dans le tournoi
+  date: string | null; // date du tournoi (ISO) si connue
+};
+
+/** Participation d'un joueur à une saison de league. */
+export type ProfileSeason = {
+  leagueId: string;
+  leagueName: string | null;
+  leagueSlug: string | null;
+  teamId: string;
+  teamName: string | null;
+  rank: number | null; // rang dans la league
+  points: number;
+};
+
+/** Bloc "achievements" du profil public. */
+export type ProfileAchievements = {
+  badges: ProfileBadge[];
+  palmares: ProfilePlacement[];
+  seasons: ProfileSeason[];
+};
+
 /** Réponse `GET /api/players/[userId]/profile`. */
 export type PlayerProfileResponse = {
   player: PlayerProfileCore;
   history: PlayerProfileHistoryPoint[];
   recentMatches: PlayerProfileRecentMatch[];
   h2h: PlayerProfileH2H[];
+  // Badges / palmarès / historique de saison, dérivés par le réducteur pur
+  // utils/profile/achievements.ts et branchés dans readPlayerProfile.ts.
+  achievements: ProfileAchievements;
 };

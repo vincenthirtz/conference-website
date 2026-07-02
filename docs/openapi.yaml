@@ -3362,6 +3362,7 @@ components:
         - history
         - recentMatches
         - h2h
+        - achievements
       properties:
         player:
           type: object
@@ -3471,6 +3472,96 @@ components:
                 type: integer
               games:
                 type: integer
+        achievements:
+          type: object
+          description: >-
+            Badges, palmarès (placements en tournoi) et historique de saison
+            dérivés du parcours du joueur par le réducteur pur
+            utils/profile/achievements.ts. Toujours présent (bloc vide si rien
+            à agréger).
+          required:
+            - badges
+            - palmares
+            - seasons
+          properties:
+            badges:
+              type: array
+              items:
+                type: object
+                required:
+                  - key
+                  - label
+                  - description
+                  - tier
+                properties:
+                  key:
+                    type: string
+                  label:
+                    type: string
+                  description:
+                    type: string
+                  tier:
+                    type: string
+                    nullable: true
+                    enum:
+                      - bronze
+                      - silver
+                      - gold
+                      - platinum
+            palmares:
+              type: array
+              items:
+                type: object
+                required:
+                  - tournamentId
+                  - teamId
+                  - rank
+                properties:
+                  tournamentId:
+                    type: string
+                  tournamentName:
+                    type: string
+                    nullable: true
+                  tournamentSlug:
+                    type: string
+                    nullable: true
+                  teamId:
+                    type: string
+                  teamName:
+                    type: string
+                    nullable: true
+                  rank:
+                    type: integer
+                  date:
+                    type: string
+                    nullable: true
+            seasons:
+              type: array
+              items:
+                type: object
+                required:
+                  - leagueId
+                  - teamId
+                  - points
+                properties:
+                  leagueId:
+                    type: string
+                  leagueName:
+                    type: string
+                    nullable: true
+                  leagueSlug:
+                    type: string
+                    nullable: true
+                  teamId:
+                    type: string
+                  teamName:
+                    type: string
+                    nullable: true
+                  rank:
+                    type: integer
+                    nullable: true
+                  points:
+                    type: number
     League:
       type: object
       required:

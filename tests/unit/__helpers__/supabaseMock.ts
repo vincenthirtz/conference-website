@@ -40,6 +40,11 @@ export const KNOWN_TABLES: readonly string[] = [
   'leagues',
   'league_tournaments',
   'league_standings',
+  // profile achievements (palmarès + saisons)
+  'final_rankings',
+  'tournaments',
+  'teams',
+  'matches',
 ];
 
 /**

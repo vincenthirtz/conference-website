@@ -13,6 +13,7 @@
 
 import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
+import { computeAchievements } from '@/utils/profile/achievements';
 import type {
   PlayerProfileResponse,
   PlayerProfileCore,
@@ -20,6 +21,9 @@ import type {
   PlayerProfileRecentMatch,
   PlayerProfileH2H,
   PlayerRatingRow,
+  ProfileAchievements,
+  ProfilePlacement,
+  ProfileSeason,
 } from '@/types/rating';
 
 const RECENT_MATCHES_LIMIT = 20;
@@ -51,6 +55,217 @@ type MatchRow = {
   winner_team_id: string | null;
   completed_at: string | null;
 };
+
+const EMPTY_ACHIEVEMENTS: ProfileAchievements = {
+  badges: [],
+  palmares: [],
+  seasons: [],
+};
+
+/**
+ * Agrège palmarès (final_rankings des tournois du joueur) + saisons
+ * (league_standings des équipes du joueur, leagues publiques non-draft) puis
+ * délègue au réducteur pur `computeAchievements`.
+ *
+ * Best-effort : toute erreur DB est loggée et renvoie un bloc vide plutôt que
+ * de faire échouer tout le profil.
+ *
+ * @param myParts participations (non-sub) du joueur — chaque paire
+ *   (tournament_id via matches, team_id) fournit le scope palmarès + saisons.
+ */
+async function readAchievements(
+  tenantId: string,
+  stats: {
+    peakRating: number;
+    gamesPlayed: number;
+    wins: number;
+    losses: number;
+  },
+  results: { result: 'win' | 'loss' | 'draw'; occurredAt: string }[],
+  playerPairs: Array<{ tournamentId: string; teamId: string }>,
+  teamIds: string[]
+): Promise<ProfileAchievements> {
+  try {
+    // --- Palmarès : final_rankings des tournois où le joueur a une équipe ---
+    const tournamentIds = [...new Set(playerPairs.map((p) => p.tournamentId))];
+    const pairKey = (t: string, team: string) => `${t}::${team}`;
+    const wantedPairs = new Set(
+      playerPairs.map((p) => pairKey(p.tournamentId, p.teamId))
+    );
+
+    let placements: ProfilePlacement[] = [];
+    if (tournamentIds.length > 0) {
+      const { data: frRows, error: frErr } = await supabaseAdmin
+        .from('final_rankings')
+        .select('tournament_id, team_id, rank')
+        .eq('tenant_id', tenantId)
+        .in('tournament_id', tournamentIds);
+      if (frErr) throw frErr;
+      const rankings = (
+        (frRows || []) as Array<{
+          tournament_id: string;
+          team_id: string;
+          rank: number;
+        }>
+      ).filter((r) => wantedPairs.has(pairKey(r.tournament_id, r.team_id)));
+
+      const rankedTournamentIds = [
+        ...new Set(rankings.map((r) => r.tournament_id)),
+      ];
+      const rankedTeamIds = [...new Set(rankings.map((r) => r.team_id))];
+
+      const tournamentMeta = new Map<
+        string,
+        {
+          name: string | null;
+          slug: string | null;
+          start_date: string | null;
+          end_date: string | null;
+        }
+      >();
+      if (rankedTournamentIds.length > 0) {
+        const { data: tRows, error: tErr } = await supabaseAdmin
+          .from('tournaments')
+          .select('id, name, slug, start_date, end_date')
+          .eq('tenant_id', tenantId)
+          .in('id', rankedTournamentIds);
+        if (tErr) throw tErr;
+        for (const t of (tRows || []) as Array<{
+          id: string;
+          name: string | null;
+          slug: string | null;
+          start_date: string | null;
+          end_date: string | null;
+        }>) {
+          tournamentMeta.set(t.id, {
+            name: t.name ?? null,
+            slug: t.slug ?? null,
+            start_date: t.start_date ?? null,
+            end_date: t.end_date ?? null,
+          });
+        }
+      }
+
+      const teamNames = new Map<string, string | null>();
+      if (rankedTeamIds.length > 0) {
+        const { data: teamRows, error: teamErr } = await supabaseAdmin
+          .from('teams')
+          .select('id, name')
+          .eq('tenant_id', tenantId)
+          .in('id', rankedTeamIds);
+        if (teamErr) throw teamErr;
+        for (const t of (teamRows || []) as Array<{
+          id: string;
+          name: string | null;
+        }>) {
+          teamNames.set(t.id, t.name ?? null);
+        }
+      }
+
+      placements = rankings.map((r) => {
+        const meta = tournamentMeta.get(r.tournament_id);
+        return {
+          tournamentId: r.tournament_id,
+          tournamentName: meta?.name ?? null,
+          tournamentSlug: meta?.slug ?? null,
+          teamId: r.team_id,
+          teamName: teamNames.get(r.team_id) ?? null,
+          rank: r.rank,
+          date: meta?.start_date ?? meta?.end_date ?? null,
+        };
+      });
+    }
+
+    // --- Saisons : league_standings des équipes du joueur, leagues publiques ---
+    let seasons: ProfileSeason[] = [];
+    if (teamIds.length > 0) {
+      const { data: lsRows, error: lsErr } = await supabaseAdmin
+        .from('league_standings')
+        .select('league_id, team_id, rank, points')
+        .eq('tenant_id', tenantId)
+        .in('team_id', teamIds);
+      if (lsErr) throw lsErr;
+      const standings = (lsRows || []) as Array<{
+        league_id: string;
+        team_id: string;
+        rank: number | null;
+        points: number | null;
+      }>;
+
+      const leagueIds = [...new Set(standings.map((s) => s.league_id))];
+      const leagueMeta = new Map<
+        string,
+        { name: string | null; slug: string | null }
+      >();
+      if (leagueIds.length > 0) {
+        const { data: lRows, error: lErr } = await supabaseAdmin
+          .from('leagues')
+          .select('id, name, slug, is_public, status')
+          .eq('tenant_id', tenantId)
+          .in('id', leagueIds);
+        if (lErr) throw lErr;
+        for (const l of (lRows || []) as Array<{
+          id: string;
+          name: string | null;
+          slug: string | null;
+          is_public: boolean | null;
+          status: string | null;
+        }>) {
+          // Profil public : uniquement les leagues publiées.
+          if (l.is_public === true && l.status !== 'draft') {
+            leagueMeta.set(l.id, {
+              name: l.name ?? null,
+              slug: l.slug ?? null,
+            });
+          }
+        }
+      }
+
+      const teamNames = new Map<string, string | null>();
+      const seasonTeamIds = [
+        ...new Set(
+          standings
+            .filter((s) => leagueMeta.has(s.league_id))
+            .map((s) => s.team_id)
+        ),
+      ];
+      if (seasonTeamIds.length > 0) {
+        const { data: teamRows, error: teamErr } = await supabaseAdmin
+          .from('teams')
+          .select('id, name')
+          .eq('tenant_id', tenantId)
+          .in('id', seasonTeamIds);
+        if (teamErr) throw teamErr;
+        for (const t of (teamRows || []) as Array<{
+          id: string;
+          name: string | null;
+        }>) {
+          teamNames.set(t.id, t.name ?? null);
+        }
+      }
+
+      seasons = standings
+        .filter((s) => leagueMeta.has(s.league_id))
+        .map((s) => {
+          const meta = leagueMeta.get(s.league_id)!;
+          return {
+            leagueId: s.league_id,
+            leagueName: meta.name,
+            leagueSlug: meta.slug,
+            teamId: s.team_id,
+            teamName: teamNames.get(s.team_id) ?? null,
+            rank: s.rank ?? null,
+            points: Number.isFinite(s.points) ? (s.points as number) : 0,
+          };
+        });
+    }
+
+    return computeAchievements({ placements, stats, results, seasons });
+  } catch (err) {
+    logger.error('[readPlayerProfile] achievements aggregation error', err);
+    return EMPTY_ACHIEVEMENTS;
+  }
+}
 
 /**
  * Lit le profil public d'une joueuse pour un tenant donné.
@@ -312,10 +527,48 @@ export async function readPlayerProfile(
     .sort((a, b) => b.games - a.games)
     .slice(0, H2H_TOP_LIMIT);
 
+  // 8) Achievements (badges / palmarès / saisons). Best-effort : n'échoue
+  //    jamais le profil complet.
+  //    - playerPairs = paires distinctes (tournament_id, team_id) dérivées des
+  //      matches du joueur (tournament_id via `matches`, team_id via la team du
+  //      joueur sur ce match).
+  //    - teamIds = équipes distinctes du joueur (base des saisons de league).
+  const playerPairsSet = new Set<string>();
+  const playerPairs: Array<{ tournamentId: string; teamId: string }> = [];
+  for (const matchId of myMatchIds) {
+    const match = matchById.get(matchId);
+    const teamId = myTeamByMatch.get(matchId);
+    if (!match || !match.tournament_id || !teamId) continue;
+    const key = `${match.tournament_id}::${teamId}`;
+    if (playerPairsSet.has(key)) continue;
+    playerPairsSet.add(key);
+    playerPairs.push({ tournamentId: match.tournament_id, teamId });
+  }
+  const teamIds = [...new Set(myPartsRows.map((p) => p.team_id))];
+
+  const results = history.map((h) => ({
+    result: h.result,
+    occurredAt: h.occurredAt,
+  }));
+
+  const achievements = await readAchievements(
+    tenantId,
+    {
+      peakRating: pr.peak_rating,
+      gamesPlayed: pr.games_played,
+      wins: pr.wins,
+      losses: pr.losses,
+    },
+    results,
+    playerPairs,
+    teamIds
+  );
+
   return {
     player,
     history,
     recentMatches,
     h2h,
+    achievements,
   };
 }

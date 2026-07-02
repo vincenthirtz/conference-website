@@ -28,6 +28,10 @@ import type {
   PlayerProfileRecentMatch,
   PlayerProfileH2H,
   PlayerProfileCore,
+  ProfileBadge,
+  ProfileBadgeTier,
+  ProfilePlacement,
+  ProfileSeason,
 } from '@/types/rating';
 import { readPlayerProfile } from '@/utils/rating/readPlayerProfile';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
@@ -110,12 +114,14 @@ export default function PlayerProfilePage({
 }
 
 function Profile({ data }: { data: PlayerProfileResponse }) {
-  const { player, history, recentMatches, h2h } = data;
+  const { player, history, recentMatches, h2h, achievements } = data;
   const label = coreLabel(player);
 
   return (
     <>
       <ProfileHeader player={player} label={label} />
+
+      <BadgesSection badges={achievements.badges} />
 
       <section className="mt-8">
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-purple-300">
@@ -124,11 +130,215 @@ function Profile({ data }: { data: PlayerProfileResponse }) {
         <RatingChart history={history} />
       </section>
 
+      <PalmaresSection placements={achievements.palmares} />
+      <SeasonsSection seasons={achievements.seasons} />
+
       <div className="mt-8 grid gap-8 lg:grid-cols-2">
         <RecentMatches matches={recentMatches} />
         <HeadToHead rows={h2h} />
       </div>
     </>
+  );
+}
+
+// --- Badges -----------------------------------------------------------------
+// Palette par rareté (tier). `null` = badge neutre (violet, cohérent avec
+// l'accent du profil). On garde des fonds semi-transparents + bordure pour le
+// contraste sur le dégradé sombre, comme les cards existantes.
+const BADGE_TIER_STYLES: Record<ProfileBadgeTier | 'none', string> = {
+  bronze: 'border-amber-700/50 bg-amber-700/15 text-amber-300',
+  silver: 'border-zinc-400/40 bg-zinc-400/15 text-zinc-200',
+  gold: 'border-yellow-500/40 bg-yellow-500/15 text-yellow-300',
+  platinum: 'border-cyan-400/40 bg-cyan-400/15 text-cyan-200',
+  none: 'border-purple-500/40 bg-purple-500/15 text-purple-200',
+};
+
+const BADGE_TIER_LABEL: Record<ProfileBadgeTier, string> = {
+  bronze: 'bronze',
+  silver: 'argent',
+  gold: 'or',
+  platinum: 'platine',
+};
+
+function BadgesSection({ badges }: { badges: ProfileBadge[] }) {
+  if (badges.length === 0) return null;
+
+  return (
+    <section className="mt-8">
+      <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-purple-300">
+        Badges
+      </h2>
+      <ul className="flex flex-wrap gap-2">
+        {badges.map((badge) => {
+          const styles =
+            BADGE_TIER_STYLES[badge.tier ?? 'none'];
+          const tierText = badge.tier
+            ? ` (${BADGE_TIER_LABEL[badge.tier]})`
+            : '';
+          return (
+            <li key={badge.key}>
+              <span
+                className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${styles}`}
+                title={badge.description}
+                aria-label={`${badge.label}${tierText} : ${badge.description}`}
+              >
+                {badge.label}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
+// --- Palmarès ---------------------------------------------------------------
+function PalmaresSection({
+  placements,
+}: {
+  placements: ProfilePlacement[];
+}) {
+  if (placements.length === 0) return null;
+
+  return (
+    <section className="mt-8">
+      <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-purple-300">
+        Palmarès
+      </h2>
+      <ul className="divide-y divide-neutral-800/60 overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-900/40">
+        {placements.map((p) => (
+          <li
+            key={`${p.tournamentId}-${p.teamId}`}
+            className="flex items-center gap-3 px-4 py-3 text-sm"
+          >
+            <RankMedal rank={p.rank} />
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-neutral-200">
+                {p.tournamentName ? (
+                  <Link
+                    href={`/tournament/${p.tournamentSlug ?? p.tournamentId}`}
+                    className="hover:text-purple-300 hover:underline"
+                  >
+                    {p.tournamentName}
+                  </Link>
+                ) : (
+                  <span className="text-neutral-400">Tournoi</span>
+                )}
+              </div>
+              {p.teamName ? (
+                <div className="truncate text-xs text-neutral-500">
+                  avec{' '}
+                  <Link
+                    href={`/team/${p.teamId}`}
+                    className="hover:text-purple-300 hover:underline"
+                  >
+                    {p.teamName}
+                  </Link>
+                </div>
+              ) : null}
+            </div>
+            {p.date ? (
+              <span className="shrink-0 text-xs text-neutral-500">
+                {formatDate(p.date)}
+              </span>
+            ) : null}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+// Médaille pour le podium (1/2/3), sinon pastille « #rang ». L'emoji est
+// masqué aux lecteurs d'écran (aria-hidden) ; le rang réel est fourni en
+// texte alternatif via aria-label sur le conteneur.
+function RankMedal({ rank }: { rank: number }) {
+  const podium: Record<number, { emoji: string; cls: string; word: string }> = {
+    1: { emoji: '🥇', cls: 'bg-yellow-500/15 text-yellow-300', word: '1re place' },
+    2: { emoji: '🥈', cls: 'bg-zinc-400/15 text-zinc-200', word: '2e place' },
+    3: { emoji: '🥉', cls: 'bg-amber-700/20 text-amber-300', word: '3e place' },
+  };
+  const medal = podium[rank];
+
+  if (medal) {
+    return (
+      <span
+        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-base ${medal.cls}`}
+        role="img"
+        aria-label={medal.word}
+      >
+        <span aria-hidden>{medal.emoji}</span>
+      </span>
+    );
+  }
+
+  return (
+    <span
+      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-neutral-800 text-xs font-bold text-neutral-300"
+      aria-label={`${rank}e place`}
+    >
+      #{rank}
+    </span>
+  );
+}
+
+// --- Saisons (leagues) ------------------------------------------------------
+function SeasonsSection({ seasons }: { seasons: ProfileSeason[] }) {
+  if (seasons.length === 0) return null;
+
+  return (
+    <section className="mt-8">
+      <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-purple-300">
+        Saisons
+      </h2>
+      <div className="overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-900/40">
+        <table className="w-full text-sm">
+          <thead className="bg-neutral-900/80 text-xs uppercase text-neutral-400">
+            <tr>
+              <th className="px-4 py-3 text-left">League</th>
+              <th className="px-4 py-3 text-right">Rang</th>
+              <th className="px-4 py-3 text-right">Points</th>
+            </tr>
+          </thead>
+          <tbody>
+            {seasons.map((s) => (
+              <tr
+                key={`${s.leagueId}-${s.teamId}`}
+                className="border-t border-neutral-800/60 transition-colors hover:bg-white/[0.03]"
+              >
+                <td className="px-4 py-3">
+                  {s.leagueName ? (
+                    s.leagueSlug ? (
+                      <Link
+                        href={`/leagues/${s.leagueSlug}`}
+                        className="hover:text-purple-300 hover:underline"
+                      >
+                        {s.leagueName}
+                      </Link>
+                    ) : (
+                      <span className="text-neutral-200">{s.leagueName}</span>
+                    )
+                  ) : (
+                    <span className="text-neutral-500">League</span>
+                  )}
+                  {s.teamName ? (
+                    <span className="block text-xs text-neutral-500">
+                      {s.teamName}
+                    </span>
+                  ) : null}
+                </td>
+                <td className="px-4 py-3 text-right text-neutral-300">
+                  {s.rank !== null ? `#${s.rank}` : '—'}
+                </td>
+                <td className="px-4 py-3 text-right text-neutral-300">
+                  {s.points}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
   );
 }
 

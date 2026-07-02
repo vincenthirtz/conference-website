@@ -179,6 +179,88 @@ describe('GET /api/players/[userId]/profile', () => {
     expect(body.history).toEqual([]);
     expect(body.recentMatches).toEqual([]);
     expect(body.h2h).toEqual([]);
+    // achievements est toujours présent : pas de palmarès/saison ici, mais le
+    // peak_rating 1650 dérive un badge peak_contender (moteur pur).
+    expect(body.achievements).toBeDefined();
+    expect(body.achievements.palmares).toEqual([]);
+    expect(body.achievements.seasons).toEqual([]);
+    expect(body.achievements.badges.map((b: any) => b.key)).toContain(
+      'peak_contender'
+    );
+  });
+
+  it('exposes a champion badge for a tournament winner', async () => {
+    const MATCH = 'match-champ-1';
+    const TOURN = '44444444-4444-4444-4444-444444444444';
+    const TEAM = 'team-champ';
+
+    store.player_ratings = [
+      {
+        tenant_id: TENANT,
+        user_id: 'u-champ',
+        rating: 1700,
+        rd: 80,
+        volatility: 0.06,
+        peak_rating: 1750,
+        games_played: 5,
+        wins: 4,
+        losses: 1,
+        display_name: 'Champ',
+        battle_tag: 'Champ#1',
+        avatar_url: null,
+      },
+    ] as any;
+    store.player_rating_history = [];
+    // Participation du joueur → (TOURN, TEAM) via le match.
+    store.match_participants = [
+      {
+        tenant_id: TENANT,
+        match_id: MATCH,
+        team_id: TEAM,
+        user_id: 'u-champ',
+        battle_tag: 'Champ#1',
+        is_substitute: false,
+      },
+    ] as any;
+    store.matches = [
+      {
+        tenant_id: TENANT,
+        id: MATCH,
+        tournament_id: TOURN,
+        team1_id: TEAM,
+        team2_id: 'team-other',
+        winner_team_id: TEAM,
+        completed_at: '2026-06-01T10:00:00.000Z',
+      },
+    ] as any;
+    // final_rankings : l'équipe du joueur est 1re → badge champion.
+    store.final_rankings = [
+      { tenant_id: TENANT, tournament_id: TOURN, team_id: TEAM, rank: 1 },
+    ] as any;
+    store.tournaments = [
+      {
+        tenant_id: TENANT,
+        id: TOURN,
+        name: 'Grand Open',
+        slug: 'grand-open',
+        start_date: '2026-05-30',
+        end_date: '2026-06-01',
+      },
+    ] as any;
+    store.teams = [{ tenant_id: TENANT, id: TEAM, name: 'Les Championnes' }] as any;
+    store.league_standings = [];
+
+    const res = makeRes();
+    await profileHandler(makeReq({ query: { userId: 'u-champ' } }), res);
+    expect(res.statusCode).toBe(200);
+    const body = res.body as any;
+    const badgeKeys = body.achievements.badges.map((b: any) => b.key);
+    expect(badgeKeys).toContain('champion');
+    // Le palmarès reflète le placement rank 1.
+    expect(body.achievements.palmares).toHaveLength(1);
+    expect(body.achievements.palmares[0].rank).toBe(1);
+    expect(body.achievements.palmares[0].tournamentName).toBe('Grand Open');
+    expect(body.achievements.palmares[0].teamName).toBe('Les Championnes');
   });
 });
 
