@@ -123,6 +123,12 @@ const QUICK_LINKS: QuickLink[] = [
     description: 'Winrates, maps, OT',
   },
   {
+    label: 'Analytics',
+    icon: '📈',
+    href: (id) => `/admin/tournament/${id}/analytics`,
+    description: 'Résumé, équipes, maps, héros',
+  },
+  {
     label: 'Discord',
     icon: '🔔',
     href: (id) => `/admin/tournament/${id}/discord`,
