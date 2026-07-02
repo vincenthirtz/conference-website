@@ -45,6 +45,10 @@ export const KNOWN_TABLES: readonly string[] = [
   'tournaments',
   'teams',
   'matches',
+  // public/v1 read-only API (overlays, widgets, embeds)
+  'games',
+  'team_members',
+  'tournament_stages',
 ];
 
 /**

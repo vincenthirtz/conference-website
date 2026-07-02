@@ -73,6 +73,14 @@ tags:
     description: Endpoints joueurs/casters (auth Bearer).
   - name: public/onboard
   - name: public/misc
+  - name: public/v1
+    description: >-
+      API publique read-only versionnée (`/api/public/v1/*`) — parité avec
+      l'API publique de start.gg : overlays casters, widgets partenaires,
+      embeds. GET uniquement (+ OPTIONS preflight), anonyme, rate-limitée
+      (120 req/min par IP, bucket par endpoint), CORS `*`. Toutes les réponses
+      utilisent l'enveloppe `{ data }` / `{ data, pagination }` ; erreurs
+      `{ error, code? }`.
 components:
   securitySchemes:
     BotApiKey:
@@ -3783,6 +3791,215 @@ components:
                 nullable: true
               weight:
                 type: number
+    # -----------------------------------------------------------------------
+    # public/v1 read-only API schemas
+    # -----------------------------------------------------------------------
+    PublicV1Pagination:
+      type: object
+      required:
+        - limit
+        - offset
+        - count
+      properties:
+        limit:
+          type: integer
+        offset:
+          type: integer
+        count:
+          type: integer
+          description: >-
+            Nombre total d'éléments avant pagination (tournois) ou nombre
+            d'éléments retournés dans la page (leaderboard).
+    PublicV1TournamentSummary:
+      type: object
+      required:
+        - id
+        - name
+        - status
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+          nullable: true
+        game:
+          type: string
+          nullable: true
+        status:
+          type: string
+        start_date:
+          type: string
+          nullable: true
+        end_date:
+          type: string
+          nullable: true
+        format:
+          type: string
+          nullable: true
+    PublicV1StageSummary:
+      type: object
+      required:
+        - id
+        - status
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          nullable: true
+        stage_type:
+          type: string
+          nullable: true
+        status:
+          type: string
+          description: Dérivé de `is_active` (active | inactive).
+    PublicV1TournamentDetail:
+      allOf:
+        - $ref: '#/components/schemas/PublicV1TournamentSummary'
+        - type: object
+          required:
+            - stages
+          properties:
+            stages:
+              type: array
+              items:
+                $ref: '#/components/schemas/PublicV1StageSummary'
+    PublicV1Match:
+      type: object
+      required:
+        - id
+        - status
+      properties:
+        id:
+          type: string
+          format: uuid
+        stage_id:
+          type: string
+          nullable: true
+        round_number:
+          type: integer
+          nullable: true
+        bracket_side:
+          type: string
+          nullable: true
+        team1_id:
+          type: string
+          nullable: true
+        team1_name:
+          type: string
+          nullable: true
+        team2_id:
+          type: string
+          nullable: true
+        team2_name:
+          type: string
+          nullable: true
+        team1_score:
+          type: integer
+          nullable: true
+        team2_score:
+          type: integer
+          nullable: true
+        winner_team_id:
+          type: string
+          nullable: true
+        status:
+          type: string
+        scheduled_at:
+          type: string
+          nullable: true
+    PublicV1MatchGame:
+      type: object
+      properties:
+        map_name:
+          type: string
+          nullable: true
+        map_order:
+          type: integer
+          nullable: true
+        team1_score:
+          type: integer
+          nullable: true
+        team2_score:
+          type: integer
+          nullable: true
+        winner_team_id:
+          type: string
+          nullable: true
+    PublicV1MatchDetail:
+      allOf:
+        - $ref: '#/components/schemas/PublicV1Match'
+        - type: object
+          required:
+            - games
+          properties:
+            games:
+              type: array
+              items:
+                $ref: '#/components/schemas/PublicV1MatchGame'
+    PublicV1Standing:
+      type: object
+      required:
+        - rank
+        - teamId
+      properties:
+        rank:
+          type: integer
+        teamId:
+          type: string
+          format: uuid
+        teamName:
+          type: string
+          nullable: true
+        teamSlug:
+          type: string
+          nullable: true
+        logoUrl:
+          type: string
+          nullable: true
+        prize:
+          type: string
+          nullable: true
+    PublicV1TeamMember:
+      type: object
+      properties:
+        display_name:
+          type: string
+          nullable: true
+        role:
+          type: string
+          nullable: true
+        is_substitute:
+          type: boolean
+    PublicV1Team:
+      type: object
+      required:
+        - id
+        - name
+        - roster
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        short_name:
+          type: string
+          nullable: true
+        slug:
+          type: string
+          nullable: true
+        logo_url:
+          type: string
+          nullable: true
+        roster:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicV1TeamMember'
   requestBodies: {}
 security:
   - BotApiKey: []
@@ -21777,5 +21994,392 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '404':
           $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  # ===========================================================================
+  # public/v1 — API publique read-only versionnée (overlays, widgets, embeds)
+  # GET uniquement, anonyme, CORS *, enveloppe { data } / { data, pagination }.
+  # ===========================================================================
+  /api/public/v1/tournaments:
+    get:
+      tags:
+        - public/v1
+      summary: Liste des tournois publics (published/running/completed).
+      operationId: publicV1ListTournaments
+      security: []
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - published
+              - running
+              - completed
+        - name: game
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: Page de tournois publics + pagination.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PublicV1TournamentSummary'
+                  pagination:
+                    $ref: '#/components/schemas/PublicV1Pagination'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/public/v1/tournaments/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: Id (UUID) ou slug du tournoi.
+        schema:
+          type: string
+    get:
+      tags:
+        - public/v1
+      summary: Détail d'un tournoi public + résumé des stages.
+      operationId: publicV1GetTournament
+      security: []
+      responses:
+        '200':
+          description: Détail tournoi.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PublicV1TournamentDetail'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/public/v1/tournaments/{id}/matches:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: Id (UUID) ou slug du tournoi.
+        schema:
+          type: string
+    get:
+      tags:
+        - public/v1
+      summary: Matches d'un tournoi (overlays de bracket).
+      operationId: publicV1ListTournamentMatches
+      security: []
+      parameters:
+        - name: stageId
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - pending
+              - ongoing
+              - finished
+      responses:
+        '200':
+          description: Liste des matches publics du tournoi.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PublicV1Match'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/public/v1/tournaments/{id}/standings:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: Id (UUID) ou slug du tournoi.
+        schema:
+          type: string
+    get:
+      tags:
+        - public/v1
+      summary: Classement final du tournoi (vide si non finalisé).
+      operationId: publicV1GetTournamentStandings
+      security: []
+      responses:
+        '200':
+          description: Classement final trié par rank.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PublicV1Standing'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/public/v1/matches/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: Id (UUID) du match.
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags:
+        - public/v1
+      summary: Détail d'un match public + games (map par map).
+      operationId: publicV1GetMatch
+      security: []
+      responses:
+        '200':
+          description: Détail match.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PublicV1MatchDetail'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/public/v1/teams/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: Id (UUID) ou slug de l'équipe.
+        schema:
+          type: string
+    get:
+      tags:
+        - public/v1
+      summary: Équipe publique + roster public (sans données privées).
+      operationId: publicV1GetTeam
+      security: []
+      responses:
+        '200':
+          description: Détail équipe.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PublicV1Team'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/public/v1/leaderboard:
+    get:
+      tags:
+        - public/v1
+      summary: Classement Glicko-2 public des joueuses.
+      operationId: publicV1GetLeaderboard
+      security: []
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: Page du classement + pagination.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LeaderboardPlayer'
+                  pagination:
+                    $ref: '#/components/schemas/PublicV1Pagination'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/public/v1/players/{userId}:
+    parameters:
+      - name: userId
+        in: path
+        required: true
+        description: Id (UUID) de la joueuse.
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags:
+        - public/v1
+      summary: Profil public d'une joueuse (rating, historique, H2H, achievements).
+      operationId: publicV1GetPlayer
+      security: []
+      responses:
+        '200':
+          description: Profil joueur.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PlayerProfileResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/public/v1/leagues:
+    get:
+      tags:
+        - public/v1
+      summary: Liste des leagues publiques.
+      operationId: publicV1ListLeagues
+      security: []
+      responses:
+        '200':
+          description: Leagues publiques.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/League'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/public/v1/leagues/{slug}:
+    parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      tags:
+        - public/v1
+      summary: Détail public d'une league (standings + tournois liés).
+      operationId: publicV1GetLeague
+      security: []
+      responses:
+        '200':
+          description: Détail league.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/LeagueDetailResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
         '500':
           $ref: '#/components/responses/ServerError'
