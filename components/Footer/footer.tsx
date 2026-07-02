@@ -18,6 +18,7 @@ import {
   SupportIcon,
   AboutIcon,
   AppIcon,
+  CodeIcon,
 } from '@/components/Icons';
 
 type FooterLink = {
@@ -45,6 +46,7 @@ const communityLinks: FooterLink[] = [
   { label: "Installer l'app", href: '/app', Icon: AppIcon },
   { label: 'Faire un don', href: '/don', Icon: DonationIcon },
   { label: 'Signalement / Support', href: '/support', Icon: SupportIcon },
+  { label: 'API / Développeurs', href: '/developpeurs', Icon: CodeIcon },
 ];
 
 const legalLinks: FooterLink[] = [

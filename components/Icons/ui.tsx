@@ -354,10 +354,7 @@ export function SupportIcon({
   );
 }
 
-export function AppIcon({
-  className,
-  fill,
-}: Readonly<SVGTypes>): JSX.Element {
+export function AppIcon({ className, fill }: Readonly<SVGTypes>): JSX.Element {
   const stroke = fill || 'currentColor';
   return (
     <svg
@@ -396,6 +393,42 @@ export function AppIcon({
         strokeWidth="1.4"
         strokeLinecap="round"
         strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+export function CodeIcon({ className, fill }: Readonly<SVGTypes>): JSX.Element {
+  const stroke = fill || 'currentColor';
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="m9 8-4 4 4 4"
+        fill="none"
+        stroke={stroke}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.6"
+      />
+      <path
+        d="m15 8 4 4-4 4"
+        fill="none"
+        stroke={stroke}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.6"
+      />
+      <path
+        d="M13 5.5 11 18.5"
+        fill="none"
+        stroke={stroke}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.6"
       />
     </svg>
   );

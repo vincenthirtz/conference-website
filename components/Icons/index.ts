@@ -16,4 +16,5 @@ export {
   SupportIcon,
   AboutIcon,
   AppIcon,
+  CodeIcon,
 } from './ui';

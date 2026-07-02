@@ -28,6 +28,7 @@ const publicRoutes = [
   { path: '/app', priority: '0.7', changefreq: 'monthly' },
   { path: '/register', priority: '0.8', changefreq: 'weekly' },
   { path: '/rules', priority: '0.5', changefreq: 'monthly' },
+  { path: '/developpeurs', priority: '0.4', changefreq: 'monthly' },
   { path: '/leaderboard', priority: '0.7', changefreq: 'daily' },
   { path: '/leagues', priority: '0.7', changefreq: 'weekly' },
   { path: '/builds', priority: '0.3', changefreq: 'weekly' },
