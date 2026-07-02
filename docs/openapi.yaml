@@ -12739,6 +12739,142 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /api/admin/stages/{stageId}/rating-seed:
+    parameters:
+      - $ref: '#/components/parameters/StageId'
+    post:
+      summary: Seed the initial bracket from team ratings + Strength-of-Schedule.
+      description: |
+        Requires `manager` role. For the "initial bracket without a qualifier
+        stage" case: ranks the stage's registered teams by their Glicko-derived
+        rating (optionally adjusted by cross-event Strength-of-Schedule) and
+        fills round-1 slots. Refuses (409) if any round-1 match is already
+        ongoing/finished/walkover. Snapshots the bracket before mutating and
+        upserts `stage_teams.seed` with the computed rank.
+      operationId: adminRatingSeedStage
+      tags:
+        - admin/stages
+      security:
+        - StaffSession: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                method:
+                  type: string
+                  enum:
+                    - rating
+                    - rating_sos
+                  default: rating_sos
+                pattern:
+                  type: string
+                  enum:
+                    - standard
+                    - sequential
+                  default: standard
+                sosWeight:
+                  type: number
+      responses:
+        '200':
+          description: Seeded slots.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  seeded:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        matchId:
+                          type: string
+                          format: uuid
+                        slot:
+                          type: integer
+                          enum:
+                            - 1
+                            - 2
+                        teamId:
+                          type: string
+                          format: uuid
+                        seed:
+                          type: integer
+                  totalMatches:
+                    type: integer
+                  method:
+                    type: string
+                    enum:
+                      - rating
+                      - rating_sos
+                  pattern:
+                    type: string
+                    enum:
+                      - standard
+                      - sequential
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/admin/stages/{stageId}/rating-seeding-preview:
+    parameters:
+      - $ref: '#/components/parameters/StageId'
+    get:
+      summary: Preview rating-based bracket seeding without applying it.
+      description: |
+        Requires `manager` role. Read-only preview of the plan
+        `/rating-seed` would write, with a per-team breakdown
+        (rating, rd, sos, score, rank, provisional) and a `lock` object so the
+        UI can grey out the apply button. Does not block on lock.
+      operationId: adminGetStageRatingSeedingPreview
+      tags:
+        - admin/stages
+      security:
+        - StaffSession: []
+      parameters:
+        - in: query
+          name: method
+          schema:
+            type: string
+            enum:
+              - rating
+              - rating_sos
+            default: rating_sos
+        - in: query
+          name: pattern
+          schema:
+            type: string
+            enum:
+              - standard
+              - sequential
+            default: standard
+        - in: query
+          name: sosWeight
+          schema:
+            type: number
+      responses:
+        '200':
+          description: Preview.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /api/admin/stages/{stageId}/seeding-preview:
     parameters:
       - $ref: '#/components/parameters/StageId'

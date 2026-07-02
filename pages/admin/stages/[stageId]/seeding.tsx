@@ -70,6 +70,39 @@ type DraftSlot = {
   teamId: string;
 };
 
+// --- Seed par rating (Glicko + SoS) -----------------------------------------
+
+type RatingMethod = 'rating' | 'rating_sos';
+
+type RatingBreakdownRow = {
+  teamId: string;
+  teamName: string | null;
+  shortName: string | null;
+  logoUrl: string | null;
+  rating: number;
+  rd: number | null;
+  sos: number;
+  score: number;
+  rank: number;
+  provisional: boolean;
+};
+
+type RatingPreviewResponse = {
+  proposed: { matchId: string; slot: 1 | 2; teamId: string; seed: number }[];
+  breakdown: RatingBreakdownRow[];
+  bracketMatchCount: number;
+  lock: { locked: boolean; reasons: string[] };
+  method: RatingMethod;
+  pattern: Pattern;
+};
+
+type RatingSeedResponse = {
+  seeded: { matchId: string; slot: 1 | 2; teamId: string; seed: number }[];
+  totalMatches: number;
+  method: RatingMethod;
+  pattern: Pattern;
+};
+
 export const getServerSideProps = withStaffPage('manager');
 
 function SeedingComparatorPage(_: StaffProps) {
@@ -89,6 +122,16 @@ function SeedingComparatorPage(_: StaffProps) {
   const [pattern, setPattern] = useState<Pattern>('standard');
   const [draft, setDraft] = useState<Map<string, string>>(new Map()); // key=`${matchId}:${slot}` -> teamId
   const [submitting, setSubmitting] = useState(false);
+
+  // Seed par rating (Glicko + SoS)
+  const [ratingMethod, setRatingMethod] = useState<RatingMethod>('rating_sos');
+  const [ratingPattern, setRatingPattern] = useState<Pattern>('standard');
+  const [sosWeight, setSosWeight] = useState<string>('');
+  const [ratingData, setRatingData] = useState<RatingPreviewResponse | null>(
+    null
+  );
+  const [ratingLoading, setRatingLoading] = useState(false);
+  const [ratingError, setRatingError] = useState<string | null>(null);
 
   const fetchPreview = useCallback(
     async (src: string | null) => {
@@ -130,6 +173,35 @@ function SeedingComparatorPage(_: StaffProps) {
   useEffect(() => {
     fetchPreview(sourceStageId || null);
   }, [fetchPreview, sourceStageId]);
+
+  const fetchRatingPreview = useCallback(async () => {
+    if (!id) return;
+    setRatingLoading(true);
+    setRatingError(null);
+    try {
+      const params = new URLSearchParams();
+      params.set('method', ratingMethod);
+      params.set('pattern', ratingPattern);
+      const w = Number(sosWeight);
+      if (sosWeight.trim() !== '' && Number.isFinite(w)) {
+        params.set('sosWeight', String(w));
+      }
+      const json = await adminFetchJson<RatingPreviewResponse>(
+        `/api/admin/stages/${id}/rating-seeding-preview?${params.toString()}`
+      );
+      setRatingData(json);
+    } catch (err) {
+      const e = err as AdminFetchError;
+      setRatingError(extractErr(e) || 'Erreur de chargement');
+      setRatingData(null);
+    } finally {
+      setRatingLoading(false);
+    }
+  }, [adminFetchJson, id, ratingMethod, ratingPattern, sosWeight]);
+
+  useEffect(() => {
+    fetchRatingPreview();
+  }, [fetchRatingPreview]);
 
   const locked = data?.lock.locked ?? false;
   const matches = useMemo(() => {
@@ -281,6 +353,74 @@ function SeedingComparatorPage(_: StaffProps) {
       await fetchPreview(sourceStageId || null);
     } catch (err) {
       addToast(extractErr(err), 'error');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  const ratingLocked = ratingData?.lock.locked ?? false;
+  const ratingNoBracket = (ratingData?.bracketMatchCount ?? 0) === 0;
+  const ratingEmpty = (ratingData?.breakdown.length ?? 0) === 0;
+
+  async function onApplyRating() {
+    if (!id || !ratingData) return;
+    if (ratingLocked) {
+      addToast(
+        'Seed par rating bloqué : un match round 1 a démarré.',
+        'error'
+      );
+      return;
+    }
+    if (ratingNoBracket) {
+      addToast(
+        'Génère d’abord le bracket de ce stage avant de seeder.',
+        'error'
+      );
+      return;
+    }
+    const ok = await confirm({
+      title: 'Appliquer le seed par rating ?',
+      subtitle:
+        'Cela classe les équipes inscrites par rating Glicko (+ SoS) et écrase les slots actuels du round 1.',
+      confirmLabel: 'Appliquer le seed par rating',
+      variant: 'warning',
+    });
+    if (!ok) return;
+
+    setSubmitting(true);
+    try {
+      const w = Number(sosWeight);
+      const body: {
+        method: RatingMethod;
+        pattern: Pattern;
+        sosWeight?: number;
+      } = { method: ratingMethod, pattern: ratingPattern };
+      if (sosWeight.trim() !== '' && Number.isFinite(w)) {
+        body.sosWeight = w;
+      }
+      const json = await mutateJson<RatingSeedResponse>(
+        `/api/admin/stages/${id}/rating-seed`,
+        {
+          method: 'POST',
+          body: JSON.stringify(body),
+        }
+      );
+      addToast(`${json.seeded.length} équipes placées.`, 'success');
+      setDraft(new Map());
+      await Promise.all([
+        fetchPreview(sourceStageId || null),
+        fetchRatingPreview(),
+      ]);
+    } catch (err) {
+      const status = (err as { status?: number }).status;
+      if (status === 409) {
+        addToast(
+          'Impossible : un match du round 1 est déjà joué ou en cours.',
+          'error'
+        );
+      } else {
+        addToast(extractErr(err), 'error');
+      }
     } finally {
       setSubmitting(false);
     }
@@ -524,6 +664,184 @@ function SeedingComparatorPage(_: StaffProps) {
                   </footer>
                 </section>
               </div>
+
+              {/* Section SEED PAR RATING (Glicko + SoS) */}
+              <section className="mt-6 rounded-xl border border-neutral-800 bg-neutral-900/40">
+                <header className="px-4 py-3 border-b border-neutral-800 flex items-center justify-between">
+                  <h2 className="text-sm font-semibold uppercase tracking-wider text-neutral-300">
+                    Seed par rating (Glicko + SoS)
+                  </h2>
+                  <span className="text-xs text-neutral-500">
+                    {ratingData?.breakdown.length ?? 0} équipe(s) classée(s)
+                  </span>
+                </header>
+
+                <div className="px-4 py-3 border-b border-neutral-800 text-xs text-neutral-400 leading-relaxed">
+                  Classe les équipes inscrites par rating Glicko cross-event
+                  (+ force du calendrier), sans phase qualificative. Lance
+                  d’abord un{' '}
+                  <Link
+                    href="/admin/ratings"
+                    className="text-blue-400 hover:text-blue-300 underline"
+                  >
+                    rebuild des ratings
+                  </Link>{' '}
+                  si le classement paraît vide ou neutre.
+                </div>
+
+                {/* Contrôles */}
+                <div className="px-4 py-3 border-b border-neutral-800 grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <label className="text-sm">
+                    <span className="block text-neutral-400 text-xs mb-1">
+                      Méthode
+                    </span>
+                    <select
+                      value={ratingMethod}
+                      onChange={(e) =>
+                        setRatingMethod(e.target.value as RatingMethod)
+                      }
+                      disabled={submitting}
+                      className="w-full rounded-md bg-neutral-950 border border-neutral-700 px-2 py-1.5 text-sm"
+                    >
+                      <option value="rating_sos">Rating + SoS</option>
+                      <option value="rating">Rating seul</option>
+                    </select>
+                  </label>
+                  <label className="text-sm">
+                    <span className="block text-neutral-400 text-xs mb-1">
+                      Pattern de placement
+                    </span>
+                    <select
+                      value={ratingPattern}
+                      onChange={(e) =>
+                        setRatingPattern(e.target.value as Pattern)
+                      }
+                      disabled={submitting}
+                      className="w-full rounded-md bg-neutral-950 border border-neutral-700 px-2 py-1.5 text-sm"
+                    >
+                      <option value="standard">
+                        Standard (1 vs 2N, 2 vs 2N-1, …)
+                      </option>
+                      <option value="sequential">
+                        Séquentiel (1 vs 2, 3 vs 4, …)
+                      </option>
+                    </select>
+                  </label>
+                  <label className="text-sm">
+                    <span className="block text-neutral-400 text-xs mb-1">
+                      Poids SoS{' '}
+                      <span className="text-neutral-600">
+                        (avancé, vide = défaut)
+                      </span>
+                    </span>
+                    <input
+                      type="number"
+                      step="0.1"
+                      inputMode="decimal"
+                      value={sosWeight}
+                      onChange={(e) => setSosWeight(e.target.value)}
+                      disabled={submitting || ratingMethod === 'rating'}
+                      placeholder="défaut serveur"
+                      className="w-full rounded-md bg-neutral-950 border border-neutral-700 px-2 py-1.5 text-sm disabled:opacity-40"
+                    />
+                  </label>
+                </div>
+
+                {/* Lock / garde-fous */}
+                {ratingData && ratingLocked && (
+                  <div className="mx-4 mt-3 rounded-lg border border-red-500/50 bg-red-900/30 px-3 py-2 text-xs text-red-200">
+                    {ratingData.lock.reasons.length > 0
+                      ? ratingData.lock.reasons.join(' ')
+                      : 'Seeding bloqué : un match round 1 a démarré.'}
+                  </div>
+                )}
+                {ratingData && !ratingLocked && ratingNoBracket && (
+                  <div className="mx-4 mt-3 rounded-lg border border-amber-500/50 bg-amber-900/30 px-3 py-2 text-xs text-amber-200">
+                    Aucun match round 1 : génère d’abord le bracket de ce
+                    stage.
+                  </div>
+                )}
+
+                {/* Tableau breakdown */}
+                <div className="px-4 py-3">
+                  {ratingLoading && (
+                    <div className="py-8 text-center text-sm text-neutral-400">
+                      Chargement…
+                    </div>
+                  )}
+
+                  {!ratingLoading && ratingError && (
+                    <div className="rounded-lg bg-red-900/40 border border-red-500/50 px-3 py-2 text-sm">
+                      {ratingError}
+                    </div>
+                  )}
+
+                  {!ratingLoading && !ratingError && ratingEmpty && (
+                    <div className="py-8 text-center text-sm text-neutral-500">
+                      Aucune équipe inscrite à ce stage. Ajoute des équipes
+                      depuis{' '}
+                      <button
+                        type="button"
+                        onClick={() => router.push(`/admin/stages/${id}`)}
+                        className="text-blue-400 hover:text-blue-300 underline"
+                      >
+                        l’onglet Équipes du stage
+                      </button>
+                      .
+                    </div>
+                  )}
+
+                  {!ratingLoading &&
+                    !ratingError &&
+                    ratingData &&
+                    !ratingEmpty && (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="text-left text-[11px] uppercase tracking-wider text-neutral-500 border-b border-neutral-800">
+                              <th className="py-2 pr-3 font-medium">Rang</th>
+                              <th className="py-2 pr-3 font-medium">Équipe</th>
+                              <th className="py-2 pr-3 font-medium text-right">
+                                Rating
+                              </th>
+                              <th className="py-2 pr-3 font-medium text-right">
+                                SoS
+                              </th>
+                              <th className="py-2 pr-3 font-medium text-right">
+                                Score
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-neutral-800/60">
+                            {ratingData.breakdown.map((row) => (
+                              <RatingRow key={row.teamId} row={row} />
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                </div>
+
+                <footer className="px-4 py-3 border-t border-neutral-800">
+                  <button
+                    type="button"
+                    onClick={onApplyRating}
+                    disabled={
+                      submitting ||
+                      ratingLoading ||
+                      ratingLocked ||
+                      ratingNoBracket ||
+                      ratingEmpty ||
+                      !ratingData
+                    }
+                    className="w-full px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-sm font-medium transition-colors"
+                  >
+                    {submitting
+                      ? 'Application…'
+                      : 'Appliquer le seed par rating'}
+                  </button>
+                </footer>
+              </section>
             </>
           )}
 
@@ -593,6 +911,54 @@ function DraftSelect({
         ))}
       </select>
     </label>
+  );
+}
+
+function RatingRow({ row }: { row: RatingBreakdownRow }) {
+  const label = row.teamName ?? row.shortName ?? '— équipe inconnue —';
+  return (
+    <tr className="text-neutral-200">
+      <td className="py-2 pr-3">
+        <span className="px-1.5 py-0.5 text-[11px] rounded bg-neutral-800 text-neutral-300 font-mono">
+          #{row.rank}
+        </span>
+      </td>
+      <td className="py-2 pr-3">
+        <div className="flex items-center gap-2">
+          {row.logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={row.logoUrl}
+              alt=""
+              className="w-6 h-6 rounded object-cover bg-neutral-800 shrink-0"
+            />
+          ) : (
+            <span className="w-6 h-6 rounded bg-neutral-800 shrink-0" />
+          )}
+          <span className="truncate">{label}</span>
+          {row.provisional && (
+            <span
+              title="RD Glicko élevé / peu de matchs : classement provisoire."
+              className="px-1.5 py-0.5 text-[10px] rounded bg-amber-900/40 border border-amber-500/40 text-amber-300"
+            >
+              provisoire
+            </span>
+          )}
+        </div>
+      </td>
+      <td className="py-2 pr-3 text-right font-mono tabular-nums">
+        {Math.round(row.rating)}
+        {row.rd != null && (
+          <span className="text-neutral-500 text-xs"> ± {Math.round(row.rd)}</span>
+        )}
+      </td>
+      <td className="py-2 pr-3 text-right font-mono tabular-nums text-neutral-400">
+        {row.sos.toFixed(1)}
+      </td>
+      <td className="py-2 pr-3 text-right font-mono tabular-nums">
+        {row.score.toFixed(1)}
+      </td>
+    </tr>
   );
 }
 
