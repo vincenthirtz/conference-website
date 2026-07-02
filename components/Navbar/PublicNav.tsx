@@ -6,14 +6,7 @@ import type { LinkItem } from '@/types/types';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import PlayerBell from './PlayerBell';
 
-const HIDDEN_PUBLIC_LINKS = new Set([
-  'À propos',
-  'Cast',
-  'Sponsors',
-  'Jeux',
-  'Actualités',
-  'Ambassadrices',
-]);
+const HIDDEN_PUBLIC_LINKS = new Set(['À propos', 'Cast', 'Sponsors']);
 
 type PublicNavProps = {
   staffLoading: boolean;

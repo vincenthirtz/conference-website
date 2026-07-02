@@ -4,28 +4,13 @@
     "ref": "/"
   },
   {
-    "title": "L'association",
-    "ref": "/association"
-  },
-  {
-    "title": "Tournoi",
-    "ref": "/tournament/ow-womens-cup-2026"
-  },
-  {
-    "title": "Jeux",
-    "ref": "/jeux"
+    "title": "Tournoi 2026",
+    "ref": "/tournament/ow-womens-cup-2026",
+    "badge": "soon"
   },
   {
     "title": "Équipes",
     "ref": "/tournament/ow-womens-cup-2026/teams"
-  },
-  {
-    "title": "Actualités",
-    "ref": "/actualites"
-  },
-  {
-    "title": "Ambassadrices",
-    "ref": "/live"
   },
   {
     "title": "Classement",
@@ -36,18 +21,24 @@
     "ref": "/leagues"
   },
   {
-    "title": "Éditions",
+    "title": "Communauté",
     "subMenu": [
-      { "title": "2025", "ref": "/tournoi" },
       {
-        "title": "2026",
-        "ref": "/tournament/ow-womens-cup-2026",
-        "badge": "soon"
+        "title": "L'association",
+        "ref": "/association"
+      },
+      {
+        "title": "Ambassadrices",
+        "ref": "/live"
+      },
+      {
+        "title": "Partenaires",
+        "ref": "/partenaires"
+      },
+      {
+        "title": "Édition 2025",
+        "ref": "/tournoi"
       }
     ]
-  },
-  {
-    "title": "Partenaires",
-    "ref": "/partenaires"
   }
 ]

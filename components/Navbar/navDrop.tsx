@@ -5,14 +5,7 @@ import links from '@/config/links.json';
 import type { LinkItem } from '@/types/types';
 import type { INavDropProp } from '@/types/components';
 
-const HIDDEN_PUBLIC_LINKS = new Set([
-  'À propos',
-  'Cast',
-  'Sponsors',
-  'Jeux',
-  'Actualités',
-  'Ambassadrices',
-]);
+const HIDDEN_PUBLIC_LINKS = new Set(['À propos', 'Cast', 'Sponsors']);
 
 function Chevron({ open, size = 'md' }: { open: boolean; size?: 'sm' | 'md' }) {
   const cls = size === 'sm' ? 'h-3 w-3' : 'h-4 w-4';
