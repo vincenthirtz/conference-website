@@ -263,6 +263,8 @@ export function resetSupabaseMock() {
   };
   signUpCalls.length = 0;
   _storageUploadResult = { error: null };
+  _rpcResults.clear();
+  rpcCalls.length = 0;
 }
 
 type Filter = (row: Row) => boolean;
@@ -562,6 +564,20 @@ export function setStorageUploadResult(result: typeof _storageUploadResult) {
   _storageUploadResult = result;
 }
 
+/**
+ * Responses returned by `supabaseAdmin.rpc(fn, params)`, keyed by function name.
+ * Tests seed a per-function `{ data, error }` via `setRpcResult`; unseeded
+ * functions resolve to `{ data: null, error: null }`. Also captures every call
+ * for assertions on the params passed.
+ */
+type RpcResult = { data: unknown; error: unknown };
+const _rpcResults = new Map<string, RpcResult>();
+export const rpcCalls: Array<{ fn: string; params: unknown }> = [];
+
+export function setRpcResult(fn: string, result: RpcResult) {
+  _rpcResults.set(fn, result);
+}
+
 export const supabaseAdmin = {
   storage: {
     from: (bucket: string) => ({
@@ -577,6 +593,11 @@ export const supabaseAdmin = {
   from: (table: string) => {
     fromCalls.push(table);
     return new Builder(table);
+  },
+  rpc: (fn: string, params?: unknown) => {
+    rpcCalls.push({ fn, params });
+    const result = _rpcResults.get(fn);
+    return Promise.resolve(result ?? { data: null as any, error: null as any });
   },
   auth: {
     getUser: (_token?: string) =>

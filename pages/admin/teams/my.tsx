@@ -169,7 +169,9 @@ function MyTeamPage({ staff }: StaffProps) {
         // If admin and a specific team is selected, fetch that team
         let url = '/api/admin/teams/my';
         if (isStaffAdmin && teamId) {
-          url = `/api/admin/teams/${teamId}`;
+          // withMembers=1 : ce chemin lit json.members de la réponse détail
+          // (les autres consommateurs rechargent via /members et l'omettent).
+          url = `/api/admin/teams/${teamId}?withMembers=1`;
         }
 
         const json = await adminFetchJson<any>(url);

@@ -48,7 +48,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: Authentic
   try {
     switch (req.method) {
       case 'GET':
-        return await handleGet(id, res, ctx);
+        return await handleGet(id, req, res, ctx);
       case 'PUT':
       case 'PATCH':
         return await handlePut(id, req, res, ctx);
@@ -67,10 +67,18 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: Authentic
 
 /* -----------------------------------------------------------
  * GET : récupérer une équipe
+ *
+ * Par défaut ne renvoie QUE `{ team }`. Les consommateurs `edit.tsx` et
+ * `index.tsx` rechargent les membres via `/api/admin/teams/[teamId]/members`
+ * et ignorent tout `members` renvoyé ici : ne rien joindre évite un
+ * double-fetch. Seul `pages/admin/teams/my.tsx` (chemin admin) lit
+ * `.members` de cette réponse — il passe `?withMembers=1` pour demander la
+ * jointure explicitement.
  * ---------------------------------------------------------*/
 
 async function handleGet(
   id: string,
+  req: NextApiRequest,
   res: NextApiResponse,
   ctx: AuthenticatedStaffContext
 ) {
@@ -86,7 +94,14 @@ async function handleGet(
     return res.status(404).json({ error: 'Team not found' });
   }
 
-  // Récupérer les membres de l'équipe
+  const withMembers =
+    req.query.withMembers === '1' || req.query.withMembers === 'true';
+
+  if (!withMembers) {
+    return res.status(200).json({ team: data as TeamRow });
+  }
+
+  // Récupérer les membres de l'équipe (opt-in via ?withMembers=1)
   const { data: membersData, error: membersError } = await supabaseAdmin
     .from('team_members')
     .select(

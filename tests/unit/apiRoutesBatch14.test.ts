@@ -12,8 +12,8 @@ import {
   store,
   resetSupabaseMock,
   setAuthUser,
-  setAuthListUsers,
-  setAdminUser,
+  setRpcResult,
+  rpcCalls,
 } from './__helpers__/supabaseMock';
 
 import { invalidateStaffCache } from '../../utils/staff';
@@ -206,80 +206,53 @@ describe('GET /api/admin/users/search', () => {
     expect(res.statusCode).toBe(400);
   });
 
-  it('200 finds players by email substring', async () => {
-    setAuthListUsers([
-      {
-        id: 'u1',
-        email: 'alice.smith@example.com',
-      } as any,
-      {
-        id: 'u2',
-        email: 'bob@example.com',
-      } as any,
-    ]);
-    store.team_members = [];
-    store.profiles = [];
+  it('200 maps RPC rows and forwards the trimmed query', async () => {
+    setRpcResult('admin_search_users', {
+      data: [
+        {
+          id: 'u1',
+          email: 'alice.smith@example.com',
+          display_name: 'Alice',
+          battle_tag: null,
+          team_id: null,
+          team_name: null,
+        },
+        {
+          id: 'u-bt',
+          email: 'mercy@example.com',
+          display_name: null,
+          battle_tag: 'Mercy#1234',
+          team_id: 't1',
+          team_name: 'Alpha',
+        },
+      ],
+      error: null,
+    });
+
     const res = makeRes();
     await usersSearchHandler(
-      makeReq({ method: 'GET', query: { q: 'alice' } }, true),
+      makeReq({ method: 'GET', query: { q: '  alice  ' } }, true),
       res
     );
+
     expect(res.statusCode).toBe(200);
     const players = (res.body as any).players;
-    expect(players.map((p: any) => p.id)).toEqual(['u1']);
+    expect(players.map((p: any) => p.id)).toEqual(['u1', 'u-bt']);
     expect(players[0].email).toBe('alice.smith@example.com');
-  });
+    expect(players[1].battle_tag).toBe('Mercy#1234');
+    expect(players[1].team_name).toBe('Alpha');
 
-  it('200 finds players by battle_tag in team_members', async () => {
-    setAuthListUsers([]);
-    store.team_members = [
-      {
-        user_id: 'u-bt',
-        battle_tag: 'Mercy#1234',
-        team: { id: 't1', name: 'Alpha' },
-      },
-    ] as any;
-    store.profiles = [];
-    setAdminUser('u-bt', 'mercy@example.com');
-
-    const res = makeRes();
-    await usersSearchHandler(
-      makeReq({ method: 'GET', query: { q: 'mercy' } }, true),
-      res
+    // Single RPC call, query trimmed
+    const call = rpcCalls.find((c) => c.fn === 'admin_search_users');
+    expect(call).toBeTruthy();
+    expect((call!.params as any).p_query).toBe('alice');
+    expect(rpcCalls.filter((c) => c.fn === 'admin_search_users')).toHaveLength(
+      1
     );
-    const players = (res.body as any).players;
-    expect(players.length).toBeGreaterThan(0);
-    const found = players.find((p: any) => p.id === 'u-bt');
-    expect(found.battle_tag).toBe('Mercy#1234');
-    expect(found.team_name).toBe('Alpha');
-    expect(found.email).toBe('mercy@example.com');
   });
 
-  it('200 deduplicates candidates across sources', async () => {
-    setAuthListUsers([{ id: 'shared', email: 'shared@example.com' } as any]);
-    store.team_members = [
-      {
-        user_id: 'shared',
-        battle_tag: 'Tag#0001',
-        team: { id: 't1', name: 'Alpha' },
-      },
-    ] as any;
-    store.profiles = [];
-
-    const res = makeRes();
-    await usersSearchHandler(
-      makeReq({ method: 'GET', query: { q: 'shared' } }, true),
-      res
-    );
-    const players = (res.body as any).players;
-    const sharedCount = players.filter((p: any) => p.id === 'shared').length;
-    expect(sharedCount).toBe(1);
-  });
-
-  it('200 with empty results when no source matches', async () => {
-    setAuthListUsers([]);
-    store.team_members = [];
-    store.profiles = [];
+  it('200 with empty results when RPC returns no rows', async () => {
+    setRpcResult('admin_search_users', { data: [], error: null });
     const res = makeRes();
     await usersSearchHandler(
       makeReq({ method: 'GET', query: { q: 'unmatched' } }, true),
@@ -287,6 +260,31 @@ describe('GET /api/admin/users/search', () => {
     );
     expect(res.statusCode).toBe(200);
     expect((res.body as any).players).toEqual([]);
+  });
+
+  it('200 with empty results when RPC returns null data', async () => {
+    // Unseeded RPC resolves to { data: null, error: null }
+    const res = makeRes();
+    await usersSearchHandler(
+      makeReq({ method: 'GET', query: { q: 'anything' } }, true),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    expect((res.body as any).players).toEqual([]);
+  });
+
+  it('500 when RPC returns an error', async () => {
+    setRpcResult('admin_search_users', {
+      data: null,
+      error: { message: 'boom' },
+    });
+    const res = makeRes();
+    await usersSearchHandler(
+      makeReq({ method: 'GET', query: { q: 'boom' } }, true),
+      res
+    );
+    expect(res.statusCode).toBe(500);
+    expect((res.body as any).error).toBe('Search failed');
   });
 });
 

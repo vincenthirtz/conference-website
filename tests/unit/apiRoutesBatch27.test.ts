@@ -116,7 +116,31 @@ describe('/api/admin/teams/[teamId]', () => {
     expect(res.statusCode).toBe(404);
   });
 
-  it('GET 200 returns team with members + is_captain flag', async () => {
+  it('GET 200 returns team only by default (no members double-fetch)', async () => {
+    store.teams = [
+      { id: TEAM_ID, name: 'Alpha', captain_id: 'cap-1', is_active: true },
+    ] as any;
+    store.team_members = [
+      {
+        id: 'm1',
+        team_id: TEAM_ID,
+        user_id: 'cap-1',
+        role: 'player',
+        battle_tag: 'Cap#1',
+      },
+    ] as any;
+    const res = makeRes();
+    await adminTeamHandler(
+      makeReq({ method: 'GET', query: { teamId: TEAM_ID } }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    const body = res.body as any;
+    expect(body.team.name).toBe('Alpha');
+    expect(body.members).toBeUndefined();
+  });
+
+  it('GET 200 with ?withMembers=1 returns team + members + is_captain flag', async () => {
     store.teams = [
       {
         id: TEAM_ID,
@@ -143,7 +167,10 @@ describe('/api/admin/teams/[teamId]', () => {
     ] as any;
     const res = makeRes();
     await adminTeamHandler(
-      makeReq({ method: 'GET', query: { teamId: TEAM_ID } }),
+      makeReq({
+        method: 'GET',
+        query: { teamId: TEAM_ID, withMembers: '1' },
+      }),
       res
     );
     expect(res.statusCode).toBe(200);
