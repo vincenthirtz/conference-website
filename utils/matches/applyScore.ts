@@ -21,6 +21,7 @@ import {
 } from '../discord';
 import { emitBotEvent } from '../botEvents';
 import { enrichMatchEvent } from './botEventEnrich';
+import { applyMatchRatingIncremental } from '../rating/applyMatchRating';
 import type { PropagationResult } from '../../types/bracket';
 import { logger } from '../logger';
 import type {
@@ -77,7 +78,8 @@ export async function applyMatchScore(
         action: 'other',
         entity_type: 'match',
         entity_id: matchId,
-        tournament_id: extra.tournamentId as string | null | undefined ?? null,
+        tournament_id:
+          (extra.tournamentId as string | null | undefined) ?? null,
         payload: {
           needs_review: true,
           context,
@@ -254,7 +256,8 @@ export async function applyMatchScore(
   const sameStatus = newStatus === currentStatus;
   const sameScores =
     match.team1_score === team1Score && match.team2_score === team2Score;
-  const sameWinner = (match.winner_team_id ?? null) === (newWinnerTeamId ?? null);
+  const sameWinner =
+    (match.winner_team_id ?? null) === (newWinnerTeamId ?? null);
   const sameForfeit =
     resolvedForfeitTeamId === null
       ? !match.forfeit_team_id
@@ -302,10 +305,7 @@ export async function applyMatchScore(
   // une fois le match termine, le veto ne doit plus pouvoir etre modifie.
   // Si deja locke (ex: passe par 'ongoing' d'abord), on garde le timestamp
   // d'origine pour preserver l'historique reel du verrouillage.
-  if (
-    PROPAGATION_STATUSES.includes(newStatus) &&
-    !match.veto_locked_at
-  ) {
+  if (PROPAGATION_STATUSES.includes(newStatus) && !match.veto_locked_at) {
     updatePayload.veto_locked_at = newCompletedAt;
   }
 
@@ -353,15 +353,17 @@ export async function applyMatchScore(
     } catch (e) {
       // Si le reset échoue, restaurer le snapshot et abandonner
       if (propagationSnapshot) {
-        await restorePropagationSlots(tenantId, propagationSnapshot).catch(async (re) => {
-          logger.error(
-            'applyMatchScore: restore after reset failure failed',
-            re
-          );
-          await markNeedsReview('restore-after-reset-failed', re, {
-            tournamentId: match.tournament_id,
-          });
-        });
+        await restorePropagationSlots(tenantId, propagationSnapshot).catch(
+          async (re) => {
+            logger.error(
+              'applyMatchScore: restore after reset failure failed',
+              re
+            );
+            await markNeedsReview('restore-after-reset-failed', re, {
+              tournamentId: match.tournament_id,
+            });
+          }
+        );
       }
       throw new Error(
         `Reset de la propagation échoué. Aucune modification appliquée. Détail : ${
@@ -403,15 +405,17 @@ export async function applyMatchScore(
 
     // Rollback : restaurer les slots de propagation vidés par le reset
     if (propagationSnapshot) {
-      await restorePropagationSlots(tenantId, propagationSnapshot).catch(async (re) => {
-        logger.error(
-          'applyMatchScore: restore after update failure failed',
-          re
-        );
-        await markNeedsReview('restore-after-update-failed', re, {
-          tournamentId: match.tournament_id,
-        });
-      });
+      await restorePropagationSlots(tenantId, propagationSnapshot).catch(
+        async (re) => {
+          logger.error(
+            'applyMatchScore: restore after update failure failed',
+            re
+          );
+          await markNeedsReview('restore-after-update-failed', re, {
+            tournamentId: match.tournament_id,
+          });
+        }
+      );
     }
 
     if (!updateErr && !updated) {
@@ -426,6 +430,16 @@ export async function applyMatchScore(
   if (match.stage_id) {
     invalidateStandingsCache(match.stage_id);
   }
+
+  // 9c) Rating joueur persistant (best-effort, incrémental, idempotent).
+  //     Même posture que les autres side-effects : ne DOIT jamais bloquer
+  //     l'application du score ni les notifications. La fonction ne throw
+  //     pas d'elle-même, mais on enveloppe par sécurité. On l'exécute avant
+  //     les notifications Discord ; l'attendre garantit que le profil/leader-
+  //     board reflète le match dès que la réponse part.
+  await applyMatchRatingIncremental(tenantId, matchId).catch((e) =>
+    logger.error('[rating] applyMatchRatingIncremental hook error', e)
+  );
 
   // 10) Propagation du vainqueur/perdant dans le bracket
   //     En cas d'échec, on rollback le match ET les slots de propagation
@@ -468,17 +482,19 @@ export async function applyMatchScore(
 
       if (propagationSnapshot) {
         rollbackOps.push(
-          restorePropagationSlots(tenantId, propagationSnapshot).catch(async (re) => {
-            logger.error(
-              'applyMatchScore: propagation slot restore failed',
-              re
-            );
-            await markNeedsReview(
-              'propagation-restore-after-propagation-failed',
-              re,
-              { tournamentId: match.tournament_id }
-            );
-          })
+          restorePropagationSlots(tenantId, propagationSnapshot).catch(
+            async (re) => {
+              logger.error(
+                'applyMatchScore: propagation slot restore failed',
+                re
+              );
+              await markNeedsReview(
+                'propagation-restore-after-propagation-failed',
+                re,
+                { tournamentId: match.tournament_id }
+              );
+            }
+          )
         );
       }
 
