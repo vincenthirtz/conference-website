@@ -1,13 +1,19 @@
 // pages/leagues/index.tsx
 // Page publique : liste des ligues / saisons publiques.
-// Lecture publique via GET /api/leagues (tenant par défaut géré côté serveur).
-// Fetch client, états loading / empty / erreur. Chaque carte pointe vers
+//
+// Pré-rendu ISR (getStaticProps revalidate:300) : la liste est lue via l'util
+// partagé readPublicLeagues(DEFAULT_TENANT_ID) et passée en props → premier
+// rendu SSR pré-rempli, indexable, avec SEO/JSON-LD dynamique. Un fetch client
+// rafraîchit ensuite la liste après hydratation. Chaque carte pointe vers
 // /leagues/[slug].
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import type { GetStaticProps, InferGetStaticPropsType } from 'next';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import type { League, LeagueStatus } from '@/types/leagues';
+import { readPublicLeagues } from '@/utils/leagues/readPublicLeagues';
+import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 
 const STATUS_LABELS: Record<LeagueStatus, string> = {
   draft: 'Brouillon',
@@ -41,13 +47,17 @@ function periodLabel(league: League): string | null {
   return null;
 }
 
-export default function LeaguesPage() {
-  const [leagues, setLeagues] = useState<League[]>([]);
-  const [loading, setLoading] = useState(true);
+export default function LeaguesPage({
+  initialLeagues,
+}: InferGetStaticPropsType<typeof getStaticProps>) {
+  const hasInitial = initialLeagues.length > 0;
+  const [leagues, setLeagues] = useState<League[]>(initialLeagues);
+  // Pas de spinner si les props ISR sont pré-remplies : le fetch client ne
+  // sert qu'à rafraîchir après hydratation.
+  const [loading, setLoading] = useState(!hasInitial);
   const [error, setError] = useState(false);
 
   const load = useCallback(async () => {
-    setLoading(true);
     setError(false);
     try {
       const res = await fetch('/api/leagues');
@@ -55,7 +65,13 @@ export default function LeaguesPage() {
       const data = (await res.json()) as { leagues: League[] };
       setLeagues(Array.isArray(data.leagues) ? data.leagues : []);
     } catch {
-      setError(true);
+      // On garde l'affichage pré-rempli si le refresh échoue ; on ne montre
+      // l'erreur que si rien n'est affiché. On lit l'état courant via la forme
+      // fonctionnelle pour garder `load` stable (deps vides → pas de refetch).
+      setLeagues((prev) => {
+        if (prev.length === 0) setError(true);
+        return prev;
+      });
     } finally {
       setLoading(false);
     }
@@ -192,10 +208,70 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
   );
 }
 
-const leaguesSeo: SeoProps = {
+/* ---------------------------------------------------------------------------
+ * SEO dynamique
+ *
+ * `getStaticProps` renvoie `props.seo` (SeoProps), privilégié par `_app.tsx`
+ * sur la propriété statique `LeaguesPage.seo` (repli dégradé).
+ *
+ * JSON-LD : `ItemList` des ligues publiées.
+ * -------------------------------------------------------------------------*/
+
+function buildLeaguesSeo(leagues: League[]): SeoProps {
+  const count = leagues.length;
+  const description =
+    count > 0
+      ? `${count} ligue${count > 1 ? 's' : ''} et saison${
+          count > 1 ? 's' : ''
+        } OW Women’s Cup : classements cumulés des équipes sur plusieurs tournois.`
+      : leaguesSeoFallback.description;
+
+  const jsonLd: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: 'Ligues & saisons',
+    numberOfItems: count,
+    itemListElement: leagues.map((league, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      name: league.name,
+    })),
+  };
+
+  return {
+    title: 'Ligues & saisons — OW Women’s Cup',
+    description,
+    jsonLd,
+  };
+}
+
+const leaguesSeoFallback: SeoProps = {
   title: 'Ligues & saisons — OW Women’s Cup',
   description:
     'Les ligues et saisons OW Women’s Cup : classements cumulés des équipes sur plusieurs tournois.',
 };
 
-LeaguesPage.seo = leaguesSeo;
+LeaguesPage.seo = leaguesSeoFallback;
+
+export const getStaticProps: GetStaticProps<{
+  initialLeagues: League[];
+  seo: SeoProps;
+}> = async () => {
+  let leagues: League[] = [];
+  try {
+    const { leagues: list } = await readPublicLeagues(DEFAULT_TENANT_ID);
+    leagues = list;
+  } catch {
+    // En cas d'échec DB au build/revalidate, on rend une page vide indexable ;
+    // le fetch client rechargera. Revalidation rapprochée pour se rattraper.
+    return {
+      props: { initialLeagues: [], seo: leaguesSeoFallback },
+      revalidate: 30,
+    };
+  }
+
+  return {
+    props: { initialLeagues: leagues, seo: buildLeaguesSeo(leagues) },
+    revalidate: 300,
+  };
+};

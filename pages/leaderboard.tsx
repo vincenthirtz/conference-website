@@ -1,16 +1,23 @@
 // pages/leaderboard.tsx
 // Page publique : classement des joueuses par rating (Glicko-2).
-// Lecture publique via GET /api/players/leaderboard (tenant par défaut géré
-// côté serveur). Fetch client avec états loading / empty / erreur, pagination
-// "voir plus" (limit/offset). Chaque ligne pointe vers /player/[userId].
+//
+// Pré-rendu ISR (getStaticProps revalidate:300) : la première page (top 50)
+// est lue via l'util partagé readLeaderboard(DEFAULT_TENANT_ID) et passée en
+// props → premier rendu SSR pré-rempli, indexable, avec SEO/JSON-LD dynamique.
+// La pagination "voir plus" (offset > 0) reste en fetch client via
+// GET /api/players/leaderboard. Chaque ligne pointe vers /player/[userId].
 
 import { useCallback, useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import type { GetStaticProps, InferGetStaticPropsType } from 'next';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import type { LeaderboardPlayer } from '@/types/rating';
+import { readLeaderboard } from '@/utils/rating/readLeaderboard';
+import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 
 const PAGE_SIZE = 50;
+const JSONLD_TOP_N = 10;
 
 function playerLabel(p: LeaderboardPlayer): string {
   return p.displayName ?? p.battleTag ?? 'Joueuse inconnue';
@@ -23,18 +30,22 @@ function ratingBadge(rank: number): string {
   return 'text-neutral-400';
 }
 
-export default function LeaderboardPage() {
-  const [players, setPlayers] = useState<LeaderboardPlayer[]>([]);
-  const [loading, setLoading] = useState(true);
+export default function LeaderboardPage({
+  initialPlayers,
+}: InferGetStaticPropsType<typeof getStaticProps>) {
+  const hasInitial = initialPlayers.length > 0;
+  const [players, setPlayers] = useState<LeaderboardPlayer[]>(initialPlayers);
+  // Si les props ISR sont pré-remplies, on ne rétrograde pas en spinner : le
+  // fetch client ne sert qu'à rafraîchir après hydratation.
+  const [loading, setLoading] = useState(!hasInitial);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(false);
-  const [offset, setOffset] = useState(0);
-  const [hasMore, setHasMore] = useState(false);
+  const [offset, setOffset] = useState(initialPlayers.length);
+  const [hasMore, setHasMore] = useState(initialPlayers.length === PAGE_SIZE);
 
   const fetchPage = useCallback(async (nextOffset: number) => {
     const isFirst = nextOffset === 0;
     if (isFirst) {
-      setLoading(true);
       setError(false);
     } else {
       setLoadingMore(true);
@@ -52,13 +63,24 @@ export default function LeaderboardPage() {
       setHasMore(batch.length === PAGE_SIZE);
       setOffset(nextOffset + batch.length);
     } catch {
-      if (isFirst) setError(true);
+      // On garde l'affichage pré-rempli si le refresh échoue ; on ne montre
+      // l'erreur que si la première page n'a rien à afficher. On lit l'état
+      // courant via la forme fonctionnelle pour garder fetchPage stable
+      // (deps vides → pas de refetch en boucle).
+      if (isFirst) {
+        setPlayers((prev) => {
+          if (prev.length === 0) setError(true);
+          return prev;
+        });
+      }
     } finally {
       setLoading(false);
       setLoadingMore(false);
     }
   }, []);
 
+  // Rafraîchit la première page au montage. Si les props ISR existent, le
+  // rendu reste pré-rempli pendant le refresh (pas de spinner).
   useEffect(() => {
     void fetchPage(0);
   }, [fetchPage]);
@@ -256,10 +278,77 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
   );
 }
 
-const leaderboardSeo: SeoProps = {
-  title: 'Classement des joueuses — OW Women’s Cup',
+/* ---------------------------------------------------------------------------
+ * SEO dynamique
+ *
+ * `getStaticProps` renvoie `props.seo` (SeoProps), privilégié par `_app.tsx`
+ * sur la propriété statique `LeaderboardPage.seo` (repli dégradé).
+ *
+ * JSON-LD : `ItemList` du top N (classement ordonné de joueuses) — décrit
+ * fidèlement le contenu principal de la page et se prête aux rich results de
+ * type liste.
+ * -------------------------------------------------------------------------*/
+
+function buildLeaderboardSeo(players: LeaderboardPlayer[]): SeoProps {
+  const count = players.length;
+  const description =
+    count > 0
+      ? `Classement des joueuses par rating : ${count} joueuse${
+          count > 1 ? 's' : ''
+        } classée${count > 1 ? 's' : ''}. Ratings, matchs joués et bilan victoires-défaites, calculés sur les matchs officiels.`
+      : leaderboardSeoFallback.description;
+
+  const jsonLd: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: 'Classement des joueuses',
+    numberOfItems: count,
+    itemListOrder: 'https://schema.org/ItemListOrderDescending',
+    itemListElement: players.slice(0, JSONLD_TOP_N).map((p) => ({
+      '@type': 'ListItem',
+      position: p.rank,
+      name: playerLabel(p),
+    })),
+  };
+
+  return {
+    title: 'Classement des joueuses — rating',
+    description,
+    jsonLd,
+  };
+}
+
+const leaderboardSeoFallback: SeoProps = {
+  title: 'Classement des joueuses — rating',
   description:
     'Classement des joueuses par rating : ratings, matchs joués et bilan victoires-défaites, calculés sur les matchs officiels.',
 };
 
-LeaderboardPage.seo = leaderboardSeo;
+LeaderboardPage.seo = leaderboardSeoFallback;
+
+export const getStaticProps: GetStaticProps<{
+  initialPlayers: LeaderboardPlayer[];
+  seo: SeoProps;
+}> = async () => {
+  let players: LeaderboardPlayer[] = [];
+  try {
+    const { players: firstPage } = await readLeaderboard(
+      DEFAULT_TENANT_ID,
+      PAGE_SIZE,
+      0
+    );
+    players = firstPage;
+  } catch {
+    // En cas d'échec DB au build/revalidate, on rend une page vide indexable ;
+    // le fetch client rechargera. Revalidation rapprochée pour se rattraper.
+    return {
+      props: { initialPlayers: [], seo: leaderboardSeoFallback },
+      revalidate: 30,
+    };
+  }
+
+  return {
+    props: { initialPlayers: players, seo: buildLeaderboardSeo(players) },
+    revalidate: 300,
+  };
+};

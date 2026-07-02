@@ -1,12 +1,13 @@
 // pages/api/leagues/index.ts
 // API publique : liste des leagues publiques (is_public=true, status≠draft).
+// Lecture déléguée à `utils/leagues/readPublicLeagues` (partagée avec l'ISR de
+// `pages/leagues/index.tsx`).
 
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
 import { logger } from '@/utils/logger';
-import type { League, LeaguesListResponse } from '@/types/leagues';
+import { readPublicLeagues } from '@/utils/leagues/readPublicLeagues';
 
 export default async function handler(
   req: NextApiRequest,
@@ -21,27 +22,17 @@ export default async function handler(
 
   try {
     const tenantId = resolveTenantIdForPublicRequest(req);
-    const { data, error } = await supabaseAdmin
-      .from('leagues')
-      .select('*')
-      .eq('tenant_id', tenantId)
-      .eq('is_public', true)
-      .neq('status', 'draft')
-      .order('created_at', { ascending: false });
-    if (error) {
-      logger.error('[leagues] list error', error);
-      return res.status(500).json({ error: 'Failed to load leagues' });
-    }
+    const response = await readPublicLeagues(tenantId);
 
     res.setHeader(
       'Cache-Control',
       'public, s-maxage=120, stale-while-revalidate=300'
     );
-    const response: LeaguesListResponse = {
-      leagues: (data ?? []) as League[],
-    };
     return res.status(200).json(response);
   } catch (err) {
+    if (err instanceof Error && err.message === 'Failed to load leagues') {
+      return res.status(500).json({ error: 'Failed to load leagues' });
+    }
     logger.error('[leagues] internal error', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
