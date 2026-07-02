@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import Head from 'next/head';
 import Image from 'next/image';
 import { useRouter } from 'next/router';
@@ -125,6 +125,10 @@ function MyTeamPage({ staff }: StaffProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
+  // Debounce + annulation de la recherche joueur : sans AbortController, une
+  // reponse lente d'une requete anterieure peut ecraser un resultat plus recent
+  // (reponses hors-ordre). Meme pattern que pages/admin/teams/[teamId]/edit.tsx.
+  const searchAbortRef = useRef<AbortController | null>(null);
   const [selectedPlayer, setSelectedPlayer] = useState<SearchResult | null>(
     null
   );
@@ -265,21 +269,27 @@ function MyTeamPage({ staff }: StaffProps) {
         setSearchResults([]);
         return;
       }
+      // Annule la requete precedente encore en vol pour eviter les reponses
+      // hors-ordre (une reponse perimee ecrasant un resultat plus recent).
+      if (searchAbortRef.current) searchAbortRef.current.abort();
+      const controller = new AbortController();
+      searchAbortRef.current = controller;
       setSearchLoading(true);
       try {
         const json = await adminFetchJson<{ players?: SearchResult[] }>(
-          `/api/teams/search-players?q=${encodeURIComponent(query)}`
+          `/api/teams/search-players?q=${encodeURIComponent(query)}`,
+          { signal: controller.signal }
         );
-        if (json.players) {
-          setSearchResults(json.players);
-        } else {
-          setSearchResults([]);
-        }
+        // Ignore les reponses d'une requete qui a ete supplantee entre-temps.
+        if (searchAbortRef.current !== controller) return;
+        setSearchResults(json.players || []);
       } catch (err) {
+        if ((err as Error)?.name === 'AbortError') return;
         logger.error('Search error:', err);
-        setSearchResults([]);
+        if (searchAbortRef.current === controller) setSearchResults([]);
       } finally {
-        setSearchLoading(false);
+        // Ne relache le spinner que si c'est toujours la requete active.
+        if (searchAbortRef.current === controller) setSearchLoading(false);
       }
     },
     [adminFetchJson]
@@ -296,6 +306,13 @@ function MyTeamPage({ staff }: StaffProps) {
     }, 300);
     return () => clearTimeout(timer);
   }, [searchQuery, handleSearchPlayers]);
+
+  // Annule toute recherche en vol au démontage.
+  useEffect(() => {
+    return () => {
+      if (searchAbortRef.current) searchAbortRef.current.abort();
+    };
+  }, []);
 
   // Add member to team
   const handleAddMember = async () => {

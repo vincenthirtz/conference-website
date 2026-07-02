@@ -7,7 +7,7 @@
 // La pagination "voir plus" (offset > 0) reste en fetch client via
 // GET /api/players/leaderboard. Chaque ligne pointe vers /player/[userId].
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import type { GetStaticProps, InferGetStaticPropsType } from 'next';
@@ -15,6 +15,7 @@ import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import type { LeaderboardPlayer } from '@/types/rating';
 import { readLeaderboard } from '@/utils/rating/readLeaderboard';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
+import { useIsrRefresh } from '@/hooks/useIsrRefresh';
 
 const PAGE_SIZE = 50;
 const JSONLD_TOP_N = 10;
@@ -34,23 +35,48 @@ export default function LeaderboardPage({
   initialPlayers,
 }: InferGetStaticPropsType<typeof getStaticProps>) {
   const hasInitial = initialPlayers.length > 0;
-  const [players, setPlayers] = useState<LeaderboardPlayer[]>(initialPlayers);
-  // Si les props ISR sont pré-remplies, on ne rétrograde pas en spinner : le
-  // fetch client ne sert qu'à rafraîchir après hydratation.
-  const [loading, setLoading] = useState(!hasInitial);
+
+  // Première page : servie par l'ISR (props fraîches, revalidate:300). Le hook
+  // évite le double-fetch au montage — il ne recharge que si les props sont
+  // absentes (fallback ISR) et revalide au retour de focus.
+  const firstPageFetcher = useCallback(async (): Promise<
+    LeaderboardPlayer[]
+  > => {
+    const res = await fetch(
+      `/api/players/leaderboard?limit=${PAGE_SIZE}&offset=0`
+    );
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = (await res.json()) as { players: LeaderboardPlayer[] };
+    return Array.isArray(data.players) ? data.players : [];
+  }, []);
+
+  const {
+    data: firstPage,
+    loading: firstLoading,
+    error: firstError,
+    refresh: refreshFirst,
+  } = useIsrRefresh<LeaderboardPlayer[]>({
+    initial: hasInitial ? initialPlayers : null,
+    fetcher: firstPageFetcher,
+  });
+
+  // Pages supplémentaires (« voir plus ») appendues à la première page.
+  const [extraPlayers, setExtraPlayers] = useState<LeaderboardPlayer[]>([]);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [error, setError] = useState(false);
-  const [offset, setOffset] = useState(initialPlayers.length);
-  const [hasMore, setHasMore] = useState(initialPlayers.length === PAGE_SIZE);
+  const [offset, setOffset] = useState(initialPlayers.length || PAGE_SIZE);
+  const [extraHasMore, setExtraHasMore] = useState<boolean | null>(null);
 
-  const fetchPage = useCallback(async (nextOffset: number) => {
-    const isFirst = nextOffset === 0;
-    if (isFirst) {
-      setError(false);
-    } else {
-      setLoadingMore(true);
-    }
+  const base = firstPage ?? [];
+  const players = [...base, ...extraPlayers];
+  const loading = firstLoading && players.length === 0;
+  const error = !!firstError && players.length === 0;
+  // hasMore : tant qu'on n'a pas chargé de page suivante, on se fie à la taille
+  // de la première page ; ensuite au dernier lot appendu.
+  const hasMore =
+    extraHasMore === null ? base.length === PAGE_SIZE : extraHasMore;
 
+  const fetchMore = useCallback(async (nextOffset: number) => {
+    setLoadingMore(true);
     try {
       const res = await fetch(
         `/api/players/leaderboard?limit=${PAGE_SIZE}&offset=${nextOffset}`
@@ -58,32 +84,15 @@ export default function LeaderboardPage({
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = (await res.json()) as { players: LeaderboardPlayer[] };
       const batch = Array.isArray(data.players) ? data.players : [];
-
-      setPlayers((prev) => (isFirst ? batch : [...prev, ...batch]));
-      setHasMore(batch.length === PAGE_SIZE);
+      setExtraPlayers((prev) => [...prev, ...batch]);
+      setExtraHasMore(batch.length === PAGE_SIZE);
       setOffset(nextOffset + batch.length);
     } catch {
-      // On garde l'affichage pré-rempli si le refresh échoue ; on ne montre
-      // l'erreur que si la première page n'a rien à afficher. On lit l'état
-      // courant via la forme fonctionnelle pour garder fetchPage stable
-      // (deps vides → pas de refetch en boucle).
-      if (isFirst) {
-        setPlayers((prev) => {
-          if (prev.length === 0) setError(true);
-          return prev;
-        });
-      }
+      // Échec de pagination : on garde ce qui est déjà affiché.
     } finally {
-      setLoading(false);
       setLoadingMore(false);
     }
   }, []);
-
-  // Rafraîchit la première page au montage. Si les props ISR existent, le
-  // rendu reste pré-rempli pendant le refresh (pas de spinner).
-  useEffect(() => {
-    void fetchPage(0);
-  }, [fetchPage]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
@@ -105,7 +114,7 @@ export default function LeaderboardPage({
         {loading ? (
           <LoadingState />
         ) : error ? (
-          <ErrorState onRetry={() => void fetchPage(0)} />
+          <ErrorState onRetry={refreshFirst} />
         ) : players.length === 0 ? (
           <EmptyState />
         ) : (
@@ -195,7 +204,7 @@ export default function LeaderboardPage({
               <div className="mt-6 text-center">
                 <button
                   type="button"
-                  onClick={() => void fetchPage(offset)}
+                  onClick={() => void fetchMore(offset)}
                   disabled={loadingMore}
                   className="rounded-md bg-purple-500 px-6 py-2 text-sm font-semibold transition-colors hover:bg-purple-400 disabled:opacity-50"
                 >

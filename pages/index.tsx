@@ -33,6 +33,10 @@ const AnnouncementsTicker = dynamic(
   () => import('@/components/Ads/AnnouncementsTicker')
 );
 
+// Marge de troncature du `content` des news de la home. HomeNewsSection ne rend
+// qu'un excerpt d'au plus ~220 caractères ; on garde une marge confortable.
+const HOME_NEWS_CONTENT_MAX = 300;
+
 type HomeProps = {
   news: HomeNewsItem[];
   announcements: Announcement[];
@@ -205,7 +209,14 @@ export const getStaticProps: GetStaticProps<HomeProps> = async () => {
         slug: row.slug,
         tag: row.tag || 'general',
         excerpt: row.excerpt,
-        content: row.content,
+        // La home n'affiche qu'un excerpt tronqué (jusqu'à ~220 caractères via
+        // HomeNewsSection.getExcerpt). Sérialiser le `content` complet de 30
+        // news gonflait inutilement __NEXT_DATA__ sur la page la plus vue : on
+        // tronque côté serveur, avec une marge > à la fenêtre d'excerpt.
+        content:
+          typeof row.content === 'string'
+            ? row.content.slice(0, HOME_NEWS_CONTENT_MAX)
+            : row.content,
         imageUrl: row.image_url,
         publishedAt: row.published_at,
         createdAt: row.created_at,

@@ -311,21 +311,49 @@ export async function readPlayerProfile(
     | 'avatar_url'
   >;
 
-  // 2) Rank = position par rating desc parmi les joueurs notés.
-  const { data: allRated } = await supabaseAdmin
-    .from('player_ratings')
-    .select('user_id, rating')
-    .eq('tenant_id', tenantId)
-    .gt('games_played', 0);
-  const rated = (allRated || []) as Array<{
-    user_id: string;
-    rating: number;
-  }>;
-  let rank = 0;
-  {
-    const sorted = [...rated].sort((a, b) => b.rating - a.rating);
-    const idx = sorted.findIndex((r) => r.user_id === userId);
-    rank = idx >= 0 ? idx + 1 : sorted.length + 1;
+  // 2) Rank par COUNT (aucun transfert de lignes) — fidèle à l'ordre du
+  //    classement (rating desc, tie-break user_id asc), scopé aux joueurs
+  //    notés (games_played > 0).
+  //
+  //    Joueur NOTÉ (games_played > 0) :
+  //      rank = 1 + #{ rating > pr.rating } + #{ rating = pr.rating ∧ uid < pr.uid }
+  //    Joueur NON noté (games_played = 0) : comme avant, il est exclu du
+  //      classement → rang = (nb de notés) + 1 (position juste après le dernier).
+  let rank: number;
+  if (pr.games_played > 0) {
+    const { count: higherCount, error: higherErr } = await supabaseAdmin
+      .from('player_ratings')
+      .select('*', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
+      .gt('games_played', 0)
+      .gt('rating', pr.rating);
+    if (higherErr) {
+      logger.error('[readPlayerProfile] rank higher-count error', higherErr);
+      throw new Error('Failed to load player');
+    }
+    const { count: tieCount, error: tieErr } = await supabaseAdmin
+      .from('player_ratings')
+      .select('*', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
+      .gt('games_played', 0)
+      .eq('rating', pr.rating)
+      .lt('user_id', pr.user_id);
+    if (tieErr) {
+      logger.error('[readPlayerProfile] rank tie-count error', tieErr);
+      throw new Error('Failed to load player');
+    }
+    rank = 1 + (higherCount ?? 0) + (tieCount ?? 0);
+  } else {
+    const { count: ratedCount, error: ratedErr } = await supabaseAdmin
+      .from('player_ratings')
+      .select('*', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
+      .gt('games_played', 0);
+    if (ratedErr) {
+      logger.error('[readPlayerProfile] rank rated-count error', ratedErr);
+      throw new Error('Failed to load player');
+    }
+    rank = (ratedCount ?? 0) + 1;
   }
 
   const player: PlayerProfileCore = {

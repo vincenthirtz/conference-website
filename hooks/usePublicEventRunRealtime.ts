@@ -33,13 +33,16 @@ export function usePublicEventRunRealtime({
   intervalMs = 30_000,
   onTick,
 }: Options) {
-  // Realtime best-effort.
+  // Realtime best-effort. On passe `onTick` (stable côté appelant) DIRECTEMENT :
+  // un wrapper inline `() => onTick()` recréé à chaque render se retrouvait dans
+  // le dep-array de useRealtimeChannel → désabonnement/réabonnement du canal
+  // Supabase à chaque render (churn sur /live).
   useRealtimeChannel({
     enabled: enabled && !!runId,
     channel: `public-event-run-${runId ?? 'none'}`,
     table: 'event_runs',
     filter: runId ? `id=eq.${runId}` : undefined,
-    onChange: () => onTick(),
+    onChange: onTick,
   });
 
   useRealtimeChannel({
@@ -47,7 +50,7 @@ export function usePublicEventRunRealtime({
     channel: `public-event-segments-${runId ?? 'none'}`,
     table: 'event_segments',
     filter: runId ? `event_run_id=eq.${runId}` : undefined,
-    onChange: () => onTick(),
+    onChange: onTick,
   });
 
   // Polling fallback (visibility-gated).

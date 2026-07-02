@@ -14,6 +14,7 @@ import { PlayerPageSkeleton } from '@/components/player/Skeletons';
 import { useT } from '@/lib/i18n/useT';
 import { useLang } from '@/lib/i18n/LanguageProvider';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
+import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
 import { logger } from '../../utils/logger';
 
@@ -213,12 +214,13 @@ export default function MessagesPage() {
   // Subscribe to demandes targeting the captain's team. Postgres only
   // gives us coarse filtering on top-level columns, so we further narrow
   // to captain_message rows belonging to the active conversation in JS.
-  useRealtimeChannel({
-    enabled: !!activeConvId && !!myTeamId && canManage,
-    channel: activeConvId ? `messages-${activeConvId}` : 'messages-inactive',
-    table: 'demandes',
-    filter: myTeamId ? `team_id=eq.${myTeamId}` : undefined,
-    onChange: (event) => {
+  //
+  // Mémoïsé : passer une closure inline recréait la fonction à chaque render,
+  // et comme `onChange` est dans le dep-array de useRealtimeChannel, le canal
+  // Supabase se désabonnait/réabonnait à CHAQUE render (churn). Même posture
+  // que PlayerBell.
+  const handleMessagesChange = useCallback(
+    (event: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
       const row = (event.new ?? event.old) as
         | { type?: string; payload?: { conversation_id?: string } }
         | undefined;
@@ -234,6 +236,15 @@ export default function MessagesPage() {
       }
       silentReloadActive();
     },
+    [activeConvId, loadConversations, silentReloadActive]
+  );
+
+  useRealtimeChannel({
+    enabled: !!activeConvId && !!myTeamId && canManage,
+    channel: activeConvId ? `messages-${activeConvId}` : 'messages-inactive',
+    table: 'demandes',
+    filter: myTeamId ? `team_id=eq.${myTeamId}` : undefined,
+    onChange: handleMessagesChange,
   });
 
   const loadTeams = useCallback(

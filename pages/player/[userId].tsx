@@ -12,10 +12,11 @@
 // routes statiques (profile.tsx, matches.tsx, …) AVANT [userId], donc l'espace
 // joueur authentifié n'est jamais masqué par cette page.
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import { useIsrRefresh } from '@/hooks/useIsrRefresh';
 import type {
   GetStaticPaths,
   GetStaticProps,
@@ -59,34 +60,40 @@ export default function PlayerProfilePage({
 }: InferGetStaticPropsType<typeof getStaticProps>) {
   const router = useRouter();
   const { userId } = router.query;
+  const id = typeof userId === 'string' ? userId : '';
+
+  // 404 traité à part du hook générique (état métier distinct de l'erreur
+  // réseau). Un refresh renvoyant 404 masque le profil pré-rempli.
+  const [notFound, setNotFound] = useState(false);
+
   // Premier rendu = données pré-remplies par l'ISR (getStaticProps). Le fetch
-  // client ci-dessous ne sert qu'à rafraîchir (rating live) après hydratation.
-  const [state, setState] = useState<FetchState>(
-    profile ? { status: 'ok', data: profile } : { status: 'loading' }
-  );
-
-  const load = useCallback(async (id: string) => {
-    try {
-      const res = await fetch(`/api/players/${encodeURIComponent(id)}/profile`);
-      if (res.status === 404) {
-        setState({ status: 'notfound' });
-        return;
-      }
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (await res.json()) as PlayerProfileResponse;
-      setState({ status: 'ok', data });
-    } catch {
-      // On garde l'affichage pré-rempli si le refresh échoue ; on ne bascule
-      // en erreur que si on n'avait pas de données initiales.
-      setState((prev) => (prev.status === 'ok' ? prev : { status: 'error' }));
+  // client ne se déclenche qu'en fallback ISR (profil absent des props) ou au
+  // retour de focus ; il ne double PAS la lecture des props ISR fraîches.
+  const fetcher = useCallback(async (): Promise<PlayerProfileResponse | null> => {
+    if (!id) return null;
+    const res = await fetch(`/api/players/${encodeURIComponent(id)}/profile`);
+    if (res.status === 404) {
+      setNotFound(true);
+      return null;
     }
-  }, []);
+    setNotFound(false);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return (await res.json()) as PlayerProfileResponse;
+  }, [id]);
 
-  useEffect(() => {
-    if (!router.isReady) return;
-    if (typeof userId !== 'string' || !userId) return;
-    void load(userId);
-  }, [router.isReady, userId, load]);
+  const { data, error, refresh } = useIsrRefresh<PlayerProfileResponse>({
+    initial: profile ?? null,
+    fetcher,
+    when: router.isReady && !!id,
+  });
+
+  const state: FetchState = notFound
+    ? { status: 'notfound' }
+    : data
+      ? { status: 'ok', data }
+      : error
+        ? { status: 'error' }
+        : { status: 'loading' };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-black text-white">
@@ -100,13 +107,7 @@ export default function PlayerProfilePage({
 
         {state.status === 'loading' && <LoadingState />}
         {state.status === 'notfound' && <NotFoundState />}
-        {state.status === 'error' && (
-          <ErrorState
-            onRetry={() =>
-              typeof userId === 'string' ? void load(userId) : undefined
-            }
-          />
-        )}
+        {state.status === 'error' && <ErrorState onRetry={refresh} />}
         {state.status === 'ok' && <Profile data={state.data} />}
       </main>
     </div>

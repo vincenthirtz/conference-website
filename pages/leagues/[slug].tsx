@@ -8,10 +8,11 @@
 // contenu indexable, SEO/JSON-LD par-entité. Un fetch client rafraîchit
 // ensuite les standings après hydratation. 404 = notFound.
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import { useIsrRefresh } from '@/hooks/useIsrRefresh';
 import type {
   GetStaticPaths,
   GetStaticProps,
@@ -78,33 +79,40 @@ export default function LeagueDetailPage({
 }: InferGetStaticPropsType<typeof getStaticProps>) {
   const router = useRouter();
   const { slug } = router.query;
+  const s = typeof slug === 'string' ? slug : '';
+
+  // 404 traité à part du hook générique (état métier distinct de l'erreur
+  // réseau). Un refresh renvoyant 404 masque le détail pré-rempli.
+  const [notFound, setNotFound] = useState(false);
+
   // Premier rendu = données pré-remplies par l'ISR (getStaticProps). Le fetch
-  // client ne sert qu'à rafraîchir les standings après hydratation.
-  const [state, setState] = useState<FetchState>(
-    initial ? { status: 'ok', data: initial } : { status: 'loading' }
-  );
-
-  const load = useCallback(async (s: string) => {
-    try {
-      const res = await fetch(`/api/leagues/${encodeURIComponent(s)}`);
-      if (res.status === 404) {
-        setState({ status: 'notfound' });
-        return;
-      }
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (await res.json()) as LeagueDetailResponse;
-      setState({ status: 'ok', data });
-    } catch {
-      // On garde l'affichage pré-rempli si le refresh échoue.
-      setState((prev) => (prev.status === 'ok' ? prev : { status: 'error' }));
+  // client ne se déclenche qu'en fallback ISR (détail absent des props) ou au
+  // retour de focus ; il ne double PAS la lecture des props ISR fraîches.
+  const fetcher = useCallback(async (): Promise<LeagueDetailResponse | null> => {
+    if (!s) return null;
+    const res = await fetch(`/api/leagues/${encodeURIComponent(s)}`);
+    if (res.status === 404) {
+      setNotFound(true);
+      return null;
     }
-  }, []);
+    setNotFound(false);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return (await res.json()) as LeagueDetailResponse;
+  }, [s]);
 
-  useEffect(() => {
-    if (!router.isReady) return;
-    if (typeof slug !== 'string' || !slug) return;
-    void load(slug);
-  }, [router.isReady, slug, load]);
+  const { data, error, refresh } = useIsrRefresh<LeagueDetailResponse>({
+    initial: initial ?? null,
+    fetcher,
+    when: router.isReady && !!s,
+  });
+
+  const state: FetchState = notFound
+    ? { status: 'notfound' }
+    : data
+      ? { status: 'ok', data }
+      : error
+        ? { status: 'error' }
+        : { status: 'loading' };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-black text-white">
@@ -118,13 +126,7 @@ export default function LeagueDetailPage({
 
         {state.status === 'loading' && <LoadingState />}
         {state.status === 'notfound' && <NotFoundState />}
-        {state.status === 'error' && (
-          <ErrorState
-            onRetry={() =>
-              typeof slug === 'string' ? void load(slug) : undefined
-            }
-          />
-        )}
+        {state.status === 'error' && <ErrorState onRetry={refresh} />}
         {state.status === 'ok' && <Detail data={state.data} />}
       </main>
     </div>

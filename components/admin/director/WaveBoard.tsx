@@ -18,7 +18,7 @@
 // Toutes les mutations passent par les callbacks du parent (director.tsx), qui
 // centralise idempotency + refetch. Ce composant est "presentationnel piloté".
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   waveStatusBadgeClasses,
   waveStatusDotClasses,
@@ -125,7 +125,9 @@ export default function WaveBoard({
   const [editForm, setEditForm] = useState<EditState>(emptyEdit());
   const [editError, setEditError] = useState<string | null>(null);
 
-  const sorted = [...waves].sort((a, b) => a.ord - b.ord);
+  // Tri memoisé : la page Director se re-render toutes les secondes, on ne veut
+  // pas recloner+retrier `waves` à chaque render (uniquement quand la prop change).
+  const sorted = useMemo(() => [...waves].sort((a, b) => a.ord - b.ord), [waves]);
   const segCountByWave = new Map<string, number>();
   for (const s of segments) {
     if (s.wave_id) {

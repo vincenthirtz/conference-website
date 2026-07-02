@@ -1,8 +1,9 @@
 // utils/rating/readLeaderboard.ts
 //
 // Lecture partagée du classement public des joueuses par rating Glicko-2
-// persistant : tri rating desc, filtre `games_played > 0`, calcul du rank
-// global (offset + i + 1) puis tranche [offset, offset+limit).
+// persistant : tri rating desc (tie-break user_id asc), filtre
+// `games_played > 0`, pagination DB via `.range(offset, offset+limit-1)` et
+// rank global (offset + i + 1). On ne charge QUE la page, jamais toute la table.
 //
 // Extrait depuis `pages/api/players/leaderboard.ts` afin d'être réutilisable
 // côté ISR (`getStaticProps` de `pages/leaderboard.tsx`) SANS appel HTTP au
@@ -20,9 +21,11 @@ import type {
 /**
  * Lit une page du classement public des joueuses pour un tenant donné.
  *
- * Le rank est la position globale (offset + i + 1) parmi les joueuses notées
- * triées par rating desc. On lit tous les joueurs notés triés puis on tranche —
- * les ensembles sont petits (dizaines à centaines de joueurs).
+ * Le rank est la position globale (offset + i + 1) parmi les joueuses notées.
+ * La pagination est déléguée à la DB via `.range()` sur la requête triée
+ * (`rating DESC`, tie-break `user_id ASC`) : on ne transfère QUE la page
+ * demandée, jamais toute la table `player_ratings`. L'ordre DB EST l'ordre
+ * logique, donc `rank = offset + i + 1`.
  *
  * @throws en cas d'erreur DB non récupérable (le handler / getStaticProps
  *   décide comment la traiter).
@@ -39,7 +42,9 @@ export async function readLeaderboard(
     )
     .eq('tenant_id', tenantId)
     .gt('games_played', 0)
-    .order('rating', { ascending: false });
+    .order('rating', { ascending: false })
+    .order('user_id', { ascending: true })
+    .range(offset, offset + limit - 1);
 
   if (error) {
     logger.error('[readLeaderboard] read error', error);
@@ -61,14 +66,15 @@ export async function readLeaderboard(
     >
   >;
 
-  // Tri défensif (le mock ne trie pas) : rating desc, puis user_id asc.
+  // Tri défensif de la SEULE page (l'ordre DB est la source de vérité ; ce tri
+  // ne couvre que le cas où le mock de test ne réordonne pas). Même clé que la
+  // requête : rating desc, puis user_id asc.
   rows.sort((a, b) => {
     if (b.rating !== a.rating) return b.rating - a.rating;
     return a.user_id < b.user_id ? -1 : a.user_id > b.user_id ? 1 : 0;
   });
 
-  const sliced = rows.slice(offset, offset + limit);
-  const players: LeaderboardPlayer[] = sliced.map((r, i) => ({
+  const players: LeaderboardPlayer[] = rows.map((r, i) => ({
     userId: r.user_id,
     displayName: r.display_name ?? null,
     battleTag: r.battle_tag ?? null,
