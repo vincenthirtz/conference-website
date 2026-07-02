@@ -1,7 +1,6 @@
 // pages/tournament/[id].tsx
 
 import { GetStaticPaths, GetStaticProps } from 'next';
-import Head from 'next/head';
 import Link from 'next/link';
 import { useMemo } from 'react';
 import Heading from '@/components/Typography/heading';
@@ -10,6 +9,7 @@ import Button from '@/components/Buttons/button';
 import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import type { MatchStatus } from '@/types/admin';
+import type { SeoProps } from '@/components/Seo/DefaultSeo';
 
 import { logger } from '../../utils/logger';
 type Tournament = {
@@ -72,11 +72,18 @@ type SimpleMatch = {
   } | null;
 };
 
+type LeagueRef = {
+  slug: string;
+  name: string;
+};
+
 type TournamentPageProps = {
   tournament: Tournament;
   stages: Stage[];
   teams: SimpleTeam[];
   matches: SimpleMatch[];
+  leagues: LeagueRef[];
+  seo: SeoProps;
 };
 
 const STAGE_TYPES: Record<string, string> = {
@@ -156,7 +163,8 @@ export const getStaticProps: GetStaticProps<TournamentPageProps> = async (
   const tournamentId = tournament.id;
 
   // Run all independent queries in parallel
-  const [stagesResult, matchesResult, teamsResult] = await Promise.all([
+  const [stagesResult, matchesResult, teamsResult, leaguesResult] =
+    await Promise.all([
     // 2) Stages
     supabaseAdmin
       .from('tournament_stages')
@@ -198,6 +206,13 @@ export const getStaticProps: GetStaticProps<TournamentPageProps> = async (
       .select('team:teams ( id, slug, name, short_name, logo_url )')
       .eq('tenant_id', tenantId)
       .eq('tournament_id', tournamentId),
+
+    // 5) Ligues auxquelles appartient ce tournoi (maillage interne).
+    supabaseAdmin
+      .from('league_tournaments')
+      .select('league:leagues ( slug, name, is_public, status )')
+      .eq('tenant_id', tenantId)
+      .eq('tournament_id', tournamentId),
   ]);
 
   if (stagesResult.error)
@@ -206,6 +221,8 @@ export const getStaticProps: GetStaticProps<TournamentPageProps> = async (
     logger.error('tournament matches error:', matchesResult.error);
   if (teamsResult.error)
     logger.error('tournament teams error:', teamsResult.error);
+  if (leaguesResult.error)
+    logger.error('tournament leagues error:', leaguesResult.error);
 
   const stages = (stagesResult.data || []) as any;
   const matches = (matchesResult.data || []) as any as SimpleMatch[];
@@ -216,12 +233,30 @@ export const getStaticProps: GetStaticProps<TournamentPageProps> = async (
   });
   const teams = Array.from(teamMap.values());
 
+  // Ne garder que les ligues publiques et non-draft, dédupliquées par slug.
+  const leagueMap = new Map<string, LeagueRef>();
+  (leaguesResult.data || []).forEach((row: any) => {
+    const l = row.league;
+    if (
+      l &&
+      l.slug &&
+      l.is_public === true &&
+      l.status !== 'draft' &&
+      !leagueMap.has(l.slug)
+    ) {
+      leagueMap.set(l.slug, { slug: l.slug, name: l.name });
+    }
+  });
+  const leagues = Array.from(leagueMap.values());
+
   return {
     props: {
       tournament,
       stages,
       teams,
       matches,
+      leagues,
+      seo: buildTournamentSeo(tournament),
     },
     revalidate: 60,
   };
@@ -232,7 +267,8 @@ export default function TournamentPage({
   stages,
   teams,
   matches,
-}: TournamentPageProps) {
+  leagues,
+}: Omit<TournamentPageProps, 'seo'>) {
   const totalTeams = teams.length;
   const now = useMemo(() => new Date(), []);
   const finishedMatches = matches.filter((m) => m.status === 'finished');
@@ -284,61 +320,6 @@ export default function TournamentPage({
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#0a0a1a] via-[#0d0520] to-[#0a0a1a] text-white">
-      <Head>
-        <title>{tournament.name} | OW Women&apos;s Cup</title>
-        <meta
-          name="description"
-          content={`${tournament.name} – Tournoi ${tournament.game || 'Overwatch'} OW Women's Cup. Brackets, résultats, équipes et calendrier des matchs.`}
-        />
-        <meta property="og:type" content="website" />
-        <meta
-          property="og:title"
-          content={`${tournament.name} | OW Women's Cup`}
-        />
-        <meta
-          property="og:description"
-          content={`${tournament.name} – Tournoi ${tournament.game || 'Overwatch'} OW Women's Cup. Brackets, résultats et équipes.`}
-        />
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta
-          name="twitter:title"
-          content={`${tournament.name} | OW Women's Cup`}
-        />
-        {tournament.start_date && (
-          <script
-            type="application/ld+json"
-            dangerouslySetInnerHTML={{
-              __html: JSON.stringify({
-                '@context': 'https://schema.org',
-                '@type': 'SportsEvent',
-                name: tournament.name,
-                startDate: tournament.start_date,
-                ...(tournament.end_date && { endDate: tournament.end_date }),
-                eventStatus:
-                  tournament.status === 'completed'
-                    ? 'https://schema.org/EventScheduled'
-                    : tournament.status === 'running'
-                      ? 'https://schema.org/EventScheduled'
-                      : 'https://schema.org/EventScheduled',
-                eventAttendanceMode:
-                  'https://schema.org/OnlineEventAttendanceMode',
-                location: {
-                  '@type': 'VirtualLocation',
-                  url: `https://owwomenscup.fr/tournament/${tournament.slug || tournament.id}`,
-                },
-                organizer: {
-                  '@type': 'Organization',
-                  name: "OW Women's Cup",
-                  url: 'https://owwomenscup.fr',
-                },
-                sport: tournament.game || 'Overwatch',
-                inLanguage: 'fr-FR',
-              }),
-            }}
-          />
-        )}
-      </Head>
-
       {/* Decorative background blobs */}
       <div
         className="pointer-events-none fixed inset-0 overflow-hidden"
@@ -399,6 +380,35 @@ export default function TournamentPage({
                     </>
                   )}
                 </p>
+              )}
+
+              {/* Ligue(s) parente(s) — maillage interne vers /leagues/{slug} */}
+              {leagues.length > 0 && (
+                <div className="mb-4 flex flex-wrap items-center gap-2">
+                  <span className="text-[10px] uppercase tracking-widest text-gray-500 font-medium">
+                    Saison
+                  </span>
+                  {leagues.map((league) => (
+                    <Link key={league.slug} href={`/leagues/${league.slug}`}>
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[11px] font-medium text-gray-200 hover:border-purple-400/50 hover:bg-purple-500/10 hover:text-purple-200 transition-colors cursor-pointer">
+                        <svg
+                          className="w-3 h-3 text-purple-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                          />
+                        </svg>
+                        {league.name}
+                      </span>
+                    </Link>
+                  ))}
+                </div>
               )}
 
               <Paragraph
@@ -903,6 +913,106 @@ function MatchLine({
     </Link>
   );
 }
+
+/* ---------------------------------------------------------------------------
+ * SEO dynamique par-entité
+ *
+ * `getStaticProps` renvoie `props.seo` (SeoProps), privilégié par `_app.tsx`
+ * sur la propriété statique `Component.seo` (repli dégradé). Le composant
+ * `<Seo>` global gère canonical / og:url / og:image / twitter / site_name ;
+ * on ne réémet donc plus de `<Head>` SEO manuel dans la page.
+ *
+ * JSON-LD : `SportsEvent` (un tournoi = un évènement sportif daté), avec
+ * `eventStatus` corrigé (EventCancelled si annulé, sinon EventScheduled) et un
+ * `offers` gratuit quand les inscriptions sont ouvertes.
+ * -------------------------------------------------------------------------*/
+
+const SEO_BASE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ||
+  'https://owwomenscup.fr';
+
+// Statuts pour lesquels l'inscription d'une équipe reste possible (cohérent
+// avec le bouton « Inscrire mon équipe » du rendu, qui s'affiche tant que le
+// tournoi n'est ni terminé ni annulé).
+const OPEN_REGISTRATION_STATUSES = new Set([
+  'upcoming',
+  'registration',
+  'draft',
+]);
+
+function buildTournamentSeo(tournament: Tournament): SeoProps {
+  const game = tournament.game || 'Overwatch';
+  const dateLabel = formatTournamentDates(
+    tournament.start_date,
+    tournament.end_date
+  );
+  const statusLabel = getStatusLabel(tournament.status);
+
+  const descriptionParts = [
+    `${tournament.name} — tournoi ${game} OW Women's Cup`,
+    dateLabel ? dateLabel.toLowerCase() : null,
+    `(${statusLabel.toLowerCase()}).`,
+    'Bracket, résultats, équipes et calendrier des matchs.',
+  ].filter(Boolean);
+
+  const canonicalUrl = `${SEO_BASE_URL}/tournament/${
+    tournament.slug || tournament.id
+  }`;
+
+  const isCancelled = tournament.status === 'cancelled';
+  const registrationOpen =
+    !isCancelled && OPEN_REGISTRATION_STATUSES.has(tournament.status);
+
+  const jsonLd: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': 'SportsEvent',
+    name: tournament.name,
+    url: canonicalUrl,
+    ...(tournament.start_date ? { startDate: tournament.start_date } : {}),
+    ...(tournament.end_date ? { endDate: tournament.end_date } : {}),
+    eventStatus: isCancelled
+      ? 'https://schema.org/EventCancelled'
+      : 'https://schema.org/EventScheduled',
+    eventAttendanceMode: 'https://schema.org/OnlineEventAttendanceMode',
+    location: {
+      '@type': 'VirtualLocation',
+      url: canonicalUrl,
+    },
+    organizer: {
+      '@type': 'Organization',
+      name: "OW Women's Cup",
+      url: SEO_BASE_URL,
+    },
+    sport: game,
+    inLanguage: 'fr-FR',
+    ...(registrationOpen
+      ? {
+          offers: {
+            '@type': 'Offer',
+            availability: 'InStock',
+            url: `${SEO_BASE_URL}/team/create?tournament=${tournament.id}`,
+            price: '0',
+            priceCurrency: 'EUR',
+          },
+        }
+      : {}),
+  };
+
+  return {
+    title: tournament.name,
+    description: descriptionParts.join(' '),
+    type: 'website',
+    jsonLd,
+  };
+}
+
+const tournamentSeoFallback: SeoProps = {
+  title: 'Tournoi',
+  description:
+    "Suivez les tournois Overwatch de la OW Women's Cup : bracket, résultats, équipes et calendrier des matchs.",
+};
+
+TournamentPage.seo = tournamentSeoFallback;
 
 function formatTournamentDates(
   start?: string | null,

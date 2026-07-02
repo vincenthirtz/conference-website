@@ -1386,11 +1386,21 @@ function MemberCard({
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2 flex-wrap">
-          <p
-            className={`text-sm font-semibold truncate ${substitute ? 'text-gray-300' : 'text-white'}`}
-          >
-            {name}
-          </p>
+          {member.user_id ? (
+            // Maillage interne : lien vers le profil public de la joueuse.
+            <Link
+              href={`/player/${encodeURIComponent(member.user_id)}`}
+              className={`text-sm font-semibold truncate hover:underline ${substitute ? 'text-gray-300 hover:text-white' : 'text-white hover:text-purple-200'}`}
+            >
+              {name}
+            </Link>
+          ) : (
+            <p
+              className={`text-sm font-semibold truncate ${substitute ? 'text-gray-300' : 'text-white'}`}
+            >
+              {name}
+            </p>
+          )}
           {member.is_captain && (
             <svg
               className="w-4 h-4 text-amber-400 flex-shrink-0"

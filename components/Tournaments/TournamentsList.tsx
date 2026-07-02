@@ -8,9 +8,10 @@
 // ce composant ne connaît pas le tenant et n'a pas besoin de le connaître.
 
 import Link from 'next/link';
-import { useMemo } from 'react';
+import { useId, useMemo, useState } from 'react';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
+import { getGame } from '@/config/games';
 
 export type Tournament = {
   id: string;
@@ -29,8 +30,49 @@ export type TournamentsListProps = {
   tournaments: Tournament[];
 };
 
+type StatusFilter = 'all' | 'upcoming' | 'running' | 'past';
+
+// Libellé lisible d'un jeu : réutilise le registry `config/games` si le slug y
+// est connu, sinon retombe sur la valeur brute stockée en base.
+function gameLabel(game: string): string {
+  return getGame(game)?.label ?? game;
+}
+
 export default function TournamentsList({ tournaments }: TournamentsListProps) {
   const now = useMemo(() => new Date(), []);
+
+  // Filtres client-side. Initialisés sur « Tous » / « tous les jeux » / recherche
+  // vide pour que le premier rendu (SSR) contienne l'intégralité du contenu
+  // indexable — les filtres n'enlèvent rien du DOM au chargement initial.
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [gameFilter, setGameFilter] = useState<string>('all');
+  const [search, setSearch] = useState('');
+  const gameSelectId = useId();
+  const searchId = useId();
+
+  // Jeux distincts présents dans la liste (peuple le dropdown dynamiquement).
+  const availableGames = useMemo(() => {
+    const set = new Set<string>();
+    for (const t of tournaments) {
+      if (t.game) set.add(t.game);
+    }
+    return Array.from(set).sort((a, b) =>
+      gameLabel(a).localeCompare(gameLabel(b), 'fr')
+    );
+  }, [tournaments]);
+
+  // Application des filtres jeu + recherche AVANT la classification par statut.
+  const filteredTournaments = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return tournaments.filter((t) => {
+      if (gameFilter !== 'all' && t.game !== gameFilter) return false;
+      if (query) {
+        const haystack = `${t.name} ${t.short_name ?? ''}`.toLowerCase();
+        if (!haystack.includes(query)) return false;
+      }
+      return true;
+    });
+  }, [tournaments, gameFilter, search]);
 
   // Classifier les tournois
   const { running, upcoming, past } = useMemo(() => {
@@ -38,7 +80,7 @@ export default function TournamentsList({ tournaments }: TournamentsListProps) {
     const upcoming: Tournament[] = [];
     const past: Tournament[] = [];
 
-    for (const t of tournaments) {
+    for (const t of filteredTournaments) {
       // Tournoi en cours si status = running OU (published et dates incluent aujourd'hui)
       if (t.status === 'running') {
         running.push(t);
@@ -76,7 +118,26 @@ export default function TournamentsList({ tournaments }: TournamentsListProps) {
     });
 
     return { running, upcoming, past };
-  }, [tournaments, now]);
+  }, [filteredTournaments, now]);
+
+  const showRunning = statusFilter === 'all' || statusFilter === 'running';
+  const showUpcoming = statusFilter === 'all' || statusFilter === 'upcoming';
+  const showPast = statusFilter === 'all' || statusFilter === 'past';
+
+  const visibleCount =
+    (showRunning ? running.length : 0) +
+    (showUpcoming ? upcoming.length : 0) +
+    (showPast ? past.length : 0);
+
+  const statusTabs: { value: StatusFilter; label: string }[] = [
+    { value: 'all', label: 'Tous' },
+    { value: 'upcoming', label: 'À venir' },
+    { value: 'running', label: 'En cours' },
+    { value: 'past', label: 'Terminés' },
+  ];
+
+  const hasActiveFilters =
+    statusFilter !== 'all' || gameFilter !== 'all' || search.trim() !== '';
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
@@ -109,8 +170,85 @@ export default function TournamentsList({ tournaments }: TournamentsListProps) {
           </Paragraph>
         </section>
 
+        {/* Filtres */}
+        <section className="mb-10" aria-label="Filtres des tournois">
+          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            {/* Statut : segmented control */}
+            <div
+              role="tablist"
+              aria-label="Filtrer par statut"
+              className="inline-flex flex-wrap gap-1 rounded-full border border-white/10 bg-white/5 p-1"
+            >
+              {statusTabs.map((tab) => {
+                const active = statusFilter === tab.value;
+                return (
+                  <button
+                    key={tab.value}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => setStatusFilter(tab.value)}
+                    className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-colors ${
+                      active
+                        ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
+                        : 'text-gray-300 hover:text-white'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+              {/* Jeu : dropdown (masqué s'il n'y a qu'un seul jeu) */}
+              {availableGames.length > 1 && (
+                <div className="flex flex-col gap-1">
+                  <label
+                    htmlFor={gameSelectId}
+                    className="text-[11px] uppercase tracking-wide text-gray-400"
+                  >
+                    Jeu
+                  </label>
+                  <select
+                    id={gameSelectId}
+                    value={gameFilter}
+                    onChange={(e) => setGameFilter(e.target.value)}
+                    className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:border-purple-400/60 focus:outline-none focus:ring-1 focus:ring-purple-400/40"
+                  >
+                    <option value="all">Tous les jeux</option>
+                    {availableGames.map((g) => (
+                      <option key={g} value={g}>
+                        {gameLabel(g)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Recherche texte */}
+              <div className="flex flex-col gap-1">
+                <label
+                  htmlFor={searchId}
+                  className="text-[11px] uppercase tracking-wide text-gray-400"
+                >
+                  Rechercher
+                </label>
+                <input
+                  id={searchId}
+                  type="search"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Nom du tournoi…"
+                  className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:border-purple-400/60 focus:outline-none focus:ring-1 focus:ring-purple-400/40"
+                />
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* Tournois en cours */}
-        {running.length > 0 && (
+        {showRunning && running.length > 0 && (
           <section className="mb-12">
             <div className="flex items-center gap-3 mb-6">
               <div className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse" />
@@ -129,7 +267,7 @@ export default function TournamentsList({ tournaments }: TournamentsListProps) {
         )}
 
         {/* Tournois à venir */}
-        {upcoming.length > 0 && (
+        {showUpcoming && upcoming.length > 0 && (
           <section className="mb-12">
             <div className="flex items-center gap-3 mb-6">
               <div className="w-3 h-3 rounded-full bg-amber-500" />
@@ -148,7 +286,7 @@ export default function TournamentsList({ tournaments }: TournamentsListProps) {
         )}
 
         {/* Tournois passés */}
-        {past.length > 0 && (
+        {showPast && past.length > 0 && (
           <section className="mb-12">
             <div className="flex items-center gap-3 mb-6">
               <div className="w-3 h-3 rounded-full bg-gray-500" />
@@ -166,7 +304,7 @@ export default function TournamentsList({ tournaments }: TournamentsListProps) {
           </section>
         )}
 
-        {/* Aucun tournoi */}
+        {/* Aucun tournoi du tout */}
         {tournaments.length === 0 && (
           <section className="text-center py-16">
             <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-white/5 flex items-center justify-center">
@@ -190,6 +328,46 @@ export default function TournamentsList({ tournaments }: TournamentsListProps) {
             <p className="text-gray-400">
               Les prochains tournois seront annoncés bientôt.
             </p>
+          </section>
+        )}
+
+        {/* Aucun tournoi ne correspond aux filtres */}
+        {tournaments.length > 0 && visibleCount === 0 && (
+          <section className="text-center py-16">
+            <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-white/5 flex items-center justify-center">
+              <svg
+                className="w-8 h-8 text-gray-500"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.5}
+                  d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
+                />
+              </svg>
+            </div>
+            <h2 className="text-xl font-semibold mb-2">
+              Aucun tournoi ne correspond
+            </h2>
+            <p className="text-gray-400 mb-6">
+              Essayez d&apos;élargir vos filtres pour voir plus de tournois.
+            </p>
+            {hasActiveFilters && (
+              <button
+                type="button"
+                onClick={() => {
+                  setStatusFilter('all');
+                  setGameFilter('all');
+                  setSearch('');
+                }}
+                className="px-4 py-2 rounded-md bg-purple-500 hover:bg-purple-400 text-sm font-semibold transition-colors"
+              >
+                Réinitialiser les filtres
+              </button>
+            )}
           </section>
         )}
       </main>
@@ -279,7 +457,7 @@ function TournamentCard({ tournament, status }: TournamentCardProps) {
             {tournament.game && (
               <>
                 <span className="text-gray-600">·</span>
-                <span>{tournament.game}</span>
+                <span>{gameLabel(tournament.game)}</span>
               </>
             )}
           </div>
