@@ -173,7 +173,7 @@ async function handler(
     .from('event_segments')
     .insert(insertPayload)
     .select(
-      'id, ord, type, match_id, title, duration_min, planned_start_at, status, started_at, ended_at, broadcast_message, caster_checklist, created_at, updated_at'
+      'id, ord, type, match_id, wave_id, station_id, title, duration_min, planned_start_at, status, started_at, ended_at, broadcast_message, caster_checklist, created_at, updated_at'
     )
     .single();
 

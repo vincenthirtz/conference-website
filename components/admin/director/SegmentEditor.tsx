@@ -27,6 +27,8 @@ import type {
   EventCasterChecklistItem,
   EventRun,
   EventSegment,
+  EventStation,
+  EventWave,
 } from '@/types/events';
 
 type Props = {
@@ -34,12 +36,25 @@ type Props = {
   /** Run parent — utilise pour composer planned_start_at (date du run + heure saisie). */
   run: EventRun | null;
   busy: boolean;
+  /** Waves du run pour le select d'assignation. */
+  waves?: EventWave[];
+  /** Stations du run pour le select d'assignation. */
+  stations?: EventStation[];
   onSave: (patch: {
     title?: string;
     duration_min?: number | null;
     planned_start_at?: string | null;
     broadcast_message?: EventBroadcastMessage | null;
     caster_checklist?: EventCasterChecklistItem[];
+  }) => Promise<void>;
+  /**
+   * Assigne (ou detache) le segment courant a une wave/station. PATCH immediat
+   * (pas de "Enregistrer") — l'assignation est une action atomique et rapide.
+   * Passer null pour detacher.
+   */
+  onAssign?: (patch: {
+    wave_id?: string | null;
+    station_id?: string | null;
   }) => Promise<void>;
 };
 
@@ -156,9 +171,18 @@ function buildBroadcastMessage(form: FormState): EventBroadcastMessage | null {
   return Object.keys(bm).length === 0 ? null : bm;
 }
 
-export default function SegmentEditor({ segment, run, busy, onSave }: Props) {
+export default function SegmentEditor({
+  segment,
+  run,
+  busy,
+  waves = [],
+  stations = [],
+  onSave,
+  onAssign,
+}: Props) {
   const [form, setForm] = useState<FormState>(toForm(segment));
   const [saving, setSaving] = useState(false);
+  const [assigning, setAssigning] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -223,6 +247,22 @@ export default function SegmentEditor({ segment, run, busy, onSave }: Props) {
       anchorEnabled: false,
       anchorTime: '',
     }));
+  }
+
+  async function handleAssign(patch: {
+    wave_id?: string | null;
+    station_id?: string | null;
+  }) {
+    if (!onAssign) return;
+    setError(null);
+    setAssigning(true);
+    try {
+      await onAssign(patch);
+    } catch (err) {
+      setError((err as Error)?.message ?? 'Assignation echouee.');
+    } finally {
+      setAssigning(false);
+    }
   }
 
   async function handleSave() {
@@ -379,6 +419,63 @@ export default function SegmentEditor({ segment, run, busy, onSave }: Props) {
           </div>
         )}
       </div>
+
+      {/* Assignation Wave / Station (PATCH immediat). */}
+      {onAssign && (
+        <div className="rounded-xl border border-neutral-700/40 bg-neutral-900/40 p-3 space-y-2">
+          <h4 className="text-xs font-semibold text-neutral-300 uppercase tracking-wide">
+            Assignation
+          </h4>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[11px] text-neutral-500 mb-1">
+                Wave
+              </label>
+              <select
+                value={segment.wave_id ?? ''}
+                disabled={assigning || busy}
+                onChange={(e) =>
+                  handleAssign({ wave_id: e.target.value || null })
+                }
+                className="w-full px-2 py-1.5 rounded-lg bg-neutral-900/80 border border-neutral-700 text-white text-sm focus:outline-none focus:border-purple-500 disabled:opacity-50"
+                data-testid="segment-wave-select"
+              >
+                <option value="">— aucune</option>
+                {[...waves]
+                  .sort((a, b) => a.ord - b.ord)
+                  .map((w) => (
+                    <option key={w.id} value={w.id}>
+                      {w.title}
+                    </option>
+                  ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[11px] text-neutral-500 mb-1">
+                Station
+              </label>
+              <select
+                value={segment.station_id ?? ''}
+                disabled={assigning || busy}
+                onChange={(e) =>
+                  handleAssign({ station_id: e.target.value || null })
+                }
+                className="w-full px-2 py-1.5 rounded-lg bg-neutral-900/80 border border-neutral-700 text-white text-sm focus:outline-none focus:border-purple-500 disabled:opacity-50"
+                data-testid="segment-station-select"
+              >
+                <option value="">— aucune</option>
+                {[...stations]
+                  .sort((a, b) => a.ord - b.ord)
+                  .map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+              </select>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="space-y-3">
         <div>

@@ -23,6 +23,12 @@ import CasterStatusPanel from '@/components/admin/director/CasterStatusPanel';
 import CueComposer from '@/components/admin/director/CueComposer';
 import CueFeed from '@/components/admin/director/CueFeed';
 import AddSegmentModal from '@/components/admin/director/AddSegmentModal';
+import WaveBoard, {
+  type WaveFormPatch,
+} from '@/components/admin/director/WaveBoard';
+import StationBoard, {
+  type StationFormPatch,
+} from '@/components/admin/director/StationBoard';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
@@ -40,6 +46,10 @@ import type {
   EventRunWithSegments,
   EventSegment,
   EventSegmentType,
+  EventStation,
+  EventStationStatus,
+  EventWave,
+  EventWaveStatus,
 } from '@/types/events';
 
 export const getServerSideProps = withStaffPage('manager');
@@ -61,6 +71,8 @@ function DirectorPage(_props: StaffProps) {
 
   const [run, setRun] = useState<EventRun | null>(null);
   const [segments, setSegments] = useState<EventSegment[]>([]);
+  const [waves, setWaves] = useState<EventWave[]>([]);
+  const [stations, setStations] = useState<EventStation[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -86,6 +98,8 @@ function DirectorPage(_props: StaffProps) {
       );
       setRun(json.run);
       setSegments(json.segments ?? []);
+      setWaves(json.waves ?? []);
+      setStations(json.stations ?? []);
       setErrorMsg(null);
     } catch (err) {
       setErrorMsg((err as Error)?.message ?? 'Erreur de chargement.');
@@ -147,6 +161,44 @@ function DirectorPage(_props: StaffProps) {
       setRun((prev) =>
         prev ? ({ ...prev, ...partial } as EventRun) : (partial as EventRun)
       );
+    },
+    onWaveChange: (eventType, partial) => {
+      if (eventType === 'DELETE') {
+        setWaves((prev) => prev.filter((w) => w.id !== partial.id));
+        return;
+      }
+      setWaves((prev) => {
+        const existing = prev.findIndex((w) => w.id === partial.id);
+        if (existing === -1) {
+          const next = [...prev, partial as EventWave];
+          next.sort((a, b) => a.ord - b.ord);
+          return next;
+        }
+        const merged = { ...prev[existing], ...partial } as EventWave;
+        const next = [...prev];
+        next[existing] = merged;
+        next.sort((a, b) => a.ord - b.ord);
+        return next;
+      });
+    },
+    onStationChange: (eventType, partial) => {
+      if (eventType === 'DELETE') {
+        setStations((prev) => prev.filter((s) => s.id !== partial.id));
+        return;
+      }
+      setStations((prev) => {
+        const existing = prev.findIndex((s) => s.id === partial.id);
+        if (existing === -1) {
+          const next = [...prev, partial as EventStation];
+          next.sort((a, b) => a.ord - b.ord);
+          return next;
+        }
+        const merged = { ...prev[existing], ...partial } as EventStation;
+        const next = [...prev];
+        next[existing] = merged;
+        next.sort((a, b) => a.ord - b.ord);
+        return next;
+      });
     },
   });
 
@@ -515,6 +567,290 @@ function DirectorPage(_props: StaffProps) {
   }
 
   /* -----------------------------------------------------------
+   * Assignation wave/station d'un segment (PATCH immediat).
+   * ---------------------------------------------------------*/
+
+  async function handleAssignSegment(patch: {
+    wave_id?: string | null;
+    station_id?: string | null;
+  }) {
+    if (!runId || !selectedSegment)
+      throw new Error('Aucun segment selectionne.');
+    regenerate();
+    const json = await mutateJson<EventSegment>(
+      `/api/admin/events/${runId}/segments/${selectedSegment.id}`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify(patch),
+      }
+    );
+    setSegments((prev) => prev.map((s) => (s.id === json.id ? json : s)));
+    addToast('Assignation mise a jour.', 'success');
+  }
+
+  /* -----------------------------------------------------------
+   * Waves — CRUD + statut + reorder. Toutes les mutations regenerent la clef
+   * d'idempotence (intentions distinctes) et maj l'etat local depuis la
+   * reponse canonique de l'API.
+   * ---------------------------------------------------------*/
+
+  async function handleCreateWave(patch: WaveFormPatch) {
+    if (!runId) return;
+    setBusy(true);
+    regenerate();
+    try {
+      const json = await mutateJson<{ wave: EventWave }>(
+        `/api/admin/events/${runId}/waves`,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            title: patch.title,
+            planned_start_at: patch.planned_start_at,
+            duration_min: patch.duration_min,
+          }),
+        }
+      );
+      setWaves((prev) => [...prev, json.wave].sort((a, b) => a.ord - b.ord));
+      addToast('Wave creee.', 'success');
+    } catch (err) {
+      addToast((err as Error)?.message ?? 'Creation echouee.', 'error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleUpdateWave(
+    waveId: string,
+    patch: Partial<WaveFormPatch>
+  ) {
+    if (!runId) return;
+    setBusy(true);
+    regenerate();
+    try {
+      const json = await mutateJson<{ wave: EventWave }>(
+        `/api/admin/events/${runId}/waves/${waveId}`,
+        { method: 'PATCH', body: JSON.stringify(patch) }
+      );
+      setWaves((prev) =>
+        prev
+          .map((w) => (w.id === json.wave.id ? json.wave : w))
+          .sort((a, b) => a.ord - b.ord)
+      );
+      addToast('Wave mise a jour.', 'success');
+    } catch (err) {
+      addToast((err as Error)?.message ?? 'Mise a jour echouee.', 'error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleSetWaveStatus(wave: EventWave, status: EventWaveStatus) {
+    if (!runId) return;
+    if (status === 'skipped') {
+      const ok = await confirm({
+        title: `Passer la wave "${wave.title}" ?`,
+        subtitle: 'La wave sera marquee "passee".',
+        variant: 'warning',
+        confirmLabel: 'Passer',
+      });
+      if (!ok) return;
+    }
+    setBusy(true);
+    regenerate();
+    try {
+      const json = await mutateJson<{ wave: EventWave }>(
+        `/api/admin/events/${runId}/waves/${wave.id}`,
+        { method: 'PATCH', body: JSON.stringify({ status }) }
+      );
+      setWaves((prev) =>
+        prev.map((w) => (w.id === json.wave.id ? json.wave : w))
+      );
+      addToast('Statut de la wave mis a jour.', 'success');
+    } catch (err) {
+      addToast((err as Error)?.message ?? 'Changement echoue.', 'error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleDeleteWave(wave: EventWave) {
+    if (!runId) return;
+    const ok = await confirm({
+      title: `Supprimer la wave "${wave.title}" ?`,
+      subtitle:
+        'Les segments rattaches ne seront pas supprimes mais detaches de la wave.',
+      variant: 'danger',
+      confirmLabel: 'Supprimer',
+    });
+    if (!ok) return;
+    setBusy(true);
+    regenerate();
+    try {
+      const res = await mutate(`/api/admin/events/${runId}/waves/${wave.id}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) {
+        const payload = await res.json().catch(() => null);
+        throw new Error(
+          payload?.error ?? `Suppression echouee (${res.status}).`
+        );
+      }
+      setWaves((prev) => prev.filter((w) => w.id !== wave.id));
+      // Les segments rattaches ont wave_id remis a NULL cote DB (FK SET NULL).
+      setSegments((prev) =>
+        prev.map((s) => (s.wave_id === wave.id ? { ...s, wave_id: null } : s))
+      );
+      addToast('Wave supprimee.', 'success');
+    } catch (err) {
+      addToast((err as Error)?.message ?? 'Suppression echouee.', 'error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleReorderWaves(orderedIds: string[]) {
+    if (!runId) return;
+    const prev = waves;
+    // Optimistic : reassigne ord selon la nouvelle position.
+    setWaves(() =>
+      orderedIds
+        .map((id, idx) => {
+          const w = prev.find((x) => x.id === id);
+          return w ? { ...w, ord: idx } : null;
+        })
+        .filter((w): w is EventWave => w !== null)
+    );
+    setBusy(true);
+    regenerate();
+    try {
+      const json = await mutateJson<{ waves: EventWave[] }>(
+        `/api/admin/events/${runId}/waves/reorder`,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            order: orderedIds.map((id, idx) => ({ id, ord: idx })),
+          }),
+        }
+      );
+      if (json.waves) setWaves(json.waves);
+    } catch (err) {
+      addToast(
+        (err as Error)?.message ?? 'Reorder echoue, restauration.',
+        'error'
+      );
+      setWaves(prev);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /* -----------------------------------------------------------
+   * Stations — CRUD + statut.
+   * ---------------------------------------------------------*/
+
+  async function handleCreateStation(patch: StationFormPatch) {
+    if (!runId) return;
+    setBusy(true);
+    regenerate();
+    try {
+      const json = await mutateJson<{ station: EventStation }>(
+        `/api/admin/events/${runId}/stations`,
+        { method: 'POST', body: JSON.stringify(patch) }
+      );
+      setStations((prev) =>
+        [...prev, json.station].sort((a, b) => a.ord - b.ord)
+      );
+      addToast('Station creee.', 'success');
+    } catch (err) {
+      addToast((err as Error)?.message ?? 'Creation echouee.', 'error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleUpdateStation(
+    stationId: string,
+    patch: Partial<StationFormPatch>
+  ) {
+    if (!runId) return;
+    setBusy(true);
+    regenerate();
+    try {
+      const json = await mutateJson<{ station: EventStation }>(
+        `/api/admin/events/${runId}/stations/${stationId}`,
+        { method: 'PATCH', body: JSON.stringify(patch) }
+      );
+      setStations((prev) =>
+        prev.map((s) => (s.id === json.station.id ? json.station : s))
+      );
+      addToast('Station mise a jour.', 'success');
+    } catch (err) {
+      addToast((err as Error)?.message ?? 'Mise a jour echouee.', 'error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleSetStationStatus(
+    station: EventStation,
+    status: EventStationStatus
+  ) {
+    if (!runId) return;
+    setBusy(true);
+    regenerate();
+    try {
+      const json = await mutateJson<{ station: EventStation }>(
+        `/api/admin/events/${runId}/stations/${station.id}`,
+        { method: 'PATCH', body: JSON.stringify({ status }) }
+      );
+      setStations((prev) =>
+        prev.map((s) => (s.id === json.station.id ? json.station : s))
+      );
+    } catch (err) {
+      addToast((err as Error)?.message ?? 'Changement echoue.', 'error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleDeleteStation(station: EventStation) {
+    if (!runId) return;
+    const ok = await confirm({
+      title: `Supprimer la station "${station.name}" ?`,
+      subtitle:
+        'Les segments rattaches ne seront pas supprimes mais detaches de la station.',
+      variant: 'danger',
+      confirmLabel: 'Supprimer',
+    });
+    if (!ok) return;
+    setBusy(true);
+    regenerate();
+    try {
+      const res = await mutate(
+        `/api/admin/events/${runId}/stations/${station.id}`,
+        { method: 'DELETE' }
+      );
+      if (!res.ok) {
+        const payload = await res.json().catch(() => null);
+        throw new Error(
+          payload?.error ?? `Suppression echouee (${res.status}).`
+        );
+      }
+      setStations((prev) => prev.filter((s) => s.id !== station.id));
+      setSegments((prev) =>
+        prev.map((s) =>
+          s.station_id === station.id ? { ...s, station_id: null } : s
+        )
+      );
+      addToast('Station supprimee.', 'success');
+    } catch (err) {
+      addToast((err as Error)?.message ?? 'Suppression echouee.', 'error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /* -----------------------------------------------------------
    * Render
    * ---------------------------------------------------------*/
 
@@ -605,7 +941,10 @@ function DirectorPage(_props: StaffProps) {
                       segment={selectedSegment}
                       run={run}
                       busy={busy}
+                      waves={waves}
+                      stations={stations}
                       onSave={handleSaveSegment}
+                      onAssign={handleAssignSegment}
                     />
                   </div>
                   <div className="order-4 lg:order-none">
@@ -638,6 +977,34 @@ function DirectorPage(_props: StaffProps) {
                     runId={runId ?? ''}
                     casters={casters}
                     optimisticCue={optimisticCue}
+                  />
+                </div>
+              </div>
+
+              {/* Waves + Stations — regroupements logiques et postes de prod. */}
+              <div>
+                <h2 className="mb-3 text-sm font-semibold text-neutral-300 uppercase tracking-wide">
+                  Waves &amp; Stations
+                </h2>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <WaveBoard
+                    waves={waves}
+                    segments={segments}
+                    busy={busy}
+                    onCreate={handleCreateWave}
+                    onUpdate={handleUpdateWave}
+                    onSetStatus={handleSetWaveStatus}
+                    onDelete={handleDeleteWave}
+                    onReorder={handleReorderWaves}
+                  />
+                  <StationBoard
+                    stations={stations}
+                    segments={segments}
+                    busy={busy}
+                    onCreate={handleCreateStation}
+                    onUpdate={handleUpdateStation}
+                    onSetStatus={handleSetStationStatus}
+                    onDelete={handleDeleteStation}
                   />
                 </div>
               </div>

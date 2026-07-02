@@ -7,6 +7,8 @@ import type {
   EventRunStatus,
   EventSegmentStatus,
   EventSegmentType,
+  EventStationStatus,
+  EventWaveStatus,
 } from '@/types/events';
 
 /* -----------------------------------------------------------
@@ -122,6 +124,76 @@ export function runStatusDotClasses(status: EventRunStatus | string): string {
     case 'done':
       return 'bg-neutral-400';
     case 'draft':
+    default:
+      return 'bg-neutral-300';
+  }
+}
+
+/* -----------------------------------------------------------
+ * Statuts de wave (memes valeurs que segment : on reutilise le style)
+ * ---------------------------------------------------------*/
+
+export const WAVE_STATUS_LABEL: Record<EventWaveStatus, string> = {
+  upcoming: 'A venir',
+  live: 'En direct',
+  done: 'Termine',
+  skipped: 'Passe',
+};
+
+export function waveStatusLabel(status: EventWaveStatus | string): string {
+  return WAVE_STATUS_LABEL[status as EventWaveStatus] ?? String(status);
+}
+
+/** Reutilise exactement le style des badges de segment (memes statuts). */
+export function waveStatusBadgeClasses(
+  status: EventWaveStatus | string
+): string {
+  return segmentStatusBadgeClasses(status);
+}
+
+export function waveStatusDotClasses(status: EventWaveStatus | string): string {
+  return segmentStatusDotClasses(status);
+}
+
+/* -----------------------------------------------------------
+ * Statuts de station de production
+ * ---------------------------------------------------------*/
+
+export const STATION_STATUS_LABEL: Record<EventStationStatus, string> = {
+  idle: 'Libre',
+  in_use: 'En service',
+  offline: 'Hors ligne',
+};
+
+export function stationStatusLabel(
+  status: EventStationStatus | string
+): string {
+  return STATION_STATUS_LABEL[status as EventStationStatus] ?? String(status);
+}
+
+export function stationStatusBadgeClasses(
+  status: EventStationStatus | string
+): string {
+  switch (status) {
+    case 'in_use':
+      return 'bg-emerald-500/15 border border-emerald-500/40 text-emerald-300';
+    case 'offline':
+      return 'bg-red-500/15 border border-red-500/40 text-red-300';
+    case 'idle':
+    default:
+      return 'bg-neutral-600/40 border border-neutral-500/40 text-neutral-200';
+  }
+}
+
+export function stationStatusDotClasses(
+  status: EventStationStatus | string
+): string {
+  switch (status) {
+    case 'in_use':
+      return 'bg-emerald-400 animate-pulse';
+    case 'offline':
+      return 'bg-red-400';
+    case 'idle':
     default:
       return 'bg-neutral-300';
   }

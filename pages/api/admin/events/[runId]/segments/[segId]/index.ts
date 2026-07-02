@@ -40,6 +40,10 @@ const UpdateSegmentSchema = z
     duration_min: z.number().int().positive().nullable().optional(),
     // Lot 6 timing : override ancrage horaire absolu. null = unlock (revient au mode computed).
     planned_start_at: z.string().datetime().nullable().optional(),
+    // Feature Waves + Stations : assignation d'un segment a une wave / station.
+    // null = detache. La wave/station citee doit appartenir au meme run+tenant.
+    wave_id: z.string().uuid().nullable().optional(),
+    station_id: z.string().uuid().nullable().optional(),
     broadcast_message: BroadcastMessageSchema.optional(),
     caster_checklist: z.array(ChecklistItemSchema).optional(),
   })
@@ -80,7 +84,7 @@ async function handler(
   const { data: segment, error: segErr } = await admin
     .from('event_segments')
     .select(
-      'id, event_run_id, tenant_id, ord, type, match_id, title, duration_min, status, started_at, ended_at, broadcast_message, caster_checklist, created_at, updated_at'
+      'id, event_run_id, tenant_id, ord, type, match_id, wave_id, station_id, title, duration_min, status, started_at, ended_at, broadcast_message, caster_checklist, created_at, updated_at'
     )
     .eq('id', segId)
     .eq('event_run_id', runId)
@@ -110,12 +114,50 @@ async function handler(
     }
     const body = parsed.data;
 
+    // Validation d'appartenance : une wave/station assignee doit exister dans
+    // le meme run + tenant (defense contre le cross-run/cross-tenant).
+    if (body.wave_id !== undefined && body.wave_id !== null) {
+      const { data: wave } = await admin
+        .from('event_waves')
+        .select('id')
+        .eq('id', body.wave_id)
+        .eq('event_run_id', runId)
+        .eq('tenant_id', ctx.tenantId)
+        .maybeSingle();
+      if (!wave) {
+        return res.status(400).json({
+          error:
+            "La wave_id referencee n'existe pas ou n'appartient pas a ce run.",
+          code: 'INVALID_WAVE_ID',
+        });
+      }
+    }
+    if (body.station_id !== undefined && body.station_id !== null) {
+      const { data: st } = await admin
+        .from('event_stations')
+        .select('id')
+        .eq('id', body.station_id)
+        .eq('event_run_id', runId)
+        .eq('tenant_id', ctx.tenantId)
+        .maybeSingle();
+      if (!st) {
+        return res.status(400).json({
+          error:
+            "La station_id referencee n'existe pas ou n'appartient pas a ce run.",
+          code: 'INVALID_STATION_ID',
+        });
+      }
+    }
+
     const updatePayload: Record<string, unknown> = {};
     if (body.title !== undefined) updatePayload.title = body.title;
     if (body.duration_min !== undefined)
       updatePayload.duration_min = body.duration_min;
     if (body.planned_start_at !== undefined)
       updatePayload.planned_start_at = body.planned_start_at;
+    if (body.wave_id !== undefined) updatePayload.wave_id = body.wave_id;
+    if (body.station_id !== undefined)
+      updatePayload.station_id = body.station_id;
     if (body.broadcast_message !== undefined)
       updatePayload.broadcast_message = body.broadcast_message;
     if (body.caster_checklist !== undefined)
@@ -134,7 +176,7 @@ async function handler(
       .eq('event_run_id', runId)
       .eq('tenant_id', ctx.tenantId)
       .select(
-        'id, ord, type, match_id, title, duration_min, planned_start_at, status, started_at, ended_at, broadcast_message, caster_checklist, created_at, updated_at'
+        'id, ord, type, match_id, wave_id, station_id, title, duration_min, planned_start_at, status, started_at, ended_at, broadcast_message, caster_checklist, created_at, updated_at'
       )
       .single();
 

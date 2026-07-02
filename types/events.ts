@@ -36,11 +36,60 @@ export type EventRun = {
   updated_at: string | null;
 };
 
+/**
+ * Statut d'une wave (regroupement logique de segments, cf. migration
+ * create_event_waves_and_stations_tables.sql).
+ */
+export type EventWaveStatus = 'upcoming' | 'live' | 'done' | 'skipped';
+
+/** Statut d'une station de production (poste caster/stream). */
+export type EventStationStatus = 'idle' | 'in_use' | 'offline';
+
+/**
+ * Wave : regroupement ordonne de segments dans un event_run (ex : "Poules
+ * matin", "Finale"). tenant_id denormalise depuis le run (meme rationale que
+ * event_segments : filtre realtime/SQL sans JOIN).
+ */
+export type EventWave = {
+  id: string;
+  tenant_id: string;
+  event_run_id: string;
+  ord: number;
+  title: string;
+  planned_start_at: string | null;
+  duration_min: number | null;
+  status: EventWaveStatus;
+  started_at: string | null;
+  ended_at: string | null;
+  created_at: string;
+  updated_at: string | null;
+};
+
+/**
+ * Station : poste de production (stream/caster) rattachable a des segments.
+ */
+export type EventStation = {
+  id: string;
+  tenant_id: string;
+  event_run_id: string;
+  ord: number;
+  name: string;
+  stream_url: string | null;
+  notes: string | null;
+  status: EventStationStatus;
+  created_at: string;
+  updated_at: string | null;
+};
+
 export type EventSegment = {
   id: string;
   ord: number;
   type: EventSegmentType;
   match_id: string | null;
+  /** Wave a laquelle ce segment est rattache (NULL = non assigne). */
+  wave_id: string | null;
+  /** Station de production assignee a ce segment (NULL = non assigne). */
+  station_id: string | null;
   title: string;
   duration_min: number | null;
   status: EventSegmentStatus;
@@ -65,6 +114,8 @@ export type EventSegment = {
 export type EventRunWithSegments = {
   run: EventRun;
   segments: EventSegment[];
+  waves: EventWave[];
+  stations: EventStation[];
 };
 
 // ---------------------------------------------------------------------------

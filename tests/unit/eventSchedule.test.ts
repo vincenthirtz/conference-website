@@ -17,6 +17,8 @@ function makeSegment(overrides: Partial<EventSegment> & { id: string; ord: numbe
     ord: overrides.ord,
     type: overrides.type ?? 'match',
     match_id: overrides.match_id ?? null,
+    wave_id: overrides.wave_id ?? null,
+    station_id: overrides.station_id ?? null,
     title: overrides.title ?? `Segment ${overrides.ord}`,
     // `?? 15` masquerait un override explicite a `null` → on teste la cle.
     duration_min:

@@ -20,7 +20,14 @@
 
 import { useCallback } from 'react';
 import { useRealtimeChannel } from './useRealtimeChannel';
-import type { EventRun, EventSegment } from '@/types/events';
+import type {
+  EventRun,
+  EventSegment,
+  EventStation,
+  EventWave,
+} from '@/types/events';
+
+type ChangeType = 'INSERT' | 'UPDATE' | 'DELETE';
 
 type Options = {
   enabled?: boolean;
@@ -30,10 +37,23 @@ type Options = {
    * realtime sans reset complet. On passe les setters typiquement.
    */
   onSegmentChange: (
-    eventType: 'INSERT' | 'UPDATE' | 'DELETE',
+    eventType: ChangeType,
     segment: Partial<EventSegment> & { id?: string }
   ) => void;
   onRunChange: (run: Partial<EventRun> & { id?: string }) => void;
+  /**
+   * Optionnels — feature Waves + Stations. Si fournis, le hook s'abonne aussi
+   * aux tables event_waves / event_stations (filtre event_run_id). Si absents,
+   * aucune souscription supplementaire (le parent garde son fallback refetch).
+   */
+  onWaveChange?: (
+    eventType: ChangeType,
+    wave: Partial<EventWave> & { id?: string }
+  ) => void;
+  onStationChange?: (
+    eventType: ChangeType,
+    station: Partial<EventStation> & { id?: string }
+  ) => void;
 };
 
 export function useEventRunRealtime({
@@ -41,6 +61,8 @@ export function useEventRunRealtime({
   runId,
   onSegmentChange,
   onRunChange,
+  onWaveChange,
+  onStationChange,
 }: Options) {
   const isEnabled = enabled && !!runId;
 
@@ -76,6 +98,44 @@ export function useEventRunRealtime({
     [onRunChange]
   );
 
+  const handleWaves = useCallback(
+    (payload: {
+      eventType: string;
+      new: Record<string, unknown>;
+      old: Record<string, unknown>;
+    }) => {
+      if (!onWaveChange) return;
+      const type = payload.eventType as ChangeType;
+      if (type === 'DELETE') {
+        const old = payload.old as Partial<EventWave> & { id?: string };
+        if (old?.id) onWaveChange('DELETE', { id: old.id });
+        return;
+      }
+      const row = payload.new as Partial<EventWave> & { id?: string };
+      if (row?.id) onWaveChange(type, row);
+    },
+    [onWaveChange]
+  );
+
+  const handleStations = useCallback(
+    (payload: {
+      eventType: string;
+      new: Record<string, unknown>;
+      old: Record<string, unknown>;
+    }) => {
+      if (!onStationChange) return;
+      const type = payload.eventType as ChangeType;
+      if (type === 'DELETE') {
+        const old = payload.old as Partial<EventStation> & { id?: string };
+        if (old?.id) onStationChange('DELETE', { id: old.id });
+        return;
+      }
+      const row = payload.new as Partial<EventStation> & { id?: string };
+      if (row?.id) onStationChange(type, row);
+    },
+    [onStationChange]
+  );
+
   useRealtimeChannel({
     enabled: isEnabled,
     channel: `event-segments-${runId ?? 'none'}`,
@@ -90,5 +150,21 @@ export function useEventRunRealtime({
     table: 'event_runs',
     filter: runId ? `id=eq.${runId}` : undefined,
     onChange: handleRun,
+  });
+
+  useRealtimeChannel({
+    enabled: isEnabled && !!onWaveChange,
+    channel: `event-waves-${runId ?? 'none'}`,
+    table: 'event_waves',
+    filter: runId ? `event_run_id=eq.${runId}` : undefined,
+    onChange: handleWaves,
+  });
+
+  useRealtimeChannel({
+    enabled: isEnabled && !!onStationChange,
+    channel: `event-stations-${runId ?? 'none'}`,
+    table: 'event_stations',
+    filter: runId ? `event_run_id=eq.${runId}` : undefined,
+    onChange: handleStations,
   });
 }

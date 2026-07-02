@@ -70,7 +70,7 @@ async function handler(
     const { data: segments, error: segErr } = await admin
       .from('event_segments')
       .select(
-        'id, ord, type, match_id, title, duration_min, planned_start_at, status, started_at, ended_at, broadcast_message, caster_checklist, created_at, updated_at'
+        'id, ord, type, match_id, wave_id, station_id, title, duration_min, planned_start_at, status, started_at, ended_at, broadcast_message, caster_checklist, created_at, updated_at'
       )
       .eq('event_run_id', runId)
       .eq('tenant_id', ctx.tenantId)
@@ -81,9 +81,40 @@ async function handler(
       return res.status(500).json({ error: 'Failed to load segments.' });
     }
 
+    const { data: waves, error: wavesErr } = await admin
+      .from('event_waves')
+      .select(
+        'id, tenant_id, event_run_id, ord, title, planned_start_at, duration_min, status, started_at, ended_at, created_at, updated_at'
+      )
+      .eq('event_run_id', runId)
+      .eq('tenant_id', ctx.tenantId)
+      .order('ord', { ascending: true });
+
+    if (wavesErr) {
+      logger.error('[admin/events/[runId]] waves error', wavesErr);
+      return res.status(500).json({ error: 'Failed to load waves.' });
+    }
+
+    const { data: stations, error: stationsErr } = await admin
+      .from('event_stations')
+      .select(
+        'id, tenant_id, event_run_id, ord, name, stream_url, notes, status, created_at, updated_at'
+      )
+      .eq('event_run_id', runId)
+      .eq('tenant_id', ctx.tenantId)
+      .order('ord', { ascending: true })
+      .order('name', { ascending: true });
+
+    if (stationsErr) {
+      logger.error('[admin/events/[runId]] stations error', stationsErr);
+      return res.status(500).json({ error: 'Failed to load stations.' });
+    }
+
     return res.status(200).json({
       run,
       segments: segments ?? [],
+      waves: waves ?? [],
+      stations: stations ?? [],
     });
   }
 
