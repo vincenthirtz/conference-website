@@ -12,6 +12,11 @@ import {
   getManagedTeam,
   TEAM_MANAGEMENT_FORBIDDEN,
 } from '@/utils/teams/managementAccess';
+import {
+  isTeamRosterLocked,
+  rosterLockErrorMessage,
+} from '@/utils/teams/rosterLock';
+import { mapTeamRpcError } from '@/utils/teams/rpcErrors';
 import { resolveTenantIdForUserRequest } from '@/utils/tenant';
 
 import { logger } from '../../../utils/logger';
@@ -176,96 +181,42 @@ async function handlePost(
   const newStatus = action === 'approve' ? 'approved' : 'rejected';
 
   if (action === 'approve') {
+    // Role/battle_tag lus uniquement pour la news (effet de bord). La mutation
+    // roster (retrait ancienne equipe + ajout cible) est deleguee a la RPC
+    // transactionnelle, qui resout l'appartenance REELLE du joueur — on
+    // n'utilise plus payload.from_team_id pour muter (il pouvait etre perime).
     const desiredRole = validateRole((demande.payload as any)?.desired_role);
-    let battleTag = (demande.payload as any)?.user_battle_tag || null;
-    const fromTeamId = (demande.payload as any)?.from_team_id;
+    const battleTag = (demande.payload as any)?.user_battle_tag || null;
 
-    // If no battle_tag in payload, retrieve from current team membership
-    if (!battleTag && fromTeamId) {
-      const { data: currentMember } = await supabaseAdmin!
-        .from('team_members')
-        .select('battle_tag')
-        .eq('user_id', demande.user_id)
-        .eq('team_id', fromTeamId)
-        .eq('tenant_id', tenantId)
-        .maybeSingle();
-      if (currentMember?.battle_tag) {
-        battleTag = currentMember.battle_tag;
-      }
+    // Roster lock cote team cible : refuser si un tournoi l'a verrouille.
+    // (Garde absente auparavant.) L'admin peut forcer via /api/admin/*.
+    const lockStatus = await isTeamRosterLocked(tenantId, captainTeam.id);
+    if (lockStatus.locked) {
+      return res
+        .status(409)
+        .json({ error: rosterLockErrorMessage(lockStatus) });
     }
 
-    // Check max_players limit (coaches are excluded)
-    if (desiredRole !== 'coach') {
-      const [{ count: currentNonCoachCount }, { data: teamTournaments }] =
-        await Promise.all([
-          supabaseAdmin!
-            .from('team_members')
-            .select('*', { count: 'exact', head: true })
-            .eq('team_id', captainTeam.id)
-            .eq('tenant_id', tenantId)
-            .neq('role', 'coach'),
-          supabaseAdmin!
-            .from('tournament_teams')
-            .select('tournament_id, tournaments!inner(max_players)')
-            .eq('team_id', captainTeam.id)
-            .eq('tenant_id', tenantId),
-        ]);
+    // Transfert atomique : verrou FOR UPDATE + CAS status pending->approved +
+    // retrait de l'appartenance reelle + insert dans la cible + garde
+    // max_players (trigger). Gere aussi le cas « deja dans la cible ».
+    const { error: rpcErr } = await supabaseAdmin!.rpc(
+      'approve_transfer_request',
+      { p_demande_id: demandeId }
+    );
 
-      if (teamTournaments && teamTournaments.length > 0) {
-        for (const tt of teamTournaments) {
-          const maxPlayers = (tt as any).tournaments?.max_players;
-          if (maxPlayers && (currentNonCoachCount ?? 0) >= maxPlayers) {
-            return res.status(400).json({
-              error: `L'equipe a atteint la limite de ${maxPlayers} joueur(s) imposee par un tournoi.`,
-            });
-          }
-        }
-      }
-    }
-
-    // Remove player from old team
-    if (fromTeamId) {
-      const { error: removeErr } = await supabaseAdmin!
-        .from('team_members')
-        .delete()
-        .eq('user_id', demande.user_id)
-        .eq('team_id', fromTeamId)
-        .eq('tenant_id', tenantId);
-
-      if (removeErr) {
+    if (rpcErr) {
+      const mapped = mapTeamRpcError(rpcErr);
+      if (mapped.status >= 500) {
         logger.error(
-          '[transfer-requests] remove from old team error:',
-          removeErr
+          '[transfer-requests] approve_transfer_request rpc error:',
+          rpcErr
         );
-        return res
-          .status(500)
-          .json({ error: "Echec du retrait de l'ancienne equipe." });
       }
+      return res.status(mapped.status).json({ error: mapped.error });
     }
 
-    // Add player to new team
-    const { error: insertErr } = await supabaseAdmin!
-      .from('team_members')
-      .insert({
-        team_id: captainTeam.id,
-        user_id: demande.user_id,
-        role: desiredRole,
-        battle_tag: battleTag,
-        is_substitute: desiredRole === 'substitute',
-        tenant_id: tenantId,
-      });
-
-    if (insertErr) {
-      logger.error('[transfer-requests] insert new member error:', insertErr);
-      const msg =
-        insertErr.message?.includes('duplicate') ||
-        insertErr.message?.includes('unique')
-          ? 'Ce joueur est deja dans une equipe.'
-          : "Echec de l'ajout du membre.";
-      return res.status(400).json({ error: msg });
-    }
-
-    // Auto news
+    // Auto news (effet de bord APRES succes de la RPC, best-effort).
     try {
       const playerName =
         battleTag?.split('#')[0] ||
@@ -288,9 +239,16 @@ async function handlePost(
     } catch (newsErr) {
       logger.error('[transfer-requests] create news error:', newsErr);
     }
+
+    return res.status(200).json({
+      success: true,
+      demandeId,
+      newStatus,
+      message: "Transfert accepte, joueur ajoute a l'equipe.",
+    });
   }
 
-  // Update demande status
+  // Reject : simple update de statut (pas de mutation roster).
   const { error: updateErr } = await supabaseAdmin!
     .from('demandes')
     .update({
@@ -312,9 +270,6 @@ async function handlePost(
     success: true,
     demandeId,
     newStatus,
-    message:
-      action === 'approve'
-        ? "Transfert accepte, joueur ajoute a l'equipe."
-        : 'Demande de transfert rejetee.',
+    message: 'Demande de transfert rejetee.',
   });
 }

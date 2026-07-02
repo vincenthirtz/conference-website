@@ -205,7 +205,39 @@ describe('PATCH /api/teams/transfer-captain', () => {
 
     expect(res.statusCode).toBe(400);
     expect(res.body).toMatchObject({
-      error: expect.stringContaining("n'est pas membre"),
+      error: expect.stringContaining("n'est pas un membre valide"),
+    });
+    expect(store.teams[0].captain_id).toBe(CAPTAIN_ID);
+    expect(emitRoleSyncEvent).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 when the target is a coach (coaches excluded from captaincy)', async () => {
+    authAs(CAPTAIN_ID);
+    // Le membre cible existe mais avec le rôle coach → capitanat interdit.
+    store.team_members = [
+      {
+        id: '11111111-1111-1111-1111-111111111111',
+        team_id: TEAM_ID,
+        user_id: CAPTAIN_ID,
+        role: 'player',
+        tenant_id: CONFERENCE_TENANT_ID,
+      },
+      {
+        id: '44444444-4444-4444-4444-444444444444',
+        team_id: TEAM_ID,
+        user_id: MEMBER_ID,
+        role: 'coach',
+        tenant_id: CONFERENCE_TENANT_ID,
+      },
+    ];
+    const req = makeAuthedReq({ body: { newCaptainUserId: MEMBER_ID } });
+    const res = makeRes();
+
+    await transferCaptainHandler(req, res);
+
+    expect(res.statusCode).toBe(400);
+    expect(res.body).toMatchObject({
+      error: expect.stringContaining('coach'),
     });
     expect(store.teams[0].captain_id).toBe(CAPTAIN_ID);
     expect(emitRoleSyncEvent).not.toHaveBeenCalled();

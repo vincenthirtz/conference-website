@@ -432,7 +432,10 @@
     "submitting": "Envoi en cours...",
     "submit": "Envoyer ma demande",
     "ctaQuestion": "Tu veux creer ta propre equipe ?",
-    "becomeCaptain": "Devenir capitaine"
+    "becomeCaptain": "Devenir capitaine",
+    "alreadyInTeamTitle": "Tu fais deja partie d'une equipe",
+    "alreadyInTeamBody": "Tu es deja membre de \"{teamName}\". Pour changer d'equipe, passe par Demandes › Transfert.",
+    "alreadyInTeamCta": "Aller a mes demandes de transfert →"
   },
   "manageTeam": {
     "loadError": "Erreur de chargement.",
@@ -626,6 +629,7 @@
     "errTeamNameRequired": "Le nom de l'equipe est requis.",
     "errTeamNameTooShort": "Le nom de l'equipe doit contenir au moins 2 caracteres.",
     "errInvalidEmail": "Email invalide : {email}",
+    "errMemberInvalid": "Corrige les erreurs sur les membres avant d'envoyer (BattleTag, email ou doublon).",
     "errCreateRequest": "Impossible de creer la demande.",
     "errGeneric": "Une erreur est survenue.",
     "fallbackSelectedTeam": "l'equipe selectionnee",

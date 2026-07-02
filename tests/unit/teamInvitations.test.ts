@@ -18,7 +18,12 @@ vi.mock('@/utils/supabase', async () => {
   return { supabaseAdmin: m.supabaseAdmin, getServerClient: m.getServerClient };
 });
 
-import { store, resetSupabaseMock } from './__helpers__/supabaseMock';
+import {
+  store,
+  resetSupabaseMock,
+  setRpcResult,
+  rpcCalls,
+} from './__helpers__/supabaseMock';
 import {
   createInvitation,
   acceptInvitation,
@@ -185,22 +190,54 @@ describe('acceptInvitation', () => {
     return id;
   }
 
-  it('inserts the member with role + specialty and marks the demande approved', async () => {
+  it('delegates the insert + approval to the accept_invitation RPC', async () => {
     const id = seedPending();
+    // La RPC transactionnelle insère le membre + passe la demande approved et
+    // renvoie la ligne team_members créée.
+    setRpcResult('accept_invitation', {
+      data: {
+        id: 'tm-inv',
+        team_id: TEAM,
+        user_id: INVITEE,
+        role: 'player',
+        specialty: 'support',
+        battle_tag: 'Inv#1234',
+      },
+      error: null,
+    });
+
     const r = await acceptInvitation(TENANT, id, INVITEE);
     expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.data.teamId).toBe(TEAM);
+      expect(r.data.memberId).toBe('tm-inv');
+    }
 
-    const member = (store.team_members as any[]).find(
-      (m) => m.team_id === TEAM && m.user_id === INVITEE
-    );
-    expect(member).toBeTruthy();
-    expect(member.role).toBe('player');
-    expect(member.specialty).toBe('support');
-    expect(member.battle_tag).toBe('Inv#1234');
+    const call = rpcCalls.find((c) => c.fn === 'accept_invitation');
+    expect(call).toBeTruthy();
+    expect(call!.params).toEqual({ p_demande_id: id, p_user_id: INVITEE });
+  });
 
-    const row = (store.demandes as any[]).find((d) => d.id === id);
-    expect(row.status).toBe('approved');
-    expect(row.processed_at).toBeTruthy();
+  it('maps RPC 23505 (already in a team) to 409', async () => {
+    const id = seedPending();
+    setRpcResult('accept_invitation', {
+      data: null,
+      error: { code: '23505', message: 'duplicate key value' },
+    });
+    const r = await acceptInvitation(TENANT, id, INVITEE);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.status).toBe(409);
+  });
+
+  it('maps RPC 23514 (max_players trigger) to 400', async () => {
+    const id = seedPending();
+    setRpcResult('accept_invitation', {
+      data: null,
+      error: { code: '23514', message: 'max_players exceeded' },
+    });
+    const r = await acceptInvitation(TENANT, id, INVITEE);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.status).toBe(400);
   });
 
   it('only the invitee can accept (403 for someone else)', async () => {

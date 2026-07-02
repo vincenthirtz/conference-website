@@ -29,8 +29,9 @@
 
 import { supabaseAdmin } from '../supabase';
 import { logger } from '../logger';
-import { insertTeamMember, validateBattleTag } from './addMember';
+import { validateBattleTag } from './addMember';
 import { isTeamRosterLocked, rosterLockErrorMessage } from './rosterLock';
+import { mapTeamRpcError } from './rpcErrors';
 import { validateRole } from '../apiHelpers';
 
 export const INVITATION_EXPIRY_DAYS = 7;
@@ -325,34 +326,30 @@ export async function acceptInvitation(
     };
   }
 
-  // Insert membership (le helper fait le pre-check max_players + duplicate).
-  const insertResult = await insertTeamMember({
-    tenantId,
-    teamId: demande.team_id,
-    userId: actorAuthUserId,
-    role: demande.payload?.desired_role || 'player',
-    battleTag: demande.payload?.battle_tag ?? null,
-    specialty: demande.payload?.specialty ?? null,
-    enforceMaxPlayersPreCheck: true,
-  });
-  if (!insertResult.ok) {
-    return { ok: false, error: insertResult.error, status: insertResult.status };
+  // Acceptation atomique : verrou FOR UPDATE + CAS status pending->approved +
+  // insert team_members + garde max_players (trigger), le tout dans une seule
+  // transaction PL/pgSQL. Remplace l'ancien couple insert-membre / update-statut
+  // non atomique (qui pouvait laisser un membre insere avec une demande restee
+  // pending si l'update echouait).
+  const { data: rpcData, error: rpcErr } = await supabaseAdmin.rpc(
+    'accept_invitation',
+    { p_demande_id: demande.id, p_user_id: actorAuthUserId }
+  );
+
+  if (rpcErr) {
+    const mapped = mapTeamRpcError(rpcErr);
+    if (mapped.status >= 500) {
+      logger.error('[invitations] accept_invitation rpc error', rpcErr);
+    }
+    return { ok: false, error: mapped.error, status: mapped.status };
   }
 
-  const { error: updateErr } = await supabaseAdmin
-    .from('demandes')
-    .update({ status: 'approved', processed_at: nowIso() })
-    .eq('tenant_id', tenantId)
-    .eq('id', demande.id);
-  if (updateErr) {
-    logger.error('[invitations] approve update error', updateErr);
-    // Membership deja cree : on ne rollback pas (cas rare et le membre est
-    // effectivement ajoute). On signale l'incoherence dans le log.
-  }
+  const memberId =
+    (rpcData as { id?: string | null } | null)?.id ?? null;
 
   return {
     ok: true,
-    data: { teamId: demande.team_id, memberId: insertResult.memberId },
+    data: { teamId: demande.team_id, memberId },
   };
 }
 

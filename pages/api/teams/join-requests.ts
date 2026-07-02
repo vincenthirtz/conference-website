@@ -12,6 +12,11 @@ import {
   getManagedTeam,
   TEAM_MANAGEMENT_FORBIDDEN,
 } from '@/utils/teams/managementAccess';
+import {
+  isTeamRosterLocked,
+  rosterLockErrorMessage,
+} from '@/utils/teams/rosterLock';
+import { mapTeamRpcError } from '@/utils/teams/rpcErrors';
 import { resolveTenantIdForUserRequest } from '@/utils/tenant';
 
 import { logger } from '../../../utils/logger';
@@ -175,61 +180,39 @@ async function handlePost(
 
   const newStatus = action === 'approve' ? 'approved' : 'rejected';
 
-  // If approving, add the player to team_members
+  // If approving, add the player to team_members via the transactional RPC.
   if (action === 'approve') {
-    // Determine role from payload
+    // Determine role/battle_tag from payload (utilise pour la news + roster-lock).
     const desiredRole = validateRole((demande.payload as any)?.desired_role);
     const battleTag = (demande.payload as any)?.user_battle_tag || null;
 
-    // Check max_players limit (coaches are excluded from this limit)
-    if (desiredRole !== 'coach') {
-      const [{ count: currentNonCoachCount }, { data: teamTournaments }] =
-        await Promise.all([
-          supabaseAdmin!
-            .from('team_members')
-            .select('*', { count: 'exact', head: true })
-            .eq('team_id', captainTeam.id)
-            .eq('tenant_id', tenantId)
-            .neq('role', 'coach'),
-          supabaseAdmin!
-            .from('tournament_teams')
-            .select('tournament_id, tournaments!inner(max_players)')
-            .eq('team_id', captainTeam.id)
-            .eq('tenant_id', tenantId),
-        ]);
+    // Roster lock : refuser l'ajout si un tournoi a verrouille le roster.
+    // Garde alignee sur add-member (elle etait absente ici). L'admin peut
+    // forcer via les routes /api/admin/*.
+    const lockStatus = await isTeamRosterLocked(tenantId, captainTeam.id);
+    if (lockStatus.locked) {
+      return res
+        .status(409)
+        .json({ error: rosterLockErrorMessage(lockStatus) });
+    }
 
-      if (teamTournaments && teamTournaments.length > 0) {
-        for (const tt of teamTournaments) {
-          const maxPlayers = (tt as any).tournaments?.max_players;
-          if (maxPlayers && (currentNonCoachCount ?? 0) >= maxPlayers) {
-            return res.status(400).json({
-              error: `L'equipe a atteint la limite de ${maxPlayers} joueur(s) imposee par un tournoi.`,
-            });
-          }
-        }
+    // Ajout atomique : verrou FOR UPDATE + CAS status pending->approved +
+    // insert team_members + garde max_players (trigger). La RPC est la seule
+    // source de verite ; les checks lus ci-dessus ne servent qu'a l'authz et
+    // aux effets de bord.
+    const { error: rpcErr } = await supabaseAdmin!.rpc('approve_join_request', {
+      p_demande_id: demandeId,
+    });
+
+    if (rpcErr) {
+      const mapped = mapTeamRpcError(rpcErr);
+      if (mapped.status >= 500) {
+        logger.error('[join-requests] approve_join_request rpc error:', rpcErr);
       }
+      return res.status(mapped.status).json({ error: mapped.error });
     }
 
-    const { error: insertErr } = await supabaseAdmin!
-      .from('team_members')
-      .insert({
-        team_id: captainTeam.id,
-        user_id: demande.user_id,
-        role: desiredRole,
-        battle_tag: battleTag,
-        tenant_id: tenantId,
-      });
-
-    if (insertErr) {
-      const msg =
-        insertErr.message?.includes('duplicate') ||
-        insertErr.message?.includes('unique')
-          ? 'Ce joueur est deja dans une equipe.'
-          : "Echec de l'ajout du membre.";
-      return res.status(400).json({ error: msg });
-    }
-
-    // Auto news
+    // Auto news (effet de bord APRES succes de la RPC, best-effort).
     try {
       const playerName =
         battleTag?.split('#')[0] ||
@@ -250,9 +233,16 @@ async function handlePost(
     } catch (newsErr) {
       logger.error('[join-requests] create news error:', newsErr);
     }
+
+    return res.status(200).json({
+      success: true,
+      demandeId,
+      newStatus,
+      message: "Joueur accepte et ajoute a l'equipe.",
+    });
   }
 
-  // Update demande status
+  // Reject : simple update de statut (pas de mutation roster).
   const { error: updateErr } = await supabaseAdmin!
     .from('demandes')
     .update({
@@ -274,9 +264,6 @@ async function handlePost(
     success: true,
     demandeId,
     newStatus,
-    message:
-      action === 'approve'
-        ? "Joueur accepte et ajoute a l'equipe."
-        : 'Demande rejetee.',
+    message: 'Demande rejetee.',
   });
 }

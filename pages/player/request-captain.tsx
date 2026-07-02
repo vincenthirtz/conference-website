@@ -49,6 +49,8 @@ export default function RequestCaptainPage() {
 
   // Membres (pour nouvelle équipe)
   const [members, setMembers] = useState<TeamMember[]>([]);
+  // Validité des membres remontée par NewTeamForm (email/BattleTag/doublons).
+  const [membersValid, setMembersValid] = useState(true);
 
   // Message et états
   const [message, setMessage] = useState('');
@@ -143,6 +145,9 @@ export default function RequestCaptainPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Garde anti double-submit : le disabled ne protège pas d'un double-Enter
+    // envoyé avant le re-render.
+    if (submitting) return;
     setError(null);
 
     if (mode === 'existing') {
@@ -157,6 +162,12 @@ export default function RequestCaptainPage() {
       }
       if (teamName.trim().length < 2) {
         setError(t.errTeamNameTooShort);
+        return;
+      }
+      // Bloque tant qu'un membre a une erreur (BattleTag / email / doublon)
+      // affichée par NewTeamForm.
+      if (!membersValid) {
+        setError(t.errMemberInvalid);
         return;
       }
     }
@@ -334,6 +345,7 @@ export default function RequestCaptainPage() {
                   onAddMember={addMember}
                   onUpdateMember={updateMember}
                   onRemoveMember={removeMember}
+                  onValidityChange={setMembersValid}
                 />
               )}
 
@@ -362,17 +374,25 @@ export default function RequestCaptainPage() {
                 </div>
               )}
 
-              <button
-                type="submit"
-                disabled={submitting}
-                className={`w-full px-4 py-3 rounded-xl font-semibold transition ${
-                  submitting
-                    ? 'bg-gray-600 cursor-not-allowed'
-                    : 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400'
-                }`}
-              >
-                {submitting ? t.submitting : t.submit}
-              </button>
+              {(() => {
+                const submitDisabled =
+                  submitting ||
+                  (mode === 'existing' && !selectedTeamId) ||
+                  (mode === 'new' && (!teamName.trim() || !membersValid));
+                return (
+                  <button
+                    type="submit"
+                    disabled={submitDisabled}
+                    className={`w-full px-4 py-3 rounded-xl font-semibold transition ${
+                      submitDisabled
+                        ? 'bg-gray-600 cursor-not-allowed'
+                        : 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400'
+                    }`}
+                  >
+                    {submitting ? t.submitting : t.submit}
+                  </button>
+                );
+              })()}
             </form>
           </div>
 

@@ -1,5 +1,6 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useT, format } from '@/lib/i18n/useT';
+import { BATTLE_TAG_REGEX } from '@/utils/teams/addMember';
 
 type Tr = ReturnType<typeof useT<'newTeamForm'>>;
 
@@ -21,10 +22,16 @@ type Props = {
     value: string
   ) => void;
   onRemoveMember: (index: number) => void;
+  /**
+   * Remonte au parent l'absence d'erreur de validation (email/BattleTag/doublon)
+   * sur les membres saisis, pour qu'il puisse bloquer la soumission.
+   */
+  onValidityChange?: (isValid: boolean) => void;
 };
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const BATTLETAG_RE = /^.+#\d{4,}$/;
+// Regex canonique partagée avec pages/team/create.tsx et utils/teams/addMember.ts.
+const BATTLETAG_RE = BATTLE_TAG_REGEX;
 
 function validateMember(
   member: TeamMember,
@@ -85,12 +92,23 @@ export default function NewTeamForm({
   onAddMember,
   onUpdateMember,
   onRemoveMember,
+  onValidityChange,
 }: Props) {
   const t = useT('newTeamForm');
   const memberErrors = useMemo(
     () => members.map((m, i) => validateMember(m, i, members, t)),
     [members, t]
   );
+
+  const isValid = useMemo(
+    () => memberErrors.every((errs) => Object.keys(errs).length === 0),
+    [memberErrors]
+  );
+
+  // Remonte la validité au parent à chaque changement (bloque le submit).
+  useEffect(() => {
+    onValidityChange?.(isValid);
+  }, [isValid, onValidityChange]);
 
   return (
     <>

@@ -32,10 +32,12 @@ export default withAuthRoute(async function handler(
     return res.status(400).json({ error: 'demandeId (UUID) requis.' });
   }
 
-  // Vérifier que la demande appartient à l'utilisateur et est pending
+  // Vérifier l'ownership (403 explicite si la demande existe mais appartient à
+  // un autre user). Lecture ciblée : on ne s'appuie PAS sur le statut lu ici
+  // pour décider (TOCTOU) — le CAS ci-dessous est la seule source de vérité.
   const { data: demande, error: fetchErr } = await supabaseAdmin
     .from('demandes')
-    .select('id, user_id, status')
+    .select('id, user_id')
     .eq('id', demandeId)
     .eq('tenant_id', tenantId)
     .maybeSingle();
@@ -50,22 +52,27 @@ export default withAuthRoute(async function handler(
       .json({ error: "Cette demande ne t'appartient pas." });
   }
 
-  if (demande.status !== 'pending') {
-    return res.status(400).json({
-      error: `Impossible d'annuler une demande au statut "${demande.status}".`,
-    });
-  }
-
-  // Mettre à jour le statut en "cancelled"
-  const { error: updateErr } = await supabaseAdmin
+  // Annulation atomique : UPDATE conditionné par status='pending' + retour des
+  // lignes affectées. Si 0 ligne → la demande n'était plus pending (déjà
+  // traitée / annulée entre-temps) → 409. Élimine la fenêtre TOCTOU entre le
+  // check pending et l'update.
+  const { data: updated, error: updateErr } = await supabaseAdmin
     .from('demandes')
     .update({ status: 'cancelled', updated_at: new Date().toISOString() })
     .eq('id', demandeId)
-    .eq('tenant_id', tenantId);
+    .eq('tenant_id', tenantId)
+    .eq('status', 'pending')
+    .select('id');
 
   if (updateErr) {
     logger.error('[demandes/cancel] update error:', updateErr);
     return res.status(500).json({ error: "Échec de l'annulation." });
+  }
+
+  if (!updated || updated.length === 0) {
+    return res.status(409).json({
+      error: 'Cette demande a déjà été traitée.',
+    });
   }
 
   return res.status(200).json({

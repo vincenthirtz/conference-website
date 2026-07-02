@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
-import Head from 'next/head';
 import Link from 'next/link';
 import { useToast } from '@/components/Toast';
+import type { SeoProps } from '@/components/Seo/DefaultSeo';
 
 // Idempotency-Key pour un POST public/anonyme (pas de session Supabase, donc
 // useIdempotentMutation/useAdminFetch ne s'appliquent pas ici). On génère une
@@ -295,14 +295,6 @@ export default function PublicCreateTeamPage() {
 
   return (
     <>
-      <Head>
-        <title>Créer une équipe | OW Women&apos;s Cup</title>
-        <meta
-          name="description"
-          content="Crée une équipe et ajoute rapidement ton roster complet."
-        />
-      </Head>
-
       <div className="min-h-screen bg-gradient-to-b from-black via-[#0b0b12] to-black text-white pt-24 pb-16 px-4">
         <div className="max-w-5xl mx-auto">
           <header className="mb-10 space-y-3 text-center">
@@ -807,3 +799,11 @@ export default function PublicCreateTeamPage() {
     </>
   );
 }
+
+const publicCreateTeamSeo: SeoProps = {
+  title: 'Créer une équipe',
+  description:
+    'Crée ton équipe OW Women’s Cup et ajoute rapidement ton roster complet (emails existants ou comptes créés automatiquement).',
+};
+
+PublicCreateTeamPage.seo = publicCreateTeamSeo;

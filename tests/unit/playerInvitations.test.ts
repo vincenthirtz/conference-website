@@ -15,6 +15,8 @@ import {
   store,
   resetSupabaseMock,
   setAuthUser,
+  setRpcResult,
+  rpcCalls,
 } from './__helpers__/supabaseMock';
 
 // supabase + rateLimit are mocked globally via testSetup.ts.
@@ -181,10 +183,15 @@ describe('POST /api/player/invitations/{demandeId}', () => {
     expect(res.statusCode).toBe(400);
   });
 
-  it('accept makes the caller a member and approves the demande', async () => {
+  it('accept delegates the insert + approval to the accept_invitation RPC', async () => {
     store.teams = [{ id: TEAM_ID, name: 'Phenix' }];
     store.team_members = [];
     store.demandes = [pendingInvite()];
+    // La RPC transactionnelle insère le membre + passe la demande approved.
+    setRpcResult('accept_invitation', {
+      data: { id: 'tm-inv', team_id: TEAM_ID, user_id: USER_ID, role: 'dps' },
+      error: null,
+    });
     const res = makeRes();
     await actionHandler(
       makeReq({
@@ -201,16 +208,13 @@ describe('POST /api/player/invitations/{demandeId}', () => {
       teamId: TEAM_ID,
     });
 
-    // membership inserted for the caller
-    const membership = store.team_members.find(
-      (m) => m.user_id === USER_ID && m.team_id === TEAM_ID
-    );
-    expect(membership).toBeTruthy();
-    expect(membership!.role).toBe('dps');
-
-    // demande flipped to approved
-    const demande = store.demandes.find((d) => d.id === INVITE_ID);
-    expect(demande!.status).toBe('approved');
+    // Insert + statut sont délégués à la RPC (atomique).
+    const call = rpcCalls.find((c) => c.fn === 'accept_invitation');
+    expect(call).toBeTruthy();
+    expect(call!.params).toEqual({
+      p_demande_id: INVITE_ID,
+      p_user_id: USER_ID,
+    });
   });
 
   it('reject flips the demande to rejected with no membership', async () => {

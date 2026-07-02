@@ -11,11 +11,9 @@ import { supabaseAnonServer, supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
 import { alertIfBlacklisted } from '@/utils/moderation/blacklist';
+import { BATTLE_TAG_REGEX } from '@/utils/teams/addMember';
 
 import { logger } from '../../../utils/logger';
-
-// Format BattleTag annoncé côté UI : Pseudo#0000 (4 ou 5 chiffres).
-const BATTLETAG_RE = /^.+#[0-9]{4,5}$/;
 
 // Champ texte optionnel : une chaîne vide est traitée comme « non fourni ».
 const optionalTrimmed = (max: number) =>
@@ -34,7 +32,10 @@ const registerSchema = z.object({
     z
       .string()
       .trim()
-      .regex(BATTLETAG_RE, 'Format BattleTag invalide (attendu : Pseudo#0000).')
+      .regex(
+        BATTLE_TAG_REGEX,
+        'Format BattleTag invalide (attendu : Pseudo#0000).'
+      )
       .optional()
   ),
 });

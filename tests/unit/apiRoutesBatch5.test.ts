@@ -124,7 +124,7 @@ describe('DELETE /api/demandes/cancel', () => {
     expect(res.statusCode).toBe(403);
   });
 
-  it('returns 400 when demande status is not pending', async () => {
+  it('returns 409 when demande status is not pending (CAS atomique)', async () => {
     setAuthUser({ id: 'user-1' });
     store.demandes = [
       { id: demandeId, user_id: 'user-1', status: 'accepted' },
@@ -134,7 +134,11 @@ describe('DELETE /api/demandes/cancel', () => {
       makeReq({ method: 'DELETE', body: { demandeId } }, true),
       res
     );
-    expect(res.statusCode).toBe(400);
+    // L'annulation atomique conditionnée par status='pending' n'affecte 0 ligne
+    // → conflit d'état (déjà traitée), pas un 400 de validation.
+    expect(res.statusCode).toBe(409);
+    // Le statut d'origine reste inchangé (l'UPDATE n'a rien touché).
+    expect((store.demandes[0] as any).status).toBe('accepted');
   });
 
   it('200 marks demande as cancelled', async () => {

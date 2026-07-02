@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import Link from 'next/link';
 import { supabaseClient } from '@/utils/supabase';
+import { BATTLE_TAG_REGEX } from '@/utils/teams/addMember';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 
 function RegisterPage() {
@@ -23,8 +24,10 @@ function RegisterPage() {
   const confirmRef = useRef<HTMLInputElement>(null);
   const errorRef = useRef<HTMLDivElement>(null);
 
-  // Format BattleTag annoncé : Pseudo#0000 (4 ou 5 chiffres).
-  const BATTLETAG_PATTERN = /^.+#[0-9]{4,5}$/;
+  // Format BattleTag canonique (Name#0000, alphanumérique + # + 3 à 6
+  // chiffres). Constante partagée avec l'API (utils/teams/addMember) pour
+  // garder page et route synchronisées.
+  const BATTLETAG_PATTERN = BATTLE_TAG_REGEX;
 
   // Message neutre, identique au chemin succès, pour ne pas révéler si un
   // email est déjà enregistré (anti-énumération).

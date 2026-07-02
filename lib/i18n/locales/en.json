@@ -432,7 +432,10 @@
     "submitting": "Sending...",
     "submit": "Send my request",
     "ctaQuestion": "Want to create your own team?",
-    "becomeCaptain": "Become a captain"
+    "becomeCaptain": "Become a captain",
+    "alreadyInTeamTitle": "You are already on a team",
+    "alreadyInTeamBody": "You are already a member of \"{teamName}\". To switch teams, use Requests › Transfer.",
+    "alreadyInTeamCta": "Go to my transfer requests →"
   },
   "manageTeam": {
     "loadError": "Failed to load.",
@@ -626,6 +629,7 @@
     "errTeamNameRequired": "The team name is required.",
     "errTeamNameTooShort": "The team name must be at least 2 characters.",
     "errInvalidEmail": "Invalid email: {email}",
+    "errMemberInvalid": "Fix the member errors before sending (BattleTag, email or duplicate).",
     "errCreateRequest": "Unable to create the request.",
     "errGeneric": "Something went wrong.",
     "fallbackSelectedTeam": "the selected team",

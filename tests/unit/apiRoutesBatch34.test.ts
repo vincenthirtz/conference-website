@@ -278,6 +278,34 @@ describe('POST /api/teams/create-with-member', () => {
     expect((res.body as any).invitedMembers[0].invitation_id).toBeTruthy();
   });
 
+  // Ferme le trou « équipe orpheline sans capitaine » : des membres fournis
+  // sans aucun set_captain → 400, et AUCUNE team créée (garde avant l'insert).
+  it('400 when members provided but no captain designated (no team created)', async () => {
+    setAuthListUsers([
+      { id: 'u-1', email: 'p1@example.com' },
+      { id: 'u-2', email: 'p2@example.com' },
+    ]);
+    store.teams = [];
+    store.team_members = [];
+    const res = makeRes();
+    await createWithMemberHandler(
+      makeReq({
+        body: {
+          name: 'Orphan Team',
+          members: [
+            { email: 'p1@example.com', role: 'player', battle_tag: 'P1#1234' },
+            { email: 'p2@example.com', role: 'player', battle_tag: 'P2#5678' },
+          ],
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+    expect((res.body as any).error).toMatch(/capitaine/i);
+    expect((store.teams as any[]) ?? []).toHaveLength(0);
+    expect((store.team_members as any[]) ?? []).toHaveLength(0);
+  });
+
   it('400 when set_captain provided without any member', async () => {
     const res = makeRes();
     await createWithMemberHandler(

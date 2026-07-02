@@ -14,6 +14,8 @@ import {
   resetSupabaseMock,
   setAuthUser,
   setAdminUser,
+  setRpcResult,
+  rpcCalls,
 } from './__helpers__/supabaseMock';
 
 import { invalidateStaffCache } from '../../utils/staff';
@@ -564,7 +566,11 @@ describe('/api/teams/transfer-requests', () => {
     expect(res.statusCode).toBe(404);
   });
 
-  it('POST approve transfers the player and updates status', async () => {
+  // La mutation roster (retrait ancienne team + insert cible + statut) est
+  // désormais atomique dans la RPC approve_transfer_request. Le route délègue ;
+  // on assert donc l'appel RPC + l'effet de bord news, pas la mutation elle-même
+  // (couverte côté DB par la migration).
+  it('POST approve delegates to approve_transfer_request RPC + creates news', async () => {
     setAuthUser({ id: 'cap', email: 'c@x.com', user_metadata: {} });
     store.teams = [
       {
@@ -591,9 +597,12 @@ describe('/api/teams/transfer-requests', () => {
         },
       },
     ] as any;
-    store.team_members = [
-      { id: 'tm-old', user_id: 'movee', team_id: TEAM_B, role: 'player' },
-    ] as any;
+    store.team_members = [];
+    store.tournament_teams = [];
+    setRpcResult('approve_transfer_request', {
+      data: { id: 'tm-new', team_id: TEAM_A, user_id: 'movee' },
+      error: null,
+    });
     const res = makeRes();
     await transferRequestsHandler(
       makeAuthedReq({
@@ -603,14 +612,10 @@ describe('/api/teams/transfer-requests', () => {
       res
     );
     expect(res.statusCode).toBe(200);
-    expect((store.demandes as any[])[0].status).toBe('approved');
-    // Player moved
-    const memberRows = store.team_members as any[];
-    expect(memberRows.find((m) => m.team_id === TEAM_B)).toBeUndefined();
-    expect(
-      memberRows.find((m) => m.team_id === TEAM_A && m.user_id === 'movee')
-    ).toBeDefined();
-    // News inserted
+    const call = rpcCalls.find((c) => c.fn === 'approve_transfer_request');
+    expect(call).toBeTruthy();
+    expect(call!.params).toEqual({ p_demande_id: demandeId });
+    // News inserted (effet de bord après succès de la RPC).
     expect((store.news as any[]).length).toBeGreaterThan(0);
   });
 
@@ -669,7 +674,11 @@ describe('/api/teams/transfer-requests', () => {
     expect(res.statusCode).toBe(400);
   });
 
-  it('POST approve falls back to current team battle_tag when payload omits it', async () => {
+  // Battle-tag resolution + is_substitute are now handled INSIDE the RPC (which
+  // resolves the player's real membership); the route no longer uses
+  // payload.from_team_id to mutate. We assert the route delegates cleanly on a
+  // payload that omits the battle_tag (previously it would look it up itself).
+  it('POST approve delegates even when payload omits battle_tag (RPC resolves it)', async () => {
     setAuthUser({ id: 'cap', email: 'c@x.com', user_metadata: {} });
     const validUuid = '660e8400-e29b-41d4-a716-446655440001';
     store.teams = [
@@ -700,6 +709,10 @@ describe('/api/teams/transfer-requests', () => {
       },
     ] as any;
     store.tournament_teams = [];
+    setRpcResult('approve_transfer_request', {
+      data: { id: 'tm-new', team_id: TEAM_A, user_id: 'user-x' },
+      error: null,
+    });
     const res = makeRes();
     await transferRequestsHandler(
       makeAuthedReq({
@@ -709,14 +722,12 @@ describe('/api/teams/transfer-requests', () => {
       res
     );
     expect(res.statusCode).toBe(200);
-    const newMember = (store.team_members as any).find(
-      (m: any) => m.team_id === TEAM_A && m.user_id === 'user-x'
-    );
-    expect(newMember).toBeTruthy();
-    expect(newMember.battle_tag).toBe('OldTag#1234');
+    expect(
+      rpcCalls.find((c) => c.fn === 'approve_transfer_request')!.params
+    ).toEqual({ p_demande_id: validUuid });
   });
 
-  it('POST approve as substitute sets is_substitute=true', async () => {
+  it('POST approve for a substitute delegates to the RPC (is_substitute set DB-side)', async () => {
     setAuthUser({ id: 'cap', email: 'c@x.com', user_metadata: {} });
     const validUuid = '660e8400-e29b-41d4-a716-446655440002';
     store.teams = [
@@ -738,6 +749,10 @@ describe('/api/teams/transfer-requests', () => {
     ] as any;
     store.team_members = [];
     store.tournament_teams = [];
+    setRpcResult('approve_transfer_request', {
+      data: { id: 'tm-sub', team_id: TEAM_A, user_id: 'user-y', is_substitute: true },
+      error: null,
+    });
     const res = makeRes();
     await transferRequestsHandler(
       makeAuthedReq({
@@ -747,8 +762,7 @@ describe('/api/teams/transfer-requests', () => {
       res
     );
     expect(res.statusCode).toBe(200);
-    const newMember = (store.team_members as any)[0];
-    expect(newMember.is_substitute).toBe(true);
+    expect(rpcCalls.find((c) => c.fn === 'approve_transfer_request')).toBeTruthy();
   });
 });
 

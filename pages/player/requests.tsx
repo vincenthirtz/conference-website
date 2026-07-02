@@ -155,6 +155,9 @@ export default function PlayerRequestsPage() {
 
   const handleSubmitTransfer = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Garde anti double-submit : le disabled ne protège pas d'un double-Enter
+    // envoyé avant le re-render.
+    if (submitting) return;
     setError(null);
 
     if (!selectedTeamId) {
@@ -221,6 +224,9 @@ export default function PlayerRequestsPage() {
 
   const handleSubmitScrim = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Garde anti double-submit : le disabled ne protège pas d'un double-Enter
+    // envoyé avant le re-render.
+    if (submitting) return;
     setError(null);
 
     if (!selectedTeamId) {

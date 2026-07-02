@@ -372,6 +372,28 @@ export default async function handler(
     }
   }
 
+  // Ensure only one captain flag across bulk list (résolu AVANT la création de
+  // la team pour pouvoir rejeter un roster sans capitaine sans laisser d'orphelin).
+  const firstCaptainIdx = memberRecords.findIndex((m) => m.captain);
+  const captainUserId =
+    firstCaptainIdx >= 0 ? memberRecords[firstCaptainIdx].user_id : null;
+  memberRecords = memberRecords.map((m, idx) => ({
+    ...m,
+    captain: firstCaptainIdx === idx && m.captain,
+  }));
+
+  // Ferme le trou « équipe orpheline sans capitaine » : si des membres sont
+  // fournis mais qu'AUCUN n'est désigné capitaine, on ne peut ni les insérer
+  // (personne pour piloter la team) ni les inviter (pas d'inviteur). On rejette
+  // AVANT de créer la team (aucune donnée à nettoyer). Une team sans membre du
+  // tout (création « à blanc ») reste autorisée : le créateur pourra recruter.
+  if (memberRecords.length > 0 && captainUserId === null) {
+    return res.status(400).json({
+      error:
+        'Un capitaine doit être désigné (set_captain) quand des membres sont fournis.',
+    });
+  }
+
   const teamPayload: Record<string, any> = {
     name,
     short_name: body.short_name?.toString().trim() || null,
@@ -417,15 +439,6 @@ export default async function handler(
         'Failed to create team. Try again with another name.',
     });
   }
-
-  // Ensure only one captain flag across bulk list
-  const firstCaptainIdx = memberRecords.findIndex((m) => m.captain);
-  const captainUserId =
-    firstCaptainIdx >= 0 ? memberRecords[firstCaptainIdx].user_id : null;
-  memberRecords = memberRecords.map((m, idx) => ({
-    ...m,
-    captain: firstCaptainIdx === idx && m.captain,
-  }));
 
   const insertedMembers: MemberResult[] = [];
   const invitedMembers: InvitedMemberResult[] = [];

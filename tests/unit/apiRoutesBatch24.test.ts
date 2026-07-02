@@ -5,6 +5,8 @@ import {
   resetSupabaseMock,
   setAuthUser,
   setAdminUser,
+  setRpcResult,
+  rpcCalls,
 } from './__helpers__/supabaseMock';
 
 import joinRequestsHandler from '../../pages/api/teams/join-requests';
@@ -165,7 +167,7 @@ describe('/api/teams/join-requests', () => {
     expect(res.statusCode).toBe(404);
   });
 
-  it('POST approve: creates team_member and marks demande approved', async () => {
+  it('POST approve: calls the approve_join_request RPC and creates news', async () => {
     setAuthUser({ id: 'user-1' });
     store.teams = [
       { id: 'team-1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'user-1',
@@ -190,6 +192,11 @@ describe('/api/teams/join-requests', () => {
       },
     ] as any;
     store.news = [];
+    // La RPC transactionnelle réussit et renvoie la ligne team_members créée.
+    setRpcResult('approve_join_request', {
+      data: { id: 'tm-new', team_id: 'team-1', user_id: 'new-player' },
+      error: null,
+    });
 
     const res = makeRes();
     await joinRequestsHandler(
@@ -203,11 +210,111 @@ describe('/api/teams/join-requests', () => {
       res
     );
     expect(res.statusCode).toBe(200);
-    expect(store.team_members.length).toBe(1);
-    expect((store.team_members[0] as any).user_id).toBe('new-player');
-    const dem = (store.demandes as any).find((d: any) => d.id === VALID_UUID);
-    expect(dem.status).toBe('approved');
+    // L'ajout membre + le passage pending→approved sont délégués à la RPC.
+    const call = rpcCalls.find((c) => c.fn === 'approve_join_request');
+    expect(call).toBeTruthy();
+    expect(call!.params).toEqual({ p_demande_id: VALID_UUID });
+    // Effet de bord après succès : news auto publiée.
     expect((store.news as any).length).toBe(1);
+  });
+
+  it('POST approve: 409 when roster is locked (RPC not called)', async () => {
+    setAuthUser({ id: 'user-1' });
+    store.teams = [
+      { id: 'team-1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'user-1', is_active: true, name: 'Alpha' },
+    ] as any;
+    store.demandes = [
+      {
+        id: VALID_UUID,
+        team_id: 'team-1',
+        type: 'join',
+        status: 'pending',
+        user_id: 'new-player',
+        payload: { desired_role: 'player' },
+      },
+    ] as any;
+    store.tournament_teams = [
+      { tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', team_id: 'team-1', tournament_id: 'tour-1' },
+    ] as any;
+    const past = new Date(Date.now() - 60_000).toISOString();
+    store.tournaments = [
+      { id: 'tour-1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', name: 'Cup', roster_locked_at: past, status: 'in_progress' },
+    ] as any;
+
+    const res = makeRes();
+    await joinRequestsHandler(
+      makeReq(
+        { method: 'POST', body: { demandeId: VALID_UUID, action: 'approve' } },
+        true
+      ),
+      res
+    );
+    expect(res.statusCode).toBe(409);
+    expect(rpcCalls.find((c) => c.fn === 'approve_join_request')).toBeFalsy();
+  });
+
+  it('POST approve: maps RPC 23505 (already in a team) to 409', async () => {
+    setAuthUser({ id: 'user-1' });
+    store.teams = [
+      { id: 'team-1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'user-1', is_active: true, name: 'Alpha' },
+    ] as any;
+    store.demandes = [
+      {
+        id: VALID_UUID,
+        team_id: 'team-1',
+        type: 'join',
+        status: 'pending',
+        user_id: 'new-player',
+        payload: { desired_role: 'player' },
+      },
+    ] as any;
+    store.tournament_teams = [];
+    setRpcResult('approve_join_request', {
+      data: null,
+      error: { code: '23505', message: 'duplicate key value' },
+    });
+
+    const res = makeRes();
+    await joinRequestsHandler(
+      makeReq(
+        { method: 'POST', body: { demandeId: VALID_UUID, action: 'approve' } },
+        true
+      ),
+      res
+    );
+    expect(res.statusCode).toBe(409);
+  });
+
+  it('POST approve: maps RPC demande_not_pending to 409', async () => {
+    setAuthUser({ id: 'user-1' });
+    store.teams = [
+      { id: 'team-1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'user-1', is_active: true, name: 'Alpha' },
+    ] as any;
+    store.demandes = [
+      {
+        id: VALID_UUID,
+        team_id: 'team-1',
+        type: 'join',
+        status: 'pending',
+        user_id: 'new-player',
+        payload: { desired_role: 'player' },
+      },
+    ] as any;
+    store.tournament_teams = [];
+    setRpcResult('approve_join_request', {
+      data: null,
+      error: { message: 'demande_not_pending' },
+    });
+
+    const res = makeRes();
+    await joinRequestsHandler(
+      makeReq(
+        { method: 'POST', body: { demandeId: VALID_UUID, action: 'approve' } },
+        true
+      ),
+      res
+    );
+    expect(res.statusCode).toBe(409);
   });
 
   it('POST reject: marks demande rejected, no member added', async () => {
@@ -246,7 +353,7 @@ describe('/api/teams/join-requests', () => {
     expect(dem.status).toBe('rejected');
   });
 
-  it('POST approve: 400 when team would exceed max_players', async () => {
+  it('POST approve: maps RPC 23514 (max_players trigger) to 400', async () => {
     setAuthUser({ id: 'user-1' });
     store.teams = [
       { id: 'team-1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'user-1',
@@ -254,14 +361,9 @@ describe('/api/teams/join-requests', () => {
         name: 'Alpha',
       },
     ] as any;
-    store.team_members = [
-      { id: 'm1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', team_id: 'team-1', role: 'player' },
-      { id: 'm2', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', team_id: 'team-1', role: 'player' },
-    ] as any;
-    store.tournament_teams = [
-      { tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', team_id: 'team-1', tournament_id: 'tour-1', tournaments: { max_players: 2 },
-      },
-    ] as any;
+    store.team_members = [];
+    // Pas de roster-lock : la limite est levée par le trigger DB dans la RPC.
+    store.tournament_teams = [];
     store.demandes = [
       {
         id: VALID_UUID,
@@ -272,6 +374,10 @@ describe('/api/teams/join-requests', () => {
         payload: { desired_role: 'player' },
       },
     ] as any;
+    setRpcResult('approve_join_request', {
+      data: null,
+      error: { code: '23514', message: 'max_players exceeded' },
+    });
 
     const res = makeRes();
     await joinRequestsHandler(

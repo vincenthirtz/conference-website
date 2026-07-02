@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { useDebounce } from '@/hooks/useDebounce';
+import { useManagedTeam } from '@/hooks/useManagedTeam';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
 import { MAX_TEAM_PLAYERS } from '@/utils/constants';
 import { useT, format } from '@/lib/i18n/useT';
@@ -28,7 +29,14 @@ export default function JoinTeamPage() {
   const t = useT('joinTeam');
   const router = useRouter();
   const { user, token, loading: authLoading, ready } = usePlayerSession();
+  const { data: managedTeam, loading: teamLoading } = useManagedTeam();
   const [loading, setLoading] = useState(true);
+
+  // Le joueur fait-il déjà partie d'une équipe ? (via le cache partagé
+  // useManagedTeam, comme requests.tsx). Si oui, on masque le formulaire de
+  // join et on l'oriente vers Demandes › Transfert.
+  const alreadyInTeam = !!managedTeam?.team;
+  const currentTeamName = managedTeam?.team?.name ?? '';
 
   // Equipes
   const [teams, setTeams] = useState<Team[]>([]);
@@ -134,6 +142,9 @@ export default function JoinTeamPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Garde anti double-submit : le disabled ne protège pas d'un double-Enter
+    // envoyé avant le re-render.
+    if (submitting) return;
     setError(null);
 
     if (!selectedTeamId) {
@@ -173,7 +184,7 @@ export default function JoinTeamPage() {
     }
   };
 
-  if (authLoading || loading) {
+  if (authLoading || loading || teamLoading) {
     return <PlayerPageSkeleton rows={3} />;
   }
 
@@ -240,7 +251,23 @@ export default function JoinTeamPage() {
             <h1 className="text-2xl font-bold mb-2">{t.pageTitle}</h1>
             <p className="text-gray-400 text-sm mb-6">{t.pageIntro}</p>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
+            {alreadyInTeam ? (
+              <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-4 text-sm text-amber-200">
+                <p className="font-semibold mb-1">{t.alreadyInTeamTitle}</p>
+                <p>
+                  {format(t.alreadyInTeamBody, {
+                    teamName: currentTeamName || t.selectedTeamFallback,
+                  })}
+                </p>
+                <Link
+                  href="/player/requests"
+                  className="mt-3 inline-block text-purple-300 hover:text-purple-200 underline"
+                >
+                  {t.alreadyInTeamCta}
+                </Link>
+              </div>
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-6">
               {/* Recherche d'equipe */}
               <div>
                 <label className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2">
@@ -432,6 +459,7 @@ export default function JoinTeamPage() {
                 {submitting ? t.submitting : t.submit}
               </button>
             </form>
+            )}
           </div>
 
           <div className="mt-6 text-center text-sm text-gray-500">

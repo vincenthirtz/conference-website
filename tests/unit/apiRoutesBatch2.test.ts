@@ -421,15 +421,61 @@ describe('POST /api/teams/leave', () => {
     expect(res.statusCode).toBe(400);
   });
 
-  it('returns 403 when user is the captain of the team', async () => {
+  it('returns 403 when the captain still has other members (must transfer first)', async () => {
+    setAuthUser({ id: 'user-1' });
+    store.team_members = [
+      { id: 'tm1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', team_id: 't1', user_id: 'user-1' },
+      { id: 'tm2', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', team_id: 't1', user_id: 'user-2' },
+    ] as any;
+    store.teams = [
+      { id: 't1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'user-1', name: 'Alpha' },
+    ] as any;
+    const res = makeRes();
+    await teamsLeaveHandler(makeReq({ method: 'POST' }, true), res);
+    expect(res.statusCode).toBe(403);
+    // Ni le membership ni la team ne sont touchés.
+    expect(store.team_members.length).toBe(2);
+    expect((store.teams[0] as any).is_active).toBeUndefined();
+  });
+
+  it('captain alone → leaving dissolves the team (soft-delete)', async () => {
     setAuthUser({ id: 'user-1' });
     store.team_members = [
       { id: 'tm1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', team_id: 't1', user_id: 'user-1' },
     ] as any;
-    store.teams = [{ id: 't1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'user-1' }] as any;
+    store.teams = [
+      { id: 't1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'user-1', name: 'Alpha' },
+    ] as any;
+    store.tournament_teams = [];
+    store.tournaments = [];
     const res = makeRes();
     await teamsLeaveHandler(makeReq({ method: 'POST' }, true), res);
-    expect(res.statusCode).toBe(403);
+    expect(res.statusCode).toBe(200);
+    expect((res.body as any).dissolved).toBe(true);
+    // Membership retiré + team soft-deleted.
+    expect(store.team_members.length).toBe(0);
+    expect((store.teams[0] as any).is_active).toBe(false);
+    expect((store.teams[0] as any).deleted_at).toBeTruthy();
+  });
+
+  it('captain alone but roster locked → 409, team not dissolved', async () => {
+    setAuthUser({ id: 'user-1' });
+    store.team_members = [
+      { id: 'tm1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', team_id: 't1', user_id: 'user-1' },
+    ] as any;
+    store.teams = [
+      { id: 't1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'user-1', name: 'Alpha' },
+    ] as any;
+    store.tournament_teams = [{ tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', tournament_id: 'tour1', team_id: 't1' }] as any;
+    const past = new Date(Date.now() - 60_000).toISOString();
+    store.tournaments = [
+      { id: 'tour1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', name: 'X', roster_locked_at: past, status: 'in_progress' },
+    ] as any;
+    const res = makeRes();
+    await teamsLeaveHandler(makeReq({ method: 'POST' }, true), res);
+    expect(res.statusCode).toBe(409);
+    expect(store.team_members.length).toBe(1);
+    expect((store.teams[0] as any).is_active).toBeUndefined();
   });
 
   it('returns 409 when the roster is locked', async () => {
