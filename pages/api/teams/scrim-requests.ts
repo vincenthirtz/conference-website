@@ -18,7 +18,7 @@ import {
   getManagedTeam,
   TEAM_MANAGEMENT_FORBIDDEN,
 } from '@/utils/teams/managementAccess';
-import { resolveTenantIdForUserRequest } from '@/utils/tenant';
+import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
 import { readScrimNego, normalizeSlots } from '@/utils/teams/scrimNegotiation';
 import { notifyScrimCounterProposal } from '@/utils/discord';
 import { emitScrimEvent } from '@/utils/scrimEvents';
@@ -100,7 +100,7 @@ export default withAuthRoute(async function handler(
     return;
 
   const userId = user.id;
-  const tenantId = resolveTenantIdForUserRequest(req, { authUserId: userId });
+  const tenantId = await resolveTenantIdForUserRequestAsync(req, { authUserId: userId });
 
   // Per-user cap : refuser le spam de scrim accept/reject (a chaque
   // accept, on cree un scrim draft cote /admin/demandes auto-process).

@@ -17,7 +17,7 @@ import {
   rosterLockErrorMessage,
 } from '@/utils/teams/rosterLock';
 import { mapTeamRpcError } from '@/utils/teams/rpcErrors';
-import { resolveTenantIdForUserRequest } from '@/utils/tenant';
+import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
 
 import { logger } from '../../../utils/logger';
 export default withAuthRoute(async function handler(
@@ -31,7 +31,7 @@ export default withAuthRoute(async function handler(
     return;
 
   const userId = user.id;
-  const tenantId = resolveTenantIdForUserRequest(req, { authUserId: userId });
+  const tenantId = await resolveTenantIdForUserRequestAsync(req, { authUserId: userId });
 
   // Per-user cap : transfert touche 2 teams, plus impactant qu'un join.
   if (

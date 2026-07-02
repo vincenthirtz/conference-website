@@ -16,7 +16,7 @@ import {
   loadTeamRolesFromSupabase,
   roleHasAnyPermission,
 } from '@/utils/teamRoles';
-import { resolveTenantIdForUserRequest } from '@/utils/tenant';
+import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
 
 import { logger } from '../../../utils/logger';
 
@@ -46,7 +46,7 @@ export default withAuthRoute(async function handler(
     return;
 
   const userId = user.id;
-  const tenantId = resolveTenantIdForUserRequest(req, { authUserId: userId });
+  const tenantId = await resolveTenantIdForUserRequestAsync(req, { authUserId: userId });
 
   // Check if user can manage a team (captain or manager)
   const access = await getManagedTeam(userId, tenantId);

@@ -11,7 +11,7 @@ import {
 } from '@/utils/teams/rosterLock';
 import { withAuthRoute } from '@/utils/staff';
 import { emitBotEvent } from '@/utils/botEvents';
-import { resolveTenantIdForUserRequest } from '@/utils/tenant';
+import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
 
 import { logger } from '../../../utils/logger';
 export default withAuthRoute(async function handler(
@@ -28,7 +28,7 @@ export default withAuthRoute(async function handler(
     return;
 
   const userId = user.id;
-  const tenantId = resolveTenantIdForUserRequest(req, { authUserId: userId });
+  const tenantId = await resolveTenantIdForUserRequestAsync(req, { authUserId: userId });
 
   // Trouver le membership
   const { data: membership, error: membershipErr } = await supabaseAdmin

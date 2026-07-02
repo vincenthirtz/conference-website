@@ -7,7 +7,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
-import { resolveTenantIdForUserRequest } from '@/utils/tenant';
+import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
 
 import { logger } from '../../../utils/logger';
 export type JoinRequestBody = {
@@ -25,7 +25,7 @@ export default withAuthRoute(async function handler(
     return;
 
   const userId = user.id;
-  const tenantId = resolveTenantIdForUserRequest(req, { authUserId: userId });
+  const tenantId = await resolveTenantIdForUserRequestAsync(req, { authUserId: userId });
 
   if (req.method === 'GET') {
     // Recuperer les demandes de type "join" de l'utilisateur

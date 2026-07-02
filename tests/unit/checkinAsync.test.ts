@@ -165,6 +165,18 @@ describe('resolveCheckinToken', () => {
     expect(r.ok).toBe(false);
   });
 
+  it('rejects a token with an invalid charset before querying', async () => {
+    // Long enough to pass the length check, but contains PostgREST filter
+    // metacharacters (`,` / `.` / `(`) → must be rejected pre-query.
+    const r = await resolveCheckinToken(
+      TENANT_ID,
+      'aaaaaaaa,team2_checkin_token.eq.bbbbbbbb'
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) throw new Error('expected not ok');
+    expect(r.error).toBe('Token invalide');
+  });
+
   it('returns the team1 details when team1 token matches', async () => {
     const tok = 'a'.repeat(32);
     store.matches = [

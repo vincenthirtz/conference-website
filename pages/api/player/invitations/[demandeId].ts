@@ -21,7 +21,7 @@ import { z } from 'zod';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
-import { resolveTenantIdForUserRequest } from '@/utils/tenant';
+import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { acceptInvitation, rejectInvitation } from '@/utils/teams/invitations';
 
@@ -68,7 +68,7 @@ export default withAuthRoute(async function handler(
   }
   const { action } = parsed.data;
 
-  const tenantId = resolveTenantIdForUserRequest(req, { authUserId: user.id });
+  const tenantId = await resolveTenantIdForUserRequestAsync(req, { authUserId: user.id });
 
   if (action === 'accept') {
     const result = await acceptInvitation(tenantId, demandeId, user.id);

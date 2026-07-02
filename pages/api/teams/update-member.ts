@@ -33,7 +33,7 @@ import {
   BATTLE_TAG_FORMAT_HINT,
 } from '@/utils/teams/addMember';
 import { logStaffAction } from '@/utils/staffLogs';
-import { resolveTenantIdForUserRequest } from '@/utils/tenant';
+import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
 
 import { logger } from '../../../utils/logger';
 
@@ -51,7 +51,7 @@ export default withAuthRoute(async function handler(
     return;
 
   const userId = user.id;
-  const tenantId = resolveTenantIdForUserRequest(req, { authUserId: userId });
+  const tenantId = await resolveTenantIdForUserRequestAsync(req, { authUserId: userId });
 
   // Acces : capitaine ou manager d'une equipe
   const access = await getManagedTeam(userId, tenantId);

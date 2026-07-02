@@ -44,6 +44,32 @@ describe('mapTeamRpcError', () => {
     expect(r.status).toBe(403);
   });
 
+  // transfer_captain sentinels.
+  it('P0002 (no_data_found) → 404 team introuvable', () => {
+    const r = mapTeamRpcError({ code: 'P0002', message: 'query returned no rows' });
+    expect(r.status).toBe(404);
+  });
+
+  it('team_not_found → 404', () => {
+    const r = mapTeamRpcError({ message: 'team_not_found' });
+    expect(r.status).toBe(404);
+  });
+
+  it('not_captain → 403', () => {
+    const r = mapTeamRpcError({ message: 'not_captain' });
+    expect(r.status).toBe(403);
+  });
+
+  it('same_user → 400', () => {
+    const r = mapTeamRpcError({ message: 'same_user' });
+    expect(r.status).toBe(400);
+  });
+
+  it('target_not_member → 400', () => {
+    const r = mapTeamRpcError({ message: 'target_not_member' });
+    expect(r.status).toBe(400);
+  });
+
   it('unknown error → 500', () => {
     const r = mapTeamRpcError({ message: 'something unexpected' });
     expect(r.status).toBe(500);

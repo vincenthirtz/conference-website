@@ -14,7 +14,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
-import { resolveTenantIdForUserRequest } from '@/utils/tenant';
+import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
 import { listPendingInvitationsForUser } from '@/utils/teams/invitations';
 import { logger } from '@/utils/logger';
 
@@ -54,7 +54,7 @@ export default withAuthRoute(async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const tenantId = resolveTenantIdForUserRequest(req, { authUserId: user.id });
+  const tenantId = await resolveTenantIdForUserRequestAsync(req, { authUserId: user.id });
 
   const result = await listPendingInvitationsForUser(tenantId, user.id);
   if (!result.ok) {

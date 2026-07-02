@@ -16,6 +16,8 @@ import {
   store,
   resetSupabaseMock,
   setAuthUser,
+  setRpcResult,
+  rpcCalls,
 } from './__helpers__/supabaseMock';
 
 import { invalidateStaffCache } from '../../utils/staff';
@@ -250,9 +252,12 @@ describe('PATCH /api/teams/transfer-captain', () => {
   });
 
   it('returns 400 when target user is not a member of the team', async () => {
+    // La validation « cible membre non-coach » est faite atomiquement dans la
+    // RPC transfer_captain → simulée via l'exception à message stable.
     setAuthUser({ id: 'user-1' });
     store.teams = [{ id: 't1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'user-1' }] as any;
     store.team_members = []; // target not member
+    setRpcResult('transfer_captain', { error: { message: 'target_not_member' } });
     const res = makeRes();
     await transferCaptainHandler(
       makeReq({ method: 'PATCH', body: { newCaptainUserId: otherUuid } }, true),
@@ -261,19 +266,26 @@ describe('PATCH /api/teams/transfer-captain', () => {
     expect(res.statusCode).toBe(400);
   });
 
-  it('returns 200 and updates captain_id when transfer is valid', async () => {
+  it('returns 200 and transfers captaincy via the RPC when valid', async () => {
     setAuthUser({ id: 'user-1' });
     store.teams = [{ id: 't1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'user-1' }] as any;
     store.team_members = [
       { id: 'tm-target', team_id: 't1', user_id: otherUuid },
     ] as any;
+    setRpcResult('transfer_captain', {
+      data: { team_id: 't1', captain_id: otherUuid, previous_captain: 'user-1' },
+    });
     const res = makeRes();
     await transferCaptainHandler(
       makeReq({ method: 'PATCH', body: { newCaptainUserId: otherUuid } }, true),
       res
     );
     expect(res.statusCode).toBe(200);
-    expect((store.teams[0] as any).captain_id).toBe(otherUuid);
+    // La mutation est côté RPC (atomique) : on vérifie l'appel + ses params.
+    const call = rpcCalls.find((c) => c.fn === 'transfer_captain');
+    expect(call).toBeTruthy();
+    expect((call!.params as any).p_new_captain).toBe(otherUuid);
+    expect((call!.params as any).p_actor).toBe('user-1');
   });
 
   it('returns 409 when the team roster is locked by an active tournament', async () => {
@@ -320,13 +332,16 @@ describe('PATCH /api/teams/transfer-captain', () => {
         status: 'completed',
       },
     ] as any;
+    setRpcResult('transfer_captain', {
+      data: { team_id: 't1', captain_id: otherUuid, previous_captain: 'user-1' },
+    });
     const res = makeRes();
     await transferCaptainHandler(
       makeReq({ method: 'PATCH', body: { newCaptainUserId: otherUuid } }, true),
       res
     );
     expect(res.statusCode).toBe(200);
-    expect((store.teams[0] as any).captain_id).toBe(otherUuid);
+    expect(rpcCalls.some((c) => c.fn === 'transfer_captain')).toBe(true);
   });
 });
 

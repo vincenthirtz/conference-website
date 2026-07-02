@@ -444,6 +444,79 @@ describe('/api/demandes/register-team', () => {
     expect(res.statusCode).toBe(400);
   });
 
+  it('POST 201 when min_players met by players only (coach not counted)', async () => {
+    setAuthUser({ id: 'user-1' });
+    store.teams = [
+      { id: 'team-1', name: 'A', captain_id: 'user-1', is_active: true },
+    ] as any;
+    store.tournaments = [
+      {
+        id: TID,
+        name: 'X',
+        status: 'published',
+        min_players: 3,
+        max_teams: null,
+      },
+    ] as any;
+    store.tournament_teams = [];
+    store.demandes = [];
+    // 3 players + 1 coach ; min_players=3 → passe (le coach ne compte pas).
+    store.team_members = [
+      { id: 'm1', team_id: 'team-1', role: 'player' },
+      { id: 'm2', team_id: 'team-1', role: 'player' },
+      { id: 'm3', team_id: 'team-1', role: 'substitute' },
+      { id: 'm4', team_id: 'team-1', role: 'coach' },
+    ] as any;
+    const res = makeRes();
+    await registerTeamHandler(
+      makeReq(
+        {
+          method: 'POST',
+          body: { teamId: 'team-1', tournamentId: TID },
+        },
+        true
+      ),
+      res
+    );
+    expect(res.statusCode).toBe(201);
+  });
+
+  it('POST 400 when only a coach fills the min_players gap (coach excluded)', async () => {
+    setAuthUser({ id: 'user-1' });
+    store.teams = [
+      { id: 'team-1', name: 'A', captain_id: 'user-1', is_active: true },
+    ] as any;
+    store.tournaments = [
+      {
+        id: TID,
+        name: 'X',
+        status: 'published',
+        min_players: 3,
+        max_teams: null,
+      },
+    ] as any;
+    store.tournament_teams = [];
+    store.demandes = [];
+    // 2 players + 1 coach ; min_players=3 → échoue (coach exclu → 2 < 3).
+    store.team_members = [
+      { id: 'm1', team_id: 'team-1', role: 'player' },
+      { id: 'm2', team_id: 'team-1', role: 'player' },
+      { id: 'm3', team_id: 'team-1', role: 'coach' },
+    ] as any;
+    const res = makeRes();
+    await registerTeamHandler(
+      makeReq(
+        {
+          method: 'POST',
+          body: { teamId: 'team-1', tournamentId: TID },
+        },
+        true
+      ),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+  });
+
   it('POST 400 when tournament max_teams reached', async () => {
     setAuthUser({ id: 'user-1' });
     store.teams = [

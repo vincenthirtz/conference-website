@@ -20,7 +20,7 @@ import {
   insertTeamMember,
 } from '@/utils/teams/addMember';
 import { withAuthRoute } from '@/utils/staff';
-import { resolveTenantIdForUserRequest } from '@/utils/tenant';
+import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
 import { alertIfBlacklisted } from '@/utils/moderation/blacklist';
 
 import { logger } from '../../../utils/logger';
@@ -57,7 +57,7 @@ export default withAuthRoute(async function handler(
   )
     return;
 
-  const tenantId = resolveTenantIdForUserRequest(req, { authUserId: user.id });
+  const tenantId = await resolveTenantIdForUserRequestAsync(req, { authUserId: user.id });
 
   // Check if user can manage a team (captain OR manager)
   const access = await getManagedTeam(user.id, tenantId);

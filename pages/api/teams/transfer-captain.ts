@@ -11,7 +11,8 @@ import {
   isTeamRosterLocked,
   rosterLockErrorMessage,
 } from '@/utils/teams/rosterLock';
-import { resolveTenantIdForUserRequest } from '@/utils/tenant';
+import { mapTeamRpcError } from '@/utils/teams/rpcErrors';
+import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
 import { emitRoleSyncEvent } from '@/utils/botRoleSync';
 
 import { logger } from '../../../utils/logger';
@@ -36,7 +37,7 @@ export default withAuthRoute(async function handler(
     return;
 
   const userId = user.id;
-  const tenantId = resolveTenantIdForUserRequest(req, { authUserId: userId });
+  const tenantId = await resolveTenantIdForUserRequestAsync(req, { authUserId: userId });
   const { newCaptainUserId } = req.body || {};
 
   if (
@@ -70,25 +71,6 @@ export default withAuthRoute(async function handler(
       .json({ error: "Tu n'es capitaine d'aucune équipe." });
   }
 
-  // Vérifier que le nouveau capitaine est bien membre de l'équipe ET n'est pas
-  // coach : le capitanat implique de piloter la line-up, ce qui n'a pas de sens
-  // pour un coach (exclu du roster joueur). On exclut donc explicitement le
-  // rôle coach du capitanat.
-  const { data: newCaptainMembership } = await supabaseAdmin
-    .from('team_members')
-    .select('id, role')
-    .eq('team_id', team.id)
-    .eq('user_id', newCaptainUserId)
-    .eq('tenant_id', tenantId)
-    .neq('role', 'coach')
-    .maybeSingle();
-
-  if (!newCaptainMembership) {
-    return res.status(400).json({
-      error: "Ce joueur n'est pas un membre valide de ton équipe (ou est coach).",
-    });
-  }
-
   // Bloquer si le roster est verrouillé par un tournoi en cours :
   // changer de capitaine pendant un tournoi modifie qui peut agir
   // sur les line-ups, scrims, scores… c'est une rupture d'intégrité métier.
@@ -98,31 +80,25 @@ export default withAuthRoute(async function handler(
     return res.status(409).json({ error: rosterLockErrorMessage(lockStatus) });
   }
 
-  // Transfert atomique et sûr : UPDATE conditionné par (id, tenant_id) ET
-  // captain_id === l'appelant (CAS — le demandeur est toujours le capitaine au
-  // moment de l'écriture, pas de fenêtre TOCTOU depuis le lookup ci-dessus).
-  // `.select()` renvoie les lignes affectées : 0 ligne ⇒ un autre transfert a
-  // eu lieu entre-temps ⇒ 409.
-  const { data: updatedRows, error: updateErr } = await supabaseAdmin
-    .from('teams')
-    .update({
-      captain_id: newCaptainUserId,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', team.id)
-    .eq('tenant_id', tenantId)
-    .eq('captain_id', userId)
-    .select('id');
+  // Transfert atomique via la RPC transactionnelle `transfer_captain` :
+  // verrou FOR UPDATE sur teams + EXISTS(membre non-coach) + UPDATE captain_id,
+  // le tout dans une seule transaction — pas de fenêtre TOCTOU ni de pré-check
+  // applicatif à maintenir. Les erreurs métier (team_not_found, not_captain,
+  // same_user, target_not_member) sont levées comme exceptions PL/pgSQL et
+  // mappées vers HTTP via mapTeamRpcError.
+  const { error: rpcErr } = await supabaseAdmin.rpc('transfer_captain', {
+    p_team_id: team.id,
+    p_new_captain: newCaptainUserId,
+    p_tenant: tenantId,
+    p_actor: userId,
+  });
 
-  if (updateErr) {
-    logger.error('[transfer-captain] update error:', updateErr);
-    return res.status(500).json({ error: 'Failed to transfer captaincy.' });
-  }
-
-  if (!updatedRows || updatedRows.length === 0) {
-    return res.status(409).json({
-      error: 'Le capitanat a déjà été transféré. Recharge la page.',
-    });
+  if (rpcErr) {
+    const mapped = mapTeamRpcError(rpcErr);
+    if (mapped.status >= 500) {
+      logger.error('[transfer-captain] transfer_captain rpc error:', rpcErr);
+    }
+    return res.status(mapped.status).json({ error: mapped.error });
   }
 
   // Bot role-sync + web-push : ce handler fait son propre UPDATE (il n'appelle

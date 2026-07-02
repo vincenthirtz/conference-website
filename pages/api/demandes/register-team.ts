@@ -11,7 +11,7 @@ import {
   getManagedTeam,
   TEAM_MANAGEMENT_FORBIDDEN,
 } from '@/utils/teams/managementAccess';
-import { resolveTenantIdForUserRequest } from '@/utils/tenant';
+import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
 import { emitBotEvent } from '@/utils/botEvents';
 
 import { logger } from '../../../utils/logger';
@@ -32,7 +32,7 @@ export default withAuthRoute(async function handler(
     return;
 
   const userId = user.id;
-  const tenantId = resolveTenantIdForUserRequest(req, { authUserId: userId });
+  const tenantId = await resolveTenantIdForUserRequestAsync(req, { authUserId: userId });
 
   if (req.method === 'GET') {
     const { data: demandes, error: demandesErr } = await supabaseAdmin
@@ -146,13 +146,16 @@ export default withAuthRoute(async function handler(
       });
     }
 
-    // Check min_players
+    // Check min_players — nombre de JOUEURS (player + substitute), coachs
+    // EXCLUS (décision produit : un coach ne compte pas dans le roster
+    // minimum requis pour s'inscrire).
     if (tournament.min_players) {
       const { count: memberCount } = await supabaseAdmin
         .from('team_members')
         .select('id', { count: 'exact', head: true })
         .eq('team_id', teamId)
-        .eq('tenant_id', tenantId);
+        .eq('tenant_id', tenantId)
+        .neq('role', 'coach');
 
       if ((memberCount ?? 0) < tournament.min_players) {
         return res.status(400).json({

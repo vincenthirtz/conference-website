@@ -2,7 +2,7 @@
 //
 // Traduction centralisee des erreurs remontees par les fonctions RPC
 // transactionnelles du flow equipe (approve_join_request,
-// approve_transfer_request, accept_invitation).
+// approve_transfer_request, accept_invitation, transfer_captain).
 //
 // Chaque fonction est atomique (verrou FOR UPDATE + CAS status pending->approved
 // + mutation roster) et signale ses erreurs metier via :
@@ -27,6 +27,10 @@ export type MappedRpcError = { status: number; error: string };
  *       demande_not_pending     -> 409
  *       demande_no_team         -> 409
  *       not_owner               -> 403
+ *       team_not_found          -> 404  (aussi code P0002 — no_data_found)
+ *       not_captain             -> 403
+ *       same_user               -> 400
+ *       target_not_member       -> 400  (cible absente ou coach)
  *   - defaut                    -> 500
  */
 export function mapTeamRpcError(error: {
@@ -46,6 +50,12 @@ export function mapTeamRpcError(error: {
       error:
         "L'équipe a atteint la limite de joueur(s) imposée par un tournoi.",
     };
+  }
+  // P0002 (no_data_found) : transfer_captain lève cette exception quand le
+  // SELECT ... FOR UPDATE ne trouve pas l'équipe. On la traite comme le
+  // sentinelle `team_not_found` (404) ci-dessous.
+  if (code === 'P0002') {
+    return { status: 404, error: 'Équipe introuvable.' };
   }
 
   // 2) Sentinelles metier levees par les fonctions PL/pgSQL.
@@ -68,6 +78,26 @@ export function mapTeamRpcError(error: {
     return {
       status: 403,
       error: "Tu n'es pas autorisé à traiter cette demande.",
+    };
+  }
+
+  // Sentinelles propres a transfer_captain.
+  if (message.includes('team_not_found')) {
+    return { status: 404, error: 'Équipe introuvable.' };
+  }
+  if (message.includes('not_captain')) {
+    return {
+      status: 403,
+      error: "Tu n'es capitaine d'aucune équipe.",
+    };
+  }
+  if (message.includes('same_user')) {
+    return { status: 400, error: 'Tu es déjà capitaine.' };
+  }
+  if (message.includes('target_not_member')) {
+    return {
+      status: 400,
+      error: "Ce joueur n'est pas un membre valide de ton équipe (ou est coach).",
     };
   }
 

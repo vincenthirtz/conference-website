@@ -13,7 +13,7 @@
 // (battle_tag, display_name) — dégrade gracieusement si la row profile est
 // absente.
 //
-// Auth : Bearer (withAuthRoute). Tenant : resolveTenantIdForUserRequest.
+// Auth : Bearer (withAuthRoute). Tenant : resolveTenantIdForUserRequestAsync.
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
@@ -23,7 +23,7 @@ import {
   getManagedTeam,
   TEAM_MANAGEMENT_FORBIDDEN,
 } from '@/utils/teams/managementAccess';
-import { resolveTenantIdForUserRequest } from '@/utils/tenant';
+import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
 import { logger } from '@/utils/logger';
 
 type FreePlayerOut = {
@@ -57,7 +57,7 @@ export default withAuthRoute(async function handler(
     return;
   }
 
-  const tenantId = resolveTenantIdForUserRequest(req, { authUserId: user.id });
+  const tenantId = await resolveTenantIdForUserRequestAsync(req, { authUserId: user.id });
 
   // Gate : le caller doit gérer une équipe (capitaine ou manager).
   const access = await getManagedTeam(user.id, tenantId);

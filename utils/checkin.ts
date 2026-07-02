@@ -131,6 +131,12 @@ export async function resolveCheckinToken(
   if (!supabaseAdmin) return { ok: false, error: 'Service indisponible' };
   if (!token || token.length < 16)
     return { ok: false, error: 'Token invalide' };
+  // Les tokens sont base64url (`[A-Za-z0-9_-]`). On valide le charset AVANT
+  // d'interpoler le token dans le filtre `.or(...)` PostgREST ci-dessous :
+  // défense en profondeur contre une injection de filtre (`,` / `.` / `(`)
+  // via un token forgé.
+  if (!/^[A-Za-z0-9_-]+$/.test(token))
+    return { ok: false, error: 'Token invalide' };
 
   // Lookup the match by either team1 or team2 token
   const { data: match, error } = await supabaseAdmin

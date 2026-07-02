@@ -502,6 +502,87 @@ describe('POST /api/teams/create-with-member', () => {
     expect((res.body as any).tournament).toBeFalsy();
   });
 
+  it('201 auto-registers when the sole player meets min_players (coach not counted, player captain)', async () => {
+    // min_players=1, un capitaine JOUEUR → 1 joueur inséré → passe.
+    setAuthListUsers([{ id: 'u1', email: 'p1@example.com' }]);
+    store.teams = [];
+    store.team_members = [];
+    store.tournaments = [
+      {
+        id: 'tour-coach-ok',
+        name: 'CoachCup',
+        status: 'published',
+        max_teams: null,
+        min_players: 1,
+      },
+    ] as any;
+    store.tournament_stages = [
+      { id: 's1', tournament_id: 'tour-coach-ok' },
+    ] as any;
+    store.stage_teams = [];
+    const res = makeRes();
+    await createWithMemberHandler(
+      makeReq({
+        body: {
+          name: 'PlayerLed',
+          tournament_id: 'tour-coach-ok',
+          members: [
+            {
+              email: 'p1@example.com',
+              role: 'player',
+              battle_tag: 'P1#1234',
+              set_captain: true,
+            },
+          ],
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(201);
+    expect((res.body as any).tournament).toBeTruthy();
+  });
+
+  it('201 skips auto-register when the only inserted member is a coach (coach excluded from min_players)', async () => {
+    // min_players=1 mais l'unique membre inséré (le capitaine) est un COACH
+    // → 0 joueur → auto-register skippé.
+    setAuthListUsers([{ id: 'u1', email: 'c1@example.com' }]);
+    store.teams = [];
+    store.team_members = [];
+    store.tournaments = [
+      {
+        id: 'tour-coach-only',
+        name: 'CoachOnlyCup',
+        status: 'published',
+        max_teams: null,
+        min_players: 1,
+      },
+    ] as any;
+    store.tournament_stages = [
+      { id: 's1', tournament_id: 'tour-coach-only' },
+    ] as any;
+    store.stage_teams = [];
+    const res = makeRes();
+    await createWithMemberHandler(
+      makeReq({
+        body: {
+          name: 'CoachLed',
+          tournament_id: 'tour-coach-only',
+          members: [
+            {
+              email: 'c1@example.com',
+              role: 'coach',
+              battle_tag: 'C1#1234',
+              set_captain: true,
+            },
+          ],
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(201);
+    expect((res.body as any).tournament).toBeFalsy();
+  });
+
   it('201 with member_user_id directly (existing user, no email lookup)', async () => {
     store.teams = [];
     store.team_members = [];

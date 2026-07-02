@@ -10,7 +10,7 @@ import {
   getManagedTeam,
   TEAM_MANAGEMENT_FORBIDDEN,
 } from '@/utils/teams/managementAccess';
-import { resolveTenantIdForUserRequest } from '@/utils/tenant';
+import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
 
 import { logger } from '../../../utils/logger';
 type PlayerResult = {
@@ -38,7 +38,7 @@ export default withAuthRoute(async function handler(
   )
     return;
 
-  const tenantId = resolveTenantIdForUserRequest(req, { authUserId: user.id });
+  const tenantId = await resolveTenantIdForUserRequestAsync(req, { authUserId: user.id });
 
   // Check if user can manage a team (captain or manager)
   const access = await getManagedTeam(user.id, tenantId);

@@ -15,7 +15,7 @@
 //
 // Body (zod) : { teamId: uuid, authUserId: uuid }. Comptes liés uniquement.
 //
-// Auth : Bearer (withAuthRoute). Tenant : resolveTenantIdForUserRequest.
+// Auth : Bearer (withAuthRoute). Tenant : resolveTenantIdForUserRequestAsync.
 //
 // Réponse 200 : { ok: true, demandeId }.
 
@@ -29,7 +29,7 @@ import {
   getManagedTeam,
   TEAM_MANAGEMENT_FORBIDDEN,
 } from '@/utils/teams/managementAccess';
-import { resolveTenantIdForUserRequest } from '@/utils/tenant';
+import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
 import {
   isTeamRosterLocked,
   rosterLockErrorMessage,
@@ -79,7 +79,7 @@ export default withAuthRoute(async function handler(
   }
   const { teamId, authUserId } = parsed.data;
 
-  const tenantId = resolveTenantIdForUserRequest(req, { authUserId: user.id });
+  const tenantId = await resolveTenantIdForUserRequestAsync(req, { authUserId: user.id });
 
   // Gate : le caller doit gérer CETTE équipe.
   const access = await getManagedTeam(user.id, tenantId);

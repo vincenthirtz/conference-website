@@ -33,14 +33,18 @@ Audit de correction (bugs) sur tout le parcours : inscription → création/rejo
 
 ## Résiduels / backlog
 
-- **`transfer-captain` atomicité partielle** : pré-check (exclusion coach) + CAS sur `captain_id`, plutôt qu'un seul `UPDATE ... WHERE EXISTS(member valide)` (impossible via PostgREST/mock sans sous-requête corrélée). Fenêtre TOCTOU minime (la cible devrait quitter entre le pré-check et l'UPDATE) ; pire cas = `captain_id` pointant un non-membre, surfacé au prochain transfert/leave. **Fix complet possible** : une RPC `transfer_captain(team, new, tenant)` conditionnelle.
-- **Multi-tenant latent** : `resolveTenantIdForUserRequest`/`resolveTenantIdForPublicRequest` renvoient toujours `DEFAULT_TENANT_ID`. Intentionnel en mono-tenant ; **à corriger avant le 2ᵉ tenant** (sinon fuite/écriture cross-tenant).
-- **Exemption coach** : `UNIQUE(tenant_id, user_id)` interdit aussi à un coach d'être sur plusieurs équipes. Si le métier le veut, remplacer par un index partiel `WHERE role <> 'coach'`.
-- **Check-in** : `resolveCheckinToken` interpole le token dans un filtre PostgREST `.or()` sans valider le charset (tokens base64url → sûrs en pratique ; ajouter une validation `^[A-Za-z0-9_-]+$` par défense).
-- **`min_players`/capacité** : compté sur `tournament_teams` (register-team) vs `stage_teams` (create-with-member), et `min_players` inclut les coachs dans un chemin → unifier la source de vérité.
+### Résiduels TRAITÉS (2ᵉ passe)
+- **`transfer-captain` — atomicité totale** : RPC dédiée `transfer_captain(p_team_id, p_new_captain, p_tenant, p_actor)` (`database/migrations/add_transfer_captain_function.sql`, appliquée en prod) — `FOR UPDATE` sur `teams` + `EXISTS(membre non-coach)` + `UPDATE` en une transaction ; le handler délègue et mappe les exceptions (`team_not_found`/`not_captain`/`same_user`/`target_not_member`). Plus de TOCTOU ni de coach-capitaine.
+- **Check-in — validation charset** : `resolveCheckinToken` rejette tout token hors `^[A-Za-z0-9_-]+$` avant la requête `.or()` (défense injection filtre PostgREST).
+- **`min_players` — coachs exclus** : les deux chemins (`demandes/register-team`, `teams/create-with-member`) comptent désormais les joueurs (player+substitute) hors coach. Les deux tables de capacité (`tournament_teams` vs `stage_teams`) sont **volontairement** distinctes (concepts différents) — non fusionnées.
+- **Multi-tenant — résolution user-level** : nouveau `resolveTenantIdForUserRequestAsync(req, {authUserId})` (tenant = équipe du user, fallback path-prefix → `DEFAULT_TENANT_ID`), câblé dans **22 handlers authentifiés** du flow (`teams/*`, `demandes/*`, `player/invitations/*`). Neutre aujourd'hui (mono-tenant), correct pour un 2ᵉ tenant.
+
+### Résiduels restants (décision / hors périmètre)
+- **Exemption coach** : décision = **on garde l'unicité stricte** `UNIQUE(tenant_id, user_id)` (coach inclus). Autoriser un coach multi-équipe rouvrirait le bug multi-lignes (`.maybeSingle()` → 500) et demanderait un audit complet ; non souhaité (aucune donnée de ce type).
+- **Multi-tenant — endpoints publics + handlers hors flow** : `create-with-member`, `checkin/[token]` et les routes hors flow restent sur les stubs sync (path-prefix Phase 3). Le passage du header tenant en REQUIRED reste piloté par Phase 3.
 
 ## Vérification
 
-- `tsc --noEmit` ✓ · `eslint` ✓ · `vitest` : 3868 passés, 2 skipped, 1 échec **pré-existant** (`openapiContractDrift`, repo bot sibling absent de l'env — sans rapport).
+- `tsc --noEmit` ✓ · `eslint` ✓ · `vitest` : 3885 passés, 2 skipped, 1 échec **pré-existant** (`openapiContractDrift`, repo bot sibling absent de l'env — sans rapport).
 - Fonctions RPC + contrainte smoke-testées en base (existence, grants `service_role` only, garde `demande_not_found`).
 - **e2e** : la suite du flow n'a pas révélé de bug produit ; les échecs locaux viennent du **setup des specs** (`supabaseTestClient` ne crée pas la fixture équipe → cascade `describe.serial`), pas du code. Limitation d'environnement local.

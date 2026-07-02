@@ -328,3 +328,66 @@ export function resolveTenantIdForUserRequest(
   // TODO(S7) : résoudre depuis l'équipe gérée par le user, ou via URL.
   return DEFAULT_TENANT_ID;
 }
+
+/**
+ * Version ASYNC du résolveur user-level (S7b).
+ *
+ * Pourquoi : le tenant d'une requête authentifiée = le tenant de l'équipe
+ * dont le user est membre. On lit donc `team_members.tenant_id` pour le
+ * `authUserId` courant. Aujourd'hui neutre (un seul tenant, toutes les rows
+ * portent — ou héritent par fallback — `DEFAULT_TENANT_ID`), mais correct dès
+ * qu'un 2e tenant existe : deux capitaines d'équipes de tenants différents
+ * seront résolus vers leur tenant respectif au lieu du default hardcodé.
+ *
+ * Résolution :
+ *   - `ctx.authUserId` + `supabaseAdmin` dispo → lookup
+ *     `team_members.tenant_id` (1re membership) → renvoyé si trouvé.
+ *   - Pas de membership / pas d'`authUserId` → fallback sur le résolveur
+ *     public path-prefix (`resolveTenantIdForPublicRequestAsync`), qui lui
+ *     retombe sur `DEFAULT_TENANT_ID` hors préfixe.
+ *   - Erreur DB → warn + `DEFAULT_TENANT_ID`. Ne throw JAMAIS : la résolution
+ *     de tenant ne doit pas casser un flow d'inscription/équipe.
+ *
+ * NB : le stub sync `resolveTenantIdForUserRequest` reste en place pour les
+ * call sites legacy hors flow inscription/équipe.
+ */
+export async function resolveTenantIdForUserRequestAsync(
+  req: RequestLike,
+  ctx?: { authUserId?: string | null } | null
+): Promise<string> {
+  const authUserId = ctx?.authUserId;
+
+  if (authUserId && supabaseAdmin) {
+    try {
+      const { data, error } = await supabaseAdmin
+        .from('team_members')
+        .select('tenant_id')
+        .eq('user_id', authUserId)
+        .limit(1)
+        .maybeSingle();
+
+      if (error) {
+        logger.warn(
+          '[tenant] failed to resolve user tenant from membership, falling back to DEFAULT_TENANT_ID',
+          { error: error.message }
+        );
+        return DEFAULT_TENANT_ID;
+      }
+
+      const tenantId = (data as { tenant_id?: string | null } | null)
+        ?.tenant_id;
+      if (typeof tenantId === 'string' && tenantId) {
+        return tenantId;
+      }
+    } catch (err) {
+      logger.warn(
+        '[tenant] unexpected error resolving user tenant, falling back to DEFAULT_TENANT_ID',
+        { error: err instanceof Error ? err.message : String(err) }
+      );
+      return DEFAULT_TENANT_ID;
+    }
+  }
+
+  // Pas de membership (ou pas d'authUserId) → résolveur public path-prefix.
+  return resolveTenantIdForPublicRequestAsync(req);
+}

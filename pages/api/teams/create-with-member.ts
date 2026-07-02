@@ -635,10 +635,13 @@ export default async function handler(
       if (tournament && tournament.status === 'published') {
         // Check max_teams limit
         let canRegister = true;
-        if (
-          tournament.min_players &&
-          insertedMembers.length < tournament.min_players
-        ) {
+        // min_players = nombre de JOUEURS (player + substitute), coachs
+        // EXCLUS (décision produit : un coach ne compte pas dans le roster
+        // minimum requis pour l'inscription auto).
+        const playerCount = insertedMembers.filter(
+          (m) => m.role !== 'coach'
+        ).length;
+        if (tournament.min_players && playerCount < tournament.min_players) {
           canRegister = false;
         }
         if (tournament.max_teams) {

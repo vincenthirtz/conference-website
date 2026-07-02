@@ -5,17 +5,21 @@
 // action, and — the behaviour added here — emits `team.captain.changed` so
 // Discord role-sync + web-push fire on a player-initiated handover.
 //
-// The handler does its own `teams` UPDATE (it does NOT call setTeamCaptain), so
-// it must emit the events itself. We mirror setTeamCaptain's exact shape: two
-// `team.captain.changed` role-sync events, one for the previous captain
-// (`role: 'previous'`) and one for the new captain (`role: 'new'`).
+// The atomic mutation is delegated to the transactional RPC `transfer_captain`
+// (FOR UPDATE teams + EXISTS(non-coach member) + UPDATE captain_id). Business
+// errors (team_not_found, not_captain, same_user, target_not_member) are raised
+// as PL/pgSQL exceptions and mapped to HTTP via mapTeamRpcError. On success the
+// handler still emits the role-sync events itself (the RPC doesn't), mirroring
+// setTeamCaptain's exact shape: two `team.captain.changed` events, one for the
+// previous captain (`role: 'previous'`) and one for the new (`role: 'new'`).
 //
 // Coverage:
-//   - success: captain → member, captain_id updated + both role-sync emits
-//   - 403 when caller is not the captain of any team
+//   - success: RPC called with the right params + both role-sync emits
+//   - 403 when caller is not the captain of any team (pre-check, before RPC)
 //   - 400 invalid / missing UUID
-//   - 400 transferring to self
-//   - 400 target is not a member of the team
+//   - 400 transferring to self (pre-check, before RPC)
+//   - RPC exception mapping: team_not_found 404, not_captain 403,
+//     same_user 400, target_not_member 400 (incl. coach)
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -23,6 +27,8 @@ import {
   store,
   resetSupabaseMock,
   setAuthUser,
+  setRpcResult,
+  rpcCalls,
   CONFERENCE_TENANT_ID,
 } from './__helpers__/supabaseMock';
 
@@ -122,7 +128,7 @@ describe('PATCH /api/teams/transfer-captain', () => {
     seed();
   });
 
-  it('transfers captaincy to a member and emits team.captain.changed for both users', async () => {
+  it('calls transfer_captain RPC with the right params and emits team.captain.changed for both users', async () => {
     authAs(CAPTAIN_ID);
     const req = makeAuthedReq({ body: { newCaptainUserId: MEMBER_ID } });
     const res = makeRes();
@@ -135,8 +141,15 @@ describe('PATCH /api/teams/transfer-captain', () => {
       newCaptainUserId: MEMBER_ID,
     });
 
-    // captain_id persisted on the team row.
-    expect(store.teams[0].captain_id).toBe(MEMBER_ID);
+    // The atomic mutation is delegated to the transfer_captain RPC.
+    const rpc = rpcCalls.find((c) => c.fn === 'transfer_captain');
+    expect(rpc).toBeDefined();
+    expect(rpc!.params).toEqual({
+      p_team_id: TEAM_ID,
+      p_new_captain: MEMBER_ID,
+      p_tenant: CONFERENCE_TENANT_ID,
+      p_actor: CAPTAIN_ID,
+    });
 
     // Two role-sync emits mirroring setTeamCaptain's shape.
     expect(emitRoleSyncEvent).toHaveBeenCalledTimes(2);
@@ -196,8 +209,14 @@ describe('PATCH /api/teams/transfer-captain', () => {
     expect(emitRoleSyncEvent).not.toHaveBeenCalled();
   });
 
-  it('returns 400 when the target is not a member of the team', async () => {
+  it('maps target_not_member RPC exception → 400 (target not a member)', async () => {
     authAs(CAPTAIN_ID);
+    // The RPC raises `target_not_member` when the target isn't a non-coach
+    // member of the team. Seed the exception on the mock.
+    setRpcResult('transfer_captain', {
+      data: null,
+      error: { message: 'target_not_member' },
+    });
     const req = makeAuthedReq({ body: { newCaptainUserId: STRANGER_ID } });
     const res = makeRes();
 
@@ -207,29 +226,17 @@ describe('PATCH /api/teams/transfer-captain', () => {
     expect(res.body).toMatchObject({
       error: expect.stringContaining("n'est pas un membre valide"),
     });
-    expect(store.teams[0].captain_id).toBe(CAPTAIN_ID);
     expect(emitRoleSyncEvent).not.toHaveBeenCalled();
   });
 
-  it('returns 400 when the target is a coach (coaches excluded from captaincy)', async () => {
+  it('maps target_not_member RPC exception → 400 when the target is a coach', async () => {
     authAs(CAPTAIN_ID);
-    // Le membre cible existe mais avec le rôle coach → capitanat interdit.
-    store.team_members = [
-      {
-        id: '11111111-1111-1111-1111-111111111111',
-        team_id: TEAM_ID,
-        user_id: CAPTAIN_ID,
-        role: 'player',
-        tenant_id: CONFERENCE_TENANT_ID,
-      },
-      {
-        id: '44444444-4444-4444-4444-444444444444',
-        team_id: TEAM_ID,
-        user_id: MEMBER_ID,
-        role: 'coach',
-        tenant_id: CONFERENCE_TENANT_ID,
-      },
-    ];
+    // A coach target is excluded by the RPC's EXISTS(non-coach member) guard,
+    // which raises the same `target_not_member` sentinel.
+    setRpcResult('transfer_captain', {
+      data: null,
+      error: { message: 'target_not_member' },
+    });
     const req = makeAuthedReq({ body: { newCaptainUserId: MEMBER_ID } });
     const res = makeRes();
 
@@ -237,9 +244,56 @@ describe('PATCH /api/teams/transfer-captain', () => {
 
     expect(res.statusCode).toBe(400);
     expect(res.body).toMatchObject({
-      error: expect.stringContaining('coach'),
+      error: expect.stringContaining("n'est pas un membre valide"),
     });
-    expect(store.teams[0].captain_id).toBe(CAPTAIN_ID);
+    expect(emitRoleSyncEvent).not.toHaveBeenCalled();
+  });
+
+  it('maps team_not_found RPC exception (P0002) → 404', async () => {
+    authAs(CAPTAIN_ID);
+    setRpcResult('transfer_captain', {
+      data: null,
+      error: { code: 'P0002', message: 'query returned no rows' },
+    });
+    const req = makeAuthedReq({ body: { newCaptainUserId: MEMBER_ID } });
+    const res = makeRes();
+
+    await transferCaptainHandler(req, res);
+
+    expect(res.statusCode).toBe(404);
+    expect(emitRoleSyncEvent).not.toHaveBeenCalled();
+  });
+
+  it('maps not_captain RPC exception → 403', async () => {
+    authAs(CAPTAIN_ID);
+    setRpcResult('transfer_captain', {
+      data: null,
+      error: { message: 'not_captain' },
+    });
+    const req = makeAuthedReq({ body: { newCaptainUserId: MEMBER_ID } });
+    const res = makeRes();
+
+    await transferCaptainHandler(req, res);
+
+    expect(res.statusCode).toBe(403);
+    expect(emitRoleSyncEvent).not.toHaveBeenCalled();
+  });
+
+  it('maps same_user RPC exception → 400', async () => {
+    authAs(CAPTAIN_ID);
+    // The self-transfer guard is also enforced by the RPC (defense in depth).
+    setRpcResult('transfer_captain', {
+      data: null,
+      error: { message: 'same_user' },
+    });
+    // Use a distinct-but-valid target so the handler's own pre-check passes and
+    // the request reaches the RPC.
+    const req = makeAuthedReq({ body: { newCaptainUserId: MEMBER_ID } });
+    const res = makeRes();
+
+    await transferCaptainHandler(req, res);
+
+    expect(res.statusCode).toBe(400);
     expect(emitRoleSyncEvent).not.toHaveBeenCalled();
   });
 });
