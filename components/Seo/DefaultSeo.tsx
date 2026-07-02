@@ -9,6 +9,14 @@ export type SeoProps = {
   publishedTime?: string;
   modifiedTime?: string;
   noindex?: boolean;
+  /**
+   * JSON-LD structuré par-page (par-entité). Rendu tel quel dans un
+   * `<script type="application/ld+json">` par entrée. Vient en complément du
+   * BreadcrumbList (déjà émis sur toutes les pages non-home) et des schémas
+   * Organization/WebSite (homepage-only). Ex : ProfilePage/Person pour un
+   * profil joueuse, SportsEvent/ItemList pour une league.
+   */
+  jsonLd?: Record<string, unknown> | Record<string, unknown>[];
 };
 
 const SITE_NAME = "OW Women's Cup";
@@ -89,6 +97,7 @@ export default function DefaultSeo({
   publishedTime,
   modifiedTime,
   noindex,
+  jsonLd,
 }: SeoProps) {
   const { asPath } = useRouter();
   const pathname = asPath?.split('?')[0] || '/';
@@ -130,6 +139,14 @@ export default function DefaultSeo({
           ],
         }
       : null;
+
+  // Per-page JSON-LD (par-entité) — normalisé en tableau pour émettre un
+  // <script> par entrée avec une garde de non-nullité.
+  const jsonLdEntries: Record<string, unknown>[] = jsonLd
+    ? Array.isArray(jsonLd)
+      ? jsonLd.filter((e): e is Record<string, unknown> => Boolean(e))
+      : [jsonLd]
+    : [];
 
   return (
     <Head>
@@ -222,6 +239,15 @@ export default function DefaultSeo({
           }}
         />
       )}
+
+      {/* Per-page JSON-LD (par-entité) — un script par entrée. */}
+      {jsonLdEntries.map((entry, i) => (
+        <script
+          key={`jsonld-${i}`}
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(entry) }}
+        />
+      ))}
     </Head>
   );
 }

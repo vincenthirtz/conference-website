@@ -3,13 +3,20 @@
 // (classement cumulé des équipes) et liste des tournois comptant dans la
 // saison (avec leur poids si ≠ 1).
 //
-// Lecture publique via GET /api/leagues/[slug] (tenant par défaut géré côté
-// serveur). Fetch client, états loading / 404 / erreur.
+// Pré-rendu ISR (getStaticPaths fallback:'blocking' + getStaticProps
+// revalidate:300) via l'util partagé readLeagueDetail(DEFAULT_TENANT_ID) —
+// contenu indexable, SEO/JSON-LD par-entité. Un fetch client rafraîchit
+// ensuite les standings après hydratation. 404 = notFound.
 
 import { useCallback, useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import type {
+  GetStaticPaths,
+  GetStaticProps,
+  InferGetStaticPropsType,
+} from 'next';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import type {
   LeagueDetailResponse,
@@ -18,6 +25,8 @@ import type {
   LeagueStandingPublic,
   LeagueTournamentRef,
 } from '@/types/leagues';
+import { readLeagueDetail } from '@/utils/leagues/readLeagueDetail';
+import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 
 type FetchState =
   | { status: 'loading' }
@@ -64,13 +73,18 @@ function rankClass(rank: number): string {
   return 'text-neutral-400';
 }
 
-export default function LeagueDetailPage() {
+export default function LeagueDetailPage({
+  league: initial,
+}: InferGetStaticPropsType<typeof getStaticProps>) {
   const router = useRouter();
   const { slug } = router.query;
-  const [state, setState] = useState<FetchState>({ status: 'loading' });
+  // Premier rendu = données pré-remplies par l'ISR (getStaticProps). Le fetch
+  // client ne sert qu'à rafraîchir les standings après hydratation.
+  const [state, setState] = useState<FetchState>(
+    initial ? { status: 'ok', data: initial } : { status: 'loading' }
+  );
 
   const load = useCallback(async (s: string) => {
-    setState({ status: 'loading' });
     try {
       const res = await fetch(`/api/leagues/${encodeURIComponent(s)}`);
       if (res.status === 404) {
@@ -81,16 +95,14 @@ export default function LeagueDetailPage() {
       const data = (await res.json()) as LeagueDetailResponse;
       setState({ status: 'ok', data });
     } catch {
-      setState({ status: 'error' });
+      // On garde l'affichage pré-rempli si le refresh échoue.
+      setState((prev) => (prev.status === 'ok' ? prev : { status: 'error' }));
     }
   }, []);
 
   useEffect(() => {
     if (!router.isReady) return;
-    if (typeof slug !== 'string' || !slug) {
-      setState({ status: 'notfound' });
-      return;
-    }
+    if (typeof slug !== 'string' || !slug) return;
     void load(slug);
   }, [router.isReady, slug, load]);
 
@@ -255,11 +267,7 @@ function Standings({ standings }: { standings: LeagueStandingPublic[] }) {
   );
 }
 
-function Tournaments({
-  tournaments,
-}: {
-  tournaments: LeagueTournamentRef[];
-}) {
+function Tournaments({ tournaments }: { tournaments: LeagueTournamentRef[] }) {
   if (tournaments.length === 0) {
     return (
       <p className="rounded-2xl border border-neutral-800 bg-neutral-900/40 p-6 text-sm text-neutral-400">
@@ -365,10 +373,94 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
   );
 }
 
-const leagueDetailSeo: SeoProps = {
-  title: 'Ligue — OW Women’s Cup',
+/* ---------------------------------------------------------------------------
+ * SEO dynamique par-entité
+ *
+ * `getStaticProps` renvoie `props.seo` (SeoProps), privilégié par `_app.tsx`
+ * sur la propriété statique `Component.seo`. La prop statique reste comme
+ * repli dégradé.
+ *
+ * Choix JSON-LD : `ItemList` des standings plutôt que `SportsEvent`. Une
+ * league OW Women's Cup est une *saison* cumulant plusieurs tournois — pas un
+ * évènement sportif unique daté. `ItemList` (classement ordonné d'équipes)
+ * décrit fidèlement le contenu principal de la page (la table de standings) et
+ * se prête aux rich results de type liste.
+ * -------------------------------------------------------------------------*/
+
+function buildLeagueSeo(data: LeagueDetailResponse): SeoProps {
+  const { league, standings } = data;
+  const period = periodLabel(league);
+  const statusLabel = STATUS_LABELS[league.status];
+
+  const descriptionParts = [
+    `Classement cumulé de la saison ${league.name}`,
+    period ? `(${period})` : null,
+    `— ${statusLabel.toLowerCase()}.`,
+    standings.length > 0
+      ? `${standings.length} équipe${standings.length > 1 ? 's' : ''} classée${
+          standings.length > 1 ? 's' : ''
+        }.`
+      : null,
+  ].filter(Boolean);
+
+  const jsonLd: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: `Classement — ${league.name}`,
+    ...(league.description ? { description: league.description } : {}),
+    numberOfItems: standings.length,
+    itemListOrder: 'https://schema.org/ItemListOrderAscending',
+    itemListElement: standings.map((s) => ({
+      '@type': 'ListItem',
+      position: s.rank,
+      name: s.teamName ?? 'Équipe',
+    })),
+  };
+
+  return {
+    title: `${league.name} — classement`,
+    description: descriptionParts.join(' '),
+    jsonLd,
+  };
+}
+
+const leagueDetailSeoFallback: SeoProps = {
+  title: 'Ligue',
   description:
     'Classement cumulé des équipes et tournois de la saison OW Women’s Cup.',
 };
 
-LeagueDetailPage.seo = leagueDetailSeo;
+LeagueDetailPage.seo = leagueDetailSeoFallback;
+
+export const getStaticPaths: GetStaticPaths = async () => {
+  // Génération à la demande (fallback blocking) : aucun chemin pré-généré au
+  // build, puis cache / revalidation.
+  return { paths: [], fallback: 'blocking' };
+};
+
+export const getStaticProps: GetStaticProps<{
+  league: LeagueDetailResponse;
+  seo: SeoProps;
+}> = async (ctx) => {
+  const rawSlug = ctx.params?.slug;
+  const slug = Array.isArray(rawSlug) ? rawSlug[0] : rawSlug;
+  if (!slug || typeof slug !== 'string') {
+    return { notFound: true, revalidate: 300 };
+  }
+
+  let detail: LeagueDetailResponse | null;
+  try {
+    detail = await readLeagueDetail(slug, DEFAULT_TENANT_ID);
+  } catch {
+    return { notFound: true, revalidate: 30 };
+  }
+
+  if (!detail) {
+    return { notFound: true, revalidate: 300 };
+  }
+
+  return {
+    props: { league: detail, seo: buildLeagueSeo(detail) },
+    revalidate: 300,
+  };
+};

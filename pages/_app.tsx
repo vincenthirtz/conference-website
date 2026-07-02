@@ -47,10 +47,24 @@ type AppPropsWithSeo = AppProps & {
 };
 
 function MyApp({ Component, pageProps, router }: AppPropsWithSeo) {
-  const seo = (Component as any)?.seo as SeoProps | undefined;
+  // SEO resolution order:
+  //   1. `pageProps.seo` — DYNAMIC, per-entity SEO returned by a page's
+  //      getStaticProps/getServerSideProps (ISR pages : profil joueuse,
+  //      league…). Takes precedence so the meta reflect the fetched entity.
+  //   2. `Component.seo` — STATIC property on the page component (the historic
+  //      mechanism, used by every static page).
+  const dynamicSeo = (pageProps as { seo?: SeoProps } | undefined)?.seo;
+  const staticSeo = (Component as any)?.seo as SeoProps | undefined;
+  const seo = dynamicSeo ?? staticSeo;
   const isAdmin = router.pathname.startsWith('/admin');
   const isCaster = router.pathname.startsWith('/caster');
-  const isPlayer = router.pathname.startsWith('/player');
+  // Espace joueur PRIVÉ (auth, gate client) → noindex + manifest dédié.
+  // Exception : `/player/[userId]` est le profil PUBLIC (rating/H2H, ISR,
+  // indexable). Il vit sous /player/* pour des raisons de routing mais doit
+  // rester référençable — on l'exclut donc du scope "applicatif".
+  const isPublicPlayerProfile = router.pathname === '/player/[userId]';
+  const isPlayer =
+    router.pathname.startsWith('/player') && !isPublicPlayerProfile;
   // Embeddable surfaces (iframe) render bare: no Navbar/Footer/Toast/cookie
   // banner/socials. They are read-only and meant to be framed by third parties.
   const isEmbed = router.pathname.startsWith('/embed');

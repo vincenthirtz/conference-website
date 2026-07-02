@@ -3,8 +3,10 @@
 // progression (sparkline SVG maison — aucune lib de charts dans le repo),
 // derniers matchs et head-to-head.
 //
-// Lecture publique via GET /api/players/[userId]/profile (tenant par défaut
-// géré côté serveur). Fetch client, états loading / 404 / erreur.
+// Pré-rendu ISR (getStaticPaths fallback:'blocking' + getStaticProps
+// revalidate:300) via l'util partagé readPlayerProfile(DEFAULT_TENANT_ID) —
+// contenu indexable, SEO/JSON-LD par-entité. Un fetch client rafraîchit
+// ensuite le rating live après hydratation. 404 = notFound.
 //
 // NB : ce fichier est une route dynamique sous /player/*. Next.js résout les
 // routes statiques (profile.tsx, matches.tsx, …) AVANT [userId], donc l'espace
@@ -14,6 +16,11 @@ import { useCallback, useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import type {
+  GetStaticPaths,
+  GetStaticProps,
+  InferGetStaticPropsType,
+} from 'next';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import type {
   PlayerProfileResponse,
@@ -22,6 +29,8 @@ import type {
   PlayerProfileH2H,
   PlayerProfileCore,
 } from '@/types/rating';
+import { readPlayerProfile } from '@/utils/rating/readPlayerProfile';
+import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 
 type FetchState =
   | { status: 'loading' }
@@ -41,17 +50,20 @@ function formatDate(iso: string): string {
   });
 }
 
-export default function PlayerProfilePage() {
+export default function PlayerProfilePage({
+  profile,
+}: InferGetStaticPropsType<typeof getStaticProps>) {
   const router = useRouter();
   const { userId } = router.query;
-  const [state, setState] = useState<FetchState>({ status: 'loading' });
+  // Premier rendu = données pré-remplies par l'ISR (getStaticProps). Le fetch
+  // client ci-dessous ne sert qu'à rafraîchir (rating live) après hydratation.
+  const [state, setState] = useState<FetchState>(
+    profile ? { status: 'ok', data: profile } : { status: 'loading' }
+  );
 
   const load = useCallback(async (id: string) => {
-    setState({ status: 'loading' });
     try {
-      const res = await fetch(
-        `/api/players/${encodeURIComponent(id)}/profile`
-      );
+      const res = await fetch(`/api/players/${encodeURIComponent(id)}/profile`);
       if (res.status === 404) {
         setState({ status: 'notfound' });
         return;
@@ -60,16 +72,15 @@ export default function PlayerProfilePage() {
       const data = (await res.json()) as PlayerProfileResponse;
       setState({ status: 'ok', data });
     } catch {
-      setState({ status: 'error' });
+      // On garde l'affichage pré-rempli si le refresh échoue ; on ne bascule
+      // en erreur que si on n'avait pas de données initiales.
+      setState((prev) => (prev.status === 'ok' ? prev : { status: 'error' }));
     }
   }, []);
 
   useEffect(() => {
     if (!router.isReady) return;
-    if (typeof userId !== 'string' || !userId) {
-      setState({ status: 'notfound' });
-      return;
-    }
+    if (typeof userId !== 'string' || !userId) return;
     void load(userId);
   }, [router.isReady, userId, load]);
 
@@ -233,7 +244,10 @@ function RatingChart({ history }: { history: PlayerProfileHistoryPoint[] }) {
 
   // On construit la série à partir de ratingAfter (état après chaque match),
   // précédé du ratingBefore du 1er point pour montrer le point de départ.
-  const values = [history[0].ratingBefore, ...history.map((h) => h.ratingAfter)];
+  const values = [
+    history[0].ratingBefore,
+    ...history.map((h) => h.ratingAfter),
+  ];
   const min = Math.min(...values);
   const max = Math.max(...values);
   const span = max - min || 1;
@@ -316,11 +330,7 @@ function RatingChart({ history }: { history: PlayerProfileHistoryPoint[] }) {
   );
 }
 
-function RecentMatches({
-  matches,
-}: {
-  matches: PlayerProfileRecentMatch[];
-}) {
+function RecentMatches({ matches }: { matches: PlayerProfileRecentMatch[] }) {
   return (
     <section>
       <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-purple-300">
@@ -340,9 +350,23 @@ function RecentMatches({
               <ResultBadge result={m.result} />
               <div className="min-w-0 flex-1 truncate">
                 {m.opponentTeamName ? (
-                  <span className="truncate text-neutral-200">
-                    vs {m.opponentTeamName}
-                  </span>
+                  m.opponentTeamId ? (
+                    // Maillage interne : lien vers l'équipe adverse
+                    // (la route /team/[slug] résout aussi par id).
+                    <span className="truncate text-neutral-200">
+                      vs{' '}
+                      <Link
+                        href={`/team/${m.opponentTeamId}`}
+                        className="hover:text-purple-300 hover:underline"
+                      >
+                        {m.opponentTeamName}
+                      </Link>
+                    </span>
+                  ) : (
+                    <span className="truncate text-neutral-200">
+                      vs {m.opponentTeamName}
+                    </span>
+                  )
                 ) : (
                   <span className="text-neutral-500">Adversaire inconnu</span>
                 )}
@@ -496,10 +520,92 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
   );
 }
 
-const playerProfileSeo: SeoProps = {
-  title: 'Profil joueuse — OW Women’s Cup',
+/* ---------------------------------------------------------------------------
+ * SEO dynamique par-entité
+ *
+ * Le mécanisme : `getStaticProps` renvoie `props.seo` (SeoProps). `_app.tsx`
+ * privilégie `pageProps.seo` sur la propriété statique `Component.seo` — c'est
+ * la version DYNAMIQUE du mécanisme historique (cf. `_app.tsx`). On expose
+ * quand même une prop statique de repli pour les pré-rendus dégradés.
+ * -------------------------------------------------------------------------*/
+
+function buildPlayerSeo(profile: PlayerProfileResponse): SeoProps {
+  const { player } = profile;
+  const label = coreLabel(player);
+  const total = player.wins + player.losses;
+  const winRate = total > 0 ? Math.round((player.wins / total) * 100) : null;
+  const rating = Math.round(player.rating);
+
+  const description =
+    `Rang #${player.rank} · ${rating} de rating · ` +
+    `${player.wins}V-${player.losses}D` +
+    (winRate !== null ? ` (${winRate}% de victoires)` : '') +
+    ` sur ${player.gamesPlayed} match${player.gamesPlayed > 1 ? 's' : ''}. ` +
+    `Progression, derniers matchs et face-à-face de ${label}.`;
+
+  // JSON-LD ProfilePage → mainEntity Person.
+  const jsonLd: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': 'ProfilePage',
+    name: `Profil de ${label}`,
+    mainEntity: {
+      '@type': 'Person',
+      name: label,
+      ...(player.battleTag ? { alternateName: player.battleTag } : {}),
+      ...(player.avatarUrl ? { image: player.avatarUrl } : {}),
+    },
+  };
+
+  return {
+    title: `Profil de ${label} — ${rating}`,
+    description,
+    ...(player.avatarUrl ? { image: player.avatarUrl } : {}),
+    jsonLd,
+  };
+}
+
+// Repli statique (pré-rendu dégradé sans données — ex. fallback avant que
+// `_app.tsx` ait `pageProps.seo`). En pratique l'ISR fournit toujours le SEO
+// dynamique via `props.seo`.
+const playerProfileSeoFallback: SeoProps = {
+  title: 'Profil joueuse',
   description:
     'Profil public : rating, progression, derniers matchs et face-à-face de la joueuse.',
 };
 
-PlayerProfilePage.seo = playerProfileSeo;
+PlayerProfilePage.seo = playerProfileSeoFallback;
+
+export const getStaticPaths: GetStaticPaths = async () => {
+  // On ne pré-génère aucun chemin au build : les profils sont générés à la
+  // demande (fallback blocking) puis mis en cache / revalidés.
+  return { paths: [], fallback: 'blocking' };
+};
+
+export const getStaticProps: GetStaticProps<{
+  profile: PlayerProfileResponse;
+  seo: SeoProps;
+}> = async (ctx) => {
+  const rawUserId = ctx.params?.userId;
+  const userId = Array.isArray(rawUserId) ? rawUserId[0] : rawUserId;
+  if (!userId || typeof userId !== 'string') {
+    return { notFound: true, revalidate: 300 };
+  }
+
+  let profile: PlayerProfileResponse | null;
+  try {
+    profile = await readPlayerProfile(userId, DEFAULT_TENANT_ID);
+  } catch {
+    // Erreur DB transitoire : on ne fige pas un 404. On laisse Next réessayer
+    // rapidement en renvoyant notFound avec un revalidate court.
+    return { notFound: true, revalidate: 30 };
+  }
+
+  if (!profile) {
+    return { notFound: true, revalidate: 300 };
+  }
+
+  return {
+    props: { profile, seo: buildPlayerSeo(profile) },
+    revalidate: 300,
+  };
+};
