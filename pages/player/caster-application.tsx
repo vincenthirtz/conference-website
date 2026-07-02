@@ -9,6 +9,7 @@ import { useToast } from '@/components/Toast';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLang } from '@/lib/i18n/LanguageProvider';
+import type { SeoProps } from '@/components/Seo/DefaultSeo';
 
 import { logger } from '../../utils/logger';
 
@@ -305,3 +306,11 @@ function StatusBanner({
     </div>
   );
 }
+
+const casterApplicationSeo: SeoProps = {
+  title: 'Candidature caster',
+  description: "Postule pour devenir casteuse sur l'OW Women's Cup.",
+  noindex: true,
+};
+
+CasterApplicationPage.seo = casterApplicationSeo;

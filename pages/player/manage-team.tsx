@@ -12,6 +12,7 @@ import CopyButton from '@/components/player/CopyButton';
 import FreePlayersSection from '@/components/player/FreePlayersSection';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLang } from '@/lib/i18n/LanguageProvider';
+import type { SeoProps } from '@/components/Seo/DefaultSeo';
 
 type Specialty = 'tank' | 'dps' | 'support' | 'flex' | null;
 
@@ -649,3 +650,11 @@ export default function ManageTeamPage() {
     </>
   );
 }
+
+const manageTeamSeo: SeoProps = {
+  title: 'Gérer mon équipe',
+  description: "Gère les membres et les infos de ton équipe OW Women's Cup.",
+  noindex: true,
+};
+
+ManageTeamPage.seo = manageTeamSeo;

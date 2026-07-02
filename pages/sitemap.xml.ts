@@ -28,6 +28,8 @@ const publicRoutes = [
   { path: '/app', priority: '0.7', changefreq: 'monthly' },
   { path: '/register', priority: '0.8', changefreq: 'weekly' },
   { path: '/rules', priority: '0.5', changefreq: 'monthly' },
+  { path: '/leaderboard', priority: '0.7', changefreq: 'daily' },
+  { path: '/leagues', priority: '0.7', changefreq: 'weekly' },
   { path: '/builds', priority: '0.3', changefreq: 'weekly' },
   { path: '/mentions-legales', priority: '0.3', changefreq: 'yearly' },
   { path: '/plan-du-site', priority: '0.3', changefreq: 'monthly' },
@@ -56,6 +58,16 @@ type MatchItem = {
   updated_at?: string | null;
 };
 
+type LeagueItem = {
+  slug: string;
+  updated_at?: string | null;
+};
+
+type PlayerRatingItem = {
+  user_id: string;
+  updated_at?: string | null;
+};
+
 function getBaseUrl(req: Parameters<GetServerSideProps>[0]['req']) {
   const env = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '');
   if (env) return env;
@@ -80,7 +92,9 @@ function generateSiteMap(
   newsItems: NewsItem[],
   tournaments: TournamentItem[],
   teams: TeamItem[],
-  matches: MatchItem[]
+  matches: MatchItem[],
+  leagues: LeagueItem[],
+  playerRatings: PlayerRatingItem[]
 ) {
   const today = new Date().toISOString();
 
@@ -158,6 +172,34 @@ function generateSiteMap(
     })
     .join('\n');
 
+  // Dynamic league pages
+  const leagueUrls = leagues
+    .map((league) => {
+      const loc = escapeXml(`${baseUrl}/leagues/${league.slug}`);
+      const lastmod = league.updated_at || today;
+      return `  <url>
+    <loc>${loc}</loc>
+    <lastmod>${new Date(lastmod).toISOString()}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>`;
+    })
+    .join('\n');
+
+  // Dynamic player profile pages (ranked players only)
+  const playerUrls = playerRatings
+    .map((player) => {
+      const loc = escapeXml(`${baseUrl}/player/${player.user_id}`);
+      const lastmod = player.updated_at || today;
+      return `  <url>
+    <loc>${loc}</loc>
+    <lastmod>${new Date(lastmod).toISOString()}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url>`;
+    })
+    .join('\n');
+
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${staticUrls}
@@ -165,6 +207,8 @@ ${newsUrls}
 ${tournamentUrls}
 ${teamUrls}
 ${matchUrls}
+${leagueUrls}
+${playerUrls}
 </urlset>`;
 }
 
@@ -240,12 +284,51 @@ export const getServerSideProps: GetServerSideProps = async ({ res, req }) => {
     logger.error('[sitemap] Error fetching matches:', err);
   }
 
+  // Fetch public, non-draft leagues
+  let leagues: LeagueItem[] = [];
+  try {
+    const { data } = await client
+      .from('leagues')
+      .select('slug, updated_at')
+      .eq('tenant_id', tenantId)
+      .eq('is_public', true)
+      .neq('status', 'draft')
+      .order('updated_at', { ascending: false })
+      .limit(500);
+
+    leagues = (data || [])
+      .filter((l) => Boolean(l.slug))
+      .map((l) => ({ slug: l.slug as string, updated_at: l.updated_at }));
+  } catch (err) {
+    logger.error('[sitemap] Error fetching leagues:', err);
+  }
+
+  // Fetch ranked player profiles (players with at least one game)
+  let playerRatings: PlayerRatingItem[] = [];
+  try {
+    const { data } = await client
+      .from('player_ratings')
+      .select('user_id, updated_at')
+      .eq('tenant_id', tenantId)
+      .gt('games_played', 0)
+      .order('rating', { ascending: false })
+      .limit(500);
+
+    playerRatings = (data || [])
+      .filter((p) => Boolean(p.user_id))
+      .map((p) => ({ user_id: p.user_id as string, updated_at: p.updated_at }));
+  } catch (err) {
+    logger.error('[sitemap] Error fetching player ratings:', err);
+  }
+
   const sitemap = generateSiteMap(
     baseUrl,
     newsItems,
     tournaments,
     teams,
-    matches
+    matches,
+    leagues,
+    playerRatings
   );
 
   res.setHeader('Content-Type', 'application/xml');

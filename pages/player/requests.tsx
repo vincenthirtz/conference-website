@@ -11,6 +11,7 @@ import { useManagedTeam } from '@/hooks/useManagedTeam';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
 import ScrimSlotPicker from '@/components/player/ScrimSlotPicker';
 import { useT, format } from '@/lib/i18n/useT';
+import type { SeoProps } from '@/components/Seo/DefaultSeo';
 
 import { logger } from '../../utils/logger';
 
@@ -947,3 +948,12 @@ function SubmitButton({
     </button>
   );
 }
+
+const playerRequestsSeo: SeoProps = {
+  title: 'Demandes',
+  description:
+    "Gère tes demandes de transfert et de scrim sur l'OW Women's Cup.",
+  noindex: true,
+};
+
+PlayerRequestsPage.seo = playerRequestsSeo;

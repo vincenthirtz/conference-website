@@ -11,6 +11,7 @@ import { PlayerPageSkeleton } from '@/components/player/Skeletons';
 import ExistingTeamSelector from '@/components/player/ExistingTeamSelector';
 import NewTeamForm from '@/components/player/NewTeamForm';
 import { useT, format } from '@/lib/i18n/useT';
+import type { SeoProps } from '@/components/Seo/DefaultSeo';
 
 import { logger } from '../../utils/logger';
 
@@ -383,3 +384,11 @@ export default function RequestCaptainPage() {
     </>
   );
 }
+
+const requestCaptainSeo: SeoProps = {
+  title: 'Devenir capitaine',
+  description: "Demande à devenir capitaine d'une équipe OW Women's Cup.",
+  noindex: true,
+};
+
+RequestCaptainPage.seo = requestCaptainSeo;

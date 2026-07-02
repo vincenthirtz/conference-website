@@ -10,6 +10,7 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
 import { MAX_TEAM_PLAYERS } from '@/utils/constants';
 import { useT, format } from '@/lib/i18n/useT';
+import type { SeoProps } from '@/components/Seo/DefaultSeo';
 
 import { logger } from '../../utils/logger';
 
@@ -449,3 +450,11 @@ export default function JoinTeamPage() {
     </>
   );
 }
+
+const joinTeamSeo: SeoProps = {
+  title: 'Rejoindre une équipe',
+  description: "Demande à rejoindre une équipe existante de l'OW Women's Cup.",
+  noindex: true,
+};
+
+JoinTeamPage.seo = joinTeamSeo;

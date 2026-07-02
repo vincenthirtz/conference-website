@@ -13,6 +13,7 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
 import { useT } from '@/lib/i18n/useT';
 import { useLang } from '@/lib/i18n/LanguageProvider';
+import type { SeoProps } from '@/components/Seo/DefaultSeo';
 
 import { logger } from '../../utils/logger';
 
@@ -798,3 +799,11 @@ function formatTime(iso: string, locale: string): string {
   const d = new Date(iso);
   return d.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
 }
+
+const playerMessagesSeo: SeoProps = {
+  title: 'Messagerie',
+  description: "Échange avec les autres capitaines de l'OW Women's Cup.",
+  noindex: true,
+};
+
+MessagesPage.seo = playerMessagesSeo;
