@@ -139,6 +139,14 @@ const ICON = {
       d="M9 19v-6m4 6V5m4 14v-9M5 19h14"
     />
   ),
+  medal: (
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={1.8}
+      d="M12 15a5 5 0 100-10 5 5 0 000 10zm0 0v6l-3-2-3 2m6-6l3 2 3-2M7 4l2 3m8-3l-2 3"
+    />
+  ),
 };
 
 const NAV_CARDS: NavCard[] = [
@@ -221,6 +229,22 @@ const NAV_CARDS: NavCard[] = [
     minRole: 'manager',
     icon: ICON.chart,
     accent: 'border-purple-500/30 from-purple-500/10 text-purple-300',
+  },
+  {
+    title: 'Ligues',
+    description: 'Saisons et classements agrégés multi-tournois.',
+    href: '/admin/leagues',
+    minRole: 'manager',
+    icon: ICON.medal,
+    accent: 'border-amber-500/30 from-amber-500/10 text-amber-300',
+  },
+  {
+    title: 'Ratings',
+    description: 'Classement Glicko-2 des joueurs et reconstruction.',
+    href: '/admin/ratings',
+    minRole: 'manager',
+    icon: ICON.chart,
+    accent: 'border-blue-500/30 from-blue-500/10 text-blue-300',
   },
   {
     title: 'Paramètres du site',

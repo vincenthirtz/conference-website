@@ -28,6 +28,14 @@
     "ref": "/live"
   },
   {
+    "title": "Classement",
+    "ref": "/leaderboard"
+  },
+  {
+    "title": "Ligues",
+    "ref": "/leagues"
+  },
+  {
     "title": "Éditions",
     "subMenu": [
       { "title": "2025", "ref": "/tournoi" },

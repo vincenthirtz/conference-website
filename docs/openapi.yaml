@@ -659,6 +659,74 @@ components:
             - live
             - done
             - skipped
+    EventWave:
+      type: object
+      required:
+        - id
+        - event_run_id
+        - ord
+        - title
+        - status
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        tenant_id:
+          $ref: '#/components/schemas/Uuid'
+        event_run_id:
+          $ref: '#/components/schemas/Uuid'
+        ord:
+          type: integer
+        title:
+          type: string
+        planned_start_at:
+          allOf:
+            - $ref: '#/components/schemas/Timestamp'
+          nullable: true
+        duration_min:
+          type: integer
+          nullable: true
+        status:
+          type: string
+          enum:
+            - upcoming
+            - live
+            - done
+            - skipped
+        started_at:
+          allOf:
+            - $ref: '#/components/schemas/Timestamp'
+          nullable: true
+        ended_at:
+          allOf:
+            - $ref: '#/components/schemas/Timestamp'
+          nullable: true
+    EventStation:
+      type: object
+      required:
+        - id
+        - event_run_id
+        - ord
+        - name
+        - status
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        tenant_id:
+          $ref: '#/components/schemas/Uuid'
+        event_run_id:
+          $ref: '#/components/schemas/Uuid'
+        ord:
+          type: integer
+        name:
+          type: string
+        stream_url:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        status:
+          type: string
     AutocompleteResult:
       type: object
       required:
@@ -3234,6 +3302,396 @@ components:
               type: boolean
             isPassed:
               type: boolean
+    RatingRebuildResult:
+      type: object
+      required:
+        - players
+        - matches
+      properties:
+        players:
+          type: integer
+        matches:
+          type: integer
+    LeaderboardPlayer:
+      type: object
+      required:
+        - userId
+        - rating
+        - rd
+        - gamesPlayed
+        - wins
+        - losses
+        - rank
+      properties:
+        userId:
+          type: string
+        displayName:
+          type: string
+          nullable: true
+        battleTag:
+          type: string
+          nullable: true
+        avatarUrl:
+          type: string
+          nullable: true
+        rating:
+          type: number
+        rd:
+          type: number
+        gamesPlayed:
+          type: integer
+        wins:
+          type: integer
+        losses:
+          type: integer
+        rank:
+          type: integer
+    LeaderboardResponse:
+      type: object
+      required:
+        - players
+      properties:
+        players:
+          type: array
+          items:
+            $ref: '#/components/schemas/LeaderboardPlayer'
+    PlayerProfileResponse:
+      type: object
+      required:
+        - player
+        - history
+        - recentMatches
+        - h2h
+      properties:
+        player:
+          type: object
+          required:
+            - userId
+            - rating
+            - rd
+            - volatility
+            - peakRating
+            - gamesPlayed
+            - wins
+            - losses
+            - rank
+          properties:
+            userId:
+              type: string
+            displayName:
+              type: string
+              nullable: true
+            battleTag:
+              type: string
+              nullable: true
+            avatarUrl:
+              type: string
+              nullable: true
+            rating:
+              type: number
+            rd:
+              type: number
+            volatility:
+              type: number
+            peakRating:
+              type: number
+            gamesPlayed:
+              type: integer
+            wins:
+              type: integer
+            losses:
+              type: integer
+            rank:
+              type: integer
+        history:
+          type: array
+          items:
+            type: object
+            properties:
+              matchId:
+                type: string
+              tournamentId:
+                type: string
+                nullable: true
+              occurredAt:
+                type: string
+              ratingBefore:
+                type: number
+              ratingAfter:
+                type: number
+              result:
+                type: string
+                enum:
+                  - win
+                  - loss
+                  - draw
+              opponentAvgRating:
+                type: number
+                nullable: true
+        recentMatches:
+          type: array
+          items:
+            type: object
+            properties:
+              matchId:
+                type: string
+              tournamentId:
+                type: string
+                nullable: true
+              occurredAt:
+                type: string
+              result:
+                type: string
+                enum:
+                  - win
+                  - loss
+                  - draw
+              opponentTeamId:
+                type: string
+                nullable: true
+              opponentTeamName:
+                type: string
+                nullable: true
+        h2h:
+          type: array
+          items:
+            type: object
+            properties:
+              opponentUserId:
+                type: string
+              opponentDisplayName:
+                type: string
+                nullable: true
+              opponentBattleTag:
+                type: string
+                nullable: true
+              wins:
+                type: integer
+              losses:
+                type: integer
+              games:
+                type: integer
+    League:
+      type: object
+      required:
+        - id
+        - tenant_id
+        - name
+        - slug
+        - status
+        - points_table
+        - is_public
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenant_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+          nullable: true
+        game:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum:
+            - draft
+            - active
+            - finished
+            - archived
+        start_date:
+          type: string
+          nullable: true
+        end_date:
+          type: string
+          nullable: true
+        points_table:
+          type: object
+          additionalProperties:
+            type: number
+        is_public:
+          type: boolean
+        created_at:
+          type: string
+        updated_at:
+          type: string
+    LeagueCreateInput:
+      type: object
+      required:
+        - name
+        - slug
+      properties:
+        name:
+          type: string
+        slug:
+          type: string
+          pattern: '^[a-z0-9-]+$'
+        description:
+          type: string
+          nullable: true
+        game:
+          type: string
+          nullable: true
+        start_date:
+          type: string
+          nullable: true
+        end_date:
+          type: string
+          nullable: true
+        points_table:
+          type: object
+          additionalProperties:
+            type: number
+        is_public:
+          type: boolean
+    LeaguePatchInput:
+      type: object
+      properties:
+        name:
+          type: string
+        slug:
+          type: string
+          pattern: '^[a-z0-9-]+$'
+        description:
+          type: string
+          nullable: true
+        game:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum:
+            - draft
+            - active
+            - finished
+            - archived
+        start_date:
+          type: string
+          nullable: true
+        end_date:
+          type: string
+          nullable: true
+        points_table:
+          type: object
+          additionalProperties:
+            type: number
+        is_public:
+          type: boolean
+    LeagueTournamentLink:
+      type: object
+      properties:
+        league_id:
+          type: string
+          format: uuid
+        tournament_id:
+          type: string
+          format: uuid
+        tenant_id:
+          type: string
+          format: uuid
+        weight:
+          type: number
+    LeagueDetailResponse:
+      type: object
+      required:
+        - league
+        - standings
+        - tournaments
+      properties:
+        league:
+          $ref: '#/components/schemas/League'
+        standings:
+          type: array
+          items:
+            type: object
+            properties:
+              teamId:
+                type: string
+              teamName:
+                type: string
+                nullable: true
+              teamSlug:
+                type: string
+                nullable: true
+              logoUrl:
+                type: string
+                nullable: true
+              points:
+                type: number
+              tournamentsCounted:
+                type: integer
+              bestRank:
+                type: integer
+                nullable: true
+              rank:
+                type: integer
+        tournaments:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+                nullable: true
+              slug:
+                type: string
+                nullable: true
+              weight:
+                type: number
+    LeagueStandingsResponse:
+      type: object
+      required:
+        - standings
+        - tournaments
+      properties:
+        standings:
+          type: array
+          items:
+            type: object
+            properties:
+              teamId:
+                type: string
+              teamName:
+                type: string
+                nullable: true
+              teamSlug:
+                type: string
+                nullable: true
+              logoUrl:
+                type: string
+                nullable: true
+              points:
+                type: number
+              tournamentsCounted:
+                type: integer
+              bestRank:
+                type: integer
+                nullable: true
+              rank:
+                type: integer
+        tournaments:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+                nullable: true
+              slug:
+                type: string
+                nullable: true
+              weight:
+                type: number
   requestBodies: {}
 security:
   - BotApiKey: []
@@ -8339,6 +8797,473 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /api/admin/events/{runId}/waves:
+    parameters:
+      - $ref: '#/components/parameters/RunId'
+    get:
+      summary: List waves of an event run.
+      description: Requires `manager` role. Waves are sorted by `ord` asc.
+      operationId: adminListEventWaves
+      tags:
+        - admin/events
+      security:
+        - StaffSession: []
+      responses:
+        '200':
+          description: Waves.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - waves
+                properties:
+                  waves:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/EventWave'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      summary: Append a wave to an event run.
+      description: |
+        Requires `manager` role. If `ord` is omitted the API picks MAX(ord)+1
+        (0 when the run has no wave yet). `status` defaults to `upcoming`.
+      operationId: adminCreateEventWave
+      tags:
+        - admin/events
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+              properties:
+                title:
+                  type: string
+                planned_start_at:
+                  type: string
+                  format: date-time
+                  nullable: true
+                duration_min:
+                  type: integer
+                  nullable: true
+                ord:
+                  type: integer
+                  minimum: 0
+      responses:
+        '201':
+          description: Wave created.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - wave
+                properties:
+                  wave:
+                    $ref: '#/components/schemas/EventWave'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/admin/events/{runId}/waves/reorder:
+    parameters:
+      - $ref: '#/components/parameters/RunId'
+    post:
+      summary: Reorder waves in bulk.
+      description: |
+        Requires `manager` role. `order` must list every wave of the run
+        (no missing, no extra), with unique ids and unique ords.
+      operationId: adminReorderEventWaves
+      tags:
+        - admin/events
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - order
+              properties:
+                order:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - id
+                      - ord
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      ord:
+                        type: integer
+                        minimum: 0
+      responses:
+        '200':
+          description: Reordered.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - success
+                  - waves
+                properties:
+                  success:
+                    type: boolean
+                  waves:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/EventWave'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/admin/events/{runId}/waves/{waveId}:
+    parameters:
+      - $ref: '#/components/parameters/RunId'
+      - name: waveId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    patch:
+      summary: Patch wave fields.
+      description: |
+        Requires `manager` role. Partial update. Status transitions auto-date:
+        `status='live'` sets `started_at`, `status='done'` sets `ended_at`
+        (unless explicitly provided).
+      operationId: adminPatchEventWave
+      tags:
+        - admin/events
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                planned_start_at:
+                  type: string
+                  format: date-time
+                  nullable: true
+                duration_min:
+                  type: integer
+                  nullable: true
+                status:
+                  type: string
+                  enum:
+                    - upcoming
+                    - live
+                    - done
+                    - skipped
+                started_at:
+                  type: string
+                  format: date-time
+                  nullable: true
+                ended_at:
+                  type: string
+                  format: date-time
+                  nullable: true
+      responses:
+        '200':
+          description: Updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - wave
+                properties:
+                  wave:
+                    $ref: '#/components/schemas/EventWave'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      summary: Patch wave fields (alias of PATCH).
+      description: Requires `manager` role. Same partial-update semantics as PATCH.
+      operationId: adminReplaceEventWave
+      tags:
+        - admin/events
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - wave
+                properties:
+                  wave:
+                    $ref: '#/components/schemas/EventWave'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      summary: Delete a wave.
+      description: |
+        Requires `manager` role. Hard delete. `event_segments.wave_id` is
+        `ON DELETE SET NULL`, so attached segments keep existing with a null
+        wave.
+      operationId: adminDeleteEventWave
+      tags:
+        - admin/events
+      security:
+        - StaffSession: []
+      responses:
+        '200':
+          description: Deleted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/admin/events/{runId}/stations:
+    parameters:
+      - $ref: '#/components/parameters/RunId'
+    get:
+      summary: List stations of an event run.
+      description: Requires `manager` role. Stations are sorted by `ord` asc then name.
+      operationId: adminListEventStations
+      tags:
+        - admin/events
+      security:
+        - StaffSession: []
+      responses:
+        '200':
+          description: Stations.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - stations
+                properties:
+                  stations:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/EventStation'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      summary: Append a station to an event run.
+      description: |
+        Requires `manager` role. If `ord` is omitted the API picks MAX(ord)+1
+        (0 when the run has no station yet). `status` defaults to `idle`.
+      operationId: adminCreateEventStation
+      tags:
+        - admin/events
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                stream_url:
+                  type: string
+                  nullable: true
+                notes:
+                  type: string
+                  nullable: true
+                ord:
+                  type: integer
+                  minimum: 0
+      responses:
+        '201':
+          description: Station created.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - station
+                properties:
+                  station:
+                    $ref: '#/components/schemas/EventStation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/admin/events/{runId}/stations/{stationId}:
+    parameters:
+      - $ref: '#/components/parameters/RunId'
+      - name: stationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    patch:
+      summary: Patch station fields.
+      description: Requires `manager` role. Partial update.
+      operationId: adminPatchEventStation
+      tags:
+        - admin/events
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                stream_url:
+                  type: string
+                  nullable: true
+                notes:
+                  type: string
+                  nullable: true
+                status:
+                  type: string
+                ord:
+                  type: integer
+                  minimum: 0
+      responses:
+        '200':
+          description: Updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - station
+                properties:
+                  station:
+                    $ref: '#/components/schemas/EventStation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      summary: Patch station fields (alias of PATCH).
+      description: Requires `manager` role. Same partial-update semantics as PATCH.
+      operationId: adminReplaceEventStation
+      tags:
+        - admin/events
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - station
+                properties:
+                  station:
+                    $ref: '#/components/schemas/EventStation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      summary: Delete a station.
+      description: Requires `manager` role. Hard delete.
+      operationId: adminDeleteEventStation
+      tags:
+        - admin/events
+      security:
+        - StaffSession: []
+      responses:
+        '200':
+          description: Deleted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/admin/events/{runId}/segments:
     parameters:
       - $ref: '#/components/parameters/RunId'
@@ -9000,6 +9925,36 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /api/admin/matches/{matchId}/analytics:
+    parameters:
+      - $ref: '#/components/parameters/MatchId'
+    get:
+      summary: Analytics for a single match (games, vetos, timing).
+      description: Requires `manager` role.
+      operationId: adminGetMatchAnalytics
+      tags:
+        - admin/matches
+      security:
+        - StaffSession: []
+      responses:
+        '200':
+          description: Match analytics.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - analytics
+                properties:
+                  analytics:
+                    type: object
+                    additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/admin/matches/{matchId}/checkin-nudge:
     parameters:
       - $ref: '#/components/parameters/MatchId'
@@ -13408,6 +14363,45 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /api/admin/tournament/{id}/analytics:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Aggregate analytics for a tournament (matches, games, timing).
+      description: Requires `manager` role.
+      operationId: adminGetTournamentAnalytics
+      tags:
+        - admin/tournaments
+      security:
+        - StaffSession: []
+      responses:
+        '200':
+          description: Tournament analytics.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - tournament
+                  - analytics
+                properties:
+                  tournament:
+                    type: object
+                    additionalProperties: true
+                  analytics:
+                    type: object
+                    additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/admin/tournament/{id}/apply-template:
     parameters:
       - in: path
@@ -20157,3 +21151,404 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /api/admin/ratings/rebuild:
+    post:
+      summary: Recalcule le rating persistant de tous les joueurs du tenant.
+      description: |
+        Replay complet Glicko-2 (backfill des snapshots manquants depuis le
+        roster courant, puis recompute from scratch de player_ratings /
+        player_rating_history / team_ratings). Idempotent via Idempotency-Key.
+      operationId: adminRebuildRatings
+      tags:
+        - admin/ratings
+      security:
+        - StaffSession: []
+      responses:
+        '200':
+          description: Résultat du rebuild.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RatingRebuildResult'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '405':
+          description: Méthode non autorisée.
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /api/players/leaderboard:
+    get:
+      summary: Classement des joueurs par rating Glicko-2 (games_played > 0).
+      operationId: getPlayersLeaderboard
+      tags:
+        - public/players
+      security: []
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: Classement.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeaderboardResponse'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/players/{userId}/profile:
+    parameters:
+      - in: path
+        name: userId
+        required: true
+        schema:
+          type: string
+    get:
+      summary: Profil complet d'un joueur (rating, courbe, matches récents, H2H).
+      operationId: getPlayerProfile
+      tags:
+        - public/players
+      security: []
+      responses:
+        '200':
+          description: Profil joueur.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlayerProfileResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/admin/leagues:
+    get:
+      summary: Liste des leagues du tenant.
+      operationId: adminListLeagues
+      tags:
+        - admin/leagues
+      security:
+        - StaffSession: []
+      responses:
+        '200':
+          description: Leagues.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - leagues
+                properties:
+                  leagues:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/League'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      summary: Crée une league.
+      operationId: adminCreateLeague
+      tags:
+        - admin/leagues
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LeagueCreateInput'
+      responses:
+        '201':
+          description: League créée.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/League'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/admin/leagues/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Détail d'une league.
+      operationId: adminGetLeague
+      tags:
+        - admin/leagues
+      security:
+        - StaffSession: []
+      responses:
+        '200':
+          description: League.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/League'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      summary: Met à jour partiellement une league.
+      operationId: adminUpdateLeague
+      tags:
+        - admin/leagues
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LeaguePatchInput'
+      responses:
+        '200':
+          description: League mise à jour.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/League'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+    delete:
+      summary: Supprime une league.
+      operationId: adminDeleteLeague
+      tags:
+        - admin/leagues
+      security:
+        - StaffSession: []
+      responses:
+        '204':
+          description: Supprimée.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/admin/leagues/{id}/tournaments:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      summary: Lie un tournoi à une league.
+      operationId: adminLinkLeagueTournament
+      tags:
+        - admin/leagues
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - tournament_id
+              properties:
+                tournament_id:
+                  type: string
+                  format: uuid
+                weight:
+                  type: number
+                  minimum: 0
+                  exclusiveMinimum: true
+      responses:
+        '201':
+          description: Lien créé.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeagueTournamentLink'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/admin/leagues/{id}/tournaments/{tournamentId}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - in: path
+        name: tournamentId
+        required: true
+        schema:
+          type: string
+          format: uuid
+    delete:
+      summary: Délie un tournoi d'une league.
+      operationId: adminUnlinkLeagueTournament
+      tags:
+        - admin/leagues
+      security:
+        - StaffSession: []
+      responses:
+        '204':
+          description: Lien supprimé.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/admin/leagues/{id}/recompute:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      summary: Recalcule les standings d'une league depuis les final_rankings liés.
+      operationId: adminRecomputeLeagueStandings
+      tags:
+        - admin/leagues
+      security:
+        - StaffSession: []
+      responses:
+        '200':
+          description: Standings recalculés.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - standings_count
+                properties:
+                  standings_count:
+                    type: integer
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/admin/leagues/{id}/standings:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Standings + tournois liés d'une league (admin, visible même en draft/privé).
+      operationId: adminGetLeagueStandings
+      tags:
+        - admin/leagues
+      security:
+        - StaffSession: []
+      responses:
+        '200':
+          description: Standings de la league.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeagueStandingsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/leagues:
+    get:
+      summary: Liste des leagues publiques (is_public=true, status≠draft).
+      operationId: getPublicLeagues
+      tags:
+        - public/leagues
+      security: []
+      responses:
+        '200':
+          description: Leagues publiques.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - leagues
+                properties:
+                  leagues:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/League'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/leagues/{slug}:
+    parameters:
+      - in: path
+        name: slug
+        required: true
+        schema:
+          type: string
+    get:
+      summary: Détail public d'une league (standings + tournois liés).
+      operationId: getPublicLeagueBySlug
+      tags:
+        - public/leagues
+      security: []
+      responses:
+        '200':
+          description: Détail league.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeagueDetailResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'

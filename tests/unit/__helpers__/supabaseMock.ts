@@ -21,6 +21,28 @@ export type Store = Record<string, Row[]>;
 export const store: Store = {};
 
 /**
+ * Registry of table names the mock knows about. The chainable Builder creates
+ * tables lazily (`store[table] ||= []`), so this list is primarily
+ * documentation + a safety net: `resetSupabaseMock()` clears every key present
+ * in `store`, and tests can seed any of these. Kept in sync as new tables ship.
+ *
+ * Rating + leagues feature (7 new tables):
+ *   match_participants, player_ratings, player_rating_history, team_ratings,
+ *   leagues, league_tournaments, league_standings.
+ */
+export const KNOWN_TABLES: readonly string[] = [
+  // rating / H2H
+  'match_participants',
+  'player_ratings',
+  'player_rating_history',
+  'team_ratings',
+  // leagues / seasons
+  'leagues',
+  'league_tournaments',
+  'league_standings',
+];
+
+/**
  * Conference tenant UUID — matches `DEFAULT_TENANT_ID` in `utils/tenant.ts`.
  * Bot tests historically authenticated against this tenant via the (now
  * removed) `BOT_API_KEY` env fallback + `x-tenant-id` header. With the new
