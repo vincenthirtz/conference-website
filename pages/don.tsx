@@ -6,6 +6,9 @@ import Button from '@/components/Buttons/button';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { useSiteSetting } from '@/hooks/useSiteSettings';
 import { useToast } from '@/components/Toast';
+import { useT, format } from '@/lib/i18n/useT';
+
+type DonDict = ReturnType<typeof useT<'donPage'>>;
 
 // Idempotency-Key pour le checkout HelloAsso (POST public/anonyme : pas de
 // session Supabase, donc useIdempotentMutation ne s'applique pas). Un
@@ -21,49 +24,17 @@ function genIdempotencyKey(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-const uses = [
-  {
-    title: 'Inclusion & accompagnement',
-    detail:
-      'Frais de déplacement, hébergement solidaire et matériel prêté pour que chaque joueuse puisse participer dans de bonnes conditions.',
-  },
-  {
-    title: 'Production & diffusion',
-    detail:
-      'Locations studio, captation, graphismes live et modération pour proposer un show accessible et sûr.',
-  },
-  {
-    title: 'Actions locales',
-    detail:
-      'Ateliers découverte, interventions scolaires et mentorat avec des rôles modèles issues de l’esport féminin.',
-  },
+const getUses = (t: DonDict) => [
+  { title: t.use1Title, detail: t.use1Detail },
+  { title: t.use2Title, detail: t.use2Detail },
+  { title: t.use3Title, detail: t.use3Detail },
 ];
 
-const tiers = [
-  {
-    label: 'Coup de pouce',
-    amount: '20 €',
-    impact:
-      'Aide à payer le site web (nom de domaine, serveur) ou des frais bancaires.',
-  },
-  {
-    label: 'Supporter·rice',
-    amount: '50 €',
-    impact:
-      'Couvre la création de visuels dédiés aux live et la modération d’une soirée de stream.',
-  },
-  {
-    label: 'Allié·e',
-    amount: '100 €',
-    impact:
-      'Participe au cashprize du futur tournoi et offir des goodies à toutes les joueuses.',
-  },
-  {
-    label: 'Mécène',
-    amount: '150 €',
-    impact:
-      'Permet de lancer un live (matériel + encadrement) dans une salle ou de sécuriser une captation entière.',
-  },
+const getTiers = (t: DonDict) => [
+  { label: t.tier1Label, amount: '20 €', impact: t.tier1Impact },
+  { label: t.tier2Label, amount: '50 €', impact: t.tier2Impact },
+  { label: t.tier3Label, amount: '100 €', impact: t.tier3Impact },
+  { label: t.tier4Label, amount: '150 €', impact: t.tier4Impact },
 ];
 
 const presetAmounts = [2000, 5000, 10000, 15000] as const;
@@ -72,6 +43,9 @@ const COMING_SOON = false;
 
 function DonationPage() {
   const router = useRouter();
+  const t = useT('donPage');
+  const uses = getUses(t);
+  const tiers = getTiers(t);
   const { value: contactEmail } = useSiteSetting('contact_email');
 
   // Online donation form state
@@ -100,7 +74,7 @@ function DonationPage() {
     setFormError('');
 
     if (effectiveAmount < 100) {
-      setFormError('Le montant minimum est 1 €.');
+      setFormError(t.minAmountError);
       return;
     }
 
@@ -126,7 +100,7 @@ function DonationPage() {
         // Échec : on régénère la clé pour que la prochaine tentative soit une
         // nouvelle intention, et on réactive le bouton.
         idempotencyKeyRef.current = genIdempotencyKey();
-        const message = data.error || 'Une erreur est survenue.';
+        const message = data.error || t.genericError;
         setFormError(message);
         addToast(message, 'error');
         setLoading(false);
@@ -138,8 +112,7 @@ function DonationPage() {
       window.location.href = data.redirectUrl;
     } catch {
       idempotencyKeyRef.current = genIdempotencyKey();
-      const message =
-        'Impossible de contacter le serveur. Réessayez plus tard.';
+      const message = t.serverError;
       setFormError(message);
       addToast(message, 'error');
       setLoading(false);
@@ -157,21 +130,19 @@ function DonationPage() {
         </div>
         <div className="relative mx-auto max-w-5xl px-6 pt-32 pb-14 text-center">
           <p className="mx-auto inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.18em] text-gray-200">
-            Soutenir l&apos;association
+            {t.heroBadge}
           </p>
           <h1 className="mt-3 text-4xl font-bold leading-tight sm:text-5xl md:text-6xl">
-            Faites un don pour faire grandir l&apos;esport féminin
+            {t.heroTitle}
           </h1>
           <p className="mx-auto mt-4 max-w-3xl text-lg text-gray-200">
-            Chaque contribution nous aide à ouvrir plus de places pour les
-            joueuses, sécuriser les événements et montrer que la performance
-            féminine mérite un cadre ambitieux.
+            {t.heroSubtitle}
           </p>
 
           <div className="mt-6 flex flex-wrap items-center justify-center gap-4">
             {COMING_SOON ? (
               <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-6 py-3 text-sm font-semibold text-gray-300 cursor-default">
-                Paiement en ligne bientôt disponible
+                {t.comingSoonBtn}
               </span>
             ) : (
               <a
@@ -184,14 +155,14 @@ function DonationPage() {
                 }}
                 className="flex items-center justify-center rounded-full bg-gradient-to-r from-purple-500 to-pink-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition hover:brightness-110"
               >
-                Faire un don en ligne
+                {t.donateOnline}
               </a>
             )}
             <Link
               href="/tournoi"
               className="rounded-full border border-white/15 px-6 py-3 text-sm font-semibold text-white transition hover:border-white/40 hover:bg-white/10"
             >
-              Découvrir le projet
+              {t.discoverProject}
             </Link>
           </div>
 
@@ -199,7 +170,7 @@ function DonationPage() {
             <div className="flex flex-col gap-4 sm:grid sm:grid-cols-3">
               <div className="space-y-4 text-left sm:col-span-2">
                 <p className="text-sm uppercase tracking-[0.14em] text-gray-300">
-                  Ce que votre don rend possible
+                  {t.usesTitle}
                 </p>
                 <div className="flex flex-col gap-3 sm:grid sm:grid-cols-2 sm:gap-4">
                   {uses.map((item) => (
@@ -225,15 +196,15 @@ function DonationPage() {
 
               <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 p-4 text-left">
                 <p className="text-sm uppercase tracking-[0.14em] text-emerald-100">
-                  Transparence
+                  {t.transparencyLabel}
                 </p>
                 <p className="mt-2 text-lg font-semibold text-white">
-                  Chaque euro est fléché et documenté.
+                  {t.transparencyTitle}
                 </p>
                 <ul className="mt-3 space-y-2 text-sm text-emerald-50">
-                  <li>• Rapports d&apos;impact envoyés aux donateur·rices</li>
-                  <li>• Budget suivi par l&apos;équipe staff</li>
-                  <li>• Priorité donnée aux actions inclusives</li>
+                  <li>• {t.transparency1}</li>
+                  <li>• {t.transparency2}</li>
+                  <li>• {t.transparency3}</li>
                 </ul>
               </div>
             </div>
@@ -246,23 +217,17 @@ function DonationPage() {
         {paymentStatus === 'success' && (
           <div className="rounded-2xl border border-emerald-400/30 bg-emerald-500/10 p-6 text-center">
             <p className="text-lg font-semibold text-emerald-100">
-              Merci pour votre don !
+              {t.thanksTitle}
             </p>
-            <p className="mt-2 text-sm text-emerald-50">
-              Votre paiement a bien été pris en compte. Vous recevrez un email
-              de confirmation de la part de HelloAsso.
-            </p>
+            <p className="mt-2 text-sm text-emerald-50">{t.thanksBody}</p>
           </div>
         )}
         {paymentStatus === 'error' && (
           <div className="rounded-2xl border border-red-400/30 bg-red-500/10 p-6 text-center">
             <p className="text-lg font-semibold text-red-100">
-              Le paiement n&apos;a pas abouti.
+              {t.errorTitle}
             </p>
-            <p className="mt-2 text-sm text-red-50">
-              Vous pouvez réessayer ci-dessous ou nous contacter si le problème
-              persiste.
-            </p>
+            <p className="mt-2 text-sm text-red-50">{t.errorBody}</p>
           </div>
         )}
 
@@ -270,15 +235,11 @@ function DonationPage() {
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <p className="text-sm uppercase tracking-[0.14em] text-gray-300">
-                Choisir un montant
+                {t.chooseAmountLabel}
               </p>
-              <h2 className="text-3xl font-bold">
-                Un geste, un impact concret
-              </h2>
+              <h2 className="text-3xl font-bold">{t.chooseAmountTitle}</h2>
             </div>
-            <p className="text-sm text-gray-300">
-              Les montants ci-dessous sont indicatifs : chaque don compte.
-            </p>
+            <p className="text-sm text-gray-300">{t.chooseAmountHint}</p>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -305,15 +266,13 @@ function DonationPage() {
             {COMING_SOON && (
               <div className="absolute inset-0 z-10 flex flex-col items-center justify-center rounded-3xl bg-black/70 backdrop-blur-sm">
                 <p className="text-sm uppercase tracking-[0.18em] text-purple-300">
-                  Coming soon
+                  {t.comingSoonEyebrow}
                 </p>
                 <p className="mt-2 text-2xl font-bold text-white">
-                  Paiement en ligne bientôt disponible
+                  {t.comingSoonTitle}
                 </p>
                 <p className="mt-2 max-w-md text-center text-sm text-gray-300">
-                  Le don par carte bancaire via HelloAsso sera disponible très
-                  prochainement. En attendant, vous pouvez nous contacter pour
-                  faire un don par virement.
+                  {t.comingSoonBody}
                 </p>
               </div>
             )}
@@ -322,24 +281,20 @@ function DonationPage() {
             >
               <div className="md:col-span-1">
                 <p className="text-sm uppercase tracking-[0.14em] text-gray-200">
-                  Faire un don en ligne
+                  {t.formEyebrow}
                 </p>
-                <h3 className="mt-2 text-2xl font-bold">Paiement sécurisé</h3>
-                <p className="mt-3 text-sm text-gray-100">
-                  Réglez par carte bancaire via HelloAsso, la plateforme de
-                  référence des associations françaises. Aucune commission
-                  n&apos;est prélevée sur votre don.
-                </p>
+                <h3 className="mt-2 text-2xl font-bold">{t.formTitle}</h3>
+                <p className="mt-3 text-sm text-gray-100">{t.formDesc}</p>
                 <div className="mt-5 flex flex-col items-center gap-2 rounded-2xl border border-white/10 bg-white/5 p-4">
                   <Image
                     src="/images/qr.png"
-                    alt="QR code pour faire un don"
+                    alt={t.qrAlt}
                     width={128}
                     height={128}
                     className="rounded-lg"
                   />
                   <p className="text-xs font-medium text-gray-300">
-                    Ou scannez ce QR code
+                    {t.qrHint}
                   </p>
                 </div>
               </div>
@@ -348,7 +303,7 @@ function DonationPage() {
                 {/* Amount selection */}
                 <div>
                   <label className="mb-2 block text-sm font-medium text-gray-200">
-                    Montant du don
+                    {t.amountLabel}
                   </label>
                   <div className="flex flex-wrap gap-2">
                     {presetAmounts.map((cents) => (
@@ -373,7 +328,7 @@ function DonationPage() {
                       type="number"
                       min="1"
                       step="1"
-                      placeholder="Autre (€)"
+                      placeholder={t.customAmountPlaceholder}
                       disabled={COMING_SOON}
                       value={customAmount}
                       onChange={(e) => setCustomAmount(e.target.value)}
@@ -389,7 +344,7 @@ function DonationPage() {
                       htmlFor="don-prenom"
                       className="mb-1 block text-sm text-gray-200"
                     >
-                      Prénom
+                      {t.firstNameLabel}
                     </label>
                     <input
                       id="don-prenom"
@@ -406,7 +361,7 @@ function DonationPage() {
                       htmlFor="don-nom"
                       className="mb-1 block text-sm text-gray-200"
                     >
-                      Nom
+                      {t.lastNameLabel}
                     </label>
                     <input
                       id="don-nom"
@@ -424,7 +379,7 @@ function DonationPage() {
                     htmlFor="don-email"
                     className="mb-1 block text-sm text-gray-200"
                   >
-                    Email
+                    {t.emailLabel}
                   </label>
                   <input
                     id="don-email"
@@ -454,13 +409,17 @@ function DonationPage() {
                   className="h-auto w-full justify-center rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 px-6 py-3 text-sm font-semibold disabled:opacity-50"
                 >
                   {loading
-                    ? 'Redirection...'
-                    : `Donner ${effectiveAmount >= 100 ? `${effectiveAmount / 100} €` : ''} via HelloAsso`}
+                    ? t.submitRedirecting
+                    : format(t.submitDonate, {
+                        amount:
+                          effectiveAmount >= 100
+                            ? `${effectiveAmount / 100} €`
+                            : '',
+                      })}
                 </Button>
 
                 <p className="text-center text-xs text-gray-400">
-                  Vous serez redirigé vers HelloAsso pour finaliser le paiement
-                  de façon sécurisée.
+                  {t.redirectNote}
                 </p>
               </form>
             </div>
@@ -471,38 +430,38 @@ function DonationPage() {
         <section>
           <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6 sm:p-10 shadow-xl">
             <p className="text-sm uppercase tracking-[0.14em] text-gray-300">
-              Autres moyens
+              {t.otherMeansLabel}
             </p>
-            <h3 className="mt-2 text-2xl font-bold">Virement ou mécénat</h3>
+            <h3 className="mt-2 text-2xl font-bold">{t.otherMeansTitle}</h3>
             <div className="mt-6 grid gap-4 md:grid-cols-2">
               <div className="rounded-2xl border border-white/15 bg-white/5 p-4">
-                <p className="text-lg font-semibold text-white">Virement</p>
-                <p className="mt-2 text-sm text-gray-200">
-                  Recevez le RIB de l&apos;association et une confirmation dès
-                  réception de votre don.
+                <p className="text-lg font-semibold text-white">
+                  {t.transferTitle}
                 </p>
+                <p className="mt-2 text-sm text-gray-200">{t.transferDesc}</p>
                 <Button
                   overlay
                   type="button"
                   className="mt-4 h-auto w-full justify-center rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 px-4 py-3 text-sm font-semibold"
                   onClick={() => window.location.assign(donationMail)}
                 >
-                  Demander le RIB
+                  {t.transferBtn}
                 </Button>
               </div>
 
               <div className="rounded-2xl border border-white/15 bg-white/5 p-4">
-                <p className="text-lg font-semibold text-white">Entreprises</p>
+                <p className="text-lg font-semibold text-white">
+                  {t.companiesTitle}
+                </p>
                 <p className="mt-2 text-sm text-gray-200">
-                  Vous souhaitez soutenir ou sponsoriser ? Parlons visibilité,
-                  ateliers et mécénat — voir aussi nos{' '}
+                  {t.companiesDescBefore}{' '}
                   <Link
                     href="/partenaires"
                     className="font-medium text-purple-300 underline decoration-purple-400/40 underline-offset-2 hover:text-purple-200 hover:decoration-purple-300"
                   >
-                    partenaires actuels
+                    {t.companiesLink}
                   </Link>
-                  .
+                  {t.companiesDescAfter}
                 </p>
                 <Button
                   overlay
@@ -510,7 +469,7 @@ function DonationPage() {
                   className="mt-4 h-auto w-full justify-center rounded-lg border border-white/30 bg-white/10 px-4 py-3 text-sm font-semibold hover:bg-white/20"
                   onClick={() => window.location.assign(sponsorMail)}
                 >
-                  Parler sponsoring
+                  {t.sponsorBtn}
                 </Button>
               </div>
             </div>
@@ -520,14 +479,10 @@ function DonationPage() {
         <section className="max-w-5xl">
           <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-6 sm:p-8 text-center">
             <p className="text-sm uppercase tracking-[0.14em] text-gray-300">
-              Une question ?
+              {t.questionLabel}
             </p>
-            <h4 className="mt-2 text-2xl font-semibold">On reste disponible</h4>
-            <p className="mt-3 text-sm text-gray-200">
-              Besoin d&apos;un reçu, de comprendre l&apos;affectation des dons
-              ou de connaître les prochaines actions ? Écrivez-nous, on vous
-              répond vite.
-            </p>
+            <h4 className="mt-2 text-2xl font-semibold">{t.questionTitle}</h4>
+            <p className="mt-3 text-sm text-gray-200">{t.questionBody}</p>
             <div className="mt-5 flex justify-center">
               <a
                 href={donationMail}

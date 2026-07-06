@@ -2,6 +2,9 @@ import Head from 'next/head';
 import Link from 'next/link';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { ACTIVE_WOMEN_TOURNAMENT_ID } from '@/utils/activeEdition';
+import { useT } from '@/lib/i18n/useT';
+
+type InscriptionDict = ReturnType<typeof useT<'inscription2026'>>;
 
 const DISCORD_INVITE = 'https://discord.gg/gERSsjC3Vd';
 const REGISTER_HREF = `/team/create?tournament=${ACTIVE_WOMEN_TOURNAMENT_ID}`;
@@ -23,66 +26,59 @@ type Faq = {
   answer: string;
 };
 
-const prerequisites: Prerequisite[] = [
-  {
-    title: 'Un compte sur le site',
-    desc: 'Inscris-toi avec ton email ou via Discord. Tu utiliseras ce compte pour gérer ton équipe et tes matchs.',
-  },
-  {
-    title: 'Un BattleTag valide',
-    desc: 'Format Pseudo#0000. Indispensable pour chaque joueuse du roster — il sert aux invitations en partie personnalisée.',
-  },
-  {
-    title: '5 joueuses minimum',
-    desc: 'Composition 5v5 en Role Queue : 1 Tank, 2 DPS, 2 Support. Tu peux ajouter jusqu’à 2 remplaçantes.',
-  },
-  {
-    title: 'Une capitaine',
-    desc: 'Une joueuse référente qui valide les feuilles de match, gère le check-in et reçoit les communications du staff.',
-  },
+const getPrerequisites = (t: InscriptionDict): Prerequisite[] => [
+  { title: t.prereq1Title, desc: t.prereq1Desc },
+  { title: t.prereq2Title, desc: t.prereq2Desc },
+  { title: t.prereq3Title, desc: t.prereq3Desc },
+  { title: t.prereq4Title, desc: t.prereq4Desc },
 ];
 
-const steps: Step[] = [
+const getSteps = (t: InscriptionDict): Step[] => [
   {
     number: '01',
-    title: 'Crée ton compte joueuse',
-    description:
-      'Inscris-toi gratuitement avec ton email ou ton compte Discord. Pense à renseigner ton BattleTag dès la création.',
-    cta: { label: 'Créer mon compte', href: '/register' },
+    title: t.step1Title,
+    description: t.step1Desc,
+    cta: { label: t.step1Cta, href: '/register' },
   },
   {
     number: '02',
-    title: 'Constitue ton roster',
-    description:
-      'Réunis 5 joueuses titulaires (1 Tank, 2 DPS, 2 Support). Tu peux préparer leurs emails et BattleTags à l’avance pour aller plus vite au moment de l’inscription.',
+    title: t.step2Title,
+    description: t.step2Desc,
   },
   {
     number: '03',
-    title: 'Désigne une capitaine',
-    description:
-      'La capitaine est le point de contact officiel entre l’équipe et le staff. Elle reçoit les notifications de matchs et déclare les résultats.',
+    title: t.step3Title,
+    description: t.step3Desc,
   },
   {
     number: '04',
-    title: 'Remplis le formulaire d’équipe',
-    description:
-      'Renseigne le nom, le tag, le pays et le logo de ton équipe, puis ajoute toutes les joueuses en une seule fois. Ton équipe est inscrite automatiquement au tournoi féminin 2026.',
-    cta: { label: 'Inscrire mon équipe', href: REGISTER_HREF },
+    title: t.step4Title,
+    description: t.step4Desc,
+    cta: { label: t.step4Cta, href: REGISTER_HREF },
   },
   {
     number: '05',
-    title: 'Rejoins le Discord',
-    description:
-      'Toutes les annonces, plannings et confirmations passent par le Discord officiel. La présence de la capitaine y est obligatoire.',
+    title: t.step5Title,
+    description: t.step5Desc,
     cta: {
-      label: 'Rejoindre le Discord',
+      label: t.step5Cta,
       href: DISCORD_INVITE,
       external: true,
     },
   },
 ];
 
-const faqs: Faq[] = [
+const getFaqs = (t: InscriptionDict): Faq[] => [
+  { question: t.faq1Q, answer: t.faq1A },
+  { question: t.faq2Q, answer: t.faq2A },
+  { question: t.faq3Q, answer: t.faq3A },
+  { question: t.faq4Q, answer: t.faq4A },
+  { question: t.faq5Q, answer: t.faq5A },
+];
+
+// JSON-LD FAQ pour le SEO : reste en français (langue de référence du site,
+// cf. Phase E de la roadmap i18n pour le SEO multilingue).
+const faqsForSchema: Faq[] = [
   {
     question: 'Le tournoi est-il réservé aux joueuses ?',
     answer:
@@ -113,7 +109,7 @@ const faqs: Faq[] = [
 const faqSchema = {
   '@context': 'https://schema.org',
   '@type': 'FAQPage',
-  mainEntity: faqs.map((faq) => ({
+  mainEntity: faqsForSchema.map((faq) => ({
     '@type': 'Question',
     name: faq.question,
     acceptedAnswer: {
@@ -124,6 +120,10 @@ const faqSchema = {
 };
 
 function Inscription2026Page() {
+  const t = useT('inscription2026');
+  const prerequisites = getPrerequisites(t);
+  const steps = getSteps(t);
+  const faqs = getFaqs(t);
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
       <Head>
@@ -142,24 +142,22 @@ function Inscription2026Page() {
         <div className="relative mx-auto max-w-5xl px-6 pt-32 pb-16 text-center">
           <p className="mx-auto inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.18em] text-gray-200">
             <span className="rounded-full bg-gradient-to-r from-pink-400 to-purple-400 px-2 py-[2px] text-[10px] font-semibold text-black">
-              Tournoi féminin 2026
+              {t.heroBadgeTournament}
             </span>
-            <span>Inscriptions</span>
+            <span>{t.heroBadgeAction}</span>
           </p>
           <h1 className="mt-4 text-4xl font-bold leading-tight sm:text-5xl md:text-6xl">
-            Comment inscrire ton équipe au tournoi féminin 2026
+            {t.heroTitle}
           </h1>
           <p className="mx-auto mt-4 max-w-3xl text-lg text-gray-200">
-            Suis ces étapes pour rejoindre l&apos;édition 2026 de la OW
-            Women&apos;s Cup. Roster, capitaine, BattleTag : on récapitule tout
-            ce qu&apos;il te faut.
+            {t.heroSubtitle}
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Link
               href={REGISTER_HREF}
               className="rounded-full bg-gradient-to-r from-pink-500 to-orange-400 px-6 py-3 text-sm font-bold text-black shadow-lg shadow-pink-500/20 transition hover:brightness-110"
             >
-              Inscrire mon équipe <span aria-hidden="true">↗</span>
+              {t.ctaRegister} <span aria-hidden="true">↗</span>
             </Link>
             <a
               href={DISCORD_INVITE}
@@ -167,25 +165,25 @@ function Inscription2026Page() {
               rel="noreferrer noopener"
               className="rounded-full border border-white/15 px-6 py-3 text-sm font-semibold text-white transition hover:border-white/40 hover:bg-white/10"
             >
-              Discord <span aria-hidden="true">↗</span>
+              {t.ctaDiscord} <span aria-hidden="true">↗</span>
             </a>
             <a
               href="#faq"
               className="rounded-full border border-white/15 px-6 py-3 text-sm font-semibold text-white transition hover:border-white/40 hover:bg-white/10"
             >
-              FAQ
+              {t.ctaFaq}
             </a>
             <a
               href="#etapes"
               className="rounded-full border border-white/15 px-6 py-3 text-sm font-semibold text-white transition hover:border-white/40 hover:bg-white/10"
             >
-              Voir les étapes
+              {t.ctaSteps}
             </a>
             <Link
               href="/rules"
               className="rounded-full border border-white/15 px-6 py-3 text-sm font-semibold text-white transition hover:border-white/40 hover:bg-white/10"
             >
-              Règlement
+              {t.ctaRules}
             </Link>
           </div>
         </div>
@@ -196,10 +194,10 @@ function Inscription2026Page() {
         <section>
           <div className="mb-6">
             <p className="text-xs uppercase tracking-[0.24em] text-purple-200/80">
-              Avant de commencer
+              {t.prereqEyebrow}
             </p>
             <h2 className="mt-2 text-3xl font-extrabold tracking-tight">
-              Ce qu&apos;il te faut
+              {t.prereqTitle}
             </h2>
           </div>
           <div className="grid gap-4 md:grid-cols-2">
@@ -221,15 +219,12 @@ function Inscription2026Page() {
         <section id="etapes">
           <div className="mb-6">
             <p className="text-xs uppercase tracking-[0.24em] text-purple-200/80">
-              Procédure
+              {t.stepsEyebrow}
             </p>
             <h2 className="mt-2 text-3xl font-extrabold tracking-tight">
-              5 étapes pour t&apos;inscrire
+              {t.stepsTitle}
             </h2>
-            <p className="mt-3 max-w-2xl text-sm text-gray-300">
-              Compte une dizaine de minutes si toutes les joueuses sont prêtes.
-              Tu peux interrompre et reprendre à tout moment depuis ton compte.
-            </p>
+            <p className="mt-3 max-w-2xl text-sm text-gray-300">{t.stepsIntro}</p>
           </div>
           <ol className="space-y-4">
             {steps.map((step) => (
@@ -276,21 +271,16 @@ function Inscription2026Page() {
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-xs uppercase tracking-[0.18em] text-gray-200">
-                Prête à t&apos;inscrire ?
+                {t.finalEyebrow}
               </p>
-              <h3 className="mt-2 text-2xl font-bold">
-                Lance la création de ton équipe
-              </h3>
-              <p className="mt-2 text-sm text-gray-200">
-                Le formulaire prend tout en charge : compte, roster et
-                inscription au tournoi féminin 2026.
-              </p>
+              <h3 className="mt-2 text-2xl font-bold">{t.finalTitle}</h3>
+              <p className="mt-2 text-sm text-gray-200">{t.finalBody}</p>
             </div>
             <Link
               href={REGISTER_HREF}
               className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-pink-500 to-orange-400 px-6 py-3 text-sm font-bold text-black shadow-lg shadow-pink-500/20 transition hover:brightness-110"
             >
-              Inscrire mon équipe <span aria-hidden="true">↗</span>
+              {t.ctaRegister} <span aria-hidden="true">↗</span>
             </Link>
           </div>
         </section>
@@ -299,10 +289,10 @@ function Inscription2026Page() {
         <section id="faq" className="scroll-mt-24">
           <div className="mb-6">
             <p className="text-xs uppercase tracking-[0.24em] text-purple-200/80">
-              Questions fréquentes
+              {t.faqEyebrow}
             </p>
             <h2 className="mt-2 text-3xl font-extrabold tracking-tight">
-              FAQ inscription
+              {t.faqTitle}
             </h2>
           </div>
           <div className="space-y-3">
@@ -329,16 +319,10 @@ function Inscription2026Page() {
         {/* Help */}
         <section className="rounded-2xl border border-white/10 bg-white/[0.05] p-6 sm:p-8 shadow-xl shadow-black/20">
           <p className="text-xs uppercase tracking-[0.18em] text-gray-300">
-            Besoin d&apos;aide ?
+            {t.helpEyebrow}
           </p>
-          <h3 className="mt-2 text-2xl font-bold text-white">
-            On est là pour t&apos;accompagner
-          </h3>
-          <p className="mt-3 text-sm text-gray-200">
-            Une question sur ton roster, un BattleTag qui pose problème, ou
-            besoin d&apos;une dérogation ? Le staff répond sur Discord et par
-            email.
-          </p>
+          <h3 className="mt-2 text-2xl font-bold text-white">{t.helpTitle}</h3>
+          <p className="mt-3 text-sm text-gray-200">{t.helpBody}</p>
           <div className="mt-5 flex flex-wrap gap-3">
             <a
               href={DISCORD_INVITE}
@@ -346,19 +330,19 @@ function Inscription2026Page() {
               rel="noreferrer noopener"
               className="rounded-full border border-white/15 px-5 py-2.5 text-sm font-semibold text-white transition hover:border-white/40 hover:bg-white/10"
             >
-              Discord <span aria-hidden="true">↗</span>
+              {t.ctaDiscord} <span aria-hidden="true">↗</span>
             </a>
             <Link
               href="/contact"
               className="rounded-full border border-white/15 px-5 py-2.5 text-sm font-semibold text-white transition hover:border-white/40 hover:bg-white/10"
             >
-              Formulaire de contact
+              {t.helpContact}
             </Link>
             <Link
               href="/timeline-2026"
               className="rounded-full border border-white/15 px-5 py-2.5 text-sm font-semibold text-white transition hover:border-white/40 hover:bg-white/10"
             >
-              Timeline 2026
+              {t.helpTimeline}
             </Link>
           </div>
         </section>
