@@ -12,6 +12,10 @@ import { useId, useMemo, useState } from 'react';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import { getGame } from '@/config/games';
+import { useT, format } from '@/lib/i18n/useT';
+import { useLang } from '@/lib/i18n/LanguageProvider';
+
+type TournamentsDict = ReturnType<typeof useT<'tournamentsList'>>;
 
 export type Tournament = {
   id: string;
@@ -39,6 +43,7 @@ function gameLabel(game: string): string {
 }
 
 export default function TournamentsList({ tournaments }: TournamentsListProps) {
+  const t = useT('tournamentsList');
   const now = useMemo(() => new Date(), []);
 
   // Filtres client-side. Initialisés sur « Tous » / « tous les jeux » / recherche
@@ -130,11 +135,16 @@ export default function TournamentsList({ tournaments }: TournamentsListProps) {
     (showPast ? past.length : 0);
 
   const statusTabs: { value: StatusFilter; label: string }[] = [
-    { value: 'all', label: 'Tous' },
-    { value: 'upcoming', label: 'À venir' },
-    { value: 'running', label: 'En cours' },
-    { value: 'past', label: 'Terminés' },
+    { value: 'all', label: t.tabAll },
+    { value: 'upcoming', label: t.tabUpcoming },
+    { value: 'running', label: t.tabRunning },
+    { value: 'past', label: t.tabPast },
   ];
+
+  const countLabel = (n: number) =>
+    format(n > 1 ? t.tournamentCount_other : t.tournamentCount_one, {
+      count: n,
+    });
 
   const hasActiveFilters =
     statusFilter !== 'all' || gameFilter !== 'all' || search.trim() !== '';
@@ -146,7 +156,7 @@ export default function TournamentsList({ tournaments }: TournamentsListProps) {
         <section className="mb-12 text-center">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[10px] uppercase tracking-[0.16em] text-gray-300 mb-4">
             <span className="px-1.5 py-[2px] rounded-full bg-gradient-to-r from-purple-400/90 to-pink-400/90 text-black font-semibold">
-              Compétition
+              {t.badgeCompetition}
             </span>
             <span>Overwatch</span>
           </div>
@@ -156,7 +166,7 @@ export default function TournamentsList({ tournaments }: TournamentsListProps) {
             level="h1"
             className="text-gradient mb-4"
           >
-            Tous les tournois
+            {t.title}
           </Heading>
 
           <Paragraph
@@ -164,9 +174,7 @@ export default function TournamentsList({ tournaments }: TournamentsListProps) {
             textColor="text-gray-300"
             className="max-w-2xl mx-auto"
           >
-            Retrouvez l&apos;ensemble des compétitions OW Women&apos;s Cup.
-            Suivez les brackets, consultez les résultats et découvrez les
-            équipes participantes.
+            {t.subtitle}
           </Paragraph>
         </section>
 
@@ -208,7 +216,7 @@ export default function TournamentsList({ tournaments }: TournamentsListProps) {
                     htmlFor={gameSelectId}
                     className="text-[11px] uppercase tracking-wide text-gray-400"
                   >
-                    Jeu
+                    {t.filterGame}
                   </label>
                   <select
                     id={gameSelectId}
@@ -216,7 +224,7 @@ export default function TournamentsList({ tournaments }: TournamentsListProps) {
                     onChange={(e) => setGameFilter(e.target.value)}
                     className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:border-purple-400/60 focus:outline-none focus:ring-1 focus:ring-purple-400/40"
                   >
-                    <option value="all">Tous les jeux</option>
+                    <option value="all">{t.allGames}</option>
                     {availableGames.map((g) => (
                       <option key={g} value={g}>
                         {gameLabel(g)}
@@ -232,14 +240,14 @@ export default function TournamentsList({ tournaments }: TournamentsListProps) {
                   htmlFor={searchId}
                   className="text-[11px] uppercase tracking-wide text-gray-400"
                 >
-                  Rechercher
+                  {t.filterSearch}
                 </label>
                 <input
                   id={searchId}
                   type="search"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Nom du tournoi…"
+                  placeholder={t.searchPlaceholder}
                   className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:border-purple-400/60 focus:outline-none focus:ring-1 focus:ring-purple-400/40"
                 />
               </div>
@@ -252,9 +260,9 @@ export default function TournamentsList({ tournaments }: TournamentsListProps) {
           <section className="mb-12">
             <div className="flex items-center gap-3 mb-6">
               <div className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse" />
-              <h2 className="text-xl font-bold">En cours</h2>
+              <h2 className="text-xl font-bold">{t.tabRunning}</h2>
               <span className="text-sm text-gray-400">
-                {running.length} tournoi{running.length > 1 ? 's' : ''}
+                {countLabel(running.length)}
               </span>
             </div>
 
@@ -271,9 +279,9 @@ export default function TournamentsList({ tournaments }: TournamentsListProps) {
           <section className="mb-12">
             <div className="flex items-center gap-3 mb-6">
               <div className="w-3 h-3 rounded-full bg-amber-500" />
-              <h2 className="text-xl font-bold">À venir</h2>
+              <h2 className="text-xl font-bold">{t.tabUpcoming}</h2>
               <span className="text-sm text-gray-400">
-                {upcoming.length} tournoi{upcoming.length > 1 ? 's' : ''}
+                {countLabel(upcoming.length)}
               </span>
             </div>
 
@@ -290,9 +298,9 @@ export default function TournamentsList({ tournaments }: TournamentsListProps) {
           <section className="mb-12">
             <div className="flex items-center gap-3 mb-6">
               <div className="w-3 h-3 rounded-full bg-gray-500" />
-              <h2 className="text-xl font-bold">Terminés</h2>
+              <h2 className="text-xl font-bold">{t.tabPast}</h2>
               <span className="text-sm text-gray-400">
-                {past.length} tournoi{past.length > 1 ? 's' : ''}
+                {countLabel(past.length)}
               </span>
             </div>
 
@@ -322,12 +330,8 @@ export default function TournamentsList({ tournaments }: TournamentsListProps) {
                 />
               </svg>
             </div>
-            <h2 className="text-xl font-semibold mb-2">
-              Aucun tournoi disponible
-            </h2>
-            <p className="text-gray-400">
-              Les prochains tournois seront annoncés bientôt.
-            </p>
+            <h2 className="text-xl font-semibold mb-2">{t.emptyTitle}</h2>
+            <p className="text-gray-400">{t.emptyBody}</p>
           </section>
         )}
 
@@ -349,12 +353,8 @@ export default function TournamentsList({ tournaments }: TournamentsListProps) {
                 />
               </svg>
             </div>
-            <h2 className="text-xl font-semibold mb-2">
-              Aucun tournoi ne correspond
-            </h2>
-            <p className="text-gray-400 mb-6">
-              Essayez d&apos;élargir vos filtres pour voir plus de tournois.
-            </p>
+            <h2 className="text-xl font-semibold mb-2">{t.noMatchTitle}</h2>
+            <p className="text-gray-400 mb-6">{t.noMatchBody}</p>
             {hasActiveFilters && (
               <button
                 type="button"
@@ -365,7 +365,7 @@ export default function TournamentsList({ tournaments }: TournamentsListProps) {
                 }}
                 className="px-4 py-2 rounded-md bg-purple-500 hover:bg-purple-400 text-sm font-semibold transition-colors"
               >
-                Réinitialiser les filtres
+                {t.resetFilters}
               </button>
             )}
           </section>
@@ -385,26 +385,31 @@ type TournamentCardProps = {
 };
 
 function TournamentCard({ tournament, status }: TournamentCardProps) {
+  const t = useT('tournamentsList');
+  const { lang } = useLang();
+  const locale = lang === 'fr' ? 'fr-FR' : 'en-GB';
   const dateLabel = formatTournamentDates(
     tournament.start_date,
-    tournament.end_date
+    tournament.end_date,
+    locale,
+    t.untilDate
   );
 
   const statusConfig = {
     running: {
-      label: 'En cours',
+      label: t.cardRunning,
       bg: 'bg-emerald-500/20',
       border: 'border-emerald-500/40',
       text: 'text-emerald-300',
     },
     upcoming: {
-      label: 'À venir',
+      label: t.cardUpcoming,
       bg: 'bg-amber-500/20',
       border: 'border-amber-500/40',
       text: 'text-amber-300',
     },
     past: {
-      label: 'Terminé',
+      label: t.cardPast,
       bg: 'bg-gray-500/20',
       border: 'border-gray-500/40',
       text: 'text-gray-300',
@@ -466,7 +471,7 @@ function TournamentCard({ tournament, status }: TournamentCardProps) {
             <div className="flex items-center gap-2 text-xs">
               {tournament.max_teams && (
                 <span className="px-2 py-1 rounded-lg bg-white/5 text-gray-300">
-                  {tournament.max_teams} équipes max
+                  {format(t.teamsMax, { count: tournament.max_teams })}
                 </span>
               )}
             </div>
@@ -478,12 +483,12 @@ function TournamentCard({ tournament, status }: TournamentCardProps) {
                   onClick={(e) => e.stopPropagation()}
                 >
                   <span className="px-3 py-1 rounded-full text-[11px] font-semibold bg-gradient-to-r from-pink-500 to-orange-400 text-black hover:from-pink-400 hover:to-orange-300 transition-colors">
-                    S&apos;inscrire
+                    {t.register}
                   </span>
                 </Link>
               )}
               <span className="text-xs text-purple-300 group-hover:text-purple-200 transition-colors">
-                Voir →
+                {t.viewCard}
               </span>
             </div>
           </div>
@@ -494,8 +499,10 @@ function TournamentCard({ tournament, status }: TournamentCardProps) {
 }
 
 function formatTournamentDates(
-  start?: string | null,
-  end?: string | null
+  start: string | null | undefined,
+  end: string | null | undefined,
+  locale: string,
+  untilTemplate: string
 ): string | null {
   if (!start && !end) return null;
 
@@ -517,21 +524,23 @@ function formatTournamentDates(
     const e = new Date(end);
 
     const useYear = s.getFullYear() !== currentYear;
-    const format = useYear ? optsWithYear : opts;
+    const fmt = useYear ? optsWithYear : opts;
 
     if (s.getTime() === e.getTime()) {
-      return s.toLocaleDateString('fr-FR', format);
+      return s.toLocaleDateString(locale, fmt);
     }
-    return `${s.toLocaleDateString('fr-FR', opts)} - ${e.toLocaleDateString('fr-FR', format)}`;
+    return `${s.toLocaleDateString(locale, opts)} - ${e.toLocaleDateString(locale, fmt)}`;
   }
 
   if (start) {
     const s = new Date(start);
     const useYear = s.getFullYear() !== currentYear;
-    return s.toLocaleDateString('fr-FR', useYear ? optsWithYear : opts);
+    return s.toLocaleDateString(locale, useYear ? optsWithYear : opts);
   }
 
   const e = new Date(end!);
   const useYear = e.getFullYear() !== currentYear;
-  return `Jusqu'au ${e.toLocaleDateString('fr-FR', useYear ? optsWithYear : opts)}`;
+  return format(untilTemplate, {
+    date: e.toLocaleDateString(locale, useYear ? optsWithYear : opts),
+  });
 }

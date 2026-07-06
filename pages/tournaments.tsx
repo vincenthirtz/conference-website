@@ -12,6 +12,7 @@ import TournamentsList, {
 import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
+import { useT } from '@/lib/i18n/useT';
 import { logger } from '../utils/logger';
 
 type TournamentsPageProps = {
@@ -67,6 +68,7 @@ export const getStaticProps: GetStaticProps<
 };
 
 function TournamentsPage({ tournaments, loadError }: TournamentsPageProps) {
+  const t = useT('tournamentsList');
   if (loadError) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
@@ -87,19 +89,14 @@ function TournamentsPage({ tournaments, loadError }: TournamentsPageProps) {
                 />
               </svg>
             </div>
-            <h1 className="text-xl font-semibold mb-2">
-              Impossible de charger les tournois
-            </h1>
-            <p className="text-gray-400 mb-6">
-              Une erreur est survenue de notre côté. Réessayez dans quelques
-              instants.
-            </p>
+            <h1 className="text-xl font-semibold mb-2">{t.loadErrorTitle}</h1>
+            <p className="text-gray-400 mb-6">{t.loadErrorBody}</p>
             <button
               type="button"
               onClick={() => window.location.reload()}
               className="px-4 py-2 rounded-md bg-purple-500 hover:bg-purple-400 text-sm font-semibold transition-colors"
             >
-              Réessayer
+              {t.retry}
             </button>
           </section>
         </main>
