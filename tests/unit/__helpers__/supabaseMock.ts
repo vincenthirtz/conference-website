@@ -571,11 +571,17 @@ export function setStorageUploadResult(result: typeof _storageUploadResult) {
  * for assertions on the params passed.
  */
 type RpcResult = { data: unknown; error: unknown };
+// Tests seed only the relevant half (`{ data }` or `{ error }`); the other
+// defaults to null so consumers always read a full `{ data, error }` pair.
+type RpcResultInput = { data?: unknown; error?: unknown };
 const _rpcResults = new Map<string, RpcResult>();
 export const rpcCalls: Array<{ fn: string; params: unknown }> = [];
 
-export function setRpcResult(fn: string, result: RpcResult) {
-  _rpcResults.set(fn, result);
+export function setRpcResult(fn: string, result: RpcResultInput) {
+  _rpcResults.set(fn, {
+    data: result.data ?? null,
+    error: result.error ?? null,
+  });
 }
 
 export const supabaseAdmin = {
