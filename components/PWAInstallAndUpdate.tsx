@@ -17,6 +17,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 
+import { useT } from '@/lib/i18n/useT';
+
 // Type local pour `beforeinstallprompt` (pas dans lib.dom standard).
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -24,6 +26,7 @@ type BeforeInstallPromptEvent = Event & {
 };
 
 export default function PWAInstallAndUpdate() {
+  const t = useT('pwa');
   const [installPrompt, setInstallPrompt] =
     useState<BeforeInstallPromptEvent | null>(null);
   const [updateAvailable, setUpdateAvailable] = useState(false);
@@ -95,20 +98,20 @@ export default function PWAInstallAndUpdate() {
           <div className="flex items-center gap-3">
             <span className="inline-block size-2 shrink-0 rounded-full bg-cyan-400 shadow-[0_0_10px_rgba(0,240,255,0.9)]" />
             <div className="flex-1 text-sm text-white">
-              <div className="font-semibold">Nouvelle version disponible</div>
-              <div className="text-white/70">Recharge pour mettre à jour.</div>
+              <div className="font-semibold">{t.updateTitle}</div>
+              <div className="text-white/70">{t.updateBody}</div>
             </div>
             <button
               type="button"
               onClick={() => window.location.reload()}
               className="rounded-lg bg-gradient-to-r from-cyan-400 to-fuchsia-500 px-3 py-1.5 text-xs font-semibold text-[#0e0a1f] transition hover:scale-105"
             >
-              Recharger
+              {t.reload}
             </button>
             <button
               type="button"
               onClick={() => setUpdateAvailable(false)}
-              aria-label="Plus tard"
+              aria-label={t.later}
               className="rounded-md p-1 text-white/50 transition hover:bg-white/10 hover:text-white"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -137,14 +140,14 @@ export default function PWAInstallAndUpdate() {
             }
           }}
           className="fixed bottom-6 right-6 z-[60] inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-cyan-400 via-fuchsia-500 to-violet-600 px-5 py-3 text-sm font-semibold text-white shadow-[0_8px_28px_rgba(187,0,255,0.45)] transition hover:scale-105 active:scale-95"
-          aria-label="Installer l'application"
+          aria-label={t.installAria}
         >
           <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
             <polyline points="7 10 12 15 17 10" />
             <line x1="12" y1="15" x2="12" y2="3" />
           </svg>
-          Installer l&apos;app
+          {t.install}
         </button>
       )}
     </>

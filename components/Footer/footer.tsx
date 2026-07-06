@@ -2,6 +2,7 @@ import React, { JSX } from 'react';
 import Link from 'next/link';
 import type { SVGTypes } from '@/types/types';
 import { CookieSettingsButton } from '@/components/CookieBanner';
+import { useT } from '@/lib/i18n/useT';
 import {
   TikTokIcon,
   InstagramIcon,
@@ -34,25 +35,27 @@ type SocialLink = {
   Icon: (props: Readonly<SVGTypes>) => JSX.Element;
 };
 
-const tournoiLinks: FooterLink[] = [
-  { label: 'Ambassadrices', href: '/live', Icon: LiveIcon },
-  { label: 'Règlement', href: '/rules', Icon: RulesIcon },
-  { label: 'Actualités OW', href: '/actualites', Icon: NewsIcon },
-  { label: 'Plan du site', href: '/plan-du-site', Icon: SitemapIcon },
+type FooterDict = ReturnType<typeof useT<'footer'>>;
+
+const tournoiLinks = (t: FooterDict): FooterLink[] => [
+  { label: t.ambassadors, href: '/live', Icon: LiveIcon },
+  { label: t.rules, href: '/rules', Icon: RulesIcon },
+  { label: t.news, href: '/actualites', Icon: NewsIcon },
+  { label: t.sitemap, href: '/plan-du-site', Icon: SitemapIcon },
 ];
 
-const communityLinks: FooterLink[] = [
-  { label: 'À propos', href: '/about', Icon: AboutIcon },
-  { label: "Installer l'app", href: '/app', Icon: AppIcon },
-  { label: 'Faire un don', href: '/don', Icon: DonationIcon },
-  { label: 'Signalement / Support', href: '/support', Icon: SupportIcon },
-  { label: 'API / Développeurs', href: '/developpeurs', Icon: CodeIcon },
+const communityLinks = (t: FooterDict): FooterLink[] => [
+  { label: t.about, href: '/about', Icon: AboutIcon },
+  { label: t.installApp, href: '/app', Icon: AppIcon },
+  { label: t.donate, href: '/don', Icon: DonationIcon },
+  { label: t.support, href: '/support', Icon: SupportIcon },
+  { label: t.developers, href: '/developpeurs', Icon: CodeIcon },
 ];
 
-const legalLinks: FooterLink[] = [
-  { label: 'Nous contacter', href: '/contact', Icon: MailIcon },
+const legalLinks = (t: FooterDict): FooterLink[] => [
+  { label: t.contact, href: '/contact', Icon: MailIcon },
   {
-    label: 'Mentions légales',
+    label: t.legal,
     href: '/mentions-legales',
     Icon: LegalShieldIcon,
   },
@@ -132,6 +135,7 @@ function FooterColumn({
 }
 
 function Footer(): JSX.Element {
+  const t = useT('footer');
   return (
     <footer
       className="w-full bg-[var(--bg-deep)] border-t border-white/5 pt-12 pb-6 px-4"
@@ -146,8 +150,7 @@ function Footer(): JSX.Element {
                 OW Women&apos;s Cup
               </p>
               <p className="mt-2 text-sm text-gray-400 leading-relaxed max-w-xs">
-                Le tournoi Overwatch 100&nbsp;% féminin et francophone.
-                Communauté, compétition, bienveillance.
+                {t.tagline}
               </p>
             </div>
             <ul className="flex flex-wrap items-center gap-3">
@@ -169,19 +172,18 @@ function Footer(): JSX.Element {
           </div>
 
           {/* Col 2 — Tournoi */}
-          <FooterColumn title="Tournoi" links={tournoiLinks} />
+          <FooterColumn title={t.colTournament} links={tournoiLinks(t)} />
 
           {/* Col 3 — Communauté + légal stacked */}
           <div className="flex flex-col gap-8">
-            <FooterColumn title="Communauté" links={communityLinks} />
-            <FooterColumn title="Légal & contact" links={legalLinks} />
+            <FooterColumn title={t.colCommunity} links={communityLinks(t)} />
+            <FooterColumn title={t.colLegal} links={legalLinks(t)} />
           </div>
         </div>
 
         <div className="flex flex-col items-center gap-3 border-t border-white/5 pt-6 text-xs text-gray-400 md:flex-row md:justify-between">
           <span className="text-center md:text-left">
-            Association WOMEN&apos;S CUP &mdash; Tous droits réservés &mdash;
-            Fait avec ❤️ par{' '}
+            {t.copyright}{' '}
             <a
               href="https://www.twitch.tv/arukdo"
               target="_blank"

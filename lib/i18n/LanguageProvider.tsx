@@ -23,7 +23,11 @@ import {
 
 export type Lang = 'fr' | 'en';
 
-const STORAGE_KEY = 'cw_player_lang';
+// Clé historique : 'cw_player_lang' (toggle limité à l'espace joueur). Depuis
+// que le toggle est global (navbar publique), on écrit 'cw_lang' et on lit
+// encore l'ancienne clé en fallback pour ne pas perdre la préférence.
+const STORAGE_KEY = 'cw_lang';
+const LEGACY_STORAGE_KEY = 'cw_player_lang';
 
 type LanguageContextValue = {
   lang: Lang;
@@ -45,7 +49,9 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     try {
-      const stored = window.localStorage.getItem(STORAGE_KEY);
+      const stored =
+        window.localStorage.getItem(STORAGE_KEY) ??
+        window.localStorage.getItem(LEGACY_STORAGE_KEY);
       if (stored === 'fr' || stored === 'en') {
         setLangState(stored);
       }

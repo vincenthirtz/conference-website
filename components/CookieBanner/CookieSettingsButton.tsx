@@ -1,11 +1,13 @@
 import React from 'react';
 import { useCookieConsent } from '@/hooks/useCookieConsent';
+import { useT } from '@/lib/i18n/useT';
 
 /**
  * Bouton pour rouvrir les paramètres de cookies
  * À placer dans le footer ou une page de paramètres
  */
 export default function CookieSettingsButton() {
+  const t = useT('cookieBanner');
   const { resetConsent, isLoaded } = useCookieConsent();
 
   // Ne pas afficher avant le chargement pour éviter le flash
@@ -18,9 +20,9 @@ export default function CookieSettingsButton() {
       onClick={resetConsent}
       className="cookie-settings-btn"
       type="button"
-      aria-label="Gérer les préférences de cookies"
+      aria-label={t.manageAria}
     >
-      Gérer les cookies
+      {t.manage}
     </button>
   );
 }

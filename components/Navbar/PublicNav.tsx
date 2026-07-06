@@ -4,7 +4,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import linksConfig from '@/config/links.json';
 import type { LinkItem } from '@/types/types';
 import { useAuthSession } from '@/hooks/useAuthSession';
+import { useT } from '@/lib/i18n/useT';
 import PlayerBell from './PlayerBell';
+import LanguageToggle from './LanguageToggle';
 
 const HIDDEN_PUBLIC_LINKS = new Set(['À propos', 'Cast', 'Sponsors']);
 
@@ -18,6 +20,11 @@ export default function PublicNav({
   showStaffLogin,
 }: PublicNavProps) {
   const router = useRouter();
+  const tNav = useT('navbar');
+  // Les titres de config/links.json sont le FR canonique ; la map publicLinks
+  // fournit le libellé localisé (fallback : titre tel quel).
+  const linkLabel = (title: string) =>
+    (tNav.publicLinks as Record<string, string>)[title] ?? title;
   const { user: authUser, loading: authLoading } = useAuthSession();
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [focusedIndex, setFocusedIndex] = useState<number>(-1);
@@ -120,7 +127,7 @@ export default function PublicNav({
                 aria-expanded={isOpen}
                 aria-haspopup="true"
               >
-                <span>{link.title}</span>
+                <span>{linkLabel(link.title)}</span>
                 <svg
                   aria-hidden
                   className={`h-3 w-3 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}
@@ -145,7 +152,7 @@ export default function PublicNav({
                   isActive ? 'text-white' : 'text-neutral-200 hover:text-white'
                 }`}
               >
-                <span>{link.title}</span>
+                <span>{linkLabel(link.title)}</span>
                 <Underline active={isActive} />
               </Link>
             )}
@@ -191,7 +198,7 @@ export default function PublicNav({
                         if (e.key === 'Tab') closeMenu();
                       }}
                     >
-                      <span>{sub.title}</span>
+                      <span>{linkLabel(sub.title)}</span>
                       {sub.badge && (
                         <span className="inline-flex items-center rounded-full bg-gradient-to-r from-fuchsia-500 to-purple-500 px-2 py-[2px] text-[10px] font-semibold uppercase tracking-wide text-white shadow-[0_0_12px_-2px_rgba(217,70,239,0.6)]">
                           {sub.badge}
@@ -220,10 +227,12 @@ export default function PublicNav({
         >
           <path d="M12 21s-6.716-4.297-9.193-7.6C1.07 11.13 1.4 8.07 3.6 6.43c1.9-1.42 4.46-1 5.9.72L12 10.2l2.5-3.05c1.44-1.72 4-2.14 5.9-.72 2.2 1.64 2.53 4.7.793 6.97C18.716 16.703 12 21 12 21z" />
         </svg>
-        <span>Soutenir</span>
+        <span>{tNav.support}</span>
       </Link>
 
       <PlayerBell />
+
+      <LanguageToggle className="ml-1" />
 
       {showStaffLogin && !authUser && (
         <div
@@ -241,14 +250,14 @@ export default function PublicNav({
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-400 opacity-60" />
               <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-rose-500" />
             </span>
-            <span>Connexion</span>
+            <span>{tNav.login}</span>
           </Link>
           <Link
             href="/register"
             data-test="nav-Inscription"
             className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-fuchsia-400/40 bg-gradient-to-r from-fuchsia-500 to-purple-500 px-4 py-1.5 text-[13px] font-semibold text-white shadow-[0_0_20px_-6px_rgba(217,70,239,0.7)] transition-all hover:from-fuchsia-400 hover:to-purple-400 hover:shadow-[0_0_24px_-4px_rgba(217,70,239,0.85)] focus:outline-none focus-visible:ring-2 focus-visible:ring-fuchsia-400/50"
           >
-            <span>Inscription</span>
+            <span>{tNav.signup}</span>
           </Link>
         </div>
       )}

@@ -15,8 +15,10 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { countQueuedMutations } from '@/utils/bgSyncQueue';
+import { useT, format } from '@/lib/i18n/useT';
 
 export default function OfflineBanner() {
+  const t = useT('offlineBanner');
   const online = useOnlineStatus();
   const [queueCount, setQueueCount] = useState(0);
 
@@ -69,20 +71,22 @@ export default function OfflineBanner() {
         <div className="flex-1 leading-tight">
           {showOffline ? (
             <>
-              <div className="font-semibold">Hors ligne</div>
+              <div className="font-semibold">{t.offlineTitle}</div>
               <div className="text-white/70">
                 {showQueue
-                  ? `${queueCount} action${queueCount > 1 ? 's' : ''} en file — rejouée${
-                      queueCount > 1 ? 's' : ''
-                    } dès la reconnexion.`
-                  : 'Tes actions critiques seront mises en file.'}
+                  ? format(queueCount > 1 ? t.queued_other : t.queued_one, {
+                      count: queueCount,
+                    })
+                  : t.queueEmpty}
               </div>
             </>
           ) : (
             <>
-              <div className="font-semibold">Synchronisation</div>
+              <div className="font-semibold">{t.syncTitle}</div>
               <div className="text-white/70">
-                {queueCount} action{queueCount > 1 ? 's' : ''} en cours d&apos;envoi…
+                {format(queueCount > 1 ? t.sending_other : t.sending_one, {
+                  count: queueCount,
+                })}
               </div>
             </>
           )}

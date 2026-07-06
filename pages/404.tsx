@@ -2,28 +2,29 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useSiteSetting } from '@/hooks/useSiteSettings';
+import { useT } from '@/lib/i18n/useT';
 
-const SUGGESTIONS = [
-  { label: 'Accueil', href: '/', emoji: '🏠' },
-  { label: 'Tournoi', href: '/tournoi', emoji: '🏆' },
-  { label: 'Ambassadrices', href: '/live', emoji: '🎥' },
-  { label: 'Actualités', href: '/actualites', emoji: '📰' },
-  { label: 'Plan du site', href: '/plan-du-site', emoji: '🗺️' },
-  { label: 'Contact', href: '/contact', emoji: '✉️' },
+type Error404Dict = ReturnType<typeof useT<'error404'>>;
+
+const suggestions = (t: Error404Dict) => [
+  { label: t.sHome, href: '/', emoji: '🏠' },
+  { label: t.sTournament, href: '/tournoi', emoji: '🏆' },
+  { label: t.sAmbassadors, href: '/live', emoji: '🎥' },
+  { label: t.sNews, href: '/actualites', emoji: '📰' },
+  { label: t.sSitemap, href: '/plan-du-site', emoji: '🗺️' },
+  { label: t.sContact, href: '/contact', emoji: '✉️' },
 ];
 
 export default function NotFoundPage() {
+  const t = useT('error404');
   const { value: contactEmail } = useSiteSetting('contact_email');
   const router = useRouter();
 
   return (
     <>
       <Head>
-        <title>Page introuvable | OW Women&apos;s Cup</title>
-        <meta
-          name="description"
-          content="La page que tu cherches n'existe pas ou a été déplacée."
-        />
+        <title>{t.pageTitle}</title>
+        <meta name="description" content={t.metaDescription} />
         <meta name="robots" content="noindex" />
       </Head>
 
@@ -51,35 +52,32 @@ export default function NotFoundPage() {
           </div>
 
           <h1 className="mt-2 text-2xl sm:text-3xl font-semibold">
-            Cette page a quitté la partie
+            {t.heading}
           </h1>
-          <p className="mt-3 text-gray-400 max-w-md mx-auto">
-            Le lien est peut-être cassé, la page a été déplacée, ou tu as trouvé
-            un easter egg. Pas de panique, on t&apos;aide à rentrer au lobby.
-          </p>
+          <p className="mt-3 text-gray-400 max-w-md mx-auto">{t.body}</p>
 
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
             <Link
               href="/"
               className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 text-sm font-semibold transition shadow-lg shadow-purple-500/20"
             >
-              Retour à l&apos;accueil
+              {t.backHome}
             </Link>
             <button
               type="button"
               onClick={() => router.back()}
               className="px-5 py-2.5 rounded-xl border border-white/15 bg-black/50 hover:border-white/30 text-sm font-semibold transition"
             >
-              Page précédente
+              {t.previousPage}
             </button>
           </div>
 
           <div className="mt-12">
             <p className="text-xs uppercase tracking-widest text-gray-500 mb-4">
-              Ou explore par ici
+              {t.explore}
             </p>
             <ul className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
-              {SUGGESTIONS.map((item) => (
+              {suggestions(t).map((item) => (
                 <li key={item.href}>
                   <Link
                     href={item.href}
@@ -99,12 +97,12 @@ export default function NotFoundPage() {
 
           {contactEmail && (
             <p className="text-xs text-gray-500 mt-10">
-              Tu pensais voir autre chose ?{' '}
+              {t.reportPrefix}{' '}
               <a
                 href={`mailto:${contactEmail}`}
                 className="text-purple-300 hover:text-purple-200 underline"
               >
-                Signale-le nous
+                {t.reportLink}
               </a>
             </p>
           )}

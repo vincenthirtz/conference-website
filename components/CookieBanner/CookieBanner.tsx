@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useCookieConsent, CookiePreferences } from '@/hooks/useCookieConsent';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
+import { useT } from '@/lib/i18n/useT';
 
 interface CookieCategoryInfo {
   key: keyof CookiePreferences;
@@ -10,36 +11,37 @@ interface CookieCategoryInfo {
   required: boolean;
 }
 
-const cookieCategories: CookieCategoryInfo[] = [
+const cookieCategories = (
+  t: ReturnType<typeof useT<'cookieBanner'>>
+): CookieCategoryInfo[] => [
   {
     key: 'essential',
-    name: 'Cookies essentiels',
-    description:
-      'Nécessaires au fonctionnement du site (authentification, sécurité). Ces cookies ne peuvent pas être désactivés.',
+    name: t.essentialName,
+    description: t.essentialDesc,
     required: true,
   },
   {
     key: 'functional',
-    name: 'Cookies fonctionnels',
-    description: 'Améliorent votre expérience (préférences, personnalisation).',
+    name: t.functionalName,
+    description: t.functionalDesc,
     required: false,
   },
   {
     key: 'analytics',
-    name: 'Cookies analytiques',
-    description:
-      "Nous aident à comprendre comment vous utilisez le site pour l'améliorer.",
+    name: t.analyticsName,
+    description: t.analyticsDesc,
     required: false,
   },
   {
     key: 'marketing',
-    name: 'Cookies marketing',
-    description: 'Utilisés pour afficher des publicités pertinentes.',
+    name: t.marketingName,
+    description: t.marketingDesc,
     required: false,
   },
 ];
 
 export default function CookieBanner() {
+  const t = useT('cookieBanner');
   const {
     hasConsented,
     isLoaded,
@@ -83,18 +85,16 @@ export default function CookieBanner() {
       <div className="cookie-banner-content">
         <div className="cookie-banner-header">
           <h2 id="cookie-banner-title" className="cookie-banner-title">
-            Gestion des cookies
+            {t.title}
           </h2>
           <p id="cookie-banner-description" className="cookie-banner-text">
-            Nous utilisons des cookies pour assurer le bon fonctionnement du
-            site et améliorer votre expérience. Vous pouvez personnaliser vos
-            préférences ci-dessous.
+            {t.description}
           </p>
         </div>
 
         {showDetails && (
           <div className="cookie-banner-details">
-            {cookieCategories.map((category) => (
+            {cookieCategories(t).map((category) => (
               <div key={category.key} className="cookie-category">
                 <div className="cookie-category-header">
                   <label className="cookie-category-label">
@@ -113,7 +113,9 @@ export default function CookieBanner() {
                       {category.name}
                     </span>
                     {category.required && (
-                      <span className="cookie-required-badge">Requis</span>
+                      <span className="cookie-required-badge">
+                        {t.required}
+                      </span>
                     )}
                   </label>
                 </div>
@@ -131,7 +133,7 @@ export default function CookieBanner() {
             className="cookie-btn cookie-btn-secondary"
             type="button"
           >
-            {showDetails ? 'Masquer les détails' : 'Personnaliser'}
+            {showDetails ? t.hideDetails : t.customize}
           </button>
 
           {showDetails ? (
@@ -140,7 +142,7 @@ export default function CookieBanner() {
               className="cookie-btn cookie-btn-primary"
               type="button"
             >
-              Enregistrer mes choix
+              {t.saveChoices}
             </button>
           ) : (
             <>
@@ -149,23 +151,23 @@ export default function CookieBanner() {
                 className="cookie-btn cookie-btn-secondary"
                 type="button"
               >
-                Refuser
+                {t.refuse}
               </button>
               <button
                 onClick={acceptAll}
                 className="cookie-btn cookie-btn-primary"
                 type="button"
               >
-                Tout accepter
+                {t.acceptAll}
               </button>
             </>
           )}
         </div>
 
         <p className="cookie-banner-legal">
-          En savoir plus dans notre{' '}
+          {t.legalPrefix}{' '}
           <Link href="/mentions-legales" className="cookie-link">
-            politique de confidentialité
+            {t.privacyPolicy}
           </Link>
           .
         </p>

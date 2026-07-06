@@ -4,6 +4,8 @@ import { useRouter } from 'next/router';
 import links from '@/config/links.json';
 import type { LinkItem } from '@/types/types';
 import type { INavDropProp } from '@/types/components';
+import { useT } from '@/lib/i18n/useT';
+import LanguageToggle from './LanguageToggle';
 
 const HIDDEN_PUBLIC_LINKS = new Set(['À propos', 'Cast', 'Sponsors']);
 
@@ -40,6 +42,11 @@ const NavDrop = forwardRef<HTMLDivElement, INavDropProp>(function NavDrop(
   ref
 ): JSX.Element {
   const router = useRouter();
+  const tNav = useT('navbar');
+  // Titres de config/links.json = FR canonique ; map publicLinks = libellé
+  // localisé (fallback : titre tel quel). Même convention que PublicNav.
+  const linkLabel = (title: string) =>
+    (tNav.publicLinks as Record<string, string>)[title] ?? title;
   const [openPublic, setOpenPublic] = useState<string | null>(null);
   const [adminMenuOpen, setAdminMenuOpen] = useState(false);
   const [expandedAdminSubs, setExpandedAdminSubs] = useState<Set<string>>(
@@ -76,7 +83,7 @@ const NavDrop = forwardRef<HTMLDivElement, INavDropProp>(function NavDrop(
       className="absolute inset-x-0 z-[99] bg-gradient-to-b from-[#1B1130]/95 to-[#0F0820]/95 backdrop-blur-2xl"
       style={{ top: offsetTop, height: dropHeight }}
       role="dialog"
-      aria-label="Menu mobile"
+      aria-label={tNav.mobileMenuAria}
     >
       <div
         className="flex h-full w-full flex-col gap-2 overflow-y-auto px-5 pb-10 pt-6"
@@ -96,7 +103,9 @@ const NavDrop = forwardRef<HTMLDivElement, INavDropProp>(function NavDrop(
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-400 opacity-60" />
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-rose-500" />
                 </span>
-                <span className="text-[15px] font-medium">Connexion staff</span>
+                <span className="text-[15px] font-medium">
+                  {tNav.staffLogin}
+                </span>
               </span>
               <svg
                 aria-hidden
@@ -119,7 +128,7 @@ const NavDrop = forwardRef<HTMLDivElement, INavDropProp>(function NavDrop(
               data-test="nav-Inscription"
               className="group flex min-h-[48px] items-center justify-between rounded-xl border border-fuchsia-400/40 bg-gradient-to-r from-fuchsia-500 to-purple-500 px-4 py-3 text-white shadow-[0_0_24px_-8px_rgba(217,70,239,0.7)] transition-all hover:from-fuchsia-400 hover:to-purple-400"
             >
-              <span className="text-[15px] font-semibold">Inscription</span>
+              <span className="text-[15px] font-semibold">{tNav.signup}</span>
               <svg
                 aria-hidden
                 className="h-4 w-4 -translate-x-1 text-white transition-transform group-hover:translate-x-0"
@@ -244,7 +253,7 @@ const NavDrop = forwardRef<HTMLDivElement, INavDropProp>(function NavDrop(
                     onClick={onLogout}
                     className="border-t border-white/10 px-4 py-3 text-left text-[13px] text-rose-300 transition-colors hover:bg-rose-500/10 hover:text-rose-200"
                   >
-                    Déconnexion
+                    {tNav.logout}
                   </button>
                 </div>
               </div>
@@ -253,6 +262,9 @@ const NavDrop = forwardRef<HTMLDivElement, INavDropProp>(function NavDrop(
         )}
 
         <div className="mt-2 flex flex-col gap-1">
+          <div className="mb-1 flex justify-end px-1">
+            <LanguageToggle />
+          </div>
           {publicLinks.map((link: LinkItem) => {
             const hasSubMenu = !!link.subMenu;
             const isOpen = openPublic === link.title;
@@ -274,7 +286,7 @@ const NavDrop = forwardRef<HTMLDivElement, INavDropProp>(function NavDrop(
                       : 'text-neutral-200 hover:bg-white/[0.04] hover:text-white'
                   }`}
                 >
-                  {link.title}
+                  {linkLabel(link.title)}
                 </Link>
               );
             }
@@ -291,7 +303,7 @@ const NavDrop = forwardRef<HTMLDivElement, INavDropProp>(function NavDrop(
                   }`}
                   aria-expanded={isOpen}
                 >
-                  <span>{link.title}</span>
+                  <span>{linkLabel(link.title)}</span>
                   <Chevron open={isOpen} />
                 </button>
                 <div
@@ -308,7 +320,7 @@ const NavDrop = forwardRef<HTMLDivElement, INavDropProp>(function NavDrop(
                           onClick={closeAndNavigate}
                           className="flex items-center justify-between gap-3 rounded-md px-3 py-2.5 text-[14px] text-neutral-300 transition-all hover:bg-white/[0.06] hover:text-white"
                         >
-                          <span>{sub.title}</span>
+                          <span>{linkLabel(sub.title)}</span>
                           {sub.badge && (
                             <span className="inline-flex items-center rounded-full bg-gradient-to-r from-fuchsia-500 to-purple-500 px-2 py-[2px] text-[10px] font-semibold uppercase tracking-wide text-white shadow-[0_0_12px_-2px_rgba(217,70,239,0.6)]">
                               {sub.badge}
@@ -341,7 +353,7 @@ const NavDrop = forwardRef<HTMLDivElement, INavDropProp>(function NavDrop(
                 <path d="M12 21s-6.716-4.297-9.193-7.6C1.07 11.13 1.4 8.07 3.6 6.43c1.9-1.42 4.46-1 5.9.72L12 10.2l2.5-3.05c1.44-1.72 4-2.14 5.9-.72 2.2 1.64 2.53 4.7.793 6.97C18.716 16.703 12 21 12 21z" />
               </svg>
               <span className="text-[15px] font-medium">
-                Soutenir le projet
+                {tNav.supportLong}
               </span>
             </Link>
           </div>
