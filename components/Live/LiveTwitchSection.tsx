@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import Button from '@/components/Buttons/button';
+import { useT, format } from '@/lib/i18n/useT';
 
 import { logger } from '../../utils/logger';
 export type TwitchChannel = {
@@ -24,10 +25,14 @@ type Props = {
 
 export default function LiveTwitchSection({
   initialChannels,
-  eyebrow = 'Live',
-  title = 'En attendant la compétition',
-  subtitle = 'Retrouvez nos chaînes partenaires, casts et analyses en attendant la compétition.',
+  eyebrow,
+  title,
+  subtitle,
 }: Props = {}) {
+  const t = useT('liveTwitchSection');
+  const eyebrowLabel = eyebrow ?? t.defaultEyebrow;
+  const titleLabel = title ?? t.defaultTitle;
+  const subtitleLabel = subtitle ?? t.defaultSubtitle;
   const [twitchChannels, setTwitchChannels] = useState<TwitchChannel[]>(
     initialChannels ?? []
   );
@@ -103,14 +108,14 @@ export default function LiveTwitchSection({
       className="flex items-center flex-col justify-center pt-20"
     >
       <div className="text-xl text-white font-semibold border-b-2 border-blue-400 mb-1">
-        {eyebrow}
+        {eyebrowLabel}
       </div>
       <div data-test="ticket-section" className="flex flex-col items-center ">
         <Heading
           typeStyle="heading-md"
           className="text-gradient text-center lg:mt-10"
         >
-          {title}
+          {titleLabel}
         </Heading>
         <div className="max-w-3xl sm:w-full text-center">
           <Paragraph
@@ -118,7 +123,7 @@ export default function LiveTwitchSection({
             className="mt-6"
             textColor="text-gray-200"
           >
-            {subtitle}
+            {subtitleLabel}
           </Paragraph>
         </div>
 
@@ -165,7 +170,7 @@ export default function LiveTwitchSection({
                                   }`}
                                   aria-hidden
                                 />
-                                {isLive ? 'Live en cours' : 'Hors ligne'}
+                                {isLive ? t.liveNow : t.offline}
                               </span>
                             </div>
                           </div>
@@ -176,12 +181,11 @@ export default function LiveTwitchSection({
                           )}
                         </div>
                         <p className="text-sm text-gray-300 leading-relaxed">
-                          {description ||
-                            `Streams OW, analyses et cast en direct. Suivez ${label}.`}
+                          {description || format(t.descFallback, { label })}
                         </p>
                         {loadingStatus && (
                           <p className="text-[11px] text-gray-500">
-                            Mise à jour du statut…
+                            {t.statusUpdating}
                           </p>
                         )}
                         <div className="flex justify-end">
@@ -195,7 +199,7 @@ export default function LiveTwitchSection({
                               type="button"
                               className="w-full md:w-auto px-4 py-2 bg-purple-600 hover:bg-purple-500"
                             >
-                              Voir la chaîne
+                              {t.viewChannel}
                             </Button>
                           </a>
                         </div>
@@ -217,11 +221,16 @@ export default function LiveTwitchSection({
                       : 'border-white/10 text-gray-500 cursor-not-allowed'
                   }`}
                 >
-                  ← Précédent
+                  {t.prev}
                 </button>
                 <span className="text-sm text-gray-300">
-                  Page {page + 1} /{' '}
-                  {Math.max(1, Math.ceil(twitchChannels.length / pageSize))}
+                  {format(t.page, {
+                    current: page + 1,
+                    total: Math.max(
+                      1,
+                      Math.ceil(twitchChannels.length / pageSize)
+                    ),
+                  })}
                 </span>
                 <button
                   type="button"
@@ -233,7 +242,7 @@ export default function LiveTwitchSection({
                       : 'border-white/10 text-gray-500 cursor-not-allowed'
                   }`}
                 >
-                  Suivant →
+                  {t.next}
                 </button>
               </div>
             )}

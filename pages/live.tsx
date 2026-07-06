@@ -8,7 +8,10 @@ import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
+import { useT } from '@/lib/i18n/useT';
 import { logger } from '@/utils/logger';
+
+type LiveDict = ReturnType<typeof useT<'livePage'>>;
 
 // LiveEventBanner depend de fetch + realtime supabaseClient — pas SSR-friendly,
 // on le charge cote client uniquement.
@@ -27,32 +30,15 @@ type Engagement = {
   extra?: React.ReactNode;
 };
 
-const engagements: Engagement[] = [
+const getEngagements = (t: LiveDict): Engagement[] => [
+  { title: t.eng1Title, description: t.eng1Desc },
+  { title: t.eng2Title, description: t.eng2Desc },
+  { title: t.eng3Title, description: t.eng3Desc },
+  { title: t.eng4Title, description: t.eng4Desc },
   {
-    title: 'Parler de nous en stream',
-    description:
-      'Évoquer l’association pendant tes lives — 5 à 10 minutes suffisent largement — pour présenter le projet et les tournois.',
-  },
-  {
-    title: 'Une vraie démarche de soutien',
-    description:
-      'T’inscrire dans une logique d’entraide : faire vivre l’asso au-delà d’un simple affichage, en relayant régulièrement nos actus.',
-  },
-  {
-    title: 'Logo en mode pub',
-    description:
-      'Afficher notre logo sur ton stream pendant les écrans de publicité.',
-  },
-  {
-    title: 'Commande de tchat',
-    description:
-      'Mettre en place une commande dédiée qui explique à ton tchat notre projet, nos tournois et nos actions.',
-  },
-  {
-    title: 'Stream sur la chaîne de l’asso',
-    badge: 'optionnel',
-    description:
-      'Tu as la possibilité d’animer un stream sur la chaîne de l’association une fois par mois, pour faire gonfler nos vues et renforcer la visibilité commune. Aucune obligation : c’est une opportunité ouverte si tu le souhaites.',
+    title: t.eng5Title,
+    badge: t.eng5Badge,
+    description: t.eng5Desc,
     extra: (
       <a
         href={ASSO_TWITCH_URL}
@@ -80,32 +66,12 @@ const engagements: Engagement[] = [
   },
 ];
 
-const bonuses: Engagement[] = [
-  {
-    title: 'Adhésion gratuite',
-    description:
-      'Tu deviens membre de l’association sans avoir à payer la cotisation.',
-  },
-  {
-    title: 'Accès anticipé aux infos',
-    description:
-      'Tu reçois nos annonces 24 à 48 h en avance (ex. recrutement de Happy) pour réagir avant tout le monde.',
-  },
-  {
-    title: 'Pub prioritaire & exclusive',
-    description:
-      'Mise en avant réservée aux membres de l’asso : ta chaîne est promue en priorité.',
-  },
-  {
-    title: 'Chaîne recommandée d’abord',
-    description:
-      'Quand on oriente la communauté vers des streams, la tienne passe en tête de liste.',
-  },
-  {
-    title: 'Voix consultative',
-    description:
-      'Ton avis est sollicité et pris en compte, au même titre que le nôtre, sur d’éventuelles décisions ou modifications.',
-  },
+const getBonuses = (t: LiveDict): Engagement[] => [
+  { title: t.bonus1Title, description: t.bonus1Desc },
+  { title: t.bonus2Title, description: t.bonus2Desc },
+  { title: t.bonus3Title, description: t.bonus3Desc },
+  { title: t.bonus4Title, description: t.bonus4Desc },
+  { title: t.bonus5Title, description: t.bonus5Desc },
 ];
 
 type Props = {
@@ -178,6 +144,9 @@ function CardGrid({ items, accent }: { items: Engagement[]; accent: string }) {
 }
 
 function LivePage({ channels, loadError }: Props) {
+  const t = useT('livePage');
+  const engagements = getEngagements(t);
+  const bonuses = getBonuses(t);
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
       {/* ── Hero ─────────────────────────────────────────── */}
@@ -193,23 +162,19 @@ function LivePage({ channels, loadError }: Props) {
 
           <p className="mx-auto inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.18em] text-gray-300 backdrop-blur-sm">
             <span className="h-1.5 w-1.5 rounded-full bg-fuchsia-400 animate-pulse" />
-            Partenariat &middot; Women&apos;s Cup
+            {t.heroBadge}
           </p>
 
           <h1 className="mt-5 text-4xl font-bold leading-[1.1] sm:text-5xl md:text-6xl">
-            <span className="block text-gradient">Devenir Ambassadrice</span>
+            <span className="block text-gradient">{t.heroTitle}</span>
           </h1>
 
           <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-gray-300">
-            Un partenariat gagnant-gagnant pour renforcer notre présence sur
-            Twitch et t&apos;offrir une vraie visibilité en tant
-            qu&apos;ambassadrice.
+            {t.heroSubtitle}
           </p>
 
           <div className="mx-auto mt-8 max-w-2xl rounded-2xl border border-white/10 bg-white/[0.03] p-6 text-sm leading-relaxed text-gray-300 backdrop-blur-xl">
-            Cette fiche résume tes engagements et les avantages exclusifs que tu
-            obtiens en rejoignant l&apos;association. L&apos;idée : un échange
-            équilibré, sans paiement ni goodies, où chacun y trouve son compte.
+            {t.heroBox}
           </div>
         </div>
       </div>
@@ -219,13 +184,13 @@ function LivePage({ channels, loadError }: Props) {
         <section>
           <div className="text-center">
             <p className="text-xs uppercase tracking-[0.18em] text-purple-300">
-              Ce qu&apos;on attend
+              {t.engagementsEyebrow}
             </p>
             <Heading
               typeStyle="heading-md"
               className="mt-2 text-gradient text-center"
             >
-              Tes engagements envers l&apos;asso
+              {t.engagementsTitle}
             </Heading>
           </div>
           <CardGrid
@@ -238,13 +203,13 @@ function LivePage({ channels, loadError }: Props) {
         <section>
           <div className="text-center">
             <p className="text-xs uppercase tracking-[0.18em] text-pink-300">
-              Ce que tu y gagnes
+              {t.bonusesEyebrow}
             </p>
             <Heading
               typeStyle="heading-md"
               className="mt-2 text-gradient text-center"
             >
-              Tes bonus exclusifs
+              {t.bonusesTitle}
             </Heading>
           </div>
           <CardGrid
@@ -263,13 +228,10 @@ function LivePage({ channels, loadError }: Props) {
             />
             <div className="relative">
               <p className="inline-flex items-center gap-2 rounded-full border border-fuchsia-400/30 bg-fuchsia-500/10 px-3 py-1 text-[11px] uppercase tracking-[0.16em] text-fuchsia-200">
-                Le principe clé
+                {t.calloutKeyBadge}
               </p>
               <p className="mt-4 text-sm leading-relaxed text-gray-200">
-                Comme on ne peut ni te payer ni t&apos;envoyer de goodies (pour
-                l&apos;instant), l&apos;exclusivité de la pub est le vrai levier
-                : c&apos;est ce qui donne un intérêt concret à rejoindre
-                l&apos;asso.
+                {t.calloutKeyBody}
               </p>
             </div>
           </div>
@@ -282,13 +244,10 @@ function LivePage({ channels, loadError }: Props) {
             />
             <div className="relative">
               <p className="inline-flex items-center gap-2 rounded-full border border-purple-200/40 bg-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.16em] text-purple-100">
-                Notre ambition à long terme
+                {t.calloutAmbitionBadge}
               </p>
               <p className="mt-4 text-sm leading-relaxed text-purple-50">
-                Créer un véritable groupe Twitch Women&apos;s Cup qui regroupe
-                toutes nos ambassadrices et ambassadeurs au même endroit — pour
-                gagner en visibilité, faire vivre une communauté soudée et
-                grandir ensemble.
+                {t.calloutAmbitionBody}
               </p>
             </div>
           </div>
@@ -302,26 +261,25 @@ function LivePage({ channels, loadError }: Props) {
               role="alert"
             >
               <h2 className="text-xl font-semibold text-white">
-                Impossible de charger les chaînes
+                {t.channelsErrorTitle}
               </h2>
               <Paragraph typeStyle="body-sm" textColor="text-gray-300">
-                Une erreur est survenue de notre côté. Réessayez dans quelques
-                instants.
+                {t.channelsErrorBody}
               </Paragraph>
               <button
                 type="button"
                 onClick={() => window.location.reload()}
                 className="rounded-md bg-purple-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-purple-400"
               >
-                Réessayer
+                {t.retry}
               </button>
             </div>
           ) : (
             <LiveTwitchSection
               initialChannels={channels}
-              eyebrow="Nos ambassadrices"
-              title="Suis nos ambassadrices en direct"
-              subtitle="Retrouve nos streameuses ambassadrices et leurs lives Women's Cup."
+              eyebrow={t.channelsEyebrow}
+              title={t.channelsTitle}
+              subtitle={t.channelsSubtitle}
             />
           )}
         </section>
@@ -331,12 +289,10 @@ function LivePage({ channels, loadError }: Props) {
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-purple-600/20 via-fuchsia-600/10 to-pink-600/10" />
           <div className="relative p-8 text-center sm:p-12">
             <Heading typeStyle="heading-md" className="text-gradient text-center">
-              Devenir ambassadrice
+              {t.ctaTitle}
             </Heading>
             <p className="mx-auto mt-4 max-w-lg text-sm leading-relaxed text-gray-300">
-              Rejoins-nous sur le Discord de l&apos;association et ouvre un ticket
-              de la catégorie «&nbsp;Devenir ambassadrice&nbsp;» pour lancer ta
-              candidature. On te répond au plus vite.
+              {t.ctaBody}
             </p>
             <div className="mt-8 flex flex-col items-center gap-4">
               <a
@@ -345,7 +301,7 @@ function LivePage({ channels, loadError }: Props) {
                 rel="noreferrer"
                 className="group inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-fuchsia-500 to-purple-500 px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition-all hover:-translate-y-0.5 hover:shadow-xl hover:shadow-purple-900/50"
               >
-                Ouvrir un ticket sur le Discord
+                {t.ctaButton}
                 <svg
                   className="h-4 w-4 transition-transform group-hover:translate-x-1"
                   fill="none"
@@ -362,10 +318,8 @@ function LivePage({ channels, loadError }: Props) {
                 </svg>
               </a>
               <p className="max-w-md text-xs leading-relaxed text-gray-400">
-                Une fois sur le Discord, ouvre un ticket dans la catégorie
-                «&nbsp;Devenir ambassadrice&nbsp;». Le programme est inclusif :
-                ambassadrices <span className="italic">et</span> ambassadeurs
-                sont les bienvenus.
+                {t.ctaNoteBefore} <span className="italic">{t.ctaNoteEt}</span>{' '}
+                {t.ctaNoteAfter}
               </p>
             </div>
           </div>

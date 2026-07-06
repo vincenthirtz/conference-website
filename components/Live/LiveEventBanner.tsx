@@ -8,7 +8,10 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { usePublicEventRunRealtime } from '@/hooks/usePublicEventRunRealtime';
+import { useT, format } from '@/lib/i18n/useT';
 import { logger } from '@/utils/logger';
+
+type BannerDict = ReturnType<typeof useT<'liveEventBanner'>>;
 
 type PublicSegment = {
   id: string;
@@ -38,13 +41,22 @@ type CurrentResponse = {
   segments: PublicSegment[];
 };
 
-const TYPE_LABEL: Record<string, string> = {
-  match: 'Match',
-  break: 'Pause',
-  intro: 'Intro',
-  outro: 'Outro',
-  custom: 'Segment',
-};
+function typeLabel(type: string, t: BannerDict): string {
+  switch (type) {
+    case 'match':
+      return t.typeMatch;
+    case 'break':
+      return t.typeBreak;
+    case 'intro':
+      return t.typeIntro;
+    case 'outro':
+      return t.typeOutro;
+    case 'custom':
+      return t.typeCustom;
+    default:
+      return t.typeFallback;
+  }
+}
 
 function formatDuration(totalSeconds: number): string {
   const sign = totalSeconds < 0 ? '-' : '';
@@ -55,6 +67,7 @@ function formatDuration(totalSeconds: number): string {
 }
 
 export default function LiveEventBanner() {
+  const t = useT('liveEventBanner');
   const [run, setRun] = useState<PublicRun | null>(null);
   const [segments, setSegments] = useState<PublicSegment[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -142,13 +155,13 @@ export default function LiveEventBanner() {
   return (
     <section
       className="rounded-2xl border border-red-500/40 bg-gradient-to-br from-red-950/40 via-purple-950/30 to-black p-4 sm:p-5 mb-6"
-      aria-label="Event en direct"
+      aria-label={t.ariaLabel}
       data-testid="live-event-banner"
       data-run-id={run.id}
     >
       <div className="flex items-center gap-2 mb-2 flex-wrap">
         <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-red-500/80 text-white font-semibold animate-pulse">
-          En direct maintenant
+          {t.liveNow}
         </span>
         <h2 className="text-base sm:text-lg font-bold text-white">
           {run.name}
@@ -160,10 +173,10 @@ export default function LiveEventBanner() {
           <div>
             <div className="text-xs text-gray-300 mb-0.5">
               <span className="text-gray-400">
-                {TYPE_LABEL[currentSegment.type] ?? 'Segment'} :
+                {typeLabel(currentSegment.type, t)} :
               </span>{' '}
               <span className="text-white font-medium">
-                {currentSegment.title || TYPE_LABEL[currentSegment.type]}
+                {currentSegment.title || typeLabel(currentSegment.type, t)}
               </span>
             </div>
             {remainingLabel !== null && (
@@ -188,7 +201,7 @@ export default function LiveEventBanner() {
           {remainingLabel !== null && (
             <div className="text-right">
               <div className="text-[10px] uppercase tracking-wider text-gray-400">
-                Reste
+                {t.remaining}
               </div>
               <div className="text-xl font-mono font-semibold text-white tabular-nums">
                 {remainingLabel}
@@ -198,14 +211,16 @@ export default function LiveEventBanner() {
         </div>
       ) : nextSegment ? (
         <div className="text-xs text-gray-300">
-          En attente du prochain segment —{' '}
+          {t.waitingNext}{' '}
           <span className="text-white">
-            {nextSegment.title || TYPE_LABEL[nextSegment.type] || 'Segment'}
+            {nextSegment.title || typeLabel(nextSegment.type, t)}
           </span>
-          {nextSegment.durationMin ? ` (${nextSegment.durationMin} min)` : ''}
+          {nextSegment.durationMin
+            ? ` ${format(t.durationMin, { count: nextSegment.durationMin })}`
+            : ''}
         </div>
       ) : (
-        <div className="text-xs text-gray-300">Programme en cours</div>
+        <div className="text-xs text-gray-300">{t.programInProgress}</div>
       )}
     </section>
   );
