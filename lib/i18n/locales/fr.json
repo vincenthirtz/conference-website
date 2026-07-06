@@ -75,6 +75,14 @@
     "removeSlot": "Retirer ce créneau",
     "maxSlotsHint": "Proposez jusqu'à 5 créneaux."
   },
+  "supportAssoCard": {
+    "title": "Un coup de main à l'asso ?",
+    "body": "La billetterie est gratuite, mais un don ou une adhésion nous aide à faire vivre la Women's Cup.",
+    "donateCta": "Faire un don",
+    "joinCta": "Adhérer à l'asso",
+    "dismiss": "Plus tard",
+    "dismissAria": "Masquer l'encart de soutien à l'association"
+  },
   "copyButton": {
     "copy": "Copier",
     "copied": "Copié !",

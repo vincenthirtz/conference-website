@@ -75,6 +75,14 @@
     "removeSlot": "Remove this slot",
     "maxSlotsHint": "Propose up to 5 slots."
   },
+  "supportAssoCard": {
+    "title": "Lend the association a hand?",
+    "body": "Tickets are free, but a donation or a membership helps us keep the Women's Cup running.",
+    "donateCta": "Make a donation",
+    "joinCta": "Become a member",
+    "dismiss": "Later",
+    "dismissAria": "Hide the association support card"
+  },
   "copyButton": {
     "copy": "Copy",
     "copied": "Copied!",

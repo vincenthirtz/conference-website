@@ -15,6 +15,7 @@ import QuickAction, {
 import NextMatchCard from '@/components/player/NextMatchCard';
 import { PlayerDashboardSkeleton } from '@/components/player/Skeletons';
 import ScrimSlotPicker from '@/components/player/ScrimSlotPicker';
+import SupportAssoCard from '@/components/player/SupportAssoCard';
 import PushOptIn from '@/components/shared/PushOptIn';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { useT, format } from '@/lib/i18n/useT';
@@ -520,6 +521,12 @@ function PlayerDashboard() {
               vers /player et le staff vers /admin. */}
           <div className="mb-6">
             <PushOptIn audience="player" variant="card" loginPath="/login" />
+          </div>
+
+          {/* Soutien à l'asso : billetterie gratuite, mais don / adhésion
+              appréciés. Dismissible (localStorage). */}
+          <div className="mb-6">
+            <SupportAssoCard />
           </div>
 
           <div className="grid gap-6 md:grid-cols-2">
