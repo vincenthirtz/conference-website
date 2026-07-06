@@ -23,6 +23,24 @@ function normalizeSlug(title?: string, slug?: string) {
   return slugify(base, { lower: true, strict: true });
 }
 
+// Les pages publiques qui affichent les news sont en ISR (revalidate: 900) :
+// sans revalidation à la demande, une news modifiée ou supprimée reste
+// affichée jusqu'à 15 min (même mécanique que le POST d'ingestion /api/news).
+async function revalidateNewsPages(res: NextApiResponse, slugs: string[]) {
+  const paths = [
+    '/',
+    '/actualites',
+    ...slugs.filter(Boolean).map((slug) => `/news/${slug}`),
+  ];
+  await Promise.all(
+    paths.map((path) =>
+      res.revalidate(path).catch((err) => {
+        logger.error(`[admin/news/id] revalidate ${path} failed`, err);
+      })
+    )
+  );
+}
+
 function normalizeTag(tag?: string) {
   const cleaned = (tag || '').trim();
   if (!cleaned) return 'general';
@@ -76,7 +94,7 @@ async function handler(
 
     const { data: existing, error: existingErr } = await admin
       .from('news')
-      .select('published_at, status, tag')
+      .select('published_at, status, tag, slug')
       .eq('id', id)
       .eq('tenant_id', ctx.tenantId)
       .maybeSingle();
@@ -127,6 +145,15 @@ async function handler(
       return res.status(500).json({ error: 'Failed to update the article.' });
     }
 
+    // Revalide l'ancien slug aussi si le titre/slug a changé, pour purger
+    // l'ancienne URL de détail.
+    await revalidateNewsPages(
+      res,
+      existing?.slug && existing.slug !== data.slug
+        ? [existing.slug, data.slug]
+        : [data.slug]
+    );
+
     if (
       body.status === 'published' &&
       existing?.status !== 'published'
@@ -152,15 +179,22 @@ async function handler(
   }
 
   if (req.method === 'DELETE') {
-    const { error } = await admin
+    // Slug récupéré avant suppression pour pouvoir revalider la page détail.
+    const { data: deleted, error } = await admin
       .from('news')
       .delete()
       .eq('id', id)
-      .eq('tenant_id', ctx.tenantId);
+      .eq('tenant_id', ctx.tenantId)
+      .select('slug')
+      .maybeSingle();
 
     if (error) {
       logger.error('[admin/news/id] delete error', error);
       return res.status(500).json({ error: 'Failed to delete the article.' });
+    }
+
+    if (deleted?.slug) {
+      await revalidateNewsPages(res, [deleted.slug]);
     }
 
     return res.status(204).end();

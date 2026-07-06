@@ -70,6 +70,11 @@ function makeRes() {
   res.setHeader = (k: string, v: unknown) => {
     res.headers[k] = v;
   };
+  // ISR on-demand (utilisé par admin/news sur PUT/DELETE).
+  res.revalidated = [] as string[];
+  res.revalidate = async (path: string) => {
+    res.revalidated.push(path);
+  };
   return res;
 }
 
