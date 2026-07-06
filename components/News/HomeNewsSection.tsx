@@ -3,6 +3,8 @@ import Image from 'next/image';
 import { useMemo, useState, JSX } from 'react';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
+import { useT, format } from '@/lib/i18n/useT';
+import { useLang } from '@/lib/i18n/LanguageProvider';
 
 export type HomeNewsItem = {
   id: string;
@@ -26,19 +28,19 @@ const formatTagLabel = (tag?: string | null) => {
   return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
 };
 
-function formatDate(item: HomeNewsItem) {
+function formatDate(item: HomeNewsItem, locale: string) {
   const raw = item.publishedAt || item.createdAt;
   if (!raw) return null;
-  return new Date(raw).toLocaleDateString('fr-FR', {
+  return new Date(raw).toLocaleDateString(locale, {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
   });
 }
 
-function getExcerpt(item: HomeNewsItem, max = 140) {
+function getExcerpt(item: HomeNewsItem, fallback: string, max = 140) {
   if (item.excerpt) return item.excerpt;
-  if (!item.content) return 'Découvre les dernières informations du tournoi.';
+  if (!item.content) return fallback;
   if (item.content.length <= max) return item.content;
   return `${item.content.slice(0, max)}…`;
 }
@@ -50,6 +52,7 @@ type HomeNewsSectionProps = {
 function HomeNewsSection({
   initialNews = [],
 }: HomeNewsSectionProps): JSX.Element {
+  const t = useT('homeNews');
   const [selectedTag, setSelectedTag] = useState<string>('all');
 
   const availableTags = useMemo(() => {
@@ -73,9 +76,7 @@ function HomeNewsSection({
   const renderEmpty = () => (
     <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-center">
       <Paragraph textColor="text-gray-200">
-        {selectedTag === 'all'
-          ? 'Aucune news pour le moment. Revenez bientôt !'
-          : 'Aucune news pour cette catégorie pour le moment.'}
+        {selectedTag === 'all' ? t.emptyAll : t.emptyCategory}
       </Paragraph>
     </div>
   );
@@ -87,30 +88,30 @@ function HomeNewsSection({
     >
       <div className="flex flex-col items-center text-center">
         <div className="section-eyebrow text-xl text-white font-semibold mb-1">
-          Actualités
+          {t.eyebrow}
         </div>
         <Heading
           typeStyle="heading-md"
           className="text-gradient text-center lg:mt-3"
         >
-          Dernières news OW Women&apos;s Cup
+          {t.title}
         </Heading>
         <Paragraph
           typeStyle="body-lg"
           className="mt-3 max-w-2xl"
           textColor="text-gray-200"
         >
-          Les annonces officielles du tournoi, publiées par le staff.
+          {t.subtitle}
         </Paragraph>
       </div>
       {availableTags.length > 0 && (
         <div className="flex flex-col gap-2 items-center">
           <div className="text-xs uppercase tracking-[0.18em] text-blue-200/80">
-            Filtrer par tag
+            {t.filterByTag}
           </div>
           <div className="flex flex-wrap justify-center gap-2">
             <FilterPill
-              label="Toutes"
+              label={t.filterAll}
               active={selectedTag === 'all'}
               onClick={() => setSelectedTag('all')}
             />
@@ -150,7 +151,7 @@ function HomeNewsSection({
           href="/actualites"
           className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-5 py-2 text-sm font-medium text-white transition hover:bg-white/10"
         >
-          Toutes les actualités
+          {t.allNews}
           <span aria-hidden>→</span>
         </Link>
       </div>
@@ -161,7 +162,10 @@ function HomeNewsSection({
 export default HomeNewsSection;
 
 function FeaturedCard({ item }: { item: HomeNewsItem }) {
-  const date = formatDate(item);
+  const t = useT('homeNews');
+  const { lang } = useLang();
+  const locale = lang === 'fr' ? 'fr-FR' : 'en-GB';
+  const date = formatDate(item, locale);
   return (
     <Link
       href={`/news/${item.slug}`}
@@ -185,7 +189,7 @@ function FeaturedCard({ item }: { item: HomeNewsItem }) {
       <div className="flex flex-1 flex-col gap-3 p-5 md:p-6">
         <div className="flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-[0.16em] text-blue-200/80">
           <span className="inline-flex items-center rounded-full border border-neon-cyan/50 bg-neon-cyan/10 px-2.5 py-1 text-[10px] font-semibold neon-text-cyan">
-            À la une
+            {t.featured}
           </span>
           {item.tag && (
             <span className="rounded-full border border-white/15 bg-white/5 px-2 py-0.5 text-blue-100">
@@ -194,8 +198,11 @@ function FeaturedCard({ item }: { item: HomeNewsItem }) {
           )}
           {date && <span>{date}</span>}
           <span className="text-gray-400">
-            · {item.commentsCount ?? 0} commentaire
-            {(item.commentsCount ?? 0) > 1 ? 's' : ''}
+            ·{' '}
+            {format(
+              (item.commentsCount ?? 0) > 1 ? t.comments_other : t.comments_one,
+              { count: item.commentsCount ?? 0 }
+            )}
           </span>
         </div>
         <h3 className="text-xl md:text-2xl font-bold text-white leading-tight">
@@ -205,10 +212,10 @@ function FeaturedCard({ item }: { item: HomeNewsItem }) {
           textColor="text-gray-200"
           className="text-sm md:text-base leading-relaxed line-clamp-3"
         >
-          {getExcerpt(item, 220)}
+          {getExcerpt(item, t.excerptFallback, 220)}
         </Paragraph>
         <span className="mt-auto inline-flex items-center gap-1 text-sm font-medium neon-text-cyan transition group-hover:gap-2">
-          Lire l&apos;article <span aria-hidden>→</span>
+          {t.readArticle} <span aria-hidden>→</span>
         </span>
       </div>
     </Link>
@@ -216,7 +223,9 @@ function FeaturedCard({ item }: { item: HomeNewsItem }) {
 }
 
 function CompactCard({ item }: { item: HomeNewsItem }) {
-  const date = formatDate(item);
+  const { lang } = useLang();
+  const locale = lang === 'fr' ? 'fr-FR' : 'en-GB';
+  const date = formatDate(item, locale);
   return (
     <Link
       href={`/news/${item.slug}`}

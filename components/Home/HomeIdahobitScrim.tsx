@@ -5,6 +5,8 @@
 
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
+import { useT } from '@/lib/i18n/useT';
+import { useLang } from '@/lib/i18n/LanguageProvider';
 
 const VIDEO_ID = 'DGN4olmhb2Q';
 const EVENT_DATE_ISO = '2026-05-17';
@@ -45,8 +47,8 @@ const RESULTS: ScrimResult[] = [
   },
 ];
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('fr-FR', {
+function formatDate(iso: string, locale: string) {
+  return new Date(iso).toLocaleDateString(locale, {
     day: '2-digit',
     month: 'long',
     year: 'numeric',
@@ -83,20 +85,21 @@ function ResultRow({ result }: { result: ScrimResult }) {
 }
 
 export default function HomeIdahobitScrim() {
+  const t = useT('homeIdahobit');
+  const { lang } = useLang();
+  const locale = lang === 'fr' ? 'fr-FR' : 'en-GB';
   return (
     <section className="relative mt-12 mb-10 px-4 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-5xl">
         <div className="mb-6 text-center">
           <span className="mb-3 inline-flex items-center gap-2 rounded-full border border-pink-300/40 bg-gradient-to-r from-pink-500/20 via-fuchsia-500/20 to-violet-500/20 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-pink-100">
-            🏳️‍🌈 IDAHOBIT · {formatDate(EVENT_DATE_ISO)}
+            🏳️‍🌈 IDAHOBIT · {formatDate(EVENT_DATE_ISO, locale)}
           </span>
           <Heading typeStyle="heading-md" level="h2" textColor="text-white">
-            Scrim caritatif du 17 mai
+            {t.title}
           </Heading>
           <Paragraph className="mt-2 mx-auto max-w-2xl text-white/70">
-            À l&apos;occasion de la Journée mondiale contre l&apos;homophobie,
-            la transphobie et la biphobie, nos équipes se sont affrontées dans
-            une série de scrims solidaires.
+            {t.subtitle}
           </Paragraph>
         </div>
 
@@ -106,7 +109,7 @@ export default function HomeIdahobitScrim() {
         >
           <iframe
             src={`https://www.youtube.com/embed/${VIDEO_ID}`}
-            title="Scrim IDAHOBIT 17 mai"
+            title={t.iframeTitle}
             className="absolute inset-0 h-full w-full"
             loading="lazy"
             referrerPolicy="strict-origin-when-cross-origin"

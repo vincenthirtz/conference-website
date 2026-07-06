@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRef } from 'react';
+import { useT, format } from '@/lib/i18n/useT';
 
 import { logger } from '../../utils/logger';
 export type Announcement = {
@@ -24,6 +25,7 @@ type AnnouncementsTickerProps = {
 export default function AnnouncementsTicker({
   initialItems = [],
 }: AnnouncementsTickerProps) {
+  const t = useT('announcementsTicker');
   const [items, setItems] = useState<Announcement[]>(initialItems);
   const [index, setIndex] = useState(0);
   const [animationReady, setAnimationReady] = useState(false);
@@ -99,7 +101,7 @@ export default function AnnouncementsTicker({
               rel="noreferrer"
               className="inline-flex items-center gap-1 rounded-full bg-white text-neutral-900 px-3 py-1.5 text-xs font-semibold shadow hover:-translate-y-0.5 hover:shadow-lg transition"
             >
-              {current.ctaLabel || 'Découvrir'}
+              {current.ctaLabel || t.discover}
               <span aria-hidden>↗</span>
             </Link>
           )}
@@ -115,7 +117,7 @@ export default function AnnouncementsTicker({
                 className={`h-1 rounded-full transition-all ${
                   i === index ? 'w-4 bg-white' : 'w-2 bg-white/40'
                 }`}
-                aria-label={`Aller à l'annonce ${i + 1}`}
+                aria-label={format(t.goToAnnouncement, { n: i + 1 })}
               />
             ))}
           </div>

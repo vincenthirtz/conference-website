@@ -3,6 +3,7 @@ import Link from 'next/link';
 import type { JSX } from 'react';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
+import { useT } from '@/lib/i18n/useT';
 
 export type HomePartner = {
   id: string;
@@ -54,6 +55,7 @@ function PartnerLogo({ partner }: { partner: HomePartner }) {
 export default function HomeSponsors({
   partners,
 }: HomeSponsorsProps): JSX.Element | null {
+  const t = useT('homeSponsors');
   // De-duplicate by id (defensive: DB or merge could surface dupes)
   const unique = Array.from(new Map(partners.map((p) => [p.id, p])).values());
 
@@ -71,26 +73,26 @@ export default function HomeSponsors({
     >
       <div className="flex flex-col items-center text-center">
         <div className="section-eyebrow text-xl text-white font-semibold mb-1">
-          Partenaires
+          {t.eyebrow}
         </div>
         <Heading
           typeStyle="heading-md"
           className="text-gradient text-center lg:mt-3"
         >
-          Ils soutiennent l&apos;OW Women&apos;s Cup
+          {t.title}
         </Heading>
         <Paragraph
           typeStyle="body-lg"
           className="mt-3 max-w-2xl"
           textColor="text-gray-200"
         >
-          Une production possible grâce à nos partenaires officiels.
+          {t.subtitle}
         </Paragraph>
       </div>
 
       <div
         className="sponsor-marquee relative overflow-hidden py-6"
-        aria-label="Liste des partenaires"
+        aria-label={t.listAria}
       >
         <div
           className="sponsor-marquee-track flex w-max items-center"
@@ -115,7 +117,7 @@ export default function HomeSponsors({
           href="/partenaires"
           className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-5 py-2 text-sm font-medium text-white transition hover:bg-white/10"
         >
-          Voir tous les partenaires
+          {t.viewAll}
           <span aria-hidden>→</span>
         </Link>
       </div>

@@ -1,6 +1,7 @@
 import type { JSX } from 'react';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
+import { useT } from '@/lib/i18n/useT';
 
 type PressItem = {
   title: string;
@@ -19,25 +20,25 @@ const PRESS_ITEMS: PressItem[] = [
 ];
 
 function PressSection(): JSX.Element {
+  const t = useT('pressSection');
   return (
     <section className="container mt-20 flex flex-col gap-6 px-4 md:px-0">
       <div className="flex flex-col items-center text-center">
         <div className="section-eyebrow text-xl text-white font-semibold mb-1">
-          Presse
+          {t.eyebrow}
         </div>
         <Heading
           typeStyle="heading-md"
           className="text-gradient text-center lg:mt-3"
         >
-          Ils parlent de nous
+          {t.title}
         </Heading>
         <Paragraph
           typeStyle="body-lg"
           className="mt-3 max-w-2xl"
           textColor="text-gray-200"
         >
-          Retrouvez les articles et médias qui couvrent l&apos;OW Women&apos;s
-          Cup.
+          {t.subtitle}
         </Paragraph>
       </div>
 
@@ -67,7 +68,7 @@ function PressSection(): JSX.Element {
               {item.title}
             </h3>
             <span className="text-sm neon-text-cyan mt-auto inline-flex items-center gap-1 press-card__cta">
-              Lire l&apos;article <span aria-hidden>→</span>
+              {t.readArticle} <span aria-hidden>→</span>
             </span>
           </a>
         ))}

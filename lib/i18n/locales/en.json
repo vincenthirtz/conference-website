@@ -1376,5 +1376,42 @@
     "viewMatches": "View matches",
     "register": "Register",
     "guideLink": "First time registering? See the captain guide"
+  },
+  "homeNews": {
+    "eyebrow": "News",
+    "title": "Latest OW Women's Cup news",
+    "subtitle": "The tournament's official announcements, published by the staff.",
+    "filterByTag": "Filter by tag",
+    "filterAll": "All",
+    "emptyAll": "No news for now. Check back soon!",
+    "emptyCategory": "No news in this category for now.",
+    "featured": "Featured",
+    "comments_one": "{count} comment",
+    "comments_other": "{count} comments",
+    "readArticle": "Read the article",
+    "allNews": "All news",
+    "excerptFallback": "Discover the latest tournament updates."
+  },
+  "homeSponsors": {
+    "eyebrow": "Partners",
+    "title": "They support the OW Women's Cup",
+    "subtitle": "A production made possible by our official partners.",
+    "listAria": "Partner list",
+    "viewAll": "See all partners"
+  },
+  "pressSection": {
+    "eyebrow": "Press",
+    "title": "They talk about us",
+    "subtitle": "Browse the articles and media covering the OW Women's Cup.",
+    "readArticle": "Read the article"
+  },
+  "announcementsTicker": {
+    "discover": "Discover",
+    "goToAnnouncement": "Go to announcement {n}"
+  },
+  "homeIdahobit": {
+    "title": "Charity scrim on 17 May",
+    "subtitle": "For the International Day Against Homophobia, Transphobia and Biphobia, our teams faced off in a series of solidarity scrims.",
+    "iframeTitle": "IDAHOBIT scrim 17 May"
   }
 }
