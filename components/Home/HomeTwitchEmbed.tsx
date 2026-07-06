@@ -1,6 +1,8 @@
 import { useEffect, useState, type JSX } from 'react';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
+import { useT, format } from '@/lib/i18n/useT';
+import { useLang } from '@/lib/i18n/LanguageProvider';
 
 const CHANNEL = 'womens_cup';
 const POLL_MS = 60_000;
@@ -26,6 +28,9 @@ function scheduleIdle(cb: () => void): () => void {
 }
 
 export default function HomeTwitchEmbed(): JSX.Element | null {
+  const t = useT('homeLive');
+  const { lang } = useLang();
+  const locale = lang === 'fr' ? 'fr-FR' : 'en-GB';
   const [info, setInfo] = useState<LiveInfo | null>(null);
   const [parent, setParent] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
@@ -66,7 +71,7 @@ export default function HomeTwitchEmbed(): JSX.Element | null {
   return (
     <section
       className="container mt-20 flex flex-col gap-6 px-4 md:px-0"
-      aria-label="Diffusion en direct"
+      aria-label={t.ariaLabel}
     >
       <div className="flex flex-col items-center text-center">
         <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-rose-200">
@@ -74,19 +79,19 @@ export default function HomeTwitchEmbed(): JSX.Element | null {
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-400 opacity-60" />
             <span className="relative inline-flex h-2 w-2 rounded-full bg-rose-500" />
           </span>
-          En direct sur Twitch
+          {t.liveOnTwitch}
         </div>
         <Heading
           typeStyle="heading-md"
           className="text-gradient text-center lg:mt-3"
         >
-          {info.title || 'Le live est en cours'}
+          {info.title || t.liveDefaultTitle}
         </Heading>
         {typeof info.viewer_count === 'number' && (
           <Paragraph className="mt-2 text-sm" textColor="text-gray-300">
-            {info.viewer_count.toLocaleString('fr-FR')} spectateur
-            {info.viewer_count > 1 ? 's' : ''} connecté
-            {info.viewer_count > 1 ? 's' : ''}
+            {format(info.viewer_count > 1 ? t.viewers_other : t.viewers_one, {
+              count: info.viewer_count.toLocaleString(locale),
+            })}
           </Paragraph>
         )}
       </div>

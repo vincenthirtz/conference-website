@@ -1,4 +1,6 @@
 import { useEffect, useState, type JSX } from 'react';
+import { useT } from '@/lib/i18n/useT';
+import { useLang } from '@/lib/i18n/LanguageProvider';
 
 type HomeCountdownProps = {
   /** ISO date string of the target event. If null/empty, the component renders nothing. */
@@ -35,10 +37,13 @@ function CountdownSkeleton({
   targetMs: number;
   label: string;
 }) {
+  const t = useT('homeCountdown');
+  const { lang } = useLang();
+  const locale = lang === 'fr' ? 'fr-FR' : 'en-GB';
   return (
     <section
       className="container px-4 md:px-0 mt-12 md:mt-16"
-      aria-label="Compte à rebours avant le tournoi"
+      aria-label={t.ariaLabel}
     >
       <div className="neon-card p-6 md:p-8">
         <div className="flex flex-col items-center text-center gap-1 mb-5">
@@ -46,7 +51,7 @@ function CountdownSkeleton({
             {label}
           </span>
           <span className="text-base md:text-lg text-gray-200">
-            {new Date(targetMs).toLocaleString('fr-FR', {
+            {new Date(targetMs).toLocaleString(locale, {
               dateStyle: 'long',
               timeStyle: 'short',
               timeZone: 'Europe/Paris',
@@ -57,7 +62,8 @@ function CountdownSkeleton({
           className="grid grid-cols-4 gap-2 sm:gap-3 max-w-xl mx-auto"
           aria-hidden="true"
         >
-          {(['jours', 'h', 'min', 's'] as const).map((cellLabel) => (
+          {[t.unitDays, t.unitHours, t.unitMinutes, t.unitSeconds].map(
+            (cellLabel) => (
             <div
               key={cellLabel}
               className="countdown-cell flex flex-col items-center justify-center rounded-2xl border border-white/10 bg-[var(--bg-elevated)]/60 py-3 sm:py-4"
@@ -69,7 +75,8 @@ function CountdownSkeleton({
                 {cellLabel}
               </span>
             </div>
-          ))}
+            )
+          )}
         </div>
       </div>
     </section>
@@ -78,8 +85,12 @@ function CountdownSkeleton({
 
 export default function HomeCountdown({
   targetDate,
-  label = "Coup d'envoi",
+  label,
 }: HomeCountdownProps): JSX.Element | null {
+  const t = useT('homeCountdown');
+  const { lang } = useLang();
+  const locale = lang === 'fr' ? 'fr-FR' : 'en-GB';
+  const effectiveLabel = label ?? t.kickoff;
   const targetMs = targetDate ? new Date(targetDate).getTime() : NaN;
   const isValid = Number.isFinite(targetMs);
 
@@ -100,27 +111,27 @@ export default function HomeCountdown({
   if (!isValid) return null;
   // Reserve the visual slot during SSR / pre-hydration to avoid CLS.
   if (!mounted || !parts)
-    return <CountdownSkeleton targetMs={targetMs} label={label} />;
+    return <CountdownSkeleton targetMs={targetMs} label={effectiveLabel} />;
 
   const cells: { value: number; label: string }[] = [
-    { value: parts.days, label: parts.days > 1 ? 'jours' : 'jour' },
-    { value: parts.hours, label: 'h' },
-    { value: parts.minutes, label: 'min' },
-    { value: parts.seconds, label: 's' },
+    { value: parts.days, label: parts.days > 1 ? t.unitDays : t.unitDay },
+    { value: parts.hours, label: t.unitHours },
+    { value: parts.minutes, label: t.unitMinutes },
+    { value: parts.seconds, label: t.unitSeconds },
   ];
 
   return (
     <section
       className="container px-4 md:px-0 mt-12 md:mt-16"
-      aria-label="Compte à rebours avant le tournoi"
+      aria-label={t.ariaLabel}
     >
       <div className="neon-card p-6 md:p-8">
         <div className="flex flex-col items-center text-center gap-1 mb-5">
           <span className="text-xs font-semibold uppercase tracking-[0.2em] neon-text-cyan">
-            {label}
+            {effectiveLabel}
           </span>
           <span className="text-base md:text-lg text-gray-200">
-            {new Date(targetMs).toLocaleString('fr-FR', {
+            {new Date(targetMs).toLocaleString(locale, {
               dateStyle: 'long',
               timeStyle: 'short',
               timeZone: 'Europe/Paris',

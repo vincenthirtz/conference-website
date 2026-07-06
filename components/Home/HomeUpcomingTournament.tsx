@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import type { JSX } from 'react';
 import Paragraph from '@/components/Typography/paragraph';
+import { useT, format } from '@/lib/i18n/useT';
+import { useLang } from '@/lib/i18n/LanguageProvider';
 
 export type UpcomingTournament = {
   id: string;
@@ -19,11 +21,11 @@ type TournamentCardProps = {
   tournament: UpcomingTournament;
 };
 
-function formatRange(start: string | null, end: string | null) {
+function formatRange(start: string | null, end: string | null, locale: string) {
   if (!start) return null;
   const startDate = new Date(start);
   const endDate = end ? new Date(end) : null;
-  const fmtFull = new Intl.DateTimeFormat('fr-FR', {
+  const fmtFull = new Intl.DateTimeFormat(locale, {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
@@ -38,7 +40,7 @@ function formatRange(start: string | null, end: string | null) {
   if (sameMonth) {
     return `${startDate.getDate()} – ${fmtFull.format(endDate)}`;
   }
-  const fmtShort = new Intl.DateTimeFormat('fr-FR', {
+  const fmtShort = new Intl.DateTimeFormat(locale, {
     day: 'numeric',
     month: 'long',
     timeZone: 'Europe/Paris',
@@ -49,8 +51,15 @@ function formatRange(start: string | null, end: string | null) {
 export default function TournamentCard({
   tournament,
 }: TournamentCardProps): JSX.Element {
+  const t = useT('homeEvents');
+  const { lang } = useLang();
+  const locale = lang === 'fr' ? 'fr-FR' : 'en-GB';
   const isRunning = tournament.status === 'running';
-  const range = formatRange(tournament.startDate, tournament.endDate);
+  const range = formatRange(
+    tournament.startDate,
+    tournament.endDate,
+    locale
+  );
   const slotsLeft =
     tournament.maxTeams != null
       ? Math.max(0, tournament.maxTeams - tournament.teamCount)
@@ -65,7 +74,7 @@ export default function TournamentCard({
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.16em] text-blue-200/80">
             <span className="inline-flex items-center rounded-full border border-blue-300/40 bg-blue-500/15 px-2.5 py-1 text-blue-50 text-[10px] font-semibold">
-              Tournoi
+              {t.badgeTournament}
             </span>
             {isRunning && (
               <span className="inline-flex items-center gap-1.5 rounded-full border border-rose-400/40 bg-rose-500/15 px-2.5 py-1 text-rose-100 text-[10px] font-semibold">
@@ -73,7 +82,7 @@ export default function TournamentCard({
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-400 opacity-60" />
                   <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-rose-500" />
                 </span>
-                En direct
+                {t.badgeLive}
               </span>
             )}
             {tournament.format && <span>{tournament.format}</span>}
@@ -92,16 +101,18 @@ export default function TournamentCard({
                   {tournament.teamCount}
                 </span>
                 {' / '}
-                <span>{tournament.maxTeams}</span> équipes inscrites
+                <span>{tournament.maxTeams}</span> {t.teamsRegisteredSuffix}
                 {slotsLeft != null && slotsLeft > 0 && !isRunning && (
                   <span className="ml-2 inline-flex items-center rounded-full border border-emerald-400/40 bg-emerald-500/10 px-2 py-0.5 text-[11px] text-emerald-100">
-                    {slotsLeft} place{slotsLeft > 1 ? 's' : ''} restante
-                    {slotsLeft > 1 ? 's' : ''}
+                    {format(
+                      slotsLeft > 1 ? t.slotsLeft_other : t.slotsLeft_one,
+                      { count: slotsLeft }
+                    )}
                   </span>
                 )}
               </>
             ) : (
-              <>{tournament.teamCount} équipes inscrites</>
+              <>{format(t.teamsRegisteredSimple, { count: tournament.teamCount })}</>
             )}
           </Paragraph>
         </div>
@@ -111,14 +122,14 @@ export default function TournamentCard({
               href={detailHref}
               className="rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/10"
             >
-              Voir les matchs
+              {t.viewMatches}
             </Link>
             {!isRunning && (
               <Link
                 href="/team/create"
                 className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-neutral-900 shadow hover:-translate-y-0.5 hover:shadow-lg transition"
               >
-                S&apos;inscrire
+                {t.register}
               </Link>
             )}
           </div>
@@ -127,7 +138,7 @@ export default function TournamentCard({
               href="/guide/gerer-mon-equipe"
               className="inline-flex items-center gap-1 text-xs text-gray-300 hover:text-white transition-colors"
             >
-              Première inscription ? Voir le guide capitaine
+              {t.guideLink}
               <span aria-hidden>→</span>
             </Link>
           )}

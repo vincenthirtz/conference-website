@@ -1328,5 +1328,53 @@
     "loadErrorTitle": "Impossible de charger les tournois",
     "loadErrorBody": "Une erreur est survenue de notre côté. Réessayez dans quelques instants.",
     "retry": "Réessayer"
+  },
+  "home": {
+    "loadError": "Une partie du contenu n'a pas pu être chargée. Réessayez dans quelques instants."
+  },
+  "homeHeader": {
+    "subtitle1": "Le tournoi Overwatch 100 % féminin et francophone.",
+    "subtitle2": "Rejoins la communauté et montre ton niveau !",
+    "ctaRegister": "Inscrire mon équipe",
+    "ctaDiscord": "Rejoindre le Discord",
+    "navAria": "Liens utiles",
+    "navFaq": "FAQ",
+    "navRoadmap": "Roadmap",
+    "navScrim": "Scrim"
+  },
+  "homeCountdown": {
+    "kickoff": "Coup d'envoi",
+    "ariaLabel": "Compte à rebours avant le tournoi",
+    "unitDay": "jour",
+    "unitDays": "jours",
+    "unitHours": "h",
+    "unitMinutes": "min",
+    "unitSeconds": "s"
+  },
+  "homeLive": {
+    "ariaLabel": "Diffusion en direct",
+    "liveOnTwitch": "En direct sur Twitch",
+    "liveDefaultTitle": "Le live est en cours",
+    "viewers_one": "{count} spectateur connecté",
+    "viewers_other": "{count} spectateurs connectés"
+  },
+  "homeEvents": {
+    "locTwitch": "Sur Twitch",
+    "locDiscord": "Sur Discord",
+    "locIrl": "IRL",
+    "locOnline": "En ligne",
+    "learnMore": "En savoir plus",
+    "eyebrow": "Agenda",
+    "title": "Prochains rendez-vous",
+    "subtitle": "Tournois, lives caritatifs et événements communautaires.",
+    "badgeTournament": "Tournoi",
+    "badgeLive": "En direct",
+    "teamsRegisteredSuffix": "équipes inscrites",
+    "teamsRegisteredSimple": "{count} équipes inscrites",
+    "slotsLeft_one": "{count} place restante",
+    "slotsLeft_other": "{count} places restantes",
+    "viewMatches": "Voir les matchs",
+    "register": "S'inscrire",
+    "guideLink": "Première inscription ? Voir le guide capitaine"
   }
 }

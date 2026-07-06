@@ -1328,5 +1328,53 @@
     "loadErrorTitle": "Unable to load the tournaments",
     "loadErrorBody": "Something went wrong on our side. Please try again in a moment.",
     "retry": "Try again"
+  },
+  "home": {
+    "loadError": "Some of the content couldn't be loaded. Please try again in a moment."
+  },
+  "homeHeader": {
+    "subtitle1": "The 100% women, French-speaking Overwatch tournament.",
+    "subtitle2": "Join the community and show your level!",
+    "ctaRegister": "Register my team",
+    "ctaDiscord": "Join the Discord",
+    "navAria": "Useful links",
+    "navFaq": "FAQ",
+    "navRoadmap": "Roadmap",
+    "navScrim": "Scrim"
+  },
+  "homeCountdown": {
+    "kickoff": "Kick-off",
+    "ariaLabel": "Countdown to the tournament",
+    "unitDay": "day",
+    "unitDays": "days",
+    "unitHours": "h",
+    "unitMinutes": "min",
+    "unitSeconds": "s"
+  },
+  "homeLive": {
+    "ariaLabel": "Live broadcast",
+    "liveOnTwitch": "Live on Twitch",
+    "liveDefaultTitle": "The stream is live",
+    "viewers_one": "{count} viewer connected",
+    "viewers_other": "{count} viewers connected"
+  },
+  "homeEvents": {
+    "locTwitch": "On Twitch",
+    "locDiscord": "On Discord",
+    "locIrl": "IRL",
+    "locOnline": "Online",
+    "learnMore": "Learn more",
+    "eyebrow": "Agenda",
+    "title": "Upcoming events",
+    "subtitle": "Tournaments, charity streams and community events.",
+    "badgeTournament": "Tournament",
+    "badgeLive": "Live",
+    "teamsRegisteredSuffix": "teams registered",
+    "teamsRegisteredSimple": "{count} teams registered",
+    "slotsLeft_one": "{count} spot left",
+    "slotsLeft_other": "{count} spots left",
+    "viewMatches": "View matches",
+    "register": "Register",
+    "guideLink": "First time registering? See the captain guide"
   }
 }

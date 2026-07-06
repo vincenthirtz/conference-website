@@ -10,6 +10,7 @@ import { type UpcomingTournament } from '@/components/Home/HomeUpcomingTournamen
 import { type HomePartner } from '@/components/Home/HomeSponsors';
 import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
+import { useT } from '@/lib/i18n/useT';
 
 // Above-the-fold: Header + HomeCountdown stay direct imports.
 // HomeTwitchEmbed is client-only (handles auth/iframe).
@@ -257,6 +258,7 @@ function Home({
   countdownTarget,
   loadError,
 }: HomeProps) {
+  const t = useT('home');
   return (
     <div>
       <Head>
@@ -277,10 +279,7 @@ function Home({
             className="mx-auto max-w-2xl rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-center"
             role="alert"
           >
-            <p className="text-sm text-red-200">
-              Une partie du contenu n&apos;a pas pu être chargée. Réessayez dans
-              quelques instants.
-            </p>
+            <p className="text-sm text-red-200">{t.loadError}</p>
           </div>
         </div>
       )}
