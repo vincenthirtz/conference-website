@@ -1,6 +1,7 @@
 // pages/api/admin/logout.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getServerClient } from '@/utils/supabase';
+import { csrfCheck } from '@/utils/staff';
 
 import { logger } from '../../../utils/logger';
 export default async function handler(
@@ -9,6 +10,14 @@ export default async function handler(
 ) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  // CSRF : même check Origin/Referer que le wrapper staff standard de
+  // utils/staff.ts — sans lui, un site tiers peut forcer la déconnexion
+  // cross-site. Les requêtes légitimes (même host, ou Bearer token) passent
+  // inchangées.
+  if (!csrfCheck(req)) {
+    return res.status(403).json({ error: 'Forbidden: origin mismatch' });
   }
 
   try {

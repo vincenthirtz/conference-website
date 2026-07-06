@@ -185,6 +185,34 @@ const cookieUserCache = new Map<
   { user: User | null; expiresAt: number }
 >();
 
+// Éviction des caches user (token/cookie) : sans elle, les entrées expirées
+// s'accumulent indéfiniment (chaque token rafraîchi / header cookie distinct
+// crée une clé) → fuite mémoire lente. Stratégie simple et sûre : purge des
+// entrées expirées au passage + cap de taille (suppression des plus
+// anciennes, ordre d'insertion des Map).
+const USER_CACHE_MAX_ENTRIES = 1000;
+
+/** Exporté pour les tests unitaires. */
+export function setUserCacheEntry<V extends { expiresAt: number }>(
+  cache: Map<string, V>,
+  key: string,
+  value: V,
+  maxEntries: number = USER_CACHE_MAX_ENTRIES
+): void {
+  const now = Date.now();
+  for (const [k, v] of cache) {
+    if (v.expiresAt <= now) cache.delete(k);
+  }
+  // Re-set de la clé en fin de Map (rafraîchit l'ordre d'insertion), puis cap.
+  cache.delete(key);
+  while (cache.size >= maxEntries) {
+    const oldest = cache.keys().next().value;
+    if (oldest === undefined) break;
+    cache.delete(oldest);
+  }
+  cache.set(key, value);
+}
+
 async function resolveUserFromToken(token: string): Promise<User | null> {
   const now = Date.now();
   const cached = tokenUserCache.get(token);
@@ -199,13 +227,16 @@ async function resolveUserFromToken(token: string): Promise<User | null> {
     } = await supabaseAdmin.auth.getUser(token);
     if (error) {
       logger.error('resolveUserFromToken error:', error);
-      tokenUserCache.set(token, {
+      setUserCacheEntry(tokenUserCache, token, {
         user: null,
         expiresAt: now + TOKEN_CACHE_TTL,
       });
       return null;
     }
-    tokenUserCache.set(token, { user, expiresAt: now + TOKEN_CACHE_TTL });
+    setUserCacheEntry(tokenUserCache, token, {
+      user,
+      expiresAt: now + TOKEN_CACHE_TTL,
+    });
     return user;
   } catch (err) {
     logger.error('resolveUserFromToken exception:', err);
@@ -274,7 +305,7 @@ export async function getStaffContextFromRequest(
 
       user = cookieUser ?? null;
       if (cookieHeader) {
-        cookieUserCache.set(cookieHeader, {
+        setUserCacheEntry(cookieUserCache, cookieHeader, {
           user,
           expiresAt: now + TOKEN_CACHE_TTL,
         });
@@ -359,8 +390,11 @@ export async function requireStaffRoleFromRequest(
 /**
  * CSRF protection: for state-changing methods, verify the Origin or Referer
  * header matches the host to block cross-site form submissions.
+ *
+ * Exporté pour les routes à effet de bord qui n'utilisent pas withStaffRoute
+ * (ex. /api/admin/logout, qui doit fonctionner même sans contexte staff).
  */
-function csrfCheck(req: NextApiRequest): boolean {
+export function csrfCheck(req: NextApiRequest): boolean {
   const method = (req.method || 'GET').toUpperCase();
   if (method === 'GET' || method === 'HEAD' || method === 'OPTIONS')
     return true;

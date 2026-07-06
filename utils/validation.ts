@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { checkEmailQuality, EMAIL_QUALITY_MESSAGES } from './emailQuality';
 
 // ── Shared helpers ──────────────────────────────────────────────────────
 
@@ -8,10 +9,22 @@ const trimmedString = (min = 1) =>
     .transform((s) => s.trim())
     .pipe(z.string().min(min));
 
+// Format + qualité (syntaxe stricte, domaines jetables/placeholder bloqués —
+// cf. utils/emailQuality). Pas de vérification DNS ici : ce schéma est aussi
+// importé côté client.
 const emailField = z
   .string()
   .transform((s) => s.trim().toLowerCase())
-  .pipe(z.string().email());
+  .pipe(z.string().email())
+  .superRefine((value, ctx) => {
+    const quality = checkEmailQuality(value);
+    if (!quality.ok) {
+      ctx.addIssue({
+        code: 'custom',
+        message: EMAIL_QUALITY_MESSAGES[quality.reason],
+      });
+    }
+  });
 
 // ── Contact form ────────────────────────────────────────────────────────
 

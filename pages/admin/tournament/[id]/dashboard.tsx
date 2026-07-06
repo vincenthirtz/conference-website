@@ -8,8 +8,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { withStaffPage } from '@/utils/staff';
-import type { StaffProps } from '@/types/admin';
+import { withStaffPage, hasAtLeastRole } from '@/utils/staff';
+import type { StaffProps, StaffRole } from '@/types/admin';
 import { formatDateTimeTz } from '@/utils/timezone';
 import { useRealtimeChannel } from '@/hooks/useRealtimeChannel';
 import StatCard from '@/components/admin/dashboard/StatCard';
@@ -58,6 +58,7 @@ type QuickLink = {
   href: (id: string) => string;
   icon: string;
   description: string;
+  /** Rôle minimum requis par la page cible (défaut : manager, comme le dashboard). */
   role?: 'manager' | 'admin';
 };
 
@@ -158,14 +159,14 @@ const QUICK_LINKS: QuickLink[] = [
     icon: '🧬',
     href: () => `/admin/tournament-templates`,
     description: 'Modèles de tournois',
-    role: 'admin',
+    role: 'manager',
   },
   {
     label: 'Simulateur',
     icon: '🧪',
     href: () => `/admin/tournament-simulator`,
     description: 'Monte-Carlo & projections',
-    role: 'admin',
+    role: 'manager',
   },
 ];
 
@@ -215,7 +216,7 @@ export const getServerSideProps = withStaffPage<SsrProps>(
 
 type Props = StaffProps & SsrProps;
 
-function MegaDashboardPage({ initialData, initialError }: Props) {
+function MegaDashboardPage({ staff, initialData, initialError }: Props) {
   const router = useRouter();
   const { id } = router.query;
   const tournamentId = Array.isArray(id) ? id[0] : id;
@@ -1227,7 +1228,12 @@ function MegaDashboardPage({ initialData, initialError }: Props) {
               {/* ─── Quick access grid ──────────────────────────────── */}
               <WidgetCard title="Accès rapide">
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-                  {QUICK_LINKS.map((link) => (
+                  {QUICK_LINKS.filter((link) =>
+                    hasAtLeastRole(
+                      staff.role as StaffRole,
+                      link.role ?? 'manager'
+                    )
+                  ).map((link) => (
                     <Link
                       key={link.label}
                       href={link.href(tournamentId!)}

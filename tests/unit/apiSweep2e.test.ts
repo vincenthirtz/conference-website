@@ -156,15 +156,16 @@ describe('/api/admin/logout', () => {
     expect(res.statusCode).toBe(405);
   });
 
-  it('500 on internal error (mock client has no signOut)', async () => {
-    // The supabase mock's getServerClient doesn't implement auth.signOut.
-    // The handler's try/catch turns this into a 500 — exercises the catch arm.
+  it('403 on POST without Origin/Referer (CSRF check)', async () => {
+    // csrfCheck (utils/staff.ts) rejette les POST navigateur sans Origin ni
+    // Referer correspondant au host — la déconnexion forcée cross-site est
+    // bloquée avant même d'atteindre supabase.auth.signOut.
+    // Le chemin nominal (Origin qui matche → 200) est couvert par
+    // tests/unit/apiAdminLogout.test.ts.
     setCookieUser({ id: 'user-cookie' });
-    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const res = makeRes();
     await logoutHandler(makeReq({ method: 'POST' }), res);
-    consoleSpy.mockRestore();
-    expect(res.statusCode).toBe(500);
+    expect(res.statusCode).toBe(403);
   });
 });
 

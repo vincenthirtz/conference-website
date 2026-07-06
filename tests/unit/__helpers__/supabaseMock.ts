@@ -666,6 +666,12 @@ export const getServerClient = () => ({
         data: { user: _cookieUser as any },
         error: _cookieError as any,
       }),
+    // Sign-out SSR (utilisé par /api/admin/logout) : purge l'état cookie mocké.
+    signOut: () => {
+      _cookieUser = null;
+      _cookieError = null;
+      return Promise.resolve({ error: null as any });
+    },
   },
 });
 

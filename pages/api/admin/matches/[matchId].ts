@@ -36,7 +36,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: Authentic
   try {
     switch (req.method) {
       case 'GET':
-        return await handleGet(matchId, req, res);
+        return await handleGet(matchId, req, res, ctx);
       case 'PUT':
       case 'PATCH':
         return await handlePut(matchId, req, res, ctx);
@@ -60,7 +60,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: Authentic
 async function handleGet(
   matchId: string,
   req: NextApiRequest,
-  res: NextApiResponse
+  res: NextApiResponse,
+  ctx: AuthenticatedStaffContext
 ) {
   const includeGames =
     req.query.includeGames === '1' || req.query.includeGames === 'true';
@@ -111,10 +112,13 @@ async function handleGet(
 
   const select = includeGames ? `${baseSelect}, games:games(*)` : baseSelect;
 
+  // Scope tenant : supabaseAdmin bypasse la RLS, il faut donc filtrer
+  // explicitement — un staff du tenant A ne doit pas lire un match du tenant B.
   const { data, error } = await supabaseAdmin
     .from('matches')
     .select(select)
     .eq('id', matchId)
+    .eq('tenant_id', ctx.tenantId)
     .maybeSingle();
 
   if (error || !data) {
@@ -153,6 +157,7 @@ async function handlePut(
       .from('matches')
       .select('updated_at')
       .eq('id', matchId)
+      .eq('tenant_id', ctx.tenantId)
       .maybeSingle();
 
     if (current && current.updated_at !== expected_updated_at) {
@@ -171,6 +176,7 @@ async function handlePut(
       .from('matches')
       .select('tournament_id')
       .eq('id', matchId)
+      .eq('tenant_id', ctx.tenantId)
       .maybeSingle();
 
     if (matchForGuard?.tournament_id) {
@@ -379,10 +385,47 @@ async function handlePut(
     .from('matches')
     .select('*')
     .eq('id', matchId)
+    .eq('tenant_id', ctx.tenantId)
     .maybeSingle();
 
   if (fetchErr || !before) {
     return res.status(404).json({ error: 'Match not found' });
+  }
+
+  // --- Guard tenant sur les références fournies ---
+  // team1_id / team2_id / tournament_id doivent appartenir au tenant courant.
+  // supabaseAdmin bypasse la RLS : sans ce check, un manager pourrait
+  // rattacher son match à des entités d'un autre tenant.
+  const refChecks: Array<{
+    field: 'tournament_id' | 'team1_id' | 'team2_id';
+    table: 'tournaments' | 'teams';
+  }> = [
+    { field: 'tournament_id', table: 'tournaments' },
+    { field: 'team1_id', table: 'teams' },
+    { field: 'team2_id', table: 'teams' },
+  ];
+
+  for (const { field, table } of refChecks) {
+    if (!(field in updatePayload)) continue;
+    const value = updatePayload[field];
+    if (value === null) continue; // désassignation explicite : OK
+    if (typeof value !== 'string' || !isValidUUID(value)) {
+      return res.status(400).json({ error: `Invalid ${field}` });
+    }
+    const { data: ref } = await supabaseAdmin
+      .from(table)
+      .select('id')
+      .eq('id', value)
+      .eq('tenant_id', ctx.tenantId)
+      .maybeSingle();
+    if (!ref) {
+      return res.status(400).json({
+        error: `${field} does not reference a ${
+          table === 'teams' ? 'team' : 'tournament'
+        } of this tenant`,
+        code: 'CROSS_TENANT_REF',
+      });
+    }
   }
 
   // --- Warning: scheduled_at outside tournament date range ---
@@ -454,6 +497,7 @@ async function handlePut(
     .from('matches')
     .update(updatePayload)
     .eq('id', matchId)
+    .eq('tenant_id', ctx.tenantId)
     .select('*')
     .maybeSingle();
 
@@ -486,7 +530,7 @@ async function handlePut(
     updatePayload.status === 'ongoing' &&
     before.status !== 'ongoing'
   ) {
-    void notifyMatchStartingForMatch(matchId).catch((e) =>
+    void notifyMatchStartingForMatch(matchId, ctx.tenantId).catch((e) =>
       logger.error('[discord] notifyMatchStarting error:', e)
     );
     // Enrich payload pour que le bot cree direct le thread #matchs-live
@@ -557,7 +601,10 @@ async function handlePut(
  * Discord helper: build & send the "match starting" notification
  * ---------------------------------------------------------*/
 
-async function notifyMatchStartingForMatch(matchId: string): Promise<void> {
+async function notifyMatchStartingForMatch(
+  matchId: string,
+  tenantId: string
+): Promise<void> {
   if (!supabaseAdmin) return;
 
   const { data: m } = await supabaseAdmin
@@ -577,6 +624,7 @@ async function notifyMatchStartingForMatch(matchId: string): Promise<void> {
       `
     )
     .eq('id', matchId)
+    .eq('tenant_id', tenantId)
     .maybeSingle();
 
   if (!m || !m.team1 || !m.team2) return;
@@ -627,6 +675,7 @@ async function handleDelete(
     .from('matches')
     .select('*')
     .eq('id', matchId)
+    .eq('tenant_id', ctx.tenantId)
     .maybeSingle();
 
   if (fetchErr || !match) {
@@ -637,7 +686,8 @@ async function handleDelete(
     const { error } = await supabaseAdmin
       .from('matches')
       .delete()
-      .eq('id', matchId);
+      .eq('id', matchId)
+      .eq('tenant_id', ctx.tenantId);
 
     if (error) {
       logger.error('admin hard delete match error:', error);
@@ -674,7 +724,8 @@ async function handleDelete(
       team2_score: null,
       winner_team_id: null,
     })
-    .eq('id', matchId);
+    .eq('id', matchId)
+    .eq('tenant_id', ctx.tenantId);
 
   if (error) {
     logger.error('admin cancel match error:', error);

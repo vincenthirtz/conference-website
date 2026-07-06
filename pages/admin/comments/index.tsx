@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { withStaffPage } from '@/utils/staff';
@@ -72,6 +72,15 @@ function AdminCommentsPage(_props: Props) {
   });
 
   const error = mutationError ?? fetchError;
+
+  // Auto-recul d'une page quand la page courante devient vide et offset > 0
+  // (ex. suppression du dernier commentaire d'une page > 1) : sans ça,
+  // l'utilisateur reste sur une page vide.
+  useEffect(() => {
+    if (!loading && !fetchError && comments.length === 0 && offset > 0) {
+      setOffset(Math.max(0, offset - limit));
+    }
+  }, [loading, fetchError, comments.length, offset, limit, setOffset]);
 
   const handleDelete = async (comment: CommentRow) => {
     setDeleting(true);
@@ -402,8 +411,10 @@ function AdminCommentsPage(_props: Props) {
             )}
           </section>
 
-          {/* Pagination */}
-          {comments.length > 0 && (
+          {/* Pagination : rester visible quand la page courante est vide mais
+              offset > 0 (ex. suppression du dernier commentaire d'une page),
+              sinon le bouton « Précédent » disparaît et l'offset reste coincé. */}
+          {(comments.length > 0 || offset > 0) && (
             <div className="flex justify-between items-center mt-6">
               <button
                 type="button"

@@ -10,11 +10,18 @@ vi.mock('@/utils/supabase', async () => {
   };
 });
 
+// Pas de vrai DNS dans les tests unitaires : le check de domaine répond OK par
+// défaut, chaque cas « domaine introuvable » le surcharge explicitement.
+vi.mock('@/utils/emailDns', () => ({
+  checkEmailDomainDns: vi.fn(async () => ({ ok: true })),
+}));
+
 import {
   resetSupabaseMock,
   setSignUpResult,
   signUpCalls,
 } from './__helpers__/supabaseMock';
+import { checkEmailDomainDns } from '@/utils/emailDns';
 
 import registerHandler from '../../pages/api/auth/register';
 
@@ -42,7 +49,7 @@ function makeRes(): any {
 }
 
 const validBody = {
-  email: 'New@Example.com',
+  email: 'New@Gmail.com',
   password: 'motdepasse8',
   displayName: '  Alice  ',
   battleTag: 'Alice#1234',
@@ -80,6 +87,41 @@ describe('/api/auth/register', () => {
     expect(res.body.code).toBe('VALIDATION');
   });
 
+  it('400 quand le domaine email est jetable/placeholder (yopmail)', async () => {
+    const res = makeRes();
+    await registerHandler(
+      makeReq({ body: { ...validBody, email: 'x@yopmail.com' } }),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+    expect(res.body.code).toBe('VALIDATION');
+    expect(signUpCalls).toHaveLength(0); // jamais transmis à Supabase
+  });
+
+  it('400 quand le domaine email n’existe pas en DNS (le cas a@a.com)', async () => {
+    vi.mocked(checkEmailDomainDns).mockResolvedValueOnce({
+      ok: false,
+      reason: 'domain_unresolvable',
+    });
+    const res = makeRes();
+    await registerHandler(
+      makeReq({ body: { ...validBody, email: 'a@a.com' } }),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+    expect(res.body.code).toBe('VALIDATION');
+    expect(signUpCalls).toHaveLength(0);
+  });
+
+  it('200 quand le check DNS fail-open laisse passer (erreur transitoire)', async () => {
+    // Le mock par défaut répond ok:true (comportement fail-open) : le signUp
+    // doit aboutir normalement.
+    const res = makeRes();
+    await registerHandler(makeReq({ body: validBody }), res);
+    expect(res.statusCode).toBe(200);
+    expect(signUpCalls).toHaveLength(1);
+  });
+
   it('400 quand le BattleTag est au mauvais format', async () => {
     const res = makeRes();
     await registerHandler(
@@ -101,7 +143,7 @@ describe('/api/auth/register', () => {
 
     expect(signUpCalls).toHaveLength(1);
     const call = signUpCalls[0];
-    expect(call.email).toBe('new@example.com'); // trim + lowercase
+    expect(call.email).toBe('new@gmail.com'); // trim + lowercase
     expect(call.password).toBe('motdepasse8'); // jamais trimmé
     expect(call.options?.data?.role).toBe('player'); // forcé serveur
     expect(call.options?.data?.display_name).toBe('Alice'); // trim
@@ -113,7 +155,7 @@ describe('/api/auth/register', () => {
     await registerHandler(
       makeReq({
         body: {
-          email: 'solo@example.com',
+          email: 'solo@gmail.com',
           password: 'motdepasse8',
           displayName: '   ',
           battleTag: '',

@@ -2,7 +2,7 @@
 // Modale de confirmation pour avancer auto les équipes d'une phase.
 // Appelle POST /api/admin/stages/[stageId]/advance avec { auto: true }.
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   useIdempotentMutation,
   BgSyncQueuedError,
@@ -26,6 +26,17 @@ export default function ConfirmAdvanceModal({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { mutateJson } = useIdempotentMutation();
+
+  // La modale n'est pas remontée entre deux ouvertures (pas de key côté
+  // appelant) : réarmer les états transitoires à chaque ouverture ou
+  // changement de cible, sinon l'erreur d'une phase A s'affiche en ouvrant
+  // la phase B.
+  useEffect(() => {
+    if (open) {
+      setError(null);
+      setSubmitting(false);
+    }
+  }, [open, stageId]);
 
   if (!open) return null;
 

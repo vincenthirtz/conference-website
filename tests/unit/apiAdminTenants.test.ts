@@ -600,6 +600,58 @@ describe('/api/admin/tenants/[id]/staff', () => {
     expect(row).toBeDefined();
   });
 
+  it('POST 400 si role hors nomenclature (INVALID_ROLE)', async () => {
+    const res = makeRes();
+    await staffList(
+      makeReq({
+        method: 'POST',
+        query: { id: TENANT_B },
+        body: { staff_id: OTHER_STAFF, role: 'superadmin' },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+    expect((res.body as any).code).toBe('INVALID_ROLE');
+    const row = (store.tenant_staff as any[]).find(
+      (r) => r.tenant_id === TENANT_B && r.staff_id === OTHER_STAFF
+    );
+    expect(row).toBeUndefined();
+  });
+
+  it('POST 200 sans role → défaut admin', async () => {
+    const res = makeRes();
+    await staffList(
+      makeReq({
+        method: 'POST',
+        query: { id: TENANT_B },
+        body: { staff_id: OTHER_STAFF },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    const row = (store.tenant_staff as any[]).find(
+      (r) => r.tenant_id === TENANT_B && r.staff_id === OTHER_STAFF
+    );
+    expect(row?.role).toBe('admin');
+  });
+
+  it('POST 200 avec un role valide de la nomenclature (manager)', async () => {
+    const res = makeRes();
+    await staffList(
+      makeReq({
+        method: 'POST',
+        query: { id: TENANT_B },
+        body: { staff_id: OTHER_STAFF, role: 'manager' },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    const row = (store.tenant_staff as any[]).find(
+      (r) => r.tenant_id === TENANT_B && r.staff_id === OTHER_STAFF
+    );
+    expect(row?.role).toBe('manager');
+  });
+
   it('DELETE 409 si dernier admin', async () => {
     // TENANT_A n'a que staff-1 comme admin → ne devrait pas pouvoir le
     // retirer.

@@ -12,6 +12,12 @@ import { applyRateLimit } from '@/utils/rateLimit';
 import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
 import { alertIfBlacklisted } from '@/utils/moderation/blacklist';
 import { BATTLE_TAG_REGEX } from '@/utils/teams/addMember';
+import {
+  checkEmailQuality,
+  normalizeEmail,
+  EMAIL_QUALITY_MESSAGES,
+} from '@/utils/emailQuality';
+import { checkEmailDomainDns } from '@/utils/emailDns';
 
 import { logger } from '../../../utils/logger';
 
@@ -63,12 +69,34 @@ export default async function handler(
     });
   }
 
-  const { email, password, displayName, battleTag } = parsed.data;
+  const { password, displayName, battleTag } = parsed.data;
+  const email = normalizeEmail(parsed.data.email);
+
+  // Durcissement email : syntaxe stricte + domaines jetables/placeholder
+  // (a@a.com, x@yopmail.com… passent z.string().email() mais pas ceci).
+  const quality = checkEmailQuality(email);
+  if (!quality.ok) {
+    return res.status(400).json({
+      error: EMAIL_QUALITY_MESSAGES[quality.reason],
+      code: 'VALIDATION',
+    });
+  }
+
+  // Existence du domaine (MX, repli A/AAAA). Fail-open sur erreur DNS
+  // transitoire — ne bloque que les domaines certains de ne pas exister.
+  const domainCheck = await checkEmailDomainDns(email);
+  if (!domainCheck.ok) {
+    return res.status(400).json({
+      error:
+        'Le domaine de cette adresse email est introuvable. Vérifie l’adresse saisie.',
+      code: 'VALIDATION',
+    });
+  }
 
   const tenantId = resolveTenantIdForPublicRequest(req);
 
   const { error } = await supabaseAnonServer.auth.signUp({
-    email: email.trim().toLowerCase(),
+    email,
     password,
     options: {
       data: {

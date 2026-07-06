@@ -1,7 +1,7 @@
 // components/admin/LogoUpload.tsx
 // Composant d'upload de logo avec preview, drag & drop, et fallback URL manuelle
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 
 type LogoUploadProps = {
@@ -31,7 +31,15 @@ export default function LogoUpload({
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [imgError, setImgError] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Une nouvelle source doit retenter l'affichage : l'état d'erreur de l'image
+  // est réarmé à chaque changement d'URL (pas de manipulation impérative du
+  // style, sinon l'img resterait invisible après correction de l'URL).
+  useEffect(() => {
+    setImgError(false);
+  }, [value]);
 
   const handleFile = useCallback(
     async (file: File) => {
@@ -193,15 +201,15 @@ export default function LogoUpload({
       {/* Preview */}
       {value && !error && (
         <div className="flex items-center gap-3 mt-1">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={value}
-            alt="Preview logo"
-            className="w-12 h-12 rounded-lg object-cover border border-neutral-600"
-            onError={(e) => {
-              (e.target as HTMLImageElement).style.display = 'none';
-            }}
-          />
+          {!imgError && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={value}
+              alt="Preview logo"
+              className="w-12 h-12 rounded-lg object-cover border border-neutral-600"
+              onError={() => setImgError(true)}
+            />
+          )}
           <button
             type="button"
             onClick={() => onChange('')}

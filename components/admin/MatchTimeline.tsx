@@ -68,6 +68,11 @@ export default function MatchTimeline({ matchId }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   const fetchHistory = useCallback(async () => {
+    // Réarmer loading/error à chaque (re)fetch : sinon, après une erreur
+    // transitoire, un refetch réussi continue d'afficher l'erreur, et un
+    // changement de matchId montre les logs de l'ancien match sans loading.
+    setLoading(true);
+    setError(null);
     try {
       const res = await fetch(`/api/admin/matches/${matchId}/history`);
       if (!res.ok) {

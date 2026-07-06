@@ -91,7 +91,7 @@ export default function StageProgressBar({
             </button>
           )}
           <Link
-            href={`/admin/tournament/${tournamentId}/matches?stage=${stageId}`}
+            href={`/admin/tournament/${tournamentId}/matches?stageId=${stageId}`}
             className="text-[10px] text-purple-300 hover:text-purple-200"
           >
             Voir →

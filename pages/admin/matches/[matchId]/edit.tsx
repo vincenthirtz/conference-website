@@ -308,11 +308,26 @@ function AdminMatchEditPage({ staff }: StaffProps) {
       }
 
       // Check for warnings (e.g., scheduled outside tournament dates)
-      const metaJson = await metaRes.json().catch(() => ({}));
+      const metaJson: {
+        match?: { updated_at?: string | null };
+        warnings?: string[];
+      } = await metaRes.json().catch(() => ({}));
       if (metaJson.warnings && Array.isArray(metaJson.warnings)) {
         setWarningMsgs(metaJson.warnings);
       } else {
         setWarningMsgs([]);
+      }
+
+      // Le PUT méta vient de bumper updated_at côté serveur : réutiliser
+      // l'ancien match.updated_at pour le PUT score partirait systématiquement
+      // en 409. On récupère le nouvel updated_at renvoyé par l'API
+      // ({ match: updated }) ; à défaut on refetch le match.
+      let expectedUpdatedAt: string | null = metaJson.match?.updated_at ?? null;
+      if (!expectedUpdatedAt) {
+        const refetchRes = await adminFetch(`/api/admin/matches/${matchId}`);
+        const refetchJson: { match?: { updated_at?: string | null } } =
+          await refetchRes.json().catch(() => ({}));
+        expectedUpdatedAt = refetchJson.match?.updated_at ?? null;
       }
 
       // 2) Save score if provided
@@ -326,7 +341,7 @@ function AdminMatchEditPage({ staff }: StaffProps) {
             team2Score: Number(form.team2_score),
             status: form.status,
             propagate: true,
-            expected_updated_at: match.updated_at ?? null,
+            expected_updated_at: expectedUpdatedAt,
           }),
         });
 
@@ -353,7 +368,9 @@ function AdminMatchEditPage({ staff }: StaffProps) {
           method: 'PUT',
           body: JSON.stringify({
             games: games,
-            recomputeMode: hasScore ? 'none' : 'none',
+            // Score global saisi → il fait foi ('none'). Sinon, on laisse
+            // l'API recalculer le score de série depuis les maps.
+            recomputeMode: hasScore ? 'none' : 'from_games',
           }),
         });
 

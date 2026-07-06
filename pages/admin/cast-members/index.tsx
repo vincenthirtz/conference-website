@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -82,7 +82,14 @@ function AdminCastMembersPage({ staff }: Props) {
     setOffset(0);
   }, [debouncedSearch, status]);
 
+  // Guard de séquence : le reset d'offset (effet ci-dessus) et le changement
+  // de filtre déclenchent deux fetchs successifs dans le même commit ; seule
+  // la dernière requête lancée peut appliquer sa réponse (sinon une réponse
+  // périmée — ancien offset — peut revenir après la bonne et l'écraser).
+  const fetchSeqRef = useRef(0);
+
   const fetchData = useCallback(async () => {
+    const seq = ++fetchSeqRef.current;
     setLoading(true);
 
     try {
@@ -106,12 +113,14 @@ function AdminCastMembersPage({ staff }: Props) {
         `/api/admin/cast-members?${params.toString()}`
       );
 
+      if (seq !== fetchSeqRef.current) return; // réponse périmée
       setMembers(json.items || []);
       setTotal(typeof json.total === 'number' ? json.total : null);
     } catch (err) {
+      if (seq !== fetchSeqRef.current) return;
       logger.error('Error fetching cast members', err);
     } finally {
-      setLoading(false);
+      if (seq === fetchSeqRef.current) setLoading(false);
     }
   }, [adminFetchJson, offset, status, debouncedSearch]);
 
@@ -180,7 +189,7 @@ function AdminCastMembersPage({ staff }: Props) {
 
       setSaving(true);
       try {
-        await Promise.all(
+        const results = await Promise.all(
           updates.map((u) =>
             adminFetch(`/api/admin/cast-members/${u.id}`, {
               method: 'PATCH',
@@ -188,6 +197,15 @@ function AdminCastMembersPage({ staff }: Props) {
             })
           )
         );
+        // fetch ne rejette pas sur un statut HTTP d'erreur : vérifier chaque
+        // réponse, sinon un 403/409/500 laisserait l'ordre optimiste affiché
+        // sans persistance (ni toast ni resync).
+        const failed = results.filter((res) => !res.ok);
+        if (failed.length > 0) {
+          throw new Error(
+            `Échec de ${failed.length} mise${failed.length > 1 ? 's' : ''} à jour sur ${results.length}`
+          );
+        }
       } catch (err: unknown) {
         logger.error('Reorder error', err);
         addToast('Erreur lors de la sauvegarde de l\u2019ordre.', 'error');

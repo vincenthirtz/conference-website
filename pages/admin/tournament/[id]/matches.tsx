@@ -116,6 +116,10 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // filters
+  // stageFilter est hydraté depuis l'URL (?stageId=...) une fois le router
+  // ready — filtersHydrated bloque le premier fetch tant que ce n'est pas fait
+  // (évite un fetch sans filtre suivi d'un second avec).
+  const [filtersHydrated, setFiltersHydrated] = useState(false);
   const [stageFilter, setStageFilter] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [roundFilter, setRoundFilter] = useState<string>('');
@@ -355,12 +359,27 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
     }
   }
 
+  // Hydratation des filtres depuis l'URL à l'arrivée sur la page.
+  // Le router Next n'est pas ready au premier render : on attend router.isReady
+  // avant de lire query.stageId, puis on débloque le fetch.
   useEffect(() => {
-    if (!id) return;
+    if (!router.isReady) return;
+    const rawStageId = router.query.stageId;
+    const stageId = Array.isArray(rawStageId) ? rawStageId[0] : rawStageId;
+    if (stageId) {
+      setStageFilter(stageId);
+      setOffset(0);
+    }
+    setFiltersHydrated(true);
+  }, [router.isReady, router.query.stageId]);
+
+  useEffect(() => {
+    if (!id || !filtersHydrated) return;
     fetchMatches();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     id,
+    filtersHydrated,
     offset,
     stageFilter,
     statusFilter,
@@ -972,7 +991,10 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                 <select
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   value={stageFilter}
-                  onChange={(e) => setStageFilter(e.target.value)}
+                  onChange={(e) => {
+                    setStageFilter(e.target.value);
+                    setOffset(0);
+                  }}
                 >
                   <option value="">Toutes les phases</option>
                   {stages
@@ -993,7 +1015,10 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                 <select
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
+                  onChange={(e) => {
+                    setStatusFilter(e.target.value);
+                    setOffset(0);
+                  }}
                 >
                   <option value="">Tous les statuts</option>
                   <option value="pending">A venir</option>
@@ -1011,7 +1036,10 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                   type="number"
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   value={roundFilter}
-                  onChange={(e) => setRoundFilter(e.target.value)}
+                  onChange={(e) => {
+                    setRoundFilter(e.target.value);
+                    setOffset(0);
+                  }}
                   placeholder="#"
                 />
               </div>
@@ -1023,7 +1051,10 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                 <select
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   value={resultFilter}
-                  onChange={(e) => setResultFilter(e.target.value)}
+                  onChange={(e) => {
+                    setResultFilter(e.target.value);
+                    setOffset(0);
+                  }}
                 >
                   <option value="">Tous</option>
                   <option value="win">Avec vainqueur</option>
@@ -1040,7 +1071,10 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                   type="date"
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   value={dateFromFilter}
-                  onChange={(e) => setDateFromFilter(e.target.value)}
+                  onChange={(e) => {
+                    setDateFromFilter(e.target.value);
+                    setOffset(0);
+                  }}
                 />
               </div>
 
@@ -1052,7 +1086,10 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                   type="date"
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   value={dateToFilter}
-                  onChange={(e) => setDateToFilter(e.target.value)}
+                  onChange={(e) => {
+                    setDateToFilter(e.target.value);
+                    setOffset(0);
+                  }}
                 />
               </div>
 

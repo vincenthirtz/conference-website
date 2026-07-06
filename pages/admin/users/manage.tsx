@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import {
@@ -127,6 +127,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
 
   // filters
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<string | null>(null);
 
   const [limit] = useState(20);
@@ -161,7 +162,25 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
   // Resend credentials
   const [resendingUser, setResendingUser] = useState<string | null>(null);
 
+  // Debounce de la recherche (~300ms) avant de requêter le serveur.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  // Toute modification de recherche/filtre repart de la première page.
+  useEffect(() => {
+    setOffset(0);
+  }, [debouncedSearch, roleFilter]);
+
+  // Guard de séquence : seule la dernière requête lancée peut appliquer sa
+  // réponse (évite qu'une réponse périmée écrase la liste courante).
+  const fetchSeqRef = useRef(0);
+
   const fetchData = useCallback(async () => {
+    const seq = ++fetchSeqRef.current;
     setLoading(true);
 
     try {
@@ -169,22 +188,28 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
       params.set('limit', String(limit));
       params.set('offset', String(offset));
 
-      if (search.trim()) params.set('search', search);
+      if (debouncedSearch.trim()) params.set('search', debouncedSearch);
       if (roleFilter) params.set('role', roleFilter);
 
       const json = await adminFetchJson<ApiResponse>(
         `/api/admin/users/manage?${params.toString()}`
       );
 
+      if (seq !== fetchSeqRef.current) return; // réponse périmée
       setUsers(json.items || []);
       setTotal(json.total ?? json.items?.length ?? 0);
     } catch (err) {
+      if (seq !== fetchSeqRef.current) return;
       logger.error('Error fetching users', err);
-      setTotal(0);
+      addToast(
+        (err as Error)?.message ||
+          'Erreur lors du chargement des utilisateurs.',
+        'error'
+      );
     } finally {
-      setLoading(false);
+      if (seq === fetchSeqRef.current) setLoading(false);
     }
-  }, [limit, offset, search, roleFilter, adminFetchJson]);
+  }, [limit, offset, debouncedSearch, roleFilter, adminFetchJson, addToast]);
 
   useEffect(() => {
     fetchData();
@@ -192,8 +217,11 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
 
   function handleSearchSubmit(e: React.FormEvent) {
     e.preventDefault();
+    // Flush du debounce : applique la saisie immédiatement. Le fetch part via
+    // l'effet [fetchData] dès que debouncedSearch/offset changent (pas de
+    // double requête).
+    setDebouncedSearch(search);
     setOffset(0);
-    fetchData();
   }
 
   const changeRole = async (userId: string, role: string) => {

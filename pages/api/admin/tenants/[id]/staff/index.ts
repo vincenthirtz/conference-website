@@ -6,10 +6,13 @@
 //  - POST : ajoute (upsert) un staff existant a ce tenant. Manager+ requis.
 
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { z } from 'zod';
 import { supabaseAdmin } from '@/utils/supabase';
 import {
   withStaffRoute,
   hasAtLeastRole,
+  STAFF_ROLES,
+  type StaffRole,
   type AuthenticatedStaffContext,
 } from '@/utils/staff';
 import { withAdminIdempotency } from '@/utils/adminIdempotency';
@@ -18,7 +21,10 @@ import { isValidUUID } from '@/utils/apiHelpers';
 import { canAccessTenant } from '@/utils/adminTenants';
 import { logger } from '@/utils/logger';
 
-const ROLE_MAX = 50;
+// Nomenclature stricte : le garde « dernier admin » de
+// tenants/[id]/staff/[staffId].ts compte les rows `role === 'admin'` — un
+// role libre hors nomenclature permettrait de le contourner.
+const staffRoleSchema = z.enum(STAFF_ROLES as [StaffRole, ...StaffRole[]]);
 
 async function handler(
   req: NextApiRequest,
@@ -102,10 +108,18 @@ async function handler(
     const body = (req.body ?? {}) as Record<string, unknown>;
     const staffId =
       typeof body.staff_id === 'string' ? body.staff_id.trim() : '';
-    const role =
+    const roleParsed = staffRoleSchema.safeParse(
       typeof body.role === 'string' && body.role.trim()
-        ? body.role.trim().slice(0, ROLE_MAX)
-        : 'admin';
+        ? body.role.trim()
+        : 'admin'
+    );
+    if (!roleParsed.success) {
+      return res.status(400).json({
+        error: `Invalid role. Allowed values: ${STAFF_ROLES.join(', ')}.`,
+        code: 'INVALID_ROLE',
+      });
+    }
+    const role = roleParsed.data;
 
     if (!isValidUUID(staffId)) {
       return res

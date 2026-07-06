@@ -1,7 +1,7 @@
 // pages/admin/support/index.tsx
 // Admin: list + manage support tickets (litiges, comportement, technique, autre).
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import Head from 'next/head';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
@@ -165,7 +165,14 @@ function AdminSupportPage(_: StaffProps) {
     setOffset(0);
   }, [status, severity, category, search]);
 
+  // Guard de séquence : le reset d'offset (effet ci-dessus) et le changement
+  // de filtre déclenchent deux fetchs successifs dans le même commit ; seule
+  // la dernière requête lancée peut appliquer sa réponse (sinon une réponse
+  // périmée — ancien offset — peut revenir après la bonne et l'écraser).
+  const fetchSeqRef = useRef(0);
+
   const fetchTickets = useCallback(async () => {
+    const seq = ++fetchSeqRef.current;
     setLoading(true);
     setErrorMsg(null);
     const params = new URLSearchParams();
@@ -179,6 +186,7 @@ function AdminSupportPage(_: StaffProps) {
       const json = await adminFetchJson<TicketsResponse>(
         `/api/admin/support/tickets?${params.toString()}`
       );
+      if (seq !== fetchSeqRef.current) return; // réponse périmée
       setTickets(json.tickets || []);
       setTotal(typeof json.total === 'number' ? json.total : null);
       setCounts(
@@ -192,9 +200,10 @@ function AdminSupportPage(_: StaffProps) {
           : null
       );
     } catch (err) {
+      if (seq !== fetchSeqRef.current) return;
       setErrorMsg((err as Error).message);
     } finally {
-      setLoading(false);
+      if (seq === fetchSeqRef.current) setLoading(false);
     }
   }, [status, severity, category, search, offset, adminFetchJson]);
 

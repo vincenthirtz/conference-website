@@ -10,7 +10,7 @@ describe('contactSchema', () => {
   it('validates a correct contact form', () => {
     const result = contactSchema.safeParse({
       name: 'Jean Dupont',
-      email: 'jean@example.com',
+      email: 'jean@gmail.com',
       subject: 'Question',
       message: 'Bonjour, je voudrais savoir...',
     });
@@ -20,20 +20,20 @@ describe('contactSchema', () => {
   it('trims and lowercases email', () => {
     const result = contactSchema.safeParse({
       name: 'Jean',
-      email: '  JEAN@Example.COM  ',
+      email: '  JEAN@Gmail.COM  ',
       subject: 'Test',
       message: 'Message de test assez long',
     });
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data.email).toBe('jean@example.com');
+      expect(result.data.email).toBe('jean@gmail.com');
     }
   });
 
   it('rejects missing name', () => {
     const result = contactSchema.safeParse({
       name: '',
-      email: 'jean@example.com',
+      email: 'jean@gmail.com',
       subject: 'Question',
       message: 'Bonjour, je voudrais savoir...',
     });
@@ -53,7 +53,7 @@ describe('contactSchema', () => {
   it('rejects message shorter than 10 chars', () => {
     const result = contactSchema.safeParse({
       name: 'Jean',
-      email: 'jean@example.com',
+      email: 'jean@gmail.com',
       subject: 'Question',
       message: 'Court',
     });
@@ -63,7 +63,7 @@ describe('contactSchema', () => {
   it('rejects message longer than 5000 chars', () => {
     const result = contactSchema.safeParse({
       name: 'Jean',
-      email: 'jean@example.com',
+      email: 'jean@gmail.com',
       subject: 'Question',
       message: 'a'.repeat(5001),
     });
@@ -73,7 +73,7 @@ describe('contactSchema', () => {
   it('trims whitespace from name', () => {
     const result = contactSchema.safeParse({
       name: '  Jean  ',
-      email: 'jean@example.com',
+      email: 'jean@gmail.com',
       subject: 'Test',
       message: 'Message long assez ok ici',
     });
@@ -162,8 +162,8 @@ describe('captainRequestSchema', () => {
     const result = captainRequestSchema.safeParse({
       teamName: 'Team A',
       members: [
-        { email: 'player1@example.com', battleTag: 'Player#1234' },
-        { email: 'player2@example.com' },
+        { email: 'player1@gmail.com', battleTag: 'Player#1234' },
+        { email: 'player2@gmail.com' },
       ],
     });
     expect(result.success).toBe(true);
@@ -171,7 +171,7 @@ describe('captainRequestSchema', () => {
 
   it('rejects more than 5 members', () => {
     const members = Array.from({ length: 6 }, (_, i) => ({
-      email: `player${i}@example.com`,
+      email: `player${i}@gmail.com`,
     }));
     const result = captainRequestSchema.safeParse({
       teamName: 'Team A',
