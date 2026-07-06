@@ -10,8 +10,12 @@ import Button from '@/components/Buttons/button';
 import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import type { MatchStatus, BracketSide } from '@/types/admin';
+import { useT, format } from '@/lib/i18n/useT';
+import { useLang } from '@/lib/i18n/LanguageProvider';
 
 import { logger } from '../../utils/logger';
+
+type MatchDict = ReturnType<typeof useT<'matchDetail'>>;
 type SimpleTeam = {
   id: string;
   slug?: string | null;
@@ -142,10 +146,13 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
 };
 
 export default function MatchPage({ match }: Props) {
+  const t = useT('matchDetail');
+  const { lang } = useLang();
+  const locale = lang === 'fr' ? 'fr-FR' : 'en-GB';
   if (!match) {
     return (
       <div className="min-h-screen bg-black text-white flex items-center justify-center">
-        <p>Match introuvable.</p>
+        <p>{t.notFound}</p>
       </div>
     );
   }
@@ -154,17 +161,15 @@ export default function MatchPage({ match }: Props) {
   const t2 = match.team2;
   const isBye = match.is_bye;
 
-  const t1Name = t1?.short_name || t1?.name || 'Équipe 1';
-  const t2Name = t2?.short_name || t2?.name || (isBye ? '(bye)' : 'Équipe 2');
+  const t1Name = t1?.short_name || t1?.name || t.teamFallback1;
+  const t2Name =
+    t2?.short_name || t2?.name || (isBye ? t.bye : t.teamFallback2);
 
-  const t1Logo = t1?.logo_url || null;
-  const t2Logo = t2?.logo_url || null;
-
-  const statusLabel = getMatchStatusLabel(match.status);
+  const statusLabel = getMatchStatusLabel(match.status, t);
   const statusChipClass = getMatchStatusChipClass(match.status);
   const formatLabel = match.match_format?.toUpperCase() || 'BO?';
-  const dateLabel = formatMatchDate(match.scheduled_at);
-  const completedLabel = formatMatchDate(match.completed_at);
+  const dateLabel = formatMatchDate(match.scheduled_at, locale);
+  const completedLabel = formatMatchDate(match.completed_at, locale);
 
   const gameCount = match.games.length;
   const tournamentPath = `/tournament/${match.tournament.slug || match.tournament.id}`;
@@ -228,14 +233,15 @@ export default function MatchPage({ match }: Props) {
                 {match.group_key && (
                   <>
                     <span className="text-gray-500">·</span>
-                    <span>Poule {match.group_key}</span>
+                    <span>
+                      {t.poolPrefix} {match.group_key}
+                    </span>
                   </>
                 )}
               </div>
 
               <Paragraph typeStyle="body-sm" textColor="text-gray-200">
-                Résumé complet du match, carte par carte : scores, overtimes,
-                tiebreakers, et infos pratiques.
+                {t.summary}
               </Paragraph>
             </div>
 
@@ -245,7 +251,7 @@ export default function MatchPage({ match }: Props) {
                   type="button"
                   className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-blue-400"
                 >
-                  ← Tournoi
+                  {t.btnTournament}
                 </Button>
               </Link>
               <Link href={`${tournamentPath}/matches`}>
@@ -253,7 +259,7 @@ export default function MatchPage({ match }: Props) {
                   type="button"
                   className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-emerald-400"
                 >
-                  Tous les matchs
+                  {t.btnAllMatches}
                 </Button>
               </Link>
               <Link href={`${tournamentPath}/bracket`}>
@@ -261,7 +267,7 @@ export default function MatchPage({ match }: Props) {
                   type="button"
                   className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-purple-400"
                 >
-                  Bracket
+                  {t.btnBracket}
                 </Button>
               </Link>
             </div>
@@ -273,13 +279,13 @@ export default function MatchPage({ match }: Props) {
           <div className="bg-black/60 border border-white/10 rounded-2xl px-4 py-4">
             <div className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,1.5fr)_minmax(0,1.4fr)] gap-3 items-center">
               {/* Team 1 */}
-              <TeamHeader team={t1} fallbackName="Équipe 1" align="left" />
+              <TeamHeader team={t1} fallbackName={t.teamFallback1} align="left" />
 
               {/* Score & meta */}
               <div className="flex flex-col items-center">
                 <div className="flex items-center gap-3 mb-1">
                   <span className="text-xs text-gray-400 uppercase tracking-wide">
-                    Score global
+                    {t.scoreGlobal}
                   </span>
                 </div>
                 <div className="flex items-center gap-4">
@@ -296,13 +302,20 @@ export default function MatchPage({ match }: Props) {
                   {completedLabel && (
                     <>
                       <span className="text-gray-600">·</span>
-                      <span>Fin : {completedLabel}</span>
+                      <span>
+                        {t.endPrefix} {completedLabel}
+                      </span>
                     </>
                   )}
                   {gameCount > 0 && (
                     <>
                       <span className="text-gray-600">·</span>
-                      <span>{gameCount} map(s) jouée(s)</span>
+                      <span>
+                        {format(
+                          gameCount > 1 ? t.mapsPlayed_other : t.mapsPlayed_one,
+                          { count: gameCount }
+                        )}
+                      </span>
                     </>
                   )}
                 </div>
@@ -311,7 +324,7 @@ export default function MatchPage({ match }: Props) {
               {/* Team 2 */}
               <TeamHeader
                 team={t2}
-                fallbackName={isBye ? '(bye)' : 'Équipe 2'}
+                fallbackName={isBye ? t.bye : t.teamFallback2}
                 align="right"
               />
             </div>
@@ -324,21 +337,21 @@ export default function MatchPage({ match }: Props) {
           <div className="bg-black/60 border border-white/5 rounded-2xl p-4">
             <div className="flex items-center justify-between mb-3">
               <p className="text-[11px] uppercase tracking-wide text-gray-400">
-                Détail par carte
+                {t.mapsDetailTitle}
               </p>
               {gameCount > 0 && (
                 <span className="text-[10px] text-gray-500">
-                  {gameCount} map
-                  {gameCount > 1 ? 's' : ''} enregistrée
-                  {gameCount > 1 ? 's' : ''}
+                  {format(
+                    gameCount > 1 ? t.mapsRecorded_other : t.mapsRecorded_one,
+                    { count: gameCount }
+                  )}
                 </span>
               )}
             </div>
 
             {match.games.length === 0 && (
               <Paragraph typeStyle="body-sm" textColor="text-gray-300">
-                Les détails par carte ne sont pas encore disponibles pour ce
-                match.
+                {t.noMapsDetail}
               </Paragraph>
             )}
 
@@ -351,6 +364,7 @@ export default function MatchPage({ match }: Props) {
                     game={g}
                     team1Name={t1Name}
                     team2Name={t2Name}
+                    t={t}
                   />
                 ))}
               </div>
@@ -361,12 +375,12 @@ export default function MatchPage({ match }: Props) {
           <div className="space-y-4">
             <div className="bg-black/60 border border-white/5 rounded-2xl p-4">
               <p className="text-[11px] uppercase tracking-wide text-gray-400 mb-2">
-                Infos match
+                {t.matchInfo}
               </p>
 
               <dl className="space-y-1 text-[11px]">
                 <InfoRow
-                  label="Tournoi"
+                  label={t.infoTournament}
                   value={
                     <Link
                       href={tournamentPath}
@@ -377,18 +391,18 @@ export default function MatchPage({ match }: Props) {
                   }
                 />
                 {match.stage && (
-                  <InfoRow label="Phase" value={match.stage.name} />
+                  <InfoRow label={t.infoStage} value={match.stage.name} />
                 )}
                 {match.round_name && (
-                  <InfoRow label="Round" value={match.round_name} />
+                  <InfoRow label={t.infoRound} value={match.round_name} />
                 )}
                 {match.group_key && (
-                  <InfoRow label="Poule" value={match.group_key} />
+                  <InfoRow label={t.infoPool} value={match.group_key} />
                 )}
-                <InfoRow label="Format" value={formatLabel} />
+                <InfoRow label={t.infoFormat} value={formatLabel} />
                 {match.lobby_code && (
                   <InfoRow
-                    label="Lobby"
+                    label={t.infoLobby}
                     value={
                       <code className="bg-black/60 border border-white/10 rounded px-1.5 py-[1px] text-[10px]">
                         {match.lobby_code}
@@ -398,7 +412,7 @@ export default function MatchPage({ match }: Props) {
                 )}
                 {match.stream_url && (
                   <InfoRow
-                    label="Stream"
+                    label={t.infoStream}
                     value={
                       <a
                         href={match.stream_url}
@@ -406,14 +420,14 @@ export default function MatchPage({ match }: Props) {
                         rel="noreferrer"
                         className="text-emerald-300 hover:text-emerald-100"
                       >
-                        Voir le stream
+                        {t.viewStream}
                       </a>
                     }
                   />
                 )}
                 {match.replay_url && (
                   <InfoRow
-                    label="Replay"
+                    label={t.infoReplay}
                     value={
                       <a
                         href={match.replay_url}
@@ -421,19 +435,19 @@ export default function MatchPage({ match }: Props) {
                         rel="noreferrer"
                         className="text-purple-300 hover:text-purple-100"
                       >
-                        Voir le VOD ↗
+                        {t.viewVod}
                       </a>
                     }
                   />
                 )}
-                <InfoRow label="Bye" value={isBye ? 'Oui' : 'Non'} />
+                <InfoRow label={t.infoBye} value={isBye ? t.yes : t.no} />
               </dl>
             </div>
 
             {match.notes && (
               <div className="bg-black/60 border border-white/5 rounded-2xl p-4">
                 <p className="text-[11px] uppercase tracking-wide text-gray-400 mb-2">
-                  Notes staff
+                  {t.staffNotes}
                 </p>
                 <p className="text-[11px] text-gray-200 whitespace-pre-wrap">
                   {match.notes}
@@ -518,13 +532,15 @@ function MapRow({
   index,
   team1Name,
   team2Name,
+  t,
 }: {
   game: Game;
   index: number;
   team1Name: string;
   team2Name: string;
+  t: MatchDict;
 }) {
-  const label = game.map_name || `Map ${index + 1}`;
+  const label = game.map_name || format(t.mapLabel, { n: index + 1 });
   const orderLabel =
     typeof game.map_order === 'number'
       ? `#${game.map_order + 1}`
@@ -554,7 +570,7 @@ function MapRow({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-col">
           <span className="text-[10px] text-gray-300">
-            {team1Name} vs {team2Name}
+            {team1Name} {t.vs} {team2Name}
           </span>
         </div>
         <div className="flex flex-wrap gap-1">
@@ -587,11 +603,11 @@ function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
  * Utils (cohérents avec les pages tournoi)
  * ────────────────────────────────────────────*/
 
-function formatMatchDate(iso: string | null): string | null {
+function formatMatchDate(iso: string | null, locale: string): string | null {
   if (!iso) return null;
   const d = new Date(iso);
   if (isNaN(d.getTime())) return null;
-  return d.toLocaleString('fr-FR', {
+  return d.toLocaleString(locale, {
     day: '2-digit',
     month: '2-digit',
     hour: '2-digit',
@@ -599,16 +615,16 @@ function formatMatchDate(iso: string | null): string | null {
   });
 }
 
-function getMatchStatusLabel(status: MatchStatus): string {
+function getMatchStatusLabel(status: MatchStatus, t: MatchDict): string {
   switch (status) {
     case 'pending':
-      return 'À venir';
+      return t.statusPending;
     case 'ongoing':
-      return 'En cours';
+      return t.statusOngoing;
     case 'finished':
-      return 'Terminé';
+      return t.statusFinished;
     case 'cancelled':
-      return 'Annulé';
+      return t.statusCancelled;
     default:
       return status;
   }

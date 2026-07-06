@@ -9,6 +9,8 @@ import Paragraph from '@/components/Typography/paragraph';
 import { supabaseAdmin } from '@/utils/supabase';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
+import { useT, format } from '@/lib/i18n/useT';
+import { useLang } from '@/lib/i18n/LanguageProvider';
 import { logger } from '../../utils/logger';
 
 type TeamMini = {
@@ -112,10 +114,10 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
   };
 };
 
-function formatDate(d: string | null) {
-  if (!d) return 'Date a definir';
+function formatDate(d: string | null, locale: string, tbd: string) {
+  if (!d) return tbd;
   try {
-    return new Date(d).toLocaleString('fr-FR', {
+    return new Date(d).toLocaleString(locale, {
       day: 'numeric',
       month: 'long',
       year: 'numeric',
@@ -128,6 +130,9 @@ function formatDate(d: string | null) {
 }
 
 function ScrimDetailPage({ scrim, matches }: Props) {
+  const t = useT('scrimDetail');
+  const { lang } = useLang();
+  const locale = lang === 'fr' ? 'fr-FR' : 'en-GB';
   return (
     <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-16">
@@ -135,26 +140,26 @@ function ScrimDetailPage({ scrim, matches }: Props) {
           href="/scrims"
           className="text-sm text-neutral-400 hover:text-white"
         >
-          ← Tous les scrims
+          {t.backToScrims}
         </Link>
 
         <Heading level="h1" className="!text-4xl md:!text-5xl mt-3">
           {scrim.name}
         </Heading>
         <Paragraph className="text-neutral-400 mt-2">
-          {formatDate(scrim.scheduled_date)}
+          {formatDate(scrim.scheduled_date, locale, t.dateTbd)}
           {scrim.game ? ` · ${scrim.game}` : ''}
         </Paragraph>
 
         <div className="mt-8 flex flex-wrap items-center justify-center gap-6 bg-neutral-800/50 border border-neutral-700/50 rounded-2xl p-6">
           <TeamBlock team={scrim.team1} />
-          <span className="text-2xl text-neutral-500 font-semibold">vs</span>
+          <span className="text-2xl text-neutral-500 font-semibold">{t.vs}</span>
           <TeamBlock team={scrim.team2} />
         </div>
 
         {scrim.description && (
           <section className="mt-8">
-            <h2 className="text-lg font-semibold mb-2">A propos</h2>
+            <h2 className="text-lg font-semibold mb-2">{t.about}</h2>
             <p className="text-neutral-300 whitespace-pre-line">
               {scrim.description}
             </p>
@@ -169,19 +174,17 @@ function ScrimDetailPage({ scrim, matches }: Props) {
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-sm font-medium"
             >
-              Voir le stream →
+              {t.viewStream}
             </a>
           </section>
         )}
 
         <section className="mt-10">
           <h2 className="text-lg font-semibold mb-3">
-            Matchs ({matches.length})
+            {format(t.matchesHeading, { count: matches.length })}
           </h2>
           {matches.length === 0 ? (
-            <p className="text-neutral-400 text-sm">
-              Programme des matchs a venir.
-            </p>
+            <p className="text-neutral-400 text-sm">{t.noMatches}</p>
           ) : (
             <ul className="space-y-2">
               {matches.map((m, i) => (
@@ -191,12 +194,12 @@ function ScrimDetailPage({ scrim, matches }: Props) {
                 >
                   <div className="flex items-center gap-3">
                     <span className="text-xs text-neutral-500">
-                      Match #{i + 1}
+                      {format(t.matchNumber, { n: i + 1 })}
                     </span>
                     <span className="text-sm">
-                      {(m.team1?.name || 'a definir') +
-                        ' vs ' +
-                        (m.team2?.name || 'a definir')}
+                      {(m.team1?.name || t.tbd) +
+                        ` ${t.vs} ` +
+                        (m.team2?.name || t.tbd)}
                     </span>
                   </div>
                   <div className="flex items-center gap-3 text-sm">
@@ -208,7 +211,7 @@ function ScrimDetailPage({ scrim, matches }: Props) {
                       <span className="text-neutral-400 text-xs">
                         {m.scheduled_at
                           ? new Date(m.scheduled_at).toLocaleTimeString(
-                              'fr-FR',
+                              locale,
                               { hour: '2-digit', minute: '2-digit' }
                             )
                           : '—'}
@@ -229,11 +232,12 @@ function ScrimDetailPage({ scrim, matches }: Props) {
 }
 
 function TeamBlock({ team }: { team: TeamMini | null }) {
+  const t = useT('scrimDetail');
   if (!team) {
     return (
       <div className="flex flex-col items-center gap-2 min-w-[120px]">
         <div className="w-16 h-16 rounded-xl bg-neutral-700/50" />
-        <span className="text-neutral-400 italic text-sm">a definir</span>
+        <span className="text-neutral-400 italic text-sm">{t.tbd}</span>
       </div>
     );
   }
