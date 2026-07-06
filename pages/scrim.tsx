@@ -10,6 +10,9 @@ import Paragraph from '@/components/Typography/paragraph';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
+import { useT, format } from '@/lib/i18n/useT';
+
+type ScrimDict = ReturnType<typeof useT<'scrimLanding'>>;
 
 type ScrimTeam = {
   id: string;
@@ -44,19 +47,10 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
   };
 };
 
-const STEPS = [
-  {
-    title: 'Choisis une équipe',
-    body: 'Parcours nos équipes actives ci-dessous et clique sur celle que tu veux affronter.',
-  },
-  {
-    title: 'Remplis la demande',
-    body: 'Indique ton équipe, un contact (email ou Discord), une date souhaitée et un format. Pas besoin de compte.',
-  },
-  {
-    title: 'Le capitaine répond',
-    body: 'Le capitaine reçoit ta demande et te recontacte directement via le contact que tu as fourni.',
-  },
+const getSteps = (t: ScrimDict) => [
+  { title: t.step1Title, body: t.step1Body },
+  { title: t.step2Title, body: t.step2Body },
+  { title: t.step3Title, body: t.step3Body },
 ];
 
 function initials(name: string): string {
@@ -66,29 +60,29 @@ function initials(name: string): string {
 }
 
 function ScrimPage({ teams }: Props) {
+  const t = useT('scrimLanding');
+  const steps = getSteps(t);
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
       <main className="container mx-auto max-w-5xl px-4 pt-24 pb-16">
         <section className="mb-10 text-center">
           <span className="inline-block px-3 py-1 rounded-full border border-cyan-500/40 bg-cyan-500/10 text-cyan-200 text-xs uppercase tracking-wide mb-4">
-            Scrims ouverts
+            {t.badge}
           </span>
           <Heading typeStyle="heading-lg" className="text-gradient mb-3">
-            Affronte une équipe de l’OW Women’s Cup
+            {t.heading}
           </Heading>
           <Paragraph
             typeStyle="body-md"
             textColor="text-gray-300"
             className="max-w-2xl mx-auto"
           >
-            Tu cherches un match amical pour préparer un tournoi ou tester ta
-            composition ? Propose un scrim à l’une de nos équipes — pas besoin
-            de compte sur le site.
+            {t.subtitle}
           </Paragraph>
         </section>
 
         <section className="mb-12 grid grid-cols-1 md:grid-cols-3 gap-4">
-          {STEPS.map((step, i) => (
+          {steps.map((step, i) => (
             <div
               key={step.title}
               className="rounded-2xl border border-white/10 bg-white/[0.03] p-5"
@@ -107,19 +101,19 @@ function ScrimPage({ teams }: Props) {
         <section>
           <div className="flex items-end justify-between mb-4 flex-wrap gap-2">
             <Heading typeStyle="heading-sm" className="text-white">
-              Nos équipes ({teams.length})
+              {format(t.teamsHeading, { count: teams.length })}
             </Heading>
             <Link
               href="/tournaments"
               className="text-xs text-gray-400 hover:text-white"
             >
-              Voir les tournois →
+              {t.viewTournaments}
             </Link>
           </div>
 
           {teams.length === 0 ? (
             <Paragraph typeStyle="body-sm" textColor="text-gray-400">
-              Aucune équipe active pour le moment.
+              {t.noTeams}
             </Paragraph>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -159,7 +153,7 @@ function ScrimPage({ teams }: Props) {
                       </div>
                     </div>
                     <span className="text-xs text-cyan-300 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-                      Proposer →
+                      {t.propose}
                     </span>
                   </div>
                 </Link>

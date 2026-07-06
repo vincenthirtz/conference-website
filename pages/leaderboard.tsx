@@ -16,12 +16,16 @@ import type { LeaderboardPlayer } from '@/types/rating';
 import { readLeaderboard } from '@/utils/rating/readLeaderboard';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { useIsrRefresh } from '@/hooks/useIsrRefresh';
+import { useT } from '@/lib/i18n/useT';
 
 const PAGE_SIZE = 50;
 const JSONLD_TOP_N = 10;
 
-function playerLabel(p: LeaderboardPlayer): string {
-  return p.displayName ?? p.battleTag ?? 'Joueuse inconnue';
+function playerLabel(
+  p: LeaderboardPlayer,
+  fallback = 'Joueuse inconnue'
+): string {
+  return p.displayName ?? p.battleTag ?? fallback;
 }
 
 function ratingBadge(rank: number): string {
@@ -34,6 +38,7 @@ function ratingBadge(rank: number): string {
 export default function LeaderboardPage({
   initialPlayers,
 }: InferGetStaticPropsType<typeof getStaticProps>) {
+  const t = useT('leaderboardPage');
   const hasInitial = initialPlayers.length > 0;
 
   // Première page : servie par l'ISR (props fraîches, revalidate:300). Le hook
@@ -99,15 +104,11 @@ export default function LeaderboardPage({
       <main className="container mx-auto max-w-5xl px-4 pb-16 pt-24">
         <header className="mb-8 text-center">
           <p className="mb-2 text-xs uppercase tracking-widest text-purple-300">
-            Classement
+            {t.eyebrow}
           </p>
-          <h1 className="text-3xl font-bold sm:text-4xl">
-            Classement des joueuses
-          </h1>
+          <h1 className="text-3xl font-bold sm:text-4xl">{t.title}</h1>
           <p className="mx-auto mt-3 max-w-2xl text-sm text-neutral-400">
-            Rating calculé à partir des matchs officiels. L&apos;incertitude
-            (RD) reflète la fiabilité du score : plus elle est basse, plus le
-            rating est stable.
+            {t.subtitle}
           </p>
         </header>
 
@@ -124,18 +125,18 @@ export default function LeaderboardPage({
                 <table className="w-full text-sm">
                   <thead className="bg-neutral-900/80 text-xs uppercase text-neutral-400">
                     <tr>
-                      <th className="w-16 px-4 py-3 text-left">Rang</th>
-                      <th className="px-4 py-3 text-left">Joueuse</th>
-                      <th className="px-4 py-3 text-right">Rating</th>
+                      <th className="w-16 px-4 py-3 text-left">{t.thRank}</th>
+                      <th className="px-4 py-3 text-left">{t.thPlayer}</th>
+                      <th className="px-4 py-3 text-right">{t.thRating}</th>
                       <th className="hidden px-4 py-3 text-right sm:table-cell">
-                        Matchs
+                        {t.thMatches}
                       </th>
-                      <th className="px-4 py-3 text-right">V - D</th>
+                      <th className="px-4 py-3 text-right">{t.thWinLoss}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {players.map((p) => {
-                      const label = playerLabel(p);
+                      const label = playerLabel(p, t.unknownPlayer);
                       return (
                         <tr
                           key={p.userId}
@@ -208,7 +209,7 @@ export default function LeaderboardPage({
                   disabled={loadingMore}
                   className="rounded-md bg-purple-500 px-6 py-2 text-sm font-semibold transition-colors hover:bg-purple-400 disabled:opacity-50"
                 >
-                  {loadingMore ? 'Chargement…' : 'Voir plus'}
+                  {loadingMore ? t.loading : t.loadMore}
                 </button>
               </div>
             )}
@@ -238,21 +239,20 @@ function LoadingState() {
 }
 
 function EmptyState() {
+  const t = useT('leaderboardPage');
   return (
     <section className="rounded-2xl border border-neutral-800 bg-neutral-900/40 py-16 text-center">
       <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-purple-500/10 text-2xl">
         🏆
       </div>
-      <h2 className="mb-2 text-lg font-semibold">Aucune joueuse classée</h2>
-      <p className="mx-auto max-w-md text-sm text-neutral-400">
-        Le classement se remplira dès que des matchs officiels auront été joués.
-        Revenez bientôt !
-      </p>
+      <h2 className="mb-2 text-lg font-semibold">{t.emptyTitle}</h2>
+      <p className="mx-auto max-w-md text-sm text-neutral-400">{t.emptyBody}</p>
     </section>
   );
 }
 
 function ErrorState({ onRetry }: { onRetry: () => void }) {
+  const t = useT('leaderboardPage');
   return (
     <section className="py-16 text-center" role="alert">
       <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full border border-red-500/30 bg-red-500/10">
@@ -270,18 +270,14 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
           />
         </svg>
       </div>
-      <h2 className="mb-2 text-xl font-semibold">
-        Impossible de charger le classement
-      </h2>
-      <p className="mb-6 text-neutral-400">
-        Une erreur est survenue. Réessayez dans quelques instants.
-      </p>
+      <h2 className="mb-2 text-xl font-semibold">{t.errorTitle}</h2>
+      <p className="mb-6 text-neutral-400">{t.errorBody}</p>
       <button
         type="button"
         onClick={onRetry}
         className="rounded-md bg-purple-500 px-4 py-2 text-sm font-semibold transition-colors hover:bg-purple-400"
       >
-        Réessayer
+        {t.retry}
       </button>
     </section>
   );

@@ -9,7 +9,11 @@ import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
+import { useT } from '@/lib/i18n/useT';
+import { useLang } from '@/lib/i18n/LanguageProvider';
 import { logger } from '../utils/logger';
+
+type ScrimsDict = ReturnType<typeof useT<'scrimsPage'>>;
 
 type ScrimTeam = {
   id: string;
@@ -65,10 +69,10 @@ export const getStaticProps: GetStaticProps<ScrimsPageProps> = async () => {
   };
 };
 
-function formatDate(d: string | null) {
-  if (!d) return 'Date a definir';
+function formatDate(d: string | null, locale: string, tbd: string) {
+  if (!d) return tbd;
   try {
-    return new Date(d).toLocaleString('fr-FR', {
+    return new Date(d).toLocaleString(locale, {
       day: 'numeric',
       month: 'long',
       year: 'numeric',
@@ -80,16 +84,16 @@ function formatDate(d: string | null) {
   }
 }
 
-function statusLabel(status: string) {
+function statusLabel(status: string, t: ScrimsDict) {
   switch (status) {
     case 'scheduled':
-      return 'Planifie';
+      return t.statusScheduled;
     case 'running':
-      return 'En cours';
+      return t.statusRunning;
     case 'completed':
-      return 'Termine';
+      return t.statusCompleted;
     case 'cancelled':
-      return 'Annule';
+      return t.statusCancelled;
     default:
       return status;
   }
@@ -111,6 +115,7 @@ function statusColor(status: string) {
 }
 
 function ScrimsPage({ scrims }: ScrimsPageProps) {
+  const t = useT('scrimsPage');
   const { upcoming, running, past } = useMemo(() => {
     const upcoming: PublicScrim[] = [];
     const running: PublicScrim[] = [];
@@ -127,31 +132,31 @@ function ScrimsPage({ scrims }: ScrimsPageProps) {
     <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-16">
         <Heading level="h1" className="!text-4xl md:!text-5xl">
-          Scrims
+          {t.title}
         </Heading>
         <Paragraph className="text-neutral-400 mt-2 max-w-2xl">
-          Les sessions de matchs amicaux organisees entre nos equipes. Chaque
-          scrim regroupe plusieurs matchs joues sur une journee.
+          {t.subtitle}
         </Paragraph>
 
         {scrims.length === 0 && (
           <div className="mt-10 rounded-2xl border border-neutral-700/50 bg-neutral-800/30 p-8 text-center text-neutral-400">
-            Pas encore de scrim public. Les capitaines peuvent en proposer
-            depuis{' '}
+            {t.emptyBefore}{' '}
             <Link href="/scrim" className="text-blue-400 hover:underline">
-              la page scrim
+              {t.emptyLink}
             </Link>
-            .
+            {t.emptyAfter}
           </div>
         )}
 
         {running.length > 0 && (
-          <ScrimSection title="En cours" scrims={running} />
+          <ScrimSection title={t.sectionRunning} scrims={running} />
         )}
         {upcoming.length > 0 && (
-          <ScrimSection title="A venir" scrims={upcoming} />
+          <ScrimSection title={t.sectionUpcoming} scrims={upcoming} />
         )}
-        {past.length > 0 && <ScrimSection title="Termines" scrims={past} />}
+        {past.length > 0 && (
+          <ScrimSection title={t.sectionPast} scrims={past} />
+        )}
       </div>
     </div>
   );
@@ -164,6 +169,9 @@ function ScrimSection({
   title: string;
   scrims: PublicScrim[];
 }) {
+  const t = useT('scrimsPage');
+  const { lang } = useLang();
+  const locale = lang === 'fr' ? 'fr-FR' : 'en-GB';
   return (
     <section className="mt-10">
       <h2 className="text-xl font-semibold mb-4 text-neutral-200">{title}</h2>
@@ -181,17 +189,17 @@ function ScrimSection({
                     s.status
                   )}`}
                 >
-                  {statusLabel(s.status)}
+                  {statusLabel(s.status, t)}
                 </span>
                 <span className="font-medium truncate">{s.name}</span>
               </div>
               <div className="text-xs text-neutral-400">
-                {formatDate(s.scheduled_date)}
+                {formatDate(s.scheduled_date, locale, t.dateTbd)}
               </div>
             </div>
             <div className="mt-3 flex items-center gap-3 text-sm">
               <TeamPill team={s.team1} />
-              <span className="text-neutral-500">vs</span>
+              <span className="text-neutral-500">{t.vs}</span>
               <TeamPill team={s.team2} />
             </div>
           </Link>
@@ -202,7 +210,9 @@ function ScrimSection({
 }
 
 function TeamPill({ team }: { team: ScrimTeam | null }) {
-  if (!team) return <span className="text-neutral-500 italic">a definir</span>;
+  const t = useT('scrimsPage');
+  if (!team)
+    return <span className="text-neutral-500 italic">{t.teamTbd}</span>;
   return (
     <span className="inline-flex items-center gap-2">
       {team.logo_url ? (
