@@ -2,9 +2,11 @@ import { useRef, useState } from 'react';
 import Link from 'next/link';
 import { supabaseClient } from '@/utils/supabase';
 import { BATTLE_TAG_REGEX } from '@/utils/teams/addMember';
+import { useT } from '@/lib/i18n/useT';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 
 function RegisterPage() {
+  const t = useT('registerPage');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -31,8 +33,7 @@ function RegisterPage() {
 
   // Message neutre, identique au chemin succès, pour ne pas révéler si un
   // email est déjà enregistré (anti-énumération).
-  const NEUTRAL_SIGNUP_MSG =
-    "Si cette adresse n'est pas déjà utilisée, un email de confirmation vient d'être envoyé. Vérifie ta boîte mail, puis connecte-toi.";
+  const NEUTRAL_SIGNUP_MSG = t.neutralSignupMsg;
 
   const focusFirstError = (field: 'battleTag' | 'password' | 'confirm') => {
     setFieldError(field);
@@ -67,16 +68,10 @@ function RegisterPage() {
       });
 
       if (error) {
-        throw new Error(
-          error.message ||
-            "Impossible de démarrer l'inscription via Discord pour le moment."
-        );
+        throw new Error(error.message || t.discordStartError);
       }
     } catch (err: unknown) {
-      setErrorMsg(
-        (err as Error)?.message ||
-          'Une erreur est survenue avec Discord. Réessaie dans un instant.'
-      );
+      setErrorMsg((err as Error)?.message || t.discordGenericError);
       setOauthLoading(false);
     }
   };
@@ -90,19 +85,19 @@ function RegisterPage() {
     // On valide la valeur brute du mot de passe (pas de .trim() : un mot de
     // passe peut légitimement contenir des espaces).
     if (password.length < 8) {
-      setErrorMsg('Le mot de passe doit contenir au moins 8 caractères.');
+      setErrorMsg(t.passwordTooShort);
       focusFirstError('password');
       return;
     }
 
     if (password !== confirm) {
-      setErrorMsg('Les mots de passe ne correspondent pas.');
+      setErrorMsg(t.passwordMismatch);
       focusFirstError('confirm');
       return;
     }
 
     if (battleTag.trim() && !BATTLETAG_PATTERN.test(battleTag.trim())) {
-      setErrorMsg('Le BattleTag doit être au format Pseudo#0000.');
+      setErrorMsg(t.battleTagInvalid);
       focusFirstError('battleTag');
       return;
     }
@@ -137,9 +132,7 @@ function RegisterPage() {
       }
 
       if (res.status === 429) {
-        setErrorMsg(
-          'Trop de tentatives. Patiente quelques instants avant de réessayer.'
-        );
+        setErrorMsg(t.rateLimited);
         focusError();
         return;
       }
@@ -148,13 +141,11 @@ function RegisterPage() {
       setErrorMsg(
         data?.code === 'VALIDATION' && typeof data.error === 'string'
           ? data.error
-          : 'Impossible de créer le compte pour le moment. Réessaie dans un instant.'
+          : t.createAccountError
       );
       focusError();
     } catch {
-      setErrorMsg(
-        'Une erreur est survenue pendant la création du compte. Réessaie dans un instant.'
-      );
+      setErrorMsg(t.submitGenericError);
       focusError();
     } finally {
       setLoading(false);
@@ -168,17 +159,16 @@ function RegisterPage() {
           <div className="flex flex-col items-center mb-8">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[10px] uppercase tracking-[0.16em] text-gray-300">
               <span className="px-1.5 py-[2px] rounded-full bg-gradient-to-r from-purple-400/90 to-pink-400/90 text-black font-semibold">
-                Staff / Joueur
+                {t.badgeRole}
               </span>
-              <span className="text-[10px]">Inscription</span>
+              <span className="text-[10px]">{t.badgeAction}</span>
             </div>
 
             <h1 className="text-3xl font-bold text-gradient text-center mt-4">
-              Créer un compte
+              {t.title}
             </h1>
             <p className="text-sm text-gray-300 mt-2 text-center max-w-sm">
-              Inscris-toi avec ton email. Tu recevras un lien pour confirmer ton
-              compte avant de te connecter.
+              {t.subtitle}
             </p>
           </div>
 
@@ -189,7 +179,7 @@ function RegisterPage() {
                   htmlFor="displayName"
                   className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2"
                 >
-                  Nom affiché (optionnel)
+                  {t.displayNameLabel}
                 </label>
                 <input
                   id="displayName"
@@ -197,7 +187,7 @@ function RegisterPage() {
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
                   className="w-full rounded-xl border border-white/15 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/80 focus:border-purple-400/80 transition"
-                  placeholder="Ex: LaKiiroi"
+                  placeholder={t.displayNamePlaceholder}
                 />
               </div>
 
@@ -206,7 +196,7 @@ function RegisterPage() {
                   htmlFor="battleTag"
                   className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2"
                 >
-                  BattleTag (format Pseudo#0000)
+                  {t.battleTagLabel}
                 </label>
                 <input
                   ref={battleTagRef}
@@ -219,7 +209,7 @@ function RegisterPage() {
                     fieldError === 'battleTag' ? 'register-error' : undefined
                   }
                   className="w-full rounded-xl border border-white/15 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/80 focus:border-purple-400/80 transition"
-                  placeholder="Ex: Gamerette#1234"
+                  placeholder={t.battleTagPlaceholder}
                 />
               </div>
 
@@ -228,7 +218,7 @@ function RegisterPage() {
                   htmlFor="email"
                   className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2"
                 >
-                  Email
+                  {t.emailLabel}
                 </label>
                 <input
                   id="email"
@@ -238,7 +228,7 @@ function RegisterPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full rounded-xl border border-white/15 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/80 focus:border-purple-400/80 transition"
-                  placeholder="prenom.nom@email.tld"
+                  placeholder={t.emailPlaceholder}
                 />
               </div>
 
@@ -247,7 +237,7 @@ function RegisterPage() {
                   htmlFor="password"
                   className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2"
                 >
-                  Mot de passe
+                  {t.passwordLabel}
                 </label>
                 <input
                   ref={passwordRef}
@@ -271,7 +261,7 @@ function RegisterPage() {
                   htmlFor="confirm"
                   className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2"
                 >
-                  Confirmation
+                  {t.confirmLabel}
                 </label>
                 <input
                   ref={confirmRef}
@@ -321,7 +311,7 @@ function RegisterPage() {
                       : 'bg-purple-600 hover:bg-purple-500'
                   }`}
                 >
-                  {loading ? 'Création...' : 'Créer le compte'}
+                  {loading ? t.submitLoading : t.submit}
                 </button>
               </div>
 
@@ -347,18 +337,18 @@ function RegisterPage() {
                       fill="currentColor"
                     />
                   </svg>
-                  <span>Continuer avec Discord</span>
+                  <span>{t.continueWithDiscord}</span>
                 </button>
               </div>
             </form>
 
             <div className="mt-4 text-center text-sm text-gray-300 space-x-3">
               <Link href="/login" className="hover:text-white">
-                Connexion
+                {t.linkLogin}
               </Link>
               <span className="text-gray-600">•</span>
               <Link href="/" className="hover:text-white">
-                Retour au site
+                {t.linkBackToSite}
               </Link>
             </div>
           </div>
@@ -373,13 +363,12 @@ function RegisterPage() {
                 🎙️
               </span>
               <span>
-                Tu veux caster nos matchs ? Crée ton compte, puis fais ta
-                demande depuis ton espace joueuse.{' '}
+                {t.castBlurb}{' '}
                 <Link
                   href="/login?next=/player/caster-application"
                   className="font-semibold underline decoration-cyan-300/60 underline-offset-2 hover:text-white"
                 >
-                  Rejoindre le cast
+                  {t.castLink}
                 </Link>
               </span>
             </p>

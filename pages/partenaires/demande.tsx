@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
+import { useT } from '@/lib/i18n/useT';
 
 type FormData = {
   companyName: string;
@@ -11,13 +12,6 @@ type FormData = {
   category: 'super' | 'major' | 'cultural' | 'other' | '';
   message: string;
   budgetRange: string;
-};
-
-const categoryLabels: Record<string, string> = {
-  super: 'Super partenaire (naming, activations principales)',
-  major: 'Partenaire majeur (production, cashprize, matériel)',
-  cultural: 'Partenaire culturel (médiation, talents, ateliers)',
-  other: 'Autre / Je ne sais pas encore',
 };
 
 const budgetOptions = [
@@ -31,6 +25,25 @@ const budgetOptions = [
 ];
 
 function PartnershipRequestPage() {
+  const t = useT('partnerRequest');
+
+  const categoryLabels: Record<string, string> = {
+    super: t.categorySuper,
+    major: t.categoryMajor,
+    cultural: t.categoryCultural,
+    other: t.categoryOther,
+  };
+
+  const budgetLabels: Record<string, string> = {
+    'Moins de 500 EUR': t.budgetLt500,
+    '500 - 1000 EUR': t.budget500to1000,
+    '1000 - 3000 EUR': t.budget1000to3000,
+    '3000 - 5000 EUR': t.budget3000to5000,
+    'Plus de 5000 EUR': t.budgetGt5000,
+    'Soutien en nature (matériel, services)': t.budgetInKind,
+    'À discuter': t.budgetToDiscuss,
+  };
+
   const [form, setForm] = useState<FormData>({
     companyName: '',
     contactName: '',
@@ -56,23 +69,23 @@ function PartnershipRequestPage() {
 
     // Basic validation
     if (!form.companyName.trim()) {
-      setError("Le nom de l'entreprise est requis.");
+      setError(t.errorCompanyRequired);
       return;
     }
     if (!form.contactName.trim()) {
-      setError('Le nom du contact est requis.');
+      setError(t.errorContactRequired);
       return;
     }
     if (!form.email.trim()) {
-      setError("L'email est requis.");
+      setError(t.errorEmailRequired);
       return;
     }
     if (!form.category) {
-      setError('Veuillez sélectionner une catégorie.');
+      setError(t.errorCategoryRequired);
       return;
     }
     if (!form.message.trim()) {
-      setError('Le message est requis.');
+      setError(t.errorMessageRequired);
       return;
     }
 
@@ -88,14 +101,12 @@ function PartnershipRequestPage() {
       const json = await res.json();
 
       if (!res.ok) {
-        throw new Error(json.error || "Erreur lors de l'envoi.");
+        throw new Error(json.error || t.errorSendGeneric);
       }
 
       setSuccess(true);
     } catch (err: unknown) {
-      setError(
-        (err as Error).message || "Une erreur est survenue lors de l'envoi."
-      );
+      setError((err as Error).message || t.errorSendFallback);
     } finally {
       setSending(false);
     }
@@ -120,16 +131,13 @@ function PartnershipRequestPage() {
               />
             </svg>
           </div>
-          <h1 className="text-3xl font-bold mb-4">Demande envoyée !</h1>
-          <p className="text-gray-300 mb-6">
-            Merci pour votre intérêt ! Notre équipe examinera votre demande et
-            vous recontactera dans les plus brefs délais.
-          </p>
+          <h1 className="text-3xl font-bold mb-4">{t.successTitle}</h1>
+          <p className="text-gray-300 mb-6">{t.successMessage}</p>
           <Link
             href="/partenaires"
             className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition hover:brightness-110"
           >
-            Retour aux partenaires
+            {t.backToPartners}
           </Link>
         </div>
       </div>
@@ -162,17 +170,13 @@ function PartnershipRequestPage() {
                 d="M15 19l-7-7 7-7"
               />
             </svg>
-            Retour aux partenaires
+            {t.backToPartners}
           </Link>
 
           <h1 className="text-3xl sm:text-4xl font-bold leading-tight">
-            Devenir partenaire
+            {t.pageTitle}
           </h1>
-          <p className="mt-4 text-gray-300">
-            Remplissez ce formulaire pour nous présenter votre projet de
-            partenariat. Notre équipe vous recontactera rapidement pour
-            construire ensemble une collaboration sur-mesure.
-          </p>
+          <p className="mt-4 text-gray-300">{t.intro}</p>
         </div>
       </div>
 
@@ -201,75 +205,75 @@ function PartnershipRequestPage() {
           <div className="grid gap-6 sm:grid-cols-2">
             <div className="sm:col-span-2">
               <label className="block text-sm font-medium text-gray-300 mb-2">
-                Nom de l&apos;entreprise / organisation *
+                {t.labelCompany}
               </label>
               <input
                 type="text"
                 value={form.companyName}
                 onChange={(e) => updateField('companyName', e.target.value)}
                 className="w-full px-4 py-3 rounded-xl bg-neutral-800 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-purple-500 text-white placeholder-gray-500"
-                placeholder="Votre entreprise"
+                placeholder={t.phCompany}
                 required
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
-                Nom du contact *
+                {t.labelContact}
               </label>
               <input
                 type="text"
                 value={form.contactName}
                 onChange={(e) => updateField('contactName', e.target.value)}
                 className="w-full px-4 py-3 rounded-xl bg-neutral-800 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-purple-500 text-white placeholder-gray-500"
-                placeholder="Prénom Nom"
+                placeholder={t.phContact}
                 required
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
-                Email *
+                {t.labelEmail}
               </label>
               <input
                 type="email"
                 value={form.email}
                 onChange={(e) => updateField('email', e.target.value)}
                 className="w-full px-4 py-3 rounded-xl bg-neutral-800 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-purple-500 text-white placeholder-gray-500"
-                placeholder="contact@entreprise.com"
+                placeholder={t.phEmail}
                 required
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
-                Téléphone
+                {t.labelPhone}
               </label>
               <input
                 type="tel"
                 value={form.phone}
                 onChange={(e) => updateField('phone', e.target.value)}
                 className="w-full px-4 py-3 rounded-xl bg-neutral-800 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-purple-500 text-white placeholder-gray-500"
-                placeholder="+33 6 00 00 00 00"
+                placeholder={t.phPhone}
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
-                Site web
+                {t.labelWebsite}
               </label>
               <input
                 type="url"
                 value={form.website}
                 onChange={(e) => updateField('website', e.target.value)}
                 className="w-full px-4 py-3 rounded-xl bg-neutral-800 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-purple-500 text-white placeholder-gray-500"
-                placeholder="https://www.exemple.com"
+                placeholder={t.phWebsite}
               />
             </div>
 
             <div className="sm:col-span-2">
               <label className="block text-sm font-medium text-gray-300 mb-2">
-                Type de partenariat souhaité *
+                {t.labelCategory}
               </label>
               <select
                 value={form.category}
@@ -277,7 +281,7 @@ function PartnershipRequestPage() {
                 className="w-full px-4 py-3 rounded-xl bg-neutral-800 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
                 required
               >
-                <option value="">Sélectionnez une catégorie</option>
+                <option value="">{t.optionCategoryPlaceholder}</option>
                 {Object.entries(categoryLabels).map(([value, label]) => (
                   <option key={value} value={value}>
                     {label}
@@ -288,19 +292,17 @@ function PartnershipRequestPage() {
 
             <div className="sm:col-span-2">
               <label className="block text-sm font-medium text-gray-300 mb-2">
-                Budget indicatif
+                {t.labelBudget}
               </label>
               <select
                 value={form.budgetRange}
                 onChange={(e) => updateField('budgetRange', e.target.value)}
                 className="w-full px-4 py-3 rounded-xl bg-neutral-800 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
               >
-                <option value="">
-                  Sélectionnez une fourchette (optionnel)
-                </option>
+                <option value="">{t.optionBudgetPlaceholder}</option>
                 {budgetOptions.map((option) => (
                   <option key={option} value={option}>
-                    {option}
+                    {budgetLabels[option] ?? option}
                   </option>
                 ))}
               </select>
@@ -308,14 +310,14 @@ function PartnershipRequestPage() {
 
             <div className="sm:col-span-2">
               <label className="block text-sm font-medium text-gray-300 mb-2">
-                Votre message *
+                {t.labelMessage}
               </label>
               <textarea
                 value={form.message}
                 onChange={(e) => updateField('message', e.target.value)}
                 rows={5}
                 className="w-full px-4 py-3 rounded-xl bg-neutral-800 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-purple-500 text-white placeholder-gray-500 resize-none"
-                placeholder="Présentez votre entreprise et vos attentes pour ce partenariat..."
+                placeholder={t.phMessage}
                 required
               />
             </div>
@@ -330,17 +332,17 @@ function PartnershipRequestPage() {
               {sending ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Envoi en cours...
+                  {t.submitting}
                 </>
               ) : (
-                'Envoyer ma demande'
+                t.submit
               )}
             </button>
             <Link
               href="/partenaires"
               className="px-6 py-3 rounded-xl border border-white/20 text-sm font-semibold text-white text-center transition hover:bg-white/10"
             >
-              Annuler
+              {t.cancel}
             </Link>
           </div>
         </form>

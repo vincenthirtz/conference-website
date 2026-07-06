@@ -9,6 +9,7 @@ import Button from '@/components/Buttons/button';
 import { supabaseClient, purgeSupabaseAuthStorage } from '@/utils/supabase';
 import { STAFF_CACHE_KEY } from '@/hooks/useStaffSession';
 import { useSiteSetting } from '@/hooks/useSiteSettings';
+import { useT } from '@/lib/i18n/useT';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 
 import { logger } from '../utils/logger';
@@ -46,6 +47,7 @@ function primeStaffCache(me: {
 
 const LoginPage = () => {
   const router = useRouter();
+  const t = useT('loginPage');
   const { value: contactEmail } = useSiteSetting('contact_email');
 
   const [email, setEmail] = useState('');
@@ -95,7 +97,7 @@ const LoginPage = () => {
             .catch(() => {});
           purgeSupabaseAuthStorage();
           if (!cancelled) {
-            setError('Email ou mot de passe incorrect.');
+            setError(t.errorInvalidCredentials);
           }
         }
       } catch (err) {
@@ -111,7 +113,7 @@ const LoginPage = () => {
     return () => {
       cancelled = true;
     };
-  }, [router]);
+  }, [router, t]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -123,13 +125,13 @@ const LoginPage = () => {
         await supabaseClient.auth.signInWithPassword({ email, password });
 
       if (authError) {
-        setError('Email ou mot de passe incorrect.');
+        setError(t.errorInvalidCredentials);
         return;
       }
 
       const token = data.session?.access_token;
       if (!token) {
-        setError('Impossible de récupérer la session.');
+        setError(t.errorNoSession);
         return;
       }
 
@@ -162,18 +164,16 @@ const LoginPage = () => {
       if (res.status === 401) {
         await supabaseClient.auth.signOut({ scope: 'local' }).catch(() => {});
         purgeSupabaseAuthStorage();
-        throw new Error('Email ou mot de passe incorrect.');
+        throw new Error(t.errorInvalidCredentials);
       }
 
       if (!data?.user) {
-        setError('Utilisateur non trouvé après la connexion.');
+        setError(t.errorUserNotFound);
       }
     } catch (err: unknown) {
       logger.error('[login] error:', err);
       // On n'expose jamais le message brut (souvent en anglais) à l'écran.
-      setError(
-        'Une erreur est survenue pendant la connexion. Réessaie dans un instant.'
-      );
+      setError(t.errorGeneric);
     } finally {
       setIsSubmitting(false);
     }
@@ -202,16 +202,11 @@ const LoginPage = () => {
       });
 
       if (oauthError) {
-        throw new Error(
-          oauthError.message || 'Connexion Discord impossible pour le moment.'
-        );
+        throw new Error(oauthError.message || t.errorDiscordUnavailable);
       }
     } catch (err: unknown) {
       logger.error('[login] discord error:', err);
-      setError(
-        (err as Error)?.message ||
-          'Une erreur est survenue avec Discord. Réessaie dans un instant.'
-      );
+      setError((err as Error)?.message || t.errorDiscordGeneric);
       setIsSubmitting(false);
     }
   };
@@ -219,7 +214,7 @@ const LoginPage = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
       <Head>
-        <title>Connexion | OW Women&apos;s Cup</title>
+        <title>{t.headTitle}</title>
       </Head>
 
       <main className="flex items-center justify-center px-4 pt-28 pb-20 md:pt-24 md:pb-10">
@@ -230,7 +225,7 @@ const LoginPage = () => {
               typeStyle="heading-md"
               className="text-gradient text-center mt-4"
             >
-              Connexion
+              {t.title}
             </Heading>
 
             <Paragraph
@@ -238,17 +233,14 @@ const LoginPage = () => {
               className="mt-2 text-center max-w-sm"
               textColor="text-gray-300"
             >
-              Connecte-toi pour accéder à ton espace joueur ou au panel
-              d&apos;administration.
+              {t.subtitle}
             </Paragraph>
           </div>
 
           {isCheckingSession ? (
             <div className="flex flex-col items-center justify-center py-20">
               <div className="w-8 h-8 border-2 border-neutral-600 border-t-purple-400 rounded-full animate-spin mb-4" />
-              <p className="text-sm text-gray-400">
-                Vérification de la session...
-              </p>
+              <p className="text-sm text-gray-400">{t.checkingSession}</p>
             </div>
           ) : (
             <>
@@ -259,7 +251,7 @@ const LoginPage = () => {
                       htmlFor="email"
                       className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2"
                     >
-                      Email
+                      {t.emailLabel}
                     </label>
                     <input
                       id="email"
@@ -269,7 +261,7 @@ const LoginPage = () => {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       className="w-full rounded-xl border border-white/15 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/80 focus:border-purple-400/80 transition"
-                      placeholder="prenom.nom@organisation.tld"
+                      placeholder={t.emailPlaceholder}
                     />
                   </div>
 
@@ -278,7 +270,7 @@ const LoginPage = () => {
                       htmlFor="password"
                       className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2"
                     >
-                      Mot de passe
+                      {t.passwordLabel}
                     </label>
                     <input
                       id="password"
@@ -317,14 +309,14 @@ const LoginPage = () => {
                           </svg>
                         </span>
                       </span>
-                      <span>Se souvenir de moi</span>
+                      <span>{t.rememberMe}</span>
                     </label>
 
                     <Link
                       href="/admin/forgot-password"
                       className="text-xs text-purple-300 hover:text-purple-200 hover:underline"
                     >
-                      Mot de passe oublié ?
+                      {t.forgotPassword}
                     </Link>
                   </div>
 
@@ -344,7 +336,7 @@ const LoginPage = () => {
                       className="w-full justify-center px-4 py-2 text-sm font-medium bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 border-0 shadow-lg shadow-purple-900/40"
                       disabled={isSubmitting || isCheckingSession}
                     >
-                      {isSubmitting ? 'Connexion en cours…' : 'Se connecter'}
+                      {isSubmitting ? t.submitting : t.submit}
                     </Button>
                     <button
                       type="button"
@@ -368,7 +360,7 @@ const LoginPage = () => {
                             fill="currentColor"
                           />
                         </svg>
-                        <span>Continuer avec Discord</span>
+                        <span>{t.continueWithDiscord}</span>
                       </span>
                     </button>
                   </div>
@@ -380,12 +372,12 @@ const LoginPage = () => {
                     textColor="text-gray-400"
                     className="text-center"
                   >
-                    Pas encore de compte ?{' '}
+                    {t.noAccount}{' '}
                     <Link
                       href="/register"
                       className="text-purple-300 hover:text-purple-200 underline"
                     >
-                      Créer mon compte
+                      {t.createAccount}
                     </Link>
                   </Paragraph>
                 </div>
@@ -397,7 +389,7 @@ const LoginPage = () => {
                   href="/"
                   className="text-xs text-gray-400 hover:text-gray-200 hover:underline"
                 >
-                  ← Retour au site public
+                  {t.backToPublic}
                 </Link>
               </div>
             </>

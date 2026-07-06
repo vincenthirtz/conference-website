@@ -2,6 +2,7 @@ import Link from 'next/link';
 import Contact from '@/components/Form/Contact';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { useSiteSetting } from '@/hooks/useSiteSettings';
+import { useT } from '@/lib/i18n/useT';
 
 type ContactChannel = {
   title: string;
@@ -12,56 +13,54 @@ type ContactChannel = {
   };
 };
 
-function getContactChannels(contactEmail: string): ContactChannel[] {
+function getContactChannels(
+  contactEmail: string,
+  t: ReturnType<typeof useT<'contactPage'>>
+): ContactChannel[] {
   return [
     {
-      title: 'Email principal',
-      desc: 'Questions générales, inscriptions, suivi des demandes staff ou équipes.',
+      title: t.channelEmailTitle,
+      desc: t.channelEmailDesc,
       cta: {
         label: contactEmail,
         href: `mailto:${contactEmail}?subject=Contact%20OW%20Women%27s%20Cup`,
       },
     },
     {
-      title: 'Discord communautaire',
-      desc: 'Rejoins le serveur pour discuter avec le staff et la communauté.',
+      title: t.channelDiscordTitle,
+      desc: t.channelDiscordDesc,
       cta: {
-        label: 'Serveur Discord',
+        label: t.channelDiscordCta,
         href: 'https://discord.gg/gERSsjC3Vd',
       },
     },
     {
-      title: 'Partenariats & presse',
+      title: t.channelPressTitle,
       desc: (
         <>
-          Collaborations marque, médias ou bénévolat pro (graphisme, cast,
-          prod) — voir nos{' '}
+          {t.channelPressDescBefore}{' '}
           <Link
             href="/partenaires"
             className="font-medium text-purple-300 underline decoration-purple-400/40 underline-offset-2 hover:text-purple-200 hover:decoration-purple-300"
           >
-            partenaires actuels
+            {t.channelPressLink}
           </Link>
-          .
+          {t.channelPressDescAfter}
         </>
       ),
       cta: {
-        label: 'Écrire au staff',
+        label: t.channelPressCta,
         href: `mailto:${contactEmail}?subject=Partenariat%20OW%20Women%27s%20Cup`,
       },
     },
   ];
 }
 
-const helpPoints = [
-  'Temps de réponse moyen : 24 à 48h hors périodes de tournoi en direct.',
-  'En cas d’incident pendant une rencontre, pingez le staff sur Discord pour une prise en charge rapide.',
-  'Les échanges sont modérés : respect et bienveillance obligatoires envers toutes les participantes.',
-];
-
 function ContactPage() {
+  const t = useT('contactPage');
   const { value: contactEmail } = useSiteSetting('contact_email');
-  const contactChannels = getContactChannels(contactEmail);
+  const contactChannels = getContactChannels(contactEmail, t);
+  const helpPoints = [t.helpPoint1, t.helpPoint2, t.helpPoint3];
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
@@ -73,27 +72,26 @@ function ContactPage() {
 
         <div className="relative mx-auto max-w-5xl px-6 pt-32 pb-14 text-center">
           <p className="mx-auto inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.18em] text-gray-200">
-            Contact & support
+            {t.badge}
           </p>
           <h1 className="mt-3 text-4xl font-bold leading-tight sm:text-5xl md:text-6xl">
-            Nous contacter
+            {t.title}
           </h1>
           <p className="mx-auto mt-4 max-w-3xl text-lg text-gray-200">
-            Choisis le canal le plus rapide pour joindre l&apos;équipe OW
-            Women&apos;s Cup : email, Discord ou formulaire direct.
+            {t.intro}
           </p>
           <div className="mt-6 flex flex-wrap items-center justify-center gap-4">
             <a
               href="#formulaire"
               className="rounded-full bg-gradient-to-r from-purple-500 to-pink-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition hover:brightness-110"
             >
-              Ouvrir le formulaire
+              {t.openForm}
             </a>
             <a
               href={`mailto:${contactEmail}?subject=Contact%20OW%20Women%27s%20Cup`}
               className="rounded-full border border-white/15 px-6 py-3 text-sm font-semibold text-white transition hover:border-white/40 hover:bg-white/10"
             >
-              Écrire un email
+              {t.writeEmail}
             </a>
           </div>
         </div>
@@ -127,14 +125,11 @@ function ContactPage() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-xs uppercase tracking-[0.18em] text-gray-200">
-                Support
+                {t.supportLabel}
               </p>
-              <h3 className="text-2xl font-bold">Ce que tu peux attendre</h3>
+              <h3 className="text-2xl font-bold">{t.supportHeading}</h3>
             </div>
-            <p className="text-sm text-gray-200">
-              Nous centralisons les demandes via l’email et le formulaire pour
-              garantir une réponse.
-            </p>
+            <p className="text-sm text-gray-200">{t.supportDesc}</p>
           </div>
           <ul className="mt-6 space-y-3 text-sm text-gray-100">
             {helpPoints.map((item) => (
@@ -148,14 +143,8 @@ function ContactPage() {
             ))}
           </ul>
           <div className="mt-6 rounded-xl border border-white/10 bg-white/5 p-4 text-sm text-gray-100">
-            <p className="font-semibold text-white">
-              À prévoir dans ton message
-            </p>
-            <p className="mt-2">
-              Pour les demandes d’équipes : nom de l’équipe, BattleTag/Twitter
-              des capitaines, disponibilité. Pour les partenariats : objectifs,
-              budget ou contreparties envisagées.
-            </p>
+            <p className="font-semibold text-white">{t.prepareTitle}</p>
+            <p className="mt-2">{t.prepareDesc}</p>
           </div>
         </section>
 
@@ -165,25 +154,22 @@ function ContactPage() {
         >
           <div className="flex flex-col gap-2 text-center">
             <p className="text-xs uppercase tracking-[0.18em] text-gray-300">
-              Formulaire
+              {t.formLabel}
             </p>
-            <h3 className="text-2xl font-bold text-white">
-              Envoyer un message
-            </h3>
+            <h3 className="text-2xl font-bold text-white">{t.formHeading}</h3>
           </div>
           <div className="mt-8">
             <Contact />
           </div>
           <div className="mt-4 text-center text-xs text-gray-400">
-            En soumettant ce formulaire, tu acceptes que les informations
-            fournies soient utilisées pour répondre à ta demande. Voir les{' '}
+            {t.formDisclaimerBefore}{' '}
             <Link
               href="/mentions-legales"
               className="text-purple-200 underline decoration-purple-400/60 underline-offset-4 hover:text-white"
             >
-              mentions légales
+              {t.formDisclaimerLink}
             </Link>
-            .
+            {t.formDisclaimerAfter}
           </div>
         </section>
       </main>
