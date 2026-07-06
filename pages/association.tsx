@@ -6,15 +6,18 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { useSiteSetting } from '@/hooks/useSiteSettings';
 import { POLE_KEYS, type PoleKey } from '@/utils/associationPoles';
+import { useT } from '@/lib/i18n/useT';
+
+type AssoDict = ReturnType<typeof useT<'associationPage'>>;
 
 const ADHESION_URL =
   'https://www.helloasso.com/associations/women-s-cup/adhesions/adhesion-2026-2027-women-s-cup';
 
-const adhesionPerks = [
-  'Soutenir financièrement la scène Overwatch féminine francophone.',
-  'Participer aux assemblées générales et voter les orientations.',
-  'Accès prioritaire aux ateliers, scrims et événements communautaires.',
-  'Reçu fiscal HelloAsso dès la finalisation du paiement.',
+const getAdhesionPerks = (t: AssoDict) => [
+  t.perk1,
+  t.perk2,
+  t.perk3,
+  t.perk4,
 ];
 
 import { logger } from '../utils/logger';
@@ -42,11 +45,10 @@ type Props = {
   poleMembers: PoleMember[];
 };
 
-const pillars = [
+const getPillars = (t: AssoDict) => [
   {
-    title: 'Inclusion',
-    detail:
-      'Accompagnement des joueuses d\u00e9butantes et confirm\u00e9es, encadrement staff form\u00e9 et mod\u00e9ration active pour des espaces s\u00fbrs.',
+    title: t.pillar1Title,
+    detail: t.pillar1Detail,
     icon: (
       <svg
         className="w-7 h-7"
@@ -67,9 +69,8 @@ const pillars = [
     border: 'border-purple-500/20',
   },
   {
-    title: 'Visibilit\u00e9',
-    detail:
-      'Casts 100\u202f% f\u00e9minins, interviews et contenus p\u00e9dagogiques pour montrer des r\u00f4les mod\u00e8les et inspirer les futures comp\u00e9titrices.',
+    title: t.pillar2Title,
+    detail: t.pillar2Detail,
     icon: (
       <svg
         className="w-7 h-7"
@@ -90,9 +91,8 @@ const pillars = [
     border: 'border-pink-500/20',
   },
   {
-    title: 'Terrain',
-    detail:
-      'Tournois en ligne, ateliers d\u00e9couverte, mentorat et relais avec les communaut\u00e9s locales pour faire \u00e9merger de nouvelles \u00e9quipes.',
+    title: t.pillar3Title,
+    detail: t.pillar3Detail,
     icon: (
       <svg
         className="w-7 h-7"
@@ -114,18 +114,20 @@ const pillars = [
   },
 ];
 
-const commitments: Array<{ text: React.ReactNode; icon: React.ReactNode }> = [
+const getCommitments = (
+  t: AssoDict
+): Array<{ text: React.ReactNode; icon: React.ReactNode }> => [
   {
     text: (
       <>
-        Respect des{' '}
+        {t.commit1Before}{' '}
         <Link
           href="/rules"
           className="font-medium text-emerald-300 underline decoration-emerald-400/40 underline-offset-2 hover:text-emerald-200 hover:decoration-emerald-300"
         >
-          r&egrave;gles officielles Overwatch
-        </Link>{' '}
-        et du code de conduite Blizzard.
+          {t.commit1Link}
+        </Link>
+        {t.commit1After}
       </>
     ),
     icon: (
@@ -147,14 +149,14 @@ const commitments: Array<{ text: React.ReactNode; icon: React.ReactNode }> = [
   {
     text: (
       <>
-        Charte anti-harc&egrave;lement et{' '}
+        {t.commit2Before}{' '}
         <Link
           href="/support"
           className="font-medium text-emerald-300 underline decoration-emerald-400/40 underline-offset-2 hover:text-emerald-200 hover:decoration-emerald-300"
         >
-          proc&eacute;dure de signalement
-        </Link>{' '}
-        claire (staff d&eacute;di&eacute;).
+          {t.commit2Link}
+        </Link>
+        {t.commit2After}
       </>
     ),
     icon: (
@@ -174,7 +176,7 @@ const commitments: Array<{ text: React.ReactNode; icon: React.ReactNode }> = [
     ),
   },
   {
-    text: 'Priorit\u00e9 aux opportunit\u00e9s pour les talents f\u00e9minins : joueuses, casters, admins, graphistes.',
+    text: t.commit3,
     icon: (
       <svg
         className="w-5 h-5 text-emerald-400 flex-shrink-0"
@@ -192,7 +194,7 @@ const commitments: Array<{ text: React.ReactNode; icon: React.ReactNode }> = [
     ),
   },
   {
-    text: 'Transparence budg\u00e9taire : rapports d\u2019impact et allocation des dons par poste.',
+    text: t.commit4,
     icon: (
       <svg
         className="w-5 h-5 text-emerald-400 flex-shrink-0"
@@ -216,7 +218,9 @@ const commitments: Array<{ text: React.ReactNode; icon: React.ReactNode }> = [
   },
 ];
 
-const teamRoles: Array<{
+const getTeamRoles = (
+  t: AssoDict
+): Array<{
   poleKey: PoleKey;
   title: string;
   desc: string;
@@ -224,11 +228,11 @@ const teamRoles: Array<{
   iconColor: string;
   badge: string;
   icon: React.ReactNode;
-}> = [
+}> => [
   {
     poleKey: 'direction',
-    title: 'Direction & admin',
-    desc: 'Organisation g\u00e9n\u00e9rale, partenariats, suivi des budgets.',
+    title: t.role1Title,
+    desc: t.role1Desc,
     accent: 'from-purple-500/25 to-purple-600/5',
     iconColor: 'text-purple-300',
     badge: 'border-purple-400/30 bg-purple-500/10 text-purple-200',
@@ -250,8 +254,8 @@ const teamRoles: Array<{
   },
   {
     poleKey: 'tournoi',
-    title: 'Tournoi & arbitrage',
-    desc: 'R\u00e8gles, lobby settings, gestion des matchs et litiges.',
+    title: t.role2Title,
+    desc: t.role2Desc,
     accent: 'from-cyan-500/25 to-cyan-600/5',
     iconColor: 'text-cyan-300',
     badge: 'border-cyan-400/30 bg-cyan-500/10 text-cyan-200',
@@ -273,8 +277,8 @@ const teamRoles: Array<{
   },
   {
     poleKey: 'production',
-    title: 'Production & cast',
-    desc: 'Overlay, graphismes, casters et mod\u00e9ration live.',
+    title: t.role3Title,
+    desc: t.role3Desc,
     accent: 'from-pink-500/25 to-pink-600/5',
     iconColor: 'text-pink-300',
     badge: 'border-pink-400/30 bg-pink-500/10 text-pink-200',
@@ -296,8 +300,8 @@ const teamRoles: Array<{
   },
   {
     poleKey: 'communaute',
-    title: 'Communaut\u00e9',
-    desc: 'Mentorat, ateliers, communication et support joueuses/\u00e9quipes.',
+    title: t.role4Title,
+    desc: t.role4Desc,
     accent: 'from-emerald-500/25 to-emerald-600/5',
     iconColor: 'text-emerald-300',
     badge: 'border-emerald-400/30 bg-emerald-500/10 text-emerald-200',
@@ -319,32 +323,27 @@ const teamRoles: Array<{
   },
 ];
 
-const stats = [
-  { value: '100%', label: 'F\u00e9minin' },
-  { value: '3', label: '\u00c9ditions' },
-  { value: '10+', label: 'B\u00e9n\u00e9voles' },
-  { value: '50+', label: 'Joueuses' },
+const getStats = (t: AssoDict) => [
+  { value: '100%', label: t.stat1Label },
+  { value: '3', label: t.stat2Label },
+  { value: '10+', label: t.stat3Label },
+  { value: '50+', label: t.stat4Label },
 ];
 
-const timeline = [
-  {
-    year: '2025',
-    title: 'La naissance',
-    desc: 'Premi\u00e8re \u00e9dition de l\u2019OW Women\u2019s Cup. Un pari fou : un tournoi Overwatch 100\u202f% f\u00e9minin et francophone, port\u00e9 par une poign\u00e9e de passionn\u00e9es.',
-  },
-  {
-    year: '2026',
-    title: 'La croissance',
-    desc: 'Deuxi\u00e8me \u00e9dition avec plus d\u2019\u00e9quipes, des partenariats, un cast professionnel en direct sur Twitch et la cr\u00e9ation de l\u2019association.',
-  },
-  {
-    year: '2027',
-    title: 'L\u2019ambition',
-    desc: 'Troisi\u00e8me \u00e9dition en pr\u00e9paration avec un format \u00e9largi, un tournoi mixte, et l\u2019objectif de devenir une r\u00e9f\u00e9rence de l\u2019esport f\u00e9minin francophone.',
-  },
+const getTimeline = (t: AssoDict) => [
+  { year: '2025', title: t.timeline1Title, desc: t.timeline1Desc },
+  { year: '2026', title: t.timeline2Title, desc: t.timeline2Desc },
+  { year: '2027', title: t.timeline3Title, desc: t.timeline3Desc },
 ];
 
 function AssociationPage({ castMembers, poleMembers }: Props) {
+  const t = useT('associationPage');
+  const adhesionPerks = getAdhesionPerks(t);
+  const pillars = getPillars(t);
+  const commitments = getCommitments(t);
+  const teamRoles = getTeamRoles(t);
+  const stats = getStats(t);
+  const timeline = getTimeline(t);
   const { value: contactEmail } = useSiteSetting('contact_email');
 
   const membersByPole = POLE_KEYS.reduce<Record<PoleKey, PoleMember[]>>(
@@ -381,19 +380,14 @@ function AssociationPage({ castMembers, poleMembers }: Props) {
         <div className="relative mx-auto max-w-5xl px-6 pt-36 pb-20 text-center">
           <p className="mx-auto inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.18em] text-gray-300 backdrop-blur-sm">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            Association loi 1901
+            {t.heroBadge}
           </p>
           <h1 className="mt-5 text-4xl font-bold leading-[1.1] sm:text-5xl md:text-6xl lg:text-7xl">
-            <span className="block">Faire briller</span>
-            <span className="block text-gradient">
-              l&apos;esport f&eacute;minin
-            </span>
+            <span className="block">{t.heroTitle1}</span>
+            <span className="block text-gradient">{t.heroTitle2}</span>
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-gray-300">
-            La Women&apos;s Cup est une association b&eacute;n&eacute;vole qui
-            organise le premier tournoi Overwatch 100&nbsp;% f&eacute;minin et
-            francophone. Notre mission&nbsp;: cr&eacute;er des espaces inclusifs
-            et ambitieux pour les talents de la sc&egrave;ne comp&eacute;titive.
+            {t.heroSubtitle}
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
             <a
@@ -402,19 +396,19 @@ function AssociationPage({ castMembers, poleMembers }: Props) {
               rel="noopener noreferrer"
               className="group relative rounded-full bg-gradient-to-r from-purple-500 to-pink-500 px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition-all hover:shadow-xl hover:shadow-purple-900/50 hover:-translate-y-0.5"
             >
-              Adh&eacute;rer 2026&nbsp;-&nbsp;2027
+              {t.ctaAdhere2627}
             </a>
             <Link
               href="/don"
               className="rounded-full border border-white/15 bg-white/5 backdrop-blur-sm px-7 py-3.5 text-sm font-semibold text-white transition hover:border-white/30 hover:bg-white/10"
             >
-              Faire un don
+              {t.ctaDonate}
             </Link>
             <Link
               href="#adhesion"
               className="rounded-full border border-white/15 bg-white/5 backdrop-blur-sm px-7 py-3.5 text-sm font-semibold text-white transition hover:border-white/30 hover:bg-white/10"
             >
-              Voir les avantages
+              {t.ctaSeePerks}
             </Link>
           </div>
 
@@ -440,10 +434,10 @@ function AssociationPage({ castMembers, poleMembers }: Props) {
         <section>
           <div className="text-center mb-12">
             <p className="text-xs uppercase tracking-[0.18em] text-purple-300">
-              Notre parcours
+              {t.historyEyebrow}
             </p>
             <h2 className="mt-2 text-3xl font-bold sm:text-4xl">
-              Une aventure qui grandit
+              {t.historyTitle}
             </h2>
           </div>
 
@@ -480,14 +474,13 @@ function AssociationPage({ castMembers, poleMembers }: Props) {
         <section>
           <div className="text-center mb-10">
             <p className="text-xs uppercase tracking-[0.18em] text-pink-300">
-              Nos valeurs
+              {t.pillarsEyebrow}
             </p>
             <h2 className="mt-2 text-3xl font-bold sm:text-4xl">
-              Trois piliers fondateurs
+              {t.pillarsTitle}
             </h2>
             <p className="mt-3 mx-auto max-w-xl text-sm text-gray-400">
-              Chaque action de l&apos;association s&apos;inscrit dans une de ces
-              missions.
+              {t.pillarsIntro}
             </p>
           </div>
 
@@ -518,16 +511,13 @@ function AssociationPage({ castMembers, poleMembers }: Props) {
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between mb-8">
             <div>
               <p className="text-xs uppercase tracking-[0.18em] text-emerald-300">
-                Engagements
+                {t.commitmentsEyebrow}
               </p>
               <h3 className="mt-1 text-2xl font-bold sm:text-3xl">
-                Ce qui nous guide
+                {t.commitmentsTitle}
               </h3>
             </div>
-            <p className="text-sm text-gray-400 max-w-xs">
-              Un cadre sain pour les joueuses, le staff et toute la
-              communaut&eacute;.
-            </p>
+            <p className="text-sm text-gray-400 max-w-xs">{t.commitmentsIntro}</p>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
@@ -559,17 +549,14 @@ function AssociationPage({ castMembers, poleMembers }: Props) {
             <div>
               <p className="inline-flex items-center gap-2 rounded-full border border-purple-400/30 bg-purple-500/10 px-3 py-1 text-xs uppercase tracking-[0.18em] text-purple-200">
                 <span className="h-1.5 w-1.5 rounded-full bg-pink-400 animate-pulse" />
-                Campagne ouverte
+                {t.adhesionCampaign}
               </p>
               <h3 className="mt-4 text-3xl font-bold sm:text-4xl">
-                <span className="block">Devenir adh&eacute;rent&middot;e</span>
-                <span className="block text-gradient">saison 2026 - 2027</span>
+                <span className="block">{t.adhesionTitle1}</span>
+                <span className="block text-gradient">{t.adhesionTitle2}</span>
               </h3>
               <p className="mt-4 max-w-xl text-sm leading-relaxed text-gray-300">
-                Rejoindre l&apos;association, c&apos;est faire vivre la
-                comp&eacute;tition Overwatch f&eacute;minine francophone et
-                soutenir directement nos actions toute la saison. L&apos;adh&eacute;sion
-                est valable jusqu&apos;au 31 ao&ucirc;t 2027.
+                {t.adhesionBody}
               </p>
 
               <ul className="mt-6 space-y-3">
@@ -603,7 +590,7 @@ function AssociationPage({ castMembers, poleMembers }: Props) {
                   rel="noopener noreferrer"
                   className="group inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition-all hover:shadow-xl hover:shadow-purple-900/50 hover:-translate-y-0.5"
                 >
-                  Adh&eacute;rer sur HelloAsso
+                  {t.adhereHelloasso}
                   <svg
                     className="h-4 w-4 transition-transform group-hover:translate-x-1"
                     fill="none"
@@ -620,8 +607,7 @@ function AssociationPage({ castMembers, poleMembers }: Props) {
                   </svg>
                 </a>
                 <span className="text-xs text-gray-400">
-                  Paiement s&eacute;curis&eacute; &middot; Re&ccedil;u fiscal
-                  automatique
+                  {t.adhesionSecure}
                 </span>
               </div>
             </div>
@@ -630,19 +616,18 @@ function AssociationPage({ castMembers, poleMembers }: Props) {
               <div className="flex flex-col items-center gap-3 rounded-2xl border border-white/15 bg-white/95 p-4 shadow-xl shadow-purple-900/30">
                 <Image
                   src="/images/qradhesion2026.png"
-                  alt="QR code vers la campagne d'adh&eacute;sion 2026-2027"
+                  alt={t.qrAlt}
                   width={180}
                   height={180}
                   className="rounded-lg"
                   unoptimized
                 />
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-700">
-                  Scanner pour adh&eacute;rer
+                  {t.qrScan}
                 </p>
               </div>
               <p className="mt-3 max-w-[200px] text-center text-[11px] leading-relaxed text-gray-400 md:text-right">
-                Pointe ton t&eacute;l&eacute;phone vers ce QR code pour acc&eacute;der
-                directement au formulaire HelloAsso.
+                {t.qrHint}
               </p>
             </div>
           </div>
@@ -652,15 +637,13 @@ function AssociationPage({ castMembers, poleMembers }: Props) {
         <section>
           <div className="text-center mb-10">
             <p className="text-xs uppercase tracking-[0.18em] text-cyan-300">
-              Qui fait quoi
+              {t.polesEyebrow}
             </p>
             <h3 className="mt-2 text-2xl font-bold sm:text-3xl">
-              Les p&ocirc;les de l&apos;&eacute;quipe
+              {t.polesTitle}
             </h3>
             <p className="mt-3 mx-auto max-w-xl text-sm text-gray-400">
-              Chacun peut proposer son aide. L&apos;asso fonctionne par
-              p&ocirc;les th&eacute;matiques anim&eacute;s par des
-              b&eacute;n&eacute;voles motiv&eacute;es.
+              {t.polesIntro}
             </p>
           </div>
 
@@ -687,7 +670,7 @@ function AssociationPage({ castMembers, poleMembers }: Props) {
                 {members.length > 0 && (
                   <div className="border-t border-white/5 pt-3">
                     <p className="mb-2 text-[11px] uppercase tracking-[0.16em] text-gray-500">
-                      Membres
+                      {t.membersLabel}
                     </p>
                     <div className="flex flex-wrap gap-1.5">
                       {members.map((member) => {
@@ -756,12 +739,9 @@ function AssociationPage({ castMembers, poleMembers }: Props) {
                 />
               </svg>
             </div>
-            <h4 className="text-2xl font-bold sm:text-3xl">
-              Envie d&apos;aider ou de collaborer&nbsp;?
-            </h4>
+            <h4 className="text-2xl font-bold sm:text-3xl">{t.contactTitle}</h4>
             <p className="mt-3 mx-auto max-w-md text-sm text-gray-300">
-              Rejoins l&apos;asso en tant que b&eacute;n&eacute;vole, propose un
-              partenariat ou pose tes questions. On r&eacute;pond vite.
+              {t.contactBody}
             </p>
             <div className="mt-7 flex flex-wrap justify-center gap-4">
               <a
@@ -789,13 +769,13 @@ function AssociationPage({ castMembers, poleMembers }: Props) {
                 rel="noopener noreferrer"
                 className="rounded-full bg-gradient-to-r from-purple-500 to-pink-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition-all hover:shadow-xl hover:shadow-purple-900/50 hover:-translate-y-0.5"
               >
-                Adh&eacute;rer
+                {t.ctaAdhere}
               </a>
               <Link
                 href="/don"
                 className="rounded-full border border-white/20 bg-white/5 backdrop-blur-sm px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/10 hover:border-white/30"
               >
-                Faire un don
+                {t.ctaDonate}
               </Link>
             </div>
           </div>
