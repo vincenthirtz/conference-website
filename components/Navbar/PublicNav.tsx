@@ -200,7 +200,7 @@ export default function PublicNav({
                     >
                       <span>{linkLabel(sub.title)}</span>
                       {sub.badge && (
-                        <span className="inline-flex items-center rounded-full bg-gradient-to-r from-fuchsia-500 to-purple-500 px-2 py-[2px] text-[10px] font-semibold uppercase tracking-wide text-white shadow-[0_0_12px_-2px_rgba(217,70,239,0.6)]">
+                        <span className="inline-flex items-center rounded-full bg-gradient-to-r from-fuchsia-500 to-purple-500 px-2 py-[2px] text-[10px] font-semibold uppercase tracking-wide text-white shadow-[0_0_12px_-2px_rgba(178,75,224,0.6)]">
                           {sub.badge}
                         </span>
                       )}
@@ -255,7 +255,7 @@ export default function PublicNav({
           <Link
             href="/register"
             data-test="nav-Inscription"
-            className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-fuchsia-400/40 bg-gradient-to-r from-fuchsia-500 to-purple-500 px-4 py-1.5 text-[13px] font-semibold text-white shadow-[0_0_20px_-6px_rgba(217,70,239,0.7)] transition-all hover:from-fuchsia-400 hover:to-purple-400 hover:shadow-[0_0_24px_-4px_rgba(217,70,239,0.85)] focus:outline-none focus-visible:ring-2 focus-visible:ring-fuchsia-400/50"
+            className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-fuchsia-400/40 bg-gradient-to-r from-fuchsia-500 to-purple-500 px-4 py-1.5 text-[13px] font-semibold text-white shadow-[0_0_20px_-6px_rgba(178,75,224,0.7)] transition-all hover:from-fuchsia-400 hover:to-purple-400 hover:shadow-[0_0_24px_-4px_rgba(178,75,224,0.85)] focus:outline-none focus-visible:ring-2 focus-visible:ring-fuchsia-400/50"
           >
             <span>{tNav.signup}</span>
           </Link>

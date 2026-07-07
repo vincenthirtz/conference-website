@@ -223,7 +223,7 @@ export default function Contact({ className = '' }: { className?: string }) {
               disabled={status === 'loading'}
               className="relative inline-flex items-center justify-center rounded-2xl px-6 py-3 font-medium text-white
                 bg-gradient-to-r from-blue-600 to-cyan-500
-                shadow-[0_10px_30px_rgba(0,180,255,0.25)]
+                shadow-[0_10px_30px_rgba(77,255,138,0.25)]
                 hover:from-blue-500 hover:to-cyan-400
                 focus:outline-none focus:ring-2 focus:ring-blue-400/60
                 disabled:opacity-60 disabled:cursor-not-allowed transition"

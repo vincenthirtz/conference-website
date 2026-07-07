@@ -287,7 +287,7 @@ export default function PlayerTopBar({
         >
           <BellIcon />
           {hasNotifs && (
-            <span className="absolute -right-0.5 -top-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-gradient-to-r from-pink-500 to-purple-500 px-1 text-[10px] font-bold leading-none text-white shadow-[0_0_0_2px_rgba(168,85,247,0.25)]">
+            <span className="absolute -right-0.5 -top-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-gradient-to-r from-pink-500 to-purple-500 px-1 text-[10px] font-bold leading-none text-white shadow-[0_0_0_2px_rgba(178,75,224,0.25)]">
               {notifBadgeLabel}
             </span>
           )}

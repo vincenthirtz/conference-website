@@ -155,7 +155,7 @@ function EspaceCapitainePage() {
 
       <main className="mx-auto max-w-5xl space-y-14 px-4 pb-20 sm:px-6">
         {/* Pour qui */}
-        <section className="rounded-3xl border border-white/10 bg-gradient-to-r from-[#0F1F3A] via-[#1A0F2E] to-[#2C0B2C] p-6 sm:p-10 shadow-2xl">
+        <section className="rounded-3xl border border-white/10 bg-gradient-to-r from-[#140a24] via-[#1c0f33] to-[#2a0d3d] p-6 sm:p-10 shadow-2xl">
           <p className="text-xs uppercase tracking-[0.18em] text-gray-200">
             {t.forWhoKicker}
           </p>
@@ -263,7 +263,7 @@ function EspaceCapitainePage() {
         </section>
 
         {/* Final CTA */}
-        <section className="rounded-3xl border border-white/10 bg-gradient-to-r from-[#0F1F3A] via-[#1A0F2E] to-[#2C0B2C] p-6 sm:p-10 shadow-2xl">
+        <section className="rounded-3xl border border-white/10 bg-gradient-to-r from-[#140a24] via-[#1c0f33] to-[#2a0d3d] p-6 sm:p-10 shadow-2xl">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-xs uppercase tracking-[0.18em] text-gray-200">

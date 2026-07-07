@@ -507,7 +507,7 @@ function AssociationPage({ castMembers, poleMembers }: Props) {
         </section>
 
         {/* ── Engagements ─────────────────────────────────── */}
-        <section className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#0F1F3A] via-[#1A0F2E] to-[#2C0B2C] p-8 sm:p-12 shadow-2xl">
+        <section className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#140a24] via-[#1c0f33] to-[#2a0d3d] p-8 sm:p-12 shadow-2xl">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between mb-8">
             <div>
               <p className="text-xs uppercase tracking-[0.18em] text-emerald-300">

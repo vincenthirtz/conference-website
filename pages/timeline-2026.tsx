@@ -358,7 +358,7 @@ function Timeline2026Page({ matches, tournamentSlug }: Props) {
         <div className="relative">
           <div
             aria-hidden
-            className="pointer-events-none absolute inset-y-0 left-4 w-2 rounded-full bg-gradient-to-b from-purple-400 via-purple-300/40 to-pink-500 shadow-[0_0_25px_rgba(168,85,247,0.4)]"
+            className="pointer-events-none absolute inset-y-0 left-4 w-2 rounded-full bg-gradient-to-b from-purple-400 via-purple-300/40 to-pink-500 shadow-[0_0_25px_rgba(178,75,224,0.4)]"
           />
           {highlightPercent !== null && (
             <div

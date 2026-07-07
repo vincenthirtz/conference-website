@@ -335,7 +335,7 @@ function AboutPage({ videoUrl }: AboutPageProps) {
 
         {/* ── Notre mission ──────────────────────────────── */}
         <section>
-          <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#0F1F3A] via-[#1A0F2E] to-[#2C0B2C] p-8 sm:p-12">
+          <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#140a24] via-[#1c0f33] to-[#2a0d3d] p-8 sm:p-12">
             <div className="max-w-3xl mx-auto text-center">
               <p className="text-xs uppercase tracking-[0.18em] text-purple-300">
                 {t.missionEyebrow}

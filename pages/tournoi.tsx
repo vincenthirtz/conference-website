@@ -29,14 +29,13 @@ type Match = {
 
 // Palette & color utils
 const TEAM_PALETTE = [
-  '#3b82f6',
-  '#10b981',
-  '#f59e0b',
-  '#ef4444',
-  '#8b5cf6',
-  '#14b8a6',
-  '#f97316',
-  '#22c55e',
+  '#b24be0',
+  '#7bc96a',
+  '#f0e63c',
+  '#6d1a9c',
+  '#4a9e3a',
+  '#cd85ec',
+  '#a6dd9a',
 ];
 function hashCode(str: string) {
   let h = 0;

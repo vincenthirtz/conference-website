@@ -221,7 +221,7 @@ function LivePage({ channels, loadError }: Props) {
         {/* ── Callouts ────────────────────────────────────── */}
         <section className="grid gap-6 md:grid-cols-2">
           {/* Le principe clé — callout sombre */}
-          <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-[#0F0820] via-[#1A0F2E] to-[#2C0B2C] p-8 shadow-2xl">
+          <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-[#0F0820] via-[#1c0f33] to-[#2a0d3d] p-8 shadow-2xl">
             <div
               className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-fuchsia-500/20 blur-[90px]"
               aria-hidden

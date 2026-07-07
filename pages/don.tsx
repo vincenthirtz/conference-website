@@ -262,7 +262,7 @@ function DonationPage() {
 
         {/* Online donation form via HelloAsso */}
         <section>
-          <div className="relative rounded-3xl border border-white/10 bg-gradient-to-r from-[#0F1F3A] via-[#1A0F2E] to-[#2C0B2C] p-6 sm:p-10 shadow-2xl">
+          <div className="relative rounded-3xl border border-white/10 bg-gradient-to-r from-[#140a24] via-[#1c0f33] to-[#2a0d3d] p-6 sm:p-10 shadow-2xl">
             {COMING_SOON && (
               <div className="absolute inset-0 z-10 flex flex-col items-center justify-center rounded-3xl bg-black/70 backdrop-blur-sm">
                 <p className="text-sm uppercase tracking-[0.18em] text-purple-300">

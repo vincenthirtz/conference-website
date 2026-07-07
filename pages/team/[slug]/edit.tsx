@@ -378,7 +378,7 @@ export default function TeamPublicEditPage({ team, members }: Props) {
                 value={accentColor}
                 onChange={setAccentColor}
                 valid={accentValid}
-                placeholder="#7c3aed"
+                placeholder="#b24be0"
               />
               <ColorField
                 id="secondaryColor"
@@ -386,7 +386,7 @@ export default function TeamPublicEditPage({ team, members }: Props) {
                 value={secondaryColor}
                 onChange={setSecondaryColor}
                 valid={secondaryValid}
-                placeholder="#22d3ee"
+                placeholder="#7bc96a"
                 hint={t.secondaryColorHint}
               />
             </div>

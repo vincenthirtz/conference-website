@@ -3,7 +3,7 @@ import React, { JSX } from 'react';
 import type { TeamProps } from '../../types/components';
 
 function Team({ details, location, className }: TeamProps): JSX.Element {
-  const accent = details.color || '#60a5fa';
+  const accent = details.color || 'var(--color-green)';
 
   return (
     <div

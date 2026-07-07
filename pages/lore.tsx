@@ -45,7 +45,7 @@ const getTypeConfig = (
     bgColor: 'bg-purple-500/20',
     borderColor: 'border-purple-500/30',
     hoverBorder: 'hover:border-purple-400/60',
-    shadow: 'hover:shadow-[0_16px_40px_rgba(168,85,247,0.15)]',
+    shadow: 'hover:shadow-[0_16px_40px_rgba(178,75,224,0.15)]',
   },
   story: {
     label: t.labelStory,

@@ -93,10 +93,10 @@ export default function PWAInstallAndUpdate() {
         <div
           role="status"
           aria-live="polite"
-          className="fixed left-1/2 top-4 z-[70] -translate-x-1/2 max-w-md w-[calc(100%-2rem)] rounded-xl border border-cyan-400/40 bg-[#0e0a1f]/95 px-4 py-3 shadow-[0_8px_28px_rgba(0,240,255,0.25)] backdrop-blur"
+          className="fixed left-1/2 top-4 z-[70] -translate-x-1/2 max-w-md w-[calc(100%-2rem)] rounded-xl border border-cyan-400/40 bg-[#0e0a1f]/95 px-4 py-3 shadow-[0_8px_28px_rgba(77,255,138,0.25)] backdrop-blur"
         >
           <div className="flex items-center gap-3">
-            <span className="inline-block size-2 shrink-0 rounded-full bg-cyan-400 shadow-[0_0_10px_rgba(0,240,255,0.9)]" />
+            <span className="inline-block size-2 shrink-0 rounded-full bg-cyan-400 shadow-[0_0_10px_rgba(77,255,138,0.9)]" />
             <div className="flex-1 text-sm text-white">
               <div className="font-semibold">{t.updateTitle}</div>
               <div className="text-white/70">{t.updateBody}</div>
@@ -139,7 +139,7 @@ export default function PWAInstallAndUpdate() {
               setInstallPrompt(null);
             }
           }}
-          className="fixed bottom-6 right-6 z-[60] inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-cyan-400 via-fuchsia-500 to-violet-600 px-5 py-3 text-sm font-semibold text-white shadow-[0_8px_28px_rgba(187,0,255,0.45)] transition hover:scale-105 active:scale-95"
+          className="fixed bottom-6 right-6 z-[60] inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-cyan-400 via-fuchsia-500 to-violet-600 px-5 py-3 text-sm font-semibold text-white shadow-[0_8px_28px_rgba(194,77,255,0.45)] transition hover:scale-105 active:scale-95"
           aria-label={t.installAria}
         >
           <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

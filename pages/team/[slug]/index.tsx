@@ -659,7 +659,7 @@ export default function TeamPage({
             backgroundImage: gradientStops
               ? `linear-gradient(90deg, ${accent}, ${secondary})`
               : undefined,
-            backgroundColor: gradientStops ? undefined : (accent ?? '#fbbf24'),
+            backgroundColor: gradientStops ? undefined : (accent ?? '#f0e63c'),
           }}
         >
           {team.pinned_announcement}
@@ -965,8 +965,8 @@ export default function TeamPage({
                     style={{
                       backgroundColor: accent
                         ? `${accent}33`
-                        : 'rgba(251,191,36,0.2)',
-                      color: accent ?? '#fbbf24',
+                        : 'rgba(240,230,60,0.2)',
+                      color: accent ?? '#f0e63c',
                     }}
                   >
                     <svg

@@ -960,7 +960,7 @@ function DevelopersPage() {
         {/* Note de fin */}
         <section
           aria-labelledby="notes-heading"
-          className="rounded-2xl border border-white/10 bg-gradient-to-r from-[#0F1F3A] via-[#1A0F2E] to-[#2C0B2C] p-6 sm:p-8"
+          className="rounded-2xl border border-white/10 bg-gradient-to-r from-[#140a24] via-[#1c0f33] to-[#2a0d3d] p-6 sm:p-8"
         >
           <h2 id="notes-heading" className="text-xl font-bold text-white">
             {t.notesTitle}

@@ -57,7 +57,7 @@ export default function OfflineBanner() {
       className={`fixed left-1/2 top-4 z-[55] -translate-x-1/2 w-[calc(100%-2rem)] max-w-md rounded-xl border px-4 py-3 backdrop-blur shadow-lg ${
         showOffline
           ? 'border-amber-400/40 bg-amber-950/85 shadow-[0_8px_28px_rgba(245,158,11,0.35)]'
-          : 'border-cyan-400/30 bg-[#0e0a1f]/95 shadow-[0_8px_28px_rgba(0,240,255,0.22)]'
+          : 'border-cyan-400/30 bg-[#0e0a1f]/95 shadow-[0_8px_28px_rgba(77,255,138,0.22)]'
       }`}
     >
       <div className="flex items-center gap-3 text-sm text-white">
@@ -65,7 +65,7 @@ export default function OfflineBanner() {
           className={`inline-block size-2 shrink-0 rounded-full ${
             showOffline
               ? 'bg-amber-400 shadow-[0_0_10px_rgba(245,158,11,0.9)] animate-pulse'
-              : 'bg-cyan-400 shadow-[0_0_10px_rgba(0,240,255,0.9)] animate-pulse'
+              : 'bg-cyan-400 shadow-[0_0_10px_rgba(77,255,138,0.9)] animate-pulse'
           }`}
         />
         <div className="flex-1 leading-tight">

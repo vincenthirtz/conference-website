@@ -47,7 +47,7 @@ const getFeatures = (t: AppDict): Feature[] => [
     icon: (cls) => (
       <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
         <rect x="3" y="4" width="14" height="14" rx="2" />
-        <circle cx="18" cy="6" r="3.5" fill="#ff2ec8" stroke="none" />
+        <circle cx="18" cy="6" r="3.5" fill="#b24be0" stroke="none" />
       </svg>
     ),
   },
@@ -332,7 +332,7 @@ function AppPage() {
             {audiences.map((a) => (
               <article
                 key={a.title}
-                className="flex flex-col rounded-3xl border border-white/10 bg-gradient-to-b from-[#0F1F3A]/60 via-[#1A0F2E]/60 to-[#2C0B2C]/60 p-6 shadow-xl"
+                className="flex flex-col rounded-3xl border border-white/10 bg-gradient-to-b from-[#140a24]/60 via-[#1c0f33]/60 to-[#2a0d3d]/60 p-6 shadow-xl"
               >
                 <div className="text-3xl mb-3" aria-hidden="true">
                   {a.emoji}
