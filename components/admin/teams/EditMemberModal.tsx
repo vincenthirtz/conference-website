@@ -1,4 +1,5 @@
 import React from 'react';
+import { useAdminT } from '@/lib/i18n/useAdminT';
 import Modal from '@/components/admin/Modal';
 import type { TeamMemberRow } from '@/types/admin';
 import type { TeamRole } from '@/utils/teamRoles';
@@ -27,18 +28,19 @@ function EditMemberModalComponent({
   memberError,
   onSubmit,
 }: EditMemberModalProps) {
+  const t = useAdminT('adminTeamsEditMemberModal');
   return (
     <Modal
       open={open}
       onClose={onClose}
-      title="Modifier le membre"
+      title={t.title}
       footer={
         <>
           <button
             onClick={onClose}
             className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
           >
-            Annuler
+            {t.cancel}
           </button>
           <button
             onClick={onSubmit}
@@ -48,7 +50,7 @@ function EditMemberModalComponent({
             {memberSaving && (
               <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
             )}
-            {memberSaving ? 'Enregistrement...' : 'Enregistrer'}
+            {memberSaving ? t.saving : t.save}
           </button>
         </>
       }
@@ -83,7 +85,9 @@ function EditMemberModalComponent({
           </div>
 
           <div>
-            <label className="block text-sm text-neutral-400 mb-1">Rôle</label>
+            <label className="block text-sm text-neutral-400 mb-1">
+              {t.roleLabel}
+            </label>
             <select
               value={memberForm.role}
               onChange={(e) =>
@@ -111,7 +115,7 @@ function EditMemberModalComponent({
               }
               className="h-4 w-4 rounded border-neutral-600 bg-neutral-700"
             />
-            <span>Remplaçant</span>
+            <span>{t.substitute}</span>
           </label>
 
           {memberError && (

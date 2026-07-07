@@ -7,6 +7,7 @@
 // Lot 6 : ajoute une mini-jauge horizontale "planned vs reel" + un delta texte
 // signe/couleur. La jauge n'apparait que si on a un planning calcule.
 
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import {
   runStatusBadgeClasses,
   runStatusDotClasses,
@@ -76,6 +77,7 @@ export default function RunStatusHeader({
   onEndRun,
   busy,
 }: Props) {
+  const t = useAdminT('adminDirectorRunStatusHeader');
   const doneCount = segments.filter(
     (s) => s.status === 'done' || s.status === 'skipped'
   ).length;
@@ -123,8 +125,11 @@ export default function RunStatusHeader({
     driftGauge = (
       <div
         className="relative h-2 w-[200px] rounded-full bg-neutral-800/80 border border-neutral-700/60"
-        title={`Planifie : ${formatTimeHHMMSS(plannedNowMs)} — Reel : ${formatTimeHHMMSS(realNowMs)}`}
-        aria-label="Jauge de drift planifie vs reel"
+        title={format(t.driftTitle, {
+          planned: formatTimeHHMMSS(plannedNowMs),
+          real: formatTimeHHMMSS(realNowMs),
+        })}
+        aria-label={t.driftGaugeAria}
         data-testid="run-drift-gauge"
         data-drift-sec={Math.round(schedule.driftSec)}
       >
@@ -180,32 +185,35 @@ export default function RunStatusHeader({
           </div>
           <div className="mt-1 text-sm text-neutral-400 flex flex-wrap gap-x-4 gap-y-1">
             <span>
-              <span className="text-neutral-500">Slug :</span>{' '}
+              <span className="text-neutral-500">{t.slugLabel}</span>{' '}
               <code className="text-xs">{run.slug}</code>
             </span>
             <span>
-              <span className="text-neutral-500">Date :</span>{' '}
+              <span className="text-neutral-500">{t.dateLabel}</span>{' '}
               {formatDate(run.scheduled_at)}
             </span>
             {run.started_at && (
               <span>
-                <span className="text-neutral-500">Demarre :</span>{' '}
+                <span className="text-neutral-500">{t.startedLabel}</span>{' '}
                 {formatDate(run.started_at)}
               </span>
             )}
             {run.ended_at && (
               <span>
-                <span className="text-neutral-500">Termine :</span>{' '}
+                <span className="text-neutral-500">{t.endedLabel}</span>{' '}
                 {formatDate(run.ended_at)}
               </span>
             )}
           </div>
           <div className="mt-2 text-sm text-neutral-300">
             <span className="font-medium">{doneCount}</span>
-            <span className="text-neutral-500"> / {total} segments</span>
             <span className="text-neutral-500">
               {' '}
-              {total > 0 ? 'termines' : ''}
+              / {total} {t.segmentsLabel}
+            </span>
+            <span className="text-neutral-500">
+              {' '}
+              {total > 0 ? t.segmentsDone : ''}
             </span>
           </div>
           {driftGauge && (
@@ -228,7 +236,7 @@ export default function RunStatusHeader({
               data-testid="run-start"
               className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-sm font-medium"
             >
-              Demarrer le run
+              {t.startRun}
             </button>
           )}
           {run.status === 'live' && (
@@ -239,7 +247,7 @@ export default function RunStatusHeader({
               data-testid="run-end"
               className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 disabled:opacity-50 text-sm font-medium"
             >
-              Terminer le run
+              {t.endRun}
             </button>
           )}
           {run.status === 'done' && (
@@ -247,7 +255,7 @@ export default function RunStatusHeader({
               className="px-4 py-2 rounded-lg bg-neutral-800 text-sm text-neutral-400 border border-neutral-700"
               data-testid="run-done-label"
             >
-              Run termine
+              {t.runDone}
             </span>
           )}
         </div>

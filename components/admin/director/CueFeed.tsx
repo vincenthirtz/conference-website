@@ -22,11 +22,14 @@
 // urgents traineg deja).
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import LoadingSpinner from '@/components/admin/LoadingSpinner';
 import { playChime } from '@/utils/playChime';
 import { logger } from '@/utils/logger';
 import type { EventCue, EventCueSeverity } from '@/types/events';
+
+type Dict = ReturnType<typeof useAdminT<'adminDirectorCueFeed'>>;
 
 const POLL_INTERVAL_MS = 5_000;
 
@@ -60,18 +63,18 @@ const SEVERITY_BADGE: Record<EventCueSeverity, string> = {
   urgent: 'bg-red-500/25 border-red-400/60 text-red-100',
 };
 
-function formatRelative(iso: string): string {
+function formatRelative(iso: string, tx: Dict): string {
   const t = Date.parse(iso);
   if (!Number.isFinite(t)) return '—';
   const diffSec = Math.max(0, Math.floor((Date.now() - t) / 1000));
-  if (diffSec < 10) return 'a l\'instant';
-  if (diffSec < 60) return `il y a ${diffSec}s`;
+  if (diffSec < 10) return tx.relativeNow;
+  if (diffSec < 60) return format(tx.relativeSeconds, { n: diffSec });
   const m = Math.floor(diffSec / 60);
-  if (m < 60) return `il y a ${m}min`;
+  if (m < 60) return format(tx.relativeMinutes, { n: m });
   const h = Math.floor(m / 60);
-  if (h < 24) return `il y a ${h}h`;
+  if (h < 24) return format(tx.relativeHours, { n: h });
   const d = Math.floor(h / 24);
-  return `il y a ${d}j`;
+  return format(tx.relativeDays, { n: d });
 }
 
 function formatTime(iso: string): string {
@@ -86,6 +89,7 @@ function formatTime(iso: string): string {
 }
 
 export default function CueFeed({ runId, casters, optimisticCue }: Props) {
+  const t = useAdminT('adminDirectorCueFeed');
   const { adminFetchJson } = useAdminFetch();
   const [data, setData] = useState<ApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -106,11 +110,11 @@ export default function CueFeed({ runId, casters, optimisticCue }: Props) {
       setError(null);
     } catch (err) {
       logger.error('[director-comms] cue fetch error', err);
-      setError((err as Error)?.message ?? 'Erreur de chargement des cues.');
+      setError((err as Error)?.message ?? t.errLoading);
     } finally {
       setLoading(false);
     }
-  }, [adminFetchJson, runId]);
+  }, [adminFetchJson, runId, t]);
 
   useEffect(() => {
     setLoading(true);
@@ -178,7 +182,7 @@ export default function CueFeed({ runId, casters, optimisticCue }: Props) {
       className="rounded-2xl border border-neutral-700/50 bg-neutral-800/30 p-5 flex flex-col"
       role="status"
       aria-live="polite"
-      aria-label="Liste des cues envoyes"
+      aria-label={t.listAria}
     >
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-semibold text-neutral-200">Cue feed</h3>
@@ -186,8 +190,8 @@ export default function CueFeed({ runId, casters, optimisticCue }: Props) {
           type="button"
           onClick={fetchData}
           className="text-xs text-neutral-400 hover:text-white"
-          title="Rafraichir"
-          aria-label="Rafraichir les cues"
+          title={t.refreshTitle}
+          aria-label={t.refreshAria}
         >
           ↻
         </button>
@@ -202,9 +206,7 @@ export default function CueFeed({ runId, casters, optimisticCue }: Props) {
           {error}
         </div>
       ) : cues.length === 0 ? (
-        <p className="text-xs text-neutral-500 py-4 text-center">
-          Aucun cue envoye pour ce run.
-        </p>
+        <p className="text-xs text-neutral-500 py-4 text-center">{t.noCues}</p>
       ) : (
         <ul className="space-y-2 max-h-[60vh] overflow-y-auto pr-1">
           {cues.map((cue) => {
@@ -230,7 +232,7 @@ export default function CueFeed({ runId, casters, optimisticCue }: Props) {
                     className="text-[11px] text-neutral-500"
                     title={new Date(cue.created_at).toLocaleString('fr-FR')}
                   >
-                    {formatRelative(cue.created_at)}
+                    {formatRelative(cue.created_at, t)}
                   </span>
                 </div>
                 <p className="text-sm text-neutral-100 whitespace-pre-wrap break-words">
@@ -241,7 +243,7 @@ export default function CueFeed({ runId, casters, optimisticCue }: Props) {
                   <div className="mt-2 pt-2 border-t border-neutral-700/60">
                     <div className="flex items-center justify-between text-[11px] mb-1.5">
                       <span className="font-semibold text-neutral-300">
-                        Ack
+                        {t.ackLabel}
                       </span>
                       <span
                         data-testid={`cue-feed-ack-count-${cue.id}`}
@@ -287,7 +289,7 @@ export default function CueFeed({ runId, casters, optimisticCue }: Props) {
                     )}
                     {total === 0 && (
                       <p className="text-[11px] text-neutral-500">
-                        Pas de caster assigne au run.
+                        {t.noCasterAssigned}
                       </p>
                     )}
                   </div>

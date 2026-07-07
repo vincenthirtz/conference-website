@@ -28,9 +28,12 @@ import {
   useState,
   type KeyboardEvent as ReactKeyboardEvent,
 } from 'react';
+import { useAdminT } from '@/lib/i18n/useAdminT';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { logger } from '../../../utils/logger';
+
+type Dict = ReturnType<typeof useAdminT<'adminDirectorMatchPicker'>>;
 
 export type MatchPickerSummary = {
   kickoffAt: string | null;
@@ -61,8 +64,8 @@ type Props = {
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-function formatKickoff(iso: string | null): string {
-  if (!iso) return 'non planifie';
+function formatKickoff(iso: string | null, tx: Dict): string {
+  if (!iso) return tx.notPlanned;
   try {
     const d = new Date(iso);
     const date = d.toLocaleDateString('fr-FR', {
@@ -75,7 +78,7 @@ function formatKickoff(iso: string | null): string {
     });
     return `${date} ${time}`;
   } catch {
-    return 'non planifie';
+    return tx.notPlanned;
   }
 }
 
@@ -85,13 +88,14 @@ function shortId(id: string): string {
 
 function formatSelected(
   id: string,
-  summary: MatchPickerSummary | null | undefined
+  summary: MatchPickerSummary | null | undefined,
+  tx: Dict
 ): string {
   if (!summary) return `Match #${shortId(id)}`;
   const teamA = summary.teamAName ?? '?';
   const teamB = summary.teamBName ?? '?';
   const tour = summary.tournamentName ? ` — ${summary.tournamentName}` : '';
-  return `${teamA} vs ${teamB}${tour} — ${formatKickoff(summary.kickoffAt)}`;
+  return `${teamA} vs ${teamB}${tour} — ${formatKickoff(summary.kickoffAt, tx)}`;
 }
 
 export default function MatchPicker({
@@ -102,6 +106,7 @@ export default function MatchPicker({
   initialSummary,
   testId,
 }: Props) {
+  const t = useAdminT('adminDirectorMatchPicker');
   const { adminFetchJson } = useAdminFetch();
 
   const [query, setQuery] = useState('');
@@ -164,7 +169,7 @@ export default function MatchPicker({
       } catch (err) {
         if (cancelled) return;
         logger.error('MatchPicker search error', err);
-        setFetchError((err as Error)?.message || 'Erreur de recherche.');
+        setFetchError((err as Error)?.message || t.searchError);
         setResults([]);
       } finally {
         if (!cancelled) setLoading(false);
@@ -174,7 +179,7 @@ export default function MatchPicker({
     return () => {
       cancelled = true;
     };
-  }, [debouncedQuery, open, adminFetchJson]);
+  }, [debouncedQuery, open, adminFetchJson, t]);
 
   const handleSelect = useCallback(
     (m: MatchSearchResult) => {
@@ -253,9 +258,9 @@ export default function MatchPicker({
 
   const displayValue = useMemo(() => {
     if (open) return query;
-    if (value) return formatSelected(value, selectedSummary);
+    if (value) return formatSelected(value, selectedSummary, t);
     return '';
-  }, [open, query, value, selectedSummary]);
+  }, [open, query, value, selectedSummary, t]);
 
   return (
     <div
@@ -280,10 +285,7 @@ export default function MatchPicker({
           onKeyDown={handleKeyDown}
           disabled={disabled}
           placeholder={
-            placeholder ??
-            (value
-              ? 'Match selectionne — taper pour changer'
-              : 'Rechercher un match (equipe, tournoi)…')
+            placeholder ?? (value ? t.selectedChange : t.searchPlaceholder)
           }
           aria-autocomplete="list"
           aria-expanded={open}
@@ -296,7 +298,7 @@ export default function MatchPicker({
           <button
             type="button"
             onClick={handleClear}
-            aria-label="Effacer la selection"
+            aria-label={t.clearAria}
             data-testid="match-picker-clear"
             className="absolute right-2 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-neutral-400 hover:text-red-300 text-base leading-none"
           >
@@ -313,7 +315,9 @@ export default function MatchPicker({
           className="absolute left-0 right-0 top-full mt-1 z-50 max-h-60 overflow-y-auto rounded-lg bg-neutral-900 border border-neutral-700 shadow-xl"
         >
           {loading && (
-            <div className="px-3 py-2 text-xs text-neutral-400">Recherche…</div>
+            <div className="px-3 py-2 text-xs text-neutral-400">
+              {t.searching}
+            </div>
           )}
           {!loading && fetchError && (
             <div className="px-3 py-2 text-xs text-red-300">{fetchError}</div>
@@ -323,7 +327,7 @@ export default function MatchPicker({
               className="px-3 py-2 text-xs text-neutral-500"
               data-testid="match-picker-empty"
             >
-              Aucun match trouve. Verifie le nom de l&apos;equipe ou du tournoi.
+              {t.noMatch}
             </div>
           )}
           {!loading &&
@@ -342,8 +346,8 @@ export default function MatchPicker({
                   {m.teamAName ?? '?'} vs {m.teamBName ?? '?'}
                 </div>
                 <div className="text-neutral-400 text-[11px]">
-                  {m.tournamentName ?? 'Sans tournoi'} ·{' '}
-                  {formatKickoff(m.kickoffAt)}
+                  {m.tournamentName ?? t.noTournament} ·{' '}
+                  {formatKickoff(m.kickoffAt, t)}
                   {m.status ? ` · ${m.status}` : ''}
                 </div>
               </button>

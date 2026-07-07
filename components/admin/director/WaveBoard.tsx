@@ -19,12 +19,15 @@
 // centralise idempotency + refetch. Ce composant est "presentationnel piloté".
 
 import { useMemo, useState } from 'react';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import {
   waveStatusBadgeClasses,
   waveStatusDotClasses,
   waveStatusLabel,
 } from '@/utils/eventSegmentLabels';
 import type { EventSegment, EventWave, EventWaveStatus } from '@/types/events';
+
+type Dict = ReturnType<typeof useAdminT<'adminDirectorWaveBoard'>>;
 
 /** Patch envoye au parent pour create/update. */
 export type WaveFormPatch = {
@@ -90,14 +93,17 @@ function editFromWave(w: EventWave): EditState {
   };
 }
 
-function parseEdit(edit: EditState): WaveFormPatch | { error: string } {
+function parseEdit(
+  edit: EditState,
+  tx: Dict
+): WaveFormPatch | { error: string } {
   const title = edit.title.trim();
-  if (!title) return { error: 'Le titre est obligatoire.' };
+  if (!title) return { error: tx.titleRequired };
   let duration_min: number | null = null;
   if (edit.duration.trim()) {
     const n = Number.parseInt(edit.duration, 10);
     if (!Number.isFinite(n) || n <= 0) {
-      return { error: 'La duree doit etre un entier positif.' };
+      return { error: tx.durationPositive };
     }
     duration_min = n;
   }
@@ -118,6 +124,7 @@ export default function WaveBoard({
   onDelete,
   onReorder,
 }: Props) {
+  const t = useAdminT('adminDirectorWaveBoard');
   const [showCreate, setShowCreate] = useState(false);
   const [createForm, setCreateForm] = useState<EditState>(emptyEdit());
   const [createError, setCreateError] = useState<string | null>(null);
@@ -147,7 +154,7 @@ export default function WaveBoard({
 
   async function submitCreate() {
     setCreateError(null);
-    const parsed = parseEdit(createForm);
+    const parsed = parseEdit(createForm, t);
     if ('error' in parsed) {
       setCreateError(parsed.error);
       return;
@@ -159,7 +166,7 @@ export default function WaveBoard({
 
   async function submitEdit(waveId: string) {
     setEditError(null);
-    const parsed = parseEdit(editForm);
+    const parsed = parseEdit(editForm, t);
     if ('error' in parsed) {
       setEditError(parsed.error);
       return;
@@ -179,9 +186,7 @@ export default function WaveBoard({
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-sm font-semibold text-neutral-200">Waves</h3>
-          <p className="text-xs text-neutral-500">
-            Regroupements de segments (poules, finale…).
-          </p>
+          <p className="text-xs text-neutral-500">{t.subtitle}</p>
         </div>
         <button
           type="button"
@@ -194,7 +199,7 @@ export default function WaveBoard({
           disabled={busy}
           data-testid="wave-create-toggle"
         >
-          {showCreate ? 'Annuler' : '+ Wave'}
+          {showCreate ? t.cancel : t.addWave}
         </button>
       </div>
 
@@ -205,14 +210,14 @@ export default function WaveBoard({
             onChange={(e) =>
               setCreateForm((f) => ({ ...f, title: e.target.value }))
             }
-            placeholder="Titre de la wave"
+            placeholder={t.titlePlaceholder}
             className="w-full px-3 py-2 rounded-lg bg-neutral-900/80 border border-neutral-700 text-white text-sm focus:outline-none focus:border-purple-500"
             data-testid="wave-create-title"
           />
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="block text-[11px] text-neutral-500 mb-1">
-                Debut prevu
+                {t.startLabel}
               </label>
               <input
                 type="datetime-local"
@@ -225,7 +230,7 @@ export default function WaveBoard({
             </div>
             <div>
               <label className="block text-[11px] text-neutral-500 mb-1">
-                Duree (min)
+                {t.durationLabel}
               </label>
               <input
                 type="number"
@@ -234,7 +239,7 @@ export default function WaveBoard({
                 onChange={(e) =>
                   setCreateForm((f) => ({ ...f, duration: e.target.value }))
                 }
-                placeholder="ex: 90"
+                placeholder={t.durationPlaceholder}
                 className="w-full px-2 py-1.5 rounded-lg bg-neutral-900/80 border border-neutral-700 text-white text-sm focus:outline-none focus:border-purple-500"
               />
             </div>
@@ -249,15 +254,13 @@ export default function WaveBoard({
             className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-xs font-medium"
             data-testid="wave-create-submit"
           >
-            Creer la wave
+            {t.createWave}
           </button>
         </div>
       )}
 
       {sorted.length === 0 ? (
-        <p className="text-xs text-neutral-500">
-          Aucune wave. Cree-en une pour regrouper des segments.
-        </p>
+        <p className="text-xs text-neutral-500">{t.empty}</p>
       ) : (
         <ul className="space-y-2">
           {sorted.map((w, idx) => {
@@ -279,7 +282,7 @@ export default function WaveBoard({
                       onClick={() => move(idx, -1)}
                       disabled={busy || idx === 0}
                       className="text-neutral-400 hover:text-white disabled:opacity-30 text-xs leading-none"
-                      aria-label="Monter"
+                      aria-label={t.upAria}
                       data-testid={`wave-up-${w.id}`}
                     >
                       ▲
@@ -289,7 +292,7 @@ export default function WaveBoard({
                       onClick={() => move(idx, 1)}
                       disabled={busy || idx === sorted.length - 1}
                       className="text-neutral-400 hover:text-white disabled:opacity-30 text-xs leading-none"
-                      aria-label="Descendre"
+                      aria-label={t.downAria}
                       data-testid={`wave-down-${w.id}`}
                     >
                       ▼
@@ -325,10 +328,12 @@ export default function WaveBoard({
                       )}
                       <span
                         className="text-[11px] text-neutral-400 bg-neutral-700/50 px-1.5 py-0.5 rounded"
-                        title="Segments rattaches"
+                        title={t.segCountTitle}
                         data-testid={`wave-segcount-${w.id}`}
                       >
-                        {count} segment{count > 1 ? 's' : ''}
+                        {format(count > 1 ? t.segment_other : t.segment_one, {
+                          count,
+                        })}
                       </span>
                     </div>
 
@@ -343,7 +348,7 @@ export default function WaveBoard({
                             className="px-2 py-1 rounded-md text-xs bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-200 border border-emerald-500/40 disabled:opacity-50"
                             data-testid={`wave-start-${w.id}`}
                           >
-                            Demarrer
+                            {t.start}
                           </button>
                           <button
                             type="button"
@@ -352,7 +357,7 @@ export default function WaveBoard({
                             className="px-2 py-1 rounded-md text-xs bg-amber-600/30 hover:bg-amber-600/50 text-amber-200 border border-amber-500/40 disabled:opacity-50"
                             data-testid={`wave-skip-${w.id}`}
                           >
-                            Skip
+                            {t.skip}
                           </button>
                         </>
                       )}
@@ -364,7 +369,7 @@ export default function WaveBoard({
                           className="px-2 py-1 rounded-md text-xs bg-red-600/30 hover:bg-red-600/50 text-red-200 border border-red-500/40 disabled:opacity-50"
                           data-testid={`wave-end-${w.id}`}
                         >
-                          Terminer
+                          {t.end}
                         </button>
                       )}
                       <button
@@ -376,7 +381,7 @@ export default function WaveBoard({
                         className="px-2 py-1 rounded-md text-xs bg-neutral-700/50 hover:bg-neutral-600/60 text-neutral-200 border border-neutral-600/40 disabled:opacity-50"
                         data-testid={`wave-edit-${w.id}`}
                       >
-                        {isEditing ? 'Fermer' : 'Editer'}
+                        {isEditing ? t.close : t.edit}
                       </button>
                       <button
                         type="button"
@@ -385,7 +390,7 @@ export default function WaveBoard({
                         className="px-2 py-1 rounded-md text-xs bg-neutral-700/50 hover:bg-red-700/40 text-neutral-300 hover:text-red-200 border border-neutral-600/40 disabled:opacity-50"
                         data-testid={`wave-delete-${w.id}`}
                       >
-                        Supprimer
+                        {t.delete}
                       </button>
                     </div>
 
@@ -400,7 +405,7 @@ export default function WaveBoard({
                               title: e.target.value,
                             }))
                           }
-                          placeholder="Titre"
+                          placeholder={t.editTitlePlaceholder}
                           className="w-full px-3 py-2 rounded-lg bg-neutral-900/80 border border-neutral-700 text-white text-sm focus:outline-none focus:border-purple-500"
                           data-testid={`wave-edit-title-${w.id}`}
                         />
@@ -426,7 +431,7 @@ export default function WaveBoard({
                                 duration: e.target.value,
                               }))
                             }
-                            placeholder="Duree (min)"
+                            placeholder={t.editDurationPlaceholder}
                             className="w-full px-2 py-1.5 rounded-lg bg-neutral-900/80 border border-neutral-700 text-white text-sm focus:outline-none focus:border-purple-500"
                           />
                         </div>
@@ -442,7 +447,7 @@ export default function WaveBoard({
                           className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-xs font-medium"
                           data-testid={`wave-edit-submit-${w.id}`}
                         >
-                          Enregistrer
+                          {t.save}
                         </button>
                       </div>
                     )}

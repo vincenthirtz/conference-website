@@ -16,6 +16,7 @@
 // textarea pour permettre la frappe du cue suivant), on garde la severite.
 
 import { useCallback, useRef, useState } from 'react';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
 import { logger } from '@/utils/logger';
@@ -66,6 +67,7 @@ export default function CueComposer({
   runStatus,
   onCueCreated,
 }: Props) {
+  const t = useAdminT('adminDirectorCueComposer');
   const { mutateJson, regenerate } = useIdempotentMutation();
   const { addToast } = useToast();
 
@@ -91,9 +93,7 @@ export default function CueComposer({
         }
       );
       addToast(
-        severity === 'urgent'
-          ? 'Cue urgent envoye. En attente d\'ack.'
-          : 'Cue envoye.',
+        severity === 'urgent' ? t.cueUrgentSent : t.cueSent,
         'success'
       );
       setBody('');
@@ -102,7 +102,7 @@ export default function CueComposer({
       requestAnimationFrame(() => textareaRef.current?.focus());
     } catch (err) {
       logger.error('[director-comms] cue send error', err);
-      addToast((err as Error)?.message ?? 'Envoi echoue.', 'error');
+      addToast((err as Error)?.message ?? t.sendFailed, 'error');
     } finally {
       setBusy(false);
     }
@@ -115,6 +115,7 @@ export default function CueComposer({
     runId,
     severity,
     trimmed,
+    t,
   ]);
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
@@ -140,7 +141,7 @@ export default function CueComposer({
       {/* Severity picker — segmented */}
       <div
         role="radiogroup"
-        aria-label="Severite du cue"
+        aria-label={t.severityAria}
         className="grid grid-cols-3 gap-2 mb-3"
       >
         {SEVERITY_BUTTONS.map((sev) => {
@@ -151,7 +152,7 @@ export default function CueComposer({
               type="button"
               role="radio"
               aria-checked={selected}
-              aria-label={`Severite ${sev.label}`}
+              aria-label={format(t.severityItemAria, { label: sev.label })}
               data-testid={`cue-composer-severity-${sev.value}`}
               onClick={() => setSeverity(sev.value)}
               className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${
@@ -165,7 +166,7 @@ export default function CueComposer({
       </div>
 
       <label htmlFor="cue-body" className="sr-only">
-        Texte du cue
+        {t.cueTextLabel}
       </label>
       <textarea
         id="cue-body"
@@ -174,11 +175,7 @@ export default function CueComposer({
         value={body}
         onChange={(e) => setBody(e.target.value.slice(0, MAX_BODY))}
         onKeyDown={handleKeyDown}
-        placeholder={
-          isLive
-            ? 'Ex : on coupe la pub dans 30s, on reprend match 2'
-            : 'Le run doit etre live pour envoyer un cue.'
-        }
+        placeholder={isLive ? t.placeholderLive : t.placeholderIdle}
         disabled={!isLive || busy}
         rows={3}
         className="w-full rounded-lg bg-neutral-900/60 border border-neutral-700/60 focus:border-purple-500/60 focus:outline-none focus:ring-1 focus:ring-purple-500/30 px-3 py-2 text-sm text-white placeholder:text-neutral-600 resize-none disabled:opacity-50"
@@ -193,10 +190,10 @@ export default function CueComposer({
           <kbd className="rounded bg-neutral-900/70 border border-neutral-700/60 px-1 py-0.5 text-[10px] text-neutral-400">
             {typeof navigator !== 'undefined' &&
             /Mac|iPhone|iPad/i.test(navigator.platform)
-              ? '⌘ + Entree'
-              : 'Ctrl + Entree'}
+              ? t.keyMac
+              : t.keyOther}
           </kbd>{' '}
-          pour envoyer
+          {t.toSend}
         </span>
         <span
           className={
@@ -213,7 +210,7 @@ export default function CueComposer({
         type="button"
         onClick={handleSend}
         disabled={!canSend}
-        aria-label="Envoyer le cue"
+        aria-label={t.sendAria}
         data-testid="cue-composer-submit"
         className={`mt-3 w-full rounded-lg px-3 py-2 text-sm font-semibold transition ${
           canSend
@@ -225,17 +222,17 @@ export default function CueComposer({
             : 'bg-neutral-800/60 text-neutral-500 cursor-not-allowed'
         }`}
       >
-        {busy ? 'Envoi…' : 'Envoyer'}
+        {busy ? t.sending : t.send}
       </button>
 
       {severity === 'urgent' && (
         <p className="mt-2 text-[11px] text-red-300/80" role="note">
-          Ack requis — les casters devront cliquer Vu.
+          {t.ackNote}
         </p>
       )}
       {!isLive && (
         <p className="mt-2 text-[11px] text-neutral-500" role="note">
-          Demarre le run pour envoyer des cues.
+          {t.startNote}
         </p>
       )}
     </div>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { TeamMemberRow } from '@/types/admin';
 import type { TeamRole } from '@/utils/teamRoles';
 import MemberRow from './MemberRow';
@@ -60,6 +61,7 @@ function MembersSectionComponent({
   onEditMember,
   onDeleteMember,
 }: MembersSectionProps) {
+  const t = useAdminT('adminTeamsMembersSection');
   const swapActive = Boolean(swapSource);
   const canSwapRoster = subMembers.length > 0;
   const canSwapSub = rosterMembers.length > 0;
@@ -81,7 +83,7 @@ function MembersSectionComponent({
               d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
             />
           </svg>
-          Membres ({membersCount})
+          {format(t.membersTitle, { count: membersCount })}
         </h2>
         <div className="flex items-center gap-2">
           {swapSource && (
@@ -89,7 +91,7 @@ function MembersSectionComponent({
               onClick={onCancelSwap}
               className="px-3 py-1.5 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
             >
-              Annuler l&apos;échange
+              {t.cancelSwap}
             </button>
           )}
           <button
@@ -110,7 +112,7 @@ function MembersSectionComponent({
                 d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
               />
             </svg>
-            Importer BattleTags
+            {t.importBattleTags}
           </button>
           <button
             onClick={onOpenAddMember}
@@ -129,7 +131,7 @@ function MembersSectionComponent({
                 d="M12 4v16m8-8H4"
               />
             </svg>
-            Ajouter
+            {t.add}
           </button>
         </div>
       </div>
@@ -150,8 +152,7 @@ function MembersSectionComponent({
             />
           </svg>
           <span>
-            Sélectionnez un membre pour échanger avec{' '}
-            <strong>{swapSource.battle_tag}</strong>
+            {t.selectToSwap} <strong>{swapSource.battle_tag}</strong>
           </span>
         </div>
       )}
@@ -178,8 +179,8 @@ function MembersSectionComponent({
               />
               <span data-testid="selection-count">
                 {selectedIds.size > 0
-                  ? `${selectedIds.size} sélectionné(s)`
-                  : 'Tout sélectionner'}
+                  ? format(t.selectedCount, { count: selectedIds.size })
+                  : t.selectAll}
               </span>
             </label>
 
@@ -194,7 +195,7 @@ function MembersSectionComponent({
                     data-testid="bulk-role-select"
                     className="px-2.5 py-1.5 rounded-lg bg-neutral-800 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   >
-                    <option value="">Rôle…</option>
+                    <option value="">{t.rolePlaceholder}</option>
                     {teamRoles.map((r) => (
                       <option key={r.value} value={r.value}>
                         {r.label}
@@ -207,7 +208,7 @@ function MembersSectionComponent({
                     data-testid="bulk-role-apply"
                     className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors"
                   >
-                    Appliquer
+                    {t.apply}
                   </button>
                 </div>
 
@@ -218,7 +219,7 @@ function MembersSectionComponent({
                   data-testid="bulk-mark-sub"
                   className="px-3 py-1.5 rounded-lg bg-neutral-700 hover:bg-neutral-600 disabled:opacity-50 text-sm font-medium transition-colors"
                 >
-                  Marquer remplaçant
+                  {t.markSub}
                 </button>
                 <button
                   onClick={() => onBulkSetSubstitute(false)}
@@ -226,7 +227,7 @@ function MembersSectionComponent({
                   data-testid="bulk-unmark-sub"
                   className="px-3 py-1.5 rounded-lg bg-neutral-700 hover:bg-neutral-600 disabled:opacity-50 text-sm font-medium transition-colors"
                 >
-                  Retirer remplaçant
+                  {t.unmarkSub}
                 </button>
 
                 {/* Bulk remove */}
@@ -236,7 +237,7 @@ function MembersSectionComponent({
                   data-testid="bulk-remove"
                   className="px-3 py-1.5 rounded-lg bg-red-900/50 hover:bg-red-900/70 text-red-200 border border-red-700/50 disabled:opacity-50 text-sm font-medium transition-colors"
                 >
-                  Retirer de l&apos;équipe
+                  {t.removeFromTeam}
                 </button>
 
                 <button
@@ -244,7 +245,7 @@ function MembersSectionComponent({
                   disabled={bulkBusy}
                   className="px-2.5 py-1.5 rounded-lg text-neutral-400 hover:text-white text-sm transition-colors"
                 >
-                  Désélectionner
+                  {t.deselect}
                 </button>
               </div>
             )}
@@ -262,29 +263,28 @@ function MembersSectionComponent({
                   clipRule="evenodd"
                 />
               </svg>
-              Le capitaine est protégé : il ne sera ni retiré ni passé
-              remplaçant.
+              {t.captainProtected}
             </p>
           )}
         </div>
       )}
 
       {membersLoading ? (
-        <div className="text-neutral-400 text-sm py-4">Chargement...</div>
+        <div className="text-neutral-400 text-sm py-4">{t.loading}</div>
       ) : membersCount === 0 ? (
         <div className="text-neutral-400 text-sm py-8 text-center bg-neutral-900/30 rounded-xl">
-          Aucun membre dans cette équipe
+          {t.emptyTeam}
         </div>
       ) : (
         <div className="space-y-6">
           {/* Roster (active members) */}
           <div>
             <h3 className="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-2">
-              Roster ({rosterMembers.length})
+              {format(t.rosterTitle, { count: rosterMembers.length })}
             </h3>
             {rosterMembers.length === 0 ? (
               <div className="text-neutral-500 text-sm py-4 text-center bg-neutral-900/30 rounded-xl">
-                Aucun joueur actif
+                {t.noActivePlayer}
               </div>
             ) : (
               <div className="space-y-2">
@@ -314,11 +314,11 @@ function MembersSectionComponent({
           {/* Substitutes */}
           <div>
             <h3 className="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-2">
-              Remplaçants ({subMembers.length})
+              {format(t.subsTitle, { count: subMembers.length })}
             </h3>
             {subMembers.length === 0 ? (
               <div className="text-neutral-500 text-sm py-4 text-center bg-neutral-900/30 rounded-xl">
-                Aucun remplaçant
+                {t.noSub}
               </div>
             ) : (
               <div className="space-y-2">

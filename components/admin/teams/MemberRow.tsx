@@ -1,4 +1,5 @@
 import React from 'react';
+import { useAdminT } from '@/lib/i18n/useAdminT';
 import type { TeamMemberRow } from '@/types/admin';
 
 type MemberRowProps = {
@@ -40,6 +41,7 @@ function MemberRowComponent({
   onEdit,
   onDelete,
 }: MemberRowProps) {
+  const t = useAdminT('adminTeamsMemberRow');
   const containerClassName =
     variant === 'roster'
       ? `flex items-center justify-between gap-3 rounded-xl px-4 py-3 group ${
@@ -119,18 +121,18 @@ function MemberRowComponent({
         <div className="min-w-0">
           {variant === 'roster' ? (
             <div className="font-medium text-sm truncate flex items-center gap-2">
-              {member.battle_tag || 'Membre'}
+              {member.battle_tag || t.memberFallback}
               {isCaptain && (
                 <span className="px-1.5 py-0.5 rounded text-xs bg-amber-500/20 text-amber-300 border border-amber-500/30 font-semibold">
-                  Capitaine
+                  {t.captain}
                 </span>
               )}
             </div>
           ) : (
             <div className="font-medium text-sm truncate flex items-center gap-2 text-neutral-300">
-              {member.battle_tag || 'Membre'}
+              {member.battle_tag || t.memberFallback}
               <span className="px-1.5 py-0.5 rounded text-xs bg-neutral-700 text-neutral-400 border border-neutral-600">
-                Remplaçant
+                {t.substitute}
               </span>
             </div>
           )}
@@ -155,8 +157,8 @@ function MemberRowComponent({
               className="p-2 rounded-lg hover:bg-blue-900/50 text-neutral-400 hover:text-blue-400 transition-colors"
               title={
                 variant === 'roster'
-                  ? 'Échanger avec un remplaçant'
-                  : 'Échanger avec un joueur du roster'
+                  ? t.swapWithSubTitle
+                  : t.swapWithRosterTitle
               }
             >
               <svg
@@ -181,7 +183,7 @@ function MemberRowComponent({
                 onSetCaptain(member);
               }}
               className="p-2 rounded-lg hover:bg-amber-900/50 text-neutral-400 hover:text-amber-400 transition-colors"
-              title="Définir comme capitaine"
+              title={t.setCaptainTitle}
             >
               <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z" />
@@ -194,7 +196,7 @@ function MemberRowComponent({
               onEdit(member);
             }}
             className="p-2 rounded-lg hover:bg-neutral-700 text-neutral-400 hover:text-white transition-colors"
-            title="Modifier"
+            title={t.editTitle}
           >
             <svg
               className="w-4 h-4"
@@ -216,7 +218,7 @@ function MemberRowComponent({
               onDelete(member);
             }}
             className="p-2 rounded-lg hover:bg-red-900/50 text-neutral-400 hover:text-red-400 transition-colors"
-            title="Supprimer"
+            title={t.deleteTitle}
           >
             <svg
               className="w-4 h-4"
@@ -236,7 +238,7 @@ function MemberRowComponent({
       )}
       {isSwapTarget && (
         <span className="text-xs text-blue-400 font-medium">
-          Cliquer pour échanger
+          {t.clickToSwap}
         </span>
       )}
     </div>

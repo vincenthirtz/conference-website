@@ -9,6 +9,7 @@
 // mauvais UUID renverra 400 INVALID_MATCH_ID.
 
 import { useEffect, useState } from 'react';
+import { useAdminT } from '@/lib/i18n/useAdminT';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import MatchPicker from '@/components/admin/director/MatchPicker';
 import {
@@ -39,6 +40,7 @@ const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export default function AddSegmentModal({ onClose, onSubmit }: Props) {
+  const t = useAdminT('adminDirectorAddSegmentModal');
   const ref = useFocusTrap<HTMLDivElement>();
   const [type, setType] = useState<EventSegmentType>('intro');
   const [title, setTitle] = useState('');
@@ -59,14 +61,12 @@ export default function AddSegmentModal({ onClose, onSubmit }: Props) {
     e.preventDefault();
     setError(null);
     if (!title.trim()) {
-      setError('Le titre est obligatoire.');
+      setError(t.titleRequired);
       return;
     }
     if (type === 'match') {
       if (!matchId.trim() || !UUID_RE.test(matchId.trim())) {
-        setError(
-          'Pour un segment de type "match", un match_id (UUID) valide est obligatoire.'
-        );
+        setError(t.matchIdRequired);
         return;
       }
     }
@@ -74,7 +74,7 @@ export default function AddSegmentModal({ onClose, onSubmit }: Props) {
     if (durationMin.trim()) {
       const n = Number.parseInt(durationMin.trim(), 10);
       if (!Number.isFinite(n) || n <= 0) {
-        setError('La duree doit etre un entier positif (en minutes).');
+        setError(t.durationPositive);
         return;
       }
       duration_min = n;
@@ -88,7 +88,7 @@ export default function AddSegmentModal({ onClose, onSubmit }: Props) {
         duration_min,
       });
     } catch (err) {
-      setError((err as Error)?.message ?? 'Creation echouee.');
+      setError((err as Error)?.message ?? t.createFailed);
     } finally {
       setSubmitting(false);
     }
@@ -110,15 +110,15 @@ export default function AddSegmentModal({ onClose, onSubmit }: Props) {
       >
         <div className="px-6 py-4 border-b border-neutral-700/60">
           <h2 id="add-segment-title" className="text-lg font-semibold">
-            Ajouter un segment
+            {t.heading}
           </h2>
-          <p className="text-xs text-neutral-400 mt-0.5">
-            Le segment sera ajoute en fin de timeline.
-          </p>
+          <p className="text-xs text-neutral-400 mt-0.5">{t.subtitle}</p>
         </div>
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
           <div>
-            <label className="block text-sm text-neutral-300 mb-1">Type</label>
+            <label className="block text-sm text-neutral-300 mb-1">
+              {t.typeLabel}
+            </label>
             <select
               value={type}
               onChange={(e) => setType(e.target.value as EventSegmentType)}
@@ -134,7 +134,7 @@ export default function AddSegmentModal({ onClose, onSubmit }: Props) {
           </div>
           <div>
             <label className="block text-sm text-neutral-300 mb-1">
-              Titre <span className="text-red-400">*</span>
+              {t.titleLabel} <span className="text-red-400">*</span>
             </label>
             <input
               autoFocus
@@ -143,7 +143,7 @@ export default function AddSegmentModal({ onClose, onSubmit }: Props) {
               data-testid="add-segment-title-input"
               placeholder={
                 type === 'match'
-                  ? 'Quart 1 : Team A vs Team B'
+                  ? t.matchPlaceholder
                   : segmentTypeLabel(type)
               }
               className="w-full px-3 py-2.5 rounded-lg bg-neutral-900/80 border border-neutral-700 text-white placeholder:text-neutral-500 focus:outline-none focus:border-purple-500"
@@ -153,7 +153,7 @@ export default function AddSegmentModal({ onClose, onSubmit }: Props) {
           {type === 'match' && (
             <div>
               <label className="block text-sm text-neutral-300 mb-1">
-                Match <span className="text-red-400">*</span>
+                {t.matchLabel} <span className="text-red-400">*</span>
               </label>
               <MatchPicker
                 value={matchId || null}
@@ -161,15 +161,12 @@ export default function AddSegmentModal({ onClose, onSubmit }: Props) {
                 disabled={submitting}
                 testId="add-segment-match-id"
               />
-              <p className="text-xs text-neutral-500 mt-1">
-                Recherche par nom d&apos;equipe ou de tournoi. Seuls les matches
-                a venir ou non planifies apparaissent.
-              </p>
+              <p className="text-xs text-neutral-500 mt-1">{t.matchHint}</p>
             </div>
           )}
           <div>
             <label className="block text-sm text-neutral-300 mb-1">
-              Duree prevue (minutes)
+              {t.durationLabel}
             </label>
             <input
               type="number"
@@ -178,7 +175,7 @@ export default function AddSegmentModal({ onClose, onSubmit }: Props) {
               value={durationMin}
               onChange={(e) => setDurationMin(e.target.value)}
               data-testid="add-segment-duration"
-              placeholder="ex: 30"
+              placeholder={t.durationPlaceholder}
               className="w-full px-3 py-2.5 rounded-lg bg-neutral-900/80 border border-neutral-700 text-white placeholder:text-neutral-500 focus:outline-none focus:border-purple-500"
             />
           </div>
@@ -194,7 +191,7 @@ export default function AddSegmentModal({ onClose, onSubmit }: Props) {
               disabled={submitting}
               className="px-4 py-2 rounded-lg text-sm font-medium bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 disabled:opacity-50"
             >
-              Annuler
+              {t.cancel}
             </button>
             <button
               type="submit"
@@ -206,7 +203,7 @@ export default function AddSegmentModal({ onClose, onSubmit }: Props) {
               data-testid="add-segment-submit"
               className="px-4 py-2 rounded-lg text-sm font-medium bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {submitting ? 'Ajout…' : 'Ajouter'}
+              {submitting ? t.submitting : t.submit}
             </button>
           </div>
         </form>

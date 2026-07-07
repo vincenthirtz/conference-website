@@ -7,6 +7,7 @@
 // TimelineBuilder (drag handle = la zone "::" a gauche). Pas de lib externe
 // pour respecter la zero-dependency policy.
 
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import {
   SEGMENT_TYPE_ICON,
   segmentStatusBadgeClasses,
@@ -81,6 +82,7 @@ export default function SegmentCard({
   onDragEnd,
   onDragLeave,
 }: Props) {
+  const t = useAdminT('adminDirectorSegmentCard');
   const hasOverrun = !!overrunSec && overrunSec > 0;
   const baseClasses =
     'group relative rounded-xl border bg-neutral-800/60 transition-colors';
@@ -125,7 +127,7 @@ export default function SegmentCard({
         {/* Drag handle */}
         <div
           className="flex items-center text-neutral-500 hover:text-neutral-300 cursor-grab active:cursor-grabbing select-none"
-          aria-label="Glisser pour reordonner"
+          aria-label={t.dragHandleAria}
           onClick={(e) => e.stopPropagation()}
         >
           <svg
@@ -154,7 +156,7 @@ export default function SegmentCard({
           <div
             className="flex items-center justify-center px-1 min-w-[3.5rem] text-[11px] text-neutral-300 font-mono gap-1"
             data-testid={`segment-time-${segment.id}`}
-            title={isAnchored ? 'Horaire ancre' : 'Horaire calcule'}
+            title={isAnchored ? t.anchorTitle : t.computedTitle}
           >
             {isAnchored && (
               <svg
@@ -210,7 +212,9 @@ export default function SegmentCard({
                 className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold text-amber-100 bg-amber-500/30 border border-amber-400/60"
                 data-testid={`segment-overrun-${segment.id}`}
                 data-overrun-sec={Math.floor(overrunSec ?? 0)}
-                title={`Depassement de ${formatOverrun(overrunSec ?? 0)}`}
+                title={format(t.overrunTitle, {
+                  value: formatOverrun(overrunSec ?? 0),
+                })}
               >
                 {formatOverrun(overrunSec ?? 0)}
               </span>
@@ -234,21 +238,21 @@ export default function SegmentCard({
                 type="button"
                 onClick={onStart}
                 disabled={busy}
-                title="Demarrer ce segment"
+                title={t.startTitle}
                 data-testid={`segment-start-${segment.id}`}
                 className="px-2 py-1 rounded-md text-xs bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-200 border border-emerald-500/40 disabled:opacity-50"
               >
-                Demarrer
+                {t.start}
               </button>
               <button
                 type="button"
                 onClick={onSkip}
                 disabled={busy}
-                title="Passer ce segment"
+                title={t.skipTitle}
                 data-testid={`segment-skip-${segment.id}`}
                 className="px-2 py-1 rounded-md text-xs bg-amber-600/30 hover:bg-amber-600/50 text-amber-200 border border-amber-500/40 disabled:opacity-50"
               >
-                Skip
+                {t.skip}
               </button>
             </>
           )}
@@ -257,18 +261,18 @@ export default function SegmentCard({
               type="button"
               onClick={onEnd}
               disabled={busy}
-              title="Terminer ce segment"
+              title={t.endTitle}
               data-testid={`segment-end-${segment.id}`}
               className="px-2 py-1 rounded-md text-xs bg-red-600/30 hover:bg-red-600/50 text-red-200 border border-red-500/40 disabled:opacity-50"
             >
-              Terminer
+              {t.end}
             </button>
           )}
           <button
             type="button"
             onClick={onDelete}
             disabled={busy}
-            title="Supprimer ce segment"
+            title={t.deleteTitle}
             data-testid={`segment-delete-${segment.id}`}
             className="px-2 py-1 rounded-md text-xs bg-neutral-700/50 hover:bg-red-700/40 text-neutral-300 hover:text-red-200 border border-neutral-600/40 disabled:opacity-50"
           >

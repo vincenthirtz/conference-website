@@ -1,4 +1,5 @@
 import React from 'react';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import Modal from '@/components/admin/Modal';
 import type { ImportLine } from './types';
 
@@ -23,6 +24,7 @@ function ImportBattleTagsModalComponent({
   onBuildPreview,
   onApply,
 }: ImportBattleTagsModalProps) {
+  const t = useAdminT('adminTeamsImportBattleTagsModal');
   return (
     <Modal
       open={open}
@@ -32,25 +34,23 @@ function ImportBattleTagsModalComponent({
       panelChromeClassName="bg-gradient-to-b from-neutral-800 to-neutral-900 border border-neutral-700 rounded-2xl shadow-2xl overflow-hidden"
       panelClassName="max-h-[90vh]"
       dataTestId="import-modal"
-      title={
-        <h3 className="text-lg font-semibold text-white">
-          Importer des BattleTags
-        </h3>
-      }
+      title={<h3 className="text-lg font-semibold text-white">{t.title}</h3>}
       subtitle={
         <>
-          Une ligne par membre :{' '}
+          {t.subtitlePrefix}{' '}
           <code className="font-mono">identifiant,BattleTag#1234</code>
           <br />
-          L&apos;identifiant peut être un BattleTag actuel, un User ID ou un ID
-          de membre.
+          {t.subtitleSuffix}
         </>
       }
       footer={
         <div className="flex items-center justify-between gap-2 w-full">
           <span className="text-xs text-neutral-400">
             {importPreview
-              ? `${importPreview.filter((l) => l.status === 'matched').length} à appliquer`
+              ? format(t.toApply, {
+                  count: importPreview.filter((l) => l.status === 'matched')
+                    .length,
+                })
               : ''}
           </span>
           <div className="flex gap-2">
@@ -58,7 +58,7 @@ function ImportBattleTagsModalComponent({
               onClick={onClose}
               className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
             >
-              Annuler
+              {t.cancel}
             </button>
             <button
               onClick={onApply}
@@ -73,7 +73,7 @@ function ImportBattleTagsModalComponent({
               {importBusy && (
                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               )}
-              Appliquer les BattleTags
+              {t.apply}
             </button>
           </div>
         </div>
@@ -85,7 +85,7 @@ function ImportBattleTagsModalComponent({
           onChange={(e) => onImportTextChange(e.target.value)}
           data-testid="import-textarea"
           className="w-full px-3 py-2 rounded-lg bg-neutral-900/70 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono min-h-[140px] resize-y"
-          placeholder={'Old#1234,New#5678\nuuid-du-membre,Pseudo#0001'}
+          placeholder={t.textareaPlaceholder}
         />
 
         <button
@@ -94,7 +94,7 @@ function ImportBattleTagsModalComponent({
           data-testid="import-preview-btn"
           className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors"
         >
-          Prévisualiser
+          {t.preview}
         </button>
 
         {importPreview && (
@@ -105,9 +105,9 @@ function ImportBattleTagsModalComponent({
             <table className="w-full text-sm">
               <thead className="bg-neutral-900/60 text-neutral-400 text-xs uppercase">
                 <tr>
-                  <th className="text-left px-3 py-2">Identifiant</th>
+                  <th className="text-left px-3 py-2">{t.colIdentifiant}</th>
                   <th className="text-left px-3 py-2">BattleTag</th>
-                  <th className="text-left px-3 py-2">Statut</th>
+                  <th className="text-left px-3 py-2">{t.colStatut}</th>
                 </tr>
               </thead>
               <tbody>
@@ -117,7 +117,7 @@ function ImportBattleTagsModalComponent({
                       colSpan={3}
                       className="px-3 py-4 text-center text-neutral-500"
                     >
-                      Aucune ligne
+                      {t.emptyLine}
                     </td>
                   </tr>
                 ) : (
@@ -136,22 +136,22 @@ function ImportBattleTagsModalComponent({
                       <td className="px-3 py-2">
                         {line.status === 'matched' && (
                           <span className="px-2 py-0.5 rounded-full text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                            Trouvé
+                            {t.statusMatched}
                           </span>
                         )}
                         {line.status === 'invalid' && (
                           <span className="px-2 py-0.5 rounded-full text-xs bg-red-500/20 text-red-300 border border-red-500/30">
-                            Format invalide
+                            {t.statusInvalid}
                           </span>
                         )}
                         {line.status === 'not-found' && (
                           <span className="px-2 py-0.5 rounded-full text-xs bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                            Introuvable
+                            {t.statusNotFound}
                           </span>
                         )}
                         {line.status === 'empty' && (
                           <span className="px-2 py-0.5 rounded-full text-xs bg-neutral-700 text-neutral-400 border border-neutral-600">
-                            Ligne incomplète
+                            {t.statusEmpty}
                           </span>
                         )}
                       </td>

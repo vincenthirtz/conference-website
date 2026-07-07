@@ -1,4 +1,5 @@
 import React from 'react';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import Modal from '@/components/admin/Modal';
 import type { TeamRole } from '@/utils/teamRoles';
 import type { MemberFormState, SearchResult } from './types';
@@ -36,6 +37,7 @@ function AddMemberModalComponent({
   onSelectPlayer,
   onSubmit,
 }: AddMemberModalProps) {
+  const t = useAdminT('adminTeamsAddMemberModal');
   return (
     <Modal
       open={open}
@@ -62,12 +64,8 @@ function AddMemberModalComponent({
             </svg>
           </div>
           <div className="min-w-0">
-            <h3 className="text-lg font-semibold text-white">
-              Ajouter un joueur
-            </h3>
-            <p className="text-xs text-neutral-400 mt-0.5">
-              Recherchez un membre existant ou saisissez ses informations
-            </p>
+            <h3 className="text-lg font-semibold text-white">{t.title}</h3>
+            <p className="text-xs text-neutral-400 mt-0.5">{t.subtitle}</p>
           </div>
         </div>
       }
@@ -77,7 +75,7 @@ function AddMemberModalComponent({
             onClick={onClose}
             className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
           >
-            Annuler
+            {t.cancel}
           </button>
           <button
             onClick={onSubmit}
@@ -87,7 +85,7 @@ function AddMemberModalComponent({
             {memberSaving ? (
               <>
                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Ajout...
+                {t.adding}
               </>
             ) : (
               <>
@@ -104,7 +102,7 @@ function AddMemberModalComponent({
                     d="M12 4v16m8-8H4"
                   />
                 </svg>
-                Ajouter le joueur
+                {t.addPlayer}
               </>
             )}
           </button>
@@ -115,18 +113,16 @@ function AddMemberModalComponent({
         {/* Search section */}
         <div className="relative">
           <label className="block text-sm font-medium text-neutral-200 mb-1.5">
-            Rechercher un joueur existant
+            {t.searchLabel}
           </label>
-          <p className="text-xs text-neutral-500 mb-2">
-            Par email, nom ou BattleTag
-          </p>
+          <p className="text-xs text-neutral-500 mb-2">{t.searchHint}</p>
           <div className="relative">
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
               className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-neutral-900/70 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500/60 text-sm placeholder:text-neutral-500 transition-colors"
-              placeholder="Tapez au moins 2 caractères..."
+              placeholder={t.searchPlaceholder}
             />
             <svg
               className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400"
@@ -153,7 +149,7 @@ function AddMemberModalComponent({
             <div className="absolute z-10 w-full mt-1.5 bg-neutral-900 border border-neutral-700 rounded-xl shadow-2xl max-h-60 overflow-y-auto ring-1 ring-black/40">
               {searchResults.length === 0 && !searchLoading ? (
                 <div className="px-4 py-3 text-sm text-neutral-400 text-center">
-                  Aucun résultat trouvé
+                  {t.noResults}
                 </div>
               ) : (
                 searchResults.map((player) => (
@@ -183,13 +179,13 @@ function AddMemberModalComponent({
                         {player.battle_tag ||
                           player.display_name ||
                           player.email ||
-                          'Joueur'}
+                          t.playerFallback}
                       </div>
                       <div className="text-xs text-neutral-400 truncate">
                         {player.email}
                         {player.team_name && (
                           <span className="ml-2 text-amber-400">
-                            Équipe: {player.team_name}
+                            {format(t.teamPrefix, { name: player.team_name })}
                           </span>
                         )}
                       </div>
@@ -205,7 +201,7 @@ function AddMemberModalComponent({
         <div className="flex items-center gap-3" aria-hidden="true">
           <div className="flex-1 h-px bg-neutral-700" />
           <span className="text-xs font-medium uppercase tracking-wider text-neutral-500">
-            ou saisir manuellement
+            {t.orManual}
           </span>
           <div className="flex-1 h-px bg-neutral-700" />
         </div>
@@ -215,7 +211,7 @@ function AddMemberModalComponent({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-neutral-200 mb-1.5">
-                Email utilisateur
+                {t.emailLabel}
               </label>
               <input
                 type="email"
@@ -230,7 +226,7 @@ function AddMemberModalComponent({
 
             <div>
               <label className="block text-sm font-medium text-neutral-200 mb-1.5">
-                Ou User ID
+                {t.userIdLabel}
               </label>
               <input
                 type="text"
@@ -262,13 +258,13 @@ function AddMemberModalComponent({
               placeholder="Pseudo#1234"
             />
             <p className="text-xs text-neutral-500 mt-1.5">
-              Format : Pseudo#0000
+              {t.battleTagFormat}
             </p>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-neutral-200 mb-1.5">
-              Rôle dans l&apos;équipe
+              {t.roleLabel}
             </label>
             <select
               value={memberForm.role}
@@ -289,7 +285,7 @@ function AddMemberModalComponent({
         {/* Status toggles */}
         <div>
           <label className="block text-sm font-medium text-neutral-200 mb-2">
-            Statut
+            {t.statusLabel}
           </label>
           <div className="grid grid-cols-2 gap-3">
             <label
@@ -327,10 +323,10 @@ function AddMemberModalComponent({
                 </svg>
               </div>
               <div className="min-w-0 flex-1">
-                <div className="text-sm font-medium text-white">Capitaine</div>
-                <div className="text-xs text-neutral-400">
-                  Chef d&apos;équipe
+                <div className="text-sm font-medium text-white">
+                  {t.captain}
                 </div>
+                <div className="text-xs text-neutral-400">{t.captainDesc}</div>
               </div>
             </label>
 
@@ -375,9 +371,11 @@ function AddMemberModalComponent({
                 </svg>
               </div>
               <div className="min-w-0 flex-1">
-                <div className="text-sm font-medium text-white">Remplaçant</div>
+                <div className="text-sm font-medium text-white">
+                  {t.substitute}
+                </div>
                 <div className="text-xs text-neutral-400">
-                  Joueur de réserve
+                  {t.substituteDesc}
                 </div>
               </div>
             </label>

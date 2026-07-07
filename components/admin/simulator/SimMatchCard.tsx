@@ -2,6 +2,7 @@
 // main simulator page. Re-exports SEED_COLORS and CARD_H because both are
 // referenced from the page (standings table) and from the bracket layout.
 
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { STATUS_CONFIG } from '@/utils/statusConfig';
 import { computeWinProbability } from '@/utils/simulator';
 import type { SimMatch } from '@/utils/simulator';
@@ -97,6 +98,7 @@ export function SimMatchCard({
   onReset: () => void;
   onToggleLock?: () => void;
 }) {
+  const t = useAdminT('adminSimulatorSimMatchCard');
   const statusCfg = STATUS_CONFIG[match.status];
   const t1Name = match.team1?.short_name ?? match.team1?.name ?? 'TBD';
   const t2Name = match.team2?.short_name ?? match.team2?.name ?? 'TBD';
@@ -199,7 +201,7 @@ export function SimMatchCard({
               onClick={onSimulate}
               className="flex-1 text-[10px] py-1.5 text-emerald-400 hover:bg-emerald-500/10 transition-colors font-semibold"
             >
-              Simuler
+              {t.simulate}
             </button>
           )}
         {match.status === 'finished' && !match.locked && (
@@ -214,12 +216,12 @@ export function SimMatchCard({
           (!match.team1 || !match.team2) &&
           !match.locked && (
             <span className="flex-1 text-[10px] py-1.5 text-neutral-600 text-center italic">
-              En attente
+              {t.waiting}
             </span>
           )}
         {match.locked && (
           <span className="flex-1 text-[10px] py-1.5 text-amber-400 text-center font-semibold">
-            Verrouille
+            {t.locked}
           </span>
         )}
         {onToggleLock &&
@@ -232,11 +234,7 @@ export function SimMatchCard({
                   ? 'text-amber-400 hover:bg-amber-500/10'
                   : 'text-neutral-500 hover:bg-white/5 hover:text-neutral-300'
               }`}
-              title={
-                match.locked
-                  ? 'Deverrouiller ce match'
-                  : 'Verrouiller ce resultat (What-if)'
-              }
+              title={match.locked ? t.unlockTitle : t.lockTitle}
             >
               {match.locked ? '\u{1F512}' : '\u{1F513}'}
             </button>
@@ -262,7 +260,9 @@ export function SimMatchCard({
                         : 'bg-white/5 text-neutral-500 border-transparent'
                   }`}
                   title={
-                    mapWon ? `Gagnee par ${t1Won ? t1Name : t2Name}` : map.mode
+                    mapWon
+                      ? format(t.wonBy, { name: t1Won ? t1Name : t2Name })
+                      : map.mode
                   }
                 >
                   {map.name}

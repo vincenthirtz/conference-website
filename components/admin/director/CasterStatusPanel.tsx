@@ -12,10 +12,13 @@
 // continu : un ack est rare et le Director peut cliquer ↻ pour forcer.
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import LoadingSpinner from '@/components/admin/LoadingSpinner';
 import { logger } from '@/utils/logger';
 import type { EventSegment } from '@/types/events';
+
+type Dict = ReturnType<typeof useAdminT<'adminDirectorCasterStatusPanel'>>;
 
 const PRESENCE_POLL_INTERVAL_MS = 15_000;
 
@@ -69,10 +72,13 @@ function formatTime(d: string | null | undefined) {
   }
 }
 
-function formatRelativeShort(iso: string | null | undefined): string {
-  if (!iso) return 'inconnu';
+function formatRelativeShort(
+  iso: string | null | undefined,
+  tx: Dict
+): string {
+  if (!iso) return tx.unknown;
   const t = Date.parse(iso);
-  if (!Number.isFinite(t)) return 'inconnu';
+  if (!Number.isFinite(t)) return tx.unknown;
   const diffSec = Math.max(0, Math.floor((Date.now() - t) / 1000));
   if (diffSec < 60) return `${diffSec}s`;
   const m = Math.floor(diffSec / 60);
@@ -83,40 +89,41 @@ function formatRelativeShort(iso: string | null | undefined): string {
   return `${d}j`;
 }
 
-const STATUS_STYLES: Record<
-  PresenceStatus,
-  { dot: string; pill: string; label: string }
-> = {
-  online: {
-    dot: 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.6)]',
-    pill: 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300',
-    label: 'En ligne',
-  },
-  idle: {
-    dot: 'bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.5)]',
-    pill: 'bg-amber-500/15 border-amber-500/40 text-amber-300',
-    label: 'Idle',
-  },
-  offline: {
-    dot: 'bg-neutral-500',
-    pill: 'bg-neutral-700/50 border-neutral-600/40 text-neutral-400',
-    label: 'Hors ligne',
-  },
-  unknown: {
-    dot: 'bg-neutral-700',
-    pill: 'bg-neutral-800/50 border-neutral-700/40 text-neutral-500',
-    label: 'Non connecte',
-  },
-};
+function getStatusStyles(
+  tx: Dict
+): Record<PresenceStatus, { dot: string; pill: string; label: string }> {
+  return {
+    online: {
+      dot: 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.6)]',
+      pill: 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300',
+      label: tx.statusOnline,
+    },
+    idle: {
+      dot: 'bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.5)]',
+      pill: 'bg-amber-500/15 border-amber-500/40 text-amber-300',
+      label: tx.statusIdle,
+    },
+    offline: {
+      dot: 'bg-neutral-500',
+      pill: 'bg-neutral-700/50 border-neutral-600/40 text-neutral-400',
+      label: tx.statusOffline,
+    },
+    unknown: {
+      dot: 'bg-neutral-700',
+      pill: 'bg-neutral-800/50 border-neutral-700/40 text-neutral-500',
+      label: tx.statusUnknown,
+    },
+  };
+}
 
-function presenceTooltip(p: PresenceItem | undefined): string {
-  if (!p) return 'Pas encore connecte';
-  if (p.status === 'unknown') return 'Pas encore connecte';
-  if (!p.last_seen_at) return 'Pas encore connecte';
-  const ago = formatRelativeShort(p.last_seen_at);
-  if (p.status === 'online') return `Dernier ping : il y a ${ago}`;
-  if (p.status === 'idle') return `Idle depuis ${ago}`;
-  return `Hors ligne depuis ${ago}`;
+function presenceTooltip(p: PresenceItem | undefined, tx: Dict): string {
+  if (!p) return tx.tooltipNotConnected;
+  if (p.status === 'unknown') return tx.tooltipNotConnected;
+  if (!p.last_seen_at) return tx.tooltipNotConnected;
+  const ago = formatRelativeShort(p.last_seen_at, tx);
+  if (p.status === 'online') return format(tx.tooltipLastPing, { ago });
+  if (p.status === 'idle') return format(tx.tooltipIdle, { ago });
+  return format(tx.tooltipOffline, { ago });
 }
 
 export default function CasterStatusPanel({
@@ -124,6 +131,8 @@ export default function CasterStatusPanel({
   runId,
   onPresenceChange,
 }: Props) {
+  const t = useAdminT('adminDirectorCasterStatusPanel');
+  const statusStyles = getStatusStyles(t);
   const { adminFetchJson } = useAdminFetch();
   const [assignLoading, setAssignLoading] = useState(false);
   const [assignError, setAssignError] = useState<string | null>(null);
@@ -163,11 +172,11 @@ export default function CasterStatusPanel({
       setAssignments(results.flat());
     } catch (err) {
       logger.error('[director-comms] assignments fetch error', err);
-      setAssignError((err as Error)?.message ?? 'Erreur de chargement.');
+      setAssignError((err as Error)?.message ?? t.errLoading);
     } finally {
       setAssignLoading(false);
     }
-  }, [adminFetchJson, matchIds]);
+  }, [adminFetchJson, matchIds, t]);
 
   useEffect(() => {
     fetchAssignments();
@@ -183,9 +192,9 @@ export default function CasterStatusPanel({
       setPresenceError(null);
     } catch (err) {
       logger.error('[director-comms] presence fetch error', err);
-      setPresenceError((err as Error)?.message ?? 'Erreur presence.');
+      setPresenceError((err as Error)?.message ?? t.errPresence);
     }
-  }, [adminFetchJson, runId]);
+  }, [adminFetchJson, runId, t]);
 
   useEffect(() => {
     fetchPresence();
@@ -230,7 +239,9 @@ export default function CasterStatusPanel({
     <div className="rounded-2xl border border-neutral-700/50 bg-neutral-800/30 p-5">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <h3 className="text-sm font-semibold text-neutral-200">Casters</h3>
+          <h3 className="text-sm font-semibold text-neutral-200">
+            {t.heading}
+          </h3>
           {totalCount > 0 && (
             <span
               className={`text-[11px] px-2 py-0.5 rounded-full border ${
@@ -240,7 +251,10 @@ export default function CasterStatusPanel({
                     ? 'bg-amber-500/15 border-amber-500/40 text-amber-300'
                     : 'bg-neutral-700/50 border-neutral-600/40 text-neutral-400'
               }`}
-              aria-label={`${onlineCount} casters en ligne sur ${totalCount}`}
+              aria-label={format(t.onlineAria, {
+                online: onlineCount,
+                total: totalCount,
+              })}
             >
               {onlineCount}/{totalCount} online
             </span>
@@ -253,8 +267,8 @@ export default function CasterStatusPanel({
             fetchPresence();
           }}
           className="text-xs text-neutral-400 hover:text-white"
-          title="Rafraichir"
-          aria-label="Rafraichir les casters"
+          title={t.refreshTitle}
+          aria-label={t.refreshAria}
         >
           ↻
         </button>
@@ -275,13 +289,9 @@ export default function CasterStatusPanel({
           {assignError}
         </div>
       ) : matchIds.length === 0 ? (
-        <p className="text-xs text-neutral-500">
-          Aucun segment de type match dans ce run.
-        </p>
+        <p className="text-xs text-neutral-500">{t.noMatchSegment}</p>
       ) : assignments.length === 0 ? (
-        <p className="text-xs text-neutral-500">
-          Aucun caster assigne aux matches du run.
-        </p>
+        <p className="text-xs text-neutral-500">{t.noCaster}</p>
       ) : (
         <ul className="space-y-2">
           {assignments.map((a) => {
@@ -289,8 +299,8 @@ export default function CasterStatusPanel({
             const acked = ackedKnown && !!a.acked_at;
             const p = presenceById.get(a.cast_member_id);
             const status: PresenceStatus = p?.status ?? 'unknown';
-            const styles = STATUS_STYLES[status];
-            const tooltip = presenceTooltip(p);
+            const styles = statusStyles[status];
+            const tooltip = presenceTooltip(p, t);
             return (
               <li
                 key={a.id}
@@ -303,24 +313,29 @@ export default function CasterStatusPanel({
                   <span
                     className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-neutral-900 ${styles.dot}`}
                     title={tooltip}
-                    aria-label={`Statut : ${styles.label}. ${tooltip}`}
+                    aria-label={format(t.statusAria, {
+                      label: styles.label,
+                      tooltip,
+                    })}
                   />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium text-white truncate">
-                    {a.cast_member?.name ?? 'Caster inconnu'}
+                    {a.cast_member?.name ?? t.casterUnknown}
                   </div>
                   <div className="text-[11px] text-neutral-400 flex flex-wrap gap-x-3">
-                    <span>brief : {formatTime(a.briefing_at)}</span>
+                    <span>
+                      {t.brief} {formatTime(a.briefing_at)}
+                    </span>
                     {ackedKnown && (
                       <span>
-                        ack :{' '}
+                        {t.ack}{' '}
                         {acked ? (
                           <span className="text-emerald-300">
                             {formatTime(a.acked_at)}
                           </span>
                         ) : (
-                          <span className="text-neutral-500">en attente</span>
+                          <span className="text-neutral-500">{t.ackPending}</span>
                         )}
                       </span>
                     )}
@@ -335,11 +350,11 @@ export default function CasterStatusPanel({
                           : 'bg-neutral-700/50 border-neutral-600/40 text-neutral-300'
                       }`}
                     >
-                      {acked ? 'Ack' : 'No ack'}
+                      {acked ? t.ackYes : t.ackNo}
                     </span>
                   ) : (
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold border bg-neutral-700/50 border-neutral-600/40 text-neutral-500">
-                      Ack indispo
+                      {t.ackUnavailable}
                     </span>
                   )}
                   <span

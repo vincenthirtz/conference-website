@@ -14,6 +14,7 @@
 // parent (director.tsx) via callbacks.
 
 import { useState } from 'react';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import {
   stationStatusBadgeClasses,
   stationStatusDotClasses,
@@ -24,6 +25,8 @@ import type {
   EventStation,
   EventStationStatus,
 } from '@/types/events';
+
+type Dict = ReturnType<typeof useAdminT<'adminDirectorStationBoard'>>;
 
 /** Ordre de cycle du toggle de statut. */
 const STATUS_CYCLE: EventStationStatus[] = ['idle', 'in_use', 'offline'];
@@ -68,9 +71,12 @@ function editFromStation(s: EventStation): EditState {
   };
 }
 
-function parseEdit(edit: EditState): StationFormPatch | { error: string } {
+function parseEdit(
+  edit: EditState,
+  tx: Dict
+): StationFormPatch | { error: string } {
   const name = edit.name.trim();
-  if (!name) return { error: 'Le nom est obligatoire.' };
+  if (!name) return { error: tx.nameRequired };
   return {
     name,
     stream_url: edit.stream_url.trim() || null,
@@ -87,6 +93,7 @@ export default function StationBoard({
   onSetStatus,
   onDelete,
 }: Props) {
+  const t = useAdminT('adminDirectorStationBoard');
   const [showCreate, setShowCreate] = useState(false);
   const [createForm, setCreateForm] = useState<EditState>(emptyEdit());
   const [createError, setCreateError] = useState<string | null>(null);
@@ -111,7 +118,7 @@ export default function StationBoard({
 
   async function submitCreate() {
     setCreateError(null);
-    const parsed = parseEdit(createForm);
+    const parsed = parseEdit(createForm, t);
     if ('error' in parsed) {
       setCreateError(parsed.error);
       return;
@@ -123,7 +130,7 @@ export default function StationBoard({
 
   async function submitEdit(stationId: string) {
     setEditError(null);
-    const parsed = parseEdit(editForm);
+    const parsed = parseEdit(editForm, t);
     if ('error' in parsed) {
       setEditError(parsed.error);
       return;
@@ -143,9 +150,7 @@ export default function StationBoard({
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-sm font-semibold text-neutral-200">Stations</h3>
-          <p className="text-xs text-neutral-500">
-            Postes de production (stream / caster).
-          </p>
+          <p className="text-xs text-neutral-500">{t.subtitle}</p>
         </div>
         <button
           type="button"
@@ -158,7 +163,7 @@ export default function StationBoard({
           disabled={busy}
           data-testid="station-create-toggle"
         >
-          {showCreate ? 'Annuler' : '+ Station'}
+          {showCreate ? t.cancel : t.addStation}
         </button>
       </div>
 
@@ -169,7 +174,7 @@ export default function StationBoard({
             onChange={(e) =>
               setCreateForm((f) => ({ ...f, name: e.target.value }))
             }
-            placeholder="Nom de la station (ex: Stream principal)"
+            placeholder={t.namePlaceholder}
             className="w-full px-3 py-2 rounded-lg bg-neutral-900/80 border border-neutral-700 text-white text-sm focus:outline-none focus:border-purple-500"
             data-testid="station-create-name"
           />
@@ -178,7 +183,7 @@ export default function StationBoard({
             onChange={(e) =>
               setCreateForm((f) => ({ ...f, stream_url: e.target.value }))
             }
-            placeholder="URL du stream (optionnel)"
+            placeholder={t.streamPlaceholder}
             className="w-full px-3 py-2 rounded-lg bg-neutral-900/80 border border-neutral-700 text-white text-sm focus:outline-none focus:border-purple-500"
           />
           <textarea
@@ -187,7 +192,7 @@ export default function StationBoard({
               setCreateForm((f) => ({ ...f, notes: e.target.value }))
             }
             rows={2}
-            placeholder="Notes (optionnel)"
+            placeholder={t.notesPlaceholder}
             className="w-full px-3 py-2 rounded-lg bg-neutral-900/80 border border-neutral-700 text-white text-sm focus:outline-none focus:border-purple-500"
           />
           {createError && (
@@ -200,15 +205,13 @@ export default function StationBoard({
             className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-xs font-medium"
             data-testid="station-create-submit"
           >
-            Creer la station
+            {t.createStation}
           </button>
         </div>
       )}
 
       {sorted.length === 0 ? (
-        <p className="text-xs text-neutral-500">
-          Aucune station. Cree-en une pour rattacher des segments a un poste.
-        </p>
+        <p className="text-xs text-neutral-500">{t.empty}</p>
       ) : (
         <ul className="space-y-2">
           {sorted.map((s) => {
@@ -226,7 +229,7 @@ export default function StationBoard({
                     type="button"
                     onClick={() => onSetStatus(s, nextStatus(s.status))}
                     disabled={busy}
-                    title="Changer le statut"
+                    title={t.statusTitle}
                     className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold disabled:opacity-50 ${stationStatusBadgeClasses(
                       s.status
                     )}`}
@@ -251,7 +254,7 @@ export default function StationBoard({
                       className="text-[11px] text-purple-300 hover:text-purple-200 underline truncate max-w-[200px]"
                       data-testid={`station-stream-${s.id}`}
                     >
-                      Stream ↗
+                      {t.streamLink}
                     </a>
                   )}
                 </div>
@@ -270,12 +273,10 @@ export default function StationBoard({
                       data-testid={`station-live-seg-${s.id}`}
                     >
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                      En direct : {liveSeg.title}
+                      {format(t.liveNow, { title: liveSeg.title })}
                     </span>
                   ) : (
-                    <span className="text-neutral-500">
-                      Aucun segment en direct.
-                    </span>
+                    <span className="text-neutral-500">{t.noLive}</span>
                   )}
                 </div>
 
@@ -289,7 +290,7 @@ export default function StationBoard({
                     className="px-2 py-1 rounded-md text-xs bg-neutral-700/50 hover:bg-neutral-600/60 text-neutral-200 border border-neutral-600/40 disabled:opacity-50"
                     data-testid={`station-edit-${s.id}`}
                   >
-                    {isEditing ? 'Fermer' : 'Editer'}
+                    {isEditing ? t.close : t.edit}
                   </button>
                   <button
                     type="button"
@@ -298,7 +299,7 @@ export default function StationBoard({
                     className="px-2 py-1 rounded-md text-xs bg-neutral-700/50 hover:bg-red-700/40 text-neutral-300 hover:text-red-200 border border-neutral-600/40 disabled:opacity-50"
                     data-testid={`station-delete-${s.id}`}
                   >
-                    Supprimer
+                    {t.delete}
                   </button>
                 </div>
 
@@ -309,7 +310,7 @@ export default function StationBoard({
                       onChange={(e) =>
                         setEditForm((f) => ({ ...f, name: e.target.value }))
                       }
-                      placeholder="Nom"
+                      placeholder={t.editNamePlaceholder}
                       className="w-full px-3 py-2 rounded-lg bg-neutral-900/80 border border-neutral-700 text-white text-sm focus:outline-none focus:border-purple-500"
                       data-testid={`station-edit-name-${s.id}`}
                     />
@@ -321,7 +322,7 @@ export default function StationBoard({
                           stream_url: e.target.value,
                         }))
                       }
-                      placeholder="URL du stream"
+                      placeholder={t.editStreamPlaceholder}
                       className="w-full px-3 py-2 rounded-lg bg-neutral-900/80 border border-neutral-700 text-white text-sm focus:outline-none focus:border-purple-500"
                     />
                     <textarea
@@ -330,7 +331,7 @@ export default function StationBoard({
                         setEditForm((f) => ({ ...f, notes: e.target.value }))
                       }
                       rows={2}
-                      placeholder="Notes"
+                      placeholder={t.editNotesPlaceholder}
                       className="w-full px-3 py-2 rounded-lg bg-neutral-900/80 border border-neutral-700 text-white text-sm focus:outline-none focus:border-purple-500"
                     />
                     {editError && (
@@ -343,7 +344,7 @@ export default function StationBoard({
                       className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-xs font-medium"
                       data-testid={`station-edit-submit-${s.id}`}
                     >
-                      Enregistrer
+                      {t.save}
                     </button>
                   </div>
                 )}

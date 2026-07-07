@@ -21,6 +21,7 @@
 //     fenetre du jour du run.
 
 import { useEffect, useState } from 'react';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { segmentTypeLabel } from '@/utils/eventSegmentLabels';
 import type {
   EventBroadcastMessage,
@@ -180,6 +181,7 @@ export default function SegmentEditor({
   onSave,
   onAssign,
 }: Props) {
+  const t = useAdminT('adminDirectorSegmentEditor');
   const [form, setForm] = useState<FormState>(toForm(segment));
   const [saving, setSaving] = useState(false);
   const [assigning, setAssigning] = useState(false);
@@ -193,7 +195,7 @@ export default function SegmentEditor({
   if (!segment) {
     return (
       <div className="rounded-2xl border border-neutral-700/50 bg-neutral-800/30 p-6 text-sm text-neutral-400">
-        Selectionne un segment dans la timeline pour l&apos;editer.
+        {t.selectPrompt}
       </div>
     );
   }
@@ -259,7 +261,7 @@ export default function SegmentEditor({
     try {
       await onAssign(patch);
     } catch (err) {
-      setError((err as Error)?.message ?? 'Assignation echouee.');
+      setError((err as Error)?.message ?? t.assignFailed);
     } finally {
       setAssigning(false);
     }
@@ -268,7 +270,7 @@ export default function SegmentEditor({
   async function handleSave() {
     setError(null);
     if (!form.title.trim()) {
-      setError('Le titre est obligatoire.');
+      setError(t.titleRequired);
       return;
     }
     const durRaw = form.duration_min.trim();
@@ -276,7 +278,7 @@ export default function SegmentEditor({
     if (durRaw.length > 0) {
       const n = Number.parseInt(durRaw, 10);
       if (!Number.isFinite(n) || n <= 0) {
-        setError('La duree doit etre un entier positif (en minutes).');
+        setError(t.durationPositive);
         return;
       }
       duration_min = n;
@@ -288,12 +290,12 @@ export default function SegmentEditor({
     let planned_start_at: string | null | undefined;
     if (form.anchorEnabled) {
       if (!run?.scheduled_at) {
-        setError("Impossible d'ancrer : la date du run est introuvable.");
+        setError(t.anchorNoDate);
         return;
       }
       const composed = composeAnchorIso(run.scheduled_at, form.anchorTime);
       if (!composed) {
-        setError("Heure d'ancrage invalide. Format attendu : HH:MM.");
+        setError(t.anchorInvalid);
         return;
       }
       planned_start_at = composed;
@@ -305,13 +307,11 @@ export default function SegmentEditor({
     const seenKeys = new Set<string>();
     for (const it of form.checklist) {
       if (!it.key.trim() || !it.label.trim()) {
-        setError(
-          'Chaque element de checklist doit avoir une cle et un libelle.'
-        );
+        setError(t.checklistIncomplete);
         return;
       }
       if (seenKeys.has(it.key)) {
-        setError(`Cle de checklist en doublon : "${it.key}".`);
+        setError(format(t.checklistDuplicate, { key: it.key }));
         return;
       }
       seenKeys.add(it.key);
@@ -327,7 +327,7 @@ export default function SegmentEditor({
         caster_checklist: form.checklist,
       });
     } catch (err) {
-      setError((err as Error)?.message ?? 'Sauvegarde echouee.');
+      setError((err as Error)?.message ?? t.saveFailed);
     } finally {
       setSaving(false);
     }
@@ -338,10 +338,13 @@ export default function SegmentEditor({
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-sm font-semibold text-neutral-200">
-            Editer le segment
+            {t.heading}
           </h3>
           <p className="text-xs text-neutral-500">
-            Type : {segmentTypeLabel(segment.type)} · ord {segment.ord}
+            {format(t.typeOrd, {
+              type: segmentTypeLabel(segment.type),
+              ord: segment.ord,
+            })}
           </p>
         </div>
         <button
@@ -350,7 +353,7 @@ export default function SegmentEditor({
           disabled={saving || busy}
           className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-xs font-medium"
         >
-          {saving ? 'Sauvegarde…' : 'Enregistrer'}
+          {saving ? t.saving : t.save}
         </button>
       </div>
 
@@ -358,12 +361,12 @@ export default function SegmentEditor({
       <div className="rounded-xl border border-neutral-700/40 bg-neutral-900/40 p-3 space-y-2">
         <div className="flex items-center justify-between">
           <h4 className="text-xs font-semibold text-neutral-300 uppercase tracking-wide">
-            Horaire
+            {t.scheduleHeading}
           </h4>
           {form.anchorEnabled ? (
             <span
               className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wide text-amber-300"
-              aria-label="Ancre"
+              aria-label={t.anchored}
               data-testid="segment-anchor-active"
             >
               <svg
@@ -375,11 +378,11 @@ export default function SegmentEditor({
               >
                 <path d="M2 5h6v6a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V5zm1.5-3.5a1.5 1.5 0 1 1 3 0V5h-3V1.5z" />
               </svg>
-              Ancre
+              {t.anchored}
             </span>
           ) : (
             <span className="text-[10px] uppercase tracking-wide text-neutral-500">
-              Auto (calcule)
+              {t.autoComputed}
             </span>
           )}
         </div>
@@ -399,14 +402,12 @@ export default function SegmentEditor({
               data-testid="segment-anchor-release"
               className="px-2 py-1 rounded-md text-[11px] text-neutral-300 hover:text-white border border-neutral-700/60 hover:border-neutral-500"
             >
-              Liberer
+              {t.release}
             </button>
           </div>
         ) : (
           <div className="flex items-center justify-between gap-2">
-            <p className="text-[11px] text-neutral-500">
-              L&apos;horaire est calcule depuis les segments precedents.
-            </p>
+            <p className="text-[11px] text-neutral-500">{t.computedHelp}</p>
             <button
               type="button"
               onClick={handleEnableAnchor}
@@ -414,7 +415,7 @@ export default function SegmentEditor({
               disabled={!run?.scheduled_at}
               className="px-2 py-1 rounded-md text-[11px] text-amber-200 border border-amber-500/40 hover:bg-amber-500/10 disabled:opacity-40"
             >
-              Ancrer cet horaire
+              {t.anchorAction}
             </button>
           </div>
         )}
@@ -424,12 +425,12 @@ export default function SegmentEditor({
       {onAssign && (
         <div className="rounded-xl border border-neutral-700/40 bg-neutral-900/40 p-3 space-y-2">
           <h4 className="text-xs font-semibold text-neutral-300 uppercase tracking-wide">
-            Assignation
+            {t.assignHeading}
           </h4>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-[11px] text-neutral-500 mb-1">
-                Wave
+                {t.waveLabel}
               </label>
               <select
                 value={segment.wave_id ?? ''}
@@ -440,7 +441,7 @@ export default function SegmentEditor({
                 className="w-full px-2 py-1.5 rounded-lg bg-neutral-900/80 border border-neutral-700 text-white text-sm focus:outline-none focus:border-purple-500 disabled:opacity-50"
                 data-testid="segment-wave-select"
               >
-                <option value="">— aucune</option>
+                <option value="">{t.none}</option>
                 {[...waves]
                   .sort((a, b) => a.ord - b.ord)
                   .map((w) => (
@@ -452,7 +453,7 @@ export default function SegmentEditor({
             </div>
             <div>
               <label className="block text-[11px] text-neutral-500 mb-1">
-                Station
+                {t.stationLabel}
               </label>
               <select
                 value={segment.station_id ?? ''}
@@ -463,7 +464,7 @@ export default function SegmentEditor({
                 className="w-full px-2 py-1.5 rounded-lg bg-neutral-900/80 border border-neutral-700 text-white text-sm focus:outline-none focus:border-purple-500 disabled:opacity-50"
                 data-testid="segment-station-select"
               >
-                <option value="">— aucune</option>
+                <option value="">{t.none}</option>
                 {[...stations]
                   .sort((a, b) => a.ord - b.ord)
                   .map((s) => (
@@ -480,7 +481,7 @@ export default function SegmentEditor({
       <div className="space-y-3">
         <div>
           <label className="block text-xs text-neutral-400 mb-1">
-            Titre <span className="text-red-400">*</span>
+            {t.titleLabel} <span className="text-red-400">*</span>
           </label>
           <input
             value={form.title}
@@ -490,7 +491,7 @@ export default function SegmentEditor({
         </div>
         <div>
           <label className="block text-xs text-neutral-400 mb-1">
-            Duree prevue (minutes)
+            {t.durationLabel}
           </label>
           <input
             type="number"
@@ -498,34 +499,32 @@ export default function SegmentEditor({
             step={1}
             value={form.duration_min}
             onChange={(e) => update('duration_min', e.target.value)}
-            placeholder="ex: 30"
+            placeholder={t.durationPlaceholder}
             className="w-full px-3 py-2 rounded-lg bg-neutral-900/80 border border-neutral-700 text-white text-sm focus:outline-none focus:border-purple-500"
           />
         </div>
         {segment.type === 'match' && (
           <div className="text-xs text-neutral-500">
-            <span className="text-neutral-400">Match lie :</span>{' '}
+            <span className="text-neutral-400">{t.linkedMatch}</span>{' '}
             <code>{segment.match_id ?? '—'}</code>
-            <span className="ml-2 text-neutral-600">
-              (le match_id se definit a la creation du segment.)
-            </span>
+            <span className="ml-2 text-neutral-600">{t.linkedMatchHint}</span>
           </div>
         )}
       </div>
 
       <div className="border-t border-neutral-700/40 pt-4 space-y-3">
         <h4 className="text-xs font-semibold text-neutral-300 uppercase tracking-wide">
-          Message diffuse
+          {t.broadcastHeading}
         </h4>
         <div>
           <label className="block text-xs text-neutral-400 mb-1">
-            Discord (texte)
+            {t.discordLabel}
           </label>
           <textarea
             value={form.bm_discord}
             onChange={(e) => update('bm_discord', e.target.value)}
             rows={2}
-            placeholder="Le segment X demarre maintenant !"
+            placeholder={t.discordPlaceholder}
             className="w-full px-3 py-2 rounded-lg bg-neutral-900/80 border border-neutral-700 text-white text-sm focus:outline-none focus:border-purple-500"
           />
         </div>
@@ -573,14 +572,11 @@ export default function SegmentEditor({
             onClick={addChecklistItem}
             className="text-xs text-purple-300 hover:text-purple-200"
           >
-            + Ajouter
+            {t.addItem}
           </button>
         </div>
         {form.checklist.length === 0 ? (
-          <p className="text-xs text-neutral-500">
-            Aucun item de checklist. Le caster ne verra rien a cocher pour ce
-            segment.
-          </p>
+          <p className="text-xs text-neutral-500">{t.emptyChecklist}</p>
         ) : (
           <ul className="space-y-2">
             {form.checklist.map((it, idx) => (
@@ -601,14 +597,14 @@ export default function SegmentEditor({
                   onChange={(e) =>
                     updateChecklistItem(idx, { label: e.target.value })
                   }
-                  placeholder="Libelle visible par le caster"
+                  placeholder={t.labelPlaceholder}
                   className="flex-1 px-2 py-1 rounded bg-neutral-900/80 border border-neutral-700 text-white text-xs focus:outline-none focus:border-purple-500"
                 />
                 <button
                   type="button"
                   onClick={() => removeChecklistItem(idx)}
                   className="px-2 py-1 rounded text-xs text-neutral-400 hover:text-red-300"
-                  aria-label="Supprimer"
+                  aria-label={t.deleteAria}
                 >
                   ×
                 </button>

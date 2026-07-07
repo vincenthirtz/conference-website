@@ -12,6 +12,7 @@
 //     que SegmentEditor reactif coute moins cher en re-renders).
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useAdminT } from '@/lib/i18n/useAdminT';
 import SegmentCard from './SegmentCard';
 import EmptyState from '@/components/admin/EmptyState';
 import type { ComputedRunSchedule } from '@/utils/eventSchedule';
@@ -45,6 +46,7 @@ export default function TimelineBuilder({
   onDelete,
   onAddClick,
 }: Props) {
+  const t = useAdminT('adminDirectorTimelineBuilder');
   // Local copy for instant feedback during drag. Sync from props on change.
   const [localSegments, setLocalSegments] = useState(segments);
   const draggingIdRef = useRef<string | null>(null);
@@ -121,8 +123,8 @@ export default function TimelineBuilder({
       {localSegments.length === 0 ? (
         <div className="rounded-2xl border border-neutral-700/50 bg-neutral-800/30">
           <EmptyState
-            title="Aucun segment."
-            description="Ajoute un premier segment pour commencer a structurer ton run."
+            title={t.emptyTitle}
+            description={t.emptyDescription}
             action={
               <button
                 type="button"
@@ -130,7 +132,7 @@ export default function TimelineBuilder({
                 data-testid="timeline-add-empty"
                 className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-medium"
               >
-                Ajouter un segment
+                {t.addSegment}
               </button>
             }
           />
@@ -178,7 +180,7 @@ export default function TimelineBuilder({
           data-testid="timeline-add"
           className="w-full px-4 py-3 rounded-xl border border-dashed border-neutral-700 hover:border-neutral-600 text-sm text-neutral-400 hover:text-white transition-colors"
         >
-          + Ajouter un segment
+          {t.addSegmentPlus}
         </button>
       )}
     </div>

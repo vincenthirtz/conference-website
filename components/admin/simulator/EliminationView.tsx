@@ -2,6 +2,7 @@
 // Renders either a flat grid (Swiss / Round-Robin) or a tree layout
 // (single/double elimination) depending on whether the round sizes shrink.
 
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { SimMatchCard, CARD_H } from './SimMatchCard';
 import type { SimMatch } from '@/utils/simulator';
 
@@ -48,6 +49,7 @@ export function EliminationView({
   label?: string;
   accentColor?: string;
 }) {
+  const t = useAdminT('adminSimulatorEliminationView');
   if (!rounds.length) return null;
 
   const isTree =
@@ -80,8 +82,10 @@ export function EliminationView({
                     {round.roundName}
                   </div>
                   <div className="text-[10px] text-neutral-500 mt-0.5">
-                    {round.matches.length} match
-                    {round.matches.length > 1 ? 's' : ''}
+                    {format(
+                      round.matches.length > 1 ? t.match_other : t.match_one,
+                      { count: round.matches.length }
+                    )}
                   </div>
                 </div>
                 <div className="flex flex-col gap-2">
