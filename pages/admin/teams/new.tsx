@@ -13,6 +13,7 @@ import {
   DEFAULT_TEAM_ROLES,
   type TeamRole,
 } from '@/utils/teamRoles';
+import { useAdminT } from '@/lib/i18n/useAdminT';
 
 type StaffShape = {
   id: string;
@@ -48,6 +49,7 @@ export const getServerSideProps = withStaffPage<{ teamRoles: TeamRole[] }>(
 );
 
 function AdminNewTeamPage({ staff, teamRoles }: StaffProps) {
+  const t = useAdminT('adminTeamsNew');
   const router = useRouter();
   const { addToast } = useToast();
   const { mutateJson } = useIdempotentMutation();
@@ -118,13 +120,13 @@ function AdminNewTeamPage({ staff, teamRoles }: StaffProps) {
         method: 'POST',
         body: JSON.stringify(payload),
       });
-      addToast('Equipe creee avec succes', 'success');
+      addToast(t.toastCreated, 'success');
 
       if (json.team?.id) {
         router.push(`/admin/teams/${json.team.id}`);
       }
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
+      setErrorMsg((err as Error)?.message ?? t.errUnexpected);
     } finally {
       setSubmitting(false);
     }
@@ -133,7 +135,7 @@ function AdminNewTeamPage({ staff, teamRoles }: StaffProps) {
   return (
     <>
       <Head>
-        <title>Admin – Nouvelle equipe</title>
+        <title>{t.headTitle}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
@@ -158,18 +160,15 @@ function AdminNewTeamPage({ staff, teamRoles }: StaffProps) {
                   d="M15 19l-7-7 7-7"
                 />
               </svg>
-              Retour a la liste des equipes
+              {t.backToList}
             </button>
 
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-                  Creer une nouvelle equipe
+                  {t.heading}
                 </h1>
-                <p className="text-neutral-400 text-sm mt-1">
-                  Renseigne les informations generales et les membres de
-                  l&apos;equipe
-                </p>
+                <p className="text-neutral-400 text-sm mt-1">{t.subtitle}</p>
               </div>
             </div>
           </div>
@@ -201,15 +200,12 @@ function AdminNewTeamPage({ staff, teamRoles }: StaffProps) {
             <div className="space-y-6">
               {/* Infos equipe */}
               <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 space-y-5">
-                <h2 className="text-lg font-semibold">
-                  Informations principales
-                </h2>
+                <h2 className="text-lg font-semibold">{t.mainInfoTitle}</h2>
 
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm text-neutral-300 mb-1">
-                      Nom de l&apos;equipe{' '}
-                      <span className="text-red-400">*</span>
+                      {t.nameLabel} <span className="text-red-400">*</span>
                     </label>
                     <input
                       className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
@@ -217,33 +213,33 @@ function AdminNewTeamPage({ staff, teamRoles }: StaffProps) {
                       required
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      placeholder="Ex : Phoenix"
+                      placeholder={t.namePlaceholder}
                     />
                   </div>
 
                   <div className="grid gap-4 md:grid-cols-2">
                     <div>
                       <label className="block text-sm text-neutral-300 mb-1">
-                        Tag / short name
+                        {t.shortNameLabel}
                       </label>
                       <input
                         className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                         type="text"
                         value={shortName}
                         onChange={(e) => setShortName(e.target.value)}
-                        placeholder="Ex : PNX"
+                        placeholder={t.shortNamePlaceholder}
                       />
                     </div>
                     <div>
                       <label className="block text-sm text-neutral-300 mb-1">
-                        Pays
+                        {t.countryLabel}
                       </label>
                       <input
                         className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                         type="text"
                         value={country}
                         onChange={(e) => setCountry(e.target.value)}
-                        placeholder="Ex : France"
+                        placeholder={t.countryPlaceholder}
                       />
                     </div>
                   </div>
@@ -251,24 +247,24 @@ function AdminNewTeamPage({ staff, teamRoles }: StaffProps) {
                   <LogoUpload
                     value={logoUrl}
                     onChange={setLogoUrl}
-                    label="Logo de l'équipe"
+                    label={t.logoLabel}
                   />
 
                   <div>
                     <label className="block text-sm text-neutral-300 mb-1">
-                      Description
+                      {t.descriptionLabel}
                     </label>
                     <textarea
                       className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm min-h-[100px] resize-y"
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
-                      placeholder="Quelques infos sur l'equipe, palmares, style de jeu, etc."
+                      placeholder={t.descriptionPlaceholder}
                     />
                   </div>
 
                   <div>
                     <label className="block text-sm text-neutral-300 mb-1">
-                      Email du capitaine
+                      {t.captainEmailLabel}
                     </label>
                     <input
                       className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
@@ -278,7 +274,7 @@ function AdminNewTeamPage({ staff, teamRoles }: StaffProps) {
                       placeholder="capitaine@exemple.com"
                     />
                     <p className="mt-1 text-xs text-neutral-500">
-                      L&apos;API convertira cet email en captain_id.
+                      {t.captainEmailHelp}
                     </p>
                   </div>
                 </div>
@@ -288,11 +284,9 @@ function AdminNewTeamPage({ staff, teamRoles }: StaffProps) {
               <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 space-y-5">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <h2 className="text-lg font-semibold">
-                      Membres de l&apos;equipe
-                    </h2>
+                    <h2 className="text-lg font-semibold">{t.membersTitle}</h2>
                     <p className="text-sm text-neutral-400 mt-1">
-                      Ajoute les joueurs / staff avec leur email et un role
+                      {t.membersSubtitle}
                     </p>
                   </div>
                   <button
@@ -313,7 +307,7 @@ function AdminNewTeamPage({ staff, teamRoles }: StaffProps) {
                         d="M12 4v16m8-8H4"
                       />
                     </svg>
-                    Ajouter
+                    {t.add}
                   </button>
                 </div>
 
@@ -325,7 +319,7 @@ function AdminNewTeamPage({ staff, teamRoles }: StaffProps) {
                     >
                       <div className="flex-1">
                         <label className="block text-xs text-neutral-400 mb-1">
-                          Email (auth.users)
+                          {t.memberEmailLabel}
                         </label>
                         <input
                           className="w-full px-3 py-2.5 rounded-xl bg-neutral-950/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
@@ -339,7 +333,7 @@ function AdminNewTeamPage({ staff, teamRoles }: StaffProps) {
                       </div>
                       <div className="w-full md:w-40">
                         <label className="block text-xs text-neutral-400 mb-1">
-                          Role
+                          {t.roleLabel}
                         </label>
                         <select
                           className="w-full px-3 py-2.5 rounded-xl bg-neutral-950/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
@@ -361,7 +355,7 @@ function AdminNewTeamPage({ staff, teamRoles }: StaffProps) {
                           disabled={members.length === 1}
                           onClick={() => removeMemberRow(index)}
                           className="p-2.5 rounded-xl hover:bg-red-900/50 text-red-400 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                          title="Supprimer ce membre"
+                          title={t.removeMemberTitle}
                         >
                           <svg
                             className="w-5 h-5"
@@ -382,28 +376,23 @@ function AdminNewTeamPage({ staff, teamRoles }: StaffProps) {
                   ))}
                 </div>
 
-                <p className="text-xs text-neutral-500">
-                  L&apos;API creera les lignes dans team_members avec le role et
-                  le user_id correspondant a chaque email.
-                </p>
+                <p className="text-xs text-neutral-500">{t.membersHelp}</p>
               </section>
             </div>
 
             {/* Colonne droite : resume & actions */}
             <div className="space-y-6">
               <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 space-y-4">
-                <h2 className="text-lg font-semibold">
-                  Resume de l&apos;equipe
-                </h2>
+                <h2 className="text-lg font-semibold">{t.summaryTitle}</h2>
                 <div className="space-y-3 text-sm">
                   <div className="flex justify-between gap-4 py-2 border-b border-neutral-700/50">
-                    <span className="text-neutral-400">Nom</span>
+                    <span className="text-neutral-400">{t.summaryName}</span>
                     <span className="font-medium truncate max-w-[180px] text-right">
                       {name || '—'}
                     </span>
                   </div>
                   <div className="flex justify-between gap-4 py-2 border-b border-neutral-700/50">
-                    <span className="text-neutral-400">Tag</span>
+                    <span className="text-neutral-400">{t.summaryTag}</span>
                     {shortName ? (
                       <span className="font-mono text-xs bg-neutral-900/50 px-2 py-1 rounded-lg border border-neutral-700/50">
                         {shortName}
@@ -413,34 +402,29 @@ function AdminNewTeamPage({ staff, teamRoles }: StaffProps) {
                     )}
                   </div>
                   <div className="flex justify-between gap-4 py-2 border-b border-neutral-700/50">
-                    <span className="text-neutral-400">Pays</span>
+                    <span className="text-neutral-400">{t.summaryCountry}</span>
                     <span className="text-neutral-200">{country || '—'}</span>
                   </div>
                   <div className="flex justify-between gap-4 py-2 border-b border-neutral-700/50">
-                    <span className="text-neutral-400">Capitaine</span>
+                    <span className="text-neutral-400">{t.summaryCaptain}</span>
                     <span className="text-neutral-200 text-xs font-mono truncate max-w-[140px]">
                       {captainEmail || '—'}
                     </span>
                   </div>
                   <div className="flex justify-between gap-4 py-2">
-                    <span className="text-neutral-400">Membres</span>
+                    <span className="text-neutral-400">{t.summaryMembers}</span>
                     <span className="text-neutral-200">
                       {members.filter((m) => m.email.trim().length > 0).length}{' '}
                       / {members.length}
                     </span>
                   </div>
                 </div>
-                <p className="text-xs text-neutral-500 pt-2">
-                  Tu pourras editer l&apos;equipe et ses membres plus tard via
-                  l&apos;interface admin.
-                </p>
+                <p className="text-xs text-neutral-500 pt-2">{t.summaryHelp}</p>
               </section>
 
               <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 space-y-4">
-                <h2 className="text-lg font-semibold">Actions</h2>
-                <p className="text-sm text-neutral-400">
-                  Verifie bien les emails (ils doivent exister dans auth.users).
-                </p>
+                <h2 className="text-lg font-semibold">{t.actionsTitle}</h2>
+                <p className="text-sm text-neutral-400">{t.actionsHint}</p>
 
                 <div className="space-y-3 pt-2">
                   <button
@@ -451,7 +435,7 @@ function AdminNewTeamPage({ staff, teamRoles }: StaffProps) {
                     {submitting ? (
                       <>
                         <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        Creation en cours...
+                        {t.creating}
                       </>
                     ) : (
                       <>
@@ -468,7 +452,7 @@ function AdminNewTeamPage({ staff, teamRoles }: StaffProps) {
                             d="M12 4v16m8-8H4"
                           />
                         </svg>
-                        Creer l&apos;equipe
+                        {t.submit}
                       </>
                     )}
                   </button>
@@ -478,7 +462,7 @@ function AdminNewTeamPage({ staff, teamRoles }: StaffProps) {
                     onClick={() => router.push('/admin/teams')}
                     className="w-full px-5 py-3 rounded-xl bg-neutral-700 hover:bg-neutral-600 border border-neutral-600 text-sm font-medium transition-colors"
                   >
-                    Annuler
+                    {t.cancel}
                   </button>
                 </div>
               </section>

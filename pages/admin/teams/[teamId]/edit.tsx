@@ -25,6 +25,7 @@ import {
   type TeamRole,
 } from '@/utils/teamRoles';
 import type { StaffProps, TeamRow, TeamMemberRow } from '@/types/admin';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 type TournamentRow = {
   id: string;
@@ -61,6 +62,7 @@ function AdminEditTeamPage({
   staff,
   teamRoles,
 }: StaffProps & { teamRoles: TeamRole[] }) {
+  const t = useAdminT('adminTeamEdit');
   const router = useRouter();
   const { teamId } = router.query as { teamId?: string };
 
@@ -159,25 +161,25 @@ function AdminEditTeamPage({
         `/api/admin/teams/${teamId}`
       );
 
-      const t: TeamRow = json.team;
-      setTeam(t);
-      setName(t.name || '');
-      setShortName(t.short_name || '');
-      setLogoUrl(t.logo_url || '');
-      setBannerUrl(t.banner_url || '');
-      setCountry(t.country || '');
-      setDescription(t.description || '');
-      setTwitter(t.twitter || '');
-      setDiscord(t.discord || '');
-      setDiscordRoleId(t.discord_role_id || '');
-      setWebsite(t.website || '');
-      setIsActive(t.is_active !== false);
+      const row: TeamRow = json.team;
+      setTeam(row);
+      setName(row.name || '');
+      setShortName(row.short_name || '');
+      setLogoUrl(row.logo_url || '');
+      setBannerUrl(row.banner_url || '');
+      setCountry(row.country || '');
+      setDescription(row.description || '');
+      setTwitter(row.twitter || '');
+      setDiscord(row.discord || '');
+      setDiscordRoleId(row.discord_role_id || '');
+      setWebsite(row.website || '');
+      setIsActive(row.is_active !== false);
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
+      setErrorMsg((err as Error)?.message ?? t.errUnexpected);
     } finally {
       setLoading(false);
     }
-  }, [teamId, adminFetchJson]);
+  }, [teamId, adminFetchJson, t]);
 
   const fetchMembers = useCallback(async () => {
     if (!teamId) return;
@@ -260,10 +262,10 @@ function AdminEditTeamPage({
         }
       );
 
-      addToast('Équipe mise à jour', 'success');
+      addToast(t.toastTeamUpdated, 'success');
       setTeam(json.team);
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
+      setErrorMsg((err as Error)?.message ?? t.errUnexpected);
     } finally {
       setSaving(false);
     }
@@ -284,13 +286,13 @@ function AdminEditTeamPage({
 
       const json = await res.json();
       if (!res.ok || json.error) {
-        throw new Error(json.error || "Échec de l'inscription");
+        throw new Error(json.error || t.errRegister);
       }
 
       setSelectedTournamentId('');
       await fetchTournaments();
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
+      setErrorMsg((err as Error)?.message ?? t.errUnexpected);
     } finally {
       setTournamentsLoading(false);
     }
@@ -298,7 +300,7 @@ function AdminEditTeamPage({
 
   async function handleUnregisterFromTournament(tournamentId: string) {
     if (!teamId) return;
-    if (!confirm('Désinscrire cette équipe de ce tournoi ?')) return;
+    if (!confirm(t.confirmUnregister)) return;
 
     setTournamentsLoading(true);
     try {
@@ -412,11 +414,11 @@ function AdminEditTeamPage({
   const handleAddMember = useCallback(async () => {
     if (!teamId) return;
     if (!memberForm.email.trim() && !memberForm.userId.trim()) {
-      setMemberError('Email ou User ID requis');
+      setMemberError(t.errEmailOrUserId);
       return;
     }
     if (!memberForm.battleTag.trim()) {
-      setMemberError('BattleTag est obligatoire');
+      setMemberError(t.errBattleTagRequired);
       return;
     }
 
@@ -438,18 +440,18 @@ function AdminEditTeamPage({
 
       const json = await res.json();
       if (!res.ok || json.error) {
-        throw new Error(json.error || "Impossible d'ajouter le membre");
+        throw new Error(json.error || t.errAddMember);
       }
 
       setShowAddMemberModal(false);
-      addToast('Membre ajouté', 'success');
+      addToast(t.toastMemberAdded, 'success');
       await fetchMembers();
     } catch (err: unknown) {
-      setMemberError((err as Error)?.message ?? 'Erreur inattendue');
+      setMemberError((err as Error)?.message ?? t.errUnexpected);
     } finally {
       setMemberSaving(false);
     }
-  }, [teamId, memberForm, addMemberMutate, addToast, fetchMembers]);
+  }, [teamId, memberForm, addMemberMutate, addToast, fetchMembers, t]);
 
   const handleEditMember = useCallback(async () => {
     if (!teamId || !editingMember) return;
@@ -470,10 +472,10 @@ function AdminEditTeamPage({
 
       setShowEditMemberModal(false);
       setEditingMember(null);
-      addToast('Membre modifié', 'success');
+      addToast(t.toastMemberEdited, 'success');
       await fetchMembers();
     } catch (err: unknown) {
-      setMemberError((err as Error)?.message ?? 'Erreur inattendue');
+      setMemberError((err as Error)?.message ?? t.errUnexpected);
     } finally {
       setMemberSaving(false);
     }
@@ -484,13 +486,18 @@ function AdminEditTeamPage({
     adminFetchJson,
     addToast,
     fetchMembers,
+    t,
   ]);
 
   const handleDeleteMember = useCallback(
     async (member: TeamMemberRow) => {
       if (!teamId) return;
       if (
-        !confirm(`Retirer ${member.battle_tag || member.user_id} de l'équipe ?`)
+        !confirm(
+          format(t.confirmDeleteMember, {
+            member: member.battle_tag || member.user_id,
+          })
+        )
       )
         return;
 
@@ -501,7 +508,7 @@ function AdminEditTeamPage({
         });
 
         if (res.ok) {
-          addToast('Membre retiré', 'success');
+          addToast(t.toastMemberRemoved, 'success');
           await fetchMembers();
           await fetchTeam();
         }
@@ -509,7 +516,7 @@ function AdminEditTeamPage({
         // Silently fail
       }
     },
-    [teamId, adminFetch, addToast, fetchMembers, fetchTeam]
+    [teamId, adminFetch, addToast, fetchMembers, fetchTeam, t]
   );
 
   const handleSetCaptain = useCallback(
@@ -517,7 +524,9 @@ function AdminEditTeamPage({
       if (!teamId) return;
       if (
         !confirm(
-          `Définir ${member.battle_tag || member.user_id} comme capitaine ?`
+          format(t.confirmSetCaptain, {
+            member: member.battle_tag || member.user_id,
+          })
         )
       )
         return;
@@ -532,12 +541,12 @@ function AdminEditTeamPage({
         );
 
         setTeam(json.team);
-        addToast('Capitaine défini', 'success');
+        addToast(t.toastCaptainSet, 'success');
       } catch (err: unknown) {
-        setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
+        setErrorMsg((err as Error)?.message ?? t.errUnexpected);
       }
     },
-    [teamId, adminFetchJson, addToast]
+    [teamId, adminFetchJson, addToast, t]
   );
 
   const handleSwap = useCallback(
@@ -554,13 +563,13 @@ function AdminEditTeamPage({
         });
 
         setSwapSource(null);
-        addToast('Échange effectué', 'success');
+        addToast(t.toastSwapDone, 'success');
         await fetchMembers();
       } catch (err: unknown) {
-        setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
+        setErrorMsg((err as Error)?.message ?? t.errUnexpected);
       }
     },
-    [teamId, adminFetchJson, addToast, fetchMembers]
+    [teamId, adminFetchJson, addToast, fetchMembers, t]
   );
 
   // Amorce d'un échange depuis une ligne (bouton "Échanger").
@@ -624,8 +633,11 @@ function AdminEditTeamPage({
         const { successCount = 0, failureCount = 0 } = json;
         addToast(
           failureCount > 0
-            ? `${successCount} appliqué(s), ${failureCount} ignoré(s)`
-            : `${successCount} membre(s) mis à jour`,
+            ? format(t.bulkPartial, {
+                success: successCount,
+                failure: failureCount,
+              })
+            : format(t.bulkSuccess, { success: successCount }),
           failureCount > 0 ? 'info' : 'success'
         );
         clearSelection();
@@ -633,7 +645,7 @@ function AdminEditTeamPage({
         await fetchMembers();
         await fetchTeam();
       } catch (err: unknown) {
-        setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
+        setErrorMsg((err as Error)?.message ?? t.errUnexpected);
       } finally {
         setBulkBusy(false);
       }
@@ -646,19 +658,16 @@ function AdminEditTeamPage({
       clearSelection,
       fetchMembers,
       fetchTeam,
+      t,
     ]
   );
 
   const handleBulkRemove = useCallback(async () => {
     if (selectedIds.size === 0) return;
-    if (
-      !confirm(
-        `Retirer ${selectedIds.size} membre(s) de l'équipe ? Le capitaine est protégé et ne sera pas retiré.`
-      )
-    )
+    if (!confirm(format(t.confirmBulkRemove, { count: selectedIds.size })))
       return;
     await runBulk('remove');
-  }, [selectedIds, runBulk]);
+  }, [selectedIds, runBulk, t]);
 
   // Handlers bulk stables passés à MembersSection.
   const handleSelectAll = useCallback(
@@ -724,7 +733,7 @@ function AdminEditTeamPage({
       .filter((l) => l.status === 'matched' && l.memberId)
       .map((l) => ({ memberId: l.memberId as string, battleTag: l.tag }));
     if (items.length === 0) {
-      setErrorMsg('Aucune ligne valide à importer');
+      setErrorMsg(t.errNoValidImport);
       return;
     }
     setImportBusy(true);
@@ -740,8 +749,11 @@ function AdminEditTeamPage({
       const { successCount = 0, failureCount = 0 } = json;
       addToast(
         failureCount > 0
-          ? `${successCount} BattleTag(s) importé(s), ${failureCount} échoué(s)`
-          : `${successCount} BattleTag(s) importé(s)`,
+          ? format(t.importPartial, {
+              success: successCount,
+              failure: failureCount,
+            })
+          : format(t.importSuccess, { success: successCount }),
         failureCount > 0 ? 'info' : 'success'
       );
       setShowImportModal(false);
@@ -749,11 +761,11 @@ function AdminEditTeamPage({
       setImportPreview(null);
       await fetchMembers();
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
+      setErrorMsg((err as Error)?.message ?? t.errUnexpected);
     } finally {
       setImportBusy(false);
     }
-  }, [teamId, importPreview, adminFetchJson, addToast, fetchMembers]);
+  }, [teamId, importPreview, adminFetchJson, addToast, fetchMembers, t]);
 
   // Ouverture / fermeture des modales (handlers stables pour les React.memo).
   const openImportModal = useCallback(() => {
@@ -782,7 +794,11 @@ function AdminEditTeamPage({
   return (
     <>
       <Head>
-        <title>{`Admin – Éditer équipe${team?.name ? ` : ${team.name}` : ''}`}</title>
+        <title>
+          {team?.name
+            ? format(t.headTitleWithName, { name: team.name })
+            : t.headTitle}
+        </title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
@@ -808,12 +824,12 @@ function AdminEditTeamPage({
           <div className="mb-8">
             <Breadcrumb
               items={[
-                { label: 'Équipes', href: '/admin/teams' },
+                { label: t.breadcrumbTeams, href: '/admin/teams' },
                 {
-                  label: team?.name || 'Équipe',
+                  label: team?.name || t.breadcrumbTeam,
                   href: `/admin/teams/${teamId}`,
                 },
-                { label: 'Modifier' },
+                { label: t.breadcrumbEdit },
               ]}
             />
             <button
@@ -834,7 +850,7 @@ function AdminEditTeamPage({
                   d="M15 19l-7-7 7-7"
                 />
               </svg>
-              Retour à la liste
+              {t.backToList}
             </button>
 
             <div className="flex flex-wrap items-start justify-between gap-4">
@@ -850,7 +866,7 @@ function AdminEditTeamPage({
                 )}
                 <div>
                   <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-                    {team?.name || 'Chargement...'}
+                    {team?.name || t.loading}
                   </h1>
                   {team?.short_name && (
                     <p className="text-sm text-neutral-400 mt-1">
@@ -869,11 +885,11 @@ function AdminEditTeamPage({
                 <div className="flex items-center gap-2">
                   {team.is_active ? (
                     <span className="px-3 py-1.5 rounded-full text-sm font-semibold bg-emerald-600/20 text-emerald-300 border border-emerald-500/30">
-                      Active
+                      {t.active}
                     </span>
                   ) : (
                     <span className="px-3 py-1.5 rounded-full text-sm font-semibold bg-neutral-600/20 text-neutral-300 border border-neutral-500/30">
-                      Inactive
+                      {t.inactive}
                     </span>
                   )}
                 </div>
@@ -924,14 +940,14 @@ function AdminEditTeamPage({
                         d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
                       />
                     </svg>
-                    Informations générales
+                    {t.generalInfo}
                   </h2>
 
                   <form onSubmit={handleSubmit} className="space-y-5">
                     <div className="grid gap-4 md:grid-cols-2">
                       <div>
                         <label className="block text-sm text-neutral-400 mb-1">
-                          Nom *
+                          {t.nameLabel}
                         </label>
                         <input
                           type="text"
@@ -939,12 +955,12 @@ function AdminEditTeamPage({
                           value={name}
                           onChange={(e) => setName(e.target.value)}
                           className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                          placeholder="Nom de l'équipe"
+                          placeholder={t.namePlaceholder}
                         />
                       </div>
                       <div>
                         <label className="block text-sm text-neutral-400 mb-1">
-                          Tag / Short name
+                          {t.shortNameLabel}
                         </label>
                         <input
                           type="text"
@@ -960,11 +976,11 @@ function AdminEditTeamPage({
                       <LogoUpload
                         value={logoUrl}
                         onChange={setLogoUrl}
-                        label="Logo"
+                        label={t.logoLabel}
                       />
                       <div>
                         <label className="block text-sm text-neutral-400 mb-1">
-                          URL Bannière
+                          {t.bannerLabel}
                         </label>
                         <input
                           type="text"
@@ -979,7 +995,7 @@ function AdminEditTeamPage({
                     <div className="grid gap-4 md:grid-cols-2">
                       <div>
                         <label className="block text-sm text-neutral-400 mb-1">
-                          Pays
+                          {t.countryLabel}
                         </label>
                         <input
                           type="text"
@@ -1001,27 +1017,27 @@ function AdminEditTeamPage({
                           htmlFor="active"
                           className="text-sm text-neutral-300"
                         >
-                          Équipe active
+                          {t.teamActive}
                         </label>
                       </div>
                     </div>
 
                     <div>
                       <label className="block text-sm text-neutral-400 mb-1">
-                        Description
+                        {t.descriptionLabel}
                       </label>
                       <textarea
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
                         className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm min-h-[100px] resize-y"
-                        placeholder="Présentation de l'équipe"
+                        placeholder={t.descriptionPlaceholder}
                       />
                     </div>
 
                     <div className="grid gap-4 md:grid-cols-3">
                       <div>
                         <label className="block text-sm text-neutral-400 mb-1">
-                          Twitter
+                          {t.twitterLabel}
                         </label>
                         <input
                           type="text"
@@ -1033,7 +1049,7 @@ function AdminEditTeamPage({
                       </div>
                       <div>
                         <label className="block text-sm text-neutral-400 mb-1">
-                          Discord
+                          {t.discordLabel}
                         </label>
                         <input
                           type="text"
@@ -1045,7 +1061,7 @@ function AdminEditTeamPage({
                       </div>
                       <div>
                         <label className="block text-sm text-neutral-400 mb-1">
-                          ID rôle Discord
+                          {t.discordRoleIdLabel}
                         </label>
                         <input
                           type="text"
@@ -1055,13 +1071,12 @@ function AdminEditTeamPage({
                           placeholder="1234567890123456789"
                         />
                         <p className="text-xs text-neutral-500 mt-1">
-                          Pingé automatiquement lors des annonces de match
-                          (J-15min, résultats).
+                          {t.discordRoleIdHelp}
                         </p>
                       </div>
                       <div>
                         <label className="block text-sm text-neutral-400 mb-1">
-                          Site web
+                          {t.websiteLabel}
                         </label>
                         <input
                           type="text"
@@ -1081,7 +1096,7 @@ function AdminEditTeamPage({
                       {saving ? (
                         <>
                           <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                          Enregistrement...
+                          {t.saving}
                         </>
                       ) : (
                         <>
@@ -1098,7 +1113,7 @@ function AdminEditTeamPage({
                               d="M5 13l4 4L19 7"
                             />
                           </svg>
-                          Enregistrer
+                          {t.save}
                         </>
                       )}
                     </button>
@@ -1151,46 +1166,48 @@ function AdminEditTeamPage({
                         d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"
                       />
                     </svg>
-                    Tournois
+                    {t.tournamentsTitle}
                   </h2>
 
                   {tournamentsLoading ? (
                     <div className="text-neutral-400 text-sm py-4">
-                      Chargement...
+                      {t.loading}
                     </div>
                   ) : (
                     <div className="space-y-4">
                       {/* Registered tournaments */}
                       <div>
                         <h3 className="text-sm font-semibold text-neutral-400 mb-2">
-                          Inscrits ({registeredTournaments.length})
+                          {format(t.registeredTitle, {
+                            count: registeredTournaments.length,
+                          })}
                         </h3>
                         {registeredTournaments.length === 0 ? (
                           <div className="text-sm text-neutral-500 py-4 text-center bg-neutral-900/30 rounded-xl">
-                            Aucune inscription
+                            {t.noRegistration}
                           </div>
                         ) : (
                           <div className="space-y-2">
-                            {registeredTournaments.map((t) => (
+                            {registeredTournaments.map((tourn) => (
                               <div
-                                key={t.id}
+                                key={tourn.id}
                                 className="flex items-center justify-between gap-3 bg-neutral-900/50 rounded-xl px-4 py-3"
                               >
                                 <div>
                                   <div className="font-medium text-sm">
-                                    {t.name}
+                                    {tourn.name}
                                   </div>
                                   <div className="text-xs text-neutral-500 mt-0.5">
-                                    {t.game} • {t.status}
+                                    {tourn.game} • {tourn.status}
                                   </div>
                                 </div>
                                 <button
                                   onClick={() =>
-                                    handleUnregisterFromTournament(t.id)
+                                    handleUnregisterFromTournament(tourn.id)
                                   }
                                   className="px-3 py-1 rounded-lg text-xs font-medium bg-red-900/40 hover:bg-red-900/60 text-red-300 border border-red-700/50 transition-colors"
                                 >
-                                  Désinscrire
+                                  {t.unregister}
                                 </button>
                               </div>
                             ))}
@@ -1202,7 +1219,7 @@ function AdminEditTeamPage({
                       {availableTournaments.length > 0 && (
                         <div className="pt-4 border-t border-neutral-700">
                           <h3 className="text-sm font-semibold text-neutral-400 mb-2">
-                            Inscrire à un tournoi
+                            {t.registerToTournament}
                           </h3>
                           <div className="flex gap-2">
                             <select
@@ -1212,12 +1229,10 @@ function AdminEditTeamPage({
                               }
                               className="flex-1 px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                             >
-                              <option value="">
-                                Sélectionner un tournoi...
-                              </option>
-                              {availableTournaments.map((t) => (
-                                <option key={t.id} value={t.id}>
-                                  {t.name} ({t.game})
+                              <option value="">{t.selectTournament}</option>
+                              {availableTournaments.map((tourn) => (
+                                <option key={tourn.id} value={tourn.id}>
+                                  {tourn.name} ({tourn.game})
                                 </option>
                               ))}
                             </select>
@@ -1228,7 +1243,7 @@ function AdminEditTeamPage({
                               }
                               className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors"
                             >
-                              Inscrire
+                              {t.register}
                             </button>
                           </div>
                         </div>
@@ -1242,12 +1257,12 @@ function AdminEditTeamPage({
               <div className="space-y-6">
                 <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
                   <h2 className="text-sm font-semibold text-neutral-400 mb-3">
-                    Informations système
+                    {t.systemInfoTitle}
                   </h2>
                   <div className="space-y-3 text-sm">
                     <div>
                       <div className="text-xs text-neutral-500 mb-1">
-                        ID de l&apos;équipe
+                        {t.teamIdLabel}
                       </div>
                       <div className="font-mono text-xs bg-neutral-900 px-3 py-2 rounded-lg border border-neutral-700 break-all">
                         {team.id}
@@ -1258,7 +1273,7 @@ function AdminEditTeamPage({
 
                 <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
                   <h2 className="text-sm font-semibold text-neutral-400 mb-3">
-                    Liens rapides
+                    {t.quickLinksTitle}
                   </h2>
                   <div className="space-y-2">
                     <Link
@@ -1282,7 +1297,7 @@ function AdminEditTeamPage({
                             />
                           </svg>
                         </div>
-                        <span className="text-sm">Page publique</span>
+                        <span className="text-sm">{t.publicPage}</span>
                       </div>
                       <svg
                         className="w-4 h-4 text-neutral-500 group-hover:text-white transition-colors"

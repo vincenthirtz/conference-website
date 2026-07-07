@@ -13,8 +13,11 @@ import {
   DEFAULT_TEAM_ROLES,
   type TeamRole,
 } from '@/utils/teamRoles';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 import { logger } from '../../../utils/logger';
+
+type Dict = ReturnType<typeof useAdminT<'adminUsersNew'>>;
 type StaffShape = {
   id: string;
   role: string;
@@ -49,20 +52,20 @@ type AddMemberResponse = {
 
 const ROLES = ['member', 'player', 'caster', 'manager', 'admin', 'owner'];
 
-function roleLabel(role: string) {
+function roleLabel(t: Dict, role: string) {
   switch (role) {
     case 'owner':
-      return 'Owner';
+      return t.roleOwner;
     case 'admin':
-      return 'Admin';
+      return t.roleAdmin;
     case 'manager':
-      return 'Manager';
+      return t.roleManager;
     case 'caster':
-      return 'Caster';
+      return t.roleCaster;
     case 'player':
-      return 'Joueur';
+      return t.rolePlayer;
     case 'member':
-      return 'Membre';
+      return t.roleMember;
     default:
       return role;
   }
@@ -79,6 +82,7 @@ export const getServerSideProps = withStaffPage<{ teamRoles: TeamRole[] }>(
 );
 
 function AdminCreateUserPage({ staff, teamRoles }: StaffProps) {
+  const t = useAdminT('adminUsersNew');
   const router = useRouter();
   const { addToast } = useToast();
   const { adminFetch } = useAdminFetch();
@@ -139,14 +143,14 @@ function AdminCreateUserPage({ staff, teamRoles }: StaffProps) {
       // Validate team assignment fields if enabled
       if (assignToTeam) {
         if (!selectedTeamId) {
-          throw new Error('Veuillez sélectionner une équipe');
+          throw new Error(t.errSelectTeam);
         }
         if (!battleTag.trim()) {
-          throw new Error('BattleTag requis (format Pseudo#0000)');
+          throw new Error(t.errBattleTagRequired);
         }
         const battleTagRegex = /^[A-Za-z0-9]{2,}#[0-9]{3,6}$/;
         if (!battleTagRegex.test(battleTag.trim())) {
-          throw new Error('Format BattleTag invalide (ex: Pseudo#1234)');
+          throw new Error(t.errBattleTagInvalid);
         }
       }
 
@@ -167,7 +171,7 @@ function AdminCreateUserPage({ staff, teamRoles }: StaffProps) {
         await userRes.json();
 
       if (!userRes.ok || userJson.error) {
-        throw new Error(userJson.error || "Impossible de créer l'utilisateur");
+        throw new Error(userJson.error || t.errCreateUser);
       }
 
       let teamAssignment: AddMemberResponse | undefined;
@@ -193,10 +197,8 @@ function AdminCreateUserPage({ staff, teamRoles }: StaffProps) {
         if (!teamRes.ok || teamJson.error) {
           // User created but team assignment failed
           setSuccess({ user: userJson });
-          addToast('Compte créé avec succès', 'success');
-          setErrorMsg(
-            `Utilisateur créé mais erreur lors de l'ajout à l'équipe: ${teamJson.error}`
-          );
+          addToast(t.toastCreated, 'success');
+          setErrorMsg(format(t.errTeamAssign, { error: teamJson.error ?? '' }));
           return;
         }
 
@@ -204,7 +206,7 @@ function AdminCreateUserPage({ staff, teamRoles }: StaffProps) {
       }
 
       setSuccess({ user: userJson, teamAssignment });
-      addToast('Compte créé avec succès', 'success');
+      addToast(t.toastCreated, 'success');
       setEmail('');
       setPassword('');
       setDisplayName('');
@@ -212,18 +214,20 @@ function AdminCreateUserPage({ staff, teamRoles }: StaffProps) {
       setSelectedTeamId('');
       setSetCaptain(false);
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
+      setErrorMsg((err as Error)?.message ?? t.errUnexpected);
     } finally {
       setLoading(false);
     }
   }
 
-  const selectedTeamName = teams.find((t) => t.id === selectedTeamId)?.name;
+  const selectedTeamName = teams.find(
+    (team) => team.id === selectedTeamId
+  )?.name;
 
   return (
     <>
       <Head>
-        <title>Admin – Créer un utilisateur</title>
+        <title>{t.headTitle}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
@@ -233,11 +237,9 @@ function AdminCreateUserPage({ staff, teamRoles }: StaffProps) {
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-                  Nouvel utilisateur
+                  {t.heading}
                 </h1>
-                <p className="text-neutral-400 text-sm mt-1">
-                  Créer un compte et optionnellement l&apos;ajouter à une équipe
-                </p>
+                <p className="text-neutral-400 text-sm mt-1">{t.subtitle}</p>
               </div>
 
               <Link
@@ -257,7 +259,7 @@ function AdminCreateUserPage({ staff, teamRoles }: StaffProps) {
                     d="M15 19l-7-7 7-7"
                   />
                 </svg>
-                Retour à la liste
+                {t.backToList}
               </Link>
             </div>
           </div>
@@ -278,57 +280,50 @@ function AdminCreateUserPage({ staff, teamRoles }: StaffProps) {
                   />
                 </svg>
                 <div className="space-y-3 flex-1">
-                  <p className="font-semibold text-white">
-                    Compte créé avec succès
-                  </p>
+                  <p className="font-semibold text-white">{t.successTitle}</p>
                   <div className="text-sm text-neutral-300 space-y-1">
                     <p>
-                      User ID :{' '}
+                      {t.userIdLabel}{' '}
                       <span className="font-mono text-xs bg-neutral-800 px-2 py-0.5 rounded">
                         {success.user.userId}
                       </span>
                     </p>
                     <p>
-                      Email :{' '}
+                      {t.emailLabel}{' '}
                       <span className="font-mono text-xs bg-neutral-800 px-2 py-0.5 rounded">
                         {success.user.email}
                       </span>
                     </p>
                     {success.user.passwordSentByEmail ? (
                       <p className="text-emerald-300 text-xs">
-                        Le mot de passe a été envoyé par email à
-                        l&apos;utilisateur.
+                        {t.passwordSentByEmail}
                       </p>
                     ) : (
-                      <p className="text-amber-300 text-xs">
-                        L&apos;email de bienvenue n&apos;a pas pu être envoyé.
-                        Utilisez &quot;Renvoyer les identifiants&quot; depuis la
-                        gestion des utilisateurs.
-                      </p>
+                      <p className="text-amber-300 text-xs">{t.emailNotSent}</p>
                     )}
                   </div>
 
                   {success.teamAssignment && (
                     <div className="mt-3 pt-3 border-t border-emerald-500/30">
                       <p className="font-medium text-emerald-300 mb-1">
-                        Ajouté à l&apos;équipe
+                        {t.teamAssignedTitle}
                       </p>
                       <div className="text-sm text-neutral-300 space-y-1">
                         <p>
-                          Équipe :{' '}
+                          {t.teamLabel}{' '}
                           <span className="text-white">
                             {selectedTeamName || success.teamAssignment.teamId}
                           </span>
                         </p>
                         <p>
-                          Rôle :{' '}
+                          {t.roleLabelColon}{' '}
                           <span className="text-white">
                             {success.teamAssignment.role}
                           </span>
                         </p>
                         {success.teamAssignment.captainSet && (
                           <p className="text-amber-300">
-                            Défini comme capitaine
+                            {t.setCaptainSuccess}
                           </p>
                         )}
                       </div>
@@ -339,7 +334,7 @@ function AdminCreateUserPage({ staff, teamRoles }: StaffProps) {
                     onClick={() => setSuccess(null)}
                     className="mt-2 text-sm text-emerald-400 hover:text-emerald-300"
                   >
-                    Créer un autre utilisateur
+                    {t.createAnother}
                   </button>
                 </div>
               </div>
@@ -371,12 +366,12 @@ function AdminCreateUserPage({ staff, teamRoles }: StaffProps) {
                 {/* Informations de connexion */}
                 <div>
                   <h2 className="font-semibold text-lg mb-4">
-                    Informations de connexion
+                    {t.sectionLogin}
                   </h2>
                   <div className="grid gap-4 md:grid-cols-2">
                     <div>
                       <label className="block text-sm text-neutral-400 mb-1">
-                        Email <span className="text-red-400">*</span>
+                        {t.emailField} <span className="text-red-400">*</span>
                       </label>
                       <input
                         type="email"
@@ -390,17 +385,17 @@ function AdminCreateUserPage({ staff, teamRoles }: StaffProps) {
 
                     <div>
                       <label className="block text-sm text-neutral-400 mb-1">
-                        Mot de passe
+                        {t.passwordField}
                       </label>
                       <input
                         type="text"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Laisser vide pour générer"
+                        placeholder={t.passwordPlaceholder}
                       />
                       <p className="text-xs text-neutral-500 mt-1">
-                        Vide = mot de passe auto-généré
+                        {t.passwordHelp}
                       </p>
                     </div>
                   </div>
@@ -408,24 +403,26 @@ function AdminCreateUserPage({ staff, teamRoles }: StaffProps) {
 
                 {/* Profil */}
                 <div>
-                  <h2 className="font-semibold text-lg mb-4">Profil</h2>
+                  <h2 className="font-semibold text-lg mb-4">
+                    {t.sectionProfil}
+                  </h2>
                   <div className="grid gap-4 md:grid-cols-2">
                     <div>
                       <label className="block text-sm text-neutral-400 mb-1">
-                        Nom affiché
+                        {t.displayNameField}
                       </label>
                       <input
                         type="text"
                         value={displayName}
                         onChange={(e) => setDisplayName(e.target.value)}
                         className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Pseudo du joueur"
+                        placeholder={t.displayNamePlaceholder}
                       />
                     </div>
 
                     <div>
                       <label className="block text-sm text-neutral-400 mb-1">
-                        Rôle système
+                        {t.systemRoleField}
                       </label>
                       <select
                         value={role}
@@ -434,7 +431,7 @@ function AdminCreateUserPage({ staff, teamRoles }: StaffProps) {
                       >
                         {ROLES.map((r) => (
                           <option key={r} value={r}>
-                            {roleLabel(r)}
+                            {roleLabel(t, r)}
                           </option>
                         ))}
                       </select>
@@ -446,7 +443,7 @@ function AdminCreateUserPage({ staff, teamRoles }: StaffProps) {
                 <div className="border-t border-neutral-700/50 pt-6">
                   <div className="flex items-center justify-between mb-4">
                     <h2 className="font-semibold text-lg">
-                      Rattacher à une équipe
+                      {t.sectionAttachTeam}
                     </h2>
                     <label className="inline-flex items-center gap-2 text-sm cursor-pointer">
                       <input
@@ -455,7 +452,7 @@ function AdminCreateUserPage({ staff, teamRoles }: StaffProps) {
                         onChange={(e) => setAssignToTeam(e.target.checked)}
                         className="rounded border-neutral-500 bg-neutral-700 h-4 w-4"
                       />
-                      <span className="text-neutral-300">Activer</span>
+                      <span className="text-neutral-300">{t.enable}</span>
                     </label>
                   </div>
 
@@ -464,40 +461,42 @@ function AdminCreateUserPage({ staff, teamRoles }: StaffProps) {
                       <div className="grid gap-4 md:grid-cols-2">
                         <div>
                           <label className="block text-sm text-neutral-400 mb-1">
-                            Équipe <span className="text-red-400">*</span>
+                            {t.teamField}{' '}
+                            <span className="text-red-400">*</span>
                           </label>
                           <select
                             value={selectedTeamId}
                             onChange={(e) => setSelectedTeamId(e.target.value)}
                             className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                           >
-                            <option value="">Sélectionner une équipe</option>
-                            {teams.map((t) => (
-                              <option key={t.id} value={t.id}>
-                                {t.name}
+                            <option value="">{t.selectTeam}</option>
+                            {teams.map((team) => (
+                              <option key={team.id} value={team.id}>
+                                {team.name}
                               </option>
                             ))}
                           </select>
                           {loadingTeams && (
                             <p className="text-xs text-neutral-500 mt-1">
-                              Chargement des équipes...
+                              {t.loadingTeams}
                             </p>
                           )}
                         </div>
 
                         <div>
                           <label className="block text-sm text-neutral-400 mb-1">
-                            BattleTag <span className="text-red-400">*</span>
+                            {t.battleTagField}{' '}
+                            <span className="text-red-400">*</span>
                           </label>
                           <input
                             type="text"
                             value={battleTag}
                             onChange={(e) => setBattleTag(e.target.value)}
                             className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            placeholder="Pseudo#1234"
+                            placeholder={t.battleTagPlaceholder}
                           />
                           <p className="text-xs text-neutral-500 mt-1">
-                            Format: Pseudo#0000
+                            {t.battleTagHelp}
                           </p>
                         </div>
                       </div>
@@ -505,7 +504,7 @@ function AdminCreateUserPage({ staff, teamRoles }: StaffProps) {
                       <div className="grid gap-4 md:grid-cols-2 items-end">
                         <div>
                           <label className="block text-sm text-neutral-400 mb-1">
-                            Rôle dans l&apos;équipe
+                            {t.teamRoleField}
                           </label>
                           <select
                             value={teamRole}
@@ -528,7 +527,7 @@ function AdminCreateUserPage({ staff, teamRoles }: StaffProps) {
                             className="rounded border-neutral-500 bg-neutral-700 h-4 w-4"
                           />
                           <span className="text-neutral-300">
-                            Définir comme capitaine
+                            {t.setCaptain}
                           </span>
                         </label>
                       </div>
@@ -545,7 +544,7 @@ function AdminCreateUserPage({ staff, teamRoles }: StaffProps) {
                     onClick={() => router.push('/admin/users/manage')}
                     disabled={loading}
                   >
-                    Annuler
+                    {t.cancel}
                   </Button>
 
                   <Button
@@ -554,7 +553,7 @@ function AdminCreateUserPage({ staff, teamRoles }: StaffProps) {
                     disabled={loading}
                     className="px-5 py-2.5 font-semibold bg-emerald-600 hover:bg-emerald-700"
                   >
-                    {loading ? 'Création...' : "Créer l'utilisateur"}
+                    {loading ? t.creating : t.submit}
                   </Button>
                 </div>
               </form>
@@ -576,7 +575,7 @@ function AdminCreateUserPage({ staff, teamRoles }: StaffProps) {
                     d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                   />
                 </svg>
-                Informations
+                {t.infoTitle}
               </h2>
               <ul className="space-y-3 text-sm text-neutral-300">
                 <li className="flex items-start gap-2">
@@ -591,7 +590,7 @@ function AdminCreateUserPage({ staff, teamRoles }: StaffProps) {
                       clipRule="evenodd"
                     />
                   </svg>
-                  Le compte est créé via le service role Supabase
+                  {t.infoServiceRole}
                 </li>
                 <li className="flex items-start gap-2">
                   <svg
@@ -605,7 +604,7 @@ function AdminCreateUserPage({ staff, teamRoles }: StaffProps) {
                       clipRule="evenodd"
                     />
                   </svg>
-                  L&apos;email est automatiquement marqué comme confirmé
+                  {t.infoEmailConfirmed}
                 </li>
                 <li className="flex items-start gap-2">
                   <svg
@@ -619,14 +618,14 @@ function AdminCreateUserPage({ staff, teamRoles }: StaffProps) {
                       clipRule="evenodd"
                     />
                   </svg>
-                  Le mot de passe est généré si laissé vide
+                  {t.infoPasswordGenerated}
                 </li>
               </ul>
 
               {assignToTeam && (
                 <div className="mt-6 pt-4 border-t border-neutral-700/50">
                   <h3 className="font-medium text-sm mb-3 text-neutral-200">
-                    Rattachement équipe
+                    {t.teamAttachTitle}
                   </h3>
                   <ul className="space-y-2 text-sm text-neutral-400">
                     <li className="flex items-start gap-2">
@@ -641,7 +640,7 @@ function AdminCreateUserPage({ staff, teamRoles }: StaffProps) {
                           clipRule="evenodd"
                         />
                       </svg>
-                      Le BattleTag doit être au format Pseudo#0000
+                      {t.teamInfoBattleTag}
                     </li>
                     <li className="flex items-start gap-2">
                       <svg
@@ -655,7 +654,7 @@ function AdminCreateUserPage({ staff, teamRoles }: StaffProps) {
                           clipRule="evenodd"
                         />
                       </svg>
-                      L&apos;utilisateur sera ajouté à team_members
+                      {t.teamInfoAddedMembers}
                     </li>
                     <li className="flex items-start gap-2">
                       <svg
@@ -669,7 +668,7 @@ function AdminCreateUserPage({ staff, teamRoles }: StaffProps) {
                           clipRule="evenodd"
                         />
                       </svg>
-                      Si capitaine, teams.captain_id sera mis à jour
+                      {t.teamInfoCaptain}
                     </li>
                   </ul>
                 </div>

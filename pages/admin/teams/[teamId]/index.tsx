@@ -6,6 +6,7 @@ import Button from '@/components/Buttons/button';
 import { withStaffPage } from '@/utils/staff';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import Breadcrumb from '@/components/admin/Breadcrumb';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 type StaffShape = {
   id: string;
@@ -44,6 +45,7 @@ type TeamMemberRow = {
 export const getServerSideProps = withStaffPage('manager');
 
 function AdminTeamDetailPage({ staff }: StaffProps) {
+  const t = useAdminT('adminTeamDetail');
   const router = useRouter();
   const { teamId } = router.query as { teamId?: string };
   const { adminFetchJson } = useAdminFetch();
@@ -71,7 +73,7 @@ function AdminTeamDetailPage({ staff }: StaffProps) {
       );
       setTeam(json.team);
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
+      setErrorMsg((err as Error)?.message ?? t.errUnexpected);
     } finally {
       setLoading(false);
     }
@@ -87,7 +89,7 @@ function AdminTeamDetailPage({ staff }: StaffProps) {
       );
       setMembers(json.members || []);
     } catch (err: unknown) {
-      setMembersError((err as Error)?.message ?? 'Erreur inattendue');
+      setMembersError((err as Error)?.message ?? t.errUnexpected);
     } finally {
       setMembersLoading(false);
     }
@@ -98,14 +100,14 @@ function AdminTeamDetailPage({ staff }: StaffProps) {
   return (
     <>
       <Head>
-        <title>Admin – Équipe</title>
+        <title>{t.headTitle}</title>
       </Head>
 
       <div className="min-h-screen bg-neutral-900 text-white p-6 pt-20">
         <Breadcrumb
           items={[
-            { label: 'Équipes', href: '/admin/teams' },
-            { label: team?.name || 'Équipe' },
+            { label: t.breadcrumbTeams, href: '/admin/teams' },
+            { label: team?.name || t.breadcrumbTeam },
           ]}
         />
         <header className="flex items-center justify-between flex-wrap gap-4 mb-6">
@@ -115,27 +117,25 @@ function AdminTeamDetailPage({ staff }: StaffProps) {
               onClick={() => router.push(backUrl)}
               className="mb-2 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white"
             >
-              ← Retour à la liste des équipes
+              {t.backToList}
             </button>
             <h1 className="text-3xl font-bold">
-              {team?.name || 'Équipe'}{' '}
+              {team?.name || t.teamFallback}{' '}
               {team?.short_name ? `(${team.short_name})` : ''}
             </h1>
-            <p className="text-sm text-neutral-400 mt-1">
-              Vue d’ensemble de l’équipe et membres.
-            </p>
+            <p className="text-sm text-neutral-400 mt-1">{t.overview}</p>
           </div>
           <div className="flex gap-2 flex-wrap">
             {teamId && (
               <>
                 <Link href={`/admin/teams/${teamId}/edit`}>
                   <Button type="button" size="compact" className="px-4">
-                    Éditer
+                    {t.edit}
                   </Button>
                 </Link>
                 <Link href="/admin/teams/add-member">
                   <Button type="button" size="compact" className="px-4">
-                    Ajouter un membre
+                    {t.addMember}
                   </Button>
                 </Link>
               </>
@@ -152,11 +152,9 @@ function AdminTeamDetailPage({ staff }: StaffProps) {
         <div className="grid gap-6 lg:grid-cols-[1.3fr_1fr] items-start">
           <section className="bg-neutral-800 border border-neutral-700 rounded-xl p-6 space-y-4">
             {loading ? (
-              <p className="text-neutral-300 text-sm">
-                Chargement de l’équipe…
-              </p>
+              <p className="text-neutral-300 text-sm">{t.loadingTeam}</p>
             ) : !team ? (
-              <p className="text-neutral-300 text-sm">Équipe introuvable.</p>
+              <p className="text-neutral-300 text-sm">{t.teamNotFound}</p>
             ) : (
               <>
                 <div className="flex items-center gap-4 flex-wrap">
@@ -170,16 +168,16 @@ function AdminTeamDetailPage({ staff }: StaffProps) {
                   )}
                   <div className="space-y-1">
                     <p className="text-xs uppercase tracking-[0.12em] text-neutral-400">
-                      Informations
+                      {t.informations}
                     </p>
                     <p className="text-2xl font-semibold">{team.name}</p>
                     {team.short_name && (
                       <p className="text-sm text-neutral-300">
-                        Tag : {team.short_name}
+                        {format(t.tagLabel, { tag: team.short_name })}
                       </p>
                     )}
                     <p className="text-sm text-neutral-400">
-                      Statut :{' '}
+                      {t.statusLabel}{' '}
                       <span
                         className={`px-2 py-1 rounded-full text-xs ${
                           team.is_active
@@ -187,22 +185,22 @@ function AdminTeamDetailPage({ staff }: StaffProps) {
                             : 'bg-red-500/15 text-red-200 border border-red-400/50'
                         }`}
                       >
-                        {team.is_active ? 'Active' : 'Inactive'}
+                        {team.is_active ? t.active : t.inactive}
                       </span>
                     </p>
                   </div>
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <InfoRow label="Pays" value={team.country || '—'} />
-                  <InfoRow label="Site web" value={team.website || '—'} />
-                  <InfoRow label="Twitter" value={team.twitter || '—'} />
-                  <InfoRow label="Discord" value={team.discord || '—'} />
+                  <InfoRow label={t.countryLabel} value={team.country || '—'} />
+                  <InfoRow label={t.websiteLabel} value={team.website || '—'} />
+                  <InfoRow label={t.twitterLabel} value={team.twitter || '—'} />
+                  <InfoRow label={t.discordLabel} value={team.discord || '—'} />
                 </div>
 
                 <div className="grid gap-2">
                   <p className="text-xs uppercase tracking-[0.12em] text-neutral-400">
-                    Description
+                    {t.description}
                   </p>
                   <p className="text-sm text-neutral-200 whitespace-pre-wrap">
                     {team.description || '—'}
@@ -214,24 +212,20 @@ function AdminTeamDetailPage({ staff }: StaffProps) {
 
           <section className="bg-neutral-800 border border-neutral-700 rounded-xl p-6 space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Membres</h2>
+              <h2 className="text-lg font-semibold">{t.members}</h2>
               <Link
                 href="/admin/teams/add-member"
                 className="text-sm underline"
               >
-                Ajouter un membre
+                {t.addMember}
               </Link>
             </div>
             {membersLoading ? (
-              <p className="text-neutral-300 text-sm">
-                Chargement des membres…
-              </p>
+              <p className="text-neutral-300 text-sm">{t.loadingMembers}</p>
             ) : membersError ? (
               <p className="text-red-200 text-sm">{membersError}</p>
             ) : members.length === 0 ? (
-              <p className="text-neutral-300 text-sm">
-                Aucun membre pour le moment.
-              </p>
+              <p className="text-neutral-300 text-sm">{t.noMembers}</p>
             ) : (
               <div className="space-y-2">
                 {members.map((m) => {
@@ -295,12 +289,12 @@ function AdminTeamDetailPage({ staff }: StaffProps) {
                             </span>
                             {isCaptain && (
                               <span className="px-1.5 py-0.5 rounded text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 font-semibold">
-                                Capitaine
+                                {t.captain}
                               </span>
                             )}
                             {isManager && (
                               <span className="px-1.5 py-0.5 rounded text-[10px] bg-sky-500/20 text-sky-300 border border-sky-500/30 font-semibold">
-                                Manager
+                                {t.manager}
                               </span>
                             )}
                           </div>

@@ -12,6 +12,7 @@ import {
   DEFAULT_TEAM_ROLES,
   type TeamRole,
 } from '@/utils/teamRoles';
+import { useAdminT } from '@/lib/i18n/useAdminT';
 
 import { logger } from '../../../utils/logger';
 
@@ -55,6 +56,7 @@ export const getServerSideProps = withStaffPage<{ teamRoles: TeamRole[] }>(
 );
 
 function AdminAddTeamMemberPage({ staff, teamRoles }: StaffProps) {
+  const t = useAdminT('adminTeamAddMember');
   const router = useRouter();
   const { addToast } = useToast();
   const { adminFetch } = useAdminFetch();
@@ -96,12 +98,12 @@ function AdminAddTeamMemberPage({ staff, teamRoles }: StaffProps) {
     setErrorMsg(null);
 
     try {
-      if (!teamId) throw new Error('Choisis une equipe');
+      if (!teamId) throw new Error(t.errChooseTeam);
       if (!email.trim() && !userId.trim()) {
-        throw new Error('Renseigne un email ou un userId');
+        throw new Error(t.errEmailOrUserId);
       }
       if (!battleTag.trim()) {
-        throw new Error('BattleTag requis (format Pseudo#0000).');
+        throw new Error(t.errBattleTagRequired);
       }
 
       const payload = {
@@ -120,15 +122,15 @@ function AdminAddTeamMemberPage({ staff, teamRoles }: StaffProps) {
 
       const json: AddMemberResponse & { error?: string } = await res.json();
       if (!res.ok || json.error) {
-        throw new Error(json.error || "Impossible d'ajouter le membre");
+        throw new Error(json.error || t.errAddMember);
       }
 
-      addToast(json.info || 'Membre ajoute', 'success');
+      addToast(json.info || t.toastMemberAdded, 'success');
       setEmail('');
       setUserId('');
       setBattleTag('');
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
+      setErrorMsg((err as Error)?.message ?? t.errUnexpected);
     } finally {
       setSubmitting(false);
     }
@@ -137,7 +139,7 @@ function AdminAddTeamMemberPage({ staff, teamRoles }: StaffProps) {
   return (
     <>
       <Head>
-        <title>Admin – Ajouter un membre d&apos;equipe</title>
+        <title>{t.headTitle}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
@@ -162,18 +164,15 @@ function AdminAddTeamMemberPage({ staff, teamRoles }: StaffProps) {
                   d="M15 19l-7-7 7-7"
                 />
               </svg>
-              Retour a la liste des equipes
+              {t.backToList}
             </button>
 
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-                  Ajouter un membre
+                  {t.heading}
                 </h1>
-                <p className="text-neutral-400 text-sm mt-1">
-                  Lier un utilisateur a une equipe et le definir comme capitaine
-                  si besoin
-                </p>
+                <p className="text-neutral-400 text-sm mt-1">{t.subtitle}</p>
               </div>
             </div>
           </div>
@@ -184,24 +183,24 @@ function AdminAddTeamMemberPage({ staff, teamRoles }: StaffProps) {
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div>
                   <label className="block text-sm text-neutral-300 mb-1">
-                    Equipe <span className="text-red-400">*</span>
+                    {t.teamLabel} <span className="text-red-400">*</span>
                   </label>
                   <select
                     value={teamId}
                     onChange={(e) => setTeamId(e.target.value)}
                     className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   >
-                    <option value="">Selectionne une equipe</option>
-                    {teams.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.name}
+                    <option value="">{t.selectTeam}</option>
+                    {teams.map((team) => (
+                      <option key={team.id} value={team.id}>
+                        {team.name}
                       </option>
                     ))}
                   </select>
                   {loadingTeams && (
                     <p className="text-xs text-neutral-500 mt-1 flex items-center gap-2">
                       <div className="w-3 h-3 border border-neutral-500 border-t-white rounded-full animate-spin" />
-                      Chargement des equipes...
+                      {t.loadingTeams}
                     </p>
                   )}
                 </div>
@@ -209,7 +208,7 @@ function AdminAddTeamMemberPage({ staff, teamRoles }: StaffProps) {
                 <div className="grid gap-4 md:grid-cols-2">
                   <div>
                     <label className="block text-sm text-neutral-300 mb-1">
-                      Email utilisateur
+                      {t.emailLabel}
                     </label>
                     <input
                       type="email"
@@ -219,36 +218,34 @@ function AdminAddTeamMemberPage({ staff, teamRoles }: StaffProps) {
                       placeholder="user@email.tld"
                     />
                     <p className="text-xs text-neutral-500 mt-1">
-                      L&apos;API trouvera l&apos;utilisateur par email si userId
-                      n&apos;est pas fourni.
+                      {t.emailHelp}
                     </p>
                   </div>
 
                   <div>
                     <label className="block text-sm text-neutral-300 mb-1">
-                      User ID (optionnel)
+                      {t.userIdLabel}
                     </label>
                     <input
                       type="text"
                       value={userId}
                       onChange={(e) => setUserId(e.target.value)}
                       className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono"
-                      placeholder="Prioritaire sur l'email si rempli"
+                      placeholder={t.userIdPlaceholder}
                     />
                   </div>
                 </div>
 
                 <div>
                   <label className="block text-sm text-neutral-300 mb-1">
-                    BattleTag (Pseudo#0000){' '}
-                    <span className="text-red-400">*</span>
+                    {t.battleTagLabel} <span className="text-red-400">*</span>
                   </label>
                   <input
                     type="text"
                     value={battleTag}
                     onChange={(e) => setBattleTag(e.target.value)}
                     className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                    placeholder="Pseudo#1234"
+                    placeholder={t.battleTagPlaceholder}
                     required
                   />
                 </div>
@@ -256,7 +253,7 @@ function AdminAddTeamMemberPage({ staff, teamRoles }: StaffProps) {
                 <div className="grid gap-4 md:grid-cols-2 items-center">
                   <div>
                     <label className="block text-sm text-neutral-300 mb-1">
-                      Role
+                      {t.roleLabel}
                     </label>
                     <select
                       value={role}
@@ -278,7 +275,7 @@ function AdminAddTeamMemberPage({ staff, teamRoles }: StaffProps) {
                       onChange={(e) => setSetCaptain(e.target.checked)}
                       className="h-4 w-4 rounded border-neutral-600 bg-neutral-900"
                     />
-                    <span>Definir comme capitaine</span>
+                    <span>{t.setCaptain}</span>
                   </label>
                 </div>
 
@@ -308,7 +305,7 @@ function AdminAddTeamMemberPage({ staff, teamRoles }: StaffProps) {
                     {submitting ? (
                       <>
                         <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        Ajout en cours...
+                        {t.adding}
                       </>
                     ) : (
                       <>
@@ -325,7 +322,7 @@ function AdminAddTeamMemberPage({ staff, teamRoles }: StaffProps) {
                             d="M12 4v16m8-8H4"
                           />
                         </svg>
-                        Ajouter le membre
+                        {t.submit}
                       </>
                     )}
                   </button>
@@ -334,7 +331,7 @@ function AdminAddTeamMemberPage({ staff, teamRoles }: StaffProps) {
                     href="/admin/teams"
                     className="px-4 py-2.5 rounded-xl bg-neutral-700 hover:bg-neutral-600 border border-neutral-600 text-sm font-medium transition-colors"
                   >
-                    Liste des equipes
+                    {t.teamsList}
                   </Link>
                 </div>
               </form>
@@ -343,35 +340,24 @@ function AdminAddTeamMemberPage({ staff, teamRoles }: StaffProps) {
             {/* Result Panel */}
             <aside className="space-y-6">
               <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 space-y-4">
-                <h2 className="text-lg font-semibold">Resultat</h2>
-                <p className="text-sm text-neutral-400">
-                  Apres validation, un toast de confirmation s&apos;affichera.
-                </p>
+                <h2 className="text-lg font-semibold">{t.resultTitle}</h2>
+                <p className="text-sm text-neutral-400">{t.resultDesc}</p>
               </section>
 
               <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 space-y-3">
-                <h2 className="text-lg font-semibold">Informations</h2>
+                <h2 className="text-lg font-semibold">{t.infoTitle}</h2>
                 <div className="text-xs text-neutral-400 space-y-2">
                   <div className="flex items-start gap-2">
                     <span className="text-neutral-500">•</span>
-                    <p>
-                      L&apos;API ajoute a team_members (role par defaut:
-                      joueur).
-                    </p>
+                    <p>{t.info1}</p>
                   </div>
                   <div className="flex items-start gap-2">
                     <span className="text-neutral-500">•</span>
-                    <p>
-                      Si l&apos;option capitaine est cochee, teams.captain_id
-                      est mis a jour.
-                    </p>
+                    <p>{t.info2}</p>
                   </div>
                   <div className="flex items-start gap-2">
                     <span className="text-neutral-500">•</span>
-                    <p>
-                      Fournis soit l&apos;email (recherche) soit le userId
-                      (prioritaire).
-                    </p>
+                    <p>{t.info3}</p>
                   </div>
                 </div>
               </section>

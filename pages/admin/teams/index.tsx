@@ -18,6 +18,7 @@ import { SkeletonListRow } from '@/components/admin/Skeleton';
 import { useUrlFilters } from '@/utils/useUrlFilters';
 import { escapePostgrestValue, sanitizeSearch } from '@/utils/apiHelpers';
 import type { TeamRow } from '@/types/admin';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 import { logger } from '../../../utils/logger';
 type AdminTeamsProps = {
@@ -52,6 +53,7 @@ function AdminTeamsListPage({
   total,
   errorMsg: ssrError,
 }: AdminTeamsProps) {
+  const t = useAdminT('adminTeamsList');
   const { addToast } = useToast();
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
   const { mutateJson: mutateDelete } = useIdempotentMutation();
@@ -85,9 +87,9 @@ function AdminTeamsListPage({
       if (res.ok) {
         const json = await res.json();
         setTournamentOptions(
-          (json.tournaments || []).map((t: any) => ({
-            id: t.id,
-            name: t.name,
+          (json.tournaments || []).map((tour: any) => ({
+            id: tour.id,
+            name: tour.name,
           }))
         );
       }
@@ -157,8 +159,8 @@ function AdminTeamsListPage({
     } catch (err: unknown) {
       const msg =
         err instanceof BgSyncQueuedError
-          ? 'Hors-ligne : la suppression sera envoyée à la reconnexion.'
-          : ((err as Error)?.message ?? 'Erreur inattendue');
+          ? t.offlineDelete
+          : ((err as Error)?.message ?? t.errUnexpected);
       setErrorMsg(msg);
       addToast(msg, err instanceof BgSyncQueuedError ? 'info' : 'error');
     } finally {
@@ -195,19 +197,18 @@ function AdminTeamsListPage({
     // Confirmation pour les actions destructives ou lourdes en consequences
     if (bulkAction === 'delete') {
       const ok = await confirm({
-        title: `Supprimer ${selected.size} equipe(s) ?`,
-        subtitle:
-          'Soft-delete : recuperable depuis la corbeille pendant 30 jours.',
+        title: format(t.confirmBulkDeleteTitle, { count: selected.size }),
+        subtitle: t.confirmBulkDeleteSubtitle,
         variant: 'danger',
-        confirmLabel: 'Supprimer',
+        confirmLabel: t.confirmBulkDeleteBtn,
       });
       if (!ok) return;
     } else if (bulkAction === 'deactivate') {
       const ok = await confirm({
-        title: `Desactiver ${selected.size} equipe(s) ?`,
-        subtitle: 'Elles ne pourront plus etre listees publiquement.',
+        title: format(t.confirmBulkDeactivateTitle, { count: selected.size }),
+        subtitle: t.confirmBulkDeactivateSubtitle,
         variant: 'warning',
-        confirmLabel: 'Desactiver',
+        confirmLabel: t.confirmBulkDeactivateBtn,
       });
       if (!ok) return;
     }
@@ -235,13 +236,16 @@ function AdminTeamsListPage({
       );
 
       const labels: Record<string, string> = {
-        delete: 'supprimee(s)',
-        activate: 'activee(s)',
-        deactivate: 'desactivee(s)',
-        assign: 'assignee(s)',
+        delete: t.bulkLabelDeleted,
+        activate: t.bulkLabelActivated,
+        deactivate: t.bulkLabelDeactivated,
+        assign: t.bulkLabelAssigned,
       };
       addToast(
-        `${json.count} equipe(s) ${labels[bulkAction] || bulkAction}.`,
+        format(t.bulkToast, {
+          count: json.count,
+          label: labels[bulkAction] || bulkAction,
+        }),
         'success'
       );
       setSelected(new Set());
@@ -250,8 +254,8 @@ function AdminTeamsListPage({
     } catch (err: unknown) {
       const msg =
         err instanceof BgSyncQueuedError
-          ? 'Hors-ligne : l’action groupée sera envoyée à la reconnexion.'
-          : ((err as Error)?.message ?? 'Erreur');
+          ? t.offlineBulk
+          : ((err as Error)?.message ?? t.errGeneric);
       setErrorMsg(msg);
       addToast(msg, err instanceof BgSyncQueuedError ? 'info' : 'error');
     } finally {
@@ -296,14 +300,14 @@ function AdminTeamsListPage({
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || 'Erreur import');
+        throw new Error(json.error || t.errImport);
       }
 
       const json = await res.json();
       setImportResult(json);
       if (json.created > 0) fetchTeams();
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? 'Erreur import');
+      setErrorMsg((err as Error)?.message ?? t.errImport);
     } finally {
       setImporting(false);
     }
@@ -353,18 +357,17 @@ function AdminTeamsListPage({
         {
           key: 'toornament_api_key',
           value: apiKeys.toornament,
-          description:
-            "Clé API Toornament Viewer (X-Api-Key) pour import d'équipes.",
+          description: t.descToornament,
         },
         {
           key: 'challonge_api_key',
           value: apiKeys.challonge,
-          description: "Clé API Challonge v1 pour import d'équipes.",
+          description: t.descChallonge,
         },
         {
           key: 'startgg_api_key',
           value: apiKeys.startgg,
-          description: "Token start.gg (Bearer) pour import d'équipes.",
+          description: t.descStartgg,
         },
       ];
 
@@ -374,10 +377,10 @@ function AdminTeamsListPage({
           body: JSON.stringify(entry),
         });
       }
-      addToast('Clés API enregistrées.', 'success');
+      addToast(t.toastApiKeysSaved, 'success');
       setShowApiKeysModal(false);
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? 'Erreur sauvegarde clés');
+      setErrorMsg((err as Error)?.message ?? t.errApiKeysSave);
     } finally {
       setApiKeysSaving(false);
     }
@@ -387,7 +390,7 @@ function AdminTeamsListPage({
     <>
       {confirmDialog}
       <Head>
-        <title>Admin – Équipes</title>
+        <title>{t.headTitle}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
@@ -397,12 +400,14 @@ function AdminTeamsListPage({
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-                  Équipes
+                  {t.heading}
                 </h1>
                 <p className="text-neutral-400 text-sm mt-1">
                   {total !== null
-                    ? `${total} équipe${total > 1 ? 's' : ''} enregistrée${total > 1 ? 's' : ''}`
-                    : 'Chargement...'}
+                    ? format(total > 1 ? t.teamCount_other : t.teamCount_one, {
+                        count: total,
+                      })
+                    : t.loading}
                 </p>
               </div>
 
@@ -430,7 +435,7 @@ function AdminTeamsListPage({
                       d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
                     />
                   </svg>
-                  Importer
+                  {t.import}
                 </button>
                 <Link
                   href="/admin/teams/new"
@@ -449,7 +454,7 @@ function AdminTeamsListPage({
                       d="M12 4v16m8-8H4"
                     />
                   </svg>
-                  Nouvelle equipe
+                  {t.newTeam}
                 </Link>
               </div>
             </div>
@@ -475,7 +480,7 @@ function AdminTeamsListPage({
                 onClick={() => fetchTeams()}
                 className="flex-shrink-0 px-3 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-xs font-medium transition-colors"
               >
-                Réessayer
+                {t.retry}
               </button>
             </div>
           )}
@@ -488,7 +493,7 @@ function AdminTeamsListPage({
             >
               <div className="flex-1 min-w-[200px]">
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Recherche
+                  {t.searchLabel}
                 </label>
                 <div className="relative">
                   <svg
@@ -506,7 +511,7 @@ function AdminTeamsListPage({
                   </svg>
                   <input
                     type="text"
-                    placeholder="Nom ou slug..."
+                    placeholder={t.searchPlaceholder}
                     className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     value={searchInput}
                     onChange={(e) => setSearchInput(e.target.value)}
@@ -516,7 +521,7 @@ function AdminTeamsListPage({
 
               <div className="min-w-[140px]">
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Statut
+                  {t.statusLabel}
                 </label>
                 <select
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -528,15 +533,15 @@ function AdminTeamsListPage({
                     });
                   }}
                 >
-                  <option value="">Toutes</option>
-                  <option value="true">Actives</option>
-                  <option value="false">Inactives</option>
+                  <option value="">{t.statusAll}</option>
+                  <option value="true">{t.statusActive}</option>
+                  <option value="false">{t.statusInactive}</option>
                 </select>
               </div>
 
               <div className="min-w-[180px]">
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Tournoi
+                  {t.tournamentLabel}
                 </label>
                 <select
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -549,10 +554,10 @@ function AdminTeamsListPage({
                     });
                   }}
                 >
-                  <option value="">Tous les tournois</option>
-                  {tournamentOptions.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name}
+                  <option value="">{t.allTournaments}</option>
+                  {tournamentOptions.map((tour) => (
+                    <option key={tour.id} value={tour.id}>
+                      {tour.name}
                     </option>
                   ))}
                 </select>
@@ -575,7 +580,7 @@ function AdminTeamsListPage({
                     d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
                   />
                 </svg>
-                Rechercher
+                {t.search}
               </button>
             </form>
           </section>
@@ -584,8 +589,12 @@ function AdminTeamsListPage({
           {selected.size > 0 && (
             <div className="mb-4 flex flex-col sm:flex-row sm:items-center gap-3 bg-blue-900/30 border border-blue-500/30 rounded-xl px-4 py-3 flex-wrap">
               <span className="text-sm font-medium">
-                {selected.size} equipe{selected.size > 1 ? 's' : ''}{' '}
-                selectionnee{selected.size > 1 ? 's' : ''}
+                {format(
+                  selected.size > 1
+                    ? t.selectedCount_other
+                    : t.selectedCount_one,
+                  { count: selected.size }
+                )}
               </span>
               <div className="flex-1" />
               <select
@@ -593,11 +602,11 @@ function AdminTeamsListPage({
                 value={bulkAction}
                 onChange={(e) => setBulkAction(e.target.value)}
               >
-                <option value="">Action...</option>
-                <option value="activate">Activer</option>
-                <option value="deactivate">Desactiver</option>
-                <option value="delete">Supprimer (soft)</option>
-                <option value="assign">Assigner a un tournoi</option>
+                <option value="">{t.bulkActionPlaceholder}</option>
+                <option value="activate">{t.bulkActivate}</option>
+                <option value="deactivate">{t.bulkDeactivate}</option>
+                <option value="delete">{t.bulkDeleteSoft}</option>
+                <option value="assign">{t.bulkAssign}</option>
               </select>
               {bulkAction === 'assign' && (
                 <select
@@ -606,10 +615,10 @@ function AdminTeamsListPage({
                   onFocus={loadTournaments}
                   onChange={(e) => setAssignTournamentId(e.target.value)}
                 >
-                  <option value="">Choisir un tournoi...</option>
-                  {tournamentOptions.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name}
+                  <option value="">{t.chooseTournament}</option>
+                  {tournamentOptions.map((tour) => (
+                    <option key={tour.id} value={tour.id}>
+                      {tour.name}
                     </option>
                   ))}
                 </select>
@@ -624,7 +633,7 @@ function AdminTeamsListPage({
                 }
                 className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors disabled:opacity-50"
               >
-                {bulkProcessing ? 'Traitement...' : 'Appliquer'}
+                {bulkProcessing ? t.bulkProcessing : t.bulkApply}
               </button>
               <button
                 type="button"
@@ -634,7 +643,7 @@ function AdminTeamsListPage({
                 }}
                 className="px-3 py-2 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm transition-colors"
               >
-                Annuler
+                {t.cancel}
               </button>
             </div>
           )}
@@ -648,10 +657,7 @@ function AdminTeamsListPage({
                 ))}
               </div>
             ) : teams.length === 0 ? (
-              <EmptyState
-                title="Aucune equipe trouvee"
-                description="Aucune equipe ne correspond a tes filtres. Essaie d'elargir la recherche ou cree une nouvelle equipe."
-              />
+              <EmptyState title={t.emptyTitle} description={t.emptyDesc} />
             ) : (
               <div className="divide-y divide-neutral-700/50">
                 {/* Select all header */}
@@ -663,7 +669,7 @@ function AdminTeamsListPage({
                     className="w-4 h-4 rounded border-neutral-600 bg-neutral-900"
                   />
                   <span className="text-xs text-neutral-400 uppercase tracking-wide font-medium">
-                    Tout selectionner
+                    {t.selectAll}
                   </span>
                 </div>
 
@@ -730,7 +736,7 @@ function AdminTeamsListPage({
                                 : 'bg-neutral-600/20 text-neutral-400 border border-neutral-500/30'
                             }`}
                           >
-                            {team.is_active ? 'Active' : 'Inactive'}
+                            {team.is_active ? t.active : t.inactive}
                           </span>
                         </div>
                         <div className="flex items-center gap-2 sm:gap-3 text-sm text-neutral-400 flex-wrap">
@@ -745,7 +751,11 @@ function AdminTeamsListPage({
                               <span className="hidden sm:inline">•</span>
                             </>
                           )}
-                          <span>Créée le {formatDate(team.created_at)}</span>
+                          <span>
+                            {format(t.createdOn, {
+                              date: formatDate(team.created_at),
+                            })}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -769,13 +779,13 @@ function AdminTeamsListPage({
                             d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
                           />
                         </svg>
-                        Éditer
+                        {t.edit}
                       </Link>
                       <button
                         type="button"
                         onClick={() => setDeleteTarget(team)}
                         className="p-2 rounded-lg hover:bg-red-900/50 text-red-400 transition-colors"
-                        title="Supprimer"
+                        title={t.deleteTitle}
                       >
                         <svg
                           className="w-4 h-4"
@@ -821,12 +831,15 @@ function AdminTeamsListPage({
                   d="M15 19l-7-7 7-7"
                 />
               </svg>
-              Précédent
+              {t.previous}
             </button>
 
             <span className="text-neutral-400 text-sm">
-              {offset + 1} – {offset + teams.length}
-              {total ? ` sur ${total}` : ''}
+              {format(t.paginationRange, {
+                from: offset + 1,
+                to: offset + teams.length,
+              })}
+              {total ? format(t.paginationOf, { total }) : ''}
             </span>
 
             <button
@@ -835,7 +848,7 @@ function AdminTeamsListPage({
               onClick={() => setFilter('offset', String(offset + LIMIT))}
               className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
-              Suivant
+              {t.next}
               <svg
                 className="w-4 h-4"
                 fill="none"
@@ -879,11 +892,9 @@ function AdminTeamsListPage({
               </svg>
             </div>
             <div>
-              <h3 className="text-lg font-semibold">
-                Supprimer l&apos;équipe ?
-              </h3>
+              <h3 className="text-lg font-semibold">{t.deleteModalTitle}</h3>
               <p className="text-sm text-neutral-400">
-                Cette action est irréversible
+                {t.deleteModalSubtitle}
               </p>
             </div>
           </div>
@@ -896,7 +907,7 @@ function AdminTeamsListPage({
               className="px-4 py-2.5 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
               disabled={deleting}
             >
-              Annuler
+              {t.cancel}
             </button>
             <button
               type="button"
@@ -911,10 +922,10 @@ function AdminTeamsListPage({
               {deleting ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Suppression...
+                  {t.deleting}
                 </>
               ) : (
-                'Supprimer'
+                t.deleteTitle
               )}
             </button>
           </>
@@ -923,11 +934,11 @@ function AdminTeamsListPage({
         {deleteTarget && (
           <>
             <p className="text-sm text-neutral-300 mb-4 bg-neutral-900/50 rounded-xl p-3">
-              Cela désactive l&apos;équipe (suppression soft). Continuer pour{' '}
+              {t.deleteConfirmBefore}
               <span className="font-semibold text-white">
                 {deleteTarget.name}
-              </span>{' '}
-              ?
+              </span>
+              {t.deleteConfirmAfter}
             </p>
 
             {errorMsg && (
@@ -949,7 +960,7 @@ function AdminTeamsListPage({
                   onClick={() => fetchTeams()}
                   className="flex-shrink-0 px-3 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-xs font-medium transition-colors"
                 >
-                  Réessayer
+                  {t.retry}
                 </button>
               </div>
             )}
@@ -961,7 +972,7 @@ function AdminTeamsListPage({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-neutral-800 border border-neutral-700 rounded-2xl p-6 w-full max-w-2xl shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Importer des équipes</h3>
+              <h3 className="text-lg font-semibold">{t.importModalTitle}</h3>
               <div className="flex items-center gap-1">
                 <button
                   type="button"
@@ -969,7 +980,7 @@ function AdminTeamsListPage({
                     setShowApiKeysModal(true);
                     loadApiKeys();
                   }}
-                  title="Configurer les clés API"
+                  title={t.configApiKeysTitle}
                   className="p-1.5 rounded-lg hover:bg-neutral-700 transition-colors"
                 >
                   <svg
@@ -1046,21 +1057,21 @@ function AdminTeamsListPage({
             {activeTab === 'csv' && (
               <>
                 <p className="text-sm text-neutral-400 mb-4">
-                  Format attendu :{' '}
+                  {t.csvFormatPrefix}
                   <code className="bg-neutral-900 px-1.5 py-0.5 rounded text-xs">
                     name,short_name,country,joueurs
                   </code>
                   <br />
-                  Les joueurs sont séparés par{' '}
+                  {t.csvPlayersSepBefore}{' '}
                   <code className="bg-neutral-900 px-1.5 py-0.5 rounded text-xs">
                     ;
                   </code>{' '}
-                  (battle_tags). La première ligne est l&apos;en-tête.
+                  {t.csvPlayersSepAfter}
                 </p>
 
                 <div className="mb-4">
                   <label className="block text-sm text-neutral-400 mb-1">
-                    Fichier CSV (ou coller ci-dessous)
+                    {t.csvFileLabel}
                   </label>
                   <input
                     type="file"
@@ -1072,7 +1083,7 @@ function AdminTeamsListPage({
 
                 <div className="mb-4">
                   <label className="block text-sm text-neutral-400 mb-1">
-                    Contenu CSV
+                    {t.csvContentLabel}
                   </label>
                   <textarea
                     className="w-full h-40 px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono"
@@ -1090,49 +1101,48 @@ function AdminTeamsListPage({
                 <p className="text-sm text-neutral-400 mb-4">
                   {activeTab === 'toornament' && (
                     <>
-                      Colle l&apos;URL Toornament du tournoi ou son ID
-                      numérique. Ex&nbsp;:{' '}
+                      {t.toornamentProseBefore}
                       <code className="bg-neutral-900 px-1.5 py-0.5 rounded text-xs">
                         https://www.toornament.com/tournaments/12345/
                       </code>{' '}
-                      ou{' '}
+                      {t.proseOr}{' '}
                       <code className="bg-neutral-900 px-1.5 py-0.5 rounded text-xs">
                         12345
                       </code>
-                      .
+                      {t.prosePeriod}
                     </>
                   )}
                   {activeTab === 'challonge' && (
                     <>
-                      Colle l&apos;URL Challonge ou le slug. Ex&nbsp;:{' '}
+                      {t.challongeProseBefore}
                       <code className="bg-neutral-900 px-1.5 py-0.5 rounded text-xs">
                         https://challonge.com/mon-tournoi
                       </code>{' '}
-                      ou{' '}
+                      {t.proseOr}{' '}
                       <code className="bg-neutral-900 px-1.5 py-0.5 rounded text-xs">
                         mon-tournoi
                       </code>
-                      .
+                      {t.prosePeriod}
                     </>
                   )}
                   {activeTab === 'startgg' && (
                     <>
-                      Colle l&apos;URL d&apos;event start.gg ou son slug
-                      complet. Ex&nbsp;:{' '}
+                      {t.startggProseBefore}
                       <code className="bg-neutral-900 px-1.5 py-0.5 rounded text-xs">
                         https://www.start.gg/tournament/genesis-9/event/melee-singles
                       </code>
-                      .
+                      {t.prosePeriod}
                     </>
                   )}
                   <br />
-                  Une clé API doit être configurée (icône{' '}
-                  <span className="inline-block">⚙️</span> en haut).
+                  {t.apiKeyRequiredBefore}
+                  <span className="inline-block">⚙️</span>
+                  {t.apiKeyRequiredAfter}
                 </p>
 
                 <div className="mb-4">
                   <label className="block text-sm text-neutral-400 mb-1">
-                    URL ou identifiant
+                    {t.urlOrIdLabel}
                   </label>
                   <input
                     type="text"
@@ -1154,7 +1164,7 @@ function AdminTeamsListPage({
             {/* Tournoi cible (commun) */}
             <div className="mb-4">
               <label className="block text-sm text-neutral-400 mb-1">
-                Inscrire au tournoi (optionnel)
+                {t.registerToTournamentLabel}
               </label>
               <select
                 className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 text-sm"
@@ -1162,10 +1172,10 @@ function AdminTeamsListPage({
                 onFocus={loadTournaments}
                 onChange={(e) => setImportTournamentId(e.target.value)}
               >
-                <option value="">Aucun</option>
-                {tournamentOptions.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
+                <option value="">{t.none}</option>
+                {tournamentOptions.map((tour) => (
+                  <option key={tour.id} value={tour.id}>
+                    {tour.name}
                   </option>
                 ))}
               </select>
@@ -1176,16 +1186,20 @@ function AdminTeamsListPage({
               <div className="mb-4 rounded-xl bg-neutral-900/50 border border-neutral-700 p-4 text-sm">
                 <div className="flex gap-4 mb-2">
                   <span className="text-emerald-400">
-                    {importResult.created} créée(s)
+                    {format(t.resultCreated, { count: importResult.created })}
                   </span>
                   {importResult.skipped > 0 && (
                     <span className="text-amber-400">
-                      {importResult.skipped} doublon(s)
+                      {format(t.resultSkipped, {
+                        count: importResult.skipped,
+                      })}
                     </span>
                   )}
                   {importResult.errors.length > 0 && (
                     <span className="text-red-400">
-                      {importResult.errors.length} erreur(s)
+                      {format(t.resultErrors, {
+                        count: importResult.errors.length,
+                      })}
                     </span>
                   )}
                 </div>
@@ -1193,7 +1207,9 @@ function AdminTeamsListPage({
                   <ul className="text-xs text-red-300 space-y-1 max-h-32 overflow-y-auto">
                     {importResult.errors.map((e, i) => (
                       <li key={i}>
-                        {e.row > 0 ? `Ligne ${e.row}: ` : ''}
+                        {e.row > 0
+                          ? format(t.resultLinePrefix, { row: e.row })
+                          : ''}
                         {e.message}
                       </li>
                     ))}
@@ -1208,7 +1224,7 @@ function AdminTeamsListPage({
                 onClick={() => setShowImportModal(false)}
                 className="px-4 py-2.5 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
               >
-                Fermer
+                {t.close}
               </button>
               <button
                 type="button"
@@ -1222,10 +1238,10 @@ function AdminTeamsListPage({
                 {importing ? (
                   <>
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Import en cours...
+                    {t.importing}
                   </>
                 ) : (
-                  'Importer'
+                  t.importAction
                 )}
               </button>
             </div>
@@ -1238,7 +1254,7 @@ function AdminTeamsListPage({
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-neutral-800 border border-neutral-700 rounded-2xl p-6 w-full max-w-lg shadow-2xl">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Clés API d&apos;import</h3>
+              <h3 className="text-lg font-semibold">{t.apiKeysModalTitle}</h3>
               <button
                 type="button"
                 onClick={() => setShowApiKeysModal(false)}
@@ -1261,21 +1277,20 @@ function AdminTeamsListPage({
             </div>
 
             <p className="text-xs text-amber-300/80 mb-4">
-              ⚠️ Ces clés sont stockées en clair dans{' '}
+              ⚠️ {t.apiKeysWarningBefore}
               <code className="bg-neutral-900 px-1 rounded">site_settings</code>
-              . Utilise des tokens dédiés à l&apos;import et révoque-les côté
-              plateforme si compromis.
+              {t.apiKeysWarningAfter}
             </p>
 
             {apiKeysLoading ? (
-              <p className="text-sm text-neutral-400">Chargement...</p>
+              <p className="text-sm text-neutral-400">{t.loading}</p>
             ) : (
               <div className="space-y-4">
                 {(['toornament', 'challonge', 'startgg'] as const).map((k) => {
                   const labels: Record<typeof k, string> = {
-                    toornament: 'Toornament (X-Api-Key)',
-                    challonge: 'Challonge (api_key)',
-                    startgg: 'start.gg (Bearer token)',
+                    toornament: t.labelToornament,
+                    challonge: t.labelChallonge,
+                    startgg: t.labelStartgg,
                   };
                   const isRevealed = revealedKey === k;
                   return (
@@ -1301,7 +1316,7 @@ function AdminTeamsListPage({
                           onClick={() => setRevealedKey(isRevealed ? null : k)}
                           className="px-3 py-2 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-xs font-medium transition-colors"
                         >
-                          {isRevealed ? 'Masquer' : 'Voir'}
+                          {isRevealed ? t.hide : t.reveal}
                         </button>
                       </div>
                     </div>
@@ -1317,7 +1332,7 @@ function AdminTeamsListPage({
                 disabled={apiKeysSaving}
                 className="px-4 py-2.5 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
               >
-                Annuler
+                {t.cancel}
               </button>
               <button
                 type="button"
@@ -1328,10 +1343,10 @@ function AdminTeamsListPage({
                 {apiKeysSaving ? (
                   <>
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Enregistrement...
+                    {t.saving}
                   </>
                 ) : (
-                  'Enregistrer'
+                  t.save
                 )}
               </button>
             </div>

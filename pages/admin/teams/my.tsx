@@ -8,6 +8,7 @@ import { useToast } from '@/components/Toast';
 import Modal from '@/components/admin/Modal';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { BATTLE_TAG_REGEX } from '@/utils/teams/addMember';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 import { logger } from '../../../utils/logger';
 type StaffShape = {
@@ -67,6 +68,7 @@ type SearchResult = {
 export const getServerSideProps = withStaffPage('caster');
 
 function MyTeamPage({ staff }: StaffProps) {
+  const t = useAdminT('adminTeamsMy');
   const router = useRouter();
   const { adminFetch, adminFetchJson } = useAdminFetch();
   const { addToast } = useToast();
@@ -211,12 +213,12 @@ function MyTeamPage({ staff }: StaffProps) {
           }
         }
       } catch (err: unknown) {
-        setError((err as Error)?.message || 'Erreur inattendue.');
+        setError((err as Error)?.message || t.errLoad);
       } finally {
         setLoading(false);
       }
     },
-    [isStaffAdmin, adminFetchJson]
+    [isStaffAdmin, adminFetchJson, t]
   );
 
   useEffect(() => {
@@ -256,7 +258,7 @@ function MyTeamPage({ staff }: StaffProps) {
         await load();
       }
     } catch (err: unknown) {
-      alert((err as Error)?.message || 'Erreur lors de la sauvegarde.');
+      alert((err as Error)?.message || t.errSave);
     } finally {
       setSaving(false);
     }
@@ -335,13 +337,13 @@ function MyTeamPage({ staff }: StaffProps) {
       });
       const json = await res.json();
       if (!res.ok) {
-        alert(json?.error || "Erreur lors de l'ajout");
+        alert(json?.error || t.errAdd);
         return;
       }
       // L'email d'invitation est best-effort cote API : on previent l'admin
       // si le membre a bien ete ajoute mais que le mail n'est pas parti.
       if (json?.emailWarning) {
-        alert(`Membre ajoute. ${json.emailWarning}`);
+        alert(format(t.memberAddedWithWarning, { warning: json.emailWarning }));
       }
       // Reset and reload
       setShowAddModal(false);
@@ -357,7 +359,7 @@ function MyTeamPage({ staff }: StaffProps) {
         await load();
       }
     } catch (err: unknown) {
-      alert((err as Error)?.message || "Erreur lors de l'ajout");
+      alert((err as Error)?.message || t.errAdd);
     } finally {
       setAddingMember(false);
     }
@@ -390,7 +392,7 @@ function MyTeamPage({ staff }: StaffProps) {
       if (res.ok) {
         setIsJoinable(json.is_joinable);
       } else {
-        alert(json?.error || 'Erreur');
+        alert(json?.error || t.errGeneric);
       }
     } catch (err) {
       logger.error('Toggle joinable error:', err);
@@ -422,7 +424,7 @@ function MyTeamPage({ staff }: StaffProps) {
           }
         }
       } else {
-        alert(json?.error || 'Erreur');
+        alert(json?.error || t.errGeneric);
       }
     } catch (err) {
       logger.error('Join request action error:', err);
@@ -452,7 +454,7 @@ function MyTeamPage({ staff }: StaffProps) {
   const saveBattleTag = async (m: Member) => {
     const trimmed = battleTagDraft.trim();
     if (!BATTLE_TAG_REGEX.test(trimmed)) {
-      addToast('Format BattleTag invalide (ex: Pseudo#1234).', 'error');
+      addToast(t.errBattleTagInvalid, 'error');
       return;
     }
     if (trimmed === (m.battle_tag || '')) {
@@ -473,15 +475,15 @@ function MyTeamPage({ staff }: StaffProps) {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
-        addToast(json?.error || 'Erreur lors de la mise a jour.', 'error');
+        addToast(json?.error || t.errUpdate, 'error');
         return;
       }
-      addToast('BattleTag mis a jour.', 'success');
+      addToast(t.battleTagUpdated, 'success');
       cancelEditBattleTag();
       await reloadTeam();
     } catch (err) {
       logger.error('saveBattleTag error', err);
-      addToast('Erreur lors de la mise a jour.', 'error');
+      addToast(t.errUpdate, 'error');
     } finally {
       setMemberActionId(null);
     }
@@ -502,17 +504,14 @@ function MyTeamPage({ staff }: StaffProps) {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
-        addToast(json?.error || 'Erreur lors de la mise a jour.', 'error');
+        addToast(json?.error || t.errUpdate, 'error');
         return;
       }
-      addToast(
-        next ? 'Membre marque remplacant.' : 'Membre marque titulaire.',
-        'success'
-      );
+      addToast(next ? t.markedSubstitute : t.markedStarter, 'success');
       await reloadTeam();
     } catch (err) {
       logger.error('toggleSubstitute error', err);
-      addToast('Erreur lors de la mise a jour.', 'error');
+      addToast(t.errUpdate, 'error');
     } finally {
       setMemberActionId(null);
     }
@@ -542,7 +541,7 @@ function MyTeamPage({ staff }: StaffProps) {
         );
         const json = await res.json().catch(() => ({}));
         if (!res.ok) {
-          addToast(json?.error || "Echec de l'echange.", 'error');
+          addToast(json?.error || t.errSwap, 'error');
           return;
         }
       } else {
@@ -556,7 +555,7 @@ function MyTeamPage({ staff }: StaffProps) {
         });
         if (!r1.ok) {
           const j = await r1.json().catch(() => ({}));
-          addToast(j?.error || "Echec de l'echange.", 'error');
+          addToast(j?.error || t.errSwap, 'error');
           return;
         }
         const r2 = await adminFetch('/api/teams/update-member', {
@@ -568,16 +567,16 @@ function MyTeamPage({ staff }: StaffProps) {
         });
         if (!r2.ok) {
           const j = await r2.json().catch(() => ({}));
-          addToast(j?.error || 'Echange partiel : verifie le roster.', 'error');
+          addToast(j?.error || t.swapPartial, 'error');
           return;
         }
       }
-      addToast('Echange effectue.', 'success');
+      addToast(t.swapDone, 'success');
       setSwapSourceId(null);
       await reloadTeam();
     } catch (err) {
       logger.error('handleSwapWith error', err);
-      addToast("Echec de l'echange.", 'error');
+      addToast(t.errSwap, 'error');
     } finally {
       setMemberActionId(null);
     }
@@ -586,14 +585,16 @@ function MyTeamPage({ staff }: StaffProps) {
   // --- Member: transfer captaincy -----------------------------------------
   const handleTransferCaptain = async (m: Member) => {
     if (!m.user_id) {
-      addToast('Ce membre ne peut pas devenir capitaine.', 'error');
+      addToast(t.errCannotBeCaptain, 'error');
       return;
     }
     const ok = await confirm({
-      title: 'Designer ce membre comme capitaine ?',
-      subtitle: `${m.display_name || 'Ce joueur'} prendra le capitanat. Tu perdras tes droits de capitaine.`,
+      title: t.confirmTransferTitle,
+      subtitle: format(t.confirmTransferSubtitle, {
+        name: m.display_name || t.thisPlayer,
+      }),
       variant: 'warning',
-      confirmLabel: 'Transferer',
+      confirmLabel: t.confirmTransferBtn,
     });
     if (!ok) return;
     setMemberActionId(m.id);
@@ -606,7 +607,7 @@ function MyTeamPage({ staff }: StaffProps) {
         });
         const json = await res.json().catch(() => ({}));
         if (!res.ok || json.error) {
-          addToast(json?.error || 'Echec du transfert.', 'error');
+          addToast(json?.error || t.errTransfer, 'error');
           return;
         }
       } else {
@@ -616,15 +617,15 @@ function MyTeamPage({ staff }: StaffProps) {
         });
         const json = await res.json().catch(() => ({}));
         if (!res.ok) {
-          addToast(json?.error || 'Echec du transfert.', 'error');
+          addToast(json?.error || t.errTransfer, 'error');
           return;
         }
       }
-      addToast('Capitaine designe.', 'success');
+      addToast(t.captainAssigned, 'success');
       await reloadTeam();
     } catch (err) {
       logger.error('handleTransferCaptain error', err);
-      addToast('Echec du transfert.', 'error');
+      addToast(t.errTransfer, 'error');
     } finally {
       setMemberActionId(null);
     }
@@ -667,7 +668,7 @@ function MyTeamPage({ staff }: StaffProps) {
               d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
             />
           </svg>
-          Aucun membre enregistre
+          {t.noMembers}
         </div>
       );
     }
@@ -743,12 +744,12 @@ function MyTeamPage({ staff }: StaffProps) {
                     </span>
                     {isCaptain && (
                       <span className="text-[10px] uppercase tracking-wide bg-amber-500/20 text-amber-300 rounded-lg px-2 py-0.5 border border-amber-500/30 font-semibold">
-                        Capitaine
+                        {t.captain}
                       </span>
                     )}
                     {isManager && (
                       <span className="text-[10px] uppercase tracking-wide bg-sky-500/20 text-sky-300 rounded-lg px-2 py-0.5 border border-sky-500/30 font-semibold">
-                        Manager
+                        {t.manager}
                       </span>
                     )}
                     {isSubstitute && (
@@ -756,12 +757,12 @@ function MyTeamPage({ staff }: StaffProps) {
                         data-testid="substitute-badge"
                         className="text-[10px] uppercase tracking-wide bg-purple-500/20 text-purple-300 rounded-lg px-2 py-0.5 border border-purple-500/30 font-semibold"
                       >
-                        Remplaçant
+                        {t.substitute}
                       </span>
                     )}
                   </div>
                   <div className="text-xs text-neutral-400 truncate">
-                    {m.role || 'joueur'}
+                    {m.role || t.defaultRole}
                     {m.battle_tag && !isEditingTag && (
                       <span className="text-blue-400 ml-2">{m.battle_tag}</span>
                     )}
@@ -778,7 +779,7 @@ function MyTeamPage({ staff }: StaffProps) {
                           onClick={() => setSwapSourceId(null)}
                           className="px-2 py-1 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-[11px] transition-colors"
                         >
-                          Annuler
+                          {t.cancel}
                         </button>
                       ) : (
                         <button
@@ -788,14 +789,14 @@ function MyTeamPage({ staff }: StaffProps) {
                           onClick={() => handleSwapWith(m)}
                           className="px-2 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-[11px] transition-colors disabled:opacity-50"
                         >
-                          Echanger ici
+                          {t.swapHere}
                         </button>
                       )
                     ) : (
                       <>
                         <button
                           type="button"
-                          title="Modifier le BattleTag"
+                          title={t.editBattleTagTitle}
                           data-testid={`edit-battletag-${m.id}`}
                           onClick={() => startEditBattleTag(m)}
                           className="p-1.5 rounded-lg hover:bg-neutral-700 text-neutral-400 hover:text-white transition-colors"
@@ -818,8 +819,8 @@ function MyTeamPage({ staff }: StaffProps) {
                           type="button"
                           title={
                             isSubstitute
-                              ? 'Marquer titulaire'
-                              : 'Marquer remplaçant'
+                              ? t.markStarterTitle
+                              : t.markSubstituteTitle
                           }
                           data-testid={`toggle-substitute-${m.id}`}
                           disabled={busy}
@@ -849,7 +850,7 @@ function MyTeamPage({ staff }: StaffProps) {
                           data.members.length > 1 && (
                             <button
                               type="button"
-                              title="Lancer un echange titulaire/remplaçant"
+                              title={t.startSwapTitle}
                               data-testid={`start-swap-${m.id}`}
                               onClick={() => setSwapSourceId(m.id)}
                               className="p-1.5 rounded-lg hover:bg-neutral-700 text-neutral-400 hover:text-white transition-colors"
@@ -872,7 +873,7 @@ function MyTeamPage({ staff }: StaffProps) {
                         {!isCaptain && m.user_id && (
                           <button
                             type="button"
-                            title="Designer comme capitaine"
+                            title={t.makeCaptainTitle}
                             data-testid={`make-captain-${m.id}`}
                             disabled={busy}
                             onClick={() => handleTransferCaptain(m)}
@@ -900,7 +901,7 @@ function MyTeamPage({ staff }: StaffProps) {
                     type="text"
                     value={battleTagDraft}
                     onChange={(e) => setBattleTagDraft(e.target.value)}
-                    placeholder="Pseudo#1234"
+                    placeholder={t.battleTagPlaceholder}
                     autoFocus
                     data-testid={`battletag-input-${m.id}`}
                     onKeyDown={(e) => {
@@ -917,14 +918,14 @@ function MyTeamPage({ staff }: StaffProps) {
                       onClick={() => saveBattleTag(m)}
                       className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors disabled:opacity-50"
                     >
-                      {busy ? '...' : 'Enregistrer'}
+                      {busy ? '...' : t.saveShort}
                     </button>
                     <button
                       type="button"
                       onClick={cancelEditBattleTag}
                       className="px-3 py-2 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm transition-colors"
                     >
-                      Annuler
+                      {t.cancel}
                     </button>
                   </div>
                 </div>
@@ -939,7 +940,7 @@ function MyTeamPage({ staff }: StaffProps) {
   return (
     <>
       <Head>
-        <title>Admin – Gestion equipe</title>
+        <title>{t.headTitle}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
@@ -964,22 +965,22 @@ function MyTeamPage({ staff }: StaffProps) {
                   d="M15 19l-7-7 7-7"
                 />
               </svg>
-              Retour a la liste des equipes
+              {t.backToList}
             </button>
 
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-                  {data?.team ? data.team.name : 'Gestion equipe'}
+                  {data?.team ? data.team.name : t.headingFallback}
                 </h1>
                 <p className="text-neutral-400 text-sm mt-1">
                   {isStaffAdmin
-                    ? 'Mode administrateur : vous pouvez gerer toutes les equipes'
+                    ? t.subtitleAdmin
                     : data?.isCaptain
-                      ? 'Vous etes capitaine : modification autorisee'
+                      ? t.subtitleCaptain
                       : data?.isManager
-                        ? 'Vous etes manager : modification autorisee'
-                        : 'Vue en lecture seule'}
+                        ? t.subtitleManager
+                        : t.subtitleReadonly}
                 </p>
               </div>
 
@@ -1003,7 +1004,7 @@ function MyTeamPage({ staff }: StaffProps) {
                     d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
                   />
                 </svg>
-                Rafraichir
+                {t.refresh}
               </button>
             </div>
           </div>
@@ -1014,7 +1015,7 @@ function MyTeamPage({ staff }: StaffProps) {
               <div className="flex flex-wrap items-end gap-4">
                 <div className="flex-1 min-w-[250px]">
                   <label className="block text-sm text-neutral-400 mb-1">
-                    Selectionner une equipe a gerer
+                    {t.selectTeamToManage}
                   </label>
                   <select
                     value={selectedTeamId}
@@ -1023,14 +1024,12 @@ function MyTeamPage({ staff }: StaffProps) {
                     disabled={loadingAllTeams}
                   >
                     <option value="">
-                      {loadingAllTeams
-                        ? 'Chargement...'
-                        : '-- Choisir une equipe --'}
+                      {loadingAllTeams ? t.loading : t.chooseTeamPlaceholder}
                     </option>
-                    {allTeams.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.name}
-                        {t.short_name ? ` (${t.short_name})` : ''}
+                    {allTeams.map((team) => (
+                      <option key={team.id} value={team.id}>
+                        {team.name}
+                        {team.short_name ? ` (${team.short_name})` : ''}
                       </option>
                     ))}
                   </select>
@@ -1053,15 +1052,12 @@ function MyTeamPage({ staff }: StaffProps) {
                     }}
                     className="px-4 py-2.5 rounded-xl bg-neutral-700 hover:bg-neutral-600 border border-neutral-600 text-sm font-medium transition-colors"
                   >
-                    Reinitialiser
+                    {t.reset}
                   </button>
                 )}
               </div>
 
-              <p className="text-xs text-neutral-500 mt-3">
-                En tant qu&apos;admin, vous pouvez selectionner n&apos;importe
-                quelle equipe pour la modifier.
-              </p>
+              <p className="text-xs text-neutral-500 mt-3">{t.adminHint}</p>
             </section>
           )}
 
@@ -1095,7 +1091,7 @@ function MyTeamPage({ staff }: StaffProps) {
                       onClick={() => router.push('/admin/teams/new')}
                       className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors"
                     >
-                      Creer mon equipe
+                      {t.createMyTeam}
                     </button>
                   )}
                 </div>
@@ -1120,9 +1116,7 @@ function MyTeamPage({ staff }: StaffProps) {
                 />
               </svg>
               <p className="text-neutral-400">
-                {isStaffAdmin
-                  ? 'Selectionnez une equipe dans la liste ci-dessus pour la gerer.'
-                  : "Vous n'etes capitaine d'aucune equipe."}
+                {isStaffAdmin ? t.selectTeamHint : t.noCaptainTeam}
               </p>
             </div>
           )}
@@ -1159,11 +1153,9 @@ function MyTeamPage({ staff }: StaffProps) {
                     </div>
                   )}
                   <div>
-                    <h2 className="text-xl font-semibold">
-                      Informations equipe
-                    </h2>
+                    <h2 className="text-xl font-semibold">{t.teamInfoTitle}</h2>
                     {!canEdit && (
-                      <p className="text-xs text-neutral-500">Lecture seule</p>
+                      <p className="text-xs text-neutral-500">{t.readonly}</p>
                     )}
                   </div>
                 </div>
@@ -1171,7 +1163,7 @@ function MyTeamPage({ staff }: StaffProps) {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm text-neutral-300 mb-1">
-                      Nom
+                      {t.nameLabel}
                     </label>
                     <input
                       value={form.name}
@@ -1184,7 +1176,7 @@ function MyTeamPage({ staff }: StaffProps) {
                   <div className="grid gap-4 md:grid-cols-2">
                     <div>
                       <label className="block text-sm text-neutral-300 mb-1">
-                        Tag court
+                        {t.shortNameLabel}
                       </label>
                       <input
                         value={form.short_name}
@@ -1197,7 +1189,7 @@ function MyTeamPage({ staff }: StaffProps) {
                     </div>
                     <div>
                       <label className="block text-sm text-neutral-300 mb-1">
-                        Pays
+                        {t.countryLabel}
                       </label>
                       <input
                         value={form.country}
@@ -1210,7 +1202,7 @@ function MyTeamPage({ staff }: StaffProps) {
 
                   <div>
                     <label className="block text-sm text-neutral-300 mb-1">
-                      Logo (URL)
+                      {t.logoUrlLabel}
                     </label>
                     <input
                       value={form.logo_url}
@@ -1222,7 +1214,7 @@ function MyTeamPage({ staff }: StaffProps) {
 
                   <div>
                     <label className="block text-sm text-neutral-300 mb-1">
-                      Bio
+                      {t.bioLabel}
                     </label>
                     <textarea
                       value={form.bio}
@@ -1235,7 +1227,7 @@ function MyTeamPage({ staff }: StaffProps) {
 
                   <div>
                     <label className="block text-sm text-neutral-300 mb-1">
-                      Description (privee)
+                      {t.descriptionLabel}
                     </label>
                     <textarea
                       value={form.description}
@@ -1253,12 +1245,10 @@ function MyTeamPage({ staff }: StaffProps) {
                   <div className="flex items-center justify-between rounded-xl bg-neutral-900/50 border border-neutral-600 px-4 py-3">
                     <div>
                       <p className="text-sm text-neutral-200 font-medium">
-                        Recrutement ouvert
+                        {t.recruitmentOpen}
                       </p>
                       <p className="text-xs text-neutral-500">
-                        {isJoinable
-                          ? 'Les joueurs peuvent demander à rejoindre ton equipe'
-                          : 'Personne ne peut envoyer de demande'}
+                        {isJoinable ? t.recruitmentOn : t.recruitmentOff}
                       </p>
                     </div>
                     <button
@@ -1289,7 +1279,7 @@ function MyTeamPage({ staff }: StaffProps) {
                       {saving ? (
                         <>
                           <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                          Enregistrement...
+                          {t.saving}
                         </>
                       ) : (
                         <>
@@ -1306,7 +1296,7 @@ function MyTeamPage({ staff }: StaffProps) {
                               d="M5 13l4 4L19 7"
                             />
                           </svg>
-                          Enregistrer
+                          {t.save}
                         </>
                       )}
                     </button>
@@ -1318,18 +1308,24 @@ function MyTeamPage({ staff }: StaffProps) {
               <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 space-y-5">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h2 className="text-xl font-semibold">Membres</h2>
+                    <h2 className="text-xl font-semibold">{t.members}</h2>
                     <p className="text-xs text-neutral-500">
-                      {data.members?.length || 0} membre
-                      {(data.members?.length || 0) > 1 ? 's' : ''}
+                      {format(
+                        (data.members?.length || 0) > 1
+                          ? t.memberCount_other
+                          : t.memberCount_one,
+                        { count: data.members?.length || 0 }
+                      )}
                       {(() => {
                         const subs = (data.members || []).filter(
                           (m) => m.is_substitute
                         ).length;
                         return subs > 0 ? (
                           <span data-testid="substitute-count">
-                            {' '}
-                            · {subs} remplaçant{subs > 1 ? 's' : ''}
+                            {format(
+                              subs > 1 ? t.subCount_other : t.subCount_one,
+                              { count: subs }
+                            )}
                           </span>
                         ) : null;
                       })()}
@@ -1354,7 +1350,7 @@ function MyTeamPage({ staff }: StaffProps) {
                           d="M12 4v16m8-8H4"
                         />
                       </svg>
-                      Ajouter
+                      {t.add}
                     </button>
                   )}
                 </div>
@@ -1368,11 +1364,15 @@ function MyTeamPage({ staff }: StaffProps) {
                   <div className="flex items-center justify-between">
                     <div>
                       <h2 className="text-xl font-semibold">
-                        Demandes de joueurs
+                        {t.joinRequestsTitle}
                       </h2>
                       <p className="text-xs text-neutral-500">
-                        {joinRequests.length} demande
-                        {joinRequests.length > 1 ? 's' : ''} en attente
+                        {format(
+                          joinRequests.length > 1
+                            ? t.joinRequestCount_other
+                            : t.joinRequestCount_one,
+                          { count: joinRequests.length }
+                        )}
                       </p>
                     </div>
                     <button
@@ -1381,14 +1381,14 @@ function MyTeamPage({ staff }: StaffProps) {
                       disabled={joinRequestsLoading}
                       className="px-3 py-1.5 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-xs transition-colors"
                     >
-                      {joinRequestsLoading ? 'Chargement...' : 'Rafraichir'}
+                      {joinRequestsLoading ? t.loading : t.refresh}
                     </button>
                   </div>
 
                   {joinRequestsLoading && joinRequests.length === 0 ? (
                     <div className="flex items-center gap-2 text-neutral-400 text-sm py-4">
                       <div className="w-4 h-4 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
-                      Chargement des demandes...
+                      {t.loadingRequests}
                     </div>
                   ) : (
                     <div className="space-y-3">
@@ -1397,7 +1397,7 @@ function MyTeamPage({ staff }: StaffProps) {
                         const displayName =
                           jr.user?.display_name ||
                           jr.payload?.user_display_name ||
-                          'Joueur inconnu';
+                          t.unknownPlayer;
                         const battleTag =
                           jr.user?.battle_tag ||
                           jr.payload?.user_battle_tag ||
@@ -1406,8 +1406,8 @@ function MyTeamPage({ staff }: StaffProps) {
                           jr.payload?.desired_role || 'player';
                         const roleLabel =
                           desiredRole === 'substitute'
-                            ? 'Remplacant'
-                            : 'Joueur';
+                            ? t.roleSubstitute
+                            : t.rolePlayer;
 
                         return (
                           <div
@@ -1479,7 +1479,7 @@ function MyTeamPage({ staff }: StaffProps) {
                                       />
                                     </svg>
                                   )}
-                                  Accepter
+                                  {t.accept}
                                 </button>
                                 <button
                                   type="button"
@@ -1502,7 +1502,7 @@ function MyTeamPage({ staff }: StaffProps) {
                                       d="M6 18L18 6M6 6l12 12"
                                     />
                                   </svg>
-                                  Refuser
+                                  {t.reject}
                                 </button>
                               </div>
                             </div>
@@ -1534,7 +1534,7 @@ function MyTeamPage({ staff }: StaffProps) {
         size="lg"
         backdropClassName="bg-black/70 backdrop-blur-sm"
         panelClassName="max-h-[90vh] overflow-hidden"
-        title="Ajouter un membre"
+        title={t.addMemberModalTitle}
         footer={
           selectedPlayer ? (
             <>
@@ -1550,7 +1550,7 @@ function MyTeamPage({ staff }: StaffProps) {
                 }}
                 className="px-4 py-2.5 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
               >
-                Annuler
+                {t.cancel}
               </button>
               <button
                 type="button"
@@ -1561,10 +1561,10 @@ function MyTeamPage({ staff }: StaffProps) {
                 {addingMember ? (
                   <>
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Ajout...
+                    {t.adding}
                   </>
                 ) : (
-                  'Ajouter'
+                  t.add
                 )}
               </button>
             </>
@@ -1577,7 +1577,7 @@ function MyTeamPage({ staff }: StaffProps) {
               {/* Search input */}
               <div>
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Rechercher par email ou BattleTag
+                  {t.searchLabel}
                 </label>
                 <div className="relative">
                   <svg
@@ -1609,14 +1609,14 @@ function MyTeamPage({ staff }: StaffProps) {
                 {searchLoading && (
                   <div className="flex items-center gap-2 text-neutral-400 text-sm py-4">
                     <div className="w-4 h-4 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
-                    Recherche...
+                    {t.searching}
                   </div>
                 )}
                 {!searchLoading &&
                   searchQuery.length >= 2 &&
                   searchResults.length === 0 && (
                     <div className="text-neutral-400 text-sm py-4 text-center">
-                      Aucun resultat
+                      {t.noResult}
                     </div>
                   )}
                 {searchResults.map((player) => (
@@ -1638,7 +1638,9 @@ function MyTeamPage({ staff }: StaffProps) {
                     <div className="flex items-center justify-between">
                       <div>
                         <div className="font-medium text-white">
-                          {player.display_name || player.email || 'Utilisateur'}
+                          {player.display_name ||
+                            player.email ||
+                            t.userFallback}
                         </div>
                         {player.email && player.display_name && (
                           <div className="text-xs text-neutral-400">
@@ -1653,7 +1655,7 @@ function MyTeamPage({ staff }: StaffProps) {
                       </div>
                       {player.has_team && (
                         <span className="text-xs bg-red-500/20 text-red-300 px-2 py-0.5 rounded-lg border border-red-500/30">
-                          Deja en equipe
+                          {t.alreadyInTeam}
                         </span>
                       )}
                     </div>
@@ -1670,7 +1672,7 @@ function MyTeamPage({ staff }: StaffProps) {
                     <div className="font-medium text-white">
                       {selectedPlayer.display_name ||
                         selectedPlayer.email ||
-                        'Utilisateur'}
+                        t.userFallback}
                     </div>
                     {selectedPlayer.email && (
                       <div className="text-xs text-neutral-400">
@@ -1682,43 +1684,43 @@ function MyTeamPage({ staff }: StaffProps) {
                     onClick={() => setSelectedPlayer(null)}
                     className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
                   >
-                    Changer
+                    {t.change}
                   </button>
                 </div>
               </div>
 
               <div>
                 <label className="block text-sm text-neutral-300 mb-1">
-                  BattleTag <span className="text-red-400">*</span>
+                  {t.battleTagLabel} <span className="text-red-400">*</span>
                 </label>
                 <input
                   type="text"
                   value={newMemberBattleTag}
                   onChange={(e) => setNewMemberBattleTag(e.target.value)}
-                  placeholder="Pseudo#1234"
+                  placeholder={t.battleTagPlaceholder}
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                 />
                 <p className="text-xs text-neutral-500 mt-1">
-                  Format: Pseudo#0000 (2+ caracteres + # + 3-6 chiffres)
+                  {t.battleTagHelp}
                 </p>
               </div>
 
               <div>
                 <label className="block text-sm text-neutral-300 mb-1">
-                  Role
+                  {t.roleLabel}
                 </label>
                 <select
                   value={newMemberRole}
                   onChange={(e) => setNewMemberRole(e.target.value)}
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                 >
-                  <option value="player">Joueur</option>
-                  <option value="tank">Tank</option>
-                  <option value="dps">DPS</option>
-                  <option value="support">Support</option>
-                  <option value="flex">Flex</option>
-                  <option value="coach">Coach</option>
-                  <option value="manager">Manager</option>
+                  <option value="player">{t.roleOptionPlayer}</option>
+                  <option value="tank">{t.roleOptionTank}</option>
+                  <option value="dps">{t.roleOptionDps}</option>
+                  <option value="support">{t.roleOptionSupport}</option>
+                  <option value="flex">{t.roleOptionFlex}</option>
+                  <option value="coach">{t.roleOptionCoach}</option>
+                  <option value="manager">{t.roleOptionManager}</option>
                 </select>
               </div>
             </>

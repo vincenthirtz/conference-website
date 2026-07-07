@@ -31,9 +31,12 @@ import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import Modal from '@/components/admin/Modal';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { AdminPlayerViewPayload } from '@/pages/api/admin/users/[userId]/player-view';
 
 import { logger } from '../../../../utils/logger';
+
+type Dict = ReturnType<typeof useAdminT<'adminUserPlayerView'>>;
 
 type StaffShape = {
   id: string;
@@ -57,17 +60,23 @@ const ROLE_OPTIONS = [
   'owner',
 ];
 
-const ROLE_LABELS: Record<string, string> = {
-  owner: 'Owner',
-  admin: 'Admin',
-  manager: 'Manager',
-  caster: 'Caster',
-  player: 'Joueur',
-  member: 'Membre',
-};
-
-function roleLabel(role: string | null): string {
-  return ROLE_LABELS[role?.toLowerCase() ?? ''] ?? role ?? 'Membre';
+function roleLabel(t: Dict, role: string | null): string {
+  switch (role?.toLowerCase()) {
+    case 'owner':
+      return t.roleOwner;
+    case 'admin':
+      return t.roleAdmin;
+    case 'manager':
+      return t.roleManager;
+    case 'caster':
+      return t.roleCaster;
+    case 'player':
+      return t.rolePlayer;
+    case 'member':
+      return t.roleMember;
+    default:
+      return role ?? t.roleMember;
+  }
 }
 
 function isTargetProtected(targetRole: string | null): boolean {
@@ -90,13 +99,15 @@ type TeamLite = { id: string; name: string };
 
 type TabKey = 'profil' | 'equipe' | 'matchs' | 'notifications' | 'demandes';
 
-const TABS: Array<{ key: TabKey; label: string }> = [
-  { key: 'profil', label: 'Profil' },
-  { key: 'equipe', label: 'Équipe' },
-  { key: 'matchs', label: 'Mes matchs' },
-  { key: 'notifications', label: 'Notifications' },
-  { key: 'demandes', label: 'Demandes' },
-];
+function getTabs(t: Dict): Array<{ key: TabKey; label: string }> {
+  return [
+    { key: 'profil', label: t.tabProfil },
+    { key: 'equipe', label: t.tabEquipe },
+    { key: 'matchs', label: t.tabMatchs },
+    { key: 'notifications', label: t.tabNotifications },
+    { key: 'demandes', label: t.tabDemandes },
+  ];
+}
 
 type PlayerMatch = AdminPlayerViewPayload['matches'][number];
 type Demande = AdminPlayerViewPayload['demandes'][number];
@@ -118,8 +129,8 @@ function formatDate(d: string | null | undefined): string {
   }
 }
 
-function formatScheduled(iso: string | null): string {
-  if (!iso) return 'Date à venir';
+function formatScheduled(t: Dict, iso: string | null): string {
+  if (!iso) return t.dateToCome;
   try {
     return new Date(iso).toLocaleString('fr-FR', {
       weekday: 'long',
@@ -160,14 +171,16 @@ function scheduledTime(match: PlayerMatch): number {
   return match.scheduledAt ? new Date(match.scheduledAt).getTime() : 0;
 }
 
-const DEMANDE_TYPE_LABELS: Record<string, string> = {
-  captain_request: 'Demande de capitaine',
-  join: 'Rejoindre une équipe',
-  leave: "Quitter l'équipe",
-  transfer: 'Transfert',
-  scrim: 'Scrim',
-  other: 'Demande',
-};
+function getDemandeTypeLabels(t: Dict): Record<string, string> {
+  return {
+    captain_request: t.demandeTypeCaptainRequest,
+    join: t.demandeTypeJoin,
+    leave: t.demandeTypeLeave,
+    transfer: t.demandeTypeTransfer,
+    scrim: t.demandeTypeScrim,
+    other: t.demandeTypeOther,
+  };
+}
 
 const DEMANDE_STATUS_STYLES: Record<string, string> = {
   pending: 'bg-amber-500/20 text-amber-300 border border-amber-500/30',
@@ -176,36 +189,39 @@ const DEMANDE_STATUS_STYLES: Record<string, string> = {
   cancelled: 'bg-neutral-500/20 text-neutral-300 border border-neutral-500/30',
 };
 
-const DEMANDE_STATUS_LABELS: Record<string, string> = {
-  pending: 'En attente',
-  approved: 'Approuvée',
-  rejected: 'Refusée',
-  cancelled: 'Annulée',
-};
+function getDemandeStatusLabels(t: Dict): Record<string, string> {
+  return {
+    pending: t.demandeStatusPending,
+    approved: t.demandeStatusApproved,
+    rejected: t.demandeStatusRejected,
+    cancelled: t.demandeStatusCancelled,
+  };
+}
 
 /* ----------------------------------------------------------------------- */
 /* Small presentational atoms                                               */
 /* ----------------------------------------------------------------------- */
 
 function ResultBadge({ result }: { result: PlayerMatch['result'] }) {
+  const t = useAdminT('adminUserPlayerView');
   if (result === 'win') {
     return (
       <span className="inline-flex items-center rounded-full border border-emerald-400/30 bg-emerald-500/15 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-100">
-        Victoire
+        {t.resultWin}
       </span>
     );
   }
   if (result === 'loss') {
     return (
       <span className="inline-flex items-center rounded-full border border-rose-400/30 bg-rose-500/15 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-rose-100">
-        Défaite
+        {t.resultLoss}
       </span>
     );
   }
   if (result === 'draw') {
     return (
       <span className="inline-flex items-center rounded-full border border-white/15 bg-white/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-neutral-200">
-        Nul
+        {t.resultDraw}
       </span>
     );
   }
@@ -214,6 +230,7 @@ function ResultBadge({ result }: { result: PlayerMatch['result'] }) {
 
 /** Read-only check-in status rendered as plain text (NO button). */
 function CheckinStatus({ match }: { match: PlayerMatch }) {
+  const t = useAdminT('adminUserPlayerView');
   const checkin = match.checkin;
   if (!checkin) return <span className="text-neutral-500">—</span>;
   if (checkin.alreadyCheckedIn) {
@@ -231,17 +248,17 @@ function CheckinStatus({ match }: { match: PlayerMatch }) {
         >
           <path d="M5 13l4 4L19 7" />
         </svg>
-        Check-in validé
+        {t.checkinValidated}
       </span>
     );
   }
   if (checkin.isOpen) {
-    return <span className="text-amber-300">Fenêtre de check-in ouverte</span>;
+    return <span className="text-amber-300">{t.checkinOpen}</span>;
   }
   if (checkin.isPassed) {
-    return <span className="text-neutral-500">Check-in fermé (manqué)</span>;
+    return <span className="text-neutral-500">{t.checkinPassed}</span>;
   }
-  return <span className="text-neutral-400">Check-in pas encore ouvert</span>;
+  return <span className="text-neutral-400">{t.checkinNotOpen}</span>;
 }
 
 function EmptyState({ children }: { children: React.ReactNode }) {
@@ -253,6 +270,7 @@ function EmptyState({ children }: { children: React.ReactNode }) {
 }
 
 function MatchRow({ match }: { match: PlayerMatch }) {
+  const t = useAdminT('adminUserPlayerView');
   const upcoming = isUpcoming(match);
   const label = matchLabel(match);
   const isLive = match.status === 'ongoing';
@@ -262,7 +280,7 @@ function MatchRow({ match }: { match: PlayerMatch }) {
       <div className="flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.16em] text-emerald-200/70">
         {isLive && (
           <span className="inline-flex items-center gap-1.5 rounded-full border border-rose-400/40 bg-rose-500/15 px-2.5 py-1 text-rose-100 text-[10px] font-semibold">
-            En direct
+            {t.liveBadge}
           </span>
         )}
         {match.tournament && <span>{match.tournament.name}</span>}
@@ -273,11 +291,11 @@ function MatchRow({ match }: { match: PlayerMatch }) {
       <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="text-lg md:text-xl font-bold text-white leading-tight">
-            <span className="text-white/50">vs</span>{' '}
-            {match.opponent?.name ?? 'Adversaire à définir'}
+            <span className="text-white/50">{t.versus}</span>{' '}
+            {match.opponent?.name ?? t.opponentTbd}
           </h3>
           <p className="text-sm text-neutral-300 mt-1 capitalize">
-            {formatScheduled(match.scheduledAt)}
+            {formatScheduled(t, match.scheduledAt)}
           </p>
         </div>
 
@@ -294,7 +312,7 @@ function MatchRow({ match }: { match: PlayerMatch }) {
 
       {upcoming && (
         <div className="mt-3 text-sm">
-          <span className="text-neutral-500">Check-in : </span>
+          <span className="text-neutral-500">{t.checkinLabel}</span>
           <CheckinStatus match={match} />
         </div>
       )}
@@ -330,6 +348,7 @@ function StatTile({
 /* ----------------------------------------------------------------------- */
 
 function PlayerViewPage({ staff }: { staff: StaffShape }) {
+  const t = useAdminT('adminUserPlayerView');
   const router = useRouter();
   const rawUserId = router.query.userId;
   const userId = Array.isArray(rawUserId) ? rawUserId[0] : rawUserId;
@@ -378,12 +397,12 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
       if (err instanceof AdminFetchError && err.status === 404) {
         setNotFound(true);
       } else {
-        setError('Erreur lors du chargement de la vue player.');
+        setError(t.loadError);
       }
     } finally {
       setLoading(false);
     }
-  }, [userId, adminFetchJson]);
+  }, [userId, adminFetchJson, t]);
 
   useEffect(() => {
     if (!router.isReady) return;
@@ -391,7 +410,7 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
   }, [router.isReady, load]);
 
   const headerName =
-    data?.user.displayName || data?.user.email || 'Utilisateur';
+    data?.user.displayName || data?.user.email || t.defaultUser;
 
   /* --------------------------------------------------------------------- */
   /* Actions — each reuses an existing endpoint then refetches the snapshot */
@@ -407,26 +426,23 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
         body: JSON.stringify({ userId, display_name: nameDraft.trim() }),
       });
       setEditingName(false);
-      addToast('Nom affiché mis à jour', 'success');
+      addToast(t.toastNameUpdated, 'success');
       await load();
     } catch (err) {
-      addToast(
-        (err as Error)?.message || 'Erreur lors de la mise à jour.',
-        'error'
-      );
+      addToast((err as Error)?.message || t.errUpdate, 'error');
     } finally {
       setBusy(null);
     }
-  }, [userId, nameDraft, adminFetchJson, addToast, load]);
+  }, [userId, nameDraft, adminFetchJson, addToast, load, t]);
 
   // PATCH /api/admin/users/manage — resend_credentials.
   const resendCredentials = useCallback(async () => {
     if (!userId || !data?.user.email) return;
     const ok = await confirm({
-      title: 'Réinitialiser le mot de passe ?',
-      subtitle: `Un nouveau mot de passe sera généré et envoyé à ${data.user.email}.`,
+      title: t.confirmResendTitle,
+      subtitle: format(t.confirmResendSubtitle, { email: data.user.email }),
       variant: 'warning',
-      confirmLabel: 'Envoyer',
+      confirmLabel: t.confirmSend,
     });
     if (!ok) return;
     setBusy('resend');
@@ -439,13 +455,17 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
         }
       );
       if (json.warning) addToast(json.warning, 'warning');
-      else addToast(`Identifiants envoyés à ${data.user.email}`, 'success');
+      else
+        addToast(
+          format(t.toastCredentialsSent, { email: data.user.email }),
+          'success'
+        );
     } catch (err) {
-      addToast((err as Error)?.message || "Erreur lors de l'envoi.", 'error');
+      addToast((err as Error)?.message || t.errSend, 'error');
     } finally {
       setBusy(null);
     }
-  }, [userId, data?.user.email, confirm, adminFetchJson, addToast]);
+  }, [userId, data?.user.email, confirm, adminFetchJson, addToast, t]);
 
   // PATCH /api/admin/users/manage — role.
   const changeRole = useCallback(
@@ -455,25 +475,22 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
       if (previousRole === role) return;
 
       if (isTargetProtected(previousRole) && staff.role !== 'owner') {
-        addToast(
-          'Seul un owner peut modifier un compte owner ou admin.',
-          'error'
-        );
+        addToast(t.errOwnerOnly, 'error');
         return;
       }
       if (!canGrantRole(staff.role, role)) {
-        addToast(
-          'Vous ne pouvez pas octroyer un rôle égal ou supérieur au vôtre.',
-          'error'
-        );
+        addToast(t.errRoleEscalation, 'error');
         return;
       }
 
       const ok = await confirm({
-        title: `Changer le rôle vers « ${roleLabel(role)} » ?`,
-        subtitle: `Cet utilisateur passera de « ${roleLabel(previousRole)} » à « ${roleLabel(role)} ». Action à privilège.`,
+        title: format(t.confirmRoleTitle, { role: roleLabel(t, role) }),
+        subtitle: format(t.confirmRoleSubtitle, {
+          from: roleLabel(t, previousRole),
+          to: roleLabel(t, role),
+        }),
         variant: 'warning',
-        confirmLabel: 'Changer le rôle',
+        confirmLabel: t.confirmRoleBtn,
       });
       if (!ok) return;
 
@@ -483,18 +500,15 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
           method: 'PATCH',
           body: JSON.stringify({ userId, role }),
         });
-        addToast('Rôle mis à jour', 'success');
+        addToast(t.toastRoleUpdated, 'success');
         await load();
       } catch (err) {
-        addToast(
-          (err as Error)?.message || 'Erreur lors de la mise à jour du rôle.',
-          'error'
-        );
+        addToast((err as Error)?.message || t.errRoleUpdate, 'error');
       } finally {
         setBusy(null);
       }
     },
-    [userId, data, staff.role, confirm, adminFetchJson, addToast, load]
+    [userId, data, staff.role, confirm, adminFetchJson, addToast, load, t]
   );
 
   // PATCH /api/admin/users/manage — battle_tag (scoped to the player's team).
@@ -512,23 +526,26 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
         }),
       });
       setEditingTag(false);
-      addToast('BattleTag mis à jour', 'success');
+      addToast(t.toastBattleTagUpdated, 'success');
       await load();
     } catch (err) {
-      setTagError((err as Error)?.message || 'Erreur inattendue');
+      setTagError((err as Error)?.message || t.errUnexpected);
     } finally {
       setBusy(null);
     }
-  }, [userId, data?.team, tagDraft, adminFetchJson, addToast, load]);
+  }, [userId, data?.team, tagDraft, adminFetchJson, addToast, load, t]);
 
   // POST /api/admin/users/[userId]/actions — assign_captain.
   const assignCaptain = useCallback(async () => {
     if (!userId || !data?.team) return;
     const ok = await confirm({
-      title: 'Désigner ce joueur capitaine ?',
-      subtitle: `${headerName} deviendra capitaine de « ${data.team.name} ».`,
+      title: t.confirmCaptainTitle,
+      subtitle: format(t.confirmCaptainSubtitle, {
+        name: headerName,
+        team: data.team.name,
+      }),
       variant: 'warning',
-      confirmLabel: 'Désigner capitaine',
+      confirmLabel: t.confirmCaptainBtn,
     });
     if (!ok) return;
     setBusy('captain');
@@ -540,17 +557,23 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
           body: JSON.stringify({ action: 'assign_captain' }),
         }
       );
-      addToast('Capitanat transféré', 'success');
+      addToast(t.toastCaptainTransferred, 'success');
       await load();
     } catch (err) {
-      addToast(
-        (err as Error)?.message || 'Erreur lors de la désignation.',
-        'error'
-      );
+      addToast((err as Error)?.message || t.errCaptainAssign, 'error');
     } finally {
       setBusy(null);
     }
-  }, [userId, data?.team, headerName, confirm, adminFetchJson, addToast, load]);
+  }, [
+    userId,
+    data?.team,
+    headerName,
+    confirm,
+    adminFetchJson,
+    addToast,
+    load,
+    t,
+  ]);
 
   // Open the transfer modal — lazy-load the teams list (GET /api/admin/teams).
   const openTransfer = useCallback(async () => {
@@ -566,24 +589,24 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
         .map((t) => ({ id: t.id, name: t.name }));
       setTeamOptions(list);
     } catch (err) {
-      addToast(
-        (err as Error)?.message || 'Erreur lors du chargement des équipes.',
-        'error'
-      );
+      addToast((err as Error)?.message || t.errLoadTeams, 'error');
     } finally {
       setTeamsLoading(false);
     }
-  }, [adminFetchJson, addToast, data?.team?.id]);
+  }, [adminFetchJson, addToast, data?.team?.id, t]);
 
   // POST /api/admin/users/[userId]/actions — transfer_team.
   const transferTeam = useCallback(async () => {
     if (!userId || !transferTeamId) return;
-    const target = teamOptions.find((t) => t.id === transferTeamId);
+    const target = teamOptions.find((team) => team.id === transferTeamId);
     const ok = await confirm({
-      title: 'Transférer ce joueur ?',
-      subtitle: `${headerName} sera déplacé vers « ${target?.name ?? 'cette équipe'} ».`,
+      title: t.confirmTransferTitle,
+      subtitle: format(t.confirmTransferSubtitle, {
+        name: headerName,
+        team: target?.name ?? t.thisTeam,
+      }),
       variant: 'warning',
-      confirmLabel: 'Transférer',
+      confirmLabel: t.transferConfirmBtn,
     });
     if (!ok) return;
     setBusy('transfer');
@@ -599,10 +622,10 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
         }
       );
       setTransferOpen(false);
-      addToast('Joueur transféré', 'success');
+      addToast(t.toastPlayerTransferred, 'success');
       await load();
     } catch (err) {
-      addToast((err as Error)?.message || 'Erreur lors du transfert.', 'error');
+      addToast((err as Error)?.message || t.errTransfer, 'error');
     } finally {
       setBusy(null);
     }
@@ -615,14 +638,15 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
     adminFetchJson,
     addToast,
     load,
+    t,
   ]);
 
   // POST /api/admin/demandes — approve / reject a pending demande.
   const processDemande = useCallback(
     async (demandeId: string, newStatus: 'approved' | 'rejected') => {
-      const verb = newStatus === 'approved' ? 'Approuver' : 'Refuser';
+      const verb = newStatus === 'approved' ? t.verbApprove : t.verbReject;
       const ok = await confirm({
-        title: `${verb} cette demande ?`,
+        title: format(t.confirmDemandeTitle, { verb }),
         variant: newStatus === 'approved' ? 'info' : 'warning',
         confirmLabel: verb,
       });
@@ -638,20 +662,19 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
           }),
         });
         addToast(
-          newStatus === 'approved' ? 'Demande approuvée' : 'Demande refusée',
+          newStatus === 'approved'
+            ? t.toastDemandeApproved
+            : t.toastDemandeRejected,
           'success'
         );
         await load();
       } catch (err) {
-        addToast(
-          (err as Error)?.message || 'Erreur lors du traitement.',
-          'error'
-        );
+        addToast((err as Error)?.message || t.errDemandeProcess, 'error');
       } finally {
         setBusy(null);
       }
     },
-    [confirm, adminFetchJson, addToast, load]
+    [confirm, adminFetchJson, addToast, load, t]
   );
 
   const { upcoming, past } = useMemo(() => {
@@ -670,7 +693,7 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
     <>
       {confirmDialog}
       <Head>
-        <title>Vue player – {headerName}</title>
+        <title>{format(t.headTitle, { name: headerName })}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
@@ -693,7 +716,7 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
                 d="M15 19l-7-7 7-7"
               />
             </svg>
-            Retour à la gestion des inscrits
+            {t.backLink}
           </Link>
 
           {/* Admin command-center banner */}
@@ -717,14 +740,12 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
               </svg>
               <div>
                 <h1 className="text-lg md:text-xl font-bold text-emerald-100">
-                  Espace joueur de {headerName}
+                  {format(t.bannerTitle, { name: headerName })}
                 </h1>
                 <p className="text-sm text-emerald-100/80 mt-1">
-                  Outil d&apos;administration : les actions effectuées ici
-                  (profil, équipe, demandes) sont appliquées au compte du joueur
-                  et <strong>tracées</strong> dans les logs staff. Il ne
-                  s&apos;agit pas d&apos;une usurpation — vous agissez en tant
-                  que staff.
+                  {t.bannerDescBefore}
+                  <strong>{t.bannerDescStrong}</strong>
+                  {t.bannerDescAfter}
                 </p>
               </div>
             </div>
@@ -740,11 +761,9 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
           ) : notFound ? (
             <EmptyState>
               <p className="text-lg font-semibold text-white">
-                Utilisateur introuvable
+                {t.notFoundTitle}
               </p>
-              <p className="mt-2 text-sm">
-                Ce compte n&apos;existe pas ou a été supprimé.
-              </p>
+              <p className="mt-2 text-sm">{t.notFoundDesc}</p>
             </EmptyState>
           ) : error ? (
             <div className="rounded-2xl border border-red-500/40 bg-red-500/10 px-5 py-4 text-sm text-red-100">
@@ -755,29 +774,29 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
               {/* Tabs */}
               <div
                 role="tablist"
-                aria-label="Sections de l'espace joueur"
+                aria-label={t.tablistLabel}
                 className="flex flex-wrap gap-2 mb-6 border-b border-neutral-700/50 pb-3"
               >
-                {TABS.map((t) => {
-                  const active = tab === t.key;
+                {getTabs(t).map((tab_) => {
+                  const active = tab === tab_.key;
                   const badge =
-                    t.key === 'notifications' && data.notifications.total > 0
+                    tab_.key === 'notifications' && data.notifications.total > 0
                       ? data.notifications.total
                       : null;
                   return (
                     <button
-                      key={t.key}
+                      key={tab_.key}
                       type="button"
                       role="tab"
                       aria-selected={active}
-                      onClick={() => setTab(t.key)}
+                      onClick={() => setTab(tab_.key)}
                       className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors flex items-center gap-2 ${
                         active
                           ? 'bg-emerald-600 text-white'
                           : 'bg-neutral-800/60 text-neutral-300 hover:bg-neutral-700/60'
                       }`}
                     >
-                      {t.label}
+                      {tab_.label}
                       {badge !== null && (
                         <span className="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full bg-amber-500 text-[10px] font-bold text-neutral-900">
                           {badge}
@@ -811,7 +830,7 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
                     )}
                     <div className="min-w-0">
                       <h2 className="text-xl font-bold text-white truncate">
-                        {data.user.displayName || 'Sans nom'}
+                        {data.user.displayName || t.noName}
                       </h2>
                       {data.user.battleTag && (
                         <p className="text-sm text-emerald-300 font-mono">
@@ -824,7 +843,7 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
                   <dl className="mt-6 grid gap-x-6 gap-y-4 sm:grid-cols-2">
                     <div>
                       <dt className="text-xs uppercase tracking-wide text-neutral-500">
-                        Email
+                        {t.fieldEmail}
                       </dt>
                       <dd className="text-sm text-white break-all">
                         {data.user.email || '—'}
@@ -832,7 +851,7 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
                     </div>
                     <div>
                       <dt className="text-xs uppercase tracking-wide text-neutral-500">
-                        Rôle
+                        {t.fieldRole}
                       </dt>
                       <dd className="text-sm text-white">
                         {data.user.role || '—'}
@@ -840,7 +859,7 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
                     </div>
                     <div>
                       <dt className="text-xs uppercase tracking-wide text-neutral-500">
-                        BattleTag
+                        {t.fieldBattleTag}
                       </dt>
                       <dd className="text-sm text-white font-mono">
                         {data.user.battleTag || '—'}
@@ -848,7 +867,7 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
                     </div>
                     <div>
                       <dt className="text-xs uppercase tracking-wide text-neutral-500">
-                        Inscrit le
+                        {t.fieldRegisteredOn}
                       </dt>
                       <dd className="text-sm text-white">
                         {formatDate(data.user.createdAt)}
@@ -856,7 +875,7 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
                     </div>
                     <div className="sm:col-span-2">
                       <dt className="text-xs uppercase tracking-wide text-neutral-500">
-                        Identifiant
+                        {t.fieldId}
                       </dt>
                       <dd className="text-xs text-neutral-400 font-mono break-all">
                         {data.user.id}
@@ -867,7 +886,7 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
                   {/* Profil actions */}
                   <div className="mt-6 pt-6 border-t border-neutral-700/50">
                     <h3 className="text-xs uppercase tracking-wide text-neutral-500 mb-3">
-                      Actions
+                      {t.actionsTitle}
                     </h3>
                     <div className="flex flex-wrap gap-2">
                       <button
@@ -878,7 +897,7 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
                         }}
                         className="px-3 py-2 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
                       >
-                        Modifier le nom affiché
+                        {t.editDisplayName}
                       </button>
 
                       <button
@@ -887,9 +906,7 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
                         disabled={!data.user.email || busy === 'resend'}
                         className="px-3 py-2 rounded-xl bg-amber-600/80 hover:bg-amber-600 text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                       >
-                        {busy === 'resend'
-                          ? 'Envoi…'
-                          : 'Renvoyer les identifiants'}
+                        {busy === 'resend' ? t.sending : t.resendCredentials}
                       </button>
                     </div>
 
@@ -897,7 +914,7 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
                     {isAdmin && (
                       <div className="mt-4">
                         <label className="block text-xs uppercase tracking-wide text-neutral-500 mb-1">
-                          Rôle
+                          {t.fieldRole}
                         </label>
                         {(() => {
                           const targetLocked =
@@ -905,15 +922,11 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
                             staff.role !== 'owner';
                           return (
                             <select
-                              aria-label="Rôle de l'utilisateur"
+                              aria-label={t.roleSelectAria}
                               value={(data.user.role || 'member').toLowerCase()}
                               onChange={(e) => changeRole(e.target.value)}
                               disabled={busy === 'role' || targetLocked}
-                              title={
-                                targetLocked
-                                  ? 'Seul un owner peut modifier un compte owner ou admin.'
-                                  : undefined
-                              }
+                              title={targetLocked ? t.errOwnerOnly : undefined}
                               className="px-3 py-2 rounded-xl bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                               {ROLE_OPTIONS.map((r) => {
@@ -929,7 +942,7 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
                                     value={r}
                                     disabled={!grantable}
                                   >
-                                    {roleLabel(r)}
+                                    {roleLabel(t, r)}
                                   </option>
                                 );
                               })}
@@ -948,11 +961,9 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
                   {!data.team ? (
                     <EmptyState>
                       <p className="text-lg font-semibold text-white">
-                        Aucune équipe
+                        {t.noTeamTitle}
                       </p>
-                      <p className="mt-2 text-sm">
-                        Cet utilisateur n&apos;appartient à aucune équipe.
-                      </p>
+                      <p className="mt-2 text-sm">{t.noTeamDesc}</p>
                     </EmptyState>
                   ) : (
                     <div className="rounded-2xl border border-neutral-700/50 bg-neutral-800/40 p-6">
@@ -979,13 +990,13 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
                             {data.team.role && (
                               <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-600/20 text-emerald-200 border border-emerald-500/30">
                                 {data.team.role === 'captain'
-                                  ? 'Capitaine'
-                                  : 'Membre'}
+                                  ? t.teamRoleCaptain
+                                  : t.teamRoleMember}
                               </span>
                             )}
                             {data.team.isSubstitute && (
                               <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-600/20 text-amber-200 border border-amber-500/30">
-                                Remplaçant·e
+                                {t.substitute}
                               </span>
                             )}
                           </div>
@@ -994,11 +1005,13 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
 
                       <div className="mt-6">
                         <h3 className="text-sm font-semibold text-neutral-300 mb-3">
-                          Roster ({data.team.members.length})
+                          {format(t.rosterTitle, {
+                            count: data.team.members.length,
+                          })}
                         </h3>
                         {data.team.members.length === 0 ? (
                           <p className="text-sm text-neutral-500">
-                            Aucun membre.
+                            {t.noMembers}
                           </p>
                         ) : (
                           <div className="overflow-x-auto rounded-xl border border-neutral-700/50">
@@ -1006,13 +1019,13 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
                               <thead>
                                 <tr className="text-left text-xs uppercase tracking-wide text-neutral-500 border-b border-neutral-700/50">
                                   <th className="px-4 py-2 font-medium">
-                                    Nom affiché
+                                    {t.memberColName}
                                   </th>
                                   <th className="px-4 py-2 font-medium">
-                                    BattleTag
+                                    {t.memberColBattleTag}
                                   </th>
                                   <th className="px-4 py-2 font-medium">
-                                    Rôle
+                                    {t.memberColRole}
                                   </th>
                                 </tr>
                               </thead>
@@ -1026,10 +1039,10 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
                                       {m.battleTag || '—'}
                                     </td>
                                     <td className="px-4 py-2.5 text-neutral-300">
-                                      {m.role || 'Membre'}
+                                      {m.role || t.memberDefaultRole}
                                       {m.isSubstitute && (
                                         <span className="ml-2 text-xs text-amber-300">
-                                          (remplaçant·e)
+                                          {t.substituteInline}
                                         </span>
                                       )}
                                     </td>
@@ -1044,7 +1057,7 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
                       {/* Équipe actions */}
                       <div className="mt-6 pt-6 border-t border-neutral-700/50">
                         <h3 className="text-xs uppercase tracking-wide text-neutral-500 mb-3">
-                          Actions
+                          {t.actionsTitle}
                         </h3>
                         <div className="flex flex-wrap gap-2">
                           <button
@@ -1056,7 +1069,7 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
                             }}
                             className="px-3 py-2 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
                           >
-                            Modifier le BattleTag
+                            {t.editBattleTag}
                           </button>
 
                           {data.team.role !== 'captain' && (
@@ -1067,8 +1080,8 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
                               className="px-3 py-2 rounded-xl bg-emerald-700/80 hover:bg-emerald-700 text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                               {busy === 'captain'
-                                ? 'Désignation…'
-                                : 'Désigner capitaine'}
+                                ? t.assigning
+                                : t.assignCaptainBtn}
                             </button>
                           )}
 
@@ -1077,7 +1090,7 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
                             onClick={openTransfer}
                             className="px-3 py-2 rounded-xl bg-blue-700/80 hover:bg-blue-700 text-sm font-medium transition-colors"
                           >
-                            Transférer vers une autre équipe
+                            {t.transferBtn}
                           </button>
                         </div>
                       </div>
@@ -1092,23 +1105,21 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
                   {upcoming.length === 0 && past.length === 0 ? (
                     <EmptyState>
                       <p className="text-lg font-semibold text-white">
-                        Aucun match
+                        {t.noMatchTitle}
                       </p>
-                      <p className="mt-2 text-sm">
-                        Aucun match programmé ou joué pour cet utilisateur.
-                      </p>
+                      <p className="mt-2 text-sm">{t.noMatchDesc}</p>
                     </EmptyState>
                   ) : (
                     <>
                       <div>
                         <h2 className="text-lg font-semibold mb-4 text-white">
-                          À venir
+                          {t.upcomingTitle}
                           <span className="ml-2 text-sm font-normal text-neutral-500">
                             ({upcoming.length})
                           </span>
                         </h2>
                         {upcoming.length === 0 ? (
-                          <EmptyState>Aucun match à venir.</EmptyState>
+                          <EmptyState>{t.noUpcoming}</EmptyState>
                         ) : (
                           <div className="space-y-4">
                             {upcoming.map((m) => (
@@ -1120,13 +1131,13 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
 
                       <div>
                         <h2 className="text-lg font-semibold mb-4 text-white">
-                          Résultats
+                          {t.resultsTitle}
                           <span className="ml-2 text-sm font-normal text-neutral-500">
                             ({past.length})
                           </span>
                         </h2>
                         {past.length === 0 ? (
-                          <EmptyState>Aucun résultat.</EmptyState>
+                          <EmptyState>{t.noResults}</EmptyState>
                         ) : (
                           <div className="space-y-4">
                             {past.map((m) => (
@@ -1147,26 +1158,29 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
                   className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
                 >
                   <StatTile
-                    label="Messages non lus"
+                    label={t.statUnreadMessages}
                     value={data.notifications.unreadMessages}
                     highlight
                   />
                   <StatTile
-                    label="Scrims en attente"
+                    label={t.statPendingScrims}
                     value={data.notifications.pendingScrims}
                     highlight
                   />
                   <StatTile
-                    label="Demandes de join"
+                    label={t.statJoinRequests}
                     value={data.notifications.pendingJoinRequests}
                     highlight
                   />
                   <StatTile
-                    label="Check-in en attente"
+                    label={t.statCheckinPending}
                     value={data.notifications.checkinPending}
                     highlight
                   />
-                  <StatTile label="Total" value={data.notifications.total} />
+                  <StatTile
+                    label={t.statTotal}
+                    value={data.notifications.total}
+                  />
                 </section>
               )}
 
@@ -1176,22 +1190,22 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
                   {data.demandes.length === 0 ? (
                     <EmptyState>
                       <p className="text-lg font-semibold text-white">
-                        Aucune demande
+                        {t.noDemandeTitle}
                       </p>
-                      <p className="mt-2 text-sm">
-                        Cet utilisateur n&apos;a soumis aucune demande.
-                      </p>
+                      <p className="mt-2 text-sm">{t.noDemandeDesc}</p>
                     </EmptyState>
                   ) : (
                     <div className="rounded-2xl border border-neutral-700/50 bg-neutral-800/40 divide-y divide-neutral-700/40">
                       {data.demandes.map((d: Demande) => {
                         const teamName = d.team?.name || null;
+                        const demandeTypeLabels = getDemandeTypeLabels(t);
+                        const demandeStatusLabels = getDemandeStatusLabels(t);
                         return (
                           <div key={d.id} className="p-4">
                             <div className="flex items-center justify-between gap-3 flex-wrap">
                               <div className="min-w-0">
                                 <span className="font-medium text-white">
-                                  {DEMANDE_TYPE_LABELS[d.type] || d.type}
+                                  {demandeTypeLabels[d.type] || d.type}
                                 </span>
                                 {teamName && (
                                   <span className="text-neutral-400 ml-2">
@@ -1206,7 +1220,7 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
                                     'bg-neutral-500/20 text-neutral-300 border border-neutral-500/30'
                                   }`}
                                 >
-                                  {DEMANDE_STATUS_LABELS[d.status] || d.status}
+                                  {demandeStatusLabels[d.status] || d.status}
                                 </span>
                                 <span className="text-xs text-neutral-500">
                                   {formatDate(d.created_at)}
@@ -1228,7 +1242,7 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
                                   disabled={busy === `demande-${d.id}`}
                                   className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-xs font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                                 >
-                                  Approuver
+                                  {t.approve}
                                 </button>
                                 <button
                                   type="button"
@@ -1238,7 +1252,7 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
                                   disabled={busy === `demande-${d.id}`}
                                   className="px-3 py-1.5 rounded-lg bg-red-600/80 hover:bg-red-600 text-xs font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                                 >
-                                  Refuser
+                                  {t.reject}
                                 </button>
                               </div>
                             )}
@@ -1258,7 +1272,7 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
       <Modal
         open={editingName}
         onClose={() => setEditingName(false)}
-        title="Modifier le nom affiché"
+        title={t.editDisplayName}
         footer={
           <>
             <button
@@ -1266,7 +1280,7 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
               onClick={() => setEditingName(false)}
               className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
             >
-              Annuler
+              {t.cancel}
             </button>
             <button
               type="button"
@@ -1274,20 +1288,20 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
               disabled={busy === 'name'}
               className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {busy === 'name' ? 'Enregistrement…' : 'Enregistrer'}
+              {busy === 'name' ? t.saving : t.save}
             </button>
           </>
         }
       >
         <label className="block text-sm text-neutral-400 mb-1">
-          Nom affiché
+          {t.displayNameLabel}
         </label>
         <input
           type="text"
           value={nameDraft}
           onChange={(e) => setNameDraft(e.target.value)}
           className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
-          placeholder="Nom affiché"
+          placeholder={t.displayNamePlaceholder}
         />
       </Modal>
 
@@ -1295,7 +1309,7 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
       <Modal
         open={editingTag}
         onClose={() => setEditingTag(false)}
-        title="Modifier le BattleTag"
+        title={t.editBattleTag}
         footer={
           <>
             <button
@@ -1303,7 +1317,7 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
               onClick={() => setEditingTag(false)}
               className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
             >
-              Annuler
+              {t.cancel}
             </button>
             <button
               type="button"
@@ -1311,22 +1325,22 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
               disabled={busy === 'tag'}
               className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {busy === 'tag' ? 'Enregistrement…' : 'Enregistrer'}
+              {busy === 'tag' ? t.saving : t.save}
             </button>
           </>
         }
       >
-        <label className="block text-sm text-neutral-400 mb-1">BattleTag</label>
+        <label className="block text-sm text-neutral-400 mb-1">
+          {t.battleTagLabel}
+        </label>
         <input
           type="text"
           value={tagDraft}
           onChange={(e) => setTagDraft(e.target.value)}
           className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
-          placeholder="Pseudo#1234"
+          placeholder={t.battleTagPlaceholder}
         />
-        <p className="text-xs text-neutral-500 mt-1">
-          Format : Pseudo#0000 (alphanumérique + # + 3 à 6 chiffres)
-        </p>
+        <p className="text-xs text-neutral-500 mt-1">{t.battleTagHelp}</p>
         {tagError && (
           <div className="mt-3 rounded-lg bg-red-900/40 border border-red-500/50 px-3 py-2 text-sm text-red-200">
             {tagError}
@@ -1338,7 +1352,7 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
       <Modal
         open={transferOpen}
         onClose={() => setTransferOpen(false)}
-        title="Transférer vers une autre équipe"
+        title={t.transferModalTitle}
         footer={
           <>
             <button
@@ -1346,7 +1360,7 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
               onClick={() => setTransferOpen(false)}
               className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
             >
-              Annuler
+              {t.cancel}
             </button>
             <button
               type="button"
@@ -1354,34 +1368,32 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
               disabled={busy === 'transfer' || !transferTeamId}
               className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {busy === 'transfer' ? 'Transfert…' : 'Transférer'}
+              {busy === 'transfer' ? t.transferring : t.transferConfirmBtn}
             </button>
           </>
         }
       >
         <label className="block text-sm text-neutral-400 mb-1">
-          Équipe de destination
+          {t.destTeamLabel}
         </label>
         {teamsLoading ? (
           <div className="flex items-center gap-2 text-sm text-neutral-400 py-2">
             <div className="w-4 h-4 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
-            Chargement des équipes…
+            {t.loadingTeams}
           </div>
         ) : teamOptions.length === 0 ? (
-          <p className="text-sm text-neutral-500 py-2">
-            Aucune autre équipe disponible.
-          </p>
+          <p className="text-sm text-neutral-500 py-2">{t.noOtherTeam}</p>
         ) : (
           <select
-            aria-label="Équipe de destination"
+            aria-label={t.destTeamLabel}
             value={transferTeamId}
             onChange={(e) => setTransferTeamId(e.target.value)}
             className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
           >
-            <option value="">Sélectionner une équipe…</option>
-            {teamOptions.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
+            <option value="">{t.selectTeam}</option>
+            {teamOptions.map((team) => (
+              <option key={team.id} value={team.id}>
+                {team.name}
               </option>
             ))}
           </select>

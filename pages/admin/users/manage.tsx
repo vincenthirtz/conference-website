@@ -11,8 +11,11 @@ import { useToast } from '@/components/Toast';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import Modal from '@/components/admin/Modal';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 import { logger } from '../../../utils/logger';
+
+type Dict = ReturnType<typeof useAdminT<'adminUsersManage'>>;
 type StaffShape = {
   id: string;
   role: string;
@@ -45,22 +48,22 @@ export const getServerSideProps = withStaffPage('admin');
 
 const ROLES = ['member', 'player', 'caster', 'manager', 'admin', 'owner'];
 
-function roleLabel(role: string | null) {
+function roleLabel(t: Dict, role: string | null) {
   switch (role?.toLowerCase()) {
     case 'owner':
-      return 'Owner';
+      return t.roleOwner;
     case 'admin':
-      return 'Admin';
+      return t.roleAdmin;
     case 'manager':
-      return 'Manager';
+      return t.roleManager;
     case 'caster':
-      return 'Caster';
+      return t.roleCaster;
     case 'player':
-      return 'Joueur';
+      return t.rolePlayer;
     case 'member':
-      return 'Membre';
+      return t.roleMember;
     default:
-      return role || 'Membre';
+      return role || t.roleMember;
   }
 }
 
@@ -121,6 +124,7 @@ function canGrantRole(requesterRole: string | null, role: string): boolean {
 }
 
 export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
+  const t = useAdminT('adminUsersManage');
   const [loading, setLoading] = useState(false);
   const [users, setUsers] = useState<UserLite[]>([]);
   const [total, setTotal] = useState<number | null>(null);
@@ -164,10 +168,10 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
 
   // Debounce de la recherche (~300ms) avant de requêter le serveur.
   useEffect(() => {
-    const t = setTimeout(() => {
+    const timer = setTimeout(() => {
       setDebouncedSearch(search);
     }, 300);
-    return () => clearTimeout(t);
+    return () => clearTimeout(timer);
   }, [search]);
 
   // Toute modification de recherche/filtre repart de la première page.
@@ -201,15 +205,11 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
     } catch (err) {
       if (seq !== fetchSeqRef.current) return;
       logger.error('Error fetching users', err);
-      addToast(
-        (err as Error)?.message ||
-          'Erreur lors du chargement des utilisateurs.',
-        'error'
-      );
+      addToast((err as Error)?.message || t.errLoadUsers, 'error');
     } finally {
       if (seq === fetchSeqRef.current) setLoading(false);
     }
-  }, [limit, offset, debouncedSearch, roleFilter, adminFetchJson, addToast]);
+  }, [limit, offset, debouncedSearch, roleFilter, adminFetchJson, addToast, t]);
 
   useEffect(() => {
     fetchData();
@@ -233,27 +233,22 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
     // refusée 403 côté serveur (modifier un owner/admin, ou octroyer un rôle
     // >= au sien sans être owner).
     if (isTargetProtected(previousRole) && staff.role !== 'owner') {
-      addToast(
-        'Seul un owner peut modifier un compte owner ou admin.',
-        'error'
-      );
+      addToast(t.errOwnerOnly, 'error');
       return;
     }
     if (!canGrantRole(staff.role, role)) {
-      addToast(
-        'Vous ne pouvez pas octroyer un rôle égal ou supérieur au vôtre.',
-        'error'
-      );
+      addToast(t.errRoleEscalation, 'error');
       return;
     }
 
     const ok = await confirm({
-      title: `Changer le rôle vers « ${roleLabel(role)} » ?`,
-      subtitle:
-        `Cet utilisateur passera de « ${roleLabel(previousRole)} » à ` +
-        `« ${roleLabel(role)} ». Action à privilège.`,
+      title: format(t.confirmRoleTitle, { role: roleLabel(t, role) }),
+      subtitle: format(t.confirmRoleSubtitle, {
+        from: roleLabel(t, previousRole),
+        to: roleLabel(t, role),
+      }),
       variant: 'warning',
-      confirmLabel: 'Changer le rôle',
+      confirmLabel: t.confirmRoleBtn,
     });
     if (!ok) return;
 
@@ -267,12 +262,9 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
       setUsers((prev) =>
         prev.map((u) => (u.id === userId ? { ...u, role } : u))
       );
-      addToast('Rôle mis à jour', 'success');
+      addToast(t.toastRoleUpdated, 'success');
     } catch (err: unknown) {
-      addToast(
-        (err as Error)?.message || 'Erreur lors de la mise à jour du rôle.',
-        'error'
-      );
+      addToast((err as Error)?.message || t.errRoleUpdate, 'error');
     } finally {
       setUpdating(null);
     }
@@ -327,9 +319,9 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
       );
 
       setEditingBattleTag(null);
-      addToast('BattleTag mis à jour', 'success');
+      addToast(t.toastBattleTagUpdated, 'success');
     } catch (err: unknown) {
-      setBattleTagError((err as Error)?.message || 'Erreur inattendue');
+      setBattleTagError((err as Error)?.message || t.errUnexpected);
     } finally {
       setBattleTagSaving(false);
     }
@@ -363,9 +355,9 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
         )
       );
       setEditingUser(null);
-      addToast('Utilisateur mis à jour', 'success');
+      addToast(t.toastUserUpdated, 'success');
     } catch (err: unknown) {
-      setEditError((err as Error)?.message || 'Erreur inattendue');
+      setEditError((err as Error)?.message || t.errUnexpected);
     } finally {
       setEditSaving(false);
     }
@@ -374,10 +366,10 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
   const resendCredentials = async (user: UserLite) => {
     if (!user.email) return;
     const ok = await confirm({
-      title: 'Réinitialiser le mot de passe ?',
-      subtitle: `Un nouveau mot de passe sera généré et envoyé à ${user.email}.`,
+      title: t.confirmResendTitle,
+      subtitle: format(t.confirmResendSubtitle, { email: user.email }),
       variant: 'warning',
-      confirmLabel: 'Envoyer',
+      confirmLabel: t.confirmSend,
     });
     if (!ok) return;
 
@@ -397,10 +389,13 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
       if (json.warning) {
         addToast(json.warning, 'warning');
       } else {
-        addToast(`Identifiants envoyés à ${user.email}`, 'success');
+        addToast(
+          format(t.toastCredentialsSent, { email: user.email }),
+          'success'
+        );
       }
     } catch (err: unknown) {
-      addToast((err as Error)?.message || "Erreur lors de l'envoi.", 'error');
+      addToast((err as Error)?.message || t.errSend, 'error');
     } finally {
       setResendingUser(null);
     }
@@ -419,12 +414,9 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
       setUsers((prev) => prev.filter((u) => u.id !== deletingUser!.id));
       setTotal((prev) => (prev !== null ? prev - 1 : prev));
       setDeletingUser(null);
-      addToast('Utilisateur supprimé', 'success');
+      addToast(t.toastUserDeleted, 'success');
     } catch (err: unknown) {
-      addToast(
-        (err as Error)?.message || 'Erreur lors de la suppression.',
-        'error'
-      );
+      addToast((err as Error)?.message || t.errDelete, 'error');
     } finally {
       setDeleteLoading(false);
     }
@@ -434,7 +426,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
     <>
       {confirmDialog}
       <Head>
-        <title>Admin – Gestion des inscrits</title>
+        <title>{t.headTitle}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
@@ -444,12 +436,14 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-                  Gestion des inscrits
+                  {t.heading}
                 </h1>
                 <p className="text-neutral-400 text-sm mt-1">
                   {total !== null
-                    ? `${total} utilisateur${total > 1 ? 's' : ''}`
-                    : 'Chargement...'}
+                    ? format(total > 1 ? t.userCount_other : t.userCount_one, {
+                        count: total,
+                      })
+                    : t.loading}
                 </p>
               </div>
 
@@ -470,7 +464,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
                     d="M12 4v16m8-8H4"
                   />
                 </svg>
-                Nouvel utilisateur
+                {t.newUser}
               </Link>
             </div>
           </div>
@@ -483,7 +477,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
             >
               <div className="flex-1 min-w-[200px]">
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Recherche
+                  {t.searchLabel}
                 </label>
                 <div className="relative">
                   <svg
@@ -501,7 +495,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
                   </svg>
                   <input
                     type="text"
-                    placeholder="Email, nom ou BattleTag..."
+                    placeholder={t.searchPlaceholder}
                     className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
@@ -511,17 +505,17 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
 
               <div className="min-w-[160px]">
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Rôle
+                  {t.roleLabel}
                 </label>
                 <select
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={roleFilter || ''}
                   onChange={(e) => setRoleFilter(e.target.value || null)}
                 >
-                  <option value="">Tous les rôles</option>
+                  <option value="">{t.allRoles}</option>
                   {ROLES.map((r) => (
                     <option key={r} value={r}>
-                      {roleLabel(r)}
+                      {roleLabel(t, r)}
                     </option>
                   ))}
                 </select>
@@ -544,7 +538,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
                     d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
                   />
                 </svg>
-                Rechercher
+                {t.searchButton}
               </button>
             </form>
           </section>
@@ -570,7 +564,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
                     d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
                   />
                 </svg>
-                Aucun utilisateur trouvé
+                {t.emptyUsers}
               </div>
             ) : (
               <div className="divide-y divide-neutral-700/50">
@@ -602,14 +596,14 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <h3 className="font-semibold text-white truncate">
-                          {u.display_name || u.email || 'Utilisateur'}
+                          {u.display_name || u.email || t.defaultUser}
                         </h3>
                         <span
                           className={`px-2 py-0.5 rounded-full text-xs font-medium ${roleColor(
                             u.role
                           )}`}
                         >
-                          {roleLabel(u.role)}
+                          {roleLabel(t, u.role)}
                         </span>
                       </div>
                       <div className="flex items-center gap-3 text-sm text-neutral-400 flex-wrap">
@@ -619,7 +613,11 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
                           </span>
                         )}
                         <span>•</span>
-                        <span>Inscrit le {formatDate(u.created_at)}</span>
+                        <span>
+                          {format(t.registeredOn, {
+                            date: formatDate(u.created_at),
+                          })}
+                        </span>
                         <span>•</span>
                         <span
                           className={
@@ -627,8 +625,10 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
                           }
                         >
                           {u.last_sign_in_at
-                            ? `Dernière connexion ${formatDate(u.last_sign_in_at)}`
-                            : 'Jamais connecté'}
+                            ? format(t.lastSignIn, {
+                                date: formatDate(u.last_sign_in_at),
+                              })
+                            : t.neverConnected}
                         </span>
                       </div>
                       {/* Team memberships */}
@@ -671,7 +671,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
                                   }
                                   className="px-1.5 py-0.5 rounded bg-red-600/20 text-red-300 border border-red-500/30 text-xs hover:bg-red-600/30 transition-colors"
                                 >
-                                  BattleTag ?
+                                  {t.battleTagPrompt}
                                 </button>
                               )}
                             </div>
@@ -684,7 +684,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
                     <div className="flex-shrink-0 flex items-center gap-2">
                       <Link
                         href={`/admin/users/${u.id}/player-view`}
-                        title="Vue player (lecture seule)"
+                        title={t.playerViewTitle}
                         className="p-2 rounded-lg text-neutral-400 hover:text-emerald-400 hover:bg-neutral-700 transition-colors"
                       >
                         <svg
@@ -718,11 +718,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
                             value={u.role || 'member'}
                             onChange={(e) => changeRole(u.id, e.target.value)}
                             disabled={updating === u.id || targetLocked}
-                            title={
-                              targetLocked
-                                ? 'Seul un owner peut modifier un compte owner ou admin.'
-                                : undefined
-                            }
+                            title={targetLocked ? t.lockedTitle : undefined}
                             className="px-3 py-1.5 rounded-lg bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             {ROLES.map((r) => {
@@ -735,7 +731,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
                                 canGrantRole(staff.role, r);
                               return (
                                 <option key={r} value={r} disabled={!grantable}>
-                                  {roleLabel(r)}
+                                  {roleLabel(t, r)}
                                 </option>
                               );
                             })}
@@ -745,7 +741,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
 
                       <button
                         type="button"
-                        title="Renvoyer identifiants"
+                        title={t.resendTitle}
                         onClick={() => resendCredentials(u)}
                         disabled={resendingUser === u.id || !u.email}
                         className="p-2 rounded-lg text-neutral-400 hover:text-amber-400 hover:bg-neutral-700 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
@@ -767,7 +763,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
 
                       <button
                         type="button"
-                        title="Modifier"
+                        title={t.editTitle}
                         onClick={() => openEditUser(u)}
                         className="p-2 rounded-lg text-neutral-400 hover:text-blue-400 hover:bg-neutral-700 transition-colors"
                       >
@@ -788,7 +784,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
 
                       <button
                         type="button"
-                        title="Supprimer"
+                        title={t.deleteTitle}
                         onClick={() => setDeletingUser(u)}
                         className="p-2 rounded-lg text-neutral-400 hover:text-red-400 hover:bg-neutral-700 transition-colors"
                       >
@@ -834,12 +830,15 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
                   d="M15 19l-7-7 7-7"
                 />
               </svg>
-              Précédent
+              {t.previous}
             </button>
 
             <span className="text-neutral-400 text-sm">
-              {offset + 1} – {offset + users.length}
-              {total ? ` sur ${total}` : ''}
+              {format(t.paginationRange, {
+                from: offset + 1,
+                to: offset + users.length,
+              })}
+              {total ? format(t.paginationOf, { total }) : ''}
             </span>
 
             <button
@@ -848,7 +847,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
               onClick={() => setOffset(offset + limit)}
               className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
-              Suivant
+              {t.next}
               <svg
                 className="w-4 h-4"
                 fill="none"
@@ -871,7 +870,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
       <Modal
         open={Boolean(editingUser)}
         onClose={() => setEditingUser(null)}
-        title="Modifier l'utilisateur"
+        title={t.editModalTitle}
         subtitle={editingUser?.email || editingUser?.id}
         footer={
           <>
@@ -879,7 +878,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
               onClick={() => setEditingUser(null)}
               className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
             >
-              Annuler
+              {t.cancel}
             </button>
             <button
               onClick={saveEditUser}
@@ -889,7 +888,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
               {editSaving && (
                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               )}
-              {editSaving ? 'Enregistrement...' : 'Enregistrer'}
+              {editSaving ? t.saving : t.save}
             </button>
           </>
         }
@@ -897,14 +896,14 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
         <div className="space-y-4">
           <div>
             <label className="block text-sm text-neutral-400 mb-1">
-              Nom affiché
+              {t.displayNameLabel}
             </label>
             <input
               type="text"
               value={editDisplayName}
               onChange={(e) => setEditDisplayName(e.target.value)}
               className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-              placeholder="Nom affiché"
+              placeholder={t.displayNamePlaceholder}
             />
           </div>
 
@@ -922,7 +921,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
         onClose={() => setDeletingUser(null)}
         title={
           <h3 className="text-lg font-semibold text-red-400">
-            Supprimer l&apos;utilisateur
+            {t.deleteModalTitle}
           </h3>
         }
         footer={
@@ -931,7 +930,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
               onClick={() => setDeletingUser(null)}
               className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
             >
-              Annuler
+              {t.cancel}
             </button>
             <button
               onClick={deleteUser}
@@ -941,36 +940,31 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
               {deleteLoading && (
                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               )}
-              {deleteLoading ? 'Suppression...' : 'Supprimer'}
+              {deleteLoading ? t.deleting : t.delete}
             </button>
           </>
         }
       >
-        <p className="text-sm text-neutral-300 mb-2">
-          Êtes-vous sûr de vouloir supprimer cet utilisateur ?
-        </p>
+        <p className="text-sm text-neutral-300 mb-2">{t.deleteConfirmText}</p>
         <div className="bg-neutral-900/50 rounded-lg px-3 py-2 mb-4">
           <p className="text-sm font-medium text-white">
-            {deletingUser?.display_name || 'Utilisateur'}
+            {deletingUser?.display_name || t.defaultUser}
           </p>
           <p className="text-xs text-neutral-400 font-mono">
             {deletingUser?.email || deletingUser?.id}
           </p>
         </div>
-        <p className="text-xs text-red-300">
-          Cette action est irréversible. Le compte, ses appartenances aux
-          équipes et son accès staff seront supprimés.
-        </p>
+        <p className="text-xs text-red-300">{t.deleteWarning}</p>
       </Modal>
 
       {/* Battle Tag Edit Modal */}
       <Modal
         open={Boolean(editingBattleTag)}
         onClose={() => setEditingBattleTag(null)}
-        title="Modifier le BattleTag"
+        title={t.battleTagModalTitle}
         subtitle={
           <>
-            Équipe :{' '}
+            {t.battleTagModalTeamPrefix}
             <span className="text-white">{editingBattleTag?.teamName}</span>
           </>
         }
@@ -980,7 +974,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
               onClick={() => setEditingBattleTag(null)}
               className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
             >
-              Annuler
+              {t.cancel}
             </button>
             <button
               onClick={saveBattleTag}
@@ -990,7 +984,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
               {battleTagSaving && (
                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               )}
-              {battleTagSaving ? 'Enregistrement...' : 'Enregistrer'}
+              {battleTagSaving ? t.saving : t.save}
             </button>
           </>
         }
@@ -998,18 +992,16 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
         <div className="space-y-4">
           <div>
             <label className="block text-sm text-neutral-400 mb-1">
-              BattleTag
+              {t.battleTagLabel}
             </label>
             <input
               type="text"
               value={newBattleTag}
               onChange={(e) => setNewBattleTag(e.target.value)}
               className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-              placeholder="Pseudo#1234"
+              placeholder={t.battleTagPlaceholder}
             />
-            <p className="text-xs text-neutral-500 mt-1">
-              Format : Pseudo#0000 (alphanumérique + # + 3 à 6 chiffres)
-            </p>
+            <p className="text-xs text-neutral-500 mt-1">{t.battleTagHelp}</p>
           </div>
 
           {battleTagError && (
