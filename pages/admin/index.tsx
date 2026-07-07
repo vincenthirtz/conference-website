@@ -158,6 +158,14 @@ const ICON = {
       d="M13 10V3L4 14h7v7l9-11h-7z"
     />
   ),
+  key: (
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={1.8}
+      d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
+    />
+  ),
 };
 
 const getNavCards = (t: Dict): NavCard[] => [
@@ -272,6 +280,14 @@ const getNavCards = (t: Dict): NavCard[] => [
     minRole: 'admin',
     icon: ICON.cog,
     accent: 'border-amber-500/30 from-amber-500/10 text-amber-300',
+  },
+  {
+    title: t.navApiTokensTitle,
+    description: t.navApiTokensDesc,
+    href: '/admin/api-tokens',
+    minRole: 'admin',
+    icon: ICON.key,
+    accent: 'border-teal-500/30 from-teal-500/10 text-teal-300',
   },
 ];
 
