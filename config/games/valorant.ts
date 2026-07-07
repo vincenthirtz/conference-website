@@ -22,4 +22,37 @@ export const VALORANT: GameDef = {
     { name: 'Breeze', type: 'standard', image: `${CDN}/breeze.jpg` },
     { name: 'Fracture', type: 'standard', image: `${CDN}/fracture.jpg` },
   ],
+  registrationPresets: [
+    {
+      key: 'captain_riot_id',
+      label: 'Riot ID du capitaine (Nom#TAG)',
+      type: 'text',
+      required: false,
+      help: 'Format Nom#TAG',
+    },
+    {
+      key: 'rank_moyen',
+      label: 'Rang moyen de l’équipe',
+      type: 'select',
+      required: false,
+      options: [
+        'Fer',
+        'Bronze',
+        'Argent',
+        'Or',
+        'Platine',
+        'Diamant',
+        'Ascendant',
+        'Immortel',
+        'Radiant',
+      ],
+    },
+    {
+      key: 'region',
+      label: 'Région',
+      type: 'select',
+      required: false,
+      options: ['EU', 'NA', 'APAC'],
+    },
+  ],
 };

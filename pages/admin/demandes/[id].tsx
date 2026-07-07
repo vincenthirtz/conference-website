@@ -2,7 +2,6 @@
 // Page de détail d'une demande admin (tous types)
 
 import { useEffect, useState } from 'react';
-import type { ReactNode } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -12,9 +11,9 @@ import { useToast } from '@/components/Toast';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { RegistrationField } from '@/utils/registrationFields';
+import RegistrationAnswers from '@/components/admin/RegistrationAnswers';
 
 type Dict = ReturnType<typeof useAdminT<'adminDemandeDetail'>>;
-type FieldsDict = ReturnType<typeof useAdminT<'adminRegistrationFields'>>;
 
 type DemandeType =
   | 'join_team'
@@ -171,97 +170,8 @@ type ForwardCandidate = {
   short_name: string | null;
 };
 
-/** Human-readable fallback label when we don't have the field definition. */
-function humanizeKey(key: string): string {
-  return key
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, (c) => c.toUpperCase())
-    .trim();
-}
-
-function isHttpUrl(value: string): boolean {
-  return /^https?:\/\//i.test(value.trim());
-}
-
-/**
- * Render a team's submitted registration answers (`field_values`) against the
- * tournament's field definitions. Falls back to key → value when the defs
- * aren't available (e.g. caster role can't read the tournament).
- */
-function RegistrationAnswers({
-  fieldValues,
-  fields,
-  tf,
-}: {
-  fieldValues: Record<string, unknown>;
-  fields: RegistrationField[];
-  tf: FieldsDict;
-}) {
-  // Preserve field-def order first, then any leftover answer keys.
-  const orderedKeys: string[] = [];
-  for (const f of fields) {
-    if (f.key in fieldValues) orderedKeys.push(f.key);
-  }
-  for (const k of Object.keys(fieldValues)) {
-    if (!orderedKeys.includes(k)) orderedKeys.push(k);
-  }
-
-  if (orderedKeys.length === 0) return null;
-
-  const byKey = new Map(fields.map((f) => [f.key, f]));
-
-  return (
-    <div className="mt-4">
-      <div className="text-neutral-500 text-xs mb-2">{tf.answersTitle}</div>
-      <dl className="space-y-2">
-        {orderedKeys.map((key) => {
-          const def = byKey.get(key);
-          const raw = fieldValues[key];
-          const label = def?.label || humanizeKey(key);
-
-          let rendered: ReactNode;
-          if (typeof raw === 'boolean') {
-            rendered = raw ? tf.answerYes : tf.answerNo;
-          } else if (
-            typeof raw === 'string' &&
-            (def?.type === 'url' || isHttpUrl(raw))
-          ) {
-            rendered = (
-              <a
-                href={raw}
-                target="_blank"
-                rel="noreferrer"
-                className="text-blue-400 hover:underline break-all"
-              >
-                {raw}
-              </a>
-            );
-          } else if (raw === null || raw === undefined || raw === '') {
-            rendered = '—';
-          } else {
-            rendered = String(raw);
-          }
-
-          return (
-            <div
-              key={key}
-              className="px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-700"
-            >
-              <dt className="text-xs text-neutral-500">{label}</dt>
-              <dd className="text-sm font-medium mt-0.5 whitespace-pre-line">
-                {rendered}
-              </dd>
-            </div>
-          );
-        })}
-      </dl>
-    </div>
-  );
-}
-
 function AdminDemandeDetailPage() {
   const t = useAdminT('adminDemandeDetail');
-  const tf = useAdminT('adminRegistrationFields');
   const router = useRouter();
   const { addToast } = useToast();
   const { adminFetchJson } = useAdminFetch();
@@ -813,7 +723,6 @@ function AdminDemandeDetailPage() {
                       payload.field_values as Record<string, unknown>
                     }
                     fields={tournamentFields}
-                    tf={tf}
                   />
                 )}
             </div>

@@ -65,6 +65,61 @@ function formatTime(scheduledAt: string | null): string {
   });
 }
 
+/** Up-to-2-char initials derived from a team name, for the logo fallback. */
+function teamInitials(name: string | null): string {
+  if (!name) return '';
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return '';
+  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+  return (words[0][0] + words[1][0]).toUpperCase();
+}
+
+const LOGO_SIZE = 18;
+
+/**
+ * Small rounded team logo with an initials fallback when no logo is set.
+ * Plain <img> (embeds are chrome-less static HTML, no next/image).
+ */
+function TeamLogo({
+  name,
+  logoUrl,
+  isLight,
+}: {
+  name: string | null;
+  logoUrl: string | null;
+  isLight: boolean;
+}) {
+  if (logoUrl) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={logoUrl}
+        alt={name ?? ''}
+        width={LOGO_SIZE}
+        height={LOGO_SIZE}
+        loading="lazy"
+        className="shrink-0 rounded-full object-cover"
+        style={{ width: LOGO_SIZE, height: LOGO_SIZE }}
+      />
+    );
+  }
+  const initials = teamInitials(name);
+  if (!initials) return null;
+  return (
+    <span
+      aria-hidden="true"
+      className={
+        isLight
+          ? 'flex shrink-0 items-center justify-center rounded-full bg-neutral-200 text-[8px] font-bold text-neutral-600'
+          : 'flex shrink-0 items-center justify-center rounded-full bg-white/10 text-[8px] font-bold text-neutral-300'
+      }
+      style={{ width: LOGO_SIZE, height: LOGO_SIZE }}
+    >
+      {initials}
+    </span>
+  );
+}
+
 export default function EmbedSchedule({
   tournamentName,
   matches,
@@ -184,16 +239,30 @@ export default function EmbedSchedule({
                           {formatTime(m.scheduled_at)}
                         </span>
                         <span className="flex min-w-0 flex-1 items-center justify-center gap-2">
-                          <span className="min-w-0 flex-1 truncate text-right font-medium">
-                            {m.team1_name ?? t.tbd}
+                          <span className="flex min-w-0 flex-1 items-center justify-end gap-1.5">
+                            <span className="min-w-0 truncate text-right font-medium">
+                              {m.team1_name ?? t.tbd}
+                            </span>
+                            <TeamLogo
+                              name={m.team1_name}
+                              logoUrl={m.team1_logo_url}
+                              isLight={isLight}
+                            />
                           </span>
                           <span className="shrink-0 tabular-nums font-semibold">
                             {played
                               ? `${m.team1_score ?? 0} - ${m.team2_score ?? 0}`
                               : t.vs}
                           </span>
-                          <span className="min-w-0 flex-1 truncate font-medium">
-                            {m.team2_name ?? t.tbd}
+                          <span className="flex min-w-0 flex-1 items-center justify-start gap-1.5">
+                            <TeamLogo
+                              name={m.team2_name}
+                              logoUrl={m.team2_logo_url}
+                              isLight={isLight}
+                            />
+                            <span className="min-w-0 truncate font-medium">
+                              {m.team2_name ?? t.tbd}
+                            </span>
                           </span>
                         </span>
                         <span

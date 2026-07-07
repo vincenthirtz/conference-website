@@ -21,6 +21,13 @@ import Breadcrumb from '@/components/admin/Breadcrumb';
 import { useToast } from '@/components/Toast';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { MatchStatus } from '@/types/admin';
+import type {
+  RegistrationField,
+  RegistrationAnswers as RegistrationAnswerValues,
+} from '@/utils/registrationFields';
+import RegistrationAnswers, {
+  hasRenderableAnswers,
+} from '@/components/admin/RegistrationAnswers';
 
 type Dict = ReturnType<typeof useAdminT<'adminTournamentOverview'>>;
 
@@ -49,6 +56,7 @@ type Tournament = {
   is_featured: boolean;
   logo_url: string | null;
   banner_url: string | null;
+  registration_fields: RegistrationField[] | null;
   created_at: string;
   updated_at: string | null;
 };
@@ -76,6 +84,7 @@ type TournamentTeam = {
   team_id: string;
   seed?: number | null;
   status?: string | null;
+  field_values?: RegistrationAnswerValues | null;
   team: Team;
 };
 
@@ -147,7 +156,7 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
       supabaseAdmin
         .from('tournaments')
         .select(
-          'id, name, slug, game, status, start_date, end_date, timezone, format_type, max_teams, visibility, is_featured, logo_url, banner_url, created_at, updated_at'
+          'id, name, slug, game, status, start_date, end_date, timezone, format_type, max_teams, visibility, is_featured, logo_url, banner_url, registration_fields, created_at, updated_at'
         )
         .eq('tenant_id', tenantId)
         .eq('id', id)
@@ -163,7 +172,7 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
       supabaseAdmin
         .from('tournament_teams')
         .select(
-          'id, tournament_id, team_id, seed, status, created_at, team:teams ( id, name, logo_url )'
+          'id, tournament_id, team_id, seed, status, created_at, field_values, team:teams ( id, name, logo_url )'
         )
         .eq('tenant_id', tenantId)
         .eq('tournament_id', id)
@@ -1683,51 +1692,72 @@ function AdminTournamentPage({
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-64 overflow-y-auto pr-1">
                         {tournamentTeams
                           .sort((a, b) => (a.seed ?? 999) - (b.seed ?? 999))
-                          .map((tt) => (
-                            <div
-                              key={tt.id}
-                              className="flex items-center justify-between gap-2 bg-neutral-900/50 rounded-lg px-3 py-2 group"
-                            >
-                              <div className="flex items-center gap-2 min-w-0">
-                                {tt.seed && (
-                                  <span className="text-xs text-neutral-500 font-mono w-6">
-                                    #{tt.seed}
-                                  </span>
-                                )}
-                                {tt.team?.logo_url && (
-                                  <Image
-                                    src={tt.team.logo_url}
-                                    alt=""
-                                    width={24}
-                                    height={24}
-                                    className="w-6 h-6 rounded object-cover"
-                                  />
-                                )}
-                                <span className="truncate text-sm font-medium">
-                                  {tt.team?.name || tx.unknownTeam}
-                                </span>
-                              </div>
-                              <button
-                                onClick={() => handleRemoveTeam(tt.id)}
-                                className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-900/50 text-red-400 transition-all"
-                                title={tx.removeFromTournament}
+                          .map((tt) => {
+                            const registrationFields =
+                              tournament?.registration_fields ?? [];
+                            const showAnswers =
+                              registrationFields.length > 0 &&
+                              hasRenderableAnswers(
+                                tt.field_values,
+                                registrationFields
+                              );
+                            return (
+                              <div
+                                key={tt.id}
+                                className="bg-neutral-900/50 rounded-lg px-3 py-2 group"
                               >
-                                <svg
-                                  className="w-4 h-4"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M6 18L18 6M6 6l12 12"
+                                <div className="flex items-center justify-between gap-2">
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    {tt.seed && (
+                                      <span className="text-xs text-neutral-500 font-mono w-6">
+                                        #{tt.seed}
+                                      </span>
+                                    )}
+                                    {tt.team?.logo_url && (
+                                      <Image
+                                        src={tt.team.logo_url}
+                                        alt=""
+                                        width={24}
+                                        height={24}
+                                        className="w-6 h-6 rounded object-cover"
+                                      />
+                                    )}
+                                    <span className="truncate text-sm font-medium">
+                                      {tt.team?.name || tx.unknownTeam}
+                                    </span>
+                                  </div>
+                                  <button
+                                    onClick={() => handleRemoveTeam(tt.id)}
+                                    className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-900/50 text-red-400 transition-all"
+                                    title={tx.removeFromTournament}
+                                  >
+                                    <svg
+                                      className="w-4 h-4"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M6 18L18 6M6 6l12 12"
+                                      />
+                                    </svg>
+                                  </button>
+                                </div>
+                                {showAnswers && (
+                                  <RegistrationAnswers
+                                    fieldValues={
+                                      tt.field_values as Record<string, unknown>
+                                    }
+                                    fields={registrationFields}
+                                    compact
                                   />
-                                </svg>
-                              </button>
-                            </div>
-                          ))}
+                                )}
+                              </div>
+                            );
+                          })}
                       </div>
                     )}
                   </section>

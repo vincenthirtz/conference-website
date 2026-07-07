@@ -26,4 +26,36 @@ export const MARVEL_RIVALS: GameDef = {
     { name: 'Empire of Eternal Night: Midtown', type: 'convergence', image: `${CDN}/empire-eternal-night-midtown.jpg` },
     { name: 'Empire of Eternal Night: Central Park', type: 'convergence', image: `${CDN}/empire-eternal-night-central-park.jpg` },
   ],
+  registrationPresets: [
+    {
+      key: 'captain_id',
+      label: 'Pseudo in-game du capitaine',
+      type: 'text',
+      required: false,
+      help: 'Pseudo utilisé en jeu par le capitaine',
+    },
+    {
+      key: 'rank',
+      label: 'Rang moyen de l’équipe',
+      type: 'select',
+      required: false,
+      options: [
+        'Bronze',
+        'Argent',
+        'Or',
+        'Platine',
+        'Diamant',
+        'Grand Maître',
+        'Éternité',
+        'Un au-dessus de tout',
+      ],
+    },
+    {
+      key: 'region',
+      label: 'Région',
+      type: 'select',
+      required: false,
+      options: ['Europe', 'Amérique', 'Asie'],
+    },
+  ],
 };

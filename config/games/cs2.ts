@@ -59,4 +59,27 @@ export const CS2: GameDef = {
     { name: 'Dust II', type: 'active-duty', image: `${CDN}/dust2.jpg` },
     { name: 'Train', type: 'active-duty', image: `${CDN}/train.jpg` },
   ],
+  registrationPresets: [
+    {
+      key: 'captain_steam',
+      label: 'Profil Steam / SteamID',
+      type: 'text',
+      required: false,
+      help: 'Lien du profil Steam ou SteamID du capitaine',
+    },
+    {
+      key: 'faceit_level',
+      label: 'Niveau FACEIT moyen',
+      type: 'select',
+      required: false,
+      options: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'],
+    },
+    {
+      key: 'region',
+      label: 'Région',
+      type: 'select',
+      required: false,
+      options: ['EU', 'NA', 'APAC'],
+    },
+  ],
 };

@@ -24,8 +24,10 @@ export type PublicMatch = {
   bracket_side: string | null;
   team1_id: string | null;
   team1_name: string | null;
+  team1_logo_url: string | null;
   team2_id: string | null;
   team2_name: string | null;
+  team2_logo_url: string | null;
   team1_score: number | null;
   team2_score: number | null;
   winner_team_id: string | null;
@@ -63,40 +65,54 @@ type MatchRow = {
   scheduled_at: string | null;
 };
 
-/** Batch-resolve team names for a set of team ids (public projection). */
-async function resolveTeamNames(
+/** Public, non-PII team projection used to decorate match overlays. */
+type TeamPublicInfo = { name: string | null; logo_url: string | null };
+
+/** Batch-resolve public team info (name + logo) for a set of team ids. */
+async function resolveTeamInfo(
   tenantId: string,
   teamIds: string[]
-): Promise<Map<string, string>> {
-  const names = new Map<string, string>();
+): Promise<Map<string, TeamPublicInfo>> {
+  const info = new Map<string, TeamPublicInfo>();
   const ids = [...new Set(teamIds.filter((id): id is string => !!id))];
-  if (ids.length === 0) return names;
+  if (ids.length === 0) return info;
 
   const { data, error } = await supabaseAdmin
     .from('teams')
-    .select('id, name')
+    .select('id, name, logo_url')
     .eq('tenant_id', tenantId)
     .in('id', ids);
   if (error) {
-    logger.error('[readMatches] team name resolution error', error);
+    logger.error('[readMatches] team info resolution error', error);
     throw new Error('Failed to load teams');
   }
-  for (const t of (data ?? []) as Array<{ id: string; name: string | null }>) {
-    if (t.name) names.set(t.id, t.name);
+  for (const t of (data ?? []) as Array<{
+    id: string;
+    name: string | null;
+    logo_url: string | null;
+  }>) {
+    info.set(t.id, { name: t.name ?? null, logo_url: t.logo_url ?? null });
   }
-  return names;
+  return info;
 }
 
-function shapeMatch(r: MatchRow, names: Map<string, string>): PublicMatch {
+function shapeMatch(
+  r: MatchRow,
+  info: Map<string, TeamPublicInfo>
+): PublicMatch {
+  const t1 = r.team1_id ? info.get(r.team1_id) : undefined;
+  const t2 = r.team2_id ? info.get(r.team2_id) : undefined;
   return {
     id: r.id,
     stage_id: r.stage_id ?? null,
     round_number: r.round_number ?? null,
     bracket_side: r.bracket_side ?? null,
     team1_id: r.team1_id ?? null,
-    team1_name: r.team1_id ? (names.get(r.team1_id) ?? null) : null,
+    team1_name: t1?.name ?? null,
+    team1_logo_url: t1?.logo_url ?? null,
     team2_id: r.team2_id ?? null,
-    team2_name: r.team2_id ? (names.get(r.team2_id) ?? null) : null,
+    team2_name: t2?.name ?? null,
+    team2_logo_url: t2?.logo_url ?? null,
     team1_score: r.team1_score ?? null,
     team2_score: r.team2_score ?? null,
     winner_team_id: r.winner_team_id ?? null,
@@ -142,13 +158,13 @@ export async function readPublicTournamentMatches(
   }
 
   const rows = (data ?? []) as MatchRow[];
-  const names = await resolveTeamNames(
+  const info = await resolveTeamInfo(
     tenantId,
     rows.flatMap((r) =>
       [r.team1_id, r.team2_id].filter((x): x is string => !!x)
     )
   );
-  return rows.map((r) => shapeMatch(r, names));
+  return rows.map((r) => shapeMatch(r, info));
 }
 
 /**
@@ -176,7 +192,7 @@ export async function readPublicMatchDetail(
     return null;
   }
 
-  const names = await resolveTeamNames(
+  const info = await resolveTeamInfo(
     tenantId,
     [row.team1_id, row.team2_id].filter((x): x is string => !!x)
   );
@@ -211,5 +227,5 @@ export async function readPublicMatchDetail(
       winner_team_id: g.winner_team_id ?? null,
     }));
 
-  return { ...shapeMatch(row, names), games };
+  return { ...shapeMatch(row, info), games };
 }

@@ -8,7 +8,7 @@
 // source of truth.
 
 import { useMemo } from 'react';
-import { useAdminT } from '@/lib/i18n/useAdminT';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type {
   RegistrationField,
   RegistrationFieldType,
@@ -62,10 +62,34 @@ type Props = {
   fields: RegistrationField[];
   onChange: (fields: RegistrationField[]) => void;
   disabled?: boolean;
+  /** Curated per-game presets (registry `registrationPresets`). */
+  presets?: RegistrationField[];
+  /** Game label used to interpolate the presets hint. */
+  presetsGameLabel?: string;
 };
 
-function RegistrationFieldsEditor({ fields, onChange, disabled }: Props) {
+function RegistrationFieldsEditor({
+  fields,
+  onChange,
+  disabled,
+  presets,
+  presetsGameLabel,
+}: Props) {
   const t = useAdminT('adminRegistrationFields');
+
+  // Presets whose key isn't already present in the current fields.
+  const missingPresets = useMemo(() => {
+    if (!presets || presets.length === 0) return [];
+    const existing = new Set(fields.map((f) => f.key));
+    return presets.filter((p) => !existing.has(p.key));
+  }, [presets, fields]);
+
+  function addRecommendedFields() {
+    if (missingPresets.length === 0) return;
+    // Cap at the 20-field limit the validator enforces.
+    const room = Math.max(0, 20 - fields.length);
+    onChange([...fields, ...missingPresets.slice(0, room)]);
+  }
 
   const typeName = useMemo(
     (): Record<RegistrationFieldType, string> => ({
@@ -200,6 +224,37 @@ function RegistrationFieldsEditor({ fields, onChange, disabled }: Props) {
         {t.sectionTitle}
       </h2>
       <p className="text-xs text-neutral-500 mb-4">{t.sectionDescription}</p>
+
+      {presets && presets.length > 0 && (
+        <div className="mb-4 flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            disabled={disabled || missingPresets.length === 0}
+            onClick={addRecommendedFields}
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/40 text-sm font-medium text-blue-300 disabled:opacity-40 disabled:hover:bg-blue-600/20"
+          >
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
+              />
+            </svg>
+            {t.addRecommended}
+          </button>
+          <span className="text-[11px] text-neutral-500">
+            {presetsGameLabel
+              ? format(t.presetsHint, { game: presetsGameLabel })
+              : t.presetsHintGeneric}
+          </span>
+        </div>
+      )}
 
       {fields.length === 0 && (
         <div className="rounded-xl border border-dashed border-neutral-700 px-4 py-8 text-center text-sm text-neutral-500">

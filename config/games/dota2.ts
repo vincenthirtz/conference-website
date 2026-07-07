@@ -55,4 +55,36 @@ export const DOTA2: GameDef = {
     bo3: DOTA2_CAPTAINS_MODE,
     bo5: DOTA2_CAPTAINS_MODE,
   },
+  registrationPresets: [
+    {
+      key: 'captain_steam',
+      label: 'Profil Steam / SteamID du capitaine',
+      type: 'text',
+      required: false,
+      help: 'Lien du profil Steam ou SteamID',
+    },
+    {
+      key: 'rank_medal',
+      label: 'Medaille moyenne de l’équipe',
+      type: 'select',
+      required: false,
+      options: [
+        'Herald',
+        'Guardian',
+        'Crusader',
+        'Archon',
+        'Legend',
+        'Ancient',
+        'Divine',
+        'Immortal',
+      ],
+    },
+    {
+      key: 'region',
+      label: 'Région',
+      type: 'select',
+      required: false,
+      options: ['EU', 'NA', 'SEA'],
+    },
+  ],
 };

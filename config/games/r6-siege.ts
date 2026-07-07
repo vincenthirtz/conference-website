@@ -23,4 +23,36 @@ export const R6_SIEGE: GameDef = {
     { name: 'Skyscraper', type: 'ranked', image: `${CDN}/skyscraper.jpg` },
     { name: 'Villa', type: 'ranked', image: `${CDN}/villa.jpg` },
   ],
+  registrationPresets: [
+    {
+      key: 'captain_ubisoft_id',
+      label: 'Ubisoft ID du capitaine',
+      type: 'text',
+      required: false,
+      help: 'Identifiant Ubisoft Connect du capitaine',
+    },
+    {
+      key: 'rank',
+      label: 'Rang moyen de l’équipe',
+      type: 'select',
+      required: false,
+      options: [
+        'Cuivre',
+        'Bronze',
+        'Argent',
+        'Or',
+        'Platine',
+        'Émeraude',
+        'Diamant',
+        'Champion',
+      ],
+    },
+    {
+      key: 'region',
+      label: 'Région',
+      type: 'select',
+      required: false,
+      options: ['EU', 'NA', 'APAC'],
+    },
+  ],
 };

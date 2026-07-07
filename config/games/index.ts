@@ -4,6 +4,7 @@
 
 import type { VetoFlowStep } from '@/types/veto';
 import type { DraftFlow } from '@/types/draft';
+import type { RegistrationField } from '@/utils/registrationFields';
 import { OVERWATCH } from './overwatch';
 import { VALORANT } from './valorant';
 import { CS2 } from './cs2';
@@ -52,6 +53,13 @@ export type GameDef = {
   hasDraft?: boolean;
   /** Draft flows keyed by match format. Required when hasDraft = true. */
   draftFlows?: Partial<Record<MatchFormat, DraftFlow>>;
+  /**
+   * Curated TEAM-LEVEL custom registration fields recommended for this game.
+   * Surfaced in the admin field-builder via a one-click "add recommended
+   * fields" button. One value per team (not per player). Every entry satisfies
+   * `RegistrationField` so it validates cleanly if saved as-is.
+   */
+  registrationPresets?: RegistrationField[];
 };
 
 const GAMES: Record<GameSlug, GameDef> = {

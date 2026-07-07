@@ -53,4 +53,38 @@ export const LOL: GameDef = {
     bo3: LOL_TOURNAMENT_DRAFT,
     bo5: LOL_TOURNAMENT_DRAFT,
   },
+  registrationPresets: [
+    {
+      key: 'captain_riot_id',
+      label: 'Riot ID du capitaine',
+      type: 'text',
+      required: false,
+      help: 'Format Nom#TAG',
+    },
+    {
+      key: 'rank_moyen',
+      label: 'Rang moyen de l’équipe',
+      type: 'select',
+      required: false,
+      options: [
+        'Fer',
+        'Bronze',
+        'Argent',
+        'Or',
+        'Platine',
+        'Émeraude',
+        'Diamant',
+        'Maître',
+        'Grand Maître',
+        'Challenger',
+      ],
+    },
+    {
+      key: 'server',
+      label: 'Serveur',
+      type: 'select',
+      required: false,
+      options: ['EUW', 'EUNE', 'NA'],
+    },
+  ],
 };

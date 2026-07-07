@@ -46,4 +46,36 @@ export const OVERWATCH: GameDef = {
     { name: 'Suravasa', type: 'flashpoint', image: `${CDN}/suravasa.jpg` },
     { name: 'Throne of Aatlis', type: 'flashpoint', image: `${CDN}/throne-of-aatlis.jpg` },
   ],
+  registrationPresets: [
+    {
+      key: 'captain_battletag',
+      label: 'BattleTag du capitaine',
+      type: 'text',
+      required: false,
+      help: 'Format Nom#1234',
+    },
+    {
+      key: 'rank_moyen',
+      label: 'Rang moyen de l’équipe',
+      type: 'select',
+      required: false,
+      options: [
+        'Bronze',
+        'Argent',
+        'Or',
+        'Platine',
+        'Diamant',
+        'Maître',
+        'Grand Maître',
+        'Champion',
+      ],
+    },
+    {
+      key: 'region',
+      label: 'Région',
+      type: 'select',
+      required: false,
+      options: ['Europe', 'Amérique', 'Asie', 'Océanie'],
+    },
+  ],
 };

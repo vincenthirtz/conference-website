@@ -15,6 +15,7 @@ import RegistrationFieldsEditor, {
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import type { StaffProps, Tournament } from '@/types/admin';
 import type { RegistrationField } from '@/utils/registrationFields';
+import { getGame } from '@/config/games';
 import { TOURNAMENT_TIMEZONES } from '@/utils/timezone';
 
 type ApiResponse = {
@@ -827,6 +828,8 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
                       fields={registrationFields}
                       onChange={setRegistrationFields}
                       disabled={saving}
+                      presets={getGame(form.game)?.registrationPresets ?? []}
+                      presetsGameLabel={getGame(form.game)?.label}
                     />
                   </div>
 

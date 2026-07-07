@@ -9,6 +9,7 @@ import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 
 import { logger } from '../../../../../utils/logger';
+import type { RegistrationAnswers } from '@/utils/registrationFields';
 type TournamentTeam = {
   id: string;
   tournament_id: string;
@@ -16,6 +17,7 @@ type TournamentTeam = {
   seed: number | null;
   status: string | null;
   created_at: string;
+  field_values: RegistrationAnswers | null;
   team: {
     id: string;
     name: string;
@@ -81,6 +83,7 @@ async function handleGet(
       seed,
       status,
       created_at,
+      field_values,
       team:teams (
         id,
         name,
@@ -212,6 +215,7 @@ async function handlePost(
       seed,
       status,
       created_at,
+      field_values,
       team:teams (
         id,
         name,
