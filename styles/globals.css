@@ -7,33 +7,33 @@
  * @layer utilities and by component-level inline styles).
  * ───────────────────────────────────────────────────────── */
 @theme {
-  --color-neon-cyan: #00f0ff;
-  --color-neon-magenta: #ff2ec8;
-  --color-neon-violet: #bb00ff;
-  --color-neon-pink: #ff3ea5;
-  --color-neon-blue: #4d8bff;
+  --color-neon-cyan: #4dff8a;
+  --color-neon-magenta: #ffe93c;
+  --color-neon-violet: #c24dff;
+  --color-neon-pink: #d98bff;
+  --color-neon-blue: #78ffa0;
 
   --shadow-neon-cyan:
-    0 0 8px rgba(0, 240, 255, 0.55), 0 0 22px rgba(0, 240, 255, 0.35),
-    0 0 44px rgba(77, 139, 255, 0.18);
+    0 0 8px rgba(77, 255, 138, 0.55), 0 0 22px rgba(77, 255, 138, 0.35),
+    0 0 44px rgba(120, 255, 160, 0.18);
   --shadow-neon-cyan-strong:
-    0 0 12px rgba(0, 240, 255, 0.9), 0 0 32px rgba(0, 240, 255, 0.6),
-    0 0 64px rgba(77, 139, 255, 0.35);
+    0 0 12px rgba(77, 255, 138, 0.9), 0 0 32px rgba(77, 255, 138, 0.6),
+    0 0 64px rgba(120, 255, 160, 0.35);
   --shadow-neon-magenta:
-    0 0 8px rgba(255, 46, 200, 0.55), 0 0 22px rgba(255, 46, 200, 0.35),
-    0 0 44px rgba(187, 0, 255, 0.18);
+    0 0 8px rgba(255, 233, 60, 0.55), 0 0 22px rgba(255, 233, 60, 0.35),
+    0 0 44px rgba(194, 77, 255, 0.18);
   --shadow-neon-magenta-strong:
-    0 0 12px rgba(255, 46, 200, 0.9), 0 0 32px rgba(255, 46, 200, 0.6),
-    0 0 64px rgba(187, 0, 255, 0.35);
+    0 0 12px rgba(255, 233, 60, 0.9), 0 0 32px rgba(255, 233, 60, 0.6),
+    0 0 64px rgba(194, 77, 255, 0.35);
   --shadow-neon-violet:
-    0 0 8px rgba(187, 0, 255, 0.55), 0 0 22px rgba(187, 0, 255, 0.35),
-    0 0 44px rgba(255, 46, 200, 0.18);
+    0 0 8px rgba(194, 77, 255, 0.55), 0 0 22px rgba(194, 77, 255, 0.35),
+    0 0 44px rgba(255, 233, 60, 0.18);
   --shadow-neon-violet-strong:
-    0 0 12px rgba(187, 0, 255, 0.9), 0 0 32px rgba(187, 0, 255, 0.6),
-    0 0 64px rgba(255, 46, 200, 0.35);
+    0 0 12px rgba(194, 77, 255, 0.9), 0 0 32px rgba(194, 77, 255, 0.6),
+    0 0 64px rgba(255, 233, 60, 0.35);
   --shadow-neon-tri:
-    0 0 12px rgba(0, 240, 255, 0.6), 0 0 24px rgba(255, 46, 200, 0.55),
-    0 0 52px rgba(187, 0, 255, 0.45);
+    0 0 12px rgba(77, 255, 138, 0.6), 0 0 24px rgba(255, 233, 60, 0.55),
+    0 0 52px rgba(194, 77, 255, 0.45);
 
   --animate-glow-breathing: glow-breathing 4.5s ease-in-out infinite;
   --animate-neon-flicker: neon-flicker 6s linear infinite;
@@ -41,6 +41,137 @@
   --animate-neon-pulse: neon-pulse 2.8s ease-in-out infinite;
   --animate-neon-pulse-magenta: neon-pulse-magenta 2.8s ease-in-out infinite;
   --animate-neon-pulse-violet: neon-pulse-violet 2.8s ease-in-out infinite;
+}
+
+/* ─────────────────────────────────────────────────────────
+ * REBRAND Lot C — override des rampes Tailwind par défaut vers la
+ * palette logo. Les utilitaires (bg-purple-N, text-cyan-N, from-pink-N …) des
+ * ~200 composants basculent SANS édition fichier. Hues froids -> vert
+ * (cyan supprimé) ; purple/blue/indigo -> violet ; pink/rose/fuchsia/orange
+ * -> jaune. emerald/red/amber laissés en défaut (statut sémantique).
+ * ───────────────────────────────────────────────────────── */
+@theme {
+  --color-purple-50: #f8eefc;
+  --color-purple-100: #ecd3f8;
+  --color-purple-200: #dcacf1;
+  --color-purple-300: #c77ce9;
+  --color-purple-400: #b551e1;
+  --color-purple-500: #a62edb;
+  --color-purple-600: #8f21bf;
+  --color-purple-700: #751b9d;
+  --color-purple-800: #5e167e;
+  --color-purple-900: #471060;
+  --color-purple-950: #310b41;
+  --color-violet-50: #f8eefc;
+  --color-violet-100: #ecd3f8;
+  --color-violet-200: #dcacf1;
+  --color-violet-300: #c77ce9;
+  --color-violet-400: #b551e1;
+  --color-violet-500: #a62edb;
+  --color-violet-600: #8f21bf;
+  --color-violet-700: #751b9d;
+  --color-violet-800: #5e167e;
+  --color-violet-900: #471060;
+  --color-violet-950: #310b41;
+  --color-indigo-50: #f8eefc;
+  --color-indigo-100: #ecd3f8;
+  --color-indigo-200: #dcacf1;
+  --color-indigo-300: #c77ce9;
+  --color-indigo-400: #b551e1;
+  --color-indigo-500: #a62edb;
+  --color-indigo-600: #8f21bf;
+  --color-indigo-700: #751b9d;
+  --color-indigo-800: #5e167e;
+  --color-indigo-900: #471060;
+  --color-indigo-950: #310b41;
+  --color-blue-50: #f8eefc;
+  --color-blue-100: #ecd3f8;
+  --color-blue-200: #dcacf1;
+  --color-blue-300: #c77ce9;
+  --color-blue-400: #b551e1;
+  --color-blue-500: #a62edb;
+  --color-blue-600: #8f21bf;
+  --color-blue-700: #751b9d;
+  --color-blue-800: #5e167e;
+  --color-blue-900: #471060;
+  --color-blue-950: #310b41;
+  --color-pink-50: #fefdec;
+  --color-pink-100: #fbf9d0;
+  --color-pink-200: #f8f3a5;
+  --color-pink-300: #f4ed71;
+  --color-pink-400: #f0e742;
+  --color-pink-500: #eee21c;
+  --color-pink-600: #d0c610;
+  --color-pink-700: #aaa20d;
+  --color-pink-800: #89820b;
+  --color-pink-900: #686308;
+  --color-pink-950: #474305;
+  --color-rose-50: #fefdec;
+  --color-rose-100: #fbf9d0;
+  --color-rose-200: #f8f3a5;
+  --color-rose-300: #f4ed71;
+  --color-rose-400: #f0e742;
+  --color-rose-500: #eee21c;
+  --color-rose-600: #d0c610;
+  --color-rose-700: #aaa20d;
+  --color-rose-800: #89820b;
+  --color-rose-900: #686308;
+  --color-rose-950: #474305;
+  --color-fuchsia-50: #fefdec;
+  --color-fuchsia-100: #fbf9d0;
+  --color-fuchsia-200: #f8f3a5;
+  --color-fuchsia-300: #f4ed71;
+  --color-fuchsia-400: #f0e742;
+  --color-fuchsia-500: #eee21c;
+  --color-fuchsia-600: #d0c610;
+  --color-fuchsia-700: #aaa20d;
+  --color-fuchsia-800: #89820b;
+  --color-fuchsia-900: #686308;
+  --color-fuchsia-950: #474305;
+  --color-orange-50: #fefdec;
+  --color-orange-100: #fbf9d0;
+  --color-orange-200: #f8f3a5;
+  --color-orange-300: #f4ed71;
+  --color-orange-400: #f0e742;
+  --color-orange-500: #eee21c;
+  --color-orange-600: #d0c610;
+  --color-orange-700: #aaa20d;
+  --color-orange-800: #89820b;
+  --color-orange-900: #686308;
+  --color-orange-950: #474305;
+  --color-cyan-50: #f2faf0;
+  --color-cyan-100: #def1da;
+  --color-cyan-200: #c0e5b8;
+  --color-cyan-300: #9cd68f;
+  --color-cyan-400: #7ac969;
+  --color-cyan-500: #60be4b;
+  --color-cyan-600: #4ea53c;
+  --color-cyan-700: #408731;
+  --color-cyan-800: #346d27;
+  --color-cyan-900: #27521e;
+  --color-cyan-950: #1b3814;
+  --color-teal-50: #f2faf0;
+  --color-teal-100: #def1da;
+  --color-teal-200: #c0e5b8;
+  --color-teal-300: #9cd68f;
+  --color-teal-400: #7ac969;
+  --color-teal-500: #60be4b;
+  --color-teal-600: #4ea53c;
+  --color-teal-700: #408731;
+  --color-teal-800: #346d27;
+  --color-teal-900: #27521e;
+  --color-teal-950: #1b3814;
+  --color-sky-50: #f2faf0;
+  --color-sky-100: #def1da;
+  --color-sky-200: #c0e5b8;
+  --color-sky-300: #9cd68f;
+  --color-sky-400: #7ac969;
+  --color-sky-500: #60be4b;
+  --color-sky-600: #4ea53c;
+  --color-sky-700: #408731;
+  --color-sky-800: #346d27;
+  --color-sky-900: #27521e;
+  --color-sky-950: #1b3814;
 }
 
 :root {
@@ -153,34 +284,34 @@
     0 18px 35px rgba(240, 230, 60, 0.3), 0 0 0 5px rgba(178, 75, 224, 0.24);
 
   /* ─────── Neon palette (cyberpunk-intensified) ─────── */
-  --color-neon-cyan: #00f0ff;
-  --color-neon-magenta: #ff2ec8;
-  --color-neon-violet: #bb00ff;
-  --color-neon-pink: #ff3ea5;
-  --color-neon-blue: #4d8bff;
+  --color-neon-cyan: #4dff8a;
+  --color-neon-magenta: #ffe93c;
+  --color-neon-violet: #c24dff;
+  --color-neon-pink: #d98bff;
+  --color-neon-blue: #78ffa0;
 
   /* ─────── Neon glows (layered: tight + bloom + shadow) ─────── */
   --glow-neon-cyan-soft:
-    0 0 8px rgba(0, 240, 255, 0.55), 0 0 22px rgba(0, 240, 255, 0.35),
-    0 0 44px rgba(77, 139, 255, 0.18);
+    0 0 8px rgba(77, 255, 138, 0.55), 0 0 22px rgba(77, 255, 138, 0.35),
+    0 0 44px rgba(120, 255, 160, 0.18);
   --glow-neon-cyan-strong:
-    0 0 12px rgba(0, 240, 255, 0.9), 0 0 32px rgba(0, 240, 255, 0.6),
-    0 0 64px rgba(77, 139, 255, 0.35);
+    0 0 12px rgba(77, 255, 138, 0.9), 0 0 32px rgba(77, 255, 138, 0.6),
+    0 0 64px rgba(120, 255, 160, 0.35);
   --glow-neon-magenta-soft:
-    0 0 8px rgba(255, 46, 200, 0.55), 0 0 22px rgba(255, 46, 200, 0.35),
-    0 0 44px rgba(187, 0, 255, 0.18);
+    0 0 8px rgba(255, 233, 60, 0.55), 0 0 22px rgba(255, 233, 60, 0.35),
+    0 0 44px rgba(194, 77, 255, 0.18);
   --glow-neon-magenta-strong:
-    0 0 12px rgba(255, 46, 200, 0.9), 0 0 32px rgba(255, 46, 200, 0.6),
-    0 0 64px rgba(187, 0, 255, 0.35);
+    0 0 12px rgba(255, 233, 60, 0.9), 0 0 32px rgba(255, 233, 60, 0.6),
+    0 0 64px rgba(194, 77, 255, 0.35);
   --glow-neon-violet-soft:
-    0 0 8px rgba(187, 0, 255, 0.55), 0 0 22px rgba(187, 0, 255, 0.35),
-    0 0 44px rgba(255, 46, 200, 0.18);
+    0 0 8px rgba(194, 77, 255, 0.55), 0 0 22px rgba(194, 77, 255, 0.35),
+    0 0 44px rgba(255, 233, 60, 0.18);
   --glow-neon-violet-strong:
-    0 0 12px rgba(187, 0, 255, 0.9), 0 0 32px rgba(187, 0, 255, 0.6),
-    0 0 64px rgba(255, 46, 200, 0.35);
+    0 0 12px rgba(194, 77, 255, 0.9), 0 0 32px rgba(194, 77, 255, 0.6),
+    0 0 64px rgba(255, 233, 60, 0.35);
   --glow-neon-tri-strong:
-    0 0 12px rgba(0, 240, 255, 0.6), 0 0 24px rgba(255, 46, 200, 0.55),
-    0 0 52px rgba(187, 0, 255, 0.45);
+    0 0 12px rgba(77, 255, 138, 0.6), 0 0 24px rgba(255, 233, 60, 0.55),
+    0 0 52px rgba(194, 77, 255, 0.45);
 
   /* ─────── Neon gradients ─────── */
   --gradient-neon-tri: linear-gradient(
@@ -260,9 +391,9 @@ select option {
   background-size: 300% 100%;
   animation: esportGradient 6s ease infinite;
   box-shadow:
-    0 0 18px rgba(0, 240, 255, 0.45),
-    0 0 36px rgba(255, 46, 200, 0.4),
-    0 0 60px rgba(187, 0, 255, 0.32),
+    0 0 18px rgba(77, 255, 138, 0.45),
+    0 0 36px rgba(255, 233, 60, 0.4),
+    0 0 60px rgba(194, 77, 255, 0.32),
     0 10px 28px rgba(0, 0, 0, 0.45);
   position: relative;
 }
@@ -284,9 +415,9 @@ select option {
 .esport-cta:hover,
 .esport-cta:focus-visible {
   box-shadow:
-    0 0 22px rgba(0, 240, 255, 0.75),
-    0 0 48px rgba(255, 46, 200, 0.65),
-    0 0 80px rgba(187, 0, 255, 0.5),
+    0 0 22px rgba(77, 255, 138, 0.75),
+    0 0 48px rgba(255, 233, 60, 0.65),
+    0 0 80px rgba(194, 77, 255, 0.5),
     0 12px 32px rgba(0, 0, 0, 0.5);
   animation-duration: 2.5s;
 }
@@ -592,8 +723,8 @@ select option {
 .hero-title {
   letter-spacing: -1px;
   line-height: 1.1;
-  filter: drop-shadow(0 0 16px rgba(187, 0, 255, 0.35))
-    drop-shadow(0 0 32px rgba(0, 240, 255, 0.2));
+  filter: drop-shadow(0 0 16px rgba(194, 77, 255, 0.35))
+    drop-shadow(0 0 32px rgba(77, 255, 138, 0.2));
 }
 
 @media (min-width: 480px) {
@@ -632,7 +763,7 @@ select option {
   );
   background-size: 100% 220%;
   border-radius: 2px;
-  filter: blur(0.4px) drop-shadow(0 0 4px rgba(0, 240, 255, 0.5));
+  filter: blur(0.4px) drop-shadow(0 0 4px rgba(77, 255, 138, 0.5));
   animation: hero-connector-beam 3.4s ease-in-out infinite;
 }
 
@@ -647,8 +778,8 @@ select option {
   transform: translate(-50%, -50%);
   box-shadow:
     0 0 10px var(--color-neon-cyan),
-    0 0 22px rgba(0, 240, 255, 0.7),
-    0 0 40px rgba(77, 139, 255, 0.45);
+    0 0 22px rgba(77, 255, 138, 0.7),
+    0 0 40px rgba(120, 255, 160, 0.45);
   animation: hero-connector-travel 2.6s cubic-bezier(0.55, 0, 0.45, 1) infinite;
 }
 
@@ -657,8 +788,8 @@ select option {
   background: var(--color-neon-magenta);
   box-shadow:
     0 0 10px var(--color-neon-magenta),
-    0 0 22px rgba(255, 46, 200, 0.7),
-    0 0 40px rgba(187, 0, 255, 0.45);
+    0 0 22px rgba(255, 233, 60, 0.7),
+    0 0 40px rgba(194, 77, 255, 0.45);
 }
 
 .hero-connector__diamond {
@@ -671,9 +802,9 @@ select option {
   background: var(--gradient-neon-tri);
   border-radius: 2px;
   box-shadow:
-    0 0 14px rgba(0, 240, 255, 0.8),
-    0 0 28px rgba(255, 46, 200, 0.65),
-    0 0 48px rgba(187, 0, 255, 0.45);
+    0 0 14px rgba(77, 255, 138, 0.8),
+    0 0 28px rgba(255, 233, 60, 0.65),
+    0 0 48px rgba(194, 77, 255, 0.45);
   animation: hero-connector-pulse 2.6s ease-in-out infinite;
 }
 
@@ -692,7 +823,7 @@ select option {
   top: -55px;
   background: radial-gradient(
     closest-side,
-    rgba(0, 240, 255, 0.6),
+    rgba(77, 255, 138, 0.6),
     transparent 70%
   );
   opacity: 0.7;
@@ -702,7 +833,7 @@ select option {
   bottom: -55px;
   background: radial-gradient(
     closest-side,
-    rgba(187, 0, 255, 0.55),
+    rgba(194, 77, 255, 0.55),
     transparent 70%
   );
   opacity: 0.6;
@@ -1468,20 +1599,20 @@ select option {
   .neon-text-cyan {
     color: var(--color-neon-cyan);
     text-shadow:
-      0 0 6px rgba(0, 240, 255, 0.75),
-      0 0 18px rgba(0, 240, 255, 0.45);
+      0 0 6px rgba(77, 255, 138, 0.75),
+      0 0 18px rgba(77, 255, 138, 0.45);
   }
   .neon-text-magenta {
     color: var(--color-neon-magenta);
     text-shadow:
-      0 0 6px rgba(255, 46, 200, 0.75),
-      0 0 18px rgba(255, 46, 200, 0.45);
+      0 0 6px rgba(255, 233, 60, 0.75),
+      0 0 18px rgba(255, 233, 60, 0.45);
   }
   .neon-text-violet {
     color: var(--color-neon-violet);
     text-shadow:
-      0 0 6px rgba(187, 0, 255, 0.75),
-      0 0 18px rgba(187, 0, 255, 0.45);
+      0 0 6px rgba(194, 77, 255, 0.75),
+      0 0 18px rgba(194, 77, 255, 0.45);
   }
 
   /* Gradient border via masked outer ring (1px). Sits on any rounded element. */
@@ -1509,15 +1640,15 @@ select option {
   }
 
   .neon-border-cyan {
-    border: 1px solid rgba(0, 240, 255, 0.55);
+    border: 1px solid rgba(77, 255, 138, 0.55);
     box-shadow: var(--glow-neon-cyan-soft);
   }
   .neon-border-magenta {
-    border: 1px solid rgba(255, 46, 200, 0.55);
+    border: 1px solid rgba(255, 233, 60, 0.55);
     box-shadow: var(--glow-neon-magenta-soft);
   }
   .neon-border-violet {
-    border: 1px solid rgba(187, 0, 255, 0.55);
+    border: 1px solid rgba(194, 77, 255, 0.55);
     box-shadow: var(--glow-neon-violet-soft);
   }
 
@@ -1628,27 +1759,27 @@ select option {
   position: relative;
   background: linear-gradient(
       180deg,
-      rgba(0, 240, 255, 0.04) 0%,
+      rgba(77, 255, 138, 0.04) 0%,
       transparent 60%
     )
     var(--bg-elevated);
   box-shadow:
-    inset 0 0 0 1px rgba(0, 240, 255, 0.18),
-    inset 0 -20px 32px -16px rgba(187, 0, 255, 0.25);
+    inset 0 0 0 1px rgba(77, 255, 138, 0.18),
+    inset 0 -20px 32px -16px rgba(194, 77, 255, 0.25);
   transition: box-shadow 0.4s ease;
 }
 
 .countdown-cell:hover {
   box-shadow:
-    inset 0 0 0 1px rgba(0, 240, 255, 0.45),
-    inset 0 -20px 32px -16px rgba(187, 0, 255, 0.45),
-    0 0 16px rgba(0, 240, 255, 0.25);
+    inset 0 0 0 1px rgba(77, 255, 138, 0.45),
+    inset 0 -20px 32px -16px rgba(194, 77, 255, 0.45),
+    0 0 16px rgba(77, 255, 138, 0.25);
 }
 
 .countdown-digit {
   text-shadow:
-    0 0 8px rgba(0, 240, 255, 0.45),
-    0 0 20px rgba(187, 0, 255, 0.25);
+    0 0 8px rgba(77, 255, 138, 0.45),
+    0 0 20px rgba(194, 77, 255, 0.25);
 }
 
 /* Section eyebrow label (PR4 polish): unified across HomeEvents,
@@ -1672,8 +1803,8 @@ select option {
   background: var(--gradient-neon-tri);
   border-radius: 2px;
   box-shadow:
-    0 0 8px rgba(0, 240, 255, 0.55),
-    0 0 16px rgba(187, 0, 255, 0.35);
+    0 0 8px rgba(77, 255, 138, 0.55),
+    0 0 16px rgba(194, 77, 255, 0.35);
 }
 
 /* Press cards (PR4 polish): neon edge on hover + arrow nudge */
@@ -1683,11 +1814,11 @@ select option {
 }
 
 .press-card:hover {
-  border-color: rgba(0, 240, 255, 0.4);
+  border-color: rgba(77, 255, 138, 0.4);
   box-shadow:
-    0 0 0 1px rgba(255, 46, 200, 0.25),
+    0 0 0 1px rgba(255, 233, 60, 0.25),
     0 16px 40px rgba(0, 0, 0, 0.45),
-    0 0 32px rgba(187, 0, 255, 0.25);
+    0 0 32px rgba(194, 77, 255, 0.25);
   transform: translateY(-2px);
 }
 
@@ -1714,29 +1845,29 @@ select option {
 
 /* News featured card hover: layered neon glow (cyan→violet) + tiny lift */
 .news-featured:hover {
-  border-color: rgba(0, 240, 255, 0.45);
+  border-color: rgba(77, 255, 138, 0.45);
   box-shadow:
-    0 0 0 1px rgba(255, 46, 200, 0.25),
+    0 0 0 1px rgba(255, 233, 60, 0.25),
     0 24px 60px rgba(0, 0, 0, 0.5),
-    0 0 48px rgba(187, 0, 255, 0.3);
+    0 0 48px rgba(194, 77, 255, 0.3);
   transform: translateY(-3px);
 }
 
 .news-compact:hover {
-  border-color: rgba(0, 240, 255, 0.4);
+  border-color: rgba(77, 255, 138, 0.4);
   box-shadow:
-    0 0 0 1px rgba(187, 0, 255, 0.18),
+    0 0 0 1px rgba(194, 77, 255, 0.18),
     0 12px 28px rgba(0, 0, 0, 0.35),
-    0 0 20px rgba(0, 240, 255, 0.15);
+    0 0 20px rgba(77, 255, 138, 0.15);
   transform: translateY(-1px);
 }
 
 /* Active filter pill picks up the cyan neon glow used elsewhere */
 .filter-pill--active {
   box-shadow:
-    0 0 0 1px rgba(0, 240, 255, 0.35),
-    0 6px 18px rgba(0, 240, 255, 0.25),
-    0 0 24px rgba(0, 240, 255, 0.2);
+    0 0 0 1px rgba(77, 255, 138, 0.35),
+    0 6px 18px rgba(77, 255, 138, 0.25),
+    0 0 24px rgba(77, 255, 138, 0.2);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1768,35 +1899,35 @@ select option {
 }
 
 .hero-secondary-btn--cyan:hover {
-  background: rgba(0, 240, 255, 0.12);
-  border-color: rgba(0, 240, 255, 0.5);
+  background: rgba(77, 255, 138, 0.12);
+  border-color: rgba(77, 255, 138, 0.5);
   box-shadow:
-    0 0 0 1px rgba(0, 240, 255, 0.25),
-    0 0 18px rgba(0, 240, 255, 0.3);
+    0 0 0 1px rgba(77, 255, 138, 0.25),
+    0 0 18px rgba(77, 255, 138, 0.3);
 }
 
 .hero-secondary-btn--magenta:hover {
-  background: rgba(255, 46, 200, 0.12);
-  border-color: rgba(255, 46, 200, 0.5);
+  background: rgba(255, 233, 60, 0.12);
+  border-color: rgba(255, 233, 60, 0.5);
   box-shadow:
-    0 0 0 1px rgba(255, 46, 200, 0.25),
-    0 0 18px rgba(255, 46, 200, 0.3);
+    0 0 0 1px rgba(255, 233, 60, 0.25),
+    0 0 18px rgba(255, 233, 60, 0.3);
 }
 
 .hero-secondary-btn--violet:hover {
-  background: rgba(187, 0, 255, 0.12);
-  border-color: rgba(187, 0, 255, 0.5);
+  background: rgba(194, 77, 255, 0.12);
+  border-color: rgba(194, 77, 255, 0.5);
   box-shadow:
-    0 0 0 1px rgba(187, 0, 255, 0.25),
-    0 0 18px rgba(187, 0, 255, 0.3);
+    0 0 0 1px rgba(194, 77, 255, 0.25),
+    0 0 18px rgba(194, 77, 255, 0.3);
 }
 
 .hero-secondary-btn--scrim:hover {
-  background: rgba(0, 240, 255, 0.25);
-  border-color: rgba(0, 240, 255, 0.7);
+  background: rgba(77, 255, 138, 0.25);
+  border-color: rgba(77, 255, 138, 0.7);
   box-shadow:
-    0 0 0 1px rgba(0, 240, 255, 0.4),
-    0 0 24px rgba(0, 240, 255, 0.4);
+    0 0 0 1px rgba(77, 255, 138, 0.4),
+    0 0 24px rgba(77, 255, 138, 0.4);
 }
 
 /* Global focus-visible rings — replaces default browser outline with a
@@ -1808,7 +1939,7 @@ a:focus-visible,
 [role='button']:focus-visible {
   outline: 2px solid var(--color-neon-cyan);
   outline-offset: 2px;
-  box-shadow: 0 0 0 4px rgba(0, 240, 255, 0.2);
+  box-shadow: 0 0 0 4px rgba(77, 255, 138, 0.2);
   border-radius: 4px;
 }
 
