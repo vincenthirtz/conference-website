@@ -11,8 +11,11 @@ import { useUrlFilters } from '@/utils/useUrlFilters';
 import { useToast } from '@/components/Toast';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import Modal from '@/components/admin/Modal';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 import { logger } from '../../../utils/logger';
+
+type Dict = ReturnType<typeof useAdminT<'adminDemandesList'>>;
 
 type DemandeType =
   | 'join'
@@ -354,22 +357,22 @@ function formatDateTime(iso: string | null) {
   }
 }
 
-function typeLabel(type: DemandeType | string) {
+function typeLabel(type: DemandeType | string, t: Dict) {
   switch (type) {
     case 'join':
     case 'join_team':
-      return 'Rejoindre';
+      return t.chipJoin;
     case 'leave':
     case 'leave_team':
-      return 'Quitter';
+      return t.chipLeave;
     case 'captain_request':
-      return 'Capitaine';
+      return t.chipCaptain;
     case 'team_registration':
-      return 'Inscription';
+      return t.chipTeamRegistration;
     case 'scrim':
-      return 'Scrim';
+      return t.chipScrim;
     case 'other':
-      return 'Autre';
+      return t.chipOther;
     default:
       return String(type);
   }
@@ -396,16 +399,16 @@ function typeColor(type: DemandeType | string) {
   }
 }
 
-function statusLabel(status: DemandeStatus) {
+function statusLabel(status: DemandeStatus, t: Dict) {
   switch (status) {
     case 'pending':
-      return 'En attente';
+      return t.statusPending;
     case 'approved':
-      return 'Approuvée';
+      return t.statusApproved;
     case 'rejected':
-      return 'Refusée';
+      return t.statusRejected;
     case 'cancelled':
-      return 'Annulée';
+      return t.statusCancelled;
     default:
       return status;
   }
@@ -433,6 +436,7 @@ function AdminDemandesPage({
   statusCounts,
   initialError,
 }: Props) {
+  const t = useAdminT('adminDemandesList');
   const { addToast } = useToast();
   const { adminFetch, adminFetchJson } = useAdminFetch();
   const router = useRouter();
@@ -553,13 +557,18 @@ function AdminDemandesPage({
     try {
       const json = await postUpdateStatus(Array.from(selected), newStatus);
       addToast(
-        `${json.updatedCount} demande(s) ${newStatus === 'approved' ? 'approuvée(s)' : 'refusée(s)'}.`,
+        format(
+          newStatus === 'approved'
+            ? t.toastBatchApproved
+            : t.toastBatchRejected,
+          { count: json.updatedCount }
+        ),
         'success'
       );
       setSelected(new Set());
       refresh();
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? 'Erreur');
+      setErrorMsg((err as Error)?.message ?? t.error);
     } finally {
       setBatchProcessing(false);
     }
@@ -587,7 +596,7 @@ function AdminDemandesPage({
     try {
       await postUpdateStatus([id], newStatus);
       addToast(
-        newStatus === 'approved' ? 'Demande approuvée.' : 'Demande refusée.',
+        newStatus === 'approved' ? t.toastApproved : t.toastRejected,
         'success'
       );
       setSelected((prev) => {
@@ -597,7 +606,7 @@ function AdminDemandesPage({
       });
       refresh();
     } catch (err: unknown) {
-      addToast((err as Error)?.message || 'Erreur', 'error');
+      addToast((err as Error)?.message || t.error, 'error');
     } finally {
       setSingleProcessing(null);
     }
@@ -621,9 +630,7 @@ function AdminDemandesPage({
         trimmed ? { [demande.id]: trimmed } : undefined
       );
       addToast(
-        stillInvalid
-          ? 'Demande approuvée (BattleTag toujours invalide/absent).'
-          : 'Demande approuvée.',
+        stillInvalid ? t.toastApprovedInvalidTag : t.toastApproved,
         stillInvalid ? 'error' : 'success'
       );
       setTagModal(null);
@@ -634,7 +641,7 @@ function AdminDemandesPage({
       });
       refresh();
     } catch (err: unknown) {
-      addToast((err as Error)?.message || 'Erreur', 'error');
+      addToast((err as Error)?.message || t.error, 'error');
     } finally {
       setSingleProcessing(null);
     }
@@ -644,7 +651,7 @@ function AdminDemandesPage({
     if (!infoModal) return;
     const note = infoModal.note.trim();
     if (!note) {
-      addToast('Saisis une note avant d’envoyer.', 'error');
+      addToast(t.errorNoteRequired, 'error');
       return;
     }
     setInfoProcessing(true);
@@ -657,11 +664,11 @@ function AdminDemandesPage({
           note,
         }),
       });
-      addToast('Note enregistrée. La demande reste en attente.', 'success');
+      addToast(t.toastNoteSaved, 'success');
       setInfoModal(null);
       refresh();
     } catch (err: unknown) {
-      addToast((err as Error)?.message || 'Erreur', 'error');
+      addToast((err as Error)?.message || t.error, 'error');
     } finally {
       setInfoProcessing(false);
     }
@@ -713,35 +720,35 @@ function AdminDemandesPage({
   }> = [
     {
       key: 'all',
-      label: 'Total',
+      label: t.statTotal,
       value: statusCounts.total,
       accent: 'text-white',
       statusValue: '',
     },
     {
       key: 'pending',
-      label: 'En attente',
+      label: t.statPending,
       value: statusCounts.pending,
       accent: 'text-blue-300',
       statusValue: 'pending',
     },
     {
       key: 'approved',
-      label: 'Approuvées',
+      label: t.statApproved,
       value: statusCounts.approved,
       accent: 'text-emerald-300',
       statusValue: 'approved',
     },
     {
       key: 'rejected',
-      label: 'Refusées',
+      label: t.statRejected,
       value: statusCounts.rejected,
       accent: 'text-red-300',
       statusValue: 'rejected',
     },
     {
       key: 'cancelled',
-      label: 'Annulées',
+      label: t.statCancelled,
       value: statusCounts.cancelled,
       accent: 'text-neutral-300',
       statusValue: 'cancelled',
@@ -751,7 +758,7 @@ function AdminDemandesPage({
   return (
     <>
       <Head>
-        <title>Admin – Demandes d&apos;équipes</title>
+        <title>{t.pageTitle}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
@@ -776,18 +783,23 @@ function AdminDemandesPage({
                   d="M15 19l-7-7 7-7"
                 />
               </svg>
-              Retour au dashboard admin
+              {t.backToDashboard}
             </button>
 
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-                  Demandes équipes / joueurs
+                  {t.heading}
                 </h1>
                 <p className="text-neutral-400 text-sm mt-1">
                   {total !== null
-                    ? `${total} demande${total > 1 ? 's' : ''} pour ce filtre`
-                    : 'Chargement...'}
+                    ? format(
+                        total > 1
+                          ? t.countForFilter_other
+                          : t.countForFilter_one,
+                        { count: total }
+                      )
+                    : t.loading}
                 </p>
               </div>
 
@@ -796,7 +808,7 @@ function AdminDemandesPage({
                   type="button"
                   onClick={refresh}
                   className="px-3 py-2.5 rounded-xl border border-neutral-600 hover:bg-neutral-800 text-sm font-medium transition-colors flex items-center gap-2"
-                  title="Rafraîchir"
+                  title={t.refresh}
                 >
                   <svg
                     className="w-4 h-4"
@@ -811,7 +823,7 @@ function AdminDemandesPage({
                       d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
                     />
                   </svg>
-                  Rafraîchir
+                  {t.refresh}
                 </button>
 
                 <button
@@ -832,7 +844,7 @@ function AdminDemandesPage({
                       d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                     />
                   </svg>
-                  Export CSV
+                  {t.exportCsv}
                 </button>
               </div>
             </div>
@@ -891,7 +903,7 @@ function AdminDemandesPage({
                 onClick={() => refresh()}
                 className="flex-shrink-0 px-3 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-xs font-medium transition-colors"
               >
-                Réessayer
+                {t.retry}
               </button>
             </div>
           )}
@@ -904,7 +916,7 @@ function AdminDemandesPage({
             >
               <div>
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Type
+                  {t.filterType}
                 </label>
                 <select
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
@@ -916,19 +928,23 @@ function AdminDemandesPage({
                     })
                   }
                 >
-                  <option value="">Tous les types</option>
-                  <option value="captain_request">Devenir capitaine</option>
-                  <option value="join">Rejoindre une équipe</option>
-                  <option value="leave">Quitter une équipe</option>
-                  <option value="team_registration">Inscription tournoi</option>
-                  <option value="scrim">Scrim</option>
-                  <option value="other">Autre</option>
+                  <option value="">{t.typeAll}</option>
+                  <option value="captain_request">
+                    {t.typeCaptainRequest}
+                  </option>
+                  <option value="join">{t.typeJoin}</option>
+                  <option value="leave">{t.typeLeave}</option>
+                  <option value="team_registration">
+                    {t.typeTeamRegistration}
+                  </option>
+                  <option value="scrim">{t.typeScrim}</option>
+                  <option value="other">{t.typeOther}</option>
                 </select>
               </div>
 
               <div>
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Statut
+                  {t.filterStatus}
                 </label>
                 <select
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
@@ -940,17 +956,17 @@ function AdminDemandesPage({
                     })
                   }
                 >
-                  <option value="">Tous les statuts</option>
-                  <option value="pending">En attente</option>
-                  <option value="approved">Approuvée</option>
-                  <option value="rejected">Refusée</option>
-                  <option value="cancelled">Annulée</option>
+                  <option value="">{t.statusAll}</option>
+                  <option value="pending">{t.statusPending}</option>
+                  <option value="approved">{t.statusApproved}</option>
+                  <option value="rejected">{t.statusRejected}</option>
+                  <option value="cancelled">{t.statusCancelled}</option>
                 </select>
               </div>
 
               <div>
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Tournoi
+                  {t.filterTournament}
                 </label>
                 <select
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
@@ -962,7 +978,7 @@ function AdminDemandesPage({
                     })
                   }
                 >
-                  <option value="">Tous les tournois</option>
+                  <option value="">{t.tournamentAll}</option>
                   {tournaments.map((t) => (
                     <option key={t.id} value={t.id}>
                       {t.name}
@@ -974,7 +990,7 @@ function AdminDemandesPage({
 
               <div>
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Recherche
+                  {t.filterSearch}
                 </label>
                 <div className="relative">
                   <svg
@@ -992,7 +1008,7 @@ function AdminDemandesPage({
                   </svg>
                   <input
                     type="text"
-                    placeholder="Commentaire, note staff..."
+                    placeholder={t.searchPlaceholder}
                     className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                     value={searchInput}
                     onChange={(e) => setSearchInput(e.target.value)}
@@ -1002,7 +1018,7 @@ function AdminDemandesPage({
 
               <div>
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Du
+                  {t.filterFrom}
                 </label>
                 <input
                   type="date"
@@ -1019,7 +1035,7 @@ function AdminDemandesPage({
 
               <div>
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Au
+                  {t.filterTo}
                 </label>
                 <input
                   type="date"
@@ -1033,7 +1049,7 @@ function AdminDemandesPage({
 
               <div>
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Tri
+                  {t.filterSort}
                 </label>
                 <select
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
@@ -1047,10 +1063,12 @@ function AdminDemandesPage({
                     });
                   }}
                 >
-                  <option value="created_at:desc">Date — récentes</option>
-                  <option value="created_at:asc">Date — anciennes</option>
-                  <option value="processed_at:desc">Traitée — récentes</option>
-                  <option value="processed_at:asc">Traitée — anciennes</option>
+                  <option value="created_at:desc">{t.sortDateRecent}</option>
+                  <option value="created_at:asc">{t.sortDateOld}</option>
+                  <option value="processed_at:desc">
+                    {t.sortProcessedRecent}
+                  </option>
+                  <option value="processed_at:asc">{t.sortProcessedOld}</option>
                 </select>
               </div>
 
@@ -1072,16 +1090,16 @@ function AdminDemandesPage({
                       d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
                     />
                   </svg>
-                  Rechercher
+                  {t.searchBtn}
                 </button>
                 {hasActiveFilters && (
                   <button
                     type="button"
                     onClick={handleResetFilters}
-                    title="Réinitialiser les filtres"
+                    title={t.resetFiltersTitle}
                     className="px-3 py-2.5 rounded-xl border border-neutral-600 hover:bg-neutral-800 text-sm transition-colors"
                   >
-                    Reset
+                    {t.reset}
                   </button>
                 )}
               </div>
@@ -1092,7 +1110,12 @@ function AdminDemandesPage({
           {selected.size > 0 && (
             <div className="mb-4 flex items-center gap-3 bg-blue-900/30 border border-blue-500/30 rounded-xl px-4 py-3">
               <span className="text-sm font-medium">
-                {selected.size} sélectionnée{selected.size > 1 ? 's' : ''}
+                {format(
+                  selected.size > 1
+                    ? t.selectedCount_other
+                    : t.selectedCount_one,
+                  { count: selected.size }
+                )}
               </span>
               <div className="flex-1" />
               <button
@@ -1101,7 +1124,7 @@ function AdminDemandesPage({
                 disabled={batchProcessing}
                 className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors disabled:opacity-50"
               >
-                Approuver
+                {t.approve}
               </button>
               <button
                 type="button"
@@ -1109,14 +1132,14 @@ function AdminDemandesPage({
                 disabled={batchProcessing}
                 className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-sm font-medium transition-colors disabled:opacity-50"
               >
-                Refuser
+                {t.reject}
               </button>
               <button
                 type="button"
                 onClick={() => setSelected(new Set())}
                 className="px-3 py-2 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm transition-colors"
               >
-                Désélectionner
+                {t.deselect}
               </button>
             </div>
           )}
@@ -1138,7 +1161,7 @@ function AdminDemandesPage({
                     d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                   />
                 </svg>
-                Aucune demande trouvée pour ces filtres
+                {t.emptyTitle}
                 {hasActiveFilters && (
                   <div className="mt-4">
                     <button
@@ -1146,7 +1169,7 @@ function AdminDemandesPage({
                       onClick={handleResetFilters}
                       className="px-4 py-2 rounded-xl border border-neutral-600 hover:bg-neutral-800 text-sm font-medium transition-colors"
                     >
-                      Réinitialiser les filtres
+                      {t.resetFilters}
                     </button>
                   </div>
                 )}
@@ -1164,7 +1187,7 @@ function AdminDemandesPage({
                     className="w-4 h-4 rounded border-neutral-600 bg-neutral-900"
                   />
                   <span className="text-xs text-neutral-400 uppercase tracking-wide font-medium">
-                    Tout sélectionner
+                    {t.selectAll}
                   </span>
                 </div>
 
@@ -1225,21 +1248,21 @@ function AdminDemandesPage({
                               {d.user?.display_name ||
                                 d.user?.email ||
                                 d.user_id ||
-                                'Utilisateur inconnu'}
+                                t.unknownUser}
                             </h3>
                             <span
                               className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColor(
                                 d.status
                               )}`}
                             >
-                              {statusLabel(d.status)}
+                              {statusLabel(d.status, t)}
                             </span>
                             <span
                               className={`px-2 py-0.5 rounded-full text-xs font-medium ${typeColor(
                                 d.type
                               )}`}
                             >
-                              {typeLabel(d.type)}
+                              {typeLabel(d.type, t)}
                             </span>
                             {d.source && d.source !== 'website' && (
                               <span className="px-2 py-0.5 rounded-full text-[10px] uppercase tracking-wide bg-neutral-700/60 text-neutral-300 border border-neutral-600/50">
@@ -1248,7 +1271,7 @@ function AdminDemandesPage({
                             )}
                             {isBattleTagFlagged(d) && (
                               <span
-                                title="BattleTag manquant ou invalide — à corriger à l'approbation"
+                                title={t.battleTagWarnTitle}
                                 data-testid="battletag-warning"
                                 className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-orange-600/20 text-orange-300 border border-orange-500/40"
                               >
@@ -1265,7 +1288,7 @@ function AdminDemandesPage({
                                     d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
                                   />
                                 </svg>
-                                BattleTag
+                                {t.battleTagLabel}
                               </span>
                             )}
                           </div>
@@ -1281,7 +1304,7 @@ function AdminDemandesPage({
                                     <span>
                                       {d.team?.name ||
                                         d.payload.target_team_name ||
-                                        'Équipe cible'}
+                                        t.targetTeamFallback}
                                     </span>
                                   </span>
                                   {d.payload.preferred_date && (
@@ -1327,7 +1350,7 @@ function AdminDemandesPage({
                                       ? d.payload.existing_team_name
                                       : d.payload.team_name}
                                     {d.payload.request_type === 'new_team' &&
-                                      ' (à créer)'}
+                                      t.toCreate}
                                   </span>
                                   <span>•</span>
                                 </>
@@ -1353,7 +1376,7 @@ function AdminDemandesPage({
                         {d.processed_by && (
                           <div className="hidden sm:block text-xs text-neutral-500 text-right flex-shrink-0">
                             <div>
-                              par{' '}
+                              {t.by}{' '}
                               <span className="text-neutral-300">
                                 {d.processed_by.display_name ||
                                   d.processed_by.id}
@@ -1377,7 +1400,7 @@ function AdminDemandesPage({
                               setInfoModal({ demande: d, note: '' })
                             }
                             disabled={isProcessing || batchProcessing}
-                            title="Demander plus d'infos"
+                            title={t.requestMoreInfoTitle}
                             data-testid="request-more-info"
                             className="p-2 rounded-lg bg-amber-600/20 hover:bg-amber-600 text-amber-300 hover:text-white border border-amber-500/30 hover:border-amber-500 text-xs transition-colors disabled:opacity-50"
                           >
@@ -1399,7 +1422,7 @@ function AdminDemandesPage({
                             type="button"
                             onClick={() => handleSingleAction(d.id, 'approved')}
                             disabled={isProcessing || batchProcessing}
-                            title="Approuver"
+                            title={t.approveTitle}
                             className="p-2 rounded-lg bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/30 hover:border-emerald-500 text-xs transition-colors disabled:opacity-50"
                           >
                             <svg
@@ -1420,7 +1443,7 @@ function AdminDemandesPage({
                             type="button"
                             onClick={() => handleSingleAction(d.id, 'rejected')}
                             disabled={isProcessing || batchProcessing}
-                            title="Refuser"
+                            title={t.rejectTitle}
                             className="p-2 rounded-lg bg-red-600/20 hover:bg-red-600 text-red-300 hover:text-white border border-red-500/30 hover:border-red-500 text-xs transition-colors disabled:opacity-50"
                           >
                             <svg
@@ -1443,7 +1466,7 @@ function AdminDemandesPage({
                       <Link
                         href={`/admin/demandes/${d.id}`}
                         className="flex-shrink-0"
-                        aria-label="Voir le détail"
+                        aria-label={t.viewDetail}
                       >
                         <svg
                           className="w-5 h-5 text-neutral-500 group-hover:text-white transition-colors"
@@ -1492,13 +1515,13 @@ function AdminDemandesPage({
                   d="M15 19l-7-7 7-7"
                 />
               </svg>
-              Précédent
+              {t.previous}
             </button>
 
             <span className="text-neutral-400 text-sm">
               {demandes.length === 0 ? 0 : offset + 1} –{' '}
               {offset + demandes.length}
-              {total ? ` sur ${total}` : ''}
+              {total ? format(t.paginationTotal, { total }) : ''}
             </span>
 
             <button
@@ -1507,7 +1530,7 @@ function AdminDemandesPage({
               onClick={() => applyFilter('offset', String(offset + limit))}
               className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
-              Suivant
+              {t.next}
               <svg
                 className="w-4 h-4"
                 fill="none"
@@ -1535,10 +1558,10 @@ function AdminDemandesPage({
         dataTestId="battletag-modal"
         title={
           <h2 className="text-lg font-semibold text-white">
-            Corriger le BattleTag avant l&apos;approbation
+            {t.tagModalTitle}
           </h2>
         }
-        subtitle="Le BattleTag de cette demande est manquant ou invalide. Corrige-le ci-dessous — il sera utilisé lors de la création du membre. Tu peux tout de même approuver sans corriger."
+        subtitle={t.tagModalSubtitle}
         footer={
           <>
             <button
@@ -1546,7 +1569,7 @@ function AdminDemandesPage({
               onClick={() => setTagModal(null)}
               className="px-4 py-2 rounded-xl border border-neutral-600 hover:bg-neutral-800 text-sm transition-colors"
             >
-              Annuler
+              {t.cancel}
             </button>
             <button
               type="button"
@@ -1555,7 +1578,7 @@ function AdminDemandesPage({
               onClick={confirmTagApproval}
               className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors disabled:opacity-50"
             >
-              Approuver
+              {t.approve}
             </button>
           </>
         }
@@ -1563,7 +1586,7 @@ function AdminDemandesPage({
         {tagModal && (
           <>
             <label className="block text-sm text-neutral-400 mb-1">
-              BattleTag (format Nom#0000)
+              {t.tagInputLabel}
             </label>
             <input
               type="text"
@@ -1573,14 +1596,13 @@ function AdminDemandesPage({
               onChange={(e) =>
                 setTagModal((m) => (m ? { ...m, value: e.target.value } : m))
               }
-              placeholder="Nom#1234"
+              placeholder={t.tagInputPlaceholder}
               className="w-full px-3 py-2.5 rounded-xl bg-neutral-800 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
             />
             {tagModal.value.trim() &&
               !BATTLE_TAG_REGEX.test(tagModal.value.trim()) && (
                 <p className="mt-2 text-xs text-orange-300">
-                  Format invalide (attendu : alphanumérique + # + 3 à 6
-                  chiffres).
+                  {t.tagFormatInvalid}
                 </p>
               )}
           </>
@@ -1596,10 +1618,10 @@ function AdminDemandesPage({
         dataTestId="info-modal"
         title={
           <h2 className="text-lg font-semibold text-white">
-            Demander plus d&apos;infos
+            {t.infoModalTitle}
           </h2>
         }
-        subtitle="La note est enregistrée sur la demande (note staff). Le statut reste « en attente »."
+        subtitle={t.infoModalSubtitle}
         footer={
           <>
             <button
@@ -1607,7 +1629,7 @@ function AdminDemandesPage({
               onClick={() => setInfoModal(null)}
               className="px-4 py-2 rounded-xl border border-neutral-600 hover:bg-neutral-800 text-sm transition-colors"
             >
-              Annuler
+              {t.cancel}
             </button>
             <button
               type="button"
@@ -1616,7 +1638,7 @@ function AdminDemandesPage({
               onClick={submitRequestMoreInfo}
               className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-sm font-medium transition-colors disabled:opacity-50"
             >
-              Envoyer
+              {t.send}
             </button>
           </>
         }
@@ -1630,7 +1652,7 @@ function AdminDemandesPage({
             onChange={(e) =>
               setInfoModal((m) => (m ? { ...m, note: e.target.value } : m))
             }
-            placeholder="Ex : peux-tu confirmer ton BattleTag et ton rôle ?"
+            placeholder={t.infoNotePlaceholder}
             className="w-full px-3 py-2.5 rounded-xl bg-neutral-800 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm"
           />
         )}

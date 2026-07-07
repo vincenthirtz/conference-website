@@ -30,6 +30,9 @@ import LoadingSpinner from '@/components/admin/LoadingSpinner';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
 import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
+
+type Dict = ReturnType<typeof useAdminT<'adminTenantRequestsList'>>;
 
 type TenantRequestStatus =
   | 'pending_email_verification'
@@ -73,40 +76,45 @@ type Props = {
 
 const PAGE_SIZE = 20;
 
-const STATUS_TABS: ReadonlyArray<{ value: StatusFilter; label: string }> = [
-  { value: 'all', label: 'Toutes' },
-  { value: 'pending_email_verification', label: 'Vérif email' },
-  { value: 'pending_bot_invite', label: 'Invitation bot' },
-  { value: 'completed', label: 'Complétées' },
-  { value: 'rejected', label: 'Rejetées' },
-  { value: 'expired', label: 'Expirées' },
-];
+function getStatusTabs(
+  t: Dict
+): ReadonlyArray<{ value: StatusFilter; label: string }> {
+  return [
+    { value: 'all', label: t.tabAll },
+    { value: 'pending_email_verification', label: t.tabEmailVerif },
+    { value: 'pending_bot_invite', label: t.tabBotInvite },
+    { value: 'completed', label: t.tabCompleted },
+    { value: 'rejected', label: t.tabRejected },
+    { value: 'expired', label: t.tabExpired },
+  ];
+}
 
-const STATUS_BADGE: Record<
-  TenantRequestStatus,
-  { label: string; className: string }
-> = {
-  pending_email_verification: {
-    label: 'Vérif email',
-    className: 'bg-amber-500/15 text-amber-200 border-amber-500/30',
-  },
-  pending_bot_invite: {
-    label: 'Invitation bot',
-    className: 'bg-blue-500/15 text-blue-200 border-blue-500/30',
-  },
-  completed: {
-    label: 'Complétée',
-    className: 'bg-emerald-500/15 text-emerald-200 border-emerald-500/30',
-  },
-  rejected: {
-    label: 'Rejetée',
-    className: 'bg-red-500/15 text-red-200 border-red-500/30',
-  },
-  expired: {
-    label: 'Expirée',
-    className: 'bg-neutral-500/15 text-neutral-300 border-neutral-500/30',
-  },
-};
+function getStatusBadge(
+  t: Dict
+): Record<TenantRequestStatus, { label: string; className: string }> {
+  return {
+    pending_email_verification: {
+      label: t.badgeEmailVerif,
+      className: 'bg-amber-500/15 text-amber-200 border-amber-500/30',
+    },
+    pending_bot_invite: {
+      label: t.badgeBotInvite,
+      className: 'bg-blue-500/15 text-blue-200 border-blue-500/30',
+    },
+    completed: {
+      label: t.badgeCompleted,
+      className: 'bg-emerald-500/15 text-emerald-200 border-emerald-500/30',
+    },
+    rejected: {
+      label: t.badgeRejected,
+      className: 'bg-red-500/15 text-red-200 border-red-500/30',
+    },
+    expired: {
+      label: t.badgeExpired,
+      className: 'bg-neutral-500/15 text-neutral-300 border-neutral-500/30',
+    },
+  };
+}
 
 function isPending(status: TenantRequestStatus): boolean {
   return (
@@ -130,6 +138,9 @@ function formatDateTime(s: string | null): string {
 }
 
 function AdminTenantRequestsPage({ currentStaffDiscordId }: Props) {
+  const t = useAdminT('adminTenantRequestsList');
+  const STATUS_TABS = getStatusTabs(t);
+  const STATUS_BADGE = getStatusBadge(t);
   const { adminFetchJson } = useAdminFetch();
   const { mutateJson, regenerate } = useIdempotentMutation();
   const { addToast } = useToast();
@@ -170,11 +181,11 @@ function AdminTenantRequestsPage({ currentStaffDiscordId }: Props) {
       setData(json);
     } catch (err) {
       logger.error('AdminTenantRequestsPage: fetch error', err);
-      setError((err as Error)?.message || 'Erreur de chargement');
+      setError((err as Error)?.message || t.errorLoad);
     } finally {
       setRefreshing(false);
     }
-  }, [adminFetchJson, status, offset]);
+  }, [adminFetchJson, status, offset, t]);
 
   useEffect(() => {
     fetchPage();
@@ -214,7 +225,7 @@ function AdminTenantRequestsPage({ currentStaffDiscordId }: Props) {
     if (!rejectTarget) return;
     const trimmed = rejectReason.trim();
     if (trimmed.length < 1 || trimmed.length > 500) {
-      setRejectError('La raison doit faire entre 1 et 500 caractères.');
+      setRejectError(t.errorReasonLength);
       return;
     }
     setRejectLoading(true);
@@ -224,17 +235,17 @@ function AdminTenantRequestsPage({ currentStaffDiscordId }: Props) {
         method: 'POST',
         body: JSON.stringify({ reason: trimmed }),
       });
-      addToast('Demande rejetée.', 'success');
+      addToast(t.toastRejected, 'success');
       setRejectTarget(null);
       setRejectReason('');
       await fetchPage();
     } catch (err) {
       logger.error('AdminTenantRequestsPage: reject error', err);
-      setRejectError((err as Error)?.message || 'Erreur lors du rejet.');
+      setRejectError((err as Error)?.message || t.errorReject);
     } finally {
       setRejectLoading(false);
     }
-  }, [rejectTarget, rejectReason, mutateJson, addToast, fetchPage]);
+  }, [rejectTarget, rejectReason, mutateJson, addToast, fetchPage, t]);
 
   const openExpire = useCallback(
     (row: TenantRequestRow) => {
@@ -260,45 +271,50 @@ function AdminTenantRequestsPage({ currentStaffDiscordId }: Props) {
         method: 'POST',
         body: JSON.stringify({}),
       });
-      addToast('Demande expirée.', 'success');
+      addToast(t.toastExpired, 'success');
       setExpireTarget(null);
       await fetchPage();
     } catch (err) {
       logger.error('AdminTenantRequestsPage: expire error', err);
-      setExpireError((err as Error)?.message || 'Erreur lors de l’expiration.');
+      setExpireError((err as Error)?.message || t.errorExpire);
     } finally {
       setExpireLoading(false);
     }
-  }, [expireTarget, mutateJson, addToast, fetchPage]);
+  }, [expireTarget, mutateJson, addToast, fetchPage, t]);
 
   const summary = useMemo(() => {
-    if (data === null) return 'Chargement…';
-    if (total === 0) return 'Aucune demande pour ce filtre.';
-    return `${pageStart}–${pageEnd} sur ${total}`;
-  }, [data, total, pageStart, pageEnd]);
+    if (data === null) return t.summaryLoading;
+    if (total === 0) return t.summaryEmpty;
+    return format(t.summaryRange, {
+      start: pageStart,
+      end: pageEnd,
+      total,
+    });
+  }, [data, total, pageStart, pageEnd, t]);
 
   return (
     <>
       <Head>
-        <title>Admin – Demandes de tenants</title>
+        <title>{t.pageTitle}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
         <div className="w-full px-4 sm:px-6 lg:px-8 pt-20 pb-12">
           <Breadcrumb
             items={[
-              { label: 'Admin', href: '/admin' },
-              { label: 'Demandes de tenants' },
+              { label: t.breadcrumbAdmin, href: '/admin' },
+              { label: t.breadcrumbCurrent },
             ]}
           />
 
           <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
             <div>
               <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-                Demandes de tenants
+                {t.heading}
               </h1>
               <p className="mt-1 text-sm text-neutral-400">
-                File des demandes self-service (flow auto-approuvé). {summary}
+                {t.subtitle}
+                {summary}
               </p>
             </div>
             <button
@@ -308,7 +324,7 @@ function AdminTenantRequestsPage({ currentStaffDiscordId }: Props) {
               className="px-4 py-2 rounded-xl border border-neutral-700 hover:border-neutral-500 text-sm font-medium transition-colors inline-flex items-center gap-2 disabled:opacity-50"
               data-testid="tenant-requests-refresh"
             >
-              {refreshing ? 'Rafraîchissement…' : 'Rafraîchir'}
+              {refreshing ? t.refreshing : t.refresh}
             </button>
           </div>
 
@@ -337,15 +353,13 @@ function AdminTenantRequestsPage({ currentStaffDiscordId }: Props) {
           <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden">
             {data === null ? (
               <div className="py-16">
-                <LoadingSpinner label="Chargement des demandes…" />
+                <LoadingSpinner label={t.loadingRequests} />
               </div>
             ) : visibleRequests.length === 0 ? (
               <EmptyState
-                title="Aucune demande"
+                title={t.emptyTitle}
                 description={
-                  status === 'all'
-                    ? 'Aucune demande de tenant en base.'
-                    : 'Aucune demande avec ce statut.'
+                  status === 'all' ? t.emptyDescAll : t.emptyDescFilter
                 }
               />
             ) : (
@@ -353,14 +367,14 @@ function AdminTenantRequestsPage({ currentStaffDiscordId }: Props) {
                 <table className="w-full text-sm">
                   <thead className="bg-neutral-900/50 text-neutral-400 text-xs uppercase tracking-wider">
                     <tr>
-                      <th className="px-4 py-3 text-left">Statut</th>
-                      <th className="px-4 py-3 text-left">Slug demandé</th>
-                      <th className="px-4 py-3 text-left">Nom</th>
-                      <th className="px-4 py-3 text-left">Email</th>
-                      <th className="px-4 py-3 text-left">Discord</th>
-                      <th className="px-4 py-3 text-left">Créée le</th>
-                      <th className="px-4 py-3 text-left">Tenant créé</th>
-                      <th className="px-4 py-3 text-right">Actions</th>
+                      <th className="px-4 py-3 text-left">{t.colStatus}</th>
+                      <th className="px-4 py-3 text-left">{t.colSlug}</th>
+                      <th className="px-4 py-3 text-left">{t.colName}</th>
+                      <th className="px-4 py-3 text-left">{t.colEmail}</th>
+                      <th className="px-4 py-3 text-left">{t.colDiscord}</th>
+                      <th className="px-4 py-3 text-left">{t.colCreated}</th>
+                      <th className="px-4 py-3 text-left">{t.colTenant}</th>
+                      <th className="px-4 py-3 text-right">{t.colActions}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-neutral-700/50">
@@ -406,7 +420,7 @@ function AdminTenantRequestsPage({ currentStaffDiscordId }: Props) {
                                 {row.requesterDiscordDisplayName ?? '—'}
                                 {isSelf && (
                                   <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-purple-600/30 border border-purple-500/40 text-purple-200 text-[10px] font-semibold uppercase">
-                                    Toi
+                                    {t.selfBadge}
                                   </span>
                                 )}
                               </span>
@@ -424,7 +438,7 @@ function AdminTenantRequestsPage({ currentStaffDiscordId }: Props) {
                                 href={`/admin/tenants/${row.createdTenantId}`}
                                 className="text-emerald-300 hover:text-emerald-200 text-xs font-medium underline decoration-dotted underline-offset-4"
                               >
-                                Voir le tenant
+                                {t.viewTenant}
                               </Link>
                             ) : (
                               <span className="text-neutral-600 text-xs">
@@ -442,7 +456,7 @@ function AdminTenantRequestsPage({ currentStaffDiscordId }: Props) {
                                     className="px-3 py-1.5 rounded-lg border border-red-500/40 text-red-300 hover:bg-red-500/10 text-xs font-medium transition-colors"
                                     data-testid={`reject-${row.id}`}
                                   >
-                                    Rejeter
+                                    {t.reject}
                                   </button>
                                   <button
                                     type="button"
@@ -450,12 +464,12 @@ function AdminTenantRequestsPage({ currentStaffDiscordId }: Props) {
                                     className="px-3 py-1.5 rounded-lg border border-neutral-600 text-neutral-200 hover:bg-neutral-700 text-xs font-medium transition-colors"
                                     data-testid={`expire-${row.id}`}
                                   >
-                                    Expirer
+                                    {t.expire}
                                   </button>
                                 </>
                               ) : (
                                 <span className="text-neutral-600 text-xs italic">
-                                  Lecture seule
+                                  {t.readOnly}
                                 </span>
                               )}
                             </div>
@@ -481,7 +495,7 @@ function AdminTenantRequestsPage({ currentStaffDiscordId }: Props) {
                   className="px-3 py-1.5 rounded-lg border border-neutral-700 hover:border-neutral-500 disabled:opacity-30 disabled:cursor-not-allowed text-xs font-medium transition-colors"
                   data-testid="pagination-prev"
                 >
-                  ← Précédent
+                  {t.prev}
                 </button>
                 <button
                   type="button"
@@ -490,7 +504,7 @@ function AdminTenantRequestsPage({ currentStaffDiscordId }: Props) {
                   className="px-3 py-1.5 rounded-lg border border-neutral-700 hover:border-neutral-500 disabled:opacity-30 disabled:cursor-not-allowed text-xs font-medium transition-colors"
                   data-testid="pagination-next"
                 >
-                  Suivant →
+                  {t.next}
                 </button>
               </div>
             </div>
@@ -501,13 +515,13 @@ function AdminTenantRequestsPage({ currentStaffDiscordId }: Props) {
       {/* Reject modal */}
       {rejectTarget && (
         <ConfirmDialog
-          title="Rejeter cette demande"
+          title={t.rejectTitle}
           subtitle={`${rejectTarget.requestedName} (${rejectTarget.requestedSlug})`}
           loading={rejectLoading}
           variant="danger"
-          confirmLabel="Rejeter"
-          confirmingLabel="Rejet…"
-          cancelLabel="Annuler"
+          confirmLabel={t.rejectConfirm}
+          confirmingLabel={t.rejecting}
+          cancelLabel={t.cancel}
           onCancel={closeReject}
           onConfirm={submitReject}
           errorMsg={rejectError}
@@ -516,7 +530,7 @@ function AdminTenantRequestsPage({ currentStaffDiscordId }: Props) {
             htmlFor="reject-reason"
             className="block text-xs uppercase tracking-wider text-neutral-400 mb-1"
           >
-            Raison du rejet (visible dans les logs staff)
+            {t.rejectReasonLabel}
           </label>
           <textarea
             id="reject-reason"
@@ -524,13 +538,13 @@ function AdminTenantRequestsPage({ currentStaffDiscordId }: Props) {
             onChange={(e) => setRejectReason(e.target.value)}
             rows={4}
             maxLength={500}
-            placeholder="Spam, slug interdit, email suspect…"
+            placeholder={t.rejectReasonPlaceholder}
             className="w-full px-3 py-2 rounded-lg bg-neutral-900/80 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-red-500 text-sm"
             data-testid="reject-reason-input"
             disabled={rejectLoading}
           />
           <p className="mt-1 text-[11px] text-neutral-500">
-            {rejectReason.trim().length}/500 — la raison est obligatoire.
+            {format(t.rejectCounter, { count: rejectReason.trim().length })}
           </p>
         </ConfirmDialog>
       )}
@@ -538,20 +552,21 @@ function AdminTenantRequestsPage({ currentStaffDiscordId }: Props) {
       {/* Expire confirm */}
       {expireTarget && (
         <ConfirmDialog
-          title="Expirer cette demande"
+          title={t.expireTitle}
           subtitle={`${expireTarget.requestedName} (${expireTarget.requestedSlug})`}
           loading={expireLoading}
           variant="warning"
-          confirmLabel="Expirer"
-          confirmingLabel="Expiration…"
-          cancelLabel="Annuler"
+          confirmLabel={t.expireConfirm}
+          confirmingLabel={t.expiring}
+          cancelLabel={t.cancel}
           onCancel={closeExpire}
           onConfirm={submitExpire}
           errorMsg={expireError}
         >
           <p className="text-sm text-neutral-300">
-            La demande passera en statut <strong>expired</strong>. Le slug sera
-            libéré et l’utilisateur pourra re-soumettre une nouvelle demande.
+            {t.expireBodyBefore}
+            <strong>expired</strong>
+            {t.expireBodyAfter}
           </p>
         </ConfirmDialog>
       )}

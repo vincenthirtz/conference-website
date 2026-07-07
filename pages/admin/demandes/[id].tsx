@@ -9,6 +9,9 @@ import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
+
+type Dict = ReturnType<typeof useAdminT<'adminDemandeDetail'>>;
 
 type DemandeType =
   | 'join_team'
@@ -89,22 +92,22 @@ function formatDate(iso: string | null | undefined) {
   }
 }
 
-function typeLabel(type: string) {
+function typeLabel(type: string, t: Dict) {
   switch (type) {
     case 'join_team':
     case 'join':
-      return 'Rejoindre une équipe';
+      return t.typeJoin;
     case 'leave_team':
     case 'leave':
-      return 'Quitter une équipe';
+      return t.typeLeave;
     case 'captain_request':
-      return 'Demande de capitaine';
+      return t.typeCaptainRequest;
     case 'team_registration':
-      return 'Inscription tournoi';
+      return t.typeTeamRegistration;
     case 'scrim':
-      return 'Demande de scrim';
+      return t.typeScrim;
     case 'other':
-      return 'Autre';
+      return t.typeOther;
     default:
       return type;
   }
@@ -129,16 +132,16 @@ function typeColor(type: string) {
   }
 }
 
-function statusLabel(status: DemandeStatus) {
+function statusLabel(status: DemandeStatus, t: Dict) {
   switch (status) {
     case 'pending':
-      return 'En attente';
+      return t.statusPending;
     case 'approved':
-      return 'Approuvée';
+      return t.statusApproved;
     case 'rejected':
-      return 'Refusée';
+      return t.statusRejected;
     case 'cancelled':
-      return 'Annulée';
+      return t.statusCancelled;
     default:
       return status;
   }
@@ -166,6 +169,7 @@ type ForwardCandidate = {
 };
 
 function AdminDemandeDetailPage() {
+  const t = useAdminT('adminDemandeDetail');
   const router = useRouter();
   const { addToast } = useToast();
   const { adminFetchJson } = useAdminFetch();
@@ -198,7 +202,7 @@ function AdminDemandeDetailPage() {
       setDemande(json.demande);
       setStaffNote(json.demande?.staff_note || '');
     } catch (err) {
-      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
+      setErrorMsg((err as Error)?.message ?? t.errorUnexpected);
     } finally {
       setLoading(false);
     }
@@ -226,10 +230,7 @@ function AdminDemandeDetailPage() {
           )
       );
     } catch (err) {
-      addToast(
-        (err as Error)?.message || 'Impossible de charger les équipes.',
-        'error'
-      );
+      addToast((err as Error)?.message || t.errorLoadTeams, 'error');
     }
   }
 
@@ -248,13 +249,15 @@ function AdminDemandeDetailPage() {
         }
       );
       addToast(
-        `Demande transférée vers ${json.targetTeam?.name || 'l’équipe'}.`,
+        format(t.toastForwarded, {
+          team: json.targetTeam?.name || t.fallbackTeam,
+        }),
         'success'
       );
       setForwardOpen(false);
       await fetchDemande();
     } catch (err) {
-      addToast((err as Error)?.message || 'Erreur', 'error');
+      addToast((err as Error)?.message || t.error, 'error');
     } finally {
       setForwarding(false);
     }
@@ -275,12 +278,12 @@ function AdminDemandeDetailPage() {
         }),
       });
       addToast(
-        newStatus === 'approved' ? 'Demande approuvée.' : 'Demande refusée.',
+        newStatus === 'approved' ? t.toastApproved : t.toastRejected,
         'success'
       );
       await fetchDemande();
     } catch (err) {
-      setErrorMsg((err as Error)?.message ?? 'Erreur');
+      setErrorMsg((err as Error)?.message ?? t.error);
     } finally {
       setProcessing(false);
     }
@@ -310,7 +313,7 @@ function AdminDemandeDetailPage() {
   return (
     <>
       <Head>
-        <title>Demande {demande.id.slice(0, 8)} – Admin</title>
+        <title>{format(t.pageTitle, { id: demande.id.slice(0, 8) })}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
@@ -332,7 +335,7 @@ function AdminDemandeDetailPage() {
                 d="M15 19l-7-7 7-7"
               />
             </svg>
-            Retour à la liste
+            {t.backToList}
           </Link>
 
           {errorMsg && (
@@ -350,14 +353,14 @@ function AdminDemandeDetailPage() {
                     demande.type
                   )}`}
                 >
-                  {typeLabel(demande.type)}
+                  {typeLabel(demande.type, t)}
                 </span>
                 <span
                   className={`px-3 py-1 rounded-full text-sm font-medium ${statusColor(
                     demande.status
                   )}`}
                 >
-                  {statusLabel(demande.status)}
+                  {statusLabel(demande.status, t)}
                 </span>
                 {demande.source && (
                   <span className="px-2.5 py-1 rounded-full text-xs bg-neutral-700/60 text-neutral-300 border border-neutral-600/50">
@@ -367,11 +370,13 @@ function AdminDemandeDetailPage() {
               </div>
               <div className="text-right text-xs text-neutral-500">
                 <div>
-                  ID&nbsp;:{' '}
+                  {t.idLabel}{' '}
                   <code className="text-neutral-400">{demande.id}</code>
                 </div>
                 <div className="mt-1">
-                  Créée le {formatDateTime(demande.created_at)}
+                  {format(t.createdOn, {
+                    date: formatDateTime(demande.created_at),
+                  })}
                 </div>
               </div>
             </div>
@@ -379,7 +384,7 @@ function AdminDemandeDetailPage() {
             {demande.comment && (
               <div className="mt-2 p-4 bg-neutral-900/50 border border-neutral-700 rounded-xl">
                 <p className="text-xs uppercase tracking-wide text-neutral-500 mb-1">
-                  Message
+                  {t.message}
                 </p>
                 <p className="text-sm whitespace-pre-line">{demande.comment}</p>
               </div>
@@ -392,7 +397,7 @@ function AdminDemandeDetailPage() {
             {demande.user && (
               <div className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
                 <h3 className="text-xs uppercase tracking-wide text-neutral-500 mb-3">
-                  Utilisateur
+                  {t.user}
                 </h3>
                 <div className="space-y-1 text-sm">
                   <div className="text-base font-semibold">
@@ -405,7 +410,7 @@ function AdminDemandeDetailPage() {
                   )}
                   {demande.user.battle_tag && (
                     <div className="text-neutral-400">
-                      BattleTag&nbsp;:{' '}
+                      {t.battleTagLabel}{' '}
                       <span className="text-neutral-200">
                         {demande.user.battle_tag}
                       </span>
@@ -413,7 +418,7 @@ function AdminDemandeDetailPage() {
                   )}
                   {demande.user.discord && (
                     <div className="text-neutral-400">
-                      Discord&nbsp;:{' '}
+                      {t.discordLabel}{' '}
                       <span className="text-neutral-200">
                         {demande.user.discord}
                       </span>
@@ -427,7 +432,7 @@ function AdminDemandeDetailPage() {
             {demande.team && (
               <div className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
                 <h3 className="text-xs uppercase tracking-wide text-neutral-500 mb-3">
-                  {demande.type === 'scrim' ? 'Équipe cible' : 'Équipe'}
+                  {demande.type === 'scrim' ? t.teamTarget : t.team}
                 </h3>
                 <div className="flex items-center gap-3">
                   {demande.team.logo_url && (
@@ -460,7 +465,7 @@ function AdminDemandeDetailPage() {
             {demande.tournament && (
               <div className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
                 <h3 className="text-xs uppercase tracking-wide text-neutral-500 mb-3">
-                  Tournoi
+                  {t.tournament}
                 </h3>
                 <Link
                   href={`/admin/tournament/${demande.tournament.id}/edit`}
@@ -482,11 +487,11 @@ function AdminDemandeDetailPage() {
             <div className="bg-neutral-800/50 backdrop-blur border border-cyan-500/20 rounded-2xl p-6 mb-6">
               <div className="flex items-start justify-between gap-3 mb-3 flex-wrap">
                 <h3 className="text-xs uppercase tracking-wide text-cyan-300/80">
-                  Détails du scrim
+                  {t.scrimDetails}
                 </h3>
                 {demande.source === 'public' && (
                   <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-200 border border-amber-500/40 text-[10px] uppercase tracking-wide">
-                    Demande externe
+                    {t.externalRequest}
                   </span>
                 )}
               </div>
@@ -494,14 +499,16 @@ function AdminDemandeDetailPage() {
                 {payload.from_team_name && (
                   <div>
                     <div className="text-neutral-500 text-xs">
-                      Équipe demandeuse
+                      {t.requestingTeam}
                     </div>
                     <div className="font-medium">{payload.from_team_name}</div>
                   </div>
                 )}
                 {(payload.target_team_name || demande.team?.name) && (
                   <div>
-                    <div className="text-neutral-500 text-xs">Équipe cible</div>
+                    <div className="text-neutral-500 text-xs">
+                      {t.teamTarget}
+                    </div>
                     <div className="font-medium">
                       {payload.target_team_name || demande.team?.name}
                     </div>
@@ -510,7 +517,7 @@ function AdminDemandeDetailPage() {
                 {payload.preferred_date && (
                   <div>
                     <div className="text-neutral-500 text-xs">
-                      Date souhaitée
+                      {t.preferredDate}
                     </div>
                     <div className="font-medium">
                       {formatDate(payload.preferred_date)}
@@ -519,7 +526,7 @@ function AdminDemandeDetailPage() {
                 )}
                 {payload.format && (
                   <div>
-                    <div className="text-neutral-500 text-xs">Format</div>
+                    <div className="text-neutral-500 text-xs">{t.format}</div>
                     <div className="font-medium">{payload.format}</div>
                   </div>
                 )}
@@ -527,7 +534,9 @@ function AdminDemandeDetailPage() {
                   <>
                     {payload.requester_name && (
                       <div>
-                        <div className="text-neutral-500 text-xs">Contact</div>
+                        <div className="text-neutral-500 text-xs">
+                          {t.contact}
+                        </div>
                         <div className="font-medium">
                           {payload.requester_name}
                         </div>
@@ -535,7 +544,9 @@ function AdminDemandeDetailPage() {
                     )}
                     {payload.requester_email && (
                       <div>
-                        <div className="text-neutral-500 text-xs">Email</div>
+                        <div className="text-neutral-500 text-xs">
+                          {t.email}
+                        </div>
                         <a
                           href={`mailto:${payload.requester_email}`}
                           className="font-medium text-cyan-300 hover:underline break-all"
@@ -546,7 +557,9 @@ function AdminDemandeDetailPage() {
                     )}
                     {payload.requester_discord && (
                       <div>
-                        <div className="text-neutral-500 text-xs">Discord</div>
+                        <div className="text-neutral-500 text-xs">
+                          {t.discord}
+                        </div>
                         <div className="font-medium break-all">
                           {payload.requester_discord}
                         </div>
@@ -558,19 +571,17 @@ function AdminDemandeDetailPage() {
 
               {payload.forwarded_from && (
                 <div className="mt-4 rounded-lg bg-neutral-900/60 border border-neutral-700 px-3 py-2 text-xs text-neutral-400">
-                  Transférée depuis{' '}
+                  {t.forwardedFromPrefix}
                   <Link
                     href={`/admin/demandes/${payload.forwarded_from.demande_id}`}
                     className="text-cyan-300 hover:underline"
                   >
-                    la demande d’origine
+                    {t.forwardedFromLink}
                   </Link>
-                  {payload.forwarded_from.forwarded_at && (
-                    <>
-                      {' '}
-                      le {formatDateTime(payload.forwarded_from.forwarded_at)}
-                    </>
-                  )}
+                  {payload.forwarded_from.forwarded_at &&
+                    format(t.forwardedFromDate, {
+                      date: formatDateTime(payload.forwarded_from.forwarded_at),
+                    })}
                   .
                 </div>
               )}
@@ -584,19 +595,19 @@ function AdminDemandeDetailPage() {
                       onClick={openForwardPanel}
                       className="px-4 py-2 rounded-lg bg-cyan-600/80 hover:bg-cyan-500 text-sm font-medium"
                     >
-                      Transférer à une autre équipe
+                      {t.forwardToOther}
                     </button>
                   ) : (
                     <div className="space-y-3">
                       <label className="block text-xs uppercase tracking-wide text-neutral-500">
-                        Choisir l’équipe destinataire
+                        {t.chooseTargetTeam}
                       </label>
                       <select
                         value={forwardTargetId}
                         onChange={(e) => setForwardTargetId(e.target.value)}
                         className="w-full px-3 py-2 rounded-lg bg-neutral-900/60 border border-neutral-700 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
                       >
-                        <option value="">— Sélectionner —</option>
+                        <option value="">{t.selectPlaceholder}</option>
                         {forwardTeams.map((t) => (
                           <option key={t.id} value={t.id}>
                             {t.name}
@@ -611,19 +622,18 @@ function AdminDemandeDetailPage() {
                           onClick={submitForward}
                           className="px-4 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-sm font-medium"
                         >
-                          {forwarding ? 'Transfert…' : 'Confirmer le transfert'}
+                          {forwarding ? t.forwarding : t.confirmForward}
                         </button>
                         <button
                           type="button"
                           onClick={() => setForwardOpen(false)}
                           className="px-4 py-2 rounded-lg border border-neutral-700 hover:bg-neutral-800 text-sm"
                         >
-                          Annuler
+                          {t.cancel}
                         </button>
                       </div>
                       <p className="text-xs text-neutral-500">
-                        Une nouvelle demande sera créée pour l’équipe choisie,
-                        avec le même contact et message.
+                        {t.forwardHelp}
                       </p>
                     </div>
                   )}
@@ -635,21 +645,19 @@ function AdminDemandeDetailPage() {
           {demande.type === 'team_registration' && (
             <div className="bg-neutral-800/50 backdrop-blur border border-blue-500/20 rounded-2xl p-6 mb-6">
               <h3 className="text-xs uppercase tracking-wide text-blue-300/80 mb-3">
-                Détails de l&apos;inscription
+                {t.registrationDetails}
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                 {payload.team_name && (
                   <div>
-                    <div className="text-neutral-500 text-xs">
-                      Nom d&apos;équipe
-                    </div>
+                    <div className="text-neutral-500 text-xs">{t.teamName}</div>
                     <div className="font-medium">{payload.team_name}</div>
                   </div>
                 )}
                 {payload.user_email && (
                   <div>
                     <div className="text-neutral-500 text-xs">
-                      Email contact
+                      {t.contactEmail}
                     </div>
                     <div className="font-medium">{payload.user_email}</div>
                   </div>
@@ -658,7 +666,7 @@ function AdminDemandeDetailPage() {
               {Array.isArray(payload.members) && payload.members.length > 0 && (
                 <div className="mt-4">
                   <div className="text-neutral-500 text-xs mb-2">
-                    Membres ({payload.members.length})
+                    {format(t.membersCount, { count: payload.members.length })}
                   </div>
                   <ul className="space-y-1.5 text-sm">
                     {payload.members.map((m: any, i: number) => (
@@ -671,7 +679,11 @@ function AdminDemandeDetailPage() {
                         </div>
                         <div className="text-xs text-neutral-400 flex flex-wrap gap-x-3">
                           {m.email && <span>{m.email}</span>}
-                          {m.battle_tag && <span>BT: {m.battle_tag}</span>}
+                          {m.battle_tag && (
+                            <span>
+                              {format(t.memberBt, { tag: m.battle_tag })}
+                            </span>
+                          )}
                         </div>
                       </li>
                     ))}
@@ -684,22 +696,22 @@ function AdminDemandeDetailPage() {
           {demande.type === 'captain_request' && (
             <div className="bg-neutral-800/50 backdrop-blur border border-purple-500/20 rounded-2xl p-6 mb-6">
               <h3 className="text-xs uppercase tracking-wide text-purple-300/80 mb-3">
-                Détails de la demande
+                {t.requestDetails}
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                 {payload.request_type && (
                   <div>
-                    <div className="text-neutral-500 text-xs">Type</div>
+                    <div className="text-neutral-500 text-xs">{t.type}</div>
                     <div className="font-medium">
                       {payload.request_type === 'existing_team'
-                        ? 'Équipe existante'
-                        : 'Nouvelle équipe à créer'}
+                        ? t.existingTeam
+                        : t.newTeamToCreate}
                     </div>
                   </div>
                 )}
                 {(payload.existing_team_name || payload.team_name) && (
                   <div>
-                    <div className="text-neutral-500 text-xs">Équipe</div>
+                    <div className="text-neutral-500 text-xs">{t.team}</div>
                     <div className="font-medium">
                       {payload.existing_team_name || payload.team_name}
                     </div>
@@ -713,7 +725,7 @@ function AdminDemandeDetailPage() {
           {payload && Object.keys(payload).length > 0 && (
             <details className="mb-6">
               <summary className="text-xs text-neutral-500 cursor-pointer hover:text-neutral-300">
-                Voir le payload complet (JSON)
+                {t.viewRawPayload}
               </summary>
               <pre className="mt-2 p-4 bg-neutral-900/70 border border-neutral-700 rounded-xl overflow-x-auto text-xs text-neutral-300">
                 {JSON.stringify(payload, null, 2)}
@@ -724,14 +736,14 @@ function AdminDemandeDetailPage() {
           {/* Staff note + actions */}
           <div className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 mb-6">
             <h3 className="text-xs uppercase tracking-wide text-neutral-500 mb-3">
-              Note staff (interne)
+              {t.staffNoteHeading}
             </h3>
             <textarea
               rows={3}
               value={staffNote}
               onChange={(e) => setStaffNote(e.target.value)}
               disabled={!isPending && demande.status !== 'pending'}
-              placeholder="Note interne, raison de la décision..."
+              placeholder={t.staffNotePlaceholder}
               className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
             />
 
@@ -756,7 +768,7 @@ function AdminDemandeDetailPage() {
                       d="M5 13l4 4L19 7"
                     />
                   </svg>
-                  Approuver
+                  {t.approve}
                 </button>
                 <button
                   type="button"
@@ -777,24 +789,24 @@ function AdminDemandeDetailPage() {
                       d="M6 18L18 6M6 6l12 12"
                     />
                   </svg>
-                  Refuser
+                  {t.reject}
                 </button>
               </div>
             ) : (
               <div className="mt-4 text-sm text-neutral-400">
-                Cette demande a été traitée
+                {t.treated}
                 {demande.handled_by?.display_name && (
                   <>
-                    {' '}
-                    par{' '}
+                    {t.treatedBy}
                     <span className="text-neutral-200 font-medium">
                       {demande.handled_by.display_name}
                     </span>
                   </>
                 )}
-                {demande.processed_at && (
-                  <> le {formatDateTime(demande.processed_at)}</>
-                )}
+                {demande.processed_at &&
+                  format(t.treatedOn, {
+                    date: formatDateTime(demande.processed_at),
+                  })}
                 .
               </div>
             )}

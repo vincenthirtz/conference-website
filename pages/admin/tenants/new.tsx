@@ -7,6 +7,7 @@ import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
 import AlertBanner from '@/components/admin/AlertBanner';
 import Breadcrumb from '@/components/admin/Breadcrumb';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
@@ -32,6 +33,7 @@ function slugify(s: string): string {
 }
 
 function AdminNewTenantPage(_props: Props) {
+  const t = useAdminT('adminTenantsNew');
   const router = useRouter();
   const { addToast } = useToast();
   const { mutateJson } = useIdempotentMutation();
@@ -50,18 +52,16 @@ function AdminNewTenantPage(_props: Props) {
     setError(null);
 
     if (!name.trim()) {
-      setError('Le nom est requis.');
+      setError(t.errorNameRequired);
       return;
     }
     const finalSlug = computedSlug.trim();
     if (!finalSlug) {
-      setError('Le slug est requis.');
+      setError(t.errorSlugRequired);
       return;
     }
     if (!SLUG_RE.test(finalSlug)) {
-      setError(
-        'Slug invalide. Utilise kebab-case (a-z, 0-9, séparateurs « - »).'
-      );
+      setError(t.errorSlugInvalid);
       return;
     }
 
@@ -78,10 +78,10 @@ function AdminNewTenantPage(_props: Props) {
           }),
         }
       );
-      addToast(`Tenant « ${json.tenant.slug} » créé.`, 'success');
+      addToast(format(t.toastCreated, { slug: json.tenant.slug }), 'success');
       router.push(`/admin/tenants/${json.tenant.id}`);
     } catch (err) {
-      setError((err as Error)?.message || 'Création impossible.');
+      setError((err as Error)?.message || t.errorCreate);
     } finally {
       setSaving(false);
     }
@@ -90,27 +90,22 @@ function AdminNewTenantPage(_props: Props) {
   return (
     <>
       <Head>
-        <title>Admin – Nouveau tenant</title>
+        <title>{t.pageTitle}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
         <div className="w-full max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-12">
           <Breadcrumb
             items={[
-              { label: 'Admin', href: '/admin' },
-              { label: 'Tenants', href: '/admin/tenants' },
-              { label: 'Nouveau' },
+              { label: t.breadcrumbAdmin, href: '/admin' },
+              { label: t.breadcrumbTenants, href: '/admin/tenants' },
+              { label: t.breadcrumbNew },
             ]}
           />
 
           <div className="mb-8">
-            <h1 className="text-3xl font-bold tracking-tight">
-              Nouveau tenant
-            </h1>
-            <p className="mt-1 text-sm text-neutral-400">
-              Crée un nouveau périmètre multi-tenant (slug = identifiant
-              technique, immuable).
-            </p>
+            <h1 className="text-3xl font-bold tracking-tight">{t.heading}</h1>
+            <p className="mt-1 text-sm text-neutral-400">{t.subtitle}</p>
           </div>
 
           <form
@@ -124,7 +119,7 @@ function AdminNewTenantPage(_props: Props) {
                 htmlFor="tenant-name"
                 className="block text-sm font-medium text-neutral-300 mb-2"
               >
-                Nom <span className="text-red-400">*</span>
+                {t.nameLabel} <span className="text-red-400">*</span>
               </label>
               <input
                 id="tenant-name"
@@ -132,7 +127,7 @@ function AdminNewTenantPage(_props: Props) {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="w-full px-4 py-3 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
-                placeholder="Ex: conference 2026"
+                placeholder={t.namePlaceholder}
                 required
                 data-testid="tenant-name-input"
               />
@@ -143,7 +138,7 @@ function AdminNewTenantPage(_props: Props) {
                 htmlFor="tenant-slug"
                 className="block text-sm font-medium text-neutral-300 mb-2"
               >
-                Slug (kebab-case) <span className="text-red-400">*</span>
+                {t.slugLabel} <span className="text-red-400">*</span>
               </label>
               <input
                 id="tenant-slug"
@@ -155,14 +150,11 @@ function AdminNewTenantPage(_props: Props) {
                 }}
                 pattern="[a-z0-9]+(-[a-z0-9]+)*"
                 className="w-full px-4 py-3 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-white font-mono text-sm"
-                placeholder="conference-2026"
+                placeholder={t.slugPlaceholder}
                 required
                 data-testid="tenant-slug-input"
               />
-              <p className="text-xs text-neutral-500 mt-1">
-                Auto-rempli depuis le nom. Lettres minuscules, chiffres et
-                tirets uniquement. Cet identifiant ne pourra pas être modifié.
-              </p>
+              <p className="text-xs text-neutral-500 mt-1">{t.slugHelp}</p>
             </div>
 
             <div>
@@ -170,7 +162,7 @@ function AdminNewTenantPage(_props: Props) {
                 htmlFor="tenant-locale"
                 className="block text-sm font-medium text-neutral-300 mb-2"
               >
-                Locale par défaut
+                {t.localeLabel}
               </label>
               <select
                 id="tenant-locale"
@@ -178,8 +170,8 @@ function AdminNewTenantPage(_props: Props) {
                 onChange={(e) => setDefaultLocale(e.target.value)}
                 className="w-full px-4 py-3 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
               >
-                <option value="fr">Français (fr)</option>
-                <option value="en">English (en)</option>
+                <option value="fr">{t.localeFr}</option>
+                <option value="en">{t.localeEn}</option>
               </select>
             </div>
 
@@ -193,17 +185,17 @@ function AdminNewTenantPage(_props: Props) {
                 {saving ? (
                   <>
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Création…
+                    {t.saving}
                   </>
                 ) : (
-                  'Créer le tenant'
+                  t.submit
                 )}
               </button>
               <Link
                 href="/admin/tenants"
                 className="px-6 py-3 rounded-xl border border-neutral-600 text-sm font-semibold text-white text-center transition hover:bg-neutral-800"
               >
-                Annuler
+                {t.cancel}
               </Link>
             </div>
           </form>

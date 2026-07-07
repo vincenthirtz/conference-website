@@ -14,6 +14,7 @@ import {
   useAccessibleTenants,
   type AccessibleTenant,
 } from '@/hooks/useAccessibleTenants';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 import { logger } from '../../../utils/logger';
 
@@ -62,6 +63,7 @@ type ClaimModalState = {
 };
 
 function AdminPendingGuildLinksPage(_props: Props) {
+  const t = useAdminT('adminPendingGuildLinks');
   const { addToast } = useToast();
   const { adminFetchJson } = useAdminFetch();
   const { mutateJson } = useIdempotentMutation();
@@ -81,9 +83,9 @@ function AdminPendingGuildLinksPage(_props: Props) {
       setLinks(json.links || []);
     } catch (err) {
       logger.error('AdminPendingGuildLinksPage: fetch error', err);
-      setError((err as Error)?.message || 'Erreur de chargement');
+      setError((err as Error)?.message || t.errorLoad);
     }
-  }, [adminFetchJson]);
+  }, [adminFetchJson, t]);
 
   useEffect(() => {
     fetchData();
@@ -114,7 +116,7 @@ function AdminPendingGuildLinksPage(_props: Props) {
           setModal({
             ...modal,
             saving: false,
-            error: 'Sélectionne un tenant.',
+            error: t.errorSelectTenant,
           });
           return;
         }
@@ -126,7 +128,7 @@ function AdminPendingGuildLinksPage(_props: Props) {
           setModal({
             ...modal,
             saving: false,
-            error: 'Slug et nom requis.',
+            error: t.errorSlugNameRequired,
           });
           return;
         }
@@ -134,7 +136,7 @@ function AdminPendingGuildLinksPage(_props: Props) {
           setModal({
             ...modal,
             saving: false,
-            error: 'Slug invalide (kebab-case).',
+            error: t.errorSlugInvalid,
           });
           return;
         }
@@ -147,7 +149,7 @@ function AdminPendingGuildLinksPage(_props: Props) {
           body: JSON.stringify(body),
         }
       );
-      addToast('Serveur attribué.', 'success');
+      addToast(t.toastAssigned, 'success');
       closeModal();
       await fetchData();
     } catch (err) {
@@ -156,7 +158,7 @@ function AdminPendingGuildLinksPage(_props: Props) {
           ? {
               ...prev,
               saving: false,
-              error: (err as Error)?.message ?? "Échec de l'attribution.",
+              error: (err as Error)?.message ?? t.errorAssign,
             }
           : null
       );
@@ -165,49 +167,46 @@ function AdminPendingGuildLinksPage(_props: Props) {
 
   const handleReject = async (guild: PendingLink) => {
     const ok = await confirm({
-      title: `Rejeter ${guild.guild_name ?? guild.guild_id} ?`,
-      subtitle:
-        "La demande sera supprimée de la file. Le bot sera ignoré tant qu'il n'aura pas re-demandé.",
+      title: format(t.confirmRejectTitle, {
+        name: guild.guild_name ?? guild.guild_id,
+      }),
+      subtitle: t.confirmRejectSubtitle,
       variant: 'danger',
-      confirmLabel: 'Rejeter',
+      confirmLabel: t.reject,
     });
     if (!ok) return;
     try {
       await mutateJson(`/api/admin/pending-guild-links/${guild.guild_id}`, {
         method: 'DELETE',
       });
-      addToast('Demande rejetée.', 'success');
+      addToast(t.toastRejected, 'success');
       await fetchData();
     } catch (err) {
-      addToast((err as Error)?.message || 'Rejet impossible.', 'error');
+      addToast((err as Error)?.message || t.errorReject, 'error');
     }
   };
 
   return (
     <>
       <Head>
-        <title>Admin – Serveurs Discord en attente</title>
+        <title>{t.pageTitle}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
         <div className="w-full px-4 sm:px-6 lg:px-8 pt-20 pb-12">
           <Breadcrumb
             items={[
-              { label: 'Admin', href: '/admin' },
-              { label: 'Tenants', href: '/admin/tenants' },
-              { label: 'File serveurs Discord' },
+              { label: t.breadcrumbAdmin, href: '/admin' },
+              { label: t.breadcrumbTenants, href: '/admin/tenants' },
+              { label: t.breadcrumbCurrent },
             ]}
           />
 
           <div className="mb-6">
             <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-              Serveurs Discord en attente
+              {t.heading}
             </h1>
-            <p className="mt-1 text-sm text-neutral-400">
-              Quand le bot rejoint un serveur sans tenant assigné, le serveur
-              attend ici qu&apos;un staff l&apos;attribue à un tenant existant
-              ou crée un nouveau tenant.
-            </p>
+            <p className="mt-1 text-sm text-neutral-400">{t.subtitle}</p>
           </div>
 
           <AlertBanner message={error} className="mb-4" />
@@ -215,22 +214,19 @@ function AdminPendingGuildLinksPage(_props: Props) {
           <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden">
             {links === null ? (
               <div className="py-16">
-                <LoadingSpinner label="Chargement de la file…" />
+                <LoadingSpinner label={t.loading} />
               </div>
             ) : links.length === 0 ? (
-              <EmptyState
-                title="Aucun serveur en attente."
-                description="Tu seras notifié·e ici dès qu'un serveur Discord aura besoin d'être attribué."
-              />
+              <EmptyState title={t.emptyTitle} description={t.emptyDesc} />
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead className="bg-neutral-900/50 text-neutral-400 text-xs uppercase tracking-wider">
                     <tr>
-                      <th className="px-4 py-3 text-left">Guild</th>
-                      <th className="px-4 py-3 text-left">Owner Discord ID</th>
-                      <th className="px-4 py-3 text-left">Demandé le</th>
-                      <th className="px-4 py-3 text-right">Actions</th>
+                      <th className="px-4 py-3 text-left">{t.colGuild}</th>
+                      <th className="px-4 py-3 text-left">{t.colOwner}</th>
+                      <th className="px-4 py-3 text-left">{t.colRequested}</th>
+                      <th className="px-4 py-3 text-right">{t.colActions}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-neutral-700/50">
@@ -242,7 +238,7 @@ function AdminPendingGuildLinksPage(_props: Props) {
                       >
                         <td className="px-4 py-3">
                           <div className="font-medium text-white">
-                            {g.guild_name ?? '— sans nom —'}
+                            {g.guild_name ?? t.noName}
                           </div>
                           <div className="text-xs font-mono text-purple-300">
                             {g.guild_id}
@@ -262,14 +258,14 @@ function AdminPendingGuildLinksPage(_props: Props) {
                               className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-sm transition-colors"
                               data-testid={`claim-${g.guild_id}`}
                             >
-                              Attribuer…
+                              {t.assign}
                             </button>
                             <button
                               type="button"
                               onClick={() => handleReject(g)}
                               className="px-3 py-1.5 rounded-lg border border-red-500/40 text-red-300 hover:border-red-400 text-sm transition-colors"
                             >
-                              Rejeter
+                              {t.reject}
                             </button>
                           </div>
                         </td>
@@ -291,10 +287,12 @@ function AdminPendingGuildLinksPage(_props: Props) {
           size="lg"
           title={
             <h2 className="text-lg font-semibold text-white">
-              Attribuer {modal?.guild.guild_name ?? modal?.guild.guild_id}
+              {format(t.modalTitle, {
+                name: modal?.guild.guild_name ?? modal?.guild.guild_id ?? '',
+              })}
             </h2>
           }
-          subtitle="Choisis un tenant existant ou crée-en un nouveau."
+          subtitle={t.modalSubtitle}
           footer={
             <>
               <button
@@ -302,7 +300,7 @@ function AdminPendingGuildLinksPage(_props: Props) {
                 onClick={closeModal}
                 className="px-4 py-2 rounded-lg border border-neutral-600 text-sm hover:bg-neutral-800 transition-colors"
               >
-                Annuler
+                {t.cancel}
               </button>
               <button
                 type="button"
@@ -310,7 +308,7 @@ function AdminPendingGuildLinksPage(_props: Props) {
                 disabled={modal?.saving}
                 className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-sm font-medium text-white disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {modal?.saving ? 'Attribution…' : 'Attribuer'}
+                {modal?.saving ? t.assigning : t.assignBtn}
               </button>
             </>
           }
@@ -331,7 +329,7 @@ function AdminPendingGuildLinksPage(_props: Props) {
                         : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
                     }`}
                   >
-                    {m === 'existing' ? 'Tenant existant' : 'Nouveau tenant'}
+                    {m === 'existing' ? t.modeExisting : t.modeNew}
                   </button>
                 ))}
               </div>
@@ -342,7 +340,7 @@ function AdminPendingGuildLinksPage(_props: Props) {
                     htmlFor="claim-tenant-select"
                     className="block text-xs font-medium text-neutral-400 mb-1"
                   >
-                    Tenant
+                    {t.tenantLabel}
                   </label>
                   <select
                     id="claim-tenant-select"
@@ -355,11 +353,11 @@ function AdminPendingGuildLinksPage(_props: Props) {
                     }
                     className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
                   >
-                    <option value="">— sélectionner —</option>
-                    {tenants.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.slug} — {t.name}
-                        {!t.is_active ? ' (archivé)' : ''}
+                    <option value="">{t.selectPlaceholder}</option>
+                    {tenants.map((tenant) => (
+                      <option key={tenant.id} value={tenant.id}>
+                        {tenant.slug} — {tenant.name}
+                        {!tenant.is_active ? t.archivedSuffix : ''}
                       </option>
                     ))}
                   </select>
@@ -371,7 +369,7 @@ function AdminPendingGuildLinksPage(_props: Props) {
                       htmlFor="claim-new-slug"
                       className="block text-xs font-medium text-neutral-400 mb-1"
                     >
-                      Slug (kebab-case)
+                      {t.slugLabel}
                     </label>
                     <input
                       id="claim-new-slug"
@@ -383,7 +381,7 @@ function AdminPendingGuildLinksPage(_props: Props) {
                           newSlug: e.target.value.toLowerCase(),
                         })
                       }
-                      placeholder="mon-evenement"
+                      placeholder={t.slugPlaceholder}
                       className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-600 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-purple-500"
                     />
                   </div>
@@ -392,7 +390,7 @@ function AdminPendingGuildLinksPage(_props: Props) {
                       htmlFor="claim-new-name"
                       className="block text-xs font-medium text-neutral-400 mb-1"
                     >
-                      Nom
+                      {t.nameLabel}
                     </label>
                     <input
                       id="claim-new-name"
@@ -401,7 +399,7 @@ function AdminPendingGuildLinksPage(_props: Props) {
                       onChange={(e) =>
                         setModal({ ...modal, newName: e.target.value })
                       }
-                      placeholder="Mon événement"
+                      placeholder={t.namePlaceholder}
                       className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
                     />
                   </div>

@@ -15,6 +15,9 @@ import Link from 'next/link';
 import { withStaffPage } from '@/utils/staff';
 import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';
 import type { StaffProps } from '@/types/admin';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
+
+type Dict = ReturnType<typeof useAdminT<'adminOnboardingQueue'>>;
 
 type TenantRequestStatus =
   | 'pending_email_verification'
@@ -70,35 +73,39 @@ type Filter = 'all' | 'tenant_request' | 'guild_link';
 
 export const getServerSideProps = withStaffPage('manager');
 
-const STATUS_BADGE: Record<
+function getStatusBadge(
+  t: Dict
+): Record<
   TenantRequestStatus | 'awaiting_claim',
   { label: string; className: string }
-> = {
-  pending_email_verification: {
-    label: 'Vérif email',
-    className: 'bg-amber-500/15 text-amber-200 border-amber-500/30',
-  },
-  pending_bot_invite: {
-    label: 'Invitation bot',
-    className: 'bg-blue-500/15 text-blue-200 border-blue-500/30',
-  },
-  completed: {
-    label: 'Complétée',
-    className: 'bg-emerald-500/15 text-emerald-200 border-emerald-500/30',
-  },
-  rejected: {
-    label: 'Rejetée',
-    className: 'bg-red-500/15 text-red-200 border-red-500/30',
-  },
-  expired: {
-    label: 'Expirée',
-    className: 'bg-neutral-500/15 text-neutral-300 border-neutral-500/30',
-  },
-  awaiting_claim: {
-    label: 'À claim',
-    className: 'bg-purple-500/15 text-purple-200 border-purple-500/30',
-  },
-};
+> {
+  return {
+    pending_email_verification: {
+      label: t.badgeEmailVerif,
+      className: 'bg-amber-500/15 text-amber-200 border-amber-500/30',
+    },
+    pending_bot_invite: {
+      label: t.badgeBotInvite,
+      className: 'bg-blue-500/15 text-blue-200 border-blue-500/30',
+    },
+    completed: {
+      label: t.badgeCompleted,
+      className: 'bg-emerald-500/15 text-emerald-200 border-emerald-500/30',
+    },
+    rejected: {
+      label: t.badgeRejected,
+      className: 'bg-red-500/15 text-red-200 border-red-500/30',
+    },
+    expired: {
+      label: t.badgeExpired,
+      className: 'bg-neutral-500/15 text-neutral-300 border-neutral-500/30',
+    },
+    awaiting_claim: {
+      label: t.badgeAwaitingClaim,
+      className: 'bg-purple-500/15 text-purple-200 border-purple-500/30',
+    },
+  };
+}
 
 function formatDate(s: string | null): string {
   if (!s) return '—';
@@ -115,6 +122,7 @@ function formatDate(s: string | null): string {
 }
 
 function OnboardingQueuePage(_props: StaffProps) {
+  const t = useAdminT('adminOnboardingQueue');
   const { adminFetchJson } = useAdminFetch();
 
   const [items, setItems] = useState<UnifiedItem[]>([]);
@@ -159,7 +167,7 @@ function OnboardingQueuePage(_props: StaffProps) {
         // guild-link rows then.
         const err = tenantResp.reason as AdminFetchError;
         if (err?.status && err.status !== 403) {
-          setError(err.message || 'Erreur tenant-requests');
+          setError(err.message || t.errorTenantRequests);
         }
       }
 
@@ -168,9 +176,9 @@ function OnboardingQueuePage(_props: StaffProps) {
           merged.push({
             kind: 'guild_link',
             id: g.guild_id,
-            title: g.guild_name || `Guild ${g.guild_id}`,
+            title: g.guild_name || format(t.guildFallback, { id: g.guild_id }),
             subtitle: g.owner_discord_id
-              ? `Owner: ${g.owner_discord_id}`
+              ? format(t.ownerLabel, { id: g.owner_discord_id })
               : '—',
             status: 'awaiting_claim',
             requestedAt: g.requested_at ?? null,
@@ -181,9 +189,7 @@ function OnboardingQueuePage(_props: StaffProps) {
       } else {
         const err = guildResp.reason as AdminFetchError;
         if (err?.status && err.status !== 403) {
-          setError((prev) =>
-            prev ?? err.message ?? 'Erreur pending-guild-links'
-          );
+          setError((prev) => prev ?? err.message ?? t.errorGuildLinks);
         }
       }
 
@@ -195,11 +201,11 @@ function OnboardingQueuePage(_props: StaffProps) {
 
       setItems(merged);
     } catch (e) {
-      setError((e as Error)?.message || 'Erreur de chargement');
+      setError((e as Error)?.message || t.errorLoad);
     } finally {
       setLoading(false);
     }
-  }, [adminFetchJson]);
+  }, [adminFetchJson, t]);
 
   useEffect(() => {
     fetchAll();
@@ -230,40 +236,34 @@ function OnboardingQueuePage(_props: StaffProps) {
   return (
     <>
       <Head>
-        <title>Admin – Onboarding queue</title>
+        <title>{t.pageTitle}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-12">
           <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">
-                Onboarding queue
-              </h1>
-              <p className="text-sm text-neutral-400 mt-1">
-                Vue unifiée des demandes de tenant + des guilds Discord en
-                attente de claim. Les actions détaillées (reject, claim,
-                expire) restent sur les pages dédiées.
-              </p>
+              <h1 className="text-3xl font-bold tracking-tight">{t.heading}</h1>
+              <p className="text-sm text-neutral-400 mt-1">{t.subtitle}</p>
             </div>
             <button
               type="button"
               onClick={fetchAll}
               className="px-4 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors"
             >
-              Rafraîchir
+              {t.refresh}
             </button>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
             <Stat
-              label="Total"
+              label={t.statTotal}
               value={counts.total}
               active={filter === 'all'}
               onClick={() => setFilter('all')}
             />
             <Stat
-              label="Tenant requests (pending)"
+              label={t.statTenantPending}
               value={counts.tenantPending}
               accent="amber"
               active={filter === 'tenant_request'}
@@ -271,7 +271,7 @@ function OnboardingQueuePage(_props: StaffProps) {
               href="/admin/tenant-requests"
             />
             <Stat
-              label="Guild links (claim)"
+              label={t.statGuildPending}
               value={counts.guildPending}
               accent="purple"
               active={filter === 'guild_link'}
@@ -288,13 +288,13 @@ function OnboardingQueuePage(_props: StaffProps) {
 
           {loading && items.length === 0 && (
             <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 px-4 py-8 text-center text-sm text-neutral-400">
-              Chargement…
+              {t.loading}
             </div>
           )}
 
           {!loading && visible.length === 0 && (
             <div className="rounded-xl border border-neutral-800 bg-neutral-900/40 px-4 py-8 text-center text-sm text-neutral-500">
-              Rien en attente. ✨
+              {t.empty}
             </div>
           )}
 
@@ -324,6 +324,7 @@ function Stat({
   onClick?: () => void;
   href?: string;
 }) {
+  const t = useAdminT('adminOnboardingQueue');
   const accentClass =
     accent === 'amber'
       ? 'border-amber-500/50 bg-amber-900/20 text-amber-200'
@@ -336,11 +337,7 @@ function Stat({
         active ? 'ring-2 ring-white/30' : ''
       }`}
     >
-      <button
-        type="button"
-        onClick={onClick}
-        className="w-full text-left"
-      >
+      <button type="button" onClick={onClick} className="w-full text-left">
         <div className="text-xs uppercase tracking-wide opacity-80">
           {label}
         </div>
@@ -351,7 +348,7 @@ function Stat({
           href={href}
           className="block text-[10px] uppercase tracking-widest opacity-70 hover:opacity-100 mt-2"
         >
-          Voir la file dédiée →
+          {t.viewDedicated}
         </Link>
       )}
     </div>
@@ -359,7 +356,8 @@ function Stat({
 }
 
 function ItemRow({ item }: { item: UnifiedItem }) {
-  const badge = STATUS_BADGE[item.status];
+  const t = useAdminT('adminOnboardingQueue');
+  const badge = getStatusBadge(t)[item.status];
   return (
     <div className="rounded-xl border border-neutral-800 bg-neutral-900/40 px-4 py-3">
       <div className="flex flex-wrap items-start justify-between gap-2">
@@ -372,8 +370,8 @@ function ItemRow({ item }: { item: UnifiedItem }) {
             </span>
             <span className="text-[10px] uppercase tracking-widest text-neutral-500">
               {item.kind === 'tenant_request'
-                ? 'Tenant request'
-                : 'Guild link'}
+                ? t.kindTenantRequest
+                : t.kindGuildLink}
             </span>
             <span className="text-neutral-600">·</span>
             <span>{formatDate(item.requestedAt)}</span>
@@ -385,7 +383,7 @@ function ItemRow({ item }: { item: UnifiedItem }) {
           href={item.detailHref}
           className="px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-xs font-medium"
         >
-          Détail →
+          {t.detail}
         </Link>
       </div>
     </div>

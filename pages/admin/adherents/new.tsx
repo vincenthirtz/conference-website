@@ -7,6 +7,7 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAutoSave } from '@/utils/useAutoSave';
 import DraftBanner from '@/components/admin/DraftBanner';
 import AutoSaveIndicator from '@/components/admin/AutoSaveIndicator';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 import { logger } from '../../../utils/logger';
 type Props = {
@@ -53,6 +54,7 @@ type FormData = {
 };
 
 function AdminNewAdherentPage({ staff }: Props) {
+  const t = useAdminT('adminAdherentsNew');
   const router = useRouter();
   const { adminFetchJson } = useAdminFetch();
   const [saving, setSaving] = useState(false);
@@ -128,15 +130,15 @@ function AdminNewAdherentPage({ staff }: Props) {
     setError(null);
 
     if (!form.firstName.trim()) {
-      setError('Le prénom est requis.');
+      setError(t.errorFirstNameRequired);
       return;
     }
     if (!form.lastName.trim()) {
-      setError('Le nom est requis.');
+      setError(t.errorLastNameRequired);
       return;
     }
     if (!form.email.trim()) {
-      setError("L'email est requis.");
+      setError(t.errorEmailRequired);
       return;
     }
 
@@ -154,7 +156,7 @@ function AdminNewAdherentPage({ staff }: Props) {
       clearDraft();
       router.push('/admin/adherents');
     } catch (err: unknown) {
-      setError((err as Error).message || 'Une erreur est survenue.');
+      setError((err as Error).message || t.errorGeneric);
     } finally {
       setSaving(false);
     }
@@ -172,7 +174,7 @@ function AdminNewAdherentPage({ staff }: Props) {
   return (
     <>
       <Head>
-        <title>Admin - Nouvel adhérent</title>
+        <title>{t.pageTitle}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
@@ -196,14 +198,14 @@ function AdminNewAdherentPage({ staff }: Props) {
                   d="M15 19l-7-7 7-7"
                 />
               </svg>
-              Retour aux adhérents
+              {t.backToAdherents}
             </Link>
-            <h1 className="text-3xl font-bold tracking-tight">
-              Nouvel adhérent
-            </h1>
+            <h1 className="text-3xl font-bold tracking-tight">{t.heading}</h1>
             {cotisationAmount > 0 && (
               <p className="text-neutral-400 text-sm mt-1">
-                Cotisation annuelle : {cotisationAmount.toFixed(2)} €
+                {format(t.annualCotisation, {
+                  amount: cotisationAmount.toFixed(2),
+                })}
               </p>
             )}
           </div>
@@ -259,40 +261,40 @@ function AdminNewAdherentPage({ staff }: Props) {
                     d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
                   />
                 </svg>
-                Informations personnelles
+                {t.sectionPersonal}
               </h2>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
                   <label className="block text-sm font-medium text-neutral-300 mb-2">
-                    Prénom *
+                    {t.firstName}
                   </label>
                   <input
                     type="text"
                     value={form.firstName}
                     onChange={(e) => updateField('firstName', e.target.value)}
                     className="w-full px-4 py-3 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white"
-                    placeholder="Marie"
+                    placeholder={t.firstNamePlaceholder}
                     required
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-neutral-300 mb-2">
-                    Nom *
+                    {t.lastName}
                   </label>
                   <input
                     type="text"
                     value={form.lastName}
                     onChange={(e) => updateField('lastName', e.target.value)}
                     className="w-full px-4 py-3 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white"
-                    placeholder="Dupont"
+                    placeholder={t.lastNamePlaceholder}
                     required
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-neutral-300 mb-2">
-                    Email *
+                    {t.email}
                   </label>
                   <input
                     type="email"
@@ -306,20 +308,20 @@ function AdminNewAdherentPage({ staff }: Props) {
 
                 <div>
                   <label className="block text-sm font-medium text-neutral-300 mb-2">
-                    Téléphone
+                    {t.phone}
                   </label>
                   <input
                     type="tel"
                     value={form.phone}
                     onChange={(e) => updateField('phone', e.target.value)}
                     className="w-full px-4 py-3 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white"
-                    placeholder="06 12 34 56 78"
+                    placeholder={t.phonePlaceholder}
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-neutral-300 mb-2">
-                    Date de naissance
+                    {t.birthDate}
                   </label>
                   <input
                     type="date"
@@ -331,53 +333,53 @@ function AdminNewAdherentPage({ staff }: Props) {
 
                 <div>
                   <label className="block text-sm font-medium text-neutral-300 mb-2">
-                    Pays
+                    {t.country}
                   </label>
                   <input
                     type="text"
                     value={form.country}
                     onChange={(e) => updateField('country', e.target.value)}
                     className="w-full px-4 py-3 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white"
-                    placeholder="France"
+                    placeholder={t.countryPlaceholder}
                   />
                 </div>
 
                 <div className="sm:col-span-2">
                   <label className="block text-sm font-medium text-neutral-300 mb-2">
-                    Adresse
+                    {t.address}
                   </label>
                   <input
                     type="text"
                     value={form.address}
                     onChange={(e) => updateField('address', e.target.value)}
                     className="w-full px-4 py-3 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white"
-                    placeholder="123 rue de la Paix"
+                    placeholder={t.addressPlaceholder}
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-neutral-300 mb-2">
-                    Code postal
+                    {t.postalCode}
                   </label>
                   <input
                     type="text"
                     value={form.postalCode}
                     onChange={(e) => updateField('postalCode', e.target.value)}
                     className="w-full px-4 py-3 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white"
-                    placeholder="75001"
+                    placeholder={t.postalCodePlaceholder}
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-neutral-300 mb-2">
-                    Ville
+                    {t.city}
                   </label>
                   <input
                     type="text"
                     value={form.city}
                     onChange={(e) => updateField('city', e.target.value)}
                     className="w-full px-4 py-3 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white"
-                    placeholder="Paris"
+                    placeholder={t.cityPlaceholder}
                   />
                 </div>
               </div>
@@ -399,12 +401,12 @@ function AdminNewAdherentPage({ staff }: Props) {
                     d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"
                   />
                 </svg>
-                Adhésion
+                {t.sectionMembership}
               </h2>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
                   <label className="block text-sm font-medium text-neutral-300 mb-2">
-                    Date d&apos;adhésion
+                    {t.joinDate}
                   </label>
                   <input
                     type="date"
@@ -416,7 +418,7 @@ function AdminNewAdherentPage({ staff }: Props) {
 
                 <div>
                   <label className="block text-sm font-medium text-neutral-300 mb-2">
-                    Année de cotisation
+                    {t.cotisationYear}
                   </label>
                   <select
                     value={form.currentYear}
@@ -437,7 +439,7 @@ function AdminNewAdherentPage({ staff }: Props) {
 
                 <div>
                   <label className="block text-sm font-medium text-neutral-300 mb-2">
-                    Rôle dans l&apos;association
+                    {t.roleInAssoc}
                   </label>
                   <select
                     value={form.role}
@@ -446,12 +448,12 @@ function AdminNewAdherentPage({ staff }: Props) {
                     }
                     className="w-full px-4 py-3 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white"
                   >
-                    <option value="member">Membre</option>
-                    <option value="volunteer">Bénévole</option>
-                    <option value="board">Membre du bureau</option>
-                    <option value="president">Président(e)</option>
-                    <option value="treasurer">Trésorier(ère)</option>
-                    <option value="secretary">Secrétaire</option>
+                    <option value="member">{t.roleMember}</option>
+                    <option value="volunteer">{t.roleVolunteer}</option>
+                    <option value="board">{t.roleBoard}</option>
+                    <option value="president">{t.rolePresident}</option>
+                    <option value="treasurer">{t.roleTreasurer}</option>
+                    <option value="secretary">{t.roleSecretary}</option>
                   </select>
                 </div>
 
@@ -466,7 +468,7 @@ function AdminNewAdherentPage({ staff }: Props) {
                       className="w-5 h-5 rounded border-neutral-600 bg-neutral-900/50 text-emerald-500 focus:ring-emerald-500"
                     />
                     <span className="text-sm font-medium text-neutral-300">
-                      Membre actif
+                      {t.activeMember}
                     </span>
                   </label>
                 </div>
@@ -490,7 +492,7 @@ function AdminNewAdherentPage({ staff }: Props) {
                       d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
                     />
                   </svg>
-                  Paiement de la cotisation
+                  {t.sectionPayment}
                 </h2>
                 {cotisationAmount > 0 && form.paymentStatus !== 'paid' && (
                   <button
@@ -498,14 +500,16 @@ function AdminNewAdherentPage({ staff }: Props) {
                     onClick={markAsPaid}
                     className="px-3 py-1.5 rounded-lg bg-emerald-600/20 border border-emerald-500/40 text-emerald-300 text-sm hover:bg-emerald-600/30 transition"
                   >
-                    Marquer comme payé ({cotisationAmount.toFixed(2)} €)
+                    {format(t.markPaid, {
+                      amount: cotisationAmount.toFixed(2),
+                    })}
                   </button>
                 )}
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
                   <label className="block text-sm font-medium text-neutral-300 mb-2">
-                    Statut du paiement
+                    {t.paymentStatus}
                   </label>
                   <select
                     value={form.paymentStatus}
@@ -517,17 +521,17 @@ function AdminNewAdherentPage({ staff }: Props) {
                     }
                     className="w-full px-4 py-3 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white"
                   >
-                    <option value="pending">En attente</option>
-                    <option value="partial">Partiel</option>
-                    <option value="paid">Payé</option>
-                    <option value="exempt">Exempté</option>
-                    <option value="overdue">En retard</option>
+                    <option value="pending">{t.statusPending}</option>
+                    <option value="partial">{t.statusPartial}</option>
+                    <option value="paid">{t.statusPaid}</option>
+                    <option value="exempt">{t.statusExempt}</option>
+                    <option value="overdue">{t.statusOverdue}</option>
                   </select>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-neutral-300 mb-2">
-                    Montant payé (€)
+                    {t.paymentAmount}
                   </label>
                   <input
                     type="number"
@@ -547,7 +551,7 @@ function AdminNewAdherentPage({ staff }: Props) {
 
                 <div>
                   <label className="block text-sm font-medium text-neutral-300 mb-2">
-                    Date du paiement
+                    {t.paymentDate}
                   </label>
                   <input
                     type="date"
@@ -559,7 +563,7 @@ function AdminNewAdherentPage({ staff }: Props) {
 
                 <div>
                   <label className="block text-sm font-medium text-neutral-300 mb-2">
-                    Mode de paiement
+                    {t.paymentMethod}
                   </label>
                   <select
                     value={form.paymentMethod}
@@ -571,19 +575,19 @@ function AdminNewAdherentPage({ staff }: Props) {
                     }
                     className="w-full px-4 py-3 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white"
                   >
-                    <option value="">Non spécifié</option>
-                    <option value="cash">Espèces</option>
-                    <option value="check">Chèque</option>
-                    <option value="transfer">Virement</option>
-                    <option value="card">Carte bancaire</option>
-                    <option value="helloasso">HelloAsso</option>
-                    <option value="other">Autre</option>
+                    <option value="">{t.methodUnspecified}</option>
+                    <option value="cash">{t.methodCash}</option>
+                    <option value="check">{t.methodCheck}</option>
+                    <option value="transfer">{t.methodTransfer}</option>
+                    <option value="card">{t.methodCard}</option>
+                    <option value="helloasso">{t.methodHelloasso}</option>
+                    <option value="other">{t.methodOther}</option>
                   </select>
                 </div>
 
                 <div className="sm:col-span-2">
                   <label className="block text-sm font-medium text-neutral-300 mb-2">
-                    Référence de paiement
+                    {t.paymentReference}
                   </label>
                   <input
                     type="text"
@@ -592,7 +596,7 @@ function AdminNewAdherentPage({ staff }: Props) {
                       updateField('paymentReference', e.target.value)
                     }
                     className="w-full px-4 py-3 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white"
-                    placeholder="N° de chèque, ID transaction HelloAsso..."
+                    placeholder={t.paymentReferencePlaceholder}
                   />
                 </div>
               </div>
@@ -614,14 +618,14 @@ function AdminNewAdherentPage({ staff }: Props) {
                     d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
                   />
                 </svg>
-                Notes internes
+                {t.sectionNotes}
               </h2>
               <textarea
                 value={form.notes}
                 onChange={(e) => updateField('notes', e.target.value)}
                 rows={3}
                 className="w-full px-4 py-3 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white resize-none"
-                placeholder="Notes internes (visibles uniquement par le staff)..."
+                placeholder={t.notesPlaceholder}
               />
             </section>
 
@@ -634,17 +638,17 @@ function AdminNewAdherentPage({ staff }: Props) {
                 {saving ? (
                   <>
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Création...
+                    {t.saving}
                   </>
                 ) : (
-                  "Créer l'adhérent"
+                  t.submit
                 )}
               </button>
               <Link
                 href="/admin/adherents"
                 className="px-6 py-3 rounded-xl border border-neutral-600 text-sm font-semibold text-white text-center transition hover:bg-neutral-800"
               >
-                Annuler
+                {t.cancel}
               </Link>
             </div>
           </form>

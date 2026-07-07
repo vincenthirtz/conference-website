@@ -13,6 +13,7 @@ import Breadcrumb from '@/components/admin/Breadcrumb';
 import EmptyState from '@/components/admin/EmptyState';
 import LoadingSpinner from '@/components/admin/LoadingSpinner';
 import BotSecretsRevealModal from '@/components/admin/BotSecretsRevealModal';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 import { logger } from '../../../utils/logger';
 
@@ -83,6 +84,7 @@ function formatDate(s: string | null): string {
 }
 
 function AdminTenantDetailPage({ tenantId }: Props) {
+  const t = useAdminT('adminTenantDetail');
   const router = useRouter();
   const { addToast } = useToast();
   const { adminFetchJson } = useAdminFetch();
@@ -124,9 +126,9 @@ function AdminTenantDetailPage({ tenantId }: Props) {
       setEditActive(json.tenant.is_active);
     } catch (err) {
       logger.error('AdminTenantDetailPage: fetch error', err);
-      setError((err as Error)?.message || 'Erreur de chargement');
+      setError((err as Error)?.message || t.errorLoad);
     }
-  }, [adminFetchJson, tenantId]);
+  }, [adminFetchJson, tenantId, t]);
 
   useEffect(() => {
     fetchData();
@@ -146,10 +148,10 @@ function AdminTenantDetailPage({ tenantId }: Props) {
           is_active: editActive,
         }),
       });
-      addToast('Tenant mis à jour.', 'success');
+      addToast(t.toastUpdated, 'success');
       await fetchData();
     } catch (err) {
-      setError((err as Error)?.message || 'Mise à jour impossible.');
+      setError((err as Error)?.message || t.errorUpdate);
     } finally {
       setSaving(false);
     }
@@ -158,15 +160,14 @@ function AdminTenantDetailPage({ tenantId }: Props) {
   const handleArchive = async () => {
     if (!data) return;
     if (data.tenant.slug === CONFERENCE_SLUG) {
-      addToast('Le tenant « conference » ne peut pas être archivé.', 'error');
+      addToast(t.conferenceNoArchive, 'error');
       return;
     }
     const ok = await confirm({
-      title: `Archiver le tenant « ${data.tenant.slug} » ?`,
-      subtitle:
-        "Le tenant sera marqué is_active=false. Les staff perdront l'accès tant qu'il reste archivé.",
+      title: format(t.confirmArchiveTitle, { slug: data.tenant.slug }),
+      subtitle: t.confirmArchiveSubtitle,
       variant: 'danger',
-      confirmLabel: 'Archiver',
+      confirmLabel: t.archive,
     });
     if (!ok) return;
     setArchiving(true);
@@ -174,10 +175,10 @@ function AdminTenantDetailPage({ tenantId }: Props) {
       await mutateJson(`/api/admin/tenants/${tenantId}`, {
         method: 'DELETE',
       });
-      addToast('Tenant archivé.', 'success');
+      addToast(t.toastArchived, 'success');
       router.push('/admin/tenants');
     } catch (err) {
-      addToast((err as Error)?.message || 'Archivage impossible.', 'error');
+      addToast((err as Error)?.message || t.errorArchive, 'error');
     } finally {
       setArchiving(false);
     }
@@ -195,11 +196,11 @@ function AdminTenantDetailPage({ tenantId }: Props) {
           role: staffRoleToAdd,
         }),
       });
-      addToast('Staff ajouté au tenant.', 'success');
+      addToast(t.toastStaffAdded, 'success');
       setStaffIdToAdd('');
       await fetchData();
     } catch (err) {
-      addToast((err as Error)?.message || 'Ajout impossible.', 'error');
+      addToast((err as Error)?.message || t.errorAddStaff, 'error');
     } finally {
       setAddingStaff(false);
     }
@@ -209,11 +210,10 @@ function AdminTenantDetailPage({ tenantId }: Props) {
     if (!data) return;
     if (!ROTATE_SECRETS_API_READY) return;
     const ok = await confirm({
-      title: 'Régénérer les secrets bot du tenant ?',
-      subtitle:
-        "Cette action invalide les anciens secrets bot. Le bot et tout système qui s'authentifie auprès du tenant devront utiliser les nouvelles valeurs.",
+      title: t.confirmRotateTitle,
+      subtitle: t.confirmRotateSubtitle,
       variant: 'danger',
-      confirmLabel: 'Régénérer',
+      confirmLabel: t.rotate,
     });
     if (!ok) return;
     setRotatingSecrets(true);
@@ -227,12 +227,9 @@ function AdminTenantDetailPage({ tenantId }: Props) {
         botApiKey: resp.botApiKey,
         botWebhookSecret: resp.botWebhookSecret,
       });
-      addToast('Secrets bot régénérés.', 'success');
+      addToast(t.toastRotated, 'success');
     } catch (err) {
-      addToast(
-        (err as Error)?.message || 'Régénération des secrets impossible.',
-        'error'
-      );
+      addToast((err as Error)?.message || t.errorRotate, 'error');
     } finally {
       setRotatingSecrets(false);
     }
@@ -240,42 +237,44 @@ function AdminTenantDetailPage({ tenantId }: Props) {
 
   const handleRemoveStaff = async (row: StaffRow) => {
     const ok = await confirm({
-      title: `Retirer ${row.display_name ?? row.email ?? row.staff_id} du tenant ?`,
-      subtitle: "Le staff perdra l'accès à ce tenant.",
+      title: format(t.confirmRemoveStaffTitle, {
+        name: row.display_name ?? row.email ?? row.staff_id,
+      }),
+      subtitle: t.confirmRemoveStaffSubtitle,
       variant: 'danger',
-      confirmLabel: 'Retirer',
+      confirmLabel: t.remove,
     });
     if (!ok) return;
     try {
       await mutateJson(`/api/admin/tenants/${tenantId}/staff/${row.staff_id}`, {
         method: 'DELETE',
       });
-      addToast('Staff retiré.', 'success');
+      addToast(t.toastStaffRemoved, 'success');
       await fetchData();
     } catch (err) {
-      addToast((err as Error)?.message || 'Retrait impossible.', 'error');
+      addToast((err as Error)?.message || t.errorRemoveStaff, 'error');
     }
   };
 
   return (
     <>
       <Head>
-        <title>Admin – Tenant {data?.tenant.slug ?? ''}</title>
+        <title>{format(t.pageTitle, { slug: data?.tenant.slug ?? '' })}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
         <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-12">
           <Breadcrumb
             items={[
-              { label: 'Admin', href: '/admin' },
-              { label: 'Tenants', href: '/admin/tenants' },
+              { label: t.breadcrumbAdmin, href: '/admin' },
+              { label: t.breadcrumbTenants, href: '/admin/tenants' },
               { label: data?.tenant.slug ?? '…' },
             ]}
           />
 
           {data === null && error === null && (
             <div className="py-16">
-              <LoadingSpinner label="Chargement du tenant…" />
+              <LoadingSpinner label={t.loading} />
             </div>
           )}
 
@@ -296,7 +295,9 @@ function AdminTenantDetailPage({ tenantId }: Props) {
                           : 'bg-neutral-700/40 text-neutral-400 border border-neutral-600/40'
                       }`}
                     >
-                      {data.tenant.is_active ? 'Actif' : 'Archivé'}
+                      {data.tenant.is_active
+                        ? t.statusActive
+                        : t.statusArchived}
                     </span>
                   </div>
                   <p className="mt-1 text-sm text-neutral-400 font-mono">
@@ -312,12 +313,12 @@ function AdminTenantDetailPage({ tenantId }: Props) {
                     className="px-4 py-2.5 rounded-xl border border-red-500/40 text-red-300 hover:border-red-400 hover:bg-red-500/10 text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                     title={
                       data.tenant.slug === CONFERENCE_SLUG
-                        ? 'Le tenant conference ne peut pas être archivé.'
+                        ? t.archiveTitleDisabled
                         : undefined
                     }
                     data-testid="tenant-archive-btn"
                   >
-                    {archiving ? 'Archivage…' : 'Archiver'}
+                    {archiving ? t.archiving : t.archive}
                   </button>
                 </div>
               </div>
@@ -326,9 +327,9 @@ function AdminTenantDetailPage({ tenantId }: Props) {
               <div className="mb-6 border-b border-neutral-700/50 flex gap-1">
                 {(
                   [
-                    ['general', 'Général'],
-                    ['discord', 'Discord'],
-                    ['staff', 'Staff'],
+                    ['general', t.tabGeneral],
+                    ['discord', t.tabDiscord],
+                    ['staff', t.tabStaff],
                   ] as const
                 ).map(([key, label]) => (
                   <button
@@ -368,7 +369,7 @@ function AdminTenantDetailPage({ tenantId }: Props) {
                         htmlFor="g-name"
                         className="block text-sm font-medium text-neutral-300 mb-2"
                       >
-                        Nom
+                        {t.nameLabel}
                       </label>
                       <input
                         id="g-name"
@@ -385,7 +386,7 @@ function AdminTenantDetailPage({ tenantId }: Props) {
                         htmlFor="g-locale"
                         className="block text-sm font-medium text-neutral-300 mb-2"
                       >
-                        Locale par défaut
+                        {t.localeLabel}
                       </label>
                       <select
                         id="g-locale"
@@ -393,8 +394,8 @@ function AdminTenantDetailPage({ tenantId }: Props) {
                         onChange={(e) => setEditLocale(e.target.value)}
                         className="w-full px-4 py-3 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
                       >
-                        <option value="fr">Français (fr)</option>
-                        <option value="en">English (en)</option>
+                        <option value="fr">{t.localeFr}</option>
+                        <option value="en">{t.localeEn}</option>
                       </select>
                     </div>
 
@@ -406,7 +407,7 @@ function AdminTenantDetailPage({ tenantId }: Props) {
                         className="w-5 h-5 rounded border-neutral-600 bg-neutral-900/50 text-purple-500 focus:ring-purple-500"
                       />
                       <span className="text-sm font-medium text-neutral-300">
-                        Tenant actif
+                        {t.activeLabel}
                       </span>
                     </label>
 
@@ -416,7 +417,7 @@ function AdminTenantDetailPage({ tenantId }: Props) {
                         disabled={saving}
                         className="px-6 py-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-sm font-semibold text-white transition disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2"
                       >
-                        {saving ? 'Sauvegarde…' : 'Enregistrer'}
+                        {saving ? t.saving : t.save}
                       </button>
                     </div>
                   </form>
@@ -443,14 +444,10 @@ function AdminTenantDetailPage({ tenantId }: Props) {
                       </div>
                       <div>
                         <h2 className="text-lg font-semibold text-white">
-                          Secrets bot
+                          {t.botSecretsHeading}
                         </h2>
                         <p className="mt-1 text-sm text-neutral-400">
-                          Régénère les secrets utilisés par le bot Discord pour
-                          s&apos;authentifier auprès du site et signer les
-                          webhooks de ce tenant. Le nouveau secret n&apos;est
-                          affiché qu&apos;une seule fois, juste après la
-                          rotation.
+                          {t.botSecretsDesc}
                         </p>
                       </div>
                     </div>
@@ -462,16 +459,16 @@ function AdminTenantDetailPage({ tenantId }: Props) {
                         className="px-4 py-2.5 rounded-xl border border-amber-500/50 text-amber-200 hover:border-amber-400 hover:bg-amber-500/10 text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                         title={
                           !ROTATE_SECRETS_API_READY
-                            ? 'API à venir : POST /api/admin/tenants/[id]/rotate-secrets'
+                            ? t.apiComingSoonTitle
                             : undefined
                         }
                         data-testid="tenant-rotate-secrets-btn"
                       >
-                        {rotatingSecrets ? 'Rotation…' : 'Rotate bot secrets'}
+                        {rotatingSecrets ? t.rotating : t.rotateBtn}
                       </button>
                       {!ROTATE_SECRETS_API_READY && (
                         <span className="text-xs text-neutral-500">
-                          API en cours d&apos;implémentation.
+                          {t.apiInProgress}
                         </span>
                       )}
                     </div>
@@ -483,14 +480,14 @@ function AdminTenantDetailPage({ tenantId }: Props) {
                 <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden">
                   {data.guilds.length === 0 ? (
                     <EmptyState
-                      title="Aucun serveur Discord lié"
-                      description="Quand le bot est ajouté à un serveur, celui-ci apparaît ici (ou dans la file pending-guild-links si non assigné)."
+                      title={t.discordEmptyTitle}
+                      description={t.discordEmptyDesc}
                       action={
                         <Link
                           href="/admin/pending-guild-links"
                           className="px-4 py-2 rounded-lg border border-neutral-600 text-sm hover:border-neutral-500 transition-colors"
                         >
-                          Voir la file d&apos;attente
+                          {t.discordEmptyAction}
                         </Link>
                       }
                     />
@@ -499,10 +496,18 @@ function AdminTenantDetailPage({ tenantId }: Props) {
                       <table className="w-full text-sm">
                         <thead className="bg-neutral-900/50 text-neutral-400 text-xs uppercase tracking-wider">
                           <tr>
-                            <th className="px-4 py-3 text-left">Guild ID</th>
-                            <th className="px-4 py-3 text-left">Nom</th>
-                            <th className="px-4 py-3 text-left">Rejoint le</th>
-                            <th className="px-4 py-3 text-right">Actions</th>
+                            <th className="px-4 py-3 text-left">
+                              {t.colGuildId}
+                            </th>
+                            <th className="px-4 py-3 text-left">
+                              {t.colGuildName}
+                            </th>
+                            <th className="px-4 py-3 text-left">
+                              {t.colJoinedAt}
+                            </th>
+                            <th className="px-4 py-3 text-right">
+                              {t.colActions}
+                            </th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-neutral-700/50">
@@ -525,7 +530,7 @@ function AdminTenantDetailPage({ tenantId }: Props) {
                                   href={`/admin/tenants/${tenantId}/discord-config/${g.guild_id}`}
                                   className="px-3 py-1.5 rounded-lg border border-neutral-600 hover:border-neutral-500 text-sm transition-colors"
                                 >
-                                  Configurer
+                                  {t.configure}
                                 </Link>
                               </td>
                             </tr>
@@ -548,14 +553,14 @@ function AdminTenantDetailPage({ tenantId }: Props) {
                         htmlFor="add-staff-id"
                         className="block text-xs font-medium text-neutral-400 mb-1"
                       >
-                        ID du staff
+                        {t.staffIdLabel}
                       </label>
                       <input
                         id="add-staff-id"
                         type="text"
                         value={staffIdToAdd}
                         onChange={(e) => setStaffIdToAdd(e.target.value)}
-                        placeholder="UUID du staff existant"
+                        placeholder={t.staffIdPlaceholder}
                         className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm font-mono"
                       />
                     </div>
@@ -564,7 +569,7 @@ function AdminTenantDetailPage({ tenantId }: Props) {
                         htmlFor="add-staff-role"
                         className="block text-xs font-medium text-neutral-400 mb-1"
                       >
-                        Rôle
+                        {t.staffRoleLabel}
                       </label>
                       <select
                         id="add-staff-role"
@@ -583,26 +588,36 @@ function AdminTenantDetailPage({ tenantId }: Props) {
                       disabled={addingStaff || !staffIdToAdd.trim()}
                       className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-sm font-medium text-white disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {addingStaff ? 'Ajout…' : 'Ajouter'}
+                      {addingStaff ? t.addingStaff : t.addStaff}
                     </button>
                   </form>
 
                   <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden">
                     {data.staff.length === 0 ? (
                       <EmptyState
-                        title="Aucun staff sur ce tenant"
-                        description="Ajoute un membre via le formulaire ci-dessus."
+                        title={t.staffEmptyTitle}
+                        description={t.staffEmptyDesc}
                       />
                     ) : (
                       <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                           <thead className="bg-neutral-900/50 text-neutral-400 text-xs uppercase tracking-wider">
                             <tr>
-                              <th className="px-4 py-3 text-left">Nom</th>
-                              <th className="px-4 py-3 text-left">Email</th>
-                              <th className="px-4 py-3 text-left">Rôle</th>
-                              <th className="px-4 py-3 text-left">Ajouté le</th>
-                              <th className="px-4 py-3 text-right">Actions</th>
+                              <th className="px-4 py-3 text-left">
+                                {t.colStaffName}
+                              </th>
+                              <th className="px-4 py-3 text-left">
+                                {t.colStaffEmail}
+                              </th>
+                              <th className="px-4 py-3 text-left">
+                                {t.colStaffRole}
+                              </th>
+                              <th className="px-4 py-3 text-left">
+                                {t.colAddedAt}
+                              </th>
+                              <th className="px-4 py-3 text-right">
+                                {t.colActions}
+                              </th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-neutral-700/50">
@@ -631,7 +646,7 @@ function AdminTenantDetailPage({ tenantId }: Props) {
                                     onClick={() => handleRemoveStaff(s)}
                                     className="px-3 py-1.5 rounded-lg border border-red-500/40 text-red-300 hover:border-red-400 text-sm transition-colors"
                                   >
-                                    Retirer
+                                    {t.removeStaff}
                                   </button>
                                 </td>
                               </tr>

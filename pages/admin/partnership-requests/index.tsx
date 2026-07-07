@@ -5,8 +5,11 @@ import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 import { logger } from '../../../utils/logger';
+
+type Dict = ReturnType<typeof useAdminT<'adminPartnershipRequestsList'>>;
 type RequestRow = {
   id: string;
   company_name: string;
@@ -30,15 +33,17 @@ type Props = {
   };
 };
 
-const statusLabels: Record<string, string> = {
-  new: 'Nouvelle',
-  read: 'Lue',
-  contacted: 'Contacté',
-  negotiating: 'En négociation',
-  accepted: 'Acceptée',
-  declined: 'Déclinée',
-  archived: 'Archivée',
-};
+function getStatusLabels(t: Dict): Record<string, string> {
+  return {
+    new: t.statusNew,
+    read: t.statusRead,
+    contacted: t.statusContacted,
+    negotiating: t.statusNegotiating,
+    accepted: t.statusAccepted,
+    declined: t.statusDeclined,
+    archived: t.statusArchived,
+  };
+}
 
 const statusColors: Record<string, string> = {
   new: 'bg-blue-600 text-white',
@@ -50,12 +55,14 @@ const statusColors: Record<string, string> = {
   archived: 'bg-neutral-500 text-white',
 };
 
-const categoryLabels: Record<string, string> = {
-  super: 'Super partenaire',
-  major: 'Partenaire majeur',
-  cultural: 'Partenaire culturel',
-  other: 'Autre',
-};
+function getCategoryLabels(t: Dict): Record<string, string> {
+  return {
+    super: t.categorySuper,
+    major: t.categoryMajor,
+    cultural: t.categoryCultural,
+    other: t.categoryOther,
+  };
+}
 
 function formatDate(d: string | null) {
   if (!d) return '—';
@@ -73,6 +80,9 @@ function formatDate(d: string | null) {
 }
 
 function AdminPartnershipRequestsPage({ staff }: Props) {
+  const t = useAdminT('adminPartnershipRequestsList');
+  const statusLabels = getStatusLabels(t);
+  const categoryLabels = getCategoryLabels(t);
   const { adminFetchJson } = useAdminFetch();
   const { addToast } = useToast();
   const { confirm, dialog } = useConfirmDialog();
@@ -131,9 +141,9 @@ function AdminPartnershipRequestsPage({ staff }: Props) {
 
   const onDelete = async (id: string) => {
     const ok = await confirm({
-      title: 'Supprimer cette demande ?',
+      title: t.confirmDeleteTitle,
       variant: 'danger',
-      confirmLabel: 'Supprimer',
+      confirmLabel: t.delete,
     });
     if (!ok) return;
     try {
@@ -142,7 +152,7 @@ function AdminPartnershipRequestsPage({ staff }: Props) {
       });
       fetchData();
     } catch (err: unknown) {
-      addToast((err as Error)?.message || 'Erreur de suppression.', 'error');
+      addToast((err as Error)?.message || t.errorDelete, 'error');
     }
   };
 
@@ -152,7 +162,7 @@ function AdminPartnershipRequestsPage({ staff }: Props) {
     <>
       {dialog}
       <Head>
-        <title>Admin - Demandes de partenariat</title>
+        <title>{t.pageTitle}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
@@ -162,15 +172,21 @@ function AdminPartnershipRequestsPage({ staff }: Props) {
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-                  Demandes de partenariat
+                  {t.heading}
                 </h1>
                 <p className="text-neutral-400 text-sm mt-1">
-                  {total !== null
-                    ? `${total} demande${total > 1 ? 's' : ''}`
-                    : `${requests.length} demande${requests.length > 1 ? 's' : ''}`}
+                  {format(
+                    (total !== null ? total : requests.length) > 1
+                      ? t.countRequests_other
+                      : t.countRequests_one,
+                    { count: total !== null ? total : requests.length }
+                  )}
                   {newCount > 0 && (
                     <span className="ml-2 px-2 py-0.5 rounded-full text-xs bg-blue-600 text-white">
-                      {newCount} nouvelle{newCount > 1 ? 's' : ''}
+                      {format(
+                        newCount > 1 ? t.newCount_other : t.newCount_one,
+                        { count: newCount }
+                      )}
                     </span>
                   )}
                 </p>
@@ -193,7 +209,7 @@ function AdminPartnershipRequestsPage({ staff }: Props) {
                     d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
                   />
                 </svg>
-                Gérer les partenaires
+                {t.managePartners}
               </Link>
             </div>
           </div>
@@ -223,14 +239,14 @@ function AdminPartnershipRequestsPage({ staff }: Props) {
             <div className="flex gap-4 flex-wrap items-end">
               <div className="min-w-[180px]">
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Statut
+                  {t.filterStatus}
                 </label>
                 <select
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={statusFilter || ''}
                   onChange={(e) => setStatusFilter(e.target.value || null)}
                 >
-                  <option value="">Tous les statuts</option>
+                  <option value="">{t.statusAll}</option>
                   {Object.entries(statusLabels).map(([value, label]) => (
                     <option key={value} value={value}>
                       {label}
@@ -241,14 +257,14 @@ function AdminPartnershipRequestsPage({ staff }: Props) {
 
               <div className="min-w-[180px]">
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Catégorie
+                  {t.filterCategory}
                 </label>
                 <select
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={categoryFilter || ''}
                   onChange={(e) => setCategoryFilter(e.target.value || null)}
                 >
-                  <option value="">Toutes les catégories</option>
+                  <option value="">{t.categoryAll}</option>
                   {Object.entries(categoryLabels).map(([value, label]) => (
                     <option key={value} value={value}>
                       {label}
@@ -259,7 +275,7 @@ function AdminPartnershipRequestsPage({ staff }: Props) {
 
               <div className="flex-1 min-w-[220px]">
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Recherche
+                  {t.filterSearch}
                 </label>
                 <div className="relative">
                   <svg
@@ -277,7 +293,7 @@ function AdminPartnershipRequestsPage({ staff }: Props) {
                   </svg>
                   <input
                     type="text"
-                    placeholder="Entreprise, contact, email..."
+                    placeholder={t.searchPlaceholder}
                     className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
@@ -308,7 +324,7 @@ function AdminPartnershipRequestsPage({ staff }: Props) {
                     d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
                   />
                 </svg>
-                Aucune demande trouvée
+                {t.empty}
               </div>
             ) : (
               <div className="divide-y divide-neutral-700/50">
@@ -370,11 +386,17 @@ function AdminPartnershipRequestsPage({ staff }: Props) {
                           {r.message}
                         </p>
                         <div className="flex items-center gap-4 text-xs text-neutral-500">
-                          <span>Reçue le {formatDate(r.created_at)}</span>
+                          <span>
+                            {format(t.receivedOn, {
+                              date: formatDate(r.created_at),
+                            })}
+                          </span>
                           {r.budget_range && (
                             <>
                               <span>•</span>
-                              <span>Budget: {r.budget_range}</span>
+                              <span>
+                                {format(t.budget, { budget: r.budget_range })}
+                              </span>
                             </>
                           )}
                         </div>
@@ -386,13 +408,13 @@ function AdminPartnershipRequestsPage({ staff }: Props) {
                           href={`/admin/partnership-requests/${r.id}`}
                           className="px-3 py-1.5 rounded-lg border border-neutral-600 hover:border-neutral-500 text-sm transition-colors"
                         >
-                          Voir
+                          {t.view}
                         </Link>
                         <button
                           onClick={() => onDelete(r.id)}
                           className="px-3 py-1.5 rounded-lg border border-red-500/40 text-red-300 hover:border-red-400 text-sm transition-colors"
                         >
-                          Supprimer
+                          {t.delete}
                         </button>
                       </div>
                     </div>
@@ -424,12 +446,12 @@ function AdminPartnershipRequestsPage({ staff }: Props) {
                     d="M15 19l-7-7 7-7"
                   />
                 </svg>
-                Précédent
+                {t.previous}
               </button>
 
               <span className="text-neutral-400 text-sm">
                 {offset + 1} – {offset + requests.length}
-                {total !== null ? ` sur ${total}` : ''}
+                {total !== null ? format(t.paginationTotal, { total }) : ''}
               </span>
 
               <button
@@ -438,7 +460,7 @@ function AdminPartnershipRequestsPage({ staff }: Props) {
                 onClick={() => setOffset(offset + PAGE_SIZE)}
                 className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
-                Suivant
+                {t.next}
                 <svg
                   className="w-4 h-4"
                   fill="none"
