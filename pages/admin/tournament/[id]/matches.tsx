@@ -12,6 +12,7 @@ import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import Breadcrumb from '@/components/admin/Breadcrumb';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type {
   StaffProps,
   Match,
@@ -20,6 +21,8 @@ import type {
   TeamMini,
   TournamentMini,
 } from '@/types/admin';
+
+type Dict = ReturnType<typeof useAdminT<'adminTournamentMatches'>>;
 
 type MatchesApiResponse = {
   tournament: TournamentMini | null;
@@ -55,16 +58,16 @@ function formatToInputDateTime(iso: string | null): string {
   }
 }
 
-function statusLabel(status: MatchStatus) {
+function statusLabel(t: Dict, status: MatchStatus) {
   switch (status) {
     case 'pending':
-      return 'A venir';
+      return t.statusPending;
     case 'ongoing':
-      return 'En cours';
+      return t.statusOngoing;
     case 'finished':
-      return 'Termine';
+      return t.statusFinished;
     case 'cancelled':
-      return 'Annule';
+      return t.statusCancelled;
     default:
       return status;
   }
@@ -85,17 +88,17 @@ function statusColor(status: MatchStatus) {
   }
 }
 
-function stageLabel(stage: StageSummary | null | undefined) {
+function stageLabel(t: Dict, stage: StageSummary | null | undefined) {
   if (!stage) return '—';
   const base = stage.name;
   if (stage.stage_type === 'swiss') {
-    return `${base} (Swiss)`;
+    return format(t.stageSwiss, { name: base });
   }
   if (stage.stage_type === 'bracket') {
-    return `${base} (Bracket)`;
+    return format(t.stageBracket, { name: base });
   }
   if (stage.stage_type === 'group') {
-    return `${base} (Groupes)`;
+    return format(t.stageGroup, { name: base });
   }
   return base;
 }
@@ -106,6 +109,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
   const { mutate: mutateIdempotent } = useIdempotentMutation();
   const { mutate: csvImportMutate } = useIdempotentMutation();
   const { adminFetch, adminFetchJson } = useAdminFetch();
+  const t = useAdminT('adminTournamentMatches');
 
   const [loading, setLoading] = useState(true);
   const [matches, setMatches] = useState<Match[]>([]);
@@ -353,7 +357,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
       setBulkScheduleMode(false);
       setBulkScheduleInputs({});
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
+      setErrorMsg((err as Error)?.message ?? t.errorUnexpected);
     } finally {
       setLoading(false);
     }
@@ -416,11 +420,10 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
         if (json.detail === 'SCHEDULE_CONFLICTS_REQUIRE_CONFIRMATION') {
           const count = json.conflicts?.length ?? 0;
           const ok = await confirm({
-            title: `${count} conflit(s) horaire(s) detecte(s)`,
-            subtitle:
-              'Une meme equipe est planifiee sur deux creneaux qui se chevauchent. Appliquer quand meme ?',
+            title: format(t.autoConflictsTitle, { count }),
+            subtitle: t.autoConflictsSubtitle,
             variant: 'warning',
-            confirmLabel: 'Appliquer',
+            confirmLabel: t.autoApply,
           });
           if (!ok) {
             setAutoSchedRunning(false);
@@ -432,7 +435,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || "Erreur lors de l'auto-scheduler");
+        throw new Error(json.error || t.errorAutoSchedule);
       }
 
       const json = await res.json();
@@ -441,15 +444,16 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
       const conflictCount = json.conflicts?.length ?? 0;
       const warnings: string[] = json.warnings ?? [];
 
-      let toastMsg = `Auto-scheduler termine : ${scheduledCount} matches planifies.`;
+      let toastMsg = format(t.autoDoneMsg, { count: scheduledCount });
       if (conflictCount > 0)
-        toastMsg += ` ${conflictCount} conflit(s) horaire(s) accepte(s).`;
+        toastMsg +=
+          ' ' + format(t.autoConflictsAccepted, { count: conflictCount });
       if (warnings.length > 0) toastMsg += ` ${warnings.join(' ')}`;
 
       addToast(toastMsg, conflictCount > 0 ? 'info' : 'success');
       fetchMatches();
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? "Erreur lors de l'auto-scheduler");
+      setErrorMsg((err as Error)?.message ?? t.errorAutoSchedule);
     } finally {
       setAutoSchedRunning(false);
     }
@@ -480,7 +484,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
       setQuickScoreId(null);
       fetchMatches();
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? 'Erreur lors du quick score');
+      setErrorMsg((err as Error)?.message ?? t.errorQuickScore);
     } finally {
       setQsSaving(false);
     }
@@ -530,9 +534,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
 
   async function handleBulkScheduleSave() {
     if (!stageFilter) {
-      setErrorMsg(
-        'La planification en masse nécessite de filtrer par phase (stage).'
-      );
+      setErrorMsg(t.errorBulkScheduleNoStage);
       return;
     }
 
@@ -559,23 +561,22 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(
-          json.error || 'Erreur lors de la planification en masse'
-        );
+        throw new Error(json.error || t.errorBulkSchedule);
       }
 
       const json = await res.json();
+      const successCount = json.successCount ?? 0;
       addToast(
-        `${json.successCount ?? 0} match${(json.successCount ?? 0) > 1 ? 'es' : ''} planifié${(json.successCount ?? 0) > 1 ? 's' : ''}.`,
+        format(
+          successCount > 1 ? t.toastBulkScheduled_other : t.toastBulkScheduled_one,
+          { count: successCount }
+        ),
         'info'
       );
       setBulkScheduleMode(false);
       fetchMatches();
     } catch (err: unknown) {
-      setErrorMsg(
-        (err as Error)?.message ??
-          'Erreur inattendue lors de la planification en masse'
-      );
+      setErrorMsg((err as Error)?.message ?? t.errorBulkScheduleUnexpected);
     } finally {
       setBulkScheduleSaving(false);
     }
@@ -584,9 +585,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
   // --- Bulk delete/cancel ---
   function handleBulkDelete(hard: boolean) {
     if (!stageFilter) {
-      setErrorMsg(
-        'La suppression en masse nécessite de filtrer par phase (stage).'
-      );
+      setErrorMsg(t.errorBulkDeleteNoStage);
       return;
     }
 
@@ -617,20 +616,20 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || 'Erreur lors de la suppression en masse');
+        throw new Error(json.error || t.errorBulkDelete);
       }
 
-      const verb = hard ? 'supprimé' : 'annulé';
+      const verb = hard ? t.verbDeleted : t.verbCancelled;
       addToast(
-        `${count} match${count > 1 ? 'es' : ''} ${verb}${count > 1 ? 's' : ''}.`,
+        format(count > 1 ? t.toastBulkDeleted_other : t.toastBulkDeleted_one, {
+          count,
+          verb,
+        }),
         'info'
       );
       fetchMatches();
     } catch (err: unknown) {
-      setErrorMsg(
-        (err as Error)?.message ??
-          'Erreur inattendue lors de la suppression en masse'
-      );
+      setErrorMsg((err as Error)?.message ?? t.errorBulkDeleteUnexpected);
     } finally {
       setBulkDeleting(false);
     }
@@ -639,7 +638,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
   // --- Bulk edit ---
   async function handleBulkEditSave() {
     if (!stageFilter) {
-      setErrorMsg("L'édition en masse nécessite de filtrer par phase (stage).");
+      setErrorMsg(t.errorBulkEditNoStage);
       return;
     }
     if (selectedMatchIds.size === 0) return;
@@ -653,7 +652,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
     if (bulkEditFields.notes !== undefined) fields.notes = bulkEditFields.notes;
 
     if (Object.keys(fields).length === 0) {
-      setErrorMsg('Aucun champ à modifier.');
+      setErrorMsg(t.errorNoFieldToEdit);
       return;
     }
 
@@ -674,22 +673,21 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || "Erreur lors de l'édition en masse");
+        throw new Error(json.error || t.errorBulkEdit);
       }
 
       const json = await res.json();
       addToast(
-        `${json.count ?? selectedMatchIds.size} match(es) mis à jour.`,
+        format(t.toastBulkEdited, {
+          count: json.count ?? selectedMatchIds.size,
+        }),
         'info'
       );
       setBulkEditMode(false);
       setBulkEditFields({});
       fetchMatches();
     } catch (err: unknown) {
-      setErrorMsg(
-        (err as Error)?.message ??
-          "Erreur inattendue lors de l'édition en masse"
-      );
+      setErrorMsg((err as Error)?.message ?? t.errorBulkEditUnexpected);
     } finally {
       setBulkEditSaving(false);
     }
@@ -743,7 +741,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
     try {
       // Resolve team names to IDs
       const teamsRes = await adminFetch(`/api/admin/tournament/${id}/teams`);
-      if (!teamsRes.ok) throw new Error('Impossible de charger les équipes');
+      if (!teamsRes.ok) throw new Error(t.errorTeamsLoad);
       const teamsJson = await teamsRes.json();
       const teams: Array<{
         id: string;
@@ -754,9 +752,9 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
       const findTeam = (name: string) => {
         const lower = name.toLowerCase().trim();
         return teams.find(
-          (t) =>
-            t.name.toLowerCase() === lower ||
-            (t.short_name && t.short_name.toLowerCase() === lower)
+          (team) =>
+            team.name.toLowerCase() === lower ||
+            (team.short_name && team.short_name.toLowerCase() === lower)
         );
       };
 
@@ -786,7 +784,9 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
           .flatMap((r) => [r.team1, r.team2])
           .filter((n, i, arr) => arr.indexOf(n) === i && !findTeam(n));
         throw new Error(
-          `Équipes introuvables : ${names.slice(0, 5).join(', ')}${names.length > 5 ? '...' : ''}`
+          format(t.errorTeamsNotFound, {
+            names: `${names.slice(0, 5).join(', ')}${names.length > 5 ? '...' : ''}`,
+          })
         );
       }
 
@@ -797,12 +797,12 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || "Erreur lors de l'import");
+        throw new Error(json.error || t.errorImport);
       }
 
       const json = await res.json();
       addToast(
-        `${json.matches?.length ?? 0} match(es) importé(s) depuis le CSV.`,
+        format(t.toastCsvImported, { count: json.matches?.length ?? 0 }),
         'info'
       );
       setCsvImportMode(false);
@@ -810,7 +810,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
       setCsvPreview([]);
       fetchMatches();
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? "Erreur lors de l'import CSV");
+      setErrorMsg((err as Error)?.message ?? t.errorCsvImport);
     } finally {
       setCsvImporting(false);
     }
@@ -822,7 +822,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
     <>
       {confirmDialog}
       <Head>
-        <title>Admin – Matches du tournoi</title>
+        <title>{t.pageTitle}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
@@ -831,12 +831,12 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
           <div className="mb-8">
             <Breadcrumb
               items={[
-                { label: 'Tournois', href: '/admin/tournaments' },
+                { label: t.breadcrumbTournaments, href: '/admin/tournaments' },
                 {
-                  label: tournament?.name || 'Tournoi',
+                  label: tournament?.name || t.defaultTournamentName,
                   href: `/admin/tournament/${id}`,
                 },
-                { label: 'Matchs' },
+                { label: t.breadcrumbMatches },
               ]}
             />
             <button
@@ -857,13 +857,13 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                   d="M15 19l-7-7 7-7"
                 />
               </svg>
-              Retour au tournoi
+              {t.back}
             </button>
 
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-                  Matches du tournoi
+                  {t.heading}
                 </h1>
                 {tournament && (
                   <p className="text-neutral-400 text-sm mt-1">
@@ -875,7 +875,10 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                     )}
                     {total !== null && (
                       <span className="ml-2">
-                        • {total} match{total > 1 ? 'es' : ''}
+                        {format(
+                          total > 1 ? t.matchCount_other : t.matchCount_one,
+                          { count: total }
+                        )}
                       </span>
                     )}
                   </p>
@@ -891,7 +894,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                 {autoSchedRunning ? (
                   <>
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Planning en cours...
+                    {t.planningInProgress}
                   </>
                 ) : (
                   <>
@@ -908,7 +911,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                         d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
                       />
                     </svg>
-                    Auto-scheduler
+                    {t.autoScheduler}
                   </>
                 )}
               </button>
@@ -935,13 +938,13 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                     d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
                   />
                 </svg>
-                Import CSV
+                {t.importCsv}
               </button>
 
               <Link
                 href={`/admin/tournament/${id}/bulk-ops`}
                 className="px-4 py-2.5 rounded-xl text-sm font-medium transition-colors flex items-center gap-2 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700"
-                title="Décaler un round, réassigner des matchs entre phases"
+                title={t.bulkOpsTitle}
               >
                 <svg
                   className="w-4 h-4"
@@ -956,7 +959,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                     d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
                   />
                 </svg>
-                Opérations groupées
+                {t.bulkOps}
               </Link>
             </div>
           </div>
@@ -986,7 +989,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
             >
               <div className="min-w-[180px]">
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Phase (stage)
+                  {t.filterStage}
                 </label>
                 <select
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
@@ -996,13 +999,13 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                     setOffset(0);
                   }}
                 >
-                  <option value="">Toutes les phases</option>
+                  <option value="">{t.allStages}</option>
                   {stages
                     .slice()
                     .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0))
                     .map((s) => (
                       <option key={s.id} value={s.id}>
-                        {stageLabel(s)}
+                        {stageLabel(t, s)}
                       </option>
                     ))}
                 </select>
@@ -1010,7 +1013,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
 
               <div className="min-w-[140px]">
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Statut
+                  {t.filterStatus}
                 </label>
                 <select
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
@@ -1020,17 +1023,17 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                     setOffset(0);
                   }}
                 >
-                  <option value="">Tous les statuts</option>
-                  <option value="pending">A venir</option>
-                  <option value="ongoing">En cours</option>
-                  <option value="finished">Termine</option>
-                  <option value="cancelled">Annule</option>
+                  <option value="">{t.allStatuses}</option>
+                  <option value="pending">{t.statusPending}</option>
+                  <option value="ongoing">{t.statusOngoing}</option>
+                  <option value="finished">{t.statusFinished}</option>
+                  <option value="cancelled">{t.statusCancelled}</option>
                 </select>
               </div>
 
               <div className="w-24">
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Round
+                  {t.filterRound}
                 </label>
                 <input
                   type="number"
@@ -1046,7 +1049,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
 
               <div className="min-w-[140px]">
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Résultat
+                  {t.filterResult}
                 </label>
                 <select
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
@@ -1056,16 +1059,16 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                     setOffset(0);
                   }}
                 >
-                  <option value="">Tous</option>
-                  <option value="win">Avec vainqueur</option>
-                  <option value="no_result">Sans vainqueur</option>
-                  <option value="bye">BYE</option>
+                  <option value="">{t.resultAll}</option>
+                  <option value="win">{t.resultWin}</option>
+                  <option value="no_result">{t.resultNoResult}</option>
+                  <option value="bye">{t.resultBye}</option>
                 </select>
               </div>
 
               <div className="min-w-[140px]">
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Date (depuis)
+                  {t.filterDateFrom}
                 </label>
                 <input
                   type="date"
@@ -1080,7 +1083,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
 
               <div className="min-w-[140px]">
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Date (jusqu&apos;au)
+                  {t.filterDateTo}
                 </label>
                 <input
                   type="date"
@@ -1095,7 +1098,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
 
               <div className="flex-1 min-w-[200px]">
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Recherche
+                  {t.filterSearch}
                 </label>
                 <div className="relative">
                   <svg
@@ -1114,7 +1117,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                   <input
                     type="text"
                     className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                    placeholder="Equipe, ID..."
+                    placeholder={t.searchPlaceholder}
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                   />
@@ -1139,7 +1142,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                       d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
                     />
                   </svg>
-                  Filtrer
+                  {t.filter}
                 </button>
                 <button
                   type="button"
@@ -1155,7 +1158,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                   }}
                   className="px-4 py-2.5 rounded-xl bg-neutral-700 hover:bg-neutral-600 border border-neutral-600 text-sm font-medium transition-colors"
                 >
-                  Reset
+                  {t.reset}
                 </button>
               </div>
             </form>
@@ -1186,7 +1189,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                     d="M4 6h16M4 10h16M4 14h16M4 18h16"
                   />
                 </svg>
-                Liste
+                {t.viewList}
               </button>
               <button
                 type="button"
@@ -1210,7 +1213,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                     d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
                   />
                 </svg>
-                Calendrier
+                {t.viewCalendar}
               </button>
             </div>
 
@@ -1229,9 +1232,12 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                 </svg>
                 <div>
                   <span className="font-semibold text-orange-300">
-                    {conflicts.size} conflit{conflicts.size > 1 ? 's' : ''}{' '}
-                    horaire{conflicts.size > 1 ? 's' : ''} detecte
-                    {conflicts.size > 1 ? 's' : ''}
+                    {format(
+                      conflicts.size > 1
+                        ? t.conflictsSummary_other
+                        : t.conflictsSummary_one,
+                      { count: conflicts.size }
+                    )}
                   </span>
                   <ul className="mt-1 space-y-0.5">
                     {Array.from(conflicts.values()).map((c, i) => (
@@ -1239,10 +1245,13 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                         <span
                           className={`inline-block px-1.5 py-0.5 rounded text-[10px] mr-1 ${c.type === 'team' ? 'bg-orange-700/50' : 'bg-purple-700/50'}`}
                         >
-                          {c.type === 'team' ? 'Equipe' : 'Stream'}
+                          {c.type === 'team' ? t.conflictTeam : t.conflictStream}
                         </span>
                         <span className="font-medium">{c.label}</span> —{' '}
-                        {c.matchIds.length} matches vers {c.time}
+                        {format(t.conflictDetail, {
+                          count: c.matchIds.length,
+                          time: c.time,
+                        })}
                       </li>
                     ))}
                   </ul>
@@ -1255,9 +1264,12 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
           {selectedMatchIds.size > 0 && (
             <section className="bg-blue-900/30 border border-blue-500/40 rounded-2xl p-4 mb-6 flex flex-wrap items-center gap-3">
               <span className="text-sm font-medium">
-                {selectedMatchIds.size} match
-                {selectedMatchIds.size > 1 ? 'es' : ''} sélectionné
-                {selectedMatchIds.size > 1 ? 's' : ''}
+                {format(
+                  selectedMatchIds.size > 1
+                    ? t.selectedCount_other
+                    : t.selectedCount_one,
+                  { count: selectedMatchIds.size }
+                )}
               </span>
 
               <div className="flex-1" />
@@ -1269,14 +1281,14 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                     onClick={enterBulkScheduleMode}
                     className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-xs font-medium transition-colors"
                   >
-                    Planifier en masse
+                    {t.bulkScheduleBtn}
                   </button>
                   <button
                     type="button"
                     onClick={() => setBulkEditMode(true)}
                     className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-xs font-medium transition-colors"
                   >
-                    Editer en masse
+                    {t.bulkEditBtn}
                   </button>
                 </>
               )}
@@ -1287,7 +1299,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                 disabled={bulkDeleting}
                 className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-xs font-medium transition-colors disabled:opacity-50"
               >
-                {bulkDeleting ? 'En cours…' : 'Annuler en masse'}
+                {bulkDeleting ? t.inProgress : t.bulkCancelBtn}
               </button>
 
               <button
@@ -1296,7 +1308,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                 disabled={bulkDeleting}
                 className="px-3 py-1.5 rounded-lg bg-red-700 hover:bg-red-800 text-xs font-medium transition-colors disabled:opacity-50"
               >
-                {bulkDeleting ? 'En cours…' : 'Supprimer en masse'}
+                {bulkDeleting ? t.inProgress : t.bulkDeleteBtn}
               </button>
 
               <button
@@ -1309,7 +1321,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                 }}
                 className="px-3 py-1.5 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-xs font-medium transition-colors"
               >
-                Annuler la sélection
+                {t.cancelSelection}
               </button>
             </section>
           )}
@@ -1318,14 +1330,18 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
           {bulkScheduleMode && selectedMatchIds.size > 0 && (
             <section className="bg-neutral-800/50 backdrop-blur border border-blue-500/30 rounded-2xl p-5 mb-6">
               <h3 className="text-sm font-semibold mb-3">
-                Planification en masse ({selectedMatchIds.size} match
-                {selectedMatchIds.size > 1 ? 'es' : ''})
+                {format(
+                  selectedMatchIds.size > 1
+                    ? t.bulkScheduleTitle_other
+                    : t.bulkScheduleTitle_one,
+                  { count: selectedMatchIds.size }
+                )}
               </h3>
 
               <div className="flex items-end gap-4 mb-4 flex-wrap">
                 <div>
                   <label className="block text-xs text-neutral-400 mb-1">
-                    Appliquer la même date/heure à tous
+                    {t.applySameDateTime}
                   </label>
                   <input
                     type="datetime-local"
@@ -1334,7 +1350,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                   />
                 </div>
                 <div className="text-xs text-neutral-400 py-2">
-                  ou ajustez individuellement ci-dessous
+                  {t.orAdjustIndividually}
                 </div>
               </div>
 
@@ -1376,23 +1392,20 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                       : 'bg-blue-600 hover:bg-blue-700'
                   }`}
                 >
-                  {bulkScheduleSaving
-                    ? 'Sauvegarde…'
-                    : 'Sauvegarder les horaires'}
+                  {bulkScheduleSaving ? t.bulkScheduleSaving : t.bulkScheduleSave}
                 </button>
                 <button
                   type="button"
                   onClick={() => setBulkScheduleMode(false)}
                   className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm transition-colors"
                 >
-                  Fermer
+                  {t.close}
                 </button>
               </div>
 
               {!stageFilter && (
                 <p className="mt-2 text-xs text-amber-400">
-                  Filtrez par phase (stage) pour activer la planification en
-                  masse.
+                  {t.bulkScheduleHint}
                 </p>
               )}
             </section>
@@ -1402,14 +1415,18 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
           {bulkEditMode && selectedMatchIds.size > 0 && (
             <section className="bg-neutral-800/50 backdrop-blur border border-purple-500/30 rounded-2xl p-5 mb-6">
               <h3 className="text-sm font-semibold mb-3">
-                Edition en masse ({selectedMatchIds.size} match
-                {selectedMatchIds.size > 1 ? 'es' : ''})
+                {format(
+                  selectedMatchIds.size > 1
+                    ? t.bulkEditTitle_other
+                    : t.bulkEditTitle_one,
+                  { count: selectedMatchIds.size }
+                )}
               </h3>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                 <div>
                   <label className="block text-xs text-neutral-400 mb-1">
-                    Statut
+                    {t.filterStatus}
                   </label>
                   <select
                     className="w-full px-3 py-2 rounded-lg bg-neutral-900 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
@@ -1421,17 +1438,17 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                       }))
                     }
                   >
-                    <option value="">— Ne pas modifier —</option>
-                    <option value="pending">A venir</option>
-                    <option value="ongoing">En cours</option>
-                    <option value="finished">Termine</option>
-                    <option value="cancelled">Annule</option>
+                    <option value="">{t.dontModify}</option>
+                    <option value="pending">{t.statusPending}</option>
+                    <option value="ongoing">{t.statusOngoing}</option>
+                    <option value="finished">{t.statusFinished}</option>
+                    <option value="cancelled">{t.statusCancelled}</option>
                   </select>
                 </div>
 
                 <div>
                   <label className="block text-xs text-neutral-400 mb-1">
-                    Format (BO)
+                    {t.bulkFormatLabel}
                   </label>
                   <select
                     className="w-full px-3 py-2 rounded-lg bg-neutral-900 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
@@ -1445,7 +1462,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                       }))
                     }
                   >
-                    <option value="">— Ne pas modifier —</option>
+                    <option value="">{t.dontModify}</option>
                     <option value="1">BO1</option>
                     <option value="3">BO3</option>
                     <option value="5">BO5</option>
@@ -1455,12 +1472,12 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
 
                 <div>
                   <label className="block text-xs text-neutral-400 mb-1">
-                    Numero de round
+                    {t.bulkRoundLabel}
                   </label>
                   <input
                     type="number"
                     min={1}
-                    placeholder="— Ne pas modifier —"
+                    placeholder={t.dontModify}
                     className="w-full px-3 py-2 rounded-lg bg-neutral-900 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
                     value={bulkEditFields.round_number ?? ''}
                     onChange={(e) =>
@@ -1476,11 +1493,11 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
 
                 <div>
                   <label className="block text-xs text-neutral-400 mb-1">
-                    Notes
+                    {t.bulkNotesLabel}
                   </label>
                   <input
                     type="text"
-                    placeholder="— Ne pas modifier —"
+                    placeholder={t.dontModify}
                     className="w-full px-3 py-2 rounded-lg bg-neutral-900 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
                     value={bulkEditFields.notes ?? ''}
                     onChange={(e) =>
@@ -1504,9 +1521,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                       : 'bg-purple-600 hover:bg-purple-700'
                   }`}
                 >
-                  {bulkEditSaving
-                    ? 'Sauvegarde…'
-                    : 'Appliquer les modifications'}
+                  {bulkEditSaving ? t.bulkEditSaving : t.bulkEditSave}
                 </button>
                 <button
                   type="button"
@@ -1516,15 +1531,12 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                   }}
                   className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm transition-colors"
                 >
-                  Fermer
+                  {t.close}
                 </button>
               </div>
 
               {!stageFilter && (
-                <p className="mt-2 text-xs text-amber-400">
-                  Filtrez par phase (stage) pour activer l&apos;edition en
-                  masse.
-                </p>
+                <p className="mt-2 text-xs text-amber-400">{t.bulkEditHint}</p>
               )}
             </section>
           )}
@@ -1532,18 +1544,13 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
           {/* CSV import panel */}
           {csvImportMode && (
             <section className="bg-neutral-800/50 backdrop-blur border border-emerald-500/30 rounded-2xl p-5 mb-6">
-              <h3 className="text-sm font-semibold mb-3">
-                Import CSV de matchs
-              </h3>
+              <h3 className="text-sm font-semibold mb-3">{t.csvImportTitle}</h3>
               <p className="text-xs text-neutral-400 mb-3">
-                Format :{' '}
+                {t.csvFormatPrefix}
                 <code className="bg-neutral-900 px-1 rounded">
-                  team1, team2, round, date_heure, best_of
-                </code>{' '}
-                (seules les 2 premières colonnes sont obligatoires). Les noms
-                d&apos;équipes doivent correspondre aux noms ou abréviations
-                existantes. Séparateurs acceptés : virgule, point-virgule,
-                tabulation.
+                  {t.csvFormatCode}
+                </code>
+                {t.csvFormatSuffix}
               </p>
 
               <textarea
@@ -1562,7 +1569,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
               {csvPreview.length > 0 && (
                 <div className="mt-3 rounded-lg bg-neutral-900/50 border border-neutral-700 p-3">
                   <p className="text-xs text-neutral-400 mb-2">
-                    Apercu : {csvPreview.length} match(es) detecte(s)
+                    {format(t.csvPreviewCount, { count: csvPreview.length })}
                   </p>
                   <div className="max-h-40 overflow-y-auto space-y-1">
                     {csvPreview.map((row, i) => (
@@ -1602,8 +1609,8 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                   } disabled:opacity-50`}
                 >
                   {csvImporting
-                    ? 'Import en cours…'
-                    : `Importer ${csvPreview.length} match(es)`}
+                    ? t.csvImporting
+                    : format(t.csvImportBtn, { count: csvPreview.length })}
                 </button>
                 <button
                   type="button"
@@ -1614,7 +1621,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                   }}
                   className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm transition-colors"
                 >
-                  Fermer
+                  {t.close}
                 </button>
               </div>
             </section>
@@ -1633,8 +1640,12 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                       {dateLabel}
                     </h3>
                     <span className="text-xs text-neutral-400">
-                      {dayMatches.length} match
-                      {dayMatches.length > 1 ? 'es' : ''}
+                      {format(
+                        dayMatches.length > 1
+                          ? t.dayMatchCount_other
+                          : t.dayMatchCount_one,
+                        { count: dayMatches.length }
+                      )}
                     </span>
                   </div>
 
@@ -1668,7 +1679,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                           {/* Conflict icon */}
                           {hasConflict && (
                             <span
-                              title="Conflit horaire"
+                              title={t.conflictTitle}
                               className="text-orange-400 flex-shrink-0"
                             >
                               <svg
@@ -1707,14 +1718,14 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                             <span
                               className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColor(m.status)}`}
                             >
-                              {statusLabel(m.status)}
+                              {statusLabel(t, m.status)}
                             </span>
                           </div>
 
                           {/* Stage info */}
                           <div className="w-32 flex-shrink-0 text-right">
                             <div className="text-xs text-neutral-400 truncate">
-                              {stageLabel(m.stage)}
+                              {stageLabel(t, m.stage)}
                             </div>
                             <div className="text-[10px] text-neutral-500">
                               R{m.round_number ?? '?'}
@@ -1728,7 +1739,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                               href={`/admin/matches/${m.id}/edit`}
                               className="px-2.5 py-1 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-xs font-medium transition-colors"
                             >
-                              Editer
+                              {t.edit}
                             </Link>
                           </div>
                         </div>
@@ -1743,12 +1754,15 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                 <div className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden">
                   <div className="px-5 py-3 bg-neutral-900/50 border-b border-neutral-700/50">
                     <h3 className="text-sm font-semibold text-neutral-400">
-                      Non planifies
+                      {t.unscheduled}
                     </h3>
                     <span className="text-xs text-neutral-500">
-                      {calendarDays.unscheduled.length} match
-                      {calendarDays.unscheduled.length > 1 ? 'es' : ''} sans
-                      horaire
+                      {format(
+                        calendarDays.unscheduled.length > 1
+                          ? t.unscheduledCount_other
+                          : t.unscheduledCount_one,
+                        { count: calendarDays.unscheduled.length }
+                      )}
                     </span>
                   </div>
                   <div className="divide-y divide-neutral-700/30">
@@ -1772,11 +1786,11 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                         <span
                           className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColor(m.status)}`}
                         >
-                          {statusLabel(m.status)}
+                          {statusLabel(t, m.status)}
                         </span>
                         <div className="w-32 flex-shrink-0 text-right">
                           <div className="text-xs text-neutral-400 truncate">
-                            {stageLabel(m.stage)}
+                            {stageLabel(t, m.stage)}
                           </div>
                         </div>
                         <Link
@@ -1803,7 +1817,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
           )}
           {viewMode === 'calendar' && !loading && matches.length === 0 && (
             <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-20 text-center text-neutral-400 mb-6">
-              Aucun match trouve pour ces filtres.
+              {t.emptyMatches}
             </section>
           )}
 
@@ -1829,7 +1843,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                       d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M12 12h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                     />
                   </svg>
-                  Aucun match trouve pour ces filtres.
+                  {t.emptyMatches}
                 </div>
               ) : (
                 <div className="divide-y divide-neutral-700/50">
@@ -1845,7 +1859,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                       className="accent-blue-500"
                     />
                     <span className="text-xs text-neutral-400">
-                      Tout sélectionner
+                      {t.selectAll}
                     </span>
                   </div>
 
@@ -1888,10 +1902,12 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                         {/* Stage & Round info */}
                         <div className="w-40 flex-shrink-0">
                           <div className="font-medium text-sm">
-                            {stageLabel(m.stage)}
+                            {stageLabel(t, m.stage)}
                           </div>
                           <div className="text-xs text-neutral-400">
-                            Round {m.round_number ?? '—'}
+                            {format(t.roundLabel, {
+                              round: m.round_number ?? '—',
+                            })}
                             {m.best_of ? ` • BO${m.best_of}` : ''}
                           </div>
                           <div className="text-[10px] text-neutral-500 font-mono mt-1">
@@ -1920,7 +1936,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                                 m.status
                               )}`}
                             >
-                              {statusLabel(m.status)}
+                              {statusLabel(t, m.status)}
                             </span>
                           </div>
 
@@ -1939,7 +1955,9 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                           </div>
                           {m.completed_at && (
                             <div className="text-[10px] text-neutral-500">
-                              Termine {formatDateTime(m.completed_at)}
+                              {format(t.finishedAt, {
+                                date: formatDateTime(m.completed_at),
+                              })}
                             </div>
                           )}
                         </div>
@@ -1960,21 +1978,21 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                                   : 'bg-amber-600/20 text-amber-300 hover:bg-amber-600/40'
                               }`}
                             >
-                              Score
+                              {t.score}
                             </button>
                           )}
                           <Link
                             href={`/admin/matches/${m.id}/edit`}
                             className="px-3 py-1.5 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-xs font-medium transition-colors"
                           >
-                            Editer
+                            {t.edit}
                           </Link>
                           <Link
                             href={`/match/${m.id}`}
                             target="_blank"
                             className="px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-xs font-medium transition-colors"
                           >
-                            Voir
+                            {t.view}
                           </Link>
                         </div>
                       </div>
@@ -1983,7 +2001,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                       {quickScoreId === m.id && (
                         <div className="mt-3 flex items-center gap-3 pl-40">
                           <span className="text-xs text-neutral-400 w-20 text-right truncate">
-                            {m.team1?.short_name || m.team1?.name || 'Éq. 1'}
+                            {m.team1?.short_name || m.team1?.name || t.team1Fallback}
                           </span>
                           <input
                             type="number"
@@ -2002,7 +2020,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                             onChange={(e) => setQs2(e.target.value)}
                           />
                           <span className="text-xs text-neutral-400 w-20 truncate">
-                            {m.team2?.short_name || m.team2?.name || 'Éq. 2'}
+                            {m.team2?.short_name || m.team2?.name || t.team2Fallback}
                           </span>
                           <button
                             type="button"
@@ -2010,14 +2028,14 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                             onClick={() => handleQuickScore(m.id)}
                             className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            {qsSaving ? '...' : 'Valider'}
+                            {qsSaving ? t.validating : t.validate}
                           </button>
                           <button
                             type="button"
                             onClick={() => setQuickScoreId(null)}
                             className="px-2 py-1.5 rounded-lg text-neutral-500 hover:text-neutral-300 text-xs transition-colors"
                           >
-                            Annuler
+                            {t.cancel}
                           </button>
                         </div>
                       )}
@@ -2050,12 +2068,12 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                     d="M15 19l-7-7 7-7"
                   />
                 </svg>
-                Precedent
+                {t.previous}
               </button>
 
               <span className="text-neutral-400 text-sm">
                 {offset + 1} – {offset + matches.length}
-                {total ? ` sur ${total}` : ''}
+                {total ? format(t.paginationTotal, { total }) : ''}
               </span>
 
               <button
@@ -2064,7 +2082,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                 onClick={() => setOffset(offset + limit)}
                 className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
-                Suivant
+                {t.next}
                 <svg
                   className="w-4 h-4"
                   fill="none"
@@ -2088,19 +2106,29 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
           variant="danger"
           title={
             pendingBulkDeleteHard
-              ? `Supprimer définitivement ${selectedMatchIds.size} match${selectedMatchIds.size > 1 ? 'es' : ''} ?`
-              : `Annuler ${selectedMatchIds.size} match${selectedMatchIds.size > 1 ? 'es' : ''} ?`
+              ? format(
+                  selectedMatchIds.size > 1
+                    ? t.confirmHardDeleteTitle_other
+                    : t.confirmHardDeleteTitle_one,
+                  { count: selectedMatchIds.size }
+                )
+              : format(
+                  selectedMatchIds.size > 1
+                    ? t.confirmCancelTitle_other
+                    : t.confirmCancelTitle_one,
+                  { count: selectedMatchIds.size }
+                )
           }
           subtitle={
-            pendingBulkDeleteHard
-              ? 'Cette action est irréversible. Les matches seront définitivement supprimés.'
-              : undefined
+            pendingBulkDeleteHard ? t.confirmHardDeleteSubtitle : undefined
           }
           confirmLabel={
-            pendingBulkDeleteHard ? 'Supprimer' : 'Annuler les matches'
+            pendingBulkDeleteHard ? t.confirmDeleteLabel : t.confirmCancelLabel
           }
           confirmingLabel={
-            pendingBulkDeleteHard ? 'Suppression...' : 'Annulation...'
+            pendingBulkDeleteHard
+              ? t.confirmDeletingLabel
+              : t.confirmCancellingLabel
           }
           loading={bulkDeleting}
           onConfirm={async () => {

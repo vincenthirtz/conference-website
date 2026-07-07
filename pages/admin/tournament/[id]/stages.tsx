@@ -11,6 +11,7 @@ import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import Breadcrumb from '@/components/admin/Breadcrumb';
 import Modal from '@/components/admin/Modal';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import {
   TOURNAMENT_TEMPLATES,
   type TournamentTemplate,
@@ -29,20 +30,22 @@ type MatchesApiResponse = {
 
 export const getServerSideProps = withStaffPage('manager');
 
-function typeLabel(t: StageType | null) {
-  switch (t) {
+type Dict = ReturnType<typeof useAdminT<'adminTournamentStagesList'>>;
+
+function typeLabel(t: Dict, type: StageType | null) {
+  switch (type) {
     case 'group':
-      return 'Poule';
+      return t.typeGroup;
     case 'bracket':
-      return 'Bracket';
+      return t.typeBracket;
     case 'swiss':
-      return 'Swiss';
+      return t.typeSwiss;
     case 'round_robin':
-      return 'Round robin';
+      return t.typeRoundRobin;
     case 'showmatch':
-      return 'Showmatch';
+      return t.typeShowmatch;
     default:
-      return 'Autre';
+      return t.typeOther;
   }
 }
 
@@ -52,11 +55,14 @@ function StagesPage(_: StaffProps) {
   const tournamentId = Array.isArray(id) ? id[0] : id;
   const { mutate: mutateIdempotent } = useIdempotentMutation();
   const { adminFetch, adminFetchJson } = useAdminFetch();
+  const t = useAdminT('adminTournamentStagesList');
 
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [stages, setStages] = useState<StageSummary[]>([]);
-  const [tournamentName, setTournamentName] = useState<string>('Tournoi');
+  const [tournamentName, setTournamentName] = useState<string>(
+    t.defaultTournamentName
+  );
   const [reorderMode, setReorderMode] = useState(false);
   const [reordering, setReordering] = useState(false);
   const [orderChanged, setOrderChanged] = useState(false);
@@ -94,11 +100,13 @@ function StagesPage(_: StaffProps) {
       if (tournamentRes.ok) {
         const tournamentJson = await tournamentRes.json();
         setTournamentName(
-          tournamentJson.tournament?.name || tournamentId || 'Tournoi'
+          tournamentJson.tournament?.name ||
+            tournamentId ||
+            t.defaultTournamentName
         );
       }
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message || 'Erreur de chargement');
+      setErrorMsg((err as Error)?.message || t.errorLoad);
     } finally {
       setLoading(false);
     }
@@ -148,7 +156,7 @@ function StagesPage(_: StaffProps) {
       setOrderChanged(false);
       setReorderMode(false);
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message || "Erreur lors de l'enregistrement");
+      setErrorMsg((err as Error)?.message || t.errorSaveOrder);
     } finally {
       setReordering(false);
     }
@@ -185,16 +193,17 @@ function StagesPage(_: StaffProps) {
       );
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || "Impossible d'appliquer le template");
+        throw new Error(json.error || t.errorApplyTemplate);
       }
       setShowTemplateModal(false);
       setSelectedTemplate(null);
-      addToast(`Template « ${selectedTemplate.name} » ajouté`, 'success');
+      addToast(
+        format(t.toastTemplateAdded, { name: selectedTemplate.name }),
+        'success'
+      );
       fetchStages();
     } catch (err: unknown) {
-      setErrorMsg(
-        (err as Error)?.message || "Erreur lors de l'application du template"
-      );
+      setErrorMsg((err as Error)?.message || t.errorApplyTemplateGeneric);
     } finally {
       setApplyingTemplate(false);
     }
@@ -220,27 +229,27 @@ function StagesPage(_: StaffProps) {
   return (
     <>
       <Head>
-        <title>Admin · Phases du tournoi</title>
+        <title>{t.pageTitle}</title>
       </Head>
       <div className="min-h-screen bg-neutral-950 text-white pt-24">
         <div className="max-w-6xl mx-auto px-6 py-10">
           <Breadcrumb
             items={[
-              { label: 'Tournois', href: '/admin/tournaments' },
+              { label: t.breadcrumbTournaments, href: '/admin/tournaments' },
               {
                 label: tournamentName,
                 href: `/admin/tournament/${tournamentId}`,
               },
-              { label: 'Phases' },
+              { label: t.breadcrumbStages },
             ]}
           />
           <div className="flex items-center justify-between gap-4 mb-6">
             <div>
               <p className="text-xs uppercase tracking-[0.18em] text-purple-200/80">
-                Admin · Phases
+                {t.eyebrow}
               </p>
               <h1 className="text-2xl font-semibold">
-                {tournamentName} · Phases
+                {format(t.titleSuffix, { name: tournamentName })}
               </h1>
             </div>
             <div className="flex gap-2">
@@ -248,7 +257,7 @@ function StagesPage(_: StaffProps) {
                 href={`/admin/tournament/${tournamentId}/matches`}
                 className="px-3 py-1.5 rounded-lg bg-white/10 border border-white/15 text-sm hover:bg-white/15"
               >
-                Voir les matchs
+                {t.viewMatches}
               </Link>
               {stages.length > 1 && (
                 <button
@@ -268,7 +277,7 @@ function StagesPage(_: StaffProps) {
                       : 'bg-white/10 border-white/15 hover:bg-white/15'
                   }`}
                 >
-                  {reorderMode ? 'Annuler' : 'Réorganiser'}
+                  {reorderMode ? t.cancel : t.reorder}
                 </button>
               )}
               {reorderMode && orderChanged && (
@@ -277,27 +286,27 @@ function StagesPage(_: StaffProps) {
                   disabled={reordering}
                   className="px-3 py-1.5 rounded-lg bg-purple-600 border border-purple-400/40 text-sm hover:bg-purple-500 disabled:opacity-50"
                 >
-                  {reordering ? 'Enregistrement…' : "Enregistrer l'ordre"}
+                  {reordering ? t.saving : t.saveOrder}
                 </button>
               )}
               <button
                 onClick={openTemplateModal}
                 className="px-3 py-1.5 rounded-lg bg-blue-600/80 border border-blue-400/40 text-sm hover:bg-blue-500"
               >
-                + Bloc template
+                {t.addTemplateBlock}
               </button>
               <button
                 onClick={() => fetchStages()}
                 className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-sm hover:bg-white/10"
               >
-                Rafraîchir
+                {t.refresh}
               </button>
             </div>
           </div>
 
           {loading && (
             <div className="p-4 rounded-lg bg-white/5 border border-white/10">
-              Chargement…
+              {t.loading}
             </div>
           )}
 
@@ -309,7 +318,7 @@ function StagesPage(_: StaffProps) {
 
           {!loading && !errorMsg && stages.length === 0 && (
             <div className="p-4 rounded-lg bg-white/5 border border-white/10">
-              Aucune phase pour ce tournoi.
+              {t.empty}
             </div>
           )}
 
@@ -336,7 +345,7 @@ function StagesPage(_: StaffProps) {
                             onClick={() => moveStage(idx, 'up')}
                             disabled={idx === 0}
                             className="px-2 py-0.5 rounded bg-white/10 border border-white/15 text-xs hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed"
-                            title="Monter"
+                            title={t.moveUp}
                           >
                             &#9650;
                           </button>
@@ -344,7 +353,7 @@ function StagesPage(_: StaffProps) {
                             onClick={() => moveStage(idx, 'down')}
                             disabled={idx === stages.length - 1}
                             className="px-2 py-0.5 rounded bg-white/10 border border-white/15 text-xs hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed"
-                            title="Descendre"
+                            title={t.moveDown}
                           >
                             &#9660;
                           </button>
@@ -353,7 +362,7 @@ function StagesPage(_: StaffProps) {
                       <div>
                         <p className="text-sm font-semibold">{stage.name}</p>
                         <p className="text-xs text-gray-400">
-                          {typeLabel(stage.stage_type)} · Ordre{' '}
+                          {typeLabel(t, stage.stage_type)} · {t.orderPrefix}
                           {stage.order_index ?? '—'}
                         </p>
                       </div>
@@ -362,7 +371,7 @@ function StagesPage(_: StaffProps) {
                       href={`/admin/stages/${stage.id}`}
                       className="text-sm px-3 py-1 rounded-lg bg-white/10 border border-white/15 hover:bg-white/15"
                     >
-                      Ouvrir
+                      {t.open}
                     </Link>
                   </div>
                   <div className="flex flex-wrap items-center gap-2 text-xs text-gray-300">
@@ -373,7 +382,7 @@ function StagesPage(_: StaffProps) {
                           : 'border-gray-500/40 text-gray-300'
                       }`}
                     >
-                      {stage.is_active ? 'Active' : 'Inactive'}
+                      {stage.is_active ? t.active : t.inactive}
                     </span>
                     <span
                       className={`px-2 py-0.5 rounded-full border ${
@@ -382,16 +391,18 @@ function StagesPage(_: StaffProps) {
                           : 'border-gray-500/40 text-gray-300'
                       }`}
                     >
-                      {stage.is_public ? 'Publique' : 'Privée'}
+                      {stage.is_public ? t.public : t.private}
                     </span>
                     {stage.start_date && (
                       <span className="px-2 py-0.5 rounded-full border border-white/10 text-gray-200">
-                        Débute : {new Date(stage.start_date).toLocaleString()}
+                        {t.startsAt}
+                        {new Date(stage.start_date).toLocaleString()}
                       </span>
                     )}
                     {stage.end_date && (
                       <span className="px-2 py-0.5 rounded-full border border-white/10 text-gray-200">
-                        Fin : {new Date(stage.end_date).toLocaleString()}
+                        {t.endsAt}
+                        {new Date(stage.end_date).toLocaleString()}
                       </span>
                     )}
                   </div>
@@ -409,8 +420,8 @@ function StagesPage(_: StaffProps) {
           setShowTemplateModal(false);
           setSelectedTemplate(null);
         }}
-        title="Ajouter un bloc template"
-        subtitle="Les phases du template seront ajoutées après les phases existantes."
+        title={t.modalTitle}
+        subtitle={t.modalSubtitle}
         size="lg"
         footer={
           <>
@@ -421,14 +432,14 @@ function StagesPage(_: StaffProps) {
               }}
               className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
             >
-              Annuler
+              {t.cancel}
             </button>
             <button
               onClick={handleAppendTemplate}
               disabled={!selectedTemplate || applyingTemplate}
               className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {applyingTemplate ? 'Application...' : 'Ajouter les phases'}
+              {applyingTemplate ? t.applying : t.addStages}
             </button>
           </>
         }

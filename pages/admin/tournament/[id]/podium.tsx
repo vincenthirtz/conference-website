@@ -15,6 +15,7 @@ import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { StaffProps } from '@/types/admin';
 
 type Candidate = {
@@ -63,6 +64,7 @@ function PodiumAdminPage(_: StaffProps) {
   const { adminFetchJson } = useAdminFetch();
   const { mutateJson } = useIdempotentMutation();
   const { confirm, dialog } = useConfirmDialog();
+  const t = useAdminT('adminTournamentPodium');
 
   const [data, setData] = useState<PreviewResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -84,11 +86,11 @@ function PodiumAdminPage(_: StaffProps) {
       setRows(seed);
     } catch (err) {
       const e = err as AdminFetchError;
-      setError(e.message || 'Erreur de chargement');
+      setError(e.message || t.errorLoad);
     } finally {
       setLoading(false);
     }
-  }, [adminFetchJson, tournamentId]);
+  }, [adminFetchJson, tournamentId, t]);
 
   useEffect(() => {
     fetchPreview();
@@ -122,14 +124,14 @@ function PodiumAdminPage(_: StaffProps) {
       .filter((r) => Number.isInteger(r.rank) && r.rank >= 1);
 
     if (rankings.length === 0) {
-      addToast('Aucun rang renseigné.', 'error');
+      addToast(t.errorNoRank, 'error');
       return;
     }
 
     const seenRanks = new Set<number>();
     for (const r of rankings) {
       if (seenRanks.has(r.rank)) {
-        addToast(`Rang ${r.rank} en double.`, 'error');
+        addToast(format(t.errorRankDuplicate, { rank: r.rank }), 'error');
         return;
       }
       seenRanks.add(r.rank);
@@ -137,20 +139,17 @@ function PodiumAdminPage(_: StaffProps) {
     const sorted = [...seenRanks].sort((a, b) => a - b);
     for (let i = 0; i < sorted.length; i++) {
       if (sorted[i] !== i + 1) {
-        addToast(
-          `Les rangs doivent être consécutifs 1..N (manque ${i + 1}).`,
-          'error'
-        );
+        addToast(format(t.errorRanksConsecutive, { n: i + 1 }), 'error');
         return;
       }
     }
 
     const ok = await confirm({
-      title: forceMode ? 'Écraser le podium ?' : 'Finaliser le tournoi ?',
+      title: forceMode ? t.confirmOverwriteTitle : t.confirmFinalizeTitle,
       subtitle: forceMode
-        ? 'Cela va remplacer le podium déjà figé. Cette action est tracée dans les logs staff.'
-        : 'Cela va figer le podium et passer le tournoi en "Terminé". L\'opération est idempotente mais visible publiquement.',
-      confirmLabel: forceMode ? 'Écraser' : 'Finaliser',
+        ? t.confirmOverwriteSubtitle
+        : t.confirmFinalizeSubtitle,
+      confirmLabel: forceMode ? t.confirmOverwriteLabel : t.confirmFinalizeLabel,
       variant: forceMode ? 'danger' : 'warning',
     });
     if (!ok) return;
@@ -161,10 +160,7 @@ function PodiumAdminPage(_: StaffProps) {
         method: 'POST',
         body: JSON.stringify({ rankings, force: forceMode }),
       });
-      addToast(
-        forceMode ? 'Podium écrasé et regelé.' : 'Tournoi finalisé.',
-        'success'
-      );
+      addToast(forceMode ? t.toastOverwritten : t.toastFinalized, 'success');
       setForceMode(false);
       await fetchPreview();
     } catch (err) {
@@ -173,7 +169,7 @@ function PodiumAdminPage(_: StaffProps) {
         typeof e.payload === 'object' && e.payload && 'error' in e.payload
           ? String((e.payload as { error: string }).error)
           : null;
-      addToast(payloadError || e.message || 'Échec', 'error');
+      addToast(payloadError || e.message || t.errorGeneric, 'error');
     } finally {
       setSubmitting(false);
     }
@@ -203,7 +199,9 @@ function PodiumAdminPage(_: StaffProps) {
   return (
     <>
       <Head>
-        <title>Admin – Podium {data?.tournament.name ?? ''}</title>
+        <title>
+          {format(t.pageTitle, { name: data?.tournament.name ?? '' })}
+        </title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
@@ -226,19 +224,16 @@ function PodiumAdminPage(_: StaffProps) {
                 d="M15 19l-7-7 7-7"
               />
             </svg>
-            Retour au tournoi
+            {t.backToTournament}
           </button>
 
           <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">
-                Podium &amp; clôture
-              </h1>
+              <h1 className="text-3xl font-bold tracking-tight">{t.heading}</h1>
               <p className="text-sm text-neutral-400 mt-1">
-                Fige le classement final et passe le tournoi en{' '}
-                <span className="text-white">Terminé</span>. Les rangs doivent
-                être consécutifs à partir de 1 (pas de trous, pas
-                d&apos;ex-aequo en V1).
+                {t.introBefore}
+                <span className="text-white">{t.introStatusDone}</span>
+                {t.introAfter}
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -248,21 +243,21 @@ function PodiumAdminPage(_: StaffProps) {
                 rel="noopener"
                 className="px-4 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors"
               >
-                Aperçu public ↗
+                {t.publicPreview}
               </Link>
               <button
                 type="button"
                 onClick={fetchPreview}
                 className="px-4 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors"
               >
-                Rafraîchir
+                {t.refresh}
               </button>
             </div>
           </div>
 
           {loading && (
             <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 px-4 py-8 text-center text-sm text-neutral-400">
-              Chargement…
+              {t.loading}
             </div>
           )}
 
@@ -275,10 +270,10 @@ function PodiumAdminPage(_: StaffProps) {
           {!loading && data && (
             <>
               <div className="mb-6 rounded-xl border border-neutral-800 bg-neutral-900/60 px-4 py-3 flex flex-wrap items-center gap-3 text-sm">
-                <span className="text-neutral-400">Statut du tournoi :</span>
+                <span className="text-neutral-400">{t.tournamentStatus}</span>
                 <StatusPill status={tournamentStatus} />
                 <span className="text-neutral-500">·</span>
-                <span className="text-neutral-400">Dernière phase :</span>
+                <span className="text-neutral-400">{t.lastStage}</span>
                 <span className="text-white">
                   {data.last_stage_type ?? '—'}
                 </span>
@@ -299,7 +294,7 @@ function PodiumAdminPage(_: StaffProps) {
                           d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
                         />
                       </svg>
-                      Podium gelé
+                      {t.podiumFrozen}
                     </span>
                   </>
                 )}
@@ -307,39 +302,38 @@ function PodiumAdminPage(_: StaffProps) {
 
               {isFinalized && !forceMode && (
                 <div className="mb-6 rounded-xl border border-amber-500/40 bg-amber-900/20 px-4 py-3 text-sm">
-                  Le podium est figé. Pour le modifier, active{' '}
+                  {t.frozenNoticeBefore}
                   <button
                     type="button"
                     onClick={() => setForceMode(true)}
                     className="underline font-medium hover:text-white"
                   >
-                    Mode écrasement (force)
+                    {t.forceMode}
                   </button>
-                  . L&apos;action sera tracée dans staff_logs.
+                  {t.frozenNoticeAfter}
                 </div>
               )}
 
               {forceMode && (
                 <div className="mb-6 rounded-xl border border-red-500/50 bg-red-900/30 px-4 py-3 text-sm flex items-center justify-between">
-                  <span>
-                    Mode écrasement activé. Les anciens rangs seront remplacés.
-                  </span>
+                  <span>{t.forceModeBanner}</span>
                   <button
                     type="button"
                     onClick={() => setForceMode(false)}
                     className="text-xs underline hover:text-white"
                   >
-                    Annuler
+                    {t.cancel}
                   </button>
                 </div>
               )}
 
               {tournamentStatus !== 'running' && !isFinalized && (
                 <div className="mb-6 rounded-xl border border-red-500/40 bg-red-900/20 px-4 py-3 text-sm">
-                  Le tournoi n&apos;est pas en cours (statut{' '}
-                  <span className="font-mono">{tournamentStatus}</span>). Passe
-                  le en <span className="font-mono">running</span> depuis la
-                  page d&apos;édition avant de finaliser.
+                  {t.notRunningBefore}
+                  <span className="font-mono">{tournamentStatus}</span>
+                  {t.notRunningMiddle}
+                  <span className="font-mono">running</span>
+                  {t.notRunningAfter}
                 </div>
               )}
 
@@ -349,17 +343,17 @@ function PodiumAdminPage(_: StaffProps) {
                   onClick={autofillFromProposed}
                   className="px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-xs font-medium"
                 >
-                  Pré-remplir depuis la proposition
+                  {t.autofillFromProposed}
                 </button>
                 <button
                   type="button"
                   onClick={clearRanks}
                   className="px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-xs font-medium"
                 >
-                  Vider les rangs
+                  {t.clearRanks}
                 </button>
                 <span className="ml-auto text-xs text-neutral-500">
-                  {rows.length} équipe(s)
+                  {format(t.teamCount, { count: rows.length })}
                 </span>
               </div>
 
@@ -367,11 +361,11 @@ function PodiumAdminPage(_: StaffProps) {
                 <table className="w-full text-sm">
                   <thead className="bg-neutral-900/80 text-xs uppercase text-neutral-400">
                     <tr>
-                      <th className="px-3 py-2 text-left w-16">Rang</th>
-                      <th className="px-3 py-2 text-left">Équipe</th>
-                      <th className="px-3 py-2 text-left">Source</th>
-                      <th className="px-3 py-2 text-left">Prix</th>
-                      <th className="px-3 py-2 text-left">Notes</th>
+                      <th className="px-3 py-2 text-left w-16">{t.colRank}</th>
+                      <th className="px-3 py-2 text-left">{t.colTeam}</th>
+                      <th className="px-3 py-2 text-left">{t.colSource}</th>
+                      <th className="px-3 py-2 text-left">{t.colPrize}</th>
+                      <th className="px-3 py-2 text-left">{t.colNotes}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -394,16 +388,16 @@ function PodiumAdminPage(_: StaffProps) {
                         <td className="px-3 py-2 font-medium">{r.team_name}</td>
                         <td className="px-3 py-2 text-xs text-neutral-400">
                           {r.source === 'bracket_final'
-                            ? 'Bracket – finale'
+                            ? t.sourceBracketFinal
                             : r.source === 'bracket_semi'
-                              ? 'Bracket – ½'
+                              ? t.sourceBracketSemi
                               : '—'}
                         </td>
                         <td className="px-3 py-2">
                           <input
                             type="text"
                             value={r.prize}
-                            placeholder="ex: 1500€"
+                            placeholder={t.prizePlaceholder}
                             onChange={(e) =>
                               updateRow(r.team_id, { prize: e.target.value })
                             }
@@ -429,7 +423,7 @@ function PodiumAdminPage(_: StaffProps) {
 
               {ranksPreview.length > 0 && (
                 <div className="mt-4 text-xs text-neutral-500">
-                  Aperçu :{' '}
+                  {t.previewLabel}
                   {ranksPreview
                     .map((p) => `#${p.rank} ${p.team}`)
                     .join(' · ')}
@@ -444,10 +438,10 @@ function PodiumAdminPage(_: StaffProps) {
                   className="px-5 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 disabled:opacity-40 disabled:cursor-not-allowed text-sm font-medium transition-colors"
                 >
                   {submitting
-                    ? 'Finalisation…'
+                    ? t.submitting
                     : forceMode
-                      ? 'Écraser & regeler'
-                      : 'Finaliser le tournoi'}
+                      ? t.overwriteRefreeze
+                      : t.finalizeTournament}
                 </button>
               </div>
             </>
@@ -489,6 +483,7 @@ function seedRowsFrom(preview: PreviewResponse): RowDraft[] {
 }
 
 function StatusPill({ status }: { status: string }) {
+  const t = useAdminT('adminTournamentPodium');
   const styles: Record<string, string> = {
     draft: 'bg-neutral-700/40 text-neutral-300 border-neutral-600',
     published: 'bg-blue-700/30 text-blue-300 border-blue-500/40',
@@ -498,12 +493,12 @@ function StatusPill({ status }: { status: string }) {
     cancelled: 'bg-red-700/30 text-red-300 border-red-500/40',
   };
   const labels: Record<string, string> = {
-    draft: 'Brouillon',
-    published: 'Publié',
-    running: 'En cours',
-    completed: 'Terminé',
-    archived: 'Archivé',
-    cancelled: 'Annulé',
+    draft: t.statusDraft,
+    published: t.statusPublished,
+    running: t.statusRunning,
+    completed: t.statusCompleted,
+    archived: t.statusArchived,
+    cancelled: t.statusCancelled,
   };
   return (
     <span

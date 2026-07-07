@@ -16,6 +16,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useAdminT } from '@/lib/i18n/useAdminT';
 import type { StaffProps } from '@/types/admin';
 import type {
   TournamentAnalytics,
@@ -45,6 +46,7 @@ function AdminTournamentAnalyticsPage(_props: StaffProps) {
   const router = useRouter();
   const { adminFetchJson } = useAdminFetch();
   const { id } = router.query;
+  const t = useAdminT('adminTournamentAnalytics');
 
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -60,7 +62,7 @@ function AdminTournamentAnalyticsPage(_props: StaffProps) {
       );
       setData(json);
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
+      setErrorMsg((err as Error)?.message ?? t.errorUnexpected);
     } finally {
       setLoading(false);
     }
@@ -84,7 +86,7 @@ function AdminTournamentAnalyticsPage(_props: StaffProps) {
   return (
     <>
       <Head>
-        <title>Admin – Analytics du tournoi</title>
+        <title>{t.pageTitle}</title>
       </Head>
 
       <div className="min-h-screen bg-neutral-900 text-white p-6 pt-20">
@@ -96,12 +98,12 @@ function AdminTournamentAnalyticsPage(_props: StaffProps) {
               onClick={() => router.push(backUrl)}
               className="mb-2 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white"
             >
-              ← Retour au tableau de bord
+              {t.back}
             </button>
-            <h1 className="text-3xl font-bold">Analytics du tournoi</h1>
+            <h1 className="text-3xl font-bold">{t.heading}</h1>
             {data?.tournament && (
               <p className="text-neutral-400 text-sm mt-1">
-                Tournoi :{' '}
+                {t.tournamentLabel}
                 <span className="font-semibold">{data.tournament.name}</span>
                 {data.tournament.slug && (
                   <>
@@ -121,7 +123,7 @@ function AdminTournamentAnalyticsPage(_props: StaffProps) {
             disabled={loading}
             className="px-4 py-2 rounded bg-neutral-700 hover:bg-neutral-600 text-sm font-semibold disabled:opacity-50"
           >
-            {loading ? 'Chargement...' : 'Actualiser'}
+            {loading ? t.loading : t.refresh}
           </button>
         </div>
 
@@ -132,14 +134,12 @@ function AdminTournamentAnalyticsPage(_props: StaffProps) {
         )}
 
         {loading && !data && (
-          <div className="text-neutral-400 text-sm">
-            Chargement des analytics...
-          </div>
+          <div className="text-neutral-400 text-sm">{t.loadingAnalytics}</div>
         )}
 
         {analytics && isEmpty && (
           <div className="rounded-xl border border-neutral-700 bg-neutral-800 px-4 py-10 text-center text-sm text-neutral-400">
-            Aucune donnee analytique pour ce tournoi (aucun match joue).
+            {t.empty}
           </div>
         )}
 
@@ -148,32 +148,32 @@ function AdminTournamentAnalyticsPage(_props: StaffProps) {
             {/* Resume */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
               <SummaryCard
-                label="Matchs joués"
+                label={t.kpiMatchesPlayed}
                 value={`${analytics.summary.finishedMatches}/${analytics.summary.totalMatches}`}
                 color="emerald"
               />
               <SummaryCard
-                label="Games jouées"
+                label={t.kpiGamesPlayed}
                 value={String(analytics.summary.totalGames)}
                 color="purple"
               />
               <SummaryCard
-                label="Durée moy. / game"
+                label={t.kpiAvgDuration}
                 value={fmtMin(analytics.summary.avgGameDurationMin)}
                 color="blue"
               />
               <SummaryCard
-                label="% Overtime"
+                label={t.kpiOvertime}
                 value={pct(analytics.summary.overtimeRate)}
                 color="amber"
               />
               <SummaryCard
-                label="% Games décisifs"
+                label={t.kpiDecisiveGames}
                 value={pct(analytics.summary.tiebreakerGameRate)}
                 color="neutral"
               />
               <SummaryCard
-                label="Matchs total"
+                label={t.kpiTotalMatches}
                 value={String(analytics.summary.totalMatches)}
                 color="neutral"
               />
@@ -272,45 +272,46 @@ function TableShell({
 }
 
 function TeamsTable({ teams }: { teams: TournamentAnalyticsTeam[] }) {
+  const t = useAdminT('adminTournamentAnalytics');
   return (
     <TableShell
-      title="Équipes"
-      subtitle="Classement fourni par l'API"
-      emptyLabel="Aucune statistique d'équipe."
+      title={t.teamsTitle}
+      subtitle={t.teamsSubtitle}
+      emptyLabel={t.teamsEmpty}
       isEmpty={teams.length === 0}
     >
       <table className="w-full text-sm">
         <thead className="bg-neutral-750 text-neutral-300">
           <tr>
             <th className="px-4 py-2 text-left">#</th>
-            <th className="px-4 py-2 text-left">Équipe</th>
-            <th className="px-4 py-2 text-center">Joués</th>
-            <th className="px-4 py-2 text-center">V</th>
-            <th className="px-4 py-2 text-center">D</th>
-            <th className="px-4 py-2 text-center">Winrate</th>
-            <th className="px-4 py-2 text-center">Maps</th>
+            <th className="px-4 py-2 text-left">{t.colTeam}</th>
+            <th className="px-4 py-2 text-center">{t.colPlayed}</th>
+            <th className="px-4 py-2 text-center">{t.colWins}</th>
+            <th className="px-4 py-2 text-center">{t.colLosses}</th>
+            <th className="px-4 py-2 text-center">{t.colWinrate}</th>
+            <th className="px-4 py-2 text-center">{t.colMaps}</th>
           </tr>
         </thead>
         <tbody>
-          {teams.map((t, idx) => {
-            const diff = t.mapWins - t.mapLosses;
+          {teams.map((team, idx) => {
+            const diff = team.mapWins - team.mapLosses;
             return (
-              <tr key={t.teamId} className="border-t border-neutral-700">
+              <tr key={team.teamId} className="border-t border-neutral-700">
                 <td className="px-4 py-2 text-neutral-400 font-mono">
                   {idx + 1}
                 </td>
-                <td className="px-4 py-2 font-medium">{t.name}</td>
+                <td className="px-4 py-2 font-medium">{team.name}</td>
                 <td className="px-4 py-2 text-center text-neutral-300">
-                  {t.played}
+                  {team.played}
                 </td>
                 <td className="px-4 py-2 text-center text-emerald-400 font-semibold">
-                  {t.wins}
+                  {team.wins}
                 </td>
                 <td className="px-4 py-2 text-center text-red-400 font-semibold">
-                  {t.losses}
+                  {team.losses}
                 </td>
                 <td className="px-4 py-2 text-center">
-                  <WinratePill fraction={t.winRate} />
+                  <WinratePill fraction={team.winRate} />
                 </td>
                 <td className="px-4 py-2 text-center text-xs">
                   <span
@@ -322,7 +323,7 @@ function TeamsTable({ teams }: { teams: TournamentAnalyticsTeam[] }) {
                           : 'text-neutral-300'
                     }
                   >
-                    {t.mapWins}-{t.mapLosses} ({diff > 0 ? '+' : ''}
+                    {team.mapWins}-{team.mapLosses} ({diff > 0 ? '+' : ''}
                     {diff})
                   </span>
                 </td>
@@ -336,22 +337,23 @@ function TeamsTable({ teams }: { teams: TournamentAnalyticsTeam[] }) {
 }
 
 function MapsTable({ maps }: { maps: TournamentAnalyticsMap[] }) {
+  const t = useAdminT('adminTournamentAnalytics');
   return (
     <TableShell
-      title="Maps"
-      subtitle="Picks / bans / parties jouées"
-      emptyLabel="Aucune statistique de map."
+      title={t.mapsTitle}
+      subtitle={t.mapsSubtitle}
+      emptyLabel={t.mapsEmpty}
       isEmpty={maps.length === 0}
     >
       <table className="w-full text-sm">
         <thead className="bg-neutral-750 text-neutral-300">
           <tr>
-            <th className="px-4 py-2 text-left">Map</th>
-            <th className="px-4 py-2 text-center">Picks</th>
-            <th className="px-4 py-2 text-center">Bans</th>
-            <th className="px-4 py-2 text-center">Games</th>
-            <th className="px-4 py-2 text-center">Durée moy.</th>
-            <th className="px-4 py-2 text-center">% OT</th>
+            <th className="px-4 py-2 text-left">{t.colMap}</th>
+            <th className="px-4 py-2 text-center">{t.colPicks}</th>
+            <th className="px-4 py-2 text-center">{t.colBans}</th>
+            <th className="px-4 py-2 text-center">{t.colGames}</th>
+            <th className="px-4 py-2 text-center">{t.colAvgDuration}</th>
+            <th className="px-4 py-2 text-center">{t.colOvertime}</th>
           </tr>
         </thead>
         <tbody>
@@ -386,22 +388,23 @@ function MapsTable({ maps }: { maps: TournamentAnalyticsMap[] }) {
 }
 
 function HeroesTable({ heroes }: { heroes: TournamentAnalyticsHero[] }) {
+  const t = useAdminT('adminTournamentAnalytics');
   return (
     <TableShell
-      title="Héros"
-      subtitle="Picks / bans / winrate"
-      emptyLabel="Aucune statistique de héros."
+      title={t.heroesTitle}
+      subtitle={t.heroesSubtitle}
+      emptyLabel={t.heroesEmpty}
       isEmpty={heroes.length === 0}
     >
       <table className="w-full text-sm">
         <thead className="bg-neutral-750 text-neutral-300">
           <tr>
-            <th className="px-4 py-2 text-left">Héros</th>
-            <th className="px-4 py-2 text-center">Picks</th>
-            <th className="px-4 py-2 text-center">Bans</th>
-            <th className="px-4 py-2 text-center">V</th>
-            <th className="px-4 py-2 text-center">D</th>
-            <th className="px-4 py-2 text-center">Winrate</th>
+            <th className="px-4 py-2 text-left">{t.colHero}</th>
+            <th className="px-4 py-2 text-center">{t.colPicks}</th>
+            <th className="px-4 py-2 text-center">{t.colBans}</th>
+            <th className="px-4 py-2 text-center">{t.colWins}</th>
+            <th className="px-4 py-2 text-center">{t.colLosses}</th>
+            <th className="px-4 py-2 text-center">{t.colWinrate}</th>
           </tr>
         </thead>
         <tbody>

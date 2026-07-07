@@ -19,7 +19,10 @@ import ConfirmDialog from '@/components/admin/ConfirmDialog';
 import Modal from '@/components/admin/Modal';
 import Breadcrumb from '@/components/admin/Breadcrumb';
 import { useToast } from '@/components/Toast';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { MatchStatus } from '@/types/admin';
+
+type Dict = ReturnType<typeof useAdminT<'adminTournamentOverview'>>;
 
 import { logger } from '../../../utils/logger';
 type StaffShape = {
@@ -318,20 +321,20 @@ function formatDate(d: string | null) {
   }
 }
 
-function statusLabel(status: string | null) {
+function statusLabel(tx: Dict, status: string | null) {
   switch (status) {
     case 'draft':
-      return 'Brouillon';
+      return tx.statusDraft;
     case 'published':
-      return 'Publié';
+      return tx.statusPublished;
     case 'running':
-      return 'En cours';
+      return tx.statusRunning;
     case 'completed':
-      return 'Terminé';
+      return tx.statusCompleted;
     case 'archived':
-      return 'Archivé';
+      return tx.statusArchived;
     default:
-      return status || 'Inconnu';
+      return status || tx.statusUnknown;
   }
 }
 
@@ -352,37 +355,37 @@ function statusColor(status: string | null) {
   }
 }
 
-function formatLabel(format: string | null) {
-  switch (format) {
+function formatLabel(tx: Dict, formatType: string | null) {
+  switch (formatType) {
     case 'single_elim':
-      return 'Single Elimination';
+      return tx.formatSingleElim;
     case 'double_elim':
-      return 'Double Elimination';
+      return tx.formatDoubleElim;
     case 'swiss':
-      return 'Swiss';
+      return tx.formatSwiss;
     case 'round_robin':
-      return 'Round Robin';
+      return tx.formatRoundRobin;
     case 'showmatch':
-      return 'Showmatch';
+      return tx.formatShowmatch;
     default:
-      return format || 'Non défini';
+      return formatType || tx.formatUndefined;
   }
 }
 
-function stageTypeLabel(t: string | null) {
-  switch (t) {
+function stageTypeLabel(tx: Dict, type: string | null) {
+  switch (type) {
     case 'group':
-      return 'Poule';
+      return tx.stageTypeGroup;
     case 'bracket':
-      return 'Bracket';
+      return tx.stageTypeBracket;
     case 'swiss':
-      return 'Swiss';
+      return tx.stageTypeSwiss;
     case 'round_robin':
-      return 'Round Robin';
+      return tx.stageTypeRoundRobin;
     case 'showmatch':
-      return 'Showmatch';
+      return tx.stageTypeShowmatch;
     default:
-      return 'Autre';
+      return tx.stageTypeOther;
   }
 }
 
@@ -403,13 +406,15 @@ function stageTypeColor(t: string | null) {
   }
 }
 
-const STATUS_OPTIONS = [
-  { value: 'draft', label: 'Brouillon', color: 'bg-neutral-600', icon: '📝' },
-  { value: 'published', label: 'Publié', color: 'bg-blue-600', icon: '📢' },
-  { value: 'running', label: 'En cours', color: 'bg-emerald-600', icon: '▶️' },
-  { value: 'completed', label: 'Terminé', color: 'bg-purple-600', icon: '🏆' },
-  { value: 'archived', label: 'Archivé', color: 'bg-neutral-700', icon: '📦' },
-];
+function getStatusOptions(tx: Dict) {
+  return [
+    { value: 'draft', label: tx.statusDraft, color: 'bg-neutral-600', icon: '📝' },
+    { value: 'published', label: tx.statusPublished, color: 'bg-blue-600', icon: '📢' },
+    { value: 'running', label: tx.statusRunning, color: 'bg-emerald-600', icon: '▶️' },
+    { value: 'completed', label: tx.statusCompleted, color: 'bg-purple-600', icon: '🏆' },
+    { value: 'archived', label: tx.statusArchived, color: 'bg-neutral-700', icon: '📦' },
+  ];
+}
 
 const STATUS_ORDER: Record<string, number> = {
   draft: 0,
@@ -419,25 +424,27 @@ const STATUS_ORDER: Record<string, number> = {
   archived: 4,
 };
 
-const STAGE_TYPE_OPTIONS = [
-  { value: 'bracket', label: 'Bracket' },
-  { value: 'swiss', label: 'Swiss' },
-  { value: 'group', label: 'Poule / Groupe' },
-  { value: 'round_robin', label: 'Round Robin' },
-  { value: 'showmatch', label: 'Showmatch' },
-  { value: 'other', label: 'Autre' },
-];
+function getStageTypeOptions(tx: Dict) {
+  return [
+    { value: 'bracket', label: tx.stageTypeBracket },
+    { value: 'swiss', label: tx.stageTypeSwiss },
+    { value: 'group', label: tx.stageTypeGroupOption },
+    { value: 'round_robin', label: tx.stageTypeRoundRobin },
+    { value: 'showmatch', label: tx.stageTypeShowmatch },
+    { value: 'other', label: tx.stageTypeOther },
+  ];
+}
 
-function matchStatusLabel(status: MatchStatus) {
+function matchStatusLabel(tx: Dict, status: MatchStatus) {
   switch (status) {
     case 'pending':
-      return 'A venir';
+      return tx.matchStatusPending;
     case 'ongoing':
-      return 'En cours';
+      return tx.matchStatusOngoing;
     case 'finished':
-      return 'Terminé';
+      return tx.matchStatusFinished;
     case 'cancelled':
-      return 'Annulé';
+      return tx.matchStatusCancelled;
     default:
       return status;
   }
@@ -482,6 +489,9 @@ function AdminTournamentPage({
   const { mutate: addTeamMutate } = useIdempotentMutation();
   const { mutate: createStageMutate } = useIdempotentMutation();
   const { adminFetch, adminFetchJson } = useAdminFetch();
+  const tx = useAdminT('adminTournamentOverview');
+  const STATUS_OPTIONS = getStatusOptions(tx);
+  const STAGE_TYPE_OPTIONS = getStageTypeOptions(tx);
 
   const [loading, setLoading] = useState(!initialData);
   const [tournament, setTournament] = useState<Tournament | null>(
@@ -600,25 +610,29 @@ function AdminTournamentPage({
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
-        addToast(json.error || 'Echec de la notification', 'error');
+        addToast(json.error || tx.errorNotify, 'error');
         return;
       }
       const errCount = json.errors?.length ?? 0;
-      const baseMsg = `${json.notified ?? 0} responsable(s) notifie(s) (${json.emailsSent ?? 0} email(s), ${json.messagesSent ?? 0} message(s)).`;
+      const baseMsg = format(tx.notifyBaseMsg, {
+        notified: json.notified ?? 0,
+        emails: json.emailsSent ?? 0,
+        messages: json.messagesSent ?? 0,
+      });
       if (errCount > 0) {
         addToast(
-          `${baseMsg} ${errCount} erreur(s) — voir /admin/logs.`,
+          baseMsg + ' ' + format(tx.notifyErrorsSuffix, { count: errCount }),
           'info'
         );
       } else {
         addToast(baseMsg, 'success');
       }
     } catch (err: unknown) {
-      addToast((err as Error)?.message || 'Echec de la notification', 'error');
+      addToast((err as Error)?.message || tx.errorNotify, 'error');
     } finally {
       setNotifyingCaptains(false);
     }
-  }, [id, notifyingCaptains, addToast, notifyMutate]);
+  }, [id, notifyingCaptains, addToast, notifyMutate, tx]);
 
   const fetchTournament = useCallback(async () => {
     if (!id) return;
@@ -631,11 +645,11 @@ function AdminTournamentPage({
       );
       setTournament(json.tournament);
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
+      setErrorMsg((err as Error)?.message ?? tx.errorUnexpected);
     } finally {
       setLoading(false);
     }
-  }, [id, adminFetchJson]);
+  }, [id, adminFetchJson, tx]);
 
   const fetchStages = useCallback(async () => {
     if (!id) return;
@@ -739,14 +753,14 @@ function AdminTournamentPage({
       });
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || 'Impossible de cloner le tournoi');
+        throw new Error(json.error || tx.errorClone);
       }
       const json = await res.json();
       if (json.tournament?.id) {
         router.push(`/admin/tournament/${json.tournament.id}`);
       }
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? 'Erreur lors du clonage');
+      setErrorMsg((err as Error)?.message ?? tx.errorCloneGeneric);
     } finally {
       setCloning(false);
       setShowCloneConfirm(false);
@@ -796,10 +810,13 @@ function AdminTournamentPage({
       );
 
       setTournament(json.tournament);
-      addToast(`Statut modifié : ${statusLabel(newStatus)}`, 'success');
+      addToast(
+        format(tx.toastStatusChanged, { status: statusLabel(tx, newStatus) }),
+        'success'
+      );
       fetchStatusGuards();
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
+      setErrorMsg((err as Error)?.message ?? tx.errorUnexpected);
     } finally {
       setUpdatingStatus(false);
     }
@@ -821,16 +838,16 @@ function AdminTournamentPage({
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || "Impossible d'ajouter l'équipe");
+        throw new Error(json.error || tx.errorAddTeam);
       }
 
       setShowAddTeamModal(false);
       setSelectedTeamId('');
       setTeamSeed('');
-      addToast('Équipe ajoutée avec succès', 'success');
+      addToast(tx.toastTeamAdded, 'success');
       fetchTournamentTeams();
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
+      setErrorMsg((err as Error)?.message ?? tx.errorUnexpected);
     } finally {
       setAddingTeam(false);
     }
@@ -852,10 +869,10 @@ function AdminTournamentPage({
         }
       );
 
-      addToast('Équipe retirée', 'success');
+      addToast(tx.toastTeamRemoved, 'success');
       fetchTournamentTeams();
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
+      setErrorMsg((err as Error)?.message ?? tx.errorUnexpected);
     } finally {
       setShowRemoveConfirm(false);
       setPendingRemoveTeamId(null);
@@ -893,10 +910,17 @@ function AdminTournamentPage({
     setBulkSearchFilter('');
 
     if (failCount === 0) {
-      addToast(`${teamIds.length} équipe(s) ajoutée(s) avec succès`, 'success');
+      addToast(
+        format(tx.toastBulkTeamsAdded, { count: teamIds.length }),
+        'success'
+      );
     } else {
       addToast(
-        `${teamIds.length - failCount}/${teamIds.length} équipe(s) ajoutée(s) (${failCount} erreur(s))`,
+        format(tx.toastBulkTeamsPartial, {
+          added: teamIds.length - failCount,
+          total: teamIds.length,
+          errors: failCount,
+        }),
         'success'
       );
     }
@@ -923,16 +947,16 @@ function AdminTournamentPage({
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || 'Impossible de créer la phase');
+        throw new Error(json.error || tx.errorCreateStage);
       }
 
       setShowNewStageModal(false);
       setNewStageName('');
       setNewStageType('bracket');
-      addToast('Phase créée avec succès', 'success');
+      addToast(tx.toastStageCreated, 'success');
       fetchStages();
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
+      setErrorMsg((err as Error)?.message ?? tx.errorUnexpected);
     } finally {
       setCreatingStage(false);
     }
@@ -949,7 +973,11 @@ function AdminTournamentPage({
   return (
     <>
       <Head>
-        <title>{`Admin – Tournoi${tournament ? ` : ${tournament.name}` : ''}`}</title>
+        <title>
+          {tournament
+            ? format(tx.pageTitleWith, { name: tournament.name })
+            : tx.pageTitle}
+        </title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
@@ -975,8 +1003,8 @@ function AdminTournamentPage({
           <div className="mb-8">
             <Breadcrumb
               items={[
-                { label: 'Tournois', href: '/admin/tournaments' },
-                { label: tournament?.name || 'Tournoi' },
+                { label: tx.breadcrumbTournaments, href: '/admin/tournaments' },
+                { label: tournament?.name || tx.defaultTournamentName },
               ]}
             />
             <button
@@ -997,7 +1025,7 @@ function AdminTournamentPage({
                   d="M15 19l-7-7 7-7"
                 />
               </svg>
-              Retour à la liste
+              {tx.backToList}
             </button>
 
             <div className="flex flex-wrap items-start justify-between gap-4">
@@ -1013,7 +1041,7 @@ function AdminTournamentPage({
                 )}
                 <div>
                   <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-                    {tournament?.name || 'Chargement...'}
+                    {tournament?.name || tx.loading}
                   </h1>
                   {tournament?.slug && (
                     <p className="text-sm text-neutral-400 mt-1 flex items-center gap-2">
@@ -1021,7 +1049,7 @@ function AdminTournamentPage({
                         /{tournament.slug}
                       </span>
                       <span>•</span>
-                      <span>{tournament.game || 'Jeu non spécifié'}</span>
+                      <span>{tournament.game || tx.gameUnspecified}</span>
                     </p>
                   )}
                 </div>
@@ -1034,16 +1062,16 @@ function AdminTournamentPage({
                       tournament.status
                     )}`}
                   >
-                    {statusLabel(tournament.status)}
+                    {statusLabel(tx, tournament.status)}
                   </span>
                   {tournament.visibility === 'public' && (
                     <span className="px-3 py-1.5 rounded-full text-sm font-semibold bg-emerald-600/20 text-emerald-300 border border-emerald-500/30">
-                      Public
+                      {tx.public}
                     </span>
                   )}
                   {tournament.is_featured && (
                     <span className="px-3 py-1.5 rounded-full text-sm font-semibold bg-amber-600/20 text-amber-300 border border-amber-500/30">
-                      Mis en avant
+                      {tx.featured}
                     </span>
                   )}
                 </div>
@@ -1077,7 +1105,7 @@ function AdminTournamentPage({
 
           {!loading && !tournament && !errorMsg && (
             <div className="text-center py-20 text-neutral-400">
-              Tournoi introuvable.
+              {tx.notFound}
             </div>
           )}
 
@@ -1102,7 +1130,7 @@ function AdminTournamentPage({
                       d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
                     />
                   </svg>
-                  Dashboard
+                  {tx.dashboard}
                 </Link>
                 <Link
                   href={`/admin/tournament/${tournament.id}/edit`}
@@ -1121,7 +1149,7 @@ function AdminTournamentPage({
                       d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
                     />
                   </svg>
-                  Modifier le tournoi
+                  {tx.editTournament}
                 </Link>
                 <Link
                   href={publicUrl}
@@ -1141,7 +1169,7 @@ function AdminTournamentPage({
                       d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
                     />
                   </svg>
-                  Voir la page publique
+                  {tx.viewPublicPage}
                 </Link>
                 <Link
                   href={`/admin/tournament/${tournament.id}/history`}
@@ -1160,7 +1188,7 @@ function AdminTournamentPage({
                       d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
                     />
                   </svg>
-                  Historique
+                  {tx.history}
                 </Link>
                 <Link
                   href={`/admin/tournament/${tournament.id}/discord`}
@@ -1173,7 +1201,7 @@ function AdminTournamentPage({
                   >
                     <path d="M20.317 4.369a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.078.037c-.21.375-.444.864-.608 1.249a18.27 18.27 0 0 0-5.487 0 12.683 12.683 0 0 0-.617-1.249.077.077 0 0 0-.079-.037 19.736 19.736 0 0 0-4.885 1.515.07.07 0 0 0-.032.027C.533 9.046-.319 13.58.099 18.057a.082.082 0 0 0 .031.056 19.908 19.908 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.21 14.21 0 0 0 1.226-1.994.076.076 0 0 0-.041-.105 13.166 13.166 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.094.252-.192.372-.291a.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.099.246.198.372.291a.077.077 0 0 1-.006.128c-.598.349-1.22.645-1.873.891a.076.076 0 0 0-.04.106c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.84 19.84 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.331c-1.182 0-2.157-1.085-2.157-2.418 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.419 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.418 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.419 0 1.333-.946 2.418-2.157 2.418z" />
                   </svg>
-                  Discord
+                  {tx.discord}
                 </Link>
                 <Link
                   href={`/admin/tournament/${tournament.id}/checkin`}
@@ -1192,7 +1220,7 @@ function AdminTournamentPage({
                       d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
                     />
                   </svg>
-                  Check-in
+                  {tx.checkin}
                 </Link>
                 <Link
                   href={`/admin/tournament/${tournament.id}/podium`}
@@ -1211,13 +1239,13 @@ function AdminTournamentPage({
                       d="M5 3v18h14V3H5zm7 11l3 3-3 3-3-3 3-3z"
                     />
                   </svg>
-                  Podium &amp; clôture
+                  {tx.podium}
                 </Link>
                 <button
                   type="button"
                   onClick={notifyCaptains}
                   disabled={notifyingCaptains}
-                  title="Envoie un email + un message interne au capitaine et aux managers de chaque equipe active"
+                  title={tx.notifyCaptainsTitle}
                   className="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors flex items-center gap-2"
                 >
                   {notifyingCaptains ? (
@@ -1237,9 +1265,7 @@ function AdminTournamentPage({
                       />
                     </svg>
                   )}
-                  {notifyingCaptains
-                    ? 'Envoi en cours...'
-                    : 'Notifier les capitaines'}
+                  {notifyingCaptains ? tx.notifying : tx.notifyCaptains}
                 </button>
                 <button
                   type="button"
@@ -1262,7 +1288,7 @@ function AdminTournamentPage({
                       d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
                     />
                   </svg>
-                  Conflits
+                  {tx.conflicts}
                 </button>
                 <button
                   type="button"
@@ -1283,7 +1309,7 @@ function AdminTournamentPage({
                       d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
                     />
                   </svg>
-                  Cloner
+                  {tx.clone}
                 </button>
               </div>
 
@@ -1307,22 +1333,22 @@ function AdminTournamentPage({
                           d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                         />
                       </svg>
-                      Informations
+                      {tx.infoTitle}
                     </h2>
 
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                       <div className="bg-neutral-900/50 rounded-xl p-4">
                         <div className="text-xs text-neutral-500 uppercase tracking-wider mb-1">
-                          Format
+                          {tx.infoFormat}
                         </div>
                         <div className="font-medium">
-                          {formatLabel(tournament.format_type)}
+                          {formatLabel(tx, tournament.format_type)}
                         </div>
                       </div>
 
                       <div className="bg-neutral-900/50 rounded-xl p-4">
                         <div className="text-xs text-neutral-500 uppercase tracking-wider mb-1">
-                          Max équipes
+                          {tx.infoMaxTeams}
                         </div>
                         <div className="font-medium">
                           {tournament.max_teams ?? '∞'}
@@ -1331,7 +1357,7 @@ function AdminTournamentPage({
 
                       <div className="bg-neutral-900/50 rounded-xl p-4">
                         <div className="text-xs text-neutral-500 uppercase tracking-wider mb-1">
-                          Équipes inscrites
+                          {tx.infoRegisteredTeams}
                         </div>
                         <div className="font-medium">
                           {tournamentTeams.length}
@@ -1346,7 +1372,7 @@ function AdminTournamentPage({
 
                       <div className="bg-neutral-900/50 rounded-xl p-4">
                         <div className="text-xs text-neutral-500 uppercase tracking-wider mb-1">
-                          Date de début
+                          {tx.infoStartDate}
                         </div>
                         <div className="font-medium text-sm">
                           {formatDate(tournament.start_date)}
@@ -1355,7 +1381,7 @@ function AdminTournamentPage({
 
                       <div className="bg-neutral-900/50 rounded-xl p-4">
                         <div className="text-xs text-neutral-500 uppercase tracking-wider mb-1">
-                          Date de fin
+                          {tx.infoEndDate}
                         </div>
                         <div className="font-medium text-sm">
                           {formatDate(tournament.end_date)}
@@ -1364,7 +1390,7 @@ function AdminTournamentPage({
 
                       <div className="bg-neutral-900/50 rounded-xl p-4">
                         <div className="text-xs text-neutral-500 uppercase tracking-wider mb-1">
-                          Phases
+                          {tx.infoStages}
                         </div>
                         <div className="font-medium">{stages.length}</div>
                       </div>
@@ -1387,7 +1413,7 @@ function AdminTournamentPage({
                           d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
                         />
                       </svg>
-                      Workflow du tournoi
+                      {tx.workflowTitle}
                     </h2>
 
                     {/* Progress bar */}
@@ -1444,10 +1470,12 @@ function AdminTournamentPage({
                                   }
                                   title={
                                     isCurrent
-                                      ? 'Statut actuel'
+                                      ? tx.currentStatus
                                       : guard?.allowed === false
                                         ? guard.reason
-                                        : `Passer en ${option.label}`
+                                        : format(tx.switchTo, {
+                                            label: option.label,
+                                          })
                                   }
                                   className={`relative z-10 mx-auto w-8 h-8 rounded-full border-2 flex items-center justify-center text-xs font-bold transition-all ${
                                     isCurrent
@@ -1535,7 +1563,7 @@ function AdminTournamentPage({
                     {updatingStatus && (
                       <div className="text-xs text-neutral-400 mt-3 flex items-center gap-2">
                         <div className="w-3 h-3 border border-neutral-500 border-t-white rounded-full animate-spin" />
-                        Mise à jour en cours...
+                        {tx.updating}
                       </div>
                     )}
                   </section>
@@ -1557,7 +1585,9 @@ function AdminTournamentPage({
                             d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
                           />
                         </svg>
-                        Équipes ({tournamentTeams.length})
+                        {format(tx.teamsSectionTitle, {
+                          count: tournamentTeams.length,
+                        })}
                       </h2>
                       <div className="flex gap-2">
                         <button
@@ -1580,7 +1610,7 @@ function AdminTournamentPage({
                               d="M12 4v16m8-8H4"
                             />
                           </svg>
-                          Ajouter
+                          {tx.add}
                         </button>
                         <button
                           onClick={() => {
@@ -1604,18 +1634,18 @@ function AdminTournamentPage({
                               d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
                             />
                           </svg>
-                          Ajouter en masse
+                          {tx.bulkAdd}
                         </button>
                       </div>
                     </div>
 
                     {loadingTeams ? (
                       <div className="text-neutral-400 text-sm py-4">
-                        Chargement...
+                        {tx.loading}
                       </div>
                     ) : tournamentTeams.length === 0 ? (
                       <div className="text-neutral-400 text-sm py-8 text-center bg-neutral-900/30 rounded-xl">
-                        Aucune équipe inscrite
+                        {tx.noTeams}
                       </div>
                     ) : (
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-64 overflow-y-auto pr-1">
@@ -1642,13 +1672,13 @@ function AdminTournamentPage({
                                   />
                                 )}
                                 <span className="truncate text-sm font-medium">
-                                  {tt.team?.name || 'Équipe inconnue'}
+                                  {tt.team?.name || tx.unknownTeam}
                                 </span>
                               </div>
                               <button
                                 onClick={() => handleRemoveTeam(tt.id)}
                                 className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-900/50 text-red-400 transition-all"
-                                title="Retirer du tournoi"
+                                title={tx.removeFromTournament}
                               >
                                 <svg
                                   className="w-4 h-4"
@@ -1687,7 +1717,9 @@ function AdminTournamentPage({
                             d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
                           />
                         </svg>
-                        Phases ({stages.length})
+                        {format(tx.stagesSectionTitle, {
+                          count: stages.length,
+                        })}
                       </h2>
                       <div className="flex gap-2">
                         <button
@@ -1707,24 +1739,24 @@ function AdminTournamentPage({
                               d="M12 4v16m8-8H4"
                             />
                           </svg>
-                          Nouvelle phase
+                          {tx.newStage}
                         </button>
                         <Link
                           href={`/admin/tournament/${tournament.id}/stages`}
                           className="px-3 py-1.5 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
                         >
-                          Gérer
+                          {tx.manage}
                         </Link>
                       </div>
                     </div>
 
                     {loadingStages ? (
                       <div className="text-neutral-400 text-sm py-4">
-                        Chargement...
+                        {tx.loading}
                       </div>
                     ) : stages.length === 0 ? (
                       <div className="text-neutral-400 text-sm py-8 text-center bg-neutral-900/30 rounded-xl">
-                        Aucune phase créée
+                        {tx.noStages}
                       </div>
                     ) : (
                       <div className="space-y-2">
@@ -1753,16 +1785,16 @@ function AdminTournamentPage({
                                         stage.stage_type
                                       )}`}
                                     >
-                                      {stageTypeLabel(stage.stage_type)}
+                                      {stageTypeLabel(tx, stage.stage_type)}
                                     </span>
                                     {stage.is_active && (
                                       <span className="px-2 py-0.5 rounded-full text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                                        Active
+                                        {tx.stageActive}
                                       </span>
                                     )}
                                     {stage.is_public && (
                                       <span className="px-2 py-0.5 rounded-full text-xs bg-blue-500/20 text-blue-300 border border-blue-500/30">
-                                        Publique
+                                        {tx.stagePublic}
                                       </span>
                                     )}
                                   </div>
@@ -1793,7 +1825,7 @@ function AdminTournamentPage({
                   {/* Navigation Card */}
                   <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
                     <h2 className="text-lg font-semibold mb-4">
-                      Outils & Gestion
+                      {tx.toolsTitle}
                     </h2>
                     <div className="space-y-2">
                       <Link
@@ -1817,9 +1849,11 @@ function AdminTournamentPage({
                             </svg>
                           </div>
                           <div>
-                            <div className="font-medium text-sm">Matches</div>
+                            <div className="font-medium text-sm">
+                              {tx.navMatches}
+                            </div>
                             <div className="text-xs text-neutral-500">
-                              Scores & planning
+                              {tx.navMatchesDesc}
                             </div>
                           </div>
                         </div>
@@ -1859,9 +1893,11 @@ function AdminTournamentPage({
                             </svg>
                           </div>
                           <div>
-                            <div className="font-medium text-sm">Bracket</div>
+                            <div className="font-medium text-sm">
+                              {tx.navBracket}
+                            </div>
                             <div className="text-xs text-neutral-500">
-                              Arbre visuel
+                              {tx.navBracketDesc}
                             </div>
                           </div>
                         </div>
@@ -1902,10 +1938,10 @@ function AdminTournamentPage({
                           </div>
                           <div>
                             <div className="font-medium text-sm">
-                              Pool de maps
+                              {tx.navMaps}
                             </div>
                             <div className="text-xs text-neutral-500">
-                              Maps autorisées
+                              {tx.navMapsDesc}
                             </div>
                           </div>
                         </div>
@@ -1946,10 +1982,10 @@ function AdminTournamentPage({
                           </div>
                           <div>
                             <div className="font-medium text-sm">
-                              Statistiques
+                              {tx.navStats}
                             </div>
                             <div className="text-xs text-neutral-500">
-                              Perf & analytics
+                              {tx.navStatsDesc}
                             </div>
                           </div>
                         </div>
@@ -1987,13 +2023,13 @@ function AdminTournamentPage({
                             d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
                           />
                         </svg>
-                        Derniers matches
+                        {tx.recentMatchesTitle}
                       </h2>
                       <Link
                         href={`/admin/tournament/${tournament.id}/matches`}
                         className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
                       >
-                        Voir tout →
+                        {tx.seeAll}
                       </Link>
                     </div>
 
@@ -2003,7 +2039,7 @@ function AdminTournamentPage({
                       </div>
                     ) : recentMatches.length === 0 ? (
                       <div className="text-neutral-400 text-sm py-6 text-center bg-neutral-900/30 rounded-xl">
-                        Aucun match
+                        {tx.noMatch}
                       </div>
                     ) : (
                       <div className="space-y-2">
@@ -2019,11 +2055,13 @@ function AdminTournamentPage({
                                   match.status
                                 )}`}
                               >
-                                {matchStatusLabel(match.status)}
+                                {matchStatusLabel(tx, match.status)}
                               </span>
                               {match.round_number && (
                                 <span className="text-[10px] text-neutral-500">
-                                  Round {match.round_number}
+                                  {format(tx.roundLabel, {
+                                    round: match.round_number,
+                                  })}
                                 </span>
                               )}
                             </div>
@@ -2101,12 +2139,12 @@ function AdminTournamentPage({
                   {/* Meta Info */}
                   <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
                     <h2 className="text-sm font-semibold text-neutral-400 mb-3">
-                      Informations système
+                      {tx.systemInfoTitle}
                     </h2>
                     <div className="space-y-3 text-sm">
                       <div>
                         <div className="text-xs text-neutral-500 mb-1">
-                          ID du tournoi
+                          {tx.tournamentId}
                         </div>
                         <div className="font-mono text-xs bg-neutral-900 px-3 py-2 rounded-lg border border-neutral-700 break-all">
                           {tournament.id}
@@ -2114,7 +2152,7 @@ function AdminTournamentPage({
                       </div>
                       <div>
                         <div className="text-xs text-neutral-500 mb-1">
-                          Créé le
+                          {tx.createdAt}
                         </div>
                         <div className="text-neutral-300">
                           {formatDate(tournament.created_at)}
@@ -2122,7 +2160,7 @@ function AdminTournamentPage({
                       </div>
                       <div>
                         <div className="text-xs text-neutral-500 mb-1">
-                          Dernière modification
+                          {tx.lastModified}
                         </div>
                         <div className="text-neutral-300">
                           {formatDate(
@@ -2147,7 +2185,7 @@ function AdminTournamentPage({
           setSelectedTeamId('');
           setTeamSeed('');
         }}
-        title="Ajouter une équipe"
+        title={tx.addTeamTitle}
         footer={
           <>
             <button
@@ -2158,14 +2196,14 @@ function AdminTournamentPage({
               }}
               className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
             >
-              Annuler
+              {tx.cancel}
             </button>
             <button
               onClick={handleAddTeam}
               disabled={!selectedTeamId || addingTeam}
               className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {addingTeam ? 'Ajout...' : 'Ajouter'}
+              {addingTeam ? tx.adding : tx.add}
             </button>
           </>
         }
@@ -2173,14 +2211,14 @@ function AdminTournamentPage({
         <div className="space-y-4">
           <div>
             <label className="block text-sm text-neutral-400 mb-1">
-              Équipe
+              {tx.teamLabel}
             </label>
             <select
               value={selectedTeamId}
               onChange={(e) => setSelectedTeamId(e.target.value)}
               className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="">Sélectionner une équipe...</option>
+              <option value="">{tx.selectTeam}</option>
               {availableTeamsToAdd.map((team) => (
                 <option key={team.id} value={team.id}>
                   {team.name}
@@ -2191,7 +2229,7 @@ function AdminTournamentPage({
 
           <div>
             <label className="block text-sm text-neutral-400 mb-1">
-              Seed (optionnel)
+              {tx.seedLabel}
             </label>
             <input
               type="number"
@@ -2208,12 +2246,15 @@ function AdminTournamentPage({
       {/* Status Regression Confirm Dialog */}
       {showStatusConfirm && pendingStatusValue && (
         <ConfirmDialog
-          title="Rétrograder le statut ?"
-          subtitle={`Vous allez passer de « ${statusLabel(tournament?.status ?? null)} » à « ${statusLabel(pendingStatusValue)} ». Cette action peut avoir des conséquences sur les données du tournoi.`}
+          title={tx.demoteTitle}
+          subtitle={format(tx.demoteSubtitle, {
+            from: statusLabel(tx, tournament?.status ?? null),
+            to: statusLabel(tx, pendingStatusValue),
+          })}
           variant="warning"
           loading={updatingStatus}
-          confirmLabel="Rétrograder"
-          confirmingLabel="Mise à jour..."
+          confirmLabel={tx.demote}
+          confirmingLabel={tx.updatingShort}
           onCancel={() => {
             setShowStatusConfirm(false);
             setPendingStatusValue(null);
@@ -2229,11 +2270,11 @@ function AdminTournamentPage({
       {/* Remove Team Confirm Dialog */}
       {showRemoveConfirm && pendingRemoveTeamId && (
         <ConfirmDialog
-          title="Retirer cette équipe ?"
-          subtitle="L'équipe sera retirée du tournoi. Cette action est irréversible."
+          title={tx.removeTeamTitle}
+          subtitle={tx.removeTeamSubtitle}
           variant="danger"
           loading={false}
-          confirmLabel="Retirer"
+          confirmLabel={tx.remove}
           onCancel={() => {
             setShowRemoveConfirm(false);
             setPendingRemoveTeamId(null);
@@ -2251,7 +2292,7 @@ function AdminTournamentPage({
           setBulkSelectedTeamIds(new Set());
           setBulkSearchFilter('');
         }}
-        title="Ajouter plusieurs équipes"
+        title={tx.bulkAddTitle}
         size="lg"
         disableBackdropClose={bulkAdding}
         disableEscapeClose={bulkAdding}
@@ -2266,7 +2307,7 @@ function AdminTournamentPage({
               disabled={bulkAdding}
               className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors disabled:opacity-50"
             >
-              Annuler
+              {tx.cancel}
             </button>
             <button
               onClick={handleBulkAddTeams}
@@ -2274,8 +2315,16 @@ function AdminTournamentPage({
               className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {bulkAdding
-                ? `Ajout... (${bulkProgress.done}/${bulkProgress.total})`
-                : `Ajouter ${bulkSelectedTeamIds.size > 0 ? `(${bulkSelectedTeamIds.size})` : ''}`}
+                ? format(tx.bulkAddingProgress, {
+                    done: bulkProgress.done,
+                    total: bulkProgress.total,
+                  })
+                : format(tx.bulkAddButton, {
+                    count:
+                      bulkSelectedTeamIds.size > 0
+                        ? `(${bulkSelectedTeamIds.size})`
+                        : '',
+                  })}
             </button>
           </>
         }
@@ -2286,14 +2335,16 @@ function AdminTournamentPage({
             type="text"
             value={bulkSearchFilter}
             onChange={(e) => setBulkSearchFilter(e.target.value)}
-            placeholder="Rechercher une équipe..."
+            placeholder={tx.searchTeamPlaceholder}
             className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3 text-sm"
           />
 
           {/* Select all / deselect all */}
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs text-neutral-400">
-              {bulkSelectedTeamIds.size} équipe(s) sélectionnée(s)
+              {format(tx.selectedTeamsCount, {
+                count: bulkSelectedTeamIds.size,
+              })}
             </span>
             <div className="flex gap-2">
               <button
@@ -2310,14 +2361,14 @@ function AdminTournamentPage({
                 }}
                 className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
               >
-                Tout sélectionner
+                {tx.selectAll}
               </button>
               <button
                 type="button"
                 onClick={() => setBulkSelectedTeamIds(new Set())}
                 className="text-xs text-neutral-400 hover:text-neutral-300 transition-colors"
               >
-                Tout désélectionner
+                {tx.deselectAll}
               </button>
             </div>
           </div>
@@ -2363,7 +2414,7 @@ function AdminTournamentPage({
               t.name.toLowerCase().includes(bulkSearchFilter.toLowerCase())
             ).length === 0 && (
               <div className="text-neutral-500 text-sm text-center py-4">
-                Aucune équipe disponible
+                {tx.noAvailableTeam}
               </div>
             )}
           </div>
@@ -2373,7 +2424,10 @@ function AdminTournamentPage({
             <div className="mb-4">
               <div className="flex items-center gap-2 text-xs text-neutral-400 mb-1">
                 <div className="w-3 h-3 border border-neutral-500 border-t-white rounded-full animate-spin" />
-                Ajout en cours... {bulkProgress.done}/{bulkProgress.total}
+                {format(tx.bulkAddingInProgress, {
+                  done: bulkProgress.done,
+                  total: bulkProgress.total,
+                })}
               </div>
               <div className="w-full bg-neutral-700 rounded-full h-1.5">
                 <div
@@ -2396,7 +2450,7 @@ function AdminTournamentPage({
           setNewStageName('');
           setNewStageType('bracket');
         }}
-        title="Créer une phase"
+        title={tx.createStageTitle}
         footer={
           <>
             <button
@@ -2407,14 +2461,14 @@ function AdminTournamentPage({
               }}
               className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
             >
-              Annuler
+              {tx.cancel}
             </button>
             <button
               onClick={handleCreateStage}
               disabled={!newStageName.trim() || creatingStage}
               className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {creatingStage ? 'Création...' : 'Créer'}
+              {creatingStage ? tx.creating : tx.create}
             </button>
           </>
         }
@@ -2422,20 +2476,20 @@ function AdminTournamentPage({
         <div className="space-y-4">
           <div>
             <label className="block text-sm text-neutral-400 mb-1">
-              Nom de la phase
+              {tx.stageNameLabel}
             </label>
             <input
               type="text"
               value={newStageName}
               onChange={(e) => setNewStageName(e.target.value)}
-              placeholder="Ex: Phase de groupes, Playoffs..."
+              placeholder={tx.stageNamePlaceholder}
               className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500"
             />
           </div>
 
           <div>
             <label className="block text-sm text-neutral-400 mb-1">
-              Type de phase
+              {tx.stageTypeLabel}
             </label>
             <select
               value={newStageType}
@@ -2455,12 +2509,14 @@ function AdminTournamentPage({
       {/* Clone Confirm Dialog */}
       {showCloneConfirm && (
         <ConfirmDialog
-          title="Cloner ce tournoi ?"
-          subtitle={`Une copie de « ${tournament?.name ?? ''} » sera créée en mode brouillon, avec les mêmes stages, map pool et settings, mais sans équipes ni résultats.`}
+          title={tx.cloneTitle}
+          subtitle={format(tx.cloneSubtitle, {
+            name: tournament?.name ?? '',
+          })}
           variant="warning"
           loading={cloning}
-          confirmLabel="Cloner"
-          confirmingLabel="Clonage..."
+          confirmLabel={tx.clone}
+          confirmingLabel={tx.cloning}
           onCancel={() => setShowCloneConfirm(false)}
           onConfirm={handleCloneTournament}
         />
@@ -2490,7 +2546,7 @@ function AdminTournamentPage({
                 d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
               />
             </svg>
-            Rapport de conflits
+            {tx.conflictsReportTitle}
           </h3>
         }
         footer={
@@ -2502,14 +2558,14 @@ function AdminTournamentPage({
               }}
               className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
             >
-              Fermer
+              {tx.close}
             </button>
             <button
               onClick={fetchConflicts}
               disabled={loadingConflicts}
               className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors disabled:opacity-50"
             >
-              {loadingConflicts ? 'Analyse...' : 'Re-analyser'}
+              {loadingConflicts ? tx.analyzing : tx.reanalyze}
             </button>
           </>
         }
@@ -2520,7 +2576,7 @@ function AdminTournamentPage({
           </div>
         ) : conflicts === null ? (
           <div className="text-neutral-400 text-sm py-8 text-center">
-            Erreur lors du chargement des conflits.
+            {tx.conflictsLoadError}
           </div>
         ) : conflicts.length === 0 ? (
           <div className="flex flex-col items-center py-12 text-center">
@@ -2538,17 +2594,21 @@ function AdminTournamentPage({
               />
             </svg>
             <p className="text-emerald-300 font-medium">
-              Aucun conflit détecté
+              {tx.noConflict}
             </p>
             <p className="text-neutral-500 text-xs mt-1">
-              Aucune équipe ne joue deux matchs en même temps.
+              {tx.noConflictDesc}
             </p>
           </div>
         ) : (
           <div className="overflow-y-auto flex-1 space-y-3 pr-1">
             <div className="text-sm text-amber-300 bg-amber-900/30 border border-amber-500/20 rounded-lg px-3 py-2 mb-3">
-              {conflicts.length} conflit{conflicts.length > 1 ? 's' : ''}{' '}
-              détecté{conflicts.length > 1 ? 's' : ''}
+              {format(
+                conflicts.length > 1
+                  ? tx.conflictsCount_other
+                  : tx.conflictsCount_one,
+                { count: conflicts.length }
+              )}
             </div>
             {conflicts.map((c, i) => (
               <div
@@ -2557,19 +2617,23 @@ function AdminTournamentPage({
               >
                 <div className="flex items-center gap-2 text-sm">
                   <span className="px-2 py-0.5 rounded-full text-xs bg-red-500/20 text-red-300 border border-red-500/30">
-                    Chevauchement {c.overlap_minutes} min
+                    {format(tx.overlapLabel, { minutes: c.overlap_minutes })}
                   </span>
                   <span className="font-medium text-white">{c.team_name}</span>
                 </div>
                 <div className="grid grid-cols-2 gap-3 text-xs">
                   <div className="bg-neutral-800/50 rounded-lg p-2.5">
-                    <div className="text-neutral-500 mb-1">Match A</div>
+                    <div className="text-neutral-500 mb-1">{tx.matchA}</div>
                     <div className="text-neutral-300">
                       {c.match_a.stage_name && (
                         <span>{c.match_a.stage_name} · </span>
                       )}
                       {c.match_a.round_number && (
-                        <span>Round {c.match_a.round_number}</span>
+                        <span>
+                          {format(tx.roundLabel, {
+                            round: c.match_a.round_number,
+                          })}
+                        </span>
                       )}
                     </div>
                     <div className="text-neutral-400 mt-1">
@@ -2585,13 +2649,17 @@ function AdminTournamentPage({
                     </div>
                   </div>
                   <div className="bg-neutral-800/50 rounded-lg p-2.5">
-                    <div className="text-neutral-500 mb-1">Match B</div>
+                    <div className="text-neutral-500 mb-1">{tx.matchB}</div>
                     <div className="text-neutral-300">
                       {c.match_b.stage_name && (
                         <span>{c.match_b.stage_name} · </span>
                       )}
                       {c.match_b.round_number && (
-                        <span>Round {c.match_b.round_number}</span>
+                        <span>
+                          {format(tx.roundLabel, {
+                            round: c.match_b.round_number,
+                          })}
+                        </span>
                       )}
                     </div>
                     <div className="text-neutral-400 mt-1">

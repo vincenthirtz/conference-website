@@ -5,6 +5,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 type StaffShape = {
   id: string;
@@ -53,6 +54,7 @@ function formatDateTime(iso: string) {
 function AdminTournamentHistoryPage({ staff }: StaffProps) {
   const router = useRouter();
   const { id } = router.query;
+  const t = useAdminT('adminTournamentHistory');
 
   const [logs, setLogs] = useState<FormattedStaffLog[]>([]);
   const [loading, setLoading] = useState(false);
@@ -82,13 +84,13 @@ function AdminTournamentHistoryPage({ staff }: StaffProps) {
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || 'Impossible de charger l’historique');
+        throw new Error(json.error || t.errorLoad);
       }
 
       const json: ApiResponse = await res.json();
       setLogs(json.logs || []);
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? 'Erreur inconnue');
+      setErrorMsg((err as Error)?.message ?? t.errorUnknown);
     } finally {
       setLoading(false);
     }
@@ -108,7 +110,7 @@ function AdminTournamentHistoryPage({ staff }: StaffProps) {
   return (
     <>
       <Head>
-        <title>Admin – Historique du tournoi</title>
+        <title>{t.pageTitle}</title>
       </Head>
 
       <div className="min-h-screen bg-neutral-900 text-white p-6 pt-20">
@@ -120,13 +122,10 @@ function AdminTournamentHistoryPage({ staff }: StaffProps) {
               onClick={() => router.push(`/admin/tournament/${id}`)}
               className="mb-2 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white"
             >
-              ← Retour au tournoi
+              {t.backToTournament}
             </button>
-            <h1 className="text-3xl font-bold">Historique staff du tournoi</h1>
-            <p className="text-neutral-400 text-sm mt-1">
-              Journal des actions staff (création / update / batch, etc.) sur ce
-              tournoi et ses entités liées.
-            </p>
+            <h1 className="text-3xl font-bold">{t.heading}</h1>
+            <p className="text-neutral-400 text-sm mt-1">{t.intro}</p>
           </div>
         </div>
 
@@ -137,30 +136,30 @@ function AdminTournamentHistoryPage({ staff }: StaffProps) {
         >
           <div className="flex flex-col gap-1">
             <label className="text-xs text-neutral-400">
-              Type d’entité (entity_type)
+              {t.labelEntityType}
             </label>
             <input
               type="text"
               className="px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder='ex: "tournament", "match", "stage"...'
+              placeholder={t.placeholderEntityType}
               value={entityType}
               onChange={(e) => setEntityType(e.target.value)}
             />
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-neutral-400">Action</label>
+            <label className="text-xs text-neutral-400">{t.labelAction}</label>
             <input
               type="text"
               className="px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder='ex: "update_tournament", "create_match"...'
+              placeholder={t.placeholderAction}
               value={action}
               onChange={(e) => setAction(e.target.value)}
             />
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-neutral-400">Limite</label>
+            <label className="text-xs text-neutral-400">{t.labelLimit}</label>
             <select
               className="px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={limit}
@@ -176,7 +175,7 @@ function AdminTournamentHistoryPage({ staff }: StaffProps) {
             type="submit"
             className="ml-auto px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 text-sm font-semibold"
           >
-            Filtrer
+            {t.filter}
           </button>
         </form>
 
@@ -191,17 +190,17 @@ function AdminTournamentHistoryPage({ staff }: StaffProps) {
         <div className="bg-neutral-800 border border-neutral-700 rounded-xl overflow-hidden">
           <div className="px-4 py-3 border-b border-neutral-700 flex justify-between items-center">
             <span className="text-sm font-semibold">
-              {loading ? 'Chargement...' : `Logs (${logs.length})`}
+              {loading
+                ? t.loading
+                : format(t.logsCount, { count: logs.length })}
             </span>
             <span className="text-xs text-neutral-400">
-              Trié du plus récent au plus ancien
+              {t.sortedNewestFirst}
             </span>
           </div>
 
           {logs.length === 0 && !loading && (
-            <div className="px-4 py-6 text-sm text-neutral-400">
-              Aucun log trouvé pour ces filtres.
-            </div>
+            <div className="px-4 py-6 text-sm text-neutral-400">{t.empty}</div>
           )}
 
           {logs.length > 0 && (
@@ -230,7 +229,7 @@ function AdminTournamentHistoryPage({ staff }: StaffProps) {
 
                     {log.staff && (
                       <div className="flex items-center gap-2 text-xs text-neutral-400">
-                        <span className="text-neutral-500">par</span>
+                        <span className="text-neutral-500">{t.by}</span>
                         <span className="font-medium text-neutral-200">
                           {log.staff.display_name || log.staff.id}
                         </span>
@@ -252,7 +251,7 @@ function AdminTournamentHistoryPage({ staff }: StaffProps) {
                   {log.payload && (
                     <details className="mt-1 text-xs text-neutral-400">
                       <summary className="cursor-pointer select-none hover:text-neutral-200">
-                        Détails (payload)
+                        {t.detailsPayload}
                       </summary>
                       <pre className="mt-1 bg-neutral-900 border border-neutral-800 rounded p-2 text-[11px] overflow-x-auto">
                         {JSON.stringify(log.payload, null, 2)}
@@ -267,7 +266,7 @@ function AdminTournamentHistoryPage({ staff }: StaffProps) {
                         href={`/admin/matches/${log.entity_id}`}
                         className="hover:underline"
                       >
-                        Ouvrir le match
+                        {t.openMatch}
                       </Link>
                     )}
 
@@ -276,7 +275,7 @@ function AdminTournamentHistoryPage({ staff }: StaffProps) {
                         href={`/admin/stages/${log.entity_id}`}
                         className="hover:underline"
                       >
-                        Ouvrir la phase (stage)
+                        {t.openStage}
                       </Link>
                     )}
 
@@ -285,7 +284,7 @@ function AdminTournamentHistoryPage({ staff }: StaffProps) {
                         href={`/admin/teams/${log.entity_id}`}
                         className="hover:underline"
                       >
-                        Ouvrir l&apos;équipe
+                        {t.openTeam}
                       </Link>
                     )}
                   </div>

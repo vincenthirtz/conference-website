@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 type StaffShape = {
   id: string;
@@ -85,6 +86,7 @@ function AdminTournamentStatsPage({ staff }: StaffProps) {
   const router = useRouter();
   const { adminFetchJson } = useAdminFetch();
   const { id } = router.query;
+  const t = useAdminT('adminTournamentStats');
 
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -102,7 +104,7 @@ function AdminTournamentStatsPage({ staff }: StaffProps) {
       );
       setStats(json);
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
+      setErrorMsg((err as Error)?.message ?? t.errorUnexpected);
     } finally {
       setLoading(false);
     }
@@ -119,7 +121,7 @@ function AdminTournamentStatsPage({ staff }: StaffProps) {
   return (
     <>
       <Head>
-        <title>Admin – Statistiques du tournoi</title>
+        <title>{t.pageTitle}</title>
       </Head>
 
       <div className="min-h-screen bg-neutral-900 text-white p-6 pt-20">
@@ -131,12 +133,12 @@ function AdminTournamentStatsPage({ staff }: StaffProps) {
               onClick={() => router.push(backUrl)}
               className="mb-2 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white"
             >
-              ← Retour au tournoi
+              {t.back}
             </button>
-            <h1 className="text-3xl font-bold">Statistiques du tournoi</h1>
+            <h1 className="text-3xl font-bold">{t.heading}</h1>
             {stats?.tournament && (
               <p className="text-neutral-400 text-sm mt-1">
-                Tournoi :{' '}
+                {t.tournamentLabel}
                 <span className="font-semibold">{stats.tournament.name}</span>
                 {stats.tournament.slug && (
                   <>
@@ -156,7 +158,7 @@ function AdminTournamentStatsPage({ staff }: StaffProps) {
             disabled={loading}
             className="px-4 py-2 rounded bg-neutral-700 hover:bg-neutral-600 text-sm font-semibold disabled:opacity-50"
           >
-            {loading ? 'Chargement...' : 'Actualiser'}
+            {loading ? t.loading : t.refresh}
           </button>
         </div>
 
@@ -168,9 +170,7 @@ function AdminTournamentStatsPage({ staff }: StaffProps) {
         )}
 
         {loading && !stats && (
-          <div className="text-neutral-400 text-sm">
-            Chargement des statistiques...
-          </div>
+          <div className="text-neutral-400 text-sm">{t.loadingStats}</div>
         )}
 
         {stats && (
@@ -178,37 +178,37 @@ function AdminTournamentStatsPage({ staff }: StaffProps) {
             {/* Overview Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
               <StatCard
-                label="Équipes"
+                label={t.kpiTeams}
                 value={stats.overview.totalTeams}
                 color="blue"
               />
               <StatCard
-                label="Matchs total"
+                label={t.kpiTotalMatches}
                 value={stats.overview.totalMatches}
                 color="neutral"
               />
               <StatCard
-                label="Terminés"
+                label={t.kpiFinished}
                 value={stats.overview.finishedMatches}
                 color="emerald"
               />
               <StatCard
-                label="En cours"
+                label={t.kpiOngoing}
                 value={stats.overview.ongoingMatches}
                 color="amber"
               />
               <StatCard
-                label="À venir"
+                label={t.kpiPending}
                 value={stats.overview.pendingMatches}
                 color="neutral"
               />
               <StatCard
-                label="Maps jouées"
+                label={t.kpiMapsPlayed}
                 value={stats.overview.totalGames}
                 color="purple"
               />
               <StatCard
-                label="Overtimes"
+                label={t.kpiOvertimes}
                 value={stats.overview.totalOvertimes}
                 color="red"
               />
@@ -219,17 +219,15 @@ function AdminTournamentStatsPage({ staff }: StaffProps) {
               {/* Team Rankings */}
               <div className="bg-neutral-800 border border-neutral-700 rounded-xl overflow-hidden">
                 <div className="px-4 py-3 border-b border-neutral-700">
-                  <h2 className="text-lg font-semibold">
-                    Classement des équipes
-                  </h2>
+                  <h2 className="text-lg font-semibold">{t.teamRankingTitle}</h2>
                   <p className="text-xs text-neutral-400">
-                    Par winrate (min. 1 match joué)
+                    {t.teamRankingSubtitle}
                   </p>
                 </div>
 
                 {stats.teamStats.length === 0 ? (
                   <div className="px-4 py-6 text-sm text-neutral-400">
-                    Aucune statistique d&apos;équipe disponible.
+                    {t.teamsEmpty}
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
@@ -237,11 +235,15 @@ function AdminTournamentStatsPage({ staff }: StaffProps) {
                       <thead className="bg-neutral-750 text-neutral-300">
                         <tr>
                           <th className="px-4 py-2 text-left">#</th>
-                          <th className="px-4 py-2 text-left">Équipe</th>
-                          <th className="px-4 py-2 text-center">V</th>
-                          <th className="px-4 py-2 text-center">D</th>
-                          <th className="px-4 py-2 text-center">Winrate</th>
-                          <th className="px-4 py-2 text-center">Maps</th>
+                          <th className="px-4 py-2 text-left">{t.colTeam}</th>
+                          <th className="px-4 py-2 text-center">{t.colWins}</th>
+                          <th className="px-4 py-2 text-center">
+                            {t.colLosses}
+                          </th>
+                          <th className="px-4 py-2 text-center">
+                            {t.colWinrate}
+                          </th>
+                          <th className="px-4 py-2 text-center">{t.colMaps}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -291,28 +293,28 @@ function AdminTournamentStatsPage({ staff }: StaffProps) {
               {/* Map Stats */}
               <div className="bg-neutral-800 border border-neutral-700 rounded-xl overflow-hidden">
                 <div className="px-4 py-3 border-b border-neutral-700">
-                  <h2 className="text-lg font-semibold">
-                    Statistiques des maps
-                  </h2>
+                  <h2 className="text-lg font-semibold">{t.mapStatsTitle}</h2>
                   <p className="text-xs text-neutral-400">
-                    Par nombre de parties jouées
+                    {t.mapStatsSubtitle}
                   </p>
                 </div>
 
                 {stats.mapStats.length === 0 ? (
                   <div className="px-4 py-6 text-sm text-neutral-400">
-                    Aucune statistique de map disponible.
+                    {t.mapsEmpty}
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead className="bg-neutral-750 text-neutral-300">
                         <tr>
-                          <th className="px-4 py-2 text-left">Map</th>
-                          <th className="px-4 py-2 text-center">Parties</th>
-                          <th className="px-4 py-2 text-center">Usage</th>
-                          <th className="px-4 py-2 text-center">Moy. rounds</th>
-                          <th className="px-4 py-2 text-center">OT</th>
+                          <th className="px-4 py-2 text-left">{t.colMap}</th>
+                          <th className="px-4 py-2 text-center">{t.colGames}</th>
+                          <th className="px-4 py-2 text-center">{t.colUsage}</th>
+                          <th className="px-4 py-2 text-center">
+                            {t.colAvgRounds}
+                          </th>
+                          <th className="px-4 py-2 text-center">{t.colOT}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -354,17 +356,13 @@ function AdminTournamentStatsPage({ staff }: StaffProps) {
             {/* Closest Matches */}
             <div className="bg-neutral-800 border border-neutral-700 rounded-xl overflow-hidden">
               <div className="px-4 py-3 border-b border-neutral-700">
-                <h2 className="text-lg font-semibold">
-                  Matchs les plus serrés
-                </h2>
-                <p className="text-xs text-neutral-400">
-                  Différence de score minimale (matchs terminés)
-                </p>
+                <h2 className="text-lg font-semibold">{t.closestTitle}</h2>
+                <p className="text-xs text-neutral-400">{t.closestSubtitle}</p>
               </div>
 
               {stats.closestMatches.length === 0 ? (
                 <div className="px-4 py-6 text-sm text-neutral-400">
-                  Aucun match terminé.
+                  {t.closestEmpty}
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">

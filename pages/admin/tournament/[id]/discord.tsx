@@ -8,6 +8,7 @@ import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import {
   DISCORD_CHANNEL_TYPES,
   DISCORD_CHANNEL_META,
@@ -42,6 +43,7 @@ function DiscordConfigPage(_: StaffProps) {
   const tournamentId = Array.isArray(id) ? id[0] : id;
   const { addToast } = useToast();
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
+  const t = useAdminT('adminTournamentDiscord');
 
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<ApiResponse | null>(null);
@@ -76,7 +78,7 @@ function DiscordConfigPage(_: StaffProps) {
       );
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
-        throw new Error(j.error || 'Impossible de charger les webhooks');
+        throw new Error(j.error || t.errorLoad);
       }
       const json: ApiResponse = await res.json();
       setData(json);
@@ -107,7 +109,7 @@ function DiscordConfigPage(_: StaffProps) {
     if (!tournamentId) return;
     const draft = drafts[channelType];
     if (!draft.webhookUrl.trim()) {
-      addToast('URL du webhook requise', 'error');
+      addToast(t.toastUrlRequired, 'error');
       return;
     }
 
@@ -127,8 +129,8 @@ function DiscordConfigPage(_: StaffProps) {
         }
       );
       const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json.error || 'Échec de la sauvegarde');
-      addToast('Webhook enregistré', 'success');
+      if (!res.ok) throw new Error(json.error || t.errorSave);
+      addToast(t.toastSaved, 'success');
       await fetchData();
     } catch (err) {
       addToast((err as Error).message, 'error');
@@ -140,11 +142,12 @@ function DiscordConfigPage(_: StaffProps) {
   async function remove(channelType: ChannelType) {
     if (!tournamentId) return;
     const ok = await confirm({
-      title: `Supprimer le webhook "${DISCORD_CHANNEL_META[channelType].label}" pour ce tournoi ?`,
-      subtitle:
-        'Le webhook maitre (s\'il existe) reprendra la main pour ce channel.',
+      title: format(t.confirmDeleteTitle, {
+        label: DISCORD_CHANNEL_META[channelType].label,
+      }),
+      subtitle: t.confirmDeleteSubtitle,
       variant: 'danger',
-      confirmLabel: 'Supprimer',
+      confirmLabel: t.confirmDeleteLabel,
     });
     if (!ok) return;
 
@@ -156,9 +159,9 @@ function DiscordConfigPage(_: StaffProps) {
       );
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
-        throw new Error(j.error || 'Échec de la suppression');
+        throw new Error(j.error || t.errorDelete);
       }
-      addToast('Webhook supprimé', 'success');
+      addToast(t.toastDeleted, 'success');
       setDrafts((d) => ({
         ...d,
         [channelType]: { webhookUrl: '', roleMention: '', isActive: true },
@@ -183,8 +186,8 @@ function DiscordConfigPage(_: StaffProps) {
         }
       );
       const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json.error || 'Échec du test');
-      addToast('Message de test envoyé', 'success');
+      if (!res.ok) throw new Error(json.error || t.errorTest);
+      addToast(t.toastTestSent, 'success');
     } catch (err) {
       addToast((err as Error).message, 'error');
     }
@@ -201,7 +204,7 @@ function DiscordConfigPage(_: StaffProps) {
     <>
       {confirmDialog}
       <Head>
-        <title>Admin – Discord</title>
+        <title>{t.pageTitle}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
@@ -224,23 +227,21 @@ function DiscordConfigPage(_: StaffProps) {
                 d="M15 19l-7-7 7-7"
               />
             </svg>
-            Retour au tournoi
+            {t.backToTournament}
           </button>
 
-          <h1 className="text-3xl font-bold tracking-tight mb-1">
-            Webhooks Discord
-          </h1>
+          <h1 className="text-3xl font-bold tracking-tight mb-1">{t.heading}</h1>
           <p className="text-sm text-neutral-400 mb-4">
-            Configurez un webhook par type de channel. Si rien n&apos;est
-            configuré pour un type, la{' '}
+            {t.introBefore}
             <Link
               href="/admin/site-settings/discord"
               className="underline hover:text-white"
             >
-              configuration maître
-            </Link>{' '}
-            sert de fallback. Réservé au rôle{' '}
-            <code className="bg-neutral-800 px-1 rounded">admin</code>.
+              {t.introLinkMaster}
+            </Link>
+            {t.introMiddle}
+            <code className="bg-neutral-800 px-1 rounded">admin</code>
+            {t.introAfter}
           </p>
 
           <div className="mb-8 rounded-2xl border border-indigo-500/30 bg-indigo-500/5 p-4 flex items-start gap-3">
@@ -258,15 +259,14 @@ function DiscordConfigPage(_: StaffProps) {
               />
             </svg>
             <div className="text-xs text-indigo-100/90">
-              Strategie : un webhook configure ici prend la main pour ce
-              tournoi. Sinon, le webhook global declare dans{' '}
+              {t.strategyBefore}
               <Link
                 href="/admin/site-settings/discord"
                 className="underline font-semibold hover:text-white"
               >
-                Parametres du site &rarr; Webhooks Discord
-              </Link>{' '}
-              s&apos;applique automatiquement.
+                {t.strategyLink}
+              </Link>
+              {t.strategyAfter}
             </div>
           </div>
 
@@ -305,25 +305,25 @@ function DiscordConfigPage(_: StaffProps) {
                       <div className="flex items-center gap-2 flex-shrink-0">
                         {scoped ? (
                           <span
-                            title="Cette configuration override le webhook maitre pour ce tournoi"
+                            title={t.overrideActiveTitle}
                             className="px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-600/20 text-emerald-300 border border-emerald-500/30"
                           >
-                            Override actif
+                            {t.overrideActive}
                           </span>
                         ) : fallback ? (
                           <Link
                             href="/admin/site-settings/discord"
-                            title="Voir / modifier le webhook maitre"
+                            title={t.masterFallbackTitle}
                             className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-600/20 text-amber-300 border border-amber-500/30 hover:bg-amber-600/30 transition-colors"
                           >
-                            Maitre (fallback) ↗
+                            {t.masterFallback}
                           </Link>
                         ) : (
                           <span
-                            title="Aucun webhook (ni override ni maitre) — pas de notification pour ce channel"
+                            title={t.notConfiguredTitle}
                             className="px-2 py-0.5 rounded-full text-xs font-medium bg-neutral-600/20 text-neutral-400 border border-neutral-500/30"
                           >
-                            Non configure
+                            {t.notConfigured}
                           </span>
                         )}
                       </div>
@@ -332,7 +332,7 @@ function DiscordConfigPage(_: StaffProps) {
                     <div className="grid gap-3 sm:grid-cols-[1fr_auto] mb-3">
                       <div>
                         <label className="block text-xs text-neutral-400 mb-1">
-                          URL du webhook Discord
+                          {t.webhookUrlLabel}
                         </label>
                         <input
                           type="text"
@@ -360,15 +360,14 @@ function DiscordConfigPage(_: StaffProps) {
                             }
                             className="w-4 h-4 rounded border-neutral-600 bg-neutral-900"
                           />
-                          Actif
+                          {t.active}
                         </label>
                       </div>
                     </div>
 
                     <div className="mb-3">
                       <label className="block text-xs text-neutral-400 mb-1">
-                        Rôle à pinger (optionnel) — ID Discord,
-                        &quot;everyone&quot;, ou &quot;here&quot;
+                        {t.roleMentionLabel}
                       </label>
                       <input
                         type="text"
@@ -383,12 +382,11 @@ function DiscordConfigPage(_: StaffProps) {
                         className="w-full px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono"
                       />
                       <p className="text-xs text-neutral-500 mt-1">
-                        Astuce : pour récupérer un ID de rôle Discord, tape{' '}
+                        {t.roleHintBefore}
                         <code className="bg-neutral-900 px-1 rounded">
                           \@LeRole
-                        </code>{' '}
-                        dans Discord puis envoie le message — il affichera
-                        l&apos;ID brut.
+                        </code>
+                        {t.roleHintAfter}
                       </p>
                     </div>
 
@@ -399,7 +397,7 @@ function DiscordConfigPage(_: StaffProps) {
                         disabled={saving[ct] || !draft.webhookUrl.trim()}
                         className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors disabled:opacity-50"
                       >
-                        {saving[ct] ? 'Enregistrement...' : 'Enregistrer'}
+                        {saving[ct] ? t.saving : t.save}
                       </button>
                       <button
                         type="button"
@@ -407,7 +405,7 @@ function DiscordConfigPage(_: StaffProps) {
                         disabled={saving[ct]}
                         className="px-4 py-2 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors disabled:opacity-50"
                       >
-                        Tester
+                        {t.test}
                       </button>
                       {scoped && (
                         <button
@@ -416,7 +414,7 @@ function DiscordConfigPage(_: StaffProps) {
                           disabled={saving[ct]}
                           className="px-4 py-2 rounded-xl bg-red-700/50 hover:bg-red-700 text-sm font-medium transition-colors disabled:opacity-50"
                         >
-                          Supprimer
+                          {t.delete}
                         </button>
                       )}
                     </div>

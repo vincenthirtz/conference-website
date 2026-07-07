@@ -10,6 +10,7 @@ import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import Breadcrumb from '@/components/admin/Breadcrumb';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 type StaffProps = {
   staff: {
@@ -41,6 +42,7 @@ function AdminBracketPage(_: StaffProps) {
   const { addToast } = useToast();
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
   const { mutate: generateBracket } = useIdempotentMutation();
+  const t = useAdminT('adminTournamentBracket');
 
   // Vérifier s'il y a déjà des matchs bracket
   useEffect(() => {
@@ -68,15 +70,18 @@ function AdminBracketPage(_: StaffProps) {
     const ok = await confirm({
       title:
         bracketType === 'double'
-          ? `Generer un bracket Double Elimination de ${size} slots ?`
-          : `Generer un bracket Single Elimination de ${size} slots ?`,
-      subtitle: `${totalMatches} matchs au format ${bestOf ? `BO${bestOf}` : '—'}${
-        bracketType === 'double' && grandFinalReset
-          ? ', avec grand-final reset'
-          : ''
-      }.`,
+          ? format(t.confirmTitleDouble, { size })
+          : format(t.confirmTitleSingle, { size }),
+      subtitle: format(t.confirmSubtitle, {
+        count: totalMatches,
+        format: bestOf ? `BO${bestOf}` : '—',
+        reset:
+          bracketType === 'double' && grandFinalReset
+            ? t.confirmResetSuffix
+            : '',
+      }),
       variant: 'info',
-      confirmLabel: 'Generer',
+      confirmLabel: t.confirmLabel,
     });
     if (!ok) return;
 
@@ -102,19 +107,19 @@ function AdminBracketPage(_: StaffProps) {
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || 'Erreur lors de la génération');
+        throw new Error(json.error || t.errorGenerate);
       }
 
       const json = await res.json();
       addToast(
-        `Bracket créé avec ${json.match_count} matchs. Redirection...`,
+        format(t.toastCreated, { count: json.match_count }),
         'success'
       );
       setTimeout(() => {
         router.push(`/admin/tournament/${tournamentId}/bracket-builder`);
       }, 1000);
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? 'Erreur inconnue');
+      setErrorMsg((err as Error)?.message ?? t.errorUnknown);
     } finally {
       setGenerating(false);
     }
@@ -150,18 +155,20 @@ function AdminBracketPage(_: StaffProps) {
     <>
       {confirmDialog}
       <Head>
-        <title>Admin · Bracket</title>
+        <title>{t.pageTitle}</title>
       </Head>
       <div className="min-h-screen bg-neutral-950 text-white pt-24">
         <div className="max-w-3xl mx-auto px-6 py-10 space-y-6">
           <Breadcrumb
             items={[
-              { label: 'Tournois', href: '/admin/tournaments' },
+              { label: t.breadcrumbTournaments, href: '/admin/tournaments' },
               {
-                label: `Tournoi ${tournamentId?.slice(0, 8) ?? '—'}`,
+                label: format(t.breadcrumbTournament, {
+                  id: tournamentId?.slice(0, 8) ?? '—',
+                }),
                 href: `/admin/tournament/${tournamentId}`,
               },
-              { label: 'Bracket' },
+              { label: t.breadcrumbBracket },
             ]}
           />
           <div className="flex items-center justify-between flex-wrap gap-2">
@@ -171,13 +178,13 @@ function AdminBracketPage(_: StaffProps) {
                 onClick={() => router.push(`/admin/tournament/${tournamentId}`)}
                 className="mb-2 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white"
               >
-                &larr; Retour au tournoi
+                {t.back}
               </button>
               <p className="text-xs uppercase tracking-[0.18em] text-purple-200/80">
-                Admin · Bracket
+                {t.eyebrow}
               </p>
               <h1 className="text-2xl font-semibold">
-                Tournoi {tournamentId?.slice(0, 8) ?? '—'}
+                {format(t.title, { id: tournamentId?.slice(0, 8) ?? '—' })}
               </h1>
             </div>
             {hasMatches && (
@@ -186,33 +193,28 @@ function AdminBracketPage(_: StaffProps) {
                   href={`/admin/tournament/${tournamentId}/bracket-builder`}
                   className="px-3 py-2 rounded-lg bg-purple-600/80 hover:bg-purple-600 text-sm font-semibold shadow"
                 >
-                  Ouvrir le bracket builder
+                  {t.openBuilder}
                 </Link>
                 <Link
                   href={`/admin/tournament/${tournamentId}/matches`}
                   className="px-3 py-2 rounded-lg bg-white/10 border border-white/15 hover:bg-white/15 text-sm"
                 >
-                  Voir les matchs
+                  {t.viewMatches}
                 </Link>
               </div>
             )}
           </div>
 
           {loading && (
-            <div className="text-neutral-400 text-sm">Chargement...</div>
+            <div className="text-neutral-400 text-sm">{t.loading}</div>
           )}
 
           {/* Formulaire de création quand aucun bracket n'existe */}
           {!loading && !hasMatches && (
             <div className="rounded-xl border border-white/10 bg-white/5 p-6 space-y-6">
               <div>
-                <h2 className="text-lg font-semibold mb-1">
-                  Créer un nouveau bracket
-                </h2>
-                <p className="text-sm text-neutral-400">
-                  Genere la structure du bracket sans equipes. Les slots
-                  pourront etre remplis ensuite.
-                </p>
+                <h2 className="text-lg font-semibold mb-1">{t.createHeading}</h2>
+                <p className="text-sm text-neutral-400">{t.createDesc}</p>
               </div>
 
               {errorMsg && (
@@ -224,7 +226,7 @@ function AdminBracketPage(_: StaffProps) {
                 {/* Type de bracket */}
                 <div>
                   <label className="block text-sm font-medium text-neutral-200 mb-2">
-                    Type de bracket
+                    {t.bracketTypeLabel}
                   </label>
                   <div className="flex gap-2">
                     <button
@@ -236,7 +238,7 @@ function AdminBracketPage(_: StaffProps) {
                           : 'bg-neutral-800 border-neutral-700 text-neutral-300 hover:bg-neutral-700'
                       }`}
                     >
-                      Single Elimination
+                      {t.singleElim}
                     </button>
                     <button
                       type="button"
@@ -247,7 +249,7 @@ function AdminBracketPage(_: StaffProps) {
                           : 'bg-neutral-800 border-neutral-700 text-neutral-300 hover:bg-neutral-700'
                       }`}
                     >
-                      Double Elimination
+                      {t.doubleElim}
                     </button>
                   </div>
                 </div>
@@ -255,7 +257,7 @@ function AdminBracketPage(_: StaffProps) {
                 {/* Taille du bracket */}
                 <div>
                   <label className="block text-sm font-medium text-neutral-200 mb-2">
-                    Nombre de slots (équipes)
+                    {t.slotsLabel}
                   </label>
                   <div className="flex gap-2">
                     {[4, 8, 16, 32].map((s) => (
@@ -274,14 +276,17 @@ function AdminBracketPage(_: StaffProps) {
                     ))}
                   </div>
                   <p className="mt-1 text-xs text-neutral-500">
-                    {totalRounds} rounds, {totalMatches} matchs au total
+                    {format(t.roundsSummary, {
+                      rounds: totalRounds,
+                      matches: totalMatches,
+                    })}
                   </p>
                 </div>
 
                 {/* Format (Best of) */}
                 <div>
                   <label className="block text-sm font-medium text-neutral-200 mb-2">
-                    Format par défaut
+                    {t.defaultFormatLabel}
                   </label>
                   <div className="flex gap-2">
                     {[1, 3, 5].map((bo) => (
@@ -307,7 +312,7 @@ function AdminBracketPage(_: StaffProps) {
                     htmlFor="startDate"
                     className="block text-sm font-medium text-neutral-200 mb-2"
                   >
-                    Date et heure du premier match
+                    {t.firstMatchLabel}
                   </label>
                   <input
                     id="startDate"
@@ -317,8 +322,7 @@ function AdminBracketPage(_: StaffProps) {
                     className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
                   />
                   <p className="mt-1 text-xs text-neutral-500">
-                    Optionnel. Les horaires pourront aussi être modifiés dans le
-                    bracket builder.
+                    {t.firstMatchHelp}
                   </p>
                 </div>
 
@@ -328,7 +332,7 @@ function AdminBracketPage(_: StaffProps) {
                     htmlFor="interval"
                     className="block text-sm font-medium text-neutral-200 mb-2"
                   >
-                    Intervalle entre les matchs (minutes)
+                    {t.intervalLabel}
                   </label>
                   <input
                     id="interval"
@@ -354,12 +358,11 @@ function AdminBracketPage(_: StaffProps) {
                         className="rounded border-neutral-500 bg-neutral-700"
                       />
                       <span className="font-medium text-neutral-200">
-                        Grand Final Reset
+                        {t.grandFinalReset}
                       </span>
                     </label>
                     <p className="mt-1 text-xs text-neutral-500 ml-6">
-                      Si le joueur venant du Loser Bracket gagne la Grande
-                      Finale, un match supplementaire est joue pour departager.
+                      {t.grandFinalResetHelp}
                     </p>
                   </div>
                 )}
@@ -367,12 +370,12 @@ function AdminBracketPage(_: StaffProps) {
                 {/* Aperçu visuel */}
                 <div className="rounded-lg border border-neutral-700 bg-neutral-900/50 p-4">
                   <h3 className="text-sm font-medium text-neutral-300 mb-3">
-                    Apercu de la structure
+                    {t.structurePreview}
                   </h3>
                   {/* Winners bracket preview */}
                   {bracketType === 'double' && (
                     <p className="text-xs text-purple-300 uppercase tracking-wider mb-2 font-semibold">
-                      Winners Bracket
+                      {t.winnersBracket}
                     </p>
                   )}
                   <div className="flex items-center gap-4 overflow-x-auto pb-2">
@@ -381,12 +384,19 @@ function AdminBracketPage(_: StaffProps) {
                       let label: string;
                       if (r + 1 === totalRounds)
                         label =
-                          bracketType === 'double' ? 'WB Finale' : 'Finale';
+                          bracketType === 'double'
+                            ? `WB ${t.roundFinal}`
+                            : t.roundFinal;
                       else if (r + 1 === totalRounds - 1)
-                        label = bracketType === 'double' ? 'WB Demi' : 'Demi';
+                        label =
+                          bracketType === 'double'
+                            ? `WB ${t.roundSemi}`
+                            : t.roundSemi;
                       else if (r + 1 === totalRounds - 2 && totalRounds >= 3)
                         label =
-                          bracketType === 'double' ? 'WB Quarts' : 'Quarts';
+                          bracketType === 'double'
+                            ? `WB ${t.roundQuarter}`
+                            : t.roundQuarter;
                       else
                         label =
                           bracketType === 'double'
@@ -433,7 +443,7 @@ function AdminBracketPage(_: StaffProps) {
                   {bracketType === 'double' && (
                     <>
                       <p className="text-xs text-red-300 uppercase tracking-wider mb-2 mt-4 font-semibold">
-                        Losers Bracket
+                        {t.losersBracket}
                       </p>
                       <div className="flex items-center gap-4 overflow-x-auto pb-2">
                         {(() => {
@@ -454,7 +464,7 @@ function AdminBracketPage(_: StaffProps) {
                             rounds.push({
                               label:
                                 lbR === lbRoundsCount
-                                  ? 'LB Finale'
+                                  ? `LB ${t.roundFinal}`
                                   : `LB R${lbR}`,
                               count,
                             });
@@ -495,8 +505,8 @@ function AdminBracketPage(_: StaffProps) {
                   }`}
                 >
                   {generating
-                    ? 'Génération en cours...'
-                    : `Générer le bracket (${totalMatches} matchs)`}
+                    ? t.generating
+                    : format(t.generateBtn, { matches: totalMatches })}
                 </button>
               </form>
             </div>
@@ -505,15 +515,12 @@ function AdminBracketPage(_: StaffProps) {
           {/* Quand un bracket existe déjà */}
           {!loading && hasMatches && (
             <div className="rounded-xl border border-white/10 bg-white/5 p-6 space-y-4">
-              <p className="text-sm text-neutral-300">
-                Un bracket existe déjà pour ce tournoi. Utilisez le bracket
-                builder pour modifier les slots, les dates et les résultats.
-              </p>
+              <p className="text-sm text-neutral-300">{t.existsNotice}</p>
               <Link
                 href={`/admin/tournament/${tournamentId}/bracket-builder`}
                 className="inline-block px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-sm font-semibold"
               >
-                Ouvrir le bracket builder
+                {t.openBuilder}
               </Link>
             </div>
           )}

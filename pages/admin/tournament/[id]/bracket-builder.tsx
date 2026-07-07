@@ -8,6 +8,7 @@ import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { formatDateHeader } from '@/utils/dateFormatters';
 import { STATUS_CONFIG } from '@/utils/statusConfig';
 import AlertBanner from '@/components/admin/AlertBanner';
@@ -53,6 +54,7 @@ export const getServerSideProps = withStaffPage('manager');
 function AdminBracketBuilderPage(_: StaffProps) {
   const router = useRouter();
   const { id } = router.query;
+  const t = useAdminT('adminTournamentBracketBuilder');
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -87,7 +89,7 @@ function AdminBracketBuilderPage(_: StaffProps) {
       ]);
       if (!matchRes.ok) {
         const json = await matchRes.json().catch(() => ({}));
-        throw new Error(json.error || 'Impossible de charger les matchs');
+        throw new Error(json.error || t.errorLoad);
       }
       const json: ApiResponse = await matchRes.json();
       setTournament(json.tournament);
@@ -98,7 +100,7 @@ function AdminBracketBuilderPage(_: StaffProps) {
         setTournamentTeams(teamsJson.teams || []);
       }
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
+      setErrorMsg((err as Error)?.message ?? t.errorUnexpected);
     } finally {
       setLoading(false);
     }
@@ -156,9 +158,7 @@ function AdminBracketBuilderPage(_: StaffProps) {
       if (!groups.has(dateKey)) {
         groups.set(dateKey, {
           dateKey,
-          label: m.scheduled_at
-            ? formatDateHeader(m.scheduled_at)
-            : 'Sans date',
+          label: m.scheduled_at ? formatDateHeader(m.scheduled_at) : t.noDate,
           roundName: m.round_name,
           matches: [],
         });
@@ -166,7 +166,7 @@ function AdminBracketBuilderPage(_: StaffProps) {
       groups.get(dateKey)!.matches.push(m);
     }
     return Array.from(groups.values());
-  }, [matches]);
+  }, [matches, t]);
 
   const totalMatches = matches.length;
   const finishedCount = matches.filter((m) => m.status === 'finished').length;
@@ -198,12 +198,14 @@ function AdminBracketBuilderPage(_: StaffProps) {
         roundNumber: roundNum,
         roundName:
           roundMatches[0]?.round_name ??
-          (roundMatches.length === 1 ? 'Finale' : `Round ${roundNum}`),
+          (roundMatches.length === 1
+            ? t.roundFinal
+            : format(t.roundLabel, { n: roundNum })),
         matches: roundMatches.sort(
           (a, b) => (a.position_in_round ?? 0) - (b.position_in_round ?? 0)
         ),
       }));
-  }, [matches, isDoubleElim]);
+  }, [matches, isDoubleElim, t]);
 
   /** Build loser bracket rounds (for double elim) */
   const loserBracketRounds: BracketRound[] = useMemo(() => {
@@ -219,21 +221,24 @@ function AdminBracketBuilderPage(_: StaffProps) {
       .sort(([a], [b]) => a - b)
       .map(([roundNum, roundMatches]) => ({
         roundNumber: roundNum,
-        roundName: roundMatches[0]?.round_name ?? `LB Round ${roundNum}`,
+        roundName:
+          roundMatches[0]?.round_name ??
+          format(t.lbRoundLabel, { n: roundNum }),
         matches: roundMatches.sort(
           (a, b) => (a.position_in_round ?? 0) - (b.position_in_round ?? 0)
         ),
       }));
-  }, [matches, isDoubleElim]);
+  }, [matches, isDoubleElim, t]);
 
   /** Export PDF via print */
   const handleExportPDF = useCallback(() => {
     const teamName = (m: ScheduleMatch, slot: 1 | 2) => {
-      const t = slot === 1 ? m.team1 : m.team2;
-      if (t) return t.name;
+      const tm = slot === 1 ? m.team1 : m.team2;
+      if (tm) return tm.name;
       const info = parseNotes(m.notes);
-      if (info?.seed1) return `Seed ${slot === 1 ? info.seed1 : info.seed2}`;
-      return 'TBD';
+      if (info?.seed1)
+        return format(t.seedLabel, { n: slot === 1 ? info.seed1 : info.seed2 });
+      return t.tbd;
     };
 
     const isElimination =
@@ -250,7 +255,7 @@ function AdminBracketBuilderPage(_: StaffProps) {
 <html lang="fr">
 <head>
 <meta charset="utf-8"/>
-<title>${tournament?.name ?? 'Tournoi'} — Planning des matchs</title>
+<title>${format(t.pdfTitle, { name: tournament?.name ?? t.defaultTournamentName })}</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 24px; color: #1a1a1a; }
@@ -296,14 +301,14 @@ function AdminBracketBuilderPage(_: StaffProps) {
 </style>
 </head>
 <body>
-<h1>${tournament?.name ?? 'Tournoi'} — Planning des matchs</h1>
-<p class="subtitle">Export du ${new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })} · ${totalMatches} matchs · ${roundCount} journées</p>
+<h1>${format(t.pdfTitle, { name: tournament?.name ?? t.defaultTournamentName })}</h1>
+<p class="subtitle">${format(t.pdfSubtitle, { date: new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }), matches: totalMatches, days: roundCount })}</p>
 
 ${
   bracketRounds.length > 1
     ? `
 <div class="bracket-section">
-<h2>Vue Bracket</h2>
+<h2>${t.pdfBracketView}</h2>
 ${
   isElimination
     ? `
@@ -359,13 +364,13 @@ ${bracketRounds
     : ''
 }
 
-<h2>Liste des matchs</h2>
+<h2>${t.pdfMatchList}</h2>
 ${matchDays
   .map(
     (day) => `
 <h2>${day.label}${day.roundName ? ` — ${day.roundName}` : ''}</h2>
 <table>
-<thead><tr><th>Heure</th><th>Équipe 1</th><th>Équipe 2</th><th>Format</th><th>Statut</th></tr></thead>
+<thead><tr><th>${t.pdfColTime}</th><th>${t.pdfColTeam1}</th><th>${t.pdfColTeam2}</th><th>${t.pdfColFormat}</th><th>${t.pdfColStatus}</th></tr></thead>
 <tbody>
 ${day.matches
   .map(
@@ -383,7 +388,7 @@ ${day.matches
   )
   .join('')}
 
-<p class="meta">${totalMatches} matchs · ${finishedCount} terminés</p>
+<p class="meta">${format(t.pdfFooter, { matches: totalMatches, finished: finishedCount })}</p>
 </body></html>`;
 
     const w = window.open('', '_blank');
@@ -393,7 +398,7 @@ ${day.matches
     w.onload = () => {
       setTimeout(() => w.print(), 300);
     };
-  }, [matchDays, bracketRounds, tournament, totalMatches, finishedCount]);
+  }, [matchDays, bracketRounds, tournament, totalMatches, finishedCount, t]);
 
   /* ---- Mutations ---- */
 
@@ -501,14 +506,14 @@ ${day.matches
       });
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || 'Erreur lors de l\u2019enregistrement');
+        throw new Error(json.error || t.errorSave);
       }
       await res.json();
-      addToast('Planning enregistré.', 'success');
+      addToast(t.toastSaved, 'success');
       setDirty(false);
       fetchData();
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? 'Erreur inconnue');
+      setErrorMsg((err as Error)?.message ?? t.errorUnknown);
     } finally {
       setSaving(false);
     }
@@ -518,7 +523,9 @@ ${day.matches
     <>
       <Head>
         <title>
-          {tournament ? `${tournament.name} — Planning` : 'Planning tournoi'}
+          {tournament
+            ? format(t.pageTitleWith, { name: tournament.name })
+            : t.pageTitle}
         </title>
       </Head>
 
@@ -548,13 +555,13 @@ ${day.matches
                   strokeLinejoin="round"
                 />
               </svg>
-              Retour au tournoi
+              {t.back}
             </button>
 
             <div className="flex items-end justify-between flex-wrap gap-4">
               <div>
                 <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight bg-gradient-to-r from-white via-purple-100 to-purple-300 bg-clip-text text-transparent">
-                  Planning des matchs
+                  {t.heading}
                 </h1>
                 {tournament && (
                   <p className="mt-2 text-purple-200/60 text-sm font-medium">
@@ -573,16 +580,16 @@ ${day.matches
                 <div className="flex gap-2">
                   <div className="px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-medium">
                     <span className="text-purple-300">{totalMatches}</span>{' '}
-                    <span className="text-neutral-400">matchs</span>
+                    <span className="text-neutral-400">{t.statMatches}</span>
                   </div>
                   <div className="px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-medium">
                     <span className="text-purple-300">{matchDays.length}</span>{' '}
-                    <span className="text-neutral-400">journées</span>
+                    <span className="text-neutral-400">{t.statDays}</span>
                   </div>
                   {finishedCount > 0 && (
                     <div className="px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-xs font-medium">
                       <span className="text-emerald-300">{finishedCount}</span>{' '}
-                      <span className="text-emerald-400/60">terminés</span>
+                      <span className="text-emerald-400/60">{t.statFinished}</span>
                     </div>
                   )}
                 </div>
@@ -599,17 +606,17 @@ ${day.matches
               {[
                 {
                   key: 'planning' as ViewMode,
-                  label: 'Planning',
+                  label: t.viewPlanning,
                   icon: 'M3 3h4v4H3zm6 0h4v4H9zm-6 6h4v4H3zm6 0h4v4H9z',
                 },
                 {
                   key: 'list' as ViewMode,
-                  label: 'Liste',
+                  label: t.viewList,
                   icon: 'M3 4h10M3 8h10M3 12h10',
                 },
                 {
                   key: 'bracket' as ViewMode,
-                  label: 'Arbre',
+                  label: t.viewBracket,
                   icon: 'M2 3v4h4M10 3v4h4M5 7v2h6M8 9v4',
                 },
               ].map((v) => (
@@ -645,7 +652,7 @@ ${day.matches
               disabled={loading || saving}
               className="px-3.5 py-1.5 rounded-lg text-xs font-medium border border-white/10 bg-white/5 hover:bg-white/10 transition-colors disabled:opacity-40"
             >
-              {loading ? 'Chargement...' : 'Recharger'}
+              {loading ? t.loading : t.reload}
             </button>
             <button
               type="button"
@@ -657,15 +664,11 @@ ${day.matches
                   : 'bg-purple-600 hover:bg-purple-500 text-white shadow-lg shadow-purple-600/20'
               }`}
             >
-              {saving
-                ? 'Enregistrement...'
-                : dirty
-                  ? 'Enregistrer'
-                  : 'Sauvegardé'}
+              {saving ? t.saving : dirty ? t.save : t.saved}
             </button>
             {dirty && (
               <span className="text-[11px] text-amber-400/70">
-                Modifications non sauvegardées
+                {t.unsavedChanges}
               </span>
             )}
 
@@ -701,7 +704,7 @@ ${day.matches
                   strokeLinejoin="round"
                 />
               </svg>
-              Exporter PDF
+              {t.exportPdf}
             </button>
           </div>
         </div>
@@ -721,14 +724,12 @@ ${day.matches
           {!loading && matches.length === 0 && (
             <div className="text-center py-20">
               <div className="text-4xl mb-3 opacity-30">&#9917;</div>
-              <p className="text-neutral-400">
-                Aucun match trouvé pour ce tournoi.
-              </p>
+              <p className="text-neutral-400">{t.emptyMatches}</p>
               <Link
                 href={`/admin/tournament/${id}/bracket`}
                 className="mt-4 inline-block text-sm text-purple-400 hover:text-purple-300 underline underline-offset-2"
               >
-                Créer un bracket
+                {t.createBracket}
               </Link>
             </div>
           )}
@@ -754,8 +755,12 @@ ${day.matches
                     </div>
                     <div className="flex-1 h-px bg-gradient-to-r from-white/10 to-transparent" />
                     <span className="text-xs text-neutral-500 font-medium">
-                      {day.matches.length} match
-                      {day.matches.length > 1 ? 's' : ''}
+                      {format(
+                        day.matches.length === 1
+                          ? t.dayMatchCount_one
+                          : t.dayMatchCount_other,
+                        { count: day.matches.length }
+                      )}
                     </span>
                   </div>
 
@@ -791,7 +796,7 @@ ${day.matches
             <>
               {isDoubleElim && (
                 <h3 className="text-sm font-bold uppercase tracking-wider text-purple-300 mb-2">
-                  Winners Bracket
+                  {t.winnersBracket}
                 </h3>
               )}
               <BracketTreeView rounds={bracketRounds} />
@@ -800,7 +805,7 @@ ${day.matches
                 <>
                   <div className="mt-8 mb-2 pt-6 border-t border-red-500/20">
                     <h3 className="text-sm font-bold uppercase tracking-wider text-red-300">
-                      Losers Bracket
+                      {t.losersBracket}
                     </h3>
                   </div>
                   <BracketTreeView rounds={loserBracketRounds} />

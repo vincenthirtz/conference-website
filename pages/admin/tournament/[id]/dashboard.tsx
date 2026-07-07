@@ -10,6 +10,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage, hasAtLeastRole } from '@/utils/staff';
 import type { StaffProps, StaffRole } from '@/types/admin';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { formatDateTimeTz } from '@/utils/timezone';
 import { useRealtimeChannel } from '@/hooks/useRealtimeChannel';
 import StatCard from '@/components/admin/dashboard/StatCard';
@@ -41,13 +42,17 @@ const STATUS_PILL_STYLE: Record<string, string> = {
   archived: 'bg-neutral-500/20 text-neutral-400 border-neutral-500/30',
 };
 
-const STATUS_LABEL: Record<string, string> = {
-  draft: 'Brouillon',
-  published: 'Publié',
-  running: 'En cours',
-  completed: 'Terminé',
-  archived: 'Archivé',
-};
+type Dict = ReturnType<typeof useAdminT<'adminTournamentDashboard'>>;
+
+function getStatusLabel(tx: Dict): Record<string, string> {
+  return {
+    draft: tx.statusDraft,
+    published: tx.statusPublished,
+    running: tx.statusRunning,
+    completed: tx.statusCompleted,
+    archived: tx.statusArchived,
+  };
+}
 
 /* -----------------------------------------------------------
  * Quick access grid des 15 sous-pages
@@ -62,113 +67,115 @@ type QuickLink = {
   role?: 'manager' | 'admin';
 };
 
-const QUICK_LINKS: QuickLink[] = [
-  {
-    label: 'Phases',
-    icon: '🧱',
-    href: (id) => `/admin/tournament/${id}/stages`,
-    description: 'Configurer poules, brackets, swiss',
-  },
-  {
-    label: 'Matchs',
-    icon: '🎯',
-    href: (id) => `/admin/tournament/${id}/matches`,
-    description: 'Liste, filtres, scoring',
-  },
-  {
-    label: 'Bracket',
-    icon: '🏆',
-    href: (id) => `/admin/tournament/${id}/bracket`,
-    description: 'Générer un bracket simple/double',
-  },
-  {
-    label: 'Bracket Builder',
-    icon: '🛠️',
-    href: (id) => `/admin/tournament/${id}/bracket-builder`,
-    description: 'Drag-drop visuel + planning',
-  },
-  {
-    label: 'Maps',
-    icon: '🗺️',
-    href: (id) => `/admin/tournament/${id}/maps`,
-    description: 'Pool de cartes',
-  },
-  {
-    label: 'Map Draw',
-    icon: '🎲',
-    href: (id) => `/admin/tournament/${id}/map-draw`,
-    description: 'Tirage aléatoire BO3/BO5',
-  },
-  {
-    label: 'Veto',
-    icon: '🚫',
-    href: (id) => `/admin/tournament/${id}/veto`,
-    description: 'Pick/ban par match',
-  },
-  {
-    label: 'Check-in',
-    icon: '✅',
-    href: (id) => `/admin/tournament/${id}/checkin`,
-    description: 'État check-in par match',
-  },
-  {
-    label: 'Bulk ops',
-    icon: '⚡',
-    href: (id) => `/admin/tournament/${id}/bulk-ops`,
-    description: 'Décaler / réassigner en masse',
-  },
-  {
-    label: 'Stats',
-    icon: '📊',
-    href: (id) => `/admin/tournament/${id}/stats`,
-    description: 'Winrates, maps, OT',
-  },
-  {
-    label: 'Analytics',
-    icon: '📈',
-    href: (id) => `/admin/tournament/${id}/analytics`,
-    description: 'Résumé, équipes, maps, héros',
-  },
-  {
-    label: 'Discord',
-    icon: '🔔',
-    href: (id) => `/admin/tournament/${id}/discord`,
-    description: 'Webhooks par canal',
-    role: 'admin',
-  },
-  {
-    label: 'History',
-    icon: '📜',
-    href: (id) => `/admin/tournament/${id}/history`,
-    description: 'Audit log staff',
-  },
-  {
-    label: 'Édition',
-    icon: '✏️',
-    href: (id) => `/admin/tournament/${id}/edit`,
-    description: 'Méta, dates, roster lock',
-  },
-  {
-    label: 'Tickets support',
-    icon: '🛂',
-    href: () => `/admin/support`,
-    description: 'Disputes / signalements',
-  },
-  {
-    label: 'Templates',
-    icon: '🧬',
-    href: () => `/admin/tournament-templates`,
-    description: 'Modèles de tournois',
-    role: 'manager',
-  },
-  {
-    label: 'Simulateur',
-    icon: '🧪',
-    href: () => `/admin/tournament-simulator`,
-    description: 'Monte-Carlo & projections',
-    role: 'manager',
-  },
-];
+function getQuickLinks(tx: Dict): QuickLink[] {
+  return [
+    {
+      label: tx.quickStagesLabel,
+      icon: '🧱',
+      href: (id) => `/admin/tournament/${id}/stages`,
+      description: tx.quickStagesDesc,
+    },
+    {
+      label: tx.quickMatchesLabel,
+      icon: '🎯',
+      href: (id) => `/admin/tournament/${id}/matches`,
+      description: tx.quickMatchesDesc,
+    },
+    {
+      label: tx.quickBracketLabel,
+      icon: '🏆',
+      href: (id) => `/admin/tournament/${id}/bracket`,
+      description: tx.quickBracketDesc,
+    },
+    {
+      label: tx.quickBracketBuilderLabel,
+      icon: '🛠️',
+      href: (id) => `/admin/tournament/${id}/bracket-builder`,
+      description: tx.quickBracketBuilderDesc,
+    },
+    {
+      label: tx.quickMapsLabel,
+      icon: '🗺️',
+      href: (id) => `/admin/tournament/${id}/maps`,
+      description: tx.quickMapsDesc,
+    },
+    {
+      label: tx.quickMapDrawLabel,
+      icon: '🎲',
+      href: (id) => `/admin/tournament/${id}/map-draw`,
+      description: tx.quickMapDrawDesc,
+    },
+    {
+      label: tx.quickVetoLabel,
+      icon: '🚫',
+      href: (id) => `/admin/tournament/${id}/veto`,
+      description: tx.quickVetoDesc,
+    },
+    {
+      label: tx.quickCheckinLabel,
+      icon: '✅',
+      href: (id) => `/admin/tournament/${id}/checkin`,
+      description: tx.quickCheckinDesc,
+    },
+    {
+      label: tx.quickBulkOpsLabel,
+      icon: '⚡',
+      href: (id) => `/admin/tournament/${id}/bulk-ops`,
+      description: tx.quickBulkOpsDesc,
+    },
+    {
+      label: tx.quickStatsLabel,
+      icon: '📊',
+      href: (id) => `/admin/tournament/${id}/stats`,
+      description: tx.quickStatsDesc,
+    },
+    {
+      label: tx.quickAnalyticsLabel,
+      icon: '📈',
+      href: (id) => `/admin/tournament/${id}/analytics`,
+      description: tx.quickAnalyticsDesc,
+    },
+    {
+      label: tx.quickDiscordLabel,
+      icon: '🔔',
+      href: (id) => `/admin/tournament/${id}/discord`,
+      description: tx.quickDiscordDesc,
+      role: 'admin',
+    },
+    {
+      label: tx.quickHistoryLabel,
+      icon: '📜',
+      href: (id) => `/admin/tournament/${id}/history`,
+      description: tx.quickHistoryDesc,
+    },
+    {
+      label: tx.quickEditLabel,
+      icon: '✏️',
+      href: (id) => `/admin/tournament/${id}/edit`,
+      description: tx.quickEditDesc,
+    },
+    {
+      label: tx.quickSupportLabel,
+      icon: '🛂',
+      href: () => `/admin/support`,
+      description: tx.quickSupportDesc,
+    },
+    {
+      label: tx.quickTemplatesLabel,
+      icon: '🧬',
+      href: () => `/admin/tournament-templates`,
+      description: tx.quickTemplatesDesc,
+      role: 'manager',
+    },
+    {
+      label: tx.quickSimulatorLabel,
+      icon: '🧪',
+      href: () => `/admin/tournament-simulator`,
+      description: tx.quickSimulatorDesc,
+      role: 'manager',
+    },
+  ];
+}
 
 /* -----------------------------------------------------------
  * Helpers
@@ -220,6 +227,9 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
   const router = useRouter();
   const { id } = router.query;
   const tournamentId = Array.isArray(id) ? id[0] : id;
+  const tx = useAdminT('adminTournamentDashboard');
+  const STATUS_LABEL = getStatusLabel(tx);
+  const QUICK_LINKS = getQuickLinks(tx);
 
   const [loading, setLoading] = useState(initialData == null);
   const [errorMsg, setErrorMsg] = useState<string | null>(initialError);
@@ -257,7 +267,7 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
       );
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || 'Impossible de charger le dashboard');
+        throw new Error(json.error || tx.errorLoad);
       }
       setData(await res.json());
       setLastFetchedAt(new Date());
@@ -266,11 +276,11 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
     } catch (err: unknown) {
       // Garde le snapshot précédent et passe en mode stale.
       setStale(true);
-      setErrorMsg((err as Error)?.message || 'Erreur de chargement');
+      setErrorMsg((err as Error)?.message || tx.errorGeneric);
     } finally {
       setLoading(false);
     }
-  }, [tournamentId]);
+  }, [tournamentId, tx]);
 
   // Auto-refresh (pause si onglet caché). Pas de fetch initial : SSR a déjà
   // chargé les données via getServerSideProps. Sert aussi de filet de
@@ -318,7 +328,7 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
     const lockedAt = t?.roster_locked_at;
     if (!lockedAt) return null;
     const diffMs = new Date(lockedAt).getTime() - nowMs;
-    if (diffMs <= 0) return { passed: true, label: 'verrouillé' };
+    if (diffMs <= 0) return { passed: true, label: tx.rosterLocked };
     const minutes = Math.ceil(diffMs / 60_000);
     if (minutes < 60) return { passed: false, label: `${minutes} min` };
     const hours = Math.ceil(diffMs / 3_600_000);
@@ -333,15 +343,16 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
     const etaIso = sig?.velocity.etaIso;
     if (!etaIso) return null;
     const diffMs = new Date(etaIso).getTime() - nowMs;
-    if (diffMs <= 0) return { label: 'imminent', iso: etaIso };
+    if (diffMs <= 0) return { label: tx.etaImminent, iso: etaIso };
     const hours = Math.round(diffMs / 3_600_000);
     if (hours < 1) {
       const minutes = Math.round(diffMs / 60_000);
-      return { label: `dans ${minutes} min`, iso: etaIso };
+      return { label: format(tx.etaInMinutes, { n: minutes }), iso: etaIso };
     }
-    if (hours < 36) return { label: `dans ${hours}h`, iso: etaIso };
+    if (hours < 36)
+      return { label: format(tx.etaInHours, { n: hours }), iso: etaIso };
     const days = Math.round(hours / 24);
-    return { label: `dans ${days}j`, iso: etaIso };
+    return { label: format(tx.etaInDays, { n: days }), iso: etaIso };
   })();
 
   // Prochain match à venir (pour J-X header)
@@ -361,7 +372,9 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
   return (
     <>
       <Head>
-        <title>Centre de contrôle — {t?.name ?? 'Tournoi'}</title>
+        <title>
+          {format(tx.pageTitle, { name: t?.name ?? tx.defaultTournamentName })}
+        </title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
@@ -386,14 +399,14 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
                   d="M15 19l-7-7 7-7"
                 />
               </svg>
-              Retour au tournoi
+              {tx.back}
             </button>
 
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-3">
                   <h1 className="text-3xl font-bold tracking-tight">
-                    {t?.name ?? 'Chargement…'}
+                    {t?.name ?? tx.loadingName}
                   </h1>
                   {t?.status && (
                     <span
@@ -407,15 +420,15 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
                   {sig && sig.liveMatches.length > 0 && (
                     <span className="inline-flex items-center gap-1.5 rounded-full border border-rose-500/40 bg-rose-500/10 px-3 py-1 text-xs font-semibold text-rose-300">
                       <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-rose-400" />
-                      {sig.liveMatches.length} en direct
+                      {format(tx.liveCount, { count: sig.liveMatches.length })}
                     </span>
                   )}
                 </div>
                 <p className="mt-1 text-sm text-neutral-400">
-                  Centre de contrôle
+                  {tx.controlCenter}
                   {jDayHeader && (
                     <>
-                      {' · '}prochain kickoff dans{' '}
+                      {tx.nextKickoffBefore}
                       <span className="text-purple-300">{jDayHeader}</span>
                     </>
                   )}
@@ -427,7 +440,7 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
                           stale ? 'text-amber-300' : 'text-neutral-500'
                         }
                       >
-                        {stale ? '⚠ stale' : 'à jour'} ·{' '}
+                        {stale ? tx.stale : tx.upToDate} ·{' '}
                         {lastFetchedAt.toLocaleTimeString('fr-FR')}
                       </span>
                     </>
@@ -454,20 +467,20 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
                         d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                       />
                     </svg>
-                    Exporter
+                    {tx.export}
                   </button>
                   <div className="invisible absolute right-0 z-10 mt-1 w-48 rounded-xl border border-neutral-700 bg-neutral-800 py-1 shadow-lg group-hover:visible">
                     <a
                       href={`/api/admin/tournament/${tournamentId}/export-results?format=csv`}
                       className="block px-4 py-2 text-sm transition-colors hover:bg-neutral-700"
                     >
-                      Résultats CSV
+                      {tx.resultsCsv}
                     </a>
                     <a
                       href={`/api/admin/tournament/${tournamentId}/export-results?format=json`}
                       className="block px-4 py-2 text-sm transition-colors hover:bg-neutral-700"
                     >
-                      Résultats JSON
+                      {tx.resultsJson}
                     </a>
                   </div>
                 </div>
@@ -475,7 +488,7 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
                   onClick={fetchDashboard}
                   className="rounded-lg border border-neutral-700 bg-neutral-800 px-4 py-2 text-sm font-medium transition-colors hover:bg-neutral-700"
                 >
-                  Rafraîchir
+                  {tx.refresh}
                 </button>
               </div>
             </div>
@@ -484,7 +497,7 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
           {/* ─── Loading / error initial ────────────────────────────── */}
           {loading && !data && (
             <div className="rounded-2xl border border-neutral-800 bg-neutral-900/40 p-8 text-center text-neutral-400">
-              Chargement du dashboard…
+              {tx.loadingDashboard}
             </div>
           )}
           {errorMsg && !data && (
@@ -498,34 +511,38 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
               {/* ─── KPIs ───────────────────────────────────────────── */}
               <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
                 <StatCard
-                  label="Équipes"
+                  label={tx.kpiTeams}
                   value={`${s.activeTeams}/${s.totalTeams}`}
-                  hint={`${s.eliminatedTeams} éliminée(s)`}
+                  hint={format(tx.kpiTeamsEliminated, {
+                    count: s.eliminatedTeams,
+                  })}
                   accent="pink"
                 />
                 <StatCard
-                  label="Matchs"
+                  label={tx.kpiMatches}
                   value={`${s.finishedMatches}/${s.totalMatches}`}
-                  hint={`${s.completionPercent}% terminé`}
+                  hint={format(tx.kpiMatchesDone, {
+                    percent: s.completionPercent,
+                  })}
                   accent="emerald"
                 />
                 <StatCard
-                  label="En cours"
+                  label={tx.kpiOngoing}
                   value={s.ongoingMatches}
-                  hint={s.ongoingMatches > 0 ? 'Live' : '—'}
+                  hint={s.ongoingMatches > 0 ? tx.kpiLive : '—'}
                   accent={s.ongoingMatches > 0 ? 'red' : 'gray'}
                 />
                 <StatCard
-                  label="Phases"
+                  label={tx.kpiStages}
                   value={data.stages.length}
                   hint={
                     data.stages.find((st) => st.is_active)?.name ??
-                    'Aucune active'
+                    tx.kpiNoActiveStage
                   }
                   accent="blue"
                 />
                 <StatCard
-                  label="Cadence"
+                  label={tx.kpiCadence}
                   value={
                     sig.velocity.matchesPerHour > 0
                       ? `${sig.velocity.matchesPerHour}/h`
@@ -533,16 +550,19 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
                   }
                   hint={
                     sig.velocity.finishedInWindow > 0
-                      ? `${sig.velocity.finishedInWindow} finis sur ${sig.velocity.windowHours}h`
-                      : "Pas d'activité récente"
+                      ? format(tx.kpiCadenceHint, {
+                          count: sig.velocity.finishedInWindow,
+                          hours: sig.velocity.windowHours,
+                        })
+                      : tx.kpiNoRecentActivity
                   }
                   accent={sig.velocity.matchesPerHour > 0 ? 'emerald' : 'gray'}
                 />
                 <StatCard
-                  label="ETA fin"
+                  label={tx.kpiEta}
                   value={
                     liveEta?.label ??
-                    (sig.velocity.remainingMatches === 0 ? 'Terminé' : '—')
+                    (sig.velocity.remainingMatches === 0 ? tx.kpiCompleted : '—')
                   }
                   hint={
                     liveEta?.iso
@@ -551,13 +571,13 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
                           timeStyle: 'short',
                         })
                       : sig.velocity.remainingMatches === 0
-                        ? 'Tous les matchs sont joués'
-                        : 'Cadence trop faible pour estimer'
+                        ? tx.kpiAllPlayed
+                        : tx.kpiCadenceTooLow
                   }
                   accent={liveEta ? 'purple' : 'gray'}
                 />
                 <StatCard
-                  label="Démarrage"
+                  label={tx.kpiStart}
                   value={
                     t.start_date
                       ? formatDateTimeTz(t.start_date, t.timezone, {
@@ -580,10 +600,15 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
                   <ActionableAlert
                     severity="error"
                     icon={<span>⚠️</span>}
-                    title={`${sig.disputesOpen.count} dispute${sig.disputesOpen.count > 1 ? 's' : ''} ouverte${sig.disputesOpen.count > 1 ? 's' : ''}`}
-                    message="La propagation du bracket est bloquée tant qu'elles ne sont pas résolues."
+                    title={format(
+                      sig.disputesOpen.count > 1
+                        ? tx.disputesOpenTitle_other
+                        : tx.disputesOpenTitle_one,
+                      { count: sig.disputesOpen.count }
+                    )}
+                    message={tx.disputesOpenMsg}
                     cta={{
-                      label: 'Résoudre',
+                      label: tx.resolve,
                       href: `/admin/tournament/${tournamentId}/matches?status=disputed`,
                     }}
                   />
@@ -592,22 +617,13 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
                   <ActionableAlert
                     severity="error"
                     icon={<span>🧱</span>}
-                    title={`${sig.disputesBlockingDownstream.count} dispute${
-                      sig.disputesBlockingDownstream.count > 1 ? 's' : ''
-                    } bloque${
-                      sig.disputesBlockingDownstream.count > 1 ? 'nt' : ''
-                    } ${sig.disputesBlockingDownstream.impactedMatchCount} match${
-                      sig.disputesBlockingDownstream.impactedMatchCount > 1
-                        ? 's'
-                        : ''
-                    } aval${
-                      sig.disputesBlockingDownstream.impactedMatchCount > 1
-                        ? ''
-                        : ''
-                    }`}
-                    message="Le résultat du match en dispute a déjà été propagé à un match aval qui a démarré. Résolvez la dispute puis ré-appliquez la propagation."
+                    title={format(tx.disputesBlockingTitle, {
+                      disputes: sig.disputesBlockingDownstream.count,
+                      matches: sig.disputesBlockingDownstream.impactedMatchCount,
+                    })}
+                    message={tx.disputesBlockingMsg}
                     cta={{
-                      label: 'Voir',
+                      label: tx.view,
                       href: `/admin/tournament/${tournamentId}/matches?status=disputed`,
                     }}
                   />
@@ -617,19 +633,27 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
                     <ActionableAlert
                       severity="warning"
                       icon={<span>🚨</span>}
-                      title={`${sig.conflictsCount} conflit${sig.conflictsCount > 1 ? 's' : ''} de planning`}
-                      message="Survolez pour voir le détail. Une équipe est planifiée sur deux matchs qui se chevauchent."
+                      title={format(
+                        sig.conflictsCount > 1
+                          ? tx.conflictsTitle_other
+                          : tx.conflictsTitle_one,
+                        { count: sig.conflictsCount }
+                      )}
+                      message={tx.conflictsMsg}
                       cta={{
-                        label: 'Voir',
+                        label: tx.view,
                         href: `/admin/tournament/${tournamentId}`,
                       }}
                     />
                     {sig.conflictsList.length > 0 && (
                       <div className="invisible absolute left-0 right-0 top-full z-30 mt-1 rounded-xl border border-amber-500/30 bg-neutral-900/98 p-3 shadow-2xl backdrop-blur-sm group-hover:visible">
                         <p className="mb-2 text-[10px] uppercase tracking-widest text-amber-300">
-                          Détail{' '}
+                          {tx.conflictsDetailLabel}{' '}
                           {sig.conflictsCount > sig.conflictsList.length
-                            ? `(${sig.conflictsList.length} sur ${sig.conflictsCount})`
+                            ? format(tx.conflictsDetailPartial, {
+                                shown: sig.conflictsList.length,
+                                total: sig.conflictsCount,
+                              })
                             : ''}
                         </p>
                         <ul className="space-y-1.5 text-xs">
@@ -657,9 +681,10 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
                                   {c.teamName ?? c.teamId.slice(0, 8)}
                                 </span>
                                 <span className="text-neutral-400">
-                                  : match {fmtTime(c.matchAScheduledAt)}
-                                  {' ↔ '}
-                                  {fmtTime(c.matchBScheduledAt)}
+                                  {format(tx.conflictMatchInfo, {
+                                    timeA: fmtTime(c.matchAScheduledAt),
+                                    timeB: fmtTime(c.matchBScheduledAt),
+                                  })}
                                 </span>
                                 <span className="ml-auto rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-medium text-amber-200 tabular-nums">
                                   ↔ {c.overlapMinutes}min
@@ -677,10 +702,17 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
                     <ActionableAlert
                       severity="warning"
                       icon={<span>🔔</span>}
-                      title={`${sig.checkinNext24h.missing} équipe${sig.checkinNext24h.missing > 1 ? 's' : ''} pas encore check-in`}
-                      message={`Sur les ${sig.checkinNext24h.upcoming} match(s) à venir dans les 24h.`}
+                      title={format(
+                        sig.checkinNext24h.missing > 1
+                          ? tx.checkinMissingTitle_other
+                          : tx.checkinMissingTitle_one,
+                        { count: sig.checkinNext24h.missing }
+                      )}
+                      message={format(tx.checkinMissingMsg, {
+                        count: sig.checkinNext24h.upcoming,
+                      })}
                       cta={{
-                        label: 'Check-in',
+                        label: tx.checkin,
                         href: `/admin/tournament/${tournamentId}/checkin`,
                       }}
                     />
@@ -689,9 +721,14 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
                   <ActionableAlert
                     severity="critical"
                     icon={<span>🛂</span>}
-                    title={`${sig.supportHighOpen} ticket${sig.supportHighOpen > 1 ? 's' : ''} critique${sig.supportHighOpen > 1 ? 's' : ''} non résolu${sig.supportHighOpen > 1 ? 's' : ''}`}
-                    message="Sévérité haute. À traiter en priorité."
-                    cta={{ label: 'Ouvrir', href: '/admin/support' }}
+                    title={format(
+                      sig.supportHighOpen > 1
+                        ? tx.supportCriticalTitle_other
+                        : tx.supportCriticalTitle_one,
+                      { count: sig.supportHighOpen }
+                    )}
+                    message={tx.supportCriticalMsg}
+                    cta={{ label: tx.open, href: '/admin/support' }}
                   />
                 )}
                 {liveRosterLock &&
@@ -701,14 +738,18 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
                     <ActionableAlert
                       severity="warning"
                       icon={<span>🔒</span>}
-                      title={`Roster lock dans ${liveRosterLock.label}`}
+                      title={format(tx.rosterLockTitle, {
+                        label: liveRosterLock.label,
+                      })}
                       message={
                         sig.rosterLockProximity.teamsBelowMin > 0
-                          ? `${sig.rosterLockProximity.teamsBelowMin} équipe(s) sous le minimum de joueurs.`
-                          : 'Vérifiez les rosters avant verrouillage.'
+                          ? format(tx.rosterLockBelowMin, {
+                              count: sig.rosterLockProximity.teamsBelowMin,
+                            })
+                          : tx.rosterLockCheck
                       }
                       cta={{
-                        label: 'Édition',
+                        label: tx.edit,
                         href: `/admin/tournament/${tournamentId}/edit`,
                       }}
                     />
@@ -717,12 +758,17 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
                   <ActionableAlert
                     severity="info"
                     icon={<span>🚀</span>}
-                    title={`${sig.stagesReadyToAdvance.length} phase${sig.stagesReadyToAdvance.length > 1 ? 's' : ''} prête${sig.stagesReadyToAdvance.length > 1 ? 's' : ''} à advance`}
+                    title={format(
+                      sig.stagesReadyToAdvance.length > 1
+                        ? tx.stagesReadyTitle_other
+                        : tx.stagesReadyTitle_one,
+                      { count: sig.stagesReadyToAdvance.length }
+                    )}
                     message={sig.stagesReadyToAdvance
                       .map((s) => s.stageName)
                       .join(', ')}
                     cta={{
-                      label: 'Phases',
+                      label: tx.phasesTitle,
                       href: `/admin/tournament/${tournamentId}/stages`,
                     }}
                   />
@@ -731,9 +777,14 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
                   <ActionableAlert
                     severity="info"
                     icon={<span>📋</span>}
-                    title={`${sig.pendingTeamsCount} inscription${sig.pendingTeamsCount > 1 ? 's' : ''} en attente`}
+                    title={format(
+                      sig.pendingTeamsCount > 1
+                        ? tx.pendingTeamsTitle_other
+                        : tx.pendingTeamsTitle_one,
+                      { count: sig.pendingTeamsCount }
+                    )}
                     cta={{
-                      label: 'Équipes',
+                      label: tx.teams,
                       href: `/admin/tournament/${tournamentId}`,
                     }}
                   />
@@ -742,10 +793,13 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
                   <ActionableAlert
                     severity="info"
                     icon={<span>🏅</span>}
-                    title={`${sig.activeMvpPolls} sondage${sig.activeMvpPolls > 1 ? 's' : ''} MVP actif${sig.activeMvpPolls > 1 ? 's' : ''}`}
-                    message="Importer le vainqueur après la fermeture côté Discord."
+                    title={format(
+                      sig.activeMvpPolls > 1 ? tx.mvpTitle_other : tx.mvpTitle_one,
+                      { count: sig.activeMvpPolls }
+                    )}
+                    message={tx.mvpMsg}
                     cta={{
-                      label: 'Matchs',
+                      label: tx.matches,
                       href: `/admin/tournament/${tournamentId}/matches?status=finished`,
                     }}
                   />
@@ -754,14 +808,16 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
                   <ActionableAlert
                     severity="critical"
                     icon={<span>⏰</span>}
-                    title="Cron check-in en panne"
+                    title={tx.cronDownTitle}
                     message={
                       sig.cronCheckin.lastRunAt
-                        ? `Dernier passage il y a ${sig.cronCheckin.minutesSince} min. Les rappels et auto-forfaits ne tournent plus.`
-                        : "Le cron n'a jamais pu écrire de heartbeat. Vérifie la configuration Netlify Scheduled Functions et CRON_SECRET."
+                        ? format(tx.cronDownMsgWithTime, {
+                            minutes: sig.cronCheckin.minutesSince ?? 0,
+                          })
+                        : tx.cronDownMsgNever
                     }
                     cta={{
-                      label: 'Check-in',
+                      label: tx.checkin,
                       href: `/admin/tournament/${tournamentId}/checkin`,
                     }}
                   />
@@ -770,10 +826,15 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
                   <ActionableAlert
                     severity="warning"
                     icon={<span>🔔</span>}
-                    title={`${sig.discordHealth.missingExpectedCount} canal/canaux Discord manquant${sig.discordHealth.missingExpectedCount > 1 ? 's' : ''}`}
-                    message="Au moins un canal sans webhook actif alors qu'on attend du trafic dessus."
+                    title={format(
+                      sig.discordHealth.missingExpectedCount > 1
+                        ? tx.discordMissingTitle_other
+                        : tx.discordMissingTitle_one,
+                      { count: sig.discordHealth.missingExpectedCount }
+                    )}
+                    message={tx.discordMissingMsg}
                     cta={{
-                      label: 'Discord',
+                      label: tx.discord,
                       href: `/admin/tournament/${tournamentId}/discord`,
                     }}
                   />
@@ -804,7 +865,7 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
               </div>
 
               {/* ─── Status workflow ────────────────────────────────── */}
-              <WidgetCard title="Workflow de statut" className="mb-6">
+              <WidgetCard title={tx.workflowTitle} className="mb-6">
                 <div className="flex flex-wrap items-center gap-2">
                   {data.guards.guards.map((g, i) => {
                     const isCurrent = g.status === data.guards.current_status;
@@ -841,7 +902,10 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
                       key={g.status}
                       className="mt-2 text-[11px] text-red-300/80"
                     >
-                      {g.label} bloqué : {g.reason}
+                      {format(tx.workflowBlocked, {
+                        label: g.label,
+                        reason: g.reason ?? '',
+                      })}
                     </p>
                   ))}
               </WidgetCard>
@@ -851,15 +915,13 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
                 {/* COLONNE GAUCHE */}
                 <div className="space-y-6">
                   <WidgetCard
-                    title="Phases"
+                    title={tx.phasesTitle}
                     badge={`${data.stages.length}`}
                     ctaHref={`/admin/tournament/${tournamentId}/stages`}
-                    ctaLabel="Gérer"
+                    ctaLabel={tx.manage}
                   >
                     {data.stages.length === 0 ? (
-                      <p className="text-sm text-gray-500">
-                        Aucune phase configurée.
-                      </p>
+                      <p className="text-sm text-gray-500">{tx.noStages}</p>
                     ) : (
                       <div className="space-y-2.5">
                         {data.stages.map((st) => (
@@ -893,9 +955,9 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
                   </WidgetCard>
 
                   <WidgetCard
-                    title="Équipes"
+                    title={tx.teamsTitle}
                     ctaHref={`/admin/tournament/${tournamentId}`}
-                    ctaLabel="Gérer"
+                    ctaLabel={tx.manage}
                   >
                     <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                       <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3 text-center">
@@ -903,7 +965,7 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
                           {s.activeTeams}
                         </div>
                         <div className="text-[10px] uppercase tracking-wider text-gray-400">
-                          Actives
+                          {tx.teamsActive}
                         </div>
                       </div>
                       <div className="rounded-lg border border-gray-500/20 bg-gray-500/5 p-3 text-center">
@@ -911,7 +973,7 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
                           {s.eliminatedTeams}
                         </div>
                         <div className="text-[10px] uppercase tracking-wider text-gray-400">
-                          Éliminées
+                          {tx.teamsEliminated}
                         </div>
                       </div>
                       <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-center">
@@ -919,7 +981,7 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
                           {sig.pendingTeamsCount}
                         </div>
                         <div className="text-[10px] uppercase tracking-wider text-gray-400">
-                          En attente
+                          {tx.teamsPending}
                         </div>
                       </div>
                       <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 p-3 text-center">
@@ -927,21 +989,19 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
                           {s.totalTeams}
                         </div>
                         <div className="text-[10px] uppercase tracking-wider text-gray-400">
-                          Total
+                          {tx.teamsTotal}
                         </div>
                       </div>
                     </div>
                   </WidgetCard>
 
                   <WidgetCard
-                    title="Check-in (24 h)"
+                    title={tx.checkinTitle}
                     ctaHref={`/admin/tournament/${tournamentId}/checkin`}
-                    ctaLabel="Détail"
+                    ctaLabel={tx.detail}
                   >
                     {sig.checkinNext24h.upcoming === 0 ? (
-                      <p className="text-sm text-gray-500">
-                        Pas de match planifié dans les 24h.
-                      </p>
+                      <p className="text-sm text-gray-500">{tx.noMatchIn24h}</p>
                     ) : (
                       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                         <div className="rounded-lg bg-emerald-500/10 p-3 text-center">
@@ -949,7 +1009,7 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
                             ✅ {sig.checkinNext24h.bothCheckedIn}
                           </div>
                           <div className="text-[10px] uppercase tracking-wider text-gray-400">
-                            OK
+                            {tx.checkinOk}
                           </div>
                         </div>
                         <div className="rounded-lg bg-amber-500/10 p-3 text-center">
@@ -957,7 +1017,7 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
                             ⏳ {sig.checkinNext24h.oneSide}
                           </div>
                           <div className="text-[10px] uppercase tracking-wider text-gray-400">
-                            Partiel
+                            {tx.checkinPartial}
                           </div>
                         </div>
                         <div className="rounded-lg bg-red-500/10 p-3 text-center">
@@ -965,7 +1025,7 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
                             ❌ {sig.checkinNext24h.missing}
                           </div>
                           <div className="text-[10px] uppercase tracking-wider text-gray-400">
-                            Aucun
+                            {tx.checkinNone}
                           </div>
                         </div>
                         <div className="rounded-lg bg-neutral-700/30 p-3 text-center">
@@ -973,7 +1033,7 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
                             🚷 {sig.checkinNext24h.forfeited}
                           </div>
                           <div className="text-[10px] uppercase tracking-wider text-gray-400">
-                            Forfait
+                            {tx.checkinForfeit}
                           </div>
                         </div>
                       </div>
@@ -981,14 +1041,14 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
                   </WidgetCard>
 
                   <WidgetCard
-                    title="Activité staff récente"
+                    title={tx.recentActivityTitle}
                     badge={sig.recentActivity.length}
                     ctaHref={`/admin/tournament/${tournamentId}/history`}
-                    ctaLabel="Tout l'historique"
+                    ctaLabel={tx.allHistory}
                   >
                     {sig.recentActivity.length === 0 ? (
                       <p className="text-sm text-gray-500">
-                        Aucune action staff sur ce tournoi.
+                        {tx.noStaffAction}
                       </p>
                     ) : (
                       <ul className="space-y-2">
@@ -997,12 +1057,18 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
                             nowMs - new Date(row.createdAt).getTime();
                           const ageLabel =
                             ageMs < 60_000
-                              ? "à l'instant"
+                              ? tx.ageNow
                               : ageMs < 3_600_000
-                                ? `il y a ${Math.floor(ageMs / 60_000)} min`
+                                ? format(tx.ageMinutes, {
+                                    n: Math.floor(ageMs / 60_000),
+                                  })
                                 : ageMs < 86_400_000
-                                  ? `il y a ${Math.floor(ageMs / 3_600_000)}h`
-                                  : `il y a ${Math.floor(ageMs / 86_400_000)}j`;
+                                  ? format(tx.ageHours, {
+                                      n: Math.floor(ageMs / 3_600_000),
+                                    })
+                                  : format(tx.ageDays, {
+                                      n: Math.floor(ageMs / 86_400_000),
+                                    });
                           return (
                             <li
                               key={row.id}
@@ -1011,7 +1077,7 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
                               <div className="min-w-0 flex-1">
                                 <p className="truncate text-xs text-white">
                                   <span className="font-medium text-purple-300">
-                                    {row.staffName ?? 'Staff'}
+                                    {row.staffName ?? tx.defaultStaffName}
                                   </span>
                                   <span className="mx-1.5 text-gray-500">
                                     ·
@@ -1039,27 +1105,27 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
                   </WidgetCard>
 
                   <WidgetCard
-                    title="Tickets support"
+                    title={tx.supportTicketsTitle}
                     badge={
                       sig.tickets.totalOpen > 0
                         ? sig.tickets.totalOpen
                         : undefined
                     }
                     ctaHref={`/admin/support?tournament_id=${tournamentId}&status=open`}
-                    ctaLabel="Ouvrir"
+                    ctaLabel={tx.open}
                   >
                     <SupportTicketsDonut tickets={sig.tickets} />
                   </WidgetCard>
 
                   <WidgetCard
-                    title="Webhooks Discord"
+                    title={tx.webhooksTitle}
                     badge={
                       sig.discordHealth.configuredCount > 0
                         ? `${sig.discordHealth.configuredCount}/${sig.discordHealth.channels.length}`
                         : undefined
                     }
                     ctaHref={`/admin/tournament/${tournamentId}/discord`}
-                    ctaLabel="Configurer"
+                    ctaLabel={tx.configure}
                   >
                     <DiscordHealthGrid
                       health={sig.discordHealth}
@@ -1068,7 +1134,7 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
                   </WidgetCard>
 
                   <WidgetCard
-                    title="Cron check-in"
+                    title={tx.cronTitle}
                     badge={
                       sig.cronCheckin.isStale
                         ? '⚠'
@@ -1090,16 +1156,22 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
                         >
                           {sig.cronCheckin.lastRunAt
                             ? sig.cronCheckin.minutesSince === 0
-                              ? "À l'instant"
+                              ? tx.cronNow
                               : sig.cronCheckin.minutesSince! < 60
-                                ? `il y a ${sig.cronCheckin.minutesSince} min`
-                                : `il y a ${Math.floor(sig.cronCheckin.minutesSince! / 60)}h`
-                            : 'Jamais lancé'}
+                                ? format(tx.ageMinutes, {
+                                    n: sig.cronCheckin.minutesSince ?? 0,
+                                  })
+                                : format(tx.ageHours, {
+                                    n: Math.floor(
+                                      sig.cronCheckin.minutesSince! / 60
+                                    ),
+                                  })
+                            : tx.cronNever}
                         </p>
                         <p className="mt-0.5 text-[10px] text-gray-500">
                           {sig.cronCheckin.isStale
-                            ? '> 60 min sans heartbeat — emails / forfaits suspendus'
-                            : 'Heartbeat OK (cron toutes les 5 min, seuil 60 min)'}
+                            ? tx.cronStaleHint
+                            : tx.cronOkHint}
                         </p>
                       </div>
                       {sig.cronCheckin.lastRunAt && (
@@ -1117,7 +1189,7 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
                 <div className="space-y-6">
                   {sig.liveMatches.length > 0 && (
                     <WidgetCard
-                      title="En direct"
+                      title={tx.liveTitle}
                       badge={
                         <span className="inline-flex items-center gap-1">
                           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-rose-400" />
@@ -1158,15 +1230,13 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
                   )}
 
                   <WidgetCard
-                    title="À venir"
+                    title={tx.upcomingTitle}
                     badge={data.upcomingMatches.length}
                     ctaHref={`/admin/tournament/${tournamentId}/matches?status=pending`}
-                    ctaLabel="Tout voir"
+                    ctaLabel={tx.seeAll}
                   >
                     {data.upcomingMatches.length === 0 ? (
-                      <p className="text-sm text-gray-500">
-                        Aucun match à venir.
-                      </p>
+                      <p className="text-sm text-gray-500">{tx.noUpcoming}</p>
                     ) : (
                       <div className="space-y-2">
                         {data.upcomingMatches.slice(0, 8).map((m) => (
@@ -1194,10 +1264,10 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
 
                   {sig.disputesOpen.count > 0 && (
                     <WidgetCard
-                      title="Disputes ouvertes"
+                      title={tx.disputesTitle}
                       badge={sig.disputesOpen.count}
                       ctaHref={`/admin/tournament/${tournamentId}/matches?status=disputed`}
-                      ctaLabel="Toutes"
+                      ctaLabel={tx.allFem}
                     >
                       <div className="space-y-2">
                         {sig.disputesOpen.matches.slice(0, 5).map((m) => (
@@ -1226,7 +1296,7 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
               </div>
 
               {/* ─── Quick access grid ──────────────────────────────── */}
-              <WidgetCard title="Accès rapide">
+              <WidgetCard title={tx.quickAccessTitle}>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
                   {QUICK_LINKS.filter((link) =>
                     hasAtLeastRole(

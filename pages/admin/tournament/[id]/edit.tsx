@@ -9,6 +9,7 @@ import { useToast } from '@/components/Toast';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import Breadcrumb from '@/components/admin/Breadcrumb';
+import { useAdminT } from '@/lib/i18n/useAdminT';
 import type { StaffProps, Tournament } from '@/types/admin';
 import { TOURNAMENT_TIMEZONES } from '@/utils/timezone';
 
@@ -28,6 +29,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
   const { addToast } = useToast();
   const { adminFetchJson } = useAdminFetch();
   const { mutate: uploadRules } = useIdempotentMutation();
+  const t = useAdminT('adminTournamentEdit');
 
   const [formReady, setFormReady] = useState(false);
 
@@ -97,11 +99,11 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
     setRulesError(null);
 
     if (file.type !== 'application/pdf') {
-      setRulesError('Seuls les fichiers PDF sont acceptés.');
+      setRulesError(t.errorPdfOnly);
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
-      setRulesError('PDF trop lourd (max 5 Mo).');
+      setRulesError(t.errorPdfTooLarge);
       return;
     }
 
@@ -125,12 +127,12 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
 
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(json.error || "Échec de l'upload du règlement");
+        throw new Error(json.error || t.errorRulesUpload);
       }
       updateField('rules_url', json.url || '');
-      addToast('Règlement uploadé.', 'success');
+      addToast(t.toastRulesUploaded, 'success');
     } catch (err: unknown) {
-      setRulesError((err as Error)?.message ?? 'Upload impossible');
+      setRulesError((err as Error)?.message ?? t.errorUploadFailed);
     } finally {
       setUploadingRules(false);
     }
@@ -151,41 +153,38 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
       const json = await adminFetchJson<ApiResponse>(
         `/api/admin/tournament/${id}`
       );
-      const t = json.tournament;
+      const tour = json.tournament;
 
       // Pré-remplir le formulaire
       setForm({
-        name: t.name || '',
-        slug: t.slug || '',
-        game: t.game || '',
-        status: t.status || 'draft',
-        start_date: t.start_date ? toLocalInputValue(t.start_date) : '',
-        end_date: t.end_date ? toLocalInputValue(t.end_date) : '',
-        roster_locked_at: t.roster_locked_at
-          ? toLocalInputValue(t.roster_locked_at)
+        name: tour.name || '',
+        slug: tour.slug || '',
+        game: tour.game || '',
+        status: tour.status || 'draft',
+        start_date: tour.start_date ? toLocalInputValue(tour.start_date) : '',
+        end_date: tour.end_date ? toLocalInputValue(tour.end_date) : '',
+        roster_locked_at: tour.roster_locked_at
+          ? toLocalInputValue(tour.roster_locked_at)
           : '',
-        timezone: t.timezone || 'Europe/Paris',
-        format_type: t.format_type || '',
-        max_teams: t.max_teams ? String(t.max_teams) : '',
-        min_players: t.min_players ? String(t.min_players) : '',
-        max_players: t.max_players ? String(t.max_players) : '',
-        is_public: t.is_public,
-        is_featured: t.is_featured,
-        logo_url: t.logo_url || '',
-        banner_url: t.banner_url || '',
-        rules_url: t.rules_url || '',
-        description_info: t.description_info || '',
-        schedule_details: t.schedule_details || '',
-        schedule_rules: t.schedule_rules || '',
-        format_details: t.format_details || '',
+        timezone: tour.timezone || 'Europe/Paris',
+        format_type: tour.format_type || '',
+        max_teams: tour.max_teams ? String(tour.max_teams) : '',
+        min_players: tour.min_players ? String(tour.min_players) : '',
+        max_players: tour.max_players ? String(tour.max_players) : '',
+        is_public: tour.is_public,
+        is_featured: tour.is_featured,
+        logo_url: tour.logo_url || '',
+        banner_url: tour.banner_url || '',
+        rules_url: tour.rules_url || '',
+        description_info: tour.description_info || '',
+        schedule_details: tour.schedule_details || '',
+        schedule_rules: tour.schedule_rules || '',
+        format_details: tour.format_details || '',
       });
 
       setFormReady(true);
     } catch (err: unknown) {
-      setErrorMsg(
-        (err as Error)?.message ??
-          'Erreur inattendue lors du chargement du tournoi'
-      );
+      setErrorMsg((err as Error)?.message ?? t.errorLoad);
     } finally {
       setLoading(false);
     }
@@ -214,16 +213,14 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
     setDateError(null);
 
     if (!form.name.trim()) {
-      setErrorMsg('Le nom du tournoi est obligatoire.');
+      setErrorMsg(t.errorNameRequired);
       return;
     }
 
     if (form.start_date && form.end_date) {
       if (new Date(form.start_date) >= new Date(form.end_date)) {
-        setDateError(
-          'La date de fin doit être postérieure à la date de début.'
-        );
-        setErrorMsg('La date de fin doit être postérieure à la date de début.');
+        setDateError(t.errorEndBeforeStart);
+        setErrorMsg(t.errorEndBeforeStart);
         return;
       }
     }
@@ -264,13 +261,11 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
         body: JSON.stringify(payload),
       });
 
-      addToast('Tournoi mis à jour avec succès.', 'success');
+      addToast(t.toastUpdated, 'success');
       // On peut éventuellement recharger les données
       fetchTournament();
     } catch (err: unknown) {
-      setErrorMsg(
-        (err as Error)?.message ?? 'Erreur inconnue lors de la mise à jour'
-      );
+      setErrorMsg((err as Error)?.message ?? t.errorUpdate);
     } finally {
       setSaving(false);
     }
@@ -279,7 +274,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
   return (
     <>
       <Head>
-        <title>Admin – Éditer le tournoi</title>
+        <title>{t.pageTitle}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
@@ -288,12 +283,12 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
           <div className="mb-8">
             <Breadcrumb
               items={[
-                { label: 'Tournois', href: '/admin/tournaments' },
+                { label: t.breadcrumbTournaments, href: '/admin/tournaments' },
                 {
-                  label: form.name || 'Tournoi',
+                  label: form.name || t.defaultTournamentName,
                   href: `/admin/tournament/${id}`,
                 },
-                { label: 'Modifier' },
+                { label: t.breadcrumbEdit },
               ]}
             />
             <button
@@ -314,17 +309,15 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
                   d="M15 19l-7-7 7-7"
                 />
               </svg>
-              Retour au dashboard du tournoi
+              {t.back}
             </button>
 
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-                  Éditer le tournoi
+                  {t.heading}
                 </h1>
-                <p className="text-neutral-400 text-sm mt-1">
-                  Mets à jour les informations principales du tournoi.
-                </p>
+                <p className="text-neutral-400 text-sm mt-1">{t.subtitle}</p>
               </div>
             </div>
           </div>
@@ -376,13 +369,12 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
                             d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                           />
                         </svg>
-                        Informations générales
+                        {t.sectionGeneral}
                       </h2>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm mb-1 text-neutral-300">
-                            Nom du tournoi{' '}
-                            <span className="text-red-400">*</span>
+                            {t.nameLabel} <span className="text-red-400">*</span>
                           </label>
                           <input
                             type="text"
@@ -396,7 +388,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
 
                         <div>
                           <label className="block text-sm mb-1 text-neutral-300">
-                            Slug (URL)
+                            {t.slugLabel}
                           </label>
                           <input
                             type="text"
@@ -408,14 +400,13 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
                             placeholder="owl-womens-cup-1"
                           />
                           <p className="text-xs text-neutral-500 mt-1">
-                            Si tu modifies le slug, l&apos;URL publique
-                            changera.
+                            {t.slugHelp}
                           </p>
                         </div>
 
                         <div>
                           <label className="block text-sm mb-1 text-neutral-300">
-                            Jeu
+                            {t.gameLabel}
                           </label>
                           <input
                             type="text"
@@ -430,7 +421,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
 
                         <div>
                           <label className="block text-sm mb-1 text-neutral-300">
-                            Statut
+                            {t.statusLabel}
                           </label>
                           <select
                             className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -439,11 +430,11 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
                               updateField('status', e.target.value)
                             }
                           >
-                            <option value="draft">Brouillon</option>
-                            <option value="published">Publié</option>
-                            <option value="running">En cours</option>
-                            <option value="completed">Terminé</option>
-                            <option value="archived">Archivé</option>
+                            <option value="draft">{t.statusDraft}</option>
+                            <option value="published">{t.statusPublished}</option>
+                            <option value="running">{t.statusRunning}</option>
+                            <option value="completed">{t.statusCompleted}</option>
+                            <option value="archived">{t.statusArchived}</option>
                           </select>
                         </div>
                       </div>
@@ -465,13 +456,13 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
                             d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
                           />
                         </svg>
-                        Planning & format
+                        {t.sectionSchedule}
                       </h2>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm mb-1 text-neutral-300">
-                            Date de début
+                            {t.startDateLabel}
                           </label>
                           <input
                             type="datetime-local"
@@ -485,7 +476,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
 
                         <div>
                           <label className="block text-sm mb-1 text-neutral-300">
-                            Date de fin
+                            {t.endDateLabel}
                           </label>
                           <input
                             type="datetime-local"
@@ -509,7 +500,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
 
                         <div>
                           <label className="block text-sm mb-1 text-neutral-300">
-                            Verrouillage roster
+                            {t.rosterLockLabel}
                           </label>
                           <input
                             type="datetime-local"
@@ -520,15 +511,13 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
                             }
                           />
                           <p className="text-xs text-neutral-500 mt-1">
-                            Au-delà de cette date, les équipes inscrites ne
-                            peuvent plus modifier leur roster (ajout,
-                            suppression, swap). Vide = pas de verrou.
+                            {t.rosterLockHelp}
                           </p>
                         </div>
 
                         <div>
                           <label className="block text-sm mb-1 text-neutral-300">
-                            Fuseau horaire
+                            {t.timezoneLabel}
                           </label>
                           <select
                             className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -544,13 +533,13 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
                             ))}
                           </select>
                           <p className="text-xs text-neutral-500 mt-1">
-                            Les horaires seront affiches dans ce fuseau.
+                            {t.timezoneHelp}
                           </p>
                         </div>
 
                         <div>
                           <label className="block text-sm mb-1 text-neutral-300">
-                            Format global
+                            {t.formatTypeLabel}
                           </label>
                           <select
                             className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -559,20 +548,26 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
                               updateField('format_type', e.target.value)
                             }
                           >
-                            <option value="">
-                              (Ne pas modifier / à définir)
+                            <option value="">{t.formatTypeNone}</option>
+                            <option value="single_elim">
+                              {t.formatSingleElim}
                             </option>
-                            <option value="single_elim">Single Elim</option>
-                            <option value="double_elim">Double Elim</option>
-                            <option value="swiss">Swiss</option>
-                            <option value="round_robin">Round Robin</option>
-                            <option value="showmatch">Showmatch</option>
+                            <option value="double_elim">
+                              {t.formatDoubleElim}
+                            </option>
+                            <option value="swiss">{t.formatSwiss}</option>
+                            <option value="round_robin">
+                              {t.formatRoundRobin}
+                            </option>
+                            <option value="showmatch">
+                              {t.formatShowmatch}
+                            </option>
                           </select>
                         </div>
 
                         <div>
                           <label className="block text-sm mb-1 text-neutral-300">
-                            Nombre max. d&apos;équipes
+                            {t.maxTeamsLabel}
                           </label>
                           <input
                             type="number"
@@ -588,7 +583,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
 
                         <div className="md:col-span-2">
                           <label className="block text-sm mb-1 text-neutral-300">
-                            Joueuses min. par équipe
+                            {t.minPlayersLabel}
                           </label>
                           <input
                             type="number"
@@ -601,13 +596,12 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
                             placeholder="5"
                           />
                           <p className="text-xs text-neutral-500 mt-1">
-                            Nombre minimum de membres requis pour inscrire une
-                            équipe
+                            {t.minPlayersHelp}
                           </p>
                         </div>
                         <div className="md:col-span-2">
                           <label className="block text-sm mb-1 text-neutral-300">
-                            Joueuses max. par équipe
+                            {t.maxPlayersLabel}
                           </label>
                           <input
                             type="number"
@@ -620,7 +614,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
                             placeholder="10"
                           />
                           <p className="text-xs text-neutral-500 mt-1">
-                            Nombre maximum de membres autorisé par équipe
+                            {t.maxPlayersHelp}
                           </p>
                         </div>
                       </div>
@@ -642,13 +636,13 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
                             d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
                           />
                         </svg>
-                        Visuels
+                        {t.sectionVisuals}
                       </h2>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm mb-1 text-neutral-300">
-                            Logo (URL)
+                            {t.logoLabel}
                           </label>
                           <input
                             type="text"
@@ -662,7 +656,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
                         </div>
                         <div>
                           <label className="block text-sm mb-1 text-neutral-300">
-                            Bannière (URL)
+                            {t.bannerLabel}
                           </label>
                           <input
                             type="text"
@@ -678,7 +672,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
 
                       <div className="mt-4">
                         <label className="block text-sm mb-1 text-neutral-300">
-                          Règlement (PDF)
+                          {t.rulesLabel}
                         </label>
                         <div className="flex flex-col sm:flex-row gap-2">
                           <input
@@ -691,7 +685,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
                             placeholder="https://…/reglement.pdf"
                           />
                           <label className="inline-flex items-center justify-center px-3 py-2 rounded-lg bg-neutral-700/60 hover:bg-neutral-700 border border-neutral-600 text-sm cursor-pointer whitespace-nowrap">
-                            {uploadingRules ? 'Upload…' : 'Uploader un PDF'}
+                            {uploadingRules ? t.uploading : t.uploadPdf}
                             <input
                               type="file"
                               accept="application/pdf"
@@ -702,9 +696,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
                           </label>
                         </div>
                         <p className="text-xs text-neutral-500 mt-1">
-                          Affiché en lien &laquo;&nbsp;Règlement du
-                          tournoi&nbsp;&raquo; sur la page publique. PDF max
-                          5&nbsp;Mo.
+                          {t.rulesHelp}
                         </p>
                         {rulesError && (
                           <p className="text-xs text-red-400 mt-1">
@@ -718,7 +710,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
                             rel="noreferrer"
                             className="inline-block text-xs text-blue-400 hover:text-blue-300 mt-1"
                           >
-                            Ouvrir le règlement actuel ↗
+                            {t.openCurrentRules}
                           </a>
                         )}
                       </div>
@@ -740,17 +732,16 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
                             d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                           />
                         </svg>
-                        Informations publiques
+                        {t.sectionPublic}
                       </h2>
                       <p className="text-xs text-neutral-500 mb-4">
-                        Ces champs sont affichés sur la page publique du tournoi
-                        uniquement s&apos;ils sont remplis.
+                        {t.publicHelp}
                       </p>
 
                       <div className="space-y-4">
                         <div>
                           <label className="block text-sm mb-1 text-neutral-300">
-                            Infos générales
+                            {t.descriptionLabel}
                           </label>
                           <textarea
                             rows={4}
@@ -759,13 +750,13 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
                             onChange={(e) =>
                               updateField('description_info', e.target.value)
                             }
-                            placeholder="Description du tournoi visible sur la page publique..."
+                            placeholder={t.descriptionPlaceholder}
                           />
                         </div>
 
                         <div>
                           <label className="block text-sm mb-1 text-neutral-300">
-                            Calendrier précis
+                            {t.scheduleDetailsLabel}
                           </label>
                           <textarea
                             rows={4}
@@ -774,13 +765,13 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
                             onChange={(e) =>
                               updateField('schedule_details', e.target.value)
                             }
-                            placeholder="Dates clés, phases, deadlines..."
+                            placeholder={t.scheduleDetailsPlaceholder}
                           />
                         </div>
 
                         <div>
                           <label className="block text-sm mb-1 text-neutral-300">
-                            Règles des horaires
+                            {t.scheduleRulesLabel}
                           </label>
                           <textarea
                             rows={4}
@@ -789,13 +780,13 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
                             onChange={(e) =>
                               updateField('schedule_rules', e.target.value)
                             }
-                            placeholder="Horaires de check-in, heures de match, délais..."
+                            placeholder={t.scheduleRulesPlaceholder}
                           />
                         </div>
 
                         <div>
                           <label className="block text-sm mb-1 text-neutral-300">
-                            Format du tournoi
+                            {t.formatDetailsLabel}
                           </label>
                           <textarea
                             rows={4}
@@ -804,7 +795,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
                             onChange={(e) =>
                               updateField('format_details', e.target.value)
                             }
-                            placeholder="Format des matchs, BO3/BO5, bracket, règles spécifiques..."
+                            placeholder={t.formatDetailsPlaceholder}
                           />
                         </div>
                       </div>
@@ -835,7 +826,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
                             d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
                           />
                         </svg>
-                        Visibilité
+                        {t.sectionVisibility}
                       </h2>
 
                       <div className="space-y-3">
@@ -850,10 +841,10 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
                           />
                           <div>
                             <span className="text-sm font-medium">
-                              Tournoi public
+                              {t.publicToggle}
                             </span>
                             <p className="text-xs text-neutral-500">
-                              Visible sur le site
+                              {t.publicToggleHelp}
                             </p>
                           </div>
                         </label>
@@ -869,10 +860,10 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
                           />
                           <div>
                             <span className="text-sm font-medium">
-                              Mis en avant
+                              {t.featuredToggle}
                             </span>
                             <p className="text-xs text-neutral-500">
-                              Section &quot;featured&quot;
+                              {t.featuredToggleHelp}
                             </p>
                           </div>
                         </label>
@@ -881,7 +872,9 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
 
                     {/* Actions */}
                     <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
-                      <h2 className="text-lg font-semibold mb-4">Actions</h2>
+                      <h2 className="text-lg font-semibold mb-4">
+                        {t.sectionActions}
+                      </h2>
 
                       <div className="space-y-3">
                         <button
@@ -896,7 +889,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
                           {saving ? (
                             <>
                               <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                              Enregistrement...
+                              {t.saving}
                             </>
                           ) : (
                             <>
@@ -913,7 +906,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
                                   d="M5 13l4 4L19 7"
                                 />
                               </svg>
-                              Enregistrer les modifications
+                              {t.saveChanges}
                             </>
                           )}
                         </button>
@@ -935,7 +928,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
                               d="M6 18L18 6M6 6l12 12"
                             />
                           </svg>
-                          Annuler
+                          {t.cancel}
                         </Link>
                       </div>
                     </section>
