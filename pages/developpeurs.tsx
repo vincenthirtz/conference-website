@@ -5,6 +5,7 @@
 import Link from 'next/link';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { useT, format } from '@/lib/i18n/useT';
+import { API_RESOURCES, API_ACTIONS } from '@/utils/apiScopes';
 
 type DevDict = ReturnType<typeof useT<'developpeursPage'>>;
 
@@ -365,6 +366,17 @@ const getErrorCodes = (t: DevDict): { code: string; desc: string }[] => [
   { code: 'INTERNAL', desc: t.errInternal },
 ];
 
+// Codes d'erreur propres à la surface d'écriture authentifiée (en plus des
+// codes de lecture ci-dessus). Ordonnés par statut HTTP croissant.
+const getWriteErrorCodes = (
+  t: DevDict
+): { http: string; code: string; desc: string }[] => [
+  { http: '401', code: 'UNAUTHORIZED', desc: t.errUnauthorized },
+  { http: '403', code: 'INSUFFICIENT_SCOPE', desc: t.errInsufficientScope },
+  { http: '409', code: 'CONFLICT', desc: t.errConflict },
+  { http: '503', code: 'MAINTENANCE_MODE', desc: t.errMaintenanceMode },
+];
+
 function anchorId(path: string): string {
   return path
     .replace(/[^a-zA-Z0-9]+/g, '-')
@@ -397,10 +409,54 @@ const { data, pagination } = await res.json();
 // pagination -> { limit, offset, count }
 console.log(data.length, pagination.count);`;
 
+// --- Écriture authentifiée (REST) -----------------------------------------
+
+const writeCurlExample = `curl -X POST "${BASE_URL}/api/public/v1/matches/{id}/result" \\
+  -H "Authorization: Bearer pk_live_…" \\
+  -H "Content-Type: application/json" \\
+  -H "Idempotency-Key: report-2026-01-05-42" \\
+  -d '{ "team1Score": 2, "team2Score": 1 }'`;
+
+const writeBodyExample = `{ "team1Score": 2, "team2Score": 1 }`;
+
+const writeResponseExample = `{
+  "data": {
+    "matchId": "uuid",
+    "status": "finished",
+    "team1Score": 2,
+    "team2Score": 1,
+    "winnerTeamId": "uuid"
+  }
+}`;
+
+// --- GraphQL ---------------------------------------------------------------
+
+const graphqlSchemaExample = `type Query {
+  tournaments(status: String, game: String, limit: Int = 50, offset: Int = 0): TournamentList!
+  tournament(idOrSlug: String!): TournamentDetail   # id OU slug
+  match(id: ID!): MatchDetail
+  team(idOrSlug: String!): Team
+}
+
+type Mutation {
+  # scope requis : matches:write
+  reportMatchResult(matchId: ID!, team1Score: Int!, team2Score: Int!): MatchResultPayload!
+}`;
+
+const graphqlQueryExample = `curl -X POST "${BASE_URL}/api/graphql" \\
+  -H "Content-Type: application/json" \\
+  -d '{"query":"{ tournaments(status:\\"running\\", limit: 10) { items { id name slug status } count } }"}'`;
+
+const graphqlMutationExample = `curl -X POST "${BASE_URL}/api/graphql" \\
+  -H "Content-Type: application/json" \\
+  -H "Authorization: Bearer pk_live_…" \\
+  -d '{"query":"mutation($m:ID!){reportMatchResult(matchId:$m,team1Score:2,team2Score:1){status winnerTeamId}}","variables":{"m":"…"}}'`;
+
 function DevelopersPage() {
   const t = useT('developpeursPage');
   const groups = getGroups(t);
   const errorCodes = getErrorCodes(t);
+  const writeErrorCodes = getWriteErrorCodes(t);
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
       {/* Hero */}
@@ -454,6 +510,14 @@ function DevelopersPage() {
               {
                 title: t.card6Title,
                 body: t.card6Body,
+              },
+              {
+                title: t.card7Title,
+                body: t.card7Body,
+              },
+              {
+                title: t.card8Title,
+                body: t.card8Body,
               },
             ].map((card) => (
               <div
@@ -557,7 +621,11 @@ function DevelopersPage() {
           {/* Sommaire */}
           <nav aria-label={t.tocLabel}>
             <ul className="flex flex-wrap gap-2">
-              {groups.map((g) => (
+              {[
+                ...groups.map((g) => ({ id: g.id, title: g.title })),
+                { id: 'ecriture', title: t.writeNavLabel },
+                { id: 'graphql', title: t.graphqlNavLabel },
+              ].map((g) => (
                 <li key={g.id}>
                   <a
                     href={`#${g.id}`}
@@ -661,6 +729,234 @@ function DevelopersPage() {
           ))}
         </section>
 
+        {/* Écriture authentifiée (REST) */}
+        <section
+          aria-labelledby="ecriture-heading"
+          id="ecriture"
+          className="scroll-mt-24 space-y-6"
+        >
+          <div>
+            <h2 id="ecriture-heading" className="text-2xl font-bold text-white">
+              {t.writeSectionTitle}
+            </h2>
+            <p className="mt-2 max-w-3xl text-sm text-gray-300">
+              {t.writeSectionIntro}
+            </p>
+          </div>
+
+          {/* Authentification */}
+          <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
+            <h3 className="text-base font-semibold text-white">
+              {t.writeAuthTitle}
+            </h3>
+            <p className="mt-2 text-sm text-gray-300">{t.writeAuthBody}</p>
+            <p className="mt-3 break-all font-mono text-sm text-purple-200">
+              Authorization: Bearer pk_live_…
+            </p>
+          </div>
+
+          {/* Scopes */}
+          <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
+            <h3 className="text-base font-semibold text-white">
+              {t.writeScopesTitle}
+            </h3>
+            <p className="mt-2 text-sm text-gray-300">{t.writeScopesIntro}</p>
+            <div className="mt-4 overflow-x-auto">
+              <table className="w-full border-collapse text-left text-sm">
+                <thead>
+                  <tr className="border-b border-white/10 text-gray-300">
+                    <th scope="col" className="py-2 pr-4 font-semibold">
+                      {t.writeThResource}
+                    </th>
+                    <th scope="col" className="py-2 font-semibold">
+                      {t.writeThActions}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {API_RESOURCES.map((resource) => (
+                    <tr key={resource} className="border-b border-white/5">
+                      <td className="py-2 pr-4 align-top">
+                        <code className="rounded bg-white/10 px-1.5 py-0.5 text-purple-200">
+                          {resource}
+                        </code>
+                      </td>
+                      <td className="py-2 align-top">
+                        <div className="flex flex-wrap gap-1.5">
+                          {API_ACTIONS.map((action) => (
+                            <code
+                              key={action}
+                              className="rounded bg-white/10 px-1.5 py-0.5 text-purple-200"
+                            >
+                              {resource}:{action}
+                            </code>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Codes d'erreur (écriture) */}
+          <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
+            <h3 className="text-base font-semibold text-white">
+              {t.writeErrorsTitle}
+            </h3>
+            <p className="mt-2 text-sm text-gray-300">{t.writeErrorsIntro}</p>
+            <div className="mt-4 overflow-x-auto">
+              <table className="w-full border-collapse text-left text-sm">
+                <thead>
+                  <tr className="border-b border-white/10 text-gray-300">
+                    <th scope="col" className="py-2 pr-4 font-semibold">
+                      {t.writeThHttp}
+                    </th>
+                    <th scope="col" className="py-2 pr-4 font-semibold">
+                      {t.thCode}
+                    </th>
+                    <th scope="col" className="py-2 font-semibold">
+                      {t.thMeaning}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {writeErrorCodes.map((row) => (
+                    <tr key={row.code} className="border-b border-white/5">
+                      <td className="py-2 pr-4 align-top text-gray-300">
+                        {row.http}
+                      </td>
+                      <td className="py-2 pr-4 align-top">
+                        <code className="rounded bg-white/10 px-1.5 py-0.5 text-purple-200">
+                          {row.code}
+                        </code>
+                      </td>
+                      <td className="py-2 align-top text-gray-300">
+                        {row.desc}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="mt-3 text-xs text-gray-400">{t.writeErrorsNote}</p>
+          </div>
+
+          {/* Idempotence */}
+          <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
+            <h3 className="text-base font-semibold text-white">
+              {t.writeIdempotencyTitle}
+            </h3>
+            <p className="mt-2 text-sm text-gray-300">
+              {t.writeIdempotencyBody}
+            </p>
+          </div>
+
+          {/* Endpoint pilote */}
+          <article
+            id={anchorId('/api/public/v1/matches/{id}/result')}
+            className="scroll-mt-24 space-y-4 rounded-2xl border border-white/10 bg-white/[0.04] p-5"
+          >
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-md bg-amber-500/15 px-2 py-1 text-xs font-bold uppercase tracking-wide text-amber-300">
+                POST
+              </span>
+              <code className="break-all font-mono text-sm text-purple-200">
+                /api/public/v1/matches/{'{id}'}/result
+              </code>
+              <span className="rounded-md border border-white/10 bg-white/[0.05] px-2 py-1 text-xs text-gray-300">
+                {t.writeScopeRequiredLabel}:{' '}
+                <code className="text-purple-200">matches:write</code>
+              </span>
+            </div>
+            <p className="text-sm text-gray-300">{t.writeEndpointSummary}</p>
+
+            <div>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-gray-400">
+                {t.writeBodyLabel}
+              </p>
+              <CodeBlock>{writeBodyExample}</CodeBlock>
+            </div>
+
+            <CodeBlock label="curl">{writeCurlExample}</CodeBlock>
+
+            <div>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-gray-400">
+                {t.responseLabel}
+              </p>
+              <CodeBlock>{writeResponseExample}</CodeBlock>
+            </div>
+          </article>
+        </section>
+
+        {/* GraphQL */}
+        <section
+          aria-labelledby="graphql-heading"
+          id="graphql"
+          className="scroll-mt-24 space-y-6"
+        >
+          <div>
+            <h2 id="graphql-heading" className="text-2xl font-bold text-white">
+              {t.graphqlSectionTitle}
+            </h2>
+            <p className="mt-2 max-w-3xl text-sm text-gray-300">
+              {t.graphqlSectionIntro}
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-md bg-pink-500/15 px-2 py-1 text-xs font-bold uppercase tracking-wide text-pink-300">
+              POST
+            </span>
+            <code className="break-all font-mono text-sm text-purple-200">
+              /api/graphql
+            </code>
+          </div>
+
+          <p className="max-w-3xl text-sm text-gray-300">
+            {t.graphqlDepthNote}
+          </p>
+
+          {/* Schéma */}
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-gray-400">
+              {t.graphqlSchemaHeading}
+            </p>
+            <CodeBlock label={t.graphqlSchemaLabel}>
+              {graphqlSchemaExample}
+            </CodeBlock>
+          </div>
+
+          {/* Exemples */}
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-gray-400">
+              {t.graphqlExamplesHeading}
+            </p>
+            <div className="grid gap-4 lg:grid-cols-2">
+              <CodeBlock label={t.graphqlQueryLabel}>
+                {graphqlQueryExample}
+              </CodeBlock>
+              <CodeBlock label={t.graphqlMutationLabel}>
+                {graphqlMutationExample}
+              </CodeBlock>
+            </div>
+          </div>
+
+          <p className="text-sm text-gray-300">
+            {t.graphqlGraphiqlPrompt}
+            {/* API endpoint (GraphiQL, dev-only), not a Next page route → plain anchor. */}
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+            <a
+              href="/api/graphql"
+              className="text-purple-300 underline hover:text-purple-200"
+            >
+              {t.graphqlGraphiqlLink}
+            </a>
+            {t.graphqlGraphiqlNote}
+          </p>
+        </section>
+
         {/* Note de fin */}
         <section
           aria-labelledby="notes-heading"
@@ -726,8 +1022,8 @@ const developersSeo: SeoProps = {
     en: 'Public API',
   },
   description: {
-    fr: "Documentation de l'API REST publique v1 de l'OW Women's Cup : tournois, matchs, équipes, classements et ligues. Lecture seule, sans clé, CORS ouvert.",
-    en: "Documentation for the OW Women's Cup public REST API v1: tournaments, matches, teams, standings and leagues. Read-only, no key required, open CORS.",
+    fr: "Documentation de l'API publique de l'OW Women's Cup : REST en lecture seule (tournois, matchs, équipes, classements, ligues), écriture authentifiée par token scopé et API GraphQL.",
+    en: "Documentation for the OW Women's Cup public API: read-only REST (tournaments, matches, teams, standings, leagues), authenticated writes via scoped token and a GraphQL API.",
   },
 };
 
