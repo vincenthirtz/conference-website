@@ -7,6 +7,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { parsePagination } from '@/utils/apiHelpers';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
+import type { RegistrationField } from '@/utils/registrationFields';
 
 import { logger } from '../../../utils/logger';
 export type PublicTournament = {
@@ -23,6 +24,12 @@ export type PublicTournament = {
   logo_url: string | null;
   banner_url: string | null;
   created_at: string;
+  // Définitions (pas les réponses) des champs d'inscription personnalisés.
+  // Exposées publiquement pour que le formulaire de création d'équipe
+  // (pages/team/create.tsx) puisse rendre la section « Informations
+  // complémentaires ». Valeur jsonb brute : validée côté client via
+  // validateFieldDefinitions avant rendu.
+  registration_fields: RegistrationField[] | null;
 };
 
 export default async function handler(
@@ -62,7 +69,8 @@ export default async function handler(
       max_teams,
       logo_url,
       banner_url,
-      created_at
+      created_at,
+      registration_fields
     `;
 
     let query = supabaseAdmin

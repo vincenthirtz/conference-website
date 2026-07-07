@@ -18,6 +18,11 @@ import { createInvitation } from '@/utils/teams/invitations';
 import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
 import { alertIfBlacklisted } from '@/utils/moderation/blacklist';
 import { verifyCaptcha } from '@/utils/captcha';
+import {
+  validateFieldDefinitions,
+  validateRegistrationAnswers,
+  type RegistrationAnswers,
+} from '@/utils/registrationFields';
 
 import { logger } from '../../../utils/logger';
 type Body = {
@@ -36,6 +41,8 @@ type Body = {
   set_captain?: boolean;
   members?: MemberInput[];
   tournament_id?: string | null;
+  /** Réponses aux champs d'inscription personnalisés du tournoi (Flow A). */
+  field_values?: Record<string, unknown> | null;
   // Anti-abuse : ce endpoint est PUBLIC (flux d'inscription anonyme, cf.
   // pages/team/create.tsx — page "Créer une équipe" sans session). Il peut
   // créer des comptes auth à partir des emails du roster
@@ -90,7 +97,7 @@ type ApiResponse =
       tournament?: { tournament_name: string; stages_count: number };
       info?: string;
     }
-  | { error: string };
+  | { error: string; fieldErrors?: Record<string, string> };
 
 export default async function handler(
   req: NextApiRequest,
@@ -394,6 +401,34 @@ export default async function handler(
     });
   }
 
+  // Champs d'inscription personnalisés : si le tournoi cible est publié et
+  // définit des champs custom, on valide les réponses AVANT toute création
+  // (un champ requis manquant doit bloquer l'inscription — donc la création).
+  // On garde les valeurs nettoyées pour l'upsert tournament_teams plus bas.
+  let cleanedFieldValues: RegistrationAnswers = {};
+  const earlyTournamentId = body.tournament_id?.toString().trim() || null;
+  if (earlyTournamentId) {
+    const { data: tourForFields } = await supabaseAdmin
+      .from('tournaments')
+      .select('id, status, registration_fields')
+      .eq('id', earlyTournamentId)
+      .eq('tenant_id', tenantId)
+      .maybeSingle();
+
+    if (tourForFields && tourForFields.status === 'published') {
+      const defs = validateFieldDefinitions(tourForFields.registration_fields);
+      const fieldDefs = defs.ok ? defs.fields : [];
+      const answers = validateRegistrationAnswers(fieldDefs, body.field_values);
+      if (!answers.ok) {
+        return res.status(400).json({
+          error: "Champs d'inscription invalides.",
+          fieldErrors: answers.errors,
+        });
+      }
+      cleanedFieldValues = answers.values;
+    }
+  }
+
   const teamPayload: Record<string, any> = {
     name,
     short_name: body.short_name?.toString().trim() || null,
@@ -477,7 +512,8 @@ export default async function handler(
   // fait PAS échouer la création de l'équipe : on collecte et on continue (la
   // team + le capitaine restent valides).
   for (const m of memberRecords) {
-    const isCaptainRecord = captainUserId !== null && m.user_id === captainUserId;
+    const isCaptainRecord =
+      captainUserId !== null && m.user_id === captainUserId;
 
     if (!isCaptainRecord) {
       // Membre non-créateur → invitation pending. Nécessite un capitaine
@@ -683,6 +719,45 @@ export default async function handler(
                 tournament_name: tournament.name,
                 stages_count: stages.length,
               };
+
+              // Aligne le Flow A sur la table d'inscription canonique
+              // (tournament_teams) : on y consigne le statut + les réponses aux
+              // champs custom. Best-effort/guardé comme l'insert stage_teams —
+              // un échec ne fait pas échouer la création de l'équipe.
+              try {
+                const { error: ttError } = await supabaseAdmin
+                  .from('tournament_teams')
+                  .upsert(
+                    {
+                      tenant_id: tenantId,
+                      tournament_id: tournamentId,
+                      team_id: createdTeam.id,
+                      status: 'registered',
+                      field_values: cleanedFieldValues,
+                    },
+                    { onConflict: 'tournament_id,team_id' }
+                  );
+                if (ttError) {
+                  logger.error(
+                    '[create-with-member] NEEDS_REVIEW tournament_teams upsert failed',
+                    {
+                      teamId: createdTeam.id,
+                      tournamentId,
+                      error: ttError.message,
+                    }
+                  );
+                }
+              } catch (ttErr) {
+                logger.error(
+                  '[create-with-member] NEEDS_REVIEW tournament_teams upsert crash',
+                  {
+                    teamId: createdTeam.id,
+                    tournamentId,
+                    error:
+                      ttErr instanceof Error ? ttErr.message : String(ttErr),
+                  }
+                );
+              }
             } else {
               // Best-effort : la team est creee, on ne rollback pas.
               // Marquer NEEDS_REVIEW pour qu'un admin puisse la reinscrire manuellement.
@@ -712,7 +787,8 @@ export default async function handler(
   }
 
   const infoParts: string[] = [];
-  if (insertedMembers.length) infoParts.push('Équipe créée et capitaine ajouté');
+  if (insertedMembers.length)
+    infoParts.push('Équipe créée et capitaine ajouté');
   else infoParts.push('Équipe créée');
   const sentInvites = invitedMembers.filter((i) => i.invitation_id).length;
   if (sentInvites > 0) {

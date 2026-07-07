@@ -2,6 +2,8 @@
 // Types centralisés pour l'admin (tournois, équipes, stages, matchs).
 // Importez ces types dans les pages et API admin au lieu de les redéfinir.
 
+import type { RegistrationField } from '@/utils/registrationFields';
+
 /* -----------------------------------------------------------
  * Staff
  * ---------------------------------------------------------*/
@@ -59,6 +61,7 @@ export type Tournament = {
   schedule_details: string | null;
   schedule_rules: string | null;
   format_details: string | null;
+  registration_fields: RegistrationField[] | null;
   created_at: string;
   updated_at: string | null;
 };

@@ -8,6 +8,10 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
+import {
+  validateFieldDefinitions,
+  type RegistrationField,
+} from '@/utils/registrationFields';
 
 import { logger } from '../../../../utils/logger';
 type TournamentDetail = {
@@ -27,6 +31,7 @@ type TournamentDetail = {
   schedule_details: string | null;
   schedule_rules: string | null;
   format_details: string | null;
+  registration_fields: RegistrationField[] | null;
   created_at: string;
   updated_at: string | null;
 };
@@ -97,6 +102,7 @@ async function handleGet(
         schedule_details,
         schedule_rules,
         format_details,
+        registration_fields,
         created_at,
         updated_at
 `
@@ -152,7 +158,19 @@ async function handlePatch(
       schedule_details,
       schedule_rules,
       format_details,
+      registration_fields,
     } = req.body;
+
+    // Champs d'inscription personnalisés (définitions). Validés via le contrat
+    // partagé utils/registrationFields ; on persiste le tableau nettoyé.
+    let cleanedRegistrationFields: RegistrationField[] | undefined;
+    if (registration_fields !== undefined) {
+      const fieldsResult = validateFieldDefinitions(registration_fields);
+      if (!fieldsResult.ok) {
+        return res.status(400).json({ error: fieldsResult.error });
+      }
+      cleanedRegistrationFields = fieldsResult.fields;
+    }
 
     // --- Validation des champs ---
 
@@ -339,6 +357,8 @@ async function handlePatch(
       updatePayload.schedule_rules = schedule_rules;
     if (format_details !== undefined)
       updatePayload.format_details = format_details;
+    if (cleanedRegistrationFields !== undefined)
+      updatePayload.registration_fields = cleanedRegistrationFields;
 
     // Si rien à mettre à jour
     if (Object.keys(updatePayload).length === 0) {
@@ -369,6 +389,7 @@ async function handlePatch(
         schedule_details,
         schedule_rules,
         format_details,
+        registration_fields,
         created_at,
         updated_at
 `

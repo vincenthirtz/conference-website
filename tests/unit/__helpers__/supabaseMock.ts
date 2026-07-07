@@ -49,7 +49,25 @@ export const KNOWN_TABLES: readonly string[] = [
   'games',
   'team_members',
   'tournament_stages',
+  // custom registration fields feature
+  'tournament_teams',
+  'demandes',
 ];
+
+/**
+ * Per-table default columns applied when a row is READ back (select/single/
+ * maybeSingle). Mirrors NOT-NULL-with-DEFAULT JSONB columns so both seeded and
+ * inserted rows expose the column even when a fixture omits it. A fresh value
+ * is produced per read so callers can't mutate shared state.
+ *
+ * - tournaments.registration_fields  -> [] (field definitions)
+ * - tournament_teams.field_values     -> {} (a team's answers)
+ */
+function tableColumnDefaults(table: string): Row {
+  if (table === 'tournaments') return { registration_fields: [] };
+  if (table === 'tournament_teams') return { field_values: {} };
+  return {};
+}
 
 /**
  * Conference tenant UUID — matches `DEFAULT_TENANT_ID` in `utils/tenant.ts`.
@@ -504,8 +522,9 @@ class Builder {
       // Clone rows so the returned `data` is a snapshot — matches Supabase
       // behavior and prevents callers from spotting later mutations through
       // their cached select result.
+      const defaults = tableColumnDefaults(this.table);
       return {
-        data: matched.map((r) => ({ ...r })),
+        data: matched.map((r) => ({ ...defaults, ...r })),
         error: null,
         count: this.wantCount ? total : null,
       };

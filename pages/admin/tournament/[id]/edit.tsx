@@ -9,8 +9,12 @@ import { useToast } from '@/components/Toast';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import Breadcrumb from '@/components/admin/Breadcrumb';
+import RegistrationFieldsEditor, {
+  hasRegistrationFieldErrors,
+} from '@/components/admin/RegistrationFieldsEditor';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import type { StaffProps, Tournament } from '@/types/admin';
+import type { RegistrationField } from '@/utils/registrationFields';
 import { TOURNAMENT_TIMEZONES } from '@/utils/timezone';
 
 type ApiResponse = {
@@ -30,8 +34,13 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
   const { adminFetchJson } = useAdminFetch();
   const { mutate: uploadRules } = useIdempotentMutation();
   const t = useAdminT('adminTournamentEdit');
+  const tf = useAdminT('adminRegistrationFields');
 
   const [formReady, setFormReady] = useState(false);
+
+  const [registrationFields, setRegistrationFields] = useState<
+    RegistrationField[]
+  >([]);
 
   const [dateError, setDateError] = useState<string | null>(null);
 
@@ -182,6 +191,12 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
         format_details: tour.format_details || '',
       });
 
+      setRegistrationFields(
+        Array.isArray(tour.registration_fields)
+          ? tour.registration_fields
+          : []
+      );
+
       setFormReady(true);
     } catch (err: unknown) {
       setErrorMsg((err as Error)?.message ?? t.errorLoad);
@@ -225,6 +240,11 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
       }
     }
 
+    if (hasRegistrationFieldErrors(registrationFields)) {
+      setErrorMsg(tf.errFormInvalid);
+      return;
+    }
+
     setSaving(true);
 
     const payload: Record<string, any> = {
@@ -253,6 +273,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
       schedule_details: form.schedule_details.trim() || null,
       schedule_rules: form.schedule_rules.trim() || null,
       format_details: form.format_details.trim() || null,
+      registration_fields: registrationFields,
     };
 
     try {
@@ -800,6 +821,13 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
                         </div>
                       </div>
                     </section>
+
+                    {/* Champs d'inscription personnalisés */}
+                    <RegistrationFieldsEditor
+                      fields={registrationFields}
+                      onChange={setRegistrationFields}
+                      disabled={saving}
+                    />
                   </div>
 
                   {/* Right Column - Visibility & Actions */}

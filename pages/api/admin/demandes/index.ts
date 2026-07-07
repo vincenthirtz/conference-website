@@ -524,6 +524,8 @@ async function handlePost(
               tournament_id: d.tournament_id,
               team_id: d.team_id,
               status: 'registered',
+              // Réponses aux champs custom capturées à la soumission (Flow B).
+              field_values: (d.payload as any)?.field_values ?? {},
             });
 
           if (regErr) {
@@ -887,8 +889,7 @@ async function handlePost(
         if (wantsNewTeam && Array.isArray(payload.members)) {
           for (const m of payload.members as Array<Record<string, any>>) {
             try {
-              const email =
-                typeof m?.email === 'string' ? m.email.trim() : '';
+              const email = typeof m?.email === 'string' ? m.email.trim() : '';
               if (!email) continue;
 
               // Skip the requester: they're already inserted as captain above.

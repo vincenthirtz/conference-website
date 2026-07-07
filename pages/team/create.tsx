@@ -5,6 +5,13 @@ import { useToast } from '@/components/Toast';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
+import {
+  validateFieldDefinitions,
+  type RegistrationField,
+} from '@/utils/registrationFields';
+
+/** Valeur d'une réponse à un champ d'inscription personnalisé. */
+type FieldValue = string | number | boolean;
 
 // Idempotency-Key pour un POST public/anonyme (pas de session Supabase, donc
 // useIdempotentMutation/useAdminFetch ne s'appliquent pas ici). On génère une
@@ -40,6 +47,7 @@ type CreateResponse = {
   };
   info?: string;
   error?: string;
+  fieldErrors?: Record<string, string>;
 };
 
 type TournamentInfo = {
@@ -96,6 +104,20 @@ export default function PublicCreateTeamPage() {
   const [tournamentInfo, setTournamentInfo] = useState<TournamentInfo | null>(
     null
   );
+  // Champs d'inscription personnalisés du tournoi cible (DÉFINITIONS, pas les
+  // réponses). Chargés avec le tournoi puis validés via validateFieldDefinitions.
+  const [registrationFields, setRegistrationFields] = useState<
+    RegistrationField[]
+  >([]);
+  // Réponses saisies, indexées par clé de champ. Envoyées telles quelles dans
+  // `field_values` du POST — le serveur re-valide et coerce (cf.
+  // validateRegistrationAnswers).
+  const [fieldValues, setFieldValues] = useState<Record<string, FieldValue>>(
+    {}
+  );
+  // Erreurs par champ renvoyées par l'API (400 { fieldErrors }), affichées
+  // inline sous chaque champ.
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   // Captcha anti-bot (endpoint public + création de comptes côté serveur).
   // On récupère un challenge HMAC depuis /api/captcha au montage et après
@@ -138,10 +160,38 @@ export default function PublicCreateTeamPage() {
             game: found.game,
             start_date: found.start_date,
           });
+          // Les définitions jsonb sont brutes : on les passe par le validateur
+          // partagé pour obtenir un tableau typé et nettoyé (options select,
+          // maxLength borné…). On initialise ensuite les valeurs par défaut
+          // (checkbox → false, autres → chaîne vide) pour un état contrôlé.
+          const defs = validateFieldDefinitions(found.registration_fields);
+          const fields = defs.ok ? defs.fields : [];
+          setRegistrationFields(fields);
+          setFieldValues((prev) => {
+            const next: Record<string, FieldValue> = {};
+            for (const f of fields) {
+              next[f.key] =
+                prev[f.key] ?? (f.type === 'checkbox' ? false : '');
+            }
+            return next;
+          });
+        } else {
+          setRegistrationFields([]);
         }
       })
       .catch(() => {});
   }, [tournamentIdParam]);
+
+  function handleFieldChange(key: string, value: FieldValue) {
+    setFieldValues((prev) => ({ ...prev, [key]: value }));
+    // Efface l'erreur inline du champ dès que l'utilisateur le modifie.
+    setFieldErrors((prev) => {
+      if (!prev[key]) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  }
 
   function addMemberRow() {
     setMembers((prev) => {
@@ -190,6 +240,7 @@ export default function PublicCreateTeamPage() {
     if (loading) return;
     setLoading(true);
     setErrorMsg(null);
+    setFieldErrors({});
     setResult(null);
 
     try {
@@ -234,6 +285,10 @@ export default function PublicCreateTeamPage() {
         discord: discord || null,
         members: preparedMembers,
         tournament_id: tournamentIdParam || null,
+        // Réponses aux champs d'inscription personnalisés (vide si le tournoi
+        // n'en définit aucun). Le serveur les valide/coerce et bloque en 400
+        // { fieldErrors } si un champ requis manque.
+        field_values: registrationFields.length ? fieldValues : undefined,
         captchaToken,
         captchaAnswer,
         honeypot,
@@ -254,6 +309,11 @@ export default function PublicCreateTeamPage() {
         // Le token captcha est à usage unique : on en récupère un nouveau pour
         // que l'utilisateur puisse réessayer sans recharger la page.
         refreshCaptcha();
+        // Erreurs par champ (champs d'inscription personnalisés) → affichage
+        // inline sous chaque champ, en plus du message global.
+        if (json?.fieldErrors) {
+          setFieldErrors(json.fieldErrors);
+        }
         const message = (json as any)?.error || t.errorCreateFailed;
         throw new Error(message);
       }
@@ -277,6 +337,15 @@ export default function PublicCreateTeamPage() {
         { id: 'm-0', email: '', role: 'player', battleTag: '', specialty: '' },
       ]);
       setCaptainIndex(null);
+      // Réinitialise les réponses aux champs personnalisés (valeurs par défaut).
+      setFieldValues(() => {
+        const next: Record<string, FieldValue> = {};
+        for (const f of registrationFields) {
+          next[f.key] = f.type === 'checkbox' ? false : '';
+        }
+        return next;
+      });
+      setFieldErrors({});
       // Nouveau challenge captcha pour une éventuelle prochaine création.
       refreshCaptcha();
     } catch (err: unknown) {
@@ -611,6 +680,178 @@ export default function PublicCreateTeamPage() {
                   <p className="text-xs text-gray-400">{t.addMemberHint}</p>
                 </div>
               </section>
+
+              {registrationFields.length > 0 && (
+                <section className="space-y-4">
+                  <div>
+                    <p className="text-[11px] uppercase tracking-[0.14em] text-gray-400">
+                      {t.customFieldsEyebrow}
+                    </p>
+                    <h3 className="text-lg font-semibold">
+                      {t.customFieldsTitle}
+                    </h3>
+                  </div>
+
+                  <div className="space-y-4">
+                    {registrationFields.map((field) => {
+                      const value = fieldValues[field.key];
+                      const stringValue =
+                        typeof value === 'string'
+                          ? value
+                          : typeof value === 'number'
+                            ? String(value)
+                            : '';
+                      const rawError = fieldErrors[field.key];
+                      // Le serveur renvoie des messages FR (validateRegistration
+                      // Answers). Pour le cas dominant « champ requis », on
+                      // affiche la version localisée ; sinon on montre le message
+                      // du serveur tel quel.
+                      const fieldError = rawError
+                        ? rawError === 'Ce champ est requis.'
+                          ? t.customFieldRequiredError
+                          : rawError
+                        : undefined;
+                      const controlId = `custom-field-${field.key}`;
+                      const describedBy = field.help
+                        ? `${controlId}-help`
+                        : undefined;
+
+                      if (field.type === 'checkbox') {
+                        return (
+                          <div key={field.key}>
+                            <label className="inline-flex items-start gap-2 text-sm text-gray-200">
+                              <input
+                                id={controlId}
+                                type="checkbox"
+                                checked={value === true}
+                                onChange={(e) =>
+                                  handleFieldChange(
+                                    field.key,
+                                    e.target.checked
+                                  )
+                                }
+                                aria-describedby={describedBy}
+                                className="mt-0.5 h-4 w-4 rounded border-white/20 bg-black/60"
+                              />
+                              <span>
+                                {field.label}
+                                {field.required && (
+                                  <span className="text-emerald-300">
+                                    {' '}
+                                    {t.customFieldRequiredMark}
+                                  </span>
+                                )}
+                              </span>
+                            </label>
+                            {field.help && (
+                              <p
+                                id={describedBy}
+                                className="mt-1 text-[11px] text-gray-500"
+                              >
+                                {field.help}
+                              </p>
+                            )}
+                            {fieldError && (
+                              <p className="mt-1 text-xs text-red-300">
+                                {fieldError}
+                              </p>
+                            )}
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div key={field.key}>
+                          <label
+                            htmlFor={controlId}
+                            className="block text-xs font-semibold uppercase tracking-[0.14em] text-gray-300 mb-2"
+                          >
+                            {field.label}
+                            {field.required && (
+                              <span className="text-emerald-300">
+                                {' '}
+                                {t.customFieldRequiredMark}
+                              </span>
+                            )}
+                          </label>
+
+                          {field.type === 'textarea' ? (
+                            <textarea
+                              id={controlId}
+                              rows={4}
+                              required={field.required}
+                              maxLength={field.maxLength}
+                              value={stringValue}
+                              onChange={(e) =>
+                                handleFieldChange(field.key, e.target.value)
+                              }
+                              aria-describedby={describedBy}
+                              className="w-full rounded-xl border border-white/15 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-400/70 focus:border-emerald-400/70 transition"
+                            />
+                          ) : field.type === 'select' ? (
+                            <select
+                              id={controlId}
+                              required={field.required}
+                              value={stringValue}
+                              onChange={(e) =>
+                                handleFieldChange(field.key, e.target.value)
+                              }
+                              aria-describedby={describedBy}
+                              className="w-full rounded-xl border border-white/15 bg-black/60 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-400/70 focus:border-emerald-400/70 transition"
+                            >
+                              <option value="">
+                                {t.customFieldSelectPlaceholder}
+                              </option>
+                              {(field.options ?? []).map((opt) => (
+                                <option key={opt} value={opt}>
+                                  {opt}
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            <input
+                              id={controlId}
+                              type={
+                                field.type === 'number'
+                                  ? 'number'
+                                  : field.type === 'url'
+                                    ? 'url'
+                                    : 'text'
+                              }
+                              required={field.required}
+                              maxLength={
+                                field.type === 'text'
+                                  ? field.maxLength
+                                  : undefined
+                              }
+                              value={stringValue}
+                              onChange={(e) =>
+                                handleFieldChange(field.key, e.target.value)
+                              }
+                              aria-describedby={describedBy}
+                              className="w-full rounded-xl border border-white/15 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-400/70 focus:border-emerald-400/70 transition"
+                            />
+                          )}
+
+                          {field.help && (
+                            <p
+                              id={describedBy}
+                              className="mt-1 text-[11px] text-gray-500"
+                            >
+                              {field.help}
+                            </p>
+                          )}
+                          {fieldError && (
+                            <p className="mt-1 text-xs text-red-300">
+                              {fieldError}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
+              )}
 
               {/* Honeypot : caché aux humains (aria-hidden + hors flux), piège à bots. */}
               <div

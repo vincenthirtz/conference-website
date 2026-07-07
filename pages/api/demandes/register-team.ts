@@ -13,12 +13,18 @@ import {
 } from '@/utils/teams/managementAccess';
 import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
 import { emitBotEvent } from '@/utils/botEvents';
+import {
+  validateFieldDefinitions,
+  validateRegistrationAnswers,
+} from '@/utils/registrationFields';
 
 import { logger } from '../../../utils/logger';
 export type RegisterTeamBody = {
   teamId: string;
   tournamentId: string;
   message?: string;
+  /** Réponses aux champs d'inscription personnalisés du tournoi (Flow B). */
+  field_values?: Record<string, unknown> | null;
 };
 
 export default withAuthRoute(async function handler(
@@ -32,7 +38,9 @@ export default withAuthRoute(async function handler(
     return;
 
   const userId = user.id;
-  const tenantId = await resolveTenantIdForUserRequestAsync(req, { authUserId: userId });
+  const tenantId = await resolveTenantIdForUserRequestAsync(req, {
+    authUserId: userId,
+  });
 
   if (req.method === 'GET') {
     const { data: demandes, error: demandesErr } = await supabaseAdmin
@@ -98,7 +106,7 @@ export default withAuthRoute(async function handler(
     // Verify tournament exists and is published
     const { data: tournament, error: tourErr } = await supabaseAdmin
       .from('tournaments')
-      .select('id, name, status, max_teams, min_players')
+      .select('id, name, status, max_teams, min_players, registration_fields')
       .eq('id', tournamentId)
       .eq('tenant_id', tenantId)
       .maybeSingle();
@@ -110,6 +118,25 @@ export default withAuthRoute(async function handler(
     if (tournament.status !== 'published') {
       return res.status(400).json({
         error: 'Les inscriptions ne sont pas ouvertes pour ce tournoi.',
+      });
+    }
+
+    // Champs d'inscription personnalisés : valider les réponses contre les
+    // définitions du tournoi. Les valeurs nettoyées sont stockées dans le
+    // payload de la demande (payload.field_values) et recopiées dans
+    // tournament_teams à l'approbation.
+    const fieldDefsResult = validateFieldDefinitions(
+      tournament.registration_fields
+    );
+    const fieldDefs = fieldDefsResult.ok ? fieldDefsResult.fields : [];
+    const answersResult = validateRegistrationAnswers(
+      fieldDefs,
+      body.field_values
+    );
+    if (!answersResult.ok) {
+      return res.status(400).json({
+        error: "Champs d'inscription invalides.",
+        fieldErrors: answersResult.errors,
       });
     }
 
@@ -188,6 +215,7 @@ export default withAuthRoute(async function handler(
         user.user_metadata?.display_name ||
         user.user_metadata?.full_name ||
         null,
+      field_values: answersResult.values,
     };
 
     const { data: newDemande, error: insertErr } = await supabaseAdmin
