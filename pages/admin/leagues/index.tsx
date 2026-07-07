@@ -10,27 +10,34 @@ import { useToast } from '@/components/Toast';
 import Breadcrumb from '@/components/admin/Breadcrumb';
 import EmptyState from '@/components/admin/EmptyState';
 import { Skeleton } from '@/components/admin/Skeleton';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { StaffProps } from '@/types/admin';
-import type { League, LeagueStatus, LeaguesListResponse } from '@/types/leagues';
+import type {
+  League,
+  LeagueStatus,
+  LeaguesListResponse,
+} from '@/types/leagues';
 
 import { logger } from '../../../utils/logger';
 
 export const getServerSideProps = withStaffPage('manager');
 
+type Dict = ReturnType<typeof useAdminT<'adminLeaguesList'>>;
+
 /* ----------------------------------------------------------------
  * Statut → libellé / couleur
  * ---------------------------------------------------------------- */
 
-function statusLabel(status: LeagueStatus): string {
+function statusLabel(status: LeagueStatus, t: Dict): string {
   switch (status) {
     case 'draft':
-      return 'Brouillon';
+      return t.statusDraft;
     case 'active':
-      return 'Active';
+      return t.statusActive;
     case 'finished':
-      return 'Terminée';
+      return t.statusFinished;
     case 'archived':
-      return 'Archivée';
+      return t.statusArchived;
     default:
       return status;
   }
@@ -92,6 +99,7 @@ type CreateFormProps = {
 };
 
 function CreateLeagueForm({ onCreated, onCancel }: CreateFormProps) {
+  const t = useAdminT('adminLeaguesList');
   const { mutateJson } = useIdempotentMutation();
   const { addToast } = useToast();
 
@@ -119,13 +127,11 @@ function CreateLeagueForm({ onCreated, onCancel }: CreateFormProps) {
     setError(null);
 
     if (!name.trim()) {
-      setError('Le nom est requis.');
+      setError(t.errNameRequired);
       return;
     }
     if (!/^[a-z0-9-]+$/.test(slug)) {
-      setError(
-        'Le slug doit être en minuscules, chiffres et tirets uniquement.'
-      );
+      setError(t.errSlugFormat);
       return;
     }
 
@@ -144,9 +150,7 @@ function CreateLeagueForm({ onCreated, onCancel }: CreateFormProps) {
         }
         pointsTable = parsed as Record<string, number>;
       } catch {
-        setError(
-          'Le barème de points doit être un objet JSON { rang: points }.'
-        );
+        setError(t.errPointsShape);
         return;
       }
     }
@@ -166,14 +170,14 @@ function CreateLeagueForm({ onCreated, onCancel }: CreateFormProps) {
           is_public: isPublic,
         }),
       });
-      addToast('Ligue créée.', 'success');
+      addToast(t.toastCreated, 'success');
       onCreated(league);
     } catch (err: unknown) {
       const payload = (err as { payload?: { code?: string } })?.payload;
       if (payload?.code === 'SLUG_CONFLICT') {
-        setError('Ce slug est déjà utilisé par une autre ligue.');
+        setError(t.errSlugConflict);
       } else {
-        setError((err as Error)?.message || 'Erreur lors de la création.');
+        setError((err as Error)?.message || t.errCreate);
       }
       logger.error('create league error', err);
     } finally {
@@ -190,7 +194,7 @@ function CreateLeagueForm({ onCreated, onCancel }: CreateFormProps) {
       onSubmit={handleSubmit}
       className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 mb-6 space-y-4"
     >
-      <h2 className="text-lg font-semibold">Nouvelle ligue</h2>
+      <h2 className="text-lg font-semibold">{t.formTitle}</h2>
 
       {error && (
         <div className="rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm">
@@ -201,7 +205,7 @@ function CreateLeagueForm({ onCreated, onCancel }: CreateFormProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className={labelCls} htmlFor="league-name">
-            Nom *
+            {t.nameLabel}
           </label>
           <input
             id="league-name"
@@ -209,12 +213,12 @@ function CreateLeagueForm({ onCreated, onCancel }: CreateFormProps) {
             className={inputCls}
             value={name}
             onChange={(e) => handleNameChange(e.target.value)}
-            placeholder="Saison Été 2026"
+            placeholder={t.namePlaceholder}
           />
         </div>
         <div>
           <label className={labelCls} htmlFor="league-slug">
-            Slug *
+            {t.slugLabel}
           </label>
           <input
             id="league-slug"
@@ -225,14 +229,14 @@ function CreateLeagueForm({ onCreated, onCancel }: CreateFormProps) {
               setSlugTouched(true);
               setSlug(e.target.value);
             }}
-            placeholder="saison-ete-2026"
+            placeholder={t.slugPlaceholder}
           />
         </div>
       </div>
 
       <div>
         <label className={labelCls} htmlFor="league-desc">
-          Description
+          {t.descriptionLabel}
         </label>
         <textarea
           id="league-desc"
@@ -245,7 +249,7 @@ function CreateLeagueForm({ onCreated, onCancel }: CreateFormProps) {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
           <label className={labelCls} htmlFor="league-game">
-            Jeu
+            {t.gameLabel}
           </label>
           <input
             id="league-game"
@@ -253,12 +257,12 @@ function CreateLeagueForm({ onCreated, onCancel }: CreateFormProps) {
             className={inputCls}
             value={game}
             onChange={(e) => setGame(e.target.value)}
-            placeholder="Overwatch 2"
+            placeholder={t.gamePlaceholder}
           />
         </div>
         <div>
           <label className={labelCls} htmlFor="league-start">
-            Date de début
+            {t.startDateLabel}
           </label>
           <input
             id="league-start"
@@ -270,7 +274,7 @@ function CreateLeagueForm({ onCreated, onCancel }: CreateFormProps) {
         </div>
         <div>
           <label className={labelCls} htmlFor="league-end">
-            Date de fin
+            {t.endDateLabel}
           </label>
           <input
             id="league-end"
@@ -284,7 +288,7 @@ function CreateLeagueForm({ onCreated, onCancel }: CreateFormProps) {
 
       <div>
         <label className={labelCls} htmlFor="league-points">
-          Barème de points (JSON rang → points)
+          {t.pointsLabel}
         </label>
         <textarea
           id="league-points"
@@ -292,9 +296,7 @@ function CreateLeagueForm({ onCreated, onCancel }: CreateFormProps) {
           value={pointsJson}
           onChange={(e) => setPointsJson(e.target.value)}
         />
-        <p className="text-xs text-neutral-500 mt-1">
-          Laisser tel quel pour le barème par défaut.
-        </p>
+        <p className="text-xs text-neutral-500 mt-1">{t.pointsHelp}</p>
       </div>
 
       <label className="flex items-center gap-2 text-sm cursor-pointer">
@@ -304,7 +306,7 @@ function CreateLeagueForm({ onCreated, onCancel }: CreateFormProps) {
           checked={isPublic}
           onChange={(e) => setIsPublic(e.target.checked)}
         />
-        Ligue publique (visible sur le site)
+        {t.publicLabel}
       </label>
 
       <div className="flex gap-3 pt-2">
@@ -313,14 +315,14 @@ function CreateLeagueForm({ onCreated, onCancel }: CreateFormProps) {
           disabled={submitting}
           className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors disabled:opacity-50"
         >
-          {submitting ? 'Création…' : 'Créer la ligue'}
+          {submitting ? t.creating : t.submit}
         </button>
         <button
           type="button"
           onClick={onCancel}
           className="px-5 py-2.5 rounded-xl bg-neutral-700 hover:bg-neutral-600 border border-neutral-600 text-sm font-medium transition-colors"
         >
-          Annuler
+          {t.cancel}
         </button>
       </div>
     </form>
@@ -332,6 +334,7 @@ function CreateLeagueForm({ onCreated, onCancel }: CreateFormProps) {
  * ---------------------------------------------------------------- */
 
 function AdminLeaguesPage(_props: StaffProps) {
+  const t = useAdminT('adminLeaguesList');
   const router = useRouter();
   const { adminFetchJson } = useAdminFetch();
   const { mutate } = useIdempotentMutation();
@@ -353,11 +356,11 @@ function AdminLeaguesPage(_props: StaffProps) {
       setLeagues(data.leagues ?? []);
     } catch (err: unknown) {
       logger.error('load leagues error', err);
-      setErrorMsg((err as Error)?.message || 'Erreur lors du chargement.');
+      setErrorMsg((err as Error)?.message || t.errLoad);
     } finally {
       setLoading(false);
     }
-  }, [adminFetchJson]);
+  }, [adminFetchJson, t.errLoad]);
 
   useEffect(() => {
     load();
@@ -365,11 +368,10 @@ function AdminLeaguesPage(_props: StaffProps) {
 
   async function handleDelete(league: League) {
     const ok = await confirm({
-      title: `Supprimer « ${league.name} » ?`,
-      subtitle:
-        'La ligue et ses standings seront supprimés. Cette action est irréversible.',
+      title: format(t.deleteConfirmTitle, { name: league.name }),
+      subtitle: t.deleteConfirmSubtitle,
       variant: 'danger',
-      confirmLabel: 'Supprimer',
+      confirmLabel: t.deleteConfirmLabel,
     });
     if (!ok) return;
 
@@ -379,16 +381,13 @@ function AdminLeaguesPage(_props: StaffProps) {
         method: 'DELETE',
       });
       if (!res.ok && res.status !== 204) {
-        throw new Error(`Suppression échouée (${res.status})`);
+        throw new Error(format(t.errDeleteStatus, { status: res.status }));
       }
       setLeagues((prev) => prev.filter((l) => l.id !== league.id));
-      addToast('Ligue supprimée.', 'success');
+      addToast(t.toastDeleted, 'success');
     } catch (err: unknown) {
       logger.error('delete league error', err);
-      addToast(
-        (err as Error)?.message || 'Erreur lors de la suppression.',
-        'error'
-      );
+      addToast((err as Error)?.message || t.errDelete, 'error');
     } finally {
       setDeletingId(null);
     }
@@ -397,27 +396,32 @@ function AdminLeaguesPage(_props: StaffProps) {
   return (
     <>
       <Head>
-        <title>Admin – Ligues</title>
+        <title>{t.pageTitle}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
         <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8 pt-20 pb-12">
           <Breadcrumb
             items={[
-              { label: 'Admin', href: '/admin' },
-              { label: 'Ligues' },
+              { label: t.breadcrumbAdmin, href: '/admin' },
+              { label: t.breadcrumbLeagues },
             ]}
           />
 
           <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
             <div>
               <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-                Ligues &amp; saisons
+                {t.heading}
               </h1>
               <p className="text-neutral-400 text-sm mt-1">
                 {loading
-                  ? 'Chargement…'
-                  : `${leagues.length} ligue${leagues.length > 1 ? 's' : ''}`}
+                  ? t.loading
+                  : format(
+                      leagues.length > 1
+                        ? t.leagueCount_other
+                        : t.leagueCount_one,
+                      { count: leagues.length }
+                    )}
               </p>
             </div>
             <div className="flex gap-2">
@@ -425,7 +429,7 @@ function AdminLeaguesPage(_props: StaffProps) {
                 href="/admin/ratings"
                 className="px-4 py-2.5 rounded-xl bg-neutral-700 hover:bg-neutral-600 border border-neutral-600 text-sm font-medium transition-colors"
               >
-                Ratings
+                {t.ratingsLink}
               </Link>
               <button
                 type="button"
@@ -446,7 +450,7 @@ function AdminLeaguesPage(_props: StaffProps) {
                     d="M12 4v16m8-8H4"
                   />
                 </svg>
-                Nouvelle ligue
+                {t.newLeague}
               </button>
             </div>
           </div>
@@ -469,7 +473,7 @@ function AdminLeaguesPage(_props: StaffProps) {
                 onClick={() => load()}
                 className="px-3 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-xs font-medium transition-colors"
               >
-                Réessayer
+                {t.retry}
               </button>
             </div>
           )}
@@ -478,20 +482,24 @@ function AdminLeaguesPage(_props: StaffProps) {
             {loading ? (
               <div className="p-4 space-y-3">
                 {Array.from({ length: 4 }).map((_, i) => (
-                  <Skeleton key={i} className="h-16 w-full" rounded="rounded-xl" />
+                  <Skeleton
+                    key={i}
+                    className="h-16 w-full"
+                    rounded="rounded-xl"
+                  />
                 ))}
               </div>
             ) : leagues.length === 0 ? (
               <EmptyState
-                title="Aucune ligue"
-                description="Crée une première ligue/saison pour agréger les classements de plusieurs tournois."
+                title={t.emptyTitle}
+                description={t.emptyDescription}
                 action={
                   <button
                     type="button"
                     onClick={() => setShowCreate(true)}
                     className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
                   >
-                    Nouvelle ligue
+                    {t.newLeague}
                   </button>
                 }
               />
@@ -515,11 +523,11 @@ function AdminLeaguesPage(_props: StaffProps) {
                             l.status
                           )}`}
                         >
-                          {statusLabel(l.status)}
+                          {statusLabel(l.status, t)}
                         </span>
                         {l.is_public && (
                           <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-600/20 text-emerald-300 border border-emerald-500/30">
-                            Public
+                            {t.publicBadge}
                           </span>
                         )}
                       </div>
@@ -540,7 +548,7 @@ function AdminLeaguesPage(_props: StaffProps) {
                         href={`/admin/leagues/${l.id}`}
                         className="px-3 py-1.5 rounded-lg bg-neutral-700 hover:bg-neutral-600 border border-neutral-600 text-xs font-medium transition-colors"
                       >
-                        Éditer
+                        {t.edit}
                       </Link>
                       <button
                         type="button"
@@ -548,7 +556,7 @@ function AdminLeaguesPage(_props: StaffProps) {
                         disabled={deletingId === l.id}
                         className="px-3 py-1.5 rounded-lg bg-red-900/40 hover:bg-red-800/60 border border-red-500/40 text-xs font-medium text-red-200 transition-colors disabled:opacity-50"
                       >
-                        {deletingId === l.id ? '…' : 'Supprimer'}
+                        {deletingId === l.id ? '…' : t.delete}
                       </button>
                     </div>
                   </div>

@@ -7,6 +7,7 @@ import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
+import { useAdminT } from '@/lib/i18n/useAdminT';
 
 type StaffShape = {
   id: string;
@@ -58,6 +59,7 @@ type CreateStageResponse = {
 export const getServerSideProps = withStaffPage('manager');
 
 function AdminStageCreatePage({ staff }: StaffProps) {
+  const t = useAdminT('adminStagesCreate');
   const router = useRouter();
   const { addToast } = useToast();
   const { adminFetchJson } = useAdminFetch();
@@ -113,10 +115,7 @@ function AdminStageCreatePage({ staff }: StaffProps) {
       );
       setTournaments(json.tournaments || []);
     } catch (err: unknown) {
-      setErrorMsg(
-        (err as Error)?.message ??
-          'Erreur inattendue lors du chargement des tournois'
-      );
+      setErrorMsg((err as Error)?.message ?? t.errLoadTournaments);
     } finally {
       setLoadingTournaments(false);
     }
@@ -128,7 +127,7 @@ function AdminStageCreatePage({ staff }: StaffProps) {
     try {
       return JSON.parse(raw);
     } catch (e) {
-      throw new Error('Le JSON de configuration (settings) est invalide.');
+      throw new Error(t.errSettingsInvalid);
     }
   }
 
@@ -146,22 +145,20 @@ function AdminStageCreatePage({ staff }: StaffProps) {
     setErrorMsg(null);
 
     if (!form.tournamentId) {
-      setErrorMsg('Merci de sélectionner un tournoi.');
+      setErrorMsg(t.errSelectTournament);
       return;
     }
     setDateError(null);
 
     if (!form.name.trim()) {
-      setErrorMsg('Le nom de la phase est obligatoire.');
+      setErrorMsg(t.errNameRequired);
       return;
     }
 
     if (form.start_date && form.end_date) {
       if (new Date(form.start_date) >= new Date(form.end_date)) {
-        setDateError(
-          'La date de fin doit être postérieure à la date de début.'
-        );
-        setErrorMsg('La date de fin doit être postérieure à la date de début.');
+        setDateError(t.errDateOrder);
+        setErrorMsg(t.errDateOrder);
         return;
       }
     }
@@ -170,9 +167,7 @@ function AdminStageCreatePage({ staff }: StaffProps) {
     try {
       settings = parseSettings();
     } catch (err: unknown) {
-      setErrorMsg(
-        (err as Error)?.message ?? 'Erreur dans le JSON de configuration.'
-      );
+      setErrorMsg((err as Error)?.message ?? t.errSettingsGeneric);
       return;
     }
 
@@ -202,17 +197,14 @@ function AdminStageCreatePage({ staff }: StaffProps) {
       );
       const created = json.stage;
 
-      addToast('Phase créée avec succès.', 'success');
+      addToast(t.toastCreated, 'success');
       if (created?.id) {
         router.push(`/admin/stages/${created.id}`);
       } else {
         router.push(`/admin/tournament/${form.tournamentId}`);
       }
     } catch (err: unknown) {
-      setErrorMsg(
-        (err as Error)?.message ??
-          'Erreur inconnue lors de la création de la phase'
-      );
+      setErrorMsg((err as Error)?.message ?? t.errCreate);
       setSubmitting(false);
     }
   }
@@ -220,7 +212,7 @@ function AdminStageCreatePage({ staff }: StaffProps) {
   return (
     <>
       <Head>
-        <title>Admin – Créer une phase</title>
+        <title>{t.pageTitle}</title>
       </Head>
 
       <div className="min-h-screen bg-neutral-900 text-white p-6 pt-20">
@@ -232,12 +224,10 @@ function AdminStageCreatePage({ staff }: StaffProps) {
               onClick={() => window.history.back()}
               className="mb-2 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white"
             >
-              ← Retour
+              {t.back}
             </button>
-            <h1 className="text-3xl font-bold">Nouvelle phase (stage)</h1>
-            <p className="text-neutral-400 text-sm mt-1">
-              Associe cette phase à un tournoi puis configure ses paramètres.
-            </p>
+            <h1 className="text-3xl font-bold">{t.heading}</h1>
+            <p className="text-neutral-400 text-sm mt-1">{t.subtitle}</p>
           </div>
         </div>
 
@@ -251,10 +241,12 @@ function AdminStageCreatePage({ staff }: StaffProps) {
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Tournoi */}
             <section className="space-y-4">
-              <h2 className="font-semibold text-lg">Tournoi parent</h2>
+              <h2 className="font-semibold text-lg">
+                {t.parentTournamentTitle}
+              </h2>
               <div>
                 <label className="block text-sm mb-1 text-neutral-300">
-                  Tournoi <span className="text-red-400">*</span>
+                  {t.tournamentLabel} <span className="text-red-400">*</span>
                 </label>
                 <select
                   className="w-full px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -264,58 +256,55 @@ function AdminStageCreatePage({ staff }: StaffProps) {
                 >
                   <option value="">
                     {loadingTournaments
-                      ? 'Chargement des tournois…'
-                      : 'Sélectionner un tournoi'}
+                      ? t.loadingTournaments
+                      : t.selectTournament}
                   </option>
-                  {tournaments.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name} {t.slug ? `(${t.slug})` : ''}
+                  {tournaments.map((tm) => (
+                    <option key={tm.id} value={tm.id}>
+                      {tm.name} {tm.slug ? `(${tm.slug})` : ''}
                     </option>
                   ))}
                 </select>
                 <p className="text-xs text-neutral-500 mt-1">
-                  La phase sera rattachée à ce tournoi et visible dans son
-                  dashboard admin.
+                  {t.tournamentHelp}
                 </p>
               </div>
             </section>
 
             {/* Infos générales */}
             <section className="space-y-4">
-              <h2 className="font-semibold text-lg">Informations générales</h2>
+              <h2 className="font-semibold text-lg">{t.generalInfoTitle}</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm mb-1 text-neutral-300">
-                    Nom de la phase <span className="text-red-400">*</span>
+                    {t.nameLabel} <span className="text-red-400">*</span>
                   </label>
                   <input
                     type="text"
                     className="w-full px-3 py-2 rounded bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     value={form.name}
                     onChange={(e) => updateField('name', e.target.value)}
-                    placeholder="Playoffs, Groupes A, Swiss #1…"
+                    placeholder={t.namePlaceholder}
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm mb-1 text-neutral-300">
-                    Slug (URL interne)
+                    {t.slugLabel}
                   </label>
                   <input
                     type="text"
                     className="w-full px-3 py-2 rounded bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     value={form.slug}
                     onChange={(e) => updateField('slug', e.target.value)}
-                    placeholder="playoffs, swiss-1…"
+                    placeholder={t.slugPlaceholder}
                   />
-                  <p className="text-xs text-neutral-500 mt-1">
-                    Laisse vide pour laisser le backend gérer.
-                  </p>
+                  <p className="text-xs text-neutral-500 mt-1">{t.slugHelp}</p>
                 </div>
 
                 <div>
                   <label className="block text-sm mb-1 text-neutral-300">
-                    Type de phase
+                    {t.stageTypeLabel}
                   </label>
                   <select
                     className="w-full px-3 py-2 rounded bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -327,37 +316,35 @@ function AdminStageCreatePage({ staff }: StaffProps) {
                       )
                     }
                   >
-                    <option value="">(Non défini / custom)</option>
-                    <option value="group">Groupes</option>
-                    <option value="bracket">Bracket (elim)</option>
-                    <option value="swiss">Swiss</option>
-                    <option value="round_robin">Round Robin</option>
-                    <option value="showmatch">Showmatch</option>
-                    <option value="other">Autre</option>
+                    <option value="">{t.stageTypeNone}</option>
+                    <option value="group">{t.stageTypeGroup}</option>
+                    <option value="bracket">{t.stageTypeBracket}</option>
+                    <option value="swiss">{t.stageTypeSwiss}</option>
+                    <option value="round_robin">{t.stageTypeRoundRobin}</option>
+                    <option value="showmatch">{t.stageTypeShowmatch}</option>
+                    <option value="other">{t.stageTypeOther}</option>
                   </select>
                 </div>
 
                 <div>
                   <label className="block text-sm mb-1 text-neutral-300">
-                    Ordre dans le tournoi
+                    {t.orderLabel}
                   </label>
                   <input
                     type="number"
                     className="w-full px-3 py-2 rounded bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     value={form.order_index}
                     onChange={(e) => updateField('order_index', e.target.value)}
-                    placeholder="1, 2, 3…"
+                    placeholder={t.orderPlaceholder}
                   />
-                  <p className="text-xs text-neutral-500 mt-1">
-                    Pour trier les phases (1 = première, 2 = deuxième, etc.).
-                  </p>
+                  <p className="text-xs text-neutral-500 mt-1">{t.orderHelp}</p>
                 </div>
               </div>
             </section>
 
             {/* Visibilité & dates */}
             <section className="space-y-4">
-              <h2 className="font-semibold text-lg">Visibilité & planning</h2>
+              <h2 className="font-semibold text-lg">{t.visibilityTitle}</h2>
 
               <div className="flex flex-col gap-3">
                 <label className="inline-flex items-center gap-2 text-sm text-neutral-200">
@@ -367,7 +354,7 @@ function AdminStageCreatePage({ staff }: StaffProps) {
                     checked={form.is_active}
                     onChange={(e) => updateField('is_active', e.target.checked)}
                   />
-                  <span>Phase active (prise en compte dans le tournoi)</span>
+                  <span>{t.activeLabel}</span>
                 </label>
 
                 <label className="inline-flex items-center gap-2 text-sm text-neutral-200">
@@ -377,14 +364,14 @@ function AdminStageCreatePage({ staff }: StaffProps) {
                     checked={form.is_public}
                     onChange={(e) => updateField('is_public', e.target.checked)}
                   />
-                  <span>Visible publiquement (page tournoi)</span>
+                  <span>{t.publicLabel}</span>
                 </label>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm mb-1 text-neutral-300">
-                    Début de la phase
+                    {t.startLabel}
                   </label>
                   <input
                     type="datetime-local"
@@ -395,7 +382,7 @@ function AdminStageCreatePage({ staff }: StaffProps) {
                 </div>
                 <div>
                   <label className="block text-sm mb-1 text-neutral-300">
-                    Fin de la phase
+                    {t.endLabel}
                   </label>
                   <input
                     type="datetime-local"
@@ -417,14 +404,8 @@ function AdminStageCreatePage({ staff }: StaffProps) {
 
             {/* Settings JSON */}
             <section className="space-y-3">
-              <h2 className="font-semibold text-lg">
-                Configuration avancée (settings JSON)
-              </h2>
-              <p className="text-xs text-neutral-400">
-                Utilisé pour stocker la configuration spécifique de la phase
-                (options Swiss, nombre de maps, seedings, etc.). Tu peux laisser
-                le JSON vide ou minimal et le compléter plus tard.
-              </p>
+              <h2 className="font-semibold text-lg">{t.settingsTitle}</h2>
+              <p className="text-xs text-neutral-400">{t.settingsHelp}</p>
               <textarea
                 className="w-full min-h-[180px] font-mono text-xs bg-neutral-900 border border-neutral-700 rounded p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={form.settingsRaw}
@@ -441,7 +422,7 @@ function AdminStageCreatePage({ staff }: StaffProps) {
                 onClick={() => window.history.back()}
                 disabled={submitting}
               >
-                Annuler
+                {t.cancel}
               </button>
 
               <button
@@ -453,7 +434,7 @@ function AdminStageCreatePage({ staff }: StaffProps) {
                     : 'bg-blue-600 hover:bg-blue-700'
                 }`}
               >
-                {submitting ? 'Création…' : 'Créer la phase'}
+                {submitting ? t.creating : t.submit}
               </button>
             </div>
           </form>

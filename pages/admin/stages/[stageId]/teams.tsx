@@ -7,6 +7,7 @@ import { withStaffPage } from '@/utils/staff';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 import { logger } from '../../../../utils/logger';
 type StaffShape = {
@@ -71,6 +72,7 @@ type TournamentTeamsApiResponse = {
 export const getServerSideProps = withStaffPage('manager');
 
 function AdminStageTeamsPage({ staff }: StaffProps) {
+  const t = useAdminT('adminStageTeams');
   const router = useRouter();
   const { stageId } = router.query;
   const { addToast } = useToast();
@@ -143,7 +145,7 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
         fetchTournamentTeams(json.stage.tournament_id);
       }
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
+      setErrorMsg((err as Error)?.message ?? t.errUnexpected);
     } finally {
       setLoading(false);
     }
@@ -165,14 +167,14 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
 
   const availableTeamsForAdd = useMemo(() => {
     const inStageIds = new Set(stageTeams.map((st) => st.team_id));
-    return tournamentTeams.filter((t) => !inStageIds.has(t.id));
+    return tournamentTeams.filter((team) => !inStageIds.has(team.id));
   }, [stageTeams, tournamentTeams]);
 
   async function handleAddTeam(e: React.FormEvent) {
     e.preventDefault();
     if (!stageId) return;
     if (!addTeamId) {
-      setErrorMsg('Merci de sélectionner une équipe à ajouter.');
+      setErrorMsg(t.errSelectTeam);
       return;
     }
 
@@ -190,14 +192,12 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
         }),
       });
 
-      addToast('Équipe ajoutée à la phase.', 'info');
+      addToast(t.toastAdded, 'info');
       setAddTeamId('');
       setAddSeed('');
       fetchStageTeams();
     } catch (err: unknown) {
-      setErrorMsg(
-        (err as Error)?.message ?? "Erreur inattendue lors de l'ajout"
-      );
+      setErrorMsg((err as Error)?.message ?? t.errAdd);
     } finally {
       setAdding(false);
     }
@@ -213,12 +213,10 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
         method: 'DELETE',
         body: JSON.stringify({ teamId }),
       });
-      addToast('Équipe retirée de la phase.', 'info');
+      addToast(t.toastRemoved, 'info');
       fetchStageTeams();
     } catch (err: unknown) {
-      setErrorMsg(
-        (err as Error)?.message ?? 'Erreur inattendue lors du retrait'
-      );
+      setErrorMsg((err as Error)?.message ?? t.errRemove);
     } finally {
       setRemovingTeamId(null);
     }
@@ -247,13 +245,10 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
           seed,
         }),
       });
-      addToast('Seed mis à jour.', 'info');
+      addToast(t.toastSeedUpdated, 'info');
       fetchStageTeams();
     } catch (err: unknown) {
-      setErrorMsg(
-        (err as Error)?.message ??
-          'Erreur inattendue lors de la mise à jour du seed'
-      );
+      setErrorMsg((err as Error)?.message ?? t.errSeedUpdate);
     } finally {
       setUpdatingSeedId(null);
     }
@@ -283,14 +278,14 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
       });
       const successCount = json.results?.filter((r) => r.success).length ?? 0;
       addToast(
-        `Seeds mis à jour pour ${successCount} équipe${successCount > 1 ? 's' : ''}.`,
+        format(successCount > 1 ? t.toastBulkSeed_other : t.toastBulkSeed_one, {
+          count: successCount,
+        }),
         'info'
       );
       fetchStageTeams();
     } catch (err: unknown) {
-      setErrorMsg(
-        (err as Error)?.message ?? 'Erreur inattendue lors du bulk seed'
-      );
+      setErrorMsg((err as Error)?.message ?? t.errBulkSeed);
     } finally {
       setBulkSeedSaving(false);
     }
@@ -332,7 +327,10 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
     const count = selectedTeamIds.size;
     if (
       !confirm(
-        `Retirer ${count} équipe${count > 1 ? 's' : ''} de cette phase ?`
+        format(
+          count > 1 ? t.confirmBulkRemove_other : t.confirmBulkRemove_one,
+          { count }
+        )
       )
     ) {
       return;
@@ -347,15 +345,15 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
         body: JSON.stringify({ teamIds: Array.from(selectedTeamIds) }),
       });
       addToast(
-        `${count} équipe${count > 1 ? 's' : ''} retirée${count > 1 ? 's' : ''} de la phase.`,
+        format(count > 1 ? t.toastBulkRemoved_other : t.toastBulkRemoved_one, {
+          count,
+        }),
         'info'
       );
       setSelectedTeamIds(new Set());
       fetchStageTeams();
     } catch (err: unknown) {
-      setErrorMsg(
-        (err as Error)?.message ?? 'Erreur inattendue lors du retrait en masse'
-      );
+      setErrorMsg((err as Error)?.message ?? t.errBulkRemove);
     } finally {
       setBulkRemoving(false);
     }
@@ -368,7 +366,7 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
   return (
     <>
       <Head>
-        <title>Admin – Équipes de la phase</title>
+        <title>{t.pageTitle}</title>
       </Head>
 
       <div className="min-h-screen bg-neutral-900 text-white p-6 pt-20">
@@ -380,13 +378,10 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
               onClick={() => router.push(`/admin/stages/${stageId}`)}
               className="mb-2 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white"
             >
-              ← Retour à la phase
+              {t.back}
             </button>
-            <h1 className="text-3xl font-bold">Équipes de la phase</h1>
-            <p className="text-neutral-400 text-sm mt-1">
-              Gère les équipes rattachées à cette phase (stage) : ajout,
-              retrait, seeds…
-            </p>
+            <h1 className="text-3xl font-bold">{t.heading}</h1>
+            <p className="text-neutral-400 text-sm mt-1">{t.subtitle}</p>
           </div>
         </div>
 
@@ -396,22 +391,20 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
             {errorMsg}
           </div>
         )}
-        {loading && (
-          <div className="text-neutral-300">
-            Chargement des équipes de la phase…
-          </div>
-        )}
+        {loading && <div className="text-neutral-300">{t.loadingTeams}</div>}
 
         {!loading && stage && (
           <div className="space-y-6">
             {/* Contexte stage / tournoi */}
             <section className="bg-neutral-800 border border-neutral-700 rounded-xl p-4 flex flex-wrap items-center justify-between gap-4">
               <div>
-                <div className="text-xs text-neutral-400 mb-1">Phase</div>
+                <div className="text-xs text-neutral-400 mb-1">
+                  {t.phaseLabel}
+                </div>
                 <div className="font-semibold">{stage.name}</div>
                 {tournament && (
                   <div className="text-xs text-neutral-400 mt-1">
-                    Tournoi :{' '}
+                    {t.tournamentPrefix}{' '}
                     <Link
                       href={backUrl}
                       className="underline underline-offset-2 hover:text-white"
@@ -431,18 +424,14 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
               </div>
 
               <div className="text-sm text-neutral-300">
-                <span className="text-neutral-400">
-                  Équipes dans la phase :
-                </span>{' '}
+                <span className="text-neutral-400">{t.teamsInPhaseLabel}</span>{' '}
                 <span className="font-semibold">{stageTeams.length}</span>
               </div>
             </section>
 
             {/* Formulaire d'ajout */}
             <section className="bg-neutral-800 border border-neutral-700 rounded-xl p-5">
-              <h2 className="text-lg font-semibold mb-3">
-                Ajouter une équipe à cette phase
-              </h2>
+              <h2 className="text-lg font-semibold mb-3">{t.addTeamTitle}</h2>
 
               <form
                 onSubmit={handleAddTeam}
@@ -450,7 +439,7 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
               >
                 <div className="flex flex-col min-w-[220px]">
                   <label className="text-xs text-neutral-400 mb-1">
-                    Équipe (tournoi)
+                    {t.teamSelectLabel}
                   </label>
                   <select
                     className="px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -459,11 +448,12 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
                     disabled={adding || loadingTeams || !tournament}
                   >
                     <option value="">
-                      {loadingTeams ? 'Chargement…' : 'Sélectionner une équipe'}
+                      {loadingTeams ? t.loadingShort : t.selectTeam}
                     </option>
-                    {availableTeamsForAdd.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.name} {t.short_name ? `(${t.short_name})` : ''}
+                    {availableTeamsForAdd.map((team) => (
+                      <option key={team.id} value={team.id}>
+                        {team.name}{' '}
+                        {team.short_name ? `(${team.short_name})` : ''}
                       </option>
                     ))}
                   </select>
@@ -471,7 +461,7 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
 
                 <div className="flex flex-col w-24">
                   <label className="text-xs text-neutral-400 mb-1">
-                    Seed (optionnel)
+                    {t.seedOptionalLabel}
                   </label>
                   <input
                     type="number"
@@ -490,7 +480,7 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
                       : 'bg-blue-600 hover:bg-blue-700'
                   }`}
                 >
-                  {adding ? 'Ajout…' : "Ajouter l'équipe"}
+                  {adding ? t.adding : t.addTeamSubmit}
                 </button>
               </form>
 
@@ -498,8 +488,7 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
                 !loadingTeams &&
                 tournamentTeams.length > 0 && (
                   <p className="mt-2 text-xs text-neutral-400">
-                    Toutes les équipes du tournoi sont déjà rattachées à cette
-                    phase.
+                    {t.allTeamsAttached}
                   </p>
                 )}
             </section>
@@ -508,10 +497,14 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
             <section className="bg-neutral-800 border border-neutral-700 rounded-xl overflow-hidden">
               <div className="px-4 py-3 border-b border-neutral-700 flex flex-wrap justify-between items-center gap-3">
                 <h2 className="text-sm font-semibold">
-                  Équipes rattachées à la phase
+                  {t.attachedTeamsTitle}
                   <span className="ml-2 text-xs text-neutral-400 font-normal">
-                    {stageTeams.length} équipe
-                    {stageTeams.length > 1 ? 's' : ''}
+                    {format(
+                      stageTeams.length > 1
+                        ? t.teamCount_other
+                        : t.teamCount_one,
+                      { count: stageTeams.length }
+                    )}
                   </span>
                 </h2>
 
@@ -521,9 +514,9 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
                       type="button"
                       onClick={handleAutoSeed}
                       className="px-3 py-1.5 text-xs rounded bg-neutral-700 hover:bg-neutral-600 border border-neutral-600"
-                      title="Numéroter automatiquement 1, 2, 3… dans l'ordre actuel"
+                      title={t.autoSeedTitle}
                     >
-                      Auto-seed 1..N
+                      {t.autoSeed}
                     </button>
                     <button
                       type="button"
@@ -535,9 +528,7 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
                           : 'bg-blue-600 hover:bg-blue-700'
                       }`}
                     >
-                      {bulkSeedSaving
-                        ? 'Sauvegarde…'
-                        : 'Sauvegarder tous les seeds'}
+                      {bulkSeedSaving ? t.bulkSeedSaving : t.bulkSeedSave}
                     </button>
 
                     {selectedTeamIds.size > 0 && (
@@ -552,8 +543,13 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
                         }`}
                       >
                         {bulkRemoving
-                          ? 'Retrait…'
-                          : `Retirer ${selectedTeamIds.size} équipe${selectedTeamIds.size > 1 ? 's' : ''}`}
+                          ? t.bulkRemoving
+                          : format(
+                              selectedTeamIds.size > 1
+                                ? t.bulkRemove_other
+                                : t.bulkRemove_one,
+                              { count: selectedTeamIds.size }
+                            )}
                       </button>
                     )}
                   </div>
@@ -562,7 +558,7 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
 
               {stageTeams.length === 0 ? (
                 <div className="px-4 py-6 text-sm text-neutral-400">
-                  Aucune équipe n&apos;est encore rattachée à cette phase.
+                  {t.emptyTeams}
                 </div>
               ) : (
                 <table className="w-full text-sm">
@@ -579,10 +575,10 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
                           className="accent-blue-500"
                         />
                       </th>
-                      <th className="px-4 py-2 text-left">Seed</th>
-                      <th className="px-4 py-2 text-left">Équipe</th>
-                      <th className="px-4 py-2 text-left">Notes</th>
-                      <th className="px-4 py-2 text-right">Actions</th>
+                      <th className="px-4 py-2 text-left">{t.thSeed}</th>
+                      <th className="px-4 py-2 text-left">{t.thTeam}</th>
+                      <th className="px-4 py-2 text-left">{t.thNotes}</th>
+                      <th className="px-4 py-2 text-right">{t.thActions}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -626,7 +622,9 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
                                   : 'bg-blue-600 hover:bg-blue-700'
                               }`}
                             >
-                              {updatingSeedId === st.team_id ? 'OK…' : 'OK'}
+                              {updatingSeedId === st.team_id
+                                ? t.seedOkSaving
+                                : t.seedOk}
                             </button>
                           </div>
                         </td>
@@ -669,7 +667,7 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
                                 href={`/admin/teams/${st.team.id}`}
                                 className="px-2 py-1 text-xs rounded bg-neutral-700 hover:bg-neutral-600"
                               >
-                                Voir équipe
+                                {t.viewTeam}
                               </Link>
                             )}
                             <button
@@ -683,8 +681,8 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
                               }`}
                             >
                               {removingTeamId === st.team_id
-                                ? 'Retrait…'
-                                : 'Retirer'}
+                                ? t.removing
+                                : t.remove}
                             </button>
                           </div>
                         </td>
@@ -698,7 +696,7 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
         )}
 
         {!loading && !stage && !errorMsg && (
-          <div className="text-neutral-300">Phase introuvable.</div>
+          <div className="text-neutral-300">{t.stageNotFound}</div>
         )}
       </div>
     </>

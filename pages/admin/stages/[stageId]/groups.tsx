@@ -11,6 +11,7 @@ import { withStaffPage } from '@/utils/staff';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { StaffProps } from '@/types/admin';
 
 type TeamInfo = {
@@ -30,6 +31,7 @@ type GroupsApiResponse = {
 export const getServerSideProps = withStaffPage('manager');
 
 function GroupLabel({ groupKey }: { groupKey: string }) {
+  const t = useAdminT('adminStageGroups');
   const colors = [
     'bg-blue-500/20 text-blue-300 border-blue-500/30',
     'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
@@ -45,12 +47,13 @@ function GroupLabel({ groupKey }: { groupKey: string }) {
     <span
       className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${colors[idx]}`}
     >
-      Poule {groupKey}
+      {format(t.groupLabel, { key: groupKey })}
     </span>
   );
 }
 
 function AdminStageGroupsPage({ staff }: StaffProps) {
+  const t = useAdminT('adminStageGroups');
   const router = useRouter();
   const { stageId } = router.query;
   const { addToast } = useToast();
@@ -125,11 +128,11 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
         }
       }
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
+      setErrorMsg((err as Error)?.message ?? t.errUnexpected);
     } finally {
       setLoading(false);
     }
-  }, [stageId, adminFetch, adminFetchJson]);
+  }, [stageId, adminFetch, adminFetchJson, t.errUnexpected]);
 
   useEffect(() => {
     if (stageId) fetchGroups();
@@ -157,7 +160,10 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
     if (!stageId) return;
     if (
       !confirm(
-        `Générer les matchs round-robin pour toutes les poules (${genRounds} round(s), ${genMatchFormat}) ?`
+        format(t.confirmGenerate, {
+          rounds: genRounds,
+          format: genMatchFormat,
+        })
       )
     )
       return;
@@ -175,14 +181,17 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
         }
       );
       const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json.error || 'Erreur génération');
+      if (!res.ok) throw new Error(json.error || t.errGenerate);
       addToast(
-        `${json.createdMatchIds?.length ?? 0} matchs créés sur ${json.groupCount ?? 0} poule(s)`,
+        format(t.toastGenerated, {
+          count: json.createdMatchIds?.length ?? 0,
+          groupCount: json.groupCount ?? 0,
+        }),
         'success'
       );
       await fetchStandings();
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? 'Erreur génération');
+      setErrorMsg((err as Error)?.message ?? t.errGenerate);
     } finally {
       setGenerating(false);
     }
@@ -288,9 +297,9 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
         body: JSON.stringify({ assignments }),
       });
 
-      addToast('Groupes sauvegardés avec succès', 'success');
+      addToast(t.toastSaved, 'success');
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
+      setErrorMsg((err as Error)?.message ?? t.errUnexpected);
     } finally {
       setSaving(false);
     }
@@ -312,9 +321,9 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
       );
       setGroups(json.groups);
       setUnassigned(json.unassigned || []);
-      addToast(`Equipes distribuées en ${numGroups} poule(s)`, 'success');
+      addToast(format(t.toastDistributed, { count: numGroups }), 'success');
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
+      setErrorMsg((err as Error)?.message ?? t.errUnexpected);
     } finally {
       setDistributing(false);
     }
@@ -327,7 +336,11 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
   return (
     <>
       <Head>
-        <title>Admin – Poules {stageName ? `: ${stageName}` : ''}</title>
+        <title>
+          {stageName
+            ? format(t.pageTitleWithStage, { name: stageName })
+            : t.pageTitle}
+        </title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
@@ -356,21 +369,22 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
                   d="M15 19l-7-7 7-7"
                 />
               </svg>
-              Retour à la phase
+              {t.back}
             </button>
 
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <h1 className="text-3xl font-bold tracking-tight">
-                  Gestion des Poules
+                  {t.heading}
                 </h1>
                 {stageName && (
                   <p className="text-sm text-neutral-400 mt-1">
-                    Phase : <span className="text-white">{stageName}</span>
+                    {t.phaseLabel}{' '}
+                    <span className="text-white">{stageName}</span>
                     {tournamentName && (
                       <>
                         {' '}
-                        — Tournoi :{' '}
+                        {t.tournamentLabel}{' '}
                         <Link
                           href={`/admin/tournament/${tournamentId}`}
                           className="text-blue-400 hover:text-blue-300"
@@ -385,7 +399,10 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
 
               <div className="flex items-center gap-2">
                 <span className="text-sm text-neutral-400">
-                  {totalTeams} equipe(s) — {groupKeys.length} poule(s)
+                  {format(t.teamsGroupsSummary, {
+                    teams: totalTeams,
+                    groups: groupKeys.length,
+                  })}
                 </span>
                 <button
                   onClick={handleSave}
@@ -395,10 +412,10 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
                   {saving ? (
                     <>
                       <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Sauvegarde...
+                      {t.saving}
                     </>
                   ) : (
-                    'Sauvegarder'
+                    t.save
                   )}
                 </button>
               </div>
@@ -446,13 +463,13 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
                       d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
                     />
                   </svg>
-                  Distribution automatique
+                  {t.autoDistributeTitle}
                 </h2>
 
                 <div className="flex flex-wrap items-end gap-4">
                   <div>
                     <label className="block text-xs text-neutral-500 mb-1">
-                      Nombre de poules
+                      {t.numGroupsLabel}
                     </label>
                     <input
                       type="number"
@@ -468,7 +485,7 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
 
                   <div>
                     <label className="block text-xs text-neutral-500 mb-1">
-                      Methode
+                      {t.methodLabel}
                     </label>
                     <select
                       value={distMethod}
@@ -477,8 +494,8 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
                       }
                       className="px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                     >
-                      <option value="snake">Snake (par seed)</option>
-                      <option value="random">Aleatoire</option>
+                      <option value="snake">{t.methodSnake}</option>
+                      <option value="random">{t.methodRandom}</option>
                     </select>
                   </div>
 
@@ -490,7 +507,7 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
                     {distributing ? (
                       <>
                         <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        Distribution...
+                        {t.distributing}
                       </>
                     ) : (
                       <>
@@ -507,7 +524,7 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
                             d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
                           />
                         </svg>
-                        Distribuer
+                        {t.distribute}
                       </>
                     )}
                   </button>
@@ -529,14 +546,11 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
                         d="M12 6v6m0 0v6m0-6h6m-6 0H6"
                       />
                     </svg>
-                    Ajouter une poule
+                    {t.addGroup}
                   </button>
                 </div>
 
-                <p className="text-xs text-neutral-500 mt-3">
-                  Glissez-déposez les equipes entre les poules. Cliquez &laquo;
-                  Sauvegarder &raquo; pour enregistrer.
-                </p>
+                <p className="text-xs text-neutral-500 mt-3">{t.dndHelp}</p>
               </section>
 
               {/* Groups grid */}
@@ -552,13 +566,15 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
                       <GroupLabel groupKey={gk} />
                       <div className="flex items-center gap-2">
                         <span className="text-xs text-neutral-500">
-                          {groups[gk].length} equipe(s)
+                          {format(t.groupTeamCount, {
+                            count: groups[gk].length,
+                          })}
                         </span>
                         {groups[gk].length === 0 && (
                           <button
                             onClick={() => removeGroup(gk)}
                             className="text-red-400 hover:text-red-300 transition-colors"
-                            title="Supprimer cette poule"
+                            title={t.removeGroupTitle}
                           >
                             <svg
                               className="w-4 h-4"
@@ -581,7 +597,7 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
                     <div className="space-y-1 min-h-[60px]">
                       {groups[gk].length === 0 && (
                         <div className="text-xs text-neutral-600 italic text-center py-4 border-2 border-dashed border-neutral-700 rounded-xl">
-                          Deposez des equipes ici
+                          {t.dropTeamsHere}
                         </div>
                       )}
                       {groups[gk].map((team) => (
@@ -629,22 +645,22 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
                 >
                   <div className="flex items-center justify-between mb-3">
                     <span className="px-2 py-0.5 rounded-full text-xs font-semibold border bg-neutral-700/50 text-neutral-400 border-neutral-600/50">
-                      Non assignees
+                      {t.unassignedLabel}
                     </span>
                     <span className="text-xs text-neutral-500">
-                      {unassigned.length} equipe(s)
+                      {format(t.groupTeamCount, { count: unassigned.length })}
                     </span>
                   </div>
 
                   <div className="space-y-1 min-h-[60px]">
                     {unassigned.length === 0 && groupKeys.length > 0 && (
                       <div className="text-xs text-neutral-600 italic text-center py-4">
-                        Toutes les equipes sont assignees
+                        {t.allAssigned}
                       </div>
                     )}
                     {unassigned.length === 0 && groupKeys.length === 0 && (
                       <div className="text-xs text-neutral-600 italic text-center py-4">
-                        Aucune equipe dans cette phase
+                        {t.noTeamsInPhase}
                       </div>
                     )}
                     {unassigned.map((team) => (
@@ -689,18 +705,16 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
               {/* Générer les matchs round-robin */}
               <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
                 <h2 className="text-lg font-semibold mb-1">
-                  Génération des matchs
+                  {t.genMatchesTitle}
                 </h2>
                 <p className="text-xs text-neutral-400 mb-4">
-                  Crée les matchs round-robin pour chaque poule à partir des
-                  assignations actuelles. À faire une seule fois — annuler les
-                  matchs avant de regénérer.
+                  {t.genMatchesHelp}
                 </p>
 
                 <div className="flex flex-wrap items-end gap-4">
                   <div>
                     <label className="block text-xs text-neutral-500 mb-1">
-                      Rounds (1 = aller, 2 = aller-retour)
+                      {t.roundsLabel}
                     </label>
                     <input
                       type="number"
@@ -717,7 +731,7 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
                   </div>
                   <div>
                     <label className="block text-xs text-neutral-500 mb-1">
-                      Format de match
+                      {t.matchFormatLabel}
                     </label>
                     <select
                       value={genMatchFormat}
@@ -737,10 +751,10 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
                     {generating ? (
                       <>
                         <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        Génération...
+                        {t.generating}
                       </>
                     ) : (
-                      'Générer les matchs'
+                      t.generate
                     )}
                   </button>
                 </div>
@@ -751,13 +765,13 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
                 <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
                   <div className="flex items-center justify-between mb-4">
                     <h2 className="text-lg font-semibold">
-                      Classement par poule
+                      {t.standingsTitle}
                     </h2>
                     <button
                       onClick={fetchStandings}
                       className="text-xs text-neutral-400 hover:text-white"
                     >
-                      Rafraîchir
+                      {t.refresh}
                     </button>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -775,18 +789,18 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
                             <thead>
                               <tr className="text-neutral-500 text-left">
                                 <th className="pb-1 font-normal">#</th>
-                                <th className="pb-1 font-normal">Équipe</th>
+                                <th className="pb-1 font-normal">{t.thTeam}</th>
                                 <th className="pb-1 font-normal text-center">
-                                  V
+                                  {t.thWins}
                                 </th>
                                 <th className="pb-1 font-normal text-center">
-                                  D
+                                  {t.thLosses}
                                 </th>
                                 <th className="pb-1 font-normal text-center">
-                                  N
+                                  {t.thDraws}
                                 </th>
                                 <th className="pb-1 font-normal text-right">
-                                  Pts
+                                  {t.thPoints}
                                 </th>
                               </tr>
                             </thead>

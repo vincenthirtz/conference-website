@@ -13,8 +13,11 @@ import Modal from '@/components/admin/Modal';
 import type { StaffProps, Stage, StageType, Tournament } from '@/types/admin';
 import AdvancementRulesEditor from '@/components/admin/AdvancementRulesEditor';
 import type { AdvancementRules } from '@/components/admin/AdvancementRulesEditor';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 import { logger } from '../../../utils/logger';
+
+type Dict = ReturnType<typeof useAdminT<'adminStageDetail'>>;
 type StageApiResponse = {
   stage: Stage;
 };
@@ -40,22 +43,22 @@ function formatDateTime(iso: string | null) {
   }
 }
 
-function stageTypeLabel(type: StageType | null) {
+function stageTypeLabel(type: StageType | null, t: Dict) {
   switch (type) {
     case 'group':
-      return 'Groupes / Poules';
+      return t.typeGroup;
     case 'bracket':
-      return 'Bracket';
+      return t.typeBracket;
     case 'swiss':
-      return 'Swiss';
+      return t.typeSwiss;
     case 'round_robin':
-      return 'Round Robin';
+      return t.typeRoundRobin;
     case 'showmatch':
-      return 'Showmatch';
+      return t.typeShowmatch;
     case 'other':
-      return 'Autre';
+      return t.typeOther;
     default:
-      return 'Non défini';
+      return t.typeUndefined;
   }
 }
 
@@ -163,6 +166,7 @@ function stageTypeIcon(type: StageType | null) {
 }
 
 function AdminStagePage({ staff }: StaffProps) {
+  const t = useAdminT('adminStageDetail');
   const router = useRouter();
   const { stageId } = router.query;
   const { mutate: mutateIdempotent } = useIdempotentMutation();
@@ -326,11 +330,11 @@ function AdminStagePage({ staff }: StaffProps) {
         }
       }
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
+      setErrorMsg((err as Error)?.message ?? t.errUnexpected);
     } finally {
       setLoading(false);
     }
-  }, [stageId, adminFetch, adminFetchJson]);
+  }, [stageId, adminFetch, adminFetchJson, t.errUnexpected]);
 
   const fetchSwissStatus = useCallback(async () => {
     if (!stageId) return;
@@ -380,7 +384,10 @@ function AdminStagePage({ staff }: StaffProps) {
       if (res.ok) {
         const json = await res.json();
         setAllTournaments(
-          (json.tournaments || []).map((t: any) => ({ id: t.id, name: t.name }))
+          (json.tournaments || []).map((tm: any) => ({
+            id: tm.id,
+            name: tm.name,
+          }))
         );
       }
     } catch (e) {
@@ -403,7 +410,7 @@ function AdminStagePage({ staff }: StaffProps) {
       );
       setStage(json.stage);
       setIsEditing(false);
-      addToast('Phase mise à jour avec succès', 'success');
+      addToast(t.toastStageUpdated, 'success');
 
       // Recharger le tournoi parent si changé
       if (json.stage.tournament_id !== stage.tournament_id) {
@@ -420,7 +427,7 @@ function AdminStagePage({ staff }: StaffProps) {
         }
       }
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
+      setErrorMsg((err as Error)?.message ?? t.errUnexpected);
     } finally {
       setSaving(false);
     }
@@ -442,16 +449,18 @@ function AdminStagePage({ staff }: StaffProps) {
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || "Erreur lors de l'application des BYE");
+        throw new Error(json.error || t.errAutoByes);
       }
 
       const json = await res.json();
       addToast(
-        `Auto-BYEs appliqués : ${json.updatedMatchIds?.length ?? 0} matchs mis à jour.`,
+        format(t.toastAutoByes, {
+          count: json.updatedMatchIds?.length ?? 0,
+        }),
         'success'
       );
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? "Erreur lors de l'auto-BYE");
+      setErrorMsg((err as Error)?.message ?? t.errAutoByesShort);
     } finally {
       setLoadingActions(false);
     }
@@ -473,23 +482,22 @@ function AdminStagePage({ staff }: StaffProps) {
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(
-          json.error || 'Erreur lors de la génération de la ronde Swiss'
-        );
+        throw new Error(json.error || t.errGenSwiss);
       }
 
       const json = await res.json();
       addToast(
-        `Nouvelle ronde Swiss #${json.roundNumber} générée : ${json.createdMatches?.length ?? 0} matchs.`,
+        format(t.toastSwissGenerated, {
+          round: json.roundNumber,
+          count: json.createdMatches?.length ?? 0,
+        }),
         'success'
       );
       // Refresh Swiss and completion status
       fetchSwissStatus();
       fetchCompletionStatus();
     } catch (err: unknown) {
-      setErrorMsg(
-        (err as Error)?.message ?? 'Erreur lors de la génération Swiss'
-      );
+      setErrorMsg((err as Error)?.message ?? t.errGenSwissShort);
     } finally {
       setLoadingActions(false);
     }
@@ -609,22 +617,22 @@ function AdminStagePage({ staff }: StaffProps) {
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || "Erreur lors de l'avancement");
+        throw new Error(json.error || t.errAdvance);
       }
 
       const json = await res.json();
       const advancedCount = json.advanced?.length ?? 0;
       const skippedCount = json.skipped?.length ?? 0;
 
-      let msg = `${advancedCount} equipe(s) avancee(s) avec succes.`;
+      let msg = format(t.toastAdvanced, { count: advancedCount });
       if (skippedCount > 0) {
-        msg += ` ${skippedCount} deja presente(s) dans le stage cible.`;
+        msg += ' ' + format(t.toastAdvancedSkipped, { count: skippedCount });
       }
 
       addToast(msg, 'success');
       setShowAdvanceModal(false);
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? "Erreur lors de l'avancement");
+      setErrorMsg((err as Error)?.message ?? t.errAdvance);
     } finally {
       setAdvanceSubmitting(false);
     }
@@ -683,19 +691,20 @@ function AdminStagePage({ staff }: StaffProps) {
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || 'Erreur lors du seeding automatique');
+        throw new Error(json.error || t.errAutoSeed);
       }
 
       const json = await res.json();
       addToast(
-        `Seeding automatique applique : ${json.seeded?.length ?? 0} equipes placees dans ${json.totalMatches} matchs.`,
+        format(t.toastAutoSeed, {
+          count: json.seeded?.length ?? 0,
+          total: json.totalMatches,
+        }),
         'success'
       );
       setShowAutoSeedModal(false);
     } catch (err: unknown) {
-      setErrorMsg(
-        (err as Error)?.message ?? 'Erreur lors du seeding automatique'
-      );
+      setErrorMsg((err as Error)?.message ?? t.errAutoSeed);
     } finally {
       setAutoSeedSubmitting(false);
     }
@@ -714,15 +723,18 @@ function AdminStagePage({ staff }: StaffProps) {
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || 'Erreur lors du clonage');
+        throw new Error(json.error || t.errClone);
       }
 
       const json = await res.json();
       const matchMsg = includeMatches
-        ? ` avec ${json.clonedMatchCount ?? 0} match(es)`
+        ? format(t.cloneMatchSuffix, { count: json.clonedMatchCount ?? 0 })
         : '';
       addToast(
-        `Phase clonee${matchMsg}. Nouvelle phase : ${json.stage?.name ?? 'copie'}`,
+        format(t.toastCloned, {
+          matchSuffix: matchMsg,
+          name: json.stage?.name ?? t.cloneFallbackName,
+        }),
         'success'
       );
 
@@ -731,7 +743,7 @@ function AdminStagePage({ staff }: StaffProps) {
         router.push(`/admin/stages/${json.stage.id}`);
       }
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? 'Erreur lors du clonage');
+      setErrorMsg((err as Error)?.message ?? t.errClone);
     } finally {
       setCloning(false);
     }
@@ -751,7 +763,11 @@ function AdminStagePage({ staff }: StaffProps) {
   return (
     <>
       <Head>
-        <title>Admin – Phase {stage ? `: ${stage.name}` : ''}</title>
+        <title>
+          {stage
+            ? format(t.pageTitleWithName, { name: stage.name })
+            : t.pageTitle}
+        </title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
@@ -761,12 +777,12 @@ function AdminStagePage({ staff }: StaffProps) {
             <Breadcrumb
               items={[
                 {
-                  label: 'Phases',
+                  label: t.breadcrumbStages,
                   href: tournament
                     ? `/admin/tournament/${tournament.id}/stages`
                     : '/admin/tournaments',
                 },
-                { label: stage?.name || 'Phase' },
+                { label: stage?.name || t.stageFallback },
               ]}
             />
             <button
@@ -787,7 +803,7 @@ function AdminStagePage({ staff }: StaffProps) {
                   d="M15 19l-7-7 7-7"
                 />
               </svg>
-              Retour au tournoi
+              {t.backToTournament}
             </button>
 
             <div className="flex flex-wrap items-start justify-between gap-4">
@@ -802,19 +818,19 @@ function AdminStagePage({ staff }: StaffProps) {
                 <div>
                   <div className="flex items-center gap-2">
                     <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-                      {stage?.name || 'Chargement...'}
+                      {stage?.name || t.loadingName}
                     </h1>
                     {stage && (
                       <span
                         className={`px-3 py-1 rounded-full text-sm font-medium border ${stageTypeColor(stage.stage_type)}`}
                       >
-                        {stageTypeLabel(stage.stage_type)}
+                        {stageTypeLabel(stage.stage_type, t)}
                       </span>
                     )}
                   </div>
                   {tournament && (
                     <p className="text-sm text-neutral-400 mt-1 flex items-center gap-2">
-                      <span>Tournoi :</span>
+                      <span>{t.tournamentPrefix}</span>
                       <Link
                         href={tournamentDashboardUrl}
                         className="text-blue-400 hover:text-blue-300 transition-colors"
@@ -838,17 +854,17 @@ function AdminStagePage({ staff }: StaffProps) {
                 <div className="flex flex-wrap items-center gap-2">
                   {stage.is_active && (
                     <span className="px-3 py-1.5 rounded-full text-sm font-semibold bg-emerald-600/20 text-emerald-300 border border-emerald-500/30">
-                      Active
+                      {t.badgeActive}
                     </span>
                   )}
                   {stage.is_public && (
                     <span className="px-3 py-1.5 rounded-full text-sm font-semibold bg-blue-600/20 text-blue-300 border border-blue-500/30">
-                      Publique
+                      {t.badgePublic}
                     </span>
                   )}
                   {!stage.is_active && !stage.is_public && (
                     <span className="px-3 py-1.5 rounded-full text-sm font-semibold bg-neutral-700/50 text-neutral-400 border border-neutral-600/30">
-                      Brouillon
+                      {t.badgeDraft}
                     </span>
                   )}
                 </div>
@@ -882,7 +898,7 @@ function AdminStagePage({ staff }: StaffProps) {
 
           {!loading && !stage && !errorMsg && (
             <div className="text-center py-20 text-neutral-400">
-              Phase introuvable.
+              {t.stageNotFound}
             </div>
           )}
 
@@ -910,7 +926,7 @@ function AdminStagePage({ staff }: StaffProps) {
                       d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
                     />
                   </svg>
-                  Modifier la phase
+                  {t.editStage}
                 </button>
                 {matchesUrl && (
                   <Link
@@ -930,7 +946,7 @@ function AdminStagePage({ staff }: StaffProps) {
                         d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
                       />
                     </svg>
-                    Voir les matchs
+                    {t.viewMatches}
                   </Link>
                 )}
                 <button
@@ -950,7 +966,7 @@ function AdminStagePage({ staff }: StaffProps) {
                       d="M13 7l5 5m0 0l-5 5m5-5H6"
                     />
                   </svg>
-                  Avancer des equipes
+                  {t.advanceTeams}
                 </button>
                 <button
                   onClick={() => handleClone(false)}
@@ -970,7 +986,7 @@ function AdminStagePage({ staff }: StaffProps) {
                       d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
                     />
                   </svg>
-                  {cloning ? 'Clonage…' : 'Cloner la phase'}
+                  {cloning ? t.cloning : t.cloneStage}
                 </button>
                 <button
                   onClick={() => handleClone(true)}
@@ -990,7 +1006,7 @@ function AdminStagePage({ staff }: StaffProps) {
                       d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
                     />
                   </svg>
-                  {cloning ? 'Clonage…' : 'Cloner avec matchs'}
+                  {cloning ? t.cloning : t.cloneWithMatches}
                 </button>
                 <Link
                   href={`/admin/stages/${stage.id}/history`}
@@ -1009,7 +1025,7 @@ function AdminStagePage({ staff }: StaffProps) {
                       d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
                     />
                   </svg>
-                  Historique
+                  {t.history}
                 </Link>
               </div>
 
@@ -1033,22 +1049,22 @@ function AdminStagePage({ staff }: StaffProps) {
                           d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                         />
                       </svg>
-                      Informations
+                      {t.infoTitle}
                     </h2>
 
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                       <div className="bg-neutral-900/50 rounded-xl p-4">
                         <div className="text-xs text-neutral-500 uppercase tracking-wider mb-1">
-                          Type
+                          {t.infoType}
                         </div>
                         <div className="font-medium">
-                          {stageTypeLabel(stage.stage_type)}
+                          {stageTypeLabel(stage.stage_type, t)}
                         </div>
                       </div>
 
                       <div className="bg-neutral-900/50 rounded-xl p-4">
                         <div className="text-xs text-neutral-500 uppercase tracking-wider mb-1">
-                          Ordre
+                          {t.infoOrder}
                         </div>
                         <div className="font-medium">
                           {stage.order_index !== null
@@ -1059,16 +1075,16 @@ function AdminStagePage({ staff }: StaffProps) {
 
                       <div className="bg-neutral-900/50 rounded-xl p-4">
                         <div className="text-xs text-neutral-500 uppercase tracking-wider mb-1">
-                          Statut
+                          {t.infoStatus}
                         </div>
                         <div className="font-medium">
-                          {stage.is_active ? 'Active' : 'Inactive'}
+                          {stage.is_active ? t.statusActive : t.statusInactive}
                         </div>
                       </div>
 
                       <div className="bg-neutral-900/50 rounded-xl p-4">
                         <div className="text-xs text-neutral-500 uppercase tracking-wider mb-1">
-                          Date de début
+                          {t.infoStartDate}
                         </div>
                         <div className="font-medium text-sm">
                           {formatDateTime(stage.start_date)}
@@ -1077,7 +1093,7 @@ function AdminStagePage({ staff }: StaffProps) {
 
                       <div className="bg-neutral-900/50 rounded-xl p-4">
                         <div className="text-xs text-neutral-500 uppercase tracking-wider mb-1">
-                          Date de fin
+                          {t.infoEndDate}
                         </div>
                         <div className="font-medium text-sm">
                           {formatDateTime(stage.end_date)}
@@ -1086,7 +1102,7 @@ function AdminStagePage({ staff }: StaffProps) {
 
                       <div className="bg-neutral-900/50 rounded-xl p-4">
                         <div className="text-xs text-neutral-500 uppercase tracking-wider mb-1">
-                          Créée le
+                          {t.infoCreatedAt}
                         </div>
                         <div className="font-medium text-sm">
                           {formatDateTime(stage.created_at)}
@@ -1117,7 +1133,7 @@ function AdminStagePage({ staff }: StaffProps) {
                           d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
                         />
                       </svg>
-                      Outils automatiques
+                      {t.autoToolsTitle}
                     </h2>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1148,9 +1164,11 @@ function AdminStagePage({ staff }: StaffProps) {
                             </svg>
                           </div>
                           <div>
-                            <div className="font-medium text-sm">Auto-BYE</div>
+                            <div className="font-medium text-sm">
+                              {t.autoByeTitle}
+                            </div>
                             <div className="text-xs text-neutral-500">
-                              Détecter et valider les matchs BYE
+                              {t.autoByeDesc}
                             </div>
                           </div>
                         </div>
@@ -1185,10 +1203,10 @@ function AdminStagePage({ staff }: StaffProps) {
                             </div>
                             <div>
                               <div className="font-medium text-sm text-purple-200">
-                                Seeding automatique
+                                {t.autoSeedTitle}
                               </div>
                               <div className="text-xs text-purple-400/70">
-                                Peupler le bracket depuis un classement
+                                {t.autoSeedDesc}
                               </div>
                             </div>
                           </div>
@@ -1218,10 +1236,10 @@ function AdminStagePage({ staff }: StaffProps) {
                             </div>
                             <div>
                               <div className="font-medium text-sm text-indigo-200">
-                                Seeding comparator
+                                {t.seedingComparatorTitle}
                               </div>
                               <div className="text-xs text-indigo-400/70">
-                                Comparer auto vs manuel côte-à-côte
+                                {t.seedingComparatorDesc}
                               </div>
                             </div>
                           </div>
@@ -1257,10 +1275,10 @@ function AdminStagePage({ staff }: StaffProps) {
                             </div>
                             <div>
                               <div className="font-medium text-sm text-amber-200">
-                                Générer ronde Swiss
+                                {t.genSwissTitle}
                               </div>
                               <div className="text-xs text-amber-400/70">
-                                Créer la prochaine ronde automatiquement
+                                {t.genSwissDesc}
                               </div>
                             </div>
                           </div>
@@ -1271,7 +1289,7 @@ function AdminStagePage({ staff }: StaffProps) {
                     {loadingActions && (
                       <div className="mt-4 text-xs text-neutral-400 flex items-center gap-2">
                         <div className="w-3 h-3 border border-neutral-500 border-t-white rounded-full animate-spin" />
-                        Traitement en cours...
+                        {t.processing}
                       </div>
                     )}
                   </section>
@@ -1293,7 +1311,7 @@ function AdminStagePage({ staff }: StaffProps) {
                             d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
                           />
                         </svg>
-                        Progression Swiss
+                        {t.swissProgressTitle}
                       </h2>
 
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
@@ -1302,7 +1320,7 @@ function AdminStagePage({ staff }: StaffProps) {
                             {swissStatus.currentRound}
                           </div>
                           <div className="text-xs text-neutral-500">
-                            Round actuel
+                            {t.swissCurrentRound}
                           </div>
                         </div>
                         <div className="bg-neutral-900/50 rounded-xl p-3 text-center">
@@ -1310,7 +1328,7 @@ function AdminStagePage({ staff }: StaffProps) {
                             {swissStatus.totalRounds ?? '∞'}
                           </div>
                           <div className="text-xs text-neutral-500">
-                            Rounds total
+                            {t.swissTotalRounds}
                           </div>
                         </div>
                         <div className="bg-neutral-900/50 rounded-xl p-3 text-center">
@@ -1318,7 +1336,9 @@ function AdminStagePage({ staff }: StaffProps) {
                             {swissStatus.roundStatus.finished}
                           </div>
                           <div className="text-xs text-neutral-500">
-                            Matchs finis (R{swissStatus.currentRound})
+                            {format(t.swissFinishedMatches, {
+                              round: swissStatus.currentRound,
+                            })}
                           </div>
                         </div>
                         <div className="bg-neutral-900/50 rounded-xl p-3 text-center">
@@ -1327,7 +1347,9 @@ function AdminStagePage({ staff }: StaffProps) {
                               swissStatus.roundStatus.ongoing}
                           </div>
                           <div className="text-xs text-neutral-500">
-                            En attente (R{swissStatus.currentRound})
+                            {format(t.swissPendingMatches, {
+                              round: swissStatus.currentRound,
+                            })}
                           </div>
                         </div>
                       </div>
@@ -1336,10 +1358,12 @@ function AdminStagePage({ staff }: StaffProps) {
                       {swissStatus.totalRounds && (
                         <div className="mb-4">
                           <div className="flex justify-between text-xs text-neutral-500 mb-1">
-                            <span>Progression globale</span>
+                            <span>{t.swissGlobalProgress}</span>
                             <span>
-                              {swissStatus.currentRound} /{' '}
-                              {swissStatus.totalRounds} rounds
+                              {format(t.swissRoundsProgress, {
+                                current: swissStatus.currentRound,
+                                total: swissStatus.totalRounds,
+                              })}
                             </span>
                           </div>
                           <div className="h-2 bg-neutral-700 rounded-full overflow-hidden">
@@ -1368,11 +1392,12 @@ function AdminStagePage({ staff }: StaffProps) {
                           </svg>
                           <div>
                             <div className="font-medium text-emerald-300">
-                              Swiss terminé
+                              {t.swissCompleteTitle}
                             </div>
                             <div className="text-xs text-emerald-400/70">
-                              Tous les {swissStatus.totalRounds} rounds sont
-                              completes.
+                              {format(t.swissCompleteDesc, {
+                                total: swissStatus.totalRounds ?? 0,
+                              })}
                             </div>
                           </div>
                         </div>
@@ -1394,15 +1419,19 @@ function AdminStagePage({ staff }: StaffProps) {
                             </svg>
                             <div>
                               <div className="font-medium text-amber-200">
-                                Round {swissStatus.currentRound} terminé
+                                {format(t.swissRoundDoneTitle, {
+                                  round: swissStatus.currentRound,
+                                })}
                               </div>
                               <div className="text-xs text-amber-400/70">
-                                Tous les matchs sont finis. Prêt pour le round{' '}
-                                {swissStatus.currentRound + 1}
-                                {swissStatus.totalRounds
-                                  ? ` / ${swissStatus.totalRounds}`
-                                  : ''}
-                                .
+                                {format(t.swissRoundDoneDesc, {
+                                  next: swissStatus.currentRound + 1,
+                                  suffix: swissStatus.totalRounds
+                                    ? format(t.swissRoundSuffix, {
+                                        total: swissStatus.totalRounds,
+                                      })
+                                    : '',
+                                })}
                               </div>
                             </div>
                           </div>
@@ -1428,7 +1457,9 @@ function AdminStagePage({ staff }: StaffProps) {
                                 />
                               </svg>
                             )}
-                            Generer Round {swissStatus.currentRound + 1}
+                            {format(t.swissGenerateRound, {
+                              round: swissStatus.currentRound + 1,
+                            })}
                           </button>
                         </div>
                       ) : (
@@ -1449,12 +1480,16 @@ function AdminStagePage({ staff }: StaffProps) {
                           </div>
                           <div>
                             <div className="font-medium text-neutral-300">
-                              Round {swissStatus.currentRound} en cours
+                              {format(t.swissRoundInProgressTitle, {
+                                round: swissStatus.currentRound,
+                              })}
                             </div>
                             <div className="text-xs text-neutral-500">
-                              {swissStatus.roundStatus.pending +
-                                swissStatus.roundStatus.ongoing}{' '}
-                              match(s) restant(s) à terminer.
+                              {format(t.swissRoundInProgressDesc, {
+                                count:
+                                  swissStatus.roundStatus.pending +
+                                  swissStatus.roundStatus.ongoing,
+                              })}
                             </div>
                           </div>
                         </div>
@@ -1479,12 +1514,13 @@ function AdminStagePage({ staff }: StaffProps) {
                               clipRule="evenodd"
                             />
                           </svg>
-                          Phase terminée
+                          {t.phaseCompleteTitle}
                         </h2>
 
                         <p className="text-sm text-emerald-300/80 mb-4">
-                          Les {completionStatus.finishedMatches} matchs de cette
-                          phase sont terminés.
+                          {format(t.phaseCompleteDesc, {
+                            count: completionStatus.finishedMatches,
+                          })}
                         </p>
 
                         {completionStatus.canAdvance &&
@@ -1492,16 +1528,18 @@ function AdminStagePage({ staff }: StaffProps) {
                             <div className="bg-emerald-900/30 border border-emerald-600/40 rounded-xl p-4 flex items-center justify-between gap-4">
                               <div>
                                 <div className="font-medium text-emerald-200 text-sm">
-                                  Avancer vers :{' '}
-                                  {completionStatus.nextStage.name}
+                                  {format(t.advanceToward, {
+                                    name: completionStatus.nextStage.name,
+                                  })}
                                 </div>
                                 <div className="text-xs text-emerald-400/60">
                                   {completionStatus.nextStage.stage_type
                                     ? stageTypeLabel(
                                         completionStatus.nextStage
-                                          .stage_type as StageType
+                                          .stage_type as StageType,
+                                        t
                                       )
-                                    : 'Phase suivante'}
+                                    : t.nextPhaseFallback}
                                 </div>
                               </div>
                               <button
@@ -1521,7 +1559,7 @@ function AdminStagePage({ staff }: StaffProps) {
                                     d="M13 7l5 5m0 0l-5 5m5-5H6"
                                   />
                                 </svg>
-                                Avancer des equipes
+                                {t.advanceTeams}
                               </button>
                             </div>
                           )}
@@ -1529,9 +1567,7 @@ function AdminStagePage({ staff }: StaffProps) {
                         {!completionStatus.canAdvance &&
                           !completionStatus.nextStage && (
                             <p className="text-xs text-emerald-400/60">
-                              Aucune phase suivante configurée. Créez une
-                              nouvelle phase dans le tournoi pour avancer des
-                              equipes.
+                              {t.noNextPhase}
                             </p>
                           )}
                       </section>
@@ -1553,11 +1589,10 @@ function AdminStagePage({ staff }: StaffProps) {
                           d="M13 7l5 5m0 0l-5 5m5-5H6"
                         />
                       </svg>
-                      Regles d&apos;avancement
+                      {t.advancementRulesTitle}
                     </h2>
                     <p className="text-xs text-neutral-500 mb-4">
-                      Configurez comment les equipes avancent automatiquement
-                      vers la phase suivante.
+                      {t.advancementRulesDesc}
                     </p>
 
                     <AdvancementRulesEditor
@@ -1592,14 +1627,11 @@ function AdminStagePage({ staff }: StaffProps) {
                                 body: JSON.stringify({ settings: newSettings }),
                               }
                             );
-                            addToast(
-                              "Regles d'avancement mises a jour.",
-                              'success'
-                            );
+                            addToast(t.toastAdvancementRules, 'success');
                             await fetchStage();
                           } catch (err: unknown) {
                             setErrorMsg(
-                              (err as Error)?.message ?? 'Erreur inattendue'
+                              (err as Error)?.message ?? t.errUnexpected
                             );
                           } finally {
                             setAdvancementSaving(false);
@@ -1612,8 +1644,8 @@ function AdminStagePage({ staff }: StaffProps) {
                         }`}
                       >
                         {advancementSaving
-                          ? 'Sauvegarde...'
-                          : 'Enregistrer les regles'}
+                          ? t.advancementSaving
+                          : t.advancementSave}
                       </button>
                     </div>
                   </section>
@@ -1634,11 +1666,10 @@ function AdminStagePage({ staff }: StaffProps) {
                           d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
                         />
                       </svg>
-                      Configuration avancee (JSON)
+                      {t.advancedConfigTitle}
                     </h2>
                     <p className="text-xs text-neutral-500 mb-4">
-                      Autres parametres de la phase (format, tiebreaker...). Les
-                      regles d&apos;avancement sont editables ci-dessus.
+                      {t.advancedConfigDesc}
                     </p>
                     <pre className="bg-neutral-900/80 border border-neutral-700 rounded-xl p-4 text-xs overflow-x-auto text-neutral-300 font-mono">
                       {JSON.stringify(
@@ -1658,7 +1689,7 @@ function AdminStagePage({ staff }: StaffProps) {
                 <div className="space-y-6">
                   {/* Navigation Card */}
                   <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
-                    <h2 className="text-lg font-semibold mb-4">Navigation</h2>
+                    <h2 className="text-lg font-semibold mb-4">{t.navTitle}</h2>
                     <div className="space-y-2">
                       {matchesUrl && (
                         <Link
@@ -1682,9 +1713,11 @@ function AdminStagePage({ staff }: StaffProps) {
                               </svg>
                             </div>
                             <div>
-                              <div className="font-medium text-sm">Matchs</div>
+                              <div className="font-medium text-sm">
+                                {t.navMatches}
+                              </div>
                               <div className="text-xs text-neutral-500">
-                                De cette phase
+                                {t.navMatchesDesc}
                               </div>
                             </div>
                           </div>
@@ -1728,10 +1761,10 @@ function AdminStagePage({ staff }: StaffProps) {
                             </div>
                             <div>
                               <div className="font-medium text-sm">
-                                Poules / Groupes
+                                {t.navGroups}
                               </div>
                               <div className="text-xs text-neutral-500">
-                                Gérer les assignations
+                                {t.navGroupsDesc}
                               </div>
                             </div>
                           </div>
@@ -1774,10 +1807,10 @@ function AdminStagePage({ staff }: StaffProps) {
                             </div>
                             <div>
                               <div className="font-medium text-sm">
-                                Classement Swiss
+                                {t.navSwiss}
                               </div>
                               <div className="text-xs text-neutral-500">
-                                Standings & rondes
+                                {t.navSwissDesc}
                               </div>
                             </div>
                           </div>
@@ -1818,9 +1851,11 @@ function AdminStagePage({ staff }: StaffProps) {
                             </svg>
                           </div>
                           <div>
-                            <div className="font-medium text-sm">Équipes</div>
+                            <div className="font-medium text-sm">
+                              {t.navTeams}
+                            </div>
                             <div className="text-xs text-neutral-500">
-                              Gérer les participants
+                              {t.navTeamsDesc}
                             </div>
                           </div>
                         </div>
@@ -1860,9 +1895,11 @@ function AdminStagePage({ staff }: StaffProps) {
                             </svg>
                           </div>
                           <div>
-                            <div className="font-medium text-sm">Tournoi</div>
+                            <div className="font-medium text-sm">
+                              {t.navTournament}
+                            </div>
                             <div className="text-xs text-neutral-500">
-                              {tournament?.name || 'Dashboard'}
+                              {tournament?.name || t.navTournamentFallback}
                             </div>
                           </div>
                         </div>
@@ -1886,12 +1923,12 @@ function AdminStagePage({ staff }: StaffProps) {
                   {/* Meta Info */}
                   <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
                     <h2 className="text-sm font-semibold text-neutral-400 mb-3">
-                      Informations système
+                      {t.sysInfoTitle}
                     </h2>
                     <div className="space-y-3 text-sm">
                       <div>
                         <div className="text-xs text-neutral-500 mb-1">
-                          ID de la phase
+                          {t.sysStageId}
                         </div>
                         <div className="font-mono text-xs bg-neutral-900 px-3 py-2 rounded-lg border border-neutral-700 break-all">
                           {stage.id}
@@ -1899,7 +1936,7 @@ function AdminStagePage({ staff }: StaffProps) {
                       </div>
                       <div>
                         <div className="text-xs text-neutral-500 mb-1">
-                          ID du tournoi
+                          {t.sysTournamentId}
                         </div>
                         <div className="font-mono text-xs bg-neutral-900 px-3 py-2 rounded-lg border border-neutral-700 break-all">
                           {stage.tournament_id}
@@ -1907,7 +1944,7 @@ function AdminStagePage({ staff }: StaffProps) {
                       </div>
                       <div>
                         <div className="text-xs text-neutral-500 mb-1">
-                          Dernière modification
+                          {t.sysLastModified}
                         </div>
                         <div className="text-neutral-300">
                           {formatDateTime(stage.updated_at || stage.created_at)}
@@ -1926,21 +1963,21 @@ function AdminStagePage({ staff }: StaffProps) {
       <Modal
         open={Boolean(isEditing && stage)}
         onClose={() => setIsEditing(false)}
-        title="Modifier la phase"
+        title={t.editModalTitle}
         footer={
           <>
             <button
               onClick={() => setIsEditing(false)}
               className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
             >
-              Annuler
+              {t.cancel}
             </button>
             <button
               onClick={handleSaveEdit}
               disabled={saving || !editForm.name.trim()}
               className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {saving ? 'Enregistrement...' : 'Enregistrer'}
+              {saving ? t.saving : t.save}
             </button>
           </>
         }
@@ -1949,7 +1986,7 @@ function AdminStagePage({ staff }: StaffProps) {
           <div className="space-y-4">
             <div>
               <label className="block text-sm text-neutral-400 mb-1">
-                Nom de la phase
+                {t.editNameLabel}
               </label>
               <input
                 type="text"
@@ -1963,7 +2000,7 @@ function AdminStagePage({ staff }: StaffProps) {
 
             <div>
               <label className="block text-sm text-neutral-400 mb-1">
-                Tournoi rattaché
+                {t.editTournamentLabel}
               </label>
               <select
                 value={editForm.tournament_id}
@@ -1972,10 +2009,10 @@ function AdminStagePage({ staff }: StaffProps) {
                 }
                 className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="">-- Aucun --</option>
-                {allTournaments.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
+                <option value="">{t.editNoTournament}</option>
+                {allTournaments.map((tm) => (
+                  <option key={tm.id} value={tm.id}>
+                    {tm.name}
                   </option>
                 ))}
               </select>
@@ -1991,7 +2028,7 @@ function AdminStagePage({ staff }: StaffProps) {
                   }
                   className="rounded border-neutral-500 bg-neutral-700"
                 />
-                <span>Phase active</span>
+                <span>{t.editActiveLabel}</span>
               </label>
 
               <label className="flex items-center gap-2 text-sm cursor-pointer">
@@ -2003,7 +2040,7 @@ function AdminStagePage({ staff }: StaffProps) {
                   }
                   className="rounded border-neutral-500 bg-neutral-700"
                 />
-                <span>Visible publiquement</span>
+                <span>{t.editPublicLabel}</span>
               </label>
             </div>
           </div>
@@ -2028,7 +2065,7 @@ function AdminStagePage({ staff }: StaffProps) {
                 d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
               />
             </svg>
-            Seeding automatique
+            {t.autoSeedModalTitle}
           </h3>
         }
         footer={
@@ -2037,7 +2074,7 @@ function AdminStagePage({ staff }: StaffProps) {
               onClick={() => setShowAutoSeedModal(false)}
               className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
             >
-              Annuler
+              {t.cancel}
             </button>
             <button
               onClick={handleAutoSeedSubmit}
@@ -2051,10 +2088,10 @@ function AdminStagePage({ staff }: StaffProps) {
               {autoSeedSubmitting ? (
                 <>
                   <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Seeding...
+                  {t.autoSeedSubmitting}
                 </>
               ) : (
-                'Appliquer le seeding'
+                t.autoSeedApply
               )}
             </button>
           </>
@@ -2068,12 +2105,10 @@ function AdminStagePage({ staff }: StaffProps) {
           <div className="space-y-4">
             <div>
               <label className="block text-sm text-neutral-400 mb-1">
-                Stage source (classement)
+                {t.sourceStageLabel}
               </label>
               {autoSeedOtherStages.length === 0 ? (
-                <p className="text-sm text-neutral-500">
-                  Aucun stage group/swiss/round-robin dans ce tournoi.
-                </p>
+                <p className="text-sm text-neutral-500">{t.noSourceStages}</p>
               ) : (
                 <select
                   value={autoSeedSourceStageId}
@@ -2091,7 +2126,7 @@ function AdminStagePage({ staff }: StaffProps) {
 
             <div>
               <label className="block text-sm text-neutral-400 mb-2">
-                Methode de placement
+                {t.methodLabel}
               </label>
               <div className="space-y-2">
                 <label className="flex items-center gap-2 text-sm cursor-pointer">
@@ -2103,9 +2138,9 @@ function AdminStagePage({ staff }: StaffProps) {
                     className="border-neutral-500 bg-neutral-700"
                   />
                   <div>
-                    <span className="font-medium">Standard</span>
+                    <span className="font-medium">{t.patternStandard}</span>
                     <span className="text-neutral-500 ml-1">
-                      — 1vN, 2v(N-1)... evite les confrontations precoces
+                      {t.patternStandardDesc}
                     </span>
                   </div>
                 </label>
@@ -2118,9 +2153,9 @@ function AdminStagePage({ staff }: StaffProps) {
                     className="border-neutral-500 bg-neutral-700"
                   />
                   <div>
-                    <span className="font-medium">Sequentiel</span>
+                    <span className="font-medium">{t.patternSequential}</span>
                     <span className="text-neutral-500 ml-1">
-                      — 1v2, 3v4... placement lineaire
+                      {t.patternSequentialDesc}
                     </span>
                   </div>
                 </label>
@@ -2151,20 +2186,22 @@ function AdminStagePage({ staff }: StaffProps) {
                 d="M13 7l5 5m0 0l-5 5m5-5H6"
               />
             </svg>
-            Avancer des equipes
+            {t.advanceModalTitle}
           </h3>
         }
         footer={
           <div className="flex justify-between items-center w-full">
             <span className="text-xs text-neutral-500">
-              {advanceSelectedIds.size} equipe(s) selectionnee(s)
+              {format(t.advanceSelectedCount, {
+                count: advanceSelectedIds.size,
+              })}
             </span>
             <div className="flex gap-2">
               <button
                 onClick={() => setShowAdvanceModal(false)}
                 className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
               >
-                Annuler
+                {t.cancel}
               </button>
               <button
                 onClick={handleAdvanceSubmit}
@@ -2178,10 +2215,10 @@ function AdminStagePage({ staff }: StaffProps) {
                 {advanceSubmitting ? (
                   <>
                     <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Avancement...
+                    {t.advanceSubmitting}
                   </>
                 ) : (
-                  'Avancer'
+                  t.advanceSubmit
                 )}
               </button>
             </div>
@@ -2197,12 +2234,10 @@ function AdminStagePage({ staff }: StaffProps) {
             {/* Target stage selector */}
             <div>
               <label className="block text-sm text-neutral-400 mb-1">
-                Stage cible
+                {t.targetStageLabel}
               </label>
               {advanceOtherStages.length === 0 ? (
-                <p className="text-sm text-neutral-500">
-                  Aucun autre stage dans ce tournoi.
-                </p>
+                <p className="text-sm text-neutral-500">{t.noOtherStages}</p>
               ) : (
                 <select
                   value={advanceTargetStageId}
@@ -2211,7 +2246,7 @@ function AdminStagePage({ staff }: StaffProps) {
                 >
                   {advanceOtherStages.map((s) => (
                     <option key={s.id} value={s.id}>
-                      {s.name} ({s.stage_type || 'autre'})
+                      {s.name} ({s.stage_type || t.stageTypeOtherFallback})
                     </option>
                   ))}
                 </select>
@@ -2221,12 +2256,12 @@ function AdminStagePage({ staff }: StaffProps) {
             {/* Criteria filters */}
             <div className="bg-neutral-900/50 border border-neutral-700 rounded-xl p-4 space-y-3">
               <p className="text-xs text-neutral-400 uppercase tracking-wider font-semibold mb-2">
-                Criteres de selection
+                {t.criteriaTitle}
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block text-xs text-neutral-500 mb-1">
-                    Top N
+                    {t.topNLabel}
                   </label>
                   <div className="flex items-center gap-2">
                     <input
@@ -2236,13 +2271,13 @@ function AdminStagePage({ staff }: StaffProps) {
                       value={advanceTopN}
                       onChange={(e) => handleAdvanceTopN(e.target.value)}
                       className="w-full px-3 py-1.5 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
-                      placeholder="N"
+                      placeholder={t.topNPlaceholder}
                     />
                   </div>
                 </div>
                 <div>
                   <label className="block text-xs text-neutral-500 mb-1">
-                    Score minimum
+                    {t.minScoreLabel}
                   </label>
                   <input
                     type="number"
@@ -2251,12 +2286,12 @@ function AdminStagePage({ staff }: StaffProps) {
                     value={advanceMinScore}
                     onChange={(e) => handleAdvanceMinScore(e.target.value)}
                     className="w-full px-3 py-1.5 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
-                    placeholder="Ex: 6"
+                    placeholder={t.minScorePlaceholder}
                   />
                 </div>
                 <div>
                   <label className="block text-xs text-neutral-500 mb-1">
-                    Victoires minimum
+                    {t.minWinsLabel}
                   </label>
                   <input
                     type="number"
@@ -2264,13 +2299,15 @@ function AdminStagePage({ staff }: StaffProps) {
                     value={advanceMinWins}
                     onChange={(e) => handleAdvanceMinWins(e.target.value)}
                     className="w-full px-3 py-1.5 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
-                    placeholder="Ex: 3"
+                    placeholder={t.minWinsPlaceholder}
                   />
                 </div>
               </div>
               <p className="text-xs text-neutral-500">
-                {advanceSelectedIds.size} / {advanceStandings.length} equipe(s)
-                selectionnee(s)
+                {format(t.advanceRatio, {
+                  selected: advanceSelectedIds.size,
+                  total: advanceStandings.length,
+                })}
               </p>
             </div>
 
@@ -2303,11 +2340,11 @@ function AdminStagePage({ staff }: StaffProps) {
                         />
                       </th>
                       <th className="px-3 py-2 text-left">#</th>
-                      <th className="px-3 py-2 text-left">Equipe</th>
-                      <th className="px-3 py-2 text-center">V</th>
-                      <th className="px-3 py-2 text-center">D</th>
-                      <th className="px-3 py-2 text-center">N</th>
-                      <th className="px-3 py-2 text-right">Pts</th>
+                      <th className="px-3 py-2 text-left">{t.thTeam}</th>
+                      <th className="px-3 py-2 text-center">{t.thWins}</th>
+                      <th className="px-3 py-2 text-center">{t.thLosses}</th>
+                      <th className="px-3 py-2 text-center">{t.thDraws}</th>
+                      <th className="px-3 py-2 text-right">{t.thPoints}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -2353,15 +2390,13 @@ function AdminStagePage({ staff }: StaffProps) {
                 </table>
               </div>
             ) : (
-              <p className="text-sm text-neutral-500">
-                Aucune equipe ou aucun match termine dans cette phase.
-              </p>
+              <p className="text-sm text-neutral-500">{t.noStandings}</p>
             )}
 
             {/* Seed mode */}
             <div>
               <label className="block text-sm text-neutral-400 mb-2">
-                Attribution des seeds
+                {t.seedModeLabel}
               </label>
               <div className="flex flex-wrap gap-3">
                 {(['rank', 'manual', 'none'] as const).map((mode) => (
@@ -2377,9 +2412,9 @@ function AdminStagePage({ staff }: StaffProps) {
                       className="border-neutral-500 bg-neutral-700"
                     />
                     <span>
-                      {mode === 'rank' && 'Par classement'}
-                      {mode === 'manual' && 'Par ordre de selection'}
-                      {mode === 'none' && 'Aucun seed'}
+                      {mode === 'rank' && t.seedModeRank}
+                      {mode === 'manual' && t.seedModeManual}
+                      {mode === 'none' && t.seedModeNone}
                     </span>
                   </label>
                 ))}

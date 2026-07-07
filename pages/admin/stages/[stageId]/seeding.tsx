@@ -17,7 +17,10 @@ import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { StaffProps } from '@/types/admin';
+
+type Dict = ReturnType<typeof useAdminT<'adminStageSeeding'>>;
 
 type TeamLite = {
   id: string;
@@ -106,6 +109,7 @@ type RatingSeedResponse = {
 export const getServerSideProps = withStaffPage('manager');
 
 function SeedingComparatorPage(_: StaffProps) {
+  const t = useAdminT('adminStageSeeding');
   const router = useRouter();
   const { stageId } = router.query;
   const id = Array.isArray(stageId) ? stageId[0] : stageId;
@@ -162,12 +166,12 @@ function SeedingComparatorPage(_: StaffProps) {
         });
       } catch (err) {
         const e = err as AdminFetchError;
-        setError(e.message || 'Erreur de chargement');
+        setError(e.message || t.errLoad);
       } finally {
         setLoading(false);
       }
     },
-    [adminFetchJson, id, pattern]
+    [adminFetchJson, id, pattern, t.errLoad]
   );
 
   useEffect(() => {
@@ -192,12 +196,20 @@ function SeedingComparatorPage(_: StaffProps) {
       setRatingData(json);
     } catch (err) {
       const e = err as AdminFetchError;
-      setRatingError(extractErr(e) || 'Erreur de chargement');
+      setRatingError(extractErr(e, t.errFallback) || t.errLoad);
       setRatingData(null);
     } finally {
       setRatingLoading(false);
     }
-  }, [adminFetchJson, id, ratingMethod, ratingPattern, sosWeight]);
+  }, [
+    adminFetchJson,
+    id,
+    ratingMethod,
+    ratingPattern,
+    sosWeight,
+    t.errFallback,
+    t.errLoad,
+  ]);
 
   useEffect(() => {
     fetchRatingPreview();
@@ -233,7 +245,7 @@ function SeedingComparatorPage(_: StaffProps) {
   const teamPool = useMemo<TeamLite[]>(() => {
     if (!data) return [];
     const out = new Map<string, TeamLite>();
-    for (const t of data.availableTeams) out.set(t.id, t);
+    for (const team of data.availableTeams) out.set(team.id, team);
     for (const c of data.current) if (c.team) out.set(c.team.id, c.team);
     for (const p of data.proposed) if (p.team) out.set(p.team.id, p.team);
     return Array.from(out.values()).sort((a, b) =>
@@ -266,18 +278,17 @@ function SeedingComparatorPage(_: StaffProps) {
 
   async function onApplyAuto() {
     if (!id || !sourceStageId) {
-      addToast('Sélectionne un stage source.', 'error');
+      addToast(t.toastSelectSource, 'error');
       return;
     }
     if (locked) {
-      addToast('Re-seed bloqué : un match round 1 a démarré.', 'error');
+      addToast(t.toastLockedReseed, 'error');
       return;
     }
     const ok = await confirm({
-      title: 'Appliquer le seeding automatique ?',
-      subtitle:
-        'Cela écrase les slots actuels du round 1 avec la proposition auto.',
-      confirmLabel: 'Appliquer auto',
+      title: t.confirmAutoTitle,
+      subtitle: t.confirmAutoSubtitle,
+      confirmLabel: t.confirmAutoLabel,
       variant: 'warning',
     });
     if (!ok) return;
@@ -291,11 +302,11 @@ function SeedingComparatorPage(_: StaffProps) {
           seedingPattern: pattern,
         }),
       });
-      addToast('Seeding automatique appliqué.', 'success');
+      addToast(t.toastAutoApplied, 'success');
       setDraft(new Map()); // reset pour refléter la nouvelle baseline
       await fetchPreview(sourceStageId);
     } catch (err) {
-      addToast(extractErr(err), 'error');
+      addToast(extractErr(err, t.errFallback), 'error');
     } finally {
       setSubmitting(false);
     }
@@ -304,7 +315,7 @@ function SeedingComparatorPage(_: StaffProps) {
   async function onApplyManual() {
     if (!id) return;
     if (locked) {
-      addToast('Re-seed bloqué : un match round 1 a démarré.', 'error');
+      addToast(t.toastLockedReseed, 'error');
       return;
     }
     const assignments = Array.from(draft.entries())
@@ -319,7 +330,7 @@ function SeedingComparatorPage(_: StaffProps) {
       .filter((a) => a.matchId && (a.slot === 1 || a.slot === 2) && a.teamId);
 
     if (assignments.length === 0) {
-      addToast('Aucune assignation à appliquer.', 'error');
+      addToast(t.toastNoAssignments, 'error');
       return;
     }
 
@@ -327,17 +338,16 @@ function SeedingComparatorPage(_: StaffProps) {
     const seenTeams = new Set<string>();
     for (const a of assignments) {
       if (seenTeams.has(a.teamId)) {
-        addToast(`Équipe en double dans le draft.`, 'error');
+        addToast(t.toastDuplicateTeam, 'error');
         return;
       }
       seenTeams.add(a.teamId);
     }
 
     const ok = await confirm({
-      title: 'Appliquer le seeding manuel ?',
-      subtitle:
-        'Cela remplace les slots actuels du round 1 par tes choix manuels.',
-      confirmLabel: 'Appliquer manuel',
+      title: t.confirmManualTitle,
+      subtitle: t.confirmManualSubtitle,
+      confirmLabel: t.confirmManualLabel,
       variant: 'warning',
     });
     if (!ok) return;
@@ -348,11 +358,11 @@ function SeedingComparatorPage(_: StaffProps) {
         method: 'POST',
         body: JSON.stringify({ assignments, replaceExisting: true }),
       });
-      addToast('Seeding manuel appliqué.', 'success');
+      addToast(t.toastManualApplied, 'success');
       setDraft(new Map());
       await fetchPreview(sourceStageId || null);
     } catch (err) {
-      addToast(extractErr(err), 'error');
+      addToast(extractErr(err, t.errFallback), 'error');
     } finally {
       setSubmitting(false);
     }
@@ -365,24 +375,17 @@ function SeedingComparatorPage(_: StaffProps) {
   async function onApplyRating() {
     if (!id || !ratingData) return;
     if (ratingLocked) {
-      addToast(
-        'Seed par rating bloqué : un match round 1 a démarré.',
-        'error'
-      );
+      addToast(t.toastRatingLocked, 'error');
       return;
     }
     if (ratingNoBracket) {
-      addToast(
-        'Génère d’abord le bracket de ce stage avant de seeder.',
-        'error'
-      );
+      addToast(t.toastGenBracketFirst, 'error');
       return;
     }
     const ok = await confirm({
-      title: 'Appliquer le seed par rating ?',
-      subtitle:
-        'Cela classe les équipes inscrites par rating Glicko (+ SoS) et écrase les slots actuels du round 1.',
-      confirmLabel: 'Appliquer le seed par rating',
+      title: t.confirmRatingTitle,
+      subtitle: t.confirmRatingSubtitle,
+      confirmLabel: t.confirmRatingLabel,
       variant: 'warning',
     });
     if (!ok) return;
@@ -405,7 +408,10 @@ function SeedingComparatorPage(_: StaffProps) {
           body: JSON.stringify(body),
         }
       );
-      addToast(`${json.seeded.length} équipes placées.`, 'success');
+      addToast(
+        format(t.toastRatingApplied, { count: json.seeded.length }),
+        'success'
+      );
       setDraft(new Map());
       await Promise.all([
         fetchPreview(sourceStageId || null),
@@ -414,12 +420,9 @@ function SeedingComparatorPage(_: StaffProps) {
     } catch (err) {
       const status = (err as { status?: number }).status;
       if (status === 409) {
-        addToast(
-          'Impossible : un match du round 1 est déjà joué ou en cours.',
-          'error'
-        );
+        addToast(t.toastRatingConflict, 'error');
       } else {
-        addToast(extractErr(err), 'error');
+        addToast(extractErr(err, t.errFallback), 'error');
       }
     } finally {
       setSubmitting(false);
@@ -429,7 +432,7 @@ function SeedingComparatorPage(_: StaffProps) {
   return (
     <>
       <Head>
-        <title>Admin – Seeding comparator</title>
+        <title>{t.pageTitle}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
@@ -452,17 +455,17 @@ function SeedingComparatorPage(_: StaffProps) {
                 d="M15 19l-7-7 7-7"
               />
             </svg>
-            Retour au stage
+            {t.back}
           </button>
 
           <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">
-                Seeding comparator
-              </h1>
+              <h1 className="text-3xl font-bold tracking-tight">{t.heading}</h1>
               <p className="text-sm text-neutral-400 mt-1">
-                {data?.stage.name ?? '…'} · {data?.bracketSize ?? 0} slots
-                round 1
+                {format(t.subtitle, {
+                  stage: data?.stage.name ?? '…',
+                  slots: data?.bracketSize ?? 0,
+                })}
               </p>
             </div>
             <button
@@ -470,14 +473,13 @@ function SeedingComparatorPage(_: StaffProps) {
               onClick={() => fetchPreview(sourceStageId || null)}
               className="px-4 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors"
             >
-              Rafraîchir
+              {t.refresh}
             </button>
           </div>
 
           {locked && data && (
             <div className="mb-6 rounded-xl border border-red-500/50 bg-red-900/30 px-4 py-3 text-sm">
-              {data.lock.reason} Toute action de seeding est bloquée tant que
-              ces matchs ne sont pas réinitialisés.
+              {data.lock.reason} {t.lockNoticeSuffix}
             </div>
           )}
 
@@ -492,7 +494,7 @@ function SeedingComparatorPage(_: StaffProps) {
               <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-3 rounded-xl border border-neutral-800 bg-neutral-900/60 px-4 py-3">
                 <label className="text-sm">
                   <span className="block text-neutral-400 text-xs mb-1">
-                    Stage source (classement)
+                    {t.sourceStageLabel}
                   </span>
                   <select
                     value={sourceStageId}
@@ -503,7 +505,7 @@ function SeedingComparatorPage(_: StaffProps) {
                     className="w-full rounded-md bg-neutral-950 border border-neutral-700 px-2 py-1.5 text-sm"
                   >
                     {data.sources.length === 0 && (
-                      <option value="">— Aucun stage source —</option>
+                      <option value="">{t.noSourceStage}</option>
                     )}
                     {data.sources.map((s) => (
                       <option key={s.id} value={s.id}>
@@ -514,7 +516,7 @@ function SeedingComparatorPage(_: StaffProps) {
                 </label>
                 <label className="text-sm">
                   <span className="block text-neutral-400 text-xs mb-1">
-                    Pattern de placement
+                    {t.patternLabel}
                   </span>
                   <select
                     value={pattern}
@@ -522,12 +524,8 @@ function SeedingComparatorPage(_: StaffProps) {
                     disabled={locked || submitting}
                     className="w-full rounded-md bg-neutral-950 border border-neutral-700 px-2 py-1.5 text-sm"
                   >
-                    <option value="standard">
-                      Standard (1 vs 2N, 2 vs 2N-1, …)
-                    </option>
-                    <option value="sequential">
-                      Séquentiel (1 vs 2, 3 vs 4, …)
-                    </option>
+                    <option value="standard">{t.patternStandard}</option>
+                    <option value="sequential">{t.patternSequential}</option>
                   </select>
                 </label>
                 <div className="flex items-end gap-2">
@@ -539,7 +537,7 @@ function SeedingComparatorPage(_: StaffProps) {
                     }
                     className="px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-xs font-medium disabled:opacity-40"
                   >
-                    Copier auto → manuel
+                    {t.copyAutoToManual}
                   </button>
                   <button
                     type="button"
@@ -547,7 +545,7 @@ function SeedingComparatorPage(_: StaffProps) {
                     disabled={locked || submitting}
                     className="px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-xs font-medium disabled:opacity-40"
                   >
-                    Vider le draft
+                    {t.clearDraft}
                   </button>
                 </div>
               </div>
@@ -557,10 +555,10 @@ function SeedingComparatorPage(_: StaffProps) {
                 <section className="rounded-xl border border-neutral-800 bg-neutral-900/40">
                   <header className="px-4 py-3 border-b border-neutral-800 flex items-center justify-between">
                     <h2 className="text-sm font-semibold uppercase tracking-wider text-neutral-300">
-                      Proposition auto
+                      {t.autoTitle}
                     </h2>
                     <span className="text-xs text-neutral-500">
-                      {data.proposed.length} slot(s)
+                      {format(t.slotCount, { count: data.proposed.length })}
                     </span>
                   </header>
                   <div className="divide-y divide-neutral-800/60">
@@ -570,7 +568,7 @@ function SeedingComparatorPage(_: StaffProps) {
                       return (
                         <div key={m.matchId} className="px-4 py-3">
                           <div className="text-xs text-neutral-500 mb-1">
-                            Match #{idx + 1}
+                            {format(t.matchLabel, { n: idx + 1 })}
                           </div>
                           <SlotRow
                             label="A"
@@ -587,7 +585,7 @@ function SeedingComparatorPage(_: StaffProps) {
                     })}
                     {matches.length === 0 && (
                       <div className="px-4 py-8 text-center text-sm text-neutral-500">
-                        Aucun match round 1 dans ce bracket.
+                        {t.noRound1Matches}
                       </div>
                     )}
                   </div>
@@ -603,7 +601,7 @@ function SeedingComparatorPage(_: StaffProps) {
                       }
                       className="w-full px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-sm font-medium transition-colors"
                     >
-                      {submitting ? 'Application…' : 'Appliquer cette auto-seed'}
+                      {submitting ? t.applying : t.applyAuto}
                     </button>
                   </footer>
                 </section>
@@ -612,10 +610,10 @@ function SeedingComparatorPage(_: StaffProps) {
                 <section className="rounded-xl border border-neutral-800 bg-neutral-900/40">
                   <header className="px-4 py-3 border-b border-neutral-800 flex items-center justify-between">
                     <h2 className="text-sm font-semibold uppercase tracking-wider text-neutral-300">
-                      Draft manuel
+                      {t.manualTitle}
                     </h2>
                     <span className="text-xs text-neutral-500">
-                      {draft.size} slot(s) renseigné(s)
+                      {format(t.draftSlotCount, { count: draft.size })}
                     </span>
                   </header>
                   <div className="divide-y divide-neutral-800/60">
@@ -623,7 +621,7 @@ function SeedingComparatorPage(_: StaffProps) {
                       return (
                         <div key={m.matchId} className="px-4 py-3 space-y-2">
                           <div className="text-xs text-neutral-500">
-                            Match #{idx + 1}
+                            {format(t.matchLabel, { n: idx + 1 })}
                           </div>
                           <DraftSelect
                             label="A"
@@ -644,7 +642,7 @@ function SeedingComparatorPage(_: StaffProps) {
                     })}
                     {matches.length === 0 && (
                       <div className="px-4 py-8 text-center text-sm text-neutral-500">
-                        Aucun match round 1.
+                        {t.noRound1}
                       </div>
                     )}
                   </div>
@@ -652,14 +650,10 @@ function SeedingComparatorPage(_: StaffProps) {
                     <button
                       type="button"
                       onClick={onApplyManual}
-                      disabled={
-                        locked || submitting || draft.size === 0
-                      }
+                      disabled={locked || submitting || draft.size === 0}
                       className="w-full px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 disabled:opacity-40 disabled:cursor-not-allowed text-sm font-medium transition-colors"
                     >
-                      {submitting
-                        ? 'Application…'
-                        : 'Appliquer ce draft manuel'}
+                      {submitting ? t.applying : t.applyManual}
                     </button>
                   </footer>
                 </section>
@@ -669,31 +663,31 @@ function SeedingComparatorPage(_: StaffProps) {
               <section className="mt-6 rounded-xl border border-neutral-800 bg-neutral-900/40">
                 <header className="px-4 py-3 border-b border-neutral-800 flex items-center justify-between">
                   <h2 className="text-sm font-semibold uppercase tracking-wider text-neutral-300">
-                    Seed par rating (Glicko + SoS)
+                    {t.ratingTitle}
                   </h2>
                   <span className="text-xs text-neutral-500">
-                    {ratingData?.breakdown.length ?? 0} équipe(s) classée(s)
+                    {format(t.ratingRankedCount, {
+                      count: ratingData?.breakdown.length ?? 0,
+                    })}
                   </span>
                 </header>
 
                 <div className="px-4 py-3 border-b border-neutral-800 text-xs text-neutral-400 leading-relaxed">
-                  Classe les équipes inscrites par rating Glicko cross-event
-                  (+ force du calendrier), sans phase qualificative. Lance
-                  d’abord un{' '}
+                  {t.ratingIntroBefore}{' '}
                   <Link
                     href="/admin/ratings"
                     className="text-blue-400 hover:text-blue-300 underline"
                   >
-                    rebuild des ratings
+                    {t.ratingIntroLink}
                   </Link>{' '}
-                  si le classement paraît vide ou neutre.
+                  {t.ratingIntroAfter}
                 </div>
 
                 {/* Contrôles */}
                 <div className="px-4 py-3 border-b border-neutral-800 grid grid-cols-1 md:grid-cols-3 gap-3">
                   <label className="text-sm">
                     <span className="block text-neutral-400 text-xs mb-1">
-                      Méthode
+                      {t.methodLabel}
                     </span>
                     <select
                       value={ratingMethod}
@@ -703,13 +697,13 @@ function SeedingComparatorPage(_: StaffProps) {
                       disabled={submitting}
                       className="w-full rounded-md bg-neutral-950 border border-neutral-700 px-2 py-1.5 text-sm"
                     >
-                      <option value="rating_sos">Rating + SoS</option>
-                      <option value="rating">Rating seul</option>
+                      <option value="rating_sos">{t.methodRatingSos}</option>
+                      <option value="rating">{t.methodRating}</option>
                     </select>
                   </label>
                   <label className="text-sm">
                     <span className="block text-neutral-400 text-xs mb-1">
-                      Pattern de placement
+                      {t.patternLabel}
                     </span>
                     <select
                       value={ratingPattern}
@@ -719,19 +713,15 @@ function SeedingComparatorPage(_: StaffProps) {
                       disabled={submitting}
                       className="w-full rounded-md bg-neutral-950 border border-neutral-700 px-2 py-1.5 text-sm"
                     >
-                      <option value="standard">
-                        Standard (1 vs 2N, 2 vs 2N-1, …)
-                      </option>
-                      <option value="sequential">
-                        Séquentiel (1 vs 2, 3 vs 4, …)
-                      </option>
+                      <option value="standard">{t.patternStandard}</option>
+                      <option value="sequential">{t.patternSequential}</option>
                     </select>
                   </label>
                   <label className="text-sm">
                     <span className="block text-neutral-400 text-xs mb-1">
-                      Poids SoS{' '}
+                      {t.sosWeightLabel}{' '}
                       <span className="text-neutral-600">
-                        (avancé, vide = défaut)
+                        {t.sosWeightHint}
                       </span>
                     </span>
                     <input
@@ -741,7 +731,7 @@ function SeedingComparatorPage(_: StaffProps) {
                       value={sosWeight}
                       onChange={(e) => setSosWeight(e.target.value)}
                       disabled={submitting || ratingMethod === 'rating'}
-                      placeholder="défaut serveur"
+                      placeholder={t.sosWeightPlaceholder}
                       className="w-full rounded-md bg-neutral-950 border border-neutral-700 px-2 py-1.5 text-sm disabled:opacity-40"
                     />
                   </label>
@@ -752,13 +742,12 @@ function SeedingComparatorPage(_: StaffProps) {
                   <div className="mx-4 mt-3 rounded-lg border border-red-500/50 bg-red-900/30 px-3 py-2 text-xs text-red-200">
                     {ratingData.lock.reasons.length > 0
                       ? ratingData.lock.reasons.join(' ')
-                      : 'Seeding bloqué : un match round 1 a démarré.'}
+                      : t.ratingLockReason}
                   </div>
                 )}
                 {ratingData && !ratingLocked && ratingNoBracket && (
                   <div className="mx-4 mt-3 rounded-lg border border-amber-500/50 bg-amber-900/30 px-3 py-2 text-xs text-amber-200">
-                    Aucun match round 1 : génère d’abord le bracket de ce
-                    stage.
+                    {t.ratingNoBracketNotice}
                   </div>
                 )}
 
@@ -766,7 +755,7 @@ function SeedingComparatorPage(_: StaffProps) {
                 <div className="px-4 py-3">
                   {ratingLoading && (
                     <div className="py-8 text-center text-sm text-neutral-400">
-                      Chargement…
+                      {t.loadingShort}
                     </div>
                   )}
 
@@ -778,14 +767,13 @@ function SeedingComparatorPage(_: StaffProps) {
 
                   {!ratingLoading && !ratingError && ratingEmpty && (
                     <div className="py-8 text-center text-sm text-neutral-500">
-                      Aucune équipe inscrite à ce stage. Ajoute des équipes
-                      depuis{' '}
+                      {t.ratingEmptyBefore}{' '}
                       <button
                         type="button"
                         onClick={() => router.push(`/admin/stages/${id}`)}
                         className="text-blue-400 hover:text-blue-300 underline"
                       >
-                        l’onglet Équipes du stage
+                        {t.ratingEmptyLink}
                       </button>
                       .
                     </div>
@@ -799,16 +787,20 @@ function SeedingComparatorPage(_: StaffProps) {
                         <table className="w-full text-sm">
                           <thead>
                             <tr className="text-left text-[11px] uppercase tracking-wider text-neutral-500 border-b border-neutral-800">
-                              <th className="py-2 pr-3 font-medium">Rang</th>
-                              <th className="py-2 pr-3 font-medium">Équipe</th>
-                              <th className="py-2 pr-3 font-medium text-right">
-                                Rating
+                              <th className="py-2 pr-3 font-medium">
+                                {t.thRank}
+                              </th>
+                              <th className="py-2 pr-3 font-medium">
+                                {t.thTeam}
                               </th>
                               <th className="py-2 pr-3 font-medium text-right">
-                                SoS
+                                {t.thRating}
                               </th>
                               <th className="py-2 pr-3 font-medium text-right">
-                                Score
+                                {t.thSos}
+                              </th>
+                              <th className="py-2 pr-3 font-medium text-right">
+                                {t.thScore}
                               </th>
                             </tr>
                           </thead>
@@ -836,9 +828,7 @@ function SeedingComparatorPage(_: StaffProps) {
                     }
                     className="w-full px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-sm font-medium transition-colors"
                   >
-                    {submitting
-                      ? 'Application…'
-                      : 'Appliquer le seed par rating'}
+                    {submitting ? t.applying : t.applyRating}
                   </button>
                 </footer>
               </section>
@@ -847,7 +837,7 @@ function SeedingComparatorPage(_: StaffProps) {
 
           {loading && (
             <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 px-4 py-8 text-center text-sm text-neutral-400">
-              Chargement…
+              {t.loadingShort}
             </div>
           )}
         </div>
@@ -866,6 +856,7 @@ function SlotRow({
   seed: number | null;
   team: TeamLite | null;
 }) {
+  const t = useAdminT('adminStageSeeding');
   return (
     <div className="flex items-center gap-2 py-1 text-sm">
       <span className="w-5 text-neutral-500">{label}</span>
@@ -875,7 +866,7 @@ function SlotRow({
         </span>
       )}
       <span className={team ? '' : 'text-neutral-600 italic'}>
-        {team?.name ?? '— vide —'}
+        {team?.name ?? t.slotEmpty}
       </span>
     </div>
   );
@@ -894,6 +885,7 @@ function DraftSelect({
   disabled: boolean;
   onChange: (v: string) => void;
 }) {
+  const t = useAdminT('adminStageSeeding');
   return (
     <label className="flex items-center gap-2 text-sm">
       <span className="w-5 text-neutral-500">{label}</span>
@@ -903,10 +895,10 @@ function DraftSelect({
         disabled={disabled}
         className="flex-1 rounded-md bg-neutral-950 border border-neutral-700 px-2 py-1 text-sm"
       >
-        <option value="">— vide —</option>
-        {pool.map((t) => (
-          <option key={t.id} value={t.id}>
-            {t.name}
+        <option value="">{t.slotEmpty}</option>
+        {pool.map((team) => (
+          <option key={team.id} value={team.id}>
+            {team.name}
           </option>
         ))}
       </select>
@@ -915,7 +907,8 @@ function DraftSelect({
 }
 
 function RatingRow({ row }: { row: RatingBreakdownRow }) {
-  const label = row.teamName ?? row.shortName ?? '— équipe inconnue —';
+  const t = useAdminT('adminStageSeeding');
+  const label = row.teamName ?? row.shortName ?? t.teamUnknown;
   return (
     <tr className="text-neutral-200">
       <td className="py-2 pr-3">
@@ -938,10 +931,10 @@ function RatingRow({ row }: { row: RatingBreakdownRow }) {
           <span className="truncate">{label}</span>
           {row.provisional && (
             <span
-              title="RD Glicko élevé / peu de matchs : classement provisoire."
+              title={t.provisionalTitle}
               className="px-1.5 py-0.5 text-[10px] rounded bg-amber-900/40 border border-amber-500/40 text-amber-300"
             >
-              provisoire
+              {t.provisionalBadge}
             </span>
           )}
         </div>
@@ -949,7 +942,10 @@ function RatingRow({ row }: { row: RatingBreakdownRow }) {
       <td className="py-2 pr-3 text-right font-mono tabular-nums">
         {Math.round(row.rating)}
         {row.rd != null && (
-          <span className="text-neutral-500 text-xs"> ± {Math.round(row.rd)}</span>
+          <span className="text-neutral-500 text-xs">
+            {' '}
+            ± {Math.round(row.rd)}
+          </span>
         )}
       </td>
       <td className="py-2 pr-3 text-right font-mono tabular-nums text-neutral-400">
@@ -962,7 +958,7 @@ function RatingRow({ row }: { row: RatingBreakdownRow }) {
   );
 }
 
-function extractErr(err: unknown): string {
+function extractErr(err: unknown, fallback: string): string {
   if (err && typeof err === 'object') {
     const e = err as { payload?: unknown; message?: string };
     if (e.payload && typeof e.payload === 'object' && 'error' in e.payload) {
@@ -970,7 +966,7 @@ function extractErr(err: unknown): string {
     }
     if (e.message) return e.message;
   }
-  return 'Échec';
+  return fallback;
 }
 
 export default SeedingComparatorPage;

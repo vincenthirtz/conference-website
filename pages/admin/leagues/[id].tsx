@@ -10,6 +10,7 @@ import { useToast } from '@/components/Toast';
 import Breadcrumb from '@/components/admin/Breadcrumb';
 import EmptyState from '@/components/admin/EmptyState';
 import { Skeleton } from '@/components/admin/Skeleton';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { StaffProps } from '@/types/admin';
 import type {
   League,
@@ -23,12 +24,16 @@ import { logger } from '../../../utils/logger';
 
 export const getServerSideProps = withStaffPage('manager');
 
-const STATUS_OPTIONS: { value: LeagueStatus; label: string }[] = [
-  { value: 'draft', label: 'Brouillon' },
-  { value: 'active', label: 'Active' },
-  { value: 'finished', label: 'Terminée' },
-  { value: 'archived', label: 'Archivée' },
-];
+type Dict = ReturnType<typeof useAdminT<'adminLeagueDetail'>>;
+
+function getStatusOptions(t: Dict): { value: LeagueStatus; label: string }[] {
+  return [
+    { value: 'draft', label: t.statusDraft },
+    { value: 'active', label: t.statusActive },
+    { value: 'finished', label: t.statusFinished },
+    { value: 'archived', label: t.statusArchived },
+  ];
+}
 
 type TournamentOption = {
   id: string;
@@ -55,6 +60,8 @@ function tableToRows(
 }
 
 function AdminLeagueDetailPage(_props: StaffProps) {
+  const t = useAdminT('adminLeagueDetail');
+  const statusOptions = getStatusOptions(t);
   const router = useRouter();
   const leagueId = typeof router.query.id === 'string' ? router.query.id : '';
 
@@ -131,18 +138,16 @@ function AdminLeagueDetailPage(_props: StaffProps) {
     setLoading(true);
     setErrorMsg(null);
     try {
-      const l = await adminFetchJson<League>(
-        `/api/admin/leagues/${leagueId}`
-      );
+      const l = await adminFetchJson<League>(`/api/admin/leagues/${leagueId}`);
       hydrateFromLeague(l);
       await loadDetail();
     } catch (err: unknown) {
       logger.error('load league error', err);
-      setErrorMsg((err as Error)?.message || 'Erreur lors du chargement.');
+      setErrorMsg((err as Error)?.message || t.errLoad);
     } finally {
       setLoading(false);
     }
-  }, [leagueId, adminFetchJson, hydrateFromLeague, loadDetail]);
+  }, [leagueId, adminFetchJson, hydrateFromLeague, loadDetail, t.errLoad]);
 
   useEffect(() => {
     load();
@@ -167,7 +172,7 @@ function AdminLeagueDetailPage(_props: StaffProps) {
   }, [adminFetchJson]);
 
   const linkedIds = useMemo(
-    () => new Set(tournaments.map((t) => t.id)),
+    () => new Set(tournaments.map((tm) => tm.id)),
     [tournaments]
   );
   const availableOptions = useMemo(
@@ -177,7 +182,11 @@ function AdminLeagueDetailPage(_props: StaffProps) {
 
   /* ---------------- Points table editing ---------------- */
 
-  function updatePointRow(index: number, field: 'rank' | 'points', value: string) {
+  function updatePointRow(
+    index: number,
+    field: 'rank' | 'points',
+    value: string
+  ) {
     setPointsRows((prev) =>
       prev.map((row, i) =>
         i === index
@@ -218,16 +227,16 @@ function AdminLeagueDetailPage(_props: StaffProps) {
     setErrorMsg(null);
 
     if (!name.trim()) {
-      setErrorMsg('Le nom est requis.');
+      setErrorMsg(t.errNameRequired);
       return;
     }
     if (!/^[a-z0-9-]+$/.test(slug)) {
-      setErrorMsg('Le slug doit être en minuscules, chiffres et tirets.');
+      setErrorMsg(t.errSlugFormat);
       return;
     }
     const pointsTable = buildPointsTable();
     if (pointsTable === null) {
-      setErrorMsg('Les rangs du barème doivent être des entiers positifs.');
+      setErrorMsg(t.errPointsRanks);
       return;
     }
 
@@ -251,14 +260,14 @@ function AdminLeagueDetailPage(_props: StaffProps) {
         }
       );
       hydrateFromLeague(updated);
-      addToast('Ligue enregistrée.', 'success');
+      addToast(t.toastSaved, 'success');
       await loadDetail();
     } catch (err: unknown) {
       const payload = (err as { payload?: { code?: string } })?.payload;
       if (payload?.code === 'SLUG_CONFLICT') {
-        setErrorMsg('Ce slug est déjà utilisé par une autre ligue.');
+        setErrorMsg(t.errSlugConflict);
       } else {
-        setErrorMsg((err as Error)?.message || 'Erreur lors de la sauvegarde.');
+        setErrorMsg((err as Error)?.message || t.errSave);
       }
       logger.error('save league error', err);
     } finally {
@@ -271,10 +280,10 @@ function AdminLeagueDetailPage(_props: StaffProps) {
   async function handleDelete() {
     if (!league) return;
     const ok = await confirm({
-      title: `Supprimer « ${league.name} » ?`,
-      subtitle: 'La ligue et ses standings seront supprimés définitivement.',
+      title: format(t.deleteConfirmTitle, { name: league.name }),
+      subtitle: t.deleteConfirmSubtitle,
       variant: 'danger',
-      confirmLabel: 'Supprimer',
+      confirmLabel: t.deleteConfirmLabel,
     });
     if (!ok) return;
     try {
@@ -282,16 +291,13 @@ function AdminLeagueDetailPage(_props: StaffProps) {
         method: 'DELETE',
       });
       if (!res.ok && res.status !== 204) {
-        throw new Error(`Suppression échouée (${res.status})`);
+        throw new Error(format(t.errDeleteStatus, { status: res.status }));
       }
-      addToast('Ligue supprimée.', 'success');
+      addToast(t.toastDeleted, 'success');
       router.push('/admin/leagues');
     } catch (err: unknown) {
       logger.error('delete league error', err);
-      addToast(
-        (err as Error)?.message || 'Erreur lors de la suppression.',
-        'error'
-      );
+      addToast((err as Error)?.message || t.errDelete, 'error');
     }
   }
 
@@ -310,19 +316,16 @@ function AdminLeagueDetailPage(_props: StaffProps) {
           weight,
         }),
       });
-      addToast('Tournoi lié.', 'success');
+      addToast(t.toastLinked, 'success');
       setSelectedTournament('');
       setLinkWeight('1');
       await loadDetail();
     } catch (err: unknown) {
       const payload = (err as { payload?: { code?: string } })?.payload;
       if (payload?.code === 'TOURNAMENT_NOT_FOUND') {
-        addToast('Tournoi introuvable.', 'error');
+        addToast(t.errTournamentNotFound, 'error');
       } else {
-        addToast(
-          (err as Error)?.message || 'Erreur lors du rattachement.',
-          'error'
-        );
+        addToast((err as Error)?.message || t.errLink, 'error');
       }
       logger.error('link tournament error', err);
     } finally {
@@ -330,28 +333,28 @@ function AdminLeagueDetailPage(_props: StaffProps) {
     }
   }
 
-  async function handleUnlink(t: LeagueTournamentRef) {
+  async function handleUnlink(tm: LeagueTournamentRef) {
     if (!league) return;
     const ok = await confirm({
-      title: `Retirer « ${t.name ?? t.id} » de la ligue ?`,
-      subtitle: 'Ce tournoi ne comptera plus dans les classements.',
+      title: format(t.unlinkConfirmTitle, { name: tm.name ?? tm.id }),
+      subtitle: t.unlinkConfirmSubtitle,
       variant: 'warning',
-      confirmLabel: 'Retirer',
+      confirmLabel: t.unlinkConfirmLabel,
     });
     if (!ok) return;
     try {
       const res = await mutate(
-        `/api/admin/leagues/${league.id}/tournaments/${t.id}`,
+        `/api/admin/leagues/${league.id}/tournaments/${tm.id}`,
         { method: 'DELETE' }
       );
       if (!res.ok && res.status !== 204) {
-        throw new Error(`Retrait échoué (${res.status})`);
+        throw new Error(format(t.errUnlinkStatus, { status: res.status }));
       }
-      addToast('Tournoi retiré.', 'success');
+      addToast(t.toastUnlinked, 'success');
       await loadDetail();
     } catch (err: unknown) {
       logger.error('unlink tournament error', err);
-      addToast((err as Error)?.message || 'Erreur lors du retrait.', 'error');
+      addToast((err as Error)?.message || t.errUnlink, 'error');
     }
   }
 
@@ -366,18 +369,18 @@ function AdminLeagueDetailPage(_props: StaffProps) {
         { method: 'POST' }
       );
       addToast(
-        `Standings recalculés : ${result.standings_count} équipe${
-          result.standings_count > 1 ? 's' : ''
-        }.`,
+        format(
+          result.standings_count > 1
+            ? t.toastRecomputed_other
+            : t.toastRecomputed_one,
+          { count: result.standings_count }
+        ),
         'success'
       );
       await loadDetail();
     } catch (err: unknown) {
       logger.error('recompute standings error', err);
-      addToast(
-        (err as Error)?.message || 'Erreur lors du recalcul.',
-        'error'
-      );
+      addToast((err as Error)?.message || t.errRecompute, 'error');
     } finally {
       setRecomputing(false);
     }
@@ -403,9 +406,9 @@ function AdminLeagueDetailPage(_props: StaffProps) {
         <div className="mx-auto w-full max-w-5xl px-4 sm:px-6 lg:px-8 pt-20 pb-12">
           <Breadcrumb
             items={[
-              { label: 'Admin', href: '/admin' },
-              { label: 'Ligues', href: '/admin/leagues' },
-              { label: 'Erreur' },
+              { label: t.breadcrumbAdmin, href: '/admin' },
+              { label: t.breadcrumbLeagues, href: '/admin/leagues' },
+              { label: t.breadcrumbError },
             ]}
           />
           <div className="rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm flex items-center gap-3">
@@ -415,7 +418,7 @@ function AdminLeagueDetailPage(_props: StaffProps) {
               onClick={() => load()}
               className="px-3 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-xs font-medium transition-colors"
             >
-              Réessayer
+              {t.retry}
             </button>
           </div>
         </div>
@@ -426,16 +429,18 @@ function AdminLeagueDetailPage(_props: StaffProps) {
   return (
     <>
       <Head>
-        <title>Admin – {league?.name ?? 'Ligue'}</title>
+        <title>
+          {format(t.pageTitle, { name: league?.name ?? t.leagueFallback })}
+        </title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
         <div className="mx-auto w-full max-w-5xl px-4 sm:px-6 lg:px-8 pt-20 pb-12 space-y-6">
           <Breadcrumb
             items={[
-              { label: 'Admin', href: '/admin' },
-              { label: 'Ligues', href: '/admin/leagues' },
-              { label: league?.name ?? 'Ligue' },
+              { label: t.breadcrumbAdmin, href: '/admin' },
+              { label: t.breadcrumbLeagues, href: '/admin/leagues' },
+              { label: league?.name ?? t.leagueFallback },
             ]}
           />
 
@@ -448,7 +453,7 @@ function AdminLeagueDetailPage(_props: StaffProps) {
               onClick={handleDelete}
               className="px-4 py-2.5 rounded-xl bg-red-900/40 hover:bg-red-800/60 border border-red-500/40 text-sm font-medium text-red-200 transition-colors"
             >
-              Supprimer la ligue
+              {t.deleteLeague}
             </button>
           </div>
 
@@ -463,12 +468,12 @@ function AdminLeagueDetailPage(_props: StaffProps) {
             onSubmit={handleSave}
             className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 space-y-4"
           >
-            <h2 className="text-lg font-semibold">Informations</h2>
+            <h2 className="text-lg font-semibold">{t.infoTitle}</h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className={labelCls} htmlFor="d-name">
-                  Nom *
+                  {t.nameLabel}
                 </label>
                 <input
                   id="d-name"
@@ -480,7 +485,7 @@ function AdminLeagueDetailPage(_props: StaffProps) {
               </div>
               <div>
                 <label className={labelCls} htmlFor="d-slug">
-                  Slug *
+                  {t.slugLabel}
                 </label>
                 <input
                   id="d-slug"
@@ -494,7 +499,7 @@ function AdminLeagueDetailPage(_props: StaffProps) {
 
             <div>
               <label className={labelCls} htmlFor="d-desc">
-                Description
+                {t.descriptionLabel}
               </label>
               <textarea
                 id="d-desc"
@@ -507,7 +512,7 @@ function AdminLeagueDetailPage(_props: StaffProps) {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <div>
                 <label className={labelCls} htmlFor="d-game">
-                  Jeu
+                  {t.gameLabel}
                 </label>
                 <input
                   id="d-game"
@@ -519,7 +524,7 @@ function AdminLeagueDetailPage(_props: StaffProps) {
               </div>
               <div>
                 <label className={labelCls} htmlFor="d-status">
-                  Statut
+                  {t.statusLabel}
                 </label>
                 <select
                   id="d-status"
@@ -527,7 +532,7 @@ function AdminLeagueDetailPage(_props: StaffProps) {
                   value={status}
                   onChange={(e) => setStatus(e.target.value as LeagueStatus)}
                 >
-                  {STATUS_OPTIONS.map((o) => (
+                  {statusOptions.map((o) => (
                     <option key={o.value} value={o.value}>
                       {o.label}
                     </option>
@@ -536,7 +541,7 @@ function AdminLeagueDetailPage(_props: StaffProps) {
               </div>
               <div>
                 <label className={labelCls} htmlFor="d-start">
-                  Date de début
+                  {t.startDateLabel}
                 </label>
                 <input
                   id="d-start"
@@ -548,7 +553,7 @@ function AdminLeagueDetailPage(_props: StaffProps) {
               </div>
               <div>
                 <label className={labelCls} htmlFor="d-end">
-                  Date de fin
+                  {t.endDateLabel}
                 </label>
                 <input
                   id="d-end"
@@ -562,41 +567,41 @@ function AdminLeagueDetailPage(_props: StaffProps) {
 
             {/* Éditeur de barème */}
             <div>
-              <label className={labelCls}>Barème de points (rang → points)</label>
+              <label className={labelCls}>{t.pointsLabel}</label>
               <div className="space-y-2">
                 {pointsRows.length === 0 && (
-                  <p className="text-sm text-neutral-500">
-                    Aucun rang défini.
-                  </p>
+                  <p className="text-sm text-neutral-500">{t.noPointsRows}</p>
                 )}
                 {pointsRows.map((row, i) => (
                   <div key={i} className="flex items-center gap-2">
                     <input
                       type="text"
                       inputMode="numeric"
-                      aria-label={`Rang ${i + 1}`}
+                      aria-label={format(t.rankAria, { n: i + 1 })}
                       className={`${inputCls} w-24 font-mono`}
                       value={row.rank}
-                      onChange={(e) => updatePointRow(i, 'rank', e.target.value)}
-                      placeholder="rang"
+                      onChange={(e) =>
+                        updatePointRow(i, 'rank', e.target.value)
+                      }
+                      placeholder={t.rankPlaceholder}
                     />
                     <span className="text-neutral-500">→</span>
                     <input
                       type="number"
-                      aria-label={`Points rang ${i + 1}`}
+                      aria-label={format(t.rankPointsAria, { n: i + 1 })}
                       className={`${inputCls} w-32`}
                       value={row.points}
                       onChange={(e) =>
                         updatePointRow(i, 'points', e.target.value)
                       }
-                      placeholder="points"
+                      placeholder={t.pointsPlaceholder}
                     />
                     <button
                       type="button"
                       onClick={() => removePointRow(i)}
                       className="px-3 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 border border-neutral-600 text-xs transition-colors"
                     >
-                      Retirer
+                      {t.removeRow}
                     </button>
                   </div>
                 ))}
@@ -606,7 +611,7 @@ function AdminLeagueDetailPage(_props: StaffProps) {
                 onClick={addPointRow}
                 className="mt-2 px-3 py-1.5 rounded-lg bg-neutral-700 hover:bg-neutral-600 border border-neutral-600 text-xs font-medium transition-colors"
               >
-                + Ajouter un rang
+                {t.addRow}
               </button>
             </div>
 
@@ -617,7 +622,7 @@ function AdminLeagueDetailPage(_props: StaffProps) {
                 checked={isPublic}
                 onChange={(e) => setIsPublic(e.target.checked)}
               />
-              Ligue publique (visible sur le site)
+              {t.publicLabel}
             </label>
 
             <div className="pt-2">
@@ -626,14 +631,16 @@ function AdminLeagueDetailPage(_props: StaffProps) {
                 disabled={saving}
                 className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors disabled:opacity-50"
               >
-                {saving ? 'Enregistrement…' : 'Enregistrer'}
+                {saving ? t.saving : t.save}
               </button>
             </div>
           </form>
 
           {/* --- Tournois liés --- */}
           <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 space-y-4">
-            <h2 className="text-lg font-semibold">Tournois liés</h2>
+            <h2 className="text-lg font-semibold">
+              {t.linkedTournamentsTitle}
+            </h2>
 
             <form
               onSubmit={handleLink}
@@ -641,7 +648,7 @@ function AdminLeagueDetailPage(_props: StaffProps) {
             >
               <div className="flex-1 min-w-[220px]">
                 <label className={labelCls} htmlFor="link-tournament">
-                  Tournoi
+                  {t.tournamentLabel}
                 </label>
                 <select
                   id="link-tournament"
@@ -649,7 +656,7 @@ function AdminLeagueDetailPage(_props: StaffProps) {
                   value={selectedTournament}
                   onChange={(e) => setSelectedTournament(e.target.value)}
                 >
-                  <option value="">Sélectionner un tournoi…</option>
+                  <option value="">{t.selectTournament}</option>
                   {availableOptions.map((o) => (
                     <option key={o.id} value={o.id}>
                       {o.name}
@@ -660,7 +667,7 @@ function AdminLeagueDetailPage(_props: StaffProps) {
               </div>
               <div className="w-28">
                 <label className={labelCls} htmlFor="link-weight">
-                  Poids
+                  {t.weightLabel}
                 </label>
                 <input
                   id="link-weight"
@@ -677,41 +684,41 @@ function AdminLeagueDetailPage(_props: StaffProps) {
                 disabled={!selectedTournament || linking}
                 className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors disabled:opacity-50"
               >
-                {linking ? 'Ajout…' : 'Lier'}
+                {linking ? t.linking : t.link}
               </button>
             </form>
 
             {tournaments.length === 0 ? (
               <EmptyState
-                title="Aucun tournoi lié"
-                description="Ajoute des tournois pour alimenter le classement de la ligue."
+                title={t.emptyTournamentsTitle}
+                description={t.emptyTournamentsDescription}
               />
             ) : (
               <div className="divide-y divide-neutral-700/50 border border-neutral-700/50 rounded-xl overflow-hidden">
-                {tournaments.map((t) => (
+                {tournaments.map((tm) => (
                   <div
-                    key={t.id}
+                    key={tm.id}
                     className="flex items-center gap-3 p-3 hover:bg-neutral-700/20 transition-colors"
                   >
                     <div className="flex-1 min-w-0">
                       <span className="font-medium truncate">
-                        {t.name ?? t.id}
+                        {tm.name ?? tm.id}
                       </span>
-                      {t.slug && (
+                      {tm.slug && (
                         <span className="ml-2 font-mono text-xs bg-neutral-800 px-2 py-0.5 rounded">
-                          /{t.slug}
+                          /{tm.slug}
                         </span>
                       )}
                     </div>
                     <span className="text-sm text-neutral-400">
-                      poids {t.weight}
+                      {format(t.weightPrefix, { weight: tm.weight })}
                     </span>
                     <button
                       type="button"
-                      onClick={() => handleUnlink(t)}
+                      onClick={() => handleUnlink(tm)}
                       className="px-3 py-1.5 rounded-lg bg-red-900/40 hover:bg-red-800/60 border border-red-500/40 text-xs font-medium text-red-200 transition-colors"
                     >
-                      Retirer
+                      {t.unlink}
                     </button>
                   </div>
                 ))}
@@ -722,7 +729,7 @@ function AdminLeagueDetailPage(_props: StaffProps) {
           {/* --- Standings --- */}
           <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-lg font-semibold">Classement</h2>
+              <h2 className="text-lg font-semibold">{t.standingsTitle}</h2>
               <button
                 type="button"
                 onClick={handleRecompute}
@@ -743,25 +750,27 @@ function AdminLeagueDetailPage(_props: StaffProps) {
                     d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
                   />
                 </svg>
-                {recomputing ? 'Recalcul…' : 'Recalculer les standings'}
+                {recomputing ? t.recomputing : t.recompute}
               </button>
             </div>
 
             {standings.length === 0 ? (
               <EmptyState
-                title="Aucun classement"
-                description="Lance un recalcul après avoir lié des tournois avec des résultats."
+                title={t.emptyStandingsTitle}
+                description={t.emptyStandingsDescription}
               />
             ) : (
               <div className="overflow-x-auto border border-neutral-700/50 rounded-xl">
                 <table className="w-full text-sm">
                   <thead className="bg-neutral-900/50 text-neutral-400">
                     <tr>
-                      <th className="text-left px-4 py-2.5 w-16">Rang</th>
-                      <th className="text-left px-4 py-2.5">Équipe</th>
-                      <th className="text-right px-4 py-2.5">Points</th>
-                      <th className="text-right px-4 py-2.5">Tournois comptés</th>
-                      <th className="text-right px-4 py-2.5">Meilleur rang</th>
+                      <th className="text-left px-4 py-2.5 w-16">{t.thRank}</th>
+                      <th className="text-left px-4 py-2.5">{t.thTeam}</th>
+                      <th className="text-right px-4 py-2.5">{t.thPoints}</th>
+                      <th className="text-right px-4 py-2.5">
+                        {t.thTournaments}
+                      </th>
+                      <th className="text-right px-4 py-2.5">{t.thBestRank}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-neutral-700/50">
@@ -793,7 +802,7 @@ function AdminLeagueDetailPage(_props: StaffProps) {
               href="/admin/leagues"
               className="text-sm text-neutral-400 hover:text-white transition-colors"
             >
-              ← Retour aux ligues
+              {t.backToLeagues}
             </Link>
           </div>
         </div>

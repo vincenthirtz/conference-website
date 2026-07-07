@@ -3,6 +3,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 type StaffShape = {
   id: string;
@@ -53,6 +54,7 @@ function shortId(id: string) {
 }
 
 function AdminStageHistoryPage({ staff }: StaffProps) {
+  const t = useAdminT('adminStageHistory');
   const router = useRouter();
   const { stageId } = router.query;
 
@@ -84,13 +86,13 @@ function AdminStageHistoryPage({ staff }: StaffProps) {
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || 'Impossible de charger l’historique');
+        throw new Error(json.error || t.errLoadHistory);
       }
 
       const json: ApiResponse = await res.json();
       setLogs(json.logs || []);
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? 'Erreur inconnue');
+      setErrorMsg((err as Error)?.message ?? t.errUnknown);
     } finally {
       setLoading(false);
     }
@@ -110,7 +112,7 @@ function AdminStageHistoryPage({ staff }: StaffProps) {
   return (
     <>
       <Head>
-        <title>Admin – Historique de la phase</title>
+        <title>{t.pageTitle}</title>
       </Head>
 
       <div className="min-h-screen bg-neutral-900 text-white p-6 pt-20">
@@ -122,13 +124,10 @@ function AdminStageHistoryPage({ staff }: StaffProps) {
               onClick={() => router.push(`/admin/stages/${stageId}`)}
               className="mb-2 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white"
             >
-              ← Retour à la phase
+              {t.back}
             </button>
-            <h1 className="text-3xl font-bold">Historique staff de la phase</h1>
-            <p className="text-neutral-400 text-sm mt-1">
-              Journal des actions staff liées à cette phase (stages, matches,
-              etc.).
-            </p>
+            <h1 className="text-3xl font-bold">{t.heading}</h1>
+            <p className="text-neutral-400 text-sm mt-1">{t.subtitle}</p>
           </div>
         </div>
 
@@ -139,30 +138,30 @@ function AdminStageHistoryPage({ staff }: StaffProps) {
         >
           <div className="flex flex-col gap-1">
             <label className="text-xs text-neutral-400">
-              Type d&apos;entité (entity_type)
+              {t.entityTypeLabel}
             </label>
             <input
               type="text"
               className="px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder='ex: "stage", "match", "team"...'
+              placeholder={t.entityTypePlaceholder}
               value={entityType}
               onChange={(e) => setEntityType(e.target.value)}
             />
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-neutral-400">Action</label>
+            <label className="text-xs text-neutral-400">{t.actionLabel}</label>
             <input
               type="text"
               className="px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder='ex: "create_match", "update_stage"...'
+              placeholder={t.actionPlaceholder}
               value={action}
               onChange={(e) => setAction(e.target.value)}
             />
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-neutral-400">Limite</label>
+            <label className="text-xs text-neutral-400">{t.limitLabel}</label>
             <select
               className="px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={limit}
@@ -178,7 +177,7 @@ function AdminStageHistoryPage({ staff }: StaffProps) {
             type="submit"
             className="ml-auto px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 text-sm font-semibold"
           >
-            Filtrer
+            {t.filter}
           </button>
         </form>
 
@@ -193,16 +192,16 @@ function AdminStageHistoryPage({ staff }: StaffProps) {
         <div className="bg-neutral-800 border border-neutral-700 rounded-xl overflow-hidden">
           <div className="px-4 py-3 border-b border-neutral-700 flex justify-between items-center">
             <span className="text-sm font-semibold">
-              {loading ? 'Chargement...' : `Logs (${logs.length})`}
+              {loading
+                ? t.loading
+                : format(t.logsCount, { count: logs.length })}
             </span>
-            <span className="text-xs text-neutral-400">
-              Trié du plus récent au plus ancien
-            </span>
+            <span className="text-xs text-neutral-400">{t.sortedHint}</span>
           </div>
 
           {logs.length === 0 && !loading && (
             <div className="px-4 py-6 text-sm text-neutral-400">
-              Aucun log trouvé pour ces filtres.
+              {t.emptyLogs}
             </div>
           )}
 
@@ -232,7 +231,7 @@ function AdminStageHistoryPage({ staff }: StaffProps) {
 
                     {log.staff && (
                       <div className="flex items-center gap-2 text-xs text-neutral-400">
-                        <span className="text-neutral-500">par</span>
+                        <span className="text-neutral-500">{t.by}</span>
                         <span className="font-medium text-neutral-200">
                           {log.staff.display_name || log.staff.id}
                         </span>
@@ -254,7 +253,7 @@ function AdminStageHistoryPage({ staff }: StaffProps) {
                   {log.payload && (
                     <details className="mt-1 text-xs text-neutral-400">
                       <summary className="cursor-pointer select-none hover:text-neutral-200">
-                        Détails (payload)
+                        {t.payloadDetails}
                       </summary>
                       <pre className="mt-1 bg-neutral-900 border border-neutral-800 rounded p-2 text-[11px] overflow-x-auto">
                         {JSON.stringify(log.payload, null, 2)}
@@ -269,7 +268,7 @@ function AdminStageHistoryPage({ staff }: StaffProps) {
                         href={`/admin/matches/${log.entity_id}`}
                         className="hover:underline"
                       >
-                        Ouvrir le match
+                        {t.openMatch}
                       </Link>
                     )}
 
@@ -278,7 +277,7 @@ function AdminStageHistoryPage({ staff }: StaffProps) {
                         href={`/admin/stages/${log.entity_id}`}
                         className="hover:underline"
                       >
-                        Ouvrir la phase
+                        {t.openStage}
                       </Link>
                     )}
 
@@ -287,7 +286,7 @@ function AdminStageHistoryPage({ staff }: StaffProps) {
                         href={`/admin/teams/${log.entity_id}`}
                         className="hover:underline"
                       >
-                        Ouvrir l&apos;équipe
+                        {t.openTeam}
                       </Link>
                     )}
 
@@ -296,7 +295,7 @@ function AdminStageHistoryPage({ staff }: StaffProps) {
                         href={`/admin/tournament/${log.tournament_id}`}
                         className="hover:underline"
                       >
-                        Ouvrir le tournoi
+                        {t.openTournament}
                       </Link>
                     )}
                   </div>

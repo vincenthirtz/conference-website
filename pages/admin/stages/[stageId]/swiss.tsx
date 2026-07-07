@@ -10,7 +10,10 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { MatchStatus } from '@/types/admin';
+
+type Dict = ReturnType<typeof useAdminT<'adminStageSwiss'>>;
 
 type StaffShape = {
   id: string;
@@ -106,16 +109,16 @@ function formatDateTime(iso: string | null) {
   }
 }
 
-function statusLabel(status: MatchStatus) {
+function statusLabel(status: MatchStatus, t: Dict) {
   switch (status) {
     case 'pending':
-      return 'À venir';
+      return t.statusPending;
     case 'ongoing':
-      return 'En cours';
+      return t.statusOngoing;
     case 'finished':
-      return 'Terminé';
+      return t.statusFinished;
     case 'cancelled':
-      return 'Annulé';
+      return t.statusCancelled;
     default:
       return status;
   }
@@ -137,6 +140,7 @@ function statusColor(status: MatchStatus) {
 }
 
 function AdminSwissStagePage({ staff }: StaffProps) {
+  const t = useAdminT('adminStageSwiss');
   const router = useRouter();
   const { stageId } = router.query;
   const { addToast } = useToast();
@@ -189,7 +193,7 @@ function AdminSwissStagePage({ staff }: StaffProps) {
       setStandings(json.standings || []);
       setRounds(json.rounds || []);
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
+      setErrorMsg((err as Error)?.message ?? t.errUnexpected);
     } finally {
       setLoading(false);
     }
@@ -217,9 +221,7 @@ function AdminSwissStagePage({ staff }: StaffProps) {
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(
-          json.error || "Erreur lors de l'apercu des pairings Swiss"
-        );
+        throw new Error(json.error || t.errPreview);
       }
 
       const json = await res.json();
@@ -227,7 +229,7 @@ function AdminSwissStagePage({ staff }: StaffProps) {
       setPreviewRound(json.roundNumber ?? null);
       setPreviewHasRematches(json.hasRematches ?? false);
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? "Erreur lors de l'apercu");
+      setErrorMsg((err as Error)?.message ?? t.errPreviewShort);
     } finally {
       setLoadingPreview(false);
     }
@@ -240,11 +242,10 @@ function AdminSwissStagePage({ staff }: StaffProps) {
     // avant d'envoyer la requete de generation. Le back exigera acceptRematches=true.
     if (previewHasRematches) {
       const ok = await confirm({
-        title: 'Cet appariement contient des rematches',
-        subtitle:
-          'Deux equipes vont se rejouer (le solveur n a pas trouve mieux). Confirmer la generation ?',
+        title: t.confirmRematchTitle,
+        subtitle: t.confirmRematchSubtitle,
         variant: 'warning',
-        confirmLabel: 'Generer quand meme',
+        confirmLabel: t.confirmRematchLabel,
       });
       if (!ok) return;
     }
@@ -265,9 +266,7 @@ function AdminSwissStagePage({ staff }: StaffProps) {
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(
-          json.error || 'Erreur lors de la generation de la ronde Swiss'
-        );
+        throw new Error(json.error || t.errGenerate);
       }
 
       const json = await res.json();
@@ -275,16 +274,17 @@ function AdminSwissStagePage({ staff }: StaffProps) {
       const createdCount = json.createdMatches?.length ?? 0;
 
       addToast(
-        `Ronde Swiss #${roundNumber} generee : ${createdCount} matchs crees.`,
+        format(t.toastGenerated, {
+          round: roundNumber,
+          count: createdCount,
+        }),
         'info'
       );
       setPreview(null);
       setPreviewRound(null);
       fetchSwissData();
     } catch (err: unknown) {
-      setErrorMsg(
-        (err as Error)?.message ?? 'Erreur lors de la generation de la ronde'
-      );
+      setErrorMsg((err as Error)?.message ?? t.errGenerateShort);
     } finally {
       setLoadingGenerate(false);
     }
@@ -304,7 +304,7 @@ function AdminSwissStagePage({ staff }: StaffProps) {
     <>
       {confirmDialog}
       <Head>
-        <title>Admin – Swiss stage</title>
+        <title>{t.pageTitle}</title>
       </Head>
 
       <div className="min-h-screen bg-neutral-900 text-white p-6 pt-20">
@@ -316,13 +316,14 @@ function AdminSwissStagePage({ staff }: StaffProps) {
               onClick={() => router.push(backStageUrl)}
               className="mb-2 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white"
             >
-              ← Retour à la phase
+              {t.back}
             </button>
-            <h1 className="text-3xl font-bold">Gestion Swiss</h1>
+            <h1 className="text-3xl font-bold">{t.heading}</h1>
 
             {stage && (
               <p className="text-neutral-400 text-sm mt-1">
-                Phase : <span className="font-semibold">{stage.name}</span>
+                {t.phaseLabel}{' '}
+                <span className="font-semibold">{stage.name}</span>
                 {stage.stage_type && (
                   <span className="ml-2 text-[10px] uppercase tracking-wide bg-neutral-800 border border-neutral-700 px-1.5 py-0.5 rounded">
                     {stage.stage_type}
@@ -331,7 +332,7 @@ function AdminSwissStagePage({ staff }: StaffProps) {
                 {tournament && (
                   <>
                     {' '}
-                    • Tournoi{' '}
+                    {t.tournamentLabel}{' '}
                     <Link
                       href={backTournamentUrl}
                       className="font-semibold hover:underline"
@@ -344,7 +345,7 @@ function AdminSwissStagePage({ staff }: StaffProps) {
             )}
             {!!rounds.length && (
               <p className="text-xs text-neutral-500 mt-1">
-                Ronde actuelle : {currentRoundNumber()}
+                {format(t.currentRound, { round: currentRoundNumber() })}
               </p>
             )}
           </div>
@@ -368,7 +369,7 @@ function AdminSwissStagePage({ staff }: StaffProps) {
                 : 'bg-neutral-800 hover:bg-neutral-700'
             }`}
           >
-            Rafraichir les donnees
+            {t.refreshData}
           </button>
 
           <button
@@ -381,9 +382,7 @@ function AdminSwissStagePage({ staff }: StaffProps) {
                 : 'bg-blue-600 hover:bg-blue-700'
             }`}
           >
-            {loadingPreview
-              ? 'Calcul en cours…'
-              : 'Apercu de la prochaine ronde'}
+            {loadingPreview ? t.previewCalculating : t.previewNextRound}
           </button>
 
           <button
@@ -392,13 +391,10 @@ function AdminSwissStagePage({ staff }: StaffProps) {
             disabled={!stageId || standings.length === 0}
             className="px-4 py-2 rounded text-sm border border-neutral-600 bg-neutral-800 hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Exporter CSV
+            {t.exportCsv}
           </button>
 
-          <p className="text-xs text-neutral-500">
-            La generation utilise le systeme de pairing Swiss (victoires,
-            Buchholz, etc.) et evite les rematches autant que possible.
-          </p>
+          <p className="text-xs text-neutral-500">{t.toolbarHelp}</p>
         </div>
 
         {/* Swiss round preview panel */}
@@ -407,14 +403,18 @@ function AdminSwissStagePage({ staff }: StaffProps) {
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="text-sm font-semibold">
-                  Apercu — Ronde #{previewRound ?? '?'}
+                  {format(t.previewTitle, { round: previewRound ?? '?' })}
                 </h3>
                 <p className="text-xs text-neutral-400 mt-0.5">
-                  {preview.length} match{preview.length > 1 ? 'es' : ''}{' '}
-                  proposes
+                  {format(
+                    preview.length > 1
+                      ? t.previewMatchCount_other
+                      : t.previewMatchCount_one,
+                    { count: preview.length }
+                  )}
                   {previewHasRematches && (
                     <span className="ml-2 text-amber-400 font-medium">
-                      (contient des rematches)
+                      {t.previewHasRematches}
                     </span>
                   )}
                 </p>
@@ -439,7 +439,7 @@ function AdminSwissStagePage({ staff }: StaffProps) {
                     </span>
                   ) : (
                     <>
-                      <span className="text-neutral-500 text-xs">vs</span>
+                      <span className="text-neutral-500 text-xs">{t.vs}</span>
                       <span className="flex-1 font-medium">
                         {p.team2_name || (p.team2_id ?? 'TBD').slice(0, 8)}
                       </span>
@@ -460,9 +460,7 @@ function AdminSwissStagePage({ staff }: StaffProps) {
                     : 'bg-emerald-600 hover:bg-emerald-700'
                 }`}
               >
-                {loadingGenerate
-                  ? 'Generation en cours…'
-                  : 'Confirmer et generer'}
+                {loadingGenerate ? t.generating : t.confirmGenerate}
               </button>
               <button
                 type="button"
@@ -472,18 +470,16 @@ function AdminSwissStagePage({ staff }: StaffProps) {
                 }}
                 className="px-4 py-2 rounded text-sm bg-neutral-700 hover:bg-neutral-600"
               >
-                Annuler
+                {t.cancel}
               </button>
             </div>
           </section>
         )}
 
-        {loading && (
-          <div className="text-neutral-300">Chargement des donnees Swiss…</div>
-        )}
+        {loading && <div className="text-neutral-300">{t.loadingData}</div>}
 
         {!loading && !stage && !errorMsg && (
-          <div className="text-neutral-300">Phase introuvable.</div>
+          <div className="text-neutral-300">{t.stageNotFound}</div>
         )}
 
         {!loading && stage && (
@@ -491,19 +487,18 @@ function AdminSwissStagePage({ staff }: StaffProps) {
             {/* Standings */}
             <section className="bg-neutral-800 border border-neutral-700 rounded-xl overflow-hidden">
               <div className="px-4 py-3 border-b border-neutral-700 flex justify-between items-center">
-                <h2 className="text-sm font-semibold">
-                  Classement Swiss (standings)
-                </h2>
+                <h2 className="text-sm font-semibold">{t.standingsTitle}</h2>
                 <span className="text-xs text-neutral-400">
-                  {standings.length} équipe
-                  {standings.length > 1 ? 's' : ''}
+                  {format(
+                    standings.length > 1 ? t.teamCount_other : t.teamCount_one,
+                    { count: standings.length }
+                  )}
                 </span>
               </div>
 
               {standings.length === 0 ? (
                 <div className="px-4 py-6 text-sm text-neutral-400">
-                  Aucun classement disponible. Assure-toi que des équipes sont
-                  rattachées à la phase et que des rondes ont été jouées.
+                  {t.emptyStandings}
                 </div>
               ) : (
                 <div className="overflow-x-auto">
@@ -511,14 +506,18 @@ function AdminSwissStagePage({ staff }: StaffProps) {
                     <thead className="bg-neutral-750 text-neutral-300">
                       <tr>
                         <th className="px-3 py-2 text-left">#</th>
-                        <th className="px-3 py-2 text-left">Équipe</th>
-                        <th className="px-3 py-2 text-center">V</th>
-                        <th className="px-3 py-2 text-center">D</th>
-                        <th className="px-3 py-2 text-center">N</th>
-                        <th className="px-3 py-2 text-center">Pts</th>
-                        <th className="px-3 py-2 text-center">Maps +/−</th>
-                        <th className="px-3 py-2 text-center">Buchholz</th>
-                        <th className="px-3 py-2 text-center">Winrate adv.</th>
+                        <th className="px-3 py-2 text-left">{t.thTeam}</th>
+                        <th className="px-3 py-2 text-center">{t.thWins}</th>
+                        <th className="px-3 py-2 text-center">{t.thLosses}</th>
+                        <th className="px-3 py-2 text-center">{t.thDraws}</th>
+                        <th className="px-3 py-2 text-center">{t.thPoints}</th>
+                        <th className="px-3 py-2 text-center">{t.thMaps}</th>
+                        <th className="px-3 py-2 text-center">
+                          {t.thBuchholz}
+                        </th>
+                        <th className="px-3 py-2 text-center">
+                          {t.thOppWinrate}
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
@@ -600,20 +599,18 @@ function AdminSwissStagePage({ staff }: StaffProps) {
             {/* Rounds & matches */}
             <section className="bg-neutral-800 border border-neutral-700 rounded-xl overflow-hidden">
               <div className="px-4 py-3 border-b border-neutral-700 flex justify-between items-center">
-                <h2 className="text-sm font-semibold">
-                  Rondes Swiss & matches
-                </h2>
+                <h2 className="text-sm font-semibold">{t.roundsTitle}</h2>
                 <span className="text-xs text-neutral-400">
-                  {rounds.length} ronde
-                  {rounds.length > 1 ? 's' : ''}
+                  {format(
+                    rounds.length > 1 ? t.roundCount_other : t.roundCount_one,
+                    { count: rounds.length }
+                  )}
                 </span>
               </div>
 
               {rounds.length === 0 ? (
                 <div className="px-4 py-6 text-sm text-neutral-400">
-                  Aucune ronde n&apos;est encore générée. Utilise le bouton
-                  &quot;Générer la prochaine ronde Swiss&quot; pour créer la
-                  ronde #1.
+                  {t.emptyRounds}
                 </div>
               ) : (
                 <div className="max-h-[70vh] overflow-y-auto">
@@ -638,15 +635,18 @@ type RoundBlockProps = {
 };
 
 function SwissRoundBlock({ round }: RoundBlockProps) {
+  const t = useAdminT('adminStageSwiss');
   return (
     <div className="border-b border-neutral-700 last:border-b-0">
       <div className="px-4 py-2 bg-neutral-825 flex justify-between items-center">
         <div className="text-sm font-semibold">
-          Ronde Swiss #{round.round_number}
+          {format(t.roundTitle, { round: round.round_number })}
         </div>
         <div className="text-xs text-neutral-400">
-          {round.matches.length} match
-          {round.matches.length > 1 ? 'es' : ''}
+          {format(
+            round.matches.length > 1 ? t.matchCount_other : t.matchCount_one,
+            { count: round.matches.length }
+          )}
         </div>
       </div>
       <div className="divide-y divide-neutral-800">
@@ -663,6 +663,7 @@ type SwissMatchRowProps = {
 };
 
 function SwissMatchRow({ match }: SwissMatchRowProps) {
+  const t = useAdminT('adminStageSwiss');
   const label1 = match.team1?.name || match.team1_id || 'TBD';
   const label2 = match.team2?.name || match.team2_id || 'TBD';
 
@@ -691,7 +692,7 @@ function SwissMatchRow({ match }: SwissMatchRowProps) {
               />
             )}
             <span className="font-semibold text-neutral-50">{label1}</span>
-            <span className="text-neutral-400">vs</span>
+            <span className="text-neutral-400">{t.vs}</span>
             {match.team2?.logo_url && (
               <Image
                 src={match.team2.logo_url}
@@ -706,7 +707,8 @@ function SwissMatchRow({ match }: SwissMatchRowProps) {
           <div className="flex items-center gap-3 text-[11px] text-neutral-500">
             <span>
               {isBo && <>{isBo} • </>}
-              Score : <span className="text-neutral-200">{scoreStr}</span>
+              {t.scorePrefix}{' '}
+              <span className="text-neutral-200">{scoreStr}</span>
             </span>
             <span>|</span>
             <span>{formatDateTime(match.scheduled_at)}</span>
@@ -720,20 +722,20 @@ function SwissMatchRow({ match }: SwissMatchRowProps) {
             match.status
           )}`}
         >
-          {statusLabel(match.status)}
+          {statusLabel(match.status, t)}
         </span>
         <Link
           href={`/admin/matches/${match.id}`}
           className="px-2 py-1 rounded bg-neutral-750 hover:bg-neutral-700 text-[11px]"
         >
-          Ouvrir (admin)
+          {t.openAdmin}
         </Link>
         <Link
           href={`/match/${match.id}`}
           target="_blank"
           className="px-2 py-1 rounded bg-neutral-900 hover:bg-neutral-800 border border-neutral-700 text-[11px]"
         >
-          Public
+          {t.publicLink}
         </Link>
       </div>
     </div>
