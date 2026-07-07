@@ -115,7 +115,7 @@ async function readCardData(userId: string): Promise<CardData | null> {
 
 // Fond de marque commun (dégradé violet profond → magenta néon).
 const BRAND_BACKGROUND =
-  'linear-gradient(135deg, #0E0A1F 0%, #2A0F4A 45%, #7C1E6E 100%)';
+  'linear-gradient(135deg, #0E0A1F 0%, #2A0F4A 45%, #6d1a9c 100%)';
 
 // Carte de repli : marque seule, aucun besoin de données joueuse.
 function fallbackCard() {
@@ -140,7 +140,7 @@ function fallbackCard() {
           display: 'flex',
           marginTop: 16,
           fontSize: 30,
-          color: '#D8B4FE',
+          color: '#cd85ec',
         }}
       >
         {siteHost()}
@@ -209,7 +209,7 @@ function playerCard(data: CardData) {
             width: 140,
             height: 140,
             borderRadius: 140,
-            background: 'linear-gradient(135deg, #A855F7 0%, #EC4899 100%)',
+            background: 'linear-gradient(135deg, #b24be0 0%, #f0e63c 100%)',
             fontSize: 60,
             fontWeight: 700,
             color: '#FFFFFF',
@@ -230,7 +230,7 @@ function playerCard(data: CardData) {
               fontSize: 30,
               letterSpacing: 3,
               textTransform: 'uppercase',
-              color: '#D8B4FE',
+              color: '#cd85ec',
             }}
           >
             {SITE_NAME}
@@ -256,7 +256,7 @@ function playerCard(data: CardData) {
             fontSize: 200,
             fontWeight: 700,
             lineHeight: 1,
-            color: '#F5D0FE',
+            color: '#e7c6f7',
           }}
         >
           {String(data.rating)}
@@ -290,14 +290,14 @@ function playerCard(data: CardData) {
             'Rank',
             '#FFFFFF'
           )}
-          {statBlock(String(data.peakRating), 'Peak', '#FCD34D', 56)}
+          {statBlock(String(data.peakRating), 'Peak', '#f0e63c', 56)}
           {statBlock(`${data.wins}-${data.losses}`, 'W-L', '#6EE7B7', 56)}
         </div>
         <div
           style={{
             display: 'flex',
             fontSize: 28,
-            color: '#D8B4FE',
+            color: '#cd85ec',
           }}
         >
           {siteHost()}
