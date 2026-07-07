@@ -6,8 +6,11 @@ import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 import { logger } from '../../../utils/logger';
+type Dict = ReturnType<typeof useAdminT<'adminTwitchChannelsList'>>;
+
 type TwitchChannelRow = {
   id: string;
   channel: string;
@@ -33,8 +36,8 @@ type Props = {
   };
 };
 
-function statusLabel(isActive: boolean) {
-  return isActive ? 'Actif' : 'Inactif';
+function statusLabel(t: Dict, isActive: boolean) {
+  return isActive ? t.statusActive : t.statusInactive;
 }
 
 function statusColor(isActive: boolean) {
@@ -44,6 +47,7 @@ function statusColor(isActive: boolean) {
 }
 
 function AdminTwitchChannelsPage({ staff }: Props) {
+  const t = useAdminT('adminTwitchChannelsList');
   const { adminFetch, adminFetchJson } = useAdminFetch();
   const { addToast } = useToast();
   const { confirm, dialog } = useConfirmDialog();
@@ -75,9 +79,9 @@ function AdminTwitchChannelsPage({ staff }: Props) {
 
   const onDelete = async (id: string) => {
     const ok = await confirm({
-      title: 'Supprimer cette chaîne ?',
+      title: t.deleteConfirmTitle,
       variant: 'danger',
-      confirmLabel: 'Supprimer',
+      confirmLabel: t.delete,
     });
     if (!ok) return;
     try {
@@ -86,7 +90,7 @@ function AdminTwitchChannelsPage({ staff }: Props) {
       });
       fetchData();
     } catch (err: unknown) {
-      addToast((err as Error)?.message || 'Erreur de suppression.', 'error');
+      addToast((err as Error)?.message || t.errorDelete, 'error');
     }
   };
 
@@ -98,7 +102,7 @@ function AdminTwitchChannelsPage({ staff }: Props) {
       });
       fetchData();
     } catch (err: unknown) {
-      addToast((err as Error)?.message || 'Erreur de modification.', 'error');
+      addToast((err as Error)?.message || t.errorUpdate, 'error');
     }
   };
 
@@ -135,13 +139,13 @@ function AdminTwitchChannelsPage({ staff }: Props) {
         );
       } catch (err: unknown) {
         logger.error('Reorder error', err);
-        addToast('Erreur lors de la sauvegarde de l\u2019ordre.', 'error');
+        addToast(t.errorReorder, 'error');
         fetchData();
       } finally {
         setSaving(false);
       }
     },
-    [channels, fetchData, adminFetch, addToast]
+    [channels, fetchData, adminFetch, addToast, t]
   );
 
   const filteredChannels = channels.filter(
@@ -155,7 +159,7 @@ function AdminTwitchChannelsPage({ staff }: Props) {
     <>
       {dialog}
       <Head>
-        <title>Admin – Chaînes Twitch</title>
+        <title>{t.pageTitle}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
@@ -165,11 +169,12 @@ function AdminTwitchChannelsPage({ staff }: Props) {
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-                  Chaînes Twitch partenaires
+                  {t.heading}
                 </h1>
                 <p className="text-neutral-400 text-sm mt-1">
-                  {channels.length} chaîne{channels.length > 1 ? 's' : ''}{' '}
-                  configurée{channels.length > 1 ? 's' : ''}
+                  {format(channels.length > 1 ? t.count_other : t.count_one, {
+                    count: channels.length,
+                  })}
                 </p>
               </div>
 
@@ -190,7 +195,7 @@ function AdminTwitchChannelsPage({ staff }: Props) {
                     d="M12 4v16m8-8H4"
                   />
                 </svg>
-                Ajouter une chaîne
+                {t.addButton}
               </Link>
             </div>
           </div>
@@ -199,7 +204,7 @@ function AdminTwitchChannelsPage({ staff }: Props) {
           <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 mb-6">
             <div className="flex-1 min-w-[200px]">
               <label className="block text-sm text-neutral-400 mb-1">
-                Recherche
+                {t.searchLabel}
               </label>
               <div className="relative">
                 <svg
@@ -217,7 +222,7 @@ function AdminTwitchChannelsPage({ staff }: Props) {
                 </svg>
                 <input
                   type="text"
-                  placeholder="Nom, chaîne ou badge..."
+                  placeholder={t.searchPlaceholder}
                   className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
@@ -241,13 +246,13 @@ function AdminTwitchChannelsPage({ staff }: Props) {
                 >
                   <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z" />
                 </svg>
-                {search ? 'Aucune chaîne trouvée' : 'Aucune chaîne configurée'}
+                {search ? t.emptyFiltered : t.emptyState}
               </div>
             ) : (
               <div className="divide-y divide-neutral-700/50">
                 {saving && (
                   <div className="px-4 py-2 bg-purple-600/20 text-purple-300 text-xs text-center">
-                    Sauvegarde de l&apos;ordre…
+                    {t.savingOrder}
                   </div>
                 )}
                 {filteredChannels.map((c, idx) => {
@@ -339,7 +344,7 @@ function AdminTwitchChannelsPage({ staff }: Props) {
                               c.is_active
                             )}`}
                           >
-                            {statusLabel(c.is_active)}
+                            {statusLabel(t, c.is_active)}
                           </span>
                           {c.badge && (
                             <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-purple-600/20 text-purple-300 border border-purple-500/30">
@@ -366,7 +371,9 @@ function AdminTwitchChannelsPage({ staff }: Props) {
 
                       {/* Sort order */}
                       <div className="flex-shrink-0 text-center">
-                        <span className="text-xs text-neutral-500">Ordre</span>
+                        <span className="text-xs text-neutral-500">
+                          {t.order}
+                        </span>
                         <div className="text-lg font-bold text-neutral-300">
                           {c.sort_order}
                         </div>
@@ -382,19 +389,19 @@ function AdminTwitchChannelsPage({ staff }: Props) {
                               : 'border-emerald-500/40 text-emerald-300 hover:border-emerald-400'
                           }`}
                         >
-                          {c.is_active ? 'Désactiver' : 'Activer'}
+                          {c.is_active ? t.deactivate : t.activate}
                         </button>
                         <Link
                           href={`/admin/twitch-channels/${c.id}`}
                           className="px-3 py-1.5 rounded-lg border border-neutral-600 hover:border-neutral-500 text-sm transition-colors"
                         >
-                          Modifier
+                          {t.edit}
                         </Link>
                         <button
                           onClick={() => onDelete(c.id)}
                           className="px-3 py-1.5 rounded-lg border border-red-500/40 text-red-300 hover:border-red-400 text-sm transition-colors"
                         >
-                          Supprimer
+                          {t.delete}
                         </button>
                       </div>
                     </div>

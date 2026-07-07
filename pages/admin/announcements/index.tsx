@@ -5,6 +5,9 @@ import { withStaffPage } from '@/utils/staff';
 import DeleteConfirmModal from '@/components/admin/DeleteConfirmModal';
 import { useUrlFilters } from '@/utils/useUrlFilters';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
+
+type Dict = ReturnType<typeof useAdminT<'adminAnnouncementsList'>>;
 
 type AnnouncementRow = {
   id: string;
@@ -37,8 +40,8 @@ const A_FILTER_KEYS = ['search', 'status', 'offset'] as const;
 const LIMIT = 20;
 const SEARCH_DEBOUNCE_MS = 300;
 
-function statusLabel(isActive: boolean) {
-  return isActive ? 'Actif' : 'Inactif';
+function statusLabel(t: Dict, isActive: boolean) {
+  return isActive ? t.statusActive : t.statusInactive;
 }
 
 function statusColor(isActive: boolean) {
@@ -65,6 +68,7 @@ function formatDate(d: string | null) {
 export const getServerSideProps = withStaffPage('admin');
 
 function AdminAnnouncementsPage(_props: Props) {
+  const t = useAdminT('adminAnnouncementsList');
   const { adminFetch, adminFetchJson } = useAdminFetch();
   const { filters, setFilter, setFilters } = useUrlFilters(A_FILTER_KEYS);
 
@@ -103,11 +107,11 @@ function AdminAnnouncementsPage(_props: Props) {
       setAnnouncements(json.items || []);
       setTotal(typeof json.total === 'number' ? json.total : null);
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? 'Erreur lors du chargement');
+      setErrorMsg((err as Error)?.message ?? t.errorLoad);
     } finally {
       setLoading(false);
     }
-  }, [adminFetchJson, limit, offset, search, statusFilter]);
+  }, [adminFetchJson, limit, offset, search, statusFilter, t]);
 
   // Refetch when the server-side query params change.
   useEffect(() => {
@@ -153,12 +157,12 @@ function AdminAnnouncementsPage(_props: Props) {
       });
       if (!res.ok) {
         const json = await res.json().catch(() => null);
-        throw new Error(json?.error || 'Suppression impossible');
+        throw new Error(json?.error || t.errorDeleteFailed);
       }
       setDeleteTarget(null);
       void fetchData();
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message || 'Erreur de suppression.');
+      setErrorMsg((err as Error)?.message || t.errorDelete);
     } finally {
       setDeleting(false);
     }
@@ -169,7 +173,7 @@ function AdminAnnouncementsPage(_props: Props) {
   return (
     <>
       <Head>
-        <title>Admin – Annonces</title>
+        <title>{t.pageTitle}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
@@ -179,12 +183,14 @@ function AdminAnnouncementsPage(_props: Props) {
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-                  Gestion des annonces
+                  {t.heading}
                 </h1>
                 <p className="text-neutral-400 text-sm mt-1">
                   {total !== null
-                    ? `${totalCount} annonce${totalCount > 1 ? 's' : ''}`
-                    : 'Chargement...'}
+                    ? format(totalCount > 1 ? t.count_other : t.count_one, {
+                        count: totalCount,
+                      })
+                    : t.loading}
                 </p>
               </div>
 
@@ -205,7 +211,7 @@ function AdminAnnouncementsPage(_props: Props) {
                     d="M12 4v16m8-8H4"
                   />
                 </svg>
-                Nouvelle annonce
+                {t.newButton}
               </Link>
             </div>
           </div>
@@ -230,7 +236,7 @@ function AdminAnnouncementsPage(_props: Props) {
                 onClick={() => void fetchData()}
                 className="flex-shrink-0 px-3 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-xs font-medium transition-colors"
               >
-                Réessayer
+                {t.retry}
               </button>
             </div>
           )}
@@ -243,7 +249,7 @@ function AdminAnnouncementsPage(_props: Props) {
             >
               <div className="flex-1 min-w-[200px]">
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Recherche
+                  {t.searchLabel}
                 </label>
                 <div className="relative">
                   <svg
@@ -261,7 +267,7 @@ function AdminAnnouncementsPage(_props: Props) {
                   </svg>
                   <input
                     type="text"
-                    placeholder="Titre ou message..."
+                    placeholder={t.searchPlaceholder}
                     className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     value={searchInput}
                     onChange={(e) => handleSearchChange(e.target.value)}
@@ -271,7 +277,7 @@ function AdminAnnouncementsPage(_props: Props) {
 
               <div className="min-w-[160px]">
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Statut
+                  {t.statusLabel}
                 </label>
                 <select
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -280,9 +286,9 @@ function AdminAnnouncementsPage(_props: Props) {
                     setFilters({ status: e.target.value || null, offset: null })
                   }
                 >
-                  <option value="">Tous les statuts</option>
-                  <option value="active">Actif</option>
-                  <option value="inactive">Inactif</option>
+                  <option value="">{t.statusAll}</option>
+                  <option value="active">{t.statusActive}</option>
+                  <option value="inactive">{t.statusInactive}</option>
                 </select>
               </div>
 
@@ -303,7 +309,7 @@ function AdminAnnouncementsPage(_props: Props) {
                     d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
                   />
                 </svg>
-                Rechercher
+                {t.searchButton}
               </button>
             </form>
           </section>
@@ -329,7 +335,7 @@ function AdminAnnouncementsPage(_props: Props) {
                     d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"
                   />
                 </svg>
-                Aucune annonce trouvée
+                {t.emptyState}
               </div>
             ) : (
               <div className="divide-y divide-neutral-700/50">
@@ -368,11 +374,11 @@ function AdminAnnouncementsPage(_props: Props) {
                             a.is_active
                           )}`}
                         >
-                          {statusLabel(a.is_active)}
+                          {statusLabel(t, a.is_active)}
                         </span>
                         {a.priority !== null && a.priority > 0 && (
                           <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-600/20 text-amber-300 border border-amber-500/30">
-                            Priorité {a.priority}
+                            {format(t.priority, { priority: a.priority })}
                           </span>
                         )}
                       </div>
@@ -382,12 +388,16 @@ function AdminAnnouncementsPage(_props: Props) {
                       <div className="flex items-center gap-3 text-sm text-neutral-400">
                         {a.cta_label && (
                           <span className="font-mono text-xs bg-neutral-800 px-2 py-0.5 rounded">
-                            CTA: {a.cta_label}
+                            {format(t.ctaLabel, { label: a.cta_label })}
                           </span>
                         )}
-                        <span>Début: {formatDate(a.starts_at)}</span>
+                        <span>
+                          {format(t.startAt, { date: formatDate(a.starts_at) })}
+                        </span>
                         <span>•</span>
-                        <span>Fin: {formatDate(a.ends_at)}</span>
+                        <span>
+                          {format(t.endAt, { date: formatDate(a.ends_at) })}
+                        </span>
                       </div>
                     </div>
 
@@ -397,13 +407,13 @@ function AdminAnnouncementsPage(_props: Props) {
                         href={`/admin/announcements/${a.id}`}
                         className="px-3 py-1.5 rounded-lg border border-neutral-600 hover:border-neutral-500 text-sm transition-colors"
                       >
-                        Modifier
+                        {t.edit}
                       </Link>
                       <button
                         onClick={() => setDeleteTarget(a)}
                         className="px-3 py-1.5 rounded-lg border border-red-500/40 text-red-300 hover:border-red-400 text-sm transition-colors"
                       >
-                        Supprimer
+                        {t.delete}
                       </button>
                     </div>
                   </div>
@@ -439,12 +449,12 @@ function AdminAnnouncementsPage(_props: Props) {
                     d="M15 19l-7-7 7-7"
                   />
                 </svg>
-                Précédent
+                {t.previous}
               </button>
 
               <span className="text-neutral-400 text-sm">
                 {offset + 1} – {offset + announcements.length}
-                {total !== null ? ` sur ${total}` : ''}
+                {total !== null ? format(t.paginationOf, { total }) : ''}
               </span>
 
               <button
@@ -453,7 +463,7 @@ function AdminAnnouncementsPage(_props: Props) {
                 onClick={() => setFilter('offset', String(offset + limit))}
                 className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
-                Suivant
+                {t.next}
                 <svg
                   className="w-4 h-4"
                   fill="none"
@@ -476,14 +486,14 @@ function AdminAnnouncementsPage(_props: Props) {
       {/* Delete Modal */}
       {deleteTarget && (
         <DeleteConfirmModal
-          title="Supprimer cette annonce ?"
+          title={t.deleteModalTitle}
           deleting={deleting}
           errorMsg={errorMsg}
           onCancel={() => setDeleteTarget(null)}
           onConfirm={() => handleDelete(deleteTarget)}
         >
           <p className="text-sm text-neutral-300 bg-neutral-900/50 rounded-xl p-3">
-            Supprimer l&apos;annonce{' '}
+            {t.deleteModalPrefix}{' '}
             <span className="font-semibold text-white">
               {deleteTarget.title}
             </span>{' '}

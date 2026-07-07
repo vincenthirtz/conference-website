@@ -6,8 +6,11 @@ import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 import { logger } from '../../../utils/logger';
+type Dict = ReturnType<typeof useAdminT<'adminCastMembersList'>>;
+
 type CastMemberRow = {
   id: string;
   name: string;
@@ -38,8 +41,8 @@ type Props = {
   };
 };
 
-function statusLabel(isActive: boolean) {
-  return isActive ? 'Active' : 'Inactive';
+function statusLabel(tx: Dict, isActive: boolean) {
+  return isActive ? tx.statusActive : tx.statusInactive;
 }
 
 function statusColor(isActive: boolean) {
@@ -49,6 +52,7 @@ function statusColor(isActive: boolean) {
 }
 
 function AdminCastMembersPage({ staff }: Props) {
+  const tx = useAdminT('adminCastMembersList');
   const [loading, setLoading] = useState(false);
   const [members, setMembers] = useState<CastMemberRow[]>([]);
   const [total, setTotal] = useState<number | null>(null);
@@ -130,9 +134,9 @@ function AdminCastMembersPage({ staff }: Props) {
 
   const onDelete = async (id: string) => {
     const ok = await confirm({
-      title: 'Supprimer cette casteuse ?',
+      title: tx.deleteConfirmTitle,
       variant: 'danger',
-      confirmLabel: 'Supprimer',
+      confirmLabel: tx.delete,
     });
     if (!ok) return;
     try {
@@ -141,11 +145,11 @@ function AdminCastMembersPage({ staff }: Props) {
       });
       if (!res.ok) {
         const json = await res.json().catch(() => null);
-        throw new Error(json?.error || 'Suppression impossible');
+        throw new Error(json?.error || tx.errorDeleteFailed);
       }
       fetchData();
     } catch (err: unknown) {
-      addToast((err as Error)?.message || 'Erreur de suppression.', 'error');
+      addToast((err as Error)?.message || tx.errorDelete, 'error');
     }
   };
 
@@ -157,11 +161,11 @@ function AdminCastMembersPage({ staff }: Props) {
       });
       if (!res.ok) {
         const json = await res.json().catch(() => null);
-        throw new Error(json?.error || 'Modification impossible');
+        throw new Error(json?.error || tx.errorUpdateFailed);
       }
       fetchData();
     } catch (err: unknown) {
-      addToast((err as Error)?.message || 'Erreur de modification.', 'error');
+      addToast((err as Error)?.message || tx.errorUpdate, 'error');
     }
   };
 
@@ -203,25 +207,28 @@ function AdminCastMembersPage({ staff }: Props) {
         const failed = results.filter((res) => !res.ok);
         if (failed.length > 0) {
           throw new Error(
-            `Échec de ${failed.length} mise${failed.length > 1 ? 's' : ''} à jour sur ${results.length}`
+            format(
+              failed.length > 1 ? tx.reorderFailed_other : tx.reorderFailed_one,
+              { failed: failed.length, total: results.length }
+            )
           );
         }
       } catch (err: unknown) {
         logger.error('Reorder error', err);
-        addToast('Erreur lors de la sauvegarde de l\u2019ordre.', 'error');
+        addToast(tx.errorReorder, 'error');
         fetchData();
       } finally {
         setSaving(false);
       }
     },
-    [members, fetchData, adminFetch, addToast]
+    [members, fetchData, adminFetch, addToast, tx]
   );
 
   return (
     <>
       {dialog}
       <Head>
-        <title>Admin – Casteuses</title>
+        <title>{tx.pageTitle}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
@@ -231,14 +238,14 @@ function AdminCastMembersPage({ staff }: Props) {
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-                  Pôle Production &amp; Cast
+                  {tx.heading}
                 </h1>
                 <p className="text-neutral-400 text-sm mt-1">
                   {total !== null
-                    ? `${total} casteuse${total > 1 ? 's' : ''} configurée${
-                        total > 1 ? 's' : ''
-                      }`
-                    : 'Chargement…'}
+                    ? format(total > 1 ? tx.count_other : tx.count_one, {
+                        count: total,
+                      })
+                    : tx.loading}
                 </p>
               </div>
 
@@ -259,7 +266,7 @@ function AdminCastMembersPage({ staff }: Props) {
                     d="M12 4v16m8-8H4"
                   />
                 </svg>
-                Ajouter une casteuse
+                {tx.addButton}
               </Link>
             </div>
           </div>
@@ -269,7 +276,7 @@ function AdminCastMembersPage({ staff }: Props) {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
               <div className="sm:col-span-2">
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Recherche
+                  {tx.searchLabel}
                 </label>
                 <div className="relative">
                   <svg
@@ -287,7 +294,7 @@ function AdminCastMembersPage({ staff }: Props) {
                   </svg>
                   <input
                     type="text"
-                    placeholder="Nom, titre ou ville..."
+                    placeholder={tx.searchPlaceholder}
                     className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
@@ -297,7 +304,7 @@ function AdminCastMembersPage({ staff }: Props) {
 
               <div>
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Statut
+                  {tx.statusLabel}
                 </label>
                 <select
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
@@ -306,9 +313,9 @@ function AdminCastMembersPage({ staff }: Props) {
                     setStatus(e.target.value as 'all' | 'active' | 'inactive')
                   }
                 >
-                  <option value="all">Toutes</option>
-                  <option value="active">Actives</option>
-                  <option value="inactive">Inactives</option>
+                  <option value="all">{tx.statusAll}</option>
+                  <option value="active">{tx.statusActivePlural}</option>
+                  <option value="inactive">{tx.statusInactivePlural}</option>
                 </select>
               </div>
             </div>
@@ -336,14 +343,14 @@ function AdminCastMembersPage({ staff }: Props) {
                   />
                 </svg>
                 {debouncedSearch.trim() || status !== 'all'
-                  ? 'Aucune casteuse trouvée'
-                  : 'Aucune casteuse configurée'}
+                  ? tx.emptyFiltered
+                  : tx.emptyState}
               </div>
             ) : (
               <div className="divide-y divide-neutral-700/50">
                 {saving && (
                   <div className="px-4 py-2 bg-purple-600/20 text-purple-300 text-xs text-center">
-                    Sauvegarde de l&apos;ordre…
+                    {tx.savingOrder}
                   </div>
                 )}
                 {members.map((m, idx) => {
@@ -441,11 +448,11 @@ function AdminCastMembersPage({ staff }: Props) {
                               m.is_active
                             )}`}
                           >
-                            {statusLabel(m.is_active)}
+                            {statusLabel(tx, m.is_active)}
                           </span>
                           {m.is_promo && (
                             <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-600/20 text-amber-300 border border-amber-500/30">
-                              Promo
+                              {tx.promo}
                             </span>
                           )}
                         </div>
@@ -494,7 +501,9 @@ function AdminCastMembersPage({ staff }: Props) {
 
                       {/* Sort order */}
                       <div className="flex-shrink-0 text-center">
-                        <span className="text-xs text-neutral-500">Ordre</span>
+                        <span className="text-xs text-neutral-500">
+                          {tx.order}
+                        </span>
                         <div className="text-lg font-bold text-neutral-300">
                           {m.sort_order}
                         </div>
@@ -510,19 +519,19 @@ function AdminCastMembersPage({ staff }: Props) {
                               : 'border-emerald-500/40 text-emerald-300 hover:border-emerald-400'
                           }`}
                         >
-                          {m.is_active ? 'Désactiver' : 'Activer'}
+                          {m.is_active ? tx.deactivate : tx.activate}
                         </button>
                         <Link
                           href={`/admin/cast-members/${m.id}`}
                           className="px-3 py-1.5 rounded-lg border border-neutral-600 hover:border-neutral-500 text-sm transition-colors"
                         >
-                          Modifier
+                          {tx.edit}
                         </Link>
                         <button
                           onClick={() => onDelete(m.id)}
                           className="px-3 py-1.5 rounded-lg border border-red-500/40 text-red-300 hover:border-red-400 text-sm transition-colors"
                         >
-                          Supprimer
+                          {tx.delete}
                         </button>
                       </div>
                     </div>
@@ -554,12 +563,12 @@ function AdminCastMembersPage({ staff }: Props) {
                     d="M15 19l-7-7 7-7"
                   />
                 </svg>
-                Précédent
+                {tx.previous}
               </button>
 
               <span className="text-neutral-400 text-sm">
                 {offset + 1} – {offset + members.length}
-                {total !== null ? ` sur ${total}` : ''}
+                {total !== null ? format(tx.paginationOf, { total }) : ''}
               </span>
 
               <button
@@ -570,7 +579,7 @@ function AdminCastMembersPage({ staff }: Props) {
                 onClick={() => setOffset(offset + PAGE_SIZE)}
                 className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
-                Suivant
+                {tx.next}
                 <svg
                   className="w-4 h-4"
                   fill="none"

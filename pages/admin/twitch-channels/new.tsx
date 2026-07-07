@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useAdminT } from '@/lib/i18n/useAdminT';
 
 type Props = {
   staff: {
@@ -13,6 +14,7 @@ type Props = {
 };
 
 function AdminTwitchChannelNewPage({ staff }: Props) {
+  const t = useAdminT('adminTwitchChannelsNew');
   const router = useRouter();
   const { adminFetchJson } = useAdminFetch();
 
@@ -38,7 +40,7 @@ function AdminTwitchChannelNewPage({ staff }: Props) {
     setError(null);
 
     if (!form.channel.trim() || !form.label.trim()) {
-      setError('Le nom de la chaîne et le label sont obligatoires.');
+      setError(t.errorRequired);
       return;
     }
 
@@ -61,7 +63,7 @@ function AdminTwitchChannelNewPage({ staff }: Props) {
 
       router.push('/admin/twitch-channels');
     } catch (err: unknown) {
-      setError((err as Error)?.message || 'Erreur inattendue.');
+      setError((err as Error)?.message || t.errorGeneric);
     } finally {
       setSaving(false);
     }
@@ -70,7 +72,7 @@ function AdminTwitchChannelNewPage({ staff }: Props) {
   return (
     <>
       <Head>
-        <title>Admin – Nouvelle chaîne Twitch</title>
+        <title>{t.pageTitle}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
@@ -95,16 +97,13 @@ function AdminTwitchChannelNewPage({ staff }: Props) {
                   d="M15 19l-7-7 7-7"
                 />
               </svg>
-              Retour à la liste
+              {t.back}
             </button>
 
             <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-              Ajouter une chaîne Twitch
+              {t.heading}
             </h1>
-            <p className="text-neutral-400 text-sm mt-1">
-              Configurez une nouvelle chaîne partenaire pour la page
-              d&apos;accueil
-            </p>
+            <p className="text-neutral-400 text-sm mt-1">{t.subtitle}</p>
           </div>
 
           {/* Form */}
@@ -130,8 +129,7 @@ function AdminTwitchChannelNewPage({ staff }: Props) {
               <div className="grid gap-6 md:grid-cols-2">
                 <div>
                   <label className="block text-sm text-neutral-300 mb-1">
-                    Nom de la chaîne Twitch{' '}
-                    <span className="text-red-400">*</span>
+                    {t.channelLabel} <span className="text-red-400">*</span>
                   </label>
                   <input
                     type="text"
@@ -142,14 +140,13 @@ function AdminTwitchChannelNewPage({ staff }: Props) {
                     required
                   />
                   <p className="text-xs text-neutral-500 mt-1">
-                    L&apos;identifiant dans l&apos;URL twitch.tv/
+                    {t.channelHint}
                   </p>
                 </div>
 
                 <div>
                   <label className="block text-sm text-neutral-300 mb-1">
-                    Label d&apos;affichage{' '}
-                    <span className="text-red-400">*</span>
+                    {t.labelLabel} <span className="text-red-400">*</span>
                   </label>
                   <input
                     type="text"
@@ -165,26 +162,26 @@ function AdminTwitchChannelNewPage({ staff }: Props) {
               <div className="grid gap-6 md:grid-cols-2">
                 <div>
                   <label className="block text-sm text-neutral-300 mb-1">
-                    Badge
+                    {t.badgeLabel}
                   </label>
                   <input
                     type="text"
                     value={form.badge}
                     onChange={(e) => updateField('badge', e.target.value)}
-                    placeholder="ex: Cast, Player, Coach..."
+                    placeholder={t.badgePlaceholder}
                     className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm text-neutral-300 mb-1">
-                    Ordre d&apos;affichage
+                    {t.sortOrderLabel}
                   </label>
                   <input
                     type="number"
                     value={form.sortOrder}
                     onChange={(e) => updateField('sortOrder', e.target.value)}
-                    placeholder="Auto (dernier)"
+                    placeholder={t.sortOrderPlaceholder}
                     className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
                     min="0"
                   />
@@ -193,7 +190,7 @@ function AdminTwitchChannelNewPage({ staff }: Props) {
 
               <div>
                 <label className="block text-sm text-neutral-300 mb-1">
-                  URL de l&apos;avatar
+                  {t.avatarLabel}
                 </label>
                 <input
                   type="url"
@@ -202,19 +199,17 @@ function AdminTwitchChannelNewPage({ staff }: Props) {
                   placeholder="https://static-cdn.jtvnw.net/..."
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm font-mono"
                 />
-                <p className="text-xs text-neutral-500 mt-1">
-                  URL de l&apos;image de profil Twitch (150x150 recommandé)
-                </p>
+                <p className="text-xs text-neutral-500 mt-1">{t.avatarHint}</p>
               </div>
 
               <div>
                 <label className="block text-sm text-neutral-300 mb-1">
-                  Description
+                  {t.descriptionLabel}
                 </label>
                 <textarea
                   value={form.description}
                   onChange={(e) => updateField('description', e.target.value)}
-                  placeholder="Décrivez la chaîne en quelques mots..."
+                  placeholder={t.descriptionPlaceholder}
                   rows={3}
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm resize-y"
                 />
@@ -231,7 +226,7 @@ function AdminTwitchChannelNewPage({ staff }: Props) {
                   <div className="w-11 h-6 bg-neutral-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-purple-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
                 </label>
                 <span className="text-sm text-neutral-300">
-                  Chaîne active (visible sur la page d&apos;accueil)
+                  {t.activeLabel}
                 </span>
               </div>
 
@@ -241,7 +236,7 @@ function AdminTwitchChannelNewPage({ staff }: Props) {
                   onClick={() => router.push('/admin/twitch-channels')}
                   className="px-5 py-2.5 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
                 >
-                  Annuler
+                  {t.cancel}
                 </button>
                 <button
                   type="submit"
@@ -251,7 +246,7 @@ function AdminTwitchChannelNewPage({ staff }: Props) {
                   {saving ? (
                     <>
                       <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Création...
+                      {t.creating}
                     </>
                   ) : (
                     <>
@@ -268,7 +263,7 @@ function AdminTwitchChannelNewPage({ staff }: Props) {
                           d="M12 4v16m8-8H4"
                         />
                       </svg>
-                      Créer la chaîne
+                      {t.submit}
                     </>
                   )}
                 </button>

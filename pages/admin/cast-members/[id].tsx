@@ -6,6 +6,7 @@ import { withStaffPage } from '@/utils/staff';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
 import CastMemberStaffPicker from '@/components/admin/CastMemberStaffPicker';
+import { useAdminT } from '@/lib/i18n/useAdminT';
 
 type Props = {
   staff: {
@@ -16,6 +17,7 @@ type Props = {
 };
 
 function AdminCastMemberEditPage({ staff }: Props) {
+  const t = useAdminT('adminCastMemberEdit');
   const router = useRouter();
   const { id } = router.query;
   const { addToast } = useToast();
@@ -59,11 +61,11 @@ function AdminCastMemberEditPage({ staff }: Props) {
         authUserId: data.auth_user_id ?? null,
       });
     } catch (err: unknown) {
-      setError((err as Error)?.message || 'Erreur de chargement.');
+      setError((err as Error)?.message || t.errorLoad);
     } finally {
       setLoading(false);
     }
-  }, [id, adminFetchJson]);
+  }, [id, adminFetchJson, t]);
 
   useEffect(() => {
     fetchMember();
@@ -81,7 +83,7 @@ function AdminCastMemberEditPage({ staff }: Props) {
     setError(null);
 
     if (!form.name.trim()) {
-      setError('Le nom est obligatoire.');
+      setError(t.errorNameRequired);
       return;
     }
 
@@ -105,9 +107,9 @@ function AdminCastMemberEditPage({ staff }: Props) {
         body: JSON.stringify(payload),
       });
 
-      addToast('Casteuse mise à jour avec succès.', 'success');
+      addToast(t.updateSuccess, 'success');
     } catch (err: unknown) {
-      setError((err as Error)?.message || 'Erreur inattendue.');
+      setError((err as Error)?.message || t.errorGeneric);
     } finally {
       setSaving(false);
     }
@@ -116,7 +118,7 @@ function AdminCastMemberEditPage({ staff }: Props) {
   return (
     <>
       <Head>
-        <title>Admin – Modifier casteuse</title>
+        <title>{t.pageTitle}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
@@ -141,14 +143,14 @@ function AdminCastMemberEditPage({ staff }: Props) {
                   d="M15 19l-7-7 7-7"
                 />
               </svg>
-              Retour à la liste
+              {t.back}
             </button>
 
             <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-              Modifier la casteuse
+              {t.heading}
             </h1>
             <p className="text-neutral-400 text-sm mt-1">
-              {form.name || 'Chargement...'}
+              {form.name || t.loading}
             </p>
           </div>
 
@@ -189,10 +191,10 @@ function AdminCastMemberEditPage({ staff }: Props) {
                       />
                       <div>
                         <div className="font-semibold text-white">
-                          {form.name || 'Nom'}
+                          {form.name || t.previewNameFallback}
                         </div>
                         <div className="text-sm text-neutral-400">
-                          {form.title || 'Titre'}
+                          {form.title || t.previewTitleFallback}
                         </div>
                         {form.city && (
                           <div className="text-sm text-neutral-500">
@@ -206,7 +208,7 @@ function AdminCastMemberEditPage({ staff }: Props) {
                   <div className="grid gap-6 md:grid-cols-2">
                     <div>
                       <label className="block text-sm text-neutral-300 mb-1">
-                        Nom <span className="text-red-400">*</span>
+                        {t.nameLabel} <span className="text-red-400">*</span>
                       </label>
                       <input
                         type="text"
@@ -220,7 +222,7 @@ function AdminCastMemberEditPage({ staff }: Props) {
 
                     <div>
                       <label className="block text-sm text-neutral-300 mb-1">
-                        Titre / Rôle
+                        {t.titleLabel}
                       </label>
                       <input
                         type="text"
@@ -235,7 +237,7 @@ function AdminCastMemberEditPage({ staff }: Props) {
                   <div className="grid gap-6 md:grid-cols-2">
                     <div>
                       <label className="block text-sm text-neutral-300 mb-1">
-                        Ville / Pays
+                        {t.cityLabel}
                       </label>
                       <input
                         type="text"
@@ -248,7 +250,7 @@ function AdminCastMemberEditPage({ staff }: Props) {
 
                     <div>
                       <label className="block text-sm text-neutral-300 mb-1">
-                        Ordre d&apos;affichage
+                        {t.sortOrderLabel}
                       </label>
                       <input
                         type="number"
@@ -265,7 +267,7 @@ function AdminCastMemberEditPage({ staff }: Props) {
 
                   <div>
                     <label className="block text-sm text-neutral-300 mb-1">
-                      URL de l&apos;image
+                      {t.imageLabel}
                     </label>
                     <input
                       type="text"
@@ -278,7 +280,7 @@ function AdminCastMemberEditPage({ staff }: Props) {
 
                   <div>
                     <label className="block text-sm text-neutral-300 mb-1">
-                      Lien Twitch ou autre
+                      {t.twitchLabel}
                     </label>
                     <input
                       type="url"
@@ -291,14 +293,14 @@ function AdminCastMemberEditPage({ staff }: Props) {
 
                   <div>
                     <label className="block text-sm text-neutral-300 mb-1">
-                      Description
+                      {t.descriptionLabel}
                     </label>
                     <textarea
                       value={form.description}
                       onChange={(e) =>
                         updateField('description', e.target.value)
                       }
-                      placeholder="Bio courte (optionnel)..."
+                      placeholder={t.descriptionPlaceholder}
                       rows={3}
                       className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm resize-y"
                     />
@@ -324,7 +326,7 @@ function AdminCastMemberEditPage({ staff }: Props) {
                         <div className="w-11 h-6 bg-neutral-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-purple-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
                       </label>
                       <span className="text-sm text-neutral-300">
-                        Active (visible sur la page association)
+                        {t.activeLabel}
                       </span>
                     </div>
 
@@ -341,8 +343,7 @@ function AdminCastMemberEditPage({ staff }: Props) {
                         <div className="w-11 h-6 bg-neutral-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-purple-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-600"></div>
                       </label>
                       <span className="text-sm text-neutral-300">
-                        Carte promotionnelle (ex: &quot;Envie de rejoindre le
-                        cast ?&quot;)
+                        {t.promoLabel}
                       </span>
                     </div>
                   </div>
@@ -353,7 +354,7 @@ function AdminCastMemberEditPage({ staff }: Props) {
                       onClick={() => router.push('/admin/cast-members')}
                       className={`px-5 py-2.5 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors${saving ? ' pointer-events-none opacity-50' : ''}`}
                     >
-                      Annuler
+                      {t.cancel}
                     </button>
                     <button
                       type="submit"
@@ -363,7 +364,7 @@ function AdminCastMemberEditPage({ staff }: Props) {
                       {saving ? (
                         <>
                           <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                          Enregistrement...
+                          {t.saving}
                         </>
                       ) : (
                         <>
@@ -380,7 +381,7 @@ function AdminCastMemberEditPage({ staff }: Props) {
                               d="M5 13l4 4L19 7"
                             />
                           </svg>
-                          Enregistrer
+                          {t.submit}
                         </>
                       )}
                     </button>

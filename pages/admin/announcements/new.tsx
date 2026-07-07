@@ -6,6 +6,7 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAutoSave } from '@/utils/useAutoSave';
 import DraftBanner from '@/components/admin/DraftBanner';
 import AutoSaveIndicator from '@/components/admin/AutoSaveIndicator';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 type Props = {
   staff: {
@@ -29,6 +30,7 @@ type FormState = {
 export const getServerSideProps = withStaffPage('admin');
 
 function AdminAnnouncementCreatePage({ staff }: Props) {
+  const t = useAdminT('adminAnnouncementsNew');
   const router = useRouter();
   const { adminFetch } = useAdminFetch();
 
@@ -67,12 +69,12 @@ function AdminAnnouncementCreatePage({ staff }: Props) {
     setErrorMsg(null);
 
     if (!form.title.trim()) {
-      setErrorMsg("Le titre de l'annonce est obligatoire.");
+      setErrorMsg(t.errorTitleRequired);
       return;
     }
 
     if (!form.message.trim()) {
-      setErrorMsg("Le message de l'annonce est obligatoire.");
+      setErrorMsg(t.errorMessageRequired);
       return;
     }
 
@@ -97,18 +99,13 @@ function AdminAnnouncementCreatePage({ staff }: Props) {
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(
-          json.error || "Erreur lors de la création de l'annonce"
-        );
+        throw new Error(json.error || t.errorCreate);
       }
 
       clearDraft();
       router.push('/admin/announcements');
     } catch (err: unknown) {
-      setErrorMsg(
-        (err as Error)?.message ??
-          "Erreur inconnue lors de la création de l'annonce"
-      );
+      setErrorMsg((err as Error)?.message ?? t.errorCreateUnknown);
       setSubmitting(false);
     }
   }
@@ -116,7 +113,7 @@ function AdminAnnouncementCreatePage({ staff }: Props) {
   return (
     <>
       <Head>
-        <title>Admin – Nouvelle annonce</title>
+        <title>{t.pageTitle}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
@@ -141,18 +138,15 @@ function AdminAnnouncementCreatePage({ staff }: Props) {
                   d="M15 19l-7-7 7-7"
                 />
               </svg>
-              Retour a la liste des annonces
+              {t.back}
             </button>
 
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-                  Nouvelle annonce
+                  {t.heading}
                 </h1>
-                <p className="text-neutral-400 text-sm mt-1">
-                  Creez un bandeau publicitaire ou une annonce pour la page
-                  d&apos;accueil.
-                </p>
+                <p className="text-neutral-400 text-sm mt-1">{t.subtitle}</p>
               </div>
             </div>
           </div>
@@ -194,21 +188,19 @@ function AdminAnnouncementCreatePage({ staff }: Props) {
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Informations generales */}
                 <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 space-y-4">
-                  <h2 className="text-lg font-semibold">
-                    Informations generales
-                  </h2>
+                  <h2 className="text-lg font-semibold">{t.sectionGeneral}</h2>
 
                   <div className="grid gap-4 md:grid-cols-2">
                     <div>
                       <label className="block text-sm text-neutral-300 mb-1">
-                        Titre <span className="text-red-400">*</span>
+                        {t.titleLabel} <span className="text-red-400">*</span>
                       </label>
                       <input
                         type="text"
                         className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                         value={form.title}
                         onChange={(e) => updateField('title', e.target.value)}
-                        placeholder="Offre speciale partenaire"
+                        placeholder={t.titlePlaceholder}
                       />
                     </div>
 
@@ -222,35 +214,33 @@ function AdminAnnouncementCreatePage({ staff }: Props) {
                             updateField('isActive', e.target.checked)
                           }
                         />
-                        <span>Activer l&apos;annonce</span>
+                        <span>{t.activate}</span>
                       </label>
                     </div>
                   </div>
 
                   <div>
                     <label className="block text-sm text-neutral-300 mb-1">
-                      Message <span className="text-red-400">*</span>
+                      {t.messageLabel} <span className="text-red-400">*</span>
                     </label>
                     <textarea
                       rows={3}
                       className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm resize-y"
                       value={form.message}
                       onChange={(e) => updateField('message', e.target.value)}
-                      placeholder="Decouvrez notre partenaire avec -20% sur votre premiere commande..."
+                      placeholder={t.messagePlaceholder}
                     />
                   </div>
                 </section>
 
                 {/* Call to Action */}
                 <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 space-y-4">
-                  <h2 className="text-lg font-semibold">
-                    Call to Action (optionnel)
-                  </h2>
+                  <h2 className="text-lg font-semibold">{t.sectionCta}</h2>
 
                   <div className="grid gap-4 md:grid-cols-2">
                     <div>
                       <label className="block text-sm text-neutral-300 mb-1">
-                        Label du bouton
+                        {t.ctaLabelLabel}
                       </label>
                       <input
                         type="text"
@@ -259,13 +249,13 @@ function AdminAnnouncementCreatePage({ staff }: Props) {
                         onChange={(e) =>
                           updateField('ctaLabel', e.target.value)
                         }
-                        placeholder="Decouvrir, Voir l'offre..."
+                        placeholder={t.ctaLabelPlaceholder}
                       />
                     </div>
 
                     <div>
                       <label className="block text-sm text-neutral-300 mb-1">
-                        URL du bouton
+                        {t.ctaUrlLabel}
                       </label>
                       <input
                         type="text"
@@ -280,12 +270,12 @@ function AdminAnnouncementCreatePage({ staff }: Props) {
 
                 {/* Planification */}
                 <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 space-y-4">
-                  <h2 className="text-lg font-semibold">Planification</h2>
+                  <h2 className="text-lg font-semibold">{t.sectionSchedule}</h2>
 
                   <div className="grid gap-4 md:grid-cols-3">
                     <div>
                       <label className="block text-sm text-neutral-300 mb-1">
-                        Date de debut
+                        {t.startDateLabel}
                       </label>
                       <input
                         type="datetime-local"
@@ -296,13 +286,13 @@ function AdminAnnouncementCreatePage({ staff }: Props) {
                         }
                       />
                       <p className="text-xs text-neutral-500 mt-1">
-                        Laissez vide pour afficher immediatement.
+                        {t.startDateHint}
                       </p>
                     </div>
 
                     <div>
                       <label className="block text-sm text-neutral-300 mb-1">
-                        Date de fin
+                        {t.endDateLabel}
                       </label>
                       <input
                         type="datetime-local"
@@ -311,13 +301,13 @@ function AdminAnnouncementCreatePage({ staff }: Props) {
                         onChange={(e) => updateField('endsAt', e.target.value)}
                       />
                       <p className="text-xs text-neutral-500 mt-1">
-                        Laissez vide pour une duree indefinie.
+                        {t.endDateHint}
                       </p>
                     </div>
 
                     <div>
                       <label className="block text-sm text-neutral-300 mb-1">
-                        Priorite
+                        {t.priorityLabel}
                       </label>
                       <input
                         type="number"
@@ -330,8 +320,7 @@ function AdminAnnouncementCreatePage({ staff }: Props) {
                         placeholder="0"
                       />
                       <p className="text-xs text-neutral-500 mt-1">
-                        Plus le chiffre est eleve, plus l&apos;annonce est
-                        prioritaire.
+                        {t.priorityHint}
                       </p>
                     </div>
                   </div>
@@ -347,7 +336,7 @@ function AdminAnnouncementCreatePage({ staff }: Props) {
                     {submitting ? (
                       <>
                         <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        Creation en cours...
+                        {t.creating}
                       </>
                     ) : (
                       <>
@@ -364,7 +353,7 @@ function AdminAnnouncementCreatePage({ staff }: Props) {
                             d="M12 4v16m8-8H4"
                           />
                         </svg>
-                        Creer l&apos;annonce
+                        {t.submit}
                       </>
                     )}
                   </button>
@@ -375,7 +364,7 @@ function AdminAnnouncementCreatePage({ staff }: Props) {
                     disabled={submitting}
                     className="px-4 py-2.5 rounded-xl bg-neutral-700 hover:bg-neutral-600 border border-neutral-600 text-sm font-medium transition-colors disabled:opacity-50"
                   >
-                    Annuler
+                    {t.cancel}
                   </button>
                 </div>
               </form>
@@ -384,7 +373,7 @@ function AdminAnnouncementCreatePage({ staff }: Props) {
             {/* Sidebar */}
             <aside className="space-y-6">
               <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 space-y-4">
-                <h2 className="text-lg font-semibold">Apercu</h2>
+                <h2 className="text-lg font-semibold">{t.sectionPreview}</h2>
 
                 <div className="space-y-3">
                   <div className="flex items-center gap-3">
@@ -405,7 +394,7 @@ function AdminAnnouncementCreatePage({ staff }: Props) {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-white truncate">
-                        {form.title || "Titre de l'annonce"}
+                        {form.title || t.previewTitleFallback}
                       </p>
                     </div>
                   </div>
@@ -418,11 +407,11 @@ function AdminAnnouncementCreatePage({ staff }: Props) {
                           : 'bg-neutral-600 text-neutral-300'
                       }`}
                     >
-                      {form.isActive ? 'Actif' : 'Inactif'}
+                      {form.isActive ? t.statusActive : t.statusInactive}
                     </span>
                     {Number(form.priority) > 0 && (
                       <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-600/20 text-amber-300 border border-amber-500/30">
-                        Priorite {form.priority}
+                        {format(t.priority, { priority: form.priority })}
                       </span>
                     )}
                   </div>
@@ -444,28 +433,19 @@ function AdminAnnouncementCreatePage({ staff }: Props) {
               </section>
 
               <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 space-y-3">
-                <h2 className="text-lg font-semibold">Informations</h2>
+                <h2 className="text-lg font-semibold">{t.sectionInfo}</h2>
                 <div className="text-xs text-neutral-400 space-y-2">
                   <div className="flex items-start gap-2">
                     <span className="text-neutral-500">•</span>
-                    <p>
-                      L&apos;annonce sera affichee en bandeau sur la page
-                      d&apos;accueil.
-                    </p>
+                    <p>{t.infoBanner}</p>
                   </div>
                   <div className="flex items-start gap-2">
                     <span className="text-neutral-500">•</span>
-                    <p>
-                      Les dates permettent de programmer l&apos;affichage
-                      automatiquement.
-                    </p>
+                    <p>{t.infoSchedule}</p>
                   </div>
                   <div className="flex items-start gap-2">
                     <span className="text-neutral-500">•</span>
-                    <p>
-                      Une priorite elevee affiche l&apos;annonce en premier si
-                      plusieurs sont actives.
-                    </p>
+                    <p>{t.infoPriority}</p>
                   </div>
                 </div>
               </section>

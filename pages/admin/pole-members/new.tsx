@@ -3,11 +3,8 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
-import {
-  POLE_KEYS,
-  POLE_LABELS,
-  type PoleKey,
-} from '@/utils/associationPoles';
+import { POLE_KEYS, POLE_LABELS, type PoleKey } from '@/utils/associationPoles';
+import { useAdminT } from '@/lib/i18n/useAdminT';
 
 type Props = {
   staff: {
@@ -18,6 +15,7 @@ type Props = {
 };
 
 function AdminPoleMemberNewPage({ staff }: Props) {
+  const t = useAdminT('adminPoleMembersNew');
   const router = useRouter();
   const { adminFetchJson } = useAdminFetch();
 
@@ -42,10 +40,7 @@ function AdminPoleMemberNewPage({ staff }: Props) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const updateField = (
-    key: keyof typeof form,
-    value: string | boolean
-  ) => {
+  const updateField = (key: keyof typeof form, value: string | boolean) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
@@ -54,7 +49,7 @@ function AdminPoleMemberNewPage({ staff }: Props) {
     setError(null);
 
     if (!form.name.trim()) {
-      setError('Le nom est obligatoire.');
+      setError(t.errorNameRequired);
       return;
     }
 
@@ -78,7 +73,7 @@ function AdminPoleMemberNewPage({ staff }: Props) {
 
       router.push('/admin/pole-members');
     } catch (err: unknown) {
-      setError((err as Error)?.message || 'Erreur inattendue.');
+      setError((err as Error)?.message || t.errorGeneric);
     } finally {
       setSaving(false);
     }
@@ -87,7 +82,7 @@ function AdminPoleMemberNewPage({ staff }: Props) {
   return (
     <>
       <Head>
-        <title>Admin – Nouveau membre de pôle</title>
+        <title>{t.pageTitle}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
@@ -111,15 +106,13 @@ function AdminPoleMemberNewPage({ staff }: Props) {
                   d="M15 19l-7-7 7-7"
                 />
               </svg>
-              Retour à la liste
+              {t.back}
             </button>
 
             <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-              Ajouter un membre de pôle
+              {t.heading}
             </h1>
-            <p className="text-neutral-400 text-sm mt-1">
-              Configurez un nouveau membre pour la page association
-            </p>
+            <p className="text-neutral-400 text-sm mt-1">{t.subtitle}</p>
           </div>
 
           <form onSubmit={handleSubmit}>
@@ -133,7 +126,7 @@ function AdminPoleMemberNewPage({ staff }: Props) {
               <div className="grid gap-6 md:grid-cols-2">
                 <div>
                   <label className="block text-sm text-neutral-300 mb-1">
-                    Pôle <span className="text-red-400">*</span>
+                    {t.poleLabel} <span className="text-red-400">*</span>
                   </label>
                   <select
                     value={form.poleKey}
@@ -153,7 +146,7 @@ function AdminPoleMemberNewPage({ staff }: Props) {
 
                 <div>
                   <label className="block text-sm text-neutral-300 mb-1">
-                    Nom <span className="text-red-400">*</span>
+                    {t.nameLabel} <span className="text-red-400">*</span>
                   </label>
                   <input
                     type="text"
@@ -169,26 +162,26 @@ function AdminPoleMemberNewPage({ staff }: Props) {
               <div className="grid gap-6 md:grid-cols-2">
                 <div>
                   <label className="block text-sm text-neutral-300 mb-1">
-                    Titre / Rôle
+                    {t.titleLabel}
                   </label>
                   <input
                     type="text"
                     value={form.title}
                     onChange={(e) => updateField('title', e.target.value)}
-                    placeholder="ex: Présidente, Trésorier..."
+                    placeholder={t.titlePlaceholder}
                     className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm text-neutral-300 mb-1">
-                    Ordre d&apos;affichage
+                    {t.sortOrderLabel}
                   </label>
                   <input
                     type="number"
                     value={form.sortOrder}
                     onChange={(e) => updateField('sortOrder', e.target.value)}
-                    placeholder="Auto (dernier)"
+                    placeholder={t.sortOrderPlaceholder}
                     className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
                     min="0"
                   />
@@ -197,7 +190,7 @@ function AdminPoleMemberNewPage({ staff }: Props) {
 
               <div>
                 <label className="block text-sm text-neutral-300 mb-1">
-                  URL de l&apos;avatar
+                  {t.avatarLabel}
                 </label>
                 <input
                   type="text"
@@ -210,7 +203,7 @@ function AdminPoleMemberNewPage({ staff }: Props) {
 
               <div>
                 <label className="block text-sm text-neutral-300 mb-1">
-                  Lien (Twitch, X, contact...)
+                  {t.linkLabel}
                 </label>
                 <input
                   type="url"
@@ -223,12 +216,12 @@ function AdminPoleMemberNewPage({ staff }: Props) {
 
               <div>
                 <label className="block text-sm text-neutral-300 mb-1">
-                  Description
+                  {t.descriptionLabel}
                 </label>
                 <textarea
                   value={form.description}
                   onChange={(e) => updateField('description', e.target.value)}
-                  placeholder="Bio courte (optionnel)..."
+                  placeholder={t.descriptionPlaceholder}
                   rows={3}
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm resize-y"
                 />
@@ -245,7 +238,7 @@ function AdminPoleMemberNewPage({ staff }: Props) {
                   <div className="w-11 h-6 bg-neutral-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-purple-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
                 </label>
                 <span className="text-sm text-neutral-300">
-                  Active (visible sur la page association)
+                  {t.activeLabel}
                 </span>
               </div>
 
@@ -255,14 +248,14 @@ function AdminPoleMemberNewPage({ staff }: Props) {
                   onClick={() => router.push('/admin/pole-members')}
                   className="px-5 py-2.5 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
                 >
-                  Annuler
+                  {t.cancel}
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
                   className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
-                  {saving ? 'Création...' : 'Créer'}
+                  {saving ? t.creating : t.submit}
                 </button>
               </div>
             </section>

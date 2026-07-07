@@ -5,6 +5,7 @@ import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 type Props = {
   staff: {
@@ -26,6 +27,7 @@ type FormData = {
 };
 
 function AdminEditPartnerPage({ staff }: Props) {
+  const t = useAdminT('adminPartnerEdit');
   const router = useRouter();
   const { addToast } = useToast();
   const { adminFetchJson } = useAdminFetch();
@@ -74,7 +76,7 @@ function AdminEditPartnerPage({ staff }: Props) {
           isActive: json.is_active ?? true,
         });
       } catch (err: unknown) {
-        setError((err as Error).message || 'Erreur de chargement.');
+        setError((err as Error).message || t.errorLoad);
       } finally {
         setLoading(false);
       }
@@ -97,15 +99,15 @@ function AdminEditPartnerPage({ staff }: Props) {
     setError(null);
 
     if (!form.name.trim()) {
-      setError('Le nom est requis.');
+      setError(t.errorNameRequired);
       return;
     }
     if (!form.description.trim()) {
-      setError('La description est requise.');
+      setError(t.errorDescriptionRequired);
       return;
     }
     if (!form.category) {
-      setError('La catégorie est requise.');
+      setError(t.errorCategoryRequired);
       return;
     }
 
@@ -116,9 +118,9 @@ function AdminEditPartnerPage({ staff }: Props) {
         method: 'PATCH',
         body: JSON.stringify(form),
       });
-      addToast('Partenaire mis à jour avec succès.', 'success');
+      addToast(t.updateSuccess, 'success');
     } catch (err: unknown) {
-      setError((err as Error).message || 'Une erreur est survenue.');
+      setError((err as Error).message || t.errorGeneric);
     } finally {
       setSaving(false);
     }
@@ -135,7 +137,7 @@ function AdminEditPartnerPage({ staff }: Props) {
   return (
     <>
       <Head>
-        <title>Admin - Modifier {form.name}</title>
+        <title>{format(t.pageTitle, { name: form.name })}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
@@ -159,11 +161,9 @@ function AdminEditPartnerPage({ staff }: Props) {
                   d="M15 19l-7-7 7-7"
                 />
               </svg>
-              Retour aux partenaires
+              {t.back}
             </Link>
-            <h1 className="text-3xl font-bold tracking-tight">
-              Modifier le partenaire
-            </h1>
+            <h1 className="text-3xl font-bold tracking-tight">{t.heading}</h1>
           </div>
 
           <form
@@ -191,21 +191,21 @@ function AdminEditPartnerPage({ staff }: Props) {
               <div className="grid gap-6 sm:grid-cols-2">
                 <div className="sm:col-span-2">
                   <label className="block text-sm font-medium text-neutral-300 mb-2">
-                    Nom du partenaire *
+                    {t.nameLabel}
                   </label>
                   <input
                     type="text"
                     value={form.name}
                     onChange={(e) => updateField('name', e.target.value)}
                     className="w-full px-4 py-3 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white"
-                    placeholder="Nom de l'entreprise"
+                    placeholder={t.namePlaceholder}
                     required
                   />
                 </div>
 
                 <div className="sm:col-span-2">
                   <label className="block text-sm font-medium text-neutral-300 mb-2">
-                    Catégorie *
+                    {t.categoryLabel}
                   </label>
                   <select
                     value={form.category}
@@ -218,30 +218,30 @@ function AdminEditPartnerPage({ staff }: Props) {
                     className="w-full px-4 py-3 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white"
                     required
                   >
-                    <option value="">Sélectionnez une catégorie</option>
-                    <option value="super">Super partenaire</option>
-                    <option value="major">Partenaire majeur</option>
-                    <option value="cultural">Partenaire culturel</option>
+                    <option value="">{t.categoryPlaceholder}</option>
+                    <option value="super">{t.categorySuper}</option>
+                    <option value="major">{t.categoryMajor}</option>
+                    <option value="cultural">{t.categoryCultural}</option>
                   </select>
                 </div>
 
                 <div className="sm:col-span-2">
                   <label className="block text-sm font-medium text-neutral-300 mb-2">
-                    Description *
+                    {t.descriptionLabel}
                   </label>
                   <textarea
                     value={form.description}
                     onChange={(e) => updateField('description', e.target.value)}
                     rows={3}
                     className="w-full px-4 py-3 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white resize-none"
-                    placeholder="Description du partenaire..."
+                    placeholder={t.descriptionPlaceholder}
                     required
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-neutral-300 mb-2">
-                    URL du logo
+                    {t.logoUrlLabel}
                   </label>
                   <input
                     type="url"
@@ -255,7 +255,7 @@ function AdminEditPartnerPage({ staff }: Props) {
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={form.logoUrl}
-                        alt="Aperçu logo"
+                        alt={t.logoPreviewAlt}
                         className="max-h-16 w-auto mx-auto object-contain"
                       />
                     </div>
@@ -264,7 +264,7 @@ function AdminEditPartnerPage({ staff }: Props) {
 
                 <div>
                   <label className="block text-sm font-medium text-neutral-300 mb-2">
-                    Site web
+                    {t.websiteLabel}
                   </label>
                   <input
                     type="url"
@@ -277,20 +277,20 @@ function AdminEditPartnerPage({ staff }: Props) {
 
                 <div>
                   <label className="block text-sm font-medium text-neutral-300 mb-2">
-                    Badge / Note
+                    {t.noteLabel}
                   </label>
                   <input
                     type="text"
                     value={form.note}
                     onChange={(e) => updateField('note', e.target.value)}
                     className="w-full px-4 py-3 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white"
-                    placeholder="Ex: Nouveau, 2026"
+                    placeholder={t.notePlaceholder}
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-neutral-300 mb-2">
-                    Ordre d&apos;affichage
+                    {t.displayOrderLabel}
                   </label>
                   <input
                     type="number"
@@ -302,8 +302,7 @@ function AdminEditPartnerPage({ staff }: Props) {
                     placeholder="0"
                   />
                   <p className="text-xs text-neutral-500 mt-1">
-                    Plus le nombre est bas, plus le partenaire apparaît en
-                    premier.
+                    {t.displayOrderHint}
                   </p>
                 </div>
 
@@ -318,7 +317,7 @@ function AdminEditPartnerPage({ staff }: Props) {
                       className="w-5 h-5 rounded border-neutral-600 bg-neutral-900/50 text-emerald-500 focus:ring-emerald-500"
                     />
                     <span className="text-sm font-medium text-neutral-300">
-                      Partenaire actif (visible sur le site)
+                      {t.activeLabel}
                     </span>
                   </label>
                 </div>
@@ -333,17 +332,17 @@ function AdminEditPartnerPage({ staff }: Props) {
                   {saving ? (
                     <>
                       <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Enregistrement...
+                      {t.saving}
                     </>
                   ) : (
-                    'Enregistrer les modifications'
+                    t.submit
                   )}
                 </button>
                 <Link
                   href="/admin/partners"
                   className={`px-6 py-3 rounded-xl border border-neutral-600 text-sm font-semibold text-white text-center transition hover:bg-neutral-800${saving ? ' pointer-events-none opacity-50' : ''}`}
                 >
-                  Retour
+                  {t.backButton}
                 </Link>
               </div>
             </fieldset>

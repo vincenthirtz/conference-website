@@ -4,6 +4,7 @@ import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import CastMemberStaffPicker from '@/components/admin/CastMemberStaffPicker';
+import { useAdminT } from '@/lib/i18n/useAdminT';
 
 type Props = {
   staff: {
@@ -14,6 +15,7 @@ type Props = {
 };
 
 function AdminCastMemberNewPage({ staff }: Props) {
+  const t = useAdminT('adminCastMembersNew');
   const router = useRouter();
   const { adminFetchJson } = useAdminFetch();
 
@@ -45,7 +47,7 @@ function AdminCastMemberNewPage({ staff }: Props) {
     setError(null);
 
     if (!form.name.trim()) {
-      setError('Le nom est obligatoire.');
+      setError(t.errorNameRequired);
       return;
     }
 
@@ -71,7 +73,7 @@ function AdminCastMemberNewPage({ staff }: Props) {
 
       router.push('/admin/cast-members');
     } catch (err: unknown) {
-      setError((err as Error)?.message || 'Erreur inattendue.');
+      setError((err as Error)?.message || t.errorGeneric);
     } finally {
       setSaving(false);
     }
@@ -80,7 +82,7 @@ function AdminCastMemberNewPage({ staff }: Props) {
   return (
     <>
       <Head>
-        <title>Admin – Nouvelle casteuse</title>
+        <title>{t.pageTitle}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
@@ -105,15 +107,13 @@ function AdminCastMemberNewPage({ staff }: Props) {
                   d="M15 19l-7-7 7-7"
                 />
               </svg>
-              Retour à la liste
+              {t.back}
             </button>
 
             <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-              Ajouter une casteuse
+              {t.heading}
             </h1>
-            <p className="text-neutral-400 text-sm mt-1">
-              Configurez une nouvelle casteuse pour la page association
-            </p>
+            <p className="text-neutral-400 text-sm mt-1">{t.subtitle}</p>
           </div>
 
           {/* Form */}
@@ -139,7 +139,7 @@ function AdminCastMemberNewPage({ staff }: Props) {
               <div className="grid gap-6 md:grid-cols-2">
                 <div>
                   <label className="block text-sm text-neutral-300 mb-1">
-                    Nom <span className="text-red-400">*</span>
+                    {t.nameLabel} <span className="text-red-400">*</span>
                   </label>
                   <input
                     type="text"
@@ -153,7 +153,7 @@ function AdminCastMemberNewPage({ staff }: Props) {
 
                 <div>
                   <label className="block text-sm text-neutral-300 mb-1">
-                    Titre / Rôle
+                    {t.titleLabel}
                   </label>
                   <input
                     type="text"
@@ -168,7 +168,7 @@ function AdminCastMemberNewPage({ staff }: Props) {
               <div className="grid gap-6 md:grid-cols-2">
                 <div>
                   <label className="block text-sm text-neutral-300 mb-1">
-                    Ville / Pays
+                    {t.cityLabel}
                   </label>
                   <input
                     type="text"
@@ -181,13 +181,13 @@ function AdminCastMemberNewPage({ staff }: Props) {
 
                 <div>
                   <label className="block text-sm text-neutral-300 mb-1">
-                    Ordre d&apos;affichage
+                    {t.sortOrderLabel}
                   </label>
                   <input
                     type="number"
                     value={form.sortOrder}
                     onChange={(e) => updateField('sortOrder', e.target.value)}
-                    placeholder="Auto (dernier)"
+                    placeholder={t.sortOrderPlaceholder}
                     className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
                     min="0"
                   />
@@ -196,7 +196,7 @@ function AdminCastMemberNewPage({ staff }: Props) {
 
               <div>
                 <label className="block text-sm text-neutral-300 mb-1">
-                  URL de l&apos;image
+                  {t.imageLabel}
                 </label>
                 <input
                   type="url"
@@ -205,14 +205,12 @@ function AdminCastMemberNewPage({ staff }: Props) {
                   placeholder="/img/speaker-images/nom.jpg ou https://..."
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm font-mono"
                 />
-                <p className="text-xs text-neutral-500 mt-1">
-                  Photo de profil (image carrée recommandée)
-                </p>
+                <p className="text-xs text-neutral-500 mt-1">{t.imageHint}</p>
               </div>
 
               <div>
                 <label className="block text-sm text-neutral-300 mb-1">
-                  Lien Twitch ou autre
+                  {t.twitchLabel}
                 </label>
                 <input
                   type="url"
@@ -225,12 +223,12 @@ function AdminCastMemberNewPage({ staff }: Props) {
 
               <div>
                 <label className="block text-sm text-neutral-300 mb-1">
-                  Description
+                  {t.descriptionLabel}
                 </label>
                 <textarea
                   value={form.description}
                   onChange={(e) => updateField('description', e.target.value)}
-                  placeholder="Bio courte (optionnel)..."
+                  placeholder={t.descriptionPlaceholder}
                   rows={3}
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm resize-y"
                 />
@@ -255,7 +253,7 @@ function AdminCastMemberNewPage({ staff }: Props) {
                     <div className="w-11 h-6 bg-neutral-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-purple-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
                   </label>
                   <span className="text-sm text-neutral-300">
-                    Active (visible sur la page association)
+                    {t.activeLabel}
                   </span>
                 </div>
 
@@ -270,8 +268,7 @@ function AdminCastMemberNewPage({ staff }: Props) {
                     <div className="w-11 h-6 bg-neutral-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-purple-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-600"></div>
                   </label>
                   <span className="text-sm text-neutral-300">
-                    Carte promotionnelle (ex: &quot;Envie de rejoindre le cast
-                    ?&quot;)
+                    {t.promoLabel}
                   </span>
                 </div>
               </div>
@@ -282,7 +279,7 @@ function AdminCastMemberNewPage({ staff }: Props) {
                   onClick={() => router.push('/admin/cast-members')}
                   className="px-5 py-2.5 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
                 >
-                  Annuler
+                  {t.cancel}
                 </button>
                 <button
                   type="submit"
@@ -292,7 +289,7 @@ function AdminCastMemberNewPage({ staff }: Props) {
                   {saving ? (
                     <>
                       <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Création...
+                      {t.creating}
                     </>
                   ) : (
                     <>
@@ -309,7 +306,7 @@ function AdminCastMemberNewPage({ staff }: Props) {
                           d="M12 4v16m8-8H4"
                         />
                       </svg>
-                      Créer
+                      {t.submit}
                     </>
                   )}
                 </button>

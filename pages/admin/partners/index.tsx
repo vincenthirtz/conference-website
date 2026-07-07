@@ -6,6 +6,9 @@ import { useUrlFilters } from '@/utils/useUrlFilters';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
+
+type Dict = ReturnType<typeof useAdminT<'adminPartnersList'>>;
 
 type PartnerRow = {
   id: string;
@@ -38,11 +41,11 @@ const P_FILTER_KEYS = ['category', 'active', 'search'] as const;
 
 const PAGE_LIMIT = 50;
 
-const categoryLabels: Record<string, string> = {
-  super: 'Super partenaire',
-  major: 'Partenaire majeur',
-  cultural: 'Partenaire culturel',
-};
+const getCategoryLabels = (tx: Dict): Record<string, string> => ({
+  super: tx.categorySuper,
+  major: tx.categoryMajor,
+  cultural: tx.categoryCultural,
+});
 
 const categoryColors: Record<string, string> = {
   super: 'bg-amber-600 text-white',
@@ -51,6 +54,8 @@ const categoryColors: Record<string, string> = {
 };
 
 function AdminPartnersPage(_props: Props) {
+  const tx = useAdminT('adminPartnersList');
+  const categoryLabels = getCategoryLabels(tx);
   const { adminFetchJson } = useAdminFetch();
   const { addToast } = useToast();
   const { confirm, dialog } = useConfirmDialog();
@@ -108,13 +113,11 @@ function AdminPartnersPage(_props: Props) {
       setPartners(json.items || []);
       setTotal(typeof json.total === 'number' ? json.total : null);
     } catch (err: unknown) {
-      setErrorMsg(
-        (err as Error)?.message || 'Impossible de charger les partenaires.'
-      );
+      setErrorMsg((err as Error)?.message || tx.errorLoad);
     } finally {
       setLoading(false);
     }
-  }, [adminFetchJson, offset, categoryFilter, activeFilter, searchFilter]);
+  }, [adminFetchJson, offset, categoryFilter, activeFilter, searchFilter, tx]);
 
   // Re-fetch à chaque changement de filtre serveur / pagination
   useEffect(() => {
@@ -123,16 +126,16 @@ function AdminPartnersPage(_props: Props) {
 
   const onDelete = async (id: string) => {
     const ok = await confirm({
-      title: 'Supprimer ce partenaire ?',
+      title: tx.deleteConfirmTitle,
       variant: 'danger',
-      confirmLabel: 'Supprimer',
+      confirmLabel: tx.delete,
     });
     if (!ok) return;
     try {
       await adminFetchJson(`/api/admin/partners/${id}`, { method: 'DELETE' });
       fetchPartners();
     } catch (err: unknown) {
-      addToast((err as Error)?.message || 'Erreur de suppression.', 'error');
+      addToast((err as Error)?.message || tx.errorDelete, 'error');
     }
   };
 
@@ -144,7 +147,7 @@ function AdminPartnersPage(_props: Props) {
       });
       fetchPartners();
     } catch (err: unknown) {
-      addToast((err as Error)?.message || 'Erreur de modification.', 'error');
+      addToast((err as Error)?.message || tx.errorUpdate, 'error');
     }
   };
 
@@ -155,7 +158,7 @@ function AdminPartnersPage(_props: Props) {
     <>
       {dialog}
       <Head>
-        <title>Admin - Partenaires</title>
+        <title>{tx.pageTitle}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
@@ -165,12 +168,14 @@ function AdminPartnersPage(_props: Props) {
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-                  Gestion des partenaires
+                  {tx.heading}
                 </h1>
                 <p className="text-neutral-400 text-sm mt-1">
                   {total !== null
-                    ? `${total} partenaire${total > 1 ? 's' : ''}`
-                    : 'Chargement...'}
+                    ? format(total > 1 ? tx.count_other : tx.count_one, {
+                        count: total,
+                      })
+                    : tx.loading}
                 </p>
               </div>
 
@@ -191,7 +196,7 @@ function AdminPartnersPage(_props: Props) {
                     d="M12 4v16m8-8H4"
                   />
                 </svg>
-                Nouveau partenaire
+                {tx.newButton}
               </Link>
             </div>
           </div>
@@ -219,7 +224,7 @@ function AdminPartnersPage(_props: Props) {
             <div className="flex gap-4 flex-wrap items-end">
               <div className="min-w-[180px]">
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Catégorie
+                  {tx.categoryLabel}
                 </label>
                 <select
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -228,16 +233,16 @@ function AdminPartnersPage(_props: Props) {
                     setFilters({ category: e.target.value || null })
                   }
                 >
-                  <option value="">Toutes les catégories</option>
-                  <option value="super">Super partenaire</option>
-                  <option value="major">Partenaire majeur</option>
-                  <option value="cultural">Partenaire culturel</option>
+                  <option value="">{tx.categoryAll}</option>
+                  <option value="super">{tx.categorySuper}</option>
+                  <option value="major">{tx.categoryMajor}</option>
+                  <option value="cultural">{tx.categoryCultural}</option>
                 </select>
               </div>
 
               <div className="min-w-[160px]">
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Statut
+                  {tx.statusLabel}
                 </label>
                 <select
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -246,15 +251,15 @@ function AdminPartnersPage(_props: Props) {
                     setFilters({ active: e.target.value || null })
                   }
                 >
-                  <option value="">Tous les statuts</option>
-                  <option value="true">Actifs</option>
-                  <option value="false">Inactifs</option>
+                  <option value="">{tx.statusAll}</option>
+                  <option value="true">{tx.statusActive}</option>
+                  <option value="false">{tx.statusInactive}</option>
                 </select>
               </div>
 
               <div className="min-w-[220px] flex-1">
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Recherche
+                  {tx.searchLabel}
                 </label>
                 <div className="relative">
                   <svg
@@ -272,7 +277,7 @@ function AdminPartnersPage(_props: Props) {
                   </svg>
                   <input
                     type="text"
-                    placeholder="Nom du partenaire..."
+                    placeholder={tx.searchPlaceholder}
                     className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                     value={searchInput}
                     onChange={(e) => setSearchInput(e.target.value)}
@@ -303,7 +308,7 @@ function AdminPartnersPage(_props: Props) {
                     d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
                   />
                 </svg>
-                Aucun partenaire trouvé
+                {tx.emptyState}
               </div>
             ) : (
               <div className="divide-y divide-neutral-700/50">
@@ -362,7 +367,7 @@ function AdminPartnersPage(_props: Props) {
                         )}
                         {!p.is_active && (
                           <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-neutral-600 text-neutral-300">
-                            Inactif
+                            {tx.statusInactive}
                           </span>
                         )}
                       </div>
@@ -370,7 +375,9 @@ function AdminPartnersPage(_props: Props) {
                         {p.description}
                       </p>
                       <div className="flex items-center gap-3 text-xs text-neutral-500 mt-1">
-                        <span>Ordre: {p.display_order}</span>
+                        <span>
+                          {format(tx.order, { order: p.display_order })}
+                        </span>
                         {p.website_url && (
                           <>
                             <span>•</span>
@@ -380,7 +387,7 @@ function AdminPartnersPage(_props: Props) {
                               rel="noopener noreferrer"
                               className="hover:text-blue-400 transition"
                             >
-                              Site web
+                              {tx.website}
                             </a>
                           </>
                         )}
@@ -397,19 +404,19 @@ function AdminPartnersPage(_props: Props) {
                             : 'border-emerald-500/40 text-emerald-300 hover:border-emerald-400'
                         }`}
                       >
-                        {p.is_active ? 'Désactiver' : 'Activer'}
+                        {p.is_active ? tx.deactivate : tx.activate}
                       </button>
                       <Link
                         href={`/admin/partners/${p.id}`}
                         className="px-3 py-1.5 rounded-lg border border-neutral-600 hover:border-neutral-500 text-sm transition-colors"
                       >
-                        Modifier
+                        {tx.edit}
                       </Link>
                       <button
                         onClick={() => onDelete(p.id)}
                         className="px-3 py-1.5 rounded-lg border border-red-500/40 text-red-300 hover:border-red-400 text-sm transition-colors"
                       >
-                        Supprimer
+                        {tx.delete}
                       </button>
                     </div>
                   </div>
@@ -440,12 +447,12 @@ function AdminPartnersPage(_props: Props) {
                     d="M15 19l-7-7 7-7"
                   />
                 </svg>
-                Precedent
+                {tx.previous}
               </button>
 
               <span className="text-neutral-400 text-sm">
                 {showingFrom} – {showingTo}
-                {total !== null ? ` sur ${total}` : ''}
+                {total !== null ? format(tx.paginationOf, { total }) : ''}
               </span>
 
               <button
@@ -454,7 +461,7 @@ function AdminPartnersPage(_props: Props) {
                 onClick={() => setOffset(offset + PAGE_LIMIT)}
                 className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
-                Suivant
+                {tx.next}
                 <svg
                   className="w-4 h-4"
                   fill="none"

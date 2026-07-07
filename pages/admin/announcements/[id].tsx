@@ -6,6 +6,7 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import Button from '@/components/Buttons/button';
 import { useToast } from '@/components/Toast';
 import Breadcrumb from '@/components/admin/Breadcrumb';
+import { useAdminT } from '@/lib/i18n/useAdminT';
 
 type Props = {
   staff: {
@@ -54,6 +55,7 @@ function toDateTimeLocalValue(isoString: string | null | undefined): string {
 export const getServerSideProps = withStaffPage('admin');
 
 function AdminAnnouncementEditPage({ staff }: Props) {
+  const t = useAdminT('adminAnnouncementEdit');
   const router = useRouter();
   const { addToast } = useToast();
   const { adminFetch } = useAdminFetch();
@@ -90,7 +92,7 @@ function AdminAnnouncementEditPage({ staff }: Props) {
           setNotFound(true);
         } else {
           const json = await res.json().catch(() => ({}));
-          setErrorMsg(json.error || 'Erreur lors du chargement.');
+          setErrorMsg(json.error || t.errorLoad);
         }
         setLoading(false);
         return;
@@ -109,11 +111,11 @@ function AdminAnnouncementEditPage({ staff }: Props) {
         isActive: data.is_active ?? true,
       });
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message || 'Erreur inconnue.');
+      setErrorMsg((err as Error)?.message || t.errorUnknown);
     } finally {
       setLoading(false);
     }
-  }, [id, adminFetch]);
+  }, [id, adminFetch, t]);
 
   useEffect(() => {
     fetchAnnouncement();
@@ -128,12 +130,12 @@ function AdminAnnouncementEditPage({ staff }: Props) {
     setErrorMsg(null);
 
     if (!form.title.trim()) {
-      setErrorMsg("Le titre de l'annonce est obligatoire.");
+      setErrorMsg(t.errorTitleRequired);
       return;
     }
 
     if (!form.message.trim()) {
-      setErrorMsg("Le message de l'annonce est obligatoire.");
+      setErrorMsg(t.errorMessageRequired);
       return;
     }
 
@@ -158,24 +160,19 @@ function AdminAnnouncementEditPage({ staff }: Props) {
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(
-          json.error || "Erreur lors de la mise à jour de l'annonce"
-        );
+        throw new Error(json.error || t.errorUpdate);
       }
 
-      addToast('Annonce mise à jour avec succès.', 'success');
+      addToast(t.updateSuccess, 'success');
     } catch (err: unknown) {
-      setErrorMsg(
-        (err as Error)?.message ??
-          "Erreur inconnue lors de la mise à jour de l'annonce"
-      );
+      setErrorMsg((err as Error)?.message ?? t.errorUpdateUnknown);
     } finally {
       setSubmitting(false);
     }
   }
 
   async function handleDelete() {
-    if (!confirm('Supprimer cette annonce ? Cette action est irréversible.')) {
+    if (!confirm(t.deleteConfirm)) {
       return;
     }
 
@@ -189,12 +186,12 @@ function AdminAnnouncementEditPage({ staff }: Props) {
 
       if (!res.ok && res.status !== 204) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || 'Erreur lors de la suppression.');
+        throw new Error(json.error || t.errorDelete);
       }
 
       router.push('/admin/announcements');
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message || 'Erreur lors de la suppression.');
+      setErrorMsg((err as Error)?.message || t.errorDelete);
       setSubmitting(false);
     }
   }
@@ -203,7 +200,7 @@ function AdminAnnouncementEditPage({ staff }: Props) {
     return (
       <>
         <Head>
-          <title>Admin – Chargement...</title>
+          <title>{t.pageTitleLoading}</title>
         </Head>
         <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white flex items-center justify-center">
           <div className="w-8 h-8 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
@@ -216,7 +213,7 @@ function AdminAnnouncementEditPage({ staff }: Props) {
     return (
       <>
         <Head>
-          <title>Admin – Annonce introuvable</title>
+          <title>{t.pageTitleNotFound}</title>
         </Head>
         <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white p-6 pt-20">
           <div className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-8 text-center max-w-md mx-auto">
@@ -233,16 +230,14 @@ function AdminAnnouncementEditPage({ staff }: Props) {
                 d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
               />
             </svg>
-            <h1 className="text-xl font-bold mb-2">Annonce introuvable</h1>
-            <p className="text-neutral-400 mb-6">
-              Cette annonce n&apos;existe pas ou a été supprimée.
-            </p>
+            <h1 className="text-xl font-bold mb-2">{t.notFoundTitle}</h1>
+            <p className="text-neutral-400 mb-6">{t.notFoundText}</p>
             <Button
               type="button"
               size="compact"
               onClick={() => router.push('/admin/announcements')}
             >
-              Retour à la liste
+              {t.backToList}
             </Button>
           </div>
         </div>
@@ -253,14 +248,14 @@ function AdminAnnouncementEditPage({ staff }: Props) {
   return (
     <>
       <Head>
-        <title>Admin – Modifier l&apos;annonce</title>
+        <title>{t.pageTitle}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white p-6 pt-20">
         <Breadcrumb
           items={[
-            { label: 'Annonces', href: '/admin/announcements' },
-            { label: 'Modifier' },
+            { label: t.breadcrumbAnnouncements, href: '/admin/announcements' },
+            { label: t.breadcrumbEdit },
           ]}
         />
         {/* Header */}
@@ -284,12 +279,10 @@ function AdminAnnouncementEditPage({ staff }: Props) {
                   d="M15 19l-7-7 7-7"
                 />
               </svg>
-              Retour aux annonces
+              {t.back}
             </button>
-            <h1 className="text-3xl font-bold">Modifier l&apos;annonce</h1>
-            <p className="text-neutral-400 text-sm mt-1">
-              Modifiez les informations de cette annonce.
-            </p>
+            <h1 className="text-3xl font-bold">{t.heading}</h1>
+            <p className="text-neutral-400 text-sm mt-1">{t.subtitle}</p>
           </div>
 
           <button
@@ -311,7 +304,7 @@ function AdminAnnouncementEditPage({ staff }: Props) {
                 d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
               />
             </svg>
-            Supprimer
+            {t.delete}
           </button>
         </div>
 
@@ -337,18 +330,18 @@ function AdminAnnouncementEditPage({ staff }: Props) {
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Informations generales */}
             <section className="space-y-4">
-              <h2 className="font-semibold text-lg">Informations generales</h2>
+              <h2 className="font-semibold text-lg">{t.sectionGeneral}</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm mb-1 text-neutral-300">
-                    Titre <span className="text-red-400">*</span>
+                    {t.titleLabel} <span className="text-red-400">*</span>
                   </label>
                   <input
                     type="text"
                     className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     value={form.title}
                     onChange={(e) => updateField('title', e.target.value)}
-                    placeholder="Offre speciale partenaire"
+                    placeholder={t.titlePlaceholder}
                   />
                 </div>
 
@@ -362,47 +355,45 @@ function AdminAnnouncementEditPage({ staff }: Props) {
                         updateField('isActive', e.target.checked)
                       }
                     />
-                    <span>Activer l&apos;annonce</span>
+                    <span>{t.activate}</span>
                   </label>
                 </div>
               </div>
 
               <div>
                 <label className="block text-sm mb-1 text-neutral-300">
-                  Message <span className="text-red-400">*</span>
+                  {t.messageLabel} <span className="text-red-400">*</span>
                 </label>
                 <textarea
                   rows={3}
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={form.message}
                   onChange={(e) => updateField('message', e.target.value)}
-                  placeholder="Decouvrez notre partenaire avec -20% sur votre premiere commande..."
+                  placeholder={t.messagePlaceholder}
                 />
               </div>
             </section>
 
             {/* Call to Action */}
             <section className="space-y-4">
-              <h2 className="font-semibold text-lg">
-                Call to Action (optionnel)
-              </h2>
+              <h2 className="font-semibold text-lg">{t.sectionCta}</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm mb-1 text-neutral-300">
-                    Label du bouton
+                    {t.ctaLabelLabel}
                   </label>
                   <input
                     type="text"
                     className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     value={form.ctaLabel}
                     onChange={(e) => updateField('ctaLabel', e.target.value)}
-                    placeholder="Decouvrir, Voir l'offre..."
+                    placeholder={t.ctaLabelPlaceholder}
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm mb-1 text-neutral-300">
-                    URL du bouton
+                    {t.ctaUrlLabel}
                   </label>
                   <input
                     type="text"
@@ -417,11 +408,11 @@ function AdminAnnouncementEditPage({ staff }: Props) {
 
             {/* Planification */}
             <section className="space-y-4">
-              <h2 className="font-semibold text-lg">Planification</h2>
+              <h2 className="font-semibold text-lg">{t.sectionSchedule}</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm mb-1 text-neutral-300">
-                    Date de debut
+                    {t.startDateLabel}
                   </label>
                   <input
                     type="datetime-local"
@@ -430,13 +421,13 @@ function AdminAnnouncementEditPage({ staff }: Props) {
                     onChange={(e) => updateField('startsAt', e.target.value)}
                   />
                   <p className="text-xs text-neutral-500 mt-1">
-                    Laissez vide pour afficher immediatement.
+                    {t.startDateHint}
                   </p>
                 </div>
 
                 <div>
                   <label className="block text-sm mb-1 text-neutral-300">
-                    Date de fin
+                    {t.endDateLabel}
                   </label>
                   <input
                     type="datetime-local"
@@ -445,13 +436,13 @@ function AdminAnnouncementEditPage({ staff }: Props) {
                     onChange={(e) => updateField('endsAt', e.target.value)}
                   />
                   <p className="text-xs text-neutral-500 mt-1">
-                    Laissez vide pour une duree indefinie.
+                    {t.endDateHint}
                   </p>
                 </div>
 
                 <div>
                   <label className="block text-sm mb-1 text-neutral-300">
-                    Priorite
+                    {t.priorityLabel}
                   </label>
                   <input
                     type="number"
@@ -462,8 +453,7 @@ function AdminAnnouncementEditPage({ staff }: Props) {
                     placeholder="0"
                   />
                   <p className="text-xs text-neutral-500 mt-1">
-                    Plus le chiffre est eleve, plus l&apos;annonce est
-                    prioritaire.
+                    {t.priorityHint}
                   </p>
                 </div>
               </div>
@@ -478,7 +468,7 @@ function AdminAnnouncementEditPage({ staff }: Props) {
                 onClick={() => router.push('/admin/announcements')}
                 disabled={submitting}
               >
-                Annuler
+                {t.cancel}
               </Button>
 
               <Button
@@ -487,9 +477,7 @@ function AdminAnnouncementEditPage({ staff }: Props) {
                 disabled={submitting}
                 className="px-5 py-2.5 font-semibold bg-emerald-600 hover:bg-emerald-700"
               >
-                {submitting
-                  ? 'Enregistrement...'
-                  : 'Enregistrer les modifications'}
+                {submitting ? t.saving : t.submit}
               </Button>
             </div>
           </form>

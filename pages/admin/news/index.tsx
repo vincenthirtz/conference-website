@@ -8,8 +8,10 @@ import DeleteConfirmModal from '@/components/admin/DeleteConfirmModal';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useUrlFilters } from '@/utils/useUrlFilters';
 import { escapePostgrestValue, sanitizeSearch } from '@/utils/apiHelpers';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 import { logger } from '../../../utils/logger';
+type Dict = ReturnType<typeof useAdminT<'adminNewsList'>>;
 type NewsRow = {
   id: string;
   title: string;
@@ -34,8 +36,8 @@ type Props = {
 const N_FILTER_KEYS = ['search', 'status', 'offset'] as const;
 const LIMIT = 20;
 
-function statusLabel(status: 'draft' | 'published') {
-  return status === 'published' ? 'Publié' : 'Brouillon';
+function statusLabel(t: Dict, status: 'draft' | 'published') {
+  return status === 'published' ? t.statusPublished : t.statusDraft;
 }
 
 function statusColor(status: 'draft' | 'published') {
@@ -58,6 +60,7 @@ function formatDate(d: string | null) {
 }
 
 function AdminNewsPage({ news, total, errorMsg: ssrError }: Props) {
+  const t = useAdminT('adminNewsList');
   const router = useRouter();
   const { adminFetchJson } = useAdminFetch();
   const { filters, setFilter, setFilters } = useUrlFilters(N_FILTER_KEYS);
@@ -93,7 +96,7 @@ function AdminNewsPage({ news, total, errorMsg: ssrError }: Props) {
       setDeleteTarget(null);
       fetchData();
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message || 'Erreur de suppression.');
+      setErrorMsg((err as Error)?.message || t.errorDelete);
     } finally {
       setDeleting(false);
     }
@@ -102,7 +105,7 @@ function AdminNewsPage({ news, total, errorMsg: ssrError }: Props) {
   return (
     <>
       <Head>
-        <title>Admin – News</title>
+        <title>{t.pageTitle}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
@@ -112,10 +115,12 @@ function AdminNewsPage({ news, total, errorMsg: ssrError }: Props) {
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-                  Gestion des news
+                  {t.heading}
                 </h1>
                 <p className="text-neutral-400 text-sm mt-1">
-                  {total} article{total > 1 ? 's' : ''}
+                  {format(total > 1 ? t.count_other : t.count_one, {
+                    count: total,
+                  })}
                 </p>
               </div>
 
@@ -136,7 +141,7 @@ function AdminNewsPage({ news, total, errorMsg: ssrError }: Props) {
                     d="M12 4v16m8-8H4"
                   />
                 </svg>
-                Nouvelle news
+                {t.newButton}
               </Link>
             </div>
           </div>
@@ -161,7 +166,7 @@ function AdminNewsPage({ news, total, errorMsg: ssrError }: Props) {
                 onClick={() => fetchData()}
                 className="flex-shrink-0 px-3 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-xs font-medium transition-colors"
               >
-                Réessayer
+                {t.retry}
               </button>
             </div>
           )}
@@ -174,7 +179,7 @@ function AdminNewsPage({ news, total, errorMsg: ssrError }: Props) {
             >
               <div className="flex-1 min-w-[200px]">
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Recherche
+                  {t.searchLabel}
                 </label>
                 <div className="relative">
                   <svg
@@ -192,7 +197,7 @@ function AdminNewsPage({ news, total, errorMsg: ssrError }: Props) {
                   </svg>
                   <input
                     type="text"
-                    placeholder="Titre ou slug..."
+                    placeholder={t.searchPlaceholder}
                     className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     value={searchInput}
                     onChange={(e) => setSearchInput(e.target.value)}
@@ -202,7 +207,7 @@ function AdminNewsPage({ news, total, errorMsg: ssrError }: Props) {
 
               <div className="min-w-[160px]">
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Statut
+                  {t.statusLabel}
                 </label>
                 <select
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -211,9 +216,9 @@ function AdminNewsPage({ news, total, errorMsg: ssrError }: Props) {
                     setFilters({ status: e.target.value || null, offset: null })
                   }
                 >
-                  <option value="">Tous les statuts</option>
-                  <option value="draft">Brouillon</option>
-                  <option value="published">Publié</option>
+                  <option value="">{t.statusAll}</option>
+                  <option value="draft">{t.statusDraft}</option>
+                  <option value="published">{t.statusPublished}</option>
                 </select>
               </div>
 
@@ -234,7 +239,7 @@ function AdminNewsPage({ news, total, errorMsg: ssrError }: Props) {
                     d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
                   />
                 </svg>
-                Rechercher
+                {t.searchButton}
               </button>
             </form>
           </section>
@@ -260,7 +265,7 @@ function AdminNewsPage({ news, total, errorMsg: ssrError }: Props) {
                     d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"
                   />
                 </svg>
-                Aucune news trouvée
+                {t.emptyState}
               </div>
             ) : (
               <div className="divide-y divide-neutral-700/50">
@@ -300,7 +305,7 @@ function AdminNewsPage({ news, total, errorMsg: ssrError }: Props) {
                               n.status
                             )}`}
                           >
-                            {statusLabel(n.status)}
+                            {statusLabel(t, n.status)}
                           </span>
                           {n.tag && (
                             <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-600/20 text-blue-300 border border-blue-500/30">
@@ -313,12 +318,18 @@ function AdminNewsPage({ news, total, errorMsg: ssrError }: Props) {
                             /{n.slug}
                           </span>
                           <span className="hidden sm:inline">•</span>
-                          <span>Créée le {formatDate(n.created_at)}</span>
+                          <span>
+                            {format(t.createdOn, {
+                              date: formatDate(n.created_at),
+                            })}
+                          </span>
                           {n.status === 'published' && n.published_at && (
                             <>
                               <span className="hidden sm:inline">•</span>
                               <span>
-                                Publiée le {formatDate(n.published_at)}
+                                {format(t.publishedOn, {
+                                  date: formatDate(n.published_at),
+                                })}
                               </span>
                             </>
                           )}
@@ -332,13 +343,13 @@ function AdminNewsPage({ news, total, errorMsg: ssrError }: Props) {
                         href={`/admin/news/${n.id}`}
                         className="px-3 py-1.5 rounded-lg border border-neutral-600 hover:border-neutral-500 text-sm transition-colors"
                       >
-                        Modifier
+                        {t.edit}
                       </Link>
                       <button
                         onClick={() => setDeleteTarget(n)}
                         className="px-3 py-1.5 rounded-lg border border-red-500/40 text-red-300 hover:border-red-400 text-sm transition-colors"
                       >
-                        Supprimer
+                        {t.delete}
                       </button>
                     </div>
                   </div>
@@ -370,12 +381,12 @@ function AdminNewsPage({ news, total, errorMsg: ssrError }: Props) {
                   d="M15 19l-7-7 7-7"
                 />
               </svg>
-              Précédent
+              {t.previous}
             </button>
 
             <span className="text-neutral-400 text-sm">
               {offset + 1} – {offset + news.length}
-              {total ? ` sur ${total}` : ''}
+              {total ? format(t.paginationOf, { total }) : ''}
             </span>
 
             <button
@@ -384,7 +395,7 @@ function AdminNewsPage({ news, total, errorMsg: ssrError }: Props) {
               onClick={() => setFilter('offset', String(offset + limit))}
               className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
-              Suivant
+              {t.next}
               <svg
                 className="w-4 h-4"
                 fill="none"
@@ -406,14 +417,14 @@ function AdminNewsPage({ news, total, errorMsg: ssrError }: Props) {
       {/* Delete Modal */}
       {deleteTarget && (
         <DeleteConfirmModal
-          title="Supprimer cette news ?"
+          title={t.deleteModalTitle}
           deleting={deleting}
           errorMsg={errorMsg}
           onCancel={() => setDeleteTarget(null)}
           onConfirm={() => handleDelete(deleteTarget)}
         >
           <p className="text-sm text-neutral-300 bg-neutral-900/50 rounded-xl p-3">
-            Supprimer l&apos;article{' '}
+            {t.deleteModalPrefix}{' '}
             <span className="font-semibold text-white">
               {deleteTarget.title}
             </span>{' '}

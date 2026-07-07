@@ -5,6 +5,7 @@ import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminResource } from '@/hooks/useAdminResource';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 type CommentRow = {
   id: string;
@@ -44,6 +45,7 @@ function formatDate(d: string | null) {
 }
 
 function AdminCommentsPage(_props: Props) {
+  const t = useAdminT('adminCommentsList');
   const { addToast } = useToast();
   const { adminFetchJson } = useAdminFetch();
   const [search, setSearch] = useState('');
@@ -91,12 +93,10 @@ function AdminCommentsPage(_props: Props) {
         body: JSON.stringify({ id: comment.id }),
       });
       setDeleteTarget(null);
-      addToast('Commentaire supprimé', 'success');
+      addToast(t.toastDeleted, 'success');
       refresh();
     } catch (err: unknown) {
-      setMutationError(
-        (err as Error)?.message || 'Erreur lors de la suppression'
-      );
+      setMutationError((err as Error)?.message || t.errorDelete);
     } finally {
       setDeleting(false);
     }
@@ -116,12 +116,10 @@ function AdminCommentsPage(_props: Props) {
         delete next[c.id];
         return next;
       });
-      addToast('Commentaire mis à jour', 'success');
+      addToast(t.toastUpdated, 'success');
       refresh();
     } catch (err: unknown) {
-      setMutationError(
-        (err as Error)?.message || 'Erreur lors de la mise à jour'
-      );
+      setMutationError((err as Error)?.message || t.errorUpdate);
     } finally {
       setSaving(null);
     }
@@ -135,7 +133,7 @@ function AdminCommentsPage(_props: Props) {
   return (
     <>
       <Head>
-        <title>Admin – Commentaires</title>
+        <title>{t.pageTitle}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
@@ -145,12 +143,14 @@ function AdminCommentsPage(_props: Props) {
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-                  Commentaires
+                  {t.heading}
                 </h1>
                 <p className="text-neutral-400 text-sm mt-1">
                   {total !== null
-                    ? `${total} commentaire${total > 1 ? 's' : ''}`
-                    : 'Chargement...'}
+                    ? format(total > 1 ? t.count_other : t.count_one, {
+                        count: total,
+                      })
+                    : t.loading}
                 </p>
               </div>
             </div>
@@ -182,7 +182,7 @@ function AdminCommentsPage(_props: Props) {
             >
               <div className="flex-1 min-w-[200px]">
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Recherche
+                  {t.searchLabel}
                 </label>
                 <div className="relative">
                   <svg
@@ -200,7 +200,7 @@ function AdminCommentsPage(_props: Props) {
                   </svg>
                   <input
                     type="text"
-                    placeholder="Contenu ou auteur..."
+                    placeholder={t.searchPlaceholder}
                     className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
@@ -225,7 +225,7 @@ function AdminCommentsPage(_props: Props) {
                     d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
                   />
                 </svg>
-                Rechercher
+                {t.searchButton}
               </button>
             </form>
           </section>
@@ -251,7 +251,7 @@ function AdminCommentsPage(_props: Props) {
                     d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
                   />
                 </svg>
-                Aucun commentaire trouvé
+                {t.emptyState}
               </div>
             ) : (
               <div className="divide-y divide-neutral-700/50">
@@ -281,7 +281,7 @@ function AdminCommentsPage(_props: Props) {
                         </div>
                         <div>
                           <div className="font-medium text-white">
-                            {c.author_name || 'Anonyme'}
+                            {c.author_name || t.anonymous}
                           </div>
                           <div className="text-xs text-neutral-500">
                             {formatDate(c.created_at)}
@@ -309,7 +309,7 @@ function AdminCommentsPage(_props: Props) {
                               d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
                             />
                           </svg>
-                          {c.news.title || 'Article'}
+                          {c.news.title || t.articleFallback}
                         </Link>
                       )}
                     </div>
@@ -346,7 +346,7 @@ function AdminCommentsPage(_props: Props) {
                         {saving === c.id ? (
                           <>
                             <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                            Enregistrement...
+                            {t.saving}
                           </>
                         ) : (
                           <>
@@ -363,7 +363,7 @@ function AdminCommentsPage(_props: Props) {
                                 d="M5 13l4 4L19 7"
                               />
                             </svg>
-                            Sauvegarder
+                            {t.save}
                           </>
                         )}
                       </button>
@@ -380,7 +380,7 @@ function AdminCommentsPage(_props: Props) {
                           }
                           className="px-3 py-2 rounded-xl text-sm text-neutral-400 hover:text-white hover:bg-neutral-700 transition-colors"
                         >
-                          Annuler
+                          {t.cancel}
                         </button>
                       )}
 
@@ -388,7 +388,7 @@ function AdminCommentsPage(_props: Props) {
                         type="button"
                         onClick={() => setDeleteTarget(c)}
                         className="ml-auto p-2 rounded-lg hover:bg-red-900/50 text-red-400 transition-colors"
-                        title="Supprimer"
+                        title={t.delete}
                       >
                         <svg
                           className="w-4 h-4"
@@ -435,12 +435,12 @@ function AdminCommentsPage(_props: Props) {
                     d="M15 19l-7-7 7-7"
                   />
                 </svg>
-                Précédent
+                {t.previous}
               </button>
 
               <span className="text-neutral-400 text-sm">
                 {offset + 1} – {offset + comments.length}
-                {total ? ` sur ${total}` : ''}
+                {total ? format(t.paginationOf, { total }) : ''}
               </span>
 
               <button
@@ -451,7 +451,7 @@ function AdminCommentsPage(_props: Props) {
                 onClick={nextPage}
                 className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
-                Suivant
+                {t.next}
                 <svg
                   className="w-4 h-4"
                   fill="none"
@@ -492,18 +492,18 @@ function AdminCommentsPage(_props: Props) {
                 </svg>
               </div>
               <div>
-                <h3 className="text-lg font-semibold">
-                  Supprimer le commentaire ?
-                </h3>
+                <h3 className="text-lg font-semibold">{t.deleteModalTitle}</h3>
                 <p className="text-sm text-neutral-400">
-                  Cette action est irréversible
+                  {t.deleteModalSubtitle}
                 </p>
               </div>
             </div>
 
             <div className="bg-neutral-900/50 rounded-xl p-3 mb-4">
               <div className="text-xs text-neutral-500 mb-1">
-                Par {deleteTarget.author_name || 'Anonyme'}
+                {format(t.byAuthor, {
+                  author: deleteTarget.author_name || t.anonymous,
+                })}
               </div>
               <p className="text-sm text-neutral-300 line-clamp-3">
                 {deleteTarget.content}
@@ -517,7 +517,7 @@ function AdminCommentsPage(_props: Props) {
                 className="px-4 py-2.5 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
                 disabled={deleting}
               >
-                Annuler
+                {t.cancel}
               </button>
               <button
                 type="button"
@@ -532,10 +532,10 @@ function AdminCommentsPage(_props: Props) {
                 {deleting ? (
                   <>
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Suppression...
+                    {t.deleting}
                   </>
                 ) : (
-                  'Supprimer'
+                  t.delete
                 )}
               </button>
             </div>

@@ -6,11 +6,8 @@ import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
-import {
-  POLE_KEYS,
-  POLE_LABELS,
-  type PoleKey,
-} from '@/utils/associationPoles';
+import { POLE_KEYS, POLE_LABELS, type PoleKey } from '@/utils/associationPoles';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 import { logger } from '../../../utils/logger';
 
@@ -47,6 +44,7 @@ function statusColor(isActive: boolean) {
 }
 
 function AdminPoleMembersPage({ staff }: Props) {
+  const t = useAdminT('adminPoleMembersList');
   const [loading, setLoading] = useState(false);
   const [members, setMembers] = useState<PoleMemberRow[]>([]);
   const [search, setSearch] = useState('');
@@ -75,9 +73,9 @@ function AdminPoleMembersPage({ staff }: Props) {
 
   const onDelete = async (id: string) => {
     const ok = await confirm({
-      title: 'Supprimer ce membre du pôle ?',
+      title: t.deleteConfirmTitle,
       variant: 'danger',
-      confirmLabel: 'Supprimer',
+      confirmLabel: t.delete,
     });
     if (!ok) return;
     try {
@@ -86,11 +84,11 @@ function AdminPoleMembersPage({ staff }: Props) {
       });
       if (!res.ok) {
         const json = await res.json().catch(() => null);
-        throw new Error(json?.error || 'Suppression impossible');
+        throw new Error(json?.error || t.errorDeleteFailed);
       }
       fetchData();
     } catch (err: unknown) {
-      addToast((err as Error)?.message || 'Erreur de suppression.', 'error');
+      addToast((err as Error)?.message || t.errorDelete, 'error');
     }
   };
 
@@ -102,11 +100,11 @@ function AdminPoleMembersPage({ staff }: Props) {
       });
       if (!res.ok) {
         const json = await res.json().catch(() => null);
-        throw new Error(json?.error || 'Modification impossible');
+        throw new Error(json?.error || t.errorUpdateFailed);
       }
       fetchData();
     } catch (err: unknown) {
-      addToast((err as Error)?.message || 'Erreur de modification.', 'error');
+      addToast((err as Error)?.message || t.errorUpdate, 'error');
     }
   };
 
@@ -132,7 +130,7 @@ function AdminPoleMembersPage({ staff }: Props) {
     <>
       {dialog}
       <Head>
-        <title>Admin – Pôles de l&apos;asso</title>
+        <title>{t.pageTitle}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
@@ -141,11 +139,13 @@ function AdminPoleMembersPage({ staff }: Props) {
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-                  Pôles de l&apos;association
+                  {t.heading}
                 </h1>
                 <p className="text-neutral-400 text-sm mt-1">
-                  {members.length} membre{members.length > 1 ? 's' : ''} au
-                  total — répartis sur {POLE_KEYS.length} pôles.
+                  {format(
+                    members.length > 1 ? t.summary_other : t.summary_one,
+                    { count: members.length, poles: POLE_KEYS.length }
+                  )}
                 </p>
               </div>
 
@@ -166,7 +166,7 @@ function AdminPoleMembersPage({ staff }: Props) {
                     d="M12 4v16m8-8H4"
                   />
                 </svg>
-                Ajouter un membre
+                {t.addButton}
               </Link>
             </div>
           </div>
@@ -176,11 +176,11 @@ function AdminPoleMembersPage({ staff }: Props) {
             <div className="flex flex-wrap items-end gap-4">
               <div className="flex-1 min-w-[200px]">
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Recherche
+                  {t.searchLabel}
                 </label>
                 <input
                   type="text"
-                  placeholder="Nom ou rôle..."
+                  placeholder={t.searchPlaceholder}
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
@@ -188,7 +188,7 @@ function AdminPoleMembersPage({ staff }: Props) {
               </div>
               <div className="min-w-[200px]">
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Pôle
+                  {t.poleLabel}
                 </label>
                 <select
                   value={poleFilter}
@@ -197,7 +197,7 @@ function AdminPoleMembersPage({ staff }: Props) {
                   }
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500"
                 >
-                  <option value="all">Tous les pôles</option>
+                  <option value="all">{t.poleAll}</option>
                   {POLE_KEYS.map((key) => (
                     <option key={key} value={key}>
                       {POLE_LABELS[key]}
@@ -228,12 +228,17 @@ function AdminPoleMembersPage({ staff }: Props) {
                         {POLE_LABELS[poleKey]}
                       </h2>
                       <span className="text-xs text-neutral-400">
-                        {list.length} membre{list.length > 1 ? 's' : ''}
+                        {format(
+                          list.length > 1
+                            ? t.memberCount_other
+                            : t.memberCount_one,
+                          { count: list.length }
+                        )}
                       </span>
                     </header>
                     {list.length === 0 ? (
                       <div className="px-6 py-10 text-center text-sm text-neutral-500">
-                        Aucun membre dans ce pôle.
+                        {t.emptyPole}
                       </div>
                     ) : (
                       <div className="divide-y divide-neutral-700/50">
@@ -268,7 +273,9 @@ function AdminPoleMembersPage({ staff }: Props) {
                                     m.is_active
                                   )}`}
                                 >
-                                  {m.is_active ? 'Active' : 'Inactive'}
+                                  {m.is_active
+                                    ? t.statusActive
+                                    : t.statusInactive}
                                 </span>
                               </div>
                               {m.title && (
@@ -290,7 +297,7 @@ function AdminPoleMembersPage({ staff }: Props) {
 
                             <div className="flex-shrink-0 text-center">
                               <span className="text-xs text-neutral-500">
-                                Ordre
+                                {t.order}
                               </span>
                               <div className="text-lg font-bold text-neutral-300">
                                 {m.sort_order}
@@ -306,19 +313,19 @@ function AdminPoleMembersPage({ staff }: Props) {
                                     : 'border-emerald-500/40 text-emerald-300 hover:border-emerald-400'
                                 }`}
                               >
-                                {m.is_active ? 'Désactiver' : 'Activer'}
+                                {m.is_active ? t.deactivate : t.activate}
                               </button>
                               <Link
                                 href={`/admin/pole-members/${m.id}`}
                                 className="px-3 py-1.5 rounded-lg border border-neutral-600 hover:border-neutral-500 text-sm transition-colors"
                               >
-                                Modifier
+                                {t.edit}
                               </Link>
                               <button
                                 onClick={() => onDelete(m.id)}
                                 className="px-3 py-1.5 rounded-lg border border-red-500/40 text-red-300 hover:border-red-400 text-sm transition-colors"
                               >
-                                Supprimer
+                                {t.delete}
                               </button>
                             </div>
                           </div>

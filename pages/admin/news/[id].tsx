@@ -7,6 +7,7 @@ import { withStaffPage } from '@/utils/staff';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import Breadcrumb from '@/components/admin/Breadcrumb';
 import LogoUpload from '@/components/admin/LogoUpload';
+import { useAdminT } from '@/lib/i18n/useAdminT';
 
 type Props = {
   staff: {
@@ -33,6 +34,7 @@ const slugifyValue = (value: string) =>
   slugify(value, { lower: true, strict: true });
 
 export default function AdminNewsEdit({ staff }: Props) {
+  const t = useAdminT('adminNewsEdit');
   const router = useRouter();
   const { adminFetchJson } = useAdminFetch();
   const { id } = router.query;
@@ -75,7 +77,7 @@ export default function AdminNewsEdit({ staff }: Props) {
             : '',
         });
       } catch (err: unknown) {
-        setError((err as Error)?.message || 'Erreur inattendue.');
+        setError((err as Error)?.message || t.errorGeneric);
       } finally {
         setLoading(false);
       }
@@ -101,7 +103,7 @@ export default function AdminNewsEdit({ staff }: Props) {
       });
       router.push('/admin/news');
     } catch (err: unknown) {
-      setError((err as Error)?.message || 'Erreur inattendue.');
+      setError((err as Error)?.message || t.errorGeneric);
     } finally {
       setSaving(false);
     }
@@ -110,26 +112,24 @@ export default function AdminNewsEdit({ staff }: Props) {
   return (
     <>
       <Head>
-        <title>Admin – Éditer une news</title>
+        <title>{t.pageTitle}</title>
       </Head>
       <div className="min-h-screen bg-neutral-900 text-white p-6 pt-20">
         <Breadcrumb
           items={[
-            { label: 'News', href: '/admin/news' },
-            { label: 'Modifier' },
+            { label: t.breadcrumbNews, href: '/admin/news' },
+            { label: t.breadcrumbEdit },
           ]}
         />
         <header className="flex items-center justify-between flex-wrap gap-4 mb-6">
           <div>
-            <p className="text-sm text-neutral-400">Espace staff</p>
-            <h1 className="text-3xl font-bold mt-1">Éditer la news</h1>
-            <p className="text-sm text-neutral-400 mt-1">
-              Met à jour le contenu ou le statut.
-            </p>
+            <p className="text-sm text-neutral-400">{t.staffSpace}</p>
+            <h1 className="text-3xl font-bold mt-1">{t.heading}</h1>
+            <p className="text-sm text-neutral-400 mt-1">{t.subtitle}</p>
           </div>
         </header>
 
-        {loading && <div className="text-neutral-300">Chargement…</div>}
+        {loading && <div className="text-neutral-300">{t.loading}</div>}
         {error && (
           <div className="text-red-200 bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2 mb-4">
             {error}
@@ -143,14 +143,14 @@ export default function AdminNewsEdit({ staff }: Props) {
             <fieldset disabled={saving} className="space-y-4">
               <div className="grid gap-4 md:grid-cols-2">
                 <Field
-                  label="Titre"
+                  label={t.titleLabel}
                   required
                   value={form.title}
                   onChange={(v) => updateField('title', v)}
                 />
                 <Field
-                  label="Slug"
-                  placeholder="sera généré si vide"
+                  label={t.slugLabel}
+                  placeholder={t.slugPlaceholder}
                   value={form.slug}
                   onChange={(v) => updateField('slug', slugifyValue(v))}
                 />
@@ -158,26 +158,26 @@ export default function AdminNewsEdit({ staff }: Props) {
 
               <div className="grid gap-2">
                 <Field
-                  label="Tag / catégorie"
-                  placeholder="general, tournoi, announcement..."
+                  label={t.tagLabel}
+                  placeholder={t.tagPlaceholder}
                   value={form.tag}
                   onChange={(v) => updateField('tag', slugifyValue(v))}
                   required
                 />
-                <p className="text-xs text-neutral-400">
-                  Utilisé pour filtrer les news par catégorie (slug simple).
-                </p>
+                <p className="text-xs text-neutral-400">{t.tagHint}</p>
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
                 <LogoUpload
                   value={form.imageUrl}
                   onChange={(url) => updateField('imageUrl', url)}
-                  label="Image"
-                  hint="PNG, JPEG ou WebP, max 2 Mo."
+                  label={t.imageLabel}
+                  hint={t.imageHint}
                 />
                 <div className="grid gap-2">
-                  <label className="text-sm text-neutral-300">Statut</label>
+                  <label className="text-sm text-neutral-300">
+                    {t.statusLabel}
+                  </label>
                   <select
                     className="bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-white"
                     value={form.status}
@@ -188,12 +188,12 @@ export default function AdminNewsEdit({ staff }: Props) {
                       )
                     }
                   >
-                    <option value="draft">Brouillon</option>
-                    <option value="published">Publié</option>
+                    <option value="draft">{t.statusDraft}</option>
+                    <option value="published">{t.statusPublished}</option>
                   </select>
                   <div className="grid gap-1">
                     <label className="text-sm text-neutral-300">
-                      Date de publication (si publiée)
+                      {t.publishDateLabel}
                     </label>
                     <input
                       type="datetime-local"
@@ -208,7 +208,9 @@ export default function AdminNewsEdit({ staff }: Props) {
               </div>
 
               <div className="grid gap-2">
-                <label className="text-sm text-neutral-300">Résumé</label>
+                <label className="text-sm text-neutral-300">
+                  {t.excerptLabel}
+                </label>
                 <textarea
                   className="bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-white min-h-[80px]"
                   value={form.excerpt}
@@ -218,7 +220,7 @@ export default function AdminNewsEdit({ staff }: Props) {
 
               <div className="grid gap-2">
                 <label className="text-sm text-neutral-300">
-                  Contenu (markdown ou texte)
+                  {t.contentLabel}
                 </label>
                 <textarea
                   className="bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-white min-h-[220px]"
@@ -234,13 +236,13 @@ export default function AdminNewsEdit({ staff }: Props) {
                   disabled={saving}
                   className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 transition disabled:opacity-60"
                 >
-                  {saving ? 'Enregistrement…' : 'Mettre à jour'}
+                  {saving ? t.saving : t.submit}
                 </button>
                 <Link
                   href="/admin/news"
                   className={`px-4 py-2 rounded-lg border border-white/15 hover:border-white/30${saving ? ' pointer-events-none opacity-50' : ''}`}
                 >
-                  Retour
+                  {t.back}
                 </Link>
               </div>
             </fieldset>
