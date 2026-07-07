@@ -12,7 +12,10 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
 import Modal from '@/components/admin/Modal';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { StaffProps } from '@/types/admin';
+
+type Dict = ReturnType<typeof useAdminT<'adminTournamentCheckin'>>;
 
 type CheckinRow = {
   matchId: string;
@@ -36,10 +39,10 @@ type SettingsResponse = {
 
 const DEFAULT_GRACE_MINUTES = 60;
 
-function noShowReasonLabel(reason: string): string {
+function noShowReasonLabel(t: Dict, reason: string): string {
   switch (reason) {
     case 'auto_forfeit_no_checkin':
-      return 'Forfait auto (no check-in)';
+      return t.reasonAutoForfeit;
     default:
       return reason;
   }
@@ -75,31 +78,34 @@ function formatTimeFr(value: string | null): string {
   }
 }
 
-function statusBadge(status: string): { label: string; className: string } {
+function statusBadge(
+  t: Dict,
+  status: string
+): { label: string; className: string } {
   switch (status) {
     case 'pending':
       return {
-        label: 'À venir',
+        label: t.statusPending,
         className: 'bg-blue-600/20 text-blue-300 border-blue-500/30',
       };
     case 'ongoing':
       return {
-        label: 'En cours',
+        label: t.statusOngoing,
         className: 'bg-emerald-600/20 text-emerald-300 border-emerald-500/30',
       };
     case 'finished':
       return {
-        label: 'Terminé',
+        label: t.statusFinished,
         className: 'bg-neutral-600/20 text-neutral-400 border-neutral-500/30',
       };
     case 'walkover':
       return {
-        label: 'Forfait',
+        label: t.statusWalkover,
         className: 'bg-red-700/30 text-red-200 border-red-500/30',
       };
     case 'cancelled':
       return {
-        label: 'Annulé',
+        label: t.statusCancelled,
         className: 'bg-amber-700/30 text-amber-200 border-amber-500/30',
       };
     default:
@@ -111,6 +117,7 @@ function statusBadge(status: string): { label: string; className: string } {
 }
 
 function CheckinStatusPage(_: StaffProps) {
+  const t = useAdminT('adminTournamentCheckin');
   const router = useRouter();
   const { id } = router.query;
   const tournamentId = Array.isArray(id) ? id[0] : id;
@@ -183,10 +190,7 @@ function CheckinStatusPage(_: StaffProps) {
     if (!tournamentId) return;
     const minutes = Number(graceDraft);
     if (!Number.isInteger(minutes) || minutes < 0 || minutes > 120) {
-      addToast(
-        'La fenêtre de grâce doit être un entier entre 0 et 120.',
-        'error'
-      );
+      addToast(t.graceValidation, 'error');
       return;
     }
     setSavingSettings(true);
@@ -203,14 +207,12 @@ function CheckinStatusPage(_: StaffProps) {
       if (!res.ok) {
         throw new Error(
           json.error ||
-            (res.status === 503
-              ? 'Réglage indisponible : migration check-in non appliquée.'
-              : 'Échec de la sauvegarde')
+            (res.status === 503 ? t.errorMigrationMissing : t.errorSave)
         );
       }
       setGraceMinutes(minutes);
       setSettingsOpen(false);
-      addToast('Fenêtre de grâce mise à jour.', 'success');
+      addToast(t.graceUpdated, 'success');
     } catch (err) {
       addToast((err as Error).message, 'error');
     } finally {
@@ -227,9 +229,13 @@ function CheckinStatusPage(_: StaffProps) {
         { method: 'POST' }
       );
       const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json.error || 'Échec');
+      if (!res.ok) throw new Error(json.error || t.errorGeneric);
       addToast(
-        `Traité : ${json.scanned} matchs scannés, ${json.acted} action(s), ${json.errors} erreur(s)`,
+        format(t.processResult, {
+          scanned: json.scanned,
+          acted: json.acted,
+          errors: json.errors,
+        }),
         json.errors > 0 ? 'error' : 'success'
       );
       await fetchData();
@@ -269,7 +275,7 @@ function CheckinStatusPage(_: StaffProps) {
   return (
     <>
       <Head>
-        <title>Admin – Check-in</title>
+        <title>{t.headTitle}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
@@ -292,25 +298,22 @@ function CheckinStatusPage(_: StaffProps) {
                 d="M15 19l-7-7 7-7"
               />
             </svg>
-            Retour au tournoi
+            {t.backToTournament}
           </button>
 
           <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
             <div>
               <h1 className="text-3xl font-bold tracking-tight">
-                Check-in matchs
+                {t.pageTitle}
               </h1>
-              <p className="text-sm text-neutral-400 mt-1">
-                Suivi des présences et auto-forfaits. Le processeur tourne tout
-                seul (cron Netlify), mais vous pouvez forcer un passage ici.
-              </p>
+              <p className="text-sm text-neutral-400 mt-1">{t.pageSubtitle}</p>
             </div>
             <div className="flex items-center gap-2">
               <Link
                 href={`/admin/tournament/${tournamentId}/checkin/live`}
                 className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-sm font-medium transition-colors"
               >
-                Live console ↗
+                {t.liveConsole}
               </Link>
               <button
                 type="button"
@@ -319,16 +322,16 @@ function CheckinStatusPage(_: StaffProps) {
                   setSettingsOpen(true);
                 }}
                 className="px-4 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors"
-                title={`Fenêtre de grâce actuelle : ${graceMinutes} min`}
+                title={format(t.currentGraceTitle, { minutes: graceMinutes })}
               >
-                Configurer le check-in
+                {t.configureCheckin}
               </button>
               <button
                 type="button"
                 onClick={fetchData}
                 className="px-4 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors"
               >
-                Rafraîchir
+                {t.refresh}
               </button>
               <button
                 type="button"
@@ -336,26 +339,30 @@ function CheckinStatusPage(_: StaffProps) {
                 disabled={processing}
                 className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors disabled:opacity-50"
               >
-                {processing ? 'Traitement...' : 'Lancer maintenant'}
+                {processing ? t.processing : t.processNow}
               </button>
             </div>
           </div>
 
           {/* Stats cards */}
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
-            <Stat label="Matchs" value={stats.total} />
-            <Stat label="À venir" value={stats.upcoming} accent="blue" />
+            <Stat label={t.statMatches} value={stats.total} />
+            <Stat label={t.statUpcoming} value={stats.upcoming} accent="blue" />
             <Stat
-              label="Tous check-in"
+              label={t.statAllCheckedIn}
               value={stats.bothCheckedIn}
               accent="emerald"
             />
             <Stat
-              label="Aucun check-in"
+              label={t.statNoCheckin}
               value={stats.noCheckin}
               accent="amber"
             />
-            <Stat label="Forfaits auto" value={stats.forfeited} accent="red" />
+            <Stat
+              label={t.statAutoForfeits}
+              value={stats.forfeited}
+              accent="red"
+            />
           </div>
 
           <div className="flex items-center gap-2 mb-3">
@@ -368,7 +375,7 @@ function CheckinStatusPage(_: StaffProps) {
                   : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700'
               }`}
             >
-              À venir
+              {t.filterUpcoming}
             </button>
             <button
               type="button"
@@ -379,10 +386,10 @@ function CheckinStatusPage(_: StaffProps) {
                   : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700'
               }`}
             >
-              Tous
+              {t.filterAll}
             </button>
             <span className="ml-auto text-xs text-neutral-500">
-              {visibleRows.length} matchs
+              {format(t.matchCount, { count: visibleRows.length })}
             </span>
           </div>
 
@@ -398,7 +405,7 @@ function CheckinStatusPage(_: StaffProps) {
             </div>
           ) : visibleRows.length === 0 ? (
             <div className="text-center py-20 text-neutral-500 text-sm">
-              Aucun match à afficher.
+              {t.emptyMatches}
             </div>
           ) : (
             <div className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden">
@@ -406,21 +413,21 @@ function CheckinStatusPage(_: StaffProps) {
                 <table className="w-full text-sm">
                   <thead className="bg-neutral-800/80 text-xs uppercase tracking-wide text-neutral-400">
                     <tr>
-                      <th className="px-4 py-3 text-left">Date</th>
-                      <th className="px-4 py-3 text-left">Match</th>
-                      <th className="px-4 py-3 text-center">Statut</th>
-                      <th className="px-4 py-3 text-center">Email</th>
-                      <th className="px-4 py-3 text-center">T-30</th>
-                      <th className="px-4 py-3 text-center">T-15</th>
-                      <th className="px-4 py-3 text-center">Team1</th>
-                      <th className="px-4 py-3 text-center">Team2</th>
-                      <th className="px-4 py-3 text-left">Raison</th>
-                      <th className="px-4 py-3 text-right">Action</th>
+                      <th className="px-4 py-3 text-left">{t.thDate}</th>
+                      <th className="px-4 py-3 text-left">{t.thMatch}</th>
+                      <th className="px-4 py-3 text-center">{t.thStatus}</th>
+                      <th className="px-4 py-3 text-center">{t.thEmail}</th>
+                      <th className="px-4 py-3 text-center">{t.thT30}</th>
+                      <th className="px-4 py-3 text-center">{t.thT15}</th>
+                      <th className="px-4 py-3 text-center">{t.thTeam1}</th>
+                      <th className="px-4 py-3 text-center">{t.thTeam2}</th>
+                      <th className="px-4 py-3 text-left">{t.thReason}</th>
+                      <th className="px-4 py-3 text-right">{t.thAction}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-neutral-700/50">
                     {visibleRows.map((r) => {
-                      const badge = statusBadge(r.status);
+                      const badge = statusBadge(t, r.status);
                       return (
                         <tr key={r.matchId} className="hover:bg-neutral-700/20">
                           <td className="px-4 py-3 whitespace-nowrap text-xs text-neutral-300">
@@ -476,7 +483,7 @@ function CheckinStatusPage(_: StaffProps) {
                           <td className="px-4 py-3">
                             {noShowReasons[r.matchId] ? (
                               <span className="inline-block px-2 py-0.5 rounded-full text-xs font-medium border bg-red-700/30 text-red-200 border-red-500/30">
-                                {noShowReasonLabel(noShowReasons[r.matchId])}
+                                {noShowReasonLabel(t, noShowReasons[r.matchId])}
                               </span>
                             ) : (
                               <span className="text-neutral-600 text-xs">
@@ -489,7 +496,7 @@ function CheckinStatusPage(_: StaffProps) {
                               href={`/admin/matches/${r.matchId}/edit`}
                               className="text-xs text-blue-400 hover:text-blue-300"
                             >
-                              Voir
+                              {t.view}
                             </Link>
                           </td>
                         </tr>
@@ -502,9 +509,7 @@ function CheckinStatusPage(_: StaffProps) {
           )}
 
           <p className="text-xs text-neutral-500 mt-6 text-center">
-            Le processeur cron tourne automatiquement toutes les 5 minutes via
-            Netlify Scheduled Functions. Les matchs sans{' '}
-            <code>scheduled_at</code> sont ignorés.
+            {t.footerBefore} <code>scheduled_at</code> {t.footerAfter}
           </p>
         </div>
       </div>
@@ -512,8 +517,8 @@ function CheckinStatusPage(_: StaffProps) {
       <Modal
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
-        title="Configurer le check-in"
-        subtitle="Fenêtre de grâce avant l’auto-forfait pour non check-in."
+        title={t.settingsTitle}
+        subtitle={t.settingsSubtitle}
         size="md"
         footer={
           <>
@@ -522,7 +527,7 @@ function CheckinStatusPage(_: StaffProps) {
               onClick={() => setSettingsOpen(false)}
               className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
             >
-              Annuler
+              {t.cancel}
             </button>
             <button
               type="button"
@@ -530,7 +535,7 @@ function CheckinStatusPage(_: StaffProps) {
               disabled={savingSettings}
               className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors disabled:opacity-50"
             >
-              {savingSettings ? 'Enregistrement...' : 'Enregistrer'}
+              {savingSettings ? t.saving : t.save}
             </button>
           </>
         }
@@ -541,7 +546,7 @@ function CheckinStatusPage(_: StaffProps) {
               htmlFor="checkin-grace-minutes"
               className="block text-sm font-medium text-neutral-200 mb-1"
             >
-              Fenêtre de grâce (minutes)
+              {t.graceLabel}
             </label>
             <input
               id="checkin-grace-minutes"
@@ -554,9 +559,7 @@ function CheckinStatusPage(_: StaffProps) {
               className="w-full rounded-lg bg-neutral-900 border border-neutral-700 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <p className="text-xs text-neutral-500 mt-1.5">
-              Délai (0 à 120 min) après l’heure prévue avant de déclarer un
-              forfait automatique si une équipe ne s’est pas présentée. Défaut :{' '}
-              {DEFAULT_GRACE_MINUTES} min.
+              {format(t.graceHelp, { default: DEFAULT_GRACE_MINUTES })}
             </p>
           </div>
         </div>
@@ -592,11 +595,12 @@ function Stat({
 }
 
 function CheckinDot({ at }: { at: string | null }) {
+  const t = useAdminT('adminTournamentCheckin');
   if (at) {
     return (
       <span
         className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-600/20 border border-emerald-500/40"
-        title={`Check-in à ${formatTimeFr(at)}`}
+        title={format(t.checkinAtTitle, { time: formatTimeFr(at) })}
       >
         <svg
           className="w-3 h-3 text-emerald-400"

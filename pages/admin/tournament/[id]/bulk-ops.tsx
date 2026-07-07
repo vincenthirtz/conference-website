@@ -10,13 +10,17 @@ import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
 import Breadcrumb from '@/components/admin/Breadcrumb';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { StaffProps, StageSummary, TournamentMini } from '@/types/admin';
+
+type Dict = ReturnType<typeof useAdminT<'adminTournamentBulkOps'>>;
 
 export const getServerSideProps = withStaffPage('manager');
 
 type RoundOption = { stageId: string; roundNumber: number; matchCount: number };
 
 function BulkOpsPage(_: StaffProps) {
+  const t = useAdminT('adminTournamentBulkOps');
   const router = useRouter();
   const { id } = router.query;
   const tournamentId = Array.isArray(id) ? id[0] : id;
@@ -60,7 +64,7 @@ function BulkOpsPage(_: StaffProps) {
       );
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || 'Erreur chargement');
+        throw new Error(json.error || t.errorLoad);
       }
       const json = await res.json();
       setTournament(json.tournament || null);
@@ -88,11 +92,11 @@ function BulkOpsPage(_: StaffProps) {
         })
       );
     } catch (err: unknown) {
-      setErrorMsg((err as Error).message || 'Erreur');
+      setErrorMsg((err as Error).message || t.errorGeneric);
     } finally {
       setLoading(false);
     }
-  }, [tournamentId]);
+  }, [tournamentId, t]);
 
   useEffect(() => {
     if (tournamentId) loadStages();
@@ -134,17 +138,19 @@ function BulkOpsPage(_: StaffProps) {
   async function submitShift() {
     if (!tournamentId) return;
     if (!shiftStageId || !shiftRoundNumber) {
-      addToast('Sélectionne un round', 'error');
+      addToast(t.toastSelectRound, 'error');
       return;
     }
     const offset = Number(shiftOffset);
     if (!Number.isFinite(offset) || offset === 0) {
-      addToast('Offset invalide (entier ≠ 0)', 'error');
+      addToast(t.toastInvalidOffset, 'error');
       return;
     }
     if (
       !confirm(
-        `Décaler ce round de ${offset > 0 ? '+' : ''}${offset} minutes ? Les matchs sans horaire seront ignorés.`
+        format(t.confirmShift, {
+          offset: `${offset > 0 ? '+' : ''}${offset}`,
+        })
       )
     )
       return;
@@ -164,14 +170,17 @@ function BulkOpsPage(_: StaffProps) {
         }
       );
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'Erreur');
+      if (!res.ok) throw new Error(json.error || t.errorGeneric);
       addToast(
-        `${json.shifted} match(s) décalés (${json.ignored} ignorés)`,
+        format(t.toastShifted, {
+          shifted: json.shifted,
+          ignored: json.ignored,
+        }),
         'success'
       );
       await loadStages();
     } catch (e: unknown) {
-      addToast((e as Error).message || 'Erreur', 'error');
+      addToast((e as Error).message || t.errorGeneric, 'error');
     } finally {
       setShiftBusy(false);
     }
@@ -180,22 +189,18 @@ function BulkOpsPage(_: StaffProps) {
   async function submitReassign() {
     if (!tournamentId) return;
     if (!reassignTargetStageId) {
-      addToast('Sélectionne une phase cible', 'error');
+      addToast(t.toastSelectTarget, 'error');
       return;
     }
     if (reassignSelected.size === 0) {
-      addToast('Sélectionne au moins un match', 'error');
+      addToast(t.toastSelectAtLeastOne, 'error');
       return;
     }
     if (reassignSourceStageId === reassignTargetStageId) {
-      addToast('La phase source et cible doivent être différentes', 'error');
+      addToast(t.toastSameStage, 'error');
       return;
     }
-    if (
-      !confirm(
-        `Déplacer ${reassignSelected.size} match(s) vers la phase cible ? Le group_key sera réinitialisé.`
-      )
-    )
+    if (!confirm(format(t.confirmReassign, { count: reassignSelected.size })))
       return;
     setReassignBusy(true);
     try {
@@ -212,14 +217,15 @@ function BulkOpsPage(_: StaffProps) {
         }
       );
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'Erreur');
+      if (!res.ok) throw new Error(json.error || t.errorGeneric);
       const skippedReasons = (json.skipped || [])
         .map((s: any) => `${s.matchId.slice(0, 6)}: ${s.reason}`)
         .join(', ');
       addToast(
-        `${json.moved.length} match(s) déplacés${
-          skippedReasons ? `. Ignorés: ${skippedReasons}` : ''
-        }`,
+        format(t.toastMoved, { count: json.moved.length }) +
+          (skippedReasons
+            ? format(t.toastMovedSkipped, { reasons: skippedReasons })
+            : ''),
         json.moved.length > 0 ? 'success' : 'error'
       );
       // Refresh
@@ -239,7 +245,7 @@ function BulkOpsPage(_: StaffProps) {
         );
       }
     } catch (e: unknown) {
-      addToast((e as Error).message || 'Erreur', 'error');
+      addToast((e as Error).message || t.errorGeneric, 'error');
     } finally {
       setReassignBusy(false);
     }
@@ -267,42 +273,40 @@ function BulkOpsPage(_: StaffProps) {
   return (
     <>
       <Head>
-        <title>Admin · Opérations groupées</title>
+        <title>{t.headTitle}</title>
       </Head>
       <div className="min-h-screen bg-neutral-950 text-white pt-24">
         <div className="max-w-5xl mx-auto px-6 py-10">
           <Breadcrumb
             items={[
-              { label: 'Tournois', href: '/admin/tournaments' },
+              { label: t.breadcrumbTournaments, href: '/admin/tournaments' },
               {
-                label: tournament?.name || 'Tournoi',
+                label: tournament?.name || t.defaultTournamentName,
                 href: `/admin/tournament/${tournamentId}`,
               },
-              { label: 'Opérations groupées' },
+              { label: t.breadcrumbBulkOps },
             ]}
           />
 
           <div className="flex items-center justify-between gap-4 mb-6">
             <div>
               <p className="text-xs uppercase tracking-[0.18em] text-purple-200/80">
-                Admin · Bulk
+                {t.eyebrow}
               </p>
-              <h1 className="text-2xl font-semibold">Opérations groupées</h1>
-              <p className="text-sm text-gray-400 mt-1">
-                Décale un round entier ou déplace des matchs entre phases.
-              </p>
+              <h1 className="text-2xl font-semibold">{t.pageTitle}</h1>
+              <p className="text-sm text-gray-400 mt-1">{t.pageSubtitle}</p>
             </div>
             <Link
               href={`/admin/tournament/${tournamentId}/matches`}
               className="px-3 py-1.5 rounded-lg bg-white/10 border border-white/15 text-sm hover:bg-white/15"
             >
-              ← Liste des matchs
+              {t.backToMatches}
             </Link>
           </div>
 
           {loading && (
             <div className="p-4 rounded-lg bg-white/5 border border-white/10">
-              Chargement…
+              {t.loading}
             </div>
           )}
 
@@ -316,16 +320,12 @@ function BulkOpsPage(_: StaffProps) {
             <div className="space-y-8">
               {/* Shift round */}
               <section className="bg-neutral-800/50 border border-neutral-700/50 rounded-2xl p-6">
-                <h2 className="text-lg font-semibold mb-1">Décaler un round</h2>
-                <p className="text-xs text-neutral-400 mb-4">
-                  Applique un offset (en minutes) à tous les matchs planifiés du
-                  round sélectionné. Les matchs sans horaire ou annulés sont
-                  ignorés.
-                </p>
+                <h2 className="text-lg font-semibold mb-1">{t.shiftTitle}</h2>
+                <p className="text-xs text-neutral-400 mb-4">{t.shiftDesc}</p>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div>
                     <label className="block text-xs text-neutral-400 mb-1">
-                      Phase
+                      {t.stageLabel}
                     </label>
                     <select
                       className="w-full px-3 py-2 rounded-lg bg-neutral-900 border border-neutral-700 text-sm"
@@ -335,7 +335,7 @@ function BulkOpsPage(_: StaffProps) {
                         setShiftRoundNumber('');
                       }}
                     >
-                      <option value="">— Sélectionner —</option>
+                      <option value="">{t.selectPlaceholder}</option>
                       {stages.map((s) => (
                         <option key={s.id} value={s.id}>
                           {s.name}
@@ -345,7 +345,7 @@ function BulkOpsPage(_: StaffProps) {
                   </div>
                   <div>
                     <label className="block text-xs text-neutral-400 mb-1">
-                      Round
+                      {t.roundLabel}
                     </label>
                     <select
                       className="w-full px-3 py-2 rounded-lg bg-neutral-900 border border-neutral-700 text-sm"
@@ -353,19 +353,22 @@ function BulkOpsPage(_: StaffProps) {
                       onChange={(e) => setShiftRoundNumber(e.target.value)}
                       disabled={!shiftStageId}
                     >
-                      <option value="">— Sélectionner —</option>
+                      <option value="">{t.selectPlaceholder}</option>
                       {roundOptions
                         .filter((r) => r.stageId === shiftStageId)
                         .map((r) => (
                           <option key={r.roundNumber} value={r.roundNumber}>
-                            Round {r.roundNumber} ({r.matchCount} match)
+                            {format(t.roundOption, {
+                              n: r.roundNumber,
+                              count: r.matchCount,
+                            })}
                           </option>
                         ))}
                     </select>
                   </div>
                   <div>
                     <label className="block text-xs text-neutral-400 mb-1">
-                      Offset en minutes (négatif = avancer)
+                      {t.offsetLabel}
                     </label>
                     <input
                       type="number"
@@ -382,7 +385,7 @@ function BulkOpsPage(_: StaffProps) {
                     disabled={shiftBusy || !shiftStageId || !shiftRoundNumber}
                     className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-medium disabled:opacity-50"
                   >
-                    {shiftBusy ? 'Décalage…' : 'Appliquer le décalage'}
+                    {shiftBusy ? t.shifting : t.applyShift}
                   </button>
                 </div>
               </section>
@@ -390,23 +393,22 @@ function BulkOpsPage(_: StaffProps) {
               {/* Reassign stage */}
               <section className="bg-neutral-800/50 border border-neutral-700/50 rounded-2xl p-6">
                 <h2 className="text-lg font-semibold mb-1">
-                  Réassigner des matchs vers une autre phase
+                  {t.reassignTitle}
                 </h2>
                 <p className="text-xs text-neutral-400 mb-4">
-                  Les matchs avec liens bracket actifs ou en dispute sont
-                  rejetés. Le group_key est réinitialisé après le déplacement.
+                  {t.reassignDesc}
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
                   <div>
                     <label className="block text-xs text-neutral-400 mb-1">
-                      Phase source
+                      {t.sourceStageLabel}
                     </label>
                     <select
                       className="w-full px-3 py-2 rounded-lg bg-neutral-900 border border-neutral-700 text-sm"
                       value={reassignSourceStageId}
                       onChange={(e) => setReassignSourceStageId(e.target.value)}
                     >
-                      <option value="">— Sélectionner —</option>
+                      <option value="">{t.selectPlaceholder}</option>
                       {stages.map((s) => (
                         <option key={s.id} value={s.id}>
                           {s.name}
@@ -416,14 +418,14 @@ function BulkOpsPage(_: StaffProps) {
                   </div>
                   <div>
                     <label className="block text-xs text-neutral-400 mb-1">
-                      Phase cible
+                      {t.targetStageLabel}
                     </label>
                     <select
                       className="w-full px-3 py-2 rounded-lg bg-neutral-900 border border-neutral-700 text-sm"
                       value={reassignTargetStageId}
                       onChange={(e) => setReassignTargetStageId(e.target.value)}
                     >
-                      <option value="">— Sélectionner —</option>
+                      <option value="">{t.selectPlaceholder}</option>
                       {stages
                         .filter((s) => s.id !== reassignSourceStageId)
                         .map((s) => (
@@ -439,8 +441,10 @@ function BulkOpsPage(_: StaffProps) {
                   <div className="space-y-3">
                     <div className="flex items-center justify-between text-xs text-neutral-400">
                       <span>
-                        {reassignMatches.length} match(s) —{' '}
-                        {reassignSelected.size} sélectionné(s)
+                        {format(t.matchesSelectedSummary, {
+                          count: reassignMatches.length,
+                          selected: reassignSelected.size,
+                        })}
                       </span>
                       <div className="flex gap-2">
                         <button
@@ -448,21 +452,21 @@ function BulkOpsPage(_: StaffProps) {
                           disabled={reassignMatches.length === 0}
                           className="px-2 py-1 rounded bg-white/10 hover:bg-white/15 disabled:opacity-50"
                         >
-                          Tout sélectionner
+                          {t.selectAll}
                         </button>
                         <button
                           onClick={selectNone}
                           disabled={reassignSelected.size === 0}
                           className="px-2 py-1 rounded bg-white/10 hover:bg-white/15 disabled:opacity-50"
                         >
-                          Tout désélectionner
+                          {t.selectNone}
                         </button>
                       </div>
                     </div>
                     <div className="max-h-72 overflow-y-auto rounded-lg border border-neutral-700/50">
                       {reassignMatches.length === 0 ? (
                         <p className="p-4 text-sm text-neutral-500 text-center">
-                          Aucun match dans cette phase.
+                          {t.emptyStageMatches}
                         </p>
                       ) : (
                         <ul className="divide-y divide-neutral-800">
@@ -483,7 +487,10 @@ function BulkOpsPage(_: StaffProps) {
                                 className="rounded border-neutral-600 bg-neutral-700 text-blue-500"
                               />
                               <span className="text-sm flex-1 truncate">
-                                {m.round_name || `Round ${m.round_number}`}
+                                {m.round_name ||
+                                  format(t.roundLabel, {
+                                    n: m.round_number ?? '',
+                                  })}
                                 <span className="text-xs text-neutral-500 ml-2 font-mono">
                                   {m.id.slice(0, 8)}
                                 </span>
@@ -502,7 +509,9 @@ function BulkOpsPage(_: StaffProps) {
                 <div className="mt-4 flex items-center justify-between">
                   <p className="text-xs text-neutral-500">
                     {reassignTargetStageId &&
-                      `Cible : ${stageById.get(reassignTargetStageId)?.name ?? '—'}`}
+                      format(t.targetSummary, {
+                        name: stageById.get(reassignTargetStageId)?.name ?? '—',
+                      })}
                   </p>
                   <button
                     onClick={submitReassign}
@@ -514,8 +523,8 @@ function BulkOpsPage(_: StaffProps) {
                     className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium disabled:opacity-50"
                   >
                     {reassignBusy
-                      ? 'Déplacement…'
-                      : `Déplacer ${reassignSelected.size} match(s)`}
+                      ? t.moving
+                      : format(t.moveButton, { count: reassignSelected.size })}
                   </button>
                 </div>
               </section>

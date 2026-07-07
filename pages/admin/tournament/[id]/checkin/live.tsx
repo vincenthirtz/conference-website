@@ -13,7 +13,10 @@ import { withStaffPage } from '@/utils/staff';
 import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { StaffProps } from '@/types/admin';
+
+type Dict = ReturnType<typeof useAdminT<'adminTournamentCheckinLive'>>;
 
 type TeamSide = 1 | 2;
 
@@ -40,6 +43,7 @@ const FUTURE_WINDOW_MIN = 120;
 export const getServerSideProps = withStaffPage('manager');
 
 function LiveCheckInPage(_: StaffProps) {
+  const t = useAdminT('adminTournamentCheckinLive');
   const router = useRouter();
   const { id } = router.query;
   const tournamentId = Array.isArray(id) ? id[0] : id;
@@ -70,11 +74,11 @@ function LiveCheckInPage(_: StaffProps) {
       lastFetchRef.current = Date.now();
     } catch (err) {
       const e = err as AdminFetchError;
-      setError(e.message || 'Erreur de chargement');
+      setError(e.message || t.errorLoad);
     } finally {
       setLoading(false);
     }
-  }, [adminFetchJson, tournamentId]);
+  }, [adminFetchJson, tournamentId, t]);
 
   // Tick clock + auto-poll (séparés pour ne pas re-render la totalité du
   // tableau à chaque seconde).
@@ -151,8 +155,8 @@ function LiveCheckInPage(_: StaffProps) {
       const count = json.nudgedSides?.length ?? 0;
       addToast(
         count === 0
-          ? 'Aucune équipe à relancer.'
-          : `Relance envoyée à ${count} capitaine${count > 1 ? 's' : ''}.`,
+          ? t.nudgeNone
+          : format(count > 1 ? t.nudgeSent_other : t.nudgeSent_one, { count }),
         count > 0 ? 'success' : 'info'
       );
       setLastNudgeAt(new Date());
@@ -162,7 +166,7 @@ function LiveCheckInPage(_: StaffProps) {
         typeof e.payload === 'object' && e.payload && 'error' in e.payload
           ? String((e.payload as { error: string }).error)
           : null;
-      addToast(payloadError || e.message || 'Échec de la relance', 'error');
+      addToast(payloadError || e.message || t.nudgeError, 'error');
     } finally {
       setNudging((prev) => {
         const next = new Set(prev);
@@ -175,7 +179,7 @@ function LiveCheckInPage(_: StaffProps) {
   return (
     <>
       <Head>
-        <title>Live check-in — admin</title>
+        <title>{t.headTitle}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-black text-white">
@@ -186,20 +190,27 @@ function LiveCheckInPage(_: StaffProps) {
                 href={`/admin/tournament/${tournamentId}/checkin`}
                 className="text-xs text-neutral-400 hover:text-white"
               >
-                ← Vue admin normale
+                {t.backToAdmin}
               </Link>
               <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight mt-1">
-                Live check-in
+                {t.pageTitle}
               </h1>
               <p className="text-sm text-neutral-400 mt-1">
-                Fenêtre [-{PAST_WINDOW_MIN} min, +{FUTURE_WINDOW_MIN} min] ·
-                poll {POLL_MS / 1000}s
+                {format(t.windowInfo, {
+                  past: PAST_WINDOW_MIN,
+                  future: FUTURE_WINDOW_MIN,
+                  poll: POLL_MS / 1000,
+                })}
               </p>
             </div>
             <div className="text-right text-xs text-neutral-400">
-              <div>Maintenant : {formatClock(now)}</div>
+              <div>{format(t.nowLabel, { time: formatClock(now) })}</div>
               {lastNudgeAt && (
-                <div>Dernière relance : {formatClock(lastNudgeAt.getTime())}</div>
+                <div>
+                  {format(t.lastNudgeLabel, {
+                    time: formatClock(lastNudgeAt.getTime()),
+                  })}
+                </div>
               )}
             </div>
           </div>
@@ -207,30 +218,32 @@ function LiveCheckInPage(_: StaffProps) {
           {/* Métriques header (gros chiffres stream-friendly) */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
             <BigMetric
-              label="Matchs en fenêtre"
+              label={t.metricMatchesInWindow}
               value={stats.matches}
               accent="neutral"
             />
             <BigMetric
-              label="Équipes checkées"
+              label={t.metricTeamsCheckedIn}
               value={`${stats.teamsCheckedIn} / ${stats.teamsExpected}`}
               accent="emerald"
             />
             <BigMetric
-              label="Matchs complets"
+              label={t.metricCompleteMatches}
               value={`${stats.bothCheckedIn} / ${stats.matches}`}
               accent="blue"
             />
             <BigMetric
-              label="Prochain match"
+              label={t.metricNextMatch}
               value={
                 stats.nextEta === null
                   ? '—'
                   : stats.nextEta >= 0
-                    ? `T-${stats.nextEta} min`
-                    : `T+${Math.abs(stats.nextEta)} min`
+                    ? format(t.tMinusMin, { n: stats.nextEta })
+                    : format(t.tPlusMin, { n: Math.abs(stats.nextEta) })
               }
-              accent={stats.nextEta !== null && stats.nextEta < 5 ? 'red' : 'amber'}
+              accent={
+                stats.nextEta !== null && stats.nextEta < 5 ? 'red' : 'amber'
+              }
             />
           </div>
 
@@ -242,13 +255,13 @@ function LiveCheckInPage(_: StaffProps) {
 
           {loading && rows.length === 0 && (
             <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 px-4 py-10 text-center text-neutral-400">
-              Chargement…
+              {t.loading}
             </div>
           )}
 
           {!loading && windowedRows.length === 0 && (
             <div className="rounded-xl border border-neutral-800 bg-neutral-900/40 px-4 py-10 text-center text-neutral-500">
-              Aucun match dans la fenêtre actuelle.
+              {t.emptyWindow}
             </div>
           )}
 
@@ -308,6 +321,7 @@ function MatchRow({
   onNudge: (matchId: string, side: TeamSide | 'both') => void;
   nudgingSet: Set<string>;
 }) {
+  const t = useAdminT('adminTournamentCheckinLive');
   const scheduledMs = row.scheduledAt
     ? Date.parse(row.scheduledAt)
     : Number.NaN;
@@ -318,8 +332,8 @@ function MatchRow({
     tMinusMin === null
       ? '—'
       : tMinusMin >= 0
-        ? `T-${tMinusMin} min`
-        : `T+${Math.abs(tMinusMin)} min`;
+        ? format(t.tMinusMin, { n: tMinusMin })
+        : format(t.tPlusMin, { n: Math.abs(tMinusMin) });
   const urgent = tMinusMin !== null && tMinusMin <= 5;
 
   return (
@@ -358,9 +372,7 @@ function MatchRow({
           }
           className="text-xs px-3 py-1 rounded-lg bg-purple-600 hover:bg-purple-500 disabled:opacity-40 disabled:cursor-not-allowed font-medium"
         >
-          {nudgingSet.has(`${row.matchId}:both`)
-            ? 'Relance…'
-            : 'Relance les 2'}
+          {nudgingSet.has(`${row.matchId}:both`) ? t.nudgingShort : t.nudgeBoth}
         </button>
       </div>
 
@@ -401,6 +413,7 @@ function TeamLine({
   onNudge: (matchId: string, side: TeamSide | 'both') => void;
   loading: boolean;
 }) {
+  const t = useAdminT('adminTournamentCheckinLive');
   const checkedIn = !!checkedInAt;
   return (
     <div
@@ -412,16 +425,18 @@ function TeamLine({
     >
       <div className="min-w-0">
         <div className="text-xs uppercase tracking-wider text-neutral-400">
-          Équipe {side}
+          {format(t.teamSide, { side })}
         </div>
         <div className="text-lg font-semibold truncate">{name ?? '—'}</div>
         <div className="text-xs mt-1">
           {checkedIn ? (
             <span className="text-emerald-300">
-              ✓ Checké {formatRelative(checkedInAt)}
+              {format(t.checkedInRelative, {
+                relative: formatRelative(t, checkedInAt),
+              })}
             </span>
           ) : (
-            <span className="text-amber-300">⏳ Pas encore checké</span>
+            <span className="text-amber-300">{t.notCheckedIn}</span>
           )}
         </div>
       </div>
@@ -431,7 +446,7 @@ function TeamLine({
         disabled={checkedIn || loading}
         className="text-xs px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed font-medium whitespace-nowrap"
       >
-        {loading ? '…' : 'Relance Discord'}
+        {loading ? '…' : t.nudgeDiscord}
       </button>
     </div>
   );
@@ -446,15 +461,15 @@ function formatClock(ms: number): string {
   });
 }
 
-function formatRelative(iso: string | null): string {
+function formatRelative(t: Dict, iso: string | null): string {
   if (!iso) return '';
-  const t = Date.parse(iso);
-  if (!Number.isFinite(t)) return '';
-  const diffMin = Math.round((Date.now() - t) / 60_000);
-  if (diffMin < 1) return "à l'instant";
-  if (diffMin < 60) return `il y a ${diffMin} min`;
+  const parsed = Date.parse(iso);
+  if (!Number.isFinite(parsed)) return '';
+  const diffMin = Math.round((Date.now() - parsed) / 60_000);
+  if (diffMin < 1) return t.relativeNow;
+  if (diffMin < 60) return format(t.relativeMinutes, { n: diffMin });
   const diffH = Math.round(diffMin / 60);
-  return `il y a ${diffH}h`;
+  return format(t.relativeHours, { n: diffH });
 }
 
 export default LiveCheckInPage;

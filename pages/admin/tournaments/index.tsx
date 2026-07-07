@@ -6,29 +6,32 @@ import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { supabaseAdmin } from '@/utils/supabase';
 import { useUrlFilters } from '@/utils/useUrlFilters';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { StaffProps, Tournament } from '@/types/admin';
 
 import { logger } from '../../../utils/logger';
+
+type Dict = ReturnType<typeof useAdminT<'adminTournamentsList'>>;
 type AdminTournamentsProps = StaffProps & {
   tournaments: Tournament[];
   total: number | null;
   errorMsg: string | null;
 };
 
-function statusLabel(status: string | null) {
+function statusLabel(tx: Dict, status: string | null) {
   switch (status) {
     case 'draft':
-      return 'Brouillon';
+      return tx.statusDraft;
     case 'published':
-      return 'Publié';
+      return tx.statusPublished;
     case 'running':
-      return 'En cours';
+      return tx.statusRunning;
     case 'completed':
-      return 'Terminé';
+      return tx.statusCompleted;
     case 'archived':
-      return 'Archivé';
+      return tx.statusArchived;
     default:
-      return status || 'Inconnu';
+      return status || tx.statusUnknown;
   }
 }
 
@@ -49,20 +52,20 @@ function statusColor(status: string | null) {
   }
 }
 
-function formatLabel(format: string | null) {
-  switch (format) {
+function formatLabel(tx: Dict, formatType: string | null) {
+  switch (formatType) {
     case 'single_elim':
-      return 'Single Elim';
+      return tx.formatSingleElim;
     case 'double_elim':
-      return 'Double Elim';
+      return tx.formatDoubleElim;
     case 'swiss':
-      return 'Swiss';
+      return tx.formatSwiss;
     case 'round_robin':
-      return 'Round Robin';
+      return tx.formatRoundRobin;
     case 'showmatch':
-      return 'Showmatch';
+      return tx.formatShowmatch;
     default:
-      return format || '—';
+      return formatType || '—';
   }
 }
 
@@ -93,6 +96,7 @@ function AdminTournamentsPage({
   total,
   errorMsg,
 }: AdminTournamentsProps) {
+  const tx = useAdminT('adminTournamentsList');
   const router = useRouter();
   const { filters, setFilter, setFilters } = useUrlFilters(T_FILTER_KEYS);
 
@@ -119,7 +123,7 @@ function AdminTournamentsPage({
   return (
     <>
       <Head>
-        <title>Admin – Tournois</title>
+        <title>{tx.headTitle}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
@@ -129,12 +133,19 @@ function AdminTournamentsPage({
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-                  Gestion des tournois
+                  {tx.pageTitle}
                 </h1>
                 <p className="text-neutral-400 text-sm mt-1">
                   {total !== null
-                    ? `${total} tournoi${total > 1 ? 's' : ''}`
-                    : 'Chargement...'}
+                    ? format(
+                        total > 1
+                          ? tx.tournamentCount_other
+                          : tx.tournamentCount_one,
+                        {
+                          count: total,
+                        }
+                      )
+                    : tx.loading}
                 </p>
               </div>
 
@@ -156,7 +167,7 @@ function AdminTournamentsPage({
                       d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
                     />
                   </svg>
-                  Simulateur
+                  {tx.simulator}
                 </Link>
                 <Link
                   href="/admin/tournaments/create"
@@ -175,7 +186,7 @@ function AdminTournamentsPage({
                       d="M12 4v16m8-8H4"
                     />
                   </svg>
-                  Nouveau tournoi
+                  {tx.newTournament}
                 </Link>
               </div>
             </div>
@@ -189,7 +200,7 @@ function AdminTournamentsPage({
             >
               <div className="flex-1 min-w-[200px]">
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Recherche
+                  {tx.searchLabel}
                 </label>
                 <div className="relative">
                   <svg
@@ -207,7 +218,7 @@ function AdminTournamentsPage({
                   </svg>
                   <input
                     type="text"
-                    placeholder="Nom ou slug..."
+                    placeholder={tx.searchPlaceholder}
                     className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     value={searchInput}
                     onChange={(e) => setSearchInput(e.target.value)}
@@ -217,7 +228,7 @@ function AdminTournamentsPage({
 
               <div className="min-w-[160px]">
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Statut
+                  {tx.statusLabel}
                 </label>
                 <select
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -226,18 +237,18 @@ function AdminTournamentsPage({
                     setFilters({ status: e.target.value || null, offset: null })
                   }
                 >
-                  <option value="">Tous les statuts</option>
-                  <option value="draft">Brouillon</option>
-                  <option value="published">Publié</option>
-                  <option value="running">En cours</option>
-                  <option value="completed">Terminé</option>
-                  <option value="archived">Archivé</option>
+                  <option value="">{tx.allStatuses}</option>
+                  <option value="draft">{tx.statusDraft}</option>
+                  <option value="published">{tx.statusPublished}</option>
+                  <option value="running">{tx.statusRunning}</option>
+                  <option value="completed">{tx.statusCompleted}</option>
+                  <option value="archived">{tx.statusArchived}</option>
                 </select>
               </div>
 
               <div className="min-w-[150px]">
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Date début (depuis)
+                  {tx.dateFromLabel}
                 </label>
                 <input
                   type="date"
@@ -254,7 +265,7 @@ function AdminTournamentsPage({
 
               <div className="min-w-[150px]">
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Date début (jusqu&apos;au)
+                  {tx.dateToLabel}
                 </label>
                 <input
                   type="date"
@@ -286,7 +297,7 @@ function AdminTournamentsPage({
                     d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
                   />
                 </svg>
-                Rechercher
+                {tx.searchButton}
               </button>
             </form>
           </section>
@@ -311,7 +322,7 @@ function AdminTournamentsPage({
                 onClick={() => fetchData()}
                 className="flex-shrink-0 px-3 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-xs font-medium transition-colors"
               >
-                Réessayer
+                {tx.retry}
               </button>
             </div>
           )}
@@ -337,23 +348,23 @@ function AdminTournamentsPage({
                     d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
                   />
                 </svg>
-                Aucun tournoi trouvé
+                {tx.emptyTournaments}
               </div>
             ) : (
               <div className="divide-y divide-neutral-700/50">
-                {tournaments.map((t) => (
+                {tournaments.map((tourn) => (
                   <Link
-                    key={t.id}
-                    href={`/admin/tournament/${t.id}`}
+                    key={tourn.id}
+                    href={`/admin/tournament/${tourn.id}`}
                     className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-4 hover:bg-neutral-700/30 transition-colors group"
                   >
                     <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
                       {/* Logo */}
                       <div className="flex-shrink-0">
-                        {t.logo_url ? (
+                        {tourn.logo_url ? (
                           <Image
-                            src={t.logo_url}
-                            alt={t.name}
+                            src={tourn.logo_url}
+                            alt={tourn.name}
                             width={48}
                             height={48}
                             className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl object-cover border border-neutral-700"
@@ -381,37 +392,37 @@ function AdminTournamentsPage({
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
                           <h3 className="font-semibold text-white group-hover:text-blue-400 transition-colors truncate">
-                            {t.name}
+                            {tourn.name}
                           </h3>
                           <span
                             className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColor(
-                              t.status
+                              tourn.status
                             )}`}
                           >
-                            {statusLabel(t.status)}
+                            {statusLabel(tx, tourn.status)}
                           </span>
-                          {t.is_public && (
+                          {tourn.is_public && (
                             <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-600/20 text-emerald-300 border border-emerald-500/30">
-                              Public
+                              {tx.badgePublic}
                             </span>
                           )}
-                          {t.is_featured && (
+                          {tourn.is_featured && (
                             <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-600/20 text-amber-300 border border-amber-500/30">
-                              Featured
+                              {tx.badgeFeatured}
                             </span>
                           )}
                         </div>
                         <div className="flex items-center gap-2 sm:gap-3 text-sm text-neutral-400 flex-wrap">
-                          {t.slug && (
+                          {tourn.slug && (
                             <span className="font-mono text-xs bg-neutral-800 px-2 py-0.5 rounded">
-                              /{t.slug}
+                              /{tourn.slug}
                             </span>
                           )}
-                          {t.game && <span>{t.game}</span>}
+                          {tourn.game && <span>{tourn.game}</span>}
                           <span className="hidden sm:inline">•</span>
-                          <span>{formatLabel(t.format_type)}</span>
+                          <span>{formatLabel(tx, tourn.format_type)}</span>
                           <span className="hidden sm:inline">•</span>
-                          <span>{formatDate(t.start_date)}</span>
+                          <span>{formatDate(tourn.start_date)}</span>
                         </div>
                       </div>
                     </div>
@@ -459,12 +470,15 @@ function AdminTournamentsPage({
                   d="M15 19l-7-7 7-7"
                 />
               </svg>
-              Précédent
+              {tx.previous}
             </button>
 
             <span className="text-neutral-400 text-sm">
-              {offset + 1} – {offset + tournaments.length}
-              {total ? ` sur ${total}` : ''}
+              {format(tx.paginationRange, {
+                from: offset + 1,
+                to: offset + tournaments.length,
+              })}
+              {total ? format(tx.paginationOf, { total }) : ''}
             </span>
 
             <button
@@ -473,7 +487,7 @@ function AdminTournamentsPage({
               onClick={() => setFilter('offset', String(offset + LIMIT))}
               className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
-              Suivant
+              {tx.next}
               <svg
                 className="w-4 h-4"
                 fill="none"
@@ -495,65 +509,72 @@ function AdminTournamentsPage({
   );
 }
 
-export const getServerSideProps = withStaffPage('manager', async (ctx, staffCtx) => {
-  const { query } = ctx;
-  const search = typeof query.search === 'string' ? query.search.trim() : '';
-  const status = typeof query.status === 'string' ? query.status : null;
-  const dateFromRaw = typeof query.dateFrom === 'string' ? query.dateFrom : '';
-  const dateToRaw = typeof query.dateTo === 'string' ? query.dateTo : '';
-  const offset = Math.max(0, Number(query.offset) || 0);
+export const getServerSideProps = withStaffPage(
+  'manager',
+  async (ctx, staffCtx) => {
+    const { query } = ctx;
+    const search = typeof query.search === 'string' ? query.search.trim() : '';
+    const status = typeof query.status === 'string' ? query.status : null;
+    const dateFromRaw =
+      typeof query.dateFrom === 'string' ? query.dateFrom : '';
+    const dateToRaw = typeof query.dateTo === 'string' ? query.dateTo : '';
+    const offset = Math.max(0, Number(query.offset) || 0);
 
-  if (!supabaseAdmin) {
-    return { tournaments: [], total: null, errorMsg: 'Service indisponible' };
-  }
+    if (!supabaseAdmin) {
+      return { tournaments: [], total: null, errorMsg: 'Service indisponible' };
+    }
 
-  const { tenantId } = staffCtx;
+    const { tenantId } = staffCtx;
 
-  const selectColumns = `
+    const selectColumns = `
     id, name, slug, game, status,
     start_date, end_date, max_teams,
     created_at, updated_at
   `;
 
-  let q = supabaseAdmin
-    .from('tournaments')
-    .select(selectColumns, { count: 'exact' })
-    .eq('tenant_id', tenantId)
-    .order('created_at', { ascending: false })
-    .range(offset, offset + LIMIT - 1);
+    let q = supabaseAdmin
+      .from('tournaments')
+      .select(selectColumns, { count: 'exact' })
+      .eq('tenant_id', tenantId)
+      .order('created_at', { ascending: false })
+      .range(offset, offset + LIMIT - 1);
 
-  if (status) q = q.eq('status', status);
-  if (search) {
-    const s = `%${search}%`;
-    q = q.or(`name.ilike.${s},slug.ilike.${s}`);
-  }
-  if (dateFromRaw) {
-    try {
-      q = q.gte('start_date', new Date(dateFromRaw).toISOString());
-    } catch {}
-  }
-  if (dateToRaw) {
-    try {
-      q = q.lte('start_date', new Date(`${dateToRaw}T23:59:59`).toISOString());
-    } catch {}
-  }
+    if (status) q = q.eq('status', status);
+    if (search) {
+      const s = `%${search}%`;
+      q = q.or(`name.ilike.${s},slug.ilike.${s}`);
+    }
+    if (dateFromRaw) {
+      try {
+        q = q.gte('start_date', new Date(dateFromRaw).toISOString());
+      } catch {}
+    }
+    if (dateToRaw) {
+      try {
+        q = q.lte(
+          'start_date',
+          new Date(`${dateToRaw}T23:59:59`).toISOString()
+        );
+      } catch {}
+    }
 
-  const { data, error, count } = await q;
+    const { data, error, count } = await q;
 
-  if (error) {
-    logger.error('admin tournaments SSR error:', error);
+    if (error) {
+      logger.error('admin tournaments SSR error:', error);
+      return {
+        tournaments: [],
+        total: null,
+        errorMsg: 'Erreur lors du chargement',
+      };
+    }
+
     return {
-      tournaments: [],
-      total: null,
-      errorMsg: 'Erreur lors du chargement',
+      tournaments: (data || []) as Tournament[],
+      total: typeof count === 'number' ? count : null,
+      errorMsg: null,
     };
   }
-
-  return {
-    tournaments: (data || []) as Tournament[],
-    total: typeof count === 'number' ? count : null,
-    errorMsg: null,
-  };
-});
+);
 
 export default AdminTournamentsPage;

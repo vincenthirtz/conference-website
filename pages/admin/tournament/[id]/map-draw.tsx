@@ -9,6 +9,9 @@ import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { sanitizeUrl } from '@/utils/apiHelpers';
+import { useAdminT, format as fmt } from '@/lib/i18n/useAdminT';
+
+type Dict = ReturnType<typeof useAdminT<'adminTournamentMapDraw'>>;
 
 function escapeHtml(value: string | null | undefined): string {
   if (value == null) return '';
@@ -40,17 +43,19 @@ type BoFormat = 'bo3' | 'bo5';
 
 const CHOICES_PER_SLOT = 3;
 
-const TYPE_LABEL: Record<string, string> = {
-  control: 'Contrôle',
-  hybrid: 'Hybride',
-  escort: 'Convoi',
-  push: 'Push',
-  flashpoint: 'Flashpoint',
-};
+function getTypeLabels(t: Dict): Record<string, string> {
+  return {
+    control: t.typeControl,
+    hybrid: t.typeHybrid,
+    escort: t.typeEscort,
+    push: t.typePush,
+    flashpoint: t.typeFlashpoint,
+  };
+}
 
-function typeLabel(t: string | null | undefined) {
-  if (!t) return '—';
-  return TYPE_LABEL[t] || t;
+function typeLabel(t: Dict, type: string | null | undefined) {
+  if (!type) return '—';
+  return getTypeLabels(t)[type] || type;
 }
 
 function typeBadgeColor(t: string | null | undefined): string {
@@ -89,6 +94,7 @@ function makeEmptySlots(count: number): (TournamentMapRow | null)[][] {
 export const getServerSideProps = withStaffPage('manager');
 
 function AdminMapDrawPage(_: StaffProps) {
+  const t = useAdminT('adminTournamentMapDraw');
   const router = useRouter();
   const { id } = router.query;
   const tournamentId = Array.isArray(id) ? id[0] : id;
@@ -134,7 +140,7 @@ function AdminMapDrawPage(_: StaffProps) {
       setMaps(enabledMaps);
       setTournament(json.tournament ?? null);
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message || 'Erreur de chargement');
+      setErrorMsg((err as Error)?.message || t.errorLoad);
     } finally {
       setLoading(false);
     }
@@ -144,7 +150,12 @@ function AdminMapDrawPage(_: StaffProps) {
   function handleRandomDraw() {
     if (maps.length < totalMapsNeeded) {
       setErrorMsg(
-        `Il faut au moins ${totalMapsNeeded} maps activées dans le pool pour un ${format.toUpperCase()} (${CHOICES_PER_SLOT} choix × ${slotCount} matchs).`
+        fmt(t.errorNotEnoughMaps, {
+          total: totalMapsNeeded,
+          format: format.toUpperCase(),
+          choices: CHOICES_PER_SLOT,
+          slots: slotCount,
+        })
       );
       return;
     }
@@ -275,13 +286,16 @@ function AdminMapDrawPage(_: StaffProps) {
     if (!hasAny) return;
 
     const totalFilled = selectedSlots.flat().filter(Boolean).length;
-    const tournamentName = tournament?.name ?? 'Tournoi';
+    const tournamentName = tournament?.name ?? t.defaultTournamentName;
     const trimmedLabel = matchLabel.trim();
     const title = trimmedLabel
-      ? `${tournamentName} — ${trimmedLabel}`
-      : `${tournamentName} — Tirage ${format.toUpperCase()}`;
+      ? fmt(t.pdfTitleLabeled, { name: tournamentName, label: trimmedLabel })
+      : fmt(t.pdfTitleDraw, {
+          name: tournamentName,
+          format: format.toUpperCase(),
+        });
     const safeTitle = escapeHtml(title);
-    const safeFooter = escapeHtml(`${tournamentName} · Tirage de maps`);
+    const safeFooter = escapeHtml(fmt(t.pdfFooter, { name: tournamentName }));
     const safeFormat = escapeHtml(format.toUpperCase());
     const safeDate = escapeHtml(
       new Date().toLocaleDateString('fr-FR', {
@@ -344,13 +358,13 @@ ${selectedSlots
   .map(
     (slot, si) => `
   <div class="slot">
-    <div class="slot-title">MAP ${si + 1}</div>
+    <div class="slot-title">${fmt(t.pdfMapSlot, { n: si + 1 })}</div>
     <div class="slot-body">
       ${slot
         .filter(Boolean)
         .map((m) => {
           const safeName = escapeHtml(m!.map_name);
-          const safeType = escapeHtml(typeLabel(m!.map_type));
+          const safeType = escapeHtml(typeLabel(t, m!.map_type));
           const safeImg = sanitizeUrl(m!.image_url);
           const imgTag = safeImg
             ? `<img class="choice-img" src="${escapeHtml(safeImg)}" alt="${safeName}" />`
@@ -383,12 +397,12 @@ ${selectedSlots
     w.onload = () => {
       setTimeout(() => w.print(), 300);
     };
-  }, [selectedSlots, tournament, format, matchLabel]);
+  }, [selectedSlots, tournament, format, matchLabel, t]);
 
   return (
     <>
       <Head>
-        <title>Admin · Tirage de maps</title>
+        <title>{t.headTitle}</title>
       </Head>
       <div className="min-h-screen bg-neutral-950 text-white pt-24">
         <div className="max-w-7xl mx-auto px-6 py-10">
@@ -396,10 +410,12 @@ ${selectedSlots
           <div className="flex items-center justify-between gap-4 mb-6">
             <div>
               <p className="text-xs uppercase tracking-[0.18em] text-purple-200/80">
-                Admin · Tirage de maps
+                {t.eyebrow}
               </p>
               <h1 className="text-2xl font-semibold">
-                {tournament?.name || 'Tournoi'} · Tirage de maps
+                {fmt(t.pageTitle, {
+                  name: tournament?.name || t.defaultTournamentName,
+                })}
               </h1>
             </div>
             <div className="flex gap-2">
@@ -407,26 +423,26 @@ ${selectedSlots
                 href={`/admin/tournament/${tournamentId}/veto`}
                 className="px-3 py-1.5 rounded-lg bg-white/10 border border-white/15 text-sm hover:bg-white/15"
               >
-                Pick / Ban
+                {t.linkVeto}
               </Link>
               <Link
                 href={`/admin/tournament/${tournamentId}/maps`}
                 className="px-3 py-1.5 rounded-lg bg-white/10 border border-white/15 text-sm hover:bg-white/15"
               >
-                Pool de maps
+                {t.linkMapPool}
               </Link>
               <Link
                 href={`/admin/tournament/${tournamentId}/matches`}
                 className="px-3 py-1.5 rounded-lg bg-white/10 border border-white/15 text-sm hover:bg-white/15"
               >
-                Matchs
+                {t.linkMatches}
               </Link>
             </div>
           </div>
 
           {loading && (
             <div className="p-4 rounded-lg bg-white/5 border border-white/10">
-              Chargement…
+              {t.loading}
             </div>
           )}
 
@@ -438,12 +454,12 @@ ${selectedSlots
 
           {!loading && maps.length === 0 && !errorMsg && (
             <div className="p-4 rounded-lg bg-white/5 border border-white/10">
-              Aucune map activée dans le pool.{' '}
+              {t.emptyPool}{' '}
               <Link
                 href={`/admin/tournament/${tournamentId}/maps`}
                 className="text-purple-300 underline"
               >
-                Configurer le pool de maps
+                {t.configurePool}
               </Link>
             </div>
           )}
@@ -455,7 +471,7 @@ ${selectedSlots
                 {/* Format selector */}
                 <div className="flex items-center gap-4">
                   <span className="text-sm text-gray-300 font-medium">
-                    Format :
+                    {t.formatLabel}
                   </span>
                   <div className="flex gap-2">
                     {(['bo3', 'bo5'] as BoFormat[]).map((f) => (
@@ -473,22 +489,26 @@ ${selectedSlots
                     ))}
                   </div>
                   <span className="text-xs text-gray-500">
-                    ({CHOICES_PER_SLOT} choix × {slotCount} matchs ={' '}
-                    {totalMapsNeeded} maps · {maps.length} disponibles)
+                    {fmt(t.formatSummary, {
+                      choices: CHOICES_PER_SLOT,
+                      slots: slotCount,
+                      total: totalMapsNeeded,
+                      available: maps.length,
+                    })}
                   </span>
                 </div>
 
                 {/* Match label */}
                 <div className="flex items-center gap-3">
                   <label className="text-sm text-gray-300 font-medium whitespace-nowrap">
-                    Libellé du match :
+                    {t.matchLabelLabel}
                   </label>
                   <input
                     type="text"
                     value={matchLabel}
                     onChange={(e) => setMatchLabel(e.target.value)}
                     className="flex-1 max-w-md px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white text-sm"
-                    placeholder="Ex: Demi-finale — Équipe A vs Équipe B"
+                    placeholder={t.matchLabelPlaceholder}
                   />
                 </div>
 
@@ -499,20 +519,20 @@ ${selectedSlots
                     disabled={maps.length < totalMapsNeeded}
                     className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-medium text-sm transition-colors"
                   >
-                    Tirage aléatoire
+                    {t.randomDraw}
                   </button>
                   <button
                     onClick={handleClearAll}
                     className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/15 text-white text-sm transition-colors"
                   >
-                    Réinitialiser
+                    {t.reset}
                   </button>
                   {allSlotsFilled && (
                     <button
                       onClick={handleExportPDF}
                       className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-sm transition-colors"
                     >
-                      Exporter en PDF
+                      {t.exportPdf}
                     </button>
                   )}
                 </div>
@@ -521,9 +541,9 @@ ${selectedSlots
               {/* Map slots — 3 or 5 columns, each with 3 choices */}
               <div className="mb-8">
                 <h2 className="text-lg font-semibold mb-4">
-                  Maps sélectionnées
+                  {t.selectedMapsTitle}
                   <span className="text-sm font-normal text-gray-400 ml-2">
-                    ({CHOICES_PER_SLOT} choix par match)
+                    {fmt(t.choicesPerMatch, { choices: CHOICES_PER_SLOT })}
                   </span>
                 </h2>
                 <div
@@ -539,13 +559,13 @@ ${selectedSlots
                         {/* Slot header */}
                         <div className="bg-purple-600/30 border-b border-purple-500/30 px-3 py-2 text-center">
                           <span className="text-xs font-bold uppercase tracking-wider text-purple-200">
-                            Map {si + 1}
+                            {fmt(t.mapSlot, { n: si + 1 })}
                           </span>
                           {cat && (
                             <span
                               className={`ml-2 inline-block px-2 py-0.5 rounded-full text-[10px] border ${typeBadgeColor(cat)}`}
                             >
-                              {typeLabel(cat)}
+                              {typeLabel(t, cat)}
                             </span>
                           )}
                         </div>
@@ -555,7 +575,7 @@ ${selectedSlots
                           {slot.map((choice, ci) => (
                             <div key={ci} className="p-3">
                               <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1.5">
-                                Choix {ci + 1}
+                                {fmt(t.choiceLabel, { n: ci + 1 })}
                               </p>
 
                               {/* Map image or placeholder */}
@@ -586,7 +606,7 @@ ${selectedSlots
                                   <span
                                     className={`inline-block mt-0.5 px-2 py-0.5 rounded-full text-[10px] border ${typeBadgeColor(choice.map_type)}`}
                                   >
-                                    {typeLabel(choice.map_type)}
+                                    {typeLabel(t, choice.map_type)}
                                   </span>
                                 </div>
                               )}
@@ -599,7 +619,7 @@ ${selectedSlots
                                 }
                                 className="w-full px-2 py-1.5 rounded-lg bg-white/10 border border-white/20 text-white text-xs"
                               >
-                                <option value="">— Choisir —</option>
+                                <option value="">{t.choosePlaceholder}</option>
                                 {maps
                                   .filter((m) => !usedMapIds(si, ci).has(m.id))
                                   .sort((a, b) =>
@@ -607,7 +627,7 @@ ${selectedSlots
                                   )
                                   .map((m) => (
                                     <option key={m.id} value={m.id}>
-                                      {m.map_name} ({typeLabel(m.map_type)})
+                                      {m.map_name} ({typeLabel(t, m.map_type)})
                                     </option>
                                   ))}
                               </select>
@@ -623,7 +643,7 @@ ${selectedSlots
               {/* Pool overview */}
               <div>
                 <h2 className="text-lg font-semibold mb-4">
-                  Pool de maps ({maps.length})
+                  {fmt(t.poolTitle, { count: maps.length })}
                 </h2>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
                   {maps
@@ -661,11 +681,11 @@ ${selectedSlots
                               {m.map_name}
                             </p>
                             <p className="text-[10px] text-gray-400">
-                              {typeLabel(m.map_type)}
+                              {typeLabel(t, m.map_type)}
                             </p>
                             {isUsed && (
                               <p className="text-[10px] text-purple-300 font-medium mt-0.5">
-                                Sélectionnée
+                                {t.selected}
                               </p>
                             )}
                           </div>

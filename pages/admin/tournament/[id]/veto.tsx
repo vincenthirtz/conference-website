@@ -9,7 +9,10 @@ import { withStaffPage } from '@/utils/staff';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { VetoFlowStep, VetoStep, MatchVetoState } from '@/types/veto';
+
+type Dict = ReturnType<typeof useAdminT<'adminTournamentVeto'>>;
 
 type StaffShape = { id: string; role: string; display_name: string | null };
 type StaffProps = { staff: StaffShape };
@@ -37,17 +40,19 @@ type MatchOption = {
   status: string;
 };
 
-const TYPE_LABEL: Record<string, string> = {
-  control: 'Contrôle',
-  hybrid: 'Hybride',
-  escort: 'Convoi',
-  push: 'Push',
-  flashpoint: 'Flashpoint',
-};
+function getTypeLabels(t: Dict): Record<string, string> {
+  return {
+    control: t.typeControl,
+    hybrid: t.typeHybrid,
+    escort: t.typeEscort,
+    push: t.typePush,
+    flashpoint: t.typeFlashpoint,
+  };
+}
 
-function typeLabel(t: string | null | undefined) {
-  if (!t) return '—';
-  return TYPE_LABEL[t] || t;
+function typeLabel(t: Dict, type: string | null | undefined) {
+  if (!type) return '—';
+  return getTypeLabels(t)[type] || type;
 }
 
 function typeBadgeColor(t: string | null | undefined): string {
@@ -94,18 +99,20 @@ function actionColor(action: string): string {
 }
 
 function sideLabel(
+  t: Dict,
   side: string | null,
   team1Name: string | null,
   team2Name: string | null
 ): string {
-  if (side === 'team1') return team1Name || 'Équipe 1';
-  if (side === 'team2') return team2Name || 'Équipe 2';
-  return 'Restante';
+  if (side === 'team1') return team1Name || t.team1Fallback;
+  if (side === 'team2') return team2Name || t.team2Fallback;
+  return t.sideRemaining;
 }
 
 export const getServerSideProps = withStaffPage('manager');
 
 function AdminVetoPage({ staff }: StaffProps) {
+  const t = useAdminT('adminTournamentVeto');
   const router = useRouter();
   const { id } = router.query;
   const tournamentId = Array.isArray(id) ? id[0] : id;
@@ -117,7 +124,9 @@ function AdminVetoPage({ staff }: StaffProps) {
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
   const { adminFetch } = useAdminFetch();
   const [maps, setMaps] = useState<TournamentMapRow[]>([]);
-  const [tournamentName, setTournamentName] = useState<string>('Tournoi');
+  const [tournamentName, setTournamentName] = useState<string>(
+    t.defaultTournamentName
+  );
 
   // Match selection
   const [matches, setMatches] = useState<MatchOption[]>([]);
@@ -150,7 +159,7 @@ function AdminVetoPage({ staff }: StaffProps) {
       if (mapsRes.ok) {
         const json = await mapsRes.json();
         setMaps((json.maps || []).filter((m: TournamentMapRow) => m.enabled));
-        setTournamentName(json.tournament?.name || 'Tournoi');
+        setTournamentName(json.tournament?.name || t.defaultTournamentName);
       }
 
       // Fetch matches (pending or ongoing, with both teams assigned)
@@ -180,7 +189,7 @@ function AdminVetoPage({ staff }: StaffProps) {
         setMatches(allMatches);
       }
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message || 'Erreur de chargement');
+      setErrorMsg((err as Error)?.message || t.errorLoad);
     } finally {
       setLoading(false);
     }
@@ -191,13 +200,13 @@ function AdminVetoPage({ staff }: StaffProps) {
       const res = await adminFetch(`/api/admin/matches/${matchId}/veto`);
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || 'Impossible de charger le veto');
+        throw new Error(json.error || t.errorLoadVeto);
       }
       const state = await res.json();
       setVetoState(state as MatchVetoState);
       setErrorMsg(null);
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message || 'Erreur');
+      setErrorMsg((err as Error)?.message || t.error);
       setVetoState(null);
     }
   }
@@ -206,7 +215,7 @@ function AdminVetoPage({ staff }: StaffProps) {
     async (mapName: string, mapType: string | null) => {
       if (!vetoState || !selectedMatchId || vetoState.isComplete) return;
       if (vetoState.vetoLockedAt) {
-        addToast('Veto verrouillé : impossible de modifier.', 'error');
+        addToast(t.toastVetoLockedModify, 'error');
         return;
       }
 
@@ -247,13 +256,10 @@ function AdminVetoPage({ staff }: StaffProps) {
           // refresh pour afficher le badge "verrouillé" et désactiver l'UI.
           if (res.status === 409 && json.code === 'VETO_LOCKED') {
             await fetchVetoState(selectedMatchId);
-            addToast(
-              json.error || 'Le veto est verrouillé (match commencé).',
-              'error'
-            );
+            addToast(json.error || t.errorVetoLockedStarted, 'error');
             return;
           }
-          throw new Error(json.error || 'Erreur lors du veto');
+          throw new Error(json.error || t.errorVetoAction);
         }
 
         const result = await res.json();
@@ -261,8 +267,8 @@ function AdminVetoPage({ staff }: StaffProps) {
         if (result.isComplete) {
           addToast(
             result.gamesCreated
-              ? 'Veto terminé ! Les games ont été créées automatiquement.'
-              : 'Veto terminé !',
+              ? t.toastVetoCompleteGames
+              : t.toastVetoComplete,
             'success'
           );
         }
@@ -270,23 +276,22 @@ function AdminVetoPage({ staff }: StaffProps) {
         // Refresh veto state
         await fetchVetoState(selectedMatchId);
       } catch (err: unknown) {
-        setErrorMsg((err as Error)?.message || 'Erreur');
+        setErrorMsg((err as Error)?.message || t.error);
       } finally {
         setSubmitting(false);
       }
     },
-    [vetoState, selectedMatchId, addToast, adminFetch]
+    [vetoState, selectedMatchId, addToast, adminFetch, t]
   );
 
   const handleReset = useCallback(async () => {
     if (!selectedMatchId) return;
 
     const ok = await confirm({
-      title: 'Reinitialiser tous les vetos de ce match ?',
-      subtitle:
-        'Toutes les selections de map de ce match vont etre supprimees.',
+      title: t.confirmResetTitle,
+      subtitle: t.confirmResetSubtitle,
       variant: 'danger',
-      confirmLabel: 'Reinitialiser',
+      confirmLabel: t.confirmResetLabel,
     });
     if (!ok) return;
 
@@ -305,39 +310,33 @@ function AdminVetoPage({ staff }: StaffProps) {
         const json = await res.json().catch(() => ({}));
         if (res.status === 409 && json.code === 'VETO_LOCKED') {
           await fetchVetoState(selectedMatchId);
-          addToast(
-            json.error || 'Le veto est verrouillé (match commencé).',
-            'error'
-          );
+          addToast(json.error || t.errorVetoLockedStarted, 'error');
           return;
         }
-        throw new Error(json.error || 'Erreur');
+        throw new Error(json.error || t.error);
       }
 
       await fetchVetoState(selectedMatchId);
-      addToast('Veto réinitialisé.', 'success');
+      addToast(t.toastVetoReset, 'success');
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message || 'Erreur');
+      setErrorMsg((err as Error)?.message || t.error);
     } finally {
       setSubmitting(false);
     }
-  }, [selectedMatchId, addToast, confirm, adminFetch]);
+  }, [selectedMatchId, addToast, confirm, adminFetch, t]);
 
   const handleUnlock = useCallback(async () => {
     if (!selectedMatchId || !canUnlockVeto) return;
 
     const ok = await confirm({
-      title: 'Déverrouiller le veto ?',
-      subtitle:
-        'Action exceptionnelle : permet de remodifier le veto même après le début du match. Toutes les actions seront tracées dans staff_logs.',
+      title: t.confirmUnlockTitle,
+      subtitle: t.confirmUnlockSubtitle,
       variant: 'danger',
-      confirmLabel: 'Déverrouiller',
+      confirmLabel: t.confirmUnlockLabel,
     });
     if (!ok) return;
 
-    const reason = window
-      .prompt('Raison du déverrouillage (optionnel, max 500 chars) :', '')
-      ?.trim();
+    const reason = window.prompt(t.unlockReasonPrompt, '')?.trim();
 
     setSubmitting(true);
     setErrorMsg(null);
@@ -351,16 +350,16 @@ function AdminVetoPage({ staff }: StaffProps) {
       );
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || 'Échec du déverrouillage');
+        throw new Error(json.error || t.errorUnlock);
       }
       await fetchVetoState(selectedMatchId);
-      addToast('Veto déverrouillé.', 'success');
+      addToast(t.toastVetoUnlocked, 'success');
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message || 'Erreur');
+      setErrorMsg((err as Error)?.message || t.error);
     } finally {
       setSubmitting(false);
     }
-  }, [selectedMatchId, addToast, confirm, canUnlockVeto, adminFetch]);
+  }, [selectedMatchId, addToast, confirm, canUnlockVeto, adminFetch, t]);
 
   // Compute used maps in current veto
   const usedMapNames = new Set((vetoState?.steps || []).map((s) => s.map_name));
@@ -386,7 +385,7 @@ function AdminVetoPage({ staff }: StaffProps) {
     <>
       {confirmDialog}
       <Head>
-        <title>Admin · Veto de maps</title>
+        <title>{t.headTitle}</title>
       </Head>
       <div className="min-h-screen bg-neutral-950 text-white pt-24">
         <div className="max-w-6xl mx-auto px-6 py-10">
@@ -394,10 +393,10 @@ function AdminVetoPage({ staff }: StaffProps) {
           <div className="flex items-center justify-between gap-4 mb-6">
             <div>
               <p className="text-xs uppercase tracking-[0.18em] text-purple-200/80">
-                Admin · Veto de maps
+                {t.eyebrow}
               </p>
               <h1 className="text-2xl font-semibold">
-                {tournamentName} · Pick / Ban
+                {format(t.pageTitle, { name: tournamentName })}
               </h1>
             </div>
             <div className="flex gap-2">
@@ -405,13 +404,13 @@ function AdminVetoPage({ staff }: StaffProps) {
                 href={`/admin/tournament/${tournamentId}/map-draw`}
                 className="px-3 py-1.5 rounded-lg bg-white/10 border border-white/15 text-sm hover:bg-white/15"
               >
-                Tirage aléatoire
+                {t.linkMapDraw}
               </Link>
               <Link
                 href={`/admin/tournament/${tournamentId}/maps`}
                 className="px-3 py-1.5 rounded-lg bg-white/10 border border-white/15 text-sm hover:bg-white/15"
               >
-                Pool de maps
+                {t.linkMapPool}
               </Link>
             </div>
           </div>
@@ -424,7 +423,7 @@ function AdminVetoPage({ staff }: StaffProps) {
           )}
           {loading && (
             <div className="p-4 rounded-lg bg-white/5 border border-white/10">
-              Chargement…
+              {t.loading}
             </div>
           )}
 
@@ -434,14 +433,14 @@ function AdminVetoPage({ staff }: StaffProps) {
               <div className="mb-6 p-5 rounded-xl bg-white/5 border border-white/10 space-y-4">
                 <div className="flex items-center gap-4">
                   <label className="text-sm text-gray-300 font-medium whitespace-nowrap">
-                    Match :
+                    {t.matchLabel}
                   </label>
                   <select
                     value={selectedMatchId}
                     onChange={(e) => setSelectedMatchId(e.target.value)}
                     className="flex-1 max-w-lg px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white text-sm"
                   >
-                    <option value="">— Sélectionner un match —</option>
+                    <option value="">{t.selectMatchPlaceholder}</option>
                     {matches.map((m) => (
                       <option key={m.id} value={m.id}>
                         {m.team1_name} vs {m.team2_name}
@@ -455,10 +454,7 @@ function AdminVetoPage({ staff }: StaffProps) {
                 </div>
 
                 {matches.length === 0 && (
-                  <p className="text-sm text-gray-400">
-                    Aucun match éligible (il faut des matchs pending/ongoing
-                    avec les deux équipes assignées).
-                  </p>
+                  <p className="text-sm text-gray-400">{t.noEligibleMatch}</p>
                 )}
               </div>
 
@@ -473,13 +469,14 @@ function AdminVetoPage({ staff }: StaffProps) {
                           <span className="text-2xl leading-none">🔒</span>
                           <div className="min-w-0">
                             <p className="text-base font-semibold text-amber-100">
-                              Veto verrouillé
+                              {t.lockedTitle}
                             </p>
                             <p className="text-sm text-amber-200/80 mt-0.5">
-                              Le match a commencé ou est terminé. Aucune
-                              modification possible.
+                              {t.lockedDesc}
                               {lockedLabel
-                                ? ` Verrouillé le ${lockedLabel} (Paris).`
+                                ? format(t.lockedAtSuffix, {
+                                    date: lockedLabel,
+                                  })
                                 : ''}
                             </p>
                           </div>
@@ -489,9 +486,9 @@ function AdminVetoPage({ staff }: StaffProps) {
                             onClick={handleUnlock}
                             disabled={submitting}
                             className="px-3 py-1.5 rounded-lg bg-amber-600/40 border border-amber-400/50 text-amber-50 text-sm hover:bg-amber-600/60 disabled:opacity-50 whitespace-nowrap"
-                            title="Action exceptionnelle (admin only) — tracée dans staff_logs."
+                            title={t.unlockButtonTitle}
                           >
-                            Déverrouiller
+                            {t.unlockButton}
                           </button>
                         )}
                       </div>
@@ -504,8 +501,10 @@ function AdminVetoPage({ staff }: StaffProps) {
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-xs text-gray-400 mb-1">
-                            Étape {vetoState.currentStepIndex + 1} /{' '}
-                            {vetoState.flow.length}
+                            {format(t.stepProgress, {
+                              current: vetoState.currentStepIndex + 1,
+                              total: vetoState.flow.length,
+                            })}
                           </p>
                           <p className="text-lg font-semibold">
                             <span
@@ -514,27 +513,28 @@ function AdminVetoPage({ staff }: StaffProps) {
                               {actionLabel(currentFlowStep.action)}
                             </span>
                             {sideLabel(
+                              t,
                               currentFlowStep.side,
                               vetoState.team1Name,
                               vetoState.team2Name
                             )}
                           </p>
                           <p className="text-xs text-gray-400 mt-1">
-                            Cliquez sur une map ci-dessous pour{' '}
+                            {t.clickMapPrefix}
                             {currentFlowStep.action === 'ban'
-                              ? 'la bannir'
+                              ? t.actionBan
                               : currentFlowStep.action === 'pick'
-                                ? 'la sélectionner'
-                                : 'choisir le decider'}
+                                ? t.actionPick
+                                : t.actionDecider}
                           </p>
                         </div>
                         <button
                           onClick={handleReset}
                           disabled={submitting || isLocked}
-                          title={isLocked ? 'Veto verrouillé' : undefined}
+                          title={isLocked ? t.lockedShort : undefined}
                           className="px-3 py-1.5 rounded-lg bg-red-600/30 border border-red-500/40 text-red-200 text-sm hover:bg-red-600/50 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          Réinitialiser
+                          {t.resetButton}
                         </button>
                       </div>
                     </div>
@@ -545,20 +545,22 @@ function AdminVetoPage({ staff }: StaffProps) {
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-lg font-semibold text-emerald-200">
-                            Veto terminé
+                            {t.completeTitle}
                           </p>
                           <p className="text-xs text-emerald-300/70 mt-1">
-                            {vetoState.pickedMaps.length} maps sélectionnées
-                            pour le {vetoState.format.toUpperCase()}
+                            {format(t.completeSummary, {
+                              count: vetoState.pickedMaps.length,
+                              format: vetoState.format.toUpperCase(),
+                            })}
                           </p>
                         </div>
                         <button
                           onClick={handleReset}
                           disabled={submitting || isLocked}
-                          title={isLocked ? 'Veto verrouillé' : undefined}
+                          title={isLocked ? t.lockedShort : undefined}
                           className="px-3 py-1.5 rounded-lg bg-red-600/30 border border-red-500/40 text-red-200 text-sm hover:bg-red-600/50 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          Recommencer
+                          {t.restartButton}
                         </button>
                       </div>
                     </div>
@@ -568,7 +570,7 @@ function AdminVetoPage({ staff }: StaffProps) {
                   {vetoState.steps.length > 0 && (
                     <div className="mb-6">
                       <h2 className="text-lg font-semibold mb-3">
-                        Historique du veto
+                        {t.historyTitle}
                       </h2>
                       <div className="flex flex-wrap gap-2">
                         {vetoState.steps.map((step: VetoStep, i: number) => {
@@ -589,8 +591,8 @@ function AdminVetoPage({ staff }: StaffProps) {
                                 <span className="ml-1 text-xs opacity-60">
                                   (
                                   {step.team_id === vetoState.team1Id
-                                    ? vetoState.team1Name || 'Éq. 1'
-                                    : vetoState.team2Name || 'Éq. 2'}
+                                    ? vetoState.team1Name || t.teamShort1
+                                    : vetoState.team2Name || t.teamShort2}
                                   )
                                 </span>
                               )}
@@ -605,7 +607,7 @@ function AdminVetoPage({ staff }: StaffProps) {
                   {vetoState.pickedMaps.length > 0 && (
                     <div className="mb-6">
                       <h2 className="text-lg font-semibold mb-3">
-                        Maps à jouer
+                        {t.mapsToPlayTitle}
                       </h2>
                       <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                         {vetoState.pickedMaps.map((pm, i) => {
@@ -619,7 +621,7 @@ function AdminVetoPage({ staff }: StaffProps) {
                             >
                               <div className="bg-emerald-600/30 border-b border-emerald-500/30 px-3 py-2 text-center">
                                 <span className="text-xs font-bold uppercase tracking-wider text-emerald-200">
-                                  Map {i + 1}
+                                  {format(t.mapSlot, { n: i + 1 })}
                                 </span>
                               </div>
                               {mapData?.image_url ? (
@@ -644,15 +646,21 @@ function AdminVetoPage({ staff }: StaffProps) {
                                   <span
                                     className={`inline-block mt-1 px-2 py-0.5 rounded-full text-xs border ${typeBadgeColor(pm.map_type)}`}
                                   >
-                                    {typeLabel(pm.map_type)}
+                                    {typeLabel(t, pm.map_type)}
                                   </span>
                                 )}
                                 <p className="text-[10px] text-gray-400 mt-1">
                                   {pm.picked_by
                                     ? pm.picked_by === vetoState.team1Id
-                                      ? `Pick ${vetoState.team1Name || 'Éq. 1'}`
-                                      : `Pick ${vetoState.team2Name || 'Éq. 2'}`
-                                    : 'Decider'}
+                                      ? format(t.pickBy, {
+                                          team:
+                                            vetoState.team1Name || t.teamShort1,
+                                        })
+                                      : format(t.pickBy, {
+                                          team:
+                                            vetoState.team2Name || t.teamShort2,
+                                        })
+                                    : t.decider}
                                 </p>
                               </div>
                             </div>
@@ -666,7 +674,9 @@ function AdminVetoPage({ staff }: StaffProps) {
                   {!vetoState.isComplete && (
                     <div>
                       <h2 className="text-lg font-semibold mb-3">
-                        Maps disponibles ({maps.length - usedMapNames.size})
+                        {format(t.availableMapsTitle, {
+                          count: maps.length - usedMapNames.size,
+                        })}
                       </h2>
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                         {maps
@@ -689,9 +699,9 @@ function AdminVetoPage({ staff }: StaffProps) {
                                 disabled={isUsed || submitting || isLocked}
                                 title={
                                   isLocked
-                                    ? 'Veto verrouillé'
+                                    ? t.lockedShort
                                     : isUsed
-                                      ? 'Map déjà utilisée'
+                                      ? t.mapUsedTitle
                                       : undefined
                                 }
                                 className={`rounded-lg border overflow-hidden text-left transition-all ${
@@ -721,11 +731,11 @@ function AdminVetoPage({ staff }: StaffProps) {
                                   <span
                                     className={`inline-block mt-0.5 px-1.5 py-0.5 rounded-full text-[10px] border ${typeBadgeColor(m.map_type)}`}
                                   >
-                                    {typeLabel(m.map_type)}
+                                    {typeLabel(t, m.map_type)}
                                   </span>
                                   {isUsed && (
                                     <p className="text-[10px] text-red-300 mt-0.5">
-                                      Déjà utilisée
+                                      {t.mapUsed}
                                     </p>
                                   )}
                                 </div>

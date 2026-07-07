@@ -11,6 +11,9 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import Modal from '@/components/admin/Modal';
 import { getGame, type GameDef } from '@/config/games';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
+
+type Dict = ReturnType<typeof useAdminT<'adminTournamentMaps'>>;
 
 type StaffShape = {
   id: string;
@@ -44,28 +47,31 @@ type ApiResponse = {
   tournament?: TournamentMini | null;
 };
 
-const TYPE_LABEL: Record<string, string> = {
-  // Overwatch
-  control: 'Contrôle',
-  hybrid: 'Hybride',
-  escort: 'Convoi',
-  push: 'Push',
-  flashpoint: 'Flashpoint',
-  clash: 'Clash',
-  // Valorant
-  standard: 'Standard',
-  // CS2
-  'active-duty': 'Active Duty',
-};
+function getTypeLabels(t: Dict): Record<string, string> {
+  return {
+    // Overwatch
+    control: t.typeControl,
+    hybrid: t.typeHybrid,
+    escort: t.typeEscort,
+    push: t.typePush,
+    flashpoint: t.typeFlashpoint,
+    clash: t.typeClash,
+    // Valorant
+    standard: t.typeStandard,
+    // CS2
+    'active-duty': t.typeActiveDuty,
+  };
+}
 
-function typeLabel(t: string | null | undefined) {
-  if (!t) return '—';
-  return TYPE_LABEL[t] || t;
+function typeLabel(t: Dict, type: string | null | undefined) {
+  if (!type) return '—';
+  return getTypeLabels(t)[type] || type;
 }
 
 export const getServerSideProps = withStaffPage('manager');
 
 function AdminTournamentMapsPage(_: StaffProps) {
+  const t = useAdminT('adminTournamentMaps');
   const router = useRouter();
   const { id } = router.query;
   const tournamentId = Array.isArray(id) ? id[0] : id;
@@ -118,7 +124,7 @@ function AdminTournamentMapsPage(_: StaffProps) {
       setMaps(json.maps || []);
       setTournament(json.tournament ?? null);
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message || 'Erreur de chargement');
+      setErrorMsg((err as Error)?.message || t.errorLoad);
     } finally {
       setLoading(false);
     }
@@ -136,7 +142,7 @@ function AdminTournamentMapsPage(_: StaffProps) {
 
     if (forceCustom) {
       if (!customMapName.trim()) {
-        alert('Veuillez entrer un nom de map');
+        alert(t.alertEnterMapName);
         return;
       }
       mapName = customMapName.trim();
@@ -144,7 +150,7 @@ function AdminTournamentMapsPage(_: StaffProps) {
       imageUrl = customMapImage.trim();
     } else {
       if (!selectedPoolMap) {
-        alert('Veuillez sélectionner une map');
+        alert(t.alertSelectMap);
         return;
       }
       const selected = gamePool.find((m) => m.name === selectedPoolMap);
@@ -170,7 +176,7 @@ function AdminTournamentMapsPage(_: StaffProps) {
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || "Erreur lors de l'ajout");
+        throw new Error(json.error || t.errorAdd);
       }
 
       // Réinitialiser le formulaire
@@ -183,7 +189,7 @@ function AdminTournamentMapsPage(_: StaffProps) {
       // Recharger la liste
       await fetchMaps();
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message || "Erreur lors de l'ajout");
+      setErrorMsg((err as Error)?.message || t.errorAdd);
     } finally {
       setAdding(false);
     }
@@ -191,7 +197,7 @@ function AdminTournamentMapsPage(_: StaffProps) {
 
   async function handleDeleteMap(mapId: string) {
     if (!tournamentId) return;
-    if (!confirm('Êtes-vous sûr de vouloir supprimer cette map ?')) return;
+    if (!confirm(t.confirmDeleteMap)) return;
 
     setDeleting(mapId);
     setErrorMsg(null);
@@ -205,7 +211,7 @@ function AdminTournamentMapsPage(_: StaffProps) {
       // Recharger la liste
       await fetchMaps();
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message || 'Erreur lors de la suppression');
+      setErrorMsg((err as Error)?.message || t.errorDelete);
     } finally {
       setDeleting(null);
     }
@@ -213,12 +219,7 @@ function AdminTournamentMapsPage(_: StaffProps) {
 
   async function handleDeleteAllMaps() {
     if (!tournamentId) return;
-    if (
-      !confirm(
-        'Supprimer TOUTES les maps du pool ? Cette action est irréversible.'
-      )
-    )
-      return;
+    if (!confirm(t.confirmDeleteAll)) return;
 
     setErrorMsg(null);
 
@@ -229,7 +230,7 @@ function AdminTournamentMapsPage(_: StaffProps) {
 
       await fetchMaps();
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message || 'Erreur lors de la suppression');
+      setErrorMsg((err as Error)?.message || t.errorDelete);
     }
   }
 
@@ -293,7 +294,7 @@ function AdminTournamentMapsPage(_: StaffProps) {
       setEditingMap(null);
       await fetchMaps();
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message || 'Erreur lors de la mise à jour');
+      setErrorMsg((err as Error)?.message || t.errorUpdate);
     } finally {
       setUpdating(false);
     }
@@ -302,10 +303,7 @@ function AdminTournamentMapsPage(_: StaffProps) {
   async function handleAddAllMaps() {
     if (!tournamentId) return;
     if (!gameDef || !gameDef.hasMapVeto) return;
-    if (
-      !confirm(`Ajouter toutes les maps ${gameDef.label} manquantes au pool ?`)
-    )
-      return;
+    if (!confirm(format(t.confirmAddAll, { game: gameDef.label }))) return;
 
     setAddingAll(true);
     setErrorMsg(null);
@@ -316,7 +314,7 @@ function AdminTournamentMapsPage(_: StaffProps) {
       const missing = gamePool.filter((m) => !existingNames.has(m.name));
 
       if (missing.length === 0) {
-        alert('Toutes les maps sont déjà dans le pool.');
+        alert(t.alertAllMapsPresent);
         setAddingAll(false);
         return;
       }
@@ -351,12 +349,12 @@ function AdminTournamentMapsPage(_: StaffProps) {
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || "Erreur lors de l'ajout groupé");
+        throw new Error(json.error || t.errorAddAll);
       }
 
       await fetchMaps();
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message || "Erreur lors de l'ajout groupé");
+      setErrorMsg((err as Error)?.message || t.errorAddAll);
     } finally {
       setAddingAll(false);
     }
@@ -377,23 +375,29 @@ function AdminTournamentMapsPage(_: StaffProps) {
   return (
     <>
       <Head>
-        <title>Admin · Pool de maps</title>
+        <title>{t.headTitle}</title>
       </Head>
       <div className="min-h-screen bg-neutral-950 text-white pt-24">
         <div className="max-w-6xl mx-auto px-6 py-10">
           <div className="flex items-center justify-between gap-4 mb-6">
             <div>
               <p className="text-xs uppercase tracking-[0.18em] text-purple-200/80">
-                Admin · Pool de maps
+                {t.eyebrow}
               </p>
               <h1 className="text-2xl font-semibold flex items-center gap-3">
-                <span>{tournament?.name || 'Tournoi'} · Maps</span>
+                <span>
+                  {format(t.pageTitle, {
+                    name: tournament?.name || t.defaultTournamentName,
+                  })}
+                </span>
                 {tournament?.game && (
                   <span
                     className="px-2 py-0.5 rounded-full text-xs border border-purple-400/40 bg-purple-500/10 text-purple-200 font-normal"
-                    title={`Slug: ${tournament.game}`}
+                    title={format(t.slugTitle, { slug: tournament.game })}
                   >
-                    Jeu : {gameDef?.label ?? tournament.game}
+                    {format(t.gameBadge, {
+                      game: gameDef?.label ?? tournament.game,
+                    })}
                   </span>
                 )}
               </h1>
@@ -403,26 +407,26 @@ function AdminTournamentMapsPage(_: StaffProps) {
                 href={`/admin/tournament/${tournamentId}/map-draw`}
                 className="px-3 py-1.5 rounded-lg bg-purple-600/80 border border-purple-500/30 text-sm hover:bg-purple-600"
               >
-                Tirage de maps
+                {t.linkMapDraw}
               </Link>
               <Link
                 href={`/admin/tournament/${tournamentId}/matches`}
                 className="px-3 py-1.5 rounded-lg bg-white/10 border border-white/15 text-sm hover:bg-white/15"
               >
-                Voir les matchs
+                {t.linkMatches}
               </Link>
               <button
                 onClick={() => fetchMaps()}
                 className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-sm hover:bg-white/10"
               >
-                Rafraîchir
+                {t.refresh}
               </button>
             </div>
           </div>
 
           {loading && (
             <div className="p-4 rounded-lg bg-white/5 border border-white/10">
-              Chargement…
+              {t.loading}
             </div>
           )}
 
@@ -440,7 +444,7 @@ function AdminTournamentMapsPage(_: StaffProps) {
                   onClick={() => setShowAddForm(!showAddForm)}
                   className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-medium text-sm transition-colors"
                 >
-                  {showAddForm ? '✕ Annuler' : '+ Ajouter une map'}
+                  {showAddForm ? t.cancelAddToggle : t.addMapToggle}
                 </button>
                 {hasMapVeto && availablePoolMaps.length > 0 && (
                   <button
@@ -449,8 +453,11 @@ function AdminTournamentMapsPage(_: StaffProps) {
                     className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-medium text-sm transition-colors"
                   >
                     {addingAll
-                      ? 'Ajout en cours…'
-                      : `+ Ajouter toutes les maps ${gameDef?.label ?? ''} (${availablePoolMaps.length})`}
+                      ? t.addingAll
+                      : format(t.addAllMaps, {
+                          game: gameDef?.label ?? '',
+                          count: availablePoolMaps.length,
+                        })}
                   </button>
                 )}
                 {maps.length > 0 && (
@@ -458,7 +465,7 @@ function AdminTournamentMapsPage(_: StaffProps) {
                     onClick={handleDeleteAllMaps}
                     className="px-4 py-2 rounded-lg bg-red-600/80 hover:bg-red-700 text-white font-medium text-sm transition-colors"
                   >
-                    Supprimer toutes les maps
+                    {t.deleteAllMaps}
                   </button>
                 )}
               </div>
@@ -467,16 +474,16 @@ function AdminTournamentMapsPage(_: StaffProps) {
               {showAddForm && (
                 <div className="mb-6 p-5 rounded-xl bg-white/5 border border-white/10">
                   <h3 className="text-lg font-semibold mb-4">
-                    Ajouter une map
+                    {t.addMapTitle}
                   </h3>
 
                   {/* Bandeau info si le jeu n'a pas de veto (ou jeu inconnu) */}
                   {!hasMapVeto && (
                     <div className="mb-4 p-3 rounded-lg bg-amber-500/10 border border-amber-400/30 text-amber-100 text-sm">
                       {gameDef
-                        ? `${gameDef.label} n'utilise pas de veto de maps.`
-                        : 'Ce jeu ne dispose pas de pool de maps prédéfini.'}{' '}
-                      Vous pouvez tout de même ajouter une map personnalisée.
+                        ? format(t.noVetoGame, { game: gameDef.label })
+                        : t.noPredefinedPool}{' '}
+                      {t.canAddCustom}
                     </div>
                   )}
 
@@ -491,7 +498,9 @@ function AdminTournamentMapsPage(_: StaffProps) {
                             : 'bg-white/5 text-gray-300 hover:bg-white/10'
                         }`}
                       >
-                        Map {gameDef?.label ?? ''}
+                        {format(t.mapGameToggle, {
+                          game: gameDef?.label ?? '',
+                        })}
                       </button>
                       <button
                         onClick={() => setUseCustomMap(true)}
@@ -501,7 +510,7 @@ function AdminTournamentMapsPage(_: StaffProps) {
                             : 'bg-white/5 text-gray-300 hover:bg-white/10'
                         }`}
                       >
-                        Map personnalisée
+                        {t.mapCustomToggle}
                       </button>
                     </div>
                   )}
@@ -511,17 +520,19 @@ function AdminTournamentMapsPage(_: StaffProps) {
                     <div className="space-y-3">
                       <div>
                         <label className="block text-sm text-gray-300 mb-2">
-                          Sélectionner une map {gameDef?.label ?? ''}
+                          {format(t.selectMapLabel, {
+                            game: gameDef?.label ?? '',
+                          })}
                         </label>
                         <select
                           value={selectedPoolMap}
                           onChange={(e) => setSelectedPoolMap(e.target.value)}
                           className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white"
                         >
-                          <option value="">-- Choisir une map --</option>
+                          <option value="">{t.chooseMapPlaceholder}</option>
                           {availablePoolMaps.map((poolMap) => (
                             <option key={poolMap.name} value={poolMap.name}>
-                              {poolMap.name} ({typeLabel(poolMap.type)})
+                              {poolMap.name} ({typeLabel(t, poolMap.type)})
                             </option>
                           ))}
                         </select>
@@ -532,42 +543,42 @@ function AdminTournamentMapsPage(_: StaffProps) {
                     <div className="space-y-3">
                       <div>
                         <label className="block text-sm text-gray-300 mb-2">
-                          Nom de la map
+                          {t.mapNameLabel}
                         </label>
                         <input
                           type="text"
                           value={customMapName}
                           onChange={(e) => setCustomMapName(e.target.value)}
                           className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white"
-                          placeholder="Ex: Custom Arena"
+                          placeholder={t.mapNamePlaceholder}
                         />
                       </div>
                       <div>
                         <label className="block text-sm text-gray-300 mb-2">
-                          Type de map
+                          {t.mapTypeLabel}
                         </label>
                         <select
                           value={customMapType}
                           onChange={(e) => setCustomMapType(e.target.value)}
                           className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white"
                         >
-                          <option value="control">Contrôle</option>
-                          <option value="escort">Convoi</option>
-                          <option value="hybrid">Hybride</option>
-                          <option value="push">Push</option>
-                          <option value="flashpoint">Flashpoint</option>
+                          <option value="control">{t.typeControl}</option>
+                          <option value="escort">{t.typeEscort}</option>
+                          <option value="hybrid">{t.typeHybrid}</option>
+                          <option value="push">{t.typePush}</option>
+                          <option value="flashpoint">{t.typeFlashpoint}</option>
                         </select>
                       </div>
                       <div>
                         <label className="block text-sm text-gray-300 mb-2">
-                          URL de l&apos;image (optionnel)
+                          {t.imageUrlLabel}
                         </label>
                         <input
                           type="text"
                           value={customMapImage}
                           onChange={(e) => setCustomMapImage(e.target.value)}
                           className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white"
-                          placeholder="https://exemple.com/image.jpg"
+                          placeholder={t.imageUrlPlaceholder}
                         />
                       </div>
                     </div>
@@ -579,13 +590,13 @@ function AdminTournamentMapsPage(_: StaffProps) {
                       disabled={adding}
                       className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-medium text-sm transition-colors"
                     >
-                      {adding ? 'Ajout en cours…' : 'Ajouter'}
+                      {adding ? t.addingAll : t.addButton}
                     </button>
                     <button
                       onClick={() => setShowAddForm(false)}
                       className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/15 text-white text-sm transition-colors"
                     >
-                      Annuler
+                      {t.cancel}
                     </button>
                   </div>
                 </div>
@@ -595,7 +606,7 @@ function AdminTournamentMapsPage(_: StaffProps) {
 
           {!loading && !errorMsg && maps.length === 0 && (
             <div className="p-4 rounded-lg bg-white/5 border border-white/10">
-              Aucune map configurée pour ce tournoi.
+              {t.emptyMaps}
             </div>
           )}
 
@@ -634,7 +645,7 @@ function AdminTournamentMapsPage(_: StaffProps) {
                         <div className="flex-1">
                           <p className="text-sm font-semibold">{m.map_name}</p>
                           <p className="text-xs text-gray-400">
-                            {typeLabel(m.map_type)}
+                            {typeLabel(t, m.map_type)}
                             {m.map_slug ? ` • ${m.map_slug}` : ''}
                           </p>
                         </div>
@@ -642,7 +653,7 @@ function AdminTournamentMapsPage(_: StaffProps) {
                           <button
                             onClick={() => handleEditClick(m)}
                             className="px-2 py-1 rounded-lg bg-blue-600/20 hover:bg-blue-600/40 border border-blue-500/30 text-blue-200 text-xs transition-colors flex-shrink-0"
-                            title="Éditer"
+                            title={t.editTitle}
                           >
                             ✎
                           </button>
@@ -650,7 +661,7 @@ function AdminTournamentMapsPage(_: StaffProps) {
                             onClick={() => handleDeleteMap(m.id)}
                             disabled={deleting === m.id}
                             className="px-2 py-1 rounded-lg bg-red-600/20 hover:bg-red-600/40 border border-red-500/30 text-red-200 text-xs transition-colors disabled:opacity-50 flex-shrink-0"
-                            title="Supprimer"
+                            title={t.deleteTitle}
                           >
                             {deleting === m.id ? '...' : '✕'}
                           </button>
@@ -665,10 +676,12 @@ function AdminTournamentMapsPage(_: StaffProps) {
                               : 'border-gray-500/50 text-gray-300'
                           }`}
                         >
-                          {m.enabled ? 'Activée' : 'Désactivée'}
+                          {m.enabled ? t.enabled : t.disabled}
                         </span>
                         <span className="text-xs text-gray-400">
-                          Ordre : {m.order_index ?? '—'}
+                          {format(t.orderLabel, {
+                            order: m.order_index ?? '—',
+                          })}
                         </span>
                       </div>
                     </div>
@@ -681,7 +694,7 @@ function AdminTournamentMapsPage(_: StaffProps) {
           <Modal
             open={Boolean(editingMap)}
             onClose={() => setEditingMap(null)}
-            title={<h2 className="text-xl font-semibold">Éditer la map</h2>}
+            title={<h2 className="text-xl font-semibold">{t.editMapTitle}</h2>}
             size="2xl"
             backdropClassName="bg-black/50 backdrop-blur-sm"
             panelChromeClassName="bg-neutral-900 rounded-xl border border-white/10"
@@ -691,14 +704,14 @@ function AdminTournamentMapsPage(_: StaffProps) {
                   onClick={() => setEditingMap(null)}
                   className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/15 text-white text-sm transition-colors"
                 >
-                  Annuler
+                  {t.cancel}
                 </button>
                 <button
                   onClick={handleUpdateMap}
                   disabled={updating}
                   className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-medium text-sm transition-colors"
                 >
-                  {updating ? 'Mise à jour…' : 'Enregistrer'}
+                  {updating ? t.updating : t.save}
                 </button>
               </>
             }
@@ -707,7 +720,7 @@ function AdminTournamentMapsPage(_: StaffProps) {
               {/* Nom de la map */}
               <div>
                 <label className="block text-sm text-gray-300 mb-2">
-                  Nom de la map
+                  {t.mapNameLabel}
                 </label>
                 <input
                   type="text"
@@ -720,17 +733,17 @@ function AdminTournamentMapsPage(_: StaffProps) {
               {/* Type de map */}
               <div>
                 <label className="block text-sm text-gray-300 mb-2">
-                  Type de map
+                  {t.mapTypeLabel}
                 </label>
                 <select
                   value={editMapType}
                   onChange={(e) => setEditMapType(e.target.value)}
                   className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white"
                 >
-                  <option value="control">Contrôle</option>
-                  <option value="escort">Convoi</option>
-                  <option value="hybrid">Hybride</option>
-                  <option value="push">Push</option>
+                  <option value="control">{t.typeControl}</option>
+                  <option value="escort">{t.typeEscort}</option>
+                  <option value="hybrid">{t.typeHybrid}</option>
+                  <option value="push">{t.typePush}</option>
                 </select>
               </div>
 
@@ -738,12 +751,12 @@ function AdminTournamentMapsPage(_: StaffProps) {
               {editImagePreview && (
                 <div>
                   <label className="block text-sm text-gray-300 mb-2">
-                    Aperçu de l&apos;image
+                    {t.imagePreviewLabel}
                   </label>
                   <div className="relative w-full h-48 rounded-lg overflow-hidden bg-gradient-to-b from-purple-900/20 to-transparent">
                     <img
                       src={editImagePreview}
-                      alt="Preview"
+                      alt={t.previewAlt}
                       className="w-full h-full object-cover"
                     />
                   </div>
@@ -753,7 +766,7 @@ function AdminTournamentMapsPage(_: StaffProps) {
               {/* Upload d'image */}
               <div>
                 <label className="block text-sm text-gray-300 mb-2">
-                  Changer l&apos;image
+                  {t.changeImageLabel}
                 </label>
                 <input
                   type="file"
@@ -762,14 +775,14 @@ function AdminTournamentMapsPage(_: StaffProps) {
                   className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-purple-600 file:text-white file:cursor-pointer hover:file:bg-purple-700"
                 />
                 <p className="text-xs text-gray-400 mt-1">
-                  Format accepté : JPG, PNG, WebP (max 5 MB)
+                  {t.imageFormatHint}
                 </p>
               </div>
 
               {/* URL alternative */}
               <div>
                 <label className="block text-sm text-gray-300 mb-2">
-                  Ou entrer une URL d&apos;image
+                  {t.orEnterUrlLabel}
                 </label>
                 <input
                   type="text"
@@ -780,7 +793,7 @@ function AdminTournamentMapsPage(_: StaffProps) {
                     setEditImageFile(null);
                   }}
                   className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white"
-                  placeholder="https://exemple.com/image.jpg"
+                  placeholder={t.imageUrlPlaceholder}
                 />
               </div>
             </div>
