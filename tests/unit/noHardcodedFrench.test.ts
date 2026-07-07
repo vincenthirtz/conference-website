@@ -17,7 +17,7 @@
 //  - It will NOT catch accent-free French ("Voir les tournois"). That's an
 //    accepted blind spot: this is a tripwire for the common case, not a proof.
 //
-// admin/* is intentionally out of i18n scope and is excluded.
+// admin/* is now internationalised (FR-first via useAdminT) and IS scanned.
 
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
@@ -28,10 +28,8 @@ const ROOT = process.cwd();
 const SCAN_DIRS = ['pages', 'components'];
 
 // Directories/paths that are intentionally NOT internationalised.
-const EXCLUDED_DIR_SEGMENTS = [
-  path.join('pages', 'admin'),
-  path.join('components', 'admin'),
-];
+// (Empty: the whole public site AND the admin are now on i18n.)
+const EXCLUDED_DIR_SEGMENTS: string[] = [];
 
 // Curated allowlist of accepted accented snippets (brand copy, etc.). Keep this
 // SMALL — every entry is a hole in the guard. Format: exact trimmed snippet.

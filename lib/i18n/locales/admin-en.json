@@ -2198,7 +2198,8 @@
     "submit": "Creer l'equipe",
     "cancel": "Annuler",
     "toastCreated": "Equipe creee avec succes",
-    "errUnexpected": "Erreur inattendue"
+    "errUnexpected": "Erreur inattendue",
+    "emailExamplePlaceholder": "joueur@exemple.com"
   },
   "adminStageDetail": {
     "typeGroup": "Groupes / Poules",
@@ -4392,7 +4393,8 @@
     "confirmDeleteSubtitle": "« {label} » sera retiré définitivement de la blacklist.",
     "confirmDeleteLabel": "Supprimer",
     "deleteFallbackLabel": "cette entrée",
-    "entryDeleted": "Entrée supprimée."
+    "entryDeleted": "Entrée supprimée.",
+    "playerTagPlaceholder": "Joueur#1234"
   },
   "adminMatchDraft": {
     "unavailableHeading": "Draft indisponible",
@@ -5112,7 +5114,9 @@
     "saving": "Sauvegarde…",
     "saveSubmit": "Enregistrer la configuration",
     "backToTenant": "Retour au tenant",
-    "serverFallback": "ton serveur"
+    "serverFallback": "ton serveur",
+    "welcomeExample1": "Bienvenue {user} sur {server} !",
+    "welcomeExample2": "Salut {user}, bienvenue sur {server} !"
   },
   "adminTournamentSimulator": {
     "stageGroupName": "Phase de groupes",

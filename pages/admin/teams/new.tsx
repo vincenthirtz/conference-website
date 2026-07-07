@@ -328,7 +328,7 @@ function AdminNewTeamPage({ staff, teamRoles }: StaffProps) {
                           onChange={(e) =>
                             handleMemberChange(index, 'email', e.target.value)
                           }
-                          placeholder="joueur@exemple.com"
+                          placeholder={t.emailExamplePlaceholder}
                         />
                       </div>
                       <div className="w-full md:w-40">

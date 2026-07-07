@@ -360,7 +360,7 @@ function AdminBlacklistPage(_: StaffProps) {
                 label={tx.battleTagLabel}
                 value={form.battle_tag}
                 onChange={(v) => setForm((f) => ({ ...f, battle_tag: v }))}
-                placeholder="Joueur#1234"
+                placeholder={tx.playerTagPlaceholder}
               />
               <Input
                 label={tx.displayNameLabel}
