@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 import { withStaffPage, hasAtLeastRole, getRoleLabel } from '@/utils/staff';
 import type { StaffRole } from '@/utils/staff';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import StatCard, {
   type StatAccent,
 } from '@/components/admin/dashboard/StatCard';
@@ -16,6 +17,8 @@ import EmptyState from '@/components/admin/EmptyState';
 import type { AlertsSummary } from '@/utils/dashboard/buildTournamentDashboard';
 
 import { logger } from '../../utils/logger';
+
+type Dict = ReturnType<typeof useAdminT<'adminDashboard'>>;
 
 type StaffShape = {
   id: string;
@@ -149,106 +152,106 @@ const ICON = {
   ),
 };
 
-const NAV_CARDS: NavCard[] = [
+const getNavCards = (t: Dict): NavCard[] => [
   {
-    title: 'Tournoi en cours',
-    description: 'Cockpit du tournoi actif : matchs, litiges, check-in.',
+    title: t.navTournoiEnCoursTitle,
+    description: t.navTournoiEnCoursDesc,
     href: '/admin/tournoi-en-cours',
     minRole: 'caster',
     icon: ICON.signal,
     accent: 'border-pink-500/30 from-pink-500/10 text-pink-300',
   },
   {
-    title: 'Tournois',
-    description: 'Liste, création et gestion des tournois.',
+    title: t.navTournoisTitle,
+    description: t.navTournoisDesc,
     href: '/admin/tournaments',
     minRole: 'manager',
     icon: ICON.trophy,
     accent: 'border-amber-500/30 from-amber-500/10 text-amber-300',
   },
   {
-    title: 'Équipes',
-    description: 'Rosters, capitaines et imports.',
+    title: t.navTeamsTitle,
+    description: t.navTeamsDesc,
     href: '/admin/teams',
     minRole: 'manager',
     icon: ICON.users,
     accent: 'border-blue-500/30 from-blue-500/10 text-blue-300',
   },
   {
-    title: 'Demandes',
-    description: 'Demandes joueurs, équipes et scrims à traiter.',
+    title: t.navDemandesTitle,
+    description: t.navDemandesDesc,
     href: '/admin/demandes',
     minRole: 'manager',
     icon: ICON.inbox,
     accent: 'border-emerald-500/30 from-emerald-500/10 text-emerald-300',
   },
   {
-    title: 'Support',
-    description: 'Tickets de support des utilisateurs.',
+    title: t.navSupportTitle,
+    description: t.navSupportDesc,
     href: '/admin/support',
     minRole: 'manager',
     icon: ICON.ticket,
     accent: 'border-purple-500/30 from-purple-500/10 text-purple-300',
   },
   {
-    title: 'Modération',
-    description: 'Commentaires et blacklist joueurs.',
+    title: t.navModerationTitle,
+    description: t.navModerationDesc,
     href: '/admin/comments',
     minRole: 'manager',
     icon: ICON.shield,
     accent: 'border-red-500/30 from-red-500/10 text-red-300',
   },
   {
-    title: 'Campagnes emails',
-    description: 'Envois groupés et suivi des campagnes.',
+    title: t.navCampaignsTitle,
+    description: t.navCampaignsDesc,
     href: '/admin/campaigns',
     minRole: 'admin',
     icon: ICON.mail,
     accent: 'border-blue-500/30 from-blue-500/10 text-blue-300',
   },
   {
-    title: 'Run-of-show',
-    description: 'Conduite live : timeline, segments et timing.',
+    title: t.navRunOfShowTitle,
+    description: t.navRunOfShowDesc,
     href: '/admin/broadcast/live',
     minRole: 'manager',
     icon: ICON.clock,
     accent: 'border-pink-500/30 from-pink-500/10 text-pink-300',
   },
   {
-    title: 'Utilisateurs',
-    description: 'Gestion des comptes staff et adhérents.',
+    title: t.navUsersTitle,
+    description: t.navUsersDesc,
     href: '/admin/users/manage',
     minRole: 'admin',
     icon: ICON.users,
     accent: 'border-emerald-500/30 from-emerald-500/10 text-emerald-300',
   },
   {
-    title: 'Stats',
-    description: 'Statistiques équipes et maps.',
+    title: t.navStatsTitle,
+    description: t.navStatsDesc,
     href: '/admin/stats/teams',
     minRole: 'manager',
     icon: ICON.chart,
     accent: 'border-purple-500/30 from-purple-500/10 text-purple-300',
   },
   {
-    title: 'Ligues',
-    description: 'Saisons et classements agrégés multi-tournois.',
+    title: t.navLeaguesTitle,
+    description: t.navLeaguesDesc,
     href: '/admin/leagues',
     minRole: 'manager',
     icon: ICON.medal,
     accent: 'border-amber-500/30 from-amber-500/10 text-amber-300',
   },
   {
-    title: 'Ratings',
-    description: 'Classement Glicko-2 des joueurs et reconstruction.',
+    title: t.navRatingsTitle,
+    description: t.navRatingsDesc,
     href: '/admin/ratings',
     minRole: 'manager',
     icon: ICON.chart,
     accent: 'border-blue-500/30 from-blue-500/10 text-blue-300',
   },
   {
-    title: 'Paramètres du site',
-    description: 'Configuration générale du site.',
+    title: t.navSiteSettingsTitle,
+    description: t.navSiteSettingsDesc,
     href: '/admin/site-settings',
     minRole: 'admin',
     icon: ICON.cog,
@@ -256,7 +259,7 @@ const NAV_CARDS: NavCard[] = [
   },
 ];
 
-function buildAlerts(summary: AlertsSummary | null) {
+function buildAlerts(summary: AlertsSummary | null, t: Dict) {
   if (!summary || summary.total === 0) return [];
   const b = summary.breakdown;
   const out: {
@@ -269,58 +272,85 @@ function buildAlerts(summary: AlertsSummary | null) {
   if (b.disputes > 0) {
     out.push({
       severity: 'critical',
-      title: `${b.disputes} litige${b.disputes > 1 ? 's' : ''} en attente`,
-      message: 'Des matchs contestés nécessitent une décision.',
-      cta: { label: 'Résoudre', href: '/admin/disputes' },
+      title: format(
+        b.disputes > 1 ? t.alertDisputesTitle_other : t.alertDisputesTitle_one,
+        { count: b.disputes }
+      ),
+      message: t.alertDisputesMsg,
+      cta: { label: t.ctaResolve, href: '/admin/disputes' },
     });
   }
   if (b.conflicts > 0) {
     out.push({
       severity: 'error',
-      title: `${b.conflicts} conflit${b.conflicts > 1 ? 's' : ''} de scores`,
-      message: 'Des résultats divergents bloquent la progression.',
-      cta: { label: 'Voir le tournoi', href: '/admin/tournoi-en-cours' },
+      title: format(
+        b.conflicts > 1
+          ? t.alertConflictsTitle_other
+          : t.alertConflictsTitle_one,
+        { count: b.conflicts }
+      ),
+      message: t.alertConflictsMsg,
+      cta: { label: t.ctaViewTournament, href: '/admin/tournoi-en-cours' },
     });
   }
   if (b.supportHigh > 0) {
     out.push({
       severity: 'error',
-      title: `${b.supportHigh} ticket${b.supportHigh > 1 ? 's' : ''} support haute priorité`,
-      message: 'Des demandes urgentes attendent une réponse.',
-      cta: { label: 'Ouvrir le support', href: '/admin/support' },
+      title: format(
+        b.supportHigh > 1
+          ? t.alertSupportHighTitle_other
+          : t.alertSupportHighTitle_one,
+        { count: b.supportHigh }
+      ),
+      message: t.alertSupportHighMsg,
+      cta: { label: t.ctaOpenSupport, href: '/admin/support' },
     });
   }
   if (b.checkinMissing > 0) {
     out.push({
       severity: 'warning',
-      title: `${b.checkinMissing} check-in manquant${b.checkinMissing > 1 ? 's' : ''}`,
-      message:
-        'Des équipes ne se sont pas présentées pour les prochains matchs.',
-      cta: { label: 'Voir le tournoi', href: '/admin/tournoi-en-cours' },
+      title: format(
+        b.checkinMissing > 1
+          ? t.alertCheckinTitle_other
+          : t.alertCheckinTitle_one,
+        { count: b.checkinMissing }
+      ),
+      message: t.alertCheckinMsg,
+      cta: { label: t.ctaViewTournament, href: '/admin/tournoi-en-cours' },
     });
   }
   if (b.pendingTeams > 0) {
     out.push({
       severity: 'warning',
-      title: `${b.pendingTeams} équipe${b.pendingTeams > 1 ? 's' : ''} en attente de validation`,
-      message: 'Des inscriptions doivent être approuvées.',
-      cta: { label: 'Voir les demandes', href: '/admin/demandes' },
+      title: format(
+        b.pendingTeams > 1
+          ? t.alertPendingTeamsTitle_other
+          : t.alertPendingTeamsTitle_one,
+        { count: b.pendingTeams }
+      ),
+      message: t.alertPendingTeamsMsg,
+      cta: { label: t.ctaViewDemandes, href: '/admin/demandes' },
     });
   }
   if (b.stagesReady > 0) {
     out.push({
       severity: 'info',
-      title: `${b.stagesReady} phase${b.stagesReady > 1 ? 's' : ''} prête${b.stagesReady > 1 ? 's' : ''} à avancer`,
-      message: 'Tous les matchs sont terminés sur ces phases.',
-      cta: { label: 'Voir le tournoi', href: '/admin/tournoi-en-cours' },
+      title: format(
+        b.stagesReady > 1
+          ? t.alertStagesReadyTitle_other
+          : t.alertStagesReadyTitle_one,
+        { count: b.stagesReady }
+      ),
+      message: t.alertStagesReadyMsg,
+      cta: { label: t.ctaViewTournament, href: '/admin/tournoi-en-cours' },
     });
   }
   if (b.rosterLockSoon) {
     out.push({
       severity: 'info',
-      title: 'Verrouillage des rosters imminent',
-      message: 'Le lock des effectifs intervient dans moins de 24h.',
-      cta: { label: 'Voir le tournoi', href: '/admin/tournoi-en-cours' },
+      title: t.alertRosterLockTitle,
+      message: t.alertRosterLockMsg,
+      cta: { label: t.ctaViewTournament, href: '/admin/tournoi-en-cours' },
     });
   }
 
@@ -329,6 +359,7 @@ function buildAlerts(summary: AlertsSummary | null) {
 
 function AdminDashboardPage({ staff }: Props) {
   const { adminFetchJson } = useAdminFetch();
+  const t = useAdminT('adminDashboard');
 
   const [alertsSummary, setAlertsSummary] = useState<AlertsSummary | null>(
     null
@@ -375,28 +406,28 @@ function AdminDashboardPage({ staff }: Props) {
       }
     } catch (err: unknown) {
       logger.error('AdminDashboardPage: load error', err);
-      setErrorMsg((err as Error)?.message || 'Erreur inattendue');
+      setErrorMsg((err as Error)?.message || t.errorUnexpected);
     } finally {
       setLoading(false);
     }
-  }, [adminFetchJson, canManage]);
+  }, [adminFetchJson, canManage, t]);
 
   useEffect(() => {
     load();
   }, [load]);
 
-  const alerts = buildAlerts(alertsSummary);
-  const navCards = NAV_CARDS.filter((c) =>
+  const alerts = buildAlerts(alertsSummary, t);
+  const navCards = getNavCards(t).filter((c) =>
     hasAtLeastRole(staff.role, c.minRole)
   );
-  const greetName = staff.display_name || 'Staff';
+  const greetName = staff.display_name || t.defaultGreetName;
 
   const fmt = (v: number | null) => (v === null ? '—' : v.toLocaleString());
 
   return (
     <>
       <Head>
-        <title>Admin – Tableau de bord</title>
+        <title>{t.pageTitle}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
@@ -404,12 +435,15 @@ function AdminDashboardPage({ staff }: Props) {
           {/* Header */}
           <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
             <div>
-              <p className="text-sm text-neutral-400">Espace staff</p>
+              <p className="text-sm text-neutral-400">{t.espaceStaff}</p>
               <h1 className="mt-1 text-3xl font-bold tracking-tight md:text-4xl">
-                Tableau de bord
+                {t.heading}
               </h1>
               <p className="mt-2 text-sm text-neutral-400">
-                Bonjour {greetName} · {getRoleLabel(staff.role)}
+                {format(t.greeting, {
+                  name: greetName,
+                  role: getRoleLabel(staff.role),
+                })}
               </p>
             </div>
             <Link
@@ -430,7 +464,7 @@ function AdminDashboardPage({ staff }: Props) {
                   d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
                 />
               </svg>
-              Mon profil
+              {t.myProfile}
             </Link>
           </div>
 
@@ -458,7 +492,7 @@ function AdminDashboardPage({ staff }: Props) {
               id="alerts-heading"
               className="mb-3 text-[11px] font-medium uppercase tracking-widest text-gray-400"
             >
-              Alertes
+              {t.alertsHeading}
             </h2>
             {loading ? (
               <div className="space-y-2">
@@ -482,7 +516,7 @@ function AdminDashboardPage({ staff }: Props) {
                       d="M5 13l4 4L19 7"
                     />
                   </svg>
-                  Rien à signaler — aucune alerte active.
+                  {t.noAlerts}
                 </p>
               </div>
             ) : (
@@ -507,7 +541,7 @@ function AdminDashboardPage({ staff }: Props) {
                 id="kpis-heading"
                 className="mb-3 text-[11px] font-medium uppercase tracking-widest text-gray-400"
               >
-                Vue d&apos;ensemble
+                {t.overviewHeading}
               </h2>
               {loading ? (
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
@@ -524,28 +558,32 @@ function AdminDashboardPage({ staff }: Props) {
                   {(
                     [
                       {
-                        label: 'Tournois actifs',
+                        label: t.kpiTournamentsActive,
                         value: kpis.tournamentsActive,
                         accent: 'pink',
                       },
-                      { label: 'Équipes', value: kpis.teams, accent: 'blue' },
                       {
-                        label: 'Demandes en attente',
+                        label: t.kpiTeams,
+                        value: kpis.teams,
+                        accent: 'blue',
+                      },
+                      {
+                        label: t.kpiDemandesPending,
                         value: kpis.demandesPending,
                         accent: 'emerald',
                       },
                       {
-                        label: 'Tickets ouverts',
+                        label: t.kpiSupportOpen,
                         value: kpis.supportOpen,
                         accent: 'purple',
                       },
                       {
-                        label: 'Support urgent',
+                        label: t.kpiSupportHigh,
                         value: kpis.supportHigh,
                         accent: 'amber',
                       },
                       {
-                        label: 'Litiges ouverts',
+                        label: t.kpiDisputesOpen,
                         value: kpis.disputesOpen,
                         accent: 'red',
                       },
@@ -573,18 +611,18 @@ function AdminDashboardPage({ staff }: Props) {
               id="nav-heading"
               className="mb-3 text-[11px] font-medium uppercase tracking-widest text-gray-400"
             >
-              Sections
+              {t.sectionsHeading}
             </h2>
             {navCards.length === 0 ? (
               <EmptyState
-                title="Aucune section accessible"
-                description="Ton rôle ne donne pas accès aux sections de gestion. Tu peux consulter ton profil."
+                title={t.emptySectionsTitle}
+                description={t.emptySectionsDesc}
                 action={
                   <Link
                     href="/admin/profile"
                     className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
                   >
-                    Mon profil
+                    {t.myProfile}
                   </Link>
                 }
               />

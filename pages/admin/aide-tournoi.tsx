@@ -8,7 +8,10 @@ import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { withStaffPage } from '@/utils/staff';
 import Breadcrumb from '@/components/admin/Breadcrumb';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import tournamentHelp from '@/config/tournament-help.json';
+
+type Dict = ReturnType<typeof useAdminT<'adminAideTournoi'>>;
 
 type CommandRole = 'admin' | 'captain' | 'player' | 'public';
 
@@ -67,11 +70,19 @@ export const getServerSideProps = withStaffPage<{ inventory: HelpInventory }>(
   }
 );
 
-const ROLE_LABEL: Record<CommandRole, string> = {
-  admin: 'Admin',
-  captain: 'Capitaine',
-  player: 'Joueuse',
-  public: 'Public',
+const roleLabel = (role: CommandRole, t: Dict): string => {
+  switch (role) {
+    case 'admin':
+      return t.roleAdmin;
+    case 'captain':
+      return t.roleCaptain;
+    case 'player':
+      return t.rolePlayer;
+    case 'public':
+      return t.rolePublic;
+    default:
+      return role;
+  }
 };
 
 const ROLE_BADGE_CLASS: Record<CommandRole, string> = {
@@ -96,12 +107,14 @@ function commandAnchorSlug(name: string): string {
 /** Extrait l'ancre cible depuis `deeplink_admin` (ex: "/admin/aide-tournoi#x" -> "x"). */
 function deeplinkAnchor(deeplink: string): string {
   const hashIdx = deeplink.indexOf('#');
-  return hashIdx >= 0 ? deeplink.slice(hashIdx + 1) : commandAnchorSlug(deeplink);
+  return hashIdx >= 0
+    ? deeplink.slice(hashIdx + 1)
+    : commandAnchorSlug(deeplink);
 }
 
 /** Encode safely un payload JSON (gère null/undefined). */
-function formatPayload(payload: unknown): string {
-  if (payload == null) return '(aucun payload)';
+function formatPayload(payload: unknown, noPayloadLabel: string): string {
+  if (payload == null) return noPayloadLabel;
   try {
     return JSON.stringify(payload, null, 2);
   } catch {
@@ -127,6 +140,7 @@ function uiImpactToHref(label: string): string | null {
 }
 
 function CommandCard({ command }: { command: HelpCommand }) {
+  const t = useAdminT('adminAideTournoi');
   const anchor = deeplinkAnchor(command.deeplink_admin);
   const [copied, setCopied] = useState<number | null>(null);
   const [openExampleIdx, setOpenExampleIdx] = useState<number | null>(null);
@@ -157,14 +171,14 @@ function CommandCard({ command }: { command: HelpCommand }) {
         <span
           className={`shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border ${ROLE_BADGE_CLASS[command.role]}`}
         >
-          {ROLE_LABEL[command.role]}
+          {roleLabel(command.role, t)}
         </span>
       </header>
 
       {command.prereqs.length > 0 && (
         <div className="mt-4">
           <h4 className="text-xs uppercase tracking-wider text-neutral-500 mb-1.5">
-            Prérequis
+            {t.prereqs}
           </h4>
           <ul className="list-disc list-inside text-sm text-neutral-300 space-y-1">
             {command.prereqs.map((p, i) => (
@@ -176,7 +190,7 @@ function CommandCard({ command }: { command: HelpCommand }) {
 
       <div className="mt-4">
         <h4 className="text-xs uppercase tracking-wider text-neutral-500 mb-1.5">
-          Endpoint
+          {t.endpoint}
         </h4>
         {command.endpoint ? (
           <code className="block font-mono text-xs md:text-sm text-emerald-300 bg-neutral-900/70 border border-neutral-700/60 rounded-md px-2.5 py-1.5 break-all">
@@ -185,8 +199,7 @@ function CommandCard({ command }: { command: HelpCommand }) {
         ) : (
           <p className="text-sm text-neutral-400">
             <span className="font-mono text-neutral-500">—</span>{' '}
-            <span className="text-amber-300/80">Discord-only</span> (aucun
-            appel API site)
+            <span className="text-amber-300/80">Discord-only</span> {t.apiNote}
           </p>
         )}
       </div>
@@ -194,23 +207,26 @@ function CommandCard({ command }: { command: HelpCommand }) {
       <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <h4 className="text-xs uppercase tracking-wider text-neutral-500 mb-1.5">
-            Impact DB
+            {t.impactDb}
           </h4>
           {command.impact.db.length > 0 ? (
             <ul className="text-sm text-neutral-300 space-y-1">
               {command.impact.db.map((row, i) => (
-                <li key={i} className="font-mono text-xs bg-neutral-900/50 border border-neutral-700/40 rounded px-2 py-1">
+                <li
+                  key={i}
+                  className="font-mono text-xs bg-neutral-900/50 border border-neutral-700/40 rounded px-2 py-1"
+                >
                   {row}
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="text-sm text-neutral-500 italic">Aucun (lecture seule)</p>
+            <p className="text-sm text-neutral-500 italic">{t.noneReadOnly}</p>
           )}
         </div>
         <div>
           <h4 className="text-xs uppercase tracking-wider text-neutral-500 mb-1.5">
-            Pages UI affectées
+            {t.uiPages}
           </h4>
           {command.impact.ui.length > 0 ? (
             <ul className="text-sm text-neutral-300 space-y-1">
@@ -237,7 +253,7 @@ function CommandCard({ command }: { command: HelpCommand }) {
               })}
             </ul>
           ) : (
-            <p className="text-sm text-neutral-500 italic">Aucune</p>
+            <p className="text-sm text-neutral-500 italic">{t.noneFem}</p>
           )}
         </div>
       </div>
@@ -245,12 +261,12 @@ function CommandCard({ command }: { command: HelpCommand }) {
       {command.examples.length > 0 && (
         <div className="mt-5">
           <h4 className="text-xs uppercase tracking-wider text-neutral-500 mb-2">
-            Exemples ({command.examples.length})
+            {format(t.examplesLabel, { count: command.examples.length })}
           </h4>
           <ul className="space-y-2">
             {command.examples.map((ex, idx) => {
               const isOpen = openExampleIdx === idx;
-              const payloadText = formatPayload(ex.payload);
+              const payloadText = formatPayload(ex.payload, t.noPayload);
               return (
                 <li
                   key={idx}
@@ -278,7 +294,9 @@ function CommandCard({ command }: { command: HelpCommand }) {
                           d="M9 5l7 7-7 7"
                         />
                       </svg>
-                      <span className="truncate text-neutral-200">{ex.label}</span>
+                      <span className="truncate text-neutral-200">
+                        {ex.label}
+                      </span>
                     </span>
                   </button>
 
@@ -287,14 +305,14 @@ function CommandCard({ command }: { command: HelpCommand }) {
                       <div>
                         <div className="flex items-center justify-between mb-1">
                           <span className="text-xs uppercase tracking-wider text-neutral-500">
-                            Payload
+                            {t.payload}
                           </span>
                           <button
                             type="button"
                             onClick={() => copyPayload(payloadText, idx)}
                             className="text-xs px-2 py-0.5 rounded-md border border-neutral-700 bg-neutral-800 hover:bg-neutral-700 text-neutral-200"
                           >
-                            {copied === idx ? 'Copié !' : 'Copier'}
+                            {copied === idx ? t.copied : t.copy}
                           </button>
                         </div>
                         <pre className="font-mono text-xs text-neutral-200 bg-neutral-950 border border-neutral-800 rounded-md p-3 overflow-x-auto whitespace-pre">
@@ -303,7 +321,7 @@ function CommandCard({ command }: { command: HelpCommand }) {
                       </div>
                       <div>
                         <span className="block text-xs uppercase tracking-wider text-neutral-500 mb-1">
-                          Résultat attendu
+                          {t.expectedResult}
                         </span>
                         <p className="text-sm text-neutral-300 leading-relaxed">
                           {ex.expected}
@@ -330,13 +348,14 @@ function TableOfContents({
   activeId: string | null;
   onJump: (id: string) => void;
 }) {
+  const t = useAdminT('adminAideTournoi');
   return (
     <nav
-      aria-label="Sommaire"
+      aria-label={t.tocAriaLabel}
       className="lg:sticky lg:top-24 rounded-2xl border border-neutral-700/60 bg-neutral-900/50 backdrop-blur p-4"
     >
       <p className="text-xs uppercase tracking-wider text-neutral-500 mb-3">
-        Sommaire
+        {t.tocTitle}
       </p>
       <ol className="space-y-1">
         {sections.map((s) => {
@@ -366,6 +385,7 @@ function TableOfContents({
 }
 
 function AdminAideTournoiPage({ inventory }: Props) {
+  const t = useAdminT('adminAideTournoi');
   const { version, sections } = inventory;
   const [activeId, setActiveId] = useState<string | null>(
     sections[0]?.id ?? null
@@ -410,7 +430,9 @@ function AdminAideTournoiPage({ inventory }: Props) {
     const cmdMatch = hash.startsWith('cmd-') ? hash.slice(4) : null;
     if (cmdMatch) {
       for (const s of sections) {
-        if (s.commands.some((c) => deeplinkAnchor(c.deeplink_admin) === cmdMatch)) {
+        if (
+          s.commands.some((c) => deeplinkAnchor(c.deeplink_admin) === cmdMatch)
+        ) {
           setActiveId(s.id);
           return;
         }
@@ -440,39 +462,35 @@ function AdminAideTournoiPage({ inventory }: Props) {
   return (
     <>
       <Head>
-        <title>Aide tournoi (Discord) – Admin</title>
-        <meta
-          name="description"
-          content="Parcours complet pour gérer un tournoi depuis le bot Discord, sans toucher à l'UI admin."
-        />
+        <title>{t.pageTitle}</title>
+        <meta name="description" content={t.metaDescription} />
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
         <div className="w-full px-4 sm:px-6 lg:px-8 pt-20 pb-12 max-w-7xl mx-auto">
           <Breadcrumb
             items={[
-              { label: 'Admin', href: '/admin' },
-              { label: 'Aide tournoi (Discord)' },
+              { label: t.breadcrumbAdmin, href: '/admin' },
+              { label: t.breadcrumbCurrent },
             ]}
           />
 
           {/* Header */}
           <header className="mb-8">
-            <p className="text-sm text-neutral-400">Documentation staff</p>
+            <p className="text-sm text-neutral-400">{t.docLabel}</p>
             <h1 className="text-3xl md:text-4xl font-bold tracking-tight mt-1">
-              Aide tournoi (Discord)
+              {t.heading}
             </h1>
-            <p className="text-sm text-neutral-400 mt-2 max-w-3xl">
-              Parcours complet pour gérer un tournoi depuis le bot, sans
-              toucher à l&apos;UI. Chaque commande indique son rôle, son endpoint,
-              ses impacts DB/UI et un exemple de payload.
-            </p>
+            <p className="text-sm text-neutral-400 mt-2 max-w-3xl">{t.intro}</p>
             <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-neutral-800 border border-neutral-700 text-neutral-300 font-mono">
-                version {version}
+                {format(t.versionLabel, { version })}
               </span>
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-neutral-800 border border-neutral-700 text-neutral-400">
-                {sections.length} sections · {totalCommands} commandes
+                {format(t.sectionsCount, {
+                  sections: sections.length,
+                  commands: totalCommands,
+                })}
               </span>
             </div>
           </header>
@@ -506,10 +524,7 @@ function AdminAideTournoiPage({ inventory }: Props) {
 
                   <div className="mt-5 space-y-4">
                     {section.commands.map((command) => (
-                      <CommandCard
-                        key={command.name}
-                        command={command}
-                      />
+                      <CommandCard key={command.name} command={command} />
                     ))}
                   </div>
                 </section>

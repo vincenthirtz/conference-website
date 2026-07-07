@@ -6,14 +6,12 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useToast } from '@/components/Toast';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import Breadcrumb from '@/components/admin/Breadcrumb';
 import EmptyState from '@/components/admin/EmptyState';
 import { Skeleton } from '@/components/admin/Skeleton';
 import type { StaffProps } from '@/types/admin';
-import type {
-  LeaderboardPlayer,
-  LeaderboardResponse,
-} from '@/types/rating';
+import type { LeaderboardPlayer, LeaderboardResponse } from '@/types/rating';
 
 import { logger } from '../../utils/logger';
 
@@ -26,6 +24,11 @@ function AdminRatingsPage(_props: StaffProps) {
   const rebuild = useIdempotentMutation();
   const { confirm, dialog } = useConfirmDialog();
   const { addToast } = useToast();
+  const t = useAdminT('adminRatings');
+  const playerLabel = (n: number) =>
+    format(n > 1 ? t.playerCount_other : t.playerCount_one, { count: n });
+  const matchLabel = (n: number) =>
+    format(n > 1 ? t.matchCount_other : t.matchCount_one, { count: n });
 
   const [rebuilding, setRebuilding] = useState(false);
   const [lastResult, setLastResult] = useState<RebuildResult | null>(null);
@@ -44,13 +47,11 @@ function AdminRatingsPage(_props: StaffProps) {
       setPlayers(data.players ?? []);
     } catch (err: unknown) {
       logger.error('load leaderboard error', err);
-      setBoardError(
-        (err as Error)?.message || 'Erreur lors du chargement du classement.'
-      );
+      setBoardError((err as Error)?.message || t.errorLoadBoard);
     } finally {
       setLoadingBoard(false);
     }
-  }, [adminFetchJson]);
+  }, [adminFetchJson, t]);
 
   useEffect(() => {
     loadBoard();
@@ -58,11 +59,10 @@ function AdminRatingsPage(_props: StaffProps) {
 
   async function handleRebuild() {
     const ok = await confirm({
-      title: 'Reconstruire tous les ratings ?',
-      subtitle:
-        'Opération lourde : recalcule tout l’historique des ratings depuis le premier match. Peut prendre du temps.',
+      title: t.confirmTitle,
+      subtitle: t.confirmSubtitle,
       variant: 'warning',
-      confirmLabel: 'Reconstruire',
+      confirmLabel: t.confirmLabel,
     });
     if (!ok) return;
 
@@ -74,18 +74,16 @@ function AdminRatingsPage(_props: StaffProps) {
       );
       setLastResult(result);
       addToast(
-        `Ratings reconstruits : ${result.players} joueur${
-          result.players > 1 ? 's' : ''
-        }, ${result.matches} match${result.matches > 1 ? 's' : ''}.`,
+        format(t.toastRebuilt, {
+          players: playerLabel(result.players),
+          matches: matchLabel(result.matches),
+        }),
         'success'
       );
       await loadBoard();
     } catch (err: unknown) {
       logger.error('rebuild ratings error', err);
-      addToast(
-        (err as Error)?.message || 'Erreur lors de la reconstruction.',
-        'error'
-      );
+      addToast((err as Error)?.message || t.errorRebuild, 'error');
     } finally {
       setRebuilding(false);
     }
@@ -94,44 +92,38 @@ function AdminRatingsPage(_props: StaffProps) {
   return (
     <>
       <Head>
-        <title>Admin – Ratings</title>
+        <title>{t.pageTitle}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
         <div className="mx-auto w-full max-w-4xl px-4 sm:px-6 lg:px-8 pt-20 pb-12 space-y-6">
           <Breadcrumb
             items={[
-              { label: 'Admin', href: '/admin' },
-              { label: 'Ratings' },
+              { label: t.breadcrumbAdmin, href: '/admin' },
+              { label: t.breadcrumbCurrent },
             ]}
           />
 
           <div>
             <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-              Ratings joueurs
+              {t.heading}
             </h1>
-            <p className="text-neutral-400 text-sm mt-1">
-              Système de classement Glicko-2 des joueurs.
-            </p>
+            <p className="text-neutral-400 text-sm mt-1">{t.subtitle}</p>
           </div>
 
           {/* --- Reconstruction --- */}
           <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 space-y-4">
-            <h2 className="text-lg font-semibold">Reconstruction complète</h2>
+            <h2 className="text-lg font-semibold">{t.rebuildHeading}</h2>
             <p className="text-sm text-neutral-400 leading-relaxed">
-              Recalcule l’intégralité des ratings Glicko-2 en rejouant tous les
-              matchs terminés dans l’ordre chronologique. Les rosters actuels
-              des équipes servent de base de backfill pour attribuer les matchs
-              historiques aux joueurs. Utile après un correctif de données ou un
-              changement de l’algorithme. C’est une opération lourde : à lancer
-              hors période de pic.
+              {t.rebuildDesc}
             </p>
 
             {lastResult && (
               <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 px-4 py-3 text-sm text-emerald-200">
-                Dernière reconstruction : {lastResult.players} joueur
-                {lastResult.players > 1 ? 's' : ''} sur {lastResult.matches}{' '}
-                match{lastResult.matches > 1 ? 's' : ''}.
+                {format(t.lastRebuild, {
+                  players: playerLabel(lastResult.players),
+                  matches: matchLabel(lastResult.matches),
+                })}
               </div>
             )}
 
@@ -155,26 +147,30 @@ function AdminRatingsPage(_props: StaffProps) {
                   d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
                 />
               </svg>
-              {rebuilding ? 'Reconstruction…' : 'Reconstruire les ratings'}
+              {rebuilding ? t.rebuilding : t.rebuildBtn}
             </button>
           </section>
 
           {/* --- Top leaderboard --- */}
           <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-lg font-semibold">Top classement</h2>
+              <h2 className="text-lg font-semibold">{t.boardHeading}</h2>
               <Link
                 href="/admin/leagues"
                 className="text-sm text-neutral-400 hover:text-white transition-colors"
               >
-                Ligues →
+                {t.leaguesLink}
               </Link>
             </div>
 
             {loadingBoard ? (
               <div className="space-y-2">
                 {Array.from({ length: 5 }).map((_, i) => (
-                  <Skeleton key={i} className="h-10 w-full" rounded="rounded-lg" />
+                  <Skeleton
+                    key={i}
+                    className="h-10 w-full"
+                    rounded="rounded-lg"
+                  />
                 ))}
               </div>
             ) : boardError ? (
@@ -185,24 +181,21 @@ function AdminRatingsPage(_props: StaffProps) {
                   onClick={() => loadBoard()}
                   className="px-3 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-xs font-medium transition-colors"
                 >
-                  Réessayer
+                  {t.retry}
                 </button>
               </div>
             ) : players.length === 0 ? (
-              <EmptyState
-                title="Aucun joueur noté"
-                description="Lance une reconstruction après avoir enregistré des résultats de matchs."
-              />
+              <EmptyState title={t.emptyTitle} description={t.emptyDesc} />
             ) : (
               <div className="overflow-x-auto border border-neutral-700/50 rounded-xl">
                 <table className="w-full text-sm">
                   <thead className="bg-neutral-900/50 text-neutral-400">
                     <tr>
                       <th className="text-left px-4 py-2.5 w-16">#</th>
-                      <th className="text-left px-4 py-2.5">Joueur</th>
-                      <th className="text-right px-4 py-2.5">Rating</th>
-                      <th className="text-right px-4 py-2.5">Parties</th>
-                      <th className="text-right px-4 py-2.5">V / D</th>
+                      <th className="text-left px-4 py-2.5">{t.colPlayer}</th>
+                      <th className="text-right px-4 py-2.5">{t.colRating}</th>
+                      <th className="text-right px-4 py-2.5">{t.colGames}</th>
+                      <th className="text-right px-4 py-2.5">{t.colWinLoss}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-neutral-700/50">

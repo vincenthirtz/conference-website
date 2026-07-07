@@ -4,10 +4,12 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { supabaseClient } from '@/utils/supabase';
 import { useToast } from '@/components/Toast';
+import { useAdminT } from '@/lib/i18n/useAdminT';
 
 export default function AdminResetPasswordPage() {
   const router = useRouter();
   const { addToast } = useToast();
+  const t = useAdminT('adminResetPassword');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [loading, setLoading] = useState(false);
@@ -38,7 +40,7 @@ export default function AdminResetPasswordPage() {
           token_hash: tokenHash,
         });
         if (error) {
-          msg = error.message || 'Lien invalide, expiré ou déjà utilisé.';
+          msg = error.message || t.invalidLinkDefault;
         } else {
           established = !!data?.session;
         }
@@ -47,7 +49,7 @@ export default function AdminResetPasswordPage() {
         const { data, error } =
           await supabaseClient.auth.exchangeCodeForSession(code);
         if (error) {
-          msg = error.message || 'Lien de récupération invalide ou déjà utilisé.';
+          msg = error.message || t.errorCodeInvalid;
         } else {
           established = !!data?.session;
         }
@@ -67,9 +69,7 @@ export default function AdminResetPasswordPage() {
             refresh_token,
           });
           if (error) {
-            msg =
-              error.message ||
-              'Impossible de restaurer la session de récupération.';
+            msg = error.message || t.errorRestoreSession;
           } else {
             established = !!data?.session;
           }
@@ -83,8 +83,7 @@ export default function AdminResetPasswordPage() {
       }
 
       if (!established && !msg) {
-        msg =
-          'Lien invalide, expiré ou déjà utilisé. Redemande un nouveau lien de réinitialisation.';
+        msg = t.errorNoSession;
       }
 
       if (msg) setErrorMsg(msg);
@@ -93,25 +92,23 @@ export default function AdminResetPasswordPage() {
     }
 
     initSession();
-  }, [router.isReady, router.query.token_hash, router.query.code]);
+  }, [router.isReady, router.query.token_hash, router.query.code, t]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setErrorMsg(null);
 
     if (!sessionValid) {
-      setErrorMsg(
-        'Lien expiré ou déjà utilisé. Redemande un nouveau lien de réinitialisation.'
-      );
+      setErrorMsg(t.errorLinkExpiredSubmit);
       return;
     }
 
     if (password.trim().length < 8) {
-      setErrorMsg('Le mot de passe doit contenir au moins 8 caractères.');
+      setErrorMsg(t.errorPasswordTooShort);
       return;
     }
     if (password !== confirm) {
-      setErrorMsg('Les mots de passe ne correspondent pas.');
+      setErrorMsg(t.errorPasswordMismatch);
       return;
     }
 
@@ -122,16 +119,14 @@ export default function AdminResetPasswordPage() {
       });
 
       if (error) {
-        throw new Error(
-          error.message || 'Impossible de mettre à jour le mot de passe.'
-        );
+        throw new Error(error.message || t.errorUpdateFailed);
       }
 
-      addToast('Mot de passe mis à jour. Tu peux te reconnecter.', 'success');
+      addToast(t.successUpdated, 'success');
       setPassword('');
       setConfirm('');
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
+      setErrorMsg((err as Error)?.message ?? t.errorUnexpected);
     } finally {
       setLoading(false);
     }
@@ -140,7 +135,7 @@ export default function AdminResetPasswordPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
       <Head>
-        <title>Nouveau mot de passe | OW Women&apos;s Cup</title>
+        <title>{t.pageTitle}</title>
       </Head>
 
       <main className="flex items-center justify-center px-4 py-10">
@@ -148,40 +143,33 @@ export default function AdminResetPasswordPage() {
           <div className="flex flex-col items-center mb-8">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[10px] uppercase tracking-[0.16em] text-gray-300">
               <span className="px-1.5 py-[2px] rounded-full bg-gradient-to-r from-purple-400/90 to-pink-400/90 text-black font-semibold">
-                Staff
+                {t.badgeStaff}
               </span>
-              <span className="text-[10px]">Reset</span>
+              <span className="text-[10px]">{t.badgeAction}</span>
             </div>
 
             <h1 className="text-3xl font-bold text-gradient text-center mt-4">
-              Nouveau mot de passe
+              {t.heading}
             </h1>
             <p className="text-sm text-gray-300 mt-2 text-center max-w-sm">
-              Saisis ton nouveau mot de passe après avoir ouvert le lien reçu
-              par email.
+              {t.intro}
             </p>
           </div>
 
           <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl shadow-2xl shadow-black/40 p-6">
             {!sessionReady ? (
-              <p className="text-sm text-neutral-300">
-                Chargement de la session…
-              </p>
+              <p className="text-sm text-neutral-300">{t.loadingSession}</p>
             ) : !sessionValid ? (
               <div className="space-y-4">
                 <div className="rounded-xl border border-red-500/40 bg-red-500/10 px-3 py-3 text-sm text-red-100">
-                  {errorMsg || 'Lien invalide, expiré ou déjà utilisé.'}
+                  {errorMsg || t.invalidLinkDefault}
                 </div>
-                <p className="text-xs text-gray-400">
-                  Les liens de réinitialisation sont à usage unique : ne les
-                  ouvre qu&apos;une seule fois. Demande un nouveau lien
-                  ci-dessous.
-                </p>
+                <p className="text-xs text-gray-400">{t.singleUseNote}</p>
                 <Link
                   href="/admin/forgot-password"
                   className="block w-full text-center rounded-xl py-2 text-sm font-semibold bg-purple-600 hover:bg-purple-500 transition"
                 >
-                  Redemander un lien
+                  {t.requestNewLink}
                 </Link>
               </div>
             ) : (
@@ -191,7 +179,7 @@ export default function AdminResetPasswordPage() {
                     htmlFor="password"
                     className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2"
                   >
-                    Nouveau mot de passe
+                    {t.newPasswordLabel}
                   </label>
                   <input
                     id="password"
@@ -211,7 +199,7 @@ export default function AdminResetPasswordPage() {
                     htmlFor="confirm"
                     className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2"
                   >
-                    Confirmation
+                    {t.confirmLabel}
                   </label>
                   <input
                     id="confirm"
@@ -241,7 +229,7 @@ export default function AdminResetPasswordPage() {
                         : 'bg-purple-600 hover:bg-purple-500'
                     }`}
                   >
-                    {loading ? 'Mise à jour...' : 'Mettre à jour'}
+                    {loading ? t.submitUpdating : t.submit}
                   </button>
                 </div>
               </form>
@@ -252,7 +240,7 @@ export default function AdminResetPasswordPage() {
                 href="/admin/login"
                 className="text-sm text-purple-200 hover:text-purple-100"
               >
-                Retour à la connexion
+                {t.backToLogin}
               </Link>
             </div>
           </div>

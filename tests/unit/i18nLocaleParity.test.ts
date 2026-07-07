@@ -12,6 +12,8 @@ import { describe, it, expect } from 'vitest';
 
 import en from '@/lib/i18n/locales/en.json';
 import fr from '@/lib/i18n/locales/fr.json';
+import adminEn from '@/lib/i18n/locales/admin-en.json';
+import adminFr from '@/lib/i18n/locales/admin-fr.json';
 
 type Json = Record<string, unknown>;
 
@@ -34,15 +36,23 @@ function flattenKeys(obj: Json, prefix = ''): string[] {
   return out;
 }
 
-describe('i18n locale parity (fr ↔ en)', () => {
-  const enKeys = new Set(flattenKeys(en as Json));
-  const frKeys = new Set(flattenKeys(fr as Json));
+// Public locales (`useT`) and admin locales (`useAdminT`) are separate
+// dictionaries — each pair must be internally consistent. Same assertions run
+// over both.
+const PAIRS: { label: string; fr: Json; en: Json }[] = [
+  { label: 'public (fr ↔ en)', fr: fr as Json, en: en as Json },
+  { label: 'admin (admin-fr ↔ admin-en)', fr: adminFr as Json, en: adminEn as Json },
+];
+
+describe.each(PAIRS)('i18n locale parity — $label', ({ fr: frJson, en: enJson }) => {
+  const enKeys = new Set(flattenKeys(enJson));
+  const frKeys = new Set(flattenKeys(frJson));
 
   it('fr has no keys missing from en', () => {
     const missingFromEn = [...frKeys].filter((k) => !enKeys.has(k)).sort();
     expect(
       missingFromEn,
-      `Keys present in fr.json but missing from en.json:\n  ${missingFromEn.join('\n  ')}`
+      `Keys present in fr but missing from en:\n  ${missingFromEn.join('\n  ')}`
     ).toEqual([]);
   });
 
@@ -50,7 +60,7 @@ describe('i18n locale parity (fr ↔ en)', () => {
     const missingFromFr = [...enKeys].filter((k) => !frKeys.has(k)).sort();
     expect(
       missingFromFr,
-      `Keys present in en.json but missing from fr.json:\n  ${missingFromFr.join('\n  ')}`
+      `Keys present in en but missing from fr:\n  ${missingFromFr.join('\n  ')}`
     ).toEqual([]);
   });
 

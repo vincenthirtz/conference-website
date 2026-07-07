@@ -6,6 +6,7 @@ import { supabaseClient } from '@/utils/supabase';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useAdminT } from '@/lib/i18n/useAdminT';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
 
 import { logger } from '../../utils/logger';
@@ -61,6 +62,7 @@ function AdminProfilePage({ staff }: Props) {
   const { addToast } = useToast();
   const { adminFetch, adminFetchJson } = useAdminFetch();
   const router = useRouter();
+  const t = useAdminT('adminProfile');
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -77,7 +79,7 @@ function AdminProfilePage({ staff }: Props) {
         });
       } catch (err: unknown) {
         logger.error('AdminProfilePage: profile fetch error', err);
-        setErrorMsg((err as Error)?.message || 'Erreur inattendue');
+        setErrorMsg((err as Error)?.message || t.errorUnexpected);
       } finally {
         setLoading(false);
       }
@@ -106,16 +108,11 @@ function AdminProfilePage({ staff }: Props) {
         throw error;
       }
 
-      addToast(
-        'Un email de confirmation a été envoyé à ta nouvelle adresse. Clique sur le lien pour confirmer le changement.',
-        'success'
-      );
+      addToast(t.toastEmailSent, 'success');
       setNewEmail('');
     } catch (err: unknown) {
       logger.error('AdminProfilePage: email change error', err);
-      setEmailErrorMsg(
-        (err as Error)?.message || "Erreur lors du changement d'email."
-      );
+      setEmailErrorMsg((err as Error)?.message || t.errorEmailChange);
     } finally {
       setEmailChanging(false);
     }
@@ -124,13 +121,11 @@ function AdminProfilePage({ staff }: Props) {
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newPassword || newPassword.length < 8) {
-      setPasswordErrorMsg(
-        'Le mot de passe doit contenir au moins 8 caractères.'
-      );
+      setPasswordErrorMsg(t.errorPasswordTooShort);
       return;
     }
     if (newPassword !== confirmPassword) {
-      setPasswordErrorMsg('Les mots de passe ne correspondent pas.');
+      setPasswordErrorMsg(t.errorPasswordMismatch);
       return;
     }
 
@@ -146,14 +141,12 @@ function AdminProfilePage({ staff }: Props) {
         throw error;
       }
 
-      addToast('Ton mot de passe a été modifié avec succès.', 'success');
+      addToast(t.toastPasswordChanged, 'success');
       setNewPassword('');
       setConfirmPassword('');
     } catch (err: unknown) {
       logger.error('AdminProfilePage: password change error', err);
-      setPasswordErrorMsg(
-        (err as Error)?.message || 'Erreur lors du changement de mot de passe.'
-      );
+      setPasswordErrorMsg((err as Error)?.message || t.errorPasswordChange);
     } finally {
       setPasswordChanging(false);
     }
@@ -178,10 +171,10 @@ function AdminProfilePage({ staff }: Props) {
         displayName: json.display_name || '',
         avatarUrl: json.avatar_url || '',
       });
-      addToast('Profil mis à jour.', 'success');
+      addToast(t.toastProfileUpdated, 'success');
     } catch (err: unknown) {
       logger.error('AdminProfilePage: profile update error', err);
-      setErrorMsg((err as Error)?.message || 'Erreur inattendue');
+      setErrorMsg((err as Error)?.message || t.errorUnexpected);
     } finally {
       setSaving(false);
     }
@@ -195,7 +188,7 @@ function AdminProfilePage({ staff }: Props) {
 
       if (!resp.ok) {
         const body = await resp.json().catch(() => null);
-        throw new Error(body?.error || 'Erreur lors de l’export.');
+        throw new Error(body?.error || t.errorExport);
       }
 
       const blob = await resp.blob();
@@ -207,7 +200,7 @@ function AdminProfilePage({ staff }: Props) {
       URL.revokeObjectURL(url);
     } catch (err: unknown) {
       logger.error('AdminProfilePage: export error', err);
-      setDataError((err as Error)?.message || 'Erreur lors de l’export.');
+      setDataError((err as Error)?.message || t.errorExport);
     } finally {
       setExporting(false);
     }
@@ -223,21 +216,21 @@ function AdminProfilePage({ staff }: Props) {
 
       if (!resp.ok) {
         const body = await resp.json().catch(() => null);
-        throw new Error(body?.error || 'Erreur lors de la suppression.');
+        throw new Error(body?.error || t.errorDelete);
       }
 
       await supabaseClient.auth.signOut();
       router.replace('/');
     } catch (err: unknown) {
       logger.error('AdminProfilePage: delete account error', err);
-      setDataError((err as Error)?.message || 'Erreur lors de la suppression.');
+      setDataError((err as Error)?.message || t.errorDelete);
     } finally {
       setDeleting(false);
     }
   };
 
   const displayName =
-    profile?.display_name ?? staff.display_name ?? 'Profil staff';
+    profile?.display_name ?? staff.display_name ?? t.defaultDisplayName;
   const email = profile?.email ?? '—';
   const roleLabel = formatRoleLabel(profile?.role ?? staff.role);
   const staffId = profile?.id ?? staff.id ?? '—';
@@ -249,7 +242,7 @@ function AdminProfilePage({ staff }: Props) {
   return (
     <>
       <Head>
-        <title>Admin – Mon profil</title>
+        <title>{t.pageTitle}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
@@ -261,16 +254,14 @@ function AdminProfilePage({ staff }: Props) {
                 href="/admin"
                 className="hover:text-white transition-colors"
               >
-                Espace staff
+                {t.breadcrumbStaff}
               </Link>{' '}
-              / Mon profil
+              / {t.breadcrumbCurrent}
             </p>
             <h1 className="text-3xl md:text-4xl font-bold tracking-tight mt-1">
-              Mon profil
+              {t.heading}
             </h1>
-            <p className="text-sm text-neutral-400 mt-2">
-              Résumé de ton compte staff.
-            </p>
+            <p className="text-sm text-neutral-400 mt-2">{t.subtitle}</p>
           </div>
 
           {/* Messages */}
@@ -300,7 +291,7 @@ function AdminProfilePage({ staff }: Props) {
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={profile.avatar_url}
-                      alt="Avatar"
+                      alt={t.avatarAlt}
                       className="w-16 h-16 rounded-xl border-2 border-neutral-700 shadow-lg object-cover"
                     />
                   )}
@@ -328,7 +319,7 @@ function AdminProfilePage({ staff }: Props) {
                       d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
                     />
                   </svg>
-                  Déconnexion
+                  {t.logout}
                 </Link>
               </div>
 
@@ -342,25 +333,25 @@ function AdminProfilePage({ staff }: Props) {
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   <div className="bg-neutral-900/50 rounded-xl p-4">
                     <div className="text-xs text-neutral-500 uppercase tracking-wider mb-1">
-                      Email
+                      {t.emailLabel}
                     </div>
                     <div className="font-medium text-sm truncate">{email}</div>
                   </div>
                   <div className="bg-neutral-900/50 rounded-xl p-4">
                     <div className="text-xs text-neutral-500 uppercase tracking-wider mb-1">
-                      Rôle staff
+                      {t.roleLabel}
                     </div>
                     <div className="font-medium">{roleLabel}</div>
                   </div>
                   <div className="bg-neutral-900/50 rounded-xl p-4">
                     <div className="text-xs text-neutral-500 uppercase tracking-wider mb-1">
-                      Profil créé le
+                      {t.createdAtLabel}
                     </div>
                     <div className="font-medium text-sm">{createdAt}</div>
                   </div>
                   <div className="bg-neutral-900/50 rounded-xl p-4 col-span-2 md:col-span-3">
                     <div className="text-xs text-neutral-500 uppercase tracking-wider mb-1">
-                      ID staff
+                      {t.staffIdLabel}
                     </div>
                     <div className="font-mono text-xs text-neutral-300 break-all">
                       {staffId}
@@ -386,23 +377,23 @@ function AdminProfilePage({ staff }: Props) {
                     d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
                   />
                 </svg>
-                Modifier mon profil
+                {t.editHeading}
               </h2>
               <form onSubmit={handleUpdateProfile} className="space-y-4">
                 <div>
                   <label className="block text-sm text-neutral-400 mb-1">
-                    Nom affiché
+                    {t.displayNameLabel}
                   </label>
                   <input
                     className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
                     value={form.displayName}
                     onChange={(e) => updateField('displayName', e.target.value)}
-                    placeholder="Ton pseudo staff"
+                    placeholder={t.displayNamePlaceholder}
                   />
                 </div>
                 <div>
                   <label className="block text-sm text-neutral-400 mb-1">
-                    Avatar (URL)
+                    {t.avatarUrlLabel}
                   </label>
                   <input
                     className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
@@ -411,7 +402,7 @@ function AdminProfilePage({ staff }: Props) {
                     placeholder="https://…"
                   />
                   <p className="text-xs text-neutral-500 mt-1">
-                    Optionnel. Laisse vide pour retirer l&apos;avatar.
+                    {t.avatarHelp}
                   </p>
                 </div>
                 <button
@@ -422,10 +413,10 @@ function AdminProfilePage({ staff }: Props) {
                   {saving ? (
                     <>
                       <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Enregistrement…
+                      {t.saving}
                     </>
                   ) : (
-                    'Enregistrer'
+                    t.save
                   )}
                 </button>
               </form>
@@ -447,7 +438,7 @@ function AdminProfilePage({ staff }: Props) {
                     d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
                   />
                 </svg>
-                Changer mon email
+                {t.emailHeading}
               </h2>
 
               {emailErrorMsg && (
@@ -470,7 +461,7 @@ function AdminProfilePage({ staff }: Props) {
               <form onSubmit={handleEmailChange} className="space-y-4">
                 <div>
                   <label className="block text-sm text-neutral-400 mb-1">
-                    Nouvel email
+                    {t.newEmailLabel}
                   </label>
                   <input
                     type="email"
@@ -491,15 +482,15 @@ function AdminProfilePage({ staff }: Props) {
                   {emailChanging ? (
                     <>
                       <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Envoi en cours…
+                      {t.emailSending}
                     </>
                   ) : (
-                    'Changer mon email'
+                    t.emailSubmit
                   )}
                 </button>
               </form>
               <p className="text-xs text-neutral-500 mt-3">
-                Un email de confirmation sera envoyé à la nouvelle adresse.
+                {t.emailConfirmNote}
               </p>
             </section>
 
@@ -519,7 +510,7 @@ function AdminProfilePage({ staff }: Props) {
                     d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
                   />
                 </svg>
-                Changer mon mot de passe
+                {t.passwordHeading}
               </h2>
 
               {passwordErrorMsg && (
@@ -542,7 +533,7 @@ function AdminProfilePage({ staff }: Props) {
               <form onSubmit={handlePasswordChange} className="space-y-4">
                 <div>
                   <label className="block text-sm text-neutral-400 mb-1">
-                    Nouveau mot de passe
+                    {t.newPasswordLabel}
                   </label>
                   <input
                     type="password"
@@ -556,7 +547,7 @@ function AdminProfilePage({ staff }: Props) {
                 </div>
                 <div>
                   <label className="block text-sm text-neutral-400 mb-1">
-                    Confirmer le mot de passe
+                    {t.confirmPasswordLabel}
                   </label>
                   <input
                     type="password"
@@ -578,16 +569,14 @@ function AdminProfilePage({ staff }: Props) {
                   {passwordChanging ? (
                     <>
                       <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Modification…
+                      {t.passwordChanging}
                     </>
                   ) : (
-                    'Changer mon mot de passe'
+                    t.passwordSubmit
                   )}
                 </button>
               </form>
-              <p className="text-xs text-neutral-500 mt-3">
-                Minimum 8 caractères.
-              </p>
+              <p className="text-xs text-neutral-500 mt-3">{t.passwordHelp}</p>
             </section>
 
             {/* Mes données — export & suppression */}
@@ -606,7 +595,7 @@ function AdminProfilePage({ staff }: Props) {
                     d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
                   />
                 </svg>
-                Mes données
+                {t.dataHeading}
               </h2>
 
               {dataError && (
@@ -634,16 +623,13 @@ function AdminProfilePage({ staff }: Props) {
                 {exporting ? (
                   <>
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Export en cours…
+                    {t.exporting}
                   </>
                 ) : (
-                  'Télécharger mes données'
+                  t.exportBtn
                 )}
               </button>
-              <p className="text-xs text-neutral-500 mb-5">
-                Récupère toutes tes informations personnelles au format JSON
-                (droit d&apos;accès RGPD).
-              </p>
+              <p className="text-xs text-neutral-500 mb-5">{t.exportHelp}</p>
 
               <button
                 onClick={() => {
@@ -652,23 +638,20 @@ function AdminProfilePage({ staff }: Props) {
                 }}
                 className="w-full px-4 py-2.5 rounded-xl border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-300 text-sm font-medium transition-colors"
               >
-                Supprimer mon compte
+                {t.deleteBtn}
               </button>
-              <p className="text-xs text-neutral-500 mt-3">
-                Droit à l&apos;oubli RGPD — ton compte et toutes tes données
-                seront supprimés définitivement.
-              </p>
+              <p className="text-xs text-neutral-500 mt-3">{t.deleteHelp}</p>
             </section>
 
             {/* System Info */}
             <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
               <h2 className="text-sm font-semibold text-neutral-400 mb-3">
-                Informations système
+                {t.systemHeading}
               </h2>
               <div className="space-y-3 text-sm">
                 <div>
                   <div className="text-xs text-neutral-500 mb-1">
-                    ID utilisateur
+                    {t.userIdLabel}
                   </div>
                   <div className="font-mono text-xs bg-neutral-900 px-3 py-2 rounded-lg border border-neutral-700 break-all">
                     {authUserId}
@@ -682,13 +665,13 @@ function AdminProfilePage({ staff }: Props) {
 
       {deleteConfirm && (
         <ConfirmDialog
-          title="Supprimer mon compte"
-          subtitle="Droit à l’oubli RGPD"
+          title={t.deleteDialogTitle}
+          subtitle={t.deleteDialogSubtitle}
           variant="danger"
           loading={deleting}
-          confirmLabel="Confirmer la suppression"
-          confirmingLabel="Suppression…"
-          cancelLabel="Annuler"
+          confirmLabel={t.deleteConfirmLabel}
+          confirmingLabel={t.deleteConfirmingLabel}
+          cancelLabel={t.cancelLabel}
           errorMsg={dataError}
           onCancel={() => {
             if (deleting) return;
@@ -698,8 +681,9 @@ function AdminProfilePage({ staff }: Props) {
           onConfirm={handleDeleteAccount}
         >
           <p className="text-sm text-red-200">
-            Cette action est <strong>irréversible</strong>. Toutes tes données,
-            ton rôle staff et tes appartenances seront définitivement supprimés.
+            {t.deleteDialogBodyBefore}
+            <strong>{t.deleteDialogBodyStrong}</strong>
+            {t.deleteDialogBodyAfter}
           </p>
         </ConfirmDialog>
       )}

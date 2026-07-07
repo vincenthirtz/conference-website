@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 import { logger } from '../../utils/logger';
 type StaffShape = {
@@ -76,6 +77,7 @@ function shortId(id: string | null | undefined) {
 function AdminLogsPage({ staff }: StaffProps) {
   const router = useRouter();
   const { adminFetch, adminFetchJson } = useAdminFetch();
+  const t = useAdminT('adminLogs');
 
   const [logs, setLogs] = useState<StaffLog[]>([]);
   const [total, setTotal] = useState<number | null>(null);
@@ -158,7 +160,7 @@ function AdminLogsPage({ staff }: StaffProps) {
       setLogs(json.logs || []);
       setTotal(typeof json.total === 'number' ? json.total : null);
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
+      setErrorMsg((err as Error)?.message ?? t.errorUnexpected);
     } finally {
       setLoading(false);
     }
@@ -173,7 +175,7 @@ function AdminLogsPage({ staff }: StaffProps) {
   return (
     <>
       <Head>
-        <title>Admin – Logs staff</title>
+        <title>{t.pageTitle}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
@@ -198,23 +200,26 @@ function AdminLogsPage({ staff }: StaffProps) {
                   d="M15 19l-7-7 7-7"
                 />
               </svg>
-              Retour au dashboard admin
+              {t.backToDashboard}
             </button>
 
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-                  Logs staff
+                  {t.heading}
                 </h1>
                 <p className="text-neutral-400 text-sm mt-1">
                   {total !== null
-                    ? `${total} action${total > 1 ? 's' : ''} enregistree${total > 1 ? 's' : ''}`
-                    : 'Chargement...'}
+                    ? format(
+                        total > 1 ? t.countActions_other : t.countActions_one,
+                        { count: total }
+                      )
+                    : t.loading}
                 </p>
               </div>
 
               <div className="text-xs text-neutral-500 bg-neutral-800/50 px-3 py-2 rounded-xl border border-neutral-700/50">
-                Tries par date decroissante
+                {t.sortedByDate}
               </div>
             </div>
           </div>
@@ -245,11 +250,11 @@ function AdminLogsPage({ staff }: StaffProps) {
             >
               <div>
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Type d&apos;entite
+                  {t.labelEntityType}
                 </label>
                 <input
                   type="text"
-                  placeholder="tournament, stage, match..."
+                  placeholder={t.placeholderEntityType}
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   value={entityType}
                   onChange={(e) => setEntityType(e.target.value)}
@@ -258,11 +263,11 @@ function AdminLogsPage({ staff }: StaffProps) {
 
               <div>
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Action
+                  {t.labelAction}
                 </label>
                 <input
                   type="text"
-                  placeholder="create_match, update_stage..."
+                  placeholder={t.placeholderAction}
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   value={action}
                   onChange={(e) => setAction(e.target.value)}
@@ -271,11 +276,11 @@ function AdminLogsPage({ staff }: StaffProps) {
 
               <div>
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Staff
+                  {t.labelStaff}
                 </label>
                 <input
                   type="text"
-                  placeholder="ID ou nom"
+                  placeholder={t.placeholderStaff}
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   value={staffId}
                   onChange={(e) => setStaffId(e.target.value)}
@@ -284,7 +289,7 @@ function AdminLogsPage({ staff }: StaffProps) {
 
               <div>
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Tournoi
+                  {t.labelTournament}
                 </label>
                 <select
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
@@ -293,7 +298,7 @@ function AdminLogsPage({ staff }: StaffProps) {
                   disabled={loadingTournaments}
                 >
                   <option value="">
-                    {loadingTournaments ? 'Chargement...' : 'Tous les tournois'}
+                    {loadingTournaments ? t.loading : t.allTournaments}
                   </option>
                   {tournaments.map((t) => (
                     <option key={t.id} value={t.id}>
@@ -306,7 +311,7 @@ function AdminLogsPage({ staff }: StaffProps) {
 
               <div>
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Recherche
+                  {t.labelSearch}
                 </label>
                 <div className="relative">
                   <svg
@@ -324,7 +329,7 @@ function AdminLogsPage({ staff }: StaffProps) {
                   </svg>
                   <input
                     type="text"
-                    placeholder="message, payload..."
+                    placeholder={t.placeholderSearch}
                     className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
@@ -350,53 +355,53 @@ function AdminLogsPage({ staff }: StaffProps) {
                       d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
                     />
                   </svg>
-                  Filtrer
+                  {t.filter}
                 </button>
               </div>
 
               {/* Additional filters row */}
               <div>
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Stage ID
+                  {t.labelStageId}
                 </label>
                 <input
                   type="text"
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono"
                   value={stageId}
                   onChange={(e) => setStageId(e.target.value)}
-                  placeholder="stage..."
+                  placeholder={t.placeholderStage}
                 />
               </div>
 
               <div>
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Match ID
+                  {t.labelMatchId}
                 </label>
                 <input
                   type="text"
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono"
                   value={matchId}
                   onChange={(e) => setMatchId(e.target.value)}
-                  placeholder="match..."
+                  placeholder={t.placeholderMatch}
                 />
               </div>
 
               <div>
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Team ID
+                  {t.labelTeamId}
                 </label>
                 <input
                   type="text"
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono"
                   value={teamId}
                   onChange={(e) => setTeamId(e.target.value)}
-                  placeholder="team..."
+                  placeholder={t.placeholderTeam}
                 />
               </div>
 
               <div>
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Du
+                  {t.labelFrom}
                 </label>
                 <input
                   type="date"
@@ -408,7 +413,7 @@ function AdminLogsPage({ staff }: StaffProps) {
 
               <div>
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Au
+                  {t.labelTo}
                 </label>
                 <input
                   type="date"
@@ -441,7 +446,7 @@ function AdminLogsPage({ staff }: StaffProps) {
                     d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                   />
                 </svg>
-                Aucun log trouve pour ces filtres
+                {t.empty}
               </div>
             ) : (
               <div className="divide-y divide-neutral-700/50">
@@ -469,7 +474,7 @@ function AdminLogsPage({ staff }: StaffProps) {
 
                       {log.staff_id && (
                         <div className="flex items-center gap-2 text-xs">
-                          <span className="text-neutral-500">par</span>
+                          <span className="text-neutral-500">{t.by}</span>
                           <span className="font-medium text-neutral-200">
                             {log.staff_display_name || shortId(log.staff_id)}
                           </span>
@@ -486,22 +491,24 @@ function AdminLogsPage({ staff }: StaffProps) {
                     <div className="flex flex-wrap gap-2 mb-2">
                       {log.tournament_id && (
                         <span className="px-2 py-0.5 rounded-lg text-[10px] bg-amber-900/30 border border-amber-700/30 text-amber-300">
-                          Tournoi: {shortId(log.tournament_id)}
+                          {format(t.tagTournament, {
+                            id: shortId(log.tournament_id),
+                          })}
                         </span>
                       )}
                       {log.stage_id && (
                         <span className="px-2 py-0.5 rounded-lg text-[10px] bg-purple-900/30 border border-purple-700/30 text-purple-300">
-                          Stage: {shortId(log.stage_id)}
+                          {format(t.tagStage, { id: shortId(log.stage_id) })}
                         </span>
                       )}
                       {log.match_id && (
                         <span className="px-2 py-0.5 rounded-lg text-[10px] bg-emerald-900/30 border border-emerald-700/30 text-emerald-300">
-                          Match: {shortId(log.match_id)}
+                          {format(t.tagMatch, { id: shortId(log.match_id) })}
                         </span>
                       )}
                       {log.team_id && (
                         <span className="px-2 py-0.5 rounded-lg text-[10px] bg-cyan-900/30 border border-cyan-700/30 text-cyan-300">
-                          Team: {shortId(log.team_id)}
+                          {format(t.tagTeam, { id: shortId(log.team_id) })}
                         </span>
                       )}
                     </div>
@@ -518,7 +525,7 @@ function AdminLogsPage({ staff }: StaffProps) {
                       {log.payload && (
                         <details className="text-xs text-neutral-400">
                           <summary className="cursor-pointer select-none hover:text-neutral-200 transition-colors">
-                            Details (payload)
+                            {t.detailsPayload}
                           </summary>
                           <pre className="mt-2 bg-neutral-900/70 border border-neutral-700/50 rounded-xl p-3 text-[11px] overflow-x-auto max-h-48">
                             {JSON.stringify(log.payload, null, 2)}
@@ -545,7 +552,7 @@ function AdminLogsPage({ staff }: StaffProps) {
                                 d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
                               />
                             </svg>
-                            Tournoi
+                            {t.linkTournament}
                           </Link>
                         )}
                         {log.stage_id && (
@@ -566,7 +573,7 @@ function AdminLogsPage({ staff }: StaffProps) {
                                 d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
                               />
                             </svg>
-                            Phase
+                            {t.linkStage}
                           </Link>
                         )}
                         {log.match_id && (
@@ -587,7 +594,7 @@ function AdminLogsPage({ staff }: StaffProps) {
                                 d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
                               />
                             </svg>
-                            Match
+                            {t.linkMatch}
                           </Link>
                         )}
                         {log.team_id && (
@@ -608,7 +615,7 @@ function AdminLogsPage({ staff }: StaffProps) {
                                 d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
                               />
                             </svg>
-                            Equipe
+                            {t.linkTeam}
                           </Link>
                         )}
                       </div>
@@ -641,12 +648,12 @@ function AdminLogsPage({ staff }: StaffProps) {
                     d="M15 19l-7-7 7-7"
                   />
                 </svg>
-                Precedent
+                {t.previous}
               </button>
 
               <span className="text-neutral-400 text-sm">
                 {offset + 1} – {offset + logs.length}
-                {total ? ` sur ${total}` : ''}
+                {total ? format(t.paginationTotal, { total }) : ''}
               </span>
 
               <button
@@ -655,7 +662,7 @@ function AdminLogsPage({ staff }: StaffProps) {
                 onClick={() => setOffset(offset + limit)}
                 className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
-                Suivant
+                {t.next}
                 <svg
                   className="w-4 h-4"
                   fill="none"

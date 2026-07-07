@@ -3,6 +3,9 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
+
+type Dict = ReturnType<typeof useAdminT<'adminEmailLogs'>>;
 
 type StaffShape = {
   id: string;
@@ -40,48 +43,50 @@ const EVENT_TYPES = [
   'deferred',
 ] as const;
 
-const EVENT_LABELS: Record<string, { label: string; color: string }> = {
+const getEventLabels = (
+  t: Dict
+): Record<string, { label: string; color: string }> => ({
   requests: {
-    label: 'Envoyé',
+    label: t.eventRequests,
     color: 'bg-blue-600/20 text-blue-300 border-blue-500/30',
   },
   delivered: {
-    label: 'Délivré',
+    label: t.eventDelivered,
     color: 'bg-emerald-600/20 text-emerald-300 border-emerald-500/30',
   },
   opened: {
-    label: 'Ouvert',
+    label: t.eventOpened,
     color: 'bg-violet-600/20 text-violet-300 border-violet-500/30',
   },
   clicks: {
-    label: 'Cliqué',
+    label: t.eventClicks,
     color: 'bg-cyan-600/20 text-cyan-300 border-cyan-500/30',
   },
   softBounces: {
-    label: 'Soft bounce',
+    label: t.eventSoftBounces,
     color: 'bg-amber-600/20 text-amber-300 border-amber-500/30',
   },
   hardBounces: {
-    label: 'Hard bounce',
+    label: t.eventHardBounces,
     color: 'bg-red-600/20 text-red-300 border-red-500/30',
   },
   spam: {
-    label: 'Spam',
+    label: t.eventSpam,
     color: 'bg-red-600/20 text-red-300 border-red-500/30',
   },
   blocked: {
-    label: 'Bloqué',
+    label: t.eventBlocked,
     color: 'bg-red-600/20 text-red-300 border-red-500/30',
   },
   invalid: {
-    label: 'Invalide',
+    label: t.eventInvalid,
     color: 'bg-neutral-600/20 text-neutral-300 border-neutral-500/30',
   },
   deferred: {
-    label: 'Différé',
+    label: t.eventDeferred,
     color: 'bg-amber-600/20 text-amber-300 border-amber-500/30',
   },
-};
+});
 
 function formatDateTime(iso: string) {
   try {
@@ -103,6 +108,8 @@ type TestEmailResponse = { success?: boolean; id?: string; error?: string };
 function AdminEmailLogsPage({ staff }: Props) {
   const router = useRouter();
   const { adminFetch, adminFetchJson } = useAdminFetch();
+  const t = useAdminT('adminEmailLogs');
+  const eventLabels = getEventLabels(t);
 
   const [events, setEvents] = useState<BrevoEvent[]>([]);
   const [loading, setLoading] = useState(false);
@@ -144,7 +151,7 @@ function AdminEmailLogsPage({ staff }: Props) {
       );
       setEvents(json.events || []);
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
+      setErrorMsg((err as Error)?.message ?? t.errorUnexpected);
     } finally {
       setLoading(false);
     }
@@ -156,6 +163,7 @@ function AdminEmailLogsPage({ staff }: Props) {
     startDate,
     endDate,
     adminFetchJson,
+    t,
   ]);
 
   useEffect(() => {
@@ -180,13 +188,16 @@ function AdminEmailLogsPage({ staff }: Props) {
       });
       const json: TestEmailResponse = await res.json();
       if (json.success) {
-        setTestResult({ ok: true, msg: `Email envoyé (${json.id || 'ok'})` });
+        setTestResult({
+          ok: true,
+          msg: format(t.toastTestSent, { id: json.id || 'ok' }),
+        });
         setTimeout(() => fetchEvents(), 3000);
       } else {
-        setTestResult({ ok: false, msg: json.error || 'Échec' });
+        setTestResult({ ok: false, msg: json.error || t.testFailed });
       }
     } catch {
-      setTestResult({ ok: false, msg: 'Erreur réseau' });
+      setTestResult({ ok: false, msg: t.errorNetwork });
     } finally {
       setTestSending(false);
     }
@@ -195,7 +206,7 @@ function AdminEmailLogsPage({ staff }: Props) {
   return (
     <>
       <Head>
-        <title>Admin – Logs emails (Brevo)</title>
+        <title>{t.pageTitle}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
@@ -220,20 +231,18 @@ function AdminEmailLogsPage({ staff }: Props) {
                   d="M15 19l-7-7 7-7"
                 />
               </svg>
-              Retour au dashboard admin
+              {t.backToDashboard}
             </button>
 
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-                  Logs emails
+                  {t.heading}
                 </h1>
-                <p className="text-neutral-400 text-sm mt-1">
-                  Historique des emails transactionnels via Brevo
-                </p>
+                <p className="text-neutral-400 text-sm mt-1">{t.subtitle}</p>
               </div>
               <div className="text-xs text-neutral-500 bg-neutral-800/50 px-3 py-2 rounded-xl border border-neutral-700/50">
-                300 emails/jour (gratuit)
+                {t.quota}
               </div>
             </div>
           </div>
@@ -258,7 +267,7 @@ function AdminEmailLogsPage({ staff }: Props) {
                 onClick={() => fetchEvents()}
                 className="flex-shrink-0 px-3 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-xs font-medium transition-colors"
               >
-                Réessayer
+                {t.retry}
               </button>
             </div>
           )}
@@ -279,13 +288,13 @@ function AdminEmailLogsPage({ staff }: Props) {
                   d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
                 />
               </svg>
-              Envoyer un email de test
+              {t.testHeading}
             </h2>
             <div className="flex flex-wrap gap-3 items-end">
               <div className="flex-1 min-w-[200px]">
                 <input
                   type="email"
-                  placeholder="destinataire@example.com"
+                  placeholder={t.testPlaceholder}
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   value={testTo}
                   onChange={(e) => setTestTo(e.target.value)}
@@ -315,7 +324,7 @@ function AdminEmailLogsPage({ staff }: Props) {
                     />
                   </svg>
                 )}
-                Envoyer
+                {t.testSend}
               </button>
               {testResult && (
                 <span
@@ -339,11 +348,11 @@ function AdminEmailLogsPage({ staff }: Props) {
             >
               <div>
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Email
+                  {t.labelEmail}
                 </label>
                 <input
                   type="text"
-                  placeholder="destinataire@..."
+                  placeholder={t.placeholderEmail}
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   value={emailFilter}
                   onChange={(e) => setEmailFilter(e.target.value)}
@@ -352,17 +361,17 @@ function AdminEmailLogsPage({ staff }: Props) {
 
               <div>
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Statut
+                  {t.labelStatus}
                 </label>
                 <select
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   value={eventFilter}
                   onChange={(e) => setEventFilter(e.target.value)}
                 >
-                  <option value="">Tous</option>
+                  <option value="">{t.statusAll}</option>
                   {EVENT_TYPES.map((ev) => (
                     <option key={ev} value={ev}>
-                      {EVENT_LABELS[ev]?.label || ev}
+                      {eventLabels[ev]?.label || ev}
                     </option>
                   ))}
                 </select>
@@ -370,7 +379,7 @@ function AdminEmailLogsPage({ staff }: Props) {
 
               <div>
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Du
+                  {t.labelFrom}
                 </label>
                 <input
                   type="date"
@@ -382,7 +391,7 @@ function AdminEmailLogsPage({ staff }: Props) {
 
               <div>
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Au
+                  {t.labelTo}
                 </label>
                 <input
                   type="date"
@@ -409,7 +418,7 @@ function AdminEmailLogsPage({ staff }: Props) {
                     d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
                   />
                 </svg>
-                Filtrer
+                {t.filter}
               </button>
             </form>
           </section>
@@ -435,12 +444,12 @@ function AdminEmailLogsPage({ staff }: Props) {
                     d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
                   />
                 </svg>
-                Aucun email trouvé pour ces filtres
+                {t.empty}
               </div>
             ) : (
               <div className="divide-y divide-neutral-700/50">
                 {events.map((ev, i) => {
-                  const style = EVENT_LABELS[ev.event] || {
+                  const style = eventLabels[ev.event] || {
                     label: ev.event,
                     color:
                       'bg-neutral-600/20 text-neutral-300 border-neutral-500/30',
@@ -479,13 +488,17 @@ function AdminEmailLogsPage({ staff }: Props) {
                       )}
 
                       <div className="flex flex-wrap items-center gap-3 text-xs text-neutral-500">
-                        {ev.from && <span>De : {ev.from}</span>}
+                        {ev.from && (
+                          <span>{format(t.from, { from: ev.from })}</span>
+                        )}
                         {ev.messageId && (
                           <span
                             className="font-mono truncate max-w-[200px]"
                             title={ev.messageId}
                           >
-                            ID : {ev.messageId.slice(1, 20)}…
+                            {format(t.idLabel, {
+                              id: ev.messageId.slice(1, 20),
+                            })}
                           </span>
                         )}
                         {ev.tag && (
@@ -523,7 +536,7 @@ function AdminEmailLogsPage({ staff }: Props) {
                     d="M15 19l-7-7 7-7"
                   />
                 </svg>
-                Précédent
+                {t.previous}
               </button>
 
               <span className="text-neutral-400 text-sm">
@@ -536,7 +549,7 @@ function AdminEmailLogsPage({ staff }: Props) {
                 onClick={() => setOffset(offset + limit)}
                 className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
-                Suivant
+                {t.next}
                 <svg
                   className="w-4 h-4"
                   fill="none"

@@ -2,9 +2,11 @@ import { useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useToast } from '@/components/Toast';
+import { useAdminT } from '@/lib/i18n/useAdminT';
 
 export default function AdminForgotPasswordPage() {
   const { addToast } = useToast();
+  const t = useAdminT('adminForgotPassword');
   const [email, setEmail] = useState('');
   const [sending, setSending] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -15,7 +17,7 @@ export default function AdminForgotPasswordPage() {
     setSending(true);
 
     try {
-      if (!email.trim()) throw new Error('Merci de renseigner ton email.');
+      if (!email.trim()) throw new Error(t.errorEmailRequired);
 
       const res = await fetch('/api/auth/forgot-password', {
         method: 'POST',
@@ -29,18 +31,12 @@ export default function AdminForgotPasswordPage() {
       const json = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        throw new Error(
-          json?.error || "Impossible d'envoyer l'email de réinitialisation."
-        );
+        throw new Error(json?.error || t.errorSendFailed);
       }
 
-      addToast(
-        json?.message ||
-          'Si un compte existe avec cet email, un lien de réinitialisation a été envoyé.',
-        'success'
-      );
+      addToast(json?.message || t.successSent, 'success');
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
+      setErrorMsg((err as Error)?.message ?? t.errorUnexpected);
     } finally {
       setSending(false);
     }
@@ -49,7 +45,7 @@ export default function AdminForgotPasswordPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
       <Head>
-        <title>Réinitialiser le mot de passe | OW Women&apos;s Cup</title>
+        <title>{t.pageTitle}</title>
       </Head>
 
       <main className="flex items-center justify-center px-4 pt-28 pb-20 md:pt-24 md:pb-10">
@@ -57,17 +53,16 @@ export default function AdminForgotPasswordPage() {
           <div className="flex flex-col items-center mb-8">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[10px] uppercase tracking-[0.16em] text-gray-300">
               <span className="px-1.5 py-[2px] rounded-full bg-gradient-to-r from-purple-400/90 to-pink-400/90 text-black font-semibold">
-                Staff
+                {t.badgeStaff}
               </span>
-              <span className="text-[10px]">Réinitialisation</span>
+              <span className="text-[10px]">{t.badgeAction}</span>
             </div>
 
             <h1 className="text-3xl font-bold text-gradient text-center mt-4">
-              Mot de passe oublié
+              {t.heading}
             </h1>
             <p className="text-sm text-gray-300 mt-2 text-center max-w-sm">
-              Entre ton email staff. Nous t&apos;envoyons un lien pour définir
-              un nouveau mot de passe.
+              {t.intro}
             </p>
           </div>
 
@@ -78,7 +73,7 @@ export default function AdminForgotPasswordPage() {
                   htmlFor="email"
                   className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2"
                 >
-                  Email
+                  {t.emailLabel}
                 </label>
                 <input
                   id="email"
@@ -88,7 +83,7 @@ export default function AdminForgotPasswordPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full rounded-xl border border-white/15 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/80 focus:border-purple-400/80 transition"
-                  placeholder="prenom.nom@organisation.tld"
+                  placeholder={t.emailPlaceholder}
                 />
               </div>
 
@@ -107,7 +102,7 @@ export default function AdminForgotPasswordPage() {
                       : 'bg-purple-600 hover:bg-purple-500'
                   }`}
                 >
-                  {sending ? 'Envoi...' : 'Envoyer le lien'}
+                  {sending ? t.submitSending : t.submit}
                 </button>
               </div>
             </form>
@@ -117,7 +112,7 @@ export default function AdminForgotPasswordPage() {
                 href="/admin/login"
                 className="text-sm text-purple-200 hover:text-purple-100"
               >
-                Retour à la connexion
+                {t.backToLogin}
               </Link>
             </div>
           </div>

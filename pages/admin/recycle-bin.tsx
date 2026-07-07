@@ -7,6 +7,9 @@ import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
+
+type Dict = ReturnType<typeof useAdminT<'adminRecycleBin'>>;
 
 type StaffShape = {
   id: string;
@@ -45,26 +48,26 @@ const PAGE_SIZE = 50;
 
 export const getServerSideProps = withStaffPage('admin');
 
-function typeLabel(type: string) {
+function typeLabel(type: string, t: Dict) {
   switch (type) {
     case 'stage':
-      return 'Phase';
+      return t.typeStage;
     case 'team':
-      return 'Equipe';
+      return t.typeTeam;
     case 'match':
-      return 'Match';
+      return t.typeMatch;
     case 'announcement':
-      return 'Annonce';
+      return t.typeAnnouncement;
     case 'partner':
-      return 'Partenaire';
+      return t.typePartner;
     case 'cast_member':
-      return 'Casteur';
+      return t.typeCastMember;
     case 'adherent':
-      return 'Adherent';
+      return t.typeAdherent;
     case 'staff':
-      return 'Staff';
+      return t.typeStaff;
     case 'scrim':
-      return 'Scrim';
+      return t.typeScrim;
     default:
       return type;
   }
@@ -115,6 +118,7 @@ function AdminRecycleBinPage({ staff }: StaffProps) {
   const { addToast } = useToast();
   const { confirm, dialog } = useConfirmDialog();
   const { adminFetchJson } = useAdminFetch();
+  const t = useAdminT('adminRecycleBin');
 
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<DeletedItem[]>([]);
@@ -140,11 +144,11 @@ function AdminRecycleBinPage({ staff }: StaffProps) {
       setItems(json.items || []);
       setTotal(typeof json.total === 'number' ? json.total : null);
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
+      setErrorMsg((err as Error)?.message ?? t.errorUnexpected);
     } finally {
       setLoading(false);
     }
-  }, [adminFetchJson, typeFilter, offset]);
+  }, [adminFetchJson, typeFilter, offset, t]);
 
   // Recharge à chaque changement de filtre/page. Le reset d'offset sur
   // changement de filtre est géré dans le onChange du select.
@@ -154,9 +158,12 @@ function AdminRecycleBinPage({ staff }: StaffProps) {
 
   async function handleRestore(item: DeletedItem) {
     const ok = await confirm({
-      title: `Restaurer ${typeLabel(item.type).toLowerCase()} "${item.name}" ?`,
+      title: format(t.confirmRestoreTitle, {
+        type: typeLabel(item.type, t).toLowerCase(),
+        name: item.name,
+      }),
       variant: 'info',
-      confirmLabel: 'Restaurer',
+      confirmLabel: t.confirmRestoreLabel,
     });
     if (!ok) return;
 
@@ -170,12 +177,15 @@ function AdminRecycleBinPage({ staff }: StaffProps) {
       });
 
       addToast(
-        `${typeLabel(item.type)} "${item.name}" restaure avec succes.`,
+        format(t.toastRestored, {
+          type: typeLabel(item.type, t),
+          name: item.name,
+        }),
         'info'
       );
       fetchItems();
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? 'Erreur lors de la restauration');
+      setErrorMsg((err as Error)?.message ?? t.errorRestore);
     } finally {
       setRestoringId(null);
     }
@@ -185,7 +195,7 @@ function AdminRecycleBinPage({ staff }: StaffProps) {
     <>
       {dialog}
       <Head>
-        <title>Admin – Corbeille</title>
+        <title>{t.pageTitle}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
@@ -210,18 +220,19 @@ function AdminRecycleBinPage({ staff }: StaffProps) {
                   d="M15 19l-7-7 7-7"
                 />
               </svg>
-              Retour au dashboard
+              {t.backToDashboard}
             </button>
 
             <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-              Corbeille
+              {t.heading}
             </h1>
             <p className="text-neutral-400 text-sm mt-1">
-              Elements desactives ou annules. Restaurez-les pour les remettre en
-              service.
+              {t.subtitle}
               {total !== null && (
                 <span className="ml-1">
-                  {total} element{total > 1 ? 's' : ''} dans la corbeille.
+                  {format(total > 1 ? t.countInBin_other : t.countInBin_one, {
+                    count: total,
+                  })}
                 </span>
               )}
             </p>
@@ -255,16 +266,16 @@ function AdminRecycleBinPage({ staff }: StaffProps) {
                 setTypeFilter(e.target.value);
               }}
             >
-              <option value="">Tous les types</option>
-              <option value="stage">Phases</option>
-              <option value="team">Equipes</option>
-              <option value="match">Matches</option>
-              <option value="announcement">Annonces</option>
-              <option value="partner">Partenaires</option>
-              <option value="cast_member">Casteurs</option>
-              <option value="adherent">Adherents</option>
-              <option value="staff">Staff</option>
-              <option value="scrim">Scrims</option>
+              <option value="">{t.filterAll}</option>
+              <option value="stage">{t.filterStages}</option>
+              <option value="team">{t.filterTeams}</option>
+              <option value="match">{t.filterMatches}</option>
+              <option value="announcement">{t.filterAnnouncements}</option>
+              <option value="partner">{t.filterPartners}</option>
+              <option value="cast_member">{t.filterCastMembers}</option>
+              <option value="adherent">{t.filterAdherents}</option>
+              <option value="staff">{t.filterStaff}</option>
+              <option value="scrim">{t.filterScrims}</option>
             </select>
 
             <button
@@ -273,7 +284,7 @@ function AdminRecycleBinPage({ staff }: StaffProps) {
               disabled={loading}
               className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50"
             >
-              Rafraichir
+              {t.refresh}
             </button>
           </div>
 
@@ -298,7 +309,7 @@ function AdminRecycleBinPage({ staff }: StaffProps) {
                     d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
                   />
                 </svg>
-                La corbeille est vide.
+                {t.empty}
               </div>
             ) : (
               <div className="divide-y divide-neutral-700/50">
@@ -311,7 +322,7 @@ function AdminRecycleBinPage({ staff }: StaffProps) {
                     <span
                       className={`px-2.5 py-1 rounded-lg text-xs font-medium border ${typeColor(item.type)}`}
                     >
-                      {typeLabel(item.type)}
+                      {typeLabel(item.type, t)}
                     </span>
 
                     {/* Info */}
@@ -321,7 +332,11 @@ function AdminRecycleBinPage({ staff }: StaffProps) {
                       </div>
                       <div className="text-xs text-neutral-500 flex gap-3">
                         {item.details && <span>{item.details}</span>}
-                        <span>Supprime le {formatDate(item.deleted_at)}</span>
+                        <span>
+                          {format(t.deletedOn, {
+                            date: formatDate(item.deleted_at),
+                          })}
+                        </span>
                         <span className="font-mono">
                           #{item.id.slice(0, 8)}
                         </span>
@@ -338,7 +353,7 @@ function AdminRecycleBinPage({ staff }: StaffProps) {
                       {restoringId === item.id ? (
                         <>
                           <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                          Restauration…
+                          {t.restoring}
                         </>
                       ) : (
                         <>
@@ -355,7 +370,7 @@ function AdminRecycleBinPage({ staff }: StaffProps) {
                               d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"
                             />
                           </svg>
-                          Restaurer
+                          {t.restore}
                         </>
                       )}
                     </button>
@@ -387,12 +402,12 @@ function AdminRecycleBinPage({ staff }: StaffProps) {
                     d="M15 19l-7-7 7-7"
                   />
                 </svg>
-                Precedent
+                {t.previous}
               </button>
 
               <span className="text-neutral-400 text-sm">
                 {items.length > 0 ? offset + 1 : 0} – {offset + items.length}
-                {total !== null ? ` sur ${total}` : ''}
+                {total !== null ? format(t.paginationTotal, { total }) : ''}
               </span>
 
               <button
@@ -405,7 +420,7 @@ function AdminRecycleBinPage({ staff }: StaffProps) {
                 onClick={() => setOffset(offset + PAGE_SIZE)}
                 className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
-                Suivant
+                {t.next}
                 <svg
                   className="w-4 h-4"
                   fill="none"
