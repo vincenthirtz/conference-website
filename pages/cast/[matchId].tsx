@@ -12,6 +12,7 @@ import { withStaffPage } from '@/utils/staff';
 import { maskBattleTag } from '@/utils/battleTag';
 import type { StaffProps } from '@/types/admin';
 import { useT, format } from '@/lib/i18n/useT';
+import { useLocale } from '@/lib/i18n/useLocale';
 
 type CastViewerDict = ReturnType<typeof useT<'castViewer'>>;
 
@@ -109,10 +110,10 @@ const REFRESH_MS = 10_000;
 
 export const getServerSideProps = withStaffPage('caster');
 
-function formatDateFr(value: string | null): string {
+function formatDateFr(value: string | null, locale: string): string {
   if (!value) return '—';
   try {
-    return new Date(value).toLocaleString('fr-FR', {
+    return new Date(value).toLocaleString(locale, {
       day: '2-digit',
       month: 'short',
       hour: '2-digit',
@@ -161,6 +162,7 @@ function statusBadge(
 function CastPage(_: StaffProps) {
   const router = useRouter();
   const t = useT('castViewer');
+  const locale = useLocale();
   const { matchId } = router.query;
   const id = Array.isArray(matchId) ? matchId[0] : matchId;
 
@@ -354,7 +356,7 @@ function CastPage(_: StaffProps) {
                 </span>
               )}
               {match.scheduledAt && (
-                <span>{formatDateFr(match.scheduledAt)}</span>
+                <span>{formatDateFr(match.scheduledAt, locale)}</span>
               )}
               <label className="flex items-center gap-1.5 cursor-pointer">
                 <input
@@ -367,7 +369,7 @@ function CastPage(_: StaffProps) {
               </label>
               {lastRefresh && (
                 <span className="text-neutral-600">
-                  {t.updatedLabel}&nbsp;{lastRefresh.toLocaleTimeString('fr-FR')}
+                  {t.updatedLabel}&nbsp;{lastRefresh.toLocaleTimeString(locale)}
                 </span>
               )}
               <button
@@ -571,7 +573,7 @@ function CastPage(_: StaffProps) {
                               <span className="text-neutral-500 w-16">
                                 {m.completedAt
                                   ? new Date(m.completedAt).toLocaleDateString(
-                                      'fr-FR',
+                                      locale,
                                       {
                                         day: '2-digit',
                                         month: 'short',

@@ -5,6 +5,7 @@ import Button from '@/components/Buttons/button';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import { useT, format } from '@/lib/i18n/useT';
+import { useLocale } from '@/lib/i18n/useLocale';
 
 type BuildsDict = ReturnType<typeof useT<'buildsPage'>>;
 
@@ -143,6 +144,7 @@ export const getStaticProps: GetStaticProps<BuildsPageProps> = async () => {
 
 export default function BuildsPage({ builds, error }: BuildsPageProps) {
   const t = useT('buildsPage');
+  const locale = useLocale();
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#0b0b14] to-black text-white">
       <Head>
@@ -213,7 +215,7 @@ export default function BuildsPage({ builds, error }: BuildsPageProps) {
                       {build.created_at && (
                         <span>
                           {format(t.startedAt, {
-                            date: formatDate(build.created_at),
+                            date: formatDate(build.created_at, locale),
                           })}
                         </span>
                       )}
@@ -266,10 +268,10 @@ function stateLabel(state: string, t: BuildsDict) {
   }
 }
 
-function formatDate(iso: string) {
+function formatDate(iso: string, locale: string) {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleString('fr-FR', {
+  return d.toLocaleString(locale, {
     day: '2-digit',
     month: '2-digit',
     hour: '2-digit',

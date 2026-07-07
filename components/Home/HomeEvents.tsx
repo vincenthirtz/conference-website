@@ -9,7 +9,7 @@ import { homepageEvents, type HomepageEvent } from '@/config/homepageEvents';
 import { TwitchIcon } from '@/components/Icons';
 import type { SVGTypes } from '@/types/types';
 import { useT } from '@/lib/i18n/useT';
-import { useLang } from '@/lib/i18n/LanguageProvider';
+import { useLocale } from '@/lib/i18n/useLocale';
 
 type EventsDict = ReturnType<typeof useT<'homeEvents'>>;
 
@@ -60,8 +60,7 @@ function formatTime(iso: string, locale: string) {
 
 function EventCard({ event }: { event: HomepageEvent }) {
   const t = useT('homeEvents');
-  const { lang } = useLang();
-  const locale = lang === 'fr' ? 'fr-FR' : 'en-GB';
+  const locale = useLocale();
   const meta = LOCATION_META[event.location];
   const Icon = meta.Icon;
   return (

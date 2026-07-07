@@ -213,7 +213,7 @@ export default function HeroPickerPage() {
         <div className="rounded-2xl border border-white/10 bg-white/5 p-6 space-y-4">
           {phase === 'cooldown' && (
             <div className="rounded-xl border border-yellow-400/50 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-200 flex items-center justify-between">
-              <span>Cooldown avant ban</span>
+              <span>{t.cooldownBeforeBan}</span>
               <span className="font-semibold">
                 {Math.ceil(remainingMs / 1000)}s
               </span>
@@ -223,21 +223,19 @@ export default function HeroPickerPage() {
             <div className="rounded-xl border border-blue-400/40 bg-blue-500/10 px-4 py-4 text-sm text-blue-100 flex flex-col gap-2">
               <div className="flex items-center gap-2 text-base font-semibold text-white">
                 <span className="h-2 w-2 rounded-full bg-emerald-400 animate-ping" />
-                En attente du reste de l&apos;équipe…
+                {t.waitingSquadTitle}
               </div>
-              <p className="text-gray-200">
-                Ton vote est enregistré. Le phase ban est verrouillée
-                jusqu&apos;à la validation du squad.
-              </p>
+              <p className="text-gray-200">{t.waitingSquadBody}</p>
               <div className="flex flex-wrap gap-4 text-xs text-gray-300">
                 <span>
-                  Favori :{' '}
+                  {t.favoriteColon}{' '}
                   {pendingFavorite
                     ? `${pendingFavorite.name} (${pendingFavorite.role})`
                     : '—'}
                 </span>
                 <span>
-                  Ban : {banHero ? `${banHero.name} (${banHero.role})` : '—'}
+                  {t.banColon}{' '}
+                  {banHero ? `${banHero.name} (${banHero.role})` : '—'}
                 </span>
               </div>
             </div>
@@ -245,7 +243,7 @@ export default function HeroPickerPage() {
 
           {banned.length > 0 && (
             <div className="flex flex-wrap items-center gap-2 text-xs text-gray-400">
-              <span>Bannis :</span>
+              <span>{t.bannedLabel}</span>
               {banned.map((b) => (
                 <button
                   key={b}
@@ -298,35 +296,40 @@ export default function HeroPickerPage() {
           </div>
 
           <div className="mt-4 rounded-xl border border-white/10 bg-white/5 p-4 space-y-2">
-            <p className="text-sm text-gray-300">Phase actuelle :</p>
+            <p className="text-sm text-gray-300">{t.currentPhaseLabel}</p>
             <p className="text-lg font-semibold">
-              {phase === 'favorite' && 'Choix du favori (clic sur une carte)'}
+              {phase === 'favorite' && t.phaseFavorite}
               {phase === 'cooldown' &&
-                `Cooldown avant ban : ${Math.ceil(remainingMs / 1000)}s`}
+                format(t.phaseCooldown, {
+                  seconds: Math.ceil(remainingMs / 1000),
+                })}
               {phase === 'ban' &&
-                `Choix du ban (clic sur une carte) – ${Math.ceil(banRemainingMs / 1000)}s restants`}
-              {phase === 'done' && 'Vote complet'}
+                format(t.phaseBan, {
+                  seconds: Math.ceil(banRemainingMs / 1000),
+                })}
+              {phase === 'done' && t.phaseDone}
             </p>
             <div className="flex flex-col gap-1 text-sm text-gray-300">
               <span>
-                Favori:{' '}
+                {t.favoriteColonCompact}{' '}
                 {pendingFavorite
                   ? `${pendingFavorite.name} (${pendingFavorite.role})`
                   : '—'}
               </span>
               <span>
-                Ban: {banHero ? `${banHero.name} (${banHero.role})` : '—'}
+                {t.banColonCompact}{' '}
+                {banHero ? `${banHero.name} (${banHero.role})` : '—'}
               </span>
             </div>
           </div>
 
           <div className="mt-8 rounded-2xl border border-white/10 bg-white/5 p-6 space-y-4">
             <Heading typeStyle="heading-sm" className="text-white">
-              Vote favoris & bans (2 équipes)
+              {t.voteSectionTitle}
             </Heading>
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="text-sm text-gray-300">
-                Nom équipe A
+                {t.teamANameLabel}
                 <input
                   value={teamAName}
                   onChange={(e) => setTeamAName(e.target.value)}
@@ -334,7 +337,7 @@ export default function HeroPickerPage() {
                 />
               </label>
               <label className="text-sm text-gray-300">
-                Nom équipe B
+                {t.teamBNameLabel}
                 <input
                   value={teamBName}
                   onChange={(e) => setTeamBName(e.target.value)}
@@ -345,7 +348,7 @@ export default function HeroPickerPage() {
 
             <form className="grid gap-3 sm:grid-cols-3 items-end">
               <div className="space-y-1">
-                <p className="text-sm text-gray-300">Choisis ta team</p>
+                <p className="text-sm text-gray-300">{t.chooseTeam}</p>
                 <div className="flex gap-3 text-sm">
                   <label className="inline-flex items-center gap-2">
                     <input
@@ -370,13 +373,13 @@ export default function HeroPickerPage() {
 
               <div className="space-y-1 sm:col-span-2">
                 <p className="text-sm text-gray-300">
-                  {phase === 'favorite'
-                    ? 'Clique une carte pour choisir un favori'
-                    : 'Clique une carte pour choisir un ban'}
+                  {phase === 'favorite' ? t.clickFavorite : t.clickBan}
                 </p>
                 {phase === 'cooldown' && (
                   <p className="text-xs text-yellow-300">
-                    Cooldown en cours... {Math.ceil(remainingMs / 1000)}s
+                    {format(t.cooldownInProgress, {
+                      seconds: Math.ceil(remainingMs / 1000),
+                    })}
                   </p>
                 )}
               </div>
@@ -384,7 +387,7 @@ export default function HeroPickerPage() {
               <div className="sm:col-span-3 flex items-center gap-3">
                 {phase === 'done' && (
                   <span className="text-sm text-emerald-300">
-                    Vote complet enregistré.
+                    {t.voteComplete}
                   </span>
                 )}
               </div>
@@ -402,18 +405,20 @@ export default function HeroPickerPage() {
                   >
                     <p className="text-sm text-gray-200 font-semibold flex items-center gap-2">
                       <span className="h-2 w-2 rounded-full bg-blue-400" />
-                      {name} — {total} vote(s)
+                      {format(t.votesLabel, { name, count: total })}
                     </p>
                     <div className="text-xs text-gray-400">
-                      <p>Ban le plus voté :</p>
+                      <p>{t.mostVotedBan}</p>
                       {maxBan.hero ? (
                         <p className="text-sm text-white">
-                          {maxBan.hero} ({maxBan.count} vote(s),{' '}
-                          {maxBan.percent}
-                          %)
+                          {format(t.banVotesInfo, {
+                            hero: maxBan.hero,
+                            count: maxBan.count,
+                            percent: maxBan.percent,
+                          })}
                         </p>
                       ) : (
-                        <p className="text-sm text-gray-500">Aucun vote.</p>
+                        <p className="text-sm text-gray-500">{t.noVote}</p>
                       )}
                     </div>
                   </div>

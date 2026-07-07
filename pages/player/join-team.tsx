@@ -480,8 +480,14 @@ export default function JoinTeamPage() {
 }
 
 const joinTeamSeo: SeoProps = {
-  title: 'Rejoindre une équipe',
-  description: "Demande à rejoindre une équipe existante de l'OW Women's Cup.",
+  title: {
+    fr: 'Rejoindre une équipe',
+    en: 'Join a team',
+  },
+  description: {
+    fr: "Demande à rejoindre une équipe existante de l'OW Women's Cup.",
+    en: "Request to join an existing OW Women's Cup team.",
+  },
   noindex: true,
 };
 

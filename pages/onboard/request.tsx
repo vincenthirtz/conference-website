@@ -598,9 +598,14 @@ function OnboardRequestPage() {
 }
 
 const onboardRequestSeo: SeoProps = {
-  title: 'Demander le bot Discord',
-  description:
-    'Formulaire de demande pour ajouter le bot Conférence sur votre serveur Discord — slug, organisation, email de contact.',
+  title: {
+    fr: 'Demander le bot Discord',
+    en: 'Request the Discord bot',
+  },
+  description: {
+    fr: 'Formulaire de demande pour ajouter le bot Conférence sur votre serveur Discord — slug, organisation, email de contact.',
+    en: 'Request form to add the Conférence bot to your Discord server — slug, organisation, contact email.',
+  },
   noindex: true,
 };
 

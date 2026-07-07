@@ -12,6 +12,7 @@ import ReportScoreModal, {
   type ReportOutcome,
 } from '@/components/player/ReportScoreModal';
 import { useLang, type Lang } from '@/lib/i18n/LanguageProvider';
+import { localeTag } from '@/lib/i18n/useLocale';
 import { useT, format } from '@/lib/i18n/useT';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import type { PlayerMatchesPayload } from '@/pages/api/player/matches';
@@ -24,7 +25,7 @@ type T = ReturnType<typeof useT<'playerMatches'>>;
 
 function formatScheduled(iso: string | null, lang: Lang, t: T): string {
   if (!iso) return t.dateToCome;
-  return new Date(iso).toLocaleString(lang === 'fr' ? 'fr-FR' : 'en-GB', {
+  return new Date(iso).toLocaleString(localeTag(lang), {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
@@ -449,9 +450,14 @@ function PlayerMatches() {
 }
 
 const playerMatchesSeo: SeoProps = {
-  title: 'Mes matchs',
-  description:
-    "Calendrier et résultats des matchs de ton équipe OW Women's Cup.",
+  title: {
+    fr: 'Mes matchs',
+    en: 'My matches',
+  },
+  description: {
+    fr: "Calendrier et résultats des matchs de ton équipe OW Women's Cup.",
+    en: "Schedule and results for your OW Women's Cup team's matches.",
+  },
   noindex: true,
 };
 

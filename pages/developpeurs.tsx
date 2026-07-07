@@ -721,9 +721,14 @@ function DevelopersPage() {
 }
 
 const developersSeo: SeoProps = {
-  title: 'API publique',
-  description:
-    "Documentation de l'API REST publique v1 de l'OW Women's Cup : tournois, matchs, équipes, classements et ligues. Lecture seule, sans clé, CORS ouvert.",
+  title: {
+    fr: 'API publique',
+    en: 'Public API',
+  },
+  description: {
+    fr: "Documentation de l'API REST publique v1 de l'OW Women's Cup : tournois, matchs, équipes, classements et ligues. Lecture seule, sans clé, CORS ouvert.",
+    en: "Documentation for the OW Women's Cup public REST API v1: tournaments, matches, teams, standings and leagues. Read-only, no key required, open CORS.",
+  },
 };
 
 DevelopersPage.seo = developersSeo;

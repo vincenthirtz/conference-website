@@ -401,9 +401,14 @@ const LoginPage = () => {
 };
 
 const loginSeo: SeoProps = {
-  title: 'Connexion',
-  description:
-    "Connecte-toi à ton espace OW Women's Cup : panel joueuse, gestion d'équipe ou administration staff.",
+  title: {
+    fr: 'Connexion',
+    en: 'Sign in',
+  },
+  description: {
+    fr: "Connecte-toi à ton espace OW Women's Cup : panel joueuse, gestion d'équipe ou administration staff.",
+    en: "Sign in to your OW Women's Cup space: player panel, team management or staff administration.",
+  },
 };
 
 LoginPage.seo = loginSeo;

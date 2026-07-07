@@ -1,9 +1,29 @@
 import Head from 'next/head';
 import { useRouter } from 'next/router';
+import { useLang, type Lang } from '@/lib/i18n/LanguageProvider';
+
+/**
+ * Chaîne éventuellement localisée. Une page peut fournir soit un simple
+ * `string` (FR historique), soit `{ fr, en }` pour un titre/description
+ * sensible à la langue active. `resolveLocalized()` sélectionne la bonne
+ * variante ; un `string` nu reste rendu tel quel (rétro-compatible).
+ */
+export type Localized<T = string> = T | { fr: T; en: T };
+
+export function resolveLocalized<T>(
+  value: Localized<T> | undefined,
+  lang: Lang
+): T | undefined {
+  if (value == null) return undefined;
+  if (typeof value === 'object' && value !== null && 'fr' in value) {
+    return (value as { fr: T; en: T })[lang];
+  }
+  return value as T;
+}
 
 export type SeoProps = {
-  title?: string;
-  description?: string;
+  title?: Localized;
+  description?: Localized;
   image?: string;
   type?: 'website' | 'article';
   publishedTime?: string;
@@ -90,8 +110,8 @@ function toAbsoluteUrl(path: string) {
 }
 
 export default function DefaultSeo({
-  title,
-  description,
+  title: rawTitle,
+  description: rawDescription,
   image,
   type = 'website',
   publishedTime,
@@ -100,8 +120,19 @@ export default function DefaultSeo({
   jsonLd,
 }: SeoProps) {
   const { asPath } = useRouter();
+  const { lang } = useLang();
   const pathname = asPath?.split('?')[0] || '/';
   const isHomePage = pathname === '/';
+
+  // Résolution locale-aware : `{ fr, en }` → variante active ; `string` → tel
+  // quel. En SSR et au premier rendu client, `lang === 'fr'` (cf.
+  // LanguageProvider) : les crawlers voient donc la version française, qui
+  // reste la version canonique indexée. Le passage EN est purement client
+  // (mise à jour du titre d'onglet / preview de partage après toggle).
+  const title = resolveLocalized(rawTitle, lang);
+  const description = resolveLocalized(rawDescription, lang);
+  const ogLocale = lang === 'fr' ? 'fr_FR' : 'en_GB';
+  const ogLocaleAlternate = lang === 'fr' ? 'en_GB' : 'fr_FR';
 
   const metaTitle = title ? `${title} | ${SITE_NAME}` : DEFAULT_TITLE;
   const metaDescription = description || DEFAULT_DESCRIPTION;
@@ -167,7 +198,8 @@ export default function DefaultSeo({
 
       {/* Open Graph */}
       <meta property="og:type" content={type} />
-      <meta property="og:locale" content="fr_FR" />
+      <meta property="og:locale" content={ogLocale} />
+      <meta property="og:locale:alternate" content={ogLocaleAlternate} />
       <meta property="og:site_name" content={SITE_NAME} />
       <meta property="og:title" content={metaTitle} />
       <meta property="og:description" content={metaDescription} />

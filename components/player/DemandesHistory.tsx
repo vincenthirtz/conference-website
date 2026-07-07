@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useT, format } from '@/lib/i18n/useT';
-import { useLang } from '@/lib/i18n/LanguageProvider';
+import { useLocale } from '@/lib/i18n/useLocale';
 
 type Demande = {
   id: string;
@@ -42,8 +42,7 @@ function isRecent(dateStr?: string | null): boolean {
 
 export default function DemandesHistory({ demandes, onCancel }: Props) {
   const t = useT('demandesHistory');
-  const { lang } = useLang();
-  const dateLocale = lang === 'fr' ? 'fr-FR' : 'en-GB';
+  const dateLocale = useLocale();
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [cancelError, setCancelError] = useState<string | null>(null);
 

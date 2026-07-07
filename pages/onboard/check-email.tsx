@@ -172,9 +172,14 @@ function OnboardCheckEmailPage() {
 }
 
 const onboardCheckEmailSeo: SeoProps = {
-  title: 'Confirmez votre demande par email',
-  description:
-    "Étape 2 de l'onboarding : confirmez votre demande en cliquant sur le lien envoyé par email.",
+  title: {
+    fr: 'Confirmez votre demande par email',
+    en: 'Confirm your request by email',
+  },
+  description: {
+    fr: "Étape 2 de l'onboarding : confirmez votre demande en cliquant sur le lien envoyé par email.",
+    en: 'Onboarding step 2: confirm your request by clicking the link sent to your email.',
+  },
   noindex: true,
 };
 

@@ -4,7 +4,7 @@ import { useMemo, useState, JSX } from 'react';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import { useT, format } from '@/lib/i18n/useT';
-import { useLang } from '@/lib/i18n/LanguageProvider';
+import { useLocale } from '@/lib/i18n/useLocale';
 
 export type HomeNewsItem = {
   id: string;
@@ -163,8 +163,7 @@ export default HomeNewsSection;
 
 function FeaturedCard({ item }: { item: HomeNewsItem }) {
   const t = useT('homeNews');
-  const { lang } = useLang();
-  const locale = lang === 'fr' ? 'fr-FR' : 'en-GB';
+  const locale = useLocale();
   const date = formatDate(item, locale);
   return (
     <Link
@@ -223,8 +222,7 @@ function FeaturedCard({ item }: { item: HomeNewsItem }) {
 }
 
 function CompactCard({ item }: { item: HomeNewsItem }) {
-  const { lang } = useLang();
-  const locale = lang === 'fr' ? 'fr-FR' : 'en-GB';
+  const locale = useLocale();
   const date = formatDate(item, locale);
   return (
     <Link

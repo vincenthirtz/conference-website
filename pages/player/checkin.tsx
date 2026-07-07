@@ -10,6 +10,7 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
 import { useLang, type Lang } from '@/lib/i18n/LanguageProvider';
+import { localeTag } from '@/lib/i18n/useLocale';
 import { useT, format } from '@/lib/i18n/useT';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import type { NextMatchPayload } from '@/pages/api/player/next-match';
@@ -20,7 +21,7 @@ type T = ReturnType<typeof useT<'checkin'>>;
 
 function formatScheduled(iso: string | null, lang: Lang, t: T): string {
   if (!iso) return t.dateToCome;
-  return new Date(iso).toLocaleString(lang === 'fr' ? 'fr-FR' : 'en-GB', {
+  return new Date(iso).toLocaleString(localeTag(lang), {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
@@ -32,7 +33,7 @@ function formatScheduled(iso: string | null, lang: Lang, t: T): string {
 
 function formatTime(iso: string | null, lang: Lang): string {
   if (!iso) return '—';
-  return new Date(iso).toLocaleTimeString(lang === 'fr' ? 'fr-FR' : 'en-GB', {
+  return new Date(iso).toLocaleTimeString(localeTag(lang), {
     hour: '2-digit',
     minute: '2-digit',
     timeZone: 'Europe/Paris',
@@ -443,8 +444,14 @@ function CheckinState({
 }
 
 const playerCheckinSeo: SeoProps = {
-  title: 'Check-in',
-  description: 'Valide ta présence avant ton prochain match.',
+  title: {
+    fr: 'Check-in',
+    en: 'Check-in',
+  },
+  description: {
+    fr: 'Valide ta présence avant ton prochain match.',
+    en: 'Confirm your attendance before your next match.',
+  },
   noindex: true,
 };
 

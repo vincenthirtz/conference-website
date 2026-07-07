@@ -4,6 +4,7 @@ import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { useT, format } from '@/lib/i18n/useT';
+import { useLocale } from '@/lib/i18n/useLocale';
 
 type Timeline2026Dict = ReturnType<typeof useT<'timeline2026'>>;
 
@@ -153,7 +154,8 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
 
 function groupMatchesByDay(
   matches: SimpleMatch[],
-  t: Timeline2026Dict
+  t: Timeline2026Dict,
+  locale: string
 ): DayGroup[] {
   const groups = new Map<string, DayGroup>();
 
@@ -161,7 +163,7 @@ function groupMatchesByDay(
     const d = m.scheduled_at ? new Date(m.scheduled_at) : null;
     const key = d ? d.toISOString().slice(0, 10) : 'unscheduled';
     const label = d
-      ? d.toLocaleDateString('fr-FR', {
+      ? d.toLocaleDateString(locale, {
           weekday: 'long',
           day: '2-digit',
           month: 'long',
@@ -184,11 +186,15 @@ function groupMatchesByDay(
   return arr;
 }
 
-function formatMatchTime(iso: string | null, t: Timeline2026Dict): string {
+function formatMatchTime(
+  iso: string | null,
+  t: Timeline2026Dict,
+  locale: string
+): string {
   if (!iso) return t.timeTbd;
   const d = new Date(iso);
   if (isNaN(d.getTime())) return t.timeTbd;
-  return d.toLocaleTimeString('fr-FR', {
+  return d.toLocaleTimeString(locale, {
     hour: '2-digit',
     minute: '2-digit',
   });
@@ -227,6 +233,7 @@ function getMatchStatusInfo(
 
 function MatchRow({ match }: { match: SimpleMatch }) {
   const t = useT('timeline2026');
+  const locale = useLocale();
   const t1 = match.team1?.short_name || match.team1?.name || t.teamFallback1;
   const t2 =
     match.team2?.short_name ||
@@ -252,7 +259,7 @@ function MatchRow({ match }: { match: SimpleMatch }) {
       className="group grid grid-cols-[64px_minmax(0,1fr)_auto] gap-3 items-center px-3 py-2.5 rounded-xl bg-white/[0.03] border border-white/10 hover:border-pink-400/50 hover:bg-pink-500/5 transition"
     >
       <span className="text-sm font-mono text-pink-100">
-        {formatMatchTime(match.scheduled_at, t)}
+        {formatMatchTime(match.scheduled_at, t, locale)}
       </span>
 
       <div className="min-w-0">
@@ -301,6 +308,7 @@ function MatchRow({ match }: { match: SimpleMatch }) {
 
 function Timeline2026Page({ matches, tournamentSlug }: Props) {
   const t = useT('timeline2026');
+  const locale = useLocale();
   const timeline = getTimeline(t);
   const tournamentIdentifier = tournamentSlug || WOMEN_TOURNAMENT_ID_2026;
   const now = new Date();
@@ -320,7 +328,7 @@ function Timeline2026Page({ matches, tournamentSlug }: Props) {
       ? (currentIdx / (timeline.length - 1)) * 100
       : null;
 
-  const grouped = groupMatchesByDay(matches, t);
+  const grouped = groupMatchesByDay(matches, t, locale);
   const totalMatches = matches.length;
 
   return (
@@ -498,9 +506,14 @@ function Timeline2026Page({ matches, tournamentSlug }: Props) {
 }
 
 const timelineSeo: SeoProps = {
-  title: 'Timeline 2026 — calendrier du tournoi',
-  description:
-    "Feuille de route OW Women's Cup 2026 : journée contre la transphobie, préparation estivale, calendrier des matchs et grandes finales.",
+  title: {
+    fr: 'Timeline 2026 — calendrier du tournoi',
+    en: 'Timeline 2026 — tournament schedule',
+  },
+  description: {
+    fr: "Feuille de route OW Women's Cup 2026 : journée contre la transphobie, préparation estivale, calendrier des matchs et grandes finales.",
+    en: "OW Women's Cup 2026 roadmap: day against transphobia, summer prep, match schedule and grand finals.",
+  },
 };
 
 Timeline2026Page.seo = timelineSeo;

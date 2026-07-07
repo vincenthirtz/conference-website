@@ -2,7 +2,7 @@ import { useEffect, useState, type JSX } from 'react';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import { useT, format } from '@/lib/i18n/useT';
-import { useLang } from '@/lib/i18n/LanguageProvider';
+import { useLocale } from '@/lib/i18n/useLocale';
 
 const CHANNEL = 'womens_cup';
 const POLL_MS = 60_000;
@@ -29,8 +29,7 @@ function scheduleIdle(cb: () => void): () => void {
 
 export default function HomeTwitchEmbed(): JSX.Element | null {
   const t = useT('homeLive');
-  const { lang } = useLang();
-  const locale = lang === 'fr' ? 'fr-FR' : 'en-GB';
+  const locale = useLocale();
   const [info, setInfo] = useState<LiveInfo | null>(null);
   const [parent, setParent] = useState<string | null>(null);
   const [ready, setReady] = useState(false);

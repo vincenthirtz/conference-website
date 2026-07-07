@@ -134,7 +134,10 @@ const CasterLoginCallbackPage = () => {
 };
 
 const seo: SeoProps = {
-  title: 'Connexion en cours',
+  title: {
+    fr: 'Connexion en cours',
+    en: 'Signing in',
+  },
   noindex: true,
 };
 

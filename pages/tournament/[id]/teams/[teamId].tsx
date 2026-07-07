@@ -15,6 +15,7 @@ import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { findTournamentByIdOrSlug } from '@/utils/tournamentLookup';
 import { maskBattleTag } from '@/utils/battleTag';
 import { useT, format } from '@/lib/i18n/useT';
+import { useLocale } from '@/lib/i18n/useLocale';
 
 type TeamDetailDict = ReturnType<typeof useT<'tournamentTeamDetail'>>;
 
@@ -279,10 +280,10 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
   };
 };
 
-function formatDate(iso: string | null) {
+function formatDate(iso: string | null, locale: string) {
   if (!iso) return '—';
   try {
-    return new Date(iso).toLocaleDateString('fr-FR', {
+    return new Date(iso).toLocaleDateString(locale, {
       day: 'numeric',
       month: 'short',
       year: 'numeric',
@@ -315,6 +316,7 @@ export default function TournamentTeamPage({
   totalMvpAwards,
 }: Props) {
   const t = useT('tournamentTeamDetail');
+  const locale = useLocale();
   const titulaires = roster.filter((m) => !m.is_substitute);
   const remplacants = roster.filter((m) => m.is_substitute);
   const winrate = stats.played > 0 ? (stats.wins / stats.played) * 100 : 0;
@@ -495,7 +497,7 @@ export default function TournamentTeamPage({
                       className="grid grid-cols-12 gap-2 px-4 py-3 items-center border-b border-white/5 last:border-b-0 hover:bg-white/5"
                     >
                       <div className="col-span-3 text-xs text-gray-400">
-                        {formatDate(m.scheduled_at || m.completed_at)}
+                        {formatDate(m.scheduled_at || m.completed_at, locale)}
                       </div>
                       <div className="col-span-3 text-xs text-gray-300 truncate">
                         {m.round_name || '—'}

@@ -10,7 +10,7 @@ import Paragraph from '@/components/Typography/paragraph';
 import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { useT } from '@/lib/i18n/useT';
-import { useLang } from '@/lib/i18n/LanguageProvider';
+import { useLocale } from '@/lib/i18n/useLocale';
 import { logger } from '../utils/logger';
 
 type ScrimsDict = ReturnType<typeof useT<'scrimsPage'>>;
@@ -170,8 +170,7 @@ function ScrimSection({
   scrims: PublicScrim[];
 }) {
   const t = useT('scrimsPage');
-  const { lang } = useLang();
-  const locale = lang === 'fr' ? 'fr-FR' : 'en-GB';
+  const locale = useLocale();
   return (
     <section className="mt-10">
       <h2 className="text-xl font-semibold mb-4 text-neutral-200">{title}</h2>

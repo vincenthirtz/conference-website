@@ -264,9 +264,14 @@ function PlayerNotifications() {
 }
 
 const playerNotificationsSeo: SeoProps = {
-  title: 'Notifications',
-  description:
-    'Tes actions en attente et tes préférences de notifications push.',
+  title: {
+    fr: 'Notifications',
+    en: 'Notifications',
+  },
+  description: {
+    fr: 'Tes actions en attente et tes préférences de notifications push.',
+    en: 'Your pending actions and push notification preferences.',
+  },
   noindex: true,
 };
 

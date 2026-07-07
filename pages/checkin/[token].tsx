@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useT, format } from '@/lib/i18n/useT';
+import { useLocale } from '@/lib/i18n/useLocale';
 
 type ResolveResponse =
   | {
@@ -23,10 +24,10 @@ type ResolveResponse =
     }
   | { error: string };
 
-function formatDateFr(value: string | null): string {
+function formatDateFr(value: string | null, locale: string): string {
   if (!value) return '—';
   try {
-    return new Date(value).toLocaleString('fr-FR', {
+    return new Date(value).toLocaleString(locale, {
       weekday: 'long',
       day: 'numeric',
       month: 'long',
@@ -42,6 +43,7 @@ function formatDateFr(value: string | null): string {
 export default function CheckinPage() {
   const router = useRouter();
   const t = useT('checkinToken');
+  const locale = useLocale();
   const { token } = router.query;
   const tokenStr = Array.isArray(token) ? token[0] : token;
 
@@ -162,7 +164,7 @@ export default function CheckinPage() {
                   />
                   <Row
                     label={t.rowStart}
-                    value={formatDateFr(data.scheduledAt)}
+                    value={formatDateFr(data.scheduledAt, locale)}
                   />
                 </div>
 

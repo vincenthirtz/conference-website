@@ -7,6 +7,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useToast } from '@/components/Toast';
 import type { EventCasterChecklistItem, EventSegment } from '@/types/events';
 import { useT, format } from '@/lib/i18n/useT';
+import { useLocale } from '@/lib/i18n/useLocale';
 
 type Props = {
   segment: EventSegment;
@@ -21,6 +22,7 @@ export default function CockpitChecklist({
 }: Props) {
   const { addToast } = useToast();
   const t = useT('cockpitChecklist');
+  const locale = useLocale();
   const [pending, setPending] = useState<Record<string, boolean>>({});
 
   const items = useMemo(
@@ -154,7 +156,7 @@ export default function CockpitChecklist({
                         ? format(t.validatedAtSuffix, {
                             time: new Date(
                               item.checked_at
-                            ).toLocaleTimeString('fr-FR', {
+                            ).toLocaleTimeString(locale, {
                               hour: '2-digit',
                               minute: '2-digit',
                             }),

@@ -167,9 +167,14 @@ function ScrimPage({ teams }: Props) {
 }
 
 const scrimSeo: SeoProps = {
-  title: 'Proposer un scrim',
-  description:
-    'Propose un scrim à une équipe de l’OW Women’s Cup. Formulaire ouvert, pas besoin de compte — le capitaine te recontactera directement.',
+  title: {
+    fr: 'Proposer un scrim',
+    en: 'Propose a scrim',
+  },
+  description: {
+    fr: 'Propose un scrim à une équipe de l’OW Women’s Cup. Formulaire ouvert, pas besoin de compte — le capitaine te recontactera directement.',
+    en: 'Propose a scrim to an OW Women’s Cup team. Open form, no account needed — the captain will get back to you directly.',
+  },
 };
 
 ScrimPage.seo = scrimSeo;

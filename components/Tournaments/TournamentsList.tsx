@@ -13,7 +13,7 @@ import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import { getGame } from '@/config/games';
 import { useT, format } from '@/lib/i18n/useT';
-import { useLang } from '@/lib/i18n/LanguageProvider';
+import { useLocale } from '@/lib/i18n/useLocale';
 
 type TournamentsDict = ReturnType<typeof useT<'tournamentsList'>>;
 
@@ -386,8 +386,7 @@ type TournamentCardProps = {
 
 function TournamentCard({ tournament, status }: TournamentCardProps) {
   const t = useT('tournamentsList');
-  const { lang } = useLang();
-  const locale = lang === 'fr' ? 'fr-FR' : 'en-GB';
+  const locale = useLocale();
   const dateLabel = formatTournamentDates(
     tournament.start_date,
     tournament.end_date,

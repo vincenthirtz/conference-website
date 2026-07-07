@@ -6,7 +6,7 @@
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import { useT } from '@/lib/i18n/useT';
-import { useLang } from '@/lib/i18n/LanguageProvider';
+import { useLocale } from '@/lib/i18n/useLocale';
 
 const VIDEO_ID = 'DGN4olmhb2Q';
 const EVENT_DATE_ISO = '2026-05-17';
@@ -86,8 +86,7 @@ function ResultRow({ result }: { result: ScrimResult }) {
 
 export default function HomeIdahobitScrim() {
   const t = useT('homeIdahobit');
-  const { lang } = useLang();
-  const locale = lang === 'fr' ? 'fr-FR' : 'en-GB';
+  const locale = useLocale();
   return (
     <section className="relative mt-12 mb-10 px-4 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-5xl">

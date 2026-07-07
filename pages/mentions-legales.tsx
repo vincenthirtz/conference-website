@@ -270,9 +270,14 @@ function MentionsLegalesPage() {
 }
 
 const mentionsSeo: SeoProps = {
-  title: 'Mentions légales',
-  description:
-    "Mentions légales de l'association Women's Cup : éditeur du site, hébergement, données personnelles et droits des utilisatrices.",
+  title: {
+    fr: 'Mentions légales',
+    en: 'Legal notice',
+  },
+  description: {
+    fr: "Mentions légales de l'association Women's Cup : éditeur du site, hébergement, données personnelles et droits des utilisatrices.",
+    en: "Legal notice for the Women's Cup association: site publisher, hosting, personal data and user rights.",
+  },
 };
 
 MentionsLegalesPage.seo = mentionsSeo;

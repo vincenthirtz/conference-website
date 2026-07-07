@@ -406,8 +406,14 @@ export default function RequestCaptainPage() {
 }
 
 const requestCaptainSeo: SeoProps = {
-  title: 'Devenir capitaine',
-  description: "Demande à devenir capitaine d'une équipe OW Women's Cup.",
+  title: {
+    fr: 'Devenir capitaine',
+    en: 'Become a captain',
+  },
+  description: {
+    fr: "Demande à devenir capitaine d'une équipe OW Women's Cup.",
+    en: "Request to become the captain of an OW Women's Cup team.",
+  },
   noindex: true,
 };
 

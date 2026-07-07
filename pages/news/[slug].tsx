@@ -8,6 +8,7 @@ import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { useEffect, useRef, useState, Fragment, type ReactNode } from 'react';
 import { useToast } from '@/components/Toast';
 import { useT, format } from '@/lib/i18n/useT';
+import { useLocale } from '@/lib/i18n/useLocale';
 
 import { logger } from '../../utils/logger';
 const SITE_NAME = "OW Women's Cup";
@@ -145,9 +146,10 @@ export default function NewsSlugPage({
   error,
 }: NewsPageProps) {
   const t = useT('newsDetail');
+  const locale = useLocale();
   const displayDate =
     publishedAt || createdAt
-      ? new Date(publishedAt || createdAt || '').toLocaleDateString('fr-FR')
+      ? new Date(publishedAt || createdAt || '').toLocaleDateString(locale)
       : null;
   const formattedTag = tag ? formatTagLabel(tag) : null;
 
@@ -314,6 +316,7 @@ type Comment = {
 
 function Comments({ newsId }: { newsId: string }) {
   const t = useT('newsDetail');
+  const locale = useLocale();
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -495,7 +498,7 @@ function Comments({ newsId }: { newsId: string }) {
               <span>{c.author_name || t.anonymous}</span>
               <span className="text-gray-600">·</span>
               <span>
-                {new Date(c.created_at).toLocaleString('fr-FR', {
+                {new Date(c.created_at).toLocaleString(locale, {
                   dateStyle: 'short',
                   timeStyle: 'short',
                 })}

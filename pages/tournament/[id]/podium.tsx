@@ -14,6 +14,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { findTournamentByIdOrSlug } from '@/utils/tournamentLookup';
 import { useT, format } from '@/lib/i18n/useT';
+import { useLocale } from '@/lib/i18n/useLocale';
 import { logger } from '../../../utils/logger';
 
 type PodiumDict = ReturnType<typeof useT<'tournamentPodium'>>;
@@ -146,13 +147,14 @@ const getMedal = (
 
 export default function TournamentPodiumPage({ tournament, rankings }: Props) {
   const t = useT('tournamentPodium');
+  const locale = useLocale();
   const MEDAL = getMedal(t);
   const top3 = rankings.filter((r) => r.rank <= 3);
   const rest = rankings.filter((r) => r.rank > 3);
 
   const frozenAtIso = rankings[0]?.frozen_at;
   const frozenAtLabel = frozenAtIso
-    ? new Date(frozenAtIso).toLocaleDateString('fr-FR', {
+    ? new Date(frozenAtIso).toLocaleDateString(locale, {
         day: '2-digit',
         month: 'long',
         year: 'numeric',

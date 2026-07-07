@@ -37,6 +37,7 @@ import type {
 import { readPlayerProfile } from '@/utils/rating/readPlayerProfile';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { useT, format } from '@/lib/i18n/useT';
+import { useLocale } from '@/lib/i18n/useLocale';
 
 type PlayerProfileDict = ReturnType<typeof useT<'playerPublicProfile'>>;
 
@@ -50,8 +51,8 @@ function coreLabel(p: PlayerProfileCore): string {
   return p.displayName ?? p.battleTag ?? 'Joueuse inconnue';
 }
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('fr-FR', {
+function formatDate(iso: string, locale: string): string {
+  return new Date(iso).toLocaleDateString(locale, {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
@@ -203,6 +204,7 @@ function BadgesSection({ badges }: { badges: ProfileBadge[] }) {
 // --- Palmarès ---------------------------------------------------------------
 function PalmaresSection({ placements }: { placements: ProfilePlacement[] }) {
   const t = useT('playerPublicProfile');
+  const locale = useLocale();
   if (placements.length === 0) return null;
 
   return (
@@ -246,7 +248,7 @@ function PalmaresSection({ placements }: { placements: ProfilePlacement[] }) {
             </div>
             {p.date ? (
               <span className="shrink-0 text-xs text-neutral-500">
-                {formatDate(p.date)}
+                {formatDate(p.date, locale)}
               </span>
             ) : null}
           </li>
@@ -574,6 +576,7 @@ function RatingChart({ history }: { history: PlayerProfileHistoryPoint[] }) {
 
 function RecentMatches({ matches }: { matches: PlayerProfileRecentMatch[] }) {
   const t = useT('playerPublicProfile');
+  const locale = useLocale();
   return (
     <section>
       <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-purple-300">
@@ -615,7 +618,7 @@ function RecentMatches({ matches }: { matches: PlayerProfileRecentMatch[] }) {
                 )}
               </div>
               <span className="shrink-0 text-xs text-neutral-500">
-                {formatDate(m.occurredAt)}
+                {formatDate(m.occurredAt, locale)}
               </span>
             </li>
           ))}

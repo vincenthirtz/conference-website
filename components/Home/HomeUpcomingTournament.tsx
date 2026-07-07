@@ -2,7 +2,7 @@ import Link from 'next/link';
 import type { JSX } from 'react';
 import Paragraph from '@/components/Typography/paragraph';
 import { useT, format } from '@/lib/i18n/useT';
-import { useLang } from '@/lib/i18n/LanguageProvider';
+import { useLocale } from '@/lib/i18n/useLocale';
 
 export type UpcomingTournament = {
   id: string;
@@ -52,8 +52,7 @@ export default function TournamentCard({
   tournament,
 }: TournamentCardProps): JSX.Element {
   const t = useT('homeEvents');
-  const { lang } = useLang();
-  const locale = lang === 'fr' ? 'fr-FR' : 'en-GB';
+  const locale = useLocale();
   const isRunning = tournament.status === 'running';
   const range = formatRange(
     tournament.startDate,

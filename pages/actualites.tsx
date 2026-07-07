@@ -347,9 +347,14 @@ function ActualitesPage({ patchNotes, news, loadError }: ActualitesProps) {
 }
 
 const actualitesSeo: SeoProps = {
-  title: 'Actualités Overwatch — patch notes & news Blizzard',
-  description:
-    "Patch notes Overwatch et actualités officielles Blizzard. Pour les nouvelles de l'OW Women's Cup, rends-toi sur la page actualités du site.",
+  title: {
+    fr: 'Actualités Overwatch — patch notes & news Blizzard',
+    en: 'Overwatch news — patch notes & Blizzard updates',
+  },
+  description: {
+    fr: "Patch notes Overwatch et actualités officielles Blizzard. Pour les nouvelles de l'OW Women's Cup, rends-toi sur la page actualités du site.",
+    en: "Overwatch patch notes and official Blizzard news. For OW Women's Cup updates, head to the site's news page.",
+  },
 };
 
 ActualitesPage.seo = actualitesSeo;

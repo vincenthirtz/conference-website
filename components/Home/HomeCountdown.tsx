@@ -1,6 +1,6 @@
 import { useEffect, useState, type JSX } from 'react';
 import { useT } from '@/lib/i18n/useT';
-import { useLang } from '@/lib/i18n/LanguageProvider';
+import { useLocale } from '@/lib/i18n/useLocale';
 
 type HomeCountdownProps = {
   /** ISO date string of the target event. If null/empty, the component renders nothing. */
@@ -38,8 +38,7 @@ function CountdownSkeleton({
   label: string;
 }) {
   const t = useT('homeCountdown');
-  const { lang } = useLang();
-  const locale = lang === 'fr' ? 'fr-FR' : 'en-GB';
+  const locale = useLocale();
   return (
     <section
       className="container px-4 md:px-0 mt-12 md:mt-16"
@@ -88,8 +87,7 @@ export default function HomeCountdown({
   label,
 }: HomeCountdownProps): JSX.Element | null {
   const t = useT('homeCountdown');
-  const { lang } = useLang();
-  const locale = lang === 'fr' ? 'fr-FR' : 'en-GB';
+  const locale = useLocale();
   const effectiveLabel = label ?? t.kickoff;
   const targetMs = targetDate ? new Date(targetDate).getTime() : NaN;
   const isValid = Number.isFinite(targetMs);

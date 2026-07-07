@@ -19,7 +19,7 @@ import SupportAssoCard from '@/components/player/SupportAssoCard';
 import PushOptIn from '@/components/shared/PushOptIn';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { useT, format } from '@/lib/i18n/useT';
-import { useLang } from '@/lib/i18n/LanguageProvider';
+import { useLocale } from '@/lib/i18n/useLocale';
 
 import { logger } from '../../utils/logger';
 
@@ -289,7 +289,7 @@ function PlayerDashboard() {
   // Bridge for keys that live in the i18n fragment (merged separately) and are
   // not yet present in the typed locale.
   const tr = t as unknown as Record<string, string>;
-  const { lang } = useLang();
+  const locale = useLocale();
   const { user, loading: authLoading, ready } = usePlayerSession();
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
   const [loading, setLoading] = useState(true);
@@ -446,7 +446,6 @@ function PlayerDashboard() {
     }
   };
 
-  const locale = lang === 'fr' ? 'fr-FR' : 'en-GB';
   const formatSlot = (iso: string) =>
     new Date(iso).toLocaleString(locale, {
       weekday: 'short',
@@ -656,15 +655,12 @@ function PlayerDashboard() {
                                 {t.dateLabel}{' '}
                                 {new Date(
                                   scrim.payload.preferred_date
-                                ).toLocaleDateString(
-                                  lang === 'fr' ? 'fr-FR' : 'en-GB',
-                                  {
-                                    day: 'numeric',
-                                    month: 'short',
-                                    hour: '2-digit',
-                                    minute: '2-digit',
-                                  }
-                                )}
+                                ).toLocaleDateString(locale, {
+                                  day: 'numeric',
+                                  month: 'short',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })}
                               </span>
                             )}
                             {scrim.payload?.format && (
@@ -678,9 +674,7 @@ function PlayerDashboard() {
                               {format(t.receivedOn, {
                                 date: new Date(
                                   scrim.created_at
-                                ).toLocaleDateString(
-                                  lang === 'fr' ? 'fr-FR' : 'en-GB'
-                                ),
+                                ).toLocaleDateString(locale),
                               })}
                             </span>
                             <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-[10px] uppercase tracking-wide text-gray-300">
@@ -872,9 +866,14 @@ function PlayerDashboard() {
 // mecanisme `seo` consomme par _app.tsx ; `noindex` est de toute facon force
 // pour toutes les routes /player (cf. _app.tsx → effectiveSeo).
 const playerSeo: SeoProps = {
-  title: 'Mon espace joueur',
-  description:
-    "Espace joueur OW Women's Cup : profil, equipe, prochains matchs et demandes.",
+  title: {
+    fr: 'Mon espace joueur',
+    en: 'My player space',
+  },
+  description: {
+    fr: "Espace joueur OW Women's Cup : profil, equipe, prochains matchs et demandes.",
+    en: "OW Women's Cup player space: profile, team, upcoming matches and requests.",
+  },
   noindex: true,
 };
 

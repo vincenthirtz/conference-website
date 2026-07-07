@@ -12,6 +12,7 @@ import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { useT } from '@/lib/i18n/useT';
+import { useLocale } from '@/lib/i18n/useLocale';
 
 import { logger } from '../../utils/logger';
 
@@ -86,10 +87,11 @@ export const getStaticProps: GetStaticProps<NewsIndexProps> = async () => {
 
 function NewsCard({ item }: { item: NewsItem }) {
   const t = useT('newsIndex');
+  const locale = useLocale();
   const dateStr =
     item.publishedAt || item.createdAt
       ? new Date(item.publishedAt || item.createdAt || '').toLocaleDateString(
-          'fr-FR',
+          locale,
           { day: '2-digit', month: 'short', year: 'numeric' }
         )
       : null;
@@ -212,9 +214,14 @@ function NewsIndexPage({ news, loadError }: NewsIndexProps) {
 }
 
 const newsIndexSeo: SeoProps = {
-  title: 'Actualités du site',
-  description:
-    "Toutes les actualités de l'OW Women's Cup : annonces, coulisses du tournoi et nouvelles de la communauté esport féminine.",
+  title: {
+    fr: 'Actualités du site',
+    en: 'Site news',
+  },
+  description: {
+    fr: "Toutes les actualités de l'OW Women's Cup : annonces, coulisses du tournoi et nouvelles de la communauté esport féminine.",
+    en: "All the latest from OW Women's Cup: announcements, behind-the-scenes and news from the women's esport community.",
+  },
 };
 
 NewsIndexPage.seo = newsIndexSeo;

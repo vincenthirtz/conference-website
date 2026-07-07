@@ -314,9 +314,14 @@ function SuccessView(props: SuccessProps) {
 }
 
 const onboardSecretsSeo: SeoProps = {
-  title: 'Secrets de votre bot',
-  description:
-    'Récupération unique de vos secrets de bot (clé API + secret webhook). Lien à usage unique.',
+  title: {
+    fr: 'Secrets de votre bot',
+    en: 'Your bot secrets',
+  },
+  description: {
+    fr: 'Récupération unique de vos secrets de bot (clé API + secret webhook). Lien à usage unique.',
+    en: 'One-time retrieval of your bot secrets (API key + webhook secret). Single-use link.',
+  },
   noindex: true,
 };
 

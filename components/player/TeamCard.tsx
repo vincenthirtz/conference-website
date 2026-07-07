@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useT, format } from '@/lib/i18n/useT';
-import { useLang } from '@/lib/i18n/LanguageProvider';
+import { useLocale } from '@/lib/i18n/useLocale';
 
 type TeamInfo = {
   id: string;
@@ -92,8 +92,7 @@ export default function TeamCard({
   members,
 }: Props) {
   const t = useT('teamCard');
-  const { lang } = useLang();
-  const locale = lang === 'fr' ? 'fr-FR' : 'en-US';
+  const locale = useLocale();
   const hasPendingRequest = pendingCaptainRequest || pendingJoinRequest;
   const [leaveConfirm, setLeaveConfirm] = useState(false);
   const [leaving, setLeaving] = useState(false);

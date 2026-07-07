@@ -206,9 +206,14 @@ function RulesPage() {
 }
 
 const rulesSeo: SeoProps = {
-  title: 'R\u00e8gles officielles Overwatch',
-  description:
-    "Param\u00e8tres comp\u00e9titifs, modes et conduite officielle Overwatch utilis\u00e9s pour l'OW Women's Cup, bas\u00e9s sur les r\u00e8gles Blizzard.",
+  title: {
+    fr: 'R\u00e8gles officielles Overwatch',
+    en: 'Official Overwatch rules',
+  },
+  description: {
+    fr: "Param\u00e8tres comp\u00e9titifs, modes et conduite officielle Overwatch utilis\u00e9s pour l'OW Women's Cup, bas\u00e9s sur les r\u00e8gles Blizzard.",
+    en: "Competitive settings, modes and official Overwatch conduct used for OW Women's Cup, based on Blizzard's rules.",
+  },
 };
 
 RulesPage.seo = rulesSeo;

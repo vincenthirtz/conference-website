@@ -13,7 +13,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
 import { useT, format } from '@/lib/i18n/useT';
-import { useLang } from '@/lib/i18n/LanguageProvider';
+import { useLocale } from '@/lib/i18n/useLocale';
 import { logger } from '../../utils/logger';
 
 export type PlayerInvitation = {
@@ -33,8 +33,7 @@ export default function InvitationsSection() {
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
   const { addToast } = useToast();
   const t = useT('playerNotifications');
-  const { lang } = useLang();
-  const locale = lang === 'fr' ? 'fr-FR' : 'en-GB';
+  const locale = useLocale();
 
   const [invites, setInvites] = useState<PlayerInvitation[]>([]);
   const [pendingId, setPendingId] = useState<string | null>(null);

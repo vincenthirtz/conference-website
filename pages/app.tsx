@@ -434,9 +434,14 @@ function AppPage() {
 }
 
 const appSeo: SeoProps = {
-  title: "Installer l'app — OW Women's Cup",
-  description:
-    "Installe la PWA OW Women's Cup pour recevoir tes notifs match, scrim et check-in en temps réel, même hors-ligne. Compatible Windows, macOS, Android et iOS.",
+  title: {
+    fr: "Installer l'app — OW Women's Cup",
+    en: "Install the app — OW Women's Cup",
+  },
+  description: {
+    fr: "Installe la PWA OW Women's Cup pour recevoir tes notifs match, scrim et check-in en temps réel, même hors-ligne. Compatible Windows, macOS, Android et iOS.",
+    en: "Install the OW Women's Cup PWA for real-time match, scrim and check-in alerts, even offline. Works on Windows, macOS, Android and iOS.",
+  },
 };
 
 AppPage.seo = appSeo;

@@ -558,9 +558,14 @@ function AboutPage({ videoUrl }: AboutPageProps) {
 }
 
 const aboutSeo: SeoProps = {
-  title: '\u00c0 propos \u2014 notre mission',
-  description:
-    "D\u00e9couvrez l'OW Women's Cup, tournoi Overwatch 100% f\u00e9minin : notre mission, nos valeurs et comment participer.",
+  title: {
+    fr: '\u00c0 propos \u2014 notre mission',
+    en: 'About us \u2014 our mission',
+  },
+  description: {
+    fr: "D\u00e9couvrez l'OW Women's Cup, tournoi Overwatch 100% f\u00e9minin : notre mission, nos valeurs et comment participer.",
+    en: "Discover OW Women's Cup, the 100% women's Overwatch tournament: our mission, our values and how to take part.",
+  },
 };
 
 AboutPage.seo = aboutSeo;

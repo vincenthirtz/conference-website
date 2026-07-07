@@ -499,9 +499,14 @@ function DonationPage() {
 }
 
 const donationSeo: SeoProps = {
-  title: "Faire un don — soutenir l'esport féminin",
-  description:
-    "Soutenez l'association Women's Cup : financez les déplacements des équipes, la production et les actions inclusives autour de l'esport féminin.",
+  title: {
+    fr: "Faire un don — soutenir l'esport féminin",
+    en: "Donate — support women's esport",
+  },
+  description: {
+    fr: "Soutenez l'association Women's Cup : financez les déplacements des équipes, la production et les actions inclusives autour de l'esport féminin.",
+    en: "Support the Women's Cup association: help fund team travel, broadcast production and inclusive initiatives for women's esport.",
+  },
 };
 
 DonationPage.seo = donationSeo;

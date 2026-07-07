@@ -956,9 +956,14 @@ function SubmitButton({
 }
 
 const playerRequestsSeo: SeoProps = {
-  title: 'Demandes',
-  description:
-    "Gère tes demandes de transfert et de scrim sur l'OW Women's Cup.",
+  title: {
+    fr: 'Demandes',
+    en: 'Requests',
+  },
+  description: {
+    fr: "Gère tes demandes de transfert et de scrim sur l'OW Women's Cup.",
+    en: "Manage your transfer and scrim requests on OW Women's Cup.",
+  },
   noindex: true,
 };
 

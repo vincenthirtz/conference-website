@@ -12,7 +12,7 @@ import { useRealtimeChannel } from '@/hooks/useRealtimeChannel';
 import { useDebounce } from '@/hooks/useDebounce';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
 import { useT } from '@/lib/i18n/useT';
-import { useLang } from '@/lib/i18n/LanguageProvider';
+import { useLocale } from '@/lib/i18n/useLocale';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
@@ -62,8 +62,7 @@ type Team = {
 export default function MessagesPage() {
   const router = useRouter();
   const t = useT('playerMessages');
-  const { lang } = useLang();
-  const locale = lang === 'fr' ? 'fr-FR' : 'en-GB';
+  const locale = useLocale();
   const { loading: authLoading, ready } = usePlayerSession();
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
   const { data: managedTeam, loading: teamLoading } = useManagedTeam();
@@ -812,8 +811,14 @@ function formatTime(iso: string, locale: string): string {
 }
 
 const playerMessagesSeo: SeoProps = {
-  title: 'Messagerie',
-  description: "Échange avec les autres capitaines de l'OW Women's Cup.",
+  title: {
+    fr: 'Messagerie',
+    en: 'Messages',
+  },
+  description: {
+    fr: "Échange avec les autres capitaines de l'OW Women's Cup.",
+    en: "Chat with the other OW Women's Cup captains.",
+  },
   noindex: true,
 };
 

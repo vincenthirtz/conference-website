@@ -221,9 +221,14 @@ function GuidePage(): JSX.Element {
 }
 
 const guideSeo: SeoProps = {
-  title: 'Gérer mon équipe — guide capitaine',
-  description:
-    "Aperçu pas-à-pas de l'espace capitaine OW Women's Cup : inscription d'équipe, candidatures, roster, messagerie, scrims et check-in.",
+  title: {
+    fr: 'Gérer mon équipe — guide capitaine',
+    en: 'Manage my team — captain guide',
+  },
+  description: {
+    fr: "Aperçu pas-à-pas de l'espace capitaine OW Women's Cup : inscription d'équipe, candidatures, roster, messagerie, scrims et check-in.",
+    en: "Step-by-step overview of the OW Women's Cup captain space: team registration, applications, roster, messaging, scrims and check-in.",
+  },
 };
 
 (GuidePage as unknown as { seo: SeoProps }).seo = guideSeo;

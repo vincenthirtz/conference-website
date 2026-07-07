@@ -12,6 +12,7 @@ import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { findTournamentByIdOrSlug } from '@/utils/tournamentLookup';
 import { maskBattleTag } from '@/utils/battleTag';
 import { useT, format } from '@/lib/i18n/useT';
+import { useLocale } from '@/lib/i18n/useLocale';
 
 type LeaderboardEntry = {
   memberId: string | null;
@@ -215,10 +216,10 @@ function rankColor(rank: number): string {
   return 'bg-white/5 text-gray-300 border-white/10';
 }
 
-function formatDate(iso: string | null) {
+function formatDate(iso: string | null, locale: string) {
   if (!iso) return '—';
   try {
-    return new Date(iso).toLocaleDateString('fr-FR', {
+    return new Date(iso).toLocaleDateString(locale, {
       day: 'numeric',
       month: 'short',
       year: 'numeric',
@@ -236,6 +237,7 @@ export default function TournamentMvpPage({
   perMatch,
 }: Props) {
   const t = useT('tournamentMvp');
+  const locale = useLocale();
   const matchesWithMvp = perMatch.filter((m) => m.battleTag || m.memberId);
   const tournamentPath = `/tournament/${tournament.slug || tournament.id}`;
 
@@ -363,7 +365,7 @@ export default function TournamentMvpPage({
                         className="grid grid-cols-12 gap-2 px-4 py-3 items-center border-b border-white/5 last:border-b-0 hover:bg-white/5"
                       >
                         <div className="col-span-3 text-xs text-gray-400">
-                          {formatDate(m.completedAt)}
+                          {formatDate(m.completedAt, locale)}
                         </div>
                         <div className="col-span-3 text-sm text-gray-300 truncate">
                           {m.roundName || '—'}

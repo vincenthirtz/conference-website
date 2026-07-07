@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type JSX } from 'react';
 import Link from 'next/link';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useLang, type Lang } from '@/lib/i18n/LanguageProvider';
+import { localeTag } from '@/lib/i18n/useLocale';
 import { useT, format } from '@/lib/i18n/useT';
 
 import { logger } from '../../utils/logger';
@@ -33,7 +34,7 @@ type NextMatch = {
 
 function formatScheduled(iso: string | null, lang: Lang, t: T): string {
   if (!iso) return t.noDate;
-  return new Date(iso).toLocaleString(lang === 'fr' ? 'fr-FR' : 'en-GB', {
+  return new Date(iso).toLocaleString(localeTag(lang), {
     weekday: 'long',
     day: 'numeric',
     month: 'long',

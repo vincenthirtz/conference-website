@@ -364,9 +364,14 @@ function OnboardInviteBotPage({
 }
 
 const onboardInviteBotSeo: SeoProps = {
-  title: 'Invitez le bot sur votre serveur Discord',
-  description:
-    "Étape 3 de l'onboarding : ouvrez Discord et autorisez le bot Conférence sur votre serveur. Vos secrets vous seront ensuite envoyés par email.",
+  title: {
+    fr: 'Invitez le bot sur votre serveur Discord',
+    en: 'Invite the bot to your Discord server',
+  },
+  description: {
+    fr: "Étape 3 de l'onboarding : ouvrez Discord et autorisez le bot Conférence sur votre serveur. Vos secrets vous seront ensuite envoyés par email.",
+    en: 'Onboarding step 3: open Discord and authorise the Conférence bot on your server. Your secrets will then be emailed to you.',
+  },
   noindex: true,
 };
 

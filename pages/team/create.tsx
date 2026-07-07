@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useToast } from '@/components/Toast';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { useT, format } from '@/lib/i18n/useT';
+import { useLocale } from '@/lib/i18n/useLocale';
 
 // Idempotency-Key pour un POST public/anonyme (pas de session Supabase, donc
 // useIdempotentMutation/useAdminFetch ne s'appliquent pas ici). On génère une
@@ -60,6 +61,7 @@ const WOMEN_TOURNAMENT_ID_2026 = 'e8fa740c-d92b-49d8-a654-05a37d0eea3b';
 
 export default function PublicCreateTeamPage() {
   const t = useT('teamCreate');
+  const locale = useLocale();
   const router = useRouter();
   const tournamentIdParam =
     typeof router.query.tournament === 'string'
@@ -321,7 +323,7 @@ export default function PublicCreateTeamPage() {
                       {' '}
                       —{' '}
                       {new Date(tournamentInfo.start_date).toLocaleDateString(
-                        'fr-FR',
+                        locale,
                         { day: 'numeric', month: 'long', year: 'numeric' }
                       )}
                     </>
@@ -772,9 +774,14 @@ export default function PublicCreateTeamPage() {
 }
 
 const publicCreateTeamSeo: SeoProps = {
-  title: 'Créer une équipe',
-  description:
-    'Crée ton équipe OW Women’s Cup et ajoute rapidement ton roster complet (emails existants ou comptes créés automatiquement).',
+  title: {
+    fr: 'Créer une équipe',
+    en: 'Create a team',
+  },
+  description: {
+    fr: 'Crée ton équipe OW Women’s Cup et ajoute rapidement ton roster complet (emails existants ou comptes créés automatiquement).',
+    en: 'Create your OW Women’s Cup team and quickly add your full roster (existing emails or auto-created accounts).',
+  },
 };
 
 PublicCreateTeamPage.seo = publicCreateTeamSeo;

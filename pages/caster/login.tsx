@@ -232,8 +232,14 @@ const CasterLoginPage = () => {
 };
 
 const seo: SeoProps = {
-  title: 'Connexion caster',
-  description: 'Acces au Cockpit caster — OW Women s Cup.',
+  title: {
+    fr: 'Connexion caster',
+    en: 'Caster sign-in',
+  },
+  description: {
+    fr: 'Acces au Cockpit caster — OW Women s Cup.',
+    en: "Access to the caster cockpit — OW Women's Cup.",
+  },
   noindex: true,
 };
 

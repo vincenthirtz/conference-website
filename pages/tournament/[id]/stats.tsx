@@ -11,6 +11,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { findTournamentByIdOrSlug } from '@/utils/tournamentLookup';
 import { useT, format } from '@/lib/i18n/useT';
+import { useLocale } from '@/lib/i18n/useLocale';
 
 import { logger } from '../../../utils/logger';
 type StatsDict = ReturnType<typeof useT<'tournamentStats'>>;
@@ -185,9 +186,11 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
 
 export default function TournamentStatsPage({ tournament, teamStats }: Props) {
   const t = useT('tournamentStats');
+  const locale = useLocale();
   const dateRangeLabel = formatTournamentDates(
     tournament.start_date,
-    tournament.end_date
+    tournament.end_date,
+    locale
   );
   const statusLabel = getStatusLabel(tournament.status, t);
   const statusColor = getStatusChipColor(tournament.status);
@@ -679,8 +682,9 @@ function TopTeamCard({ rank, stat }: { rank: number; stat: TeamStat }) {
  * ────────────────────────────────────────────*/
 
 function formatTournamentDates(
-  start?: string | null,
-  end?: string | null
+  start: string | null | undefined,
+  end: string | null | undefined,
+  locale: string
 ): string | null {
   if (!start && !end) return null;
 
@@ -693,21 +697,21 @@ function formatTournamentDates(
     const s = new Date(start);
     const e = new Date(end);
     if (s.getTime() === e.getTime()) {
-      return `Le ${s.toLocaleDateString('fr-FR', opts)}`;
+      return `Le ${s.toLocaleDateString(locale, opts)}`;
     }
     return `Du ${s.toLocaleDateString(
-      'fr-FR',
+      locale,
       opts
-    )} au ${e.toLocaleDateString('fr-FR', opts)}`;
+    )} au ${e.toLocaleDateString(locale, opts)}`;
   }
 
   if (start) {
     const s = new Date(start);
-    return `À partir du ${s.toLocaleDateString('fr-FR', opts)}`;
+    return `À partir du ${s.toLocaleDateString(locale, opts)}`;
   }
 
   const e = new Date(end!);
-  return `Jusqu'au ${e.toLocaleDateString('fr-FR', opts)}`;
+  return `Jusqu'au ${e.toLocaleDateString(locale, opts)}`;
 }
 
 function getStatusLabel(status: string, t: StatsDict): string {

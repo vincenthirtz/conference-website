@@ -5,6 +5,7 @@
 
 import type { CasterUpcomingAssignment } from '@/hooks/useCasterSession';
 import { useT, format } from '@/lib/i18n/useT';
+import { useLocale } from '@/lib/i18n/useLocale';
 
 type UpcomingDict = ReturnType<typeof useT<'upcomingAssignments'>>;
 
@@ -36,6 +37,7 @@ function relativeTime(iso: string | null, t: UpcomingDict): string {
 
 export default function UpcomingAssignments({ assignments }: Props) {
   const t = useT('upcomingAssignments');
+  const locale = useLocale();
   if (assignments.length === 0) {
     return (
       <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
@@ -72,7 +74,7 @@ export default function UpcomingAssignments({ assignments }: Props) {
               : null;
           const kindBadge = isScrim ? t.scrim : t.match;
           const when = scheduledAt
-            ? new Date(scheduledAt).toLocaleString('fr-FR', {
+            ? new Date(scheduledAt).toLocaleString(locale, {
                 weekday: 'short',
                 hour: '2-digit',
                 minute: '2-digit',

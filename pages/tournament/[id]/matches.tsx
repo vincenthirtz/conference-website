@@ -13,6 +13,7 @@ import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { findTournamentByIdOrSlug } from '@/utils/tournamentLookup';
 import type { MatchStatus as BaseMatchStatus } from '@/types/admin';
 import { useT, format } from '@/lib/i18n/useT';
+import { useLocale } from '@/lib/i18n/useLocale';
 
 import { logger } from '../../../utils/logger';
 type MatchStatus = BaseMatchStatus | 'completed';
@@ -157,6 +158,7 @@ export default function TournamentMatchesPage({
 }: Props) {
   const router = useRouter();
   const t = useT('tournamentMatches');
+  const locale = useLocale();
   const tournamentPath = `/tournament/${tournament.slug || tournament.id}`;
   const statusFilter =
     typeof router.query.status === 'string' ? router.query.status : 'all';
@@ -165,7 +167,8 @@ export default function TournamentMatchesPage({
 
   const dateRangeLabel = formatTournamentDates(
     tournament.start_date,
-    tournament.end_date
+    tournament.end_date,
+    locale
   );
   const statusLabel = getStatusLabel(tournament.status, t);
   const statusColor = getStatusChipColor(tournament.status);
@@ -180,7 +183,7 @@ export default function TournamentMatchesPage({
     });
   }, [matches, statusFilter, stageFilter]);
 
-  const grouped = groupMatchesByDay(filteredMatches, t.dateTbd);
+  const grouped = groupMatchesByDay(filteredMatches, t.dateTbd, locale);
 
   const hasFilters = statusFilter !== 'all' || stageFilter !== 'all';
 
@@ -383,13 +386,14 @@ export default function TournamentMatchesPage({
 
 function MatchRow({ match }: { match: SimpleMatch }) {
   const t = useT('tournamentMatches');
+  const locale = useLocale();
   const t1 = match.team1?.short_name || match.team1?.name || t.teamPlaceholder1;
   const t2 =
     match.team2?.short_name ||
     match.team2?.name ||
     (match.is_bye ? t.byeLabel : t.teamPlaceholder2);
 
-  const dateLabel = formatMatchDate(match.scheduled_at);
+  const dateLabel = formatMatchDate(match.scheduled_at, locale);
   const statusLabel = getMatchStatusShort(match.status, t);
   const statusColor = getMatchStatusColor(match.status);
 
@@ -461,7 +465,8 @@ function MatchRow({ match }: { match: SimpleMatch }) {
 
 function groupMatchesByDay(
   matches: SimpleMatch[],
-  dateTbdLabel: string
+  dateTbdLabel: string,
+  locale: string
 ): {
   key: string;
   label: string;
@@ -476,7 +481,7 @@ function groupMatchesByDay(
     const d = m.scheduled_at ? new Date(m.scheduled_at) : null;
     const key = d ? d.toISOString().slice(0, 10) : 'unscheduled';
     const label = d
-      ? d.toLocaleDateString('fr-FR', {
+      ? d.toLocaleDateString(locale, {
           weekday: 'short',
           day: '2-digit',
           month: '2-digit',
@@ -500,8 +505,9 @@ function groupMatchesByDay(
 }
 
 function formatTournamentDates(
-  start?: string | null,
-  end?: string | null
+  start: string | null | undefined,
+  end: string | null | undefined,
+  locale: string
 ): string | null {
   if (!start && !end) return null;
 
@@ -514,28 +520,28 @@ function formatTournamentDates(
     const s = new Date(start);
     const e = new Date(end);
     if (s.getTime() === e.getTime()) {
-      return `Le ${s.toLocaleDateString('fr-FR', opts)}`;
+      return `Le ${s.toLocaleDateString(locale, opts)}`;
     }
     return `Du ${s.toLocaleDateString(
-      'fr-FR',
+      locale,
       opts
-    )} au ${e.toLocaleDateString('fr-FR', opts)}`;
+    )} au ${e.toLocaleDateString(locale, opts)}`;
   }
 
   if (start) {
     const s = new Date(start);
-    return `À partir du ${s.toLocaleDateString('fr-FR', opts)}`;
+    return `À partir du ${s.toLocaleDateString(locale, opts)}`;
   }
 
   const e = new Date(end!);
-  return `Jusqu'au ${e.toLocaleDateString('fr-FR', opts)}`;
+  return `Jusqu'au ${e.toLocaleDateString(locale, opts)}`;
 }
 
-function formatMatchDate(iso: string | null): string | null {
+function formatMatchDate(iso: string | null, locale: string): string | null {
   if (!iso) return null;
   const d = new Date(iso);
   if (isNaN(d.getTime())) return null;
-  return d.toLocaleString('fr-FR', {
+  return d.toLocaleString(locale, {
     day: '2-digit',
     month: '2-digit',
     hour: '2-digit',

@@ -352,9 +352,14 @@ function PartnershipRequestPage() {
 }
 
 const partnershipRequestSeo: SeoProps = {
-  title: 'Devenir partenaire',
-  description:
-    "Faites une demande de partenariat pour soutenir l'OW Women's Cup et la scène Overwatch féminine.",
+  title: {
+    fr: 'Devenir partenaire',
+    en: 'Become a partner',
+  },
+  description: {
+    fr: "Faites une demande de partenariat pour soutenir l'OW Women's Cup et la scène Overwatch féminine.",
+    en: "Submit a partnership request to support OW Women's Cup and the women's Overwatch scene.",
+  },
 };
 
 PartnershipRequestPage.seo = partnershipRequestSeo;

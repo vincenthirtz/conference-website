@@ -108,9 +108,14 @@ function TournamentsPage({ tournaments, loadError }: TournamentsPageProps) {
 }
 
 const tournamentsSeo: SeoProps = {
-  title: 'Tournois Overwatch féminins — toutes les éditions',
-  description:
-    "Découvrez tous les tournois OW Women's Cup : passés, en cours et à venir. Brackets, résultats et équipes.",
+  title: {
+    fr: 'Tournois Overwatch féminins — toutes les éditions',
+    en: "Women's Overwatch tournaments — every edition",
+  },
+  description: {
+    fr: "Découvrez tous les tournois OW Women's Cup : passés, en cours et à venir. Brackets, résultats et équipes.",
+    en: "Browse every OW Women's Cup tournament: past, ongoing and upcoming. Brackets, results and teams.",
+  },
 };
 
 TournamentsPage.seo = tournamentsSeo;

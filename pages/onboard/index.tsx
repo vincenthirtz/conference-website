@@ -129,9 +129,14 @@ function OnboardLandingPage() {
 }
 
 const onboardLandingSeo: SeoProps = {
-  title: 'Ajoutez le bot Conférence sur votre serveur Discord',
-  description:
-    'Self-service onboarding : déployez en quelques minutes le bot Discord de la Conférence (tournois, scrims, casts, role-sync) sur votre propre serveur.',
+  title: {
+    fr: 'Ajoutez le bot Conférence sur votre serveur Discord',
+    en: 'Add the Conférence bot to your Discord server',
+  },
+  description: {
+    fr: 'Self-service onboarding : déployez en quelques minutes le bot Discord de la Conférence (tournois, scrims, casts, role-sync) sur votre propre serveur.',
+    en: 'Self-service onboarding: deploy the Conférence Discord bot (tournaments, scrims, casts, role-sync) to your own server in minutes.',
+  },
 };
 
 OnboardLandingPage.seo = onboardLandingSeo;

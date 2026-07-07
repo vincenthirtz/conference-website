@@ -11,6 +11,7 @@ import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import type { Team as TeamType } from '@/types/types';
 import { useT, format } from '@/lib/i18n/useT';
+import { useLocale } from '@/lib/i18n/useLocale';
 
 import { logger } from '../utils/logger';
 // Types
@@ -72,9 +73,9 @@ function pad(n: number) {
   return n.toString().padStart(2, '0');
 }
 
-function formatDateHuman(dateISO: string) {
+function formatDateHuman(dateISO: string, locale: string) {
   const d = new Date(dateISO);
-  return d.toLocaleString('fr-FR', {
+  return d.toLocaleString(locale, {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
@@ -119,6 +120,7 @@ function linkifyDescription(text: string) {
 
 function Tournoi() {
   const t = useT('tournoiPage');
+  const locale = useLocale();
   const fullTeams = teamsData as TeamType[];
   const teams: TeamType[] = useMemo<TeamType[]>(() => {
     const base = (teamsData as TeamType[]).slice(0, 4).map((tm) => ({
@@ -441,7 +443,7 @@ function Tournoi() {
             {m.id} · BO{m.bo}
           </div>
           <div className="text-sm font-medium text-white">
-            {formatDateHuman(m.date)}
+            {formatDateHuman(m.date, locale)}
           </div>
         </div>
         <div className="flex items-center justify-between gap-4">
@@ -611,7 +613,7 @@ function Tournoi() {
           ) : (
             <div className="space-y-3">
               <div className="text-gray-300">
-                {formatDateHuman(finalMatch.date)}
+                {formatDateHuman(finalMatch.date, locale)}
               </div>
               <div className="p-4 rounded-2xl bg-yellow-500/10 border border-yellow-500/20">
                 <div className="text-sm uppercase tracking-wider mb-2">
@@ -702,9 +704,14 @@ function Tournoi() {
 }
 
 const tournoiSeo: SeoProps = {
-  title: 'Tournoi Round Robin & Finale',
-  description:
-    "Calendrier, scores et classement du tournoi OW Women's Cup : phases de poules en BO3 puis grande finale BO5.",
+  title: {
+    fr: 'Tournoi Round Robin & Finale',
+    en: 'Round Robin & Finals tournament',
+  },
+  description: {
+    fr: "Calendrier, scores et classement du tournoi OW Women's Cup : phases de poules en BO3 puis grande finale BO5.",
+    en: "Schedule, scores and standings for the OW Women's Cup tournament: BO3 group stage then a BO5 grand final.",
+  },
 };
 
 Tournoi.seo = tournoiSeo;

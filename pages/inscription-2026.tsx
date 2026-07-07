@@ -352,9 +352,14 @@ function Inscription2026Page() {
 }
 
 const inscriptionSeo: SeoProps = {
-  title: 'Inscription au tournoi 2026',
-  description:
-    "Guide pas à pas pour inscrire ton équipe au tournoi féminin OW Women's Cup 2026 : prérequis, roster, capitaine, BattleTag et accès au formulaire officiel.",
+  title: {
+    fr: 'Inscription au tournoi 2026',
+    en: '2026 tournament registration',
+  },
+  description: {
+    fr: "Guide pas à pas pour inscrire ton équipe au tournoi féminin OW Women's Cup 2026 : prérequis, roster, capitaine, BattleTag et accès au formulaire officiel.",
+    en: "Step-by-step guide to register your team for the OW Women's Cup 2026 women's tournament: requirements, roster, captain, BattleTag and access to the official form.",
+  },
 };
 
 Inscription2026Page.seo = inscriptionSeo;

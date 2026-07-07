@@ -12,6 +12,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { maskBattleTag } from '@/utils/battleTag';
 import { useT, format } from '@/lib/i18n/useT';
+import { useLocale } from '@/lib/i18n/useLocale';
 import {
   renderTeamPublicMarkdown,
   normalizeAccentColor,
@@ -533,6 +534,7 @@ export default function TeamPage({
   announcementActive,
 }: TeamPageProps) {
   const t = useT('teamDetail');
+  const locale = useLocale();
   // `canEdit` is auth-dependent and therefore not part of the statically
   // generated payload. We resolve it client-side after hydration: a captain
   // or manager of *this* team (per /api/admin/teams/my) may edit its public
@@ -984,7 +986,7 @@ export default function TeamPage({
                         {a.tournament}
                         {a.tournament && a.date ? ' • ' : ''}
                         {a.date
-                          ? new Date(a.date).toLocaleDateString('fr-FR', {
+                          ? new Date(a.date).toLocaleDateString(locale, {
                               day: '2-digit',
                               month: 'short',
                               year: 'numeric',
@@ -1642,6 +1644,7 @@ function StatCard({
 
 function MatchCard({ match, teamId }: { match: RecentMatch; teamId: string }) {
   const t = useT('teamDetail');
+  const locale = useLocale();
   // Consider match finished if status is 'finished' or 'done'
   const isFinished =
     match.status === 'finished' ||
@@ -1681,7 +1684,7 @@ function MatchCard({ match, teamId }: { match: RecentMatch; teamId: string }) {
   };
 
   const dateStr = match.scheduled_at
-    ? new Date(match.scheduled_at).toLocaleDateString('fr-FR', {
+    ? new Date(match.scheduled_at).toLocaleDateString(locale, {
         day: '2-digit',
         month: '2-digit',
       })

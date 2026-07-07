@@ -8,7 +8,7 @@ import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { useToast } from '@/components/Toast';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
 import { useT, format } from '@/lib/i18n/useT';
-import { useLang } from '@/lib/i18n/LanguageProvider';
+import { useLocale } from '@/lib/i18n/useLocale';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 
 import { logger } from '../../utils/logger';
@@ -264,9 +264,9 @@ function StatusBanner({
   application: CasterApplication;
 }) {
   const t = useT('casterApplication');
-  const { lang } = useLang();
+  const locale = useLocale();
   const created = new Date(application.created_at).toLocaleDateString(
-    lang === 'fr' ? 'fr-FR' : 'en-GB',
+    locale,
     {
       day: 'numeric',
       month: 'long',
@@ -308,8 +308,14 @@ function StatusBanner({
 }
 
 const casterApplicationSeo: SeoProps = {
-  title: 'Candidature caster',
-  description: "Postule pour devenir casteuse sur l'OW Women's Cup.",
+  title: {
+    fr: 'Candidature caster',
+    en: 'Caster application',
+  },
+  description: {
+    fr: "Postule pour devenir casteuse sur l'OW Women's Cup.",
+    en: "Apply to become a caster for OW Women's Cup.",
+  },
   noindex: true,
 };
 

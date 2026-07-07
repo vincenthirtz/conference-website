@@ -432,7 +432,10 @@ function CockpitPage() {
 }
 
 const seo: SeoProps = {
-  title: 'Cockpit caster',
+  title: {
+    fr: 'Cockpit caster',
+    en: 'Caster cockpit',
+  },
   noindex: true,
 };
 

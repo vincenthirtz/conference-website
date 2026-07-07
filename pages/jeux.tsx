@@ -639,9 +639,14 @@ function GamesPage() {
 }
 
 const gamesSeo: SeoProps = {
-  title: 'Jeux supportés — tournois esport féminin multi-jeux',
-  description:
-    "OW Women's Cup gère désormais 8 jeux esport (Overwatch, Valorant, CS2, R6 Siege, Marvel Rivals, Rocket League, League of Legends, Dota 2) avec veto, draft et match threads Discord automatisés.",
+  title: {
+    fr: 'Jeux supportés — tournois esport féminin multi-jeux',
+    en: "Supported games — multi-game women's esport tournaments",
+  },
+  description: {
+    fr: "OW Women's Cup gère désormais 8 jeux esport (Overwatch, Valorant, CS2, R6 Siege, Marvel Rivals, Rocket League, League of Legends, Dota 2) avec veto, draft et match threads Discord automatisés.",
+    en: "OW Women's Cup now runs 8 esport titles (Overwatch, Valorant, CS2, R6 Siege, Marvel Rivals, Rocket League, League of Legends, Dota 2) with veto, draft and automated Discord match threads.",
+  },
 };
 
 GamesPage.seo = gamesSeo;

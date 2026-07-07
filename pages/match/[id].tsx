@@ -11,7 +11,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import type { MatchStatus, BracketSide } from '@/types/admin';
 import { useT, format } from '@/lib/i18n/useT';
-import { useLang } from '@/lib/i18n/LanguageProvider';
+import { useLocale } from '@/lib/i18n/useLocale';
 
 import { logger } from '../../utils/logger';
 
@@ -147,8 +147,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
 
 export default function MatchPage({ match }: Props) {
   const t = useT('matchDetail');
-  const { lang } = useLang();
-  const locale = lang === 'fr' ? 'fr-FR' : 'en-GB';
+  const locale = useLocale();
   if (!match) {
     return (
       <div className="min-h-screen bg-black text-white flex items-center justify-center">

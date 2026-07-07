@@ -10,7 +10,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
 import { useT, format } from '@/lib/i18n/useT';
-import { useLang } from '@/lib/i18n/LanguageProvider';
+import { useLocale } from '@/lib/i18n/useLocale';
 import { logger } from '../../utils/logger';
 
 type TeamMini = {
@@ -131,8 +131,7 @@ function formatDate(d: string | null, locale: string, tbd: string) {
 
 function ScrimDetailPage({ scrim, matches }: Props) {
   const t = useT('scrimDetail');
-  const { lang } = useLang();
-  const locale = lang === 'fr' ? 'fr-FR' : 'en-GB';
+  const locale = useLocale();
   return (
     <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-16">

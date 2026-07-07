@@ -163,9 +163,14 @@ function SiteMapPage() {
 }
 
 const siteMapSeo: SeoProps = {
-  title: 'Plan du site',
-  description:
-    "Parcourez l'ensemble des liens internes de l'OW Women's Cup (pages publiques, participation, staff) et accédez au sitemap XML.",
+  title: {
+    fr: 'Plan du site',
+    en: 'Site map',
+  },
+  description: {
+    fr: "Parcourez l'ensemble des liens internes de l'OW Women's Cup (pages publiques, participation, staff) et accédez au sitemap XML.",
+    en: "Browse every internal link on OW Women's Cup (public pages, participation, staff) and access the XML sitemap.",
+  },
 };
 
 SiteMapPage.seo = siteMapSeo;

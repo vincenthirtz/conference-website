@@ -9,7 +9,7 @@ import { supabaseClient } from '@/utils/supabase';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useT } from '@/lib/i18n/useT';
-import { useLang } from '@/lib/i18n/LanguageProvider';
+import { useLocale } from '@/lib/i18n/useLocale';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 
 import { logger } from '../../utils/logger';
@@ -17,7 +17,7 @@ import { logger } from '../../utils/logger';
 function PlayerProfile() {
   const router = useRouter();
   const t = useT('playerProfile');
-  const { lang } = useLang();
+  const locale = useLocale();
   const { user, loading: authLoading } = usePlayerSession({
     redirectTo: '/login?next=/player/profile',
   });
@@ -279,7 +279,7 @@ function PlayerProfile() {
     .map((p: string) => p.charAt(0).toUpperCase())
     .join('');
   const createdAt = user.created_at
-    ? new Date(user.created_at).toLocaleString(lang === 'fr' ? 'fr-FR' : 'en-GB')
+    ? new Date(user.created_at).toLocaleString(locale)
     : '—';
 
   return (
@@ -723,9 +723,14 @@ function PlayerProfile() {
 }
 
 const playerProfileSeo: SeoProps = {
-  title: 'Mon profil',
-  description:
-    "Gère ton compte joueur OW Women's Cup : profil, email, mot de passe et données personnelles.",
+  title: {
+    fr: 'Mon profil',
+    en: 'My profile',
+  },
+  description: {
+    fr: "Gère ton compte joueur OW Women's Cup : profil, email, mot de passe et données personnelles.",
+    en: "Manage your OW Women's Cup player account: profile, email, password and personal data.",
+  },
   noindex: true,
 };
 

@@ -833,9 +833,14 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
 };
 
 const associationSeo: SeoProps = {
-  title: "L'association — staff bénévole de l'esport féminin",
-  description:
-    "D\u00e9couvre l'\u00e9quipe qui organise le tournoi Overwatch f\u00e9minin OW Women's Cup : missions, engagements et p\u00f4les b\u00e9n\u00e9voles.",
+  title: {
+    fr: "L'association — staff bénévole de l'esport féminin",
+    en: "The association — volunteer staff behind women's esport",
+  },
+  description: {
+    fr: "D\u00e9couvre l'\u00e9quipe qui organise le tournoi Overwatch f\u00e9minin OW Women's Cup : missions, engagements et p\u00f4les b\u00e9n\u00e9voles.",
+    en: "Meet the volunteers who run the OW Women's Cup women's Overwatch tournament: mission, commitments and teams.",
+  },
 };
 
 AssociationPage.seo = associationSeo;

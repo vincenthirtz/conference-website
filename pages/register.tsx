@@ -380,9 +380,14 @@ function RegisterPage() {
 }
 
 const registerSeo: SeoProps = {
-  title: 'Créer un compte joueuse / staff',
-  description:
-    "Crée ton compte OW Women's Cup pour t'inscrire aux tournois, rejoindre le staff ou gérer ton équipe.",
+  title: {
+    fr: 'Créer un compte joueuse / staff',
+    en: 'Create a player / staff account',
+  },
+  description: {
+    fr: "Crée ton compte OW Women's Cup pour t'inscrire aux tournois, rejoindre le staff ou gérer ton équipe.",
+    en: "Create your OW Women's Cup account to sign up for tournaments, join the staff or manage your team.",
+  },
 };
 
 RegisterPage.seo = registerSeo;

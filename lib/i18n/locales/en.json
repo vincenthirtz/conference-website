@@ -3262,6 +3262,7 @@
     "overtimesNote": "Overtimes and tiebreakers are counted from the flags stored on each game."
   },
   "teamMaps": {
+    "notFoundHeadTitle": "Team not found – OW Women's Cup",
     "notFoundTitle": "Team not found",
     "notFoundBody": "Unable to find this team.",
     "backHome": "← Back to home",

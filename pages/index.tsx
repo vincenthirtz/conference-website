@@ -314,8 +314,10 @@ function Home({
 }
 
 const homeSeo: SeoProps = {
-  description:
-    "Tournoi Overwatch 100% féminin : suis l'édition 2026 — équipes, casts, inscriptions et calendrier des matchs en direct.",
+  description: {
+    fr: "Tournoi Overwatch 100% féminin : suis l'édition 2026 — équipes, casts, inscriptions et calendrier des matchs en direct.",
+    en: "The 100% women's Overwatch tournament: follow the 2026 edition — teams, casts, sign-ups and the live match schedule.",
+  },
 };
 
 Home.seo = homeSeo;

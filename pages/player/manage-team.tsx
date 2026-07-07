@@ -11,7 +11,7 @@ import { PlayerPageSkeleton } from '@/components/player/Skeletons';
 import CopyButton from '@/components/player/CopyButton';
 import FreePlayersSection from '@/components/player/FreePlayersSection';
 import { useT, format } from '@/lib/i18n/useT';
-import { useLang } from '@/lib/i18n/LanguageProvider';
+import { useLocale } from '@/lib/i18n/useLocale';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 
 type Specialty = 'tank' | 'dps' | 'support' | 'flex' | null;
@@ -58,8 +58,7 @@ type JoinRequest = {
 
 export default function ManageTeamPage() {
   const t = useT('manageTeam');
-  const { lang } = useLang();
-  const locale = lang === 'fr' ? 'fr-FR' : 'en-US';
+  const locale = useLocale();
   const { loading: authLoading, ready } = usePlayerSession();
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
   const {
@@ -652,8 +651,14 @@ export default function ManageTeamPage() {
 }
 
 const manageTeamSeo: SeoProps = {
-  title: 'Gérer mon équipe',
-  description: "Gère les membres et les infos de ton équipe OW Women's Cup.",
+  title: {
+    fr: 'Gérer mon équipe',
+    en: 'Manage my team',
+  },
+  description: {
+    fr: "Gère les membres et les infos de ton équipe OW Women's Cup.",
+    en: "Manage your OW Women's Cup team's members and details.",
+  },
   noindex: true,
 };
 
