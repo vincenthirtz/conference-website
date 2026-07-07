@@ -1,4 +1,36 @@
 {
+  "adminQuickBracket": {
+    "pageTitle": "Admin – Quick bracket",
+    "heading": "Quick bracket",
+    "description": "Spin up a playable bracket in 30 seconds: a name, a format, and your list of participants.",
+    "breadcrumbTournaments": "Tournaments",
+    "nameLabel": "Tournament name",
+    "namePlaceholder": "e.g. Friday Night Cup",
+    "formatLabel": "Format",
+    "formatSingleElim": "Single elimination",
+    "formatDoubleElim": "Double elimination",
+    "participantsLabel": "Participants",
+    "participantsPlaceholder": "one name per line\nTeam Alpha\nTeam Bravo\n…",
+    "participantsHint": "One name per line (or comma-separated).",
+    "participantCount_one": "{n} participant",
+    "participantCount_other": "{n} participants",
+    "bracketSizeHint": "{size}-slot bracket",
+    "bracketByes_one": "{count} bye",
+    "bracketByes_other": "{count} byes",
+    "boLabel": "Match format",
+    "boBo1": "BO1 (1 map)",
+    "boBo3": "BO3 (3 maps)",
+    "boBo5": "BO5 (5 maps)",
+    "submit": "Generate bracket",
+    "submitting": "Generating…",
+    "successToast": "Bracket created",
+    "errorMinParticipants": "Add at least 2 participants.",
+    "errorMaxParticipants": "32 participants maximum.",
+    "errorDuplicates": "Duplicate participants: {names}.",
+    "errorGeneric": "Failed to create the bracket.",
+    "helperBlurb": "Quick, casual bracket: each participant becomes a shell team (no roster, no Discord). You can upgrade it later (rosters, Discord, cast) from the normal tournament admin.",
+    "navCta": "Quick bracket ⚡"
+  },
   "adminLogout": {
     "loggingOut": "Logging out…",
     "redirectNote": "You'll be redirected to the staff login page."
@@ -126,6 +158,8 @@
     "navTournoiEnCoursDesc": "Active tournament cockpit: matches, disputes, check-in.",
     "navTournoisTitle": "Tournaments",
     "navTournoisDesc": "List, create, and manage tournaments.",
+    "navQuickBracketTitle": "Quick bracket",
+    "navQuickBracketDesc": "Spin up a playable bracket in 30 seconds from a pasted list.",
     "navTeamsTitle": "Teams",
     "navTeamsDesc": "Rosters, captains, and imports.",
     "navDemandesTitle": "Requests",
@@ -355,6 +389,13 @@
     "errorUnexpected": "Unexpected error"
   },
   "adminTournamentOverview": {
+    "quickBracketTitle": "Quick bracket",
+    "quickBracketDesc": "Add rosters, Discord setup and rating to turn this into a full tournament.",
+    "quickBracketEditLink": "Edit tournament",
+    "quickBracketDiscordLink": "Set up Discord",
+    "quickBracketConvertBtn": "Convert to full tournament",
+    "quickBracketConverting": "Converting…",
+    "quickBracketConverted": "Converted to full tournament",
     "statusDraft": "Draft",
     "statusPublished": "Published",
     "statusRunning": "Running",
@@ -5528,7 +5569,14 @@
   },
   "adminBracketTreeView": {
     "matchCount_one": "{count} match",
-    "matchCount_other": "{count} matches"
+    "matchCount_other": "{count} matches",
+    "scoreEditTitle": "Enter score",
+    "scoreSave": "Save",
+    "scoreSaving": "Saving…",
+    "scoreCancel": "Cancel",
+    "scoreInvalid": "Invalid scores: positive integers required.",
+    "scoreToastSaved": "Score saved",
+    "scoreToastError": "Failed to save score"
   },
   "adminBracketMatchCard": {
     "editTime": "Edit schedule"

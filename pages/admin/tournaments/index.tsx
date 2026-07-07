@@ -97,6 +97,7 @@ function AdminTournamentsPage({
   errorMsg,
 }: AdminTournamentsProps) {
   const tx = useAdminT('adminTournamentsList');
+  const tqb = useAdminT('adminQuickBracket');
   const router = useRouter();
   const { filters, setFilter, setFilters } = useUrlFilters(T_FILTER_KEYS);
 
@@ -150,6 +151,25 @@ function AdminTournamentsPage({
               </div>
 
               <div className="flex gap-2">
+                <Link
+                  href="/admin/quick-bracket"
+                  className="px-4 py-2.5 rounded-xl bg-neutral-700 hover:bg-neutral-600 border border-neutral-600 text-sm font-medium transition-colors flex items-center gap-2"
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M13 10V3L4 14h7v7l9-11h-7z"
+                    />
+                  </svg>
+                  {tqb.navCta}
+                </Link>
                 <Link
                   href="/admin/tournament-simulator"
                   className="px-4 py-2.5 rounded-xl bg-neutral-700 hover:bg-neutral-600 border border-neutral-600 text-sm font-medium transition-colors flex items-center gap-2"

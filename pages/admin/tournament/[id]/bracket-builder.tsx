@@ -589,7 +589,9 @@ ${day.matches
                   {finishedCount > 0 && (
                     <div className="px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-xs font-medium">
                       <span className="text-emerald-300">{finishedCount}</span>{' '}
-                      <span className="text-emerald-400/60">{t.statFinished}</span>
+                      <span className="text-emerald-400/60">
+                        {t.statFinished}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -799,7 +801,10 @@ ${day.matches
                   {t.winnersBracket}
                 </h3>
               )}
-              <BracketTreeView rounds={bracketRounds} />
+              <BracketTreeView
+                rounds={bracketRounds}
+                onScoreSaved={fetchData}
+              />
 
               {isDoubleElim && loserBracketRounds.length > 0 && (
                 <>
@@ -808,7 +813,10 @@ ${day.matches
                       {t.losersBracket}
                     </h3>
                   </div>
-                  <BracketTreeView rounds={loserBracketRounds} />
+                  <BracketTreeView
+                    rounds={loserBracketRounds}
+                    onScoreSaved={fetchData}
+                  />
                 </>
               )}
             </>

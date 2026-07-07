@@ -11904,6 +11904,69 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /api/admin/quick-bracket:
+    post:
+      summary: Create a full working bracket from a name + format + participant list.
+      description: >-
+        Requires `manager` role. Creates a minimal published tournament, one
+        shell team per participant name (no roster/captain), registers them,
+        creates a bracket stage, generates the bracket (single or double
+        elimination) via the shared engine and seeds round 1 in paste order
+        with byes for non-power-of-two counts. Honors `Idempotency-Key`.
+      operationId: adminQuickBracket
+      tags:
+        - admin/tournaments
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - format
+                - participants
+              properties:
+                name:
+                  type: string
+                  minLength: 2
+                  maxLength: 100
+                format:
+                  type: string
+                  enum: [single_elim, double_elim]
+                participants:
+                  description: Array of names OR a newline/comma-separated string (2..32).
+                  oneOf:
+                    - type: array
+                      items:
+                        type: string
+                    - type: string
+                bestOf:
+                  type: integer
+                  minimum: 1
+                  maximum: 15
+      responses:
+        '201':
+          description: Bracket created.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tournamentId:
+                    type: string
+                  slug:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          description: Rate limited.
   /api/admin/recycle-bin:
     get:
       summary: List soft-deleted entities (stages, teams, matches, etc.).

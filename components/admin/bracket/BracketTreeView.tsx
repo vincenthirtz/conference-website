@@ -1,15 +1,22 @@
 // components/admin/bracket/BracketTreeView.tsx
 // Tree/grid view for bracket-builder (elimination + Swiss/round-robin)
 
+import { useState } from 'react';
 import Image from 'next/image';
 import { formatTime } from '@/utils/dateFormatters';
 import { STATUS_CONFIG } from '@/utils/statusConfig';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { parseNotes } from './types';
+import InlineScoreEditor from './InlineScoreEditor';
 import type { ScheduleMatch, BracketRound } from './types';
 
 type BracketTreeViewProps = {
   rounds: BracketRound[];
+  /**
+   * Called after an inline score has been saved on a match card. The parent
+   * should refetch the bracket so the propagated winner is reflected.
+   */
+  onScoreSaved?: () => void;
 };
 
 const CARD_H = 82;
@@ -44,7 +51,10 @@ function bracketTeamLabel(m: ScheduleMatch, slot: 1 | 2) {
   return { name: 'TBD', logo: null, hasSeed: false, seed: null };
 }
 
-export default function BracketTreeView({ rounds }: BracketTreeViewProps) {
+export default function BracketTreeView({
+  rounds,
+  onScoreSaved,
+}: BracketTreeViewProps) {
   if (!rounds.length) return null;
 
   const isElimination =
@@ -52,15 +62,21 @@ export default function BracketTreeView({ rounds }: BracketTreeViewProps) {
     rounds[0].matches.length > rounds[rounds.length - 1].matches.length;
 
   if (!isElimination) {
-    return <SwissBracketView rounds={rounds} />;
+    return <SwissBracketView rounds={rounds} onScoreSaved={onScoreSaved} />;
   }
 
-  return <EliminationBracketView rounds={rounds} />;
+  return <EliminationBracketView rounds={rounds} onScoreSaved={onScoreSaved} />;
 }
 
 /* ---- Swiss / Round-Robin grid view ---- */
 
-function SwissBracketView({ rounds }: { rounds: BracketRound[] }) {
+function SwissBracketView({
+  rounds,
+  onScoreSaved,
+}: {
+  rounds: BracketRound[];
+  onScoreSaved?: () => void;
+}) {
   const t = useAdminT('adminBracketTreeView');
   return (
     <div className="space-y-6">
@@ -113,6 +129,7 @@ function SwissBracketView({ rounds }: { rounds: BracketRound[] }) {
                       match={m}
                       matchIndex={mIdx}
                       isFinale={isFinale}
+                      onScoreSaved={onScoreSaved}
                     />
                   ))}
                 </div>
@@ -127,7 +144,13 @@ function SwissBracketView({ rounds }: { rounds: BracketRound[] }) {
 
 /* ---- Elimination bracket (tree) view ---- */
 
-function EliminationBracketView({ rounds }: { rounds: BracketRound[] }) {
+function EliminationBracketView({
+  rounds,
+  onScoreSaved,
+}: {
+  rounds: BracketRound[];
+  onScoreSaved?: () => void;
+}) {
   const isFinalRound = (idx: number) =>
     idx === rounds.length - 1 && rounds[idx].matches.length === 1;
 
@@ -292,6 +315,7 @@ function EliminationBracketView({ rounds }: { rounds: BracketRound[] }) {
                         matchIndex={mIdx}
                         isFinale={isFinale}
                         fixedHeight
+                        onScoreSaved={onScoreSaved}
                       />
                     </div>
                   ))}
@@ -312,12 +336,16 @@ function BracketMatchCard({
   matchIndex: mIdx,
   isFinale,
   fixedHeight,
+  onScoreSaved,
 }: {
   match: ScheduleMatch;
   matchIndex: number;
   isFinale: boolean;
   fixedHeight?: boolean;
+  onScoreSaved?: () => void;
 }) {
+  const t = useAdminT('adminBracketTreeView');
+  const [editingScore, setEditingScore] = useState(false);
   const statusCfg = STATUS_CONFIG[m.status];
   const t1 = bracketTeamLabel(m, 1);
   const t2 = bracketTeamLabel(m, 2);
@@ -325,48 +353,96 @@ function BracketMatchCard({
   const w2 = !!m.winner_team_id && m.winner_team_id === m.team2_id;
   const posLabel = m.position_in_round ?? mIdx + 1;
 
+  // Fast-path inline scoring: two real teams, not a bye, not already finished.
+  const canEditScore =
+    !!m.team1_id &&
+    !!m.team2_id &&
+    !m.is_bye &&
+    m.status !== 'finished' &&
+    m.status !== 'cancelled';
+
   return (
-    <div
-      className={`rounded-xl border overflow-hidden transition-all ${fixedHeight ? 'h-full' : ''} ${
-        isFinale
-          ? 'bg-gradient-to-br from-amber-950/30 via-[#12121a] to-purple-950/30 border-amber-500/20 shadow-xl shadow-amber-500/5'
-          : m.status === 'finished'
-            ? 'bg-[#12121a] border-white/[0.08]'
-            : 'bg-[#12121a] border-white/[0.06] hover:border-purple-500/20'
-      }`}
-    >
+    <div className={`relative ${fixedHeight ? 'h-full' : ''}`}>
       <div
-        className="flex items-center justify-between px-2.5 py-1 border-b border-white/[0.05]"
-        style={{ height: 26 }}
+        className={`rounded-xl border overflow-hidden transition-all ${fixedHeight ? 'h-full' : ''} ${
+          isFinale
+            ? 'bg-gradient-to-br from-amber-950/30 via-[#12121a] to-purple-950/30 border-amber-500/20 shadow-xl shadow-amber-500/5'
+            : m.status === 'finished'
+              ? 'bg-[#12121a] border-white/[0.08]'
+              : 'bg-[#12121a] border-white/[0.06] hover:border-purple-500/20'
+        }`}
       >
-        <div className="flex items-center gap-1.5">
-          <span className="text-[9px] font-bold text-neutral-600 font-mono">
-            #{posLabel}
-          </span>
-          {m.scheduled_at && (
-            <span className="text-[10px] tabular-nums text-neutral-400 font-medium">
-              {formatTime(m.scheduled_at)}
+        <div
+          className="flex items-center justify-between px-2.5 py-1 border-b border-white/[0.05]"
+          style={{ height: 26 }}
+        >
+          <div className="flex items-center gap-1.5">
+            <span className="text-[9px] font-bold text-neutral-600 font-mono">
+              #{posLabel}
             </span>
-          )}
-        </div>
-        <div className="flex items-center gap-1.5">
-          {m.match_format && (
-            <span className="text-[9px] font-semibold uppercase text-neutral-500 bg-white/5 px-1 rounded">
-              {m.match_format}
+            {m.scheduled_at && (
+              <span className="text-[10px] tabular-nums text-neutral-400 font-medium">
+                {formatTime(m.scheduled_at)}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-1.5">
+            {canEditScore && onScoreSaved && (
+              <button
+                type="button"
+                onClick={() => setEditingScore((v) => !v)}
+                title={t.scoreEditTitle}
+                aria-label={t.scoreEditTitle}
+                className={`inline-flex items-center justify-center w-4 h-4 rounded transition-colors ${
+                  editingScore
+                    ? 'text-purple-300 bg-purple-500/20'
+                    : 'text-neutral-500 hover:text-purple-300 hover:bg-white/5'
+                }`}
+              >
+                <svg width="10" height="10" viewBox="0 0 16 16" fill="none">
+                  <path
+                    d="M11.5 2.5l2 2L6 12l-3 1 1-3 7.5-7.5z"
+                    stroke="currentColor"
+                    strokeWidth="1.3"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </button>
+            )}
+            {m.match_format && (
+              <span className="text-[9px] font-semibold uppercase text-neutral-500 bg-white/5 px-1 rounded">
+                {m.match_format}
+              </span>
+            )}
+            <span
+              className={`inline-flex items-center gap-1 px-1.5 py-px rounded-full text-[9px] font-medium border ${statusCfg.bg}`}
+            >
+              <span className={`w-1 h-1 rounded-full ${statusCfg.dot}`} />
+              {statusCfg.label}
             </span>
-          )}
-          <span
-            className={`inline-flex items-center gap-1 px-1.5 py-px rounded-full text-[9px] font-medium border ${statusCfg.bg}`}
-          >
-            <span className={`w-1 h-1 rounded-full ${statusCfg.dot}`} />
-            {statusCfg.label}
-          </span>
+          </div>
         </div>
+
+        <BracketTeamRow t={t1} isWinner={w1} score={m.team1_score ?? null} />
+        <div className="h-px bg-white/[0.04]" />
+        <BracketTeamRow t={t2} isWinner={w2} score={m.team2_score ?? null} />
       </div>
 
-      <BracketTeamRow t={t1} isWinner={w1} />
-      <div className="h-px bg-white/[0.04]" />
-      <BracketTeamRow t={t2} isWinner={w2} />
+      {editingScore && onScoreSaved && (
+        <InlineScoreEditor
+          matchId={m.id}
+          team1Name={t1.name}
+          team2Name={t2.name}
+          initialScore1={m.team1_score ?? 0}
+          initialScore2={m.team2_score ?? 0}
+          onSaved={() => {
+            setEditingScore(false);
+            onScoreSaved();
+          }}
+          onCancel={() => setEditingScore(false)}
+        />
+      )}
     </div>
   );
 }
@@ -374,6 +450,7 @@ function BracketMatchCard({
 function BracketTeamRow({
   t,
   isWinner,
+  score,
 }: {
   t: {
     name: string;
@@ -382,6 +459,7 @@ function BracketTeamRow({
     seed: string | null;
   };
   isWinner: boolean;
+  score?: number | null;
 }) {
   const rowH = (CARD_H - 26) / 2;
   return (
@@ -421,6 +499,15 @@ function BracketTeamRow({
           ? t.name.replace(/^Seed \d+$/, '') || t.name
           : t.name}
       </span>
+      {typeof score === 'number' && (
+        <span
+          className={`text-xs font-bold tabular-nums flex-shrink-0 ${
+            isWinner ? 'text-emerald-300' : 'text-neutral-400'
+          }`}
+        >
+          {score}
+        </span>
+      )}
       {isWinner && (
         <svg
           width="12"

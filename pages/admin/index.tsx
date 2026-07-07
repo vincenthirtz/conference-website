@@ -150,6 +150,14 @@ const ICON = {
       d="M12 15a5 5 0 100-10 5 5 0 000 10zm0 0v6l-3-2-3 2m6-6l3 2 3-2M7 4l2 3m8-3l-2 3"
     />
   ),
+  bolt: (
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={1.8}
+      d="M13 10V3L4 14h7v7l9-11h-7z"
+    />
+  ),
 };
 
 const getNavCards = (t: Dict): NavCard[] => [
@@ -167,6 +175,14 @@ const getNavCards = (t: Dict): NavCard[] => [
     href: '/admin/tournaments',
     minRole: 'manager',
     icon: ICON.trophy,
+    accent: 'border-amber-500/30 from-amber-500/10 text-amber-300',
+  },
+  {
+    title: t.navQuickBracketTitle,
+    description: t.navQuickBracketDesc,
+    href: '/admin/quick-bracket',
+    minRole: 'manager',
+    icon: ICON.bolt,
     accent: 'border-amber-500/30 from-amber-500/10 text-amber-300',
   },
   {

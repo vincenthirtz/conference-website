@@ -56,6 +56,7 @@ type Tournament = {
   is_featured: boolean;
   logo_url: string | null;
   banner_url: string | null;
+  description_info: string | null;
   registration_fields: RegistrationField[] | null;
   created_at: string;
   updated_at: string | null;
@@ -156,7 +157,7 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
       supabaseAdmin
         .from('tournaments')
         .select(
-          'id, name, slug, game, status, start_date, end_date, timezone, format_type, max_teams, visibility, is_featured, logo_url, banner_url, registration_fields, created_at, updated_at'
+          'id, name, slug, game, status, start_date, end_date, timezone, format_type, max_teams, visibility, is_featured, logo_url, banner_url, description_info, registration_fields, created_at, updated_at'
         )
         .eq('tenant_id', tenantId)
         .eq('id', id)
@@ -417,11 +418,36 @@ function stageTypeColor(t: string | null) {
 
 function getStatusOptions(tx: Dict) {
   return [
-    { value: 'draft', label: tx.statusDraft, color: 'bg-neutral-600', icon: '📝' },
-    { value: 'published', label: tx.statusPublished, color: 'bg-blue-600', icon: '📢' },
-    { value: 'running', label: tx.statusRunning, color: 'bg-emerald-600', icon: '▶️' },
-    { value: 'completed', label: tx.statusCompleted, color: 'bg-purple-600', icon: '🏆' },
-    { value: 'archived', label: tx.statusArchived, color: 'bg-neutral-700', icon: '📦' },
+    {
+      value: 'draft',
+      label: tx.statusDraft,
+      color: 'bg-neutral-600',
+      icon: '📝',
+    },
+    {
+      value: 'published',
+      label: tx.statusPublished,
+      color: 'bg-blue-600',
+      icon: '📢',
+    },
+    {
+      value: 'running',
+      label: tx.statusRunning,
+      color: 'bg-emerald-600',
+      icon: '▶️',
+    },
+    {
+      value: 'completed',
+      label: tx.statusCompleted,
+      color: 'bg-purple-600',
+      icon: '🏆',
+    },
+    {
+      value: 'archived',
+      label: tx.statusArchived,
+      color: 'bg-neutral-700',
+      icon: '📦',
+    },
   ];
 }
 
@@ -606,6 +632,9 @@ function AdminTournamentPage({
   // Clone
   const [cloning, setCloning] = useState(false);
   const [showCloneConfirm, setShowCloneConfirm] = useState(false);
+
+  // Quick bracket → full tournament upgrade
+  const [convertingQuickBracket, setConvertingQuickBracket] = useState(false);
 
   // Notify captains
   const [notifyingCaptains, setNotifyingCaptains] = useState(false);
@@ -805,6 +834,32 @@ function AdminTournamentPage({
     } finally {
       setCloning(false);
       setShowCloneConfirm(false);
+    }
+  }
+
+  // Quick brackets are created as normal tournaments with a sentinel
+  // description_info. Clearing it (PATCH -> null) "promotes" the tournament to
+  // a full one. Reuses the existing tournament update path.
+  const isQuickBracket = tournament?.description_info === 'Quick bracket';
+
+  async function convertQuickBracket() {
+    if (!id || !tournament || convertingQuickBracket) return;
+    setConvertingQuickBracket(true);
+    setErrorMsg(null);
+    try {
+      const json = await adminFetchJson<ApiResponse>(
+        `/api/admin/tournament/${id}`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({ description_info: null }),
+        }
+      );
+      setTournament(json.tournament);
+      addToast(tx.quickBracketConverted, 'success');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? tx.errorUnexpected);
+    } finally {
+      setConvertingQuickBracket(false);
     }
   }
 
@@ -1152,6 +1207,66 @@ function AdminTournamentPage({
 
           {tournament && (
             <div className="space-y-6">
+              {/* Quick bracket → full tournament upgrade banner */}
+              {isQuickBracket && (
+                <div className="rounded-2xl border border-purple-500/30 bg-gradient-to-br from-purple-900/30 via-neutral-900/40 to-indigo-900/20 p-5">
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div className="flex items-start gap-3">
+                      <div className="mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-purple-500/20 text-purple-300">
+                        <svg
+                          className="h-5 w-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M13 10V3L4 14h7v7l9-11h-7z"
+                          />
+                        </svg>
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-semibold text-white">
+                          {tx.quickBracketTitle}
+                        </h3>
+                        <p className="mt-1 max-w-xl text-sm text-neutral-300">
+                          {tx.quickBracketDesc}
+                        </p>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <Link
+                            href={`/admin/tournament/${tournament.id}/edit`}
+                            className="rounded-lg bg-white/10 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-white/15"
+                          >
+                            {tx.quickBracketEditLink}
+                          </Link>
+                          <Link
+                            href={`/admin/tournament/${tournament.id}/discord`}
+                            className="rounded-lg bg-white/10 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-white/15"
+                          >
+                            {tx.quickBracketDiscordLink}
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={convertQuickBracket}
+                      disabled={convertingQuickBracket}
+                      className="flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-purple-500 disabled:cursor-wait disabled:opacity-60"
+                    >
+                      {convertingQuickBracket && (
+                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                      )}
+                      {convertingQuickBracket
+                        ? tx.quickBracketConverting
+                        : tx.quickBracketConvertBtn}
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Quick Actions Bar */}
               <div className="flex flex-wrap gap-2">
                 <Link
@@ -2379,9 +2494,7 @@ function AdminTournamentPage({
                               </pre>
                               <button
                                 type="button"
-                                onClick={() =>
-                                  copyEmbedSnippet(snippet, w.key)
-                                }
+                                onClick={() => copyEmbedSnippet(snippet, w.key)}
                                 className="absolute top-2 right-2 px-2.5 py-1 rounded-md bg-neutral-700 hover:bg-neutral-600 text-xs font-medium transition-colors"
                               >
                                 {copiedWidget === w.key
@@ -2817,12 +2930,8 @@ function AdminTournamentPage({
                 d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
               />
             </svg>
-            <p className="text-emerald-300 font-medium">
-              {tx.noConflict}
-            </p>
-            <p className="text-neutral-500 text-xs mt-1">
-              {tx.noConflictDesc}
-            </p>
+            <p className="text-emerald-300 font-medium">{tx.noConflict}</p>
+            <p className="text-neutral-500 text-xs mt-1">{tx.noConflictDesc}</p>
           </div>
         ) : (
           <div className="overflow-y-auto flex-1 space-y-3 pr-1">

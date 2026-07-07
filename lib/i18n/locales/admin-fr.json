@@ -1,4 +1,36 @@
 {
+  "adminQuickBracket": {
+    "pageTitle": "Admin – Quick bracket",
+    "heading": "Quick bracket",
+    "description": "Créez un bracket jouable en 30 secondes : un nom, un format, la liste des participants.",
+    "breadcrumbTournaments": "Tournois",
+    "nameLabel": "Nom du tournoi",
+    "namePlaceholder": "Ex. : Coupe du vendredi soir",
+    "formatLabel": "Format",
+    "formatSingleElim": "Élimination simple",
+    "formatDoubleElim": "Élimination double",
+    "participantsLabel": "Participants",
+    "participantsPlaceholder": "un nom par ligne\nÉquipe Alpha\nÉquipe Bravo\n…",
+    "participantsHint": "Un nom par ligne (ou séparés par des virgules).",
+    "participantCount_one": "{n} participant",
+    "participantCount_other": "{n} participants",
+    "bracketSizeHint": "Bracket à {size}",
+    "bracketByes_one": "{count} exempt (bye)",
+    "bracketByes_other": "{count} exempts (byes)",
+    "boLabel": "Format des matchs",
+    "boBo1": "BO1 (1 map)",
+    "boBo3": "BO3 (3 maps)",
+    "boBo5": "BO5 (5 maps)",
+    "submit": "Générer le bracket",
+    "submitting": "Génération…",
+    "successToast": "Bracket créé",
+    "errorMinParticipants": "Ajoutez au moins 2 participants.",
+    "errorMaxParticipants": "32 participants maximum.",
+    "errorDuplicates": "Participants en double : {names}.",
+    "errorGeneric": "Échec de la création du bracket.",
+    "helperBlurb": "Bracket rapide et informel : chaque participant devient une équipe « coquille » (sans roster ni Discord). Vous pourrez l'enrichir plus tard (rosters, Discord, cast) depuis l'administration du tournoi.",
+    "navCta": "Quick bracket ⚡"
+  },
   "adminLogout": {
     "loggingOut": "Déconnexion en cours…",
     "redirectNote": "Tu vas être redirigé·e vers la page de connexion staff."
@@ -126,6 +158,8 @@
     "navTournoiEnCoursDesc": "Cockpit du tournoi actif : matchs, litiges, check-in.",
     "navTournoisTitle": "Tournois",
     "navTournoisDesc": "Liste, création et gestion des tournois.",
+    "navQuickBracketTitle": "Quick bracket",
+    "navQuickBracketDesc": "Créez un bracket jouable en 30 secondes à partir d'une liste collée.",
     "navTeamsTitle": "Équipes",
     "navTeamsDesc": "Rosters, capitaines et imports.",
     "navDemandesTitle": "Demandes",
@@ -355,6 +389,13 @@
     "errorUnexpected": "Erreur inattendue"
   },
   "adminTournamentOverview": {
+    "quickBracketTitle": "Bracket rapide",
+    "quickBracketDesc": "Ajoutez des rosters, la configuration Discord et le rating pour en faire un tournoi complet.",
+    "quickBracketEditLink": "Modifier le tournoi",
+    "quickBracketDiscordLink": "Configurer Discord",
+    "quickBracketConvertBtn": "Convertir en tournoi complet",
+    "quickBracketConverting": "Conversion…",
+    "quickBracketConverted": "Converti en tournoi complet",
     "statusDraft": "Brouillon",
     "statusPublished": "Publié",
     "statusRunning": "En cours",
@@ -5528,7 +5569,14 @@
   },
   "adminBracketTreeView": {
     "matchCount_one": "{count} match",
-    "matchCount_other": "{count} matchs"
+    "matchCount_other": "{count} matchs",
+    "scoreEditTitle": "Saisir le score",
+    "scoreSave": "Enregistrer",
+    "scoreSaving": "Enregistrement…",
+    "scoreCancel": "Annuler",
+    "scoreInvalid": "Scores invalides : entiers positifs requis.",
+    "scoreToastSaved": "Score enregistré",
+    "scoreToastError": "Échec de l'enregistrement du score"
   },
   "adminBracketMatchCard": {
     "editTime": "Modifier l'horaire"

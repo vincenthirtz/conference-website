@@ -8,17 +8,24 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
-import type { BracketSide } from '@/types/admin';
 import type { MatchForGraph } from '@/types/bracket';
 import { logger } from '../../../../../utils/logger';
 import {
   buildBracketGraph,
   validateBracketGraph,
 } from '@/utils/bracket/buildGraph';
+import {
+  generateSingleElim,
+  generateDoubleElim,
+} from '@/utils/bracket/generateBracket';
 
 export default withStaffRoute(handler, 'manager');
 
-async function handler(req: NextApiRequest, res: NextApiResponse, ctx: AuthenticatedStaffContext) {
+async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  ctx: AuthenticatedStaffContext
+) {
   const { id } = req.query;
 
   if (!id || Array.isArray(id) || !isValidUUID(id)) {
@@ -88,178 +95,25 @@ async function handleGenerate(
       .json({ error: `size must be one of: ${validSizes.join(', ')}` });
   }
 
-  const totalRounds = Math.log2(size);
+  // Match structure + linkage now live in the shared engine
+  // (utils/bracket/generateBracket.ts) so /api/admin/quick-bracket reuses the
+  // exact same generation. Behavior is preserved: same insert payload, same
+  // linkage, same rollback-on-failure, same 500 messages.
+  const result = await generateSingleElim({
+    tenantId: ctx.tenantId,
+    tournamentId,
+    stageId: stageId ?? null,
+    size,
+    bestOf,
+    startDate,
+    intervalMinutes,
+  });
 
-  // Build match structure: round by round
-  // Round 1 has size/2 matches, round 2 has size/4, ..., final has 1
-  type MatchDraft = {
-    round_number: number;
-    positionInRound: number; // local only, not a DB column
-    bracket_side: BracketSide;
-    round_name: string;
-    match_format: string | null;
-    scheduled_at: string | null;
-  };
-
-  const drafts: MatchDraft[] = [];
-  const baseDate = startDate ? new Date(startDate) : null;
-  let matchCounter = 0;
-
-  for (let round = 1; round <= totalRounds; round++) {
-    const matchesInRound = size / Math.pow(2, round);
-    let roundName: string;
-
-    if (round === totalRounds) {
-      roundName = 'Finale';
-    } else if (round === totalRounds - 1) {
-      roundName = 'Demi-finales';
-    } else if (round === totalRounds - 2 && totalRounds >= 3) {
-      roundName = 'Quarts de finale';
-    } else {
-      roundName = `Round ${round}`;
-    }
-
-    for (let pos = 1; pos <= matchesInRound; pos++) {
-      let scheduledAt: string | null = null;
-      if (baseDate) {
-        const d = new Date(
-          baseDate.getTime() + matchCounter * intervalMinutes * 60 * 1000
-        );
-        scheduledAt = d.toISOString();
-      }
-
-      drafts.push({
-        round_number: round,
-        positionInRound: pos,
-        bracket_side: 'wb',
-        round_name: roundName,
-        match_format: bestOf ? `bo${bestOf}` : null,
-        scheduled_at: scheduledAt,
-      });
-
-      matchCounter++;
-    }
+  if (!result.ok) {
+    return res.status(500).json({ error: result.error });
   }
 
-  // Step 1: Insert all matches without linkages
-  // Only include columns that exist in the DB (aligned with matches.ts POST)
-  const payload = drafts.map((d) => ({
-    tenant_id: ctx.tenantId,
-    tournament_id: tournamentId,
-    stage_id: stageId ?? null,
-    status: 'pending' as const,
-    is_bye: false,
-    match_format: d.match_format,
-    round_name: d.round_name,
-    round_number: d.round_number,
-    bracket_side: d.bracket_side,
-    group_key: null,
-    team1_id: null,
-    team2_id: null,
-    team1_score: null,
-    team2_score: null,
-    winner_team_id: null,
-    scheduled_at: d.scheduled_at,
-    completed_at: null,
-    stream_url: null,
-    lobby_code: null,
-    notes: null,
-    next_match_win_id: null,
-    next_match_win_slot: null,
-    next_match_lose_id: null,
-    next_match_lose_slot: null,
-  }));
-
-  const { data: inserted, error: insertError } = await supabaseAdmin
-    .from('matches')
-    .insert(payload)
-    .select('id, round_number')
-    .order('round_number', { ascending: true });
-
-  if (insertError) {
-    logger.error('bracket generate insert error:', insertError);
-    return res.status(500).json({
-      error: 'Failed to create bracket matches',
-    });
-  }
-
-  const rows = inserted || [];
-
-  // Step 2: Build linkages
-  // Match at round R, position P feeds into round R+1, position ceil(P/2)
-  // Slot: odd P -> slot 1 (team1), even P -> slot 2 (team2)
-  //
-  // Since rows are ordered by round_number + created_at, we derive
-  // position within each round from the insertion order.
-  type RowWithPos = { id: string; round_number: number; pos: number };
-  const enriched: RowWithPos[] = [];
-  const posCounters = new Map<number, number>();
-
-  for (const row of rows) {
-    const count = (posCounters.get(row.round_number) ?? 0) + 1;
-    posCounters.set(row.round_number, count);
-    enriched.push({ id: row.id, round_number: row.round_number, pos: count });
-  }
-
-  const roundMap = new Map<string, string>(); // "round:position" -> id
-  for (const r of enriched) {
-    roundMap.set(`${r.round_number}:${r.pos}`, r.id);
-  }
-
-  const updates: {
-    id: string;
-    next_match_win_id: string;
-    next_match_win_slot: 1 | 2;
-  }[] = [];
-
-  for (const r of enriched) {
-    if (r.round_number >= totalRounds) continue; // finale has no next match
-
-    const nextRound = r.round_number + 1;
-    const nextPos = Math.ceil(r.pos / 2);
-    const nextSlot: 1 | 2 = r.pos % 2 === 1 ? 1 : 2;
-
-    const nextId = roundMap.get(`${nextRound}:${nextPos}`);
-    if (nextId) {
-      updates.push({
-        id: r.id,
-        next_match_win_id: nextId,
-        next_match_win_slot: nextSlot,
-      });
-    }
-  }
-
-  // Batch update linkages — rollback all matches if any link fails
-  if (updates.length > 0) {
-    const linkErrors: string[] = [];
-    for (const u of updates) {
-      const { error: linkError } = await supabaseAdmin
-        .from('matches')
-        .update({
-          next_match_win_id: u.next_match_win_id,
-          next_match_win_slot: u.next_match_win_slot,
-        })
-        .eq('id', u.id)
-        .eq('tenant_id', ctx.tenantId);
-
-      if (linkError) {
-        linkErrors.push(`Match ${u.id}: ${linkError.message}`);
-      }
-    }
-
-    if (linkErrors.length > 0) {
-      logger.error('bracket linkage errors, rolling back:', linkErrors);
-      const matchIds = rows.map((r) => r.id);
-      await supabaseAdmin
-        .from('matches')
-        .delete()
-        .in('id', matchIds)
-        .eq('tenant_id', ctx.tenantId);
-      return res.status(500).json({
-        error: 'Failed to link bracket matches, all matches rolled back',
-      });
-    }
-  }
+  const rows = result.rows;
 
   // Log
   if (ctx?.staff?.id) {
@@ -477,407 +331,26 @@ async function handleGenerateDoubleElim(
       .json({ error: `size must be one of: ${validSizes.join(', ')}` });
   }
 
-  const wbRounds = Math.log2(size);
-  const lbRounds = 2 * (wbRounds - 1);
-
-  type MatchDraft = {
-    round_number: number;
-    bracket_side: BracketSide;
-    round_name: string;
-    match_format: string | null;
-    scheduled_at: string | null;
-    // Internal tracking
-    _wb_round?: number;
-    _wb_pos?: number;
-    _lb_round?: number;
-    _lb_pos?: number;
-  };
-
-  const drafts: MatchDraft[] = [];
-  const baseDate = startDate ? new Date(startDate) : null;
-  let matchCounter = 0;
-
-  function nextSchedule(): string | null {
-    if (!baseDate) return null;
-    const d = new Date(
-      baseDate.getTime() + matchCounter * intervalMinutes * 60 * 1000
-    );
-    matchCounter++;
-    return d.toISOString();
-  }
-
-  // --- Winners bracket ---
-  for (let round = 1; round <= wbRounds; round++) {
-    const matchesInRound = size / Math.pow(2, round);
-    let roundName: string;
-
-    if (round === wbRounds) roundName = 'WB Finale';
-    else if (round === wbRounds - 1) roundName = 'WB Demi-finales';
-    else if (round === wbRounds - 2 && wbRounds >= 3) roundName = 'WB Quarts';
-    else roundName = `WB Round ${round}`;
-
-    for (let pos = 1; pos <= matchesInRound; pos++) {
-      drafts.push({
-        round_number: round,
-        bracket_side: 'wb',
-        round_name: roundName,
-        match_format: bestOf ? `bo${bestOf}` : null,
-        scheduled_at: nextSchedule(),
-        _wb_round: round,
-        _wb_pos: pos,
-      });
-    }
-  }
-
-  // --- Losers bracket ---
-  // LB round 1: size/4 matches (losers from WB R1)
-  // LB round 2: size/4 matches (LB R1 winners vs losers from WB R2)... etc.
-  // Structure: LB has alternating "minor" (internal) and "major" (receive WB loser) rounds.
-  // Actually for standard DE:
-  //   LB Round 1: size/4 matches (from WB R1 losers)
-  //   LB Round 2: size/4 matches (LB R1 winners, may get WB R2 losers depending on size)
-  //
-  // More precisely:
-  //   LB has pairs of rounds for each WB round > 1:
-  //     - LB pair k (k=1..wbRounds-1):
-  //       round A: receives losers from WB round k+1, plays vs LB survivors
-  //       round B: internal LB matchups
-  //
-  //   LB Round 1: size/4 matches (WB R1 losers paired)
-  //   LB Round 2: size/4 matches (LB R1 winners vs WB R2 losers)
-  //   LB Round 3: size/8 matches (internal)
-  //   LB Round 4: size/8 matches (LB R3 winners vs WB R3 losers)
-  //   ... and so on
-
-  // Calculate matches per LB round
-  const lbMatchesPerRound: number[] = [];
-  let lbCurrentTeams = size / 2; // Number of WB R1 losers
-
-  for (let lbR = 1; lbR <= lbRounds; lbR++) {
-    if (lbR === 1) {
-      // First LB round: pair up WB R1 losers
-      lbMatchesPerRound.push(lbCurrentTeams / 2);
-      lbCurrentTeams = lbCurrentTeams / 2;
-    } else if (lbR % 2 === 0) {
-      // Even rounds: WB losers drop in, play vs LB survivors
-      // Number of matches = current LB survivors (already halved from previous round)
-      lbMatchesPerRound.push(lbCurrentTeams);
-      // Team count stays the same (same number of matches, losers are eliminated)
-    } else {
-      // Odd rounds (after R1): internal LB matchups, halves
-      lbMatchesPerRound.push(lbCurrentTeams / 2);
-      lbCurrentTeams = lbCurrentTeams / 2;
-    }
-  }
-
-  for (let lbR = 1; lbR <= lbRounds; lbR++) {
-    const matchesInRound = lbMatchesPerRound[lbR - 1];
-    let roundName: string;
-
-    if (lbR === lbRounds) roundName = 'LB Finale';
-    else roundName = `LB Round ${lbR}`;
-
-    for (let pos = 1; pos <= matchesInRound; pos++) {
-      drafts.push({
-        round_number: wbRounds + lbR, // offset to avoid collision with WB round numbers
-        bracket_side: 'lb',
-        round_name: roundName,
-        match_format: bestOf ? `bo${bestOf}` : null,
-        scheduled_at: nextSchedule(),
-        _lb_round: lbR,
-        _lb_pos: pos,
-      });
-    }
-  }
-
-  // --- Grand Final ---
-  drafts.push({
-    round_number: wbRounds + lbRounds + 1,
-    bracket_side: 'final',
-    round_name: 'Grande Finale',
-    match_format: bestOf ? `bo${bestOf}` : null,
-    scheduled_at: nextSchedule(),
+  // Match structure + linkage now live in the shared engine
+  // (utils/bracket/generateBracket.ts) so /api/admin/quick-bracket reuses the
+  // exact same generation. Behavior is preserved: same insert payload, same
+  // linkage, same rollback-on-failure, same 500 messages.
+  const result = await generateDoubleElim({
+    tenantId: ctx.tenantId,
+    tournamentId,
+    stageId: stageId ?? null,
+    size,
+    bestOf,
+    startDate,
+    intervalMinutes,
+    grandFinalReset,
   });
 
-  // --- Grand Final Reset (optional) ---
-  if (grandFinalReset) {
-    drafts.push({
-      round_number: wbRounds + lbRounds + 2,
-      bracket_side: 'final',
-      round_name: 'Grande Finale (Reset)',
-      match_format: bestOf ? `bo${bestOf}` : null,
-      scheduled_at: nextSchedule(),
-    });
+  if (!result.ok) {
+    return res.status(500).json({ error: result.error });
   }
 
-  // Insert all matches
-  const payload = drafts.map((d) => ({
-    tenant_id: ctx.tenantId,
-    tournament_id: tournamentId,
-    stage_id: stageId ?? null,
-    status: 'pending' as const,
-    is_bye: false,
-    match_format: d.match_format,
-    round_name: d.round_name,
-    round_number: d.round_number,
-    bracket_side: d.bracket_side,
-    group_key: null,
-    team1_id: null,
-    team2_id: null,
-    team1_score: null,
-    team2_score: null,
-    winner_team_id: null,
-    scheduled_at: d.scheduled_at,
-    completed_at: null,
-    stream_url: null,
-    lobby_code: null,
-    notes: null,
-    next_match_win_id: null,
-    next_match_win_slot: null,
-    next_match_lose_id: null,
-    next_match_lose_slot: null,
-  }));
-
-  const { data: inserted, error: insertError } = await supabaseAdmin
-    .from('matches')
-    .insert(payload)
-    .select('id, round_number, bracket_side')
-    .order('round_number', { ascending: true });
-
-  if (insertError) {
-    logger.error('double elim generate insert error:', insertError);
-    return res.status(500).json({
-      error: 'Failed to create double elimination matches',
-    });
-  }
-
-  const rows = inserted || [];
-
-  // Build lookup maps
-  // WB matches: side='wb', grouped by round_number
-  // LB matches: side='lb', grouped by round_number
-  // GF matches: side='final'
-
-  type RowInfo = {
-    id: string;
-    round_number: number;
-    bracket_side: string;
-    pos: number;
-  };
-  const enriched: RowInfo[] = [];
-  const posCounters = new Map<string, number>();
-
-  for (const row of rows) {
-    const key = `${row.bracket_side}:${row.round_number}`;
-    const count = (posCounters.get(key) ?? 0) + 1;
-    posCounters.set(key, count);
-    enriched.push({ ...row, pos: count });
-  }
-
-  // Build per-side-round map: "side:round:pos" -> id
-  const matchMap = new Map<string, string>();
-  for (const r of enriched) {
-    matchMap.set(`${r.bracket_side}:${r.round_number}:${r.pos}`, r.id);
-  }
-
-  // Helper to get match id
-  function getMatchId(
-    side: string,
-    roundNumber: number,
-    pos: number
-  ): string | undefined {
-    return matchMap.get(`${side}:${roundNumber}:${pos}`);
-  }
-
-  const updates: { id: string; data: Record<string, unknown> }[] = [];
-
-  // --- Link WB matches ---
-  for (const r of enriched) {
-    if (r.bracket_side !== 'wb') continue;
-
-    const wbRound = r.round_number;
-    const wbPos = r.pos;
-
-    // WB winner -> next WB round
-    if (wbRound < wbRounds) {
-      const nextWbRound = wbRound + 1;
-      const nextWbPos = Math.ceil(wbPos / 2);
-      const nextWbSlot: 1 | 2 = wbPos % 2 === 1 ? 1 : 2;
-      const nextWbId = getMatchId('wb', nextWbRound, nextWbPos);
-
-      if (nextWbId) {
-        updates.push({
-          id: r.id,
-          data: {
-            next_match_win_id: nextWbId,
-            next_match_win_slot: nextWbSlot,
-          },
-        });
-      }
-    }
-
-    // WB loser -> LB
-    // WB R1 losers go to LB R1
-    // WB R2 losers go to LB R2
-    // WB R(k) losers go to LB R(2*(k-1)) for k>=2
-    let lbTargetRound: number;
-    if (wbRound === 1) {
-      lbTargetRound = 1;
-    } else {
-      lbTargetRound = 2 * (wbRound - 1);
-    }
-
-    const lbRoundNumber = wbRounds + lbTargetRound;
-    const lbMatchesInTarget = lbMatchesPerRound[lbTargetRound - 1];
-
-    if (lbMatchesInTarget > 0) {
-      let lbTargetPos: number;
-      let lbTargetSlot: 1 | 2;
-
-      if (wbRound === 1) {
-        // WB R1 losers pair up: pos 1&2 -> LB match 1, pos 3&4 -> LB match 2, etc.
-        lbTargetPos = Math.ceil(wbPos / 2);
-        lbTargetSlot = wbPos % 2 === 1 ? 1 : 2;
-      } else {
-        // WB R(k) losers drop into slot 2 of the corresponding LB even-round match
-        // They play against LB survivors (slot 1)
-        lbTargetPos = wbPos;
-        lbTargetSlot = 2;
-      }
-
-      const lbTargetId = getMatchId('lb', lbRoundNumber, lbTargetPos);
-      if (lbTargetId) {
-        const existing = updates.find((u) => u.id === r.id);
-        if (existing) {
-          existing.data.next_match_lose_id = lbTargetId;
-          existing.data.next_match_lose_slot = lbTargetSlot;
-        } else {
-          updates.push({
-            id: r.id,
-            data: {
-              next_match_lose_id: lbTargetId,
-              next_match_lose_slot: lbTargetSlot,
-            },
-          });
-        }
-      }
-    }
-
-    // WB Final winner -> Grand Final
-    if (wbRound === wbRounds) {
-      const gfId = getMatchId('final', wbRounds + lbRounds + 1, 1);
-      if (gfId) {
-        const existing = updates.find((u) => u.id === r.id);
-        if (existing) {
-          existing.data.next_match_win_id = gfId;
-          existing.data.next_match_win_slot = 1;
-        } else {
-          updates.push({
-            id: r.id,
-            data: { next_match_win_id: gfId, next_match_win_slot: 1 },
-          });
-        }
-      }
-    }
-  }
-
-  // --- Link LB matches ---
-  for (const r of enriched) {
-    if (r.bracket_side !== 'lb') continue;
-
-    const lbR = r.round_number - wbRounds; // 1-based LB round
-    const lbPos = r.pos;
-
-    if (lbR < lbRounds) {
-      // LB winner goes to next LB round
-      const nextLbR = lbR + 1;
-      const nextLbRoundNumber = wbRounds + nextLbR;
-      const nextLbMatchCount = lbMatchesPerRound[nextLbR - 1];
-
-      let nextLbPos: number;
-      let nextLbSlot: 1 | 2;
-
-      if (nextLbR % 2 === 0) {
-        // Next round is an even round (receives WB losers in slot 2)
-        // LB survivors go to slot 1
-        nextLbPos = lbPos;
-        nextLbSlot = 1;
-      } else {
-        // Next round is odd (internal LB), halves the field
-        nextLbPos = Math.ceil(lbPos / 2);
-        nextLbSlot = lbPos % 2 === 1 ? 1 : 2;
-      }
-
-      if (nextLbPos <= nextLbMatchCount) {
-        const nextLbId = getMatchId('lb', nextLbRoundNumber, nextLbPos);
-        if (nextLbId) {
-          updates.push({
-            id: r.id,
-            data: {
-              next_match_win_id: nextLbId,
-              next_match_win_slot: nextLbSlot,
-            },
-          });
-        }
-      }
-    } else {
-      // LB Final winner -> Grand Final slot 2
-      const gfId = getMatchId('final', wbRounds + lbRounds + 1, 1);
-      if (gfId) {
-        updates.push({
-          id: r.id,
-          data: { next_match_win_id: gfId, next_match_win_slot: 2 },
-        });
-      }
-    }
-  }
-
-  // --- Link Grand Final ---
-  if (grandFinalReset) {
-    const gfId = getMatchId('final', wbRounds + lbRounds + 1, 1);
-    const gfResetId = getMatchId('final', wbRounds + lbRounds + 2, 1);
-    if (gfId && gfResetId) {
-      // GF loser (if it's the WB winner who loses) -> GF Reset
-      // Both go to GF Reset
-      updates.push({
-        id: gfId,
-        data: {
-          next_match_lose_id: gfResetId,
-          next_match_lose_slot: 1,
-          next_match_win_id: gfResetId,
-          next_match_win_slot: 2,
-        },
-      });
-    }
-  }
-
-  // Apply all linkage updates — rollback all matches if any link fails
-  const linkErrors: string[] = [];
-  for (const u of updates) {
-    const { error: linkError } = await supabaseAdmin
-      .from('matches')
-      .update(u.data)
-      .eq('id', u.id)
-      .eq('tenant_id', ctx.tenantId);
-
-    if (linkError) {
-      linkErrors.push(`Match ${u.id}: ${linkError.message}`);
-    }
-  }
-
-  if (linkErrors.length > 0) {
-    logger.error('double elim linkage errors, rolling back:', linkErrors);
-    const matchIds = rows.map((r) => r.id);
-    await supabaseAdmin
-      .from('matches')
-      .delete()
-      .in('id', matchIds)
-      .eq('tenant_id', ctx.tenantId);
-    return res.status(500).json({
-      error:
-        'Failed to link double elimination bracket, all matches rolled back',
-    });
-  }
+  const rows = result.rows;
 
   // Log
   if (ctx?.staff?.id) {
