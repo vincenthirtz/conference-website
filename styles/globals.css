@@ -44,28 +44,55 @@
 }
 
 :root {
-  /* ─────── Brand palette ─────── */
-  --color-cyan: #2dccfd;
-  --color-cyan-deep: #2db4fd;
-  --color-blue: #4b79cf;
-  --color-teal: #4bc5cf;
-  --color-magenta: #e74694;
-  --color-pink: #ff006e;
-  --color-orange: #ff9c29;
-  --color-orange-deep: #ff4d00;
-  --color-amber: #ff8a00;
-  --color-purple: #ad20e2;
-  --color-purple-deep: #410854;
-  --color-rose: #b31fe4;
+  /* ─────── Palette de marque (logo violet / vert / jaune) ─────────────────
+   * REBRAND Lot A. Les 3 couleurs du logo + leurs échelles sont la nouvelle
+   * source de vérité. Les alias legacy (--color-cyan, --color-magenta, …) sont
+   * CONSERVÉS pour ne pas casser leurs ~200 consommateurs, mais REPOINTÉS sur
+   * la nouvelle palette (cyan supprimé → vert ; magenta/rose → violet ;
+   * orange/amber → jaune). Le sweep de ces alias vers les tokens directs se
+   * fait aux Lots C/D. Le néon (--color-neon-*) est retravaillé au Lot B.
+   * ⚠ Hex ESTIMÉS depuis l'aperçu PNG — à confirmer contre le SVG du logo. */
+  --color-violet-light: #cd85ec;
+  --color-violet: #b24be0;
+  --color-violet-deep: #6d1a9c;
+  --color-green-light: #a6dd9a;
+  --color-green: #7bc96a;
+  --color-green-deep: #4a9e3a;
+  --color-yellow-light: #f6ee7e;
+  --color-yellow: #f0e63c;
+  --color-yellow-deep: #b8ab12;
 
   /* ─────── WHITELABEL brand tokens (override layer) ───────
-   * Ces deux variables pilotent la lignée « marque » (primaire = violet,
-   * accent = magenta). Par DÉFAUT elles pointent sur les tokens historiques,
-   * donc le rendu est inchangé. Sur un custom_domain, `pages/_document.tsx`
-   * injecte `:root:root{ --brand-primary: <hex>; --brand-accent: <hex>; }`
+   * Lignée marque : primaire = violet, secondaire = vert, accent = jaune.
+   * Par défaut = palette logo. Sur un custom_domain, `pages/_document.tsx`
+   * injecte `:root:root{ --brand-primary/-secondary/-accent: <hex>; }`
    * (spécificité supérieure) qui remplace la valeur pour ce tenant. */
-  --brand-primary: var(--color-purple);
-  --brand-accent: var(--color-magenta);
+  --brand-primary: var(--color-violet);
+  --brand-secondary: var(--color-green);
+  --brand-accent: var(--color-yellow);
+
+  /* ─────── Alias legacy REPOINTÉS (compat — à sweeper Lots C/D) ─────── */
+  --color-purple: var(--color-violet);
+  --color-purple-deep: var(--color-violet-deep);
+  --color-rose: var(--color-violet);
+  --color-magenta: var(--color-violet);
+  --color-pink: var(--color-yellow-deep);
+  --color-cyan: var(--color-green);
+  --color-cyan-deep: var(--color-green-deep);
+  --color-teal: var(--color-green-light);
+  --color-blue: var(--color-green-deep);
+  --color-orange: var(--color-yellow);
+  --color-orange-deep: var(--color-yellow-deep);
+  --color-amber: var(--color-yellow);
+
+  /* ─────── Statut sémantique (DÉCOUPLÉ de la marque — D3) ───────
+   * success ≠ vert de marque, warning ≠ jaune de marque : sinon un
+   * « ✓ validé » se confond avec un simple accent décoratif. Namespace
+   * distinct, valeurs conventionnelles (emerald / amber / red / violet). */
+  --status-success: #16b364;
+  --status-warning: #f59e0b;
+  --status-error: #ef4444;
+  --status-info: var(--color-violet);
 
   /* ─────── Surfaces ─────── */
   --bg-base: #1b1130;
@@ -111,19 +138,19 @@
     var(--color-purple) 100%
   );
 
-  /* ─────── Glow / shadow accents ─────── */
+  /* ─────── Glow / shadow de marque (rebrand : jaune #f0e63c / violet #b24be0) ─────── */
   --glow-cta-soft:
-    0 0 20px rgba(255, 0, 110, 0.45), 0 0 40px rgba(231, 70, 148, 0.3),
+    0 0 20px rgba(240, 230, 60, 0.45), 0 0 40px rgba(178, 75, 224, 0.3),
     0 8px 24px rgba(0, 0, 0, 0.35);
   --glow-cta-strong:
-    0 0 28px rgba(255, 0, 110, 0.7), 0 0 60px rgba(231, 70, 148, 0.45),
+    0 0 28px rgba(240, 230, 60, 0.7), 0 0 60px rgba(178, 75, 224, 0.45),
     0 10px 28px rgba(0, 0, 0, 0.4);
   --glow-warm-soft:
-    0 10px 25px rgba(0, 0, 0, 0.35), 0 0 0 3px rgba(173, 32, 226, 0.22);
+    0 10px 25px rgba(0, 0, 0, 0.35), 0 0 0 3px rgba(178, 75, 224, 0.22);
   --glow-warm-strong:
-    0 14px 30px rgba(173, 32, 226, 0.35), 0 0 0 4px rgba(255, 156, 41, 0.28);
+    0 14px 30px rgba(178, 75, 224, 0.35), 0 0 0 4px rgba(240, 230, 60, 0.28);
   --glow-warm-boost:
-    0 18px 35px rgba(255, 156, 41, 0.3), 0 0 0 5px rgba(173, 32, 226, 0.24);
+    0 18px 35px rgba(240, 230, 60, 0.3), 0 0 0 5px rgba(178, 75, 224, 0.24);
 
   /* ─────── Neon palette (cyberpunk-intensified) ─────── */
   --color-neon-cyan: #00f0ff;
@@ -171,7 +198,7 @@
     var(--color-neon-cyan)
   );
   --gradient-neon-electric: linear-gradient(
-    135deg,
+    135deg,nop 
     var(--color-neon-blue) 0%,
     var(--color-neon-violet) 50%,
     var(--color-neon-magenta) 100%
