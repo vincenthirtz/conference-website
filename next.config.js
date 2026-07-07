@@ -29,11 +29,6 @@ const nextConfig = {
    * Transpile them so they're bundled correctly server-side.
    */
   transpilePackages: ['@supabase/supabase-js', '@supabase/ssr'],
-  api: {
-    bodyParser: {
-      sizeLimit: '1mb',
-    },
-  },
   async headers() {
     return [
       {

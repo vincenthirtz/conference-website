@@ -5,6 +5,11 @@
 [build.environment]
   NODE_VERSION = "20.18.1"
   NPM_VERSION = "10.8.2"
+  # `next build` (Turbopack + TypeScript) peut dépasser le heap Node par défaut
+  # (~2 Go) sur la machine de build : la surface de types i18n (locales JSON
+  # volumineuses + assertions de parité `typeof fr` + génériques useT/useAdminT)
+  # a fait OOM le build. On donne 4 Go de heap (l'image Netlify a ~8 Go de RAM).
+  NODE_OPTIONS = "--max-old-space-size=4096"
 
 [functions]
   directory = "netlify/functions"
