@@ -208,6 +208,53 @@ describe('validateStageSettings', () => {
     });
   });
 
+  // FFA settings
+  describe('ffa', () => {
+    it('accepts a valid FFA settings object', () => {
+      const result = validateStageSettings('ffa', {
+        lobby_size: 16,
+        points_table: { '1': 100, '2': 80, '3': 60 },
+        tiebreak: 'most_firsts',
+      });
+      expect(result.valid).toBe(true);
+    });
+
+    it('applies defaults for lobby_size, points_table and tiebreak', () => {
+      const result = validateStageSettings('ffa', {});
+      expect(result.valid).toBe(true);
+      if (result.valid) {
+        expect(result.data.lobby_size).toBe(8);
+        expect(result.data.tiebreak).toBe('best_placement');
+        expect(result.data.points_table).toMatchObject({
+          '1': 100,
+          '8': 10,
+        });
+      }
+    });
+
+    it('rejects a non-numeric points_table value', () => {
+      const result = validateStageSettings('ffa', {
+        points_table: { '1': 'lots' },
+      });
+      expect(result.valid).toBe(false);
+    });
+
+    it('rejects lobby_size out of range', () => {
+      expect(validateStageSettings('ffa', { lobby_size: 1 }).valid).toBe(false);
+      expect(validateStageSettings('ffa', { lobby_size: 65 }).valid).toBe(
+        false
+      );
+      expect(validateStageSettings('ffa', { lobby_size: 8.5 }).valid).toBe(
+        false
+      );
+    });
+
+    it('rejects an invalid tiebreak', () => {
+      const result = validateStageSettings('ffa', { tiebreak: 'coin_flip' });
+      expect(result.valid).toBe(false);
+    });
+  });
+
   // Error message format
   describe('error messages', () => {
     it('includes field path in error message', () => {

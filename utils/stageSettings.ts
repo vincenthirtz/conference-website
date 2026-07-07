@@ -97,6 +97,36 @@ const showmatchSettingsSchema = z
   })
   .passthrough();
 
+/** Default points table (mirrors the leagues default). */
+const FFA_DEFAULT_POINTS_TABLE: Record<string, number> = {
+  '1': 100,
+  '2': 80,
+  '3': 60,
+  '4': 50,
+  '5': 40,
+  '6': 30,
+  '7': 20,
+  '8': 10,
+};
+
+/**
+ * FFA / N-competitor stage.
+ * Same points_table shape as the leagues feature (rank string → points).
+ */
+const ffaSettingsSchema = z
+  .object({
+    lobby_size: z.number().int().min(2).max(64).optional().default(8),
+    points_table: z
+      .record(z.string(), z.number())
+      .optional()
+      .default(FFA_DEFAULT_POINTS_TABLE),
+    tiebreak: z
+      .enum(['total_points', 'best_placement', 'most_firsts'])
+      .optional()
+      .default('best_placement'),
+  })
+  .passthrough();
+
 /** Other / fallback — accept anything but limit depth */
 const otherSettingsSchema = z.record(z.string(), z.unknown());
 
@@ -110,6 +140,7 @@ const schemasByType: Record<StageType, z.ZodTypeAny> = {
   round_robin: roundRobinSettingsSchema,
   group: groupSettingsSchema,
   showmatch: showmatchSettingsSchema,
+  ffa: ffaSettingsSchema,
   other: otherSettingsSchema,
 };
 

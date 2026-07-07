@@ -13,6 +13,7 @@ import Modal from '@/components/admin/Modal';
 import type { StaffProps, Stage, StageType, Tournament } from '@/types/admin';
 import AdvancementRulesEditor from '@/components/admin/AdvancementRulesEditor';
 import type { AdvancementRules } from '@/components/admin/AdvancementRulesEditor';
+import FfaLobbiesManager from '@/components/admin/ffa/FfaLobbiesManager';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 import { logger } from '../../../utils/logger';
@@ -55,6 +56,8 @@ function stageTypeLabel(type: StageType | null, t: Dict) {
       return t.typeRoundRobin;
     case 'showmatch':
       return t.typeShowmatch;
+    case 'ffa':
+      return t.typeFfa;
     case 'other':
       return t.typeOther;
     default:
@@ -74,6 +77,8 @@ function stageTypeColor(type: StageType | null) {
       return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30';
     case 'showmatch':
       return 'bg-pink-500/20 text-pink-300 border-pink-500/30';
+    case 'ffa':
+      return 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30';
     default:
       return 'bg-neutral-500/20 text-neutral-300 border-neutral-500/30';
   }
@@ -1033,6 +1038,14 @@ function AdminStagePage({ staff }: StaffProps) {
               <div className="grid gap-6 lg:grid-cols-3">
                 {/* Left Column - Info */}
                 <div className="lg:col-span-2 space-y-6">
+                  {/* FFA lobbies manager (isolé, uniquement pour les phases ffa) */}
+                  {stage.stage_type === 'ffa' && (
+                    <FfaLobbiesManager
+                      stageId={stage.id}
+                      tournamentId={stage.tournament_id}
+                    />
+                  )}
+
                   {/* Stage Overview Card */}
                   <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
                     <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">

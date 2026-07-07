@@ -24,7 +24,23 @@ type StageType =
   | 'swiss'
   | 'round_robin'
   | 'showmatch'
+  | 'ffa'
   | 'other';
+
+type FfaTiebreak = 'total_points' | 'best_placement' | 'most_firsts';
+
+type FfaPointsRow = { rank: string; points: string };
+
+const FFA_DEFAULT_POINTS_ROWS: FfaPointsRow[] = [
+  { rank: '1', points: '100' },
+  { rank: '2', points: '80' },
+  { rank: '3', points: '60' },
+  { rank: '4', points: '50' },
+  { rank: '5', points: '40' },
+  { rank: '6', points: '30' },
+  { rank: '7', points: '20' },
+  { rank: '8', points: '10' },
+];
 
 type Tournament = {
   id: string;
@@ -60,6 +76,7 @@ export const getServerSideProps = withStaffPage('manager');
 
 function AdminStageCreatePage({ staff }: StaffProps) {
   const t = useAdminT('adminStagesCreate');
+  const tf = useAdminT('adminFfa');
   const router = useRouter();
   const { addToast } = useToast();
   const { adminFetchJson } = useAdminFetch();
@@ -94,6 +111,51 @@ function AdminStageCreatePage({ staff }: StaffProps) {
     end_date: '',
     settingsRaw: '{\n  \n}',
   });
+
+  // FFA settings (only used when stage_type === 'ffa')
+  const [ffaLobbySize, setFfaLobbySize] = useState('8');
+  const [ffaTiebreak, setFfaTiebreak] = useState<FfaTiebreak>('best_placement');
+  const [ffaPointsRows, setFfaPointsRows] = useState<FfaPointsRow[]>(
+    FFA_DEFAULT_POINTS_ROWS
+  );
+
+  function updateFfaRow(index: number, key: keyof FfaPointsRow, value: string) {
+    setFfaPointsRows((prev) =>
+      prev.map((r, i) => (i === index ? { ...r, [key]: value } : r))
+    );
+  }
+
+  function addFfaRow() {
+    setFfaPointsRows((prev) => {
+      const nextRank = String(prev.length + 1);
+      return [...prev, { rank: nextRank, points: '0' }];
+    });
+  }
+
+  function removeFfaRow(index: number) {
+    setFfaPointsRows((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function buildFfaSettings(): {
+    lobby_size: number;
+    points_table: Record<string, number>;
+    tiebreak: FfaTiebreak;
+  } {
+    const points_table: Record<string, number> = {};
+    for (const row of ffaPointsRows) {
+      const rank = row.rank.trim();
+      if (!rank) continue;
+      const pts = Number(row.points);
+      if (!Number.isFinite(pts)) continue;
+      points_table[rank] = pts;
+    }
+    const lobbySize = Number(ffaLobbySize);
+    return {
+      lobby_size: Number.isInteger(lobbySize) && lobbySize >= 2 ? lobbySize : 8,
+      points_table,
+      tiebreak: ffaTiebreak,
+    };
+  }
 
   function updateField<K extends keyof typeof form>(
     key: K,
@@ -169,6 +231,16 @@ function AdminStageCreatePage({ staff }: StaffProps) {
     } catch (err: unknown) {
       setErrorMsg((err as Error)?.message ?? t.errSettingsGeneric);
       return;
+    }
+
+    // Pour une phase FFA, on injecte les réglages structurés dans settings.
+    if (form.stage_type === 'ffa') {
+      const ffa = buildFfaSettings();
+      if (Object.keys(ffa.points_table).length === 0) {
+        setErrorMsg(tf.errPointsTableEmpty);
+        return;
+      }
+      settings = { ...(settings || {}), ...ffa };
     }
 
     setSubmitting(true);
@@ -322,6 +394,7 @@ function AdminStageCreatePage({ staff }: StaffProps) {
                     <option value="swiss">{t.stageTypeSwiss}</option>
                     <option value="round_robin">{t.stageTypeRoundRobin}</option>
                     <option value="showmatch">{t.stageTypeShowmatch}</option>
+                    <option value="ffa">{tf.stageTypeFfa}</option>
                     <option value="other">{t.stageTypeOther}</option>
                   </select>
                 </div>
@@ -401,6 +474,116 @@ function AdminStageCreatePage({ staff }: StaffProps) {
                 </div>
               </div>
             </section>
+
+            {/* FFA settings (structured) */}
+            {form.stage_type === 'ffa' && (
+              <section className="space-y-4 rounded-xl border border-indigo-700/40 bg-indigo-900/10 p-4">
+                <div>
+                  <h2 className="font-semibold text-lg">{tf.settingsTitle}</h2>
+                  <p className="text-xs text-neutral-400">{tf.settingsHelp}</p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm mb-1 text-neutral-300">
+                      {tf.lobbySizeLabel}
+                    </label>
+                    <input
+                      type="number"
+                      min={2}
+                      max={64}
+                      className="w-full px-3 py-2 rounded bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      value={ffaLobbySize}
+                      onChange={(e) => setFfaLobbySize(e.target.value)}
+                    />
+                    <p className="text-xs text-neutral-500 mt-1">
+                      {tf.lobbySizeHelp}
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm mb-1 text-neutral-300">
+                      {tf.tiebreakLabel}
+                    </label>
+                    <select
+                      className="w-full px-3 py-2 rounded bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      value={ffaTiebreak}
+                      onChange={(e) =>
+                        setFfaTiebreak(e.target.value as FfaTiebreak)
+                      }
+                    >
+                      <option value="best_placement">
+                        {tf.tiebreakBestPlacement}
+                      </option>
+                      <option value="total_points">
+                        {tf.tiebreakTotalPoints}
+                      </option>
+                      <option value="most_firsts">
+                        {tf.tiebreakMostFirsts}
+                      </option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-sm text-neutral-300">
+                      {tf.pointsTableLabel}
+                    </label>
+                    <button
+                      type="button"
+                      onClick={addFfaRow}
+                      className="text-xs px-2 py-1 rounded border border-neutral-600 text-neutral-200 hover:bg-neutral-700"
+                    >
+                      {tf.addRow}
+                    </button>
+                  </div>
+                  <p className="text-xs text-neutral-500 mb-2">
+                    {tf.pointsTableHelp}
+                  </p>
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-[80px_1fr_40px] gap-2 text-xs text-neutral-500 px-1">
+                      <span>{tf.placement}</span>
+                      <span>{tf.points}</span>
+                      <span />
+                    </div>
+                    {ffaPointsRows.map((row, i) => (
+                      <div
+                        key={i}
+                        className="grid grid-cols-[80px_1fr_40px] gap-2 items-center"
+                      >
+                        <input
+                          type="number"
+                          min={1}
+                          className="w-full px-2 py-1.5 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          value={row.rank}
+                          onChange={(e) =>
+                            updateFfaRow(i, 'rank', e.target.value)
+                          }
+                        />
+                        <input
+                          type="number"
+                          className="w-full px-2 py-1.5 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          value={row.points}
+                          onChange={(e) =>
+                            updateFfaRow(i, 'points', e.target.value)
+                          }
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeFfaRow(i)}
+                          className="text-neutral-400 hover:text-red-400 text-sm"
+                          aria-label={tf.removeRow}
+                          title={tf.removeRow}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </section>
+            )}
 
             {/* Settings JSON */}
             <section className="space-y-3">

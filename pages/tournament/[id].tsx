@@ -457,6 +457,17 @@ export default function TournamentPage({
                   </Button>
                 </Link>
 
+                {stages.some((s) => s.stage_type === 'ffa') && (
+                  <Link href={`${tournamentPath}/ffa`}>
+                    <Button
+                      type="button"
+                      className="px-6 py-2.5 text-xs font-semibold rounded-full bg-white/5 backdrop-blur-sm border border-white/20 hover:border-amber-400/60 hover:bg-amber-500/10 transition-all"
+                    >
+                      {t.ctaFfaStandings}
+                    </Button>
+                  </Link>
+                )}
+
                 {tournament.status === 'completed' && (
                   <Link href={`${tournamentPath}/podium`}>
                     <Button

@@ -84,6 +84,7 @@ export type StageType =
   | 'swiss'
   | 'round_robin'
   | 'showmatch'
+  | 'ffa'
   | 'other';
 
 export type TiebreakerPolicy = 'manual' | 'extra_round' | 'map_diff' | 'seed';

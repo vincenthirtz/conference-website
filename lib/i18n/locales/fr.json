@@ -2530,6 +2530,7 @@
     "ctaBracket": "Voir le bracket",
     "ctaAllMatches": "Tous les matchs",
     "ctaTopMaps": "Top maps",
+    "ctaFfaStandings": "Classement FFA",
     "ctaOfficialPodium": "Podium officiel",
     "ctaRegisterTeam": "Inscrire mon équipe",
     "rulesLink": "Règlement du tournoi",
@@ -3579,6 +3580,22 @@
     "rank": "Rang",
     "team": "Équipe",
     "prize": "Récompense"
+  },
+  "ffaStandings": {
+    "headTitle": "Classement FFA · {name}",
+    "metaDescription": "Classement Free-For-All de {name} : points cumulés, manches jouées, meilleure place et nombre de victoires par équipe.",
+    "title": "Classement FFA",
+    "eyebrow": "Free-For-All",
+    "heading": "Classement FFA",
+    "backToTournament": "← Retour au tournoi",
+    "viewOn": "Voir sur {site}",
+    "colRank": "Rang",
+    "colTeam": "Équipe",
+    "colPoints": "Points",
+    "colLobbies": "Manches",
+    "colBest": "Meilleure place",
+    "colFirsts": "Victoires",
+    "empty": "Aucun résultat FFA n'est disponible pour ce tournoi pour le moment."
   },
   "embedSchedule": {
     "title": "Calendrier",
