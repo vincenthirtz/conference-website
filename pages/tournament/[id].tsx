@@ -12,6 +12,8 @@ import type { MatchStatus } from '@/types/admin';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
+import { useLang } from '@/lib/i18n/LanguageProvider';
+import { formatDateRange } from '@/utils/tournamentDates';
 
 import { logger } from '../../utils/logger';
 type TournamentDetailDict = ReturnType<typeof useT<'tournamentDetail'>>;
@@ -275,7 +277,7 @@ export default function TournamentPage({
   leagues,
 }: Omit<TournamentPageProps, 'seo'>) {
   const t = useT('tournamentDetail');
-  const locale = useLocale();
+  const { lang } = useLang();
   const totalTeams = teams.length;
   const now = useMemo(() => new Date(), []);
   const finishedMatches = matches.filter((m) => m.status === 'finished');
@@ -317,10 +319,10 @@ export default function TournamentPage({
 
   const mainStage = stages[0];
 
-  const dateRangeLabel = formatTournamentDates(
+  const dateRangeLabel = formatDateRange(
     tournament.start_date,
     tournament.end_date,
-    locale
+    lang
   );
 
   const statusLabel = getStatusLabelT(tournament.status, t);
@@ -962,19 +964,36 @@ const OPEN_REGISTRATION_STATUSES = new Set([
 
 function buildTournamentSeo(tournament: Tournament): SeoProps {
   const game = tournament.game || 'Overwatch';
-  const dateLabel = formatTournamentDates(
+  const dateLabelFr = formatDateRange(
     tournament.start_date,
     tournament.end_date,
-    'fr-FR'
+    'fr'
   );
-  const statusLabel = getStatusLabel(tournament.status);
+  const dateLabelEn = formatDateRange(
+    tournament.start_date,
+    tournament.end_date,
+    'en'
+  );
+  const statusLabelFr = getStatusLabel(tournament.status);
+  const statusLabelEn = getStatusLabelEn(tournament.status);
 
-  const descriptionParts = [
+  const descriptionFr = [
     `${tournament.name} — tournoi ${game} OW Women's Cup`,
-    dateLabel ? dateLabel.toLowerCase() : null,
-    `(${statusLabel.toLowerCase()}).`,
+    dateLabelFr ? dateLabelFr.toLowerCase() : null,
+    `(${statusLabelFr.toLowerCase()}).`,
     'Bracket, résultats, équipes et calendrier des matchs.',
-  ].filter(Boolean);
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  const descriptionEn = [
+    `${tournament.name} — ${game} tournament, OW Women's Cup`,
+    dateLabelEn ? dateLabelEn.toLowerCase() : null,
+    `(${statusLabelEn.toLowerCase()}).`,
+    'Bracket, results, teams and match schedule.',
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   const canonicalUrl = `${SEO_BASE_URL}/tournament/${
     tournament.slug || tournament.id
@@ -1021,52 +1040,21 @@ function buildTournamentSeo(tournament: Tournament): SeoProps {
 
   return {
     title: tournament.name,
-    description: descriptionParts.join(' '),
+    description: { fr: descriptionFr, en: descriptionEn },
     type: 'website',
     jsonLd,
   };
 }
 
 const tournamentSeoFallback: SeoProps = {
-  title: 'Tournoi',
-  description:
-    "Suivez les tournois Overwatch de la OW Women's Cup : bracket, résultats, équipes et calendrier des matchs.",
+  title: { fr: 'Tournoi', en: 'Tournament' },
+  description: {
+    fr: "Suivez les tournois Overwatch de la OW Women's Cup : bracket, résultats, équipes et calendrier des matchs.",
+    en: "Follow the OW Women's Cup Overwatch tournaments: bracket, results, teams and match schedule.",
+  },
 };
 
 TournamentPage.seo = tournamentSeoFallback;
-
-function formatTournamentDates(
-  start: string | null | undefined,
-  end: string | null | undefined,
-  locale: string
-): string | null {
-  if (!start && !end) return null;
-
-  const opts: Intl.DateTimeFormatOptions = {
-    day: '2-digit',
-    month: '2-digit',
-  };
-
-  if (start && end) {
-    const s = new Date(start);
-    const e = new Date(end);
-    if (s.getTime() === e.getTime()) {
-      return `Le ${s.toLocaleDateString(locale, opts)}`;
-    }
-    return `Du ${s.toLocaleDateString(
-      locale,
-      opts
-    )} au ${e.toLocaleDateString(locale, opts)}`;
-  }
-
-  if (start) {
-    const s = new Date(start);
-    return `À partir du ${s.toLocaleDateString(locale, opts)}`;
-  }
-
-  const e = new Date(end!);
-  return `Jusqu'au ${e.toLocaleDateString(locale, opts)}`;
-}
 
 function formatMatchDate(iso: string | null, locale: string): string | null {
   if (!iso) return null;
@@ -1092,6 +1080,23 @@ function getStatusLabel(status: string): string {
     case 'finished':
     case 'completed':
       return 'Terminé';
+    default:
+      return status;
+  }
+}
+
+// Pendant anglophone de getStatusLabel : utilisé uniquement par le SEO
+// (buildTournamentSeo, hors contexte de hook). Miroir de la version FR.
+function getStatusLabelEn(status: string): string {
+  switch (status) {
+    case 'upcoming':
+      return 'Upcoming';
+    case 'running':
+    case 'ongoing':
+      return 'Ongoing';
+    case 'finished':
+    case 'completed':
+      return 'Completed';
     default:
       return status;
   }

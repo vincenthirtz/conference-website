@@ -14,6 +14,8 @@ import { findTournamentByIdOrSlug } from '@/utils/tournamentLookup';
 import type { MatchStatus as BaseMatchStatus } from '@/types/admin';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
+import { useLang } from '@/lib/i18n/LanguageProvider';
+import { formatDateRange } from '@/utils/tournamentDates';
 
 import { logger } from '../../../utils/logger';
 type MatchStatus = BaseMatchStatus | 'completed';
@@ -159,16 +161,17 @@ export default function TournamentMatchesPage({
   const router = useRouter();
   const t = useT('tournamentMatches');
   const locale = useLocale();
+  const { lang } = useLang();
   const tournamentPath = `/tournament/${tournament.slug || tournament.id}`;
   const statusFilter =
     typeof router.query.status === 'string' ? router.query.status : 'all';
   const stageFilter =
     typeof router.query.stageId === 'string' ? router.query.stageId : 'all';
 
-  const dateRangeLabel = formatTournamentDates(
+  const dateRangeLabel = formatDateRange(
     tournament.start_date,
     tournament.end_date,
-    locale
+    lang
   );
   const statusLabel = getStatusLabel(tournament.status, t);
   const statusColor = getStatusChipColor(tournament.status);
@@ -502,39 +505,6 @@ function groupMatchesByDay(
   });
 
   return arr;
-}
-
-function formatTournamentDates(
-  start: string | null | undefined,
-  end: string | null | undefined,
-  locale: string
-): string | null {
-  if (!start && !end) return null;
-
-  const opts: Intl.DateTimeFormatOptions = {
-    day: '2-digit',
-    month: '2-digit',
-  };
-
-  if (start && end) {
-    const s = new Date(start);
-    const e = new Date(end);
-    if (s.getTime() === e.getTime()) {
-      return `Le ${s.toLocaleDateString(locale, opts)}`;
-    }
-    return `Du ${s.toLocaleDateString(
-      locale,
-      opts
-    )} au ${e.toLocaleDateString(locale, opts)}`;
-  }
-
-  if (start) {
-    const s = new Date(start);
-    return `À partir du ${s.toLocaleDateString(locale, opts)}`;
-  }
-
-  const e = new Date(end!);
-  return `Jusqu'au ${e.toLocaleDateString(locale, opts)}`;
 }
 
 function formatMatchDate(iso: string | null, locale: string): string | null {

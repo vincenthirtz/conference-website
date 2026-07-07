@@ -296,12 +296,19 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
 
 function buildLeaderboardSeo(players: LeaderboardPlayer[]): SeoProps {
   const count = players.length;
-  const description =
+  const plural = count > 1;
+  const descriptionFr =
     count > 0
       ? `Classement des joueuses par rating : ${count} joueuse${
-          count > 1 ? 's' : ''
-        } classée${count > 1 ? 's' : ''}. Ratings, matchs joués et bilan victoires-défaites, calculés sur les matchs officiels.`
-      : leaderboardSeoFallback.description;
+          plural ? 's' : ''
+        } classée${plural ? 's' : ''}. Ratings, matchs joués et bilan victoires-défaites, calculés sur les matchs officiels.`
+      : leaderboardSeoFallbackFr;
+  const descriptionEn =
+    count > 0
+      ? `Player rating leaderboard: ${count} ranked player${
+          plural ? 's' : ''
+        }. Ratings, matches played and win-loss records, computed from official matches.`
+      : leaderboardSeoFallbackEn;
 
   const jsonLd: Record<string, unknown> = {
     '@context': 'https://schema.org',
@@ -317,16 +324,26 @@ function buildLeaderboardSeo(players: LeaderboardPlayer[]): SeoProps {
   };
 
   return {
-    title: 'Classement des joueuses — rating',
-    description,
+    title: {
+      fr: 'Classement des joueuses — rating',
+      en: 'Player leaderboard — rating',
+    },
+    description: { fr: descriptionFr, en: descriptionEn },
     jsonLd,
   };
 }
 
+const leaderboardSeoFallbackFr =
+  'Classement des joueuses par rating : ratings, matchs joués et bilan victoires-défaites, calculés sur les matchs officiels.';
+const leaderboardSeoFallbackEn =
+  'Player rating leaderboard: ratings, matches played and win-loss records, computed from official matches.';
+
 const leaderboardSeoFallback: SeoProps = {
-  title: 'Classement des joueuses — rating',
-  description:
-    'Classement des joueuses par rating : ratings, matchs joués et bilan victoires-défaites, calculés sur les matchs officiels.',
+  title: {
+    fr: 'Classement des joueuses — rating',
+    en: 'Player leaderboard — rating',
+  },
+  description: { fr: leaderboardSeoFallbackFr, en: leaderboardSeoFallbackEn },
 };
 
 LeaderboardPage.seo = leaderboardSeoFallback;

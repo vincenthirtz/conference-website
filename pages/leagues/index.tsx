@@ -220,12 +220,19 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
 
 function buildLeaguesSeo(leagues: League[]): SeoProps {
   const count = leagues.length;
-  const description =
+  const plural = count > 1;
+  const descriptionFr =
     count > 0
-      ? `${count} ligue${count > 1 ? 's' : ''} et saison${
-          count > 1 ? 's' : ''
+      ? `${count} ligue${plural ? 's' : ''} et saison${
+          plural ? 's' : ''
         } OW Women’s Cup : classements cumulés des équipes sur plusieurs tournois.`
-      : leaguesSeoFallback.description;
+      : leaguesSeoFallbackFr;
+  const descriptionEn =
+    count > 0
+      ? `${count} OW Women’s Cup league${plural ? 's' : ''} and season${
+          plural ? 's' : ''
+        }: aggregated team standings across multiple tournaments.`
+      : leaguesSeoFallbackEn;
 
   const jsonLd: Record<string, unknown> = {
     '@context': 'https://schema.org',
@@ -240,16 +247,26 @@ function buildLeaguesSeo(leagues: League[]): SeoProps {
   };
 
   return {
-    title: 'Ligues & saisons — OW Women’s Cup',
-    description,
+    title: {
+      fr: 'Ligues & saisons — OW Women’s Cup',
+      en: 'Leagues & seasons — OW Women’s Cup',
+    },
+    description: { fr: descriptionFr, en: descriptionEn },
     jsonLd,
   };
 }
 
+const leaguesSeoFallbackFr =
+  'Les ligues et saisons OW Women’s Cup : classements cumulés des équipes sur plusieurs tournois.';
+const leaguesSeoFallbackEn =
+  'OW Women’s Cup leagues and seasons: aggregated team standings across multiple tournaments.';
+
 const leaguesSeoFallback: SeoProps = {
-  title: 'Ligues & saisons — OW Women’s Cup',
-  description:
-    'Les ligues et saisons OW Women’s Cup : classements cumulés des équipes sur plusieurs tournois.',
+  title: {
+    fr: 'Ligues & saisons — OW Women’s Cup',
+    en: 'Leagues & seasons — OW Women’s Cup',
+  },
+  description: { fr: leaguesSeoFallbackFr, en: leaguesSeoFallbackEn },
 };
 
 LeaguesPage.seo = leaguesSeoFallback;

@@ -29,6 +29,8 @@ import type {
 import { readLeagueDetail } from '@/utils/leagues/readLeagueDetail';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { useT } from '@/lib/i18n/useT';
+import { useLang, type Lang } from '@/lib/i18n/LanguageProvider';
+import { localeTag } from '@/lib/i18n/useLocale';
 
 type LeagueDetailDict = ReturnType<typeof useT<'leagueDetail'>>;
 
@@ -56,6 +58,15 @@ const STATUS_LABELS: Record<LeagueStatus, string> = {
   archived: 'Archivée',
 };
 
+// Pendant anglophone de STATUS_LABELS : utilisé uniquement par le SEO
+// (buildLeagueSeo, hors contexte de hook).
+const STATUS_LABELS_EN: Record<LeagueStatus, string> = {
+  draft: 'Draft',
+  active: 'Ongoing',
+  finished: 'Completed',
+  archived: 'Archived',
+};
+
 const STATUS_CLASSES: Record<LeagueStatus, string> = {
   draft: 'bg-neutral-500/15 text-neutral-300',
   active: 'bg-emerald-500/15 text-emerald-400',
@@ -63,21 +74,21 @@ const STATUS_CLASSES: Record<LeagueStatus, string> = {
   archived: 'bg-neutral-500/15 text-neutral-400',
 };
 
-function formatDate(iso: string | null): string | null {
+function formatDate(iso: string | null, lang: Lang): string | null {
   if (!iso) return null;
-  return new Date(iso).toLocaleDateString('fr-FR', {
+  return new Date(iso).toLocaleDateString(localeTag(lang), {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
   });
 }
 
-function periodLabel(league: League): string | null {
-  const start = formatDate(league.start_date);
-  const end = formatDate(league.end_date);
+function periodLabel(league: League, lang: Lang): string | null {
+  const start = formatDate(league.start_date, lang);
+  const end = formatDate(league.end_date, lang);
   if (start && end) return `${start} — ${end}`;
-  if (start) return `À partir du ${start}`;
-  if (end) return `Jusqu'au ${end}`;
+  if (start) return lang === 'fr' ? `À partir du ${start}` : `From ${start}`;
+  if (end) return lang === 'fr' ? `Jusqu'au ${end}` : `Until ${end}`;
   return null;
 }
 
@@ -151,9 +162,10 @@ export default function LeagueDetailPage({
 
 function Detail({ data }: { data: LeagueDetailResponse }) {
   const t = useT('leagueDetail');
+  const { lang } = useLang();
   const statusLabels = getStatusLabels(t);
   const { league, standings, tournaments } = data;
-  const period = periodLabel(league);
+  const period = periodLabel(league, lang);
 
   return (
     <>
@@ -406,19 +418,35 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
 
 function buildLeagueSeo(data: LeagueDetailResponse): SeoProps {
   const { league, standings } = data;
-  const period = periodLabel(league);
-  const statusLabel = STATUS_LABELS[league.status];
+  const periodFr = periodLabel(league, 'fr');
+  const periodEn = periodLabel(league, 'en');
+  const statusLabelFr = STATUS_LABELS[league.status];
+  const statusLabelEn = STATUS_LABELS_EN[league.status];
+  const plural = standings.length > 1;
 
-  const descriptionParts = [
+  const descriptionFr = [
     `Classement cumulé de la saison ${league.name}`,
-    period ? `(${period})` : null,
-    `— ${statusLabel.toLowerCase()}.`,
+    periodFr ? `(${periodFr})` : null,
+    `— ${statusLabelFr.toLowerCase()}.`,
     standings.length > 0
-      ? `${standings.length} équipe${standings.length > 1 ? 's' : ''} classée${
-          standings.length > 1 ? 's' : ''
+      ? `${standings.length} équipe${plural ? 's' : ''} classée${
+          plural ? 's' : ''
         }.`
       : null,
-  ].filter(Boolean);
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  const descriptionEn = [
+    `Aggregated standings for the ${league.name} season`,
+    periodEn ? `(${periodEn})` : null,
+    `— ${statusLabelEn.toLowerCase()}.`,
+    standings.length > 0
+      ? `${standings.length} ranked team${plural ? 's' : ''}.`
+      : null,
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   const jsonLd: Record<string, unknown> = {
     '@context': 'https://schema.org',
@@ -435,16 +463,21 @@ function buildLeagueSeo(data: LeagueDetailResponse): SeoProps {
   };
 
   return {
-    title: `${league.name} — classement`,
-    description: descriptionParts.join(' '),
+    title: {
+      fr: `${league.name} — classement`,
+      en: `${league.name} — standings`,
+    },
+    description: { fr: descriptionFr, en: descriptionEn },
     jsonLd,
   };
 }
 
 const leagueDetailSeoFallback: SeoProps = {
-  title: 'Ligue',
-  description:
-    'Classement cumulé des équipes et tournois de la saison OW Women’s Cup.',
+  title: { fr: 'Ligue', en: 'League' },
+  description: {
+    fr: 'Classement cumulé des équipes et tournois de la saison OW Women’s Cup.',
+    en: 'Aggregated team and tournament standings for the OW Women’s Cup season.',
+  },
 };
 
 LeagueDetailPage.seo = leagueDetailSeoFallback;

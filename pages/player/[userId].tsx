@@ -784,12 +784,21 @@ function buildPlayerSeo(profile: PlayerProfileResponse): SeoProps {
   const winRate = total > 0 ? Math.round((player.wins / total) * 100) : null;
   const rating = Math.round(player.rating);
 
-  const description =
+  const plural = player.gamesPlayed > 1;
+
+  const descriptionFr =
     `Rang #${player.rank} · ${rating} de rating · ` +
     `${player.wins}V-${player.losses}D` +
     (winRate !== null ? ` (${winRate}% de victoires)` : '') +
-    ` sur ${player.gamesPlayed} match${player.gamesPlayed > 1 ? 's' : ''}. ` +
+    ` sur ${player.gamesPlayed} match${plural ? 's' : ''}. ` +
     `Progression, derniers matchs et face-à-face de ${label}.`;
+
+  const descriptionEn =
+    `Rank #${player.rank} · ${rating} rating · ` +
+    `${player.wins}W-${player.losses}L` +
+    (winRate !== null ? ` (${winRate}% win rate)` : '') +
+    ` across ${player.gamesPlayed} match${plural ? 'es' : ''}. ` +
+    `Progression, recent matches and head-to-head for ${label}.`;
 
   // JSON-LD ProfilePage → mainEntity Person.
   const jsonLd: Record<string, unknown> = {
@@ -805,8 +814,11 @@ function buildPlayerSeo(profile: PlayerProfileResponse): SeoProps {
   };
 
   return {
-    title: `Profil de ${label} — ${rating}`,
-    description,
+    title: {
+      fr: `Profil de ${label} — ${rating}`,
+      en: `${label}'s profile — ${rating}`,
+    },
+    description: { fr: descriptionFr, en: descriptionEn },
     ...(player.avatarUrl ? { image: player.avatarUrl } : {}),
     jsonLd,
   };
@@ -816,9 +828,11 @@ function buildPlayerSeo(profile: PlayerProfileResponse): SeoProps {
 // `_app.tsx` ait `pageProps.seo`). En pratique l'ISR fournit toujours le SEO
 // dynamique via `props.seo`.
 const playerProfileSeoFallback: SeoProps = {
-  title: 'Profil joueuse',
-  description:
-    'Profil public : rating, progression, derniers matchs et face-à-face de la joueuse.',
+  title: { fr: 'Profil joueuse', en: 'Player profile' },
+  description: {
+    fr: 'Profil public : rating, progression, derniers matchs et face-à-face de la joueuse.',
+    en: 'Public profile: rating, progression, recent matches and head-to-head for the player.',
+  },
 };
 
 PlayerProfilePage.seo = playerProfileSeoFallback;
