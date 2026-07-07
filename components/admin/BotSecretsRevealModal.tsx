@@ -19,6 +19,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { useToast } from '@/components/Toast';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 type Props = {
   botApiKey: string;
@@ -33,6 +34,7 @@ export default function BotSecretsRevealModal({
 }: Props) {
   const trapRef = useFocusTrap<HTMLDivElement>();
   const { addToast } = useToast();
+  const t = useAdminT('adminBotSecretsRevealModal');
   const [copiedKey, setCopiedKey] = useState<null | 'api' | 'webhook'>(null);
 
   // Close on Escape.
@@ -49,17 +51,17 @@ export default function BotSecretsRevealModal({
       try {
         await navigator.clipboard.writeText(value);
         setCopiedKey(which);
-        addToast(`${label} copié dans le presse-papier.`, 'success');
+        addToast(format(t.copiedToast, { label }), 'success');
         // Reset visual state after a short delay.
         window.setTimeout(
           () => setCopiedKey((c) => (c === which ? null : c)),
           1500
         );
       } catch {
-        addToast('Copie impossible : copie le manuellement.', 'error');
+        addToast(t.copyError, 'error');
       }
     },
-    [addToast]
+    [addToast, t]
   );
 
   return (
@@ -94,12 +96,9 @@ export default function BotSecretsRevealModal({
               id="bot-secrets-reveal-title"
               className="text-lg font-semibold text-white"
             >
-              Nouveaux secrets bot
+              {t.title}
             </h3>
-            <p className="mt-1 text-sm text-amber-200/90">
-              Ces secrets ne seront plus affichés après fermeture de cette
-              modal. Notez-les dans le secret manager du tenant.
-            </p>
+            <p className="mt-1 text-sm text-amber-200/90">{t.warning}</p>
           </div>
         </div>
 
@@ -127,7 +126,7 @@ export default function BotSecretsRevealModal({
                 className="px-3 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-xs font-semibold text-white transition-colors whitespace-nowrap"
                 data-testid="bot-api-key-copy-btn"
               >
-                {copiedKey === 'api' ? 'Copié !' : 'Copier'}
+                {copiedKey === 'api' ? t.copied : t.copy}
               </button>
             </div>
           </div>
@@ -157,7 +156,7 @@ export default function BotSecretsRevealModal({
                 className="px-3 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-xs font-semibold text-white transition-colors whitespace-nowrap"
                 data-testid="bot-webhook-secret-copy-btn"
               >
-                {copiedKey === 'webhook' ? 'Copié !' : 'Copier'}
+                {copiedKey === 'webhook' ? t.copied : t.copy}
               </button>
             </div>
           </div>
@@ -170,7 +169,7 @@ export default function BotSecretsRevealModal({
             className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-semibold text-white transition-colors"
             data-testid="bot-secrets-reveal-close-btn"
           >
-            J&apos;ai noté les secrets, fermer
+            {t.close}
           </button>
         </div>
       </div>

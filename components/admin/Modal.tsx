@@ -1,5 +1,6 @@
 import { ReactNode, useEffect, useId } from 'react';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
+import { useAdminT } from '@/lib/i18n/useAdminT';
 
 export type ModalSize = 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'full';
 
@@ -79,6 +80,7 @@ export default function Modal({
   zIndexClassName = 'z-50',
   dataTestId,
 }: ModalProps) {
+  const t = useAdminT('adminModal');
   const trapRef = useFocusTrap<HTMLDivElement>();
   const titleId = useId();
 
@@ -141,7 +143,7 @@ export default function Modal({
               <button
                 type="button"
                 onClick={onClose}
-                aria-label="Fermer"
+                aria-label={t.close}
                 className="flex-shrink-0 -mr-1 -mt-1 rounded-lg p-1.5 text-neutral-400 hover:text-white hover:bg-neutral-700 transition-colors"
               >
                 <svg

@@ -3,6 +3,9 @@
 // S'appuie sur GET /api/admin/matches/[matchId]/history.
 
 import { useEffect, useState } from 'react';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
+
+type Dict = ReturnType<typeof useAdminT<'adminMatchHistoryDrawer'>>;
 
 type FormattedLog = {
   id: string;
@@ -28,6 +31,7 @@ type Props = {
 };
 
 export default function MatchHistoryDrawer({ matchId, open, onClose }: Props) {
+  const t = useAdminT('adminMatchHistoryDrawer');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [logs, setLogs] = useState<FormattedLog[]>([]);
@@ -42,11 +46,10 @@ export default function MatchHistoryDrawer({ matchId, open, onClose }: Props) {
       try {
         const res = await fetch(`/api/admin/matches/${matchId}/history`);
         const json = await res.json();
-        if (!res.ok) throw new Error(json.error || 'Erreur historique');
+        if (!res.ok) throw new Error(json.error || t.errorHistory);
         if (!cancelled) setLogs(json.logs || []);
       } catch (e: unknown) {
-        if (!cancelled)
-          setErrorMsg((e as Error).message || 'Erreur historique');
+        if (!cancelled) setErrorMsg((e as Error).message || t.errorHistory);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -54,7 +57,7 @@ export default function MatchHistoryDrawer({ matchId, open, onClose }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [open, matchId]);
+  }, [open, matchId, t]);
 
   if (!open) return null;
 
@@ -63,7 +66,7 @@ export default function MatchHistoryDrawer({ matchId, open, onClose }: Props) {
       {/* Backdrop */}
       <button
         type="button"
-        aria-label="Fermer"
+        aria-label={t.close}
         onClick={onClose}
         className="flex-1 bg-black/60 backdrop-blur-sm"
       />
@@ -72,31 +75,29 @@ export default function MatchHistoryDrawer({ matchId, open, onClose }: Props) {
         <header className="flex items-center justify-between px-4 py-3 border-b border-neutral-700">
           <div>
             <p className="text-xs uppercase tracking-[0.16em] text-purple-200/80">
-              Admin · Historique
+              {t.kicker}
             </p>
-            <h3 className="text-base font-semibold">Historique du match</h3>
+            <h3 className="text-base font-semibold">{t.title}</h3>
           </div>
           <button
             onClick={onClose}
             className="px-2 py-1 rounded bg-white/10 border border-white/15 text-sm hover:bg-white/15"
           >
-            Fermer
+            {t.close}
           </button>
         </header>
 
         <div className="flex-1 overflow-y-auto px-4 py-3">
-          {loading && <p className="text-sm text-neutral-400">Chargement…</p>}
+          {loading && <p className="text-sm text-neutral-400">{t.loading}</p>}
           {errorMsg && <p className="text-sm text-red-300">{errorMsg}</p>}
           {!loading && !errorMsg && logs.length === 0 && (
-            <p className="text-sm text-neutral-500 italic">
-              Aucune action staff enregistrée sur ce match.
-            </p>
+            <p className="text-sm text-neutral-500 italic">{t.empty}</p>
           )}
           {!loading && logs.length > 0 && (
             <ol className="space-y-3">
               {logs.map((log) => {
                 const isExpanded = expandedId === log.id;
-                const change = describeChange(log);
+                const change = describeChange(log, t);
                 return (
                   <li
                     key={log.id}
@@ -117,7 +118,7 @@ export default function MatchHistoryDrawer({ matchId, open, onClose }: Props) {
                       </div>
                       <div className="flex items-center justify-between gap-2 mt-0.5">
                         <span className="text-xs text-neutral-300 truncate">
-                          {log.staff?.display_name || 'Staff inconnu'}
+                          {log.staff?.display_name || t.unknownStaff}
                           {log.staff?.role ? ` · ${log.staff.role}` : ''}
                         </span>
                         {change && (
@@ -147,7 +148,7 @@ export default function MatchHistoryDrawer({ matchId, open, onClose }: Props) {
  * Construit une description courte du changement le plus interessant
  * a partir du payload (score before/after, status before/after, etc.).
  */
-function describeChange(log: FormattedLog): string | null {
+function describeChange(log: FormattedLog, t: Dict): string | null {
   const p = log.payload;
   if (!p) return null;
 
@@ -165,25 +166,30 @@ function describeChange(log: FormattedLog): string | null {
 
   if (p.mode === 'meta' && p.before && p.after) {
     const fields: string[] = [];
-    if (p.before.scheduled_at !== p.after.scheduled_at) fields.push('horaire');
-    if (p.before.status !== p.after.status) fields.push('statut');
-    if (p.before.notes !== p.after.notes) fields.push('notes');
-    if (p.before.lobby_code !== p.after.lobby_code) fields.push('lobby');
-    if (p.before.replay_url !== p.after.replay_url) fields.push('replay');
+    if (p.before.scheduled_at !== p.after.scheduled_at)
+      fields.push(t.fieldSchedule);
+    if (p.before.status !== p.after.status) fields.push(t.fieldStatus);
+    if (p.before.notes !== p.after.notes) fields.push(t.fieldNotes);
+    if (p.before.lobby_code !== p.after.lobby_code) fields.push(t.fieldLobby);
+    if (p.before.replay_url !== p.after.replay_url) fields.push(t.fieldReplay);
     if (fields.length > 0) return fields.join(', ');
   }
 
   if (log.action === 'open_match_dispute' && typeof p.reason === 'string') {
-    return `Motif: ${p.reason.slice(0, 40)}${p.reason.length > 40 ? '…' : ''}`;
+    return format(t.changeReason, {
+      reason: `${p.reason.slice(0, 40)}${p.reason.length > 40 ? '…' : ''}`,
+    });
   }
   if (
     log.action === 'resolve_match_dispute' &&
     typeof p.resolution === 'string'
   ) {
-    return `Décision: ${p.resolution.slice(0, 40)}${p.resolution.length > 40 ? '…' : ''}`;
+    return format(t.changeDecision, {
+      resolution: `${p.resolution.slice(0, 40)}${p.resolution.length > 40 ? '…' : ''}`,
+    });
   }
-  if (p.cancelled === true) return 'Annulé';
-  if (p.hard_delete === true) return 'Suppression DB';
+  if (p.cancelled === true) return t.changeCancelled;
+  if (p.hard_delete === true) return t.changeHardDelete;
 
   return null;
 }

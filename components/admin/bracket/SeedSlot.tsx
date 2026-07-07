@@ -3,6 +3,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
+import { useAdminT } from '@/lib/i18n/useAdminT';
 import type {
   ScheduleMatch,
   TeamMini,
@@ -56,6 +57,7 @@ export default function SeedSlot({
   availableTeams,
   onAssignTeam,
 }: SeedSlotProps) {
+  const t = useAdminT('adminBracketSeedSlot');
   const [showPicker, setShowPicker] = useState(false);
   const [pickerSearch, setPickerSearch] = useState('');
   const pickerRef = useRef<HTMLDivElement>(null);
@@ -155,14 +157,16 @@ export default function SeedSlot({
             </div>
           ) : isTBD ? (
             <span className="text-sm font-medium text-purple-300/50 italic">
-              Disponible
+              {t.available}
             </span>
           ) : seed ? (
             <span className="text-sm font-semibold text-white/70">
               Seed {seed}
             </span>
           ) : (
-            <span className="text-xs text-neutral-600 italic">Slot vide</span>
+            <span className="text-xs text-neutral-600 italic">
+              {t.emptySlot}
+            </span>
           )}
           {teamId && !team && (
             <span className="text-[10px] text-neutral-500 font-mono truncate">
@@ -222,7 +226,7 @@ export default function SeedSlot({
             <input
               type="text"
               autoFocus
-              placeholder="Rechercher une équipe…"
+              placeholder={t.searchPlaceholder}
               value={pickerSearch}
               onChange={(e) => setPickerSearch(e.target.value)}
               className="w-full px-2.5 py-1.5 rounded-lg bg-neutral-800 border border-neutral-600 text-xs text-white placeholder-neutral-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
@@ -231,7 +235,7 @@ export default function SeedSlot({
           <div className="max-h-48 overflow-y-auto">
             {filteredPickerTeams.length === 0 ? (
               <div className="px-3 py-2 text-xs text-neutral-500 text-center">
-                Aucune équipe disponible
+                {t.noTeams}
               </div>
             ) : (
               filteredPickerTeams.map((t) => (

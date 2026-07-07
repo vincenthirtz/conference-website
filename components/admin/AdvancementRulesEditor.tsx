@@ -3,6 +3,9 @@
 // d'un stage, à la place d'un JSON brut.
 
 import { useState, useEffect } from 'react';
+import { useAdminT } from '@/lib/i18n/useAdminT';
+
+type Dict = ReturnType<typeof useAdminT<'adminAdvancementRulesEditor'>>;
 
 export type AdvancementRules = {
   advance_top?: number;
@@ -28,12 +31,15 @@ type Props = {
   sourceStageType?: string | null;
 };
 
-const SEED_BY_OPTIONS: { value: AdvancementRules['seed_by']; label: string }[] =
-  [
-    { value: 'standings', label: 'Classement (automatique)' },
-    { value: 'manual', label: 'Manuel' },
-    { value: 'none', label: 'Sans seed' },
+function getSeedByOptions(
+  t: Dict
+): { value: AdvancementRules['seed_by']; label: string }[] {
+  return [
+    { value: 'standings', label: t.seedByStandings },
+    { value: 'manual', label: t.seedByManual },
+    { value: 'none', label: t.seedByNone },
   ];
+}
 
 type Mode = 'top_n' | 'per_group';
 
@@ -44,6 +50,8 @@ export default function AdvancementRulesEditor({
   disabled = false,
   sourceStageType,
 }: Props) {
+  const t = useAdminT('adminAdvancementRulesEditor');
+  const seedByOptions = getSeedByOptions(t);
   const isGroup = sourceStageType === 'group';
 
   const initialMode: Mode =
@@ -172,7 +180,7 @@ export default function AdvancementRulesEditor({
           className="rounded border-neutral-600 bg-neutral-700 text-blue-500 focus:ring-blue-500"
         />
         <span className="text-sm font-medium text-neutral-200">
-          Configurer l&apos;avancement automatique
+          {t.enableLabel}
         </span>
       </label>
 
@@ -181,13 +189,10 @@ export default function AdvancementRulesEditor({
           {/* Target stage */}
           <div>
             <label className="block text-sm mb-1 text-neutral-300">
-              Phase cible
+              {t.targetStageLabel}
             </label>
             {availableStages.length === 0 ? (
-              <p className="text-xs text-amber-400">
-                Aucune autre phase disponible. Créez d&apos;abord la phase
-                suivante dans le tournoi.
-              </p>
+              <p className="text-xs text-amber-400">{t.noOtherStage}</p>
             ) : (
               <select
                 className="w-full px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -195,7 +200,7 @@ export default function AdvancementRulesEditor({
                 onChange={(e) => handleTargetChange(e.target.value)}
                 disabled={disabled}
               >
-                <option value="">— Sélectionner —</option>
+                <option value="">{t.selectPlaceholder}</option>
                 {availableStages.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.name}
@@ -210,7 +215,7 @@ export default function AdvancementRulesEditor({
           {isGroup && (
             <div>
               <label className="block text-sm mb-1 text-neutral-300">
-                Mode d&apos;avancement
+                {t.modeLabel}
               </label>
               <div className="flex flex-col gap-2">
                 <label className="flex items-center gap-2 text-sm text-neutral-300 cursor-pointer">
@@ -223,7 +228,7 @@ export default function AdvancementRulesEditor({
                     disabled={disabled}
                     className="border-neutral-600 bg-neutral-700 text-blue-500 focus:ring-blue-500"
                   />
-                  Top N global (toutes poules confondues)
+                  {t.modeTopGlobal}
                 </label>
                 <label className="flex items-center gap-2 text-sm text-neutral-300 cursor-pointer">
                   <input
@@ -235,7 +240,7 @@ export default function AdvancementRulesEditor({
                     disabled={disabled}
                     className="border-neutral-600 bg-neutral-700 text-blue-500 focus:ring-blue-500"
                   />
-                  Top N par poule (recommandé pour group stage)
+                  {t.modePerGroup}
                 </label>
               </div>
             </div>
@@ -245,7 +250,7 @@ export default function AdvancementRulesEditor({
           {mode === 'per_group' ? (
             <div>
               <label className="block text-sm mb-1 text-neutral-300">
-                Nombre d&apos;équipes qui avancent par poule
+                {t.perGroupCountLabel}
               </label>
               <input
                 type="number"
@@ -259,14 +264,15 @@ export default function AdvancementRulesEditor({
                 disabled={disabled}
               />
               <p className="text-xs text-neutral-500 mt-1">
-                Les N premières équipes de <strong>chaque</strong> poule seront
-                avancées.
+                {t.perGroupHintPre}
+                <strong>{t.perGroupHintStrong}</strong>
+                {t.perGroupHintPost}
               </p>
             </div>
           ) : (
             <div>
               <label className="block text-sm mb-1 text-neutral-300">
-                Nombre d&apos;équipes qui avancent
+                {t.topCountLabel}
               </label>
               <input
                 type="number"
@@ -279,20 +285,17 @@ export default function AdvancementRulesEditor({
                 }
                 disabled={disabled}
               />
-              <p className="text-xs text-neutral-500 mt-1">
-                Les N premières équipes du classement seront avancées vers la
-                phase cible.
-              </p>
+              <p className="text-xs text-neutral-500 mt-1">{t.topHint}</p>
             </div>
           )}
 
           {/* Seed mode */}
           <div>
             <label className="block text-sm mb-1 text-neutral-300">
-              Mode de seeding
+              {t.seedModeLabel}
             </label>
             <div className="flex flex-col gap-2">
-              {SEED_BY_OPTIONS.map((opt) => (
+              {seedByOptions.map((opt) => (
                 <label
                   key={opt.value}
                   className="flex items-center gap-2 text-sm text-neutral-300 cursor-pointer"

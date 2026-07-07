@@ -7,6 +7,7 @@ import {
   useIdempotentMutation,
   BgSyncQueuedError,
 } from '@/hooks/useIdempotentMutation';
+import { useAdminT } from '@/lib/i18n/useAdminT';
 
 type Props = {
   open: boolean;
@@ -26,6 +27,7 @@ export default function ConfirmAdvanceModal({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { mutateJson } = useIdempotentMutation();
+  const t = useAdminT('adminDashboardConfirmAdvanceModal');
 
   // La modale n'est pas remontée entre deux ouvertures (pas de key côté
   // appelant) : réarmer les états transitoires à chaque ouverture ou
@@ -60,8 +62,8 @@ export default function ConfirmAdvanceModal({
     } catch (e: unknown) {
       const msg =
         e instanceof BgSyncQueuedError
-          ? "Hors-ligne : l'avancement sera envoyé à la reconnexion."
-          : ((e as Error)?.message ?? 'Erreur inattendue');
+          ? t.offline
+          : ((e as Error)?.message ?? t.unexpectedError);
       setError(msg);
     } finally {
       setSubmitting(false);
@@ -77,20 +79,20 @@ export default function ConfirmAdvanceModal({
         className="w-full max-w-md rounded-2xl border border-neutral-700 bg-neutral-900 p-6 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="text-lg font-semibold text-white">Avancer la phase</h3>
+        <h3 className="text-lg font-semibold text-white">{t.title}</h3>
         <p className="mt-2 text-sm text-neutral-300">
-          La phase <span className="font-semibold text-white">{stageName}</span>{' '}
-          va être avancée automatiquement selon les règles configurées (
+          {t.bodyBefore}
+          <span className="font-semibold text-white">{stageName}</span>
+          {t.bodyAfter}
           <code className="rounded bg-neutral-800 px-1 text-xs">
             advancement_rules
           </code>
-          ).
+          {t.bodyClose}
         </p>
         <p className="mt-2 text-xs text-neutral-500">
-          Les équipes éligibles seront ajoutées à la phase cible et la phase
-          source sera désactivée. Cette action est <strong>idempotente</strong>{' '}
-          mais le nettoyage manuel reste à votre charge si vous souhaitez
-          annuler.
+          {t.warningBefore}
+          <strong>{t.warningStrong}</strong>
+          {t.warningAfter}
         </p>
 
         {error && (
@@ -106,7 +108,7 @@ export default function ConfirmAdvanceModal({
             className="rounded-lg bg-neutral-800 px-4 py-2 text-sm font-medium text-neutral-300 hover:bg-neutral-700"
             disabled={submitting}
           >
-            Annuler
+            {t.cancel}
           </button>
           <button
             type="button"
@@ -117,7 +119,7 @@ export default function ConfirmAdvanceModal({
             {submitting && (
               <span className="h-3 w-3 animate-spin rounded-full border-2 border-white/30 border-t-white" />
             )}
-            🚀 Avancer maintenant
+            {t.advanceNow}
           </button>
         </div>
       </div>

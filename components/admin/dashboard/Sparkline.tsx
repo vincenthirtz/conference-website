@@ -2,6 +2,8 @@
 // Mini-sparkline SVG (area + ligne + dot final) pour visualiser une cadence
 // horaire. Utilisé sur StageProgressBar (matchs finis sur les 12 dernières heures).
 
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
+
 type Props = {
   values: number[];
   width?: number;
@@ -19,6 +21,7 @@ export default function Sparkline({
   className = 'text-purple-300',
   ariaLabel,
 }: Props) {
+  const t = useAdminT('adminDashboardSparkline');
   if (!values || values.length === 0) {
     return (
       <span
@@ -57,7 +60,9 @@ export default function Sparkline({
       height={height}
       viewBox={`0 0 ${width} ${height}`}
       className={className}
-      aria-label={ariaLabel ?? `Cadence : ${total} sur ${values.length}h`}
+      aria-label={
+        ariaLabel ?? format(t.cadenceAria, { total, hours: values.length })
+      }
       role="img"
     >
       <path d={areaPath} fill="currentColor" opacity={0.15} />

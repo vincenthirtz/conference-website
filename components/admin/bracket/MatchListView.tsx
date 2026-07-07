@@ -4,6 +4,7 @@
 import Image from 'next/image';
 import { formatTime } from '@/utils/dateFormatters';
 import { STATUS_CONFIG } from '@/utils/statusConfig';
+import { useAdminT } from '@/lib/i18n/useAdminT';
 import { parseNotes } from './types';
 import type { ScheduleMatch, MatchDay } from './types';
 
@@ -41,6 +42,7 @@ function teamDisplay(m: ScheduleMatch, slot: 1 | 2) {
 }
 
 export default function MatchListView({ matchDays }: MatchListViewProps) {
+  const t = useAdminT('adminBracketMatchListView');
   return (
     <div className="space-y-6">
       {matchDays.map((day) => (
@@ -60,25 +62,25 @@ export default function MatchListView({ matchDays }: MatchListViewProps) {
               <thead>
                 <tr className="border-b border-white/10">
                   <th className="text-left px-3 py-2 text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">
-                    Heure
+                    {t.colTime}
                   </th>
                   <th className="text-left px-3 py-2 text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">
-                    Équipe 1
+                    {t.colTeam1}
                   </th>
                   <th className="text-center px-2 py-2 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">
                     vs
                   </th>
                   <th className="text-left px-3 py-2 text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">
-                    Équipe 2
+                    {t.colTeam2}
                   </th>
                   <th className="text-left px-3 py-2 text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">
-                    Format
+                    {t.colFormat}
                   </th>
                   <th className="text-left px-3 py-2 text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">
-                    Round
+                    {t.colRound}
                   </th>
                   <th className="text-left px-3 py-2 text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">
-                    Statut
+                    {t.colStatus}
                   </th>
                 </tr>
               </thead>

@@ -7,6 +7,7 @@ import {
   localInputToIso,
 } from '@/utils/dateFormatters';
 import { STATUS_CONFIG } from '@/utils/statusConfig';
+import { useAdminT } from '@/lib/i18n/useAdminT';
 import SeedSlot from './SeedSlot';
 import { parseNotes } from './types';
 import type { ScheduleMatch, TournamentTeam, DragPayload } from './types';
@@ -40,6 +41,7 @@ export default function MatchCard({
   availableTeams,
   onAssignTeam,
 }: MatchCardProps) {
+  const t = useAdminT('adminBracketMatchCard');
   const info = parseNotes(match.notes);
   const statusCfg = STATUS_CONFIG[match.status];
   const isEditing = editingDateId === match.id;
@@ -61,7 +63,7 @@ export default function MatchCard({
               type="button"
               onClick={() => onEditDate(isEditing ? null : match.id)}
               className="text-sm font-bold tabular-nums text-white/90 hover:text-purple-300 transition-colors"
-              title="Modifier l'horaire"
+              title={t.editTime}
             >
               {formatTime(match.scheduled_at)}
             </button>

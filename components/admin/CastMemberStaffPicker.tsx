@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { logger } from '../../utils/logger';
 
 type AvailableCaster = {
@@ -24,6 +25,7 @@ export default function CastMemberStaffPicker({
   disabled,
 }: Props) {
   const { adminFetchJson } = useAdminFetch();
+  const t = useAdminT('adminCastMemberStaffPicker');
   const [casters, setCasters] = useState<AvailableCaster[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -44,7 +46,7 @@ export default function CastMemberStaffPicker({
       } catch (err: unknown) {
         logger.error('CastMemberStaffPicker load error', err);
         if (!cancelled) {
-          setError((err as Error)?.message || 'Erreur de chargement.');
+          setError((err as Error)?.message || t.loadError);
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -78,16 +80,14 @@ export default function CastMemberStaffPicker({
 
   return (
     <div>
-      <label className="block text-sm text-neutral-300 mb-1">
-        Compte staff caster lié
-      </label>
+      <label className="block text-sm text-neutral-300 mb-1">{t.label}</label>
       <select
         value={value ?? ''}
         onChange={handleChange}
         disabled={disabled || loading}
         className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm disabled:opacity-50"
       >
-        <option value="">— Aucun (fiche publique seule) —</option>
+        <option value="">{t.none}</option>
         {selectableCasters.map((c) => {
           const label =
             c.displayName && c.displayName.trim()
@@ -102,10 +102,10 @@ export default function CastMemberStaffPicker({
       </select>
       <p className="text-xs text-neutral-500 mt-1">
         {loading
-          ? 'Chargement des casters…'
+          ? t.loading
           : error
-            ? `Erreur : ${error}`
-            : 'Seuls les comptes staff avec le rôle "caster" peuvent être liés. Un caster ne peut être rattaché qu’à une seule fiche.'}
+            ? format(t.errorPrefix, { error })
+            : t.hint}
       </p>
     </div>
   );

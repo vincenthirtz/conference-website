@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { logger } from '../../utils/logger';
 
 type CastMember = {
@@ -53,6 +54,7 @@ function fmt(iso: string): string {
 export default function MatchCastAssignments({ matchId }: Props) {
   const { adminFetchJson } = useAdminFetch();
   const { addToast } = useToast();
+  const t = useAdminT('adminMatchCastAssignments');
 
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [casters, setCasters] = useState<CastMember[]>([]);
@@ -83,11 +85,11 @@ export default function MatchCastAssignments({ matchId }: Props) {
       setCasters(list as CastMember[]);
     } catch (e) {
       logger.error('[MatchCastAssignments] load', e);
-      addToast('Impossible de charger les casts assignés', 'error');
+      addToast(t.loadError, 'error');
     } finally {
       setLoading(false);
     }
-  }, [adminFetchJson, addToast, matchId]);
+  }, [adminFetchJson, addToast, matchId, t]);
 
   useEffect(() => {
     load();
@@ -105,7 +107,7 @@ export default function MatchCastAssignments({ matchId }: Props) {
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
     if (!castMemberId || !briefingAt) {
-      addToast('Choisis un caster et une heure de briefing.', 'error');
+      addToast(t.chooseError, 'error');
       return;
     }
     setSubmitting(true);
@@ -117,28 +119,28 @@ export default function MatchCastAssignments({ matchId }: Props) {
           briefingAt: new Date(briefingAt).toISOString(),
         }),
       });
-      addToast('Caster assigné', 'success');
+      addToast(t.assigned, 'success');
       setCastMemberId('');
       setBriefingAt('');
       await load();
     } catch (err) {
-      addToast((err as Error).message || 'Échec', 'error');
+      addToast((err as Error).message || t.genericError, 'error');
     } finally {
       setSubmitting(false);
     }
   }
 
   async function handleDelete(assignmentId: string) {
-    if (!confirm('Retirer ce caster du match ?')) return;
+    if (!confirm(t.confirmRemove)) return;
     try {
       await adminFetchJson(
         `/api/admin/matches/${matchId}/cast-assignments/${assignmentId}`,
         { method: 'DELETE' }
       );
-      addToast('Assignment supprimé', 'success');
+      addToast(t.assignmentDeleted, 'success');
       await load();
     } catch (err) {
-      addToast((err as Error).message || 'Échec', 'error');
+      addToast((err as Error).message || t.genericError, 'error');
     }
   }
 
@@ -153,31 +155,26 @@ export default function MatchCastAssignments({ matchId }: Props) {
           }),
         }
       );
-      addToast('Briefing repoussé (rappel renvoyé)', 'success');
+      addToast(t.rescheduled, 'success');
       await load();
     } catch (err) {
-      addToast((err as Error).message || 'Échec', 'error');
+      addToast((err as Error).message || t.genericError, 'error');
     }
   }
 
   return (
     <section className="bg-neutral-800 border border-neutral-700 rounded-xl p-5 space-y-4">
       <div>
-        <h2 className="text-lg font-semibold">Cast</h2>
-        <p className="text-xs text-neutral-500 mt-0.5">
-          Le bot Discord enverra un DM de rappel à chaque caster ~30 min avant
-          son heure de briefing.
-        </p>
+        <h2 className="text-lg font-semibold">{t.heading}</h2>
+        <p className="text-xs text-neutral-500 mt-0.5">{t.headingDesc}</p>
       </div>
 
       {loading ? (
-        <div className="text-sm text-neutral-500">Chargement…</div>
+        <div className="text-sm text-neutral-500">{t.loading}</div>
       ) : (
         <>
           {assignments.length === 0 ? (
-            <div className="text-sm text-neutral-500">
-              Aucun caster assigné.
-            </div>
+            <div className="text-sm text-neutral-500">{t.empty}</div>
           ) : (
             <ul className="space-y-2">
               {assignments.map((a) => (
@@ -188,19 +185,21 @@ export default function MatchCastAssignments({ matchId }: Props) {
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <div className="text-sm font-medium truncate">
-                        {a.cast_member?.name || 'Caster inconnu'}
+                        {a.cast_member?.name || t.unknownCaster}
                       </div>
                       <div className="text-xs text-neutral-400 mt-0.5">
-                        Briefing : {fmt(a.briefing_at)}
+                        {format(t.briefingLabel, { time: fmt(a.briefing_at) })}
                       </div>
                       {a.briefing_reminder_sent_at && (
                         <div className="text-xs text-emerald-400 mt-0.5">
-                          DM envoyé {fmt(a.briefing_reminder_sent_at)}
+                          {format(t.dmSent, {
+                            time: fmt(a.briefing_reminder_sent_at),
+                          })}
                         </div>
                       )}
                       {!a.cast_member?.auth_user_id && (
                         <div className="text-xs text-amber-400 mt-0.5">
-                          ⚠️ Caster non lié à un compte → pas de DM possible
+                          {t.notLinkedWarning}
                         </div>
                       )}
                     </div>
@@ -209,7 +208,7 @@ export default function MatchCastAssignments({ matchId }: Props) {
                       onClick={() => handleDelete(a.id)}
                       className="text-xs text-red-300 hover:text-red-200 flex-shrink-0"
                     >
-                      Retirer
+                      {t.remove}
                     </button>
                   </div>
                   <div className="mt-2">
@@ -236,18 +235,18 @@ export default function MatchCastAssignments({ matchId }: Props) {
               className="space-y-2 border-t border-neutral-700 pt-3"
             >
               <label className="block text-xs text-neutral-400">
-                Ajouter un caster
+                {t.addLabel}
               </label>
               <select
                 value={castMemberId}
                 onChange={(e) => setCastMemberId(e.target.value)}
                 className="w-full px-2 py-1.5 rounded bg-neutral-900/70 border border-neutral-700 text-sm"
               >
-                <option value="">— Choisir —</option>
+                <option value="">{t.choosePlaceholder}</option>
                 {availableCasters.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
-                    {!c.auth_user_id ? ' (non lié)' : ''}
+                    {!c.auth_user_id ? t.notLinkedSuffix : ''}
                   </option>
                 ))}
               </select>
@@ -262,13 +261,13 @@ export default function MatchCastAssignments({ matchId }: Props) {
                 disabled={submitting || !castMemberId || !briefingAt}
                 className="w-full px-3 py-1.5 rounded bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-sm font-medium"
               >
-                {submitting ? '…' : 'Assigner'}
+                {submitting ? '…' : t.assign}
               </button>
             </form>
           ) : (
             assignments.length > 0 && (
               <div className="text-xs text-neutral-500 border-t border-neutral-700 pt-3">
-                Tous les casters disponibles sont déjà assignés.
+                {t.allAssigned}
               </div>
             )
           )}

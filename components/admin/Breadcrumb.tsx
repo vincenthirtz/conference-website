@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { useAdminT } from '@/lib/i18n/useAdminT';
 
 export type BreadcrumbItem = {
   label: string;
@@ -10,10 +11,11 @@ type BreadcrumbProps = {
 };
 
 export default function Breadcrumb({ items }: BreadcrumbProps) {
+  const t = useAdminT('adminBreadcrumb');
   if (items.length === 0) return null;
 
   return (
-    <nav aria-label="Fil d'Ariane" className="mb-4">
+    <nav aria-label={t.ariaLabel} className="mb-4">
       <ol className="flex items-center gap-1.5 text-sm text-neutral-400 flex-wrap">
         {items.map((item, i) => {
           const isLast = i === items.length - 1;

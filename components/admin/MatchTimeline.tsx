@@ -3,6 +3,9 @@
 // alimentée par l'API /api/admin/matches/[matchId]/history.
 
 import { useEffect, useState, useCallback } from 'react';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
+
+type Dict = ReturnType<typeof useAdminT<'adminMatchTimeline'>>;
 
 type HistoryLog = {
   id: string;
@@ -21,7 +24,7 @@ type Props = {
   matchId: string;
 };
 
-function summarize(log: HistoryLog): string {
+function summarize(log: HistoryLog, t: Dict): string {
   const p = log.payload;
   if (!p) return log.readableAction;
 
@@ -32,7 +35,9 @@ function summarize(log: HistoryLog): string {
         ? `${p.prev_team1_score}-${p.prev_team2_score}`
         : null;
     const next = `${p.new_team1_score}-${p.new_team2_score}`;
-    return prev ? `Score : ${prev} \u2192 ${next}` : `Score : ${next}`;
+    return prev
+      ? format(t.scoreWithPrev, { prev, next })
+      : format(t.scoreOnly, { next });
   }
 
   // Status change
@@ -42,15 +47,15 @@ function summarize(log: HistoryLog): string {
 
   // Forfeit
   if (p.forfeit_team_id) {
-    return 'Forfait';
+    return t.forfeit;
   }
 
   // Cancel / delete
-  if (p.cancelled) return 'Annulation';
-  if (p.hard_delete) return 'Suppression';
+  if (p.cancelled) return t.cancel;
+  if (p.hard_delete) return t.delete;
 
   // Meta
-  if (p.mode === 'meta') return 'M\u00e9tadonn\u00e9es';
+  if (p.mode === 'meta') return t.meta;
 
   return log.readableAction;
 }
@@ -63,6 +68,7 @@ const ROLE_COLORS: Record<string, string> = {
 };
 
 export default function MatchTimeline({ matchId }: Props) {
+  const t = useAdminT('adminMatchTimeline');
   const [logs, setLogs] = useState<HistoryLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -76,28 +82,24 @@ export default function MatchTimeline({ matchId }: Props) {
     try {
       const res = await fetch(`/api/admin/matches/${matchId}/history`);
       if (!res.ok) {
-        setError('Impossible de charger l\u2019historique');
+        setError(t.errorLoad);
         return;
       }
       const json = await res.json();
       setLogs(json.logs || []);
     } catch {
-      setError('Erreur r\u00e9seau');
+      setError(t.errorNetwork);
     } finally {
       setLoading(false);
     }
-  }, [matchId]);
+  }, [matchId, t]);
 
   useEffect(() => {
     fetchHistory();
   }, [fetchHistory]);
 
   if (loading) {
-    return (
-      <div className="text-xs text-neutral-500 py-3">
-        Chargement de l&apos;historique\u2026
-      </div>
-    );
+    return <div className="text-xs text-neutral-500 py-3">{t.loading}</div>;
   }
 
   if (error) {
@@ -105,11 +107,7 @@ export default function MatchTimeline({ matchId }: Props) {
   }
 
   if (logs.length === 0) {
-    return (
-      <div className="text-xs text-neutral-500 py-3">
-        Aucune action enregistr\u00e9e.
-      </div>
-    );
+    return <div className="text-xs text-neutral-500 py-3">{t.empty}</div>;
   }
 
   return (
@@ -127,7 +125,7 @@ export default function MatchTimeline({ matchId }: Props) {
           {/* Content */}
           <div className="pb-4 min-w-0">
             <p className="text-sm text-neutral-200 leading-tight">
-              {summarize(log)}
+              {summarize(log, t)}
             </p>
             <div className="flex items-center gap-2 mt-0.5 text-[11px]">
               {log.staff?.display_name && (
@@ -147,7 +145,7 @@ export default function MatchTimeline({ matchId }: Props) {
 
       {logs.length > 15 && (
         <p className="text-[11px] text-neutral-500 pl-5">
-          +{logs.length - 15} action(s) ant\u00e9rieure(s)
+          {format(t.more, { count: logs.length - 15 })}
         </p>
       )}
     </div>

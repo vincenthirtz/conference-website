@@ -2,15 +2,20 @@
 // Petite barre de progression pour une phase (finished/total) avec label.
 
 import Link from 'next/link';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import Sparkline from './Sparkline';
 
-const STAGE_TYPE_LABEL: Record<string, string> = {
-  group: 'Poule',
-  bracket: 'Bracket',
-  swiss: 'Swiss',
-  round_robin: 'Round Robin',
-  showmatch: 'Showmatch',
-};
+type Dict = ReturnType<typeof useAdminT<'adminDashboardStageProgressBar'>>;
+
+function getStageTypeLabel(t: Dict): Record<string, string> {
+  return {
+    group: t.stageTypeGroup,
+    bracket: t.stageTypeBracket,
+    swiss: t.stageTypeSwiss,
+    round_robin: t.stageTypeRoundRobin,
+    showmatch: t.stageTypeShowmatch,
+  };
+}
 
 type Props = {
   stageId: string;
@@ -43,12 +48,12 @@ export default function StageProgressBar({
   onAdvance,
   hourlyBuckets,
 }: Props) {
+  const t = useAdminT('adminDashboardStageProgressBar');
+  const stageTypeLabel = getStageTypeLabel(t);
   const percent =
     totalMatches > 0 ? Math.round((finishedMatches / totalMatches) * 100) : 0;
   const remaining = totalMatches - finishedMatches;
-  const typeLabel = stageType
-    ? (STAGE_TYPE_LABEL[stageType] ?? stageType)
-    : null;
+  const typeLabel = stageType ? (stageTypeLabel[stageType] ?? stageType) : null;
 
   return (
     <div className="rounded-xl border border-white/10 bg-gradient-to-r from-white/5 to-transparent p-3">
@@ -68,10 +73,14 @@ export default function StageProgressBar({
             )}
           </p>
           <p className="text-[10px] text-gray-500">
-            {typeLabel ?? '—'} · {teamsCount} équipe{teamsCount > 1 ? 's' : ''}
+            {typeLabel ?? '—'} ·{' '}
+            {format(teamsCount > 1 ? t.teamsCount_other : t.teamsCount_one, {
+              count: teamsCount,
+            })}
             {ongoingMatches > 0 && (
               <span className="ml-1 text-rose-300">
-                · {ongoingMatches} en cours
+                {' '}
+                {format(t.ongoingSuffix, { count: ongoingMatches })}
               </span>
             )}
           </p>
@@ -85,16 +94,16 @@ export default function StageProgressBar({
               type="button"
               onClick={onAdvance}
               className="rounded-md border border-emerald-400/40 bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-200 transition-colors hover:bg-emerald-500/25"
-              title="Avancer automatiquement les équipes vers la phase suivante"
+              title={t.advanceTitle}
             >
-              🚀 Avancer
+              {t.advance}
             </button>
           )}
           <Link
             href={`/admin/tournament/${tournamentId}/matches?stageId=${stageId}`}
             className="text-[10px] text-purple-300 hover:text-purple-200"
           >
-            Voir →
+            {t.view}
           </Link>
         </div>
       </div>
@@ -113,8 +122,9 @@ export default function StageProgressBar({
       <div className="mt-1.5 flex items-end justify-between gap-2">
         {remaining > 0 ? (
           <p className="text-[10px] text-gray-500">
-            {remaining} match{remaining > 1 ? 's' : ''} restant
-            {remaining > 1 ? 's' : ''}
+            {format(remaining > 1 ? t.remaining_other : t.remaining_one, {
+              count: remaining,
+            })}
           </p>
         ) : (
           <span />
@@ -122,7 +132,7 @@ export default function StageProgressBar({
         {hourlyBuckets && hourlyBuckets.some((v) => v > 0) && (
           <div
             className="flex items-center gap-1.5"
-            title={`Cadence sur 12h : ${hourlyBuckets.join(', ')}`}
+            title={format(t.cadenceTitle, { values: hourlyBuckets.join(', ') })}
           >
             <span className="text-[9px] uppercase tracking-wider text-gray-500">
               12h

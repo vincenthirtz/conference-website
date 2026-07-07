@@ -7,6 +7,9 @@
 // et on dégrade en "config-only" (pas de stale, pas d'horodatage).
 
 import type { DiscordHealth } from '@/utils/dashboard/buildTournamentDashboard';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
+
+type Dict = ReturnType<typeof useAdminT<'adminDashboardDiscordHealthGrid'>>;
 
 type Props = {
   health: DiscordHealth;
@@ -14,27 +17,33 @@ type Props = {
   nowMs: number;
 };
 
-const CHANNEL_LABEL: Record<string, string> = {
-  match_announcements: 'Annonces match',
-  match_results: 'Résultats',
-  bracket_updates: 'Bracket',
-  general_announcements: 'Annonces',
-  veto_live: 'Veto live',
-  checkin_reminders: 'Check-in',
-  support_tickets: 'Support',
-  mvp_polls: 'MVP polls',
-};
+function getChannelLabel(t: Dict): Record<string, string> {
+  return {
+    match_announcements: t.channelMatchAnnouncements,
+    match_results: t.channelMatchResults,
+    bracket_updates: t.channelBracketUpdates,
+    general_announcements: t.channelGeneralAnnouncements,
+    veto_live: t.channelVetoLive,
+    checkin_reminders: t.channelCheckinReminders,
+    support_tickets: t.channelSupportTickets,
+    mvp_polls: t.channelMvpPolls,
+  };
+}
 
-function ageLabel(iso: string | null, nowMs: number): string {
+function ageLabel(iso: string | null, nowMs: number, t: Dict): string {
   if (!iso) return '—';
   const ageMs = nowMs - new Date(iso).getTime();
-  if (ageMs < 60_000) return "à l'instant";
-  if (ageMs < 3_600_000) return `il y a ${Math.floor(ageMs / 60_000)} min`;
-  if (ageMs < 86_400_000) return `il y a ${Math.floor(ageMs / 3_600_000)}h`;
-  return `il y a ${Math.floor(ageMs / 86_400_000)}j`;
+  if (ageMs < 60_000) return t.ageNow;
+  if (ageMs < 3_600_000)
+    return format(t.ageMinutes, { n: Math.floor(ageMs / 60_000) });
+  if (ageMs < 86_400_000)
+    return format(t.ageHours, { n: Math.floor(ageMs / 3_600_000) });
+  return format(t.ageDays, { n: Math.floor(ageMs / 86_400_000) });
 }
 
 export default function DiscordHealthGrid({ health, nowMs }: Props) {
+  const t = useAdminT('adminDashboardDiscordHealthGrid');
+  const channelLabel = getChannelLabel(t);
   return (
     <div>
       <ul className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
@@ -67,14 +76,16 @@ export default function DiscordHealthGrid({ health, nowMs }: Props) {
 
           const tip: Record<typeof status, string> = {
             ok: c.lastPostAt
-              ? `Dernière POST ${ageLabel(c.lastPostAt, nowMs)}`
-              : 'Configuré et actif (aucun historique encore)',
+              ? format(t.tipOkPosted, { age: ageLabel(c.lastPostAt, nowMs, t) })
+              : t.tipOkNoHistory,
             stale: c.lastPostAt
-              ? `Pas posté depuis ${ageLabel(c.lastPostAt, nowMs)} alors qu'on attend du trafic`
-              : "Aucun POST récent alors qu'on attend du trafic",
-            failed: 'Le dernier POST a échoué (HTTP non-2xx)',
-            inactive: 'Webhook configuré mais désactivé',
-            missing: 'Aucun webhook configuré pour ce canal',
+              ? format(t.tipStalePosted, {
+                  age: ageLabel(c.lastPostAt, nowMs, t),
+                })
+              : t.tipStaleNoPost,
+            failed: t.tipFailed,
+            inactive: t.tipInactive,
+            missing: t.tipMissing,
           };
 
           return (
@@ -87,15 +98,17 @@ export default function DiscordHealthGrid({ health, nowMs }: Props) {
                 className={`h-1.5 w-1.5 shrink-0 rounded-full ${dot[status]}`}
               />
               <span className="min-w-0 flex-1 truncate font-medium">
-                {CHANNEL_LABEL[c.channelType] ?? c.channelType}
+                {channelLabel[c.channelType] ?? c.channelType}
               </span>
               <span className="shrink-0 text-[10px] opacity-80">
                 {status === 'ok' &&
                   c.lastPostAt &&
-                  ageLabel(c.lastPostAt, nowMs)}
+                  ageLabel(c.lastPostAt, nowMs, t)}
                 {status === 'stale' &&
-                  (c.lastPostAt ? ageLabel(c.lastPostAt, nowMs) : 'silence')}
-                {status === 'failed' && 'échec'}
+                  (c.lastPostAt
+                    ? ageLabel(c.lastPostAt, nowMs, t)
+                    : t.shortSilence)}
+                {status === 'failed' && t.shortFailed}
                 {status === 'inactive' && 'off'}
                 {status === 'missing' && '—'}
               </span>
@@ -105,8 +118,7 @@ export default function DiscordHealthGrid({ health, nowMs }: Props) {
       </ul>
       {health.missingExpectedCount > 0 && (
         <p className="mt-2 text-[10px] text-amber-300/80">
-          ⚠️ {health.missingExpectedCount} canal/canaux manquent un webhook
-          actif alors qu&apos;on attend du trafic.
+          {format(t.missingWarning, { count: health.missingExpectedCount })}
         </p>
       )}
     </div>

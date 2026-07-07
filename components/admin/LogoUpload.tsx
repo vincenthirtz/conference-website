@@ -3,6 +3,7 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useAdminT } from '@/lib/i18n/useAdminT';
 
 type LogoUploadProps = {
   value: string; // URL actuelle (externe ou locale)
@@ -18,11 +19,14 @@ type LogoUploadProps = {
 export default function LogoUpload({
   value,
   onChange,
-  label = 'Logo',
-  hint = 'PNG, JPEG ou WebP, max 2 Mo, idéalement 512×512.',
+  label,
+  hint,
   endpoint = '/api/admin/upload',
 }: LogoUploadProps) {
   const { adminFetchJson } = useAdminFetch();
+  const t = useAdminT('adminLogoUpload');
+  const resolvedLabel = label ?? t.defaultLabel;
+  const resolvedHint = hint ?? t.defaultHint;
   const [mode, setMode] = useState<'upload' | 'url'>(
     value && !value.startsWith('/img/') && !value.includes('supabase')
       ? 'url'
@@ -48,11 +52,11 @@ export default function LogoUpload({
       // Validation côté client
       const allowed = ['image/png', 'image/jpeg', 'image/webp'];
       if (!allowed.includes(file.type)) {
-        setError('Format non supporté. Utilise PNG, JPEG ou WebP.');
+        setError(t.errorFormat);
         return;
       }
       if (file.size > 2 * 1024 * 1024) {
-        setError('Image trop lourde (max 2 Mo).');
+        setError(t.errorTooBig);
         return;
       }
 
@@ -78,12 +82,12 @@ export default function LogoUpload({
 
         onChange(json.url);
       } catch (err: unknown) {
-        setError((err as Error)?.message ?? "Erreur lors de l'upload");
+        setError((err as Error)?.message ?? t.errorUpload);
       } finally {
         setUploading(false);
       }
     },
-    [onChange, endpoint, adminFetchJson]
+    [onChange, endpoint, adminFetchJson, t]
   );
 
   const handleDrop = useCallback(
@@ -107,7 +111,9 @@ export default function LogoUpload({
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <label className="block text-sm text-neutral-300">{label}</label>
+        <label className="block text-sm text-neutral-300">
+          {resolvedLabel}
+        </label>
         <div className="flex gap-1 text-xs">
           <button
             type="button"
@@ -118,7 +124,7 @@ export default function LogoUpload({
                 : 'bg-neutral-700 text-neutral-400 hover:text-white'
             }`}
           >
-            Upload
+            {t.uploadTab}
           </button>
           <button
             type="button"
@@ -152,7 +158,7 @@ export default function LogoUpload({
           {uploading ? (
             <div className="flex items-center gap-2 text-sm text-neutral-400">
               <div className="w-4 h-4 border-2 border-neutral-500 border-t-white rounded-full animate-spin" />
-              Upload en cours...
+              {t.uploading}
             </div>
           ) : (
             <>
@@ -170,8 +176,8 @@ export default function LogoUpload({
                 />
               </svg>
               <p className="text-sm text-neutral-400">
-                Glisse une image ici ou{' '}
-                <span className="text-blue-400 underline">parcourir</span>
+                {t.dropPrefix}
+                <span className="text-blue-400 underline">{t.browse}</span>
               </p>
             </>
           )}
@@ -205,7 +211,7 @@ export default function LogoUpload({
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={value}
-              alt="Preview logo"
+              alt={t.previewAlt}
               className="w-12 h-12 rounded-lg object-cover border border-neutral-600"
               onError={() => setImgError(true)}
             />
@@ -215,12 +221,12 @@ export default function LogoUpload({
             onClick={() => onChange('')}
             className="text-xs text-red-400 hover:text-red-300 transition-colors"
           >
-            Supprimer
+            {t.remove}
           </button>
         </div>
       )}
 
-      <p className="text-xs text-neutral-500">{hint}</p>
+      <p className="text-xs text-neutral-500">{resolvedHint}</p>
     </div>
   );
 }

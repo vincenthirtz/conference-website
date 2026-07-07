@@ -3,6 +3,9 @@
 // La sévérité (low/medium/high) influe la luminosité globale.
 
 import type { TicketsBreakdown } from '@/utils/dashboard/buildTournamentDashboard';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
+
+type Dict = ReturnType<typeof useAdminT<'adminDashboardSupportTicketsDonut'>>;
 
 type Props = {
   tickets: TicketsBreakdown;
@@ -17,18 +20,24 @@ const CATEGORY_COLORS: Record<keyof TicketsBreakdown['byCategory'], string> = {
   other: '#6b7280', // gray-500
 };
 
-const CATEGORY_LABEL: Record<keyof TicketsBreakdown['byCategory'], string> = {
-  dispute: 'Litiges',
-  behavior: 'Comportement',
-  technical: 'Technique',
-  other: 'Autre',
-};
+function getCategoryLabel(
+  t: Dict
+): Record<keyof TicketsBreakdown['byCategory'], string> {
+  return {
+    dispute: t.catDispute,
+    behavior: t.catBehavior,
+    technical: t.catTechnical,
+    other: t.catOther,
+  };
+}
 
 export default function SupportTicketsDonut({
   tickets,
   size = 120,
   strokeWidth = 16,
 }: Props) {
+  const t = useAdminT('adminDashboardSupportTicketsDonut');
+  const categoryLabel = getCategoryLabel(t);
   const total = tickets.totalOpen;
   if (total === 0) {
     return (
@@ -39,7 +48,7 @@ export default function SupportTicketsDonut({
         >
           <span className="text-3xl">✓</span>
         </div>
-        <p className="text-xs text-gray-400">Aucun ticket ouvert.</p>
+        <p className="text-xs text-gray-400">{t.noTickets}</p>
       </div>
     );
   }
@@ -101,7 +110,7 @@ export default function SupportTicketsDonut({
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <div className="text-2xl font-bold text-white">{total}</div>
           <div className="text-[9px] uppercase tracking-widest text-gray-500">
-            ouverts
+            {t.open}
           </div>
         </div>
       </div>
@@ -120,7 +129,7 @@ export default function SupportTicketsDonut({
                 className="h-2 w-2 shrink-0 rounded-full"
                 style={{ backgroundColor: CATEGORY_COLORS[cat] }}
               />
-              <span className="text-gray-300">{CATEGORY_LABEL[cat]}</span>
+              <span className="text-gray-300">{categoryLabel[cat]}</span>
               <span className="ml-auto tabular-nums text-gray-400">
                 {tickets.byCategory[cat]}
               </span>
@@ -133,20 +142,20 @@ export default function SupportTicketsDonut({
         tickets.bySeverity.medium > 0 ||
         tickets.bySeverity.low > 0) && (
         <div className="flex w-full items-center gap-2 text-[10px] text-gray-400">
-          <span className="text-gray-500">Sévérité :</span>
+          <span className="text-gray-500">{t.severityLabel}</span>
           {tickets.bySeverity.high > 0 && (
             <span className="rounded-full bg-red-500/20 px-2 py-0.5 text-red-200">
-              Haute {sevPct.high}%
+              {format(t.sevHigh, { pct: sevPct.high })}
             </span>
           )}
           {tickets.bySeverity.medium > 0 && (
             <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-amber-200">
-              Moyenne {sevPct.medium}%
+              {format(t.sevMedium, { pct: sevPct.medium })}
             </span>
           )}
           {tickets.bySeverity.low > 0 && (
             <span className="rounded-full bg-blue-500/20 px-2 py-0.5 text-blue-200">
-              Basse {sevPct.low}%
+              {format(t.sevLow, { pct: sevPct.low })}
             </span>
           )}
         </div>

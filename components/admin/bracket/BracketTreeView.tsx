@@ -4,6 +4,7 @@
 import Image from 'next/image';
 import { formatTime } from '@/utils/dateFormatters';
 import { STATUS_CONFIG } from '@/utils/statusConfig';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { parseNotes } from './types';
 import type { ScheduleMatch, BracketRound } from './types';
 
@@ -60,6 +61,7 @@ export default function BracketTreeView({ rounds }: BracketTreeViewProps) {
 /* ---- Swiss / Round-Robin grid view ---- */
 
 function SwissBracketView({ rounds }: { rounds: BracketRound[] }) {
+  const t = useAdminT('adminBracketTreeView');
   return (
     <div className="space-y-6">
       <div className="overflow-x-auto pb-4">
@@ -95,8 +97,12 @@ function SwissBracketView({ rounds }: { rounds: BracketRound[] }) {
                     {round.roundName}
                   </div>
                   <div className="text-[10px] text-neutral-500 mt-0.5">
-                    {round.matches.length} match
-                    {round.matches.length > 1 ? 's' : ''}
+                    {format(
+                      round.matches.length > 1
+                        ? t.matchCount_other
+                        : t.matchCount_one,
+                      { count: round.matches.length }
+                    )}
                   </div>
                 </div>
 

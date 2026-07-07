@@ -1,5 +1,6 @@
 import { ReactNode, useEffect } from 'react';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
+import { useAdminT } from '@/lib/i18n/useAdminT';
 
 type ConfirmDialogVariant = 'danger' | 'warning' | 'info';
 
@@ -105,12 +106,16 @@ export default function ConfirmDialog({
   errorMsg,
   loading,
   variant = 'danger',
-  confirmLabel = 'Confirmer',
-  confirmingLabel = 'En cours...',
-  cancelLabel = 'Annuler',
+  confirmLabel,
+  confirmingLabel,
+  cancelLabel,
   onCancel,
   onConfirm,
 }: ConfirmDialogProps) {
+  const t = useAdminT('adminConfirmDialog');
+  const resolvedConfirmLabel = confirmLabel ?? t.confirm;
+  const resolvedConfirmingLabel = confirmingLabel ?? t.confirming;
+  const resolvedCancelLabel = cancelLabel ?? t.cancel;
   const styles = VARIANT_STYLES[variant];
   const trapRef = useFocusTrap<HTMLDivElement>();
 
@@ -174,7 +179,7 @@ export default function ConfirmDialog({
             className="px-4 py-2.5 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
             disabled={loading}
           >
-            {cancelLabel}
+            {resolvedCancelLabel}
           </button>
           <button
             type="button"
@@ -189,10 +194,10 @@ export default function ConfirmDialog({
             {loading ? (
               <>
                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                {confirmingLabel}
+                {resolvedConfirmingLabel}
               </>
             ) : (
-              confirmLabel
+              resolvedConfirmLabel
             )}
           </button>
         </div>

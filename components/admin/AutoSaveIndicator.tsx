@@ -1,6 +1,8 @@
 // components/admin/AutoSaveIndicator.tsx
 // Small indicator showing last auto-save timestamp.
 
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
+
 function formatTime(iso: string | null) {
   if (!iso) return null;
   try {
@@ -19,12 +21,13 @@ export default function AutoSaveIndicator({
 }: {
   lastSaved: string | null;
 }) {
+  const t = useAdminT('adminAutoSaveIndicator');
   const time = formatTime(lastSaved);
   if (!time) return null;
 
   return (
     <span className="text-xs text-neutral-500">
-      Brouillon sauvegardé à {time}
+      {format(t.savedAt, { time })}
     </span>
   );
 }

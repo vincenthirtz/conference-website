@@ -23,6 +23,7 @@ import {
   type AccessibleTenant,
 } from '@/hooks/useAccessibleTenants';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 import { logger } from '../../utils/logger';
 
@@ -70,7 +71,8 @@ type TenantBadgeProps = {
 };
 
 function TenantBadge({ tenant, size = 'md' }: TenantBadgeProps) {
-  const padding = size === 'sm' ? 'px-1.5 py-0.5 text-[9px]' : 'px-2 py-0.5 text-[10px]';
+  const padding =
+    size === 'sm' ? 'px-1.5 py-0.5 text-[9px]' : 'px-2 py-0.5 text-[10px]';
   return (
     <span
       className={`rounded-md border border-white/10 bg-white/5 ${padding} font-medium uppercase tracking-wider text-neutral-300`}
@@ -95,8 +97,12 @@ function TenantSwitcherSkeleton() {
 export default function TenantSwitcher() {
   const router = useRouter();
   const { addToast } = useToast();
-  const { tenant: active, isLoading: loadingActive, refresh: refreshActive } =
-    useActiveTenant();
+  const tx = useAdminT('adminTenantSwitcher');
+  const {
+    tenant: active,
+    isLoading: loadingActive,
+    refresh: refreshActive,
+  } = useActiveTenant();
   const { tenants, isLoading: loadingList } = useAccessibleTenants();
   const { mutateJson } = useIdempotentMutation();
 
@@ -140,7 +146,7 @@ export default function TenantSwitcher() {
       <div
         data-testid="tenant-switcher-single"
         className="flex shrink-0 items-center gap-2 whitespace-nowrap rounded-lg bg-white/5 px-2 py-1"
-        title={`Tenant : ${only.name}`}
+        title={format(tx.tenantTitle, { name: only.name })}
       >
         <span className="text-[12px] font-medium text-neutral-200">
           {only.name}
@@ -162,16 +168,13 @@ export default function TenantSwitcher() {
         body: JSON.stringify({ tenant_id: target.id }),
       });
       await refreshActive();
-      addToast(`Tenant actif : ${target.name}`, 'success');
+      addToast(format(tx.switchedToast, { name: target.name }), 'success');
       setOpen(false);
       // Reload so SSR pages (everywhere) re-render with the new active tenant.
       router.reload();
     } catch (err) {
       logger.error('TenantSwitcher: switch error', err);
-      addToast(
-        (err as Error)?.message ?? 'Impossible de changer de tenant.',
-        'error'
-      );
+      addToast((err as Error)?.message ?? tx.switchError, 'error');
     } finally {
       setSwitching(null);
     }
@@ -211,7 +214,7 @@ export default function TenantSwitcher() {
         }`}
       >
         <div className="border-b border-white/[0.06] px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
-          Tenant actif
+          {tx.activeTenantHeader}
         </div>
         <ul className="max-h-[320px] overflow-y-auto py-1">
           {tenants.map((t) => {
@@ -238,7 +241,7 @@ export default function TenantSwitcher() {
                       <span className="truncate font-medium">{t.name}</span>
                       <span className="truncate text-[10px] uppercase tracking-wider text-neutral-500">
                         {t.role}
-                        {!t.is_active && ' • inactif'}
+                        {!t.is_active && tx.inactiveSuffix}
                       </span>
                     </span>
                   </span>

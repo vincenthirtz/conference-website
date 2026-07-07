@@ -1,6 +1,8 @@
 // components/admin/MatchReadinessChecklist.tsx
 // Checklist "pret a jouer" affichee avant un match.
 
+import { useAdminT } from '@/lib/i18n/useAdminT';
+
 type CheckItem = {
   label: string;
   ok: boolean;
@@ -75,34 +77,35 @@ export default function MatchReadinessChecklist({
   tournamentStatus,
   stageActive,
 }: MatchReadinessProps) {
+  const t = useAdminT('adminMatchReadinessChecklist');
   const isBye = match.is_bye === true;
 
   const checks: CheckItem[] = [
     {
-      label: 'Equipe 1 assignee',
+      label: t.team1Assigned,
       ok: !!match.team1_id,
       detail: match.team1_id
         ? team1Name || match.team1_id.slice(0, 8)
-        : 'Non assignee',
+        : t.notAssigned,
     },
     ...(!isBye
       ? [
           {
-            label: 'Equipe 2 assignee',
+            label: t.team2Assigned,
             ok: !!match.team2_id,
             detail: match.team2_id
               ? team2Name || match.team2_id.slice(0, 8)
-              : 'Non assignee',
+              : t.notAssigned,
           },
         ]
       : []),
     {
-      label: 'Format defini',
+      label: t.formatDefined,
       ok: !!match.best_of && match.best_of > 0,
-      detail: match.best_of ? `BO${match.best_of}` : 'Non defini',
+      detail: match.best_of ? `BO${match.best_of}` : t.formatUndefined,
     },
     {
-      label: 'Horaire programme',
+      label: t.scheduleSet,
       ok: !!match.scheduled_at,
       detail: match.scheduled_at
         ? new Date(match.scheduled_at).toLocaleString('fr-FR', {
@@ -111,48 +114,48 @@ export default function MatchReadinessChecklist({
             hour: '2-digit',
             minute: '2-digit',
           })
-        : 'Non programme',
+        : t.notScheduled,
     },
     {
-      label: 'Stream configure',
+      label: t.streamConfigured,
       ok: !!match.stream_url,
-      detail: match.stream_url || 'Aucun stream',
+      detail: match.stream_url || t.noStream,
     },
     {
-      label: 'Code lobby renseigne',
+      label: t.lobbyCodeSet,
       ok: !!match.lobby_code,
-      detail: match.lobby_code || 'Non renseigne',
+      detail: match.lobby_code || t.notSet,
     },
     {
-      label: 'Tournoi en cours',
+      label: t.tournamentRunning,
       ok: tournamentStatus === 'running' || tournamentStatus === 'published',
       detail:
         tournamentStatus === 'running'
-          ? 'En cours'
+          ? t.statusRunning
           : tournamentStatus === 'published'
-            ? 'Publie'
-            : tournamentStatus || 'Statut inconnu',
+            ? t.statusPublished
+            : tournamentStatus || t.unknownStatus,
     },
     ...(stageActive !== null
       ? [
           {
-            label: 'Phase active',
+            label: t.stageActive,
             ok: stageActive === true,
-            detail: stageActive ? 'Oui' : 'Inactive',
+            detail: stageActive ? t.yes : t.inactive,
           },
         ]
       : []),
     {
-      label: 'Match non annule',
+      label: t.matchNotCancelled,
       ok: match.status !== 'cancelled',
       detail:
         match.status === 'cancelled'
-          ? 'Annule'
+          ? t.statusCancelled
           : match.status === 'finished'
-            ? 'Termine'
+            ? t.statusFinished
             : match.status === 'ongoing'
-              ? 'En cours'
-              : 'A venir',
+              ? t.statusRunning
+              : t.statusUpcoming,
     },
   ];
 
@@ -164,7 +167,7 @@ export default function MatchReadinessChecklist({
   return (
     <section className="bg-neutral-800 border border-neutral-700 rounded-xl p-5 space-y-3">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Checklist</h2>
+        <h2 className="text-lg font-semibold">{t.heading}</h2>
         <span
           className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
             allReady
@@ -200,7 +203,7 @@ export default function MatchReadinessChecklist({
 
       {allReady && (
         <p className="text-xs text-emerald-400 font-medium pt-1">
-          Toutes les conditions sont remplies. Le match est pret a etre lance.
+          {t.allReady}
         </p>
       )}
     </section>

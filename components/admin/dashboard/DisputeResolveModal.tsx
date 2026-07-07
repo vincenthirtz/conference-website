@@ -11,6 +11,7 @@ import {
   useIdempotentMutation,
   BgSyncQueuedError,
 } from '@/hooks/useIdempotentMutation';
+import { useAdminT } from '@/lib/i18n/useAdminT';
 
 type Props = {
   open: boolean;
@@ -51,12 +52,13 @@ export default function DisputeResolveModal({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { mutateJson } = useIdempotentMutation();
+  const t = useAdminT('adminDashboardDisputeResolveModal');
 
   if (!open) return null;
 
   async function submit() {
     if (resolution.trim().length === 0) {
-      setError('La résolution est requise.');
+      setError(t.resolutionRequired);
       return;
     }
     setSubmitting(true);
@@ -75,7 +77,7 @@ export default function DisputeResolveModal({
           t1 < 0 ||
           t2 < 0
         ) {
-          throw new Error('Les deux scores doivent être des entiers ≥ 0.');
+          throw new Error(t.scoresInteger);
         }
         body.team1Score = t1;
         body.team2Score = t2;
@@ -91,8 +93,8 @@ export default function DisputeResolveModal({
     } catch (e: unknown) {
       const msg =
         e instanceof BgSyncQueuedError
-          ? 'Hors-ligne : la résolution sera envoyée à la reconnexion.'
-          : ((e as Error)?.message ?? 'Erreur inattendue');
+          ? t.offline
+          : ((e as Error)?.message ?? t.unexpectedError);
       setError(msg);
     } finally {
       setSubmitting(false);
@@ -110,9 +112,7 @@ export default function DisputeResolveModal({
       >
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>
-            <h3 className="text-lg font-semibold text-white">
-              Résoudre la dispute
-            </h3>
+            <h3 className="text-lg font-semibold text-white">{t.title}</h3>
             <p className="mt-1 text-xs text-neutral-400">
               {team1Name ?? '—'} vs {team2Name ?? '—'}
             </p>
@@ -121,7 +121,7 @@ export default function DisputeResolveModal({
             type="button"
             onClick={onClose}
             className="rounded-lg p-1 text-neutral-400 hover:bg-neutral-800 hover:text-white"
-            aria-label="Fermer"
+            aria-label={t.closeAria}
           >
             <svg
               className="h-5 w-5"
@@ -142,7 +142,7 @@ export default function DisputeResolveModal({
         {reason && (
           <div className="mb-4 rounded-lg border border-amber-500/20 bg-amber-500/5 p-3">
             <p className="text-[10px] uppercase tracking-wider text-amber-400">
-              Raison de la dispute
+              {t.reasonLabel}
             </p>
             <p className="mt-1 whitespace-pre-wrap text-xs text-amber-100">
               {reason}
@@ -160,7 +160,7 @@ export default function DisputeResolveModal({
                 : 'border-neutral-700 text-neutral-400 hover:bg-neutral-800'
             }`}
           >
-            Sans changer le score
+            {t.modeNoChange}
           </button>
           <button
             type="button"
@@ -171,7 +171,7 @@ export default function DisputeResolveModal({
                 : 'border-neutral-700 text-neutral-400 hover:bg-neutral-800'
             }`}
           >
-            Avec score corrigé
+            {t.modeOverride}
           </button>
         </div>
 
@@ -179,7 +179,7 @@ export default function DisputeResolveModal({
           <div className="mb-4 grid grid-cols-2 gap-3">
             <label className="block">
               <span className="mb-1 block text-xs font-medium text-neutral-400">
-                {team1Name ?? 'Équipe 1'}
+                {team1Name ?? t.team1Fallback}
               </span>
               <input
                 type="number"
@@ -191,7 +191,7 @@ export default function DisputeResolveModal({
             </label>
             <label className="block">
               <span className="mb-1 block text-xs font-medium text-neutral-400">
-                {team2Name ?? 'Équipe 2'}
+                {team2Name ?? t.team2Fallback}
               </span>
               <input
                 type="number"
@@ -206,20 +206,20 @@ export default function DisputeResolveModal({
 
         <label className="mb-3 block">
           <span className="mb-1 block text-xs font-medium text-neutral-400">
-            Résolution (visible dans l&apos;historique)
+            {t.resolutionLabel}
           </span>
           <textarea
             value={resolution}
             onChange={(e) => setResolution(e.target.value)}
             rows={4}
-            placeholder="Ex : après vérification du replay, le score initial était correct."
+            placeholder={t.resolutionPlaceholder}
             className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white focus:border-purple-500 focus:outline-none"
           />
         </label>
 
         <label className="mb-4 block">
           <span className="mb-1 block text-xs font-medium text-neutral-400">
-            Statut de reprise
+            {t.resumeStatusLabel}
           </span>
           <select
             value={resumeStatus}
@@ -230,9 +230,9 @@ export default function DisputeResolveModal({
             }
             className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white focus:border-purple-500 focus:outline-none"
           >
-            <option value="finished">Terminé (finished)</option>
-            <option value="ongoing">En cours (ongoing)</option>
-            <option value="pending">En attente (pending)</option>
+            <option value="finished">{t.resumeFinished}</option>
+            <option value="ongoing">{t.resumeOngoing}</option>
+            <option value="pending">{t.resumePending}</option>
           </select>
         </label>
 
@@ -249,7 +249,7 @@ export default function DisputeResolveModal({
             className="rounded-lg bg-neutral-800 px-4 py-2 text-sm font-medium text-neutral-300 hover:bg-neutral-700"
             disabled={submitting}
           >
-            Annuler
+            {t.cancel}
           </button>
           <button
             type="button"
@@ -260,7 +260,7 @@ export default function DisputeResolveModal({
             {submitting && (
               <span className="h-3 w-3 animate-spin rounded-full border-2 border-white/30 border-t-white" />
             )}
-            Résoudre
+            {t.resolve}
           </button>
         </div>
       </div>

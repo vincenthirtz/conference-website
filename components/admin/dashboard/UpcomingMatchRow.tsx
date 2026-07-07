@@ -2,6 +2,7 @@
 // Ligne compacte pour afficher un match (upcoming, live, en attente) dans le dashboard.
 
 import Link from 'next/link';
+import { useAdminT } from '@/lib/i18n/useAdminT';
 
 type Props = {
   matchId: string;
@@ -88,6 +89,7 @@ export default function UpcomingMatchRow({
   onScoreClick,
   onResolveClick,
 }: Props) {
+  const t = useAdminT('adminDashboardUpcomingMatchRow');
   const dayShort = formatDayShort(scheduledAt);
   const time = formatTime(scheduledAt);
   const showScore =
@@ -101,7 +103,7 @@ export default function UpcomingMatchRow({
         {variant === 'live' ? (
           <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-rose-300">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-rose-400" />
-            Live
+            {t.live}
           </span>
         ) : (
           <>
@@ -129,7 +131,7 @@ export default function UpcomingMatchRow({
             <>
               <span className="mx-1.5 text-gray-600">·</span>
               <span className="text-[11px] font-medium text-rose-200">
-                Map {currentMap.index}
+                {t.mapLabel} {currentMap.index}
                 {matchFormat && FORMAT_TOTAL_MAPS[matchFormat.toLowerCase()]
                   ? `/${FORMAT_TOTAL_MAPS[matchFormat.toLowerCase()]}`
                   : ''}
@@ -159,7 +161,7 @@ export default function UpcomingMatchRow({
             className="rounded-md bg-purple-500/15 px-2 py-1 text-[10px] font-medium text-purple-200 hover:bg-purple-500/25"
             onClick={(e) => e.stopPropagation()}
           >
-            Stream
+            {t.stream}
           </a>
         )}
         {onResolveClick && (
@@ -168,7 +170,7 @@ export default function UpcomingMatchRow({
             onClick={onResolveClick}
             className="rounded-md bg-emerald-500/15 px-2 py-1 text-[10px] font-medium text-emerald-200 hover:bg-emerald-500/25"
           >
-            Résoudre
+            {t.resolve}
           </button>
         )}
         {onScoreClick && (
@@ -177,14 +179,14 @@ export default function UpcomingMatchRow({
             onClick={onScoreClick}
             className="rounded-md bg-blue-500/15 px-2 py-1 text-[10px] font-medium text-blue-200 hover:bg-blue-500/25"
           >
-            Saisir score
+            {t.scoreEntry}
           </button>
         )}
         <Link
           href={`/admin/matches/${matchId}`}
           className="rounded-md border border-white/10 px-2 py-1 text-[10px] text-gray-300 hover:bg-white/5"
         >
-          Détail
+          {t.detail}
         </Link>
       </div>
     </div>

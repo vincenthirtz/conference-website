@@ -8,6 +8,7 @@ import {
   BgSyncQueuedError,
 } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
+import { useAdminT } from '@/lib/i18n/useAdminT';
 
 type Props = {
   open: boolean;
@@ -52,6 +53,7 @@ export default function ScoreEntryModal({
   const [error, setError] = useState<string | null>(null);
   const { mutateJson } = useIdempotentMutation();
   const { addToast } = useToast();
+  const t = useAdminT('adminDashboardScoreEntryModal');
 
   if (!open) return null;
 
@@ -63,7 +65,7 @@ export default function ScoreEntryModal({
     const t1 = Number(team1Score);
     const t2 = Number(team2Score);
     if (!Number.isInteger(t1) || !Number.isInteger(t2) || t1 < 0 || t2 < 0) {
-      setError('Les deux scores doivent être des entiers ≥ 0.');
+      setError(t.scoresInteger);
       return;
     }
     setSubmitting(true);
@@ -85,8 +87,8 @@ export default function ScoreEntryModal({
     } catch (e: unknown) {
       const msg =
         e instanceof BgSyncQueuedError
-          ? 'Hors-ligne : la saisie sera envoyée à la reconnexion.'
-          : ((e as Error)?.message ?? 'Erreur inattendue');
+          ? t.offline
+          : ((e as Error)?.message ?? t.unexpectedError);
       setError(msg);
       addToast(msg, e instanceof BgSyncQueuedError ? 'info' : 'error');
     } finally {
@@ -105,9 +107,7 @@ export default function ScoreEntryModal({
       >
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>
-            <h3 className="text-lg font-semibold text-white">
-              Saisir le score
-            </h3>
+            <h3 className="text-lg font-semibold text-white">{t.title}</h3>
             <p className="mt-1 text-xs text-neutral-400">
               {team1Name ?? '—'} vs {team2Name ?? '—'}
               {matchFormat && (
@@ -121,7 +121,7 @@ export default function ScoreEntryModal({
             type="button"
             onClick={onClose}
             className="rounded-lg p-1 text-neutral-400 hover:bg-neutral-800 hover:text-white"
-            aria-label="Fermer"
+            aria-label={t.closeAria}
           >
             <svg
               className="h-5 w-5"
@@ -142,7 +142,7 @@ export default function ScoreEntryModal({
         <div className="mb-4 grid grid-cols-2 gap-3">
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-neutral-400">
-              {team1Name ?? 'Équipe 1'}
+              {team1Name ?? t.team1Fallback}
             </span>
             <input
               type="number"
@@ -156,7 +156,7 @@ export default function ScoreEntryModal({
           </label>
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-neutral-400">
-              {team2Name ?? 'Équipe 2'}
+              {team2Name ?? t.team2Fallback}
             </span>
             <input
               type="number"
@@ -176,7 +176,9 @@ export default function ScoreEntryModal({
             onChange={(e) => setMarkFinished(e.target.checked)}
             className="h-4 w-4 rounded border-neutral-600 bg-neutral-800"
           />
-          Marquer le match comme <strong>terminé</strong> et propager le bracket
+          {t.markFinishedBefore}
+          <strong>{t.markFinishedStrong}</strong>
+          {t.markFinishedAfter}
         </label>
 
         {error && (
@@ -192,7 +194,7 @@ export default function ScoreEntryModal({
             className="rounded-lg bg-neutral-800 px-4 py-2 text-sm font-medium text-neutral-300 hover:bg-neutral-700"
             disabled={submitting}
           >
-            Annuler
+            {t.cancel}
           </button>
           <button
             type="button"
@@ -203,7 +205,7 @@ export default function ScoreEntryModal({
             {submitting && (
               <span className="h-3 w-3 animate-spin rounded-full border-2 border-white/30 border-t-white" />
             )}
-            Enregistrer
+            {t.save}
           </button>
         </div>
       </div>
