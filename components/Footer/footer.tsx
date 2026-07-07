@@ -3,6 +3,7 @@ import Link from 'next/link';
 import type { SVGTypes } from '@/types/types';
 import { CookieSettingsButton } from '@/components/CookieBanner';
 import { useT } from '@/lib/i18n/useT';
+import { useTenantBranding } from '@/lib/branding/TenantBrandingProvider';
 import {
   TikTokIcon,
   InstagramIcon,
@@ -136,6 +137,8 @@ function FooterColumn({
 
 function Footer(): JSX.Element {
   const t = useT('footer');
+  const branding = useTenantBranding();
+  const siteName = branding?.name ?? "OW Women's Cup";
   return (
     <footer
       className="w-full bg-[var(--bg-deep)] border-t border-white/5 pt-12 pb-6 px-4"
@@ -147,7 +150,7 @@ function Footer(): JSX.Element {
           <div className="flex flex-col gap-4">
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.18em] text-white">
-                OW Women&apos;s Cup
+                {siteName}
               </p>
               <p className="mt-2 text-sm text-gray-400 leading-relaxed max-w-xs">
                 {t.tagline}

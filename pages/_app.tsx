@@ -12,6 +12,8 @@ import { ToastProvider } from '@/components/Toast';
 import { ToastContainer } from '@/components/Toast';
 import { LanguageProvider } from '@/lib/i18n/LanguageProvider';
 import { SessionProvider } from '@/hooks/useSession';
+import { TenantBrandingProvider } from '@/lib/branding/TenantBrandingProvider';
+import type { TenantBranding } from '@/utils/tenant';
 
 const workSans = Work_Sans({
   subsets: ['latin'],
@@ -44,9 +46,12 @@ const OfflineBanner = dynamic(() => import('@/components/OfflineBanner'), {
 
 type AppPropsWithSeo = AppProps & {
   Component: AppProps['Component'] & { seo?: SeoProps };
+  // Injecté au SSR par `enhanceApp` dans `_document.tsx` (WHITELABEL). Absent
+  // (undefined) à l'hydratation client : le provider relit alors l'île JSON.
+  branding?: TenantBranding | null;
 };
 
-function MyApp({ Component, pageProps, router }: AppPropsWithSeo) {
+function MyApp({ Component, pageProps, router, branding }: AppPropsWithSeo) {
   // SEO resolution order:
   //   1. `pageProps.seo` — DYNAMIC, per-entity SEO returned by a page's
   //      getStaticProps/getServerSideProps (ISR pages : profil joueuse,
@@ -100,54 +105,58 @@ function MyApp({ Component, pageProps, router }: AppPropsWithSeo) {
   if (isEmbed) {
     return (
       <ErrorBoundary>
-        <div className={workSans.variable}>
-          <DefaultSeo {...effectiveSeo} />
-          <Component {...pageProps} />
-        </div>
+        <TenantBrandingProvider branding={branding}>
+          <div className={workSans.variable}>
+            <DefaultSeo {...effectiveSeo} />
+            <Component {...pageProps} />
+          </div>
+        </TenantBrandingProvider>
       </ErrorBoundary>
     );
   }
 
   return (
     <ErrorBoundary>
-      <SessionProvider>
-        <LanguageProvider>
-          <ToastProvider>
-            <div className={workSans.variable}>
-              <Head>
-                <link key="manifest" rel="manifest" href={manifestHref} />
-                {isAppScope && (
-                  <meta
-                    key="apple-wac"
-                    name="apple-mobile-web-app-capable"
-                    content="yes"
-                  />
-                )}
-                {isAppScope && (
-                  <meta
-                    key="apple-sbs"
-                    name="apple-mobile-web-app-status-bar-style"
-                    content="default"
-                  />
-                )}
-              </Head>
-              <DefaultSeo {...effectiveSeo} />
-              {!isCaster && <Navbar />}
-              <main id="main-content">
-                <Component {...pageProps} />
-              </main>
-              {isAdmin && <PushOptIn />}
-              {(isAdmin || isCaster) && <PWAInstallAndUpdate />}
-              {(isAdmin || isCaster) && <OfflineBanner />}
-              {!isCaster && <Footer />}
-              {!isAdmin && !isCaster && <FloatingSocials />}
-              <BackToTopButton />
-              <CookieBanner />
-              <ToastContainer />
-            </div>
-          </ToastProvider>
-        </LanguageProvider>
-      </SessionProvider>
+      <TenantBrandingProvider branding={branding}>
+        <SessionProvider>
+          <LanguageProvider>
+            <ToastProvider>
+              <div className={workSans.variable}>
+                <Head>
+                  <link key="manifest" rel="manifest" href={manifestHref} />
+                  {isAppScope && (
+                    <meta
+                      key="apple-wac"
+                      name="apple-mobile-web-app-capable"
+                      content="yes"
+                    />
+                  )}
+                  {isAppScope && (
+                    <meta
+                      key="apple-sbs"
+                      name="apple-mobile-web-app-status-bar-style"
+                      content="default"
+                    />
+                  )}
+                </Head>
+                <DefaultSeo {...effectiveSeo} />
+                {!isCaster && <Navbar />}
+                <main id="main-content">
+                  <Component {...pageProps} />
+                </main>
+                {isAdmin && <PushOptIn />}
+                {(isAdmin || isCaster) && <PWAInstallAndUpdate />}
+                {(isAdmin || isCaster) && <OfflineBanner />}
+                {!isCaster && <Footer />}
+                {!isAdmin && !isCaster && <FloatingSocials />}
+                <BackToTopButton />
+                <CookieBanner />
+                <ToastContainer />
+              </div>
+            </ToastProvider>
+          </LanguageProvider>
+        </SessionProvider>
+      </TenantBrandingProvider>
     </ErrorBoundary>
   );
 }

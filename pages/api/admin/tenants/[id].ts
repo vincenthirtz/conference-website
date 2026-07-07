@@ -20,13 +20,20 @@ import {
 } from '@/utils/staff';
 import { withAdminIdempotency } from '@/utils/adminIdempotency';
 import { applyRateLimit } from '@/utils/rateLimit';
-import { isValidUUID } from '@/utils/apiHelpers';
+import { isValidUUID, sanitizeUrl } from '@/utils/apiHelpers';
 import { canAccessTenant, PROTECTED_TENANT_SLUGS } from '@/utils/adminTenants';
 import { logger } from '@/utils/logger';
 
 const NAME_MIN = 1;
 const NAME_MAX = 200;
 const LOCALE_RE = /^[a-z]{2}(-[A-Z]{2})?$/;
+const HEX_RE = /^#[0-9a-fA-F]{6}$/;
+const HOSTNAME_RE = /^[a-z0-9.-]+\.[a-z]{2,}$/;
+
+// Colonnes renvoyees au client pour le detail d'un tenant (inclut la marque
+// blanche : logo/couleurs/domaine personnalise).
+const TENANT_DETAIL_COLUMNS =
+  'id, slug, name, is_active, default_locale, logo_url, primary_color, accent_color, custom_domain, created_at';
 
 async function handler(
   req: NextApiRequest,
@@ -60,7 +67,7 @@ async function handler(
 
     const { data: tenant, error: tenantErr } = await supabaseAdmin
       .from('tenants')
-      .select('id, slug, name, is_active, default_locale, created_at')
+      .select(TENANT_DETAIL_COLUMNS)
       .eq('id', id)
       .maybeSingle();
 
@@ -169,6 +176,77 @@ async function handler(
       update.is_active = body.is_active;
     }
 
+    // ---- Marque blanche (white-label) ----
+    if ('logo_url' in body) {
+      const raw =
+        typeof body.logo_url === 'string' ? body.logo_url.trim() : '';
+      if (!raw) {
+        update.logo_url = null;
+      } else if (raw.startsWith('/') && !raw.startsWith('//')) {
+        // Chemin relatif au site (ex : /uploads/logo.png).
+        update.logo_url = raw;
+      } else {
+        const safe = sanitizeUrl(raw);
+        if (!safe) {
+          return res.status(400).json({
+            error:
+              'logo_url must be a valid http(s) URL or a site-relative path.',
+            code: 'INVALID_LOGO_URL',
+          });
+        }
+        update.logo_url = safe;
+      }
+    }
+
+    if ('primary_color' in body) {
+      const raw =
+        typeof body.primary_color === 'string'
+          ? body.primary_color.trim()
+          : '';
+      if (!raw) {
+        update.primary_color = null;
+      } else if (!HEX_RE.test(raw)) {
+        return res.status(400).json({
+          error: 'primary_color must be a hex color like #7c3aed.',
+          code: 'INVALID_PRIMARY_COLOR',
+        });
+      } else {
+        update.primary_color = raw;
+      }
+    }
+
+    if ('accent_color' in body) {
+      const raw =
+        typeof body.accent_color === 'string' ? body.accent_color.trim() : '';
+      if (!raw) {
+        update.accent_color = null;
+      } else if (!HEX_RE.test(raw)) {
+        return res.status(400).json({
+          error: 'accent_color must be a hex color like #22d3ee.',
+          code: 'INVALID_ACCENT_COLOR',
+        });
+      } else {
+        update.accent_color = raw;
+      }
+    }
+
+    if ('custom_domain' in body) {
+      const raw =
+        typeof body.custom_domain === 'string'
+          ? body.custom_domain.trim().toLowerCase()
+          : '';
+      if (!raw) {
+        update.custom_domain = null;
+      } else if (!HOSTNAME_RE.test(raw)) {
+        return res.status(400).json({
+          error: 'custom_domain must be a valid hostname (no scheme or path).',
+          code: 'INVALID_CUSTOM_DOMAIN',
+        });
+      } else {
+        update.custom_domain = raw;
+      }
+    }
+
     if ('slug' in body) {
       return res
         .status(400)
@@ -185,10 +263,19 @@ async function handler(
       .from('tenants')
       .update(update)
       .eq('id', id)
-      .select('id, slug, name, is_active, default_locale, created_at')
+      .select(TENANT_DETAIL_COLUMNS)
       .single();
 
     if (error || !updated) {
+      // Violation d'unicite sur custom_domain (deja pris par un autre tenant).
+      const pgCode = (error as { code?: string } | null)?.code;
+      if (pgCode === '23505') {
+        return res.status(409).json({
+          error:
+            'Ce domaine personnalisé est déjà utilisé par un autre tenant.',
+          code: 'CUSTOM_DOMAIN_TAKEN',
+        });
+      }
       logger.error('[admin/tenants/[id]] update error', error);
       return res.status(500).json({ error: 'Failed to update the tenant.' });
     }
@@ -206,7 +293,7 @@ async function handler(
     // Protection : interdit pour le tenant historique (`conference`).
     const { data: existing, error: lookupErr } = await supabaseAdmin
       .from('tenants')
-      .select('id, slug, name, is_active, default_locale, created_at')
+      .select(TENANT_DETAIL_COLUMNS)
       .eq('id', id)
       .maybeSingle();
 
@@ -227,7 +314,7 @@ async function handler(
       .from('tenants')
       .update({ is_active: false })
       .eq('id', id)
-      .select('id, slug, name, is_active, default_locale, created_at')
+      .select(TENANT_DETAIL_COLUMNS)
       .single();
 
     if (error || !updated) {

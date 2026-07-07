@@ -1,6 +1,7 @@
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useLang, type Lang } from '@/lib/i18n/LanguageProvider';
+import { useTenantBranding } from '@/lib/branding/TenantBrandingProvider';
 
 /**
  * Chaîne éventuellement localisée. Une page peut fournir soit un simple
@@ -121,6 +122,13 @@ export default function DefaultSeo({
 }: SeoProps) {
   const { asPath } = useRouter();
   const { lang } = useLang();
+  // WHITELABEL — le nom du site devient piloté par le branding du tenant quand
+  // il est présent. En son absence (tenant par défaut) on retombe sur la
+  // constante `SITE_NAME` : `siteName === SITE_NAME` sert de flag « défaut » et
+  // garantit un rendu byte-identique (mêmes objets JSON-LD, mêmes chaînes).
+  const branding = useTenantBranding();
+  const siteName = branding?.name ?? SITE_NAME;
+  const isDefaultBrand = siteName === SITE_NAME;
   const pathname = asPath?.split('?')[0] || '/';
   const isHomePage = pathname === '/';
 
@@ -134,8 +142,25 @@ export default function DefaultSeo({
   const ogLocale = lang === 'fr' ? 'fr_FR' : 'en_GB';
   const ogLocaleAlternate = lang === 'fr' ? 'en_GB' : 'fr_FR';
 
-  const metaTitle = title ? `${title} | ${SITE_NAME}` : DEFAULT_TITLE;
+  const metaTitle = title
+    ? `${title} | ${siteName}`
+    : isDefaultBrand
+      ? DEFAULT_TITLE
+      : `${siteName} – Tournoi Overwatch féminin & esport 100% féminin`;
   const metaDescription = description || DEFAULT_DESCRIPTION;
+
+  // Schémas JSON-LD homepage : objets par défaut inchangés, ou copies avec le
+  // nom du tenant substitué (le logo/URL restent ceux de la plateforme).
+  const orgSchema = isDefaultBrand
+    ? organizationSchema
+    : { ...organizationSchema, name: siteName };
+  const siteSchema = isDefaultBrand
+    ? websiteSchema
+    : {
+        ...websiteSchema,
+        name: siteName,
+        publisher: { ...websiteSchema.publisher, name: siteName },
+      };
   const canonical = BASE_URL ? `${BASE_URL}${pathname}` : undefined;
   const hasExplicitImage = Boolean(image);
   const ogImage = toAbsoluteUrl(image || DEFAULT_IMAGE);
@@ -200,12 +225,12 @@ export default function DefaultSeo({
       <meta property="og:type" content={type} />
       <meta property="og:locale" content={ogLocale} />
       <meta property="og:locale:alternate" content={ogLocaleAlternate} />
-      <meta property="og:site_name" content={SITE_NAME} />
+      <meta property="og:site_name" content={siteName} />
       <meta property="og:title" content={metaTitle} />
       <meta property="og:description" content={metaDescription} />
       {canonical && <meta property="og:url" content={canonical} />}
       {ogImage && <meta property="og:image" content={ogImage} />}
-      {ogImage && <meta property="og:image:alt" content={title || SITE_NAME} />}
+      {ogImage && <meta property="og:image:alt" content={title || siteName} />}
       {hasExplicitImage ? (
         <>
           <meta property="og:image:width" content="1200" />
@@ -226,7 +251,7 @@ export default function DefaultSeo({
         <meta property="article:modified_time" content={modifiedTime} />
       )}
       {type === 'article' && (
-        <meta property="article:author" content={SITE_NAME} />
+        <meta property="article:author" content={siteName} />
       )}
 
       {/* Twitter Card */}
@@ -236,9 +261,7 @@ export default function DefaultSeo({
       <meta name="twitter:title" content={metaTitle} />
       <meta name="twitter:description" content={metaDescription} />
       {ogImage && <meta name="twitter:image" content={ogImage} />}
-      {ogImage && (
-        <meta name="twitter:image:alt" content={title || SITE_NAME} />
-      )}
+      {ogImage && <meta name="twitter:image:alt" content={title || siteName} />}
 
       {/* Theme and favicon */}
       <meta name="theme-color" content="#0E0A1F" />
@@ -251,7 +274,7 @@ export default function DefaultSeo({
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: JSON.stringify(organizationSchema),
+            __html: JSON.stringify(orgSchema),
           }}
         />
       )}
@@ -259,7 +282,7 @@ export default function DefaultSeo({
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: JSON.stringify(websiteSchema),
+            __html: JSON.stringify(siteSchema),
           }}
         />
       )}

@@ -8,6 +8,7 @@ import { formatStaffRoleLabel, type StaffRole } from '@/utils/staff';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useRealtimeChannel } from '@/hooks/useRealtimeChannel';
 import { useT, format } from '@/lib/i18n/useT';
+import { useTenantBranding } from '@/lib/branding/TenantBrandingProvider';
 
 // TenantSwitcher intentionally not rendered here: on the
 // conference-website domain the active tenant is always DEFAULT_TENANT_ID
@@ -53,6 +54,7 @@ export default function AdminTopBar({
   onLogout,
 }: AdminTopBarProps) {
   const t = useT('adminTopBar');
+  const branding = useTenantBranding();
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [openSubMenu, setOpenSubMenu] = useState<string | null>(null);
   const menuAreaRef = useRef<HTMLDivElement>(null);
@@ -191,12 +193,13 @@ export default function AdminTopBar({
           aria-label={t.accueilAria}
         >
           <Image
-            src="/img/logos/2025-logo.png"
-            alt="conference logo"
+            src={branding?.logoUrl ?? '/img/logos/2025-logo.png'}
+            alt={branding?.name ? `${branding.name} logo` : 'conference logo'}
             width={150}
             height={38}
             className="block h-8 w-auto transition-transform duration-300 hover:scale-[1.03]"
             priority
+            unoptimized={Boolean(branding?.logoUrl)}
           />
         </Link>
 

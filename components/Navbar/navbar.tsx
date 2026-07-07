@@ -11,6 +11,9 @@ import PublicNav from './PublicNav';
 import { ADMIN_LINKS, filterAdminLinks } from './adminLinks';
 import { PLAYER_LINKS } from './playerLinks';
 import { useT } from '@/lib/i18n/useT';
+import { useTenantBranding } from '@/lib/branding/TenantBrandingProvider';
+
+const DEFAULT_LOGO_SRC = '/img/logos/2025-logo.png';
 
 const AdminTopBar = dynamic(() => import('./AdminTopBar'), { ssr: false });
 const PlayerTopBar = dynamic(() => import('./PlayerTopBar'), { ssr: false });
@@ -23,6 +26,9 @@ const PLAYER_BAR_HEIGHT = 44;
 function Navbar(): JSX.Element {
   const router = useRouter();
   const tNav = useT('navbar');
+  const branding = useTenantBranding();
+  const logoSrc = branding?.logoUrl ?? DEFAULT_LOGO_SRC;
+  const logoAlt = branding?.name ? `${branding.name} logo` : 'conference logo';
 
   const { isStaff, staffName, staffRole, loading, clear } = useStaffSession();
 
@@ -167,12 +173,16 @@ function Navbar(): JSX.Element {
                 aria-label={tNav.homeAria}
               >
                 <Image
-                  src="/img/logos/2025-logo.png"
-                  alt="conference logo"
+                  src={logoSrc}
+                  alt={logoAlt}
                   width={64}
                   height={64}
                   className="block h-16 w-auto transition-transform duration-300 group-hover:scale-[1.04]"
                   priority
+                  // Custom-domain logos (branding) live on arbitrary hosts;
+                  // skip next/image optimization (and its remotePatterns check)
+                  // for them. The default logo stays optimized (unchanged).
+                  unoptimized={Boolean(branding?.logoUrl)}
                 />
               </Link>
             )}

@@ -11,6 +11,7 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import LanguageToggle from './LanguageToggle';
 import { useT, format } from '@/lib/i18n/useT';
+import { useTenantBranding } from '@/lib/branding/TenantBrandingProvider';
 
 const SITE_MENU_KEY = '__site__';
 const MOBILE_MENU_KEY = '__mobile__';
@@ -85,6 +86,7 @@ export default function PlayerTopBar({
   avatarUrl,
 }: PlayerTopBarProps) {
   const t = useT('playerTopBar');
+  const branding = useTenantBranding();
   const router = useRouter();
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
   const [openMenu, setOpenMenu] = useState<string | null>(null);
@@ -199,12 +201,13 @@ export default function PlayerTopBar({
           aria-label={t.homeAria}
         >
           <Image
-            src="/img/logos/2025-logo.png"
-            alt="conference logo"
+            src={branding?.logoUrl ?? '/img/logos/2025-logo.png'}
+            alt={branding?.name ? `${branding.name} logo` : 'conference logo'}
             width={150}
             height={38}
             className="block h-8 w-auto transition-transform duration-300 hover:scale-[1.03]"
             priority
+            unoptimized={Boolean(branding?.logoUrl)}
           />
         </Link>
 
@@ -303,9 +306,7 @@ export default function PlayerTopBar({
         <div ref={mobileAreaRef} className="relative min-[900px]:hidden">
           <button
             type="button"
-            aria-label={
-              openMenu === MOBILE_MENU_KEY ? t.closeMenu : t.openMenu
-            }
+            aria-label={openMenu === MOBILE_MENU_KEY ? t.closeMenu : t.openMenu}
             aria-expanded={openMenu === MOBILE_MENU_KEY}
             aria-haspopup="true"
             onClick={() => toggleMenu(MOBILE_MENU_KEY)}
@@ -339,57 +340,57 @@ export default function PlayerTopBar({
           </button>
 
           {openMenu === MOBILE_MENU_KEY && (
-          <div
-            ref={drawerRef}
-            className="absolute right-0 top-[calc(100%+8px)] z-[130] w-[min(85vw,300px)] overflow-hidden rounded-xl border border-white/10 bg-neutral-900/95 shadow-2xl backdrop-blur-xl"
-            role="menu"
-          >
-            <div className="py-1">
-              {links.map((link) => {
-                const active = isActive(link.ref);
-                return (
-                  <Link
-                    key={link.ref}
-                    href={link.ref}
-                    role="menuitem"
-                    aria-current={active ? 'page' : undefined}
-                    onClick={closeAll}
-                    className={`block px-4 py-2.5 text-[13px] font-medium transition-colors ${
-                      active
-                        ? 'bg-purple-500/15 text-white'
-                        : 'text-neutral-300 hover:bg-white/[0.06] hover:text-white'
-                    }`}
-                  >
-                    {t.linkLabels[link.key]}
-                  </Link>
-                );
-              })}
-            </div>
-
-            <div className="border-t border-white/10">
-              <div className="px-4 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
-                {t.site}
+            <div
+              ref={drawerRef}
+              className="absolute right-0 top-[calc(100%+8px)] z-[130] w-[min(85vw,300px)] overflow-hidden rounded-xl border border-white/10 bg-neutral-900/95 shadow-2xl backdrop-blur-xl"
+              role="menu"
+            >
+              <div className="py-1">
+                {links.map((link) => {
+                  const active = isActive(link.ref);
+                  return (
+                    <Link
+                      key={link.ref}
+                      href={link.ref}
+                      role="menuitem"
+                      aria-current={active ? 'page' : undefined}
+                      onClick={closeAll}
+                      className={`block px-4 py-2.5 text-[13px] font-medium transition-colors ${
+                        active
+                          ? 'bg-purple-500/15 text-white'
+                          : 'text-neutral-300 hover:bg-white/[0.06] hover:text-white'
+                      }`}
+                    >
+                      {t.linkLabels[link.key]}
+                    </Link>
+                  );
+                })}
               </div>
-              {publicLinks.map((pl) => (
-                <PanelLink key={pl.ref} href={pl.ref} onNavigate={closeAll}>
-                  {pl.title}
-                </PanelLink>
-              ))}
-            </div>
 
-            <div className="border-t border-white/10">
-              <button
-                type="button"
-                onClick={() => {
-                  closeAll();
-                  onLogout();
-                }}
-                className="block w-full px-4 py-2.5 text-left text-[12px] font-medium uppercase tracking-wide text-neutral-400 transition-colors hover:bg-red-500/10 hover:text-red-400"
-              >
-                {t.logout}
-              </button>
+              <div className="border-t border-white/10">
+                <div className="px-4 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
+                  {t.site}
+                </div>
+                {publicLinks.map((pl) => (
+                  <PanelLink key={pl.ref} href={pl.ref} onNavigate={closeAll}>
+                    {pl.title}
+                  </PanelLink>
+                ))}
+              </div>
+
+              <div className="border-t border-white/10">
+                <button
+                  type="button"
+                  onClick={() => {
+                    closeAll();
+                    onLogout();
+                  }}
+                  className="block w-full px-4 py-2.5 text-left text-[12px] font-medium uppercase tracking-wide text-neutral-400 transition-colors hover:bg-red-500/10 hover:text-red-400"
+                >
+                  {t.logout}
+                </button>
+              </div>
             </div>
-          </div>
           )}
         </div>
       </div>

@@ -179,9 +179,15 @@ const tenantSlugCache = new Map<string, TenantSlugCacheEntry>();
 
 /**
  * Reset le cache. À usage strictement test.
+ *
+ * Vide aussi les caches WHITELABEL (host → tenant_id et tenant_id → branding)
+ * introduits plus bas, pour que les suites qui l'appellent en `beforeEach`
+ * repartent d'un état propre.
  */
 export function __resetTenantSlugCacheForTests(): void {
   tenantSlugCache.clear();
+  tenantHostCache.clear();
+  tenantBrandingCache.clear();
 }
 
 const SLUG_RE = /^[a-z0-9-]+$/;
@@ -203,9 +209,7 @@ const RESERVED_PATH_SEGMENTS = new Set([
  *   - tenant `is_active = false`,
  *   - `supabaseAdmin` indisponible (env mal configurée — log + null).
  */
-export async function getTenantIdBySlug(
-  slug: string
-): Promise<string | null> {
+export async function getTenantIdBySlug(slug: string): Promise<string | null> {
   if (!slug || !SLUG_RE.test(slug)) return null;
 
   const now = Date.now();
@@ -390,4 +394,288 @@ export async function resolveTenantIdForUserRequestAsync(
 
   // Pas de membership (ou pas d'authUserId) → résolveur public path-prefix.
   return resolveTenantIdForPublicRequestAsync(req);
+}
+
+/* ===========================================================================
+ * WHITELABEL — custom-domain resolution + per-tenant branding (S8)
+ * ===========================================================================
+ *
+ * Le site est mono-tenant "par défaut" : logo `/img/logos/2025-logo.png`, nom
+ * "OW Women's Cup", tokens `:root` statiques. Le whitelabel est une couche
+ * d'OVERRIDE : quand une requête arrive sur un `custom_domain` connu, on lit
+ * le branding du tenant (logo, couleurs, nom) et on l'injecte au SSR (cf.
+ * `pages/_document.tsx`). En l'absence de custom-domain / de branding, on ne
+ * renvoie RIEN et le rendu reste byte-identique au défaut historique.
+ *
+ * Deux caches mémoire (TTL 60s, negative caching) sur le même modèle que
+ * `tenantSlugCache` :
+ *   - `tenantHostCache`     : host normalisé → tenant_id | null
+ *   - `tenantBrandingCache` : tenant_id      → TenantBranding | null
+ */
+
+/**
+ * Branding public d'un tenant. `name` est toujours renseigné (fallback slug) ;
+ * les autres champs sont `null` quand le tenant ne les a pas définis, auquel
+ * cas le consommateur retombe sur sa constante par défaut.
+ */
+export type TenantBranding = {
+  name: string;
+  logoUrl: string | null;
+  primaryColor: string | null;
+  accentColor: string | null;
+  slug: string;
+};
+
+type TenantHostCacheEntry = {
+  tenantId: string | null; // null = host confirmé sans tenant (negative cache)
+  expiresAt: number;
+};
+
+type TenantBrandingCacheEntry = {
+  branding: TenantBranding | null; // null = pas de branding custom (défaut)
+  expiresAt: number;
+};
+
+const tenantHostCache = new Map<string, TenantHostCacheEntry>();
+const tenantBrandingCache = new Map<string, TenantBrandingCacheEntry>();
+
+/**
+ * Couleur hex stricte (`#rgb`, `#rgba`, `#rrggbb`, `#rrggbbaa`). Garde-fou
+ * ANTI-INJECTION : ces valeurs sont interpolées dans un `<style>` inline au
+ * SSR — on refuse tout ce qui n'est pas un hex pur pour empêcher une évasion
+ * de contexte CSS (`}...{`, `url(...)`, etc.).
+ */
+const HEX_COLOR_RE =
+  /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
+
+function sanitizeHexColor(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  return HEX_COLOR_RE.test(trimmed) ? trimmed : null;
+}
+
+/**
+ * Autorise un chemin racine (`/img/...`) ou une URL https absolue. On refuse
+ * http/data:/javascript: — le logo est rendu via `next/image`/`<img>` et
+ * l'`img-src` CSP n'autorise que `'self' data: blob: https:`. Les logos
+ * custom sont attendus sur le storage Supabase (`**.supabase.co`, déjà dans
+ * `next.config.js#images.remotePatterns`).
+ */
+function sanitizeLogoUrl(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (trimmed.startsWith('/')) return trimmed;
+  if (/^https:\/\//i.test(trimmed)) return trimmed;
+  return null;
+}
+
+/**
+ * Normalise un host : trim, lowercase, retrait du port et du point final.
+ * Retourne `null` si vide. Ne gère pas les IPv6 littéraux entre crochets
+ * (non pertinent pour un custom_domain).
+ */
+function normalizeHost(host: string | null | undefined): string | null {
+  if (!host) return null;
+  let h = host.trim().toLowerCase();
+  if (!h) return null;
+  // Strip port (ex: "exemple.fr:3000" → "exemple.fr"). On ignore les IPv6
+  // bracketés (présence de "]") pour ne pas tronquer une adresse.
+  const colonIdx = h.lastIndexOf(':');
+  if (colonIdx !== -1 && !h.includes(']')) h = h.slice(0, colonIdx);
+  h = h.replace(/\.$/, ''); // FQDN trailing dot
+  return h || null;
+}
+
+/**
+ * Host propre à la plateforme (domaine « officiel » OW Women's Cup, previews
+ * Netlify, dev local). Sur ces hosts on ne résout AUCUN tenant custom : le
+ * défaut historique s'applique. Évite un lookup DB inutile à chaque requête
+ * sur le domaine principal.
+ */
+function isPlatformDefaultHost(host: string): boolean {
+  if (host === 'localhost' || host === '127.0.0.1' || host === '[::1]') {
+    return true;
+  }
+  // Previews / branches Netlify (*.netlify.app) = plateforme, jamais un tenant.
+  if (host.endsWith('.netlify.app')) return true;
+
+  const defaults = new Set<string>(['owwomenscup.fr', 'www.owwomenscup.fr']);
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+  if (siteUrl) {
+    try {
+      const parsed = new URL(siteUrl).hostname.toLowerCase();
+      if (parsed) {
+        defaults.add(parsed);
+        defaults.add(
+          parsed.startsWith('www.') ? parsed.slice(4) : `www.${parsed}`
+        );
+      }
+    } catch {
+      // NEXT_PUBLIC_SITE_URL mal formée → on ignore, les défauts hardcodés
+      // suffisent.
+    }
+  }
+  return defaults.has(host);
+}
+
+/**
+ * Résout le tenant.id à partir du host de la requête (custom domain).
+ *
+ * - Host vide / plateforme (owwomenscup.fr, *.netlify.app, localhost) → `null`
+ *   (pas de lookup, défaut appliqué).
+ * - Host = `custom_domain` d'un tenant ACTIF → son tenant.id.
+ * - Host inconnu → `null` (negative cache).
+ *
+ * Comparaison case-insensitive côté JS (on récupère tous les tenants ayant un
+ * `custom_domain` non nul — une poignée de lignes — puis on matche le host
+ * normalisé), ce qui reste correct quelle que soit la casse stockée en base.
+ * Cache mémoire 60s.
+ */
+export async function resolveTenantIdByHost(
+  host: string | null | undefined
+): Promise<string | null> {
+  const norm = normalizeHost(host);
+  if (!norm || isPlatformDefaultHost(norm)) return null;
+
+  const now = Date.now();
+  const cached = tenantHostCache.get(norm);
+  if (cached && cached.expiresAt > now) {
+    return cached.tenantId;
+  }
+
+  if (!supabaseAdmin) {
+    logger.warn(
+      '[tenant] supabaseAdmin unavailable, cannot resolve tenant by host',
+      { host: norm }
+    );
+    return null;
+  }
+
+  let tenantId: string | null = null;
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('tenants')
+      .select('id, custom_domain, is_active')
+      .not('custom_domain', 'is', null);
+
+    if (error) {
+      logger.warn('[tenant] failed to resolve host', {
+        host: norm,
+        error: error.message,
+      });
+      return null; // erreur transitoire → ne pas cacher un faux négatif
+    }
+
+    const rows =
+      (data as
+        | { id?: string; custom_domain?: string | null; is_active?: boolean }[]
+        | null) ?? [];
+    const match = rows.find(
+      (r) =>
+        typeof r.custom_domain === 'string' &&
+        normalizeHost(r.custom_domain) === norm &&
+        r.is_active !== false &&
+        typeof r.id === 'string'
+    );
+    tenantId = match?.id ?? null;
+  } catch (err) {
+    logger.warn('[tenant] unexpected error resolving host', {
+      host: norm,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return null;
+  }
+
+  tenantHostCache.set(norm, {
+    tenantId,
+    expiresAt: now + TENANT_SLUG_CACHE_TTL_MS,
+  });
+  return tenantId;
+}
+
+/**
+ * Lit le branding public d'un tenant.
+ *
+ * Retourne `null` (→ défaut appliqué) quand :
+ *   - `tenantId` est le tenant par défaut,
+ *   - le tenant est introuvable / inactif,
+ *   - AUCUN champ de branding n'est défini (logo + primary + accent tous
+ *     vides) : sans override visuel, on laisse le rendu par défaut intact.
+ *
+ * Sinon renvoie le branding complet (avec `name`/`slug`). Les couleurs sont
+ * sanitizées en hex strict ; le logo en chemin racine ou https. Cache 60s.
+ */
+export async function readTenantBranding(
+  tenantId: string
+): Promise<TenantBranding | null> {
+  if (!tenantId || tenantId === DEFAULT_TENANT_ID) return null;
+
+  const now = Date.now();
+  const cached = tenantBrandingCache.get(tenantId);
+  if (cached && cached.expiresAt > now) {
+    return cached.branding;
+  }
+
+  if (!supabaseAdmin) {
+    logger.warn(
+      '[tenant] supabaseAdmin unavailable, cannot read tenant branding',
+      { tenantId }
+    );
+    return null;
+  }
+
+  let branding: TenantBranding | null = null;
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('tenants')
+      .select('name, slug, logo_url, primary_color, accent_color, is_active')
+      .eq('id', tenantId)
+      .maybeSingle();
+
+    if (error) {
+      logger.warn('[tenant] failed to read branding', {
+        tenantId,
+        error: error.message,
+      });
+      return null; // erreur transitoire → ne pas cacher
+    }
+
+    const row = data as {
+      name?: string | null;
+      slug?: string | null;
+      logo_url?: string | null;
+      primary_color?: string | null;
+      accent_color?: string | null;
+      is_active?: boolean;
+    } | null;
+
+    if (row && row.is_active !== false) {
+      const logoUrl = sanitizeLogoUrl(row.logo_url);
+      const primaryColor = sanitizeHexColor(row.primary_color);
+      const accentColor = sanitizeHexColor(row.accent_color);
+
+      // Un override existe seulement si au moins un champ visuel est défini.
+      if (logoUrl || primaryColor || accentColor) {
+        const slug = typeof row.slug === 'string' ? row.slug : '';
+        const name =
+          typeof row.name === 'string' && row.name.trim()
+            ? row.name.trim()
+            : slug || "OW Women's Cup";
+        branding = { name, slug, logoUrl, primaryColor, accentColor };
+      }
+    }
+  } catch (err) {
+    logger.warn('[tenant] unexpected error reading branding', {
+      tenantId,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return null;
+  }
+
+  tenantBrandingCache.set(tenantId, {
+    branding,
+    expiresAt: now + TENANT_SLUG_CACHE_TTL_MS,
+  });
+  return branding;
 }
