@@ -320,7 +320,7 @@ function AdminMapDrawPage(_: StaffProps) {
   .slots { display: flex; gap: 24px; flex-wrap: wrap; justify-content: center; }
   .slot { page-break-inside: avoid; }
   .slot-title {
-    background: #7c3aed;
+    background: #b24be0;
     color: white;
     text-align: center;
     font-weight: 700;
@@ -341,7 +341,7 @@ function AdminMapDrawPage(_: StaffProps) {
   .choice-img { width: 80px; height: 45px; object-fit: cover; border-radius: 6px; background: #e5e7eb; flex-shrink: 0; }
   .choice-info { flex: 1; }
   .choice-name { font-size: 13px; font-weight: 700; }
-  .choice-type { font-size: 10px; color: #7c3aed; font-weight: 600; }
+  .choice-type { font-size: 10px; color: #b24be0; font-weight: 600; }
   .meta { font-size: 10px; color: #999; text-align: center; margin-top: 32px; }
   @media print {
     body { padding: 20px; }

@@ -261,7 +261,7 @@ function AdminBracketBuilderPage(_: StaffProps) {
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 24px; color: #1a1a1a; }
   h1 { font-size: 20px; margin-bottom: 4px; }
   .subtitle { color: #666; font-size: 13px; margin-bottom: 20px; }
-  h2 { font-size: 15px; margin: 20px 0 8px; padding-bottom: 4px; border-bottom: 2px solid #7c3aed; }
+  h2 { font-size: 15px; margin: 20px 0 8px; padding-bottom: 4px; border-bottom: 2px solid #b24be0; }
   table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 12px; }
   th { background: #f3f0ff; text-align: left; padding: 6px 10px; font-weight: 600; border: 1px solid #ddd; }
   td { padding: 6px 10px; border: 1px solid #ddd; }
@@ -280,7 +280,7 @@ function AdminBracketBuilderPage(_: StaffProps) {
   }
   .bracket-container { display: flex; gap: 0; align-items: stretch; }
   .bracket-round { display: flex; flex-direction: column; justify-content: space-around; min-width: ${colWidthPx}px; padding: 0 4px; }
-  .bracket-round-title { text-align: center; font-weight: 700; font-size: 10px; color: #7c3aed; text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px; white-space: nowrap; }
+  .bracket-round-title { text-align: center; font-weight: 700; font-size: 10px; color: #b24be0; text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px; white-space: nowrap; }
   .bracket-match { border: 1px solid #ddd; border-radius: 5px; margin: 3px 0; overflow: hidden; }
   .bracket-team { padding: 3px 6px; font-size: 10px; display: flex; justify-content: space-between; border-bottom: 1px solid #eee; }
   .bracket-team:last-child { border-bottom: none; }

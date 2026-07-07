@@ -480,7 +480,7 @@ function AdminTenantDetailPage({ tenantId }: Props) {
                               value={
                                 /^#[0-9a-fA-F]{6}$/.test(editPrimaryColor)
                                   ? editPrimaryColor
-                                  : '#7c3aed'
+                                  : '#b24be0'
                               }
                               onChange={(e) =>
                                 setEditPrimaryColor(e.target.value)
@@ -515,7 +515,7 @@ function AdminTenantDetailPage({ tenantId }: Props) {
                               value={
                                 /^#[0-9a-fA-F]{6}$/.test(editAccentColor)
                                   ? editAccentColor
-                                  : '#22d3ee'
+                                  : '#7bc96a'
                               }
                               onChange={(e) =>
                                 setEditAccentColor(e.target.value)
