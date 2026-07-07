@@ -10,6 +10,7 @@ import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import {
   DISCORD_CHANNEL_TYPES,
   DISCORD_CHANNEL_META,
@@ -56,6 +57,7 @@ function emptySaving(): Record<DiscordChannelType, boolean> {
 export const getServerSideProps = withStaffPage('admin');
 
 function DiscordGlobalConfigPage(_: StaffProps) {
+  const t = useAdminT('adminSiteSettingsDiscord');
   const router = useRouter();
   const { addToast } = useToast();
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
@@ -103,7 +105,7 @@ function DiscordGlobalConfigPage(_: StaffProps) {
   async function save(channelType: DiscordChannelType) {
     const draft = drafts[channelType];
     if (!draft.webhookUrl.trim()) {
-      addToast('URL du webhook requise', 'error');
+      addToast(t.webhookUrlRequired, 'error');
       return;
     }
 
@@ -118,7 +120,7 @@ function DiscordGlobalConfigPage(_: StaffProps) {
           isActive: draft.isActive,
         }),
       });
-      addToast('Webhook global enregistre', 'success');
+      addToast(t.saveSuccess, 'success');
       await fetchData();
     } catch (err) {
       addToast((err as Error).message, 'error');
@@ -129,11 +131,12 @@ function DiscordGlobalConfigPage(_: StaffProps) {
 
   async function remove(channelType: DiscordChannelType) {
     const ok = await confirm({
-      title: `Supprimer le webhook global "${DISCORD_CHANNEL_META[channelType].label}" ?`,
-      subtitle:
-        "Les tournois qui n'ont pas leur propre configuration n'auront plus aucune notification pour ce type de channel.",
+      title: format(t.deleteConfirmTitle, {
+        label: DISCORD_CHANNEL_META[channelType].label,
+      }),
+      subtitle: t.deleteConfirmSubtitle,
       variant: 'danger',
-      confirmLabel: 'Supprimer',
+      confirmLabel: t.deleteConfirmLabel,
     });
     if (!ok) return;
 
@@ -143,7 +146,7 @@ function DiscordGlobalConfigPage(_: StaffProps) {
         `/api/admin/site-settings/discord-webhooks?channelType=${channelType}`,
         { method: 'DELETE' }
       );
-      addToast('Webhook global supprime', 'success');
+      addToast(t.deleteSuccess, 'success');
       setDrafts((d) => ({
         ...d,
         [channelType]: { webhookUrl: '', roleMention: '', isActive: true },
@@ -162,7 +165,7 @@ function DiscordGlobalConfigPage(_: StaffProps) {
         method: 'POST',
         body: JSON.stringify({ channelType }),
       });
-      addToast('Message de test envoye', 'success');
+      addToast(t.testSuccess, 'success');
     } catch (err) {
       addToast((err as Error).message, 'error');
     }
@@ -172,7 +175,7 @@ function DiscordGlobalConfigPage(_: StaffProps) {
     <>
       {confirmDialog}
       <Head>
-        <title>Admin — Webhooks Discord (global)</title>
+        <title>{t.pageTitle}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
@@ -195,28 +198,26 @@ function DiscordGlobalConfigPage(_: StaffProps) {
                 d="M15 19l-7-7 7-7"
               />
             </svg>
-            Retour aux parametres
+            {t.back}
           </button>
 
           <h1 className="text-3xl font-bold tracking-tight mb-1">
-            Webhooks Discord — configuration maitre
+            {t.heading}
           </h1>
           <p className="text-sm text-neutral-400 mb-2">
-            Ces webhooks s&apos;appliquent <strong>par defaut</strong> a tous
-            les tournois. Si un tournoi declare son propre webhook pour un
-            channel donne (via{' '}
+            {t.introPart1} <strong>{t.introDefault}</strong> {t.introPart2}{' '}
             <Link
               href="/admin/tournaments"
               className="underline hover:text-white"
             >
-              /admin/tournament/:id/discord
+              {t.introLink}
             </Link>
-            ), c&apos;est le webhook du tournoi qui prend la main pour ce
-            channel.
+            {t.introPart3}
           </p>
           <p className="text-xs text-neutral-500 mb-8">
-            Reserve au role{' '}
-            <code className="bg-neutral-800 px-1 rounded">admin</code>.
+            {t.reservedPrefix}{' '}
+            <code className="bg-neutral-800 px-1 rounded">admin</code>
+            {t.reservedSuffix}
           </p>
 
           {loading && (
@@ -255,15 +256,15 @@ function DiscordGlobalConfigPage(_: StaffProps) {
                       <div className="flex items-center gap-2 flex-shrink-0">
                         {existing && existing.is_active ? (
                           <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-600/20 text-emerald-300 border border-emerald-500/30">
-                            Actif
+                            {t.statusActive}
                           </span>
                         ) : existing && !existing.is_active ? (
                           <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-600/20 text-amber-300 border border-amber-500/30">
-                            Configure (inactif)
+                            {t.statusConfiguredInactive}
                           </span>
                         ) : (
                           <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-neutral-600/20 text-neutral-400 border border-neutral-500/30">
-                            Non configure
+                            {t.statusNotConfigured}
                           </span>
                         )}
                       </div>
@@ -272,7 +273,7 @@ function DiscordGlobalConfigPage(_: StaffProps) {
                     <div className="grid gap-3 sm:grid-cols-[1fr_auto] mb-3">
                       <div>
                         <label className="block text-xs text-neutral-400 mb-1">
-                          URL du webhook Discord
+                          {t.webhookUrlLabel}
                         </label>
                         <input
                           type="text"
@@ -300,15 +301,14 @@ function DiscordGlobalConfigPage(_: StaffProps) {
                             }
                             className="w-4 h-4 rounded border-neutral-600 bg-neutral-900"
                           />
-                          Actif
+                          {t.checkboxActive}
                         </label>
                       </div>
                     </div>
 
                     <div className="mb-3">
                       <label className="block text-xs text-neutral-400 mb-1">
-                        Role a pinger (optionnel) — ID Discord,
-                        &quot;everyone&quot; ou &quot;here&quot;
+                        {t.roleMentionLabel}
                       </label>
                       <input
                         type="text"
@@ -331,20 +331,16 @@ function DiscordGlobalConfigPage(_: StaffProps) {
                         disabled={saving[ct] || !draft.webhookUrl.trim()}
                         className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors disabled:opacity-50"
                       >
-                        {saving[ct] ? 'Enregistrement...' : 'Enregistrer'}
+                        {saving[ct] ? t.saving : t.save}
                       </button>
                       <button
                         type="button"
                         onClick={() => test(ct)}
                         disabled={saving[ct] || !existing}
-                        title={
-                          existing
-                            ? undefined
-                            : "Enregistre d'abord la configuration pour pouvoir la tester"
-                        }
+                        title={existing ? undefined : t.testDisabledTitle}
                         className="px-4 py-2 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors disabled:opacity-50"
                       >
-                        Tester
+                        {t.test}
                       </button>
                       {existing && (
                         <button
@@ -353,7 +349,7 @@ function DiscordGlobalConfigPage(_: StaffProps) {
                           disabled={saving[ct]}
                           className="px-4 py-2 rounded-xl bg-red-700/50 hover:bg-red-700 text-sm font-medium transition-colors disabled:opacity-50"
                         >
-                          Supprimer
+                          {t.delete}
                         </button>
                       )}
                     </div>

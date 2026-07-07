@@ -5,6 +5,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 type StaffShape = {
   id: string;
@@ -55,6 +56,7 @@ function rankBadge(rank: number) {
 }
 
 function AdminMapsStatsPage({}: StaffProps) {
+  const t = useAdminT('adminStatsMaps');
   const router = useRouter();
   const { adminFetchJson } = useAdminFetch();
 
@@ -97,7 +99,7 @@ function AdminMapsStatsPage({}: StaffProps) {
       setStats(json.stats || []);
       setTotal(typeof json.total === 'number' ? json.total : null);
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
+      setErrorMsg((err as Error)?.message ?? t.errorUnexpected);
     } finally {
       setLoading(false);
     }
@@ -127,7 +129,7 @@ function AdminMapsStatsPage({}: StaffProps) {
   return (
     <>
       <Head>
-        <title>Admin – Stats maps</title>
+        <title>{t.pageTitle}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
@@ -152,18 +154,14 @@ function AdminMapsStatsPage({}: StaffProps) {
                   d="M15 19l-7-7 7-7"
                 />
               </svg>
-              Retour au dashboard admin
+              {t.back}
             </button>
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-                  Stats maps
+                  {t.heading}
                 </h1>
-                <p className="text-neutral-400 text-sm mt-1">
-                  Analyse des performances & de la popularité des maps
-                  (pick-rate, winrate attaque/défense, volume de matchs &
-                  manches).
-                </p>
+                <p className="text-neutral-400 text-sm mt-1">{t.subtitle}</p>
               </div>
 
               <button
@@ -184,7 +182,7 @@ function AdminMapsStatsPage({}: StaffProps) {
                     d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
                   />
                 </svg>
-                Export CSV
+                {t.exportCsv}
               </button>
             </div>
           </div>
@@ -197,7 +195,7 @@ function AdminMapsStatsPage({}: StaffProps) {
             >
               <div className="flex-1 min-w-[200px]">
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Map
+                  {t.filterMapLabel}
                 </label>
                 <div className="relative">
                   <svg
@@ -215,7 +213,7 @@ function AdminMapsStatsPage({}: StaffProps) {
                   </svg>
                   <input
                     type="text"
-                    placeholder="Nom de la map (ex: Ascent, Bind…)"
+                    placeholder={t.filterMapPlaceholder}
                     className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     value={searchMap}
                     onChange={(e) => setSearchMap(e.target.value)}
@@ -225,7 +223,7 @@ function AdminMapsStatsPage({}: StaffProps) {
 
               <div className="w-36">
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Min. matchs
+                  {t.filterMinMatchesLabel}
                 </label>
                 <input
                   type="number"
@@ -239,27 +237,29 @@ function AdminMapsStatsPage({}: StaffProps) {
 
               <div className="min-w-[180px]">
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Trier par
+                  {t.sortByLabel}
                 </label>
                 <select
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
                 >
-                  <option value="matches_played">Matchs joués</option>
-                  <option value="rounds_played">Rounds totaux</option>
-                  <option value="match_winrate_attack">Victoires Team 1</option>
-                  <option value="match_winrate_defense">
-                    Victoires Team 2
+                  <option value="matches_played">{t.sortMatchesPlayed}</option>
+                  <option value="rounds_played">{t.sortRoundsPlayed}</option>
+                  <option value="match_winrate_attack">
+                    {t.sortWinsTeam1}
                   </option>
-                  <option value="avg_total_rounds">Moy. rounds/match</option>
-                  <option value="map_name">Nom de la map</option>
+                  <option value="match_winrate_defense">
+                    {t.sortWinsTeam2}
+                  </option>
+                  <option value="avg_total_rounds">{t.sortAvgRounds}</option>
+                  <option value="map_name">{t.sortMapName}</option>
                 </select>
               </div>
 
               <div className="w-36">
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Ordre
+                  {t.orderLabel}
                 </label>
                 <select
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -268,8 +268,8 @@ function AdminMapsStatsPage({}: StaffProps) {
                     setSortDir(e.target.value === 'asc' ? 'asc' : 'desc')
                   }
                 >
-                  <option value="desc">Descendant</option>
-                  <option value="asc">Ascendant</option>
+                  <option value="desc">{t.orderDesc}</option>
+                  <option value="asc">{t.orderAsc}</option>
                 </select>
               </div>
 
@@ -290,7 +290,7 @@ function AdminMapsStatsPage({}: StaffProps) {
                     d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
                   />
                 </svg>
-                Filtrer
+                {t.filterSubmit}
               </button>
             </form>
           </section>
@@ -334,14 +334,13 @@ function AdminMapsStatsPage({}: StaffProps) {
                 </svg>
                 <span className="font-semibold">
                   {loading
-                    ? 'Chargement...'
-                    : `Maps (${stats.length}${total != null ? ` / ${total}` : ''})`}
+                    ? t.loading
+                    : format(t.mapsCount, {
+                        count: `${stats.length}${total != null ? ` / ${total}` : ''}`,
+                      })}
                 </span>
               </div>
-              <span className="text-xs text-neutral-500">
-                Calcul effectué côté API à partir des matchs et des rounds
-                joués.
-              </span>
+              <span className="text-xs text-neutral-500">{t.tableCaption}</span>
             </div>
 
             {loading ? (
@@ -363,7 +362,7 @@ function AdminMapsStatsPage({}: StaffProps) {
                     d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
                   />
                 </svg>
-                Aucune map pour ces filtres.
+                {t.emptyState}
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -371,24 +370,26 @@ function AdminMapsStatsPage({}: StaffProps) {
                   <thead className="bg-neutral-900/50 text-neutral-400">
                     <tr>
                       <th className="px-4 py-3 text-left font-medium">#</th>
-                      <th className="px-4 py-3 text-left font-medium">Map</th>
-                      <th className="px-4 py-3 text-center font-medium">
-                        Matchs joués
+                      <th className="px-4 py-3 text-left font-medium">
+                        {t.thMap}
                       </th>
                       <th className="px-4 py-3 text-center font-medium">
-                        Victoires Team 1
+                        {t.thMatchesPlayed}
                       </th>
                       <th className="px-4 py-3 text-center font-medium">
-                        Victoires Team 2
+                        {t.thWinsTeam1}
                       </th>
                       <th className="px-4 py-3 text-center font-medium">
-                        Winrate T1 / T2
+                        {t.thWinsTeam2}
                       </th>
                       <th className="px-4 py-3 text-center font-medium">
-                        Rounds totaux
+                        {t.thWinrate}
                       </th>
                       <th className="px-4 py-3 text-center font-medium">
-                        Moy. rounds/match
+                        {t.thRoundsTotal}
+                      </th>
+                      <th className="px-4 py-3 text-center font-medium">
+                        {t.thAvgRounds}
                       </th>
                     </tr>
                   </thead>
@@ -495,12 +496,12 @@ function AdminMapsStatsPage({}: StaffProps) {
                     d="M15 19l-7-7 7-7"
                   />
                 </svg>
-                Précédent
+                {t.previous}
               </button>
 
               <span className="text-neutral-400 text-sm">
                 {offset + 1} – {offset + stats.length}
-                {total ? ` sur ${total}` : ''}
+                {total ? format(t.paginationOf, { total }) : ''}
               </span>
 
               <button
@@ -509,7 +510,7 @@ function AdminMapsStatsPage({}: StaffProps) {
                 onClick={() => setOffset(offset + limit)}
                 className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
-                Suivant
+                {t.next}
                 <svg
                   className="w-4 h-4"
                   fill="none"

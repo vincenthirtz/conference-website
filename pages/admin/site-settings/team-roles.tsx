@@ -6,6 +6,7 @@ import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import {
   DEFAULT_TEAM_ROLES,
   TEAM_PERMISSION_CATALOG,
@@ -29,6 +30,7 @@ function toDrafts(roles: TeamRole[]): DraftRole[] {
 export const getServerSideProps = withStaffPage('admin');
 
 function AdminTeamRolesPage(_: StaffProps) {
+  const t = useAdminT('adminSiteSettingsTeamRoles');
   const router = useRouter();
   const { addToast } = useToast();
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
@@ -91,11 +93,11 @@ function AdminTeamRolesPage(_: StaffProps) {
   const removeDraft = async (key: string) => {
     const role = drafts.find((d) => d._key === key);
     const ok = await confirm({
-      title: 'Supprimer ce rôle ?',
+      title: t.removeConfirmTitle,
       subtitle: role?.value
-        ? `Le rôle "${role.value}" ne sera plus proposé dans les formulaires. Les membres existants gardent leur rôle actuel.`
-        : 'Supprimer cette ligne ?',
-      confirmLabel: 'Supprimer',
+        ? format(t.removeConfirmSubtitle, { value: role.value })
+        : t.removeConfirmSubtitleGeneric,
+      confirmLabel: t.removeConfirmLabel,
       variant: 'danger',
     });
     if (!ok) return;
@@ -121,10 +123,9 @@ function AdminTeamRolesPage(_: StaffProps) {
 
   const restoreDefaults = async () => {
     const ok = await confirm({
-      title: 'Restaurer la liste par défaut ?',
-      subtitle:
-        'La liste des rôles sera remplacée par les valeurs par défaut (player, coach, sub, manager). Pense à sauvegarder pour persister.',
-      confirmLabel: 'Restaurer',
+      title: t.restoreConfirmTitle,
+      subtitle: t.restoreConfirmSubtitle,
+      confirmLabel: t.restoreConfirmLabel,
       variant: 'warning',
     });
     if (!ok) return;
@@ -140,16 +141,16 @@ function AdminTeamRolesPage(_: StaffProps) {
       const value = d.value.trim().toLowerCase();
       const label = d.label.trim();
       if (!value) {
-        return { ok: false, error: 'Chaque rôle doit avoir un identifiant.' };
+        return { ok: false, error: t.errorIdRequired };
       }
       if (!ROLE_VALUE_RE.test(value)) {
         return {
           ok: false,
-          error: `Identifiant invalide "${value}" (lettres minuscules, chiffres, "-" ou "_", max 32).`,
+          error: format(t.errorIdInvalid, { value }),
         };
       }
       if (seen.has(value)) {
-        return { ok: false, error: `Identifiant en double : "${value}".` };
+        return { ok: false, error: format(t.errorIdDuplicate, { value }) };
       }
       seen.add(value);
       cleaned.push({
@@ -161,7 +162,7 @@ function AdminTeamRolesPage(_: StaffProps) {
       });
     }
     if (cleaned.length === 0) {
-      return { ok: false, error: 'Au moins un rôle est requis.' };
+      return { ok: false, error: t.errorAtLeastOne };
     }
     return { ok: true, roles: cleaned };
   };
@@ -184,7 +185,7 @@ function AdminTeamRolesPage(_: StaffProps) {
       );
       setSavedRoles(json.roles || v.roles);
       setDrafts(toDrafts(json.roles || v.roles));
-      addToast('Rôles sauvegardés', 'success');
+      addToast(t.saveSuccess, 'success');
     } catch (err) {
       setErrorMsg((err as Error).message);
     } finally {
@@ -223,7 +224,7 @@ function AdminTeamRolesPage(_: StaffProps) {
   return (
     <>
       <Head>
-        <title>Admin – Rôles d&apos;équipe</title>
+        <title>{t.pageTitle}</title>
       </Head>
 
       {confirmDialog}
@@ -249,15 +250,12 @@ function AdminTeamRolesPage(_: StaffProps) {
                   d="M15 19l-7-7 7-7"
                 />
               </svg>
-              Retour aux paramètres du site
+              {t.back}
             </button>
             <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-              Rôles d&apos;équipe
+              {t.heading}
             </h1>
-            <p className="text-neutral-400 text-sm mt-1">
-              Configure la liste des rôles proposés dans les formulaires
-              d&apos;équipe (ajout / édition de membre).
-            </p>
+            <p className="text-neutral-400 text-sm mt-1">{t.subtitle}</p>
           </div>
 
           {errorMsg && (
@@ -274,11 +272,8 @@ function AdminTeamRolesPage(_: StaffProps) {
             <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h2 className="text-lg font-semibold">Liste des rôles</h2>
-                  <p className="text-sm text-neutral-400 mt-1">
-                    L&apos;identifiant est stocké en base. Le libellé est
-                    affiché dans les selects.
-                  </p>
+                  <h2 className="text-lg font-semibold">{t.listHeading}</h2>
+                  <p className="text-sm text-neutral-400 mt-1">{t.listHelp}</p>
                 </div>
                 <button
                   type="button"
@@ -298,14 +293,14 @@ function AdminTeamRolesPage(_: StaffProps) {
                       d="M12 4v16m8-8H4"
                     />
                   </svg>
-                  Ajouter un rôle
+                  {t.addRole}
                 </button>
               </div>
 
               <div className="space-y-3">
                 {drafts.length === 0 && (
                   <p className="text-sm text-neutral-500 italic py-6 text-center">
-                    Aucun rôle. Ajoute au moins une entrée.
+                    {t.emptyRoles}
                   </p>
                 )}
                 {drafts.map((d, idx) => (
@@ -320,7 +315,7 @@ function AdminTeamRolesPage(_: StaffProps) {
                           onClick={() => moveDraft(d._key, -1)}
                           disabled={idx === 0}
                           className="p-1 rounded text-neutral-400 hover:bg-neutral-800 disabled:opacity-30 disabled:cursor-not-allowed"
-                          title="Monter"
+                          title={t.moveUp}
                         >
                           <svg
                             className="w-4 h-4"
@@ -341,7 +336,7 @@ function AdminTeamRolesPage(_: StaffProps) {
                           onClick={() => moveDraft(d._key, 1)}
                           disabled={idx === drafts.length - 1}
                           className="p-1 rounded text-neutral-400 hover:bg-neutral-800 disabled:opacity-30 disabled:cursor-not-allowed"
-                          title="Descendre"
+                          title={t.moveDown}
                         >
                           <svg
                             className="w-4 h-4"
@@ -361,7 +356,7 @@ function AdminTeamRolesPage(_: StaffProps) {
 
                       <div>
                         <label className="block text-xs text-neutral-400 mb-1">
-                          Identifiant
+                          {t.idLabel}
                         </label>
                         <input
                           type="text"
@@ -376,7 +371,7 @@ function AdminTeamRolesPage(_: StaffProps) {
 
                       <div>
                         <label className="block text-xs text-neutral-400 mb-1">
-                          Libellé
+                          {t.labelLabel}
                         </label>
                         <input
                           type="text"
@@ -393,7 +388,7 @@ function AdminTeamRolesPage(_: StaffProps) {
                         type="button"
                         onClick={() => removeDraft(d._key)}
                         className="p-2.5 rounded-xl hover:bg-red-900/50 text-red-400 transition-colors"
-                        title="Supprimer ce rôle"
+                        title={t.removeRoleTitle}
                       >
                         <svg
                           className="w-5 h-5"
@@ -413,7 +408,7 @@ function AdminTeamRolesPage(_: StaffProps) {
 
                     <div>
                       <div className="text-xs text-neutral-400 mb-2">
-                        Permissions accordées par ce rôle
+                        {t.permissionsGranted}
                       </div>
                       <div className="grid gap-2 sm:grid-cols-2">
                         {TEAM_PERMISSION_CATALOG.map((perm) => {
@@ -454,7 +449,7 @@ function AdminTeamRolesPage(_: StaffProps) {
 
               <div className="mt-6 pt-6 border-t border-neutral-700/50">
                 <h3 className="text-sm font-semibold text-neutral-200 mb-2">
-                  Récapitulatif des permissions
+                  {t.recapHeading}
                 </h3>
                 {orphanCount > 0 && (
                   <div className="mb-3 rounded-lg bg-amber-900/30 border border-amber-500/40 px-3 py-2 text-xs text-amber-200 flex items-start gap-2">
@@ -472,9 +467,9 @@ function AdminTeamRolesPage(_: StaffProps) {
                     </svg>
                     <span>
                       {orphanCount === 1
-                        ? '1 permission n’est accordée par aucun rôle'
-                        : `${orphanCount} permissions ne sont accordées par aucun rôle`}{' '}
-                      — seul le capitaine pourra effectuer ces actions.
+                        ? t.orphan_one
+                        : format(t.orphan_other, { count: orphanCount })}{' '}
+                      {t.orphanSuffix}
                     </span>
                   </div>
                 )}
@@ -496,7 +491,7 @@ function AdminTeamRolesPage(_: StaffProps) {
                         <span className="flex-1 text-xs">
                           {orphan ? (
                             <span className="text-amber-300">
-                              Aucun rôle — capitaine uniquement
+                              {t.noRoleCaptainOnly}
                             </span>
                           ) : (
                             <span className="text-neutral-400">
@@ -517,7 +512,7 @@ function AdminTeamRolesPage(_: StaffProps) {
                   disabled={saving || !dirty}
                   className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {saving ? 'Sauvegarde...' : 'Sauvegarder'}
+                  {saving ? t.saving : t.save}
                 </button>
                 <button
                   type="button"
@@ -525,7 +520,7 @@ function AdminTeamRolesPage(_: StaffProps) {
                   disabled={saving || !dirty}
                   className="px-4 py-2.5 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Annuler les modifications
+                  {t.cancelChanges}
                 </button>
                 <button
                   type="button"
@@ -533,23 +528,21 @@ function AdminTeamRolesPage(_: StaffProps) {
                   disabled={saving}
                   className="ml-auto px-4 py-2.5 rounded-xl text-sm text-neutral-400 hover:text-white transition-colors disabled:opacity-50"
                 >
-                  Restaurer les valeurs par défaut
+                  {t.restoreDefaults}
                 </button>
               </div>
             </section>
           )}
 
           <p className="mt-6 text-xs text-neutral-500">
-            Les membres existants conservent leur rôle actuel même si tu
-            supprimes ce rôle de la liste — seul le picker des formulaires est
-            affecté. Le lien vers cette page est aussi accessible depuis{' '}
+            {t.footerPart1}{' '}
             <Link
               href="/admin/site-settings"
               className="text-neutral-300 hover:text-white underline"
             >
-              Paramètres du site
+              {t.footerLink}
             </Link>
-            .
+            {t.footerSuffix}
           </p>
         </div>
       </div>

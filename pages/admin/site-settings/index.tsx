@@ -1,11 +1,15 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useAdminT } from '@/lib/i18n/useAdminT';
 
 import { logger } from '../../../utils/logger';
+
+type Dict = ReturnType<typeof useAdminT<'adminSiteSettings'>>;
+
 type SiteSetting = {
   key: string;
   value: string;
@@ -21,51 +25,51 @@ type Props = {
   };
 };
 
-const KNOWN_SETTINGS = [
-  {
-    key: 'contact_email',
-    label: 'Email de contact',
-    description:
-      'Email de contact principal affiché sur le site (pages contact, mentions légales, etc.)',
-    placeholder: 'contact@example.com',
-    type: 'email',
-  },
-  {
-    key: 'about_video_url',
-    label: 'URL vidéo "A propos"',
-    description:
-      'URL de la vidéo affichée dans la section "A propos" de la page d\'accueil (YouTube ou MP4)',
-    placeholder: 'https://www.youtube.com/watch?v=...',
-    type: 'url',
-  },
-  {
-    key: 'cotisation_amount',
-    label: 'Montant de la cotisation annuelle',
-    description:
-      'Montant de la cotisation annuelle pour les adhérents (en euros)',
-    placeholder: '20.00',
-    type: 'number',
-  },
-  {
-    key: 'cotisation_year',
-    label: 'Année de cotisation en cours',
-    description: 'Année de cotisation active pour le suivi des paiements',
-    placeholder: new Date().getFullYear().toString(),
-    type: 'number',
-  },
-  {
-    key: 'homepage_event_date',
-    label: "Date de l'événement (compte à rebours)",
-    description:
-      "Date ISO du prochain événement affiché en compte à rebours sur la page d'accueil. Si vide, la date de début du prochain tournoi est utilisée. Format : 2026-06-15T18:00:00+02:00",
-    placeholder: '2026-06-15T18:00:00+02:00',
-    type: 'text',
-  },
-];
+function getKnownSettings(t: Dict) {
+  return [
+    {
+      key: 'contact_email',
+      label: t.contactEmailLabel,
+      description: t.contactEmailDesc,
+      placeholder: 'contact@example.com',
+      type: 'email',
+    },
+    {
+      key: 'about_video_url',
+      label: t.aboutVideoLabel,
+      description: t.aboutVideoDesc,
+      placeholder: 'https://www.youtube.com/watch?v=...',
+      type: 'url',
+    },
+    {
+      key: 'cotisation_amount',
+      label: t.cotisationAmountLabel,
+      description: t.cotisationAmountDesc,
+      placeholder: '20.00',
+      type: 'number',
+    },
+    {
+      key: 'cotisation_year',
+      label: t.cotisationYearLabel,
+      description: t.cotisationYearDesc,
+      placeholder: new Date().getFullYear().toString(),
+      type: 'number',
+    },
+    {
+      key: 'homepage_event_date',
+      label: t.eventDateLabel,
+      description: t.eventDateDesc,
+      placeholder: '2026-06-15T18:00:00+02:00',
+      type: 'text',
+    },
+  ];
+}
 
 function AdminSiteSettingsPage({ staff }: Props) {
+  const t = useAdminT('adminSiteSettings');
   const { addToast } = useToast();
   const { adminFetchJson } = useAdminFetch();
+  const KNOWN_SETTINGS = useMemo(() => getKnownSettings(t), [t]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState<string | null>(null);
   const [settings, setSettings] = useState<Record<string, SiteSetting>>({});
@@ -100,7 +104,7 @@ function AdminSiteSettingsPage({ staff }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [adminFetchJson]);
+  }, [adminFetchJson, KNOWN_SETTINGS]);
 
   useEffect(() => {
     fetchData();
@@ -119,10 +123,10 @@ function AdminSiteSettingsPage({ staff }: Props) {
           description: known?.description || null,
         }),
       });
-      addToast('Paramètre sauvegardé avec succès', 'success');
+      addToast(t.saveSuccess, 'success');
       fetchData();
     } catch (err: unknown) {
-      addToast((err as Error)?.message || 'Erreur de sauvegarde.', 'error');
+      addToast((err as Error)?.message || t.saveError, 'error');
     } finally {
       setSaving(null);
     }
@@ -131,7 +135,7 @@ function AdminSiteSettingsPage({ staff }: Props) {
   return (
     <>
       <Head>
-        <title>Admin – Paramètres du site</title>
+        <title>{t.pageTitle}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
@@ -139,21 +143,16 @@ function AdminSiteSettingsPage({ staff }: Props) {
           {/* Header */}
           <div className="mb-8">
             <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-              Paramètres du site
+              {t.heading}
             </h1>
-            <p className="text-neutral-400 text-sm mt-1">
-              Configurez les paramètres globaux du site
-            </p>
+            <p className="text-neutral-400 text-sm mt-1">{t.subtitle}</p>
           </div>
 
           {/* Sub-pages : configurations multi-cles avec leur propre interface */}
           <section className="mb-8 bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
-            <h2 className="text-lg font-semibold mb-1">
-              Configurations avancees
-            </h2>
+            <h2 className="text-lg font-semibold mb-1">{t.advancedHeading}</h2>
             <p className="text-sm text-neutral-400 mb-4">
-              Pages dediees pour les parametres complexes (multi-cles, par
-              type, ou avec test).
+              {t.advancedSubtitle}
             </p>
             <div className="grid gap-3 sm:grid-cols-2">
               <Link
@@ -172,11 +171,10 @@ function AdminSiteSettingsPage({ staff }: Props) {
                 </div>
                 <div>
                   <div className="font-semibold text-white group-hover:text-indigo-200 transition-colors">
-                    Webhooks Discord (maitre)
+                    {t.discordTitle}
                   </div>
                   <div className="text-xs text-neutral-400 mt-0.5">
-                    Fallback global utilise quand un tournoi n&apos;a pas
-                    declare son propre webhook pour un type de channel.
+                    {t.discordDesc}
                   </div>
                 </div>
               </Link>
@@ -203,11 +201,10 @@ function AdminSiteSettingsPage({ staff }: Props) {
                 </div>
                 <div>
                   <div className="font-semibold text-white group-hover:text-emerald-200 transition-colors">
-                    Rôles d&apos;équipe
+                    {t.teamRolesTitle}
                   </div>
                   <div className="text-xs text-neutral-400 mt-0.5">
-                    Liste des rôles proposés dans les selects des formulaires
-                    d&apos;ajout / édition de membre.
+                    {t.teamRolesDesc}
                   </div>
                 </div>
               </Link>
@@ -264,15 +261,13 @@ function AdminSiteSettingsPage({ staff }: Props) {
                           disabled={saving === known.key || !hasChanged}
                           className="px-6 py-3 rounded-xl bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors whitespace-nowrap"
                         >
-                          {saving === known.key
-                            ? 'Sauvegarde...'
-                            : 'Sauvegarder'}
+                          {saving === known.key ? t.saving : t.save}
                         </button>
                       </div>
 
                       {setting?.updated_at && (
                         <p className="text-xs text-neutral-500">
-                          Dernière modification :{' '}
+                          {t.lastModified}{' '}
                           {new Date(setting.updated_at).toLocaleString('fr-FR')}
                         </p>
                       )}
@@ -282,7 +277,7 @@ function AdminSiteSettingsPage({ staff }: Props) {
                     {known.key === 'about_video_url' && currentValue && (
                       <div className="mt-6 pt-6 border-t border-neutral-700">
                         <p className="text-sm text-neutral-400 mb-3">
-                          Aperçu :
+                          {t.preview}
                         </p>
                         <div className="relative w-full max-w-md aspect-video rounded-xl overflow-hidden bg-neutral-900">
                           {/youtu\.?be/.test(currentValue) ? (
@@ -293,7 +288,7 @@ function AdminSiteSettingsPage({ staff }: Props) {
                                   /(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([\w-]+)/
                                 )?.[1] || ''
                               }?rel=0`}
-                              title="Aperçu vidéo"
+                              title={t.videoPreviewTitle}
                               allow="fullscreen"
                               allowFullScreen
                             />

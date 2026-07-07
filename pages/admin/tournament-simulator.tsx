@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { withStaffPage } from '@/utils/staff';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { MatchStatus, FormatType, StageType } from '@/types/admin';
 import type { MatchForGraph } from '@/types/bracket';
 import { buildBracketGraph } from '@/utils/bracket/buildGraph';
@@ -78,6 +79,7 @@ type SimHistoryEntry = {
 
 const MAX_HISTORY = 20;
 function TournamentSimulatorPage() {
+  const tx = useAdminT('adminTournamentSimulator');
   const { addToast } = useToast();
   const { mutate: simMutate } = useIdempotentMutation();
   const importFileRef = useRef<HTMLInputElement>(null);
@@ -226,7 +228,7 @@ function TournamentSimulatorPage() {
           pool,
           occSchedule
         );
-        groupStage.name = 'Phase de groupes';
+        groupStage.name = tx.stageGroupName;
         groupStage.stage_type = 'group';
         newStages.push(groupStage);
 
@@ -238,7 +240,7 @@ function TournamentSimulatorPage() {
           occSchedule,
           config.escalation
         );
-        bracketStage.name = 'Phase finale';
+        bracketStage.name = tx.stageFinalName;
         newStages.push(bracketStage);
       } else {
         switch (config.formatType) {
@@ -289,7 +291,7 @@ function TournamentSimulatorPage() {
               occSchedule,
               config.escalation
             );
-            showmatch.name = 'Showmatch';
+            showmatch.name = tx.stageShowmatchName;
             showmatch.stage_type = 'showmatch';
             newStages.push(showmatch);
             break;
@@ -298,7 +300,7 @@ function TournamentSimulatorPage() {
       }
       return { stages: newStages, teams: newTeams };
     },
-    [config]
+    [config, tx]
   );
 
   const handleGenerate = useCallback(() => {
@@ -329,8 +331,8 @@ function TournamentSimulatorPage() {
       );
 
       const label = config.occurrence.enabled
-        ? `Occurrence ${i + 1}${occStartDate ? ` — ${formatMatchDate(new Date(occStartDate).toISOString())}` : ''}`
-        : 'Tournoi';
+        ? `${format(tx.occurrenceLabel, { index: i + 1 })}${occStartDate ? ` — ${formatMatchDate(new Date(occStartDate).toISOString())}` : ''}`
+        : tx.tournamentLabel;
 
       newOccurrences.push({
         index: i,
@@ -346,7 +348,7 @@ function TournamentSimulatorPage() {
     setActiveOccurrence(0);
     setGenerated(true);
     setActiveTab('bracket');
-  }, [config, generateOneOccurrence]);
+  }, [config, generateOneOccurrence, tx]);
 
   const handleSimulateMatch = useCallback(
     (stageIdx: number, matchId: string) => {
@@ -483,23 +485,26 @@ function TournamentSimulatorPage() {
   );
 
   /** Import config from file */
-  const handleImportConfig = useCallback(async (file: File) => {
-    try {
-      setImportError(null);
-      const imported = await importConfigFromFile(file);
-      setConfig(imported);
-      setGenerated(false);
-    } catch (err) {
-      setImportError(err instanceof Error ? err.message : 'Erreur inconnue');
-    }
-  }, []);
+  const handleImportConfig = useCallback(
+    async (file: File) => {
+      try {
+        setImportError(null);
+        const imported = await importConfigFromFile(file);
+        setConfig(imported);
+        setGenerated(false);
+      } catch (err) {
+        setImportError(err instanceof Error ? err.message : tx.errorUnknown);
+      }
+    },
+    [tx]
+  );
 
   /** Copy results summary to clipboard */
   const handleCopyResults = useCallback(async () => {
     const text = generateResultsSummary(stages, teams, config);
     try {
       await navigator.clipboard.writeText(text);
-      addToast('Copié !', 'success');
+      addToast(tx.copied, 'success');
     } catch {
       // Fallback
       const ta = document.createElement('textarea');
@@ -508,9 +513,9 @@ function TournamentSimulatorPage() {
       ta.select();
       document.execCommand('copy');
       document.body.removeChild(ta);
-      addToast('Copié !', 'success');
+      addToast(tx.copied, 'success');
     }
-  }, [stages, teams, config, addToast]);
+  }, [stages, teams, config, addToast, tx]);
 
   /** Print bracket/results as PDF */
   const handlePrint = useCallback(() => {
@@ -779,7 +784,7 @@ function TournamentSimulatorPage() {
             occSchedule,
             mergedConfig.escalation
           );
-          s.name = 'Showmatch';
+          s.name = tx.stageShowmatchName;
           s.stage_type = 'showmatch';
           newStages.push(s);
           break;
@@ -789,7 +794,7 @@ function TournamentSimulatorPage() {
       setCompareConfig(altConfig);
       setCompareData({ stages: newStages, teams: compareTeams });
     },
-    [config, occurrences, activeOccurrence]
+    [config, occurrences, activeOccurrence, tx]
   );
 
   /** Run Monte Carlo simulation */
@@ -851,7 +856,8 @@ function TournamentSimulatorPage() {
       const res = await fetch(
         `/api/admin/teams?limit=${config.teamCount}&isActive=true`
       );
-      if (!res.ok) throw new Error(`Erreur ${res.status}`);
+      if (!res.ok)
+        throw new Error(format(tx.errorHttp, { status: res.status }));
       const data = await res.json();
       const apiTeams: {
         id: string;
@@ -861,7 +867,7 @@ function TournamentSimulatorPage() {
       }[] = data.teams ?? [];
 
       if (apiTeams.length === 0) {
-        throw new Error('Aucune equipe active trouvee');
+        throw new Error(tx.errorNoActiveTeams);
       }
 
       // Convert to SimTeam format
@@ -910,7 +916,7 @@ function TournamentSimulatorPage() {
           pool,
           occSchedule
         );
-        groupStage.name = 'Phase de groupes';
+        groupStage.name = tx.stageGroupName;
         groupStage.stage_type = 'group';
         newStages.push(groupStage);
         const topTeams = realTeams.slice(0, Math.min(realTeams.length, 8));
@@ -921,7 +927,7 @@ function TournamentSimulatorPage() {
           occSchedule,
           config.escalation
         );
-        bracketStage.name = 'Phase finale';
+        bracketStage.name = tx.stageFinalName;
         newStages.push(bracketStage);
       } else {
         switch (config.formatType) {
@@ -972,7 +978,7 @@ function TournamentSimulatorPage() {
               occSchedule,
               config.escalation
             );
-            s.name = 'Showmatch';
+            s.name = tx.stageShowmatchName;
             s.stage_type = 'showmatch';
             newStages.push(s);
             break;
@@ -984,7 +990,7 @@ function TournamentSimulatorPage() {
       setOccurrences([
         {
           index: 0,
-          label: 'Tournoi (equipes reelles)',
+          label: tx.realTeamsLabel,
           startDate: config.schedule.startDate,
           stages: newStages,
           teams: realTeams,
@@ -994,11 +1000,11 @@ function TournamentSimulatorPage() {
       setGenerated(true);
       setActiveTab('bracket');
     } catch (err) {
-      setRealTeamsError(err instanceof Error ? err.message : 'Erreur inconnue');
+      setRealTeamsError(err instanceof Error ? err.message : tx.errorUnknown);
     } finally {
       setLoadingRealTeams(false);
     }
-  }, [config]);
+  }, [config, tx]);
 
   /** Create a real tournament from the current simulation */
   const handleCreateTournament = useCallback(async () => {
@@ -1008,7 +1014,9 @@ function TournamentSimulatorPage() {
     setCreateTournamentResult(null);
 
     try {
-      const tournamentName = `Tournoi Sim ${new Date().toLocaleDateString('fr-FR')}`;
+      const tournamentName = format(tx.simTournamentName, {
+        date: new Date().toLocaleDateString('fr-FR'),
+      });
 
       // Step 1: Create tournament
       const tRes = await simMutate('/api/admin/tournaments', {
@@ -1027,7 +1035,8 @@ function TournamentSimulatorPage() {
       if (!tRes.ok) {
         const errData = await tRes.json().catch(() => ({}));
         throw new Error(
-          errData.error ?? `Erreur creation tournoi: ${tRes.status}`
+          errData.error ??
+            format(tx.errorCreateTournament, { status: tRes.status })
         );
       }
       const tournament = await tRes.json();
@@ -1090,12 +1099,12 @@ function TournamentSimulatorPage() {
       setCreateTournamentResult({ id: tournamentId, name: tournamentName });
     } catch (err) {
       setCreateTournamentError(
-        err instanceof Error ? err.message : 'Erreur inconnue'
+        err instanceof Error ? err.message : tx.errorUnknown
       );
     } finally {
       setCreatingTournament(false);
     }
-  }, [generated, teams, stages, config, simMutate]);
+  }, [generated, teams, stages, config, simMutate, tx]);
 
   /** Build bracket graph from SimMatches using production utils.
    *  Used for graph validation and layout computation. */
@@ -1222,7 +1231,7 @@ function TournamentSimulatorPage() {
   return (
     <>
       <Head>
-        <title>Admin · Simulateur de Tournoi</title>
+        <title>{tx.pageTitle}</title>
         <style>{`
           @media print {
             body { background: white !important; color: black !important; }
@@ -1241,24 +1250,22 @@ function TournamentSimulatorPage() {
                 href="/admin"
                 className="mb-2 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white"
               >
-                &larr; Retour admin
+                &larr; {tx.backAdmin}
               </Link>
               <p className="text-xs uppercase tracking-[0.18em] text-purple-200/80">
-                Admin
+                {tx.badgeAdmin}
               </p>
-              <h1 className="text-2xl font-semibold">Simulateur de Tournoi</h1>
-              <p className="text-sm text-neutral-400 mt-1">
-                Testez les configurations avec des données fictives
-              </p>
+              <h1 className="text-2xl font-semibold">{tx.heading}</h1>
+              <p className="text-sm text-neutral-400 mt-1">{tx.subtitle}</p>
             </div>
             {generated && (
               <div className="flex gap-2 flex-wrap">
                 <button
                   onClick={handleSimulateNextRound}
                   className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-semibold shadow transition-colors"
-                  title="Simule uniquement le prochain round jouable"
+                  title={tx.nextRoundTitle}
                 >
-                  Round suivant
+                  {tx.nextRound}
                 </button>
                 <button
                   onClick={handleSimulateAnimated}
@@ -1268,24 +1275,22 @@ function TournamentSimulatorPage() {
                       : 'bg-emerald-600 hover:bg-emerald-700'
                   }`}
                   title={
-                    animating
-                      ? "Arreter l'animation"
-                      : 'Simuler match par match avec animation'
+                    animating ? tx.animatedStopTitle : tx.animatedStartTitle
                   }
                 >
-                  {animating ? 'Stop' : 'Simuler anime'}
+                  {animating ? tx.stop : tx.simulateAnimated}
                 </button>
                 <button
                   onClick={handleSimulateAll}
                   className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-semibold shadow transition-colors"
                 >
-                  Simuler tout
+                  {tx.simulateAll}
                 </button>
                 <button
                   onClick={handleResetAll}
                   className="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-sm font-semibold shadow transition-colors"
                 >
-                  Reset tout
+                  {tx.resetAll}
                 </button>
                 <button
                   onClick={handleUndo}
@@ -1295,7 +1300,7 @@ function TournamentSimulatorPage() {
                       ? 'bg-neutral-700 hover:bg-neutral-600 text-white'
                       : 'bg-neutral-800 text-neutral-600 cursor-not-allowed'
                   }`}
-                  title={`Annuler (${undoStack.length})`}
+                  title={format(tx.undoTitle, { count: undoStack.length })}
                 >
                   &#x21A9;
                 </button>
@@ -1307,7 +1312,7 @@ function TournamentSimulatorPage() {
                       ? 'bg-neutral-700 hover:bg-neutral-600 text-white'
                       : 'bg-neutral-800 text-neutral-600 cursor-not-allowed'
                   }`}
-                  title={`Refaire (${redoStack.length})`}
+                  title={format(tx.redoTitle, { count: redoStack.length })}
                 >
                   &#x21AA;
                 </button>
@@ -1315,9 +1320,9 @@ function TournamentSimulatorPage() {
                 <button
                   onClick={saveToHistory}
                   className="px-4 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 text-sm font-semibold shadow transition-colors print:hidden"
-                  title="Sauvegarder cette simulation dans l'historique"
+                  title={tx.saveHistoryTitle}
                 >
-                  Sauvegarder
+                  {tx.save}
                 </button>
                 <button
                   onClick={handleCreateTournament}
@@ -1327,21 +1332,21 @@ function TournamentSimulatorPage() {
                       ? 'bg-neutral-700 text-neutral-400 cursor-wait'
                       : 'bg-sky-600 hover:bg-sky-700 text-white'
                   }`}
-                  title="Creer un vrai tournoi en base a partir de cette simulation"
+                  title={tx.createTournamentTitle}
                 >
-                  {creatingTournament ? 'Creation...' : 'Creer le tournoi'}
+                  {creatingTournament ? tx.creating : tx.createTournament}
                 </button>
                 <button
                   onClick={handleCopyResults}
                   className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-semibold shadow transition-colors print:hidden"
-                  title="Copier le resume des resultats"
+                  title={tx.copyResultsTitle}
                 >
-                  Copier resultats
+                  {tx.copyResults}
                 </button>
                 <button
                   onClick={handlePrint}
                   className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-semibold shadow transition-colors print:hidden"
-                  title="Imprimer / Exporter en PDF"
+                  title={tx.printTitle}
                 >
                   PDF
                 </button>
@@ -1354,12 +1359,12 @@ function TournamentSimulatorPage() {
             <div className="mb-4 p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between">
               <div>
                 <p className="text-sm font-semibold text-emerald-300">
-                  Tournoi &quot;{createTournamentResult.name}&quot; cree avec
-                  succes !
+                  {format(tx.createdSuccess, {
+                    name: createTournamentResult.name,
+                  })}
                 </p>
                 <p className="text-xs text-neutral-400 mt-1">
-                  Le tournoi est en statut brouillon. Configurez-le dans
-                  l&apos;admin.
+                  {tx.createdDraftNote}
                 </p>
               </div>
               <div className="flex gap-2">
@@ -1367,14 +1372,14 @@ function TournamentSimulatorPage() {
                   href={`/admin/tournament/${createTournamentResult.id}`}
                   className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-semibold shadow transition-colors text-white"
                 >
-                  Voir le tournoi
+                  {tx.viewTournament}
                 </Link>
                 <button
                   type="button"
                   onClick={() => setCreateTournamentResult(null)}
                   className="px-3 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-sm text-neutral-400 transition-colors"
                 >
-                  Fermer
+                  {tx.close}
                 </button>
               </div>
             </div>
@@ -1387,7 +1392,7 @@ function TournamentSimulatorPage() {
                 onClick={() => setCreateTournamentError(null)}
                 className="px-3 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-sm text-neutral-400 transition-colors"
               >
-                Fermer
+                {tx.close}
               </button>
             </div>
           )}
@@ -1395,13 +1400,13 @@ function TournamentSimulatorPage() {
           {/* Configuration panel */}
           <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6 mb-8 space-y-6">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Configuration</h2>
+              <h2 className="text-lg font-semibold">{tx.configHeading}</h2>
               <div className="flex items-center gap-3 flex-wrap">
                 {/* Presets */}
                 <div className="flex gap-1">
                   {[
                     {
-                      label: 'Rapide',
+                      label: tx.presetRapide,
                       cfg: {
                         formatType: 'single_elim' as FormatType,
                         teamCount: 4,
@@ -1410,7 +1415,7 @@ function TournamentSimulatorPage() {
                       },
                     },
                     {
-                      label: 'Standard',
+                      label: tx.presetStandard,
                       cfg: {
                         formatType: 'single_elim' as FormatType,
                         teamCount: 8,
@@ -1419,7 +1424,7 @@ function TournamentSimulatorPage() {
                       },
                     },
                     {
-                      label: 'LAN',
+                      label: tx.presetLan,
                       cfg: {
                         formatType: 'double_elim' as FormatType,
                         teamCount: 8,
@@ -1435,7 +1440,7 @@ function TournamentSimulatorPage() {
                       },
                     },
                     {
-                      label: 'Ligue',
+                      label: tx.presetLigue,
                       cfg: {
                         formatType: 'swiss' as FormatType,
                         teamCount: 16,
@@ -1463,17 +1468,17 @@ function TournamentSimulatorPage() {
                     type="button"
                     onClick={() => exportConfigAsJSON(config)}
                     className="px-2.5 py-1 rounded text-[10px] font-semibold bg-sky-900/50 hover:bg-sky-800/50 border border-sky-700/40 text-sky-300 transition-colors"
-                    title="Telecharger la configuration en JSON"
+                    title={tx.exportTitle}
                   >
-                    Exporter
+                    {tx.export}
                   </button>
                   <button
                     type="button"
                     onClick={() => importFileRef.current?.click()}
                     className="px-2.5 py-1 rounded text-[10px] font-semibold bg-sky-900/50 hover:bg-sky-800/50 border border-sky-700/40 text-sky-300 transition-colors"
-                    title="Charger une configuration depuis un fichier JSON"
+                    title={tx.importTitle}
                   >
-                    Importer
+                    {tx.import}
                   </button>
                   <input
                     ref={importFileRef}
@@ -1497,7 +1502,7 @@ function TournamentSimulatorPage() {
                   onClick={() => setConfigCollapsed((c) => !c)}
                   className="text-neutral-400 hover:text-white transition-colors text-sm"
                 >
-                  {configCollapsed ? 'Afficher' : 'Reduire'}
+                  {configCollapsed ? tx.show : tx.reduce}
                 </button>
               </div>
             </div>
@@ -1508,7 +1513,7 @@ function TournamentSimulatorPage() {
                   {/* Format */}
                   <div>
                     <label className="block text-sm font-medium text-neutral-200 mb-2">
-                      Format
+                      {tx.formatLabel}
                     </label>
                     <div className="flex flex-wrap gap-2">
                       {(Object.keys(FORMAT_LABELS) as FormatType[]).map((f) => (
@@ -1545,7 +1550,7 @@ function TournamentSimulatorPage() {
                   {config.formatType !== 'showmatch' && (
                     <div>
                       <label className="block text-sm font-medium text-neutral-200 mb-2">
-                        Nombre d&apos;equipes
+                        {tx.teamCountLabel}
                       </label>
                       <div className="flex flex-wrap gap-2">
                         {validTeamCounts.map((n) => (
@@ -1571,7 +1576,7 @@ function TournamentSimulatorPage() {
                   {/* Players per team */}
                   <div>
                     <label className="block text-sm font-medium text-neutral-200 mb-2">
-                      Joueurs par equipe
+                      {tx.playersPerTeamLabel}
                     </label>
                     <div className="flex gap-2">
                       {[1, 2, 3, 5, 6].map((n) => (
@@ -1596,7 +1601,7 @@ function TournamentSimulatorPage() {
                   {/* Best of */}
                   <div>
                     <label className="block text-sm font-medium text-neutral-200 mb-2">
-                      Format de match
+                      {tx.matchFormatLabel}
                     </label>
                     <div className="flex gap-2">
                       {[1, 3, 5, 7].map((bo) => (
@@ -1621,7 +1626,7 @@ function TournamentSimulatorPage() {
                   {/* Map pool */}
                   <div>
                     <label className="block text-sm font-medium text-neutral-200 mb-2">
-                      Maps dans le pool
+                      {tx.mapPoolLabel}
                     </label>
                     <input
                       type="range"
@@ -1637,7 +1642,7 @@ function TournamentSimulatorPage() {
                       className="w-full accent-purple-500"
                     />
                     <span className="text-xs text-neutral-400">
-                      {config.mapPoolSize} maps
+                      {format(tx.mapPoolValue, { count: config.mapPoolSize })}
                     </span>
                   </div>
 
@@ -1645,7 +1650,7 @@ function TournamentSimulatorPage() {
                   {config.formatType === 'swiss' && (
                     <div>
                       <label className="block text-sm font-medium text-neutral-200 mb-2">
-                        Rounds Swiss
+                        {tx.swissRoundsLabel}
                       </label>
                       <div className="flex gap-2">
                         {[3, 5, 7, 9].map((r) => (
@@ -1684,7 +1689,7 @@ function TournamentSimulatorPage() {
                           className="rounded border-neutral-500 bg-neutral-700"
                         />
                         <span className="font-medium text-neutral-200">
-                          Grand Final Reset
+                          {tx.grandFinalReset}
                         </span>
                       </label>
                     </div>
@@ -1694,7 +1699,7 @@ function TournamentSimulatorPage() {
                   {config.formatType !== 'showmatch' && (
                     <div>
                       <label className="block text-sm font-medium text-neutral-200 mb-2">
-                        Stages
+                        {tx.stagesLabel}
                       </label>
                       <div className="flex gap-2">
                         {[1, 2].map((n) => (
@@ -1710,9 +1715,7 @@ function TournamentSimulatorPage() {
                                 : 'bg-neutral-800 border-neutral-700 text-neutral-300 hover:bg-neutral-700'
                             }`}
                           >
-                            {n === 1
-                              ? '1 stage'
-                              : '2 stages (groupes + bracket)'}
+                            {n === 1 ? tx.oneStage : tx.twoStages}
                           </button>
                         ))}
                       </div>
@@ -1723,12 +1726,12 @@ function TournamentSimulatorPage() {
                 {/* Scheduling section */}
                 <div className="border-t border-white/10 pt-6">
                   <h3 className="text-sm font-semibold text-neutral-300 uppercase tracking-wider mb-4">
-                    Planning
+                    {tx.planningHeading}
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     <div>
                       <label className="block text-sm font-medium text-neutral-200 mb-2">
-                        Date de debut
+                        {tx.startDateLabel}
                       </label>
                       <input
                         type="datetime-local"
@@ -1747,7 +1750,7 @@ function TournamentSimulatorPage() {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-neutral-200 mb-2">
-                        Duree d&apos;un match (min)
+                        {tx.matchDurationLabel}
                       </label>
                       <input
                         type="number"
@@ -1769,7 +1772,7 @@ function TournamentSimulatorPage() {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-neutral-200 mb-2">
-                        Pause entre matchs (min)
+                        {tx.breakMatchesLabel}
                       </label>
                       <input
                         type="number"
@@ -1792,7 +1795,7 @@ function TournamentSimulatorPage() {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-neutral-200 mb-2">
-                        Pause entre rounds (min)
+                        {tx.breakRoundsLabel}
                       </label>
                       <input
                         type="number"
@@ -1815,7 +1818,7 @@ function TournamentSimulatorPage() {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-neutral-200 mb-2">
-                        Heure de debut de journee
+                        {tx.dayStartLabel}
                       </label>
                       <div className="flex items-center gap-2">
                         <input
@@ -1835,7 +1838,9 @@ function TournamentSimulatorPage() {
                           className="w-20 px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
                         />
                         <span className="text-neutral-500 text-sm">h</span>
-                        <span className="text-neutral-600 text-xs">a</span>
+                        <span className="text-neutral-600 text-xs">
+                          {tx.hourSeparator}
+                        </span>
                         <input
                           type="number"
                           min={1}
@@ -1857,7 +1862,7 @@ function TournamentSimulatorPage() {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-neutral-200 mb-2">
-                        Matchs par jour (0 = illimite)
+                        {tx.matchesPerDayLabel}
                       </label>
                       <input
                         type="number"
@@ -1898,7 +1903,7 @@ function TournamentSimulatorPage() {
                         className="rounded border-neutral-500 bg-neutral-700"
                       />
                       <span className="text-sm font-semibold text-neutral-300 uppercase tracking-wider">
-                        Format progressif (escalade)
+                        {tx.escalationLabel}
                       </span>
                     </label>
                   </div>
@@ -1906,11 +1911,14 @@ function TournamentSimulatorPage() {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                       {[
                         {
-                          label: 'Premiers rounds',
+                          label: tx.escEarlyRounds,
                           key: 'earlyRoundsBo' as const,
                         },
-                        { label: 'Demi-finales', key: 'semiFinalsBo' as const },
-                        { label: 'Finale', key: 'finalsBo' as const },
+                        {
+                          label: tx.escSemiFinals,
+                          key: 'semiFinalsBo' as const,
+                        },
+                        { label: tx.escFinals, key: 'finalsBo' as const },
                       ].map(({ label, key }) => (
                         <div key={key}>
                           <label className="block text-sm font-medium text-neutral-200 mb-2">
@@ -1962,7 +1970,7 @@ function TournamentSimulatorPage() {
                         className="rounded border-neutral-500 bg-neutral-700"
                       />
                       <span className="text-sm font-semibold text-neutral-300 uppercase tracking-wider">
-                        Tournoi recurrent
+                        {tx.recurringLabel}
                       </span>
                     </label>
                   </div>
@@ -1970,7 +1978,7 @@ function TournamentSimulatorPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
                         <label className="block text-sm font-medium text-neutral-200 mb-2">
-                          Frequence
+                          {tx.frequencyLabel}
                         </label>
                         <div className="flex gap-2">
                           {(
@@ -2000,7 +2008,7 @@ function TournamentSimulatorPage() {
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-neutral-200 mb-2">
-                          Nombre d&apos;occurrences
+                          {tx.occurrenceCountLabel}
                         </label>
                         <input
                           type="number"
@@ -2033,9 +2041,11 @@ function TournamentSimulatorPage() {
                 onClick={handleGenerate}
                 className="px-6 py-3 rounded-lg bg-purple-600 hover:bg-purple-700 text-sm font-semibold shadow transition-colors"
               >
-                Generer le tournoi
+                {tx.generate}
                 {config.occurrence.enabled
-                  ? ` (${config.occurrence.count} occurrences)`
+                  ? format(tx.generateOccSuffix, {
+                      count: config.occurrence.count,
+                    })
                   : ''}
               </button>
               <button
@@ -2046,9 +2056,9 @@ function TournamentSimulatorPage() {
                     ? 'bg-neutral-700 text-neutral-400 cursor-wait'
                     : 'bg-sky-600 hover:bg-sky-700 text-white'
                 }`}
-                title="Charger les equipes reelles depuis la base de donnees"
+                title={tx.loadRealTeamsTitle}
               >
-                {loadingRealTeams ? 'Chargement...' : 'Charger les equipes'}
+                {loadingRealTeams ? tx.loading : tx.loadRealTeams}
               </button>
               {realTeamsError && (
                 <span className="text-xs text-red-400">{realTeamsError}</span>
@@ -2063,7 +2073,7 @@ function TournamentSimulatorPage() {
               {occurrences.length > 1 && (
                 <div className="mb-6">
                   <label className="block text-sm font-medium text-neutral-300 mb-2 uppercase tracking-wider">
-                    Occurrence
+                    {tx.occurrenceLabelHeading}
                   </label>
                   <div className="flex flex-wrap gap-2">
                     {occurrences.map((occ, i) => (
@@ -2086,28 +2096,28 @@ function TournamentSimulatorPage() {
 
               {/* Summary */}
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-                <SummaryCard label="Equipes" value={teams.length} />
-                <SummaryCard label="Matchs" value={stats.total} />
+                <SummaryCard label={tx.summaryTeams} value={teams.length} />
+                <SummaryCard label={tx.summaryMatches} value={stats.total} />
                 <SummaryCard
-                  label="Termines"
+                  label={tx.summaryFinished}
                   value={stats.finished}
                   color="text-emerald-400"
                 />
                 <SummaryCard
-                  label="En attente"
+                  label={tx.summaryPending}
                   value={stats.pending}
                   color="text-amber-400"
                 />
                 {stats.estimatedDuration && (
                   <SummaryCard
-                    label="Duree estimee"
+                    label={tx.summaryDuration}
                     value={stats.estimatedDuration}
                     color="text-sky-400"
                   />
                 )}
                 {stats.nextRoundName && (
                   <SummaryCard
-                    label="Prochain round"
+                    label={tx.summaryNextRound}
                     value={stats.nextRoundName}
                     color="text-blue-400"
                   />
@@ -2129,14 +2139,19 @@ function TournamentSimulatorPage() {
                   ] as const
                 ).map((tab) => {
                   const TAB_LABELS: Record<string, string> = {
-                    bracket: 'Bracket / Matchs',
-                    teams: 'Equipes',
-                    maps: 'Maps',
-                    stats: 'Statistiques',
-                    'monte-carlo': 'Monte Carlo',
-                    history: `Historique${simHistory.length > 0 ? ` (${simHistory.length})` : ''}`,
-                    compare: 'Comparaison',
-                    timeline: 'Timeline',
+                    bracket: tx.tabBracket,
+                    teams: tx.tabTeams,
+                    maps: tx.tabMaps,
+                    stats: tx.tabStats,
+                    'monte-carlo': tx.tabMonteCarlo,
+                    history:
+                      simHistory.length > 0
+                        ? format(tx.tabHistoryCount, {
+                            count: simHistory.length,
+                          })
+                        : tx.tabHistory,
+                    compare: tx.tabCompare,
+                    timeline: tx.tabTimeline,
                   };
                   return (
                     <button
@@ -2165,7 +2180,9 @@ function TournamentSimulatorPage() {
                         </span>
                         {stage.name}
                         <span className="text-sm text-neutral-500 font-normal">
-                          ({stage.matches.length} matchs)
+                          {format(tx.matchesCount, {
+                            count: stage.matches.length,
+                          })}
                         </span>
                       </h3>
 
@@ -2184,7 +2201,7 @@ function TournamentSimulatorPage() {
                             }
                             label={
                               stage.matches.some((m) => m.bracket_side === 'lb')
-                                ? 'Winners Bracket'
+                                ? tx.winnersBracket
                                 : undefined
                             }
                           />
@@ -2202,7 +2219,7 @@ function TournamentSimulatorPage() {
                                 onToggleLock={(id) =>
                                   handleToggleLock(stageIdx, id)
                                 }
-                                label="Losers Bracket"
+                                label={tx.losersBracket}
                                 accentColor="text-red-300"
                               />
                             </div>
@@ -2221,7 +2238,7 @@ function TournamentSimulatorPage() {
                                 onToggleLock={(id) =>
                                   handleToggleLock(stageIdx, id)
                                 }
-                                label="Grande Finale"
+                                label={tx.grandFinal}
                                 accentColor="text-amber-300"
                               />
                             </div>
@@ -2247,8 +2264,7 @@ function TournamentSimulatorPage() {
               {activeTab === 'teams' && (
                 <div>
                   <p className="text-xs text-neutral-500 mb-4">
-                    Glissez-deposez les equipes pour modifier le seeding. Le
-                    bracket sera regenere.
+                    {tx.teamsDragHint}
                   </p>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {teams.map((team, teamIdx) => (
@@ -2280,7 +2296,7 @@ function TournamentSimulatorPage() {
                           {/* Drag handle */}
                           <div
                             className="flex flex-col gap-0.5 text-neutral-600 flex-shrink-0 cursor-grab"
-                            title="Glisser pour reordonner"
+                            title={tx.dragToReorder}
                           >
                             <div className="flex gap-0.5">
                               <span className="w-1 h-1 rounded-full bg-current" />
@@ -2308,7 +2324,7 @@ function TournamentSimulatorPage() {
                               {team.name}
                             </div>
                             <div className="text-[10px] text-neutral-500">
-                              Seed #{team.seed}
+                              {format(tx.seedLabel, { seed: team.seed })}
                             </div>
                           </div>
                           {stats.wins.has(team.id) && (
@@ -2325,7 +2341,7 @@ function TournamentSimulatorPage() {
                         {/* Strength slider */}
                         <div className="flex items-center gap-2 pt-1 border-t border-white/[0.05]">
                           <span className="text-[10px] text-neutral-500 font-semibold w-10">
-                            Force
+                            {tx.strengthLabel}
                           </span>
                           <input
                             type="range"
@@ -2411,17 +2427,17 @@ function TournamentSimulatorPage() {
                   {/* Standings with score diff */}
                   <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
                     <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider text-neutral-400">
-                      Classement
+                      {tx.standingsHeading}
                     </h3>
                     <div className="space-y-1">
                       <div className="grid grid-cols-[auto_1fr_50px_50px_50px_70px_50px] gap-2 text-[10px] uppercase tracking-wider text-neutral-600 font-bold px-3 pb-2">
                         <span className="w-6">#</span>
-                        <span>Equipe</span>
-                        <span className="text-center">V</span>
-                        <span className="text-center">D</span>
-                        <span className="text-center">%</span>
-                        <span className="text-center">Maps</span>
-                        <span className="text-center">Diff</span>
+                        <span>{tx.thTeam}</span>
+                        <span className="text-center">{tx.thWins}</span>
+                        <span className="text-center">{tx.thLosses}</span>
+                        <span className="text-center">{tx.thPct}</span>
+                        <span className="text-center">{tx.thMaps}</span>
+                        <span className="text-center">{tx.thDiff}</span>
                       </div>
                       {teams
                         .map((t) => ({
@@ -2499,7 +2515,7 @@ function TournamentSimulatorPage() {
                   {/* Progression */}
                   <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
                     <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider text-neutral-400">
-                      Progression du tournoi
+                      {tx.progressionHeading}
                     </h3>
                     <div className="flex items-center gap-4">
                       <div className="flex-1 h-4 bg-neutral-800 rounded-full overflow-hidden">
@@ -2519,11 +2535,14 @@ function TournamentSimulatorPage() {
                     </div>
                     <div className="flex items-center justify-between mt-2">
                       <p className="text-xs text-neutral-500">
-                        {stats.finished} / {stats.total} matchs termines
+                        {format(tx.matchesFinishedProgress, {
+                          finished: stats.finished,
+                          total: stats.total,
+                        })}
                       </p>
                       {stats.nextRoundName && (
                         <p className="text-xs text-blue-400">
-                          Prochain : {stats.nextRoundName}
+                          {format(tx.nextPrefix, { name: stats.nextRoundName })}
                         </p>
                       )}
                     </div>
@@ -2533,67 +2552,71 @@ function TournamentSimulatorPage() {
                   {stats.finished > 0 && (
                     <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
                       <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider text-neutral-400">
-                        Competitivite
+                        {tx.competitivenessHeading}
                       </h3>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div className="space-y-1">
                           <div className="text-[10px] uppercase tracking-wider text-neutral-500 font-semibold">
-                            Matchs serres
+                            {tx.closeMatches}
                           </div>
                           <div className="text-xl font-bold text-amber-400">
                             {stats.competitiveness.closeMatches}
                           </div>
                           <div className="text-[10px] text-neutral-500">
-                            {stats.competitiveness.closeMatchPct}% des matchs
+                            {format(tx.statPctOfMatches, {
+                              pct: stats.competitiveness.closeMatchPct,
+                            })}
                           </div>
                         </div>
                         <div className="space-y-1">
                           <div className="text-[10px] uppercase tracking-wider text-neutral-500 font-semibold">
-                            Upsets
+                            {tx.upsets}
                           </div>
                           <div className="text-xl font-bold text-rose-400">
                             {stats.competitiveness.upsets}
                           </div>
                           <div className="text-[10px] text-neutral-500">
-                            {stats.competitiveness.upsetPct}% des matchs
+                            {format(tx.statPctOfMatches, {
+                              pct: stats.competitiveness.upsetPct,
+                            })}
                           </div>
                         </div>
                         <div className="space-y-1">
                           <div className="text-[10px] uppercase tracking-wider text-neutral-500 font-semibold">
-                            Maps / match
+                            {tx.mapsPerMatch}
                           </div>
                           <div className="text-xl font-bold text-sky-400">
                             {stats.competitiveness.avgMapsPerMatch}
                           </div>
                           <div className="text-[10px] text-neutral-500">
-                            moyenne
+                            {tx.average}
                           </div>
                         </div>
                         <div className="space-y-1">
                           <div className="text-[10px] uppercase tracking-wider text-neutral-500 font-semibold">
-                            Plus longue serie
+                            {tx.longestStreak}
                           </div>
                           <div className="text-xl font-bold text-emerald-400">
                             {stats.competitiveness.maxWinStreak}
                           </div>
                           <div className="text-[10px] text-neutral-500">
-                            victoires consecutives
+                            {tx.consecutiveWins}
                           </div>
                         </div>
                         <div className="space-y-1">
                           <div className="text-[10px] uppercase tracking-wider text-neutral-500 font-semibold">
-                            Parcours moyen
+                            {tx.avgJourney}
                           </div>
                           <div className="text-xl font-bold text-purple-400">
                             {stats.competitiveness.avgTeamJourney}
                           </div>
                           <div className="text-[10px] text-neutral-500">
-                            matchs / equipe
+                            {tx.matchesPerTeam}
                           </div>
                         </div>
                         <div className="space-y-1">
                           <div className="text-[10px] uppercase tracking-wider text-neutral-500 font-semibold">
-                            Dominance
+                            {tx.dominance}
                           </div>
                           <div className="flex items-center gap-2">
                             <div className="text-xl font-bold text-neutral-300">
@@ -2602,12 +2625,12 @@ function TournamentSimulatorPage() {
                           </div>
                           <div className="text-[10px] text-neutral-500">
                             {stats.competitiveness.dominanceScore < 30
-                              ? 'Tres equilibre'
+                              ? tx.domVeryBalanced
                               : stats.competitiveness.dominanceScore < 50
-                                ? 'Equilibre'
+                                ? tx.domBalanced
                                 : stats.competitiveness.dominanceScore < 70
-                                  ? 'Un favori'
-                                  : 'Domination'}
+                                  ? tx.domOneFavorite
+                                  : tx.domDomination}
                           </div>
                         </div>
                       </div>
@@ -2617,7 +2640,7 @@ function TournamentSimulatorPage() {
                   {/* Round-by-round breakdown */}
                   <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
                     <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider text-neutral-400">
-                      Detail par round
+                      {tx.roundDetailHeading}
                     </h3>
                     <div className="space-y-2">
                       {(() => {
@@ -2697,14 +2720,14 @@ function TournamentSimulatorPage() {
                       return (
                         <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
                           <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider text-neutral-400">
-                            Confrontations directes
+                            {tx.h2hHeading}
                           </h3>
                           <div className="overflow-x-auto">
                             <table className="w-full text-xs">
                               <thead>
                                 <tr className="border-b border-white/10">
                                   <th className="text-left py-2 pr-2 text-neutral-500 font-semibold sticky left-0 bg-[#0a0a12] z-10">
-                                    vs
+                                    {tx.vs}
                                   </th>
                                   {sortedTeams.map((t) => (
                                     <th
@@ -2791,24 +2814,22 @@ function TournamentSimulatorPage() {
                 <div className="space-y-6">
                   <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
                     <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider text-neutral-400">
-                      Simulation Monte Carlo
+                      {tx.monteCarloHeading}
                     </h3>
                     <p className="text-xs text-neutral-500 mb-4">
-                      Lance N simulations completes du tournoi pour calculer les
-                      probabilites de victoire et la distribution des placements
-                      de chaque equipe.
+                      {tx.monteCarloDesc}
                       {stages
                         .flatMap((s) => s.matches)
                         .some((m) => m.locked) && (
                         <span className="text-amber-400 ml-1">
-                          Les matchs verrouilles sont preserves.
+                          {tx.lockedPreserved}
                         </span>
                       )}
                     </p>
                     <div className="flex items-center gap-4 mb-6">
                       <div>
                         <label className="block text-[10px] uppercase tracking-wider text-neutral-500 font-semibold mb-1">
-                          Iterations
+                          {tx.iterationsLabel}
                         </label>
                         <div className="flex gap-2">
                           {[100, 500, 1000, 5000].map((n) => (
@@ -2837,21 +2858,25 @@ function TournamentSimulatorPage() {
                         }`}
                       >
                         {monteCarloRunning
-                          ? 'Calcul en cours...'
-                          : `Lancer ${monteCarloIterations} simulations`}
+                          ? tx.calcInProgress
+                          : format(tx.runSimulations, {
+                              count: monteCarloIterations,
+                            })}
                       </button>
                     </div>
 
                     {monteCarloResult && (
                       <div className="space-y-6">
                         <p className="text-xs text-neutral-500">
-                          {monteCarloResult.iterations} iterations completees
+                          {format(tx.iterationsCompleted, {
+                            count: monteCarloResult.iterations,
+                          })}
                         </p>
 
                         {/* Win probability ranking */}
                         <div>
                           <h4 className="text-xs font-semibold text-neutral-300 uppercase tracking-wider mb-3">
-                            Probabilite de victoire
+                            {tx.winProbability}
                           </h4>
                           <div className="space-y-2">
                             {teams
@@ -2902,14 +2927,14 @@ function TournamentSimulatorPage() {
                         {/* Placement distribution for top 4 */}
                         <div>
                           <h4 className="text-xs font-semibold text-neutral-300 uppercase tracking-wider mb-3">
-                            Distribution des placements (Top 8)
+                            {tx.placementDist}
                           </h4>
                           <div className="overflow-x-auto">
                             <table className="w-full text-xs">
                               <thead>
                                 <tr className="border-b border-white/10">
                                   <th className="text-left py-2 pr-4 text-neutral-500 font-semibold">
-                                    Equipe
+                                    {tx.thTeam}
                                   </th>
                                   {Array.from(
                                     { length: Math.min(teams.length, 8) },
@@ -2919,10 +2944,12 @@ function TournamentSimulatorPage() {
                                         className="text-center py-2 px-2 text-neutral-500 font-semibold"
                                       >
                                         {i === 0
-                                          ? '1er'
+                                          ? tx.placement1st
                                           : i === 1
-                                            ? '2e'
-                                            : `${i + 1}e`}
+                                            ? tx.placement2nd
+                                            : format(tx.placementNth, {
+                                                n: i + 1,
+                                              })}
                                       </th>
                                     )
                                   )}
@@ -3001,7 +3028,7 @@ function TournamentSimulatorPage() {
                   <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="text-sm font-semibold uppercase tracking-wider text-neutral-400">
-                        Historique des simulations
+                        {tx.historyHeading}
                       </h3>
                       {simHistory.length > 0 && (
                         <button
@@ -3009,15 +3036,13 @@ function TournamentSimulatorPage() {
                           onClick={() => setSimHistory([])}
                           className="text-[10px] text-neutral-500 hover:text-red-400 transition-colors"
                         >
-                          Vider l&apos;historique
+                          {tx.clearHistory}
                         </button>
                       )}
                     </div>
                     {simHistory.length === 0 ? (
                       <p className="text-sm text-neutral-500">
-                        Aucune simulation sauvegardee. Lancez une simulation
-                        puis cliquez sur &quot;Sauvegarder&quot; pour
-                        l&apos;ajouter ici.
+                        {tx.historyEmpty}
                       </p>
                     ) : (
                       <div className="space-y-4">
@@ -3045,18 +3070,28 @@ function TournamentSimulatorPage() {
                                   {FORMAT_LABELS[entry.formatType]}
                                 </span>
                                 <span className="text-[10px] text-neutral-500">
-                                  {entry.teamCount} equipes · BO{entry.bestOf}
+                                  {format(tx.teamsBoLabel, {
+                                    count: entry.teamCount,
+                                    bo: entry.bestOf,
+                                  })}
                                 </span>
                               </div>
                               <div className="flex gap-4 text-[10px]">
                                 <span
                                   className="text-amber-400"
-                                  title="Matchs serres"
+                                  title={tx.closeMatches}
                                 >
-                                  {entry.competitiveness.closeMatchPct}% serres
+                                  {format(tx.closePct, {
+                                    pct: entry.competitiveness.closeMatchPct,
+                                  })}
                                 </span>
-                                <span className="text-rose-400" title="Upsets">
-                                  {entry.competitiveness.upsets} upsets
+                                <span
+                                  className="text-rose-400"
+                                  title={tx.upsets}
+                                >
+                                  {format(tx.upsetsCount, {
+                                    count: entry.competitiveness.upsets,
+                                  })}
                                 </span>
                               </div>
                             </div>
@@ -3102,13 +3137,12 @@ function TournamentSimulatorPage() {
                   {/* Config selector for comparison */}
                   <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
                     <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider text-neutral-400">
-                      Comparer avec un autre format
+                      {tx.compareHeading}
                     </h3>
                     <p className="text-xs text-neutral-500 mb-4">
-                      Selectionnez un format alternatif pour comparer cote a
-                      cote avec la configuration actuelle (
-                      {FORMAT_LABELS[config.formatType]}). Les memes equipes
-                      seront utilisees.
+                      {format(tx.compareDesc, {
+                        format: FORMAT_LABELS[config.formatType],
+                      })}
                     </p>
                     <div className="flex flex-wrap gap-2 mb-4">
                       {(Object.keys(FORMAT_LABELS) as FormatType[])
@@ -3141,7 +3175,7 @@ function TournamentSimulatorPage() {
                                   : 'bg-neutral-800 border-neutral-700 text-neutral-300 hover:bg-neutral-700'
                               }`}
                             >
-                              vs {FORMAT_LABELS[f]}
+                              {tx.vs} {FORMAT_LABELS[f]}
                             </button>
                           );
                         })}
@@ -3153,7 +3187,7 @@ function TournamentSimulatorPage() {
                           onClick={() => handleCompare(compareConfig)}
                           className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-neutral-800 border border-neutral-700 text-neutral-300 hover:bg-neutral-700 transition-colors"
                         >
-                          Regenerer
+                          {tx.regenerate}
                         </button>
                         <button
                           type="button"
@@ -3163,7 +3197,7 @@ function TournamentSimulatorPage() {
                           }}
                           className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-neutral-800 border border-neutral-700 text-neutral-300 hover:bg-neutral-700 transition-colors"
                         >
-                          Effacer
+                          {tx.clear}
                         </button>
                       </div>
                     )}
@@ -3176,30 +3210,34 @@ function TournamentSimulatorPage() {
                       <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4 space-y-4">
                         <div className="flex items-center gap-2">
                           <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-purple-500/10 text-purple-300 border border-purple-500/20">
-                            Actuel
+                            {tx.badgeCurrent}
                           </span>
                           <span className="text-sm font-semibold">
                             {FORMAT_LABELS[config.formatType]}
                           </span>
                           <span className="text-xs text-neutral-500">
-                            {teams.length} equipes · BO{config.bestOf}
+                            {format(tx.teamsBoLabel, {
+                              count: teams.length,
+                              bo: config.bestOf,
+                            })}
                           </span>
                         </div>
                         <div className="text-xs text-neutral-400 space-y-1">
                           <div>
-                            Matchs: {stages.flatMap((s) => s.matches).length}
+                            {format(tx.matchesColon, {
+                              count: stages.flatMap((s) => s.matches).length,
+                            })}
                           </div>
                           <div>
-                            Rounds:{' '}
-                            {
-                              new Set(
+                            {format(tx.roundsColon, {
+                              count: new Set(
                                 stages
                                   .flatMap((s) => s.matches)
                                   .map(
                                     (m) => `${m.bracket_side}-${m.round_number}`
                                   )
-                              ).size
-                            }
+                              ).size,
+                            })}
                           </div>
                         </div>
                         <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
@@ -3229,7 +3267,7 @@ function TournamentSimulatorPage() {
                       <div className="rounded-xl border border-sky-500/20 bg-sky-500/[0.02] p-4 space-y-4">
                         <div className="flex items-center gap-2">
                           <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-sky-500/10 text-sky-300 border border-sky-500/20">
-                            Comparaison
+                            {tx.badgeComparison}
                           </span>
                           <span className="text-sm font-semibold">
                             {
@@ -3239,29 +3277,30 @@ function TournamentSimulatorPage() {
                             }
                           </span>
                           <span className="text-xs text-neutral-500">
-                            {compareData.teams.length} equipes · BO
-                            {config.bestOf}
+                            {format(tx.teamsBoLabel, {
+                              count: compareData.teams.length,
+                              bo: config.bestOf,
+                            })}
                           </span>
                         </div>
                         <div className="text-xs text-neutral-400 space-y-1">
                           <div>
-                            Matchs:{' '}
-                            {
-                              compareData.stages.flatMap((s) => s.matches)
-                                .length
-                            }
+                            {format(tx.matchesColon, {
+                              count: compareData.stages.flatMap(
+                                (s) => s.matches
+                              ).length,
+                            })}
                           </div>
                           <div>
-                            Rounds:{' '}
-                            {
-                              new Set(
+                            {format(tx.roundsColon, {
+                              count: new Set(
                                 compareData.stages
                                   .flatMap((s) => s.matches)
                                   .map(
                                     (m) => `${m.bracket_side}-${m.round_number}`
                                   )
-                              ).size
-                            }
+                              ).size,
+                            })}
                           </div>
                         </div>
                         <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
@@ -3293,7 +3332,7 @@ function TournamentSimulatorPage() {
                 <div className="space-y-6">
                   <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
                     <h3 className="text-sm font-semibold mb-6 uppercase tracking-wider text-neutral-400">
-                      Calendrier des occurrences
+                      {tx.calendarHeading}
                     </h3>
                     <div className="relative">
                       {/* Vertical line */}
@@ -3366,16 +3405,26 @@ function TournamentSimulatorPage() {
                                 <div className="flex items-center gap-4 text-xs text-neutral-400">
                                   {firstDate && (
                                     <span>
-                                      Debut: {formatMatchDate(firstDate)}
+                                      {format(tx.startLabel, {
+                                        date: formatMatchDate(firstDate),
+                                      })}
                                     </span>
                                   )}
                                   {lastDate && lastDate !== firstDate && (
                                     <span>
-                                      Fin: {formatMatchDate(lastDate)}
+                                      {format(tx.endLabel, {
+                                        date: formatMatchDate(lastDate),
+                                      })}
                                     </span>
                                   )}
-                                  <span>{total} matchs</span>
-                                  <span>{occ.teams.length} equipes</span>
+                                  <span>
+                                    {format(tx.matchesInline, { count: total })}
+                                  </span>
+                                  <span>
+                                    {format(tx.teamsInline, {
+                                      count: occ.teams.length,
+                                    })}
+                                  </span>
                                 </div>
                                 {/* Progress bar */}
                                 <div className="mt-2 h-1.5 bg-neutral-800 rounded-full overflow-hidden">
@@ -3395,12 +3444,12 @@ function TournamentSimulatorPage() {
                   {/* Summary across all occurrences */}
                   <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
                     <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider text-neutral-400">
-                      Resume global
+                      {tx.globalSummary}
                     </h3>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       <div>
                         <div className="text-[10px] uppercase tracking-wider text-neutral-500 font-semibold">
-                          Total matchs
+                          {tx.totalMatches}
                         </div>
                         <div className="text-2xl font-bold mt-1">
                           {occurrences.reduce(
@@ -3412,7 +3461,7 @@ function TournamentSimulatorPage() {
                       </div>
                       <div>
                         <div className="text-[10px] uppercase tracking-wider text-neutral-500 font-semibold">
-                          Termines
+                          {tx.summaryFinished}
                         </div>
                         <div className="text-2xl font-bold mt-1 text-emerald-400">
                           {occurrences.reduce(
@@ -3427,7 +3476,7 @@ function TournamentSimulatorPage() {
                       </div>
                       <div>
                         <div className="text-[10px] uppercase tracking-wider text-neutral-500 font-semibold">
-                          Duree totale
+                          {tx.totalDuration}
                         </div>
                         <div className="text-2xl font-bold mt-1 text-purple-400">
                           {(() => {
@@ -3452,7 +3501,7 @@ function TournamentSimulatorPage() {
                       </div>
                       <div>
                         <div className="text-[10px] uppercase tracking-wider text-neutral-500 font-semibold">
-                          Equipes uniques
+                          {tx.uniqueTeams}
                         </div>
                         <div className="text-2xl font-bold mt-1 text-sky-400">
                           {

@@ -9,6 +9,7 @@ import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import {
   TOURNAMENT_TEMPLATES,
   type TournamentTemplate,
@@ -16,18 +17,22 @@ import {
   type StageType,
 } from '@/config/tournament-templates';
 
+type Dict = ReturnType<typeof useAdminT<'adminTournamentTemplates'>>;
+
 type StaffProps = {
   staff: { id: string; role: string; display_name: string | null };
 };
 
-const STAGE_TYPES: { value: StageType; label: string }[] = [
-  { value: 'group', label: 'Poule' },
-  { value: 'bracket', label: 'Bracket' },
-  { value: 'swiss', label: 'Swiss' },
-  { value: 'round_robin', label: 'Round Robin' },
-  { value: 'showmatch', label: 'Showmatch' },
-  { value: 'other', label: 'Autre' },
-];
+function getStageTypes(t: Dict): { value: StageType; label: string }[] {
+  return [
+    { value: 'group', label: t.stageTypeGroup },
+    { value: 'bracket', label: t.stageTypeBracket },
+    { value: 'swiss', label: t.stageTypeSwiss },
+    { value: 'round_robin', label: t.stageTypeRoundRobin },
+    { value: 'showmatch', label: t.stageTypeShowmatch },
+    { value: 'other', label: t.stageTypeOther },
+  ];
+}
 
 function stageTypeBadge(type: string) {
   switch (type) {
@@ -49,6 +54,8 @@ function stageTypeBadge(type: string) {
 export const getServerSideProps = withStaffPage('manager');
 
 function AdminTournamentTemplatesPage({ staff }: StaffProps) {
+  const t = useAdminT('adminTournamentTemplates');
+  const STAGE_TYPES = getStageTypes(t);
   const router = useRouter();
   const { addToast } = useToast();
   const { confirm, dialog } = useConfirmDialog();
@@ -80,7 +87,7 @@ function AdminTournamentTemplatesPage({ staff }: StaffProps) {
       );
       setCustomTemplates(json.templates || []);
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message || 'Erreur inattendue');
+      setErrorMsg((err as Error)?.message || t.errorUnexpected);
     } finally {
       setLoading(false);
     }
@@ -95,13 +102,13 @@ function AdminTournamentTemplatesPage({ staff }: StaffProps) {
     setErrorMsg(null);
 
     if (!newName.trim()) {
-      setErrorMsg('Le nom est obligatoire.');
+      setErrorMsg(t.errorNameRequired);
       return;
     }
 
     const validStages = newStages.filter((s) => s.name.trim());
     if (validStages.length === 0) {
-      setErrorMsg('Au moins un stage avec un nom est requis.');
+      setErrorMsg(t.errorStageRequired);
       return;
     }
 
@@ -116,14 +123,14 @@ function AdminTournamentTemplatesPage({ staff }: StaffProps) {
         }),
       });
 
-      addToast('Template cree avec succes.', 'success');
+      addToast(t.createSuccess, 'success');
       setNewName('');
       setNewDesc('');
       setNewStages([{ name: '', stage_type: 'bracket' }]);
       setShowCreate(false);
       fetchCustomTemplates();
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message || 'Erreur inattendue');
+      setErrorMsg((err as Error)?.message || t.errorUnexpected);
     } finally {
       setCreating(false);
     }
@@ -131,9 +138,9 @@ function AdminTournamentTemplatesPage({ staff }: StaffProps) {
 
   async function handleDelete(templateId: string) {
     const ok = await confirm({
-      title: 'Supprimer ce template personnalise ?',
+      title: t.deleteConfirmTitle,
       variant: 'danger',
-      confirmLabel: 'Supprimer',
+      confirmLabel: t.deleteConfirmLabel,
     });
     if (!ok) return;
 
@@ -146,10 +153,10 @@ function AdminTournamentTemplatesPage({ staff }: StaffProps) {
         body: JSON.stringify({ templateId }),
       });
 
-      addToast('Template supprime.', 'success');
+      addToast(t.deleteSuccess, 'success');
       fetchCustomTemplates();
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message || 'Erreur inattendue');
+      setErrorMsg((err as Error)?.message || t.errorUnexpected);
     } finally {
       setDeletingId(null);
     }
@@ -199,7 +206,7 @@ function AdminTournamentTemplatesPage({ staff }: StaffProps) {
                   : 'bg-blue-600/20 text-blue-300 border border-blue-500/30'
               }`}
             >
-              {isBuiltIn ? 'Integre' : 'Personnalise'}
+              {isBuiltIn ? t.badgeBuiltIn : t.badgeCustom}
             </span>
             {!isBuiltIn && (
               <button
@@ -207,7 +214,7 @@ function AdminTournamentTemplatesPage({ staff }: StaffProps) {
                 onClick={() => handleDelete(tpl.id)}
                 disabled={deletingId === tpl.id}
                 className="p-1.5 rounded hover:bg-red-900/50 text-neutral-500 hover:text-red-400 transition-colors disabled:opacity-50"
-                title="Supprimer"
+                title={t.deleteTitle}
               >
                 <svg
                   className="w-4 h-4"
@@ -238,7 +245,9 @@ function AdminTournamentTemplatesPage({ staff }: StaffProps) {
           ))}
         </div>
 
-        <p className="text-[11px] text-neutral-500 font-mono">ID: {tpl.id}</p>
+        <p className="text-[11px] text-neutral-500 font-mono">
+          {format(t.cardId, { id: tpl.id })}
+        </p>
       </div>
     );
   }
@@ -247,7 +256,7 @@ function AdminTournamentTemplatesPage({ staff }: StaffProps) {
     <>
       {dialog}
       <Head>
-        <title>Admin – Templates de tournoi</title>
+        <title>{t.pageTitle}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
@@ -272,18 +281,15 @@ function AdminTournamentTemplatesPage({ staff }: StaffProps) {
                   d="M15 19l-7-7 7-7"
                 />
               </svg>
-              Retour aux tournois
+              {t.back}
             </button>
 
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-                  Templates de tournoi
+                  {t.heading}
                 </h1>
-                <p className="text-neutral-400 text-sm mt-1">
-                  Gere les templates integres et personnalises pour creer
-                  rapidement des structures de tournoi.
-                </p>
+                <p className="text-neutral-400 text-sm mt-1">{t.subtitle}</p>
               </div>
 
               <button
@@ -304,7 +310,7 @@ function AdminTournamentTemplatesPage({ staff }: StaffProps) {
                     d="M12 4v16m8-8H4"
                   />
                 </svg>
-                Nouveau template
+                {t.newTemplate}
               </button>
             </div>
           </div>
@@ -329,34 +335,32 @@ function AdminTournamentTemplatesPage({ staff }: StaffProps) {
           {/* Create form */}
           {showCreate && (
             <section className="mb-8 bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 space-y-4">
-              <h2 className="text-lg font-semibold">
-                Creer un template personnalise
-              </h2>
+              <h2 className="text-lg font-semibold">{t.createHeading}</h2>
 
               <form onSubmit={handleCreate} className="space-y-4">
                 <div className="grid gap-4 md:grid-cols-2">
                   <div>
                     <label className="block text-sm text-neutral-300 mb-1">
-                      Nom <span className="text-red-400">*</span>
+                      {t.nameLabel} <span className="text-red-400">*</span>
                     </label>
                     <input
                       type="text"
                       className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                       value={newName}
                       onChange={(e) => setNewName(e.target.value)}
-                      placeholder="Mon template personnalise"
+                      placeholder={t.namePlaceholder}
                     />
                   </div>
                   <div>
                     <label className="block text-sm text-neutral-300 mb-1">
-                      Description
+                      {t.descLabel}
                     </label>
                     <input
                       type="text"
                       className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                       value={newDesc}
                       onChange={(e) => setNewDesc(e.target.value)}
-                      placeholder="Description du template..."
+                      placeholder={t.descPlaceholder}
                     />
                   </div>
                 </div>
@@ -364,14 +368,14 @@ function AdminTournamentTemplatesPage({ staff }: StaffProps) {
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <label className="text-sm text-neutral-300">
-                      Stages <span className="text-red-400">*</span>
+                      {t.stagesLabel} <span className="text-red-400">*</span>
                     </label>
                     <button
                       type="button"
                       onClick={addStageRow}
                       className="px-3 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-xs font-medium transition-colors"
                     >
-                      + Ajouter un stage
+                      {t.addStage}
                     </button>
                   </div>
 
@@ -391,7 +395,7 @@ function AdminTournamentTemplatesPage({ staff }: StaffProps) {
                           onChange={(e) =>
                             updateStageRow(idx, 'name', e.target.value)
                           }
-                          placeholder="Nom du stage"
+                          placeholder={t.stageNamePlaceholder}
                         />
                         <select
                           className="px-2 py-1.5 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -441,10 +445,10 @@ function AdminTournamentTemplatesPage({ staff }: StaffProps) {
                     {creating ? (
                       <>
                         <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        Creation...
+                        {t.creating}
                       </>
                     ) : (
-                      'Creer le template'
+                      t.createSubmit
                     )}
                   </button>
                   <button
@@ -452,7 +456,7 @@ function AdminTournamentTemplatesPage({ staff }: StaffProps) {
                     onClick={() => setShowCreate(false)}
                     className="px-4 py-2.5 rounded-xl bg-neutral-700 hover:bg-neutral-600 border border-neutral-600 text-sm font-medium transition-colors"
                   >
-                    Annuler
+                    {t.cancel}
                   </button>
                 </div>
               </form>
@@ -464,7 +468,9 @@ function AdminTournamentTemplatesPage({ staff }: StaffProps) {
             {/* Built-in */}
             <section>
               <h2 className="text-lg font-semibold mb-4">
-                Templates integres ({TOURNAMENT_TEMPLATES.length})
+                {format(t.builtInHeading, {
+                  count: TOURNAMENT_TEMPLATES.length,
+                })}
               </h2>
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {TOURNAMENT_TEMPLATES.map((tpl) => (
@@ -476,7 +482,7 @@ function AdminTournamentTemplatesPage({ staff }: StaffProps) {
             {/* Custom */}
             <section>
               <h2 className="text-lg font-semibold mb-4">
-                Templates personnalises ({customTemplates.length})
+                {format(t.customHeading, { count: customTemplates.length })}
               </h2>
 
               {loading ? (
@@ -485,10 +491,8 @@ function AdminTournamentTemplatesPage({ staff }: StaffProps) {
                 </div>
               ) : customTemplates.length === 0 ? (
                 <div className="text-center py-12 text-neutral-400 bg-neutral-800/50 border border-neutral-700/50 rounded-2xl">
-                  <p>Aucun template personnalise.</p>
-                  <p className="text-xs mt-1">
-                    Cliquez sur &quot;Nouveau template&quot; pour en creer un.
-                  </p>
+                  <p>{t.emptyCustom}</p>
+                  <p className="text-xs mt-1">{t.emptyCustomHint}</p>
                 </div>
               ) : (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">

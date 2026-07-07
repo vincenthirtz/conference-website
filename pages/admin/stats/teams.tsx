@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 import { logger } from '../../../utils/logger';
 type StaffShape = {
@@ -84,6 +85,7 @@ function formatDateTime(iso: string | null) {
 }
 
 function AdminTeamsStatsPage({ staff }: StaffProps) {
+  const t = useAdminT('adminStatsTeams');
   const router = useRouter();
   const { adminFetch, adminFetchJson } = useAdminFetch();
 
@@ -149,7 +151,7 @@ function AdminTeamsStatsPage({ staff }: StaffProps) {
       setStats(json.stats || []);
       setTotal(typeof json.total === 'number' ? json.total : null);
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
+      setErrorMsg((err as Error)?.message ?? t.errorUnexpected);
     } finally {
       setLoading(false);
     }
@@ -178,7 +180,7 @@ function AdminTeamsStatsPage({ staff }: StaffProps) {
   return (
     <>
       <Head>
-        <title>Admin – Stats équipes</title>
+        <title>{t.pageTitle}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
@@ -203,18 +205,23 @@ function AdminTeamsStatsPage({ staff }: StaffProps) {
                   d="M15 19l-7-7 7-7"
                 />
               </svg>
-              Retour au dashboard admin
+              {t.back}
             </button>
 
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-                  Stats équipes
+                  {t.heading}
                 </h1>
                 <p className="text-neutral-400 text-sm mt-1">
                   {total !== null
-                    ? `${total} équipe${total > 1 ? 's' : ''} classée${total > 1 ? 's' : ''}`
-                    : 'Chargement...'}
+                    ? format(
+                        total > 1 ? t.countRanked_other : t.countRanked_one,
+                        {
+                          total,
+                        }
+                      )
+                    : t.loading}
                 </p>
               </div>
 
@@ -236,7 +243,7 @@ function AdminTeamsStatsPage({ staff }: StaffProps) {
                     d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                   />
                 </svg>
-                Export CSV
+                {t.exportCsv}
               </button>
             </div>
           </div>
@@ -267,7 +274,7 @@ function AdminTeamsStatsPage({ staff }: StaffProps) {
             >
               <div className="lg:col-span-2">
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Tournoi
+                  {t.filterTournamentLabel}
                 </label>
                 <select
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -277,13 +284,13 @@ function AdminTeamsStatsPage({ staff }: StaffProps) {
                 >
                   <option value="">
                     {loadingTournaments
-                      ? 'Chargement des tournois…'
-                      : 'Tous les tournois'}
+                      ? t.tournamentsLoading
+                      : t.tournamentsAll}
                   </option>
-                  {tournaments.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name}
-                      {t.slug ? ` (${t.slug})` : ''}
+                  {tournaments.map((tm) => (
+                    <option key={tm.id} value={tm.id}>
+                      {tm.name}
+                      {tm.slug ? ` (${tm.slug})` : ''}
                     </option>
                   ))}
                 </select>
@@ -291,7 +298,7 @@ function AdminTeamsStatsPage({ staff }: StaffProps) {
 
               <div>
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Min. matchs
+                  {t.filterMinMatchesLabel}
                 </label>
                 <input
                   type="number"
@@ -305,7 +312,7 @@ function AdminTeamsStatsPage({ staff }: StaffProps) {
 
               <div>
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Recherche
+                  {t.filterSearchLabel}
                 </label>
                 <div className="relative">
                   <svg
@@ -323,7 +330,7 @@ function AdminTeamsStatsPage({ staff }: StaffProps) {
                   </svg>
                   <input
                     type="text"
-                    placeholder="Nom, tag…"
+                    placeholder={t.filterSearchPlaceholder}
                     className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
@@ -333,25 +340,25 @@ function AdminTeamsStatsPage({ staff }: StaffProps) {
 
               <div>
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Trier par
+                  {t.sortByLabel}
                 </label>
                 <select
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
                 >
-                  <option value="winrate">Winrate match</option>
-                  <option value="map_winrate">Winrate maps</option>
-                  <option value="matches_played">Matchs joués</option>
-                  <option value="points">Points</option>
-                  <option value="last_match_at">Dernier match</option>
+                  <option value="winrate">{t.sortWinrate}</option>
+                  <option value="map_winrate">{t.sortMapWinrate}</option>
+                  <option value="matches_played">{t.sortMatchesPlayed}</option>
+                  <option value="points">{t.sortPoints}</option>
+                  <option value="last_match_at">{t.sortLastMatch}</option>
                 </select>
               </div>
 
               <div className="flex gap-2">
                 <div className="flex-1">
                   <label className="block text-sm text-neutral-400 mb-1">
-                    Ordre
+                    {t.orderLabel}
                   </label>
                   <select
                     className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -360,8 +367,8 @@ function AdminTeamsStatsPage({ staff }: StaffProps) {
                       setSortDir(e.target.value === 'asc' ? 'asc' : 'desc')
                     }
                   >
-                    <option value="desc">Desc</option>
-                    <option value="asc">Asc</option>
+                    <option value="desc">{t.orderDesc}</option>
+                    <option value="asc">{t.orderAsc}</option>
                   </select>
                 </div>
 
@@ -382,7 +389,7 @@ function AdminTeamsStatsPage({ staff }: StaffProps) {
                       d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
                     />
                   </svg>
-                  Filtrer
+                  {t.filterSubmit}
                 </button>
               </div>
             </form>
@@ -409,7 +416,7 @@ function AdminTeamsStatsPage({ staff }: StaffProps) {
                     d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
                   />
                 </svg>
-                Aucune équipe pour ces filtres
+                {t.emptyState}
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -417,15 +424,17 @@ function AdminTeamsStatsPage({ staff }: StaffProps) {
                   <thead className="bg-neutral-900/50 text-neutral-400 text-xs uppercase tracking-wider">
                     <tr>
                       <th className="px-4 py-3 text-left">#</th>
-                      <th className="px-4 py-3 text-left">Équipe</th>
-                      <th className="px-4 py-3 text-left">Tournoi</th>
-                      <th className="px-4 py-3 text-center">Matchs</th>
-                      <th className="px-4 py-3 text-center">V/D/N</th>
-                      <th className="px-4 py-3 text-center">Winrate</th>
-                      <th className="px-4 py-3 text-center">Maps</th>
-                      <th className="px-4 py-3 text-center">WR Maps</th>
-                      <th className="px-4 py-3 text-center">Points</th>
-                      <th className="px-4 py-3 text-left">Dernier match</th>
+                      <th className="px-4 py-3 text-left">{t.thTeam}</th>
+                      <th className="px-4 py-3 text-left">{t.thTournament}</th>
+                      <th className="px-4 py-3 text-center">{t.thMatches}</th>
+                      <th className="px-4 py-3 text-center">{t.thWDL}</th>
+                      <th className="px-4 py-3 text-center">{t.thWinrate}</th>
+                      <th className="px-4 py-3 text-center">{t.thMaps}</th>
+                      <th className="px-4 py-3 text-center">
+                        {t.thMapWinrate}
+                      </th>
+                      <th className="px-4 py-3 text-center">{t.thPoints}</th>
+                      <th className="px-4 py-3 text-left">{t.thLastMatch}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-neutral-700/50">
@@ -619,12 +628,12 @@ function AdminTeamsStatsPage({ staff }: StaffProps) {
                     d="M15 19l-7-7 7-7"
                   />
                 </svg>
-                Précédent
+                {t.previous}
               </button>
 
               <span className="text-neutral-400 text-sm">
                 {offset + 1} – {offset + stats.length}
-                {total ? ` sur ${total}` : ''}
+                {total ? format(t.paginationOf, { total }) : ''}
               </span>
 
               <button
@@ -633,7 +642,7 @@ function AdminTeamsStatsPage({ staff }: StaffProps) {
                 onClick={() => setOffset(offset + limit)}
                 className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
-                Suivant
+                {t.next}
                 <svg
                   className="w-4 h-4"
                   fill="none"
