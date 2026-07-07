@@ -40,6 +40,44 @@ const ALLOWLIST = new Set<string>([]);
 const ACCENTS = 'àâäéèêëîïôöùûüÿçœæÀÂÄÉÈÊËÎÏÔÖÙÛÜŸÇŒÆ';
 const ACCENT_RE = new RegExp(`[${ACCENTS}]`);
 
+// Accent-free French is a real blind spot ("Rejoindre le Discord", "Fermer",
+// "Filtres des tournois"). This curated list of French-only tokens catches the
+// common visible cases without false-positiving on English. Whole-word, case-i.
+const FR_WORDS =
+  /\b(?:rejoindre|s'inscrire|inscrire|inscription|inscriptions|fermer|ouvrir|ouverture|filtres?|aucune?|choisir|choix|envoyer|annuler|enregistrer|modifier|supprimer|ajouter|rechercher|connexion|deconnexion|suivant|precedent|retour|valider|bienvenue|obligatoire|disponible|indisponible|equipe|equipes|joueur|joueuse|joueuses|semaine|prochaine?|votre|vos|nos|notre|charger|chargement|erreur|impossible|introuvable|reessayer|reessayez)\b/i;
+
+// Decode \uXXXX escapes and the HTML entities used in JSX so accented French
+// hidden as `é` or `&eacute;` is still detected.
+const HTML_ENTITIES: Record<string, string> = {
+  '&eacute;': 'é',
+  '&egrave;': 'è',
+  '&ecirc;': 'ê',
+  '&agrave;': 'à',
+  '&acirc;': 'â',
+  '&ccedil;': 'ç',
+  '&ocirc;': 'ô',
+  '&ucirc;': 'û',
+  '&icirc;': 'î',
+  '&iuml;': 'ï',
+  '&euml;': 'ë',
+  '&ugrave;': 'ù',
+};
+
+function decodeText(s: string): string {
+  let out = s.replace(/\\u([0-9a-fA-F]{4})/g, (_, h) =>
+    String.fromCharCode(parseInt(h, 16))
+  );
+  for (const [ent, ch] of Object.entries(HTML_ENTITIES)) {
+    out = out.split(ent).join(ch);
+  }
+  return out;
+}
+
+function isFrench(text: string): boolean {
+  const decoded = decodeText(text);
+  return ACCENT_RE.test(decoded) || FR_WORDS.test(decoded);
+}
+
 function walk(dir: string): string[] {
   const abs = path.join(ROOT, dir);
   let entries: string[] = [];
@@ -62,11 +100,70 @@ function walk(dir: string): string[] {
   return files;
 }
 
-/** Strip comments so accented text inside them is never flagged. */
+/**
+ * Remove JS/TS comments while PRESERVING string/template literals (attributes
+ * are string literals — blanking them would break attr detection) and newlines.
+ *
+ * This is a character scanner, NOT a regex. A naive block-comment regex
+ * mis-pairs a block-open token that appears inside a line comment (e.g. the
+ * path segment `/player` followed by a star) with a distant block-close token,
+ * silently deleting everything between — a false-negative hole in the guard.
+ * The scanner enters LINE mode at a line-comment marker first, so a block-open
+ * token sitting inside a line comment can never start a block comment.
+ */
 function stripComments(src: string): string {
-  return src
-    .replace(/\/\*[\s\S]*?\*\//g, ' ') // block + JSX {/* */} inner
-    .replace(/(^|[^:])\/\/[^\n]*/g, '$1 '); // line comments (naive, avoids ://)
+  let out = '';
+  let mode: 'code' | 'line' | 'block' | 'sq' | 'dq' | 'tmpl' = 'code';
+  for (let i = 0; i < src.length; i++) {
+    const c = src[i];
+    const n = src[i + 1];
+    if (mode === 'code') {
+      if (c === '/' && n === '/') {
+        mode = 'line';
+        i++;
+      } else if (c === '/' && n === '*') {
+        mode = 'block';
+        i++;
+      } else if (c === "'") {
+        mode = 'sq';
+        out += c;
+      } else if (c === '"') {
+        mode = 'dq';
+        out += c;
+      } else if (c === '`') {
+        mode = 'tmpl';
+        out += c;
+      } else {
+        out += c;
+      }
+    } else if (mode === 'line') {
+      if (c === '\n') {
+        mode = 'code';
+        out += c;
+      }
+    } else if (mode === 'block') {
+      if (c === '*' && n === '/') {
+        mode = 'code';
+        i++;
+      } else if (c === '\n') {
+        out += c; // keep line structure
+      }
+    } else {
+      // inside a string/template: preserve chars, honour escapes, detect close
+      out += c;
+      if (c === '\\') {
+        out += src[i + 1] ?? '';
+        i++;
+      } else if (
+        (mode === 'sq' && c === "'") ||
+        (mode === 'dq' && c === '"') ||
+        (mode === 'tmpl' && c === '`')
+      ) {
+        mode = 'code';
+      }
+    }
+  }
+  return out;
 }
 
 const JSX_TEXT_RE = />([^<>{}]*)</g;
@@ -80,14 +177,14 @@ function findOffenders(rel: string): Offender[] {
 
   for (const m of src.matchAll(JSX_TEXT_RE)) {
     const text = m[1].trim();
-    if (!text || !ACCENT_RE.test(text)) continue;
+    if (!text || !isFrench(text)) continue;
     if (ALLOWLIST.has(text)) continue;
     found.push({ file: rel, snippet: text.slice(0, 80) });
   }
 
   for (const m of src.matchAll(ATTR_RE)) {
     const text = m[2].trim();
-    if (!text || !ACCENT_RE.test(text)) continue;
+    if (!text || !isFrench(text)) continue;
     if (ALLOWLIST.has(text)) continue;
     found.push({ file: rel, snippet: `[attr] ${text.slice(0, 80)}` });
   }

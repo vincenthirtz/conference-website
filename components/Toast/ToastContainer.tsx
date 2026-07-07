@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useToast } from './ToastContext';
 import type { Toast, ToastVariant } from './ToastContext';
+import { useT } from '@/lib/i18n/useT';
 
 const VARIANT_STYLES: Record<ToastVariant, string> = {
   success: 'bg-emerald-600 border-emerald-500/50 text-white',
@@ -25,6 +26,7 @@ function ToastItem({
   onDismiss: () => void;
 }) {
   const [visible, setVisible] = useState(false);
+  const t = useT('toast');
 
   useEffect(() => {
     // Trigger enter animation on next frame
@@ -58,7 +60,7 @@ function ToastItem({
         type="button"
         onClick={onDismiss}
         className="flex-shrink-0 p-1 rounded-lg hover:bg-white/20 transition-colors"
-        aria-label="Fermer"
+        aria-label={t.close}
       >
         <svg
           className="w-4 h-4"

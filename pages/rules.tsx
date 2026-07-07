@@ -1,81 +1,53 @@
 import Link from 'next/link';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
+import { useT } from '@/lib/i18n/useT';
 
-const ruleSections = [
+type RulesDict = ReturnType<typeof useT<'rulesPage'>>;
+
+const getRuleSections = (t: RulesDict) => [
   {
-    title: 'Composition & restrictions',
-    items: [
-      '5v5 obligatoire : 1 Tank, 2 D\u00e9g\u00e2ts, 2 Soutien (Role Queue).',
-      'H\u00e9ros uniques : aucun doublon autoris\u00e9 dans une m\u00eame \u00e9quipe.',
-      "Patch en cours : toutes les parties se jouent sur la derni\u00e8re version live d'Overwatch (pas de rollbacks).",
-      'Objets de workshop, mods, macros ou scripts interdits.',
-    ],
+    title: t.section1Title,
+    items: [t.section1Item1, t.section1Item2, t.section1Item3, t.section1Item4],
   },
   {
-    title: 'Param\u00e8tres de salon officiels',
-    items: [
-      'Pr\u00e9r\u00e9glage : R\u00e8gles de comp\u00e9tition.',
-      'Score limit\u00e9 par mode (ex. Contr\u00f4le en BO3).',
-      'Temps de pr\u00e9paration 45 s (d\u00e9part) / 35 s (mi-temps).',
-      'Pause technique : uniquement en cas de bug ou d\u00e9connexion, max 5 min par \u00e9quipe.',
-    ],
+    title: t.section2Title,
+    items: [t.section2Item1, t.section2Item2, t.section2Item3, t.section2Item4],
   },
   {
-    title: 'Fair-play & conduite',
-    items: [
-      'Aucun exploit, stream sniping ou partage de compte.',
-      'Chat vocal et textuel soumis au Code de conduite Blizzard.',
-      "R\u00e9solution des litiges : d\u00e9cision finale par l'arbitrage tournoi.",
-      'Rejoindre le Discord du tournoi est obligatoire : https://discord.gg/gERSsjC3Vd',
-    ],
+    title: t.section3Title,
+    items: [t.section3Item1, t.section3Item2, t.section3Item3, t.section3Item4],
   },
 ];
 
-const modeDetails = [
-  {
-    mode: 'Contr\u00f4le (Control)',
-    rules:
-      'BO3 sur trois points de contr\u00f4le. Si 1-1, manche d\u00e9cisive. Overtime si une \u00e9quipe conteste ou est sur le point de capturer.',
-  },
-  {
-    mode: 'Hybride (Assaut/ Escorte)',
-    rules:
-      'Att/Def : capture du point A puis escorte du convoi. Victoire \u00e0 la meilleure progression; overtime si la progression est contest\u00e9e.',
-  },
-  {
-    mode: 'Escorte (Escort)',
-    rules:
-      "Att/Def : escorte pure du convoi jusqu'au point final. Si \u00e9galit\u00e9 apr\u00e8s les deux manches, reprise avec banque de temps; meilleure distance d\u00e9partage.",
-  },
-  {
-    mode: 'Flashpoint',
-    rules:
-      "Points de capture successifs, premier \u00e0 2 points. Overtime si un point est contest\u00e9. Reset d'ultimes \u00e0 chaque prise.",
-  },
-  {
-    mode: 'Push',
-    rules:
-      "\u00c9quipe gagnante : distance la plus avanc\u00e9e. Overtime si le robot est contest\u00e9 ou proche du marqueur de l'adversaire.",
-  },
+const getModeDetails = (t: RulesDict) => [
+  { mode: t.mode1Name, rules: t.mode1Rules },
+  { mode: t.mode2Name, rules: t.mode2Rules },
+  { mode: t.mode3Name, rules: t.mode3Rules },
+  { mode: t.mode4Name, rules: t.mode4Rules },
+  { mode: t.mode5Name, rules: t.mode5Rules },
 ];
 
-const references = [
+const getReferences = (t: RulesDict) => [
   {
-    label: 'Code de conduite Blizzard',
+    label: t.ref1Label,
     href: 'https://www.blizzard.com/fr-fr/legal/7f2d718d-142f-4a68-9272-5c587f1addfb/overwatch-2-code-of-conduct',
   },
   {
-    label: 'Notes de mise \u00e0 jour Overwatch (patch live)',
+    label: t.ref2Label,
     href: 'https://overwatch.blizzard.com/fr-fr/news/patch-notes/',
   },
   {
-    label:
-      'Param\u00e8tres \u00ab R\u00e8gles de comp\u00e9tition \u00bb (guide officiel)',
+    label: t.ref3Label,
     href: 'https://overwatch.blizzard.com/fr-fr/news/23997317/',
   },
 ];
 
 function RulesPage() {
+  const t = useT('rulesPage');
+  const ruleSections = getRuleSections(t);
+  const modeDetails = getModeDetails(t);
+  const references = getReferences(t);
+
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
       <div className="relative overflow-hidden">
@@ -86,16 +58,13 @@ function RulesPage() {
 
         <div className="relative mx-auto max-w-5xl px-6 pt-32 pb-14 text-center">
           <p className="mx-auto inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.18em] text-gray-200">
-            R&egrave;glement officiel
+            {t.heroBadge}
           </p>
           <h1 className="mt-3 text-4xl font-bold leading-tight sm:text-5xl md:text-6xl">
-            R&egrave;gles officielles Overwatch
+            {t.heroTitle}
           </h1>
           <p className="mx-auto mt-4 max-w-3xl text-lg text-gray-200">
-            R&eacute;sum&eacute; des param&egrave;tres comp&eacute;titifs
-            Overwatch utilis&eacute;s pour l&apos;OW Women&apos;s Cup. Toute
-            l&apos;organisation se base sur les r&egrave;gles officielles
-            Blizzard, adapt&eacute;es au format du tournoi.
+            {t.heroSubtitle}
           </p>
         </div>
       </div>
@@ -147,17 +116,11 @@ function RulesPage() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-xs uppercase tracking-[0.18em] text-gray-200">
-                Modes de jeu
+                {t.modesEyebrow}
               </p>
-              <h3 className="text-2xl font-bold">
-                Conditions de victoire par mode
-              </h3>
+              <h3 className="text-2xl font-bold">{t.modesTitle}</h3>
             </div>
-            <p className="text-sm text-gray-200">
-              S&apos;applique avec le pr&eacute;r&eacute;glage &laquo;
-              R&egrave;gles de comp&eacute;tition &raquo; dans les salons
-              personnalis&eacute;s.
-            </p>
+            <p className="text-sm text-gray-200">{t.modesNote}</p>
           </div>
 
           <div className="mt-6 grid gap-4 md:grid-cols-2">
@@ -178,13 +141,12 @@ function RulesPage() {
         <section className="space-y-4">
           <div className="flex flex-col gap-2">
             <p className="text-xs uppercase tracking-[0.18em] text-gray-300">
-              R&eacute;f&eacute;rences officielles
+              {t.referencesEyebrow}
             </p>
-            <h3 className="text-2xl font-bold text-white">Sources Blizzard</h3>
-            <p className="text-sm text-gray-300">
-              Consultez les documents officiels pour les mises &agrave; jour de
-              r&egrave;gles, de maps ou de patchs.
-            </p>
+            <h3 className="text-2xl font-bold text-white">
+              {t.referencesTitle}
+            </h3>
+            <p className="text-sm text-gray-300">{t.referencesNote}</p>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             {references.map((ref) => (
@@ -207,11 +169,11 @@ function RulesPage() {
 
 const rulesSeo: SeoProps = {
   title: {
-    fr: 'R\u00e8gles officielles Overwatch',
+    fr: 'Règles officielles Overwatch',
     en: 'Official Overwatch rules',
   },
   description: {
-    fr: "Param\u00e8tres comp\u00e9titifs, modes et conduite officielle Overwatch utilis\u00e9s pour l'OW Women's Cup, bas\u00e9s sur les r\u00e8gles Blizzard.",
+    fr: "Paramètres compétitifs, modes et conduite officielle Overwatch utilisés pour l'OW Women's Cup, basés sur les règles Blizzard.",
     en: "Competitive settings, modes and official Overwatch conduct used for OW Women's Cup, based on Blizzard's rules.",
   },
 };

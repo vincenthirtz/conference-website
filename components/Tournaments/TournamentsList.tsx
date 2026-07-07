@@ -179,12 +179,12 @@ export default function TournamentsList({ tournaments }: TournamentsListProps) {
         </section>
 
         {/* Filtres */}
-        <section className="mb-10" aria-label="Filtres des tournois">
+        <section className="mb-10" aria-label={t.filtersAriaLabel}>
           <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             {/* Statut : segmented control */}
             <div
               role="tablist"
-              aria-label="Filtrer par statut"
+              aria-label={t.statusFilterAriaLabel}
               className="inline-flex flex-wrap gap-1 rounded-full border border-white/10 bg-white/5 p-1"
             >
               {statusTabs.map((tab) => {

@@ -5,6 +5,7 @@
 
 import { BracketTreeView } from '@/components/admin/bracket';
 import type { BracketRound } from '@/components/admin/bracket/types';
+import { useT, format } from '@/lib/i18n/useT';
 
 export type EmbedTheme = 'light' | 'dark';
 
@@ -30,6 +31,7 @@ export default function EmbedBracket({
   publicUrl,
   siteLabel = 'le site',
 }: EmbedBracketProps) {
+  const t = useT('embedBracket');
   const isLight = theme === 'light';
 
   // The underlying BracketTreeView is styled for a dark surface (white text,
@@ -68,7 +70,7 @@ export default function EmbedBracket({
                   : 'shrink-0 text-[11px] text-neutral-400 underline-offset-2 hover:underline'
               }
             >
-              Voir sur {siteLabel} ↗
+              {format(t.viewOn, { site: siteLabel })} ↗
             </a>
           )}
         </header>
@@ -81,7 +83,7 @@ export default function EmbedBracket({
                 : 'rounded-lg border border-white/10 bg-white/5 px-4 py-6 text-center text-sm text-neutral-400'
             }
           >
-            Le bracket de ce tournoi n&apos;est pas encore disponible.
+            {t.empty}
           </p>
         ) : (
           <div className="space-y-8">

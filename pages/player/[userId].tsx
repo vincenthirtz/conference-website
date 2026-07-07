@@ -714,26 +714,28 @@ function LoadingState() {
 }
 
 function NotFoundState() {
+  const t = useT('playerPublicProfile');
   return (
     <section className="py-16 text-center">
       <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-neutral-800 text-2xl">
         🔍
       </div>
-      <h1 className="mb-2 text-xl font-semibold">Joueuse introuvable</h1>
+      <h1 className="mb-2 text-xl font-semibold">{t.notFoundTitle}</h1>
       <p className="mx-auto mb-6 max-w-md text-sm text-neutral-400">
-        Cette joueuse n&apos;existe pas ou n&apos;a pas encore de rating.
+        {t.notFoundBody}
       </p>
       <Link
         href="/leaderboard"
         className="rounded-md bg-purple-500 px-4 py-2 text-sm font-semibold transition-colors hover:bg-purple-400"
       >
-        Voir le classement
+        {t.viewLeaderboard}
       </Link>
     </section>
   );
 }
 
 function ErrorState({ onRetry }: { onRetry: () => void }) {
+  const t = useT('playerPublicProfile');
   return (
     <section className="py-16 text-center" role="alert">
       <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full border border-red-500/30 bg-red-500/10">
@@ -751,18 +753,14 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
           />
         </svg>
       </div>
-      <h1 className="mb-2 text-xl font-semibold">
-        Impossible de charger ce profil
-      </h1>
-      <p className="mb-6 text-neutral-400">
-        Une erreur est survenue. Réessayez dans quelques instants.
-      </p>
+      <h1 className="mb-2 text-xl font-semibold">{t.errorTitle}</h1>
+      <p className="mb-6 text-neutral-400">{t.errorBody}</p>
       <button
         type="button"
         onClick={onRetry}
         className="rounded-md bg-purple-500 px-4 py-2 text-sm font-semibold transition-colors hover:bg-purple-400"
       >
-        Réessayer
+        {t.retry}
       </button>
     </section>
   );

@@ -6,8 +6,10 @@ import Heading from '../Typography/heading';
 import Paragraph from '../Typography/paragraph';
 import Button from '../Buttons/button';
 import Link from 'next/link';
+import { useT } from '@/lib/i18n/useT';
 
 function Popup() {
+  const t = useT('inscriptionPopup');
   const [isVisible, setIsVisible] = useState<boolean>(false);
   const [isOpen, setIsOpen] = useState<boolean>(true);
 
@@ -96,7 +98,7 @@ function Popup() {
 
                 <div className="flex flex-col items-center text-center space-y-6 pb-4">
                   <h1 className=" text-[30px] sm:text-[25px] font-bold text-white leading-tight">
-                    Ouverture des inscriptions
+                    {t.title}
                     <br />
                   </h1>
                   <Paragraph typeStyle="body-md">
@@ -115,7 +117,7 @@ function Popup() {
                   </Paragraph>
                   <Link href="/venue/California">
                     <Button type="button" className="w-[200px]">
-                      S&apos;inscrire
+                      {t.registerBtn}
                     </Button>
                   </Link>
                 </div>
