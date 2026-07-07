@@ -22,6 +22,8 @@
     "canvas-confetti": "^1.9.4",
     "cheerio": "^1.2.0",
     "cookie": "^1.1.1",
+    "graphql": "^16.14.2",
+    "graphql-yoga": "^5.21.2",
     "next": "^16.2.9",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
