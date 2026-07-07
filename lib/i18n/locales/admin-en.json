@@ -498,6 +498,26 @@
     "errorCreateStage": "Couldn't create the stage",
     "toastStageCreated": "Stage created successfully"
   },
+  "adminTournamentEmbed": {
+    "panelTitle": "Embed / Widgets",
+    "panelDescription": "Copy and paste these iframe snippets to embed the tournament widgets on an external site.",
+    "show": "Show",
+    "hide": "Hide",
+    "themeLabel": "Theme",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "snippetLabel": "iframe snippet",
+    "copyBtn": "Copy",
+    "copiedBtn": "Copied",
+    "copiedToast": "Snippet copied",
+    "openWidget": "Open widget",
+    "bracketName": "Bracket",
+    "bracketDesc": "The tournament bracket with scores and progression.",
+    "standingsName": "Standings",
+    "standingsDesc": "The team standings (wins, losses, points).",
+    "scheduleName": "Schedule",
+    "scheduleDesc": "The schedule of upcoming and completed matches."
+  },
   "adminTournamentDashboard": {
     "statusDraft": "Draft",
     "statusPublished": "Published",

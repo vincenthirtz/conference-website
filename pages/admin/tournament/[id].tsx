@@ -490,6 +490,7 @@ function AdminTournamentPage({
   const { mutate: createStageMutate } = useIdempotentMutation();
   const { adminFetch, adminFetchJson } = useAdminFetch();
   const tx = useAdminT('adminTournamentOverview');
+  const te = useAdminT('adminTournamentEmbed');
   const STATUS_OPTIONS = getStatusOptions(tx);
   const STAGE_TYPE_OPTIONS = getStageTypeOptions(tx);
 
@@ -599,6 +600,37 @@ function AdminTournamentPage({
 
   // Notify captains
   const [notifyingCaptains, setNotifyingCaptains] = useState(false);
+
+  // Embed / widgets panel
+  const [embedPanelOpen, setEmbedPanelOpen] = useState(false);
+  const [embedTheme, setEmbedTheme] = useState<'light' | 'dark'>('dark');
+  const [embedBase, setEmbedBase] = useState<string>(
+    process.env.NEXT_PUBLIC_SITE_URL ?? ''
+  );
+  const [copiedWidget, setCopiedWidget] = useState<string | null>(null);
+
+  // Fall back to the current origin when NEXT_PUBLIC_SITE_URL is unset (client-only).
+  useEffect(() => {
+    if (!embedBase && typeof window !== 'undefined') {
+      setEmbedBase(window.location.origin);
+    }
+  }, [embedBase]);
+
+  const copyEmbedSnippet = useCallback(
+    async (snippet: string, widgetKey: string) => {
+      try {
+        await navigator.clipboard.writeText(snippet);
+        setCopiedWidget(widgetKey);
+        window.setTimeout(() => {
+          setCopiedWidget((v) => (v === widgetKey ? null : v));
+        }, 1500);
+        addToast(te.copiedToast, 'success');
+      } catch {
+        /* clipboard refusé : on ignore */
+      }
+    },
+    [addToast, te.copiedToast]
+  );
 
   const notifyCaptains = useCallback(async () => {
     if (!id || notifyingCaptains) return;
@@ -2172,6 +2204,168 @@ function AdminTournamentPage({
                   </section>
                 </div>
               </div>
+
+              {/* Embed / Widgets Panel */}
+              <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setEmbedPanelOpen((v) => !v)}
+                  className="w-full flex items-center justify-between gap-3 p-6 text-left hover:bg-neutral-800/30 transition-colors"
+                >
+                  <h2 className="text-lg font-semibold flex items-center gap-2">
+                    <svg
+                      className="w-5 h-5 text-neutral-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
+                      />
+                    </svg>
+                    {te.panelTitle}
+                  </h2>
+                  <span className="flex items-center gap-2 text-sm text-neutral-400">
+                    {embedPanelOpen ? te.hide : te.show}
+                    <svg
+                      className={`w-4 h-4 transition-transform ${
+                        embedPanelOpen ? 'rotate-180' : ''
+                      }`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 9l-7 7-7-7"
+                      />
+                    </svg>
+                  </span>
+                </button>
+
+                {embedPanelOpen && (
+                  <div className="px-6 pb-6 space-y-4">
+                    <p className="text-sm text-neutral-400">
+                      {te.panelDescription}
+                    </p>
+
+                    {/* Theme toggle */}
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs text-neutral-500 uppercase tracking-wider">
+                        {te.themeLabel}
+                      </span>
+                      <div className="inline-flex rounded-lg border border-neutral-700 bg-neutral-900/50 p-0.5">
+                        {(['dark', 'light'] as const).map((th) => (
+                          <button
+                            key={th}
+                            type="button"
+                            onClick={() => setEmbedTheme(th)}
+                            className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+                              embedTheme === th
+                                ? 'bg-neutral-700 text-white'
+                                : 'text-neutral-400 hover:text-white'
+                            }`}
+                          >
+                            {th === 'dark' ? te.themeDark : te.themeLight}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Widget snippets */}
+                    <div className="space-y-3">
+                      {(
+                        [
+                          {
+                            key: 'bracket',
+                            name: te.bracketName,
+                            desc: te.bracketDesc,
+                            height: 600,
+                          },
+                          {
+                            key: 'standings',
+                            name: te.standingsName,
+                            desc: te.standingsDesc,
+                            height: 480,
+                          },
+                          {
+                            key: 'schedule',
+                            name: te.scheduleName,
+                            desc: te.scheduleDesc,
+                            height: 520,
+                          },
+                        ] as const
+                      ).map((w) => {
+                        const slugOrId = tournament.slug ?? tournament.id;
+                        const url = `${embedBase}/embed/tournament/${slugOrId}/${w.key}?theme=${embedTheme}`;
+                        const snippet = `<iframe src="${url}" width="100%" height="${w.height}" style="border:0;border-radius:12px" loading="lazy" title="${w.name}"></iframe>`;
+                        return (
+                          <div
+                            key={w.key}
+                            className="bg-neutral-900/50 rounded-xl p-4 border border-neutral-700/40"
+                          >
+                            <div className="flex items-start justify-between gap-3 mb-2">
+                              <div className="min-w-0">
+                                <div className="font-medium text-sm">
+                                  {w.name}
+                                </div>
+                                <div className="text-xs text-neutral-500 mt-0.5">
+                                  {w.desc}
+                                </div>
+                              </div>
+                              <a
+                                href={url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex-shrink-0 inline-flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                              >
+                                {te.openWidget}
+                                <svg
+                                  className="w-3.5 h-3.5"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                                  />
+                                </svg>
+                              </a>
+                            </div>
+                            <div className="text-[10px] text-neutral-600 uppercase tracking-wider mb-1">
+                              {te.snippetLabel}
+                            </div>
+                            <div className="relative">
+                              <pre className="font-mono text-[11px] text-neutral-300 bg-neutral-950/70 border border-neutral-700/60 rounded-lg p-3 pr-20 overflow-x-auto whitespace-pre-wrap break-all">
+                                {snippet}
+                              </pre>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  copyEmbedSnippet(snippet, w.key)
+                                }
+                                className="absolute top-2 right-2 px-2.5 py-1 rounded-md bg-neutral-700 hover:bg-neutral-600 text-xs font-medium transition-colors"
+                              >
+                                {copiedWidget === w.key
+                                  ? te.copiedBtn
+                                  : te.copyBtn}
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </section>
             </div>
           )}
         </div>

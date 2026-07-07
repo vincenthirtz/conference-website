@@ -3566,5 +3566,23 @@
   "embedBracket": {
     "empty": "Le bracket de ce tournoi n'est pas encore disponible.",
     "viewOn": "Voir sur {site}"
+  },
+  "embedStandings": {
+    "title": "Classement",
+    "empty": "Le classement de ce tournoi n'est pas encore disponible.",
+    "viewOn": "Voir sur {site}",
+    "rank": "Rang",
+    "team": "Équipe",
+    "prize": "Récompense"
+  },
+  "embedSchedule": {
+    "title": "Calendrier",
+    "empty": "Aucun match programmé pour ce tournoi.",
+    "viewOn": "Voir sur {site}",
+    "vs": "vs",
+    "tbd": "À déterminer",
+    "statusUpcoming": "À venir",
+    "statusLive": "En direct",
+    "statusDone": "Terminé"
   }
 }

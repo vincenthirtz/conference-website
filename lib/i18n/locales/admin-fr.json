@@ -498,6 +498,26 @@
     "errorCreateStage": "Impossible de créer la phase",
     "toastStageCreated": "Phase créée avec succès"
   },
+  "adminTournamentEmbed": {
+    "panelTitle": "Embed / Widgets",
+    "panelDescription": "Copiez-collez ces extraits iframe pour intégrer les widgets du tournoi sur un site externe.",
+    "show": "Afficher",
+    "hide": "Masquer",
+    "themeLabel": "Thème",
+    "themeLight": "Clair",
+    "themeDark": "Sombre",
+    "snippetLabel": "Extrait iframe",
+    "copyBtn": "Copier",
+    "copiedBtn": "Copié",
+    "copiedToast": "Snippet copié",
+    "openWidget": "Ouvrir le widget",
+    "bracketName": "Arbre",
+    "bracketDesc": "L'arbre du tournoi (bracket) avec les scores et l'avancement.",
+    "standingsName": "Classement",
+    "standingsDesc": "Le classement des équipes (victoires, défaites, points).",
+    "scheduleName": "Planning",
+    "scheduleDesc": "Le planning des matchs à venir et terminés."
+  },
   "adminTournamentDashboard": {
     "statusDraft": "Brouillon",
     "statusPublished": "Publié",

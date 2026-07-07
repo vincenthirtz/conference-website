@@ -3566,5 +3566,23 @@
   "embedBracket": {
     "empty": "This tournament's bracket is not available yet.",
     "viewOn": "View on {site}"
+  },
+  "embedStandings": {
+    "title": "Standings",
+    "empty": "This tournament's standings are not available yet.",
+    "viewOn": "View on {site}",
+    "rank": "Rank",
+    "team": "Team",
+    "prize": "Prize"
+  },
+  "embedSchedule": {
+    "title": "Schedule",
+    "empty": "No matches scheduled for this tournament.",
+    "viewOn": "View on {site}",
+    "vs": "vs",
+    "tbd": "TBD",
+    "statusUpcoming": "Upcoming",
+    "statusLive": "Live",
+    "statusDone": "Done"
   }
 }
