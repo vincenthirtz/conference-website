@@ -28,6 +28,18 @@ import type {
 } from '@/types/leagues';
 import { readLeagueDetail } from '@/utils/leagues/readLeagueDetail';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
+import { useT } from '@/lib/i18n/useT';
+
+type LeagueDetailDict = ReturnType<typeof useT<'leagueDetail'>>;
+
+const getStatusLabels = (
+  t: LeagueDetailDict
+): Record<LeagueStatus, string> => ({
+  draft: t.statusDraft,
+  active: t.statusActive,
+  finished: t.statusFinished,
+  archived: t.statusArchived,
+});
 
 type FetchState =
   | { status: 'loading' }
@@ -35,6 +47,8 @@ type FetchState =
   | { status: 'error' }
   | { status: 'ok'; data: LeagueDetailResponse };
 
+// Version francophone figée : utilisée uniquement par le SEO (buildLeagueSeo,
+// hors contexte de hook). Le rendu visible passe par getStatusLabels(t).
 const STATUS_LABELS: Record<LeagueStatus, string> = {
   draft: 'Brouillon',
   active: 'En cours',
@@ -88,17 +102,18 @@ export default function LeagueDetailPage({
   // Premier rendu = données pré-remplies par l'ISR (getStaticProps). Le fetch
   // client ne se déclenche qu'en fallback ISR (détail absent des props) ou au
   // retour de focus ; il ne double PAS la lecture des props ISR fraîches.
-  const fetcher = useCallback(async (): Promise<LeagueDetailResponse | null> => {
-    if (!s) return null;
-    const res = await fetch(`/api/leagues/${encodeURIComponent(s)}`);
-    if (res.status === 404) {
-      setNotFound(true);
-      return null;
-    }
-    setNotFound(false);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return (await res.json()) as LeagueDetailResponse;
-  }, [s]);
+  const fetcher =
+    useCallback(async (): Promise<LeagueDetailResponse | null> => {
+      if (!s) return null;
+      const res = await fetch(`/api/leagues/${encodeURIComponent(s)}`);
+      if (res.status === 404) {
+        setNotFound(true);
+        return null;
+      }
+      setNotFound(false);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return (await res.json()) as LeagueDetailResponse;
+    }, [s]);
 
   const { data, error, refresh } = useIsrRefresh<LeagueDetailResponse>({
     initial: initial ?? null,
@@ -106,6 +121,7 @@ export default function LeagueDetailPage({
     when: router.isReady && !!s,
   });
 
+  const t = useT('leagueDetail');
   const state: FetchState = notFound
     ? { status: 'notfound' }
     : data
@@ -121,7 +137,7 @@ export default function LeagueDetailPage({
           href="/leagues"
           className="mb-6 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white"
         >
-          ← Retour aux ligues
+          {t.backToLeagues}
         </Link>
 
         {state.status === 'loading' && <LoadingState />}
@@ -134,6 +150,8 @@ export default function LeagueDetailPage({
 }
 
 function Detail({ data }: { data: LeagueDetailResponse }) {
+  const t = useT('leagueDetail');
+  const statusLabels = getStatusLabels(t);
   const { league, standings, tournaments } = data;
   const period = periodLabel(league);
 
@@ -145,7 +163,7 @@ function Detail({ data }: { data: LeagueDetailResponse }) {
           <span
             className={`rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide ${STATUS_CLASSES[league.status]}`}
           >
-            {STATUS_LABELS[league.status]}
+            {statusLabels[league.status]}
           </span>
         </div>
         {league.description && (
@@ -163,14 +181,14 @@ function Detail({ data }: { data: LeagueDetailResponse }) {
 
       <section className="mt-8">
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-purple-300">
-          Classement
+          {t.standingsHeading}
         </h2>
         <Standings standings={standings} />
       </section>
 
       <section className="mt-8">
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-purple-300">
-          Tournois de la saison
+          {t.tournamentsHeading}
         </h2>
         <Tournaments tournaments={tournaments} />
       </section>
@@ -179,16 +197,14 @@ function Detail({ data }: { data: LeagueDetailResponse }) {
 }
 
 function Standings({ standings }: { standings: LeagueStandingPublic[] }) {
+  const t = useT('leagueDetail');
   if (standings.length === 0) {
     return (
       <div className="rounded-2xl border border-neutral-800 bg-neutral-900/40 py-12 text-center">
         <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-purple-500/10 text-xl">
           📊
         </div>
-        <p className="text-sm text-neutral-400">
-          Aucun classement disponible pour le moment. Les points apparaîtront
-          dès qu&apos;un tournoi de la saison sera terminé.
-        </p>
+        <p className="text-sm text-neutral-400">{t.standingsEmpty}</p>
       </div>
     );
   }
@@ -199,20 +215,20 @@ function Standings({ standings }: { standings: LeagueStandingPublic[] }) {
         <table className="w-full text-sm">
           <thead className="bg-neutral-900/80 text-xs uppercase text-neutral-400">
             <tr>
-              <th className="w-16 px-4 py-3 text-left">Rang</th>
-              <th className="px-4 py-3 text-left">Équipe</th>
-              <th className="px-4 py-3 text-right">Points</th>
+              <th className="w-16 px-4 py-3 text-left">{t.colRank}</th>
+              <th className="px-4 py-3 text-left">{t.colTeam}</th>
+              <th className="px-4 py-3 text-right">{t.colPoints}</th>
               <th className="hidden px-4 py-3 text-right sm:table-cell">
-                Tournois
+                {t.colTournaments}
               </th>
               <th className="hidden px-4 py-3 text-right sm:table-cell">
-                Meilleur rang
+                {t.colBestRank}
               </th>
             </tr>
           </thead>
           <tbody>
             {standings.map((s) => {
-              const name = s.teamName ?? 'Équipe inconnue';
+              const name = s.teamName ?? t.unknownTeam;
               return (
                 <tr
                   key={s.teamId}
@@ -270,33 +286,34 @@ function Standings({ standings }: { standings: LeagueStandingPublic[] }) {
 }
 
 function Tournaments({ tournaments }: { tournaments: LeagueTournamentRef[] }) {
+  const t = useT('leagueDetail');
   if (tournaments.length === 0) {
     return (
       <p className="rounded-2xl border border-neutral-800 bg-neutral-900/40 p-6 text-sm text-neutral-400">
-        Aucun tournoi rattaché à cette saison pour le moment.
+        {t.tournamentsEmpty}
       </p>
     );
   }
 
   return (
     <ul className="divide-y divide-neutral-800/60 overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-900/40">
-      {tournaments.map((t) => {
-        const name = t.name ?? 'Tournoi';
+      {tournaments.map((tr) => {
+        const name = tr.name ?? t.tournamentFallback;
         const inner = (
           <div className="flex items-center justify-between gap-3 px-4 py-3">
             <span className="truncate text-neutral-200">{name}</span>
-            {t.weight !== 1 && (
+            {tr.weight !== 1 && (
               <span className="shrink-0 rounded-full bg-purple-500/15 px-2.5 py-1 text-xs font-semibold text-purple-300">
-                ×{t.weight}
+                ×{tr.weight}
               </span>
             )}
           </div>
         );
         return (
-          <li key={t.id}>
-            {t.slug ? (
+          <li key={tr.id}>
+            {tr.slug ? (
               <Link
-                href={`/tournament/${t.slug}`}
+                href={`/tournament/${tr.slug}`}
                 className="block text-sm transition-colors hover:bg-white/[0.03] hover:text-purple-300"
               >
                 {inner}
@@ -321,26 +338,28 @@ function LoadingState() {
 }
 
 function NotFoundState() {
+  const t = useT('leagueDetail');
   return (
     <section className="py-16 text-center">
       <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-neutral-800 text-2xl">
         🔍
       </div>
-      <h1 className="mb-2 text-xl font-semibold">Ligue introuvable</h1>
+      <h1 className="mb-2 text-xl font-semibold">{t.notFoundHeading}</h1>
       <p className="mx-auto mb-6 max-w-md text-sm text-neutral-400">
-        Cette ligue n&apos;existe pas ou n&apos;est pas publique.
+        {t.notFoundBody}
       </p>
       <Link
         href="/leagues"
         className="rounded-md bg-purple-500 px-4 py-2 text-sm font-semibold transition-colors hover:bg-purple-400"
       >
-        Voir les ligues
+        {t.viewLeagues}
       </Link>
     </section>
   );
 }
 
 function ErrorState({ onRetry }: { onRetry: () => void }) {
+  const t = useT('leagueDetail');
   return (
     <section className="py-16 text-center" role="alert">
       <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full border border-red-500/30 bg-red-500/10">
@@ -358,18 +377,14 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
           />
         </svg>
       </div>
-      <h1 className="mb-2 text-xl font-semibold">
-        Impossible de charger cette ligue
-      </h1>
-      <p className="mb-6 text-neutral-400">
-        Une erreur est survenue. Réessayez dans quelques instants.
-      </p>
+      <h1 className="mb-2 text-xl font-semibold">{t.errorHeading}</h1>
+      <p className="mb-6 text-neutral-400">{t.errorBody}</p>
       <button
         type="button"
         onClick={onRetry}
         className="rounded-md bg-purple-500 px-4 py-2 text-sm font-semibold transition-colors hover:bg-purple-400"
       >
-        Réessayer
+        {t.retry}
       </button>
     </section>
   );

@@ -9,6 +9,9 @@ import type { JSX, ReactNode } from 'react';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
+import { useT, format } from '@/lib/i18n/useT';
+
+type GuideDict = ReturnType<typeof useT<'guideManageTeam'>>;
 
 const REGISTER_TEAM_HREF = '/team/create';
 const PLAYER_HREF = '/player';
@@ -21,105 +24,64 @@ type Step = {
   preview: () => JSX.Element;
 };
 
-const STEPS: Step[] = [
+const getSteps = (t: GuideDict): Step[] => [
   {
     number: '01',
-    title: 'Inscris ton équipe',
-    description:
-      'Crée ton équipe en deux minutes : nom, BattleTag de capitaine, premiers membres. Tu deviens capitaine automatiquement.',
-    bullets: [
-      'Choisis un nom et un tag (ex. PHX)',
-      'Renseigne 5 BattleTags pour démarrer le roster',
-      'Tu peux ajouter coachs et remplaçantes plus tard',
-    ],
+    title: t.step1Title,
+    description: t.step1Desc,
+    bullets: [t.step1Bullet1, t.step1Bullet2, t.step1Bullet3],
     preview: NewTeamPreview,
   },
   {
     number: '02',
-    title: 'Reçois et valide les candidatures',
-    description:
-      'Active le mode “équipe ouverte” pour recevoir des demandes. Lis le message, accepte ou refuse — la joueuse reçoit une notification.',
-    bullets: [
-      'Toggle ouvert/fermé en un clic',
-      'Voir le rôle souhaité et un mot d’intro',
-      'Accepter assigne automatiquement le rôle',
-    ],
+    title: t.step2Title,
+    description: t.step2Desc,
+    bullets: [t.step2Bullet1, t.step2Bullet2, t.step2Bullet3],
     preview: JoinRequestsPreview,
   },
   {
     number: '03',
-    title: 'Gère le roster et les rôles',
-    description:
-      'Ajuste les rôles (tank/dps/support/sub/coach), passe le brassard de capitaine, copie un BattleTag en un clic pour les lobbies.',
-    bullets: [
-      'Compteur Tank / DPS / Support visible',
-      'Bouton 📋 à côté de chaque BattleTag',
-      'Transfert de capitaine en deux clics',
-    ],
+    title: t.step3Title,
+    description: t.step3Desc,
+    bullets: [t.step3Bullet1, t.step3Bullet2, t.step3Bullet3],
     preview: RosterPreview,
   },
   {
     number: '04',
-    title: 'Discute avec les autres capitaines',
-    description:
-      'Messagerie intégrée entre capitaines pour caler horaires, lobbies ou règles maison sans quitter le site.',
-    bullets: [
-      'Inbox triée par dernière activité',
-      'Compteur de messages non lus dans la navbar',
-      'Modération staff active si besoin',
-    ],
+    title: t.step4Title,
+    description: t.step4Desc,
+    bullets: [t.step4Bullet1, t.step4Bullet2, t.step4Bullet3],
     preview: MessagesPreview,
   },
   {
     number: '05',
-    title: 'Check-in du prochain match',
-    description:
-      'Une heure avant le coup d’envoi, le bouton check-in s’ouvre directement dans ton espace. Plus besoin de chercher le mail Draftbot.',
-    bullets: [
-      'Carte “Prochain match” en haut du dashboard',
-      'Compte à rebours, format BO3/BO5, lien live',
-      'Forfait auto si pas de check-in à T-0',
-    ],
+    title: t.step5Title,
+    description: t.step5Desc,
+    bullets: [t.step5Bullet1, t.step5Bullet2, t.step5Bullet3],
     preview: NextMatchPreview,
   },
   {
     number: '06',
-    title: 'Propose des scrims',
-    description:
-      'Choisis une équipe adverse, propose un horaire et un message. La capitaine adverse accepte ou refuse depuis son espace.',
-    bullets: [
-      'Recherche d’équipe avec filtre pays/places',
-      'Proposition + date + commentaire',
-      'Une fois accepté, ajoute-le à ton agenda',
-    ],
+    title: t.step6Title,
+    description: t.step6Desc,
+    bullets: [t.step6Bullet1, t.step6Bullet2, t.step6Bullet3],
     preview: ScrimPreview,
   },
 ];
 
-const FEATURES: { title: string; description: string }[] = [
-  {
-    title: 'Cloche de notifications',
-    description:
-      'Un badge rose en navbar agrège messages non lus, scrims en attente, candidatures et check-in à valider.',
-  },
-  {
-    title: 'Page publique d’équipe',
-    description:
-      'Profite d’une vitrine partageable (logo, roster, palmarès) à diffuser sur les réseaux et auprès des sponsors.',
-  },
-  {
-    title: 'Historique des demandes',
-    description:
-      'Toutes tes demandes (capitanat, transferts, scrims) sont tracées avec leur statut et la date de traitement staff.',
-  },
-  {
-    title: 'Sécurité & modération',
-    description:
-      'Charte anti-harcèlement, staff formé, signalement intégré, suppression de compte conforme RGPD.',
-  },
+const getFeatures = (
+  t: GuideDict
+): { title: string; description: string }[] => [
+  { title: t.feature1Title, description: t.feature1Desc },
+  { title: t.feature2Title, description: t.feature2Desc },
+  { title: t.feature3Title, description: t.feature3Desc },
+  { title: t.feature4Title, description: t.feature4Desc },
 ];
 
 function GuidePage(): JSX.Element {
+  const t = useT('guideManageTeam');
+  const steps = getSteps(t);
+  const features = getFeatures(t);
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
       {/* Hero */}
@@ -130,37 +92,35 @@ function GuidePage(): JSX.Element {
         </div>
         <div className="relative mx-auto max-w-5xl px-6 pt-32 pb-16 text-center">
           <p className="mx-auto inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.18em] text-gray-200">
-            Guide capitaine
+            {t.heroBadge}
           </p>
           <Heading
             level="h1"
             typeStyle="heading-lg"
             className="mt-4 text-gradient font-extrabold leading-tight"
           >
-            Gère ton équipe en quelques clics
+            {t.heroTitle}
           </Heading>
           <Paragraph
             typeStyle="body-lg"
             className="mx-auto mt-4 max-w-3xl"
             textColor="text-gray-200"
           >
-            Roster, candidatures, scrims, check-in, messagerie : tout est dans
-            ton espace. Voici un aperçu concret de chaque étape, avec des
-            captures de l’interface réelle.
+            {t.heroSubtitle}
           </Paragraph>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Link
               href={REGISTER_TEAM_HREF}
               className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition hover:brightness-110"
             >
-              Créer mon équipe
+              {t.createTeam}
               <span aria-hidden>→</span>
             </Link>
             <Link
               href={PLAYER_HREF}
               className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-6 py-3 text-sm font-medium text-white transition hover:bg-white/10"
             >
-              Aller à mon espace
+              {t.goToSpace}
             </Link>
           </div>
         </div>
@@ -169,7 +129,7 @@ function GuidePage(): JSX.Element {
       {/* Steps */}
       <section className="relative mx-auto max-w-6xl px-4 md:px-6 pb-16">
         <ol className="flex flex-col gap-12">
-          {STEPS.map((step, idx) => {
+          {steps.map((step, idx) => {
             const reverse = idx % 2 === 1;
             const Preview = step.preview;
             return (
@@ -181,7 +141,7 @@ function GuidePage(): JSX.Element {
               >
                 <div className="space-y-4">
                   <span className="inline-flex items-center justify-center rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs uppercase tracking-[0.18em] text-blue-200/80">
-                    Étape {step.number}
+                    {format(t.stepLabel, { number: step.number })}
                   </span>
                   <h2 className="text-3xl md:text-4xl font-bold text-white leading-tight">
                     {step.title}
@@ -214,11 +174,11 @@ function GuidePage(): JSX.Element {
       <section className="relative mx-auto max-w-6xl px-4 md:px-6 pb-20">
         <div className="mb-8 text-center">
           <Heading typeStyle="heading-md" className="text-gradient text-center">
-            Et aussi…
+            {t.alsoTitle}
           </Heading>
         </div>
         <div className="grid gap-4 md:grid-cols-2">
-          {FEATURES.map((f) => (
+          {features.map((f) => (
             <article
               key={f.title}
               className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 backdrop-blur"
@@ -236,25 +196,22 @@ function GuidePage(): JSX.Element {
       <section className="relative mx-auto max-w-4xl px-6 pb-24">
         <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-purple-500/10 via-white/[0.03] to-cyan-500/10 p-8 md:p-10 text-center">
           <h2 className="text-2xl md:text-3xl font-bold text-white">
-            Prête à passer le brassard ?
+            {t.ctaTitle}
           </h2>
-          <p className="mt-3 text-gray-300">
-            L’inscription est libre, le formulaire prend deux minutes et tu peux
-            ajuster le roster à tout moment.
-          </p>
+          <p className="mt-3 text-gray-300">{t.ctaDesc}</p>
           <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
             <Link
               href={REGISTER_TEAM_HREF}
               className="inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-semibold text-neutral-900 shadow transition hover:-translate-y-0.5 hover:shadow-lg"
             >
-              Créer mon équipe
+              {t.createTeam}
               <span aria-hidden>→</span>
             </Link>
             <Link
               href="/espace-capitaine#faq"
               className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/5 px-6 py-3 text-sm font-medium text-white transition hover:bg-white/10"
             >
-              Lire la FAQ capitaine
+              {t.readFaq}
             </Link>
           </div>
         </div>
@@ -337,21 +294,18 @@ function FieldRow({
 }
 
 function NewTeamPreview() {
+  const t = useT('guideManageTeam');
   return (
     <div className="space-y-3">
       <div className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-200/80">
-        Créer mon équipe
+        {t.previewNewTeamTitle}
       </div>
-      <FieldRow label="Nom" value="Phenix" />
-      <FieldRow
-        label="Tag"
-        value="PHX"
-        hint="3-4 lettres, visible en bracket"
-      />
-      <FieldRow label="Capitaine" value="Lina#21834" />
+      <FieldRow label={t.previewFieldName} value="Phenix" />
+      <FieldRow label={t.previewFieldTag} value="PHX" hint={t.previewTagHint} />
+      <FieldRow label={t.previewFieldCaptain} value="Lina#21834" />
       <div>
         <div className="text-[10px] uppercase tracking-[0.16em] text-gray-400 mb-1">
-          Roster initial
+          {t.previewRosterInitial}
         </div>
         <div className="grid grid-cols-2 gap-2">
           {[
@@ -375,36 +329,37 @@ function NewTeamPreview() {
         disabled
         className="w-full rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 px-4 py-2 text-sm font-semibold text-white opacity-90 cursor-default"
       >
-        Inscrire mon équipe
+        {t.previewRegisterTeam}
       </button>
     </div>
   );
 }
 
 function JoinRequestsPreview() {
+  const t = useT('guideManageTeam');
   const requests = [
     {
       name: 'Akira',
       battleTag: 'Akira#4422',
       role: 'DPS',
-      message: 'Disponible 3 soirs/semaine, niveau Diamant.',
+      message: t.previewReq1Message,
     },
     {
       name: 'Yumi',
       battleTag: 'Yumi#1188',
       role: 'Support',
-      message: 'Master saison passée, cherche projet sérieux.',
+      message: t.previewReq2Message,
     },
   ];
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <span className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-200/80">
-          Candidatures
+          {t.previewApplications}
         </span>
         <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300/40 bg-emerald-500/10 px-2 py-0.5 text-[10px] text-emerald-100">
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-          Équipe ouverte
+          {t.previewTeamOpen}
         </span>
       </div>
       {requests.map((r) => (
@@ -431,14 +386,14 @@ function JoinRequestsPreview() {
                 disabled
                 className="rounded-md bg-emerald-500/80 px-3 py-1 text-[11px] font-semibold text-white"
               >
-                Accepter
+                {t.previewAccept}
               </button>
               <button
                 type="button"
                 disabled
                 className="rounded-md border border-white/15 bg-white/5 px-3 py-1 text-[11px] text-gray-300"
               >
-                Refuser
+                {t.previewDecline}
               </button>
             </div>
           </div>
@@ -449,6 +404,7 @@ function JoinRequestsPreview() {
 }
 
 function RosterPreview() {
+  const t = useT('guideManageTeam');
   const members = [
     { tag: 'Lina#21834', role: 'Tank', captain: true },
     { tag: 'Mei#9912', role: 'DPS', captain: false },
@@ -463,7 +419,7 @@ function RosterPreview() {
         <span className="text-sm font-semibold text-white tabular-nums">
           {members.length}
         </span>
-        <span className="text-xs text-gray-400">membres</span>
+        <span className="text-xs text-gray-400">{t.previewMembers}</span>
       </div>
       <div className="flex flex-wrap gap-1.5 text-[10px] uppercase tracking-[0.12em]">
         <RosterBadge n={1} label="Tank" tone="rose" />
@@ -490,7 +446,7 @@ function RosterPreview() {
                 </div>
                 <div className="text-[10px] text-gray-500">
                   {m.captain ? (
-                    <span className="text-purple-300">Capitaine</span>
+                    <span className="text-purple-300">{t.previewCaptain}</span>
                   ) : (
                     m.role.toLowerCase()
                   )}
@@ -506,11 +462,12 @@ function RosterPreview() {
 }
 
 function MessagesPreview() {
+  const t = useT('guideManageTeam');
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <span className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-200/80">
-          Messagerie
+          {t.previewMessaging}
         </span>
         <span className="rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-bold text-white">
           3
@@ -519,20 +476,20 @@ function MessagesPreview() {
       {[
         {
           team: 'Avoidgers',
-          text: 'On peut décaler le scrim à 21h ? On a un imprévu côté tank.',
-          time: 'il y a 4 min',
+          text: t.previewMsg1,
+          time: t.previewTime1,
           unread: true,
         },
         {
           team: 'Sparkles',
-          text: 'BattleTag du capitaine pour le lobby ?',
-          time: 'il y a 1 h',
+          text: t.previewMsg2,
+          time: t.previewTime2,
           unread: true,
         },
         {
           team: 'Onna',
-          text: 'Merci pour le scrim hier, vous avez bien progressé !',
-          time: 'hier',
+          text: t.previewMsg3,
+          time: t.previewTime3,
           unread: false,
         },
       ].map((c) => (
@@ -556,31 +513,30 @@ function MessagesPreview() {
 }
 
 function NextMatchPreview() {
+  const t = useT('guideManageTeam');
   return (
     <div className="rounded-xl border border-white/10 bg-gradient-to-br from-purple-500/10 via-white/[0.03] to-cyan-500/10 p-4">
       <div className="flex flex-wrap items-center gap-1.5 text-[10px] uppercase tracking-[0.16em] text-blue-200/80">
         <span className="rounded-full border border-blue-300/40 bg-blue-500/15 px-2 py-0.5 text-[10px] font-semibold text-blue-50">
-          Prochain match
+          {t.previewNextMatch}
         </span>
         <span>OW Women’s Cup 2026</span>
         <span>Round 1</span>
         <span>BO3</span>
       </div>
       <h4 className="mt-2 text-lg font-bold text-white leading-tight">
-        Phenix <span className="text-white/50">vs</span> Avoidgers
+        Phenix <span className="text-white/50">{t.previewVs}</span> Avoidgers
       </h4>
-      <p className="mt-1 text-xs text-gray-300">
-        dimanche 18 mai 2026 à 19:00 · dans 2j 4h
-      </p>
+      <p className="mt-1 text-xs text-gray-300">{t.previewMatchDate}</p>
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <span className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[11px] text-white">
-          Voir le match →
+          {t.previewViewMatch}
         </span>
         <span className="inline-flex items-center gap-1 rounded-full border border-fuchsia-400/30 bg-fuchsia-500/10 px-3 py-1 text-[11px] text-fuchsia-100">
-          Live cast ↗
+          {t.previewLiveCast}
         </span>
         <span className="inline-flex items-center rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-neutral-900 shadow">
-          Check-in maintenant
+          {t.previewCheckinNow}
         </span>
       </div>
     </div>
@@ -588,23 +544,24 @@ function NextMatchPreview() {
 }
 
 function ScrimPreview() {
+  const t = useT('guideManageTeam');
   return (
     <div className="space-y-3">
       <div className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-200/80">
-        Proposer un scrim
+        {t.previewProposeScrim}
       </div>
-      <FieldRow label="Équipe adverse" value="Sparkles · 5 membres · 🇫🇷" />
-      <FieldRow label="Date proposée" value="dimanche 18 mai 2026 à 21:00" />
+      <FieldRow label={t.previewOpponentTeam} value={t.previewOpponentValue} />
       <FieldRow
-        label="Message"
-        value="Salut ! On cherche un BO3 dimanche soir, vous êtes dispo ?"
+        label={t.previewProposedDate}
+        value={t.previewProposedDateValue}
       />
+      <FieldRow label={t.previewMessage} value={t.previewMessageValue} />
       <button
         type="button"
         disabled
         className="w-full rounded-lg border border-blue-400/40 bg-blue-500/15 px-4 py-2 text-sm font-medium text-blue-100"
       >
-        Envoyer la demande
+        {t.previewSendRequest}
       </button>
     </div>
   );

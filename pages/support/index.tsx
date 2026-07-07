@@ -4,60 +4,69 @@
 
 import { useState } from 'react';
 import Head from 'next/head';
+import { useT } from '@/lib/i18n/useT';
+
+type SupportDict = ReturnType<typeof useT<'supportPage'>>;
 
 type Category = 'dispute' | 'behavior' | 'technical' | 'other';
 type Severity = 'low' | 'medium' | 'high';
 
-const CATEGORY_OPTIONS: {
+const getCategoryOptions = (
+  t: SupportDict
+): {
   value: Category;
   label: string;
   description: string;
-}[] = [
+}[] => [
   {
     value: 'dispute',
-    label: 'Litige / Contestation',
-    description: 'Score contesté, forfait abusif, désaccord sur un résultat...',
+    label: t.catDisputeLabel,
+    description: t.catDisputeDesc,
   },
   {
     value: 'behavior',
-    label: 'Comportement / Safety',
-    description:
-      'Toxicité, harcèlement, comportement inapproprié, propos déplacés...',
+    label: t.catBehaviorLabel,
+    description: t.catBehaviorDesc,
   },
   {
     value: 'technical',
-    label: 'Problème technique',
-    description: 'Bug du site, problème de connexion lobby, etc.',
+    label: t.catTechnicalLabel,
+    description: t.catTechnicalDesc,
   },
   {
     value: 'other',
-    label: 'Autre',
-    description: 'Tout autre signalement.',
+    label: t.catOtherLabel,
+    description: t.catOtherDesc,
   },
 ];
 
-const SEVERITY_OPTIONS: {
+const getSeverityOptions = (
+  t: SupportDict
+): {
   value: Severity;
   label: string;
   hint: string;
   color: string;
-}[] = [
-  { value: 'low', label: 'Basse', hint: 'Pas urgent', color: 'blue' },
+}[] => [
+  { value: 'low', label: t.sevLowLabel, hint: t.sevLowHint, color: 'blue' },
   {
     value: 'medium',
-    label: 'Moyenne',
-    hint: 'À traiter sous 24-48h',
+    label: t.sevMediumLabel,
+    hint: t.sevMediumHint,
     color: 'amber',
   },
   {
     value: 'high',
-    label: 'Haute',
-    hint: 'Sécurité ou urgent — ping immédiat de la modération',
+    label: t.sevHighLabel,
+    hint: t.sevHighHint,
     color: 'red',
   },
 ];
 
 export default function SupportPage() {
+  const t = useT('supportPage');
+  const categoryOptions = getCategoryOptions(t);
+  const severityOptions = getSeverityOptions(t);
   const [category, setCategory] = useState<Category>('behavior');
   const [severity, setSeverity] = useState<Severity>('medium');
   const [isAnonymous, setIsAnonymous] = useState(false);
@@ -75,11 +84,11 @@ export default function SupportPage() {
     setError(null);
 
     if (!message.trim() || message.trim().length < 10) {
-      setError('Le message doit faire au moins 10 caractères');
+      setError(t.errMessageTooShort);
       return;
     }
     if (!isAnonymous && !email.trim()) {
-      setError('Email requis (ou cochez "Rester anonyme")');
+      setError(t.errEmailRequired);
       return;
     }
 
@@ -100,7 +109,7 @@ export default function SupportPage() {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(json.error || "Échec de l'envoi");
+        throw new Error(json.error || t.errSubmit);
       }
       setSuccess({ ref: json.referenceShort });
     } catch (err) {
@@ -124,11 +133,10 @@ export default function SupportPage() {
         <div className="max-w-2xl mx-auto">
           <div className="text-center mb-8">
             <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-              Signalement / Support
+              {t.pageTitle}
             </h1>
             <p className="text-neutral-400 mt-2 max-w-lg mx-auto">
-              Litige, comportement inapproprié, problème technique : signalez-le
-              ici. Vous pouvez rester anonyme.
+              {t.pageSubtitle}
             </p>
           </div>
 
@@ -149,12 +157,10 @@ export default function SupportPage() {
                   />
                 </svg>
               </div>
-              <h2 className="text-xl font-semibold mb-2">Signalement reçu</h2>
-              <p className="text-emerald-200/90 mb-4">
-                Notre équipe de modération l&apos;examine.
-              </p>
+              <h2 className="text-xl font-semibold mb-2">{t.successTitle}</h2>
+              <p className="text-emerald-200/90 mb-4">{t.successBody}</p>
               <p className="text-sm text-emerald-300/80 mb-6">
-                Référence&nbsp;:{' '}
+                {t.referenceLabel}{' '}
                 <code className="bg-emerald-900/40 px-2 py-0.5 rounded">
                   {success.ref}
                 </code>
@@ -168,7 +174,7 @@ export default function SupportPage() {
                 }}
                 className="px-4 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-sm font-medium transition-colors"
               >
-                Faire un autre signalement
+                {t.anotherReport}
               </button>
             </div>
           ) : (
@@ -179,10 +185,10 @@ export default function SupportPage() {
               {/* Category */}
               <div>
                 <label className="block text-sm font-medium text-neutral-200 mb-2">
-                  Catégorie
+                  {t.categoryLabel}
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {CATEGORY_OPTIONS.map((opt) => (
+                  {categoryOptions.map((opt) => (
                     <label
                       key={opt.value}
                       className={`cursor-pointer rounded-xl border p-3 transition-colors ${
@@ -213,10 +219,10 @@ export default function SupportPage() {
               {/* Severity */}
               <div>
                 <label className="block text-sm font-medium text-neutral-200 mb-2">
-                  Sévérité
+                  {t.severityLabel}
                 </label>
                 <div className="grid grid-cols-3 gap-2">
-                  {SEVERITY_OPTIONS.map((opt) => {
+                  {severityOptions.map((opt) => {
                     const ringColors: Record<string, string> = {
                       blue: 'border-blue-500 bg-blue-900/20',
                       amber: 'border-amber-500 bg-amber-900/20',
@@ -260,10 +266,9 @@ export default function SupportPage() {
                   className="w-4 h-4 mt-0.5 rounded border-neutral-600 bg-neutral-900"
                 />
                 <label htmlFor="anon" className="text-sm cursor-pointer flex-1">
-                  <span className="font-medium">Rester anonyme</span>
+                  <span className="font-medium">{t.anonToggle}</span>
                   <span className="block text-xs text-neutral-400 mt-0.5">
-                    Aucune information personnelle n&apos;est envoyée. La
-                    modération ne pourra pas vous recontacter.
+                    {t.anonHint}
                   </span>
                 </label>
               </div>
@@ -273,7 +278,7 @@ export default function SupportPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-sm text-neutral-400 mb-1">
-                      Votre nom (optionnel)
+                      {t.nameLabel}
                     </label>
                     <input
                       type="text"
@@ -281,12 +286,12 @@ export default function SupportPage() {
                       onChange={(e) => setName(e.target.value)}
                       maxLength={100}
                       className="w-full px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Ada Lovelace"
+                      placeholder={t.namePlaceholder}
                     />
                   </div>
                   <div>
                     <label className="block text-sm text-neutral-400 mb-1">
-                      Email <span className="text-red-400">*</span>
+                      {t.emailLabel} <span className="text-red-400">*</span>
                     </label>
                     <input
                       type="email"
@@ -294,7 +299,7 @@ export default function SupportPage() {
                       onChange={(e) => setEmail(e.target.value)}
                       required={!isAnonymous}
                       className="w-full px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="vous@exemple.com"
+                      placeholder={t.emailPlaceholder}
                     />
                   </div>
                 </div>
@@ -303,7 +308,7 @@ export default function SupportPage() {
               {/* Subject */}
               <div>
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Sujet (optionnel)
+                  {t.subjectLabel}
                 </label>
                 <input
                   type="text"
@@ -311,14 +316,14 @@ export default function SupportPage() {
                   onChange={(e) => setSubject(e.target.value)}
                   maxLength={200}
                   className="w-full px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Bref résumé du signalement"
+                  placeholder={t.subjectPlaceholder}
                 />
               </div>
 
               {/* Message */}
               <div>
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Message <span className="text-red-400">*</span>
+                  {t.messageLabel} <span className="text-red-400">*</span>
                 </label>
                 <textarea
                   value={message}
@@ -328,7 +333,7 @@ export default function SupportPage() {
                   maxLength={5000}
                   rows={6}
                   className="w-full px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                  placeholder="Décrivez la situation : quoi, qui, quand, où... Pour les comportements, citez si possible des messages précis."
+                  placeholder={t.messagePlaceholder}
                 />
                 <p className="text-xs text-neutral-500 mt-1 text-right">
                   {message.length} / 5000
@@ -351,16 +356,15 @@ export default function SupportPage() {
                 {submitting ? (
                   <>
                     <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Envoi...
+                    {t.submitting}
                   </>
                 ) : (
-                  'Envoyer le signalement'
+                  t.submit
                 )}
               </button>
 
               <p className="text-xs text-neutral-500 text-center">
-                Pour toute urgence immédiate, contactez aussi la modération sur
-                Discord.
+                {t.discordNote}
               </p>
             </form>
           )}

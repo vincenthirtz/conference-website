@@ -6,6 +6,7 @@
 
 import { useCallback, useState } from 'react';
 import { useToast } from '@/components/Toast';
+import { useT, format } from '@/lib/i18n/useT';
 
 type Props = {
   botApiKey: string;
@@ -23,6 +24,7 @@ export default function SecretRevealCard({
   tenantSlug,
 }: Props) {
   const { addToast } = useToast();
+  const t = useT('secretRevealCard');
   const [copiedKey, setCopiedKey] = useState<null | 'api' | 'webhook' | 'env'>(
     null
   );
@@ -32,16 +34,16 @@ export default function SecretRevealCard({
       try {
         await navigator.clipboard.writeText(value);
         setCopiedKey(which);
-        addToast(`${label} copié dans le presse-papier.`, 'success');
+        addToast(format(t.copiedToast, { label }), 'success');
         window.setTimeout(
           () => setCopiedKey((c) => (c === which ? null : c)),
           1500
         );
       } catch {
-        addToast('Copie impossible : copiez le manuellement.', 'error');
+        addToast(t.copyError, 'error');
       }
     },
-    [addToast]
+    [addToast, t]
   );
 
   const fallbackEnv =
@@ -76,13 +78,8 @@ export default function SecretRevealCard({
           </svg>
         </div>
         <div className="min-w-0">
-          <h2 className="text-lg font-semibold text-white">
-            Notez ces secrets maintenant
-          </h2>
-          <p className="mt-1 text-sm text-amber-200/90">
-            Ils ne seront jamais affichés à nouveau. Conservez-les dans un
-            gestionnaire de secrets ou directement dans la config de votre bot.
-          </p>
+          <h2 className="text-lg font-semibold text-white">{t.title}</h2>
+          <p className="mt-1 text-sm text-amber-200/90">{t.subtitle}</p>
         </div>
       </div>
 
@@ -109,7 +106,7 @@ export default function SecretRevealCard({
               onClick={() => copy(botApiKey, 'api', 'BOT_API_KEY')}
               className="px-3 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-xs font-semibold text-white transition-colors whitespace-nowrap"
             >
-              {copiedKey === 'api' ? 'Copié !' : 'Copier'}
+              {copiedKey === 'api' ? t.copied : t.copy}
             </button>
           </div>
         </div>
@@ -138,7 +135,7 @@ export default function SecretRevealCard({
               }
               className="px-3 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-xs font-semibold text-white transition-colors whitespace-nowrap"
             >
-              {copiedKey === 'webhook' ? 'Copié !' : 'Copier'}
+              {copiedKey === 'webhook' ? t.copied : t.copy}
             </button>
           </div>
         </div>
@@ -149,14 +146,14 @@ export default function SecretRevealCard({
               htmlFor="bot-env-snippet"
               className="block text-xs font-medium uppercase tracking-wider text-neutral-400"
             >
-              Snippet .env
+              {t.envSnippetLabel}
             </label>
             <button
               type="button"
-              onClick={() => copy(fallbackEnv, 'env', 'Snippet .env')}
+              onClick={() => copy(fallbackEnv, 'env', t.envSnippetLabel)}
               className="text-xs font-semibold text-purple-300 hover:text-purple-200 transition-colors"
             >
-              {copiedKey === 'env' ? 'Copié !' : 'Copier le bloc'}
+              {copiedKey === 'env' ? t.copied : t.copyBlock}
             </button>
           </div>
           <textarea

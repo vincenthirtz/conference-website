@@ -4,46 +4,50 @@
 // connecte. Affiche team1 vs team2, scheduledAt, tournament, role.
 
 import type { CasterUpcomingAssignment } from '@/hooks/useCasterSession';
+import { useT, format } from '@/lib/i18n/useT';
+
+type UpcomingDict = ReturnType<typeof useT<'upcomingAssignments'>>;
 
 type Props = {
   assignments: CasterUpcomingAssignment[];
 };
 
-function relativeTime(iso: string | null): string {
+function relativeTime(iso: string | null, t: UpcomingDict): string {
   if (!iso) return '—';
-  const t = Date.parse(iso);
-  if (!Number.isFinite(t)) return '—';
-  const diff = t - Date.now();
+  const parsed = Date.parse(iso);
+  if (!Number.isFinite(parsed)) return '—';
+  const diff = parsed - Date.now();
   const absMin = Math.abs(Math.round(diff / 60_000));
-  if (Math.abs(diff) < 60_000) return 'maintenant';
+  if (Math.abs(diff) < 60_000) return t.now;
   if (absMin < 60)
-    return diff > 0 ? `dans ${absMin} min` : `il y a ${absMin} min`;
+    return diff > 0
+      ? format(t.inMinutes, { count: absMin })
+      : format(t.agoMinutes, { count: absMin });
   const hours = Math.round(absMin / 60);
-  if (hours < 24) return diff > 0 ? `dans ${hours}h` : `il y a ${hours}h`;
+  if (hours < 24)
+    return diff > 0
+      ? format(t.inHours, { count: hours })
+      : format(t.agoHours, { count: hours });
   const days = Math.round(hours / 24);
-  return diff > 0 ? `dans ${days}j` : `il y a ${days}j`;
+  return diff > 0
+    ? format(t.inDays, { count: days })
+    : format(t.agoDays, { count: days });
 }
 
 export default function UpcomingAssignments({ assignments }: Props) {
+  const t = useT('upcomingAssignments');
   if (assignments.length === 0) {
     return (
       <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-        <div className="text-sm font-semibold text-white mb-1">
-          Tes prochaines assignations
-        </div>
-        <p className="text-xs text-gray-400">
-          Aucune assignation cast dans les 24h. Reviens plus tard ou contacte le
-          Director.
-        </p>
+        <div className="text-sm font-semibold text-white mb-1">{t.title}</div>
+        <p className="text-xs text-gray-400">{t.emptyBody}</p>
       </div>
     );
   }
 
   return (
     <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-      <div className="text-sm font-semibold text-white mb-3">
-        Tes prochaines assignations
-      </div>
+      <div className="text-sm font-semibold text-white mb-3">{t.title}</div>
       <ul className="space-y-2.5">
         {assignments.map((a) => {
           // Lot 9 : un assignment référence soit un match, soit un scrim.
@@ -62,18 +66,18 @@ export default function UpcomingAssignments({ assignments }: Props) {
             : (m?.team2?.name ?? 'TBD');
           const streamUrl = isScrim ? (s?.streamUrl ?? null) : (m?.streamUrl ?? null);
           const contextLine = isScrim
-            ? `Scrim${s?.slug ? ` — ${s.slug}` : ''}`
+            ? `${t.scrim}${s?.slug ? ` — ${s.slug}` : ''}`
             : m?.tournament
               ? `${m.tournament.name}${m.roundName ? ` — ${m.roundName}` : ''}`
               : null;
-          const kindBadge = isScrim ? 'Scrim' : 'Match';
+          const kindBadge = isScrim ? t.scrim : t.match;
           const when = scheduledAt
             ? new Date(scheduledAt).toLocaleString('fr-FR', {
                 weekday: 'short',
                 hour: '2-digit',
                 minute: '2-digit',
               })
-            : 'Non programme';
+            : t.notScheduled;
           return (
             <li
               key={a.assignmentId}
@@ -91,16 +95,16 @@ export default function UpcomingAssignments({ assignments }: Props) {
                     {kindBadge}
                   </span>
                   <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-200">
-                    {a.role || 'Caster'}
+                    {a.role || t.roleFallback}
                   </span>
                 </div>
                 <span className="text-[11px] text-gray-400">
-                  {when} • {relativeTime(scheduledAt)}
+                  {when} • {relativeTime(scheduledAt, t)}
                 </span>
               </div>
               <div className="flex items-center gap-2 text-sm text-white">
                 <span className="truncate flex-1 text-right">{team1Name}</span>
-                <span className="text-gray-500 text-xs">vs</span>
+                <span className="text-gray-500 text-xs">{t.vs}</span>
                 <span className="truncate flex-1">{team2Name}</span>
               </div>
               {contextLine && (
@@ -116,7 +120,7 @@ export default function UpcomingAssignments({ assignments }: Props) {
                     rel="noopener noreferrer"
                     className="text-[11px] text-purple-300 hover:text-purple-200 underline"
                   >
-                    Stream
+                    {t.stream}
                   </a>
                 </div>
               )}

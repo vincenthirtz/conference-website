@@ -10,8 +10,10 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import type { MatchStatus } from '@/types/admin';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
+import { useT, format } from '@/lib/i18n/useT';
 
 import { logger } from '../../utils/logger';
+type TournamentDetailDict = ReturnType<typeof useT<'tournamentDetail'>>;
 type Tournament = {
   id: string;
   name: string;
@@ -86,18 +88,20 @@ type TournamentPageProps = {
   seo: SeoProps;
 };
 
-const STAGE_TYPES: Record<string, string> = {
-  group: 'Poule',
-  bracket: 'Bracket',
-  swiss: 'Swiss',
-  round_robin: 'Round robin',
-  showmatch: 'Showmatch',
-  other: 'Autre',
-};
-
-function formatStageType(stageType: string | null | undefined) {
-  if (!stageType) return 'Autre';
-  return STAGE_TYPES[stageType] || stageType;
+function formatStageType(
+  stageType: string | null | undefined,
+  t: TournamentDetailDict
+) {
+  if (!stageType) return t.stageTypeOther;
+  const map: Record<string, string> = {
+    group: t.stageTypeGroup,
+    bracket: t.stageTypeBracket,
+    swiss: t.stageTypeSwiss,
+    round_robin: t.stageTypeRoundRobin,
+    showmatch: t.stageTypeShowmatch,
+    other: t.stageTypeOther,
+  };
+  return map[stageType] || stageType;
 }
 
 export const getStaticPaths: GetStaticPaths = async () => {
@@ -165,21 +169,21 @@ export const getStaticProps: GetStaticProps<TournamentPageProps> = async (
   // Run all independent queries in parallel
   const [stagesResult, matchesResult, teamsResult, leaguesResult] =
     await Promise.all([
-    // 2) Stages
-    supabaseAdmin
-      .from('tournament_stages')
-      .select(
-        'id, tournament_id, name, stage_type, default_match_format, swiss_rounds, bracket_format, visible'
-      )
-      .eq('tenant_id', tenantId)
-      .eq('tournament_id', tournamentId)
-      .order('created_at', { ascending: true }),
+      // 2) Stages
+      supabaseAdmin
+        .from('tournament_stages')
+        .select(
+          'id, tournament_id, name, stage_type, default_match_format, swiss_rounds, bracket_format, visible'
+        )
+        .eq('tenant_id', tenantId)
+        .eq('tournament_id', tournamentId)
+        .order('created_at', { ascending: true }),
 
-    // 3) Matches (limités)
-    supabaseAdmin
-      .from('matches')
-      .select(
-        `
+      // 3) Matches (limités)
+      supabaseAdmin
+        .from('matches')
+        .select(
+          `
         id,
         scheduled_at,
         completed_at,
@@ -194,26 +198,26 @@ export const getStaticProps: GetStaticProps<TournamentPageProps> = async (
         team2:team2_id ( id, name, short_name, logo_url ),
         stage:tournament_stages ( id, name, stage_type )
       `
-      )
-      .eq('tenant_id', tenantId)
-      .eq('tournament_id', tournamentId)
-      .neq('status', 'cancelled')
-      .order('scheduled_at', { ascending: true }),
+        )
+        .eq('tenant_id', tenantId)
+        .eq('tournament_id', tournamentId)
+        .neq('status', 'cancelled')
+        .order('scheduled_at', { ascending: true }),
 
-    // 4) Teams (via tournament_teams — simpler join, no stage dependency)
-    supabaseAdmin
-      .from('tournament_teams')
-      .select('team:teams ( id, slug, name, short_name, logo_url )')
-      .eq('tenant_id', tenantId)
-      .eq('tournament_id', tournamentId),
+      // 4) Teams (via tournament_teams — simpler join, no stage dependency)
+      supabaseAdmin
+        .from('tournament_teams')
+        .select('team:teams ( id, slug, name, short_name, logo_url )')
+        .eq('tenant_id', tenantId)
+        .eq('tournament_id', tournamentId),
 
-    // 5) Ligues auxquelles appartient ce tournoi (maillage interne).
-    supabaseAdmin
-      .from('league_tournaments')
-      .select('league:leagues ( slug, name, is_public, status )')
-      .eq('tenant_id', tenantId)
-      .eq('tournament_id', tournamentId),
-  ]);
+      // 5) Ligues auxquelles appartient ce tournoi (maillage interne).
+      supabaseAdmin
+        .from('league_tournaments')
+        .select('league:leagues ( slug, name, is_public, status )')
+        .eq('tenant_id', tenantId)
+        .eq('tournament_id', tournamentId),
+    ]);
 
   if (stagesResult.error)
     logger.error('tournament stages error:', stagesResult.error);
@@ -269,6 +273,7 @@ export default function TournamentPage({
   matches,
   leagues,
 }: Omit<TournamentPageProps, 'seo'>) {
+  const t = useT('tournamentDetail');
   const totalTeams = teams.length;
   const now = useMemo(() => new Date(), []);
   const finishedMatches = matches.filter((m) => m.status === 'finished');
@@ -315,7 +320,7 @@ export default function TournamentPage({
     tournament.end_date
   );
 
-  const statusLabel = getStatusLabel(tournament.status);
+  const statusLabel = getStatusLabelT(tournament.status, t);
   const statusColor = getStatusChipColor(tournament.status);
 
   return (
@@ -386,7 +391,7 @@ export default function TournamentPage({
               {leagues.length > 0 && (
                 <div className="mb-4 flex flex-wrap items-center gap-2">
                   <span className="text-[10px] uppercase tracking-widest text-gray-500 font-medium">
-                    Saison
+                    {t.seasonLabel}
                   </span>
                   {leagues.map((league) => (
                     <Link key={league.slug} href={`/leagues/${league.slug}`}>
@@ -416,9 +421,7 @@ export default function TournamentPage({
                 textColor="text-gray-300"
                 className="max-w-xl leading-relaxed"
               >
-                Suivez le bracket, les résultats, les maps et les équipes de
-                cette édition de la OW Women&apos;s Cup. Tout ce qu&apos;il faut
-                pour caster, analyser ou simplement vibrer avec le tournoi.
+                {t.heroDescription}
               </Paragraph>
 
               <div className="mt-6 flex flex-wrap gap-3">
@@ -427,7 +430,7 @@ export default function TournamentPage({
                     type="button"
                     className="px-6 py-2.5 text-xs font-bold rounded-full bg-white text-black hover:bg-gray-100 shadow-lg shadow-white/10 transition-all hover:shadow-white/20 hover:scale-[1.02]"
                   >
-                    Voir le bracket
+                    {t.ctaBracket}
                   </Button>
                 </Link>
 
@@ -436,7 +439,7 @@ export default function TournamentPage({
                     type="button"
                     className="px-6 py-2.5 text-xs font-semibold rounded-full bg-white/5 backdrop-blur-sm border border-white/20 hover:border-emerald-400/60 hover:bg-emerald-500/10 transition-all"
                   >
-                    Tous les matchs
+                    {t.ctaAllMatches}
                   </Button>
                 </Link>
 
@@ -445,7 +448,7 @@ export default function TournamentPage({
                     type="button"
                     className="px-6 py-2.5 text-xs font-semibold rounded-full bg-white/5 backdrop-blur-sm border border-white/20 hover:border-blue-400/60 hover:bg-blue-500/10 transition-all"
                   >
-                    Top maps
+                    {t.ctaTopMaps}
                   </Button>
                 </Link>
 
@@ -455,7 +458,7 @@ export default function TournamentPage({
                       type="button"
                       className="px-6 py-2.5 text-xs font-bold rounded-full bg-gradient-to-r from-amber-400 to-yellow-500 text-black hover:from-amber-300 hover:to-yellow-400 shadow-lg shadow-amber-500/20 transition-all hover:scale-[1.02]"
                     >
-                      Podium officiel
+                      {t.ctaOfficialPodium}
                     </Button>
                   </Link>
                 )}
@@ -467,7 +470,7 @@ export default function TournamentPage({
                         type="button"
                         className="px-6 py-2.5 text-xs font-bold rounded-full bg-gradient-to-r from-pink-500 to-orange-400 text-black hover:from-pink-400 hover:to-orange-300 shadow-lg shadow-pink-500/20 transition-all hover:shadow-pink-500/30 hover:scale-[1.02]"
                       >
-                        Inscrire mon équipe
+                        {t.ctaRegisterTeam}
                       </Button>
                     </Link>
                   )}
@@ -494,7 +497,7 @@ export default function TournamentPage({
                         d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                       />
                     </svg>
-                    Règlement du tournoi
+                    {t.rulesLink}
                   </a>
                 </div>
               )}
@@ -503,33 +506,36 @@ export default function TournamentPage({
             {/* Right: stats cards */}
             <div className="grid grid-cols-2 gap-3">
               <StatCard
-                label="Équipes"
+                label={t.statTeams}
                 value={totalTeams || '—'}
                 accent="purple"
                 hint={
                   tournament.max_teams
-                    ? `${totalTeams}/${tournament.max_teams} inscrites`
+                    ? format(t.hintRegistered, {
+                        count: totalTeams,
+                        max: tournament.max_teams,
+                      })
                     : undefined
                 }
               />
               <StatCard
-                label="Matchs"
+                label={t.statMatches}
                 value={totalMatches || '—'}
                 accent="emerald"
                 hint={
                   totalMatches > 0
-                    ? `${finishedMatches.length} terminés`
+                    ? format(t.hintFinished, { count: finishedMatches.length })
                     : undefined
                 }
               />
               <StatCard
-                label="Stages"
+                label={t.statStages}
                 value={stages.length || '—'}
                 accent="blue"
                 hint={mainStage ? mainStage.name : undefined}
               />
               <StatCard
-                label="Format"
+                label={t.statFormat}
                 value={tournament.format || '—'}
                 accent="pink"
                 hint={tournament.game || undefined}
@@ -546,28 +552,28 @@ export default function TournamentPage({
           <section className="mb-14 grid grid-cols-1 md:grid-cols-2 gap-6">
             {tournament.description_info && (
               <InfoCard
-                title="Infos"
+                title={t.infoTitle}
                 content={tournament.description_info}
                 accent="purple"
               />
             )}
             {tournament.schedule_details && (
               <InfoCard
-                title="Calendrier"
+                title={t.scheduleTitle}
                 content={tournament.schedule_details}
                 accent="blue"
               />
             )}
             {tournament.schedule_rules && (
               <InfoCard
-                title="Règles des horaires"
+                title={t.scheduleRulesTitle}
                 content={tournament.schedule_rules}
                 accent="emerald"
               />
             )}
             {tournament.format_details && (
               <InfoCard
-                title="Détails du format"
+                title={t.formatDetailsTitle}
                 content={tournament.format_details}
                 accent="pink"
               />
@@ -581,18 +587,21 @@ export default function TournamentPage({
           <div className="bg-white/[0.03] backdrop-blur-sm border border-white/8 rounded-2xl p-5">
             <div className="flex items-center justify-between mb-4">
               <p className="text-[10px] uppercase tracking-widest text-gray-500 font-medium">
-                Phases du tournoi
+                {t.stagesHeading}
               </p>
               {stages.length > 0 && (
                 <span className="text-[10px] text-gray-500 bg-white/5 px-2 py-0.5 rounded-full">
-                  {stages.length} phase{stages.length > 1 ? 's' : ''}
+                  {format(
+                    stages.length > 1 ? t.stagesCount_other : t.stagesCount_one,
+                    { count: stages.length }
+                  )}
                 </span>
               )}
             </div>
 
             {stages.length === 0 && (
               <Paragraph typeStyle="body-sm" textColor="text-gray-500">
-                Les phases de ce tournoi ne sont pas encore publiées.
+                {t.stagesEmpty}
               </Paragraph>
             )}
 
@@ -608,14 +617,18 @@ export default function TournamentPage({
                         {s.name}
                       </p>
                       <p className="text-[11px] text-gray-400 mt-0.5">
-                        {formatStageType(s.stage_type)}
+                        {formatStageType(s.stage_type, t)}
                         {s.stage_type === 'swiss' && s.swiss_rounds
-                          ? ` · ${s.swiss_rounds} rounds`
+                          ? format(t.stageSwissRounds, {
+                              count: s.swiss_rounds,
+                            })
                           : ''}
                       </p>
                       {s.default_match_format && (
                         <p className="text-[10px] text-gray-500 mt-0.5">
-                          Format : {s.default_match_format}
+                          {format(t.stageFormatLabel, {
+                            format: s.default_match_format,
+                          })}
                         </p>
                       )}
                     </div>
@@ -634,7 +647,7 @@ export default function TournamentPage({
                             d="M13 7l5 5m0 0l-5 5m5-5H6"
                           />
                         </svg>
-                        Bracket
+                        {t.bracketLabel}
                       </span>
                     </Link>
                   </li>
@@ -647,11 +660,11 @@ export default function TournamentPage({
           <div className="bg-white/[0.03] backdrop-blur-sm border border-white/8 rounded-2xl p-5">
             <div className="flex items-center justify-between mb-4">
               <p className="text-[10px] uppercase tracking-widest text-gray-500 font-medium">
-                Matches clés
+                {t.keyMatchesHeading}
               </p>
               <Link href={`${tournamentPath}/matches`}>
                 <span className="text-[11px] text-blue-400 hover:text-blue-300 cursor-pointer transition-colors">
-                  Voir tous les matchs →
+                  {t.viewAllMatches}
                 </span>
               </Link>
             </div>
@@ -660,12 +673,12 @@ export default function TournamentPage({
               {/* Upcoming */}
               <div>
                 <p className="text-[10px] uppercase tracking-widest text-emerald-400/70 mb-2 font-medium">
-                  Prochains matchs
+                  {t.upcomingHeading}
                 </p>
                 <div className="space-y-2">
                   {upcomingMatches.length === 0 && (
                     <p className="text-[11px] text-gray-500 italic">
-                      Aucun match à venir programmé.
+                      {t.upcomingEmpty}
                     </p>
                   )}
                   {upcomingMatches.map((m) => (
@@ -677,12 +690,12 @@ export default function TournamentPage({
               {/* Recent */}
               <div>
                 <p className="text-[10px] uppercase tracking-widest text-orange-400/70 mb-2 font-medium">
-                  Derniers résultats
+                  {t.recentHeading}
                 </p>
                 <div className="space-y-2">
                   {recentMatches.length === 0 && (
                     <p className="text-[11px] text-gray-500 italic">
-                      Aucun résultat publié.
+                      {t.recentEmpty}
                     </p>
                   )}
                   {recentMatches.map((m) => (
@@ -700,18 +713,21 @@ export default function TournamentPage({
           <div className="bg-white/[0.03] backdrop-blur-sm border border-white/8 rounded-2xl p-5">
             <div className="flex items-center justify-between mb-4">
               <p className="text-[10px] uppercase tracking-widest text-gray-500 font-medium">
-                Équipes du tournoi
+                {t.teamsHeading}
               </p>
               {totalTeams > 0 && (
                 <span className="text-[10px] text-gray-500 bg-white/5 px-2 py-0.5 rounded-full">
-                  {totalTeams} équipe{totalTeams > 1 ? 's' : ''}
+                  {format(
+                    totalTeams > 1 ? t.teamsCount_other : t.teamsCount_one,
+                    { count: totalTeams }
+                  )}
                 </span>
               )}
             </div>
 
             {totalTeams === 0 && (
               <Paragraph typeStyle="body-sm" textColor="text-gray-500">
-                Les équipes ne sont pas encore affichées pour ce tournoi.
+                {t.teamsEmpty}
               </Paragraph>
             )}
 
@@ -755,7 +771,7 @@ export default function TournamentPage({
 
                 {totalTeams > 12 && (
                   <div className="flex items-center justify-center text-[11px] text-gray-400 bg-white/[0.02] rounded-2xl border border-dashed border-white/10">
-                    + {totalTeams - 12} autres
+                    {format(t.teamsMore, { count: totalTeams - 12 })}
                   </div>
                 )}
               </div>
@@ -766,11 +782,11 @@ export default function TournamentPage({
           <div className="bg-white/[0.03] backdrop-blur-sm border border-white/8 rounded-2xl p-5">
             <div className="flex items-center justify-between mb-4">
               <p className="text-[10px] uppercase tracking-widest text-gray-500 font-medium">
-                Aperçu des maps
+                {t.mapsHeading}
               </p>
               <Link href={`${tournamentPath}/maps`}>
                 <span className="text-[11px] text-blue-400 hover:text-blue-300 cursor-pointer transition-colors">
-                  Voir toutes les maps →
+                  {t.viewAllMaps}
                 </span>
               </Link>
             </div>
@@ -780,20 +796,18 @@ export default function TournamentPage({
               textColor="text-gray-400"
               className="mb-4 leading-relaxed"
             >
-              Consultez les cartes les plus jouées du tournoi, les overtimes et
-              les tiebreakers pour analyser la meta des maps.
+              {t.mapsDescription}
             </Paragraph>
 
             <div className="border border-white/8 rounded-xl px-4 py-3 bg-gradient-to-r from-blue-500/5 to-transparent">
               <p className="text-[11px] text-gray-400">
-                Les stats détaillées (popularité, overtimes, rounds moyens) sont
-                visibles sur la page{' '}
+                {t.mapsNoteBefore}
                 <Link href={`${tournamentPath}/maps`}>
                   <span className="text-blue-400 hover:text-blue-300 cursor-pointer transition-colors font-medium">
-                    Top maps
+                    {t.mapsNoteLink}
                   </span>
                 </Link>
-                .
+                {t.mapsNoteAfter}
               </p>
             </div>
           </div>
@@ -850,11 +864,12 @@ function MatchLine({
   compact?: boolean;
   showScore?: boolean;
 }) {
-  const t1 = match.team1?.short_name || match.team1?.name || 'Équipe 1';
+  const t = useT('tournamentDetail');
+  const t1 = match.team1?.short_name || match.team1?.name || t.teamPlaceholder1;
   const t2 =
     match.team2?.short_name ||
     match.team2?.name ||
-    (match.is_bye ? '(bye)' : 'Équipe 2');
+    (match.is_bye ? t.byeLabel : t.teamPlaceholder2);
 
   const when = formatMatchDate(match.scheduled_at);
   const isFinished = match.status === 'finished';
@@ -874,11 +889,12 @@ function MatchLine({
             {t1}{' '}
             {!match.is_bye && (
               <>
-                <span className="text-gray-500 font-normal">vs</span> {t2}
+                <span className="text-gray-500 font-normal">{t.vsLabel}</span>{' '}
+                {t2}
               </>
             )}
             {match.is_bye && (
-              <span className="text-gray-500 font-normal"> (bye)</span>
+              <span className="text-gray-500 font-normal"> {t.byeLabel}</span>
             )}
           </p>
           <div className="flex items-center gap-1.5 shrink-0">
@@ -1058,6 +1074,8 @@ function formatMatchDate(iso: string | null): string | null {
   });
 }
 
+// Version francophone figée : utilisée uniquement par le SEO (buildTournamentSeo,
+// hors contexte de hook). Le rendu visible passe par getStatusLabelT.
 function getStatusLabel(status: string): string {
   switch (status) {
     case 'upcoming':
@@ -1068,6 +1086,22 @@ function getStatusLabel(status: string): string {
     case 'finished':
     case 'completed':
       return 'Terminé';
+    default:
+      return status;
+  }
+}
+
+// Version traduite pour le rendu visible (reçoit le dictionnaire du hook).
+function getStatusLabelT(status: string, t: TournamentDetailDict): string {
+  switch (status) {
+    case 'upcoming':
+      return t.statusUpcoming;
+    case 'running':
+    case 'ongoing':
+      return t.statusOngoing;
+    case 'finished':
+    case 'completed':
+      return t.statusFinished;
     default:
       return status;
   }

@@ -3,6 +3,7 @@
 // Submits to POST /api/public/scrim-requests.
 
 import { useEffect, useState } from 'react';
+import { useT, format as fmt } from '@/lib/i18n/useT';
 
 type Props = {
   teamId: string;
@@ -19,6 +20,7 @@ export default function PublicScrimDialog({
   open,
   onClose,
 }: Props) {
+  const t = useT('publicScrimDialog');
   const [captcha, setCaptcha] = useState<Captcha | null>(null);
   const [captchaAnswer, setCaptchaAnswer] = useState('');
   const [fromTeamName, setFromTeamName] = useState('');
@@ -102,14 +104,14 @@ export default function PublicScrimDialog({
         } catch {
           /* noop */
         }
-        throw new Error(data?.error || 'Échec de la demande.');
+        throw new Error(data?.error || t.errorFailed);
       }
-      setSuccess(data.message || 'Demande envoyée.');
+      setSuccess(data.message || t.successFallback);
       setMessage('');
       setPreferredDate('');
       setFormat('');
     } catch (err) {
-      setError((err as Error)?.message || 'Erreur inconnue.');
+      setError((err as Error)?.message || t.errorUnknown);
     } finally {
       setSubmitting(false);
     }
@@ -133,17 +135,14 @@ export default function PublicScrimDialog({
               id="public-scrim-title"
               className="text-lg font-semibold text-white"
             >
-              Proposer un scrim à {teamName}
+              {fmt(t.title, { teamName })}
             </h2>
-            <p className="text-xs text-gray-400 mt-1">
-              Le capitaine recevra ta demande et pourra te répondre via le
-              contact que tu fournis ci-dessous.
-            </p>
+            <p className="text-xs text-gray-400 mt-1">{t.subtitle}</p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Fermer"
+            aria-label={t.close}
             className="text-gray-400 hover:text-white"
           >
             <svg
@@ -171,7 +170,7 @@ export default function PublicScrimDialog({
                 onClick={onClose}
                 className="px-3 py-1.5 rounded-lg bg-white/10 text-xs hover:bg-white/20"
               >
-                Fermer
+                {t.close}
               </button>
             </div>
           </div>
@@ -200,69 +199,69 @@ export default function PublicScrimDialog({
             </div>
 
             <Field
-              label="Équipe demandeuse"
+              label={t.fromTeamLabel}
               required
               value={fromTeamName}
               onChange={setFromTeamName}
               maxLength={80}
-              placeholder="Nom de ton équipe"
+              placeholder={t.fromTeamPlaceholder}
             />
             <Field
-              label="Nom du contact"
+              label={t.nameLabel}
               required
               value={requesterName}
               onChange={setRequesterName}
               maxLength={80}
-              placeholder="Pseudo ou prénom"
+              placeholder={t.namePlaceholder}
             />
             <Field
-              label="Email"
+              label={t.emailLabel}
               required
               type="email"
               value={requesterEmail}
               onChange={setRequesterEmail}
               maxLength={200}
-              placeholder="contact@example.com"
+              placeholder={t.emailPlaceholder}
             />
             <Field
-              label="Discord (optionnel)"
+              label={t.discordLabel}
               value={requesterDiscord}
               onChange={setRequesterDiscord}
               maxLength={100}
-              placeholder="pseudo ou invite Discord"
+              placeholder={t.discordPlaceholder}
             />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Field
-                label="Date souhaitée"
+                label={t.dateLabel}
                 type="datetime-local"
                 value={preferredDate}
                 onChange={setPreferredDate}
               />
               <Field
-                label="Format"
+                label={t.formatLabel}
                 value={format}
                 onChange={setFormat}
                 maxLength={50}
-                placeholder="ex. 5v5 BO3"
+                placeholder={t.formatPlaceholder}
               />
             </div>
             <div>
               <label className="block text-xs uppercase tracking-wide text-gray-400 mb-1">
-                Message (optionnel)
+                {t.messageLabel}
               </label>
               <textarea
                 rows={3}
                 maxLength={1000}
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder="Précise tes disponibilités, le serveur, etc."
+                placeholder={t.messagePlaceholder}
                 className="w-full px-3 py-2 rounded-lg bg-black/40 border border-white/10 focus:outline-none focus:ring-2 focus:ring-cyan-500 text-sm text-white"
               />
             </div>
 
             <div>
               <label className="block text-xs uppercase tracking-wide text-gray-400 mb-1">
-                Anti-bot — combien font {captcha?.question || '...'} ?
+                {fmt(t.captchaLabel, { question: captcha?.question || '...' })}
               </label>
               <input
                 type="text"
@@ -270,7 +269,7 @@ export default function PublicScrimDialog({
                 required
                 value={captchaAnswer}
                 onChange={(e) => setCaptchaAnswer(e.target.value)}
-                placeholder="Réponds par un nombre"
+                placeholder={t.captchaPlaceholder}
                 className="w-full px-3 py-2 rounded-lg bg-black/40 border border-white/10 focus:outline-none focus:ring-2 focus:ring-cyan-500 text-sm text-white"
               />
             </div>
@@ -287,14 +286,14 @@ export default function PublicScrimDialog({
                 onClick={onClose}
                 className="px-4 py-2 rounded-lg border border-white/10 bg-white/5 text-sm hover:bg-white/10"
               >
-                Annuler
+                {t.cancel}
               </button>
               <button
                 type="submit"
                 disabled={submitting || !captcha}
                 className="px-4 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium text-white"
               >
-                {submitting ? 'Envoi…' : 'Envoyer la demande'}
+                {submitting ? t.submitting : t.submit}
               </button>
             </div>
           </form>

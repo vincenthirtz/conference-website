@@ -4,6 +4,9 @@ import Link from 'next/link';
 import Button from '@/components/Buttons/button';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
+import { useT, format } from '@/lib/i18n/useT';
+
+type BuildsDict = ReturnType<typeof useT<'buildsPage'>>;
 
 type Build = {
   id: string;
@@ -46,12 +49,13 @@ function computeStatus(build: Build) {
 }
 
 function StatusBadge({ build }: { build: Build }) {
+  const t = useT('buildsPage');
   const status = computeStatus(build);
 
   if (status === 'success') {
     return (
       <span className="px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-100 border border-emerald-500/40 text-[12px]">
-        Succès
+        {t.badgeSuccess}
       </span>
     );
   }
@@ -59,14 +63,14 @@ function StatusBadge({ build }: { build: Build }) {
   if (status === 'error') {
     return (
       <span className="px-3 py-1 rounded-full bg-red-500/15 text-red-100 border border-red-500/40 text-[12px]">
-        Échoué
+        {t.badgeFailed}
       </span>
     );
   }
 
   return (
     <span className="px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-100 border border-emerald-500/40 text-[12px]">
-      Succès
+      {t.badgeSuccess}
     </span>
   );
 }
@@ -138,30 +142,31 @@ export const getStaticProps: GetStaticProps<BuildsPageProps> = async () => {
 };
 
 export default function BuildsPage({ builds, error }: BuildsPageProps) {
+  const t = useT('buildsPage');
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#0b0b14] to-black text-white">
       <Head>
-        <title>Statut des builds Netlify | OW Women&apos;s Cup</title>
+        <title>{t.headTitle}</title>
       </Head>
 
       <main className="container mx-auto max-w-5xl px-4 pt-24 pb-16">
         <header className="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
             <Heading typeStyle="heading-md" className="text-gradient mb-1">
-              Builds Netlify
+              {t.heading}
             </Heading>
             <Paragraph
               typeStyle="body-sm"
               textColor="text-gray-300"
               className="max-w-2xl"
             >
-              Suivez en temps réel les déploiements du site.
+              {t.subtitle}
             </Paragraph>
           </div>
           <div className="flex gap-2">
             <Link href="/">
               <Button type="button" size="compact" className="px-3 py-1.5">
-                ← Retour à l&apos;accueil
+                {t.backHome}
               </Button>
             </Link>
           </div>
@@ -170,12 +175,12 @@ export default function BuildsPage({ builds, error }: BuildsPageProps) {
         <section className="bg-white/5 border border-white/10 rounded-2xl p-4">
           {error && (
             <p className="text-sm text-red-300">
-              Erreur lors du chargement : {error}
+              {format(t.loadError, { error })}
             </p>
           )}
 
           {!error && builds.length === 0 && (
-            <p className="text-sm text-gray-300">Aucun build récent trouvé.</p>
+            <p className="text-sm text-gray-300">{t.noBuilds}</p>
           )}
 
           {!error && builds.length > 0 && (
@@ -188,7 +193,7 @@ export default function BuildsPage({ builds, error }: BuildsPageProps) {
                   <div className="flex flex-col gap-1">
                     <div className="flex items-center gap-2">
                       <span className="px-2 py-[2px] rounded-full bg-white/10 text-white border border-white/30 text-[11px]">
-                        {stateLabel(build.state)}
+                        {stateLabel(build.state, t)}
                       </span>
                       {build.context && (
                         <span className="text-[11px] text-gray-400">
@@ -202,14 +207,20 @@ export default function BuildsPage({ builds, error }: BuildsPageProps) {
                       )}
                     </div>
                     <div className="text-sm font-semibold text-white">
-                      {build.title || build.commit_ref || 'Build'}
+                      {build.title || build.commit_ref || t.buildFallback}
                     </div>
                     <div className="text-[12px] text-gray-400 flex flex-wrap gap-2">
                       {build.created_at && (
-                        <span>Démarré : {formatDate(build.created_at)}</span>
+                        <span>
+                          {format(t.startedAt, {
+                            date: formatDate(build.created_at),
+                          })}
+                        </span>
                       )}
                       {build.deploy_time !== null && (
-                        <span>· Durée : {build.deploy_time}s</span>
+                        <span>
+                          {format(t.duration, { seconds: build.deploy_time })}
+                        </span>
                       )}
                       {build.commit_url && (
                         <a
@@ -218,13 +229,13 @@ export default function BuildsPage({ builds, error }: BuildsPageProps) {
                           rel="noreferrer"
                           className="text-blue-300 hover:text-blue-100"
                         >
-                          Voir le commit
+                          {t.viewCommit}
                         </a>
                       )}
                     </div>
                     {build.error && (
                       <div className="text-[12px] text-red-300">
-                        Erreur : {build.error}
+                        {format(t.errorLabel, { error: build.error })}
                       </div>
                     )}
                   </div>
@@ -239,17 +250,17 @@ export default function BuildsPage({ builds, error }: BuildsPageProps) {
   );
 }
 
-function stateLabel(state: string) {
+function stateLabel(state: string, t: BuildsDict) {
   switch (state) {
     case 'done':
     case 'success':
     case 'ready':
-      return 'Succès';
+      return t.stateSuccess;
     case 'building':
     case 'enqueued':
-      return 'En cours';
+      return t.stateOngoing;
     case 'error':
-      return 'Erreur';
+      return t.stateError;
     default:
       return state;
   }

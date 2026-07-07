@@ -7,6 +7,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { useEffect, useRef, useState, Fragment, type ReactNode } from 'react';
 import { useToast } from '@/components/Toast';
+import { useT, format } from '@/lib/i18n/useT';
 
 import { logger } from '../../utils/logger';
 const SITE_NAME = "OW Women's Cup";
@@ -143,6 +144,7 @@ export default function NewsSlugPage({
   newsId,
   error,
 }: NewsPageProps) {
+  const t = useT('newsDetail');
   const displayDate =
     publishedAt || createdAt
       ? new Date(publishedAt || createdAt || '').toLocaleDateString('fr-FR')
@@ -239,7 +241,7 @@ export default function NewsSlugPage({
           href="/"
           className="text-sm text-purple-200 hover:text-purple-100"
         >
-          ← Retour à l&apos;accueil
+          {t.backHome}
         </Link>
 
         {error ? (
@@ -252,10 +254,10 @@ export default function NewsSlugPage({
               <div className="flex items-center gap-3 text-xs uppercase tracking-[0.16em] text-blue-200/80">
                 {articlePublishedTime ? (
                   <time dateTime={articlePublishedTime}>
-                    {displayDate || 'News'}
+                    {displayDate || t.newsLabel}
                   </time>
                 ) : (
-                  <span>{displayDate || 'News'}</span>
+                  <span>{displayDate || t.newsLabel}</span>
                 )}
                 {formattedTag && (
                   <span className="px-3 py-1 rounded-full border border-blue-300/40 bg-blue-500/10 text-[10px] tracking-[0.14em] text-blue-100">
@@ -280,9 +282,7 @@ export default function NewsSlugPage({
             </div>
 
             <div className="mt-8 space-y-4 text-lg leading-relaxed text-gray-100 whitespace-pre-wrap">
-              {content
-                ? linkifyContent(content)
-                : 'Pas de contenu pour cette news.'}
+              {content ? linkifyContent(content) : t.noContent}
             </div>
 
             <div className="mt-10">
@@ -292,7 +292,7 @@ export default function NewsSlugPage({
                 rel="noreferrer noopener"
               >
                 <Button type="button" className="px-6 h-[48px]">
-                  Flux RSS
+                  {t.rssFeed}
                 </Button>
               </Link>
             </div>
@@ -313,6 +313,7 @@ type Comment = {
 };
 
 function Comments({ newsId }: { newsId: string }) {
+  const t = useT('newsDetail');
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -344,11 +345,11 @@ function Comments({ newsId }: { newsId: string }) {
     setError(null);
     try {
       const res = await fetch(`/api/news/comments?newsId=${newsId}`);
-      if (!res.ok) throw new Error('Impossible de récupérer les commentaires');
+      if (!res.ok) throw new Error(t.errFetchComments);
       const json = await res.json();
       setComments(json.items || []);
     } catch (err: unknown) {
-      setError((err as Error)?.message || 'Erreur chargement commentaires');
+      setError((err as Error)?.message || t.errLoadComments);
     } finally {
       setLoading(false);
     }
@@ -365,7 +366,7 @@ function Comments({ newsId }: { newsId: string }) {
     // Garde anti double-submit.
     if (loading) return;
     if (content.trim().length < 3) {
-      setError('Le commentaire doit contenir au moins 3 caractères.');
+      setError(t.errTooShort);
       return;
     }
     setLoading(true);
@@ -388,20 +389,19 @@ function Comments({ newsId }: { newsId: string }) {
       });
       if (!res.ok) {
         const json = await res.json().catch(() => null);
-        throw new Error(json?.error || 'Impossible de publier le commentaire');
+        throw new Error(json?.error || t.errPublish);
       }
       // Publication réussie : nouvelle clé pour un prochain commentaire.
       idempotencyKeyRef.current = genIdempotencyKey();
       setContent('');
       setAuthor('');
       await Promise.all([loadComments(), loadCaptcha()]);
-      addToast('Commentaire publié.', 'success');
+      addToast(t.published, 'success');
     } catch (err: unknown) {
       // Le captcha est à usage unique : on régénère la clé d'idempotence en même
       // temps que le challenge pour que le retry soit une intention propre.
       idempotencyKeyRef.current = genIdempotencyKey();
-      const message =
-        (err as Error)?.message || 'Erreur lors de la publication';
+      const message = (err as Error)?.message || t.errPublishGeneric;
       setError(message);
       addToast(message, 'error');
       await loadCaptcha();
@@ -413,40 +413,40 @@ function Comments({ newsId }: { newsId: string }) {
   return (
     <div className="mt-12 rounded-2xl border border-white/10 bg-white/5 p-6 space-y-4">
       <Heading typeStyle="heading-sm" className="text-white">
-        Commentaires
+        {t.commentsTitle}
       </Heading>
 
       <form onSubmit={handleSubmit} className="space-y-3">
         <div className="grid gap-3 md:grid-cols-[1fr_0.6fr]">
           <div>
             <label htmlFor="comment-content" className="sr-only">
-              Votre commentaire
+              {t.commentContentSrLabel}
             </label>
             <textarea
               id="comment-content"
               rows={3}
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              placeholder="Partage ton avis..."
+              placeholder={t.commentPlaceholder}
               className="w-full rounded-xl border border-white/15 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/70 focus:border-purple-400/70 transition"
             />
           </div>
           <div className="flex flex-col gap-2">
             <label htmlFor="comment-author" className="sr-only">
-              Nom (optionnel)
+              {t.commentAuthorSrLabel}
             </label>
             <input
               id="comment-author"
               type="text"
               value={author}
               onChange={(e) => setAuthor(e.target.value)}
-              placeholder="Nom (optionnel)"
+              placeholder={t.authorPlaceholder}
               className="w-full rounded-xl border border-white/15 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/70 focus:border-purple-400/70 transition"
             />
             <label htmlFor="comment-captcha" className="sr-only">
               {captchaQuestion
-                ? `Question anti-spam : combien font ${captchaQuestion} ?`
-                : 'Question anti-spam'}
+                ? format(t.captchaSrLabel, { question: captchaQuestion })
+                : t.captchaSrLabelFallback}
             </label>
             <input
               id="comment-captcha"
@@ -455,8 +455,8 @@ function Comments({ newsId }: { newsId: string }) {
               onChange={(e) => setCaptchaAnswer(e.target.value)}
               placeholder={
                 captchaQuestion
-                  ? `Combien font ${captchaQuestion} ?`
-                  : 'Chargement...'
+                  ? format(t.captchaPlaceholder, { question: captchaQuestion })
+                  : t.captchaLoading
               }
               className="w-full rounded-xl border border-white/15 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/70 focus:border-purple-400/70 transition"
             />
@@ -474,7 +474,7 @@ function Comments({ newsId }: { newsId: string }) {
               disabled={loading}
               className="w-full h-[40px] justify-center text-sm px-3"
             >
-              {loading ? 'Envoi...' : 'Publier'}
+              {loading ? t.submitting : t.publish}
             </Button>
           </div>
         </div>
@@ -487,14 +487,12 @@ function Comments({ newsId }: { newsId: string }) {
 
       <div className="divide-y divide-white/10 rounded-xl border border-white/10 bg-black/40">
         {comments.length === 0 && (
-          <p className="p-4 text-sm text-gray-400">
-            Aucun commentaire pour le moment.
-          </p>
+          <p className="p-4 text-sm text-gray-400">{t.emptyComments}</p>
         )}
         {comments.map((c) => (
           <div key={c.id} className="p-4 space-y-1">
             <div className="flex items-center gap-2 text-xs text-gray-400">
-              <span>{c.author_name || 'Anonyme'}</span>
+              <span>{c.author_name || t.anonymous}</span>
               <span className="text-gray-600">·</span>
               <span>
                 {new Date(c.created_at).toLocaleString('fr-FR', {

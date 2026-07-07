@@ -11,6 +11,7 @@ import PublicScrimDialog from '@/components/Team/PublicScrimDialog';
 import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { maskBattleTag } from '@/utils/battleTag';
+import { useT, format } from '@/lib/i18n/useT';
 import {
   renderTeamPublicMarkdown,
   normalizeAccentColor,
@@ -23,6 +24,8 @@ import {
 } from '@/utils/markdown/teamPublicMarkdown';
 
 import { logger } from '../../../utils/logger';
+
+type TeamDetailDict = ReturnType<typeof useT<'teamDetail'>>;
 
 const SITE_NAME = "OW Women's Cup";
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') || '';
@@ -529,6 +532,7 @@ export default function TeamPage({
   embedHost,
   announcementActive,
 }: TeamPageProps) {
+  const t = useT('teamDetail');
   // `canEdit` is auth-dependent and therefore not part of the statically
   // generated payload. We resolve it client-side after hydration: a captain
   // or manager of *this* team (per /api/admin/teams/my) may edit its public
@@ -733,7 +737,7 @@ export default function TeamPage({
                 )}
                 {team.is_active !== false && (
                   <span className="px-2 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs">
-                    Active
+                    {t.active}
                   </span>
                 )}
                 {canEdit && (
@@ -754,7 +758,7 @@ export default function TeamPage({
                         d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
                       />
                     </svg>
-                    Éditer la page
+                    {t.editPage}
                   </Link>
                 )}
               </div>
@@ -806,7 +810,7 @@ export default function TeamPage({
                   />
                   <SocialLink
                     href={team.website ? safeHref(team.website) : undefined}
-                    label="Site web"
+                    label={t.socialWebsite}
                     hover="hover:border-white/30"
                     icon={
                       <svg
@@ -886,19 +890,19 @@ export default function TeamPage({
 
             {/* Stats cards */}
             <div className="grid grid-cols-2 gap-2 md:gap-3 md:w-auto w-full">
-              <StatCard label="Matchs" value={matchStats.total} />
+              <StatCard label={t.statMatches} value={matchStats.total} />
               <StatCard
-                label="Victoires"
+                label={t.statWins}
                 value={matchStats.wins}
                 hint={matchStats.total > 0 ? `${winRate}%` : undefined}
                 color="emerald"
               />
               <StatCard
-                label="Défaites"
+                label={t.statLosses}
                 value={matchStats.losses}
                 color="red"
               />
-              <StatCard label="Membres" value={members.length} />
+              <StatCard label={t.statMembers} value={members.length} />
             </div>
           </div>
         </section>
@@ -946,7 +950,7 @@ export default function TeamPage({
         {achievements.length > 0 && (
           <section className="mb-6 rounded-2xl border border-white/5 bg-black/60 p-5">
             <p className="text-xs uppercase tracking-wide text-gray-400 mb-4">
-              Palmarès
+              {t.achievementsTitle}
             </p>
             <ul className="space-y-2">
               {achievements.map((a, i) => (
@@ -999,7 +1003,7 @@ export default function TeamPage({
         {sponsors.length > 0 && (
           <section className="mb-6 rounded-2xl border border-white/5 bg-black/60 p-5">
             <p className="text-xs uppercase tracking-wide text-gray-400 mb-4">
-              Sponsors & partenaires
+              {t.sponsorsTitle}
             </p>
             <div className="flex flex-wrap gap-3">
               {sponsors.map((s, i) => (
@@ -1013,19 +1017,16 @@ export default function TeamPage({
         <section className="mb-6 rounded-2xl border border-cyan-500/20 bg-gradient-to-r from-cyan-500/10 via-cyan-500/5 to-transparent px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="min-w-0">
             <p className="text-sm font-semibold text-cyan-200">
-              Tu veux affronter {team.name} en scrim ?
+              {format(t.scrimCtaTitle, { name: team.name })}
             </p>
-            <p className="text-xs text-gray-400 mt-1">
-              Pas besoin de compte — laisse un contact, le capitaine te
-              répondra.
-            </p>
+            <p className="text-xs text-gray-400 mt-1">{t.scrimCtaDesc}</p>
           </div>
           <button
             type="button"
             onClick={() => setScrimDialogOpen(true)}
             className="flex-shrink-0 px-4 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-sm font-medium text-white"
           >
-            Proposer un scrim
+            {t.scrimCtaBtn}
           </button>
         </section>
 
@@ -1050,17 +1051,21 @@ export default function TeamPage({
                   <>
                     <div className="flex items-center justify-between mb-4">
                       <p className="text-xs uppercase tracking-wide text-gray-400">
-                        Roster
+                        {t.rosterLabel}
                       </p>
                       <span className="text-xs text-gray-500">
-                        {rosterMembers.length} titulaire
-                        {rosterMembers.length > 1 ? 's' : ''}
+                        {format(
+                          rosterMembers.length > 1
+                            ? t.rosterCount_other
+                            : t.rosterCount_one,
+                          { count: rosterMembers.length }
+                        )}
                       </span>
                     </div>
 
                     {rosterMembers.length === 0 ? (
                       <Paragraph typeStyle="body-sm" textColor="text-gray-400">
-                        Aucun membre affiché pour cette équipe.
+                        {t.emptyRoster}
                       </Paragraph>
                     ) : (
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1078,7 +1083,7 @@ export default function TeamPage({
                       <div className="mt-5 pt-4 border-t border-white/5">
                         <div className="flex items-center justify-between mb-3">
                           <p className="text-xs uppercase tracking-wide text-gray-500">
-                            Remplaçantes
+                            {t.substitutesLabel}
                           </p>
                           <span className="text-xs text-gray-600">
                             {subMembers.length}
@@ -1105,13 +1110,13 @@ export default function TeamPage({
             <section className="bg-black/60 border border-white/5 rounded-2xl p-5">
               <div className="flex items-center justify-between mb-4">
                 <p className="text-xs uppercase tracking-wide text-gray-400">
-                  Matchs récents
+                  {t.recentMatchesTitle}
                 </p>
               </div>
 
               {recentMatches.length === 0 ? (
                 <Paragraph typeStyle="body-sm" textColor="text-gray-400">
-                  Aucun match récent.
+                  {t.emptyMatches}
                 </Paragraph>
               ) : (
                 <div className="space-y-2">
@@ -1129,17 +1134,21 @@ export default function TeamPage({
             <section className="bg-black/60 border border-white/5 rounded-2xl p-5">
               <div className="flex items-center justify-between mb-4">
                 <p className="text-xs uppercase tracking-wide text-gray-400">
-                  Tournois
+                  {t.tournamentsTitle}
                 </p>
                 <span className="text-xs text-gray-500">
-                  {tournaments.length} tournoi
-                  {tournaments.length > 1 ? 's' : ''}
+                  {format(
+                    tournaments.length > 1
+                      ? t.tournamentsCount_other
+                      : t.tournamentsCount_one,
+                    { count: tournaments.length }
+                  )}
                 </span>
               </div>
 
               {tournaments.length === 0 ? (
                 <Paragraph typeStyle="body-sm" textColor="text-gray-400">
-                  Aucun tournoi pour le moment.
+                  {t.emptyTournaments}
                 </Paragraph>
               ) : (
                 <div className="space-y-2">
@@ -1207,14 +1216,14 @@ export default function TeamPage({
             {/* Quick Stats */}
             <section className="bg-black/60 border border-white/5 rounded-2xl p-5">
               <p className="text-xs uppercase tracking-wide text-gray-400 mb-4">
-                Statistiques
+                {t.statisticsTitle}
               </p>
 
               <div className="space-y-4">
                 {/* Win rate bar */}
                 <div>
                   <div className="flex items-center justify-between text-xs mb-1">
-                    <span className="text-gray-400">Win rate</span>
+                    <span className="text-gray-400">{t.winRateLabel}</span>
                     <span className="text-white font-semibold">{winRate}%</span>
                   </div>
                   <div className="h-2 bg-white/10 rounded-full overflow-hidden">
@@ -1239,7 +1248,7 @@ export default function TeamPage({
                       {matchStats.wins}
                     </p>
                     <p className="text-[10px] text-gray-400 uppercase">
-                      Victoires
+                      {t.statWins}
                     </p>
                   </div>
                   <div className="bg-red-500/10 border border-red-500/20 rounded-xl py-3">
@@ -1247,14 +1256,16 @@ export default function TeamPage({
                       {matchStats.losses}
                     </p>
                     <p className="text-[10px] text-gray-400 uppercase">
-                      Défaites
+                      {t.statLosses}
                     </p>
                   </div>
                   <div className="bg-white/5 border border-white/10 rounded-xl py-3">
                     <p className="text-lg font-bold text-gray-300">
                       {matchStats.draws}
                     </p>
-                    <p className="text-[10px] text-gray-400 uppercase">Nuls</p>
+                    <p className="text-[10px] text-gray-400 uppercase">
+                      {t.statDraws}
+                    </p>
                   </div>
                 </div>
 
@@ -1262,7 +1273,7 @@ export default function TeamPage({
                 {activeTournaments.length > 0 && (
                   <div className="pt-3 border-t border-white/10">
                     <p className="text-xs text-gray-400 mb-2">
-                      Actuellement en compétition dans :
+                      {t.activeInLabel}
                     </p>
                     <div className="flex flex-wrap gap-2">
                       {activeTournaments.slice(0, 3).map((t) => (
@@ -1288,31 +1299,30 @@ export default function TeamPage({
  * Components & utils
  * ────────────────────────────────────────────*/
 
-const SPECIALTY_STYLE: Record<
-  string,
-  { label: string; bg: string; text: string }
-> = {
+const getSpecialtyStyle = (
+  t: TeamDetailDict
+): Record<string, { label: string; bg: string; text: string }> => ({
   tank: {
-    label: 'Tank',
+    label: t.specialtyTank,
     bg: 'bg-orange-500/20 border-orange-500/40',
     text: 'text-orange-200',
   },
   dps: {
-    label: 'DPS',
+    label: t.specialtyDps,
     bg: 'bg-red-500/20 border-red-500/40',
     text: 'text-red-200',
   },
   support: {
-    label: 'Support',
+    label: t.specialtySupport,
     bg: 'bg-emerald-500/20 border-emerald-500/40',
     text: 'text-emerald-200',
   },
   flex: {
-    label: 'Flex',
+    label: t.specialtyFlex,
     bg: 'bg-purple-500/20 border-purple-500/40',
     text: 'text-purple-200',
   },
-};
+});
 
 function memberInitials(member: TeamMember): string {
   const source = member.display_name || member.battle_tag || 'M';
@@ -1334,9 +1344,11 @@ function MemberCard({
   accent: string | null;
   substitute?: boolean;
 }) {
-  const name = member.display_name || member.battle_tag || 'Membre';
+  const t = useT('teamDetail');
+  const name = member.display_name || member.battle_tag || t.memberFallback;
   const specialtyStyle =
-    member.specialty && SPECIALTY_STYLE[member.specialty.toLowerCase()];
+    member.specialty &&
+    getSpecialtyStyle(t)[member.specialty.toLowerCase()];
   const avatar =
     member.avatar_url && safeHref(member.avatar_url) ? member.avatar_url : null;
   const twitterHref = socialHref('twitter', member.twitter ?? null);
@@ -1406,7 +1418,7 @@ function MemberCard({
               className="w-4 h-4 text-amber-400 flex-shrink-0"
               fill="currentColor"
               viewBox="0 0 24 24"
-              aria-label="Capitaine"
+              aria-label={t.captainAria}
             >
               <path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z" />
             </svg>
@@ -1420,7 +1432,7 @@ function MemberCard({
           )}
           {substitute && (
             <span className="text-[10px] uppercase tracking-wide font-semibold px-1.5 py-0.5 rounded bg-white/10 border border-white/10 text-gray-300">
-              Remplaçante
+              {t.substituteBadge}
             </span>
           )}
         </div>
@@ -1629,6 +1641,7 @@ function StatCard({
 }
 
 function MatchCard({ match, teamId }: { match: RecentMatch; teamId: string }) {
+  const t = useT('teamDetail');
   // Consider match finished if status is 'finished' or 'done'
   const isFinished =
     match.status === 'finished' ||
@@ -1693,7 +1706,11 @@ function MatchCard({ match, teamId }: { match: RecentMatch; teamId: string }) {
           <div
             className={`w-10 h-10 rounded-lg border ${resultColors[result]} flex items-center justify-center text-sm font-bold`}
           >
-            {result === 'win' ? 'V' : result === 'loss' ? 'D' : 'N'}
+            {result === 'win'
+              ? t.resultWin
+              : result === 'loss'
+                ? t.resultLoss
+                : t.resultDraw}
           </div>
         )}
         {!result && (
@@ -1706,7 +1723,8 @@ function MatchCard({ match, teamId }: { match: RecentMatch; teamId: string }) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <p className="text-sm font-medium text-white truncate">
-              vs {match.opponent?.short_name || match.opponent?.name || 'TBD'}
+              {t.matchVs}{' '}
+              {match.opponent?.short_name || match.opponent?.name || 'TBD'}
             </p>
             {ourScore !== null && theirScore !== null && (
               <span
@@ -1758,14 +1776,15 @@ function MatchCard({ match, teamId }: { match: RecentMatch; teamId: string }) {
 }
 
 function StatusBadge({ status }: { status: string }) {
+  const t = useT('teamDetail');
   const statusConfig: Record<string, { label: string; color: string }> = {
-    running: { label: 'En cours', color: 'text-emerald-300' },
-    ongoing: { label: 'En cours', color: 'text-emerald-300' },
-    published: { label: 'À venir', color: 'text-yellow-300' },
-    upcoming: { label: 'À venir', color: 'text-yellow-300' },
-    finished: { label: 'Terminé', color: 'text-gray-400' },
-    completed: { label: 'Terminé', color: 'text-gray-400' },
-    draft: { label: 'Brouillon', color: 'text-gray-500' },
+    running: { label: t.statusRunning, color: 'text-emerald-300' },
+    ongoing: { label: t.statusRunning, color: 'text-emerald-300' },
+    published: { label: t.statusUpcoming, color: 'text-yellow-300' },
+    upcoming: { label: t.statusUpcoming, color: 'text-yellow-300' },
+    finished: { label: t.statusFinished, color: 'text-gray-400' },
+    completed: { label: t.statusFinished, color: 'text-gray-400' },
+    draft: { label: t.statusDraft, color: 'text-gray-500' },
   };
 
   const config = statusConfig[status] || {

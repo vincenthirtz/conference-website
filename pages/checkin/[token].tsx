@@ -5,6 +5,7 @@
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
+import { useT, format } from '@/lib/i18n/useT';
 
 type ResolveResponse =
   | {
@@ -40,6 +41,7 @@ function formatDateFr(value: string | null): string {
 
 export default function CheckinPage() {
   const router = useRouter();
+  const t = useT('checkinToken');
   const { token } = router.query;
   const tokenStr = Array.isArray(token) ? token[0] : token;
 
@@ -60,13 +62,13 @@ export default function CheckinPage() {
         const json = await res.json();
         if (cancelled) return;
         if (!res.ok || json.error) {
-          setError(json.error || 'Lien invalide');
+          setError(json.error || t.errInvalidLink);
         } else {
           setInfo(json);
           if (json.alreadyCheckedIn) setConfirmed(true);
         }
       } catch {
-        if (!cancelled) setError('Erreur réseau');
+        if (!cancelled) setError(t.errNetwork);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -74,7 +76,7 @@ export default function CheckinPage() {
     return () => {
       cancelled = true;
     };
-  }, [tokenStr]);
+  }, [tokenStr, t]);
 
   async function handleConfirm() {
     if (!tokenStr) return;
@@ -86,12 +88,12 @@ export default function CheckinPage() {
       });
       const json = await res.json();
       if (!res.ok || json.error) {
-        setError(json.error || 'Échec du check-in');
+        setError(json.error || t.errCheckinFailed);
       } else {
         setConfirmed(true);
       }
     } catch {
-      setError('Erreur réseau');
+      setError(t.errNetwork);
     } finally {
       setSubmitting(false);
     }
@@ -126,12 +128,8 @@ export default function CheckinPage() {
                   />
                 </svg>
               </div>
-              <h1 className="text-2xl font-bold tracking-tight">
-                Check-in match
-              </h1>
-              <p className="text-sm text-neutral-400 mt-1">
-                Confirmez la présence de votre équipe.
-              </p>
+              <h1 className="text-2xl font-bold tracking-tight">{t.title}</h1>
+              <p className="text-sm text-neutral-400 mt-1">{t.subtitle}</p>
             </div>
 
             {loading && (
@@ -142,23 +140,28 @@ export default function CheckinPage() {
 
             {!loading && error && !data && (
               <div className="rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm">
-                <p className="font-semibold text-red-200 mb-1">Lien invalide</p>
-                <p className="text-red-300">{error}</p>
-                <p className="text-xs text-red-400 mt-3">
-                  Si vous pensez qu&apos;il s&apos;agit d&apos;une erreur,
-                  contactez l&apos;organisateur sur Discord.
+                <p className="font-semibold text-red-200 mb-1">
+                  {t.invalidLinkTitle}
                 </p>
+                <p className="text-red-300">{error}</p>
+                <p className="text-xs text-red-400 mt-3">{t.invalidLinkHint}</p>
               </div>
             )}
 
             {!loading && data && (
               <>
                 <div className="bg-neutral-900/50 border border-neutral-700/50 rounded-xl p-4 mb-5 space-y-3">
-                  <Row label="Tournoi" value={data.tournamentName || '—'} />
-                  <Row label="Votre équipe" value={data.teamName} highlight />
-                  <Row label="Adversaire" value={data.opponentName || '—'} />
                   <Row
-                    label="Début prévu"
+                    label={t.rowTournament}
+                    value={data.tournamentName || '—'}
+                  />
+                  <Row label={t.rowYourTeam} value={data.teamName} highlight />
+                  <Row
+                    label={t.rowOpponent}
+                    value={data.opponentName || '—'}
+                  />
+                  <Row
+                    label={t.rowStart}
                     value={formatDateFr(data.scheduledAt)}
                   />
                 </div>
@@ -178,23 +181,19 @@ export default function CheckinPage() {
                         />
                       </svg>
                       <p className="font-semibold text-emerald-200">
-                        Check-in confirmé
+                        {t.confirmedTitle}
                       </p>
                     </div>
-                    <p className="text-emerald-300/90">
-                      Votre équipe est attendue à l&apos;heure du match. Bonne
-                      chance !
-                    </p>
+                    <p className="text-emerald-300/90">{t.confirmedBody}</p>
                   </div>
                 ) : data.matchStatus !== 'pending' &&
                   data.matchStatus !== 'ongoing' ? (
                   <div className="rounded-xl bg-amber-900/40 border border-amber-500/50 px-4 py-4 text-sm">
                     <p className="font-semibold text-amber-200 mb-1">
-                      Check-in fermé
+                      {t.closedTitle}
                     </p>
                     <p className="text-amber-300/90">
-                      Le match a déjà été traité (statut&nbsp;:{' '}
-                      {data.matchStatus}).
+                      {format(t.closedBody, { status: data.matchStatus })}
                     </p>
                   </div>
                 ) : (
@@ -213,7 +212,7 @@ export default function CheckinPage() {
                       {submitting ? (
                         <>
                           <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                          Enregistrement...
+                          {t.saving}
                         </>
                       ) : (
                         <>
@@ -230,13 +229,12 @@ export default function CheckinPage() {
                               d="M5 13l4 4L19 7"
                             />
                           </svg>
-                          Confirmer la présence
+                          {t.confirmBtn}
                         </>
                       )}
                     </button>
                     <p className="text-xs text-neutral-500 mt-3 text-center">
-                      Sans check-in avant le début du match, votre équipe sera
-                      déclarée forfait automatiquement.
+                      {t.forfeitNote}
                     </p>
                   </>
                 )}
@@ -245,7 +243,7 @@ export default function CheckinPage() {
           </div>
 
           <p className="text-center text-xs text-neutral-500 mt-6">
-            OW Women&apos;s Cup — Check-in
+            {t.footer}
           </p>
         </div>
       </main>

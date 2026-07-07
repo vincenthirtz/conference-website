@@ -22,6 +22,9 @@ import {
   computeRunSchedule,
   type ComputedRunSchedule,
 } from '@/utils/eventSchedule';
+import { useT, format } from '@/lib/i18n/useT';
+
+type LiveSegmentDict = ReturnType<typeof useT<'liveSegmentBlock'>>;
 
 type Props = {
   run: EventRun | null;
@@ -43,20 +46,22 @@ function formatDuration(totalSeconds: number): string {
   return `${sign}${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`;
 }
 
-const STATUS_BADGE: Record<string, { label: string; cls: string }> = {
-  upcoming: { label: 'A venir', cls: 'bg-gray-700/60 text-gray-200' },
-  live: { label: 'EN DIRECT', cls: 'bg-red-500/80 text-white animate-pulse' },
-  done: { label: 'Termine', cls: 'bg-emerald-600/60 text-emerald-50' },
-  skipped: { label: 'Passe', cls: 'bg-amber-600/60 text-amber-50' },
-};
+const getStatusBadge = (
+  t: LiveSegmentDict
+): Record<string, { label: string; cls: string }> => ({
+  upcoming: { label: t.statusUpcoming, cls: 'bg-gray-700/60 text-gray-200' },
+  live: { label: t.statusLive, cls: 'bg-red-500/80 text-white animate-pulse' },
+  done: { label: t.statusDone, cls: 'bg-emerald-600/60 text-emerald-50' },
+  skipped: { label: t.statusSkipped, cls: 'bg-amber-600/60 text-amber-50' },
+});
 
-const TYPE_LABEL: Record<string, string> = {
-  match: 'Match',
-  break: 'Pause',
-  intro: 'Intro',
-  outro: 'Outro',
-  custom: 'Segment',
-};
+const getTypeLabel = (t: LiveSegmentDict): Record<string, string> => ({
+  match: t.typeMatch,
+  break: t.typeBreak,
+  intro: t.typeIntro,
+  outro: t.typeOutro,
+  custom: t.typeCustom,
+});
 
 /**
  * Hook tick 1s visibility-gated. Skip setInterval si l'onglet est cache
@@ -106,6 +111,9 @@ export default function LiveSegmentBlock({
   nextSegment,
   schedule,
 }: Props) {
+  const t = useT('liveSegmentBlock');
+  const STATUS_BADGE = getStatusBadge(t);
+  const TYPE_LABEL = getTypeLabel(t);
   const tickEnabled = !!run;
   const now = useNowTick(tickEnabled);
 
@@ -130,12 +138,9 @@ export default function LiveSegmentBlock({
     return (
       <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
         <div className="text-sm font-semibold text-white mb-1">
-          Pas d event en cours
+          {t.noEventTitle}
         </div>
-        <p className="text-xs text-gray-400">
-          Aucun event_run n est actuellement en direct sur ce tenant. Tes
-          prochaines assignations s affichent ci-dessous.
-        </p>
+        <p className="text-xs text-gray-400">{t.noEventBody}</p>
       </div>
     );
   }
@@ -154,12 +159,12 @@ export default function LiveSegmentBlock({
     const diffSec = Math.floor((startMs - now) / 1000);
     if (diffSec <= 0) {
       return (
-        <span className="text-amber-300 font-medium">Demarre maintenant</span>
+        <span className="text-amber-300 font-medium">{t.startsNow}</span>
       );
     }
     return (
       <span className="text-gray-200">
-        Demarre dans{' '}
+        {t.startsIn}{' '}
         <span className="font-mono tabular-nums text-white">
           {formatDuration(diffSec)}
         </span>
@@ -172,22 +177,24 @@ export default function LiveSegmentBlock({
       <div className="rounded-2xl border border-purple-500/30 bg-purple-900/20 p-4">
         <div className="flex items-center gap-2 mb-1">
           <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-purple-500/30 text-purple-100">
-            En direct
+            {t.liveBadge}
           </span>
           <span className="text-xs text-gray-300">{run.name}</span>
         </div>
         <div className="text-sm font-semibold text-white mb-2">
-          En attente du prochain segment
+          {t.waitingNextSegment}
         </div>
         {nextSegment && (
           <div className="text-xs text-gray-300 space-y-1">
             <div>
-              Prochain :{' '}
+              {t.nextLabel}{' '}
               <span className="text-white">
-                {nextSegment.title || TYPE_LABEL[nextSegment.type] || 'Segment'}
+                {nextSegment.title ||
+                  TYPE_LABEL[nextSegment.type] ||
+                  t.segmentFallback}
               </span>
               {nextSegment.duration_min
-                ? ` • ${nextSegment.duration_min} min`
+                ? format(t.minSuffix, { min: nextSegment.duration_min })
                 : ''}
             </div>
             {renderNextStartHint() && <div>{renderNextStartHint()}</div>}
@@ -229,20 +236,20 @@ export default function LiveSegmentBlock({
   // Couleur du timer principal : vert > 2min restants, amber 30s-2min ou
   // overrun < 2min, rouge overrun >= 2min. Si pas de duree → gris.
   let timerColorCls = 'text-white';
-  let timerLabel: 'Restant' | 'Depassement' | 'Sans duree definie' = 'Restant';
+  let timerLabel: string = t.timerRemaining;
   let timerValue = '—';
 
   if (remainingSeconds === null) {
     timerColorCls = 'text-gray-400';
-    timerLabel = 'Sans duree definie';
+    timerLabel = t.timerNoDuration;
     timerValue = '—';
   } else if (overrunSec > 0) {
-    timerLabel = 'Depassement';
+    timerLabel = t.timerOverrun;
     timerValue = formatDuration(overrunSec);
     timerColorCls =
       overrunSec >= 120 ? 'text-red-400' : 'text-amber-300';
   } else {
-    timerLabel = 'Restant';
+    timerLabel = t.timerRemaining;
     timerValue = formatDuration(remainingSeconds);
     if (remainingSeconds > 120) {
       timerColorCls = 'text-emerald-300';
@@ -256,7 +263,7 @@ export default function LiveSegmentBlock({
   }
 
   const badge = STATUS_BADGE[currentSegment.status] ?? STATUS_BADGE.upcoming;
-  const typeLabel = TYPE_LABEL[currentSegment.type] ?? 'Segment';
+  const typeLabel = TYPE_LABEL[currentSegment.type] ?? t.segmentFallback;
 
   return (
     <div className="rounded-2xl border border-red-500/40 bg-red-950/20 p-4">
@@ -293,7 +300,7 @@ export default function LiveSegmentBlock({
       {/* Bloc ecoule (secondaire, contexte) */}
       <div className="rounded-lg bg-black/40 px-3 py-2 mb-3">
         <div className="text-[10px] uppercase tracking-wider text-gray-400">
-          Ecoule
+          {t.elapsed}
         </div>
         <div className="text-sm font-mono font-semibold text-white tabular-nums">
           {formatDuration(elapsedSeconds)}
@@ -323,9 +330,11 @@ export default function LiveSegmentBlock({
       {nextSegment && (
         <div className="rounded-lg bg-black/30 px-3 py-2 text-xs text-gray-300 flex items-center justify-between gap-3 flex-wrap">
           <div className="min-w-0 truncate">
-            <span className="text-gray-500">Suivant : </span>
+            <span className="text-gray-500">{t.nextShort} </span>
             <span className="text-white">
-              {nextSegment.title || TYPE_LABEL[nextSegment.type] || 'Segment'}
+              {nextSegment.title ||
+                TYPE_LABEL[nextSegment.type] ||
+                t.segmentFallback}
             </span>
           </div>
           {renderNextStartHint() && (

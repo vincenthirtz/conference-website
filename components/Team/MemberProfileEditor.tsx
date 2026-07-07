@@ -7,6 +7,7 @@
 import { useState } from 'react';
 import { useToast } from '@/components/Toast';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useT, format } from '@/lib/i18n/useT';
 import {
   MEMBER_DISPLAY_NAME_MAX,
   MEMBER_PRONOUNS_MAX,
@@ -16,6 +17,8 @@ import {
 } from '@/utils/markdown/teamPublicMarkdown';
 
 const HANDLE_MAX = 80;
+
+type MemberEditorDict = ReturnType<typeof useT<'memberProfileEditor'>>;
 
 export type EditableMember = {
   id: string;
@@ -33,12 +36,14 @@ export type EditableMember = {
   twitch: string | null;
 };
 
-const SPECIALTY_LABELS: Record<MemberSpecialty, string> = {
-  tank: 'Tank',
-  dps: 'DPS',
-  support: 'Support',
-  flex: 'Flex',
-};
+const getSpecialtyLabels = (
+  t: MemberEditorDict
+): Record<MemberSpecialty, string> => ({
+  tank: t.specialtyTank,
+  dps: t.specialtyDps,
+  support: t.specialtySupport,
+  flex: t.specialtyFlex,
+});
 
 export default function MemberProfileEditor({
   teamId,
@@ -49,6 +54,8 @@ export default function MemberProfileEditor({
 }) {
   const { addToast } = useToast();
   const { adminFetchJson } = useAdminFetch();
+  const t = useT('memberProfileEditor');
+  const specialtyLabels = getSpecialtyLabels(t);
 
   const [displayName, setDisplayName] = useState(member.display_name ?? '');
   const [specialty, setSpecialty] = useState<MemberSpecialty | ''>(
@@ -85,21 +92,20 @@ export default function MemberProfileEditor({
       const updated = json.updatedFields?.length ?? 0;
       addToast(
         updated > 0
-          ? `Profil mis à jour (${updated} champ${updated > 1 ? 's' : ''}).`
-          : 'Aucun changement.',
+          ? format(updated > 1 ? t.updateSuccess_other : t.updateSuccess_one, {
+              count: updated,
+            })
+          : t.noChanges,
         'success'
       );
     } catch (err) {
-      addToast(
-        err instanceof Error ? err.message : 'Erreur inattendue.',
-        'error'
-      );
+      addToast(err instanceof Error ? err.message : t.errorUnexpected, 'error');
     } finally {
       setSaving(false);
     }
   }
 
-  const headerLabel = displayName || member.battle_tag || 'Membre';
+  const headerLabel = displayName || member.battle_tag || t.memberFallback;
 
   return (
     <div className="rounded-xl border border-white/10 bg-white/5 p-4 space-y-3">
@@ -109,7 +115,7 @@ export default function MemberProfileEditor({
             {headerLabel}
             {member.is_captain && (
               <span className="ml-2 text-[10px] uppercase tracking-wide text-amber-300">
-                Capitaine
+                {t.captain}
               </span>
             )}
           </p>
@@ -125,27 +131,27 @@ export default function MemberProfileEditor({
             onChange={(e) => setIsSubstitute(e.target.checked)}
             className="accent-cyan-500"
           />
-          Remplaçante
+          {t.substitute}
         </label>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         <div>
           <label className="block text-[11px] text-neutral-400 mb-1">
-            Pseudo affiché
+            {t.displayNameLabel}
           </label>
           <input
             type="text"
             value={displayName}
             maxLength={MEMBER_DISPLAY_NAME_MAX}
             onChange={(e) => setDisplayName(e.target.value)}
-            placeholder={member.battle_tag ?? 'Ex: Lyra'}
+            placeholder={member.battle_tag ?? t.displayNamePlaceholder}
             className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
           />
         </div>
         <div>
           <label className="block text-[11px] text-neutral-400 mb-1">
-            Spécialité
+            {t.specialtyLabel}
           </label>
           <select
             value={specialty}
@@ -154,10 +160,10 @@ export default function MemberProfileEditor({
             }
             className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
           >
-            <option value="">Non précisée</option>
+            <option value="">{t.specialtyNone}</option>
             {MEMBER_SPECIALTIES.map((s) => (
               <option key={s} value={s}>
-                {SPECIALTY_LABELS[s]}
+                {specialtyLabels[s]}
               </option>
             ))}
           </select>
@@ -166,7 +172,7 @@ export default function MemberProfileEditor({
 
       <div>
         <label className="block text-[11px] text-neutral-400 mb-1">
-          Avatar (URL https)
+          {t.avatarLabel}
         </label>
         <input
           type="text"
@@ -180,27 +186,27 @@ export default function MemberProfileEditor({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         <div>
           <label className="block text-[11px] text-neutral-400 mb-1">
-            Pronoms
+            {t.pronounsLabel}
           </label>
           <input
             type="text"
             value={pronouns}
             maxLength={MEMBER_PRONOUNS_MAX}
             onChange={(e) => setPronouns(e.target.value)}
-            placeholder="elle, iel, she/her"
+            placeholder={t.pronounsPlaceholder}
             className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
           />
         </div>
         <div>
           <label className="block text-[11px] text-neutral-400 mb-1">
-            Phrase de profil
+            {t.taglineLabel}
           </label>
           <input
             type="text"
             value={tagline}
             maxLength={MEMBER_TAGLINE_MAX}
             onChange={(e) => setTagline(e.target.value)}
-            placeholder="Ex: Sniper redoutée."
+            placeholder={t.taglinePlaceholder}
             className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
           />
         </div>
@@ -209,7 +215,7 @@ export default function MemberProfileEditor({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         <div>
           <label className="block text-[11px] text-neutral-400 mb-1">
-            Twitter
+            {t.twitterLabel}
           </label>
           <input
             type="text"
@@ -222,7 +228,7 @@ export default function MemberProfileEditor({
         </div>
         <div>
           <label className="block text-[11px] text-neutral-400 mb-1">
-            Twitch
+            {t.twitchLabel}
           </label>
           <input
             type="text"
@@ -242,7 +248,7 @@ export default function MemberProfileEditor({
           disabled={saving}
           className="px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-xs font-medium text-white"
         >
-          {saving ? 'Enregistrement...' : 'Enregistrer ce membre'}
+          {saving ? t.saving : t.save}
         </button>
       </div>
     </div>

@@ -17,6 +17,7 @@
 import { useCallback, useState } from 'react';
 import { useToast } from '@/components/Toast';
 import { logger } from '@/utils/logger';
+import { useT, format } from '@/lib/i18n/useT';
 
 type HotkeyKind = 'highlight' | 'score' | 'pause';
 
@@ -44,13 +45,14 @@ export default function CockpitHotkeys({
   disabled,
 }: Props) {
   const { addToast } = useToast();
+  const t = useT('cockpitHotkeys');
   const [busy, setBusy] = useState<HotkeyKind | null>(null);
 
   const trigger = useCallback(
     async (kind: HotkeyKind, payload?: Record<string, unknown>) => {
       if (disabled || busy) return;
       if (!accessToken) {
-        addToast('Session expiree, reconnecte-toi.', 'error');
+        addToast(t.sessionExpired, 'error');
         return;
       }
       setBusy(kind);
@@ -68,40 +70,39 @@ export default function CockpitHotkeys({
           const body = (await res.json().catch(() => null)) as {
             error?: string;
           } | null;
-          throw new Error(body?.error || `Erreur ${res.status}`);
+          throw new Error(
+            body?.error || format(t.errorWithStatus, { status: res.status })
+          );
         }
         const labels: Record<HotkeyKind, string> = {
-          highlight: 'Highlight marque',
-          score: 'Score annonce',
-          pause: 'Signal pause envoye',
+          highlight: t.toastHighlight,
+          score: t.toastScore,
+          pause: t.toastPause,
         };
         addToast(labels[kind], 'success');
       } catch (err) {
         logger.error('[hotkey] trigger error', err);
-        addToast(
-          (err as Error)?.message || 'Impossible de declencher la hotkey.',
-          'error'
-        );
+        addToast((err as Error)?.message || t.triggerFailed, 'error');
       } finally {
         setBusy(null);
       }
     },
-    [accessToken, addToast, busy, disabled, segmentId]
+    [accessToken, addToast, busy, disabled, segmentId, t]
   );
 
   const onScore = useCallback(() => {
     if (busy || disabled) return;
     if (typeof window === 'undefined') return;
-    const v = window.prompt('Score a annoncer (ex: "2-1 fin Game 3")', '');
+    const v = window.prompt(t.scorePrompt, '');
     if (v === null) return;
     const trimmed = v.trim();
     if (!trimmed) return;
     trigger('score', { text: trimmed.slice(0, 120) });
-  }, [busy, disabled, trigger]);
+  }, [busy, disabled, trigger, t]);
 
   return (
     <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-      <div className="text-sm font-semibold text-white mb-3">Hotkeys</div>
+      <div className="text-sm font-semibold text-white mb-3">{t.title}</div>
       <div className="grid grid-cols-2 gap-2.5">
         <button
           type="button"
@@ -124,7 +125,7 @@ export default function CockpitHotkeys({
               d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
             />
           </svg>
-          {busy === 'highlight' ? 'Envoi...' : 'Marquer un highlight'}
+          {busy === 'highlight' ? t.sending : t.markHighlight}
         </button>
         <button
           type="button"
@@ -133,7 +134,7 @@ export default function CockpitHotkeys({
           className="px-3 py-3 rounded-xl border border-emerald-400/40 bg-emerald-500/15 text-emerald-50 text-sm font-semibold transition hover:bg-emerald-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
           data-testid="hotkey-score"
         >
-          {busy === 'score' ? 'Envoi...' : 'Annoncer un score'}
+          {busy === 'score' ? t.sending : t.announceScore}
         </button>
         <button
           type="button"
@@ -142,13 +143,11 @@ export default function CockpitHotkeys({
           className="px-3 py-3 rounded-xl border border-amber-400/40 bg-amber-500/15 text-amber-50 text-sm font-semibold transition hover:bg-amber-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
           data-testid="hotkey-pause"
         >
-          {busy === 'pause' ? 'Envoi...' : 'Pause'}
+          {busy === 'pause' ? t.sending : t.pause}
         </button>
       </div>
       {disabled && (
-        <p className="text-[11px] text-gray-500 mt-2">
-          Hotkeys disponibles uniquement quand un segment est en cours.
-        </p>
+        <p className="text-[11px] text-gray-500 mt-2">{t.disabledHint}</p>
       )}
     </div>
   );

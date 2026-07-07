@@ -12,9 +12,11 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { findTournamentByIdOrSlug } from '@/utils/tournamentLookup';
 import type { MatchStatus as BaseMatchStatus } from '@/types/admin';
+import { useT, format } from '@/lib/i18n/useT';
 
 import { logger } from '../../../utils/logger';
 type MatchStatus = BaseMatchStatus | 'completed';
+type MatchesDict = ReturnType<typeof useT<'tournamentMatches'>>;
 
 type Tournament = {
   id: string;
@@ -154,6 +156,7 @@ export default function TournamentMatchesPage({
   matches,
 }: Props) {
   const router = useRouter();
+  const t = useT('tournamentMatches');
   const tournamentPath = `/tournament/${tournament.slug || tournament.id}`;
   const statusFilter =
     typeof router.query.status === 'string' ? router.query.status : 'all';
@@ -164,21 +167,20 @@ export default function TournamentMatchesPage({
     tournament.start_date,
     tournament.end_date
   );
-  const statusLabel = getStatusLabel(tournament.status);
+  const statusLabel = getStatusLabel(tournament.status, t);
   const statusColor = getStatusChipColor(tournament.status);
 
   const filteredMatches = useMemo(() => {
     return matches.filter((m) => {
       if (statusFilter === 'pending' && m.status !== 'pending') return false;
       if (statusFilter === 'ongoing' && m.status !== 'ongoing') return false;
-      if (statusFilter === 'finished' && m.status !== 'finished')
-        return false;
+      if (statusFilter === 'finished' && m.status !== 'finished') return false;
       if (stageFilter !== 'all' && m.stage?.id !== stageFilter) return false;
       return true;
     });
   }, [matches, statusFilter, stageFilter]);
 
-  const grouped = groupMatchesByDay(filteredMatches);
+  const grouped = groupMatchesByDay(filteredMatches, t.dateTbd);
 
   const hasFilters = statusFilter !== 'all' || stageFilter !== 'all';
 
@@ -201,7 +203,7 @@ export default function TournamentMatchesPage({
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
       <Head>
-        <title>Matchs – {tournament.name} | OW Women&apos;s Cup</title>
+        <title>{format(t.headTitle, { name: tournament.name })}</title>
       </Head>
 
       <main className="container mx-auto px-4 pt-24 pb-16 max-w-6xl">
@@ -221,7 +223,7 @@ export default function TournamentMatchesPage({
               </div>
 
               <Heading typeStyle="heading-md" className="text-gradient mb-1">
-                Matchs – {tournament.name}
+                {format(t.heading, { name: tournament.name })}
               </Heading>
               {dateRangeLabel && (
                 <p className="text-sm text-gray-300 mb-1">
@@ -240,9 +242,7 @@ export default function TournamentMatchesPage({
                 textColor="text-gray-200"
                 className="max-w-xl"
               >
-                Retrouvez ici la liste complète des matchs du tournoi. Utilisez
-                les filtres pour naviguer par phase ou par statut (à venir, en
-                cours, terminés).
+                {t.description}
               </Paragraph>
             </div>
 
@@ -252,7 +252,7 @@ export default function TournamentMatchesPage({
                   type="button"
                   className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-blue-400"
                 >
-                  ← Retour au tournoi
+                  {t.backToTournament}
                 </Button>
               </Link>
               <Link href={`${tournamentPath}/bracket`}>
@@ -260,7 +260,7 @@ export default function TournamentMatchesPage({
                   type="button"
                   className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-purple-400"
                 >
-                  Voir le bracket
+                  {t.viewBracket}
                 </Button>
               </Link>
               <Link href={`${tournamentPath}/maps`}>
@@ -268,7 +268,7 @@ export default function TournamentMatchesPage({
                   type="button"
                   className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-emerald-400"
                 >
-                  Top maps
+                  {t.topMaps}
                 </Button>
               </Link>
             </div>
@@ -281,35 +281,35 @@ export default function TournamentMatchesPage({
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-[11px]">
               <div className="flex flex-wrap gap-2 items-center">
                 <span className="text-gray-400 uppercase tracking-wide">
-                  Filtres
+                  {t.filtersLabel}
                 </span>
 
                 {/* Status filter */}
                 <label className="flex items-center gap-1">
-                  <span className="text-gray-400">Statut :</span>
+                  <span className="text-gray-400">{t.statusFilterLabel}</span>
                   <select
                     name="status"
                     value={statusFilter}
                     onChange={(e) => updateFilter('status', e.target.value)}
                     className="bg-black border border-white/15 rounded-lg px-2 py-1 text-[11px] text-gray-100"
                   >
-                    <option value="all">Tous</option>
-                    <option value="pending">À venir</option>
-                    <option value="ongoing">En cours</option>
-                    <option value="finished">Terminés</option>
+                    <option value="all">{t.filterAll}</option>
+                    <option value="pending">{t.filterUpcoming}</option>
+                    <option value="ongoing">{t.filterOngoing}</option>
+                    <option value="finished">{t.filterFinished}</option>
                   </select>
                 </label>
 
                 {/* Stage filter */}
                 <label className="flex items-center gap-1">
-                  <span className="text-gray-400">Phase :</span>
+                  <span className="text-gray-400">{t.stageFilterLabel}</span>
                   <select
                     name="stageId"
                     value={stageFilter}
                     onChange={(e) => updateFilter('stageId', e.target.value)}
                     className="bg-black border border-white/15 rounded-lg px-2 py-1 text-[11px] text-gray-100 max-w-[180px]"
                   >
-                    <option value="all">Toutes</option>
+                    <option value="all">{t.filterAllStages}</option>
                     {stages.map((s) => (
                       <option key={s.id} value={s.id}>
                         {s.name}
@@ -326,7 +326,7 @@ export default function TournamentMatchesPage({
                       type="button"
                       className="text-xs px-3 py-1.5 bg-transparent border border-white/25 hover:border-red-400 rounded-full"
                     >
-                      Réinitialiser
+                      {t.resetFilters}
                     </Button>
                   </Link>
                 </div>
@@ -340,7 +340,7 @@ export default function TournamentMatchesPage({
           <div className="bg-black/60 border border-white/5 rounded-2xl p-4">
             {filteredMatches.length === 0 && (
               <Paragraph typeStyle="body-sm" textColor="text-gray-300">
-                Aucun match ne correspond aux filtres actuels.
+                {t.noMatchesFilter}
               </Paragraph>
             )}
 
@@ -353,8 +353,12 @@ export default function TournamentMatchesPage({
                         {day.label}
                       </p>
                       <p className="text-[10px] text-gray-500">
-                        {day.matches.length} match
-                        {day.matches.length > 1 ? 's' : ''}
+                        {format(
+                          day.matches.length > 1
+                            ? t.matchesCount_other
+                            : t.matchesCount_one,
+                          { count: day.matches.length }
+                        )}
                       </p>
                     </div>
                     <div className="space-y-1.5">
@@ -378,14 +382,15 @@ export default function TournamentMatchesPage({
  * ────────────────────────────────────────────*/
 
 function MatchRow({ match }: { match: SimpleMatch }) {
-  const t1 = match.team1?.short_name || match.team1?.name || 'Équipe 1';
+  const t = useT('tournamentMatches');
+  const t1 = match.team1?.short_name || match.team1?.name || t.teamPlaceholder1;
   const t2 =
     match.team2?.short_name ||
     match.team2?.name ||
-    (match.is_bye ? '(bye)' : 'Équipe 2');
+    (match.is_bye ? t.byeLabel : t.teamPlaceholder2);
 
   const dateLabel = formatMatchDate(match.scheduled_at);
-  const statusLabel = getMatchStatusShort(match.status);
+  const statusLabel = getMatchStatusShort(match.status, t);
   const statusColor = getMatchStatusColor(match.status);
 
   const isFinished = match.status === 'finished';
@@ -409,10 +414,12 @@ function MatchRow({ match }: { match: SimpleMatch }) {
             {t1}{' '}
             {!match.is_bye && (
               <>
-                <span className="text-gray-500">vs</span> {t2}
+                <span className="text-gray-500">{t.vsLabel}</span> {t2}
               </>
             )}
-            {match.is_bye && <span className="text-gray-500"> (bye)</span>}
+            {match.is_bye && (
+              <span className="text-gray-500"> {t.byeLabel}</span>
+            )}
           </p>
           <div className="flex flex-wrap gap-2 text-[10px] text-gray-400">
             {match.stage && <span>{match.stage.name}</span>}
@@ -434,7 +441,7 @@ function MatchRow({ match }: { match: SimpleMatch }) {
         {/* Time */}
         <div className="flex flex-col items-start">
           <span className="text-[10px] text-gray-300">
-            {dateLabel || 'Horaire à confirmer'}
+            {dateLabel || t.timeTbd}
           </span>
         </div>
 
@@ -452,7 +459,10 @@ function MatchRow({ match }: { match: SimpleMatch }) {
   );
 }
 
-function groupMatchesByDay(matches: SimpleMatch[]): {
+function groupMatchesByDay(
+  matches: SimpleMatch[],
+  dateTbdLabel: string
+): {
   key: string;
   label: string;
   matches: SimpleMatch[];
@@ -471,7 +481,7 @@ function groupMatchesByDay(matches: SimpleMatch[]): {
           day: '2-digit',
           month: '2-digit',
         })
-      : 'Date à définir';
+      : dateTbdLabel;
 
     if (!groups.has(key)) {
       groups.set(key, { key, label, matches: [] });
@@ -533,16 +543,16 @@ function formatMatchDate(iso: string | null): string | null {
   });
 }
 
-function getStatusLabel(status: string): string {
+function getStatusLabel(status: string, t: MatchesDict): string {
   switch (status) {
     case 'upcoming':
-      return 'À venir';
+      return t.statusUpcoming;
     case 'running':
     case 'ongoing':
-      return 'En cours';
+      return t.statusOngoing;
     case 'finished':
     case 'completed':
-      return 'Terminé';
+      return t.statusFinished;
     default:
       return status;
   }
@@ -563,17 +573,17 @@ function getStatusChipColor(status: string): string {
   }
 }
 
-function getMatchStatusShort(status: MatchStatus): string {
+function getMatchStatusShort(status: MatchStatus, t: MatchesDict): string {
   switch (status) {
     case 'pending':
-      return 'À venir';
+      return t.statusUpcoming;
     case 'ongoing':
-      return 'En cours';
+      return t.statusOngoing;
     case 'completed':
     case 'finished':
-      return 'Terminé';
+      return t.statusFinished;
     case 'cancelled':
-      return 'Annulé';
+      return t.statusCancelled;
     default:
       return status;
   }

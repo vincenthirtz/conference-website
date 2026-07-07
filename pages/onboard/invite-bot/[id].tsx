@@ -21,6 +21,7 @@ import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { getServerClient, supabaseAdmin } from '@/utils/supabase';
 import { buildBotInviteUrl } from '@/utils/onboard';
 import { logger } from '@/utils/logger';
+import { useT } from '@/lib/i18n/useT';
 
 type StatusFromApi = {
   id: string;
@@ -131,6 +132,7 @@ function OnboardInviteBotPage({
   requestedName,
   botInviteUrl,
 }: ServerProps) {
+  const t = useT('onboardInviteBot');
   const router = useRouter();
   const [status, setStatus] = useState(initialStatus);
   const [createdTenantId, setCreatedTenantId] = useState<string | null>(null);
@@ -185,23 +187,21 @@ function OnboardInviteBotPage({
           <div className="flex flex-col items-center text-center mb-8">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[10px] uppercase tracking-[0.16em] text-gray-300">
               <span className="px-1.5 py-[2px] rounded-full bg-gradient-to-r from-purple-400/90 to-pink-400/90 text-black font-semibold">
-                Étape 3/3
+                {t.stepBadge}
               </span>
-              <span>Invitez le bot</span>
+              <span>{t.stepSub}</span>
             </div>
             <h1 className="text-3xl font-bold text-gradient mt-4">
-              {isCompleted
-                ? 'Bot installé avec succès'
-                : 'Invitez le bot sur votre serveur'}
+              {isCompleted ? t.titleCompleted : t.title}
             </h1>
             <p className="text-sm text-gray-300 mt-2 max-w-md">
-              Organisation :{' '}
+              {t.orgLabel}{' '}
               <span className="text-white font-semibold">
                 {requestedName || '—'}
               </span>{' '}
               {requestedSlug && (
                 <>
-                  • slug :{' '}
+                  {t.slugLabel}{' '}
                   <span className="font-mono text-white">{requestedSlug}</span>
                 </>
               )}
@@ -211,17 +211,17 @@ function OnboardInviteBotPage({
           {isBlocked && (
             <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-6 mb-6">
               <h2 className="text-sm font-semibold text-amber-100 mb-1">
-                Demande non prête
+                {t.blockedTitle}
               </h2>
               <p className="text-xs text-amber-100/90">
-                Statut actuel : <span className="font-mono">{status}</span>.
-                Cette étape attend que votre email soit confirmé. Vérifiez vos
-                mails ou
+                {t.blockedStatusLabel}{' '}
+                <span className="font-mono">{status}</span>
+                {t.blockedBody}
                 <Link
                   href="/onboard/request"
                   className="underline ml-1 hover:no-underline"
                 >
-                  recommencez la demande
+                  {t.restart}
                 </Link>
                 .
               </p>
@@ -249,26 +249,22 @@ function OnboardInviteBotPage({
                 </div>
                 <div>
                   <h2 className="text-base font-semibold text-emerald-100">
-                    Le bot est en place sur votre serveur Discord.
+                    {t.completedHeading}
                   </h2>
                   <p className="text-sm text-emerald-100/90 mt-1">
-                    Pour des raisons de sécurité, vos secrets (BOT_API_KEY,
-                    BOT_WEBHOOK_SECRET) ne sont pas affichés sur cette page.
-                    Nous venons de vous envoyer un email avec un lien unique
-                    vers la page de récupération.
+                    {t.completedBody}
                   </p>
                 </div>
               </div>
               <p className="text-xs text-emerald-100/80">
-                Si vous ne recevez pas l&apos;email dans les prochaines minutes,
-                contactez le staff via{' '}
+                {t.completedContact}{' '}
                 <a
                   href="https://discord.gg/gERSsjC3Vd"
                   target="_blank"
                   rel="noreferrer noopener"
                   className="underline hover:no-underline"
                 >
-                  notre Discord
+                  {t.ourDiscord}
                 </a>
                 .
               </p>
@@ -281,20 +277,18 @@ function OnboardInviteBotPage({
           ) : (
             <div className="rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-xl p-6 md:p-8 shadow-2xl">
               <p className="text-sm text-gray-300 mb-5">
-                Cliquez sur le bouton ci-dessous pour ouvrir Discord et inviter
-                le bot sur votre serveur. Vous devez disposer du rôle{' '}
+                {t.inviteIntroBefore}{' '}
                 <span className="text-white font-semibold">
-                  Gérer le serveur
+                  {t.manageServerRole}
                 </span>{' '}
-                sur la guilde concernée.
+                {t.inviteIntroAfter}
               </p>
 
               {!botInviteUrl ? (
                 <div className="rounded-xl border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-100">
-                  Variable d&apos;environnement{' '}
-                  <span className="font-mono">DISCORD_CLIENT_ID</span> non
-                  configurée — impossible de générer l&apos;URL
-                  d&apos;invitation. Contactez le staff.
+                  {t.noUrlBefore}{' '}
+                  <span className="font-mono">DISCORD_CLIENT_ID</span>{' '}
+                  {t.noUrlAfter}
                 </div>
               ) : (
                 <button
@@ -319,7 +313,7 @@ function OnboardInviteBotPage({
                       fill="currentColor"
                     />
                   </svg>
-                  Inviter le bot sur mon serveur
+                  {t.inviteButton}
                 </button>
               )}
 
@@ -329,28 +323,22 @@ function OnboardInviteBotPage({
                     1
                   </span>
                   <span>
-                    Cliquez sur <span className="text-white">Inviter</span> —
-                    une nouvelle fenêtre Discord s&apos;ouvre.
+                    {t.step1Before}{' '}
+                    <span className="text-white">{t.step1Highlight}</span>{' '}
+                    {t.step1After}
                   </span>
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="flex-shrink-0 w-6 h-6 rounded-full bg-white/10 border border-white/10 text-xs font-semibold flex items-center justify-center">
                     2
                   </span>
-                  <span>
-                    Sélectionnez votre serveur dans la liste et autorisez les
-                    permissions demandées.
-                  </span>
+                  <span>{t.step2}</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="flex-shrink-0 w-6 h-6 rounded-full bg-white/10 border border-white/10 text-xs font-semibold flex items-center justify-center">
                     3
                   </span>
-                  <span>
-                    Revenez sur cette page — nous détectons automatiquement
-                    l&apos;arrivée du bot et vous recevrez vos secrets par email
-                    dans la foulée.
-                  </span>
+                  <span>{t.step3}</span>
                 </li>
               </ol>
 
@@ -359,17 +347,14 @@ function OnboardInviteBotPage({
                   className="inline-block h-3 w-3 rounded-full border-2 border-white/30 border-t-white animate-spin"
                   aria-hidden
                 />
-                <span>
-                  En attente de l&apos;arrivée du bot — vérification toutes les
-                  5 secondes.
-                </span>
+                <span>{t.waiting}</span>
               </div>
             </div>
           )}
 
           <div className="mt-6 text-center text-xs text-gray-400">
             <Link href="/onboard" className="hover:text-white">
-              ← Retour à la présentation
+              {t.backToIntro}
             </Link>
           </div>
         </div>

@@ -14,13 +14,18 @@ import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import type { League, LeagueStatus } from '@/types/leagues';
 import { readPublicLeagues } from '@/utils/leagues/readPublicLeagues';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
+import { useT } from '@/lib/i18n/useT';
 
-const STATUS_LABELS: Record<LeagueStatus, string> = {
-  draft: 'Brouillon',
-  active: 'En cours',
-  finished: 'Terminée',
-  archived: 'Archivée',
-};
+type LeaguesIndexDict = ReturnType<typeof useT<'leaguesIndex'>>;
+
+const getStatusLabels = (
+  t: LeaguesIndexDict
+): Record<LeagueStatus, string> => ({
+  draft: t.statusDraft,
+  active: t.statusActive,
+  finished: t.statusFinished,
+  archived: t.statusArchived,
+});
 
 const STATUS_CLASSES: Record<LeagueStatus, string> = {
   draft: 'bg-neutral-500/15 text-neutral-300',
@@ -50,6 +55,8 @@ function periodLabel(league: League): string | null {
 export default function LeaguesPage({
   initialLeagues,
 }: InferGetStaticPropsType<typeof getStaticProps>) {
+  const t = useT('leaguesIndex');
+  const statusLabels = getStatusLabels(t);
   const hasInitial = initialLeagues.length > 0;
   const [leagues, setLeagues] = useState<League[]>(initialLeagues);
   // Pas de spinner si les props ISR sont pré-remplies : le fetch client ne
@@ -86,13 +93,11 @@ export default function LeaguesPage({
       <main className="container mx-auto max-w-5xl px-4 pb-16 pt-24">
         <header className="mb-8 text-center">
           <p className="mb-2 text-xs uppercase tracking-widest text-purple-300">
-            Ligues
+            {t.eyebrow}
           </p>
-          <h1 className="text-3xl font-bold sm:text-4xl">Ligues & saisons</h1>
+          <h1 className="text-3xl font-bold sm:text-4xl">{t.heading}</h1>
           <p className="mx-auto mt-3 max-w-2xl text-sm text-neutral-400">
-            Suivez les classements cumulés sur plusieurs tournois. Les points
-            sont attribués selon le classement final de chaque tournoi de la
-            saison.
+            {t.subtitle}
           </p>
         </header>
 
@@ -119,7 +124,7 @@ export default function LeaguesPage({
                       <span
                         className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide ${STATUS_CLASSES[league.status]}`}
                       >
-                        {STATUS_LABELS[league.status]}
+                        {statusLabels[league.status]}
                       </span>
                     </div>
                     {league.description && (
@@ -160,20 +165,20 @@ function LoadingState() {
 }
 
 function EmptyState() {
+  const t = useT('leaguesIndex');
   return (
     <section className="rounded-2xl border border-neutral-800 bg-neutral-900/40 py-16 text-center">
       <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-purple-500/10 text-2xl">
         📅
       </div>
-      <h2 className="mb-2 text-lg font-semibold">Aucune ligue publiée</h2>
-      <p className="mx-auto max-w-md text-sm text-neutral-400">
-        Aucune saison n&apos;est disponible pour le moment. Revenez bientôt !
-      </p>
+      <h2 className="mb-2 text-lg font-semibold">{t.emptyHeading}</h2>
+      <p className="mx-auto max-w-md text-sm text-neutral-400">{t.emptyBody}</p>
     </section>
   );
 }
 
 function ErrorState({ onRetry }: { onRetry: () => void }) {
+  const t = useT('leaguesIndex');
   return (
     <section className="py-16 text-center" role="alert">
       <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full border border-red-500/30 bg-red-500/10">
@@ -191,18 +196,14 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
           />
         </svg>
       </div>
-      <h2 className="mb-2 text-xl font-semibold">
-        Impossible de charger les ligues
-      </h2>
-      <p className="mb-6 text-neutral-400">
-        Une erreur est survenue. Réessayez dans quelques instants.
-      </p>
+      <h2 className="mb-2 text-xl font-semibold">{t.errorHeading}</h2>
+      <p className="mb-6 text-neutral-400">{t.errorBody}</p>
       <button
         type="button"
         onClick={onRetry}
         className="rounded-md bg-purple-500 px-4 py-2 text-sm font-semibold transition-colors hover:bg-purple-400"
       >
-        Réessayer
+        {t.retry}
       </button>
     </section>
   );

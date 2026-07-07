@@ -14,6 +14,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { findTournamentByIdOrSlug } from '@/utils/tournamentLookup';
 import { logger } from '@/utils/logger';
+import { useT, format } from '@/lib/i18n/useT';
 
 type Tournament = {
   id: string;
@@ -87,15 +88,16 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
 };
 
 export default function TournamentTeamsPage({ tournament, teams }: Props) {
+  const t = useT('tournamentTeams');
   const tournamentPath = `/tournament/${tournament.slug || tournament.id}`;
 
   return (
     <>
       <Head>
-        <title>{`Équipes · ${tournament.name}`}</title>
+        <title>{format(t.headTitle, { name: tournament.name })}</title>
         <meta
           name="description"
-          content={`Toutes les équipes inscrites au tournoi ${tournament.name}.`}
+          content={format(t.metaDescription, { name: tournament.name })}
         />
       </Head>
 
@@ -103,14 +105,14 @@ export default function TournamentTeamsPage({ tournament, teams }: Props) {
         <div className="max-w-5xl mx-auto px-4">
           <section className="mb-8">
             <p className="text-xs uppercase tracking-[0.18em] text-purple-200/80">
-              Tournoi · Équipes
+              {t.eyebrow}
             </p>
             <Heading
               level="h1"
               typeStyle="heading-md"
               className="text-gradient mb-1"
             >
-              Équipes inscrites
+              {t.heading}
             </Heading>
             <p className="text-sm text-gray-300">
               <Link
@@ -118,22 +120,25 @@ export default function TournamentTeamsPage({ tournament, teams }: Props) {
                 className="text-purple-300 hover:text-purple-200 underline"
               >
                 {tournament.name}
-              </Link>
-              {` · ${teams.length} équipe${teams.length > 1 ? 's' : ''}`}
+              </Link>{' '}
+              {format(
+                teams.length > 1 ? t.teamsCount_other : t.teamsCount_one,
+                { count: teams.length }
+              )}
             </p>
           </section>
 
           {teams.length === 0 ? (
             <div className="rounded-xl border border-white/10 bg-white/[0.03] p-8 text-center">
               <Paragraph typeStyle="body-md" textColor="text-gray-300">
-                Aucune équipe inscrite pour le moment.
+                {t.empty}
               </Paragraph>
               <Link href={tournamentPath} className="mt-4 inline-block">
                 <Button
                   type="button"
                   className="px-6 py-2.5 text-xs font-semibold rounded-full bg-white/5 border border-white/20 hover:border-purple-400/60 hover:bg-purple-500/10 transition-all"
                 >
-                  Retour au tournoi
+                  {t.backToTournament}
                 </Button>
               </Link>
             </div>

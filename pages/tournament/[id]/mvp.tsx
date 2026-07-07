@@ -11,6 +11,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { findTournamentByIdOrSlug } from '@/utils/tournamentLookup';
 import { maskBattleTag } from '@/utils/battleTag';
+import { useT, format } from '@/lib/i18n/useT';
 
 type LeaderboardEntry = {
   memberId: string | null;
@@ -234,13 +235,14 @@ export default function TournamentMvpPage({
   leaderboard,
   perMatch,
 }: Props) {
+  const t = useT('tournamentMvp');
   const matchesWithMvp = perMatch.filter((m) => m.battleTag || m.memberId);
   const tournamentPath = `/tournament/${tournament.slug || tournament.id}`;
 
   return (
     <>
       <Head>
-        <title>{tournament.name} · MVP du tournoi</title>
+        <title>{format(t.headTitle, { name: tournament.name })}</title>
         <meta
           name="description"
           content={`Classement des MVP du tournoi ${tournament.name}`}
@@ -253,14 +255,14 @@ export default function TournamentMvpPage({
             <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
               <div>
                 <p className="text-xs uppercase tracking-[0.18em] text-purple-200/80">
-                  Tournoi · MVP
+                  {t.eyebrow}
                 </p>
                 <Heading
                   level="h1"
                   typeStyle="heading-md"
                   className="text-gradient mb-2"
                 >
-                  MVP du tournoi
+                  {t.heading}
                 </Heading>
                 <p className="text-sm text-gray-300">{tournament.name}</p>
                 <Paragraph
@@ -268,9 +270,10 @@ export default function TournamentMvpPage({
                   textColor="text-gray-200"
                   className="max-w-xl mt-2"
                 >
-                  Classement des joueuses élues MVP par sondage Discord après
-                  chaque match. {totalMvpAwards} MVP attribué(s) sur{' '}
-                  {totalFinishedMatches} match(s) terminé(s).
+                  {format(t.intro, {
+                    awards: totalMvpAwards,
+                    matches: totalFinishedMatches,
+                  })}
                 </Paragraph>
               </div>
 
@@ -280,7 +283,7 @@ export default function TournamentMvpPage({
                     type="button"
                     className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-blue-400"
                   >
-                    ← Retour au tournoi
+                    {t.backToTournament}
                   </Button>
                 </Link>
                 <Link href={`${tournamentPath}/stats`}>
@@ -288,7 +291,7 @@ export default function TournamentMvpPage({
                     type="button"
                     className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-emerald-400"
                   >
-                    Stats équipes
+                    {t.teamStats}
                   </Button>
                 </Link>
                 <Link href={`${tournamentPath}/matches`}>
@@ -296,7 +299,7 @@ export default function TournamentMvpPage({
                     type="button"
                     className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-pink-400"
                   >
-                    Tous les matchs
+                    {t.allMatches}
                   </Button>
                 </Link>
               </div>
@@ -306,9 +309,7 @@ export default function TournamentMvpPage({
           {leaderboard.length === 0 ? (
             <section className="bg-black/60 border border-white/5 rounded-2xl p-8 text-center">
               <Paragraph typeStyle="body-sm" textColor="text-gray-300">
-                Aucun MVP n&apos;a encore été désigné sur ce tournoi. Les MVP
-                sont importés manuellement par le staff après le sondage
-                Discord.
+                {t.empty}
               </Paragraph>
             </section>
           ) : (
@@ -317,9 +318,9 @@ export default function TournamentMvpPage({
                 <div className="bg-black/60 border border-white/5 rounded-2xl overflow-hidden">
                   <div className="grid grid-cols-12 gap-2 px-4 py-3 text-xs uppercase tracking-[0.16em] text-gray-400 border-b border-white/5">
                     <div className="col-span-1">#</div>
-                    <div className="col-span-5">Joueur</div>
-                    <div className="col-span-4">Équipe</div>
-                    <div className="col-span-2 text-right">MVP</div>
+                    <div className="col-span-5">{t.colPlayer}</div>
+                    <div className="col-span-4">{t.colTeam}</div>
+                    <div className="col-span-2 text-right">{t.colMvp}</div>
                   </div>
                   {leaderboard.map((entry, idx) => (
                     <div
@@ -335,7 +336,7 @@ export default function TournamentMvpPage({
                       </div>
                       <div className="col-span-5">
                         <p className="text-sm font-semibold truncate">
-                          {entry.battleTag || 'Joueur inconnu'}
+                          {entry.battleTag || t.unknownPlayer}
                         </p>
                       </div>
                       <div className="col-span-4 text-sm text-gray-300 truncate">
@@ -352,7 +353,7 @@ export default function TournamentMvpPage({
               {matchesWithMvp.length > 0 && (
                 <section>
                   <Heading level="h2" typeStyle="heading-md" className="mb-3">
-                    MVP par match
+                    {t.perMatchHeading}
                   </Heading>
                   <div className="bg-black/60 border border-white/5 rounded-2xl overflow-hidden">
                     {matchesWithMvp.map((m) => (

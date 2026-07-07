@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { supabaseClient } from '@/utils/supabase';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useT } from '@/lib/i18n/useT';
 
 import { logger } from '../../utils/logger';
 export default function DiscordMemberRedirect() {
   const router = useRouter();
   const { adminFetch } = useAdminFetch();
-  const [status, setStatus] = useState('Connexion via Discord…');
+  const t = useT('authDiscordMember');
+  const [status, setStatus] = useState(t.statusConnecting);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -22,7 +24,7 @@ export default function DiscordMemberRedirect() {
 
         // 1) Si retour OAuth avec code/state → échanger contre une session
         if (code && state) {
-          setStatus('Validation de la connexion…');
+          setStatus(t.statusValidating);
           const { error: exchangeError } =
             await supabaseClient.auth.exchangeCodeForSession(code);
           if (exchangeError) {
@@ -34,7 +36,7 @@ export default function DiscordMemberRedirect() {
         const { data: sessionData, error: sessionErr } =
           await supabaseClient.auth.getSession();
         if (sessionErr || !sessionData.session?.user) {
-          setStatus("Session introuvable. Redirection vers l'accueil.");
+          setStatus(t.statusSessionNotFound);
           setTimeout(() => router.replace('/'), 1000);
           return;
         }
@@ -63,7 +65,7 @@ export default function DiscordMemberRedirect() {
 
         // 3) Si la destination est /admin, vérifier que l'utilisateur a un rôle staff
         if (next.startsWith('/admin')) {
-          setStatus('Vérification des permissions…');
+          setStatus(t.statusCheckingPerms);
 
           const res = await adminFetch('/api/admin/me', {
             skipAuthRedirect: true,
@@ -71,22 +73,20 @@ export default function DiscordMemberRedirect() {
 
           if (!res.ok) {
             // L'utilisateur n'a pas de rôle staff → rediriger vers l'accueil avec message
-            setError(
-              "Ton compte n'a pas d'accès staff. Contacte un admin si c'est une erreur."
-            );
-            setStatus("Pas d'accès staff. Redirection vers l'accueil…");
+            setError(t.errNoStaff);
+            setStatus(t.statusNoStaffAccess);
             await supabaseClient.auth.signOut();
             setTimeout(() => router.replace('/'), 2000);
             return;
           }
         }
 
-        setStatus('Redirection…');
+        setStatus(t.statusRedirecting);
         router.replace(next);
       } catch (e) {
         logger.error('[discord-member] error', e);
-        setError('Erreur de connexion Discord. Réessaie.');
-        setStatus('Erreur de connexion. Redirection vers accueil…');
+        setError(t.errConnection);
+        setStatus(t.statusConnectionError);
         setTimeout(() => router.replace('/'), 1000);
       }
     };
@@ -99,9 +99,7 @@ export default function DiscordMemberRedirect() {
     <div className="min-h-screen bg-black text-white flex items-center justify-center">
       <div className="text-center space-y-2">
         <div className="text-lg font-semibold">{status}</div>
-        <div className="text-sm text-gray-400">
-          Merci de patienter pendant la finalisation de la connexion.
-        </div>
+        <div className="text-sm text-gray-400">{t.waitMessage}</div>
         {error && <div className="text-sm text-red-300 mt-2">{error}</div>}
       </div>
     </div>

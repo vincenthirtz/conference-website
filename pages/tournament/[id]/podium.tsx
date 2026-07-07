@@ -13,7 +13,10 @@ import Paragraph from '@/components/Typography/paragraph';
 import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { findTournamentByIdOrSlug } from '@/utils/tournamentLookup';
+import { useT, format } from '@/lib/i18n/useT';
 import { logger } from '../../../utils/logger';
+
+type PodiumDict = ReturnType<typeof useT<'tournamentPodium'>>;
 
 type Tournament = {
   id: string;
@@ -121,17 +124,29 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
   };
 };
 
-const MEDAL: Record<number, { emoji: string; label: string; color: string }> = {
-  1: { emoji: '🥇', label: '1ʳᵉ place', color: 'from-amber-400 to-yellow-600' },
+const getMedal = (
+  t: PodiumDict
+): Record<number, { emoji: string; label: string; color: string }> => ({
+  1: {
+    emoji: '🥇',
+    label: t.medalFirst,
+    color: 'from-amber-400 to-yellow-600',
+  },
   2: {
     emoji: '🥈',
-    label: '2ᵉ place',
+    label: t.medalSecond,
     color: 'from-neutral-200 to-neutral-400',
   },
-  3: { emoji: '🥉', label: '3ᵉ place', color: 'from-orange-500 to-amber-700' },
-};
+  3: {
+    emoji: '🥉',
+    label: t.medalThird,
+    color: 'from-orange-500 to-amber-700',
+  },
+});
 
 export default function TournamentPodiumPage({ tournament, rankings }: Props) {
+  const t = useT('tournamentPodium');
+  const MEDAL = getMedal(t);
   const top3 = rankings.filter((r) => r.rank <= 3);
   const rest = rankings.filter((r) => r.rank > 3);
 
@@ -147,12 +162,15 @@ export default function TournamentPodiumPage({ tournament, rankings }: Props) {
   return (
     <>
       <Head>
-        <title>Podium · {tournament.name}</title>
+        <title>{format(t.headTitle, { name: tournament.name })}</title>
         <meta
           name="description"
-          content={`Classement final officiel de ${tournament.name}.`}
+          content={format(t.metaDescription, { name: tournament.name })}
         />
-        <meta property="og:title" content={`Podium · ${tournament.name}`} />
+        <meta
+          property="og:title"
+          content={format(t.headTitle, { name: tournament.name })}
+        />
       </Head>
 
       <main className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-black text-white">
@@ -161,17 +179,17 @@ export default function TournamentPodiumPage({ tournament, rankings }: Props) {
             href={`/tournament/${tournament.slug ?? tournament.id}`}
             className="inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white mb-6"
           >
-            ← Retour au tournoi
+            {t.backToTournament}
           </Link>
 
           <div className="text-center mb-10">
             <p className="text-xs uppercase tracking-widest text-purple-300 mb-2">
-              Classement final
+              {t.eyebrow}
             </p>
             <Heading level="h1">{tournament.name}</Heading>
             {frozenAtLabel && (
               <Paragraph className="text-neutral-400 mt-2">
-                Tournoi clôturé le {frozenAtLabel}
+                {format(t.closedOn, { date: frozenAtLabel })}
               </Paragraph>
             )}
           </div>
@@ -245,10 +263,10 @@ export default function TournamentPodiumPage({ tournament, rankings }: Props) {
               <table className="w-full text-sm">
                 <thead className="bg-neutral-900/80 text-xs uppercase text-neutral-400">
                   <tr>
-                    <th className="px-4 py-3 text-left w-16">Rang</th>
-                    <th className="px-4 py-3 text-left">Équipe</th>
-                    <th className="px-4 py-3 text-left">Prix</th>
-                    <th className="px-4 py-3 text-left">Notes</th>
+                    <th className="px-4 py-3 text-left w-16">{t.colRank}</th>
+                    <th className="px-4 py-3 text-left">{t.colTeam}</th>
+                    <th className="px-4 py-3 text-left">{t.colPrize}</th>
+                    <th className="px-4 py-3 text-left">{t.colNotes}</th>
                   </tr>
                 </thead>
                 <tbody>

@@ -18,11 +18,13 @@ import Button from '@/components/Buttons/button';
 import { supabaseClient } from '@/utils/supabase';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { logger } from '@/utils/logger';
+import { useT } from '@/lib/i18n/useT';
 
 type Stage = 'idle' | 'sending' | 'sent';
 
 const CasterLoginPage = () => {
   const router = useRouter();
+  const t = useT('casterLogin');
 
   const [email, setEmail] = useState('');
   const [stage, setStage] = useState<Stage>('idle');
@@ -67,17 +69,13 @@ const CasterLoginPage = () => {
     if (!router.isReady) return;
     const err = router.query.error;
     if (err === 'not_caster') {
-      setErrorMsg(
-        'Ton compte n est lie a aucune fiche caster active. Contacte un admin.'
-      );
+      setErrorMsg(t.errNotCaster);
     } else if (err === 'no_session') {
-      setErrorMsg(
-        'Lien expire ou invalide. Demande un nouveau lien ci-dessous.'
-      );
+      setErrorMsg(t.errNoSession);
     } else if (err === 'callback_error') {
-      setErrorMsg('Erreur durant la connexion. Reessaie dans un instant.');
+      setErrorMsg(t.errCallback);
     }
-  }, [router.isReady, router.query.error]);
+  }, [router.isReady, router.query.error, t]);
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent<HTMLFormElement>) => {
@@ -87,7 +85,7 @@ const CasterLoginPage = () => {
 
       const trimmed = email.trim();
       if (!trimmed) {
-        setErrorMsg('Entre ton email caster.');
+        setErrorMsg(t.errEmptyEmail);
         return;
       }
 
@@ -102,26 +100,24 @@ const CasterLoginPage = () => {
         // voulu (anti-enumeration). On affiche un message neutre.
         if (!res.ok) {
           setStage('idle');
-          setErrorMsg('Erreur reseau. Reessaie dans un instant.');
+          setErrorMsg(t.errNetwork);
           return;
         }
         setStage('sent');
-        setInfo(
-          'Si tu es caster, un lien de connexion vient d arriver dans ta boite mail. Verifie aussi les spams.'
-        );
+        setInfo(t.infoSent);
       } catch (err) {
         logger.error('[caster/login] submit error', err);
         setStage('idle');
-        setErrorMsg('Erreur reseau. Reessaie dans un instant.');
+        setErrorMsg(t.errNetwork);
       }
     },
-    [email]
+    [email, t]
   );
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
       <Head>
-        <title>Connexion caster | OW Women&apos;s Cup</title>
+        <title>{t.docTitle}</title>
       </Head>
 
       <main className="flex items-center justify-center px-4 pt-28 pb-20 md:pt-24 md:pb-10">
@@ -131,24 +127,21 @@ const CasterLoginPage = () => {
               typeStyle="heading-md"
               className="text-gradient text-center mt-4"
             >
-              Connexion caster
+              {t.title}
             </Heading>
             <Paragraph
               typeStyle="body-sm"
               className="mt-2 text-center max-w-sm"
               textColor="text-gray-300"
             >
-              Acces au Cockpit du caster — segments, checklist, hotkeys et
-              briefing.
+              {t.subtitle}
             </Paragraph>
           </div>
 
           {checking ? (
             <div className="flex flex-col items-center justify-center py-20">
               <div className="w-8 h-8 border-2 border-neutral-600 border-t-purple-400 rounded-full animate-spin mb-4" />
-              <p className="text-sm text-gray-400">
-                Verification de la session...
-              </p>
+              <p className="text-sm text-gray-400">{t.checkingSession}</p>
             </div>
           ) : (
             <>
@@ -159,7 +152,7 @@ const CasterLoginPage = () => {
                       htmlFor="email"
                       className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2"
                     >
-                      Email caster
+                      {t.emailLabel}
                     </label>
                     <input
                       id="email"
@@ -170,7 +163,7 @@ const CasterLoginPage = () => {
                       onChange={(e) => setEmail(e.target.value)}
                       disabled={stage === 'sending' || stage === 'sent'}
                       className="w-full rounded-xl border border-white/15 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/80 focus:border-purple-400/80 transition disabled:opacity-60"
-                      placeholder="prenom.nom@exemple.tld"
+                      placeholder={t.emailPlaceholder}
                     />
                   </div>
 
@@ -201,10 +194,10 @@ const CasterLoginPage = () => {
                       disabled={stage === 'sending'}
                     >
                       {stage === 'sending'
-                        ? 'Envoi du lien...'
+                        ? t.sending
                         : stage === 'sent'
-                          ? 'Lien envoye'
-                          : 'Recevoir le lien'}
+                          ? t.sent
+                          : t.sendLink}
                     </Button>
                     {stage === 'sent' && (
                       <Button
@@ -215,7 +208,7 @@ const CasterLoginPage = () => {
                           setInfo(null);
                         }}
                       >
-                        Renvoyer un lien
+                        {t.resendLink}
                       </Button>
                     )}
                   </div>
@@ -227,7 +220,7 @@ const CasterLoginPage = () => {
                   href="/"
                   className="text-xs text-gray-400 hover:text-gray-200 hover:underline"
                 >
-                  &larr; Retour au site public
+                  {t.backToSite}
                 </Link>
               </div>
             </>

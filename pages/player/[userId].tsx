@@ -36,6 +36,9 @@ import type {
 } from '@/types/rating';
 import { readPlayerProfile } from '@/utils/rating/readPlayerProfile';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
+import { useT, format } from '@/lib/i18n/useT';
+
+type PlayerProfileDict = ReturnType<typeof useT<'playerPublicProfile'>>;
 
 type FetchState =
   | { status: 'loading' }
@@ -58,6 +61,7 @@ function formatDate(iso: string): string {
 export default function PlayerProfilePage({
   profile,
 }: InferGetStaticPropsType<typeof getStaticProps>) {
+  const t = useT('playerPublicProfile');
   const router = useRouter();
   const { userId } = router.query;
   const id = typeof userId === 'string' ? userId : '';
@@ -69,17 +73,18 @@ export default function PlayerProfilePage({
   // Premier rendu = données pré-remplies par l'ISR (getStaticProps). Le fetch
   // client ne se déclenche qu'en fallback ISR (profil absent des props) ou au
   // retour de focus ; il ne double PAS la lecture des props ISR fraîches.
-  const fetcher = useCallback(async (): Promise<PlayerProfileResponse | null> => {
-    if (!id) return null;
-    const res = await fetch(`/api/players/${encodeURIComponent(id)}/profile`);
-    if (res.status === 404) {
-      setNotFound(true);
-      return null;
-    }
-    setNotFound(false);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return (await res.json()) as PlayerProfileResponse;
-  }, [id]);
+  const fetcher =
+    useCallback(async (): Promise<PlayerProfileResponse | null> => {
+      if (!id) return null;
+      const res = await fetch(`/api/players/${encodeURIComponent(id)}/profile`);
+      if (res.status === 404) {
+        setNotFound(true);
+        return null;
+      }
+      setNotFound(false);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return (await res.json()) as PlayerProfileResponse;
+    }, [id]);
 
   const { data, error, refresh } = useIsrRefresh<PlayerProfileResponse>({
     initial: profile ?? null,
@@ -102,7 +107,7 @@ export default function PlayerProfilePage({
           href="/leaderboard"
           className="mb-6 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white"
         >
-          ← Retour au classement
+          {t.backToLeaderboard}
         </Link>
 
         {state.status === 'loading' && <LoadingState />}
@@ -115,6 +120,7 @@ export default function PlayerProfilePage({
 }
 
 function Profile({ data }: { data: PlayerProfileResponse }) {
+  const t = useT('playerPublicProfile');
   const { player, history, recentMatches, h2h, achievements } = data;
   const label = coreLabel(player);
 
@@ -126,7 +132,7 @@ function Profile({ data }: { data: PlayerProfileResponse }) {
 
       <section className="mt-8">
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-purple-300">
-          Progression du rating
+          {t.ratingProgression}
         </h2>
         <RatingChart history={history} />
       </section>
@@ -154,28 +160,29 @@ const BADGE_TIER_STYLES: Record<ProfileBadgeTier | 'none', string> = {
   none: 'border-purple-500/40 bg-purple-500/15 text-purple-200',
 };
 
-const BADGE_TIER_LABEL: Record<ProfileBadgeTier, string> = {
-  bronze: 'bronze',
-  silver: 'argent',
-  gold: 'or',
-  platinum: 'platine',
-};
+const getBadgeTierLabel = (
+  t: PlayerProfileDict
+): Record<ProfileBadgeTier, string> => ({
+  bronze: t.tierBronze,
+  silver: t.tierSilver,
+  gold: t.tierGold,
+  platinum: t.tierPlatinum,
+});
 
 function BadgesSection({ badges }: { badges: ProfileBadge[] }) {
+  const t = useT('playerPublicProfile');
+  const badgeTierLabel = getBadgeTierLabel(t);
   if (badges.length === 0) return null;
 
   return (
     <section className="mt-8">
       <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-purple-300">
-        Badges
+        {t.badges}
       </h2>
       <ul className="flex flex-wrap gap-2">
         {badges.map((badge) => {
-          const styles =
-            BADGE_TIER_STYLES[badge.tier ?? 'none'];
-          const tierText = badge.tier
-            ? ` (${BADGE_TIER_LABEL[badge.tier]})`
-            : '';
+          const styles = BADGE_TIER_STYLES[badge.tier ?? 'none'];
+          const tierText = badge.tier ? ` (${badgeTierLabel[badge.tier]})` : '';
           return (
             <li key={badge.key}>
               <span
@@ -194,17 +201,14 @@ function BadgesSection({ badges }: { badges: ProfileBadge[] }) {
 }
 
 // --- Palmarès ---------------------------------------------------------------
-function PalmaresSection({
-  placements,
-}: {
-  placements: ProfilePlacement[];
-}) {
+function PalmaresSection({ placements }: { placements: ProfilePlacement[] }) {
+  const t = useT('playerPublicProfile');
   if (placements.length === 0) return null;
 
   return (
     <section className="mt-8">
       <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-purple-300">
-        Palmarès
+        {t.palmares}
       </h2>
       <ul className="divide-y divide-neutral-800/60 overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-900/40">
         {placements.map((p) => (
@@ -223,12 +227,14 @@ function PalmaresSection({
                     {p.tournamentName}
                   </Link>
                 ) : (
-                  <span className="text-neutral-400">Tournoi</span>
+                  <span className="text-neutral-400">
+                    {t.tournamentFallback}
+                  </span>
                 )}
               </div>
               {p.teamName ? (
                 <div className="truncate text-xs text-neutral-500">
-                  avec{' '}
+                  {t.withTeam}{' '}
                   <Link
                     href={`/team/${p.teamId}`}
                     className="hover:text-purple-300 hover:underline"
@@ -254,10 +260,23 @@ function PalmaresSection({
 // masqué aux lecteurs d'écran (aria-hidden) ; le rang réel est fourni en
 // texte alternatif via aria-label sur le conteneur.
 function RankMedal({ rank }: { rank: number }) {
+  const t = useT('playerPublicProfile');
   const podium: Record<number, { emoji: string; cls: string; word: string }> = {
-    1: { emoji: '🥇', cls: 'bg-yellow-500/15 text-yellow-300', word: '1re place' },
-    2: { emoji: '🥈', cls: 'bg-zinc-400/15 text-zinc-200', word: '2e place' },
-    3: { emoji: '🥉', cls: 'bg-amber-700/20 text-amber-300', word: '3e place' },
+    1: {
+      emoji: '🥇',
+      cls: 'bg-yellow-500/15 text-yellow-300',
+      word: t.firstPlace,
+    },
+    2: {
+      emoji: '🥈',
+      cls: 'bg-zinc-400/15 text-zinc-200',
+      word: t.secondPlace,
+    },
+    3: {
+      emoji: '🥉',
+      cls: 'bg-amber-700/20 text-amber-300',
+      word: t.thirdPlace,
+    },
   };
   const medal = podium[rank];
 
@@ -276,7 +295,7 @@ function RankMedal({ rank }: { rank: number }) {
   return (
     <span
       className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-neutral-800 text-xs font-bold text-neutral-300"
-      aria-label={`${rank}e place`}
+      aria-label={format(t.nthPlace, { rank })}
     >
       #{rank}
     </span>
@@ -285,20 +304,21 @@ function RankMedal({ rank }: { rank: number }) {
 
 // --- Saisons (leagues) ------------------------------------------------------
 function SeasonsSection({ seasons }: { seasons: ProfileSeason[] }) {
+  const t = useT('playerPublicProfile');
   if (seasons.length === 0) return null;
 
   return (
     <section className="mt-8">
       <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-purple-300">
-        Saisons
+        {t.seasons}
       </h2>
       <div className="overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-900/40">
         <table className="w-full text-sm">
           <thead className="bg-neutral-900/80 text-xs uppercase text-neutral-400">
             <tr>
-              <th className="px-4 py-3 text-left">League</th>
-              <th className="px-4 py-3 text-right">Rang</th>
-              <th className="px-4 py-3 text-right">Points</th>
+              <th className="px-4 py-3 text-left">{t.thLeague}</th>
+              <th className="px-4 py-3 text-right">{t.thRank}</th>
+              <th className="px-4 py-3 text-right">{t.thPoints}</th>
             </tr>
           </thead>
           <tbody>
@@ -320,7 +340,7 @@ function SeasonsSection({ seasons }: { seasons: ProfileSeason[] }) {
                       <span className="text-neutral-200">{s.leagueName}</span>
                     )
                   ) : (
-                    <span className="text-neutral-500">League</span>
+                    <span className="text-neutral-500">{t.leagueFallback}</span>
                   )}
                   {s.teamName ? (
                     <span className="block text-xs text-neutral-500">
@@ -350,6 +370,7 @@ function ProfileHeader({
   player: PlayerProfileCore;
   label: string;
 }) {
+  const t = useT('playerPublicProfile');
   const total = player.wins + player.losses;
   const winRate = total > 0 ? Math.round((player.wins / total) * 100) : null;
 
@@ -377,17 +398,22 @@ function ProfileHeader({
           ) : null}
           <div className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-sm text-neutral-400 sm:justify-start">
             <span>
-              Rang{' '}
+              {t.rankLabel}{' '}
               <span className="font-semibold text-white">#{player.rank}</span>
             </span>
             <span aria-hidden>·</span>
             <span>
-              {player.gamesPlayed} match{player.gamesPlayed > 1 ? 's' : ''}
+              {format(
+                player.gamesPlayed > 1
+                  ? t.matchesCount_other
+                  : t.matchesCount_one,
+                { count: player.gamesPlayed }
+              )}
             </span>
             {winRate !== null && (
               <>
                 <span aria-hidden>·</span>
-                <span>{winRate}% de victoires</span>
+                <span>{format(t.winRatePct, { rate: winRate })}</span>
               </>
             )}
           </div>
@@ -399,19 +425,22 @@ function ProfileHeader({
           </div>
           <div
             className="text-xs text-neutral-500"
-            title="Incertitude du rating (écart-type). Plus la valeur est basse, plus le rating est fiable."
+            title={t.ratingUncertaintyTitle}
           >
-            ± {Math.round(player.rd)} · pic {Math.round(player.peakRating)}
+            {format(t.ratingDelta, {
+              rd: Math.round(player.rd),
+              peak: Math.round(player.peakRating),
+            })}
           </div>
         </div>
       </div>
 
       <div className="mt-5 grid grid-cols-3 gap-3 border-t border-neutral-800 pt-5 text-center">
-        <Stat value={player.wins} label="Victoires" tone="text-emerald-400" />
-        <Stat value={player.losses} label="Défaites" tone="text-rose-400" />
+        <Stat value={player.wins} label={t.statWins} tone="text-emerald-400" />
+        <Stat value={player.losses} label={t.statLosses} tone="text-rose-400" />
         <Stat
           value={Math.round(player.peakRating)}
-          label="Pic de rating"
+          label={t.statPeak}
           tone="text-amber-300"
         />
       </div>
@@ -440,10 +469,11 @@ function Stat({
 
 // --- Sparkline SVG maison (pas de dépendance de charts) --------------------
 function RatingChart({ history }: { history: PlayerProfileHistoryPoint[] }) {
+  const t = useT('playerPublicProfile');
   if (history.length < 2) {
     return (
       <div className="rounded-2xl border border-neutral-800 bg-neutral-900/40 p-8 text-center text-sm text-neutral-400">
-        Pas encore assez de matchs pour tracer une courbe de progression.
+        {t.chartNotEnough}
       </div>
     );
   }
@@ -486,7 +516,7 @@ function RatingChart({ history }: { history: PlayerProfileHistoryPoint[] }) {
   return (
     <div className="rounded-2xl border border-neutral-800 bg-neutral-900/40 p-4">
       <div className="mb-2 flex items-center justify-between text-xs text-neutral-400">
-        <span>Min {Math.round(min)}</span>
+        <span>{format(t.chartMin, { value: Math.round(min) })}</span>
         <span
           className={
             delta > 0
@@ -496,19 +526,20 @@ function RatingChart({ history }: { history: PlayerProfileHistoryPoint[] }) {
                 : 'text-neutral-400'
           }
         >
-          {delta > 0 ? '+' : ''}
-          {delta} pts
+          {format(t.chartPts, { delta: `${delta > 0 ? '+' : ''}${delta}` })}
         </span>
-        <span>Max {Math.round(max)}</span>
+        <span>{format(t.chartMax, { value: Math.round(max) })}</span>
       </div>
       <svg
         viewBox={`0 0 ${W} ${H}`}
         className="h-40 w-full sm:h-48"
         preserveAspectRatio="none"
         role="img"
-        aria-label={`Courbe de progression du rating, de ${Math.round(
-          first
-        )} à ${Math.round(last)} points sur ${history.length} matchs.`}
+        aria-label={format(t.chartAriaLabel, {
+          first: Math.round(first),
+          last: Math.round(last),
+          count: history.length,
+        })}
       >
         <defs>
           <linearGradient id="ratingFill" x1="0" y1="0" x2="0" y2="1">
@@ -542,14 +573,15 @@ function RatingChart({ history }: { history: PlayerProfileHistoryPoint[] }) {
 }
 
 function RecentMatches({ matches }: { matches: PlayerProfileRecentMatch[] }) {
+  const t = useT('playerPublicProfile');
   return (
     <section>
       <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-purple-300">
-        Derniers matchs
+        {t.recentMatches}
       </h2>
       {matches.length === 0 ? (
         <p className="rounded-2xl border border-neutral-800 bg-neutral-900/40 p-6 text-sm text-neutral-400">
-          Aucun match récent.
+          {t.noRecentMatches}
         </p>
       ) : (
         <ul className="divide-y divide-neutral-800/60 overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-900/40">
@@ -565,7 +597,7 @@ function RecentMatches({ matches }: { matches: PlayerProfileRecentMatch[] }) {
                     // Maillage interne : lien vers l'équipe adverse
                     // (la route /team/[slug] résout aussi par id).
                     <span className="truncate text-neutral-200">
-                      vs{' '}
+                      {t.vs}{' '}
                       <Link
                         href={`/team/${m.opponentTeamId}`}
                         className="hover:text-purple-300 hover:underline"
@@ -575,11 +607,11 @@ function RecentMatches({ matches }: { matches: PlayerProfileRecentMatch[] }) {
                     </span>
                   ) : (
                     <span className="truncate text-neutral-200">
-                      vs {m.opponentTeamName}
+                      {t.vs} {m.opponentTeamName}
                     </span>
                   )
                 ) : (
-                  <span className="text-neutral-500">Adversaire inconnu</span>
+                  <span className="text-neutral-500">{t.unknownOpponent}</span>
                 )}
               </div>
               <span className="shrink-0 text-xs text-neutral-500">
@@ -594,10 +626,11 @@ function RecentMatches({ matches }: { matches: PlayerProfileRecentMatch[] }) {
 }
 
 function ResultBadge({ result }: { result: 'win' | 'loss' | 'draw' }) {
+  const t = useT('playerPublicProfile');
   const map = {
-    win: { label: 'V', cls: 'bg-emerald-500/15 text-emerald-400' },
-    loss: { label: 'D', cls: 'bg-rose-500/15 text-rose-400' },
-    draw: { label: 'N', cls: 'bg-neutral-500/15 text-neutral-300' },
+    win: { label: t.resultWin, cls: 'bg-emerald-500/15 text-emerald-400' },
+    loss: { label: t.resultLoss, cls: 'bg-rose-500/15 text-rose-400' },
+    draw: { label: t.resultDraw, cls: 'bg-neutral-500/15 text-neutral-300' },
   } as const;
   const m = map[result];
   return (
@@ -610,23 +643,24 @@ function ResultBadge({ result }: { result: 'win' | 'loss' | 'draw' }) {
 }
 
 function HeadToHead({ rows }: { rows: PlayerProfileH2H[] }) {
+  const t = useT('playerPublicProfile');
   return (
     <section>
       <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-purple-300">
-        Face-à-face
+        {t.headToHead}
       </h2>
       {rows.length === 0 ? (
         <p className="rounded-2xl border border-neutral-800 bg-neutral-900/40 p-6 text-sm text-neutral-400">
-          Aucun face-à-face enregistré.
+          {t.noHeadToHead}
         </p>
       ) : (
         <div className="overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-900/40">
           <table className="w-full text-sm">
             <thead className="bg-neutral-900/80 text-xs uppercase text-neutral-400">
               <tr>
-                <th className="px-4 py-3 text-left">Adversaire</th>
-                <th className="px-4 py-3 text-right">V - D</th>
-                <th className="px-4 py-3 text-right">Matchs</th>
+                <th className="px-4 py-3 text-left">{t.thOpponent}</th>
+                <th className="px-4 py-3 text-right">{t.thWinLoss}</th>
+                <th className="px-4 py-3 text-right">{t.thMatches}</th>
               </tr>
             </thead>
             <tbody>
@@ -634,7 +668,7 @@ function HeadToHead({ rows }: { rows: PlayerProfileH2H[] }) {
                 const oppLabel =
                   r.opponentDisplayName ??
                   r.opponentBattleTag ??
-                  'Joueuse inconnue';
+                  t.unknownPlayer;
                 return (
                   <tr
                     key={r.opponentUserId}

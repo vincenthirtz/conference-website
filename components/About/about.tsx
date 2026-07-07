@@ -4,10 +4,12 @@ import Image from 'next/image';
 import Heading from '../Typography/heading';
 import Paragraph from '../Typography/paragraph';
 import Button from '../Buttons/button';
+import { useT } from '@/lib/i18n/useT';
 
 const DEFAULT_VIDEO_URL = 'https://www.youtube.com/watch?v=3j6w7CjXne8';
 
 function About(): JSX.Element {
+  const t = useT('aboutPage');
   const [aboutVideoUrl, setAboutVideoUrl] = useState(DEFAULT_VIDEO_URL);
   const [showMedia, setShowMedia] = useState(false);
   const [mediaLoaded, setMediaLoaded] = useState(false);
@@ -49,7 +51,7 @@ function About(): JSX.Element {
         <div className="relative w-full max-w-[480px] h-[320px] md:h-[420px] min-[1100px]:h-[550px] rounded-[30px] overflow-hidden">
           <Image
             src="/img/fourplayers.jpg"
-            alt="Joueuses Overwatch"
+            alt={t.playersAlt}
             fill
             sizes="(max-width: 768px) 100vw, 480px"
             className="object-cover md:hidden"
@@ -64,7 +66,7 @@ function About(): JSX.Element {
                 <iframe
                   className="absolute inset-0 w-full h-full object-cover"
                   src={youtubeEmbedUrl}
-                  title="OW Women's Cup vidéo"
+                  title={t.videoTitle}
                   allow="autoplay; fullscreen; picture-in-picture"
                   allowFullScreen
                   loading="lazy"
@@ -88,7 +90,7 @@ function About(): JSX.Element {
         <div className="w-full max-w-[620px] text-center min-[1024px]:text-left min-[1024px]:mt-6 min-[1024px]:ml-4">
           <div className="flex items-center justify-center min-[1024px]:justify-start">
             <div className="text-xl text-white font-semibold border-b-2 border-blue-400 mb-1">
-              A propos du tournoi
+              {t.sectionBadge}
             </div>
           </div>
           <Heading typeStyle="heading-md" className="text-gradient lg:mt-10">
@@ -99,17 +101,14 @@ function About(): JSX.Element {
             className="mt-6"
             textColor="text-gray-200"
           >
-            Le but étant de promouvoir l’esport féminin et francophone à travers
-            une compétition 100% féminine. Le cast sera aussi composé uniquement
-            de femmes.
+            {t.compP1}
           </Paragraph>
           <Paragraph
             typeStyle="body-lg"
             className="mt-6"
             textColor="text-gray-200"
           >
-            Nous sommes à le recherche d'un super sponsor sur le long terme.
-            Nous avons déjà deux partenaires pour l'édition 2026.
+            {t.compP2}
           </Paragraph>
           <div
             className="mt-10 flex flex-col gap-4 md:flex-row md:justify-center min-[1024px]:justify-start"
@@ -122,7 +121,7 @@ function About(): JSX.Element {
               rel="noreferrer"
             >
               <Button type="button" className="w-[200px]">
-                Devenir sponsor
+                {t.becomeSponsor}
               </Button>
             </a>
             <a

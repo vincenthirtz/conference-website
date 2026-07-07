@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
+import { useT, format } from '@/lib/i18n/useT';
 
 type Hero = {
   name: string;
@@ -59,6 +60,7 @@ const HEROES: Hero[] = [
 ];
 
 export default function HeroPickerPage() {
+  const t = useT('heroPicker');
   const [roleFilter, setRoleFilter] = useState<'All' | Hero['role']>('All');
   const [favoriteHero, setFavoriteHero] = useState<Hero | null>(null);
   const [banHero, setBanHero] = useState<Hero | null>(null);
@@ -70,8 +72,8 @@ export default function HeroPickerPage() {
   const [banEnds, setBanEnds] = useState<number | null>(null);
   const [banRemainingMs, setBanRemainingMs] = useState<number>(0);
   const [banned, setBanned] = useState<string[]>([]);
-  const [teamAName, setTeamAName] = useState('Equipe A');
-  const [teamBName, setTeamBName] = useState('Equipe B');
+  const [teamAName, setTeamAName] = useState(t.teamADefault);
+  const [teamBName, setTeamBName] = useState(t.teamBDefault);
   const [voteTeam, setVoteTeam] = useState<'A' | 'B'>('A');
   const [pendingFavorite, setPendingFavorite] = useState<Hero | null>(null);
   const [votes, setVotes] = useState<
@@ -187,23 +189,25 @@ export default function HeroPickerPage() {
       <div className="container max-w-4xl mx-auto px-4 pt-24 space-y-6">
         <div className="flex flex-wrap items-center gap-3">
           <Heading typeStyle="heading-md" className="text-gradient">
-            Test – Hero Picker
+            {t.title}
           </Heading>
           {phase === 'cooldown' && (
             <span className="text-sm text-yellow-300 rounded-full border border-yellow-400/60 bg-yellow-500/10 px-3 py-1">
-              Cooldown : {Math.ceil(remainingMs / 1000)}s
+              {format(t.cooldownBadge, {
+                seconds: Math.ceil(remainingMs / 1000),
+              })}
             </span>
           )}
           {phase === 'ban' && (
             <span className="text-sm text-red-300 rounded-full border border-red-400/60 bg-red-500/10 px-3 py-1">
-              Ban en cours : {Math.ceil(banRemainingMs / 1000)}s
+              {format(t.banBadge, {
+                seconds: Math.ceil(banRemainingMs / 1000),
+              })}
             </span>
           )}
         </div>
         <Paragraph textColor="text-gray-200" className="max-w-2xl">
-          Petit bac à sable pour tester un picker de héros (inspiré de
-          https://github.com/geddski/overwatch-hero-picker), choisir un favori
-          et simuler des bans pour deux équipes.
+          {t.intro}
         </Paragraph>
 
         <div className="rounded-2xl border border-white/10 bg-white/5 p-6 space-y-4">

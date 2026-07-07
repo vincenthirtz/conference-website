@@ -10,6 +10,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import type { CasterProfile } from '@/hooks/useCasterSession';
+import { useT } from '@/lib/i18n/useT';
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -22,6 +23,7 @@ type Props = {
 };
 
 export default function CockpitHeader({ caster, onSignOut }: Props) {
+  const t = useT('cockpitHeader');
   const [installEvent, setInstallEvent] =
     useState<BeforeInstallPromptEvent | null>(null);
   const [installed, setInstalled] = useState(false);
@@ -101,7 +103,7 @@ export default function CockpitHeader({ caster, onSignOut }: Props) {
               {caster.name}
             </div>
             <div className="text-[11px] text-gray-400 truncate">
-              {caster.title ?? 'Caster'}
+              {caster.title ?? t.roleFallback}
               {caster.city ? ` • ${caster.city}` : ''}
             </div>
           </div>
@@ -115,7 +117,7 @@ export default function CockpitHeader({ caster, onSignOut }: Props) {
               className="text-[11px] px-2.5 py-1.5 rounded-md border border-purple-400/40 bg-purple-500/15 text-purple-100 hover:bg-purple-500/25 transition"
               data-testid="caster-install-pwa"
             >
-              Installer
+              {t.install}
             </button>
           )}
           <button
@@ -124,7 +126,7 @@ export default function CockpitHeader({ caster, onSignOut }: Props) {
             className="text-[11px] px-2.5 py-1.5 rounded-md border border-white/15 text-gray-200 hover:bg-white/10 transition"
             data-testid="caster-signout"
           >
-            Quitter
+            {t.quit}
           </button>
         </div>
       </div>

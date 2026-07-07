@@ -11,6 +11,9 @@ import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { maskBattleTag } from '@/utils/battleTag';
 import type { StaffProps } from '@/types/admin';
+import { useT, format } from '@/lib/i18n/useT';
+
+type CastViewerDict = ReturnType<typeof useT<'castViewer'>>;
 
 type Member = {
   id: string;
@@ -121,27 +124,30 @@ function formatDateFr(value: string | null): string {
   }
 }
 
-function statusBadge(status: string): { label: string; className: string } {
+function statusBadge(
+  t: CastViewerDict,
+  status: string
+): { label: string; className: string } {
   switch (status) {
     case 'pending':
       return {
-        label: 'À VENIR',
+        label: t.statusUpcoming,
         className: 'bg-blue-600/20 text-blue-300 border-blue-500/40',
       };
     case 'ongoing':
       return {
-        label: 'EN COURS',
+        label: t.statusOngoing,
         className:
           'bg-emerald-600/30 text-emerald-200 border-emerald-500/50 animate-pulse',
       };
     case 'finished':
       return {
-        label: 'TERMINÉ',
+        label: t.statusFinished,
         className: 'bg-neutral-600/20 text-neutral-300 border-neutral-500/40',
       };
     case 'walkover':
       return {
-        label: 'FORFAIT',
+        label: t.statusWalkover,
         className: 'bg-red-700/30 text-red-200 border-red-500/40',
       };
     default:
@@ -154,6 +160,7 @@ function statusBadge(status: string): { label: string; className: string } {
 
 function CastPage(_: StaffProps) {
   const router = useRouter();
+  const t = useT('castViewer');
   const { matchId } = router.query;
   const id = Array.isArray(matchId) ? matchId[0] : matchId;
 
@@ -183,11 +190,11 @@ function CastPage(_: StaffProps) {
       try {
         const u = new URL(value);
         if (!['http:', 'https:'].includes(u.protocol)) {
-          setReplayMsg('URL invalide (http/https requis)');
+          setReplayMsg(t.urlInvalidHttp);
           return;
         }
       } catch {
-        setReplayMsg('URL invalide');
+        setReplayMsg(t.urlInvalid);
         return;
       }
     }
@@ -200,13 +207,13 @@ function CastPage(_: StaffProps) {
         body: JSON.stringify({ replay_url: value || null }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'Erreur');
-      setReplayMsg('Replay enregistré.');
+      if (!res.ok) throw new Error(json.error || t.errorGeneric);
+      setReplayMsg(t.replaySaved);
       // Refresh cast data so the displayed value reflects the new state
       await fetchData();
       setTimeout(() => setReplayMsg(null), 3000);
     } catch (e: unknown) {
-      setReplayMsg((e as Error).message || 'Erreur');
+      setReplayMsg((e as Error).message || t.errorGeneric);
     } finally {
       setSavingReplay(false);
     }
@@ -218,7 +225,7 @@ function CastPage(_: StaffProps) {
     try {
       const res = await fetch(`/api/cast/${encodeURIComponent(id)}`);
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'Erreur');
+      if (!res.ok) throw new Error(json.error || t.errorGeneric);
       setData(json);
       setLastRefresh(new Date());
     } catch (err) {
@@ -226,7 +233,7 @@ function CastPage(_: StaffProps) {
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, t]);
 
   useEffect(() => {
     fetchData();
@@ -261,7 +268,7 @@ function CastPage(_: StaffProps) {
     return (
       <main className="min-h-screen bg-neutral-950 text-white flex items-center justify-center p-4">
         <div className="text-center max-w-md">
-          <div className="text-red-400 text-lg mb-2">Erreur</div>
+          <div className="text-red-400 text-lg mb-2">{t.errorTitle}</div>
           <p className="text-sm text-neutral-400">{errorMsg}</p>
         </div>
       </main>
@@ -272,12 +279,17 @@ function CastPage(_: StaffProps) {
 
   const { castProfile, match, team1, team2, tournament, stage, veto, h2h } =
     data;
-  const badge = statusBadge(match.status);
+  const badge = statusBadge(t, match.status);
 
   return (
     <>
       <Head>
-        <title>{`Cast — ${team1?.name || '?'} vs ${team2?.name || '?'}`}</title>
+        <title>
+          {format(t.docTitle, {
+            team1: team1?.name || '?',
+            team2: team2?.name || '?',
+          })}
+        </title>
         <meta name="robots" content="noindex" />
       </Head>
 
@@ -313,7 +325,7 @@ function CastPage(_: StaffProps) {
               {castProfile && (
                 <span
                   className="flex items-center gap-2 px-2 py-1 rounded-full bg-purple-600/15 border border-purple-500/30 text-purple-200"
-                  title={castProfile.title || 'Caster connecté'}
+                  title={castProfile.title || t.casterConnected}
                 >
                   {castProfile.imageUrl ? (
                     <Image
@@ -351,11 +363,11 @@ function CastPage(_: StaffProps) {
                   onChange={(e) => setAutoRefresh(e.target.checked)}
                   className="w-3.5 h-3.5 rounded border-neutral-600 bg-neutral-900"
                 />
-                Auto-refresh ({REFRESH_MS / 1000}s)
+                {format(t.autoRefresh, { seconds: REFRESH_MS / 1000 })}
               </label>
               {lastRefresh && (
                 <span className="text-neutral-600">
-                  MAJ&nbsp;{lastRefresh.toLocaleTimeString('fr-FR')}
+                  {t.updatedLabel}&nbsp;{lastRefresh.toLocaleTimeString('fr-FR')}
                 </span>
               )}
               <button
@@ -381,25 +393,25 @@ function CastPage(_: StaffProps) {
             {/* Center: lobby code */}
             <div className="bg-neutral-800/60 backdrop-blur border border-neutral-700/50 rounded-2xl p-5 flex flex-col items-center justify-center min-w-[220px]">
               <div className="text-[10px] uppercase tracking-widest text-neutral-500 mb-1">
-                Code lobby
+                {t.lobbyCode}
               </div>
               {match.lobbyCode ? (
                 <button
                   type="button"
                   onClick={copyLobby}
                   className="text-2xl md:text-3xl font-mono font-bold text-amber-300 hover:text-amber-200 transition-colors break-all"
-                  title="Cliquer pour copier"
+                  title={t.copyHint}
                 >
                   {match.lobbyCode}
                 </button>
               ) : (
                 <span className="text-neutral-600 italic text-sm">
-                  non défini
+                  {t.undefinedValue}
                 </span>
               )}
               {copied && (
                 <span className="text-[11px] text-emerald-400 mt-1">
-                  copié ✓
+                  {t.copied}
                 </span>
               )}
               {match.streamUrl && (
@@ -409,7 +421,7 @@ function CastPage(_: StaffProps) {
                   rel="noreferrer"
                   className="text-[11px] text-blue-400 hover:text-blue-300 mt-3 truncate max-w-full"
                 >
-                  ↗ Stream
+                  {t.streamLink}
                 </a>
               )}
             </div>
@@ -428,7 +440,7 @@ function CastPage(_: StaffProps) {
             {/* Rosters */}
             <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-5">
               <h2 className="text-sm uppercase tracking-widest text-neutral-400 mb-3">
-                Rosters
+                {t.rosters}
               </h2>
               <div className="grid grid-cols-2 gap-4">
                 <RosterColumn team={team1} />
@@ -441,14 +453,20 @@ function CastPage(_: StaffProps) {
               <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-5">
                 <div className="flex items-center justify-between mb-3">
                   <h2 className="text-sm uppercase tracking-widest text-neutral-400">
-                    Veto ({veto.format.toUpperCase()})
+                    {t.veto} ({veto.format.toUpperCase()})
                   </h2>
                   <span className="text-[11px] text-neutral-500">
-                    Étape{' '}
-                    {Math.min(veto.currentStepIndex + 1, veto.flow.length)} /{' '}
-                    {veto.flow.length}
+                    {format(t.stepProgress, {
+                      current: Math.min(
+                        veto.currentStepIndex + 1,
+                        veto.flow.length
+                      ),
+                      total: veto.flow.length,
+                    })}
                     {veto.isComplete && (
-                      <span className="text-emerald-400 ml-2">✓ terminé</span>
+                      <span className="text-emerald-400 ml-2">
+                        {t.vetoComplete}
+                      </span>
                     )}
                   </span>
                 </div>
@@ -465,7 +483,7 @@ function CastPage(_: StaffProps) {
                 {veto.pickedMaps.length > 0 && (
                   <div className="mt-4 pt-4 border-t border-neutral-700/50">
                     <div className="text-[10px] uppercase tracking-widest text-neutral-500 mb-2">
-                      Cartes en jeu
+                      {t.mapsInPlay}
                     </div>
                     <ol className="space-y-1.5">
                       {veto.pickedMaps.map((m, idx) => {
@@ -474,7 +492,7 @@ function CastPage(_: StaffProps) {
                             ? team1?.shortName || team1?.name
                             : m.picked_by === team2?.id
                               ? team2?.shortName || team2?.name
-                              : 'Decider';
+                              : t.decider;
                         const isDecider = m.picked_by === null;
                         return (
                           <li
@@ -507,11 +525,11 @@ function CastPage(_: StaffProps) {
 
               <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-5">
                 <h2 className="text-sm uppercase tracking-widest text-neutral-400 mb-3">
-                  Head-to-head
+                  {t.headToHead}
                 </h2>
                 {h2h.total === 0 ? (
                   <p className="text-sm text-neutral-500 italic">
-                    Aucune confrontation préalable.
+                    {t.noPreviousMatch}
                   </p>
                 ) : (
                   <>
@@ -525,7 +543,10 @@ function CastPage(_: StaffProps) {
                         </div>
                       </div>
                       <div className="text-neutral-600 text-xs">
-                        {h2h.total} match{h2h.total > 1 ? 's' : ''}
+                        {format(
+                          h2h.total > 1 ? t.matchCount_other : t.matchCount_one,
+                          { count: h2h.total }
+                        )}
                       </div>
                       <div className="text-center flex-1">
                         <div className="text-3xl font-bold text-white">
@@ -539,7 +560,7 @@ function CastPage(_: StaffProps) {
                     {h2h.meetings.length > 0 && (
                       <div className="mt-4 pt-3 border-t border-neutral-700/50">
                         <div className="text-[10px] uppercase tracking-widest text-neutral-500 mb-2">
-                          Dernières confrontations
+                          {t.lastMeetings}
                         </div>
                         <ul className="space-y-1.5">
                           {h2h.meetings.map((m) => (
@@ -588,7 +609,7 @@ function CastPage(_: StaffProps) {
           {match.notes && (
             <div className="mt-4 bg-neutral-800/40 border border-neutral-700/40 rounded-xl p-3 text-xs text-neutral-400">
               <span className="uppercase tracking-widest text-neutral-500 mr-2">
-                Notes
+                {t.notes}
               </span>
               {match.notes}
             </div>
@@ -601,7 +622,7 @@ function CastPage(_: StaffProps) {
             <div className="mt-4 bg-neutral-800/40 border border-neutral-700/40 rounded-xl p-3">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs uppercase tracking-widest text-neutral-500">
-                  Replay / VOD
+                  {t.replayVod}
                 </span>
                 {match.replayUrl && (
                   <a
@@ -610,7 +631,7 @@ function CastPage(_: StaffProps) {
                     rel="noreferrer"
                     className="text-xs text-blue-300 hover:text-blue-200 underline"
                   >
-                    Ouvrir le replay actuel ↗
+                    {t.openCurrentReplay}
                   </a>
                 )}
               </div>
@@ -629,14 +650,15 @@ function CastPage(_: StaffProps) {
                   }
                   className="px-3 py-2 rounded bg-blue-600 hover:bg-blue-500 text-sm font-medium disabled:opacity-50"
                 >
-                  {savingReplay ? 'Enregistrement…' : 'Enregistrer'}
+                  {savingReplay ? t.saving : t.save}
                 </button>
               </div>
               {replayMsg && (
                 <p
                   className={`text-xs mt-2 ${
-                    replayMsg.toLowerCase().includes('erreur') ||
-                    replayMsg.toLowerCase().includes('invalide')
+                    /erreur|error|invalide|invalid/.test(
+                      replayMsg.toLowerCase()
+                    )
                       ? 'text-red-300'
                       : 'text-emerald-300'
                   }`}
@@ -644,10 +666,7 @@ function CastPage(_: StaffProps) {
                   {replayMsg}
                 </p>
               )}
-              <p className="text-xs text-neutral-500 mt-2">
-                Colle ici le lien YouTube ou Twitch du VOD post-match. Il sera
-                affiché publiquement sur la page du match.
-              </p>
+              <p className="text-xs text-neutral-500 mt-2">{t.replayHint}</p>
             </div>
           )}
         </div>
@@ -700,6 +719,7 @@ function TeamBanner({
 }
 
 function RosterColumn({ team }: { team: Team | null }) {
+  const t = useT('castViewer');
   if (!team) return <div className="text-neutral-500 italic">—</div>;
   return (
     <div>
@@ -707,7 +727,7 @@ function RosterColumn({ team }: { team: Team | null }) {
         {team.name}
       </div>
       {team.members.length === 0 ? (
-        <p className="text-xs text-neutral-500 italic">Pas de roster</p>
+        <p className="text-xs text-neutral-500 italic">{t.noRoster}</p>
       ) : (
         <ul className="space-y-1">
           {team.members.map((m) => (
@@ -716,12 +736,12 @@ function RosterColumn({ team }: { team: Team | null }) {
               className={`flex items-center gap-2 text-xs ${m.is_substitute ? 'opacity-60' : ''}`}
             >
               {m.is_captain && (
-                <span className="text-amber-400 text-xs" title="Capitaine">
+                <span className="text-amber-400 text-xs" title={t.captain}>
                   ★
                 </span>
               )}
               {!m.is_captain && m.is_manager && (
-                <span className="text-sky-400 text-xs" title="Manager">
+                <span className="text-sky-400 text-xs" title={t.manager}>
                   ◆
                 </span>
               )}
@@ -738,7 +758,7 @@ function RosterColumn({ team }: { team: Team | null }) {
               </span>
               {m.is_substitute && (
                 <span className="text-[9px] uppercase text-neutral-500 tracking-widest">
-                  sub
+                  {t.sub}
                 </span>
               )}
             </li>
@@ -764,6 +784,7 @@ function VetoTimeline({
   team1Id: string | null;
   team2Id: string | null;
 }) {
+  const t = useT('castViewer');
   return (
     <ol className="space-y-1.5">
       {flow.map((f, idx) => {
@@ -775,7 +796,7 @@ function VetoTimeline({
             ? team1Name
             : f.side === 'team2'
               ? team2Name
-              : 'Auto';
+              : t.auto;
 
         const actionColor =
           f.action === 'ban'

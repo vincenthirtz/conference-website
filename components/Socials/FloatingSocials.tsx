@@ -10,6 +10,7 @@ import {
   RssIcon,
   DonationIcon,
 } from '@/components/Icons';
+import { useT } from '@/lib/i18n/useT';
 
 type SocialLink = {
   name: string;
@@ -52,6 +53,7 @@ const SOCIALS: SocialLink[] = [
 ];
 
 function FloatingSocials(): JSX.Element {
+  const t = useT('floatingSocials');
   return (
     <div className="fixed left-5 top-1/2 -translate-y-1/2 z-40 hidden lg:block">
       <div className="relative">
@@ -99,8 +101,8 @@ function FloatingSocials(): JSX.Element {
           {/* Donate */}
           <Link
             href="/don"
-            title="Faire un don"
-            aria-label="Faire un don"
+            title={t.donateTitle}
+            aria-label={t.donateTitle}
             className="group relative flex h-10 w-10 items-center justify-center rounded-xl text-pink-300 transition-all duration-200 hover:-translate-y-0.5 hover:bg-pink-500/15"
           >
             <DonationIcon
@@ -111,17 +113,17 @@ function FloatingSocials(): JSX.Element {
             {/* QR popover on hover */}
             <div className="pointer-events-none absolute bottom-0 left-full ml-3 w-max -translate-x-2 rounded-2xl border border-white/10 bg-neutral-900/95 p-4 opacity-0 shadow-2xl backdrop-blur-md transition-all duration-200 group-hover:pointer-events-auto group-hover:translate-x-0 group-hover:opacity-100">
               <p className="mb-2 text-center text-sm font-semibold text-white">
-                Faire un don
+                {t.donateTitle}
               </p>
               <Image
                 src="/images/qr.png"
-                alt="QR code pour faire un don"
+                alt={t.qrAlt}
                 width={128}
                 height={128}
                 className="rounded-lg"
               />
               <p className="mt-2 text-center text-xs text-gray-400">
-                Scanne avec ton téléphone
+                {t.scanPhone}
               </p>
               <span
                 aria-hidden="true"

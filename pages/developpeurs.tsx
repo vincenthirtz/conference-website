@@ -4,6 +4,9 @@
 
 import Link from 'next/link';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
+import { useT, format } from '@/lib/i18n/useT';
+
+type DevDict = ReturnType<typeof useT<'developpeursPage'>>;
 
 // Base URL affichée dans les exemples : origine réelle du site si connue,
 // sinon un placeholder explicite pour l'utilisateur.
@@ -33,37 +36,36 @@ type EndpointGroup = {
   endpoints: Endpoint[];
 };
 
-const groups: EndpointGroup[] = [
+const getGroups = (t: DevDict): EndpointGroup[] => [
   {
     id: 'tournois',
-    title: 'Tournois',
-    intro:
-      "Liste, détail et déroulé compétitif d'un tournoi. L'identifiant accepte l'UUID ou le slug.",
+    title: t.groupTournamentsTitle,
+    intro: t.groupTournamentsIntro,
     endpoints: [
       {
         method: 'GET',
         path: '/api/public/v1/tournaments',
-        summary: 'Liste des tournois publics.',
+        summary: t.sumTournamentsList,
         params: [
           {
             name: 'status',
             kind: 'query',
-            desc: 'Filtre par statut (ex. running, completed).',
+            desc: t.paramStatusTournament,
           },
           {
             name: 'game',
             kind: 'query',
-            desc: 'Filtre par jeu (ex. overwatch).',
+            desc: t.paramGame,
           },
           {
             name: 'limit',
             kind: 'query',
-            desc: 'Taille de page (pagination).',
+            desc: t.paramLimit,
           },
           {
             name: 'offset',
             kind: 'query',
-            desc: 'Décalage de départ (pagination).',
+            desc: t.paramOffset,
           },
         ],
         data: `{
@@ -85,13 +87,13 @@ const groups: EndpointGroup[] = [
       {
         method: 'GET',
         path: '/api/public/v1/tournaments/{id}',
-        summary: 'Détail d’un tournoi et ses phases (stages).',
+        summary: t.sumTournamentDetail,
         params: [
           {
             name: 'id',
             kind: 'path',
             required: true,
-            desc: 'Identifiant du tournoi : UUID ou slug.',
+            desc: t.paramIdRequired,
           },
         ],
         data: `{
@@ -113,23 +115,23 @@ const groups: EndpointGroup[] = [
       {
         method: 'GET',
         path: '/api/public/v1/tournaments/{id}/matches',
-        summary: 'Matchs d’un tournoi.',
+        summary: t.sumTournamentMatches,
         params: [
           {
             name: 'id',
             kind: 'path',
             required: true,
-            desc: 'UUID ou slug du tournoi.',
+            desc: t.paramTournamentIdSlug,
           },
           {
             name: 'stageId',
             kind: 'query',
-            desc: 'Filtre par phase (id de stage).',
+            desc: t.paramStageId,
           },
           {
             name: 'status',
             kind: 'query',
-            desc: 'Filtre par statut de match.',
+            desc: t.paramMatchStatus,
           },
         ],
         data: `{
@@ -155,14 +157,13 @@ const groups: EndpointGroup[] = [
       {
         method: 'GET',
         path: '/api/public/v1/tournaments/{id}/standings',
-        summary:
-          'Classement final d’un tournoi (vide tant qu’il n’est pas finalisé).',
+        summary: t.sumTournamentStandings,
         params: [
           {
             name: 'id',
             kind: 'path',
             required: true,
-            desc: 'UUID ou slug du tournoi.',
+            desc: t.paramTournamentIdSlug,
           },
         ],
         data: `{
@@ -182,15 +183,15 @@ const groups: EndpointGroup[] = [
   },
   {
     id: 'matchs',
-    title: 'Matchs',
-    intro: 'Détail d’un match, avec le score par carte (games).',
+    title: t.groupMatchesTitle,
+    intro: t.groupMatchesIntro,
     endpoints: [
       {
         method: 'GET',
         path: '/api/public/v1/matches/{id}',
-        summary: 'Détail d’un match et ses cartes.',
+        summary: t.sumMatchDetail,
         params: [
-          { name: 'id', kind: 'path', required: true, desc: 'UUID du match.' },
+          { name: 'id', kind: 'path', required: true, desc: t.paramMatchId },
         ],
         data: `{
   "data": {
@@ -217,20 +218,19 @@ const groups: EndpointGroup[] = [
   },
   {
     id: 'equipes',
-    title: 'Équipes',
-    intro:
-      'Fiche publique d’une équipe et son roster. L’identifiant accepte l’UUID ou le slug.',
+    title: t.groupTeamsTitle,
+    intro: t.groupTeamsIntro,
     endpoints: [
       {
         method: 'GET',
         path: '/api/public/v1/teams/{id}',
-        summary: 'Détail d’une équipe et sa composition.',
+        summary: t.sumTeamDetail,
         params: [
           {
             name: 'id',
             kind: 'path',
             required: true,
-            desc: 'UUID ou slug de l’équipe.',
+            desc: t.paramTeamId,
           },
         ],
         data: `{
@@ -250,24 +250,23 @@ const groups: EndpointGroup[] = [
   },
   {
     id: 'classement-profils',
-    title: 'Classement & profils',
-    intro:
-      'Classement des joueuses (rating Glicko-2) et profil individuel : historique, matchs récents, confrontations et distinctions.',
+    title: t.groupLeaderboardTitle,
+    intro: t.groupLeaderboardIntro,
     endpoints: [
       {
         method: 'GET',
         path: '/api/public/v1/leaderboard',
-        summary: 'Classement des joueuses.',
+        summary: t.sumLeaderboard,
         params: [
           {
             name: 'limit',
             kind: 'query',
-            desc: 'Taille de page (pagination).',
+            desc: t.paramLimit,
           },
           {
             name: 'offset',
             kind: 'query',
-            desc: 'Décalage de départ (pagination).',
+            desc: t.paramOffset,
           },
         ],
         data: `{
@@ -291,13 +290,13 @@ const groups: EndpointGroup[] = [
       {
         method: 'GET',
         path: '/api/public/v1/players/{userId}',
-        summary: 'Profil détaillé d’une joueuse.',
+        summary: t.sumPlayerDetail,
         params: [
           {
             name: 'userId',
             kind: 'path',
             required: true,
-            desc: 'Identifiant de la joueuse.',
+            desc: t.paramUserId,
           },
         ],
         data: `{
@@ -314,14 +313,13 @@ const groups: EndpointGroup[] = [
   },
   {
     id: 'ligues',
-    title: 'Ligues',
-    intro:
-      'Liste des ligues publiques et détail d’une ligue (classement + tournois rattachés).',
+    title: t.groupLeaguesTitle,
+    intro: t.groupLeaguesIntro,
     endpoints: [
       {
         method: 'GET',
         path: '/api/public/v1/leagues',
-        summary: 'Liste des ligues publiques.',
+        summary: t.sumLeaguesList,
         params: [],
         data: `{
   "data": [
@@ -332,13 +330,13 @@ const groups: EndpointGroup[] = [
       {
         method: 'GET',
         path: '/api/public/v1/leagues/{slug}',
-        summary: 'Détail d’une ligue.',
+        summary: t.sumLeagueDetail,
         params: [
           {
             name: 'slug',
             kind: 'path',
             required: true,
-            desc: 'Slug de la ligue.',
+            desc: t.paramLeagueSlug,
           },
         ],
         data: `{
@@ -353,18 +351,18 @@ const groups: EndpointGroup[] = [
   },
 ];
 
-const errorCodes: { code: string; desc: string }[] = [
-  { code: 'NOT_FOUND', desc: 'Ressource introuvable.' },
-  { code: 'BAD_REQUEST', desc: 'Paramètres invalides ou manquants.' },
+const getErrorCodes = (t: DevDict): { code: string; desc: string }[] => [
+  { code: 'NOT_FOUND', desc: t.errNotFound },
+  { code: 'BAD_REQUEST', desc: t.errBadRequest },
   {
     code: 'METHOD_NOT_ALLOWED',
-    desc: 'Méthode HTTP non autorisée (seul GET est supporté).',
+    desc: t.errMethodNotAllowed,
   },
   {
     code: 'RATE_LIMITED',
-    desc: 'Limite de requêtes dépassée. Réessayez plus tard.',
+    desc: t.errRateLimited,
   },
-  { code: 'INTERNAL', desc: 'Erreur interne du serveur.' },
+  { code: 'INTERNAL', desc: t.errInternal },
 ];
 
 function anchorId(path: string): string {
@@ -400,6 +398,9 @@ const { data, pagination } = await res.json();
 console.log(data.length, pagination.count);`;
 
 function DevelopersPage() {
+  const t = useT('developpeursPage');
+  const groups = getGroups(t);
+  const errorCodes = getErrorCodes(t);
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
       {/* Hero */}
@@ -411,15 +412,13 @@ function DevelopersPage() {
 
         <div className="relative mx-auto max-w-5xl px-6 pt-32 pb-12 text-center">
           <p className="mx-auto inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.18em] text-gray-200">
-            Portail développeur
+            {t.heroBadge}
           </p>
           <h1 className="mt-3 text-4xl font-bold leading-tight sm:text-5xl md:text-6xl">
-            API publique v1
+            {t.heroTitle}
           </h1>
           <p className="mx-auto mt-4 max-w-3xl text-lg text-gray-200">
-            Une API REST publique, en lecture seule, pour consommer les données
-            de tournois, matchs, équipes, classements et ligues. Sans clé,
-            versionnée, prête à intégrer dans vos overlays, bots et sites.
+            {t.heroSubtitle}
           </p>
         </div>
       </div>
@@ -428,33 +427,33 @@ function DevelopersPage() {
         {/* Introduction */}
         <section aria-labelledby="intro-heading" className="space-y-6">
           <h2 id="intro-heading" className="text-2xl font-bold text-white">
-            Vue d&apos;ensemble
+            {t.overviewTitle}
           </h2>
           <div className="grid gap-4 sm:grid-cols-2">
             {[
               {
-                title: 'Lecture seule',
-                body: 'Toutes les routes sont en GET. Aucune écriture, aucune mutation possible.',
+                title: t.card1Title,
+                body: t.card1Body,
               },
               {
-                title: 'Sans authentification',
-                body: 'Aucune clé d’API ni jeton requis. Appelez directement les endpoints.',
+                title: t.card2Title,
+                body: t.card2Body,
               },
               {
-                title: 'CORS ouvert',
-                body: 'En-tête Access-Control-Allow-Origin: * — utilisable depuis un navigateur.',
+                title: t.card3Title,
+                body: t.card3Body,
               },
               {
-                title: 'Versionnée',
-                body: 'Préfixe /api/public/v1. La v1 reste stable ; toute rupture passera par une v2.',
+                title: t.card4Title,
+                body: t.card4Body,
               },
               {
-                title: 'Rate-limit',
-                body: 'Environ 120 requêtes par minute et par adresse IP. Au-delà : erreur RATE_LIMITED.',
+                title: t.card5Title,
+                body: t.card5Body,
               },
               {
-                title: 'Réponses JSON en enveloppe',
-                body: 'Le contenu est toujours sous { data: ... }. Les listes ajoutent un objet pagination.',
+                title: t.card6Title,
+                body: t.card6Body,
               },
             ].map((card) => (
               <div
@@ -470,10 +469,11 @@ function DevelopersPage() {
           </div>
 
           <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
-            <h3 className="text-base font-semibold text-white">Base URL</h3>
+            <h3 className="text-base font-semibold text-white">
+              {t.baseUrlTitle}
+            </h3>
             <p className="mt-2 text-sm text-gray-300">
-              L&apos;API est servie depuis l&apos;origine du site. Toutes les
-              routes sont préfixées par{' '}
+              {t.baseUrlDescBefore}
               <code className="rounded bg-white/10 px-1.5 py-0.5 text-purple-200">
                 /api/public/v1
               </code>
@@ -486,10 +486,10 @@ function DevelopersPage() {
 
           <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
             <h3 className="text-base font-semibold text-white">
-              Format des erreurs
+              {t.errorsTitle}
             </h3>
             <p className="mt-2 text-sm text-gray-300">
-              Une erreur renvoie un statut HTTP adapté et un corps JSON{' '}
+              {t.errorsDescBefore}
               <code className="rounded bg-white/10 px-1.5 py-0.5 text-purple-200">
                 {'{ error, code }'}
               </code>
@@ -500,10 +500,10 @@ function DevelopersPage() {
                 <thead>
                   <tr className="border-b border-white/10 text-gray-300">
                     <th scope="col" className="py-2 pr-4 font-semibold">
-                      code
+                      {t.thCode}
                     </th>
                     <th scope="col" className="py-2 font-semibold">
-                      Signification
+                      {t.thMeaning}
                     </th>
                   </tr>
                 </thead>
@@ -529,14 +529,14 @@ function DevelopersPage() {
         {/* Exemple rapide */}
         <section aria-labelledby="quickstart-heading" className="space-y-6">
           <h2 id="quickstart-heading" className="text-2xl font-bold text-white">
-            Exemple rapide
+            {t.quickstartTitle}
           </h2>
           <p className="max-w-3xl text-sm text-gray-300">
-            Récupérer les tournois en cours. La réponse expose la liste sous{' '}
+            {t.quickstartDescPart1}
             <code className="rounded bg-white/10 px-1.5 py-0.5 text-purple-200">
               data
-            </code>{' '}
-            et les métadonnées de pagination sous{' '}
+            </code>
+            {t.quickstartDescPart2}
             <code className="rounded bg-white/10 px-1.5 py-0.5 text-purple-200">
               pagination
             </code>
@@ -551,11 +551,11 @@ function DevelopersPage() {
         {/* Référence des endpoints */}
         <section aria-labelledby="reference-heading" className="space-y-6">
           <h2 id="reference-heading" className="text-2xl font-bold text-white">
-            Référence des endpoints
+            {t.referenceTitle}
           </h2>
 
           {/* Sommaire */}
-          <nav aria-label="Sommaire des groupes d'endpoints">
+          <nav aria-label={t.tocLabel}>
             <ul className="flex flex-wrap gap-2">
               {groups.map((g) => (
                 <li key={g.id}>
@@ -603,18 +603,18 @@ function DevelopersPage() {
                     <div className="overflow-x-auto">
                       <table className="w-full border-collapse text-left text-sm">
                         <caption className="sr-only">
-                          Paramètres de {ep.path}
+                          {format(t.paramsCaption, { path: ep.path })}
                         </caption>
                         <thead>
                           <tr className="border-b border-white/10 text-gray-300">
                             <th scope="col" className="py-2 pr-4 font-semibold">
-                              Paramètre
+                              {t.paramsTh}
                             </th>
                             <th scope="col" className="py-2 pr-4 font-semibold">
-                              Emplacement
+                              {t.locationTh}
                             </th>
                             <th scope="col" className="py-2 font-semibold">
-                              Description
+                              {t.descriptionTh}
                             </th>
                           </tr>
                         </thead>
@@ -630,12 +630,14 @@ function DevelopersPage() {
                                 </code>
                                 {p.required && (
                                   <span className="ml-1 text-xs text-pink-300">
-                                    requis
+                                    {t.requiredTag}
                                   </span>
                                 )}
                               </td>
                               <td className="py-2 pr-4 align-top text-gray-300">
-                                {p.kind === 'path' ? 'chemin' : 'requête'}
+                                {p.kind === 'path'
+                                  ? t.pathLocation
+                                  : t.queryLocation}
                               </td>
                               <td className="py-2 align-top text-gray-300">
                                 {p.desc}
@@ -649,7 +651,7 @@ function DevelopersPage() {
 
                   <div>
                     <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-gray-400">
-                      Réponse
+                      {t.responseLabel}
                     </p>
                     <CodeBlock>{ep.data}</CodeBlock>
                   </div>
@@ -665,7 +667,7 @@ function DevelopersPage() {
           className="rounded-2xl border border-white/10 bg-gradient-to-r from-[#0F1F3A] via-[#1A0F2E] to-[#2C0B2C] p-6 sm:p-8"
         >
           <h2 id="notes-heading" className="text-xl font-bold text-white">
-            À noter
+            {t.notesTitle}
           </h2>
           <ul className="mt-3 space-y-2 text-sm text-gray-200">
             <li className="flex items-start gap-2">
@@ -673,7 +675,7 @@ function DevelopersPage() {
                 className="mt-[6px] h-2 w-2 rounded-full bg-purple-400"
                 aria-hidden
               />
-              <span>API en lecture seule.</span>
+              <span>{t.note1}</span>
             </li>
             <li className="flex items-start gap-2">
               <span
@@ -681,7 +683,7 @@ function DevelopersPage() {
                 aria-hidden
               />
               <span>
-                Le contrat de référence est décrit dans{' '}
+                {t.note2Before}
                 <code className="rounded bg-white/10 px-1.5 py-0.5 text-purple-200">
                   openapi.yaml
                 </code>
@@ -694,21 +696,21 @@ function DevelopersPage() {
                 aria-hidden
               />
               <span>
-                Les endpoints sont susceptibles d&apos;évoluer&nbsp;; la version{' '}
+                {t.note3Before}
                 <code className="rounded bg-white/10 px-1.5 py-0.5 text-purple-200">
                   v1
-                </code>{' '}
-                reste stable.
+                </code>
+                {t.note3After}
               </span>
             </li>
           </ul>
           <p className="mt-5 text-sm text-gray-300">
-            Une question ou un cas d&apos;usage&nbsp;?{' '}
+            {t.contactPrompt}
             <Link
               href="/contact"
               className="text-purple-300 underline hover:text-purple-200"
             >
-              Contactez-nous
+              {t.contactLink}
             </Link>
             .
           </p>

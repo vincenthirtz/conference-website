@@ -9,8 +9,11 @@ import Button from '@/components/Buttons/button';
 import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import type { MatchStatus } from '@/types/admin';
+import { useT, format } from '@/lib/i18n/useT';
 
 import { logger } from '../../../utils/logger';
+
+type MatchGamesDict = ReturnType<typeof useT<'matchGames'>>;
 type SimpleTeam = {
   id: string;
   name: string;
@@ -130,10 +133,11 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
 };
 
 export default function MatchGamesPage({ match }: Props) {
+  const t = useT('matchGames');
   if (!match) {
     return (
       <div className="min-h-screen bg-black text-white flex items-center justify-center">
-        <p>Match introuvable.</p>
+        <p>{t.notFound}</p>
       </div>
     );
   }
@@ -142,10 +146,11 @@ export default function MatchGamesPage({ match }: Props) {
   const t2 = match.team2;
   const isBye = match.is_bye;
 
-  const t1Name = t1?.short_name || t1?.name || 'Équipe 1';
-  const t2Name = t2?.short_name || t2?.name || (isBye ? '(bye)' : 'Équipe 2');
+  const t1Name = t1?.short_name || t1?.name || t.team1Fallback;
+  const t2Name =
+    t2?.short_name || t2?.name || (isBye ? t.byeLabel : t.team2Fallback);
 
-  const statusLabel = getMatchStatusLabel(match.status);
+  const statusLabel = getMatchStatusLabel(t, match.status);
   const statusChipClass = getMatchStatusChipClass(match.status);
   const formatLabel = match.match_format?.toUpperCase() || 'BO?';
 
@@ -155,7 +160,13 @@ export default function MatchGamesPage({ match }: Props) {
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
       <Head>
-        <title>{`Maps – ${t1Name} vs ${t2Name} | ${match.tournament.name} | OW Women's Cup`}</title>
+        <title>
+          {format(t.docTitle, {
+            team1: t1Name,
+            team2: t2Name,
+            tournament: match.tournament.name,
+          })}
+        </title>
       </Head>
 
       <main className="container mx-auto px-4 pt-24 pb-16 max-w-5xl">
@@ -179,8 +190,9 @@ export default function MatchGamesPage({ match }: Props) {
               </div>
 
               <Heading typeStyle="heading-md" className="mb-1 text-gradient">
-                Détail des maps – {t1Name}{' '}
-                {!isBye && <span className="text-gray-400">vs</span>} {t2Name}
+                {t.detailHeading} – {t1Name}{' '}
+                {!isBye && <span className="text-gray-400">{t.vs}</span>}{' '}
+                {t2Name}
               </Heading>
 
               <div className="flex flex-wrap items-center gap-2 text-[11px] text-gray-300 mb-1">
@@ -205,7 +217,7 @@ export default function MatchGamesPage({ match }: Props) {
                 {match.group_key && (
                   <>
                     <span className="text-gray-500">·</span>
-                    <span>Poule {match.group_key}</span>
+                    <span>{format(t.poule, { key: match.group_key })}</span>
                   </>
                 )}
               </div>
@@ -215,8 +227,7 @@ export default function MatchGamesPage({ match }: Props) {
                 textColor="text-gray-200"
                 className="max-w-xl"
               >
-                Vue centrée sur les games de ce match : scores détaillés carte
-                par carte, overtimes, tiebreakers et total de rounds.
+                {t.intro}
               </Paragraph>
             </div>
 
@@ -226,7 +237,7 @@ export default function MatchGamesPage({ match }: Props) {
                   type="button"
                   className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-blue-400"
                 >
-                  ← Résumé du match
+                  {t.backToSummary}
                 </Button>
               </Link>
               <Link href={tournamentPath}>
@@ -234,7 +245,7 @@ export default function MatchGamesPage({ match }: Props) {
                   type="button"
                   className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-emerald-400"
                 >
-                  Tournoi
+                  {t.tournament}
                 </Button>
               </Link>
               <Link href={`${tournamentPath}/maps`}>
@@ -242,7 +253,7 @@ export default function MatchGamesPage({ match }: Props) {
                   type="button"
                   className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-purple-400"
                 >
-                  Top maps du tournoi
+                  {t.topMaps}
                 </Button>
               </Link>
             </div>
@@ -254,23 +265,26 @@ export default function MatchGamesPage({ match }: Props) {
           <div className="bg-black/60 border border-white/5 rounded-2xl p-4">
             {match.games.length === 0 && (
               <Paragraph typeStyle="body-sm" textColor="text-gray-300">
-                Aucune carte n&apos;est encore enregistrée pour ce match.
+                {t.noMapsYet}
               </Paragraph>
             )}
 
             {match.games.length > 0 && (
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <StatCard label="Maps jouées" value={match.games.length} />
                 <StatCard
-                  label={`Rounds ${t1Name}`}
+                  label={t.statMapsPlayed}
+                  value={match.games.length}
+                />
+                <StatCard
+                  label={format(t.statRoundsTeam, { team: t1Name })}
                   value={roundsSummary.team1Rounds}
                 />
                 <StatCard
-                  label={`Rounds ${t2Name}`}
+                  label={format(t.statRoundsTeam, { team: t2Name })}
                   value={roundsSummary.team2Rounds}
                 />
                 <StatCard
-                  label="Différence de rounds"
+                  label={t.statRoundsDiff}
                   value={
                     roundsSummary.diff > 0
                       ? `+${roundsSummary.diff}`
@@ -281,7 +295,7 @@ export default function MatchGamesPage({ match }: Props) {
                       ? t1Name
                       : roundsSummary.diff < 0
                         ? t2Name
-                        : 'Équilibré'
+                        : t.balanced
                   }
                 />
               </div>
@@ -295,12 +309,15 @@ export default function MatchGamesPage({ match }: Props) {
             <div className="bg-black/60 border border-white/5 rounded-2xl p-4">
               <div className="flex items-center justify-between mb-3">
                 <p className="text-[11px] uppercase tracking-wide text-gray-400">
-                  Cartes du match
+                  {t.mapsOfMatch}
                 </p>
                 <span className="text-[10px] text-gray-500">
-                  {match.games.length} map
-                  {match.games.length > 1 ? 's' : ''} enregistrée
-                  {match.games.length > 1 ? 's' : ''}
+                  {format(
+                    match.games.length > 1
+                      ? t.mapsRecorded_other
+                      : t.mapsRecorded_one,
+                    { count: match.games.length }
+                  )}
                 </span>
               </div>
 
@@ -309,11 +326,13 @@ export default function MatchGamesPage({ match }: Props) {
                   <thead>
                     <tr className="text-gray-400 border-b border-white/10">
                       <th className="text-left py-1.5 pr-3">#</th>
-                      <th className="text-left py-1.5 pr-3">Map</th>
+                      <th className="text-left py-1.5 pr-3">{t.colMap}</th>
                       <th className="text-right py-1.5 px-3">{t1Name}</th>
                       <th className="text-right py-1.5 px-3">{t2Name}</th>
-                      <th className="text-right py-1.5 px-3">Total rounds</th>
-                      <th className="text-right py-1.5 pl-3">Tags</th>
+                      <th className="text-right py-1.5 px-3">
+                        {t.colTotalRounds}
+                      </th>
+                      <th className="text-right py-1.5 pl-3">{t.colTags}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -325,9 +344,20 @@ export default function MatchGamesPage({ match }: Props) {
                       const s1 = g.team1_score ?? 0;
                       const s2 = g.team2_score ?? 0;
                       const total = s1 + s2;
-                      const tags: string[] = [];
-                      if (g.is_tiebreaker) tags.push('Tiebreaker');
-                      if (g.went_overtime) tags.push('Overtime');
+                      const tags: { id: string; label: string; cls: string }[] =
+                        [];
+                      if (g.is_tiebreaker)
+                        tags.push({
+                          id: 'tiebreaker',
+                          label: t.tagTiebreaker,
+                          cls: ' bg-fuchsia-500/20 border-fuchsia-400/70 text-fuchsia-100',
+                        });
+                      if (g.went_overtime)
+                        tags.push({
+                          id: 'overtime',
+                          label: t.tagOvertime,
+                          cls: ' bg-amber-500/20 border-amber-400/70 text-amber-100',
+                        });
 
                       return (
                         <tr
@@ -339,7 +369,7 @@ export default function MatchGamesPage({ match }: Props) {
                         >
                           <td className="py-1.5 pr-3 text-gray-400">{order}</td>
                           <td className="py-1.5 pr-3 text-gray-100">
-                            {g.map_name || `Map ${order}`}
+                            {g.map_name || format(t.mapFallback, { order })}
                           </td>
                           <td className="py-1.5 px-3 text-right text-gray-100">
                             {s1}
@@ -359,15 +389,13 @@ export default function MatchGamesPage({ match }: Props) {
                               )}
                               {tags.map((tag) => (
                                 <span
-                                  key={tag}
+                                  key={tag.id}
                                   className={
                                     'px-1.5 py-[1px] rounded-full border text-[9px]' +
-                                    (tag === 'Tiebreaker'
-                                      ? ' bg-fuchsia-500/20 border-fuchsia-400/70 text-fuchsia-100'
-                                      : ' bg-amber-500/20 border-amber-400/70 text-amber-100')
+                                    tag.cls
                                   }
                                 >
-                                  {tag}
+                                  {tag.label}
                                 </span>
                               ))}
                             </div>
@@ -379,11 +407,7 @@ export default function MatchGamesPage({ match }: Props) {
                 </table>
               </div>
 
-              <p className="mt-2 text-[10px] text-gray-500">
-                Les scores correspondent aux manches cumulées remportées par
-                chaque équipe sur la carte (rounds, points, etc. selon le mode
-                de jeu).
-              </p>
+              <p className="mt-2 text-[10px] text-gray-500">{t.scoresHint}</p>
             </div>
           </section>
         )}
@@ -434,16 +458,19 @@ function StatCard({
   );
 }
 
-function getMatchStatusLabel(status: MatchStatus): string {
+function getMatchStatusLabel(
+  t: MatchGamesDict,
+  status: MatchStatus
+): string {
   switch (status) {
     case 'pending':
-      return 'À venir';
+      return t.statusUpcoming;
     case 'ongoing':
-      return 'En cours';
+      return t.statusOngoing;
     case 'finished':
-      return 'Terminé';
+      return t.statusFinished;
     case 'cancelled':
-      return 'Annulé';
+      return t.statusCancelled;
     default:
       return status;
   }

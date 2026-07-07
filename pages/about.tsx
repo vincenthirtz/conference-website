@@ -4,6 +4,9 @@ import { useState } from 'react';
 import type { GetStaticProps } from 'next';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { supabaseAdmin } from '@/utils/supabase';
+import { useT, format } from '@/lib/i18n/useT';
+
+type AboutDict = ReturnType<typeof useT<'aboutPage'>>;
 
 const DEFAULT_VIDEO_URL = 'https://www.youtube.com/watch?v=3j6w7CjXne8';
 
@@ -29,19 +32,19 @@ export const getStaticProps: GetStaticProps<AboutPageProps> = async () => {
   };
 };
 
-const stats = [
-  { value: '3', label: '\u00c9ditions' },
-  { value: '50+', label: 'Joueuses' },
-  { value: '10+', label: 'B\u00e9n\u00e9voles' },
-  { value: '100%', label: 'F\u00e9minin' },
-  { value: '200+', label: 'Viewers' },
+const getStats = (t: AboutDict) => [
+  { value: '3', label: t.statEditions },
+  { value: '50+', label: t.statPlayers },
+  { value: '10+', label: t.statVolunteers },
+  { value: '100%', label: t.statFeminine },
+  { value: '200+', label: t.statViewers },
 ];
 
-const steps = [
+const getSteps = (t: AboutDict) => [
   {
     step: '01',
-    title: 'Inscris ton \u00e9quipe',
-    desc: 'Cr\u00e9e ou rejoins une \u00e9quipe de 5 joueuses. Le format est ouvert \u00e0 toutes, d\u00e9butantes comme confirm\u00e9es.',
+    title: t.step1Title,
+    desc: t.step1Desc,
     icon: (
       <svg
         className="w-7 h-7"
@@ -60,8 +63,8 @@ const steps = [
   },
   {
     step: '02',
-    title: 'Joue le tournoi',
-    desc: 'Des matchs en ligne au format comp\u00e9titif, avec arbitrage professionnel et lobby s\u00e9curis\u00e9s. Du Swiss au bracket final.',
+    title: t.step2Title,
+    desc: t.step2Desc,
     icon: (
       <svg
         className="w-7 h-7"
@@ -80,8 +83,8 @@ const steps = [
   },
   {
     step: '03',
-    title: 'Regarde le cast en direct',
-    desc: 'Chaque match est cast\u00e9 en direct sur Twitch par une \u00e9quipe 100\u202f% f\u00e9minine. Overlay pro, replays et interviews.',
+    title: t.step3Title,
+    desc: t.step3Desc,
     icon: (
       <svg
         className="w-7 h-7"
@@ -100,10 +103,10 @@ const steps = [
   },
 ];
 
-const values = [
+const getValues = (t: AboutDict) => [
   {
-    title: 'Safe space',
-    desc: 'Mod\u00e9ration active, charte anti-harc\u00e8lement et staff form\u00e9 pour que chaque joueuse se sente en s\u00e9curit\u00e9.',
+    title: t.value1Title,
+    desc: t.value1Desc,
     accent: 'from-emerald-500/20 to-emerald-600/5',
     border: 'border-emerald-500/20',
     iconColor: 'text-emerald-400',
@@ -124,8 +127,8 @@ const values = [
     ),
   },
   {
-    title: 'Accessibilit\u00e9',
-    desc: 'Ouvert \u00e0 tous les niveaux, du d\u00e9butant au semi-pro. L\u2019important c\u2019est de participer et progresser.',
+    title: t.value2Title,
+    desc: t.value2Desc,
     accent: 'from-purple-500/20 to-purple-600/5',
     border: 'border-purple-500/20',
     iconColor: 'text-purple-400',
@@ -146,8 +149,8 @@ const values = [
     ),
   },
   {
-    title: 'Transparence',
-    desc: 'R\u00e8glement public, arbitrage clair et communication ouverte avec les joueuses et la communaut\u00e9.',
+    title: t.value3Title,
+    desc: t.value3Desc,
     accent: 'from-cyan-500/20 to-cyan-600/5',
     border: 'border-cyan-500/20',
     iconColor: 'text-cyan-400',
@@ -173,8 +176,8 @@ const values = [
     ),
   },
   {
-    title: 'B\u00e9n\u00e9volat',
-    desc: 'Enti\u00e8rement port\u00e9 par des passionn\u00e9es. Chaque don et partenariat finance directement le tournoi.',
+    title: t.value4Title,
+    desc: t.value4Desc,
     accent: 'from-pink-500/20 to-pink-600/5',
     border: 'border-pink-500/20',
     iconColor: 'text-pink-400',
@@ -197,6 +200,10 @@ const values = [
 ];
 
 function AboutPage({ videoUrl }: AboutPageProps) {
+  const t = useT('aboutPage');
+  const stats = getStats(t);
+  const steps = getSteps(t);
+  const values = getValues(t);
   const [showVideo, setShowVideo] = useState(false);
 
   const youtubeId =
@@ -220,32 +227,27 @@ function AboutPage({ videoUrl }: AboutPageProps) {
             <div className="flex-1 text-center lg:text-left">
               <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.18em] text-gray-300 backdrop-blur-sm">
                 <span className="h-1.5 w-1.5 rounded-full bg-purple-400 animate-pulse" />
-                Depuis 2025
+                {t.since2025}
               </p>
               <h1 className="mt-5 text-4xl font-bold leading-[1.1] sm:text-5xl lg:text-6xl">
-                Le tournoi Overwatch
-                <span className="block text-gradient">
-                  100&nbsp;% f&eacute;minin
-                </span>
+                {t.heroTitleLine1}
+                <span className="block text-gradient">{t.heroTitleLine2}</span>
               </h1>
               <p className="mt-6 max-w-lg text-lg leading-relaxed text-gray-300 mx-auto lg:mx-0">
-                La Women&apos;s Cup r&eacute;unit des joueuses francophones de
-                tous niveaux dans un cadre comp&eacute;titif, bienveillant et
-                enti&egrave;rement cast&eacute; par des femmes. Un tournoi par
-                et pour la communaut&eacute;.
+                {t.heroSubtitle}
               </p>
               <div className="mt-8 flex flex-wrap gap-4 justify-center lg:justify-start">
                 <Link
                   href="/register"
                   className="rounded-full bg-gradient-to-r from-purple-500 to-pink-500 px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition-all hover:shadow-xl hover:shadow-purple-900/50 hover:-translate-y-0.5"
                 >
-                  S&apos;inscrire au tournoi
+                  {t.ctaRegister}
                 </Link>
                 <Link
                   href="/association"
                   className="rounded-full border border-white/15 bg-white/5 backdrop-blur-sm px-7 py-3.5 text-sm font-semibold text-white transition hover:border-white/30 hover:bg-white/10"
                 >
-                  D&eacute;couvrir l&apos;asso
+                  {t.ctaDiscoverAsso}
                 </Link>
               </div>
             </div>
@@ -258,13 +260,13 @@ function AboutPage({ videoUrl }: AboutPageProps) {
                     type="button"
                     onClick={() => setShowVideo(true)}
                     className="group relative w-full h-full"
-                    aria-label="Lancer la vid\u00e9o"
+                    aria-label={t.videoPlayAria}
                   >
                     {youtubeId ? (
                       /* eslint-disable-next-line @next/next/no-img-element */
                       <img
                         src={`https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg`}
-                        alt="Aper\u00e7u vid\u00e9o OW Women's Cup"
+                        alt={t.videoPreviewAlt}
                         width={1280}
                         height={720}
                         loading="eager"
@@ -273,7 +275,7 @@ function AboutPage({ videoUrl }: AboutPageProps) {
                     ) : (
                       <Image
                         src="/img/fourplayers.jpg"
-                        alt="Aper\u00e7u vid\u00e9o OW Women's Cup"
+                        alt={t.videoPreviewAlt}
                         fill
                         sizes="(max-width: 768px) 100vw, 720px"
                         className="object-cover"
@@ -296,7 +298,7 @@ function AboutPage({ videoUrl }: AboutPageProps) {
                   <iframe
                     className="absolute inset-0 w-full h-full"
                     src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&rel=0`}
-                    title="OW Women's Cup vid\u00e9o"
+                    title={t.videoTitle}
                     allow="autoplay; fullscreen; picture-in-picture"
                     allowFullScreen
                   />
@@ -336,25 +338,16 @@ function AboutPage({ videoUrl }: AboutPageProps) {
           <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#0F1F3A] via-[#1A0F2E] to-[#2C0B2C] p-8 sm:p-12">
             <div className="max-w-3xl mx-auto text-center">
               <p className="text-xs uppercase tracking-[0.18em] text-purple-300">
-                Notre mission
+                {t.missionEyebrow}
               </p>
               <h2 className="mt-3 text-3xl font-bold sm:text-4xl">
-                Promouvoir l&apos;esport f&eacute;minin francophone
+                {t.missionTitle}
               </h2>
               <p className="mt-5 text-gray-300 leading-relaxed">
-                L&apos;OW Women&apos;s Cup est n&eacute;e d&apos;un constat
-                simple&nbsp;: les femmes sont sous-repr&eacute;sent&eacute;es
-                dans l&apos;esport comp&eacute;titif. Notre
-                r&eacute;ponse&nbsp;? Un tournoi Overwatch o&ugrave; les
-                joueuses sont au centre, o&ugrave; le cast est 100&nbsp;%
-                f&eacute;minin, et o&ugrave; chaque participante &mdash;
-                d&eacute;butante ou confirm&eacute;e &mdash; trouve sa place.
+                {t.missionP1}
               </p>
               <p className="mt-4 text-gray-300 leading-relaxed">
-                Port&eacute;e par une association loi 1901 enti&egrave;rement
-                b&eacute;n&eacute;vole, la comp&eacute;tition grandit chaque
-                ann&eacute;e avec de nouvelles &eacute;quipes, des partenaires
-                engag&eacute;s et une communaut&eacute; de plus en plus active.
+                {t.missionP2}
               </p>
             </div>
           </div>
@@ -364,10 +357,10 @@ function AboutPage({ videoUrl }: AboutPageProps) {
         <section>
           <div className="text-center mb-12">
             <p className="text-xs uppercase tracking-[0.18em] text-pink-300">
-              Comment &ccedil;a marche
+              {t.howEyebrow}
             </p>
             <h2 className="mt-2 text-3xl font-bold sm:text-4xl">
-              Trois &eacute;tapes pour participer
+              {t.howTitle}
             </h2>
           </div>
 
@@ -382,7 +375,7 @@ function AboutPage({ videoUrl }: AboutPageProps) {
                     {item.icon}
                   </div>
                   <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-                    &Eacute;tape {item.step}
+                    {format(t.stepLabel, { step: item.step })}
                   </span>
                 </div>
                 <h3 className="text-lg font-semibold">{item.title}</h3>
@@ -398,14 +391,13 @@ function AboutPage({ videoUrl }: AboutPageProps) {
         <section>
           <div className="text-center mb-12">
             <p className="text-xs uppercase tracking-[0.18em] text-cyan-300">
-              Nos valeurs
+              {t.valuesEyebrow}
             </p>
             <h2 className="mt-2 text-3xl font-bold sm:text-4xl">
-              Ce qui nous d&eacute;finit
+              {t.valuesTitle}
             </h2>
             <p className="mt-3 mx-auto max-w-xl text-sm text-gray-400">
-              Plus qu&apos;un tournoi, un espace cr&eacute;&eacute; pour que
-              chaque joueuse puisse s&apos;&eacute;panouir et progresser.
+              {t.valuesIntro}
             </p>
           </div>
 
@@ -436,36 +428,33 @@ function AboutPage({ videoUrl }: AboutPageProps) {
           <div className="flex flex-col md:flex-row">
             <div className="flex-1 p-8 sm:p-12 flex flex-col justify-center">
               <p className="text-xs uppercase tracking-[0.18em] text-purple-300">
-                L&apos;&eacute;quipe
+                {t.teamEyebrow}
               </p>
               <h2 className="mt-2 text-2xl font-bold sm:text-3xl">
-                Une asso port&eacute;e par des passionn&eacute;es
+                {t.teamTitle}
               </h2>
-              <p className="mt-4 text-gray-400 leading-relaxed">
-                Direction, arbitrage, production, communaut&eacute;&hellip;
-                L&apos;OW Women&apos;s Cup est organis&eacute;e par une
-                &eacute;quipe de b&eacute;n&eacute;voles r&eacute;parties en 4
-                p&ocirc;les. Chacune apporte son expertise pour offrir la
-                meilleure exp&eacute;rience aux joueuses et au public.
-              </p>
+              <p className="mt-4 text-gray-400 leading-relaxed">{t.teamDesc}</p>
               <div className="mt-6 flex flex-wrap gap-2">
-                {['Direction', 'Tournoi', 'Production', 'Communaut\u00e9'].map(
-                  (pole) => (
-                    <span
-                      key={pole}
-                      className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-gray-300"
-                    >
-                      {pole}
-                    </span>
-                  )
-                )}
+                {[
+                  t.poleDirection,
+                  t.poleTournament,
+                  t.poleProduction,
+                  t.poleCommunity,
+                ].map((pole) => (
+                  <span
+                    key={pole}
+                    className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-gray-300"
+                  >
+                    {pole}
+                  </span>
+                ))}
               </div>
               <div className="mt-8">
                 <Link
                   href="/association"
                   className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/10 hover:border-white/30"
                 >
-                  D&eacute;couvrir l&apos;association
+                  {t.discoverAssoLink}
                   <svg
                     className="w-4 h-4"
                     fill="none"
@@ -485,7 +474,7 @@ function AboutPage({ videoUrl }: AboutPageProps) {
             <div className="flex-1 relative min-h-[280px] md:min-h-0">
               <Image
                 src="/img/fourplayers.jpg"
-                alt="L'\u00e9quipe OW Women's Cup"
+                alt={t.teamImgAlt}
                 fill
                 sizes="(max-width: 768px) 100vw, 50vw"
                 className="object-cover"
@@ -498,27 +487,26 @@ function AboutPage({ videoUrl }: AboutPageProps) {
         {/* ── Partenaires teaser ──────────────────────────── */}
         <section className="text-center">
           <p className="text-xs uppercase tracking-[0.18em] text-gray-400">
-            Ils nous soutiennent
+            {t.partnersEyebrow}
           </p>
           <h2 className="mt-2 text-2xl font-bold sm:text-3xl">
-            Nos partenaires
+            {t.partnersTitle}
           </h2>
           <p className="mt-3 mx-auto max-w-md text-sm text-gray-400">
-            Merci aux partenaires qui rendent cette aventure possible. Envie de
-            nous rejoindre&nbsp;?
+            {t.partnersDesc}
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-4">
             <Link
               href="/partenaires"
               className="rounded-full border border-white/15 bg-white/5 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/10 hover:border-white/30"
             >
-              Voir nos partenaires
+              {t.viewPartners}
             </Link>
             <Link
               href="/partenaires#devenir-partenaire"
               className="rounded-full bg-gradient-to-r from-purple-500 to-pink-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition-all hover:shadow-xl hover:shadow-purple-900/50 hover:-translate-y-0.5"
             >
-              Devenir sponsor
+              {t.becomeSponsor}
             </Link>
           </div>
         </section>
@@ -531,19 +519,16 @@ function AboutPage({ videoUrl }: AboutPageProps) {
             <div className="absolute -left-20 -bottom-20 h-[300px] w-[300px] rounded-full bg-pink-500/10 blur-[80px]" />
           </div>
           <div className="relative p-8 sm:p-14 text-center">
-            <h2 className="text-3xl font-bold sm:text-4xl">
-              Pr&ecirc;te &agrave; rejoindre l&apos;aventure&nbsp;?
-            </h2>
+            <h2 className="text-3xl font-bold sm:text-4xl">{t.ctaTitle}</h2>
             <p className="mt-4 mx-auto max-w-lg text-gray-300 leading-relaxed">
-              Que tu sois joueuse, streameuse ou simplement curieuse, il y a une
-              place pour toi dans la communaut&eacute; OW Women&apos;s Cup.
+              {t.ctaDesc}
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-4">
               <Link
                 href="/register"
                 className="rounded-full bg-gradient-to-r from-purple-500 to-pink-500 px-8 py-4 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition-all hover:shadow-xl hover:shadow-purple-900/50 hover:-translate-y-0.5"
               >
-                Cr&eacute;er mon &eacute;quipe
+                {t.ctaCreateTeam}
               </Link>
               <Link
                 href="/contact"
@@ -562,7 +547,7 @@ function AboutPage({ videoUrl }: AboutPageProps) {
                     d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"
                   />
                 </svg>
-                Nous contacter
+                {t.ctaContact}
               </Link>
             </div>
           </div>

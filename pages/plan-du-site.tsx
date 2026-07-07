@@ -1,5 +1,8 @@
 import Link from 'next/link';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
+import { useT } from '@/lib/i18n/useT';
+
+type PlanDict = ReturnType<typeof useT<'planDuSite'>>;
 
 type SiteSection = {
   title: string;
@@ -7,91 +10,81 @@ type SiteSection = {
   links: { label: string; href: string }[];
 };
 
-const siteSections: SiteSection[] = [
+const getSiteSections = (t: PlanDict): SiteSection[] => [
   {
-    title: 'Pages principales',
-    description: 'Navigation g\u00e9n\u00e9rale du site public.',
+    title: t.section1Title,
+    description: t.section1Desc,
     links: [
-      { label: 'Accueil', href: '/' },
-      { label: "L'association", href: '/association' },
-      { label: '\u00c0 propos', href: '/about' },
-      { label: 'Partenaires', href: '/partenaires' },
-      { label: 'Tournoi 2025', href: '/tournoi' },
-      { label: 'Timeline 2026', href: '/timeline-2026' },
-      { label: 'Tous les tournois', href: '/tournaments' },
-      { label: 'Jeux supportés', href: '/jeux' },
-      { label: "Installer l'app", href: '/app' },
+      { label: t.linkHome, href: '/' },
+      { label: t.linkAssociation, href: '/association' },
+      { label: t.linkAbout, href: '/about' },
+      { label: t.linkPartners, href: '/partenaires' },
+      { label: t.linkTournament2025, href: '/tournoi' },
+      { label: t.linkTimeline2026, href: '/timeline-2026' },
+      { label: t.linkAllTournaments, href: '/tournaments' },
+      { label: t.linkGames, href: '/jeux' },
+      { label: t.linkInstallApp, href: '/app' },
     ],
   },
   {
-    title: 'Contenu & m\u00e9dias',
-    description: 'Actualit\u00e9s, lore et ressources Overwatch.',
+    title: t.section2Title,
+    description: t.section2Desc,
     links: [
-      { label: 'Actualit\u00e9s', href: '/actualites' },
-      { label: 'Ambassadrices', href: '/live' },
-      { label: 'Lore & m\u00e9dias', href: '/lore' },
-      { label: 'Hero Picker', href: '/hero-picker' },
+      { label: t.linkNews, href: '/actualites' },
+      { label: t.linkAmbassadors, href: '/live' },
+      { label: t.linkLore, href: '/lore' },
+      { label: t.linkHeroPicker, href: '/hero-picker' },
     ],
   },
   {
-    title: 'Participer',
-    description: 'Inscription, \u00e9quipes et \u00e9changes avec le staff.',
+    title: t.section3Title,
+    description: t.section3Desc,
     links: [
-      { label: 'Inscription staff / joueur', href: '/register' },
-      {
-        label: 'Inscription tournoi f\u00e9minin 2026',
-        href: '/inscription-2026',
-      },
-      { label: 'Cr\u00e9er une \u00e9quipe', href: '/team/create' },
-      {
-        label: 'Guide capitaine \u2014 g\u00e9rer mon \u00e9quipe',
-        href: '/guide/gerer-mon-equipe',
-      },
-      {
-        label: 'Espace capitaine \u2014 pr\u00e9sentation',
-        href: '/espace-capitaine',
-      },
-      { label: 'Espace joueur', href: '/player' },
-      { label: 'Devenir partenaire', href: '/partenaires/demande' },
-      { label: 'Proposer un scrim', href: '/scrim' },
-      { label: 'Contact', href: '/contact' },
-      { label: 'Signalement / Support', href: '/support' },
-      { label: 'Faire un don', href: '/don' },
+      { label: t.linkRegister, href: '/register' },
+      { label: t.linkRegister2026, href: '/inscription-2026' },
+      { label: t.linkCreateTeam, href: '/team/create' },
+      { label: t.linkCaptainGuide, href: '/guide/gerer-mon-equipe' },
+      { label: t.linkCaptainSpace, href: '/espace-capitaine' },
+      { label: t.linkPlayerSpace, href: '/player' },
+      { label: t.linkBecomePartner, href: '/partenaires/demande' },
+      { label: t.linkProposeScrim, href: '/scrim' },
+      { label: t.linkContact, href: '/contact' },
+      { label: t.linkSupport, href: '/support' },
+      { label: t.linkDonate, href: '/don' },
     ],
   },
   {
-    title: 'Infos officielles',
-    description: 'Documents et r\u00e9f\u00e9rences cl\u00e9s pour le tournoi.',
+    title: t.section4Title,
+    description: t.section4Desc,
     links: [
-      { label: 'R\u00e8glement', href: '/rules' },
-      { label: 'Mentions l\u00e9gales', href: '/mentions-legales' },
-      { label: 'D\u00e9ploiements', href: '/builds' },
+      { label: t.linkRules, href: '/rules' },
+      { label: t.linkLegal, href: '/mentions-legales' },
+      { label: t.linkBuilds, href: '/builds' },
     ],
   },
   {
-    title: 'Plan & ressources',
-    description: 'Plan du site et liens pour les moteurs de recherche.',
+    title: t.section5Title,
+    description: t.section5Desc,
     links: [
-      { label: 'Plan du site', href: '/plan-du-site' },
-      { label: 'Sitemap XML', href: '/sitemap.xml' },
+      { label: t.linkSitemap, href: '/plan-du-site' },
+      { label: t.linkSitemapXml, href: '/sitemap.xml' },
     ],
   },
   {
-    title: 'Espace staff',
-    description: "Acc\u00e8s r\u00e9serv\u00e9 \u00e0 l'organisation.",
+    title: t.section6Title,
+    description: t.section6Desc,
     links: [
-      { label: 'Dashboard staff', href: '/admin' },
-      { label: 'Connexion staff', href: '/admin/login' },
-      { label: 'Mot de passe oubli\u00e9', href: '/admin/forgot-password' },
-      {
-        label: 'R\u00e9initialiser le mot de passe',
-        href: '/admin/reset-password',
-      },
+      { label: t.linkStaffDashboard, href: '/admin' },
+      { label: t.linkStaffLogin, href: '/admin/login' },
+      { label: t.linkForgotPassword, href: '/admin/forgot-password' },
+      { label: t.linkResetPassword, href: '/admin/reset-password' },
     ],
   },
 ];
 
 function SiteMapPage() {
+  const t = useT('planDuSite');
+  const siteSections = getSiteSections(t);
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
       <div className="relative overflow-hidden">
@@ -103,25 +96,23 @@ function SiteMapPage() {
 
         <div className="relative mx-auto max-w-5xl px-6 pt-24 pb-12 sm:pt-28">
           <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.18em] text-gray-200">
-            Plan du site
+            {t.heroBadge}
           </p>
           <h1 className="mt-4 text-4xl font-bold leading-tight sm:text-5xl">
-            Tous les liens internes, en un coup d&apos;&#339;il
+            {t.heroTitle}
           </h1>
           <p className="mt-4 max-w-3xl text-lg text-gray-200">
-            Retrouvez ici l&apos;ensemble des pages publiques et des
-            acc&egrave;s staff. Le sitemap XML reste disponible pour les moteurs
-            de recherche et les int&eacute;grations externes.
+            {t.heroSubtitle}
           </p>
           <div className="mt-6 inline-flex items-center gap-3 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-gray-200">
             <span className="rounded-full bg-purple-500/20 px-2 py-[2px] text-[11px] font-semibold uppercase tracking-[0.18em] text-purple-100">
-              Ressource
+              {t.resourceBadge}
             </span>
             <Link
               href="/sitemap.xml"
               className="font-semibold text-white underline decoration-purple-300/60 decoration-2 underline-offset-4"
             >
-              Ouvrir le sitemap.xml
+              {t.openSitemap}
             </Link>
           </div>
         </div>
@@ -174,7 +165,7 @@ function SiteMapPage() {
 const siteMapSeo: SeoProps = {
   title: 'Plan du site',
   description:
-    "Parcourez l'ensemble des liens internes de l'OW Women's Cup (pages publiques, participation, staff) et acc\u00e9dez au sitemap XML.",
+    "Parcourez l'ensemble des liens internes de l'OW Women's Cup (pages publiques, participation, staff) et accédez au sitemap XML.",
 };
 
 SiteMapPage.seo = siteMapSeo;

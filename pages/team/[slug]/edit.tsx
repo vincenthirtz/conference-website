@@ -35,6 +35,9 @@ import LogoUpload from '@/components/admin/LogoUpload';
 import MemberProfileEditor, {
   type EditableMember,
 } from '@/components/Team/MemberProfileEditor';
+import { useT, format } from '@/lib/i18n/useT';
+
+type TeamEditDict = ReturnType<typeof useT<'teamEdit'>>;
 
 type EditableTeam = {
   id: string;
@@ -188,6 +191,9 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
 export default function TeamPublicEditPage({ team, members }: Props) {
   const { addToast } = useToast();
   const { adminFetchJson } = useAdminFetch();
+  const t = useT('teamEdit');
+  const overlayLabels = getOverlayLabels(t);
+  const focalLabels = getFocalLabels(t);
 
   const [description, setDescription] = useState(team.description ?? '');
   const [publicContent, setPublicContent] = useState(team.public_content ?? '');
@@ -260,14 +266,11 @@ export default function TeamPublicEditPage({ team, members }: Props) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!accentValid || !secondaryValid) {
-      addToast(
-        'Couleur invalide — utilise un hex (#rgb ou #rrggbb).',
-        'error'
-      );
+      addToast(t.errorInvalidColor, 'error');
       return;
     }
     if (!embedValid) {
-      addToast('Embed: URL YouTube ou Twitch invalide.', 'error');
+      addToast(t.errorInvalidEmbed, 'error');
       return;
     }
     setSaving(true);
@@ -307,15 +310,15 @@ export default function TeamPublicEditPage({ team, members }: Props) {
       const updatedCount = json.updatedFields?.length ?? 0;
       addToast(
         updatedCount > 0
-          ? `Page mise à jour (${updatedCount} champ${updatedCount > 1 ? 's' : ''} modifié${updatedCount > 1 ? 's' : ''}).`
-          : 'Aucun changement.',
+          ? format(
+              updatedCount > 1 ? t.updateSuccess_other : t.updateSuccess_one,
+              { count: updatedCount }
+            )
+          : t.noChanges,
         'success'
       );
     } catch (err) {
-      addToast(
-        err instanceof Error ? err.message : 'Erreur inattendue.',
-        'error'
-      );
+      addToast(err instanceof Error ? err.message : t.errorUnexpected, 'error');
     } finally {
       setSaving(false);
     }
@@ -324,24 +327,24 @@ export default function TeamPublicEditPage({ team, members }: Props) {
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
       <Head>
-        <title>Éditer {team.name} | OW Women&apos;s Cup</title>
+        <title>{format(t.headTitle, { name: team.name })}</title>
       </Head>
 
       <main className="container mx-auto px-4 max-w-4xl py-10">
         <div className="mb-6 flex items-center justify-between gap-4">
           <div>
             <p className="text-xs uppercase tracking-wide text-gray-500">
-              Personnalisation
+              {t.eyebrow}
             </p>
             <h1 className="text-2xl font-bold text-gradient">
-              Page publique de {team.name}
+              {format(t.title, { name: team.name })}
             </h1>
           </div>
           <Link
             href={`/team/${teamSlugForLink}`}
             className="text-sm text-gray-400 hover:text-white underline"
           >
-            ← Voir la page
+            {t.viewPage}
           </Link>
         </div>
 
@@ -349,20 +352,20 @@ export default function TeamPublicEditPage({ team, members }: Props) {
           {/* Identity */}
           <section className="bg-black/60 border border-white/5 rounded-2xl p-5 space-y-4">
             <h2 className="text-sm uppercase tracking-wide text-gray-400">
-              Identité visuelle
+              {t.identitySection}
             </h2>
 
             <LogoUpload
-              label="Logo"
-              hint="PNG, JPEG ou WebP, max 2 Mo. Carré recommandé (512×512)."
+              label={t.logoLabel}
+              hint={t.logoHint}
               value={logoUrl}
               onChange={setLogoUrl}
               endpoint={uploadEndpoint}
             />
 
             <LogoUpload
-              label="Bannière"
-              hint="PNG, JPEG ou WebP, max 2 Mo. Format paysage (1500×500)."
+              label={t.bannerLabel}
+              hint={t.bannerHint}
               value={bannerUrl}
               onChange={setBannerUrl}
               endpoint={uploadEndpoint}
@@ -371,7 +374,7 @@ export default function TeamPublicEditPage({ team, members }: Props) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <ColorField
                 id="accentColor"
-                label="Couleur d'accent"
+                label={t.accentColorLabel}
                 value={accentColor}
                 onChange={setAccentColor}
                 valid={accentValid}
@@ -379,12 +382,12 @@ export default function TeamPublicEditPage({ team, members }: Props) {
               />
               <ColorField
                 id="secondaryColor"
-                label="Couleur secondaire"
+                label={t.secondaryColorLabel}
                 value={secondaryColor}
                 onChange={setSecondaryColor}
                 valid={secondaryValid}
                 placeholder="#22d3ee"
-                hint="Combinée à l'accent pour les dégradés (logo, bannière, win-rate)."
+                hint={t.secondaryColorHint}
               />
             </div>
 
@@ -403,7 +406,7 @@ export default function TeamPublicEditPage({ team, members }: Props) {
                 htmlFor="bannerOverlay"
                 className="block text-sm text-neutral-300 mb-1"
               >
-                Overlay de bannière
+                {t.bannerOverlayLabel}
               </label>
               <select
                 id="bannerOverlay"
@@ -413,15 +416,15 @@ export default function TeamPublicEditPage({ team, members }: Props) {
                 }
                 className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
               >
-                <option value="">Par défaut (gradient noir)</option>
+                <option value="">{t.bannerOverlayDefault}</option>
                 {BANNER_OVERLAY_VALUES.map((value) => (
                   <option key={value} value={value}>
-                    {OVERLAY_LABELS[value]}
+                    {overlayLabels[value]}
                   </option>
                 ))}
               </select>
               <p className="text-xs text-neutral-500 mt-1">
-                Style de la couche posée au-dessus de l&apos;image de bannière.
+                {t.bannerOverlayHint}
               </p>
             </div>
 
@@ -430,7 +433,7 @@ export default function TeamPublicEditPage({ team, members }: Props) {
                 htmlFor="bannerFocal"
                 className="block text-sm text-neutral-300 mb-1"
               >
-                Cadrage de la bannière
+                {t.bannerFocalLabel}
               </label>
               <select
                 id="bannerFocal"
@@ -440,17 +443,17 @@ export default function TeamPublicEditPage({ team, members }: Props) {
                 }
                 className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
               >
-                <option value="">Centré (par défaut)</option>
+                <option value="">{t.bannerFocalDefault}</option>
                 {BANNER_FOCAL_VALUES.filter((v) => v !== 'center').map(
                   (value) => (
                     <option key={value} value={value}>
-                      {FOCAL_LABELS[value]}
+                      {focalLabels[value]}
                     </option>
                   )
                 )}
               </select>
               <p className="text-xs text-neutral-500 mt-1">
-                Point d&apos;ancrage de l&apos;image quand elle est recadrée.
+                {t.bannerFocalHint}
               </p>
             </div>
           </section>
@@ -458,7 +461,7 @@ export default function TeamPublicEditPage({ team, members }: Props) {
           {/* Description */}
           <section className="bg-black/60 border border-white/5 rounded-2xl p-5 space-y-4">
             <h2 className="text-sm uppercase tracking-wide text-gray-400">
-              Description courte
+              {t.shortDescSection}
             </h2>
             <div>
               <textarea
@@ -466,11 +469,14 @@ export default function TeamPublicEditPage({ team, members }: Props) {
                 maxLength={DESCRIPTION_MAX}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={3}
-                placeholder="Une phrase pour présenter l'équipe."
+                placeholder={t.shortDescPlaceholder}
                 className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
               />
               <p className="text-xs text-neutral-500 mt-1">
-                {description.length}/{DESCRIPTION_MAX} caractères
+                {format(t.charCount, {
+                  count: description.length,
+                  max: DESCRIPTION_MAX,
+                })}
               </p>
             </div>
           </section>
@@ -479,23 +485,21 @@ export default function TeamPublicEditPage({ team, members }: Props) {
           <section className="bg-black/60 border border-white/5 rounded-2xl p-5 space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-sm uppercase tracking-wide text-gray-400">
-                Contenu détaillé
+                {t.richContentSection}
               </h2>
               <button
                 type="button"
                 onClick={() => setShowPreview((s) => !s)}
                 className="text-xs text-cyan-300 hover:text-cyan-200 underline"
               >
-                {showPreview ? 'Édition' : 'Aperçu'}
+                {showPreview ? t.editToggle : t.previewToggle}
               </button>
             </div>
 
             {showPreview ? (
               <div className="min-h-[200px] rounded-xl border border-white/10 bg-black/40 p-4">
                 {previewNode ?? (
-                  <p className="text-gray-500 text-sm italic">
-                    Aucun contenu.
-                  </p>
+                  <p className="text-gray-500 text-sm italic">{t.noContent}</p>
                 )}
               </div>
             ) : (
@@ -504,20 +508,19 @@ export default function TeamPublicEditPage({ team, members }: Props) {
                 maxLength={TEAM_PUBLIC_CONTENT_MAX_LENGTH}
                 onChange={(e) => setPublicContent(e.target.value)}
                 rows={12}
-                placeholder={
-                  '## Notre histoire\n\nNous sommes une équipe...\n\n- Fondée en 2024\n- 5 joueuses titulaires'
-                }
+                placeholder={t.richContentPlaceholder}
                 className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono"
               />
             )}
 
             <div className="flex items-center justify-between text-xs text-neutral-500">
               <span>
-                Markdown : <code className="text-neutral-400">## titre</code>,{' '}
-                <code className="text-neutral-400">**gras**</code>,{' '}
-                <code className="text-neutral-400">*italique*</code>,{' '}
-                <code className="text-neutral-400">- liste</code>,{' '}
-                <code className="text-neutral-400">[lien](https://...)</code>
+                {t.markdownLabel}{' '}
+                <code className="text-neutral-400">{t.markdownHeading}</code>,{' '}
+                <code className="text-neutral-400">{t.markdownBold}</code>,{' '}
+                <code className="text-neutral-400">{t.markdownItalic}</code>,{' '}
+                <code className="text-neutral-400">{t.markdownList}</code>,{' '}
+                <code className="text-neutral-400">{t.markdownLink}</code>
               </span>
               <span>
                 {publicContent.length}/{TEAM_PUBLIC_CONTENT_MAX_LENGTH}
@@ -529,7 +532,7 @@ export default function TeamPublicEditPage({ team, members }: Props) {
           <section className="bg-black/60 border border-white/5 rounded-2xl p-5 space-y-4">
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-sm uppercase tracking-wide text-gray-400">
-                Annonce épinglée
+                {t.pinnedSection}
               </h2>
               {pinnedAnnouncement && (
                 <button
@@ -540,7 +543,7 @@ export default function TeamPublicEditPage({ team, members }: Props) {
                   }}
                   className="text-xs text-red-400 hover:text-red-300"
                 >
-                  Effacer
+                  {t.clear}
                 </button>
               )}
             </div>
@@ -550,13 +553,14 @@ export default function TeamPublicEditPage({ team, members }: Props) {
                 value={pinnedAnnouncement}
                 maxLength={PINNED_ANNOUNCEMENT_MAX}
                 onChange={(e) => setPinnedAnnouncement(e.target.value)}
-                placeholder="Ex: Nous recrutons un support !"
+                placeholder={t.pinnedPlaceholder}
                 className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
               />
               <p className="text-xs text-neutral-500 mt-1">
-                {pinnedAnnouncement.length}/{PINNED_ANNOUNCEMENT_MAX} —
-                bandeau affiché au-dessus de la page tant qu&apos;il y a du
-                texte (vide = caché).
+                {format(t.pinnedHint, {
+                  count: pinnedAnnouncement.length,
+                  max: PINNED_ANNOUNCEMENT_MAX,
+                })}
               </p>
             </div>
             <div>
@@ -564,7 +568,7 @@ export default function TeamPublicEditPage({ team, members }: Props) {
                 htmlFor="pinnedUntil"
                 className="block text-sm text-neutral-300 mb-1"
               >
-                Expire le (optionnel)
+                {t.pinnedUntilLabel}
               </label>
               <input
                 id="pinnedUntil"
@@ -574,7 +578,7 @@ export default function TeamPublicEditPage({ team, members }: Props) {
                 className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
               />
               <p className="text-xs text-neutral-500 mt-1">
-                Une fois cette date passée, le bandeau disparaît automatiquement.
+                {t.pinnedUntilHint}
               </p>
             </div>
           </section>
@@ -583,7 +587,7 @@ export default function TeamPublicEditPage({ team, members }: Props) {
           <section className="bg-black/60 border border-white/5 rounded-2xl p-5 space-y-4">
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-sm uppercase tracking-wide text-gray-400">
-                Embed Twitch / YouTube
+                {t.embedSection}
               </h2>
               {embedUrl && (
                 <button
@@ -591,7 +595,7 @@ export default function TeamPublicEditPage({ team, members }: Props) {
                   onClick={() => setEmbedUrl('')}
                   className="text-xs text-red-400 hover:text-red-300"
                 >
-                  Retirer
+                  {t.remove}
                 </button>
               )}
             </div>
@@ -600,17 +604,20 @@ export default function TeamPublicEditPage({ team, members }: Props) {
                 type="text"
                 value={embedUrl}
                 onChange={(e) => setEmbedUrl(e.target.value)}
-                placeholder="https://www.twitch.tv/votre-chaine ou https://youtu.be/VIDEO_ID"
+                placeholder={t.embedPlaceholder}
                 className={`w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border ${
                   embedValid ? 'border-neutral-600' : 'border-red-500'
                 } focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm`}
               />
               <p className="text-xs text-neutral-500 mt-1">
                 {embedParsed
-                  ? `Détecté : ${embedParsed.provider} (${embedParsed.id})`
+                  ? format(t.embedDetected, {
+                      provider: embedParsed.provider,
+                      id: embedParsed.id,
+                    })
                   : embedUrl
-                    ? 'URL non reconnue — Twitch (twitch.tv/CHAINE) ou YouTube (youtu.be/ID, /watch?v=ID, /embed/ID).'
-                    : 'Laisse vide pour ne pas afficher de lecteur.'}
+                    ? t.embedUnrecognized
+                    : t.embedEmpty}
               </p>
             </div>
           </section>
@@ -619,7 +626,7 @@ export default function TeamPublicEditPage({ team, members }: Props) {
           <section className="bg-black/60 border border-white/5 rounded-2xl p-5 space-y-4">
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-sm uppercase tracking-wide text-gray-400">
-                Palmarès
+                {t.achievementsSection}
               </h2>
               <span className="text-xs text-neutral-500">
                 {achievements.length}/{ACHIEVEMENTS_MAX}
@@ -627,8 +634,7 @@ export default function TeamPublicEditPage({ team, members }: Props) {
             </div>
             {achievements.length === 0 && (
               <p className="text-xs text-neutral-500 italic">
-                Aucun palmarès pour le moment. Ajoute un titre pour le faire
-                apparaître sur la page publique.
+                {t.achievementsEmpty}
               </p>
             )}
             <div className="space-y-3">
@@ -642,7 +648,7 @@ export default function TeamPublicEditPage({ team, members }: Props) {
                       type="text"
                       value={a.title}
                       maxLength={ACHIEVEMENT_TITLE_MAX}
-                      placeholder="Ex: 1er place"
+                      placeholder={t.achievementTitlePlaceholder}
                       onChange={(e) =>
                         setAchievements((prev) =>
                           prev.map((it, i) =>
@@ -660,7 +666,7 @@ export default function TeamPublicEditPage({ team, members }: Props) {
                         )
                       }
                       className="px-2 text-xs text-red-400 hover:text-red-300"
-                      aria-label="Supprimer"
+                      aria-label={t.delete}
                     >
                       ✕
                     </button>
@@ -684,7 +690,7 @@ export default function TeamPublicEditPage({ team, members }: Props) {
                       type="text"
                       value={a.tournament ?? ''}
                       maxLength={ACHIEVEMENT_TOURNAMENT_MAX}
-                      placeholder="Tournoi (optionnel)"
+                      placeholder={t.achievementTournamentPlaceholder}
                       onChange={(e) =>
                         setAchievements((prev) =>
                           prev.map((it, i) =>
@@ -714,7 +720,7 @@ export default function TeamPublicEditPage({ team, members }: Props) {
                 }
                 className="w-full px-3 py-2 rounded-lg border border-dashed border-white/15 text-sm text-cyan-300 hover:bg-cyan-500/5"
               >
-                + Ajouter un palmarès
+                {t.addAchievement}
               </button>
             )}
           </section>
@@ -723,7 +729,7 @@ export default function TeamPublicEditPage({ team, members }: Props) {
           <section className="bg-black/60 border border-white/5 rounded-2xl p-5 space-y-4">
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-sm uppercase tracking-wide text-gray-400">
-                Sponsors
+                {t.sponsorsSection}
               </h2>
               <span className="text-xs text-neutral-500">
                 {sponsors.length}/{SPONSORS_MAX}
@@ -731,7 +737,7 @@ export default function TeamPublicEditPage({ team, members }: Props) {
             </div>
             {sponsors.length === 0 && (
               <p className="text-xs text-neutral-500 italic">
-                Aucun sponsor. Ajoute un nom + lien pour les afficher.
+                {t.sponsorsEmpty}
               </p>
             )}
             <div className="space-y-3">
@@ -745,7 +751,7 @@ export default function TeamPublicEditPage({ team, members }: Props) {
                       type="text"
                       value={s.name}
                       maxLength={SPONSOR_NAME_MAX}
-                      placeholder="Nom du sponsor"
+                      placeholder={t.sponsorNamePlaceholder}
                       onChange={(e) =>
                         setSponsors((prev) =>
                           prev.map((it, i) =>
@@ -761,7 +767,7 @@ export default function TeamPublicEditPage({ team, members }: Props) {
                         setSponsors((prev) => prev.filter((_, i) => i !== idx))
                       }
                       className="px-2 text-xs text-red-400 hover:text-red-300"
-                      aria-label="Supprimer"
+                      aria-label={t.delete}
                     >
                       ✕
                     </button>
@@ -769,7 +775,7 @@ export default function TeamPublicEditPage({ team, members }: Props) {
                   <input
                     type="text"
                     value={s.logo_url ?? ''}
-                    placeholder="URL du logo (https://...)"
+                    placeholder={t.sponsorLogoPlaceholder}
                     onChange={(e) =>
                       setSponsors((prev) =>
                         prev.map((it, i) =>
@@ -784,7 +790,7 @@ export default function TeamPublicEditPage({ team, members }: Props) {
                   <input
                     type="text"
                     value={s.url ?? ''}
-                    placeholder="Site (https://...)"
+                    placeholder={t.sponsorUrlPlaceholder}
                     onChange={(e) =>
                       setSponsors((prev) =>
                         prev.map((it, i) =>
@@ -810,7 +816,7 @@ export default function TeamPublicEditPage({ team, members }: Props) {
                 }
                 className="w-full px-3 py-2 rounded-lg border border-dashed border-white/15 text-sm text-cyan-300 hover:bg-cyan-500/5"
               >
-                + Ajouter un sponsor
+                {t.addSponsor}
               </button>
             )}
           </section>
@@ -818,60 +824,60 @@ export default function TeamPublicEditPage({ team, members }: Props) {
           {/* Socials */}
           <section className="bg-black/60 border border-white/5 rounded-2xl p-5 space-y-4">
             <h2 className="text-sm uppercase tracking-wide text-gray-400">
-              Réseaux & contact
+              {t.socialsSection}
             </h2>
             <SocialField
               id="twitter"
-              label="Twitter / X"
-              hint="Handle ou URL complète"
+              label={t.twitterLabel}
+              hint={t.twitterHint}
               value={twitter}
               onChange={setTwitter}
               max={HANDLE_MAX}
             />
             <SocialField
               id="discord"
-              label="Discord"
-              hint="Lien d'invitation ou nom du serveur"
+              label={t.discordLabel}
+              hint={t.discordHint}
               value={discord}
               onChange={setDiscord}
               max={HANDLE_MAX}
             />
             <SocialField
               id="website"
-              label="Site web"
-              hint="URL complète (https://...)"
+              label={t.websiteLabel}
+              hint={t.websiteHint}
               value={website}
               onChange={setWebsite}
               max={200}
             />
             <SocialField
               id="youtube"
-              label="YouTube"
-              hint="Handle (@chaine), ID ou URL complète"
+              label={t.youtubeLabel}
+              hint={t.youtubeHint}
               value={youtube}
               onChange={setYoutube}
               max={HANDLE_MAX}
             />
             <SocialField
               id="twitch"
-              label="Twitch"
-              hint="Pseudo ou URL complète"
+              label={t.twitchLabel}
+              hint={t.twitchHint}
               value={twitch}
               onChange={setTwitch}
               max={HANDLE_MAX}
             />
             <SocialField
               id="instagram"
-              label="Instagram"
-              hint="Handle (@compte) ou URL complète"
+              label={t.instagramLabel}
+              hint={t.instagramHint}
               value={instagram}
               onChange={setInstagram}
               max={HANDLE_MAX}
             />
             <SocialField
               id="tiktok"
-              label="TikTok"
-              hint="Handle (@compte) ou URL complète"
+              label={t.tiktokLabel}
+              hint={t.tiktokHint}
               value={tiktok}
               onChange={setTiktok}
               max={HANDLE_MAX}
@@ -882,28 +888,26 @@ export default function TeamPublicEditPage({ team, members }: Props) {
           <section className="bg-black/60 border border-white/5 rounded-2xl p-5 space-y-4">
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-sm uppercase tracking-wide text-gray-400">
-                Profils des membres
+                {t.membersSection}
               </h2>
               <span className="text-xs text-neutral-500">
-                {members.length} membre{members.length > 1 ? 's' : ''}
+                {format(
+                  members.length > 1
+                    ? t.membersCount_other
+                    : t.membersCount_one,
+                  { count: members.length }
+                )}
               </span>
             </div>
-            <p className="text-xs text-neutral-500">
-              Personnalise comment chaque joueuse apparaît sur la page publique.
-              Chaque profil a son propre bouton « Enregistrer ».
-            </p>
+            <p className="text-xs text-neutral-500">{t.membersDesc}</p>
             {members.length === 0 ? (
               <p className="text-xs text-neutral-500 italic">
-                Aucun membre dans le roster.
+                {t.membersEmpty}
               </p>
             ) : (
               <div className="space-y-3">
                 {members.map((m) => (
-                  <MemberProfileEditor
-                    key={m.id}
-                    teamId={team.id}
-                    member={m}
-                  />
+                  <MemberProfileEditor key={m.id} teamId={team.id} member={m} />
                 ))}
               </div>
             )}
@@ -914,14 +918,14 @@ export default function TeamPublicEditPage({ team, members }: Props) {
               href={`/team/${teamSlugForLink}`}
               className="px-4 py-2 rounded-xl border border-white/10 text-sm text-gray-300 hover:bg-white/5"
             >
-              Annuler
+              {t.cancel}
             </Link>
             <button
               type="submit"
               disabled={saving}
               className="px-5 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium text-white"
             >
-              {saving ? 'Enregistrement...' : 'Enregistrer'}
+              {saving ? t.saving : t.save}
             </button>
           </div>
         </form>
@@ -930,7 +934,7 @@ export default function TeamPublicEditPage({ team, members }: Props) {
         {(logoUrl || bannerUrl) && (
           <section className="mt-10 bg-black/40 border border-dashed border-white/10 rounded-2xl p-5">
             <p className="text-xs uppercase tracking-wide text-gray-500 mb-3">
-              Aperçu visuel
+              {t.visualPreview}
             </p>
             <div className="flex items-center gap-4">
               {logoUrl && (
@@ -965,21 +969,21 @@ export default function TeamPublicEditPage({ team, members }: Props) {
   );
 }
 
-const OVERLAY_LABELS: Record<BannerOverlay, string> = {
-  gradient: 'Dégradé sombre (recommandé)',
-  dark: 'Noir uni 50%',
-  none: 'Aucun (image pleine)',
-  grid: 'Grille',
-  dots: 'Pointillés',
-};
+const getOverlayLabels = (t: TeamEditDict): Record<BannerOverlay, string> => ({
+  gradient: t.overlayGradient,
+  dark: t.overlayDark,
+  none: t.overlayNone,
+  grid: t.overlayGrid,
+  dots: t.overlayDots,
+});
 
-const FOCAL_LABELS: Record<BannerFocal, string> = {
-  center: 'Centré',
-  top: 'Haut',
-  bottom: 'Bas',
-  left: 'Gauche',
-  right: 'Droite',
-};
+const getFocalLabels = (t: TeamEditDict): Record<BannerFocal, string> => ({
+  center: t.focalCenter,
+  top: t.focalTop,
+  bottom: t.focalBottom,
+  left: t.focalLeft,
+  right: t.focalRight,
+});
 
 function ColorField({
   id,
@@ -998,6 +1002,7 @@ function ColorField({
   placeholder: string;
   hint?: string;
 }) {
+  const t = useT('teamEdit');
   return (
     <div>
       <label htmlFor={id} className="block text-sm text-neutral-300 mb-1">
@@ -1027,12 +1032,12 @@ function ColorField({
             onClick={() => onChange('')}
             className="text-xs text-red-400 hover:text-red-300"
           >
-            Reset
+            {t.reset}
           </button>
         )}
       </div>
       <p className="text-xs text-neutral-500 mt-1">
-        {hint ?? 'Format hex (#rgb ou #rrggbb). Laisse vide pour la valeur par défaut.'}
+        {hint ?? t.colorHintDefault}
       </p>
     </div>
   );

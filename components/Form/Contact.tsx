@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useToast } from '@/components/Toast';
+import { useT } from '@/lib/i18n/useT';
 
 type Status = 'idle' | 'loading' | 'success' | 'error';
 
@@ -17,6 +18,7 @@ function genIdempotencyKey(): string {
 }
 
 export default function Contact({ className = '' }: { className?: string }) {
+  const t = useT('contactForm');
   const [status, setStatus] = useState<Status>('idle');
   const [error, setError] = useState<string | null>(null);
   const liveRef = useRef<HTMLSpanElement | null>(null);
@@ -90,18 +92,17 @@ export default function Contact({ className = '' }: { className?: string }) {
         setStatus('success');
         form.reset();
         liveRef.current?.focus();
-        addToast('Message envoyé avec succès.', 'success');
+        addToast(t.sent, 'success');
       } else {
         idempotencyKeyRef.current = genIdempotencyKey();
-        const message =
-          json?.error || 'Une erreur est survenue. Réessaie plus tard.';
+        const message = json?.error || t.errorGeneric;
         setStatus('error');
         setError(message);
         addToast(message, 'error');
       }
     } catch {
       idempotencyKeyRef.current = genIdempotencyKey();
-      const message = 'Impossible de joindre le service. Vérifie ta connexion.';
+      const message = t.errorNetwork;
       setStatus('error');
       setError(message);
       addToast(message, 'error');
@@ -113,10 +114,7 @@ export default function Contact({ className = '' }: { className?: string }) {
       <div className="max-w-3xl mx-auto">
         {/* Titre style site: gradient + sous-titre fin */}
         <div className="text-center">
-          <p className="mt-4 text-gray-300">
-            Une question sur l&apos;OW Women&apos;s Cup ? Laisse-nous un
-            message, on répond vite.
-          </p>
+          <p className="mt-4 text-gray-300">{t.intro}</p>
         </div>
 
         {/* Card verre/frosted pour matcher la home */}
@@ -131,7 +129,7 @@ export default function Contact({ className = '' }: { className?: string }) {
             aria-live="polite"
             className="sr-only"
           >
-            {status === 'success' ? 'Message envoyé avec succès.' : ''}
+            {status === 'success' ? t.sent : ''}
           </span>
 
           {/* Honeypot anti-spam */}
@@ -147,19 +145,19 @@ export default function Contact({ className = '' }: { className?: string }) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="grid gap-2">
               <label htmlFor="name" className="text-gray-200">
-                Nom
+                {t.nameLabel}
               </label>
               <input
                 id="name"
                 name="name"
                 required
                 className="w-full rounded-xl bg-[#0b1020] border border-white/10 px-4 py-3 text-white outline-none focus:ring-2 focus:ring-blue-400/70 focus:border-transparent"
-                placeholder="Ana Dupont"
+                placeholder={t.namePlaceholder}
               />
             </div>
             <div className="grid gap-2">
               <label htmlFor="email" className="text-gray-200">
-                Email
+                {t.emailLabel}
               </label>
               <input
                 id="email"
@@ -168,14 +166,14 @@ export default function Contact({ className = '' }: { className?: string }) {
                 inputMode="email"
                 required
                 className="w-full rounded-xl bg-[#0b1020] border border-white/10 px-4 py-3 text-white outline-none focus:ring-2 focus:ring-blue-400/70 focus:border-transparent"
-                placeholder="ana@email.com"
+                placeholder={t.emailPlaceholder}
               />
             </div>
           </div>
 
           <div className="grid gap-2">
             <label htmlFor="subject" className="text-gray-200">
-              Sujet
+              {t.subjectLabel}
             </label>
             <select
               id="subject"
@@ -185,19 +183,19 @@ export default function Contact({ className = '' }: { className?: string }) {
               defaultValue=""
             >
               <option value="" disabled>
-                Choisir un sujet
+                {t.subjectPlaceholder}
               </option>
-              <option value="cast">Rejoindre le cast / desk</option>
-              <option value="tournoi">Infos tournoi / règles</option>
-              <option value="teams">Inscription équipe</option>
-              <option value="partenariat">Partenariat / sponsor</option>
-              <option value="autre">Autre question</option>
+              <option value="cast">{t.subjectCast}</option>
+              <option value="tournoi">{t.subjectTournament}</option>
+              <option value="teams">{t.subjectTeams}</option>
+              <option value="partenariat">{t.subjectPartner}</option>
+              <option value="autre">{t.subjectOther}</option>
             </select>
           </div>
 
           <div className="grid gap-2">
             <label htmlFor="message" className="text-gray-200">
-              Message
+              {t.messageLabel}
             </label>
             <textarea
               id="message"
@@ -205,7 +203,7 @@ export default function Contact({ className = '' }: { className?: string }) {
               required
               rows={6}
               className="w-full rounded-xl bg-[#0b1020] border border-white/10 px-4 py-3 text-white outline-none focus:ring-2 focus:ring-blue-400/70 focus:border-transparent"
-              placeholder="Ton message…"
+              placeholder={t.messagePlaceholder}
             />
           </div>
 
@@ -216,8 +214,7 @@ export default function Contact({ className = '' }: { className?: string }) {
               required
               className="mt-1 accent-blue-500"
             />
-            J&apos;accepte que mes informations soient utilisées pour traiter ma
-            demande. (Pas de revente.)
+            {t.consent}
           </label>
 
           <div className="flex flex-wrap items-center gap-4">
@@ -231,13 +228,11 @@ export default function Contact({ className = '' }: { className?: string }) {
                 focus:outline-none focus:ring-2 focus:ring-blue-400/60
                 disabled:opacity-60 disabled:cursor-not-allowed transition"
             >
-              {status === 'loading' ? 'Envoi…' : 'Envoyer'}
+              {status === 'loading' ? t.submitting : t.submit}
             </button>
 
             {status === 'success' && (
-              <span className="text-green-400">
-                Merci ! Ton message a bien été envoyé 🎉
-              </span>
+              <span className="text-green-400">{t.successInline}</span>
             )}
             {status === 'error' && (
               <span role="alert" aria-live="polite" className="text-red-400">

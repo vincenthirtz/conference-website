@@ -2,49 +2,22 @@ import Link from 'next/link';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { listGames } from '@/config/games';
 import type { GameDef, GameSlug, MatchFormat } from '@/config/games';
+import { useT, format } from '@/lib/i18n/useT';
 
-const GAME_COPY: Record<GameSlug, { tagline: string; pitch: string }> = {
-  overwatch: {
-    tagline: 'Le titre fondateur de la communauté.',
-    pitch:
-      "Le hero shooter de Blizzard est le cœur de l'OW Women's Cup depuis 2025. Map veto complet, pool de 29 maps et formats BO1/3/5 pour les phases finales.",
-  },
-  valorant: {
-    tagline: 'Tactique 5v5 sur la scène FPS.',
-    pitch:
-      'Le tactical shooter de Riot intègre notre stack tournoi avec son pool compétitif (Ascent, Bind, Lotus, Sunset…) et un veto inspiré du ruleset VCT.',
-  },
-  cs2: {
-    tagline: 'Le mythe du tir 5v5.',
-    pitch:
-      'Counter-Strike 2 utilise les séquences de veto ESL / Major (ban-ban-pick-pick-ban-ban-decider) sur les active-duty maps officielles.',
-  },
-  'r6-siege': {
-    tagline: 'Siège tactique 5v5, destruction & gadgets.',
-    pitch:
-      'Rainbow Six Siege rejoint le programme avec son pool ranked complet (Bank, Clubhouse, Kafe, Nighthaven Labs…) et un veto calé sur les règles esport.',
-  },
-  'marvel-rivals': {
-    tagline: '6v6 hero shooter Marvel.',
-    pitch:
-      'Marvel Rivals propose Domination, Convoy et Convergence sur un pool de 11 cartes : tournois BO1/3/5 avec veto pour éviter les cartes « maison ».',
-  },
-  'rocket-league': {
-    tagline: 'Voitures-fusées, 3v3, sport mécanique.',
-    pitch:
-      'Rocket League se passe de veto (arène fixe) mais utilise des formats longs BO3/5/7 pour les playoffs : la stack tournoi gère directement le match sans veto.',
-  },
-  lol: {
-    tagline: 'MOBA Riot, Tournament Draft.',
-    pitch:
-      "League of Legends utilise le Tournament Draft officiel : 10 bans + 10 picks répartis en deux phases. Le bot lance la draft sur Discord et la pousse à l'UI live.",
-  },
-  dota2: {
-    tagline: 'MOBA Valve, Captains Mode.',
-    pitch:
-      'Dota 2 utilise le Captains Mode (patch 7.34+) : 9 bans + 10 picks en trois phases, géré de bout en bout par notre moteur de draft multi-jeux.',
-  },
-};
+type JeuxDict = ReturnType<typeof useT<'jeuxPage'>>;
+
+const getGameCopy = (
+  t: JeuxDict
+): Record<GameSlug, { tagline: string; pitch: string }> => ({
+  overwatch: { tagline: t.overwatchTagline, pitch: t.overwatchPitch },
+  valorant: { tagline: t.valorantTagline, pitch: t.valorantPitch },
+  cs2: { tagline: t.cs2Tagline, pitch: t.cs2Pitch },
+  'r6-siege': { tagline: t.r6Tagline, pitch: t.r6Pitch },
+  'marvel-rivals': { tagline: t.marvelTagline, pitch: t.marvelPitch },
+  'rocket-league': { tagline: t.rocketTagline, pitch: t.rocketPitch },
+  lol: { tagline: t.lolTagline, pitch: t.lolPitch },
+  dota2: { tagline: t.dota2Tagline, pitch: t.dota2Pitch },
+});
 
 // Palette de degrades par jeu, utilises comme visuel de fallback quand
 // on n'a pas (encore) d'image hero locale.
@@ -66,10 +39,10 @@ function formatLabel(format: MatchFormat): string {
 }
 
 function GameCard({ game }: { game: GameDef }) {
-  const copy = GAME_COPY[game.slug] ?? {
+  const t = useT('jeuxPage');
+  const copy = getGameCopy(t)[game.slug] ?? {
     tagline: '',
-    pitch:
-      'Jeu supporté par la stack tournoi multi-jeux : inscription, bracket, scoring et match thread Discord automatisés.',
+    pitch: t.fallbackPitch,
   };
   const gradient =
     GAME_GRADIENT[game.slug] ?? 'from-purple-500 via-fuchsia-500 to-pink-500';
@@ -104,22 +77,22 @@ function GameCard({ game }: { game: GameDef }) {
         <div className="flex flex-wrap gap-2">
           {game.hasMapVeto && (
             <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300/30 bg-emerald-400/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-emerald-100">
-              Map veto
+              {t.mapVeto}
             </span>
           )}
           {game.hasDraft && (
             <span className="inline-flex items-center gap-1 rounded-full border border-amber-300/30 bg-amber-400/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-amber-100">
-              Draft
+              {t.draft}
             </span>
           )}
           {game.mapPool.length > 0 && (
             <span className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-white">
-              {game.mapPool.length} maps
+              {format(t.mapsCount, { count: game.mapPool.length })}
             </span>
           )}
           {!game.hasMapVeto && game.mapPool.length === 0 && (
             <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-300">
-              Map fixe
+              {t.mapFixed}
             </span>
           )}
         </div>
@@ -127,7 +100,7 @@ function GameCard({ game }: { game: GameDef }) {
         {/* Formats supportes */}
         <div className="mt-auto flex flex-wrap items-center gap-2 pt-2">
           <span className="text-[11px] uppercase tracking-[0.14em] text-gray-400">
-            Formats
+            {t.formats}
           </span>
           {game.matchFormats.map((fmt) => (
             <span
@@ -144,6 +117,7 @@ function GameCard({ game }: { game: GameDef }) {
 }
 
 function GamesPage() {
+  const t = useT('jeuxPage');
   const games = listGames();
 
   // Stats calculées dynamiquement depuis le registry : si on ajoute un jeu,
@@ -159,28 +133,28 @@ function GamesPage() {
   const heroStats: { value: string; label: string; sub?: string }[] = [
     {
       value: String(games.length),
-      label: 'jeux supportés',
-      sub: 'FPS, MOBA, sport mécanique',
+      label: t.statGamesLabel,
+      sub: t.statGamesSub,
     },
     {
       value: String(totalMaps),
-      label: 'maps cumulées',
-      sub: 'toutes pool confondues',
+      label: t.statMapsLabel,
+      sub: t.statMapsSub,
     },
     {
       value: String(vetoGames),
-      label: 'jeux avec veto',
-      sub: 'séquences ESL / VCT auto',
+      label: t.statVetoLabel,
+      sub: t.statVetoSub,
     },
     {
       value: String(draftGames),
-      label: 'jeux avec draft',
-      sub: 'LoL & Dota 2',
+      label: t.statDraftLabel,
+      sub: t.statDraftSub,
     },
     {
       value: String(allFormats.size),
-      label: 'formats',
-      sub: 'BO1 → BO7 selon le jeu',
+      label: t.statFormatsLabel,
+      sub: t.statFormatsSub,
     },
   ];
 
@@ -196,16 +170,15 @@ function GamesPage() {
 
         <div className="relative mx-auto max-w-6xl px-6 pt-32 pb-16">
           <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.18em] text-gray-200">
-            Multi-jeux
+            {t.badgeMulti}
           </p>
           <h1 className="mt-4 text-4xl font-bold leading-tight sm:text-5xl md:text-6xl">
-            Les jeux supportés par le système de la Women&apos;s Cup
+            {t.heroTitle}
           </h1>
           <p className="mt-4 max-w-3xl text-lg text-gray-200">
-            Notre stack tournoi (bracket, veto, draft, match threads Discord)
-            est maintenant <strong>multi-jeux</strong>. {games.length} titres
-            sont supportés nativement : choisis ton jeu, ton format, et lance la
-            machine.
+            {t.heroSubtitlePart1}
+            <strong>{t.heroSubtitleStrong}</strong>
+            {format(t.heroSubtitlePart2, { count: games.length })}
           </p>
 
           <div className="mt-6 flex flex-wrap items-center gap-4">
@@ -213,13 +186,13 @@ function GamesPage() {
               href="/inscription-2026"
               className="rounded-full bg-gradient-to-r from-purple-500 to-pink-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition hover:brightness-110"
             >
-              Inscrire mon équipe
+              {t.ctaRegisterTeam}
             </Link>
             <Link
               href="/tournaments"
               className="rounded-full border border-white/15 px-6 py-3 text-sm font-semibold text-white transition hover:border-white/40 hover:bg-white/10"
             >
-              Voir les tournois
+              {t.ctaViewTournaments}
             </Link>
           </div>
         </div>
@@ -229,7 +202,7 @@ function GamesPage() {
         {/* En chiffres */}
         <section aria-labelledby="stats-heading" className="-mt-6 sm:-mt-10">
           <h2 id="stats-heading" className="sr-only">
-            En chiffres
+            {t.statsHeading}
           </h2>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
             {heroStats.map((stat) => (
@@ -261,19 +234,15 @@ function GamesPage() {
         <section aria-labelledby="games-grid-heading" className="space-y-8">
           <div className="flex flex-col gap-2">
             <p className="text-xs uppercase tracking-[0.18em] text-gray-300">
-              Catalogue
+              {t.catalogueEyebrow}
             </p>
             <h2
               id="games-grid-heading"
               className="text-3xl font-bold text-white"
             >
-              {games.length} jeux pris en charge
+              {format(t.catalogueTitle, { count: games.length })}
             </h2>
-            <p className="text-sm text-gray-300 max-w-3xl">
-              Pour chaque titre on gère les inscriptions, les vetos / drafts,
-              les scores et la diffusion sur Discord. Pas besoin d&apos;outil
-              externe.
-            </p>
+            <p className="text-sm text-gray-300 max-w-3xl">{t.catalogueDesc}</p>
           </div>
 
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -287,15 +256,12 @@ function GamesPage() {
         <section aria-labelledby="compare-heading" className="space-y-6">
           <div className="flex flex-col gap-2">
             <p className="text-xs uppercase tracking-[0.18em] text-gray-300">
-              Comparatif
+              {t.compareEyebrow}
             </p>
             <h2 id="compare-heading" className="text-3xl font-bold text-white">
-              Tout sur une grille
+              {t.compareTitle}
             </h2>
-            <p className="text-sm text-gray-300 max-w-3xl">
-              Capacités du moteur tournoi par jeu. Utile pour choisir ton format
-              ou comparer deux titres rapidement.
-            </p>
+            <p className="text-sm text-gray-300 max-w-3xl">{t.compareDesc}</p>
           </div>
 
           <div className="overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.03]">
@@ -303,19 +269,19 @@ function GamesPage() {
               <thead className="border-b border-white/10 bg-white/[0.04] text-[11px] uppercase tracking-[0.14em] text-gray-300">
                 <tr>
                   <th scope="col" className="px-4 py-3 font-semibold">
-                    Jeu
+                    {t.tableGame}
                   </th>
                   <th scope="col" className="px-4 py-3 font-semibold">
-                    Map veto
+                    {t.tableMapVeto}
                   </th>
                   <th scope="col" className="px-4 py-3 font-semibold">
-                    Draft
+                    {t.tableDraft}
                   </th>
                   <th scope="col" className="px-4 py-3 font-semibold">
-                    Maps
+                    {t.tableMaps}
                   </th>
                   <th scope="col" className="px-4 py-3 font-semibold">
-                    Formats
+                    {t.tableFormats}
                   </th>
                 </tr>
               </thead>
@@ -343,22 +309,22 @@ function GamesPage() {
                       </th>
                       <td className="px-4 py-3">
                         {game.hasMapVeto ? (
-                          <span className="text-emerald-300">✓ Oui</span>
+                          <span className="text-emerald-300">{t.tableYes}</span>
                         ) : (
                           <span className="text-gray-500">—</span>
                         )}
                       </td>
                       <td className="px-4 py-3">
                         {game.hasDraft ? (
-                          <span className="text-amber-300">✓ Oui</span>
+                          <span className="text-amber-300">{t.tableYes}</span>
                         ) : (
                           <span className="text-gray-500">—</span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-gray-200">
                         {game.mapPool.length > 0
-                          ? `${game.mapPool.length} maps`
-                          : 'Map fixe'}
+                          ? format(t.mapsCount, { count: game.mapPool.length })
+                          : t.mapFixed}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap gap-1">
@@ -384,36 +350,30 @@ function GamesPage() {
         <section aria-labelledby="how-heading" className="space-y-6">
           <div className="flex flex-col gap-2">
             <p className="text-xs uppercase tracking-[0.18em] text-gray-300">
-              Pipeline
+              {t.howEyebrow}
             </p>
             <h2 id="how-heading" className="text-3xl font-bold text-white">
-              Comment ça marche
+              {t.howTitle}
             </h2>
-            <p className="text-sm text-gray-300 max-w-3xl">
-              La même stack pour tous les jeux : zéro friction pour les équipes,
-              zéro copier-coller pour le staff.
-            </p>
+            <p className="text-sm text-gray-300 max-w-3xl">{t.howDesc}</p>
           </div>
 
           <div className="grid gap-4 md:grid-cols-3">
             {[
               {
                 step: '1',
-                title: 'Inscris ton équipe',
-                detail:
-                  "Crée ton équipe, choisis ton jeu et ton format. La plateforme vérifie la composition et te place dans le bracket dès l'ouverture des inscriptions.",
+                title: t.step1Title,
+                detail: t.step1Detail,
               },
               {
                 step: '2',
-                title: 'Veto / draft automatisé',
-                detail:
-                  "Avant chaque match, l'outil lance le veto ou la draft (selon le jeu) avec timer, alternance auto et historique. Aucun staff nécessaire.",
+                title: t.step2Title,
+                detail: t.step2Detail,
               },
               {
                 step: '3',
-                title: 'Match thread Discord live',
-                detail:
-                  'Le bot ouvre un thread dédié, publie le scoreboard, relève les scores et clôt le match. Les casters et les viewers suivent en direct.',
+                title: t.step3Title,
+                detail: t.step3Detail,
               },
             ].map((item) => (
               <div
@@ -427,7 +387,7 @@ function GamesPage() {
                   {item.step}
                 </span>
                 <p className="text-xs uppercase tracking-[0.16em] text-purple-200">
-                  Étape {item.step}
+                  {format(t.stepLabel, { n: item.step })}
                 </p>
                 <h3 className="mt-2 text-xl font-semibold text-white">
                   {item.title}
@@ -442,23 +402,19 @@ function GamesPage() {
         <section aria-labelledby="bot-heading" className="space-y-6">
           <div className="flex flex-col gap-2">
             <p className="text-xs uppercase tracking-[0.18em] text-gray-300">
-              Discord
+              {t.botEyebrow}
             </p>
             <h2 id="bot-heading" className="text-3xl font-bold text-white">
-              Le bot Discord, ton cockpit
+              {t.botTitle}
             </h2>
-            <p className="text-sm text-gray-300 max-w-3xl">
-              Tout passe par des commandes slash : inscription, match, veto,
-              draft, score, dispute. Une seule interface, identique pour tous
-              les jeux.
-            </p>
+            <p className="text-sm text-gray-300 max-w-3xl">{t.botDesc}</p>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {[
               {
-                title: 'Tournois & équipes',
-                scope: 'Universel',
+                title: t.cap1Title,
+                scope: t.scopeUniversal,
                 commands: [
                   '/creer-tournoi',
                   '/publier-tournoi',
@@ -467,12 +423,11 @@ function GamesPage() {
                   '/inviter',
                   '/roster',
                 ],
-                detail:
-                  'Création, publication, inscriptions, gestion du roster. La commande /creer-tournoi propose les 8 jeux au choix.',
+                detail: t.cap1Detail,
               },
               {
-                title: 'Match live',
-                scope: 'Universel',
+                title: t.cap2Title,
+                scope: t.scopeUniversal,
                 commands: [
                   '/next-match',
                   '/checkin',
@@ -480,12 +435,11 @@ function GamesPage() {
                   '/bracket',
                   '/forfait',
                 ],
-                detail:
-                  'Le bot ouvre un thread Discord par match, suit le check-in, collecte les scores et propage la victoire dans le bracket automatiquement.',
+                detail: t.cap2Detail,
               },
               {
-                title: 'Map veto',
-                scope: '5 jeux',
+                title: t.cap3Title,
+                scope: t.scope5Games,
                 badges: [
                   'Overwatch',
                   'Valorant',
@@ -493,55 +447,48 @@ function GamesPage() {
                   'R6 Siege',
                   'Marvel Rivals',
                 ],
-                detail:
-                  'Veto automatisé en DM avec les capitaines : alternance, timer, séquences ESL/VCT spécifiques au jeu. Aucune saisie manuelle côté staff.',
+                detail: t.cap3Detail,
               },
               {
-                title: 'Draft MOBA',
-                scope: 'LoL & Dota 2',
+                title: t.cap4Title,
+                scope: t.scopeLolDota,
                 commands: ['/draft-init'],
-                detail:
-                  'Tournament Draft (LoL) et Captains Mode (Dota 2) gérés de bout en bout : bans, picks, fearless draft, timer serveur et UI spectateur live.',
+                detail: t.cap4Detail,
               },
               {
-                title: 'Cast & live',
-                scope: 'Universel',
+                title: t.cap5Title,
+                scope: t.scopeUniversal,
                 commands: ['/lives', '/casters', '/assigner-cast', '/annoncer'],
-                detail:
-                  'Coordination des casters, attribution des matchs à caster, annonces multi-channels et relais des lives Twitch.',
+                detail: t.cap5Detail,
               },
               {
-                title: 'Scrims & entraînement',
-                scope: 'Universel',
+                title: t.cap6Title,
+                scope: t.scopeUniversal,
                 commands: ['/scrim'],
-                detail:
-                  'Création de scrims publics, recherche d’adversaire, fil dédié et rappels automatiques. Marche pour tous les jeux du registry.',
+                detail: t.cap6Detail,
               },
               {
-                title: 'Disputes & arbitrage',
-                scope: 'Universel',
+                title: t.cap7Title,
+                scope: t.scopeUniversal,
                 commands: [
                   '/signalement',
                   '/ma-dispute',
                   '/disputes',
                   '/resoudre-dispute',
                 ],
-                detail:
-                  'Forum disputes dédié, suivi par le staff arbitrage et notifications aux capitaines à chaque évolution.',
+                detail: t.cap7Detail,
               },
               {
-                title: 'Stats & classement',
-                scope: 'Universel',
+                title: t.cap8Title,
+                scope: t.scopeUniversal,
                 commands: ['/classement', '/stats', '/historique', '/profil'],
-                detail:
-                  'Classement live du tournoi, stats agrégées par équipe et joueur, historique des matchs avec replay du veto/draft.',
+                detail: t.cap8Detail,
               },
               {
-                title: 'Aide & support',
-                scope: 'Universel',
+                title: t.cap9Title,
+                scope: t.scopeUniversal,
                 commands: ['/help', '/aide-tournoi', '/demander-bot', '/me'],
-                detail:
-                  'Une aide contextuelle par commande, un canal /aide-tournoi pour le staff et l’enregistrement du bot sur d’autres serveurs.',
+                detail: t.cap9Detail,
               },
             ].map((cap) => (
               <div
@@ -592,10 +539,10 @@ function GamesPage() {
 
           <div className="flex flex-col gap-4 rounded-2xl border border-white/10 bg-white/[0.03] p-5 text-sm text-gray-300 sm:flex-row sm:items-center sm:justify-between">
             <p className="flex-1">
-              <span className="font-semibold text-white">Multi-tenant :</span>{' '}
-              le bot peut tourner sur plusieurs serveurs Discord avec un
-              cloisonnement total des tournois, des équipes et des stats.
-              Pratique si une autre asso veut bénéficier de la même stack.
+              <span className="font-semibold text-white">
+                {t.multiTenantLabel}
+              </span>
+              {t.multiTenantBody}
             </p>
             <Link
               href="/onboard"
@@ -608,7 +555,7 @@ function GamesPage() {
               >
                 <path d="M20.317 4.369a19.79 19.79 0 0 0-4.885-1.514.075.075 0 0 0-.079.037 13.74 13.74 0 0 0-.608 1.249 18.27 18.27 0 0 0-5.487 0 12.65 12.65 0 0 0-.617-1.25.077.077 0 0 0-.079-.036A19.74 19.74 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.2 14.2 0 0 0 1.226-1.994.076.076 0 0 0-.041-.105 13.1 13.1 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.094.252-.192.371-.291a.074.074 0 0 1 .078-.01c3.927 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .079.009c.12.099.245.198.372.292a.077.077 0 0 1-.006.128 12.3 12.3 0 0 1-1.873.891.077.077 0 0 0-.041.106c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.84 19.84 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.331c-1.182 0-2.157-1.086-2.157-2.42 0-1.333.956-2.42 2.157-2.42 1.21 0 2.176 1.096 2.157 2.42 0 1.334-.956 2.42-2.157 2.42zm7.974 0c-1.182 0-2.157-1.086-2.157-2.42 0-1.333.955-2.42 2.157-2.42 1.21 0 2.176 1.096 2.157 2.42 0 1.334-.946 2.42-2.157 2.42z" />
               </svg>
-              Inviter le bot sur mon serveur
+              {t.inviteBotCta}
             </Link>
           </div>
         </section>
@@ -617,50 +564,29 @@ function GamesPage() {
         <section aria-labelledby="faq-heading" className="space-y-6">
           <div className="flex flex-col gap-2">
             <p className="text-xs uppercase tracking-[0.18em] text-gray-300">
-              FAQ
+              {t.faqEyebrow}
             </p>
             <h2 id="faq-heading" className="text-3xl font-bold text-white">
-              Les questions qu&apos;on nous pose
+              {t.faqTitle}
             </h2>
             <p className="text-sm text-gray-300 max-w-3xl">
-              Une autre question ? Le canal{' '}
+              {t.faqIntroBefore}
               <code className="rounded border border-white/10 bg-neutral-900/80 px-1.5 py-0.5 font-mono text-[12px] text-cyan-200">
                 /aide-tournoi
-              </code>{' '}
-              du Discord est ouvert à toutes les capitaines.
+              </code>
+              {t.faqIntroAfter}
             </p>
           </div>
 
           <div className="space-y-3">
             {[
-              {
-                q: 'Mon jeu préféré n’est pas dans la liste, vous pouvez l’ajouter ?',
-                a: 'Oui — la stack est conçue pour ça. Ajouter un jeu se fait en déclarant son registry (pool de cartes ou flow de draft, formats supportés) et en mettant à jour la commande /creer-tournoi. Compte une à deux semaines selon la complexité. Ouvre une discussion via la page Contact pour qu’on en discute.',
-              },
-              {
-                q: 'Comment fonctionne le map veto exactement ?',
-                a: 'Le bot envoie un DM aux deux capitaines dès que le match est prêt. Chaque capitaine ban ou pick à son tour selon la séquence du jeu (ESL/Major pour CS2, VCT pour Valorant, etc.), avec un timer serveur. La séquence est rejouée dans le thread Discord et stockée pour l’historique du match.',
-              },
-              {
-                q: 'Pourquoi seuls LoL et Dota 2 ont un draft de héros ?',
-                a: 'Parce que ces deux jeux ont une vraie phase de draft formalisée (Tournament Draft pour LoL, Captains Mode pour Dota 2) où les bans/picks alternent. Les hero shooters comme Overwatch ou Marvel Rivals ont du hero swap libre en partie : il n’y a rien à drafter avant le match.',
-              },
-              {
-                q: 'Le bot peut-il tourner sur d’autres serveurs Discord ?',
-                a: 'Oui. Le bot est multi-tenant : on peut l’inviter sur n’importe quel serveur. Chaque serveur a ses propres tournois, équipes et stats, cloisonnés via un identifiant de tenant. Le bouton « Inviter le bot sur mon serveur » au-dessus lance la procédure self-service.',
-              },
-              {
-                q: 'Quel format choisir pour mon tournoi ?',
-                a: 'BO1 = match unique (rapide, idéal pour les phases de groupes). BO3 = standard compétitif, deux maps gagnantes sur trois. BO5 = grandes finales. BO7 = uniquement Rocket League (sport mécanique, parties courtes). Tu peux mélanger les formats : par exemple BO1 en poules et BO3 en élimination.',
-              },
-              {
-                q: 'Combien ça coûte pour utiliser le système ?',
-                a: 'Zéro. La stack est open et l’association OW Women’s Cup la maintient comme outil communautaire. Tu peux participer à nos tournois, ou inviter le bot sur ton serveur si tu organises les tiens — dans tous les cas il n’y a pas de licence.',
-              },
-              {
-                q: 'Est-ce que je peux suivre les matchs en direct sans installer le bot ?',
-                a: 'Oui : tous les matchs publics sont visibles sur ce site (bracket, scores, replay du veto et de la draft) et les casts Twitch sont relayés sur la page Live. Le bot est l’outil des joueuses et du staff, pas une obligation pour le public.',
-              },
+              { q: t.faq1Question, a: t.faq1Answer },
+              { q: t.faq2Question, a: t.faq2Answer },
+              { q: t.faq3Question, a: t.faq3Answer },
+              { q: t.faq4Question, a: t.faq4Answer },
+              { q: t.faq5Question, a: t.faq5Answer },
+              { q: t.faq6Question, a: t.faq6Answer },
+              { q: t.faq7Question, a: t.faq7Answer },
             ].map((item, idx) => (
               <details
                 key={idx}
@@ -686,28 +612,24 @@ function GamesPage() {
         {/* CTA final */}
         <section className="rounded-2xl border border-white/10 bg-white/[0.05] p-6 sm:p-8 text-center">
           <p className="text-sm uppercase tracking-[0.14em] text-gray-300">
-            Suggestion
+            {t.ctaEyebrow}
           </p>
-          <h3 className="mt-2 text-2xl font-semibold">
-            Tu veux qu&apos;on ajoute ton jeu ?
-          </h3>
+          <h3 className="mt-2 text-2xl font-semibold">{t.ctaTitle}</h3>
           <p className="mt-3 text-sm text-gray-200 max-w-3xl mx-auto">
-            La stack est conçue pour accueillir de nouveaux titres. Si la scène
-            féminine de ton jeu mérite un tournoi outillé comme le nôtre, dis-le
-            nous, on regarde ensemble.
+            {t.ctaDesc}
           </p>
           <div className="mt-5 flex flex-wrap justify-center gap-3">
             <Link
               href="/contact"
               className="rounded-full bg-gradient-to-r from-purple-500 to-pink-500 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition hover:brightness-110"
             >
-              Nous contacter
+              {t.ctaContact}
             </Link>
             <Link
               href="/partenaires"
               className="rounded-full border border-white/20 px-5 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
             >
-              Devenir partenaire
+              {t.ctaBecomePartner}
             </Link>
           </div>
         </section>

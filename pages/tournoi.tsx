@@ -10,6 +10,7 @@ import TeamCard from '@/components/Team/Team';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import type { Team as TeamType } from '@/types/types';
+import { useT, format } from '@/lib/i18n/useT';
 
 import { logger } from '../utils/logger';
 // Types
@@ -117,15 +118,16 @@ function linkifyDescription(text: string) {
 }
 
 function Tournoi() {
+  const t = useT('tournoiPage');
   const fullTeams = teamsData as TeamType[];
   const teams: TeamType[] = useMemo<TeamType[]>(() => {
-    const base = (teamsData as TeamType[]).slice(0, 4).map((t) => ({
-      ...t,
+    const base = (teamsData as TeamType[]).slice(0, 4).map((tm) => ({
+      ...tm,
     }));
     while (base.length < 4)
       base.push({
         id: base.length + 1,
-        name: `Équipe ${base.length + 1}`,
+        name: format(t.teamPlaceholder, { number: base.length + 1 }),
         title: '',
         link: '',
         img: '',
@@ -134,7 +136,7 @@ function Tournoi() {
         pub: false,
       });
     return base;
-  }, []);
+  }, [t.teamPlaceholder]);
 
   const [matches, setMatches] = useState<Match[]>([]);
   const [finalMatch, setFinalMatch] = useState<Match | null>(null);
@@ -463,14 +465,13 @@ function Tournoi() {
 
         <div className="max-w-6xl mx-auto px-6 pt-32 pb-14 relative">
           <p className="text-xs uppercase tracking-[0.24em] text-purple-200/80">
-            Tournoi
+            {t.eyebrow}
           </p>
           <h1 className="text-4xl md:text-5xl font-bold mt-3 leading-tight">
-            Round Robin &amp; Finale
+            {t.heroTitle}
           </h1>
           <p className="text-neutral-300 text-lg mt-4 max-w-2xl">
-            4 équipes, 6 matchs de poules en BO3, puis une grande finale en BO5
-            pour couronner la championne.
+            {t.heroSubtitle}
           </p>
         </div>
       </div>
@@ -479,13 +480,13 @@ function Tournoi() {
         <section id="teams" className="mt-10">
           <div className="flex flex-col items-center text-center">
             <div className="text-xl text-white font-semibold border-b-2 border-blue-400 mb-1">
-              Equipes
+              {t.teamsTab}
             </div>
             <Heading
               typeStyle="heading-md"
               className="text-gradient text-center lg:mt-3"
             >
-              Des équipes au rendez-vous
+              {t.teamsHeading}
             </Heading>
             <div className="max-w-3xl">
               <Paragraph
@@ -493,7 +494,7 @@ function Tournoi() {
                 className="mt-4"
                 textColor="text-gray-200"
               >
-                Tout niveau et de plusieurs nationalités.
+                {t.teamsSubtitle}
               </Paragraph>
             </div>
           </div>
@@ -526,7 +527,7 @@ function Tournoi() {
 
         <section className="mt-6">
           <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white mb-4">
-            Classement (Round Robin)
+            {t.standingsHeading}
           </h2>
           <div className="p-5 rounded-2xl bg-white/5 border border-white/10">
             <div className="overflow-x-auto">
@@ -534,21 +535,21 @@ function Tournoi() {
                 <thead className="text-left text-gray-200 uppercase tracking-wider text-[11px] md:text-xs">
                   <tr className="text-gray-300">
                     <th className="py-2">#</th>
-                    <th className="py-2">Équipe</th>
+                    <th className="py-2">{t.colTeam}</th>
                     <th className="py-2">
-                      <abbr title="Matchs joués">MJ</abbr>
+                      <abbr title={t.colMJTitle}>{t.colMJ}</abbr>
                     </th>
                     <th className="py-2">
-                      <abbr title="Victoires">V</abbr>
+                      <abbr title={t.colVTitle}>{t.colV}</abbr>
                     </th>
                     <th className="py-2">
-                      <abbr title="Défaites">D</abbr>
+                      <abbr title={t.colDTitle}>{t.colD}</abbr>
                     </th>
                     <th className="py-2">
-                      <abbr title="Maps gagnées-perdues">Maps</abbr>
+                      <abbr title={t.colMapsTitle}>{t.colMaps}</abbr>
                     </th>
                     <th className="py-2">
-                      <abbr title="Différence de maps">Diff</abbr>
+                      <abbr title={t.colDiffTitle}>{t.colDiff}</abbr>
                     </th>
                   </tr>
                 </thead>
@@ -584,16 +585,14 @@ function Tournoi() {
                 </tbody>
               </table>
             </div>
-            <p className="text-xs text-gray-400 mt-3">
-              Tiebreakers: Victoires &gt; Différence de maps &gt; Maps gagnées.
-            </p>
+            <p className="text-xs text-gray-400 mt-3">{t.tiebreakers}</p>
           </div>
         </section>
 
         {/* Matchs */}
         <section className="mt-12">
           <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white mb-4">
-            Calendrier – Phase de poules (BO3)
+            {t.scheduleHeading}
           </h2>
           <div className="grid md:grid-cols-2 gap-4">
             {matches.map((m) => (
@@ -605,12 +604,10 @@ function Tournoi() {
         {/* Finale */}
         <section className="mt-12">
           <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white mb-2">
-            Finale (BO5)
+            {t.finalHeading}
           </h2>
           {!finalMatch ? (
-            <p className="text-gray-300">
-              En attente des 6 résultats de poules…
-            </p>
+            <p className="text-gray-300">{t.finalWaiting}</p>
           ) : (
             <div className="space-y-3">
               <div className="text-gray-300">
@@ -618,7 +615,7 @@ function Tournoi() {
               </div>
               <div className="p-4 rounded-2xl bg-yellow-500/10 border border-yellow-500/20">
                 <div className="text-sm uppercase tracking-wider mb-2">
-                  BO5 – Premier à 3
+                  {t.finalBo5Label}
                 </div>
                 <div className="flex items-center justify-between gap-4">
                   <TeamBadge team={finalMatch.home} />
@@ -633,7 +630,7 @@ function Tournoi() {
               {champion && (
                 <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20">
                   <div className="text-emerald-300 font-semibold">
-                    🏆 Champion 2025: {champion} 🏆
+                    {format(t.championLabel, { champion })}
                   </div>
                 </div>
               )}
@@ -645,20 +642,18 @@ function Tournoi() {
         <section className="mt-16">
           <div className="mb-6">
             <p className="text-xs uppercase tracking-[0.24em] text-purple-200/80">
-              Rediffusions
+              {t.replaysEyebrow}
             </p>
             <h2 className="text-3xl font-extrabold tracking-tight text-white">
-              Revivez l&apos;édition 2025
+              {t.replaysHeading}
             </h2>
             <p className="text-neutral-300 text-base mt-2 max-w-2xl">
-              Finales, meilleurs moments et VOD officielles de la saison.
+              {t.replaysSubtitle}
             </p>
           </div>
 
           {replays.length === 0 ? (
-            <p className="text-neutral-400 text-sm">
-              Aucune rediffusion n&apos;est disponible pour le moment.
-            </p>
+            <p className="text-neutral-400 text-sm">{t.replaysEmpty}</p>
           ) : (
             <div className="grid gap-8 md:grid-cols-2">
               {replays.map((replay: Replay) => (
@@ -669,7 +664,7 @@ function Tournoi() {
                   <div className="aspect-video rounded-xl overflow-hidden border border-white/10 bg-black/40">
                     {replay.youtubeId.includes('VIDEO_ID') ? (
                       <div className="w-full h-full flex items-center justify-center text-sm text-neutral-400">
-                        Remplace l&apos;ID YouTube pour afficher la vidéo.
+                        {t.replayPlaceholder}
                       </div>
                     ) : (
                       <iframe

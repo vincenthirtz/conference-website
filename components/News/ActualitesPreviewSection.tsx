@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import type { JSX } from 'react';
+import { useT } from '@/lib/i18n/useT';
 
 const HEROES = [
   'hero-ana',
@@ -27,6 +28,7 @@ function pickTwoRandom(): [string, string] {
 }
 
 function ActualitesPreviewSection(): JSX.Element {
+  const t = useT('actualitesPreview');
   const [heroes, setHeroes] = useState<[string, string] | null>(null);
 
   useEffect(() => {
@@ -89,11 +91,11 @@ function ActualitesPreviewSection(): JSX.Element {
 
         <div className="relative flex flex-col items-center text-center gap-6">
           <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-red-500/20 text-red-300 text-sm font-semibold uppercase tracking-wider">
-            Annulé
+            {t.statusCancelled}
           </span>
 
           <Heading typeStyle="heading-md" className="text-gradient text-center">
-            Tournoi Mixte
+            {t.title}
           </Heading>
 
           <div className="max-w-2xl">
@@ -102,25 +104,33 @@ function ActualitesPreviewSection(): JSX.Element {
               className="mt-2"
               textColor="text-gray-200"
             >
-              Tournoi mixte hommes/femmes pour lancer la saison
-              comp&eacute;titive. Un avant-go&ucirc;t de ce qui vous attend en
-              octobre&nbsp;!
+              {t.subtitle}
             </Paragraph>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4 w-full max-w-2xl">
             <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-center">
-              <div className="text-2xl font-bold text-white">Mixte</div>
-              <div className="text-xs text-neutral-400 mt-1">Format ouvert</div>
-            </div>
-            <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-center">
-              <div className="text-2xl font-bold text-white">3 Avril</div>
-              <div className="text-xs text-neutral-400 mt-1">Save the date</div>
-            </div>
-            <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-center">
-              <div className="text-2xl font-bold text-white">Saison 2026</div>
+              <div className="text-2xl font-bold text-white">
+                {t.cardMixteValue}
+              </div>
               <div className="text-xs text-neutral-400 mt-1">
-                Coup d&apos;envoi
+                {t.cardMixteLabel}
+              </div>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-center">
+              <div className="text-2xl font-bold text-white">
+                {t.cardDateValue}
+              </div>
+              <div className="text-xs text-neutral-400 mt-1">
+                {t.cardDateLabel}
+              </div>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-center">
+              <div className="text-2xl font-bold text-white">
+                {t.cardSeasonValue}
+              </div>
+              <div className="text-xs text-neutral-400 mt-1">
+                {t.cardSeasonLabel}
               </div>
             </div>
           </div>
@@ -128,7 +138,7 @@ function ActualitesPreviewSection(): JSX.Element {
           {/* Cast Mixte */}
           <div className="flex items-center gap-6 mt-4">
             <span className="text-sm font-semibold text-neutral-400 uppercase tracking-wider">
-              Cast
+              {t.castLabel}
             </span>
             <div className="flex gap-4">
               <a
@@ -184,7 +194,7 @@ function ActualitesPreviewSection(): JSX.Element {
                 <line x1="19" y1="8" x2="19" y2="14" />
                 <line x1="22" y1="11" x2="16" y2="11" />
               </svg>
-              Inscrire mon équipe
+              {t.registerTeam}
             </button>
             <button
               type="button"
@@ -205,7 +215,7 @@ function ActualitesPreviewSection(): JSX.Element {
                 <line x1="8" y1="2" x2="8" y2="6" />
                 <line x1="3" y1="10" x2="21" y2="10" />
               </svg>
-              Voir le programme
+              {t.seeProgram}
             </button>
             <a
               href="https://discord.com/channels/1259186540001890474/1430516361255321691/1488476161146228866"
@@ -228,7 +238,7 @@ function ActualitesPreviewSection(): JSX.Element {
                 <line x1="16" y1="17" x2="8" y2="17" />
                 <polyline points="10 9 9 9 8 9" />
               </svg>
-              Voir le communiqué
+              {t.seeStatement}
             </a>
           </div>
         </div>

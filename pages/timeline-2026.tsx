@@ -3,6 +3,9 @@ import type { GetStaticProps } from 'next';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
+import { useT, format } from '@/lib/i18n/useT';
+
+type Timeline2026Dict = ReturnType<typeof useT<'timeline2026'>>;
 
 const WOMEN_TOURNAMENT_ID_2026 = 'e8fa740c-d92b-49d8-a654-05a37d0eea3b';
 const TWITCH_URL = 'https://www.twitch.tv/womens_cup';
@@ -60,31 +63,42 @@ const frenchMonthMap: Record<string, number> = {
   octobre: 9,
   novembre: 10,
   decembre: 11,
+  // Libellés EN : la détection du jalon « en cours » lit `period`, qui est
+  // désormais traduit — on accepte donc aussi les mois anglais.
+  january: 0,
+  february: 1,
+  march: 2,
+  april: 3,
+  may: 4,
+  june: 5,
+  july: 6,
+  august: 7,
+  september: 8,
+  october: 9,
+  november: 10,
+  december: 11,
 };
 
-const timeline: TimelineItem[] = [
+const getTimeline = (t: Timeline2026Dict): TimelineItem[] => [
   {
     id: 'transphobia-day',
-    title: 'Journée internationale contre la transphobie',
-    period: 'Mai 2026',
-    description:
-      "Le 17 mai, on prend la parole sur la chaîne Twitch officielle : table ronde, témoignages et showmatch caritatif pour soutenir la communauté trans dans l'esport.",
-    badge: '17 Mai',
+    title: t.item1Title,
+    period: t.item1Period,
+    description: t.item1Desc,
+    badge: t.item1Badge,
   },
   {
     id: 'summer',
-    title: "Été — Préparation de l'événement",
-    period: 'Juin 2026',
-    description:
-      "Annonces progressives, recrutement staff, partenariats et teasers pour le grand événement féminin d'octobre.",
+    title: t.item2Title,
+    period: t.item2Period,
+    description: t.item2Desc,
   },
   {
     id: 'main-event',
-    title: 'Grand événement féminin',
-    period: 'Octobre 2026',
-    description:
-      "L'événement phare de la saison : compétition 100 % féminine, grande scène, showmatchs, invitées spéciales et remise des récompenses.",
-    badge: 'Main Event',
+    title: t.item3Title,
+    period: t.item3Period,
+    description: t.item3Desc,
+    badge: t.item3Badge,
   },
 ];
 
@@ -137,7 +151,10 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
   };
 };
 
-function groupMatchesByDay(matches: SimpleMatch[]): DayGroup[] {
+function groupMatchesByDay(
+  matches: SimpleMatch[],
+  t: Timeline2026Dict
+): DayGroup[] {
   const groups = new Map<string, DayGroup>();
 
   for (const m of matches) {
@@ -149,7 +166,7 @@ function groupMatchesByDay(matches: SimpleMatch[]): DayGroup[] {
           day: '2-digit',
           month: 'long',
         })
-      : 'Date à définir';
+      : t.dateTbd;
 
     if (!groups.has(key)) {
       groups.set(key, { key, label, matches: [] });
@@ -167,34 +184,37 @@ function groupMatchesByDay(matches: SimpleMatch[]): DayGroup[] {
   return arr;
 }
 
-function formatMatchTime(iso: string | null): string {
-  if (!iso) return 'Horaire à confirmer';
+function formatMatchTime(iso: string | null, t: Timeline2026Dict): string {
+  if (!iso) return t.timeTbd;
   const d = new Date(iso);
-  if (isNaN(d.getTime())) return 'Horaire à confirmer';
+  if (isNaN(d.getTime())) return t.timeTbd;
   return d.toLocaleTimeString('fr-FR', {
     hour: '2-digit',
     minute: '2-digit',
   });
 }
 
-function getMatchStatusInfo(status: string): { label: string; cls: string } {
+function getMatchStatusInfo(
+  status: string,
+  t: Timeline2026Dict
+): { label: string; cls: string } {
   switch (status) {
     case 'pending':
     case 'upcoming':
       return {
-        label: 'À venir',
+        label: t.statusUpcoming,
         cls: 'bg-yellow-500/15 text-yellow-200 border-yellow-500/40',
       };
     case 'ongoing':
     case 'running':
       return {
-        label: 'En cours',
+        label: t.statusOngoing,
         cls: 'bg-emerald-500/15 text-emerald-200 border-emerald-500/40',
       };
     case 'completed':
     case 'finished':
       return {
-        label: 'Terminé',
+        label: t.statusFinished,
         cls: 'bg-gray-500/15 text-gray-200 border-gray-500/40',
       };
     default:
@@ -206,11 +226,12 @@ function getMatchStatusInfo(status: string): { label: string; cls: string } {
 }
 
 function MatchRow({ match }: { match: SimpleMatch }) {
-  const t1 = match.team1?.short_name || match.team1?.name || 'Équipe 1';
+  const t = useT('timeline2026');
+  const t1 = match.team1?.short_name || match.team1?.name || t.teamFallback1;
   const t2 =
     match.team2?.short_name ||
     match.team2?.name ||
-    (match.is_bye ? '(bye)' : 'Équipe 2');
+    (match.is_bye ? t.bye : t.teamFallback2);
 
   const isFinished = match.status === 'finished';
   const hasScores =
@@ -223,7 +244,7 @@ function MatchRow({ match }: { match: SimpleMatch }) {
       ? `${match.team1_score ?? 0} – ${match.team2_score ?? 0}`
       : '';
 
-  const status = getMatchStatusInfo(match.status);
+  const status = getMatchStatusInfo(match.status, t);
 
   return (
     <Link
@@ -231,7 +252,7 @@ function MatchRow({ match }: { match: SimpleMatch }) {
       className="group grid grid-cols-[64px_minmax(0,1fr)_auto] gap-3 items-center px-3 py-2.5 rounded-xl bg-white/[0.03] border border-white/10 hover:border-pink-400/50 hover:bg-pink-500/5 transition"
     >
       <span className="text-sm font-mono text-pink-100">
-        {formatMatchTime(match.scheduled_at)}
+        {formatMatchTime(match.scheduled_at, t)}
       </span>
 
       <div className="min-w-0">
@@ -239,11 +260,11 @@ function MatchRow({ match }: { match: SimpleMatch }) {
           <span className="font-medium">{t1}</span>
           {!match.is_bye && (
             <>
-              <span className="text-gray-500 mx-1">vs</span>
+              <span className="text-gray-500 mx-1">{t.vs}</span>
               <span className="font-medium">{t2}</span>
             </>
           )}
-          {match.is_bye && <span className="text-gray-500"> (bye)</span>}
+          {match.is_bye && <span className="text-gray-500"> {t.bye}</span>}
         </p>
         <div className="flex flex-wrap gap-1.5 text-[10px] text-gray-400 mt-0.5">
           {match.stage?.name && <span>{match.stage.name}</span>}
@@ -279,6 +300,8 @@ function MatchRow({ match }: { match: SimpleMatch }) {
 }
 
 function Timeline2026Page({ matches, tournamentSlug }: Props) {
+  const t = useT('timeline2026');
+  const timeline = getTimeline(t);
   const tournamentIdentifier = tournamentSlug || WOMEN_TOURNAMENT_ID_2026;
   const now = new Date();
   const currentIdx = timeline.findIndex((item) => {
@@ -297,7 +320,7 @@ function Timeline2026Page({ matches, tournamentSlug }: Props) {
       ? (currentIdx / (timeline.length - 1)) * 100
       : null;
 
-  const grouped = groupMatchesByDay(matches);
+  const grouped = groupMatchesByDay(matches, t);
   const totalMatches = matches.length;
 
   return (
@@ -311,14 +334,13 @@ function Timeline2026Page({ matches, tournamentSlug }: Props) {
 
         <div className="max-w-6xl mx-auto px-6 pt-32 pb-16 relative">
           <p className="text-xs uppercase tracking-[0.24em] text-purple-200/80">
-            Roadmap 2026
+            {t.heroEyebrow}
           </p>
           <h1 className="text-4xl md:text-5xl font-bold mt-3 leading-tight">
-            Toutes les étapes jusqu&apos;aux finales 2026
+            {t.heroTitle}
           </h1>
           <p className="text-neutral-300 text-lg mt-4 max-w-2xl">
-            Suis le déroulé de la saison : inscriptions, playoffs et grande
-            finale. Chaque jalon sera détaillé et mis à jour en temps réel.
+            {t.heroSubtitle}
           </p>
         </div>
       </div>
@@ -392,7 +414,7 @@ function Timeline2026Page({ matches, tournamentSlug }: Props) {
                           rel="noreferrer noopener"
                           className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-purple-500 text-white hover:bg-purple-400 transition"
                         >
-                          Suivre sur Twitch ↗
+                          {t.followTwitch}
                         </a>
                       </div>
                     )}
@@ -402,7 +424,7 @@ function Timeline2026Page({ matches, tournamentSlug }: Props) {
                           href={`/team/create?tournament=${WOMEN_TOURNAMENT_ID_2026}`}
                           className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-emerald-500 text-black hover:bg-emerald-400 transition"
                         >
-                          Inscrire mon équipe ↗
+                          {t.registerTeam}
                         </Link>
                       </div>
                     )}
@@ -420,34 +442,27 @@ function Timeline2026Page({ matches, tournamentSlug }: Props) {
           <div className="flex items-end justify-between flex-wrap gap-3 mb-6">
             <div>
               <p className="text-xs uppercase tracking-[0.24em] text-purple-200/80">
-                Tournoi féminin 2026
+                {t.calEyebrow}
               </p>
               <h2 className="text-3xl md:text-4xl font-bold mt-2 leading-tight">
-                Calendrier des matchs
+                {t.calTitle}
               </h2>
               <p className="text-neutral-300 text-base mt-2 max-w-2xl">
-                Toutes les rencontres de l&apos;édition féminine, mises à jour
-                en temps réel. Clique sur un match pour ouvrir sa fiche
-                détaillée.
+                {t.calSubtitle}
               </p>
             </div>
             <Link
               href={`/tournament/${tournamentIdentifier}/matches`}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border border-white/20 text-white hover:border-pink-400/60 hover:bg-pink-500/10 transition"
             >
-              Voir tout le tournoi ↗
+              {t.viewAllTournament}
             </Link>
           </div>
 
           {totalMatches === 0 ? (
             <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-8 text-center">
-              <p className="text-neutral-300">
-                Le calendrier du tournoi féminin 2026 sera publié dès la fin des
-                inscriptions.
-              </p>
-              <p className="text-neutral-500 text-sm mt-2">
-                Reviens bientôt ou rejoins le Discord pour être prévenue.
-              </p>
+              <p className="text-neutral-300">{t.emptyTitle}</p>
+              <p className="text-neutral-500 text-sm mt-2">{t.emptySub}</p>
             </div>
           ) : (
             <div className="space-y-6">
@@ -461,8 +476,10 @@ function Timeline2026Page({ matches, tournamentSlug }: Props) {
                       {day.label}
                     </p>
                     <p className="text-xs text-gray-400">
-                      {day.matches.length} match
-                      {day.matches.length > 1 ? 's' : ''}
+                      {format(
+                        day.matches.length > 1 ? t.match_other : t.match_one,
+                        { count: day.matches.length }
+                      )}
                     </p>
                   </div>
                   <div className="space-y-2">

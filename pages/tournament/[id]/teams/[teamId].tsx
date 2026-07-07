@@ -14,6 +14,9 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { findTournamentByIdOrSlug } from '@/utils/tournamentLookup';
 import { maskBattleTag } from '@/utils/battleTag';
+import { useT, format } from '@/lib/i18n/useT';
+
+type TeamDetailDict = ReturnType<typeof useT<'tournamentTeamDetail'>>;
 
 type Tournament = {
   id: string;
@@ -85,8 +88,7 @@ export const getStaticPaths: GetStaticPaths = async () => {
 export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
   const id = ctx.params?.id;
   const teamId = ctx.params?.teamId;
-  if (!id || Array.isArray(id))
-    return { notFound: true, revalidate: 60 };
+  if (!id || Array.isArray(id)) return { notFound: true, revalidate: 60 };
   if (!teamId || Array.isArray(teamId))
     return { notFound: true, revalidate: 60 };
   if (!supabaseAdmin) return { notFound: true, revalidate: 60 };
@@ -151,8 +153,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
   if (!team || team.is_active === false)
     return { notFound: true, revalidate: 60 };
 
-  if (!registrationRes.data)
-    return { notFound: true, revalidate: 60 };
+  if (!registrationRes.data) return { notFound: true, revalidate: 60 };
 
   const members = membersRes.data;
   const matches = matchesRes.data || [];
@@ -293,16 +294,16 @@ function formatDate(iso: string | null) {
   }
 }
 
-function matchOutcome(m: TournamentMatch, teamId: string) {
+function matchOutcome(m: TournamentMatch, teamId: string, t: TeamDetailDict) {
   if (m.status !== 'finished' && m.status !== 'walkover') {
     if (m.status === 'ongoing')
-      return { label: 'En cours', color: 'text-amber-300' };
-    return { label: 'À venir', color: 'text-neutral-400' };
+      return { label: t.outcomeOngoing, color: 'text-amber-300' };
+    return { label: t.outcomeUpcoming, color: 'text-neutral-400' };
   }
   if (m.winner_team_id === teamId)
-    return { label: 'Victoire', color: 'text-emerald-300' };
-  if (m.winner_team_id) return { label: 'Défaite', color: 'text-red-300' };
-  return { label: 'Nul', color: 'text-neutral-400' };
+    return { label: t.outcomeWin, color: 'text-emerald-300' };
+  if (m.winner_team_id) return { label: t.outcomeLoss, color: 'text-red-300' };
+  return { label: t.outcomeDraw, color: 'text-neutral-400' };
 }
 
 export default function TournamentTeamPage({
@@ -313,6 +314,7 @@ export default function TournamentTeamPage({
   stats,
   totalMvpAwards,
 }: Props) {
+  const t = useT('tournamentTeamDetail');
   const titulaires = roster.filter((m) => !m.is_substitute);
   const remplacants = roster.filter((m) => m.is_substitute);
   const winrate = stats.played > 0 ? (stats.wins / stats.played) * 100 : 0;
@@ -321,10 +323,18 @@ export default function TournamentTeamPage({
   return (
     <>
       <Head>
-        <title>{`${team.name} · ${tournament.name}`}</title>
+        <title>
+          {format(t.headTitle, {
+            team: team.name,
+            tournament: tournament.name,
+          })}
+        </title>
         <meta
           name="description"
-          content={`Roster, stats et résultats de ${team.name} sur le tournoi ${tournament.name}`}
+          content={format(t.metaDescription, {
+            team: team.name,
+            tournament: tournament.name,
+          })}
         />
       </Head>
 
@@ -344,7 +354,7 @@ export default function TournamentTeamPage({
               )}
               <div className="flex-1">
                 <p className="text-xs uppercase tracking-[0.18em] text-purple-200/80">
-                  Tournoi · Équipe
+                  {t.eyebrow}
                 </p>
                 <Heading
                   level="h1"
@@ -380,7 +390,7 @@ export default function TournamentTeamPage({
                     type="button"
                     className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-blue-400"
                   >
-                    Profil global
+                    {t.globalProfile}
                   </Button>
                 </Link>
                 <Link href={tournamentPath}>
@@ -388,7 +398,7 @@ export default function TournamentTeamPage({
                     type="button"
                     className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-emerald-400"
                   >
-                    ← Tournoi
+                    {t.backToTournament}
                   </Button>
                 </Link>
               </div>
@@ -398,20 +408,23 @@ export default function TournamentTeamPage({
           {/* Stats du tournoi */}
           <section className="mb-6">
             <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-              <StatCard label="Matchs joués" value={stats.played} />
+              <StatCard label={t.statPlayed} value={stats.played} />
               <StatCard
-                label="Victoires"
+                label={t.statWins}
                 value={stats.wins}
                 accent="text-emerald-300"
               />
               <StatCard
-                label="Défaites"
+                label={t.statLosses}
                 value={stats.losses}
                 accent="text-red-300"
               />
-              <StatCard label="Winrate" value={`${winrate.toFixed(0)}%`} />
               <StatCard
-                label="MVP"
+                label={t.statWinrate}
+                value={`${winrate.toFixed(0)}%`}
+              />
+              <StatCard
+                label={t.statMvp}
                 value={totalMvpAwards}
                 accent="text-yellow-300"
               />
@@ -422,17 +435,17 @@ export default function TournamentTeamPage({
           <section className="mb-8">
             <div className="bg-black/60 border border-white/5 rounded-2xl p-4">
               <h2 className="text-xs uppercase tracking-[0.16em] text-gray-400 mb-3">
-                Roster ({roster.length})
+                {format(t.rosterHeading, { count: roster.length })}
               </h2>
 
               {titulaires.length === 0 && remplacants.length === 0 && (
-                <p className="text-sm text-neutral-500">Aucun membre listé.</p>
+                <p className="text-sm text-neutral-500">{t.rosterEmpty}</p>
               )}
 
               {titulaires.length > 0 && (
                 <>
                   <p className="text-[10px] uppercase tracking-widest text-neutral-500 mb-2">
-                    Titulaires
+                    {t.starters}
                   </p>
                   <ul className="space-y-1 mb-4">
                     {titulaires.map((m) => (
@@ -445,7 +458,7 @@ export default function TournamentTeamPage({
               {remplacants.length > 0 && (
                 <>
                   <p className="text-[10px] uppercase tracking-widest text-neutral-500 mb-2">
-                    Remplaçants
+                    {t.substitutes}
                   </p>
                   <ul className="space-y-1">
                     {remplacants.map((m) => (
@@ -460,19 +473,19 @@ export default function TournamentTeamPage({
           {/* Matches */}
           <section>
             <Heading level="h2" typeStyle="heading-md" className="mb-3">
-              Matchs sur ce tournoi
+              {t.matchesHeading}
             </Heading>
 
             {matches.length === 0 ? (
               <div className="bg-black/60 border border-white/5 rounded-2xl p-6 text-center">
                 <Paragraph typeStyle="body-sm" textColor="text-gray-300">
-                  Aucun match programmé pour cette équipe sur ce tournoi.
+                  {t.matchesEmpty}
                 </Paragraph>
               </div>
             ) : (
               <div className="bg-black/60 border border-white/5 rounded-2xl overflow-hidden">
                 {matches.map((m) => {
-                  const outcome = matchOutcome(m, team.id);
+                  const outcome = matchOutcome(m, team.id, t);
                   const ourScore = m.isTeam1 ? m.team1_score : m.team2_score;
                   const theirScore = m.isTeam1 ? m.team2_score : m.team1_score;
                   return (
@@ -545,15 +558,16 @@ function StatCard({
 }
 
 function RosterRow({ member }: { member: RosterMember }) {
+  const t = useT('tournamentTeamDetail');
   return (
     <li className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg bg-white/5">
       <div className="flex items-center gap-3 min-w-0">
         <span className="text-sm font-medium truncate">
-          {member.battle_tag || '— inconnu —'}
+          {member.battle_tag || t.unknownMember}
         </span>
         {member.is_captain && (
           <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold border bg-yellow-500/20 text-yellow-300 border-yellow-500/40">
-            CAPITAINE
+            {t.captainBadge}
           </span>
         )}
       </div>

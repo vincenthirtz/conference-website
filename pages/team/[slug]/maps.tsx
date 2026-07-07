@@ -7,6 +7,7 @@ import Paragraph from '@/components/Typography/paragraph';
 import { logger } from '../../../utils/logger';
 import { supabaseAdmin } from '@/utils/supabase'; // adapte le chemin si besoin
 import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
+import { useT } from '@/lib/i18n/useT';
 
 type Team = {
   id: string;
@@ -34,6 +35,7 @@ type Props = {
 };
 
 const TeamMapsPage: NextPage<Props> = ({ team, mapStats }) => {
+  const t = useT('teamMaps');
   if (!team) {
     return (
       <>
@@ -43,14 +45,14 @@ const TeamMapsPage: NextPage<Props> = ({ team, mapStats }) => {
         <main className="min-h-screen bg-neutral-900 text-white">
           <div className="container mx-auto px-4 py-16">
             <Heading level="h1" className="text-center mb-4">
-              Équipe introuvable
+              {t.notFoundTitle}
             </Heading>
             <Paragraph className="text-center text-neutral-400 mb-8">
-              Impossible de trouver cette équipe.
+              {t.notFoundBody}
             </Paragraph>
             <div className="flex justify-center">
               <Link href="/" className="text-blue-400 hover:underline">
-                ← Retour à l&apos;accueil
+                {t.backHome}
               </Link>
             </div>
           </div>
@@ -80,7 +82,7 @@ const TeamMapsPage: NextPage<Props> = ({ team, mapStats }) => {
               className="inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white"
             >
               <span>←</span>
-              <span>Retour à la fiche équipe</span>
+              <span>{t.backToTeam}</span>
             </Link>
           </div>
 
@@ -112,7 +114,7 @@ const TeamMapsPage: NextPage<Props> = ({ team, mapStats }) => {
                     </span>
                   )}
                   <span className="px-2 py-0.5 rounded-full bg-blue-900/40 border border-blue-700/60 text-blue-200">
-                    Stats par carte
+                    {t.mapStatsBadge}
                   </span>
                 </div>
               </div>
@@ -133,19 +135,17 @@ const TeamMapsPage: NextPage<Props> = ({ team, mapStats }) => {
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb  -4">
               <div>
                 <Heading level="h2" className="text-2xl">
-                  Performance par carte
+                  {t.perMapTitle}
                 </Heading>
                 <Paragraph className="text-neutral-400 mt-1">
-                  Nombre de matchs, victoires, défaites et winrate par carte
-                  jouée.
+                  {t.perMapDesc}
                 </Paragraph>
               </div>
             </div>
 
             {!hasStats && (
               <div className="mt-8 text-neutral-400 text-sm">
-                Aucune statistique de cartes disponible pour cette équipe pour
-                le moment.
+                {t.emptyStats}
               </div>
             )}
 
@@ -155,22 +155,22 @@ const TeamMapsPage: NextPage<Props> = ({ team, mapStats }) => {
                   <thead>
                     <tr className="bg-neutral-900/80">
                       <th className="text-left px-3 py-2 border-b border-neutral-700 font-medium">
-                        Carte
+                        {t.thMap}
                       </th>
                       <th className="text-center px-3 py-2 border-b border-neutral-700 font-medium">
-                        Joués
+                        {t.thPlayed}
                       </th>
                       <th className="text-center px-3 py-2 border-b border-neutral-700 font-medium">
-                        V
+                        {t.thW}
                       </th>
                       <th className="text-center px-3 py-2 border-b border-neutral-700 font-medium">
-                        D
+                        {t.thL}
                       </th>
                       <th className="text-center px-3 py-2 border-b border-neutral-700 font-medium">
-                        WR
+                        {t.thWR}
                       </th>
                       <th className="text-center px-3 py-2 border-b border-neutral-700 font-medium">
-                        Rounds
+                        {t.thRounds}
                       </th>
                     </tr>
                   </thead>

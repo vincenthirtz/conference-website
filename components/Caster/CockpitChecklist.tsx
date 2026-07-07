@@ -6,6 +6,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useToast } from '@/components/Toast';
 import type { EventCasterChecklistItem, EventSegment } from '@/types/events';
+import { useT, format } from '@/lib/i18n/useT';
 
 type Props = {
   segment: EventSegment;
@@ -19,6 +20,7 @@ export default function CockpitChecklist({
   onUpdated,
 }: Props) {
   const { addToast } = useToast();
+  const t = useT('cockpitChecklist');
   const [pending, setPending] = useState<Record<string, boolean>>({});
 
   const items = useMemo(
@@ -32,7 +34,7 @@ export default function CockpitChecklist({
   const toggle = useCallback(
     async (item: EventCasterChecklistItem) => {
       if (!accessToken) {
-        addToast('Session expiree, reconnecte-toi.', 'error');
+        addToast(t.sessionExpired, 'error');
         return;
       }
       if (pending[item.key]) return;
@@ -55,14 +57,13 @@ export default function CockpitChecklist({
           const body = (await res.json().catch(() => null)) as {
             error?: string;
           } | null;
-          throw new Error(body?.error || 'Mise a jour echouee.');
+          throw new Error(body?.error || t.updateFailed);
         }
         const json = (await res.json()) as { segment: EventSegment };
         onUpdated(json.segment);
       } catch (err) {
         addToast(
-          (err as Error)?.message ||
-            'Impossible de mettre a jour la checklist.',
+          (err as Error)?.message || t.updateChecklistFailed,
           'error'
         );
       } finally {
@@ -73,19 +74,16 @@ export default function CockpitChecklist({
         });
       }
     },
-    [accessToken, addToast, onUpdated, pending, segment.id]
+    [accessToken, addToast, onUpdated, pending, segment.id, t]
   );
 
   if (items.length === 0) {
     return (
       <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
         <div className="text-sm font-semibold text-white mb-1">
-          Checklist pre-match
+          {t.title}
         </div>
-        <p className="text-xs text-gray-400">
-          Aucun item de checklist pour ce segment. Demande au Director de
-          configurer la liste depuis l admin si necessaire.
-        </p>
+        <p className="text-xs text-gray-400">{t.emptyBody}</p>
       </div>
     );
   }
@@ -96,11 +94,12 @@ export default function CockpitChecklist({
     <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
       <div className="flex items-center justify-between mb-3">
         <div>
-          <div className="text-sm font-semibold text-white">
-            Checklist pre-match
-          </div>
+          <div className="text-sm font-semibold text-white">{t.title}</div>
           <div className="text-[11px] text-gray-400">
-            {checkedCount} / {items.length} valides
+            {format(t.validatedProgress, {
+              checked: checkedCount,
+              total: items.length,
+            })}
           </div>
         </div>
       </div>
@@ -150,12 +149,16 @@ export default function CockpitChecklist({
                   </span>
                   {checked && item.checked_at && (
                     <span className="block text-[11px] text-emerald-200/80 mt-0.5">
-                      Valide
+                      {t.validated}
                       {item.checked_at
-                        ? ` à ${new Date(item.checked_at).toLocaleTimeString(
-                            'fr-FR',
-                            { hour: '2-digit', minute: '2-digit' }
-                          )}`
+                        ? format(t.validatedAtSuffix, {
+                            time: new Date(
+                              item.checked_at
+                            ).toLocaleTimeString('fr-FR', {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            }),
+                          })
                         : ''}
                     </span>
                   )}

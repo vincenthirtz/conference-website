@@ -25,6 +25,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useToast } from '@/components/Toast';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { logger } from '@/utils/logger';
+import { useT } from '@/lib/i18n/useT';
 import {
   getActivePushSubscription,
   getWebPushSupport,
@@ -64,23 +65,19 @@ function dismissKey(audience: PushAudience): string {
   return `${DISMISS_KEY_PREFIX}-${audience}`;
 }
 
-const DEFAULT_MESSAGES: Record<PushAudience, string> = {
-  admin:
-    'Active les notifications pour etre alerte des matches, disputes et inscriptions, meme quand l onglet est ferme.',
-  caster:
-    'Active les notifications pour recevoir tes assignations cast, briefings et signaux du Director, meme hors session.',
-  player:
-    'Active les notifications pour recevoir tes alertes de match, check-in, scrim et news, meme quand l onglet est ferme.',
-  public:
-    'Active les notifications pour recevoir les annonces de l event en direct.',
-};
-
 export default function PushOptIn({
   audience,
   variant = 'banner',
   loginPath = '/admin/login',
   message,
 }: Props) {
+  const t = useT('pushOptIn');
+  const defaultMessages: Record<PushAudience, string> = {
+    admin: t.msgAdmin,
+    caster: t.msgCaster,
+    player: t.msgPlayer,
+    public: t.msgPublic,
+  };
   const [visible, setVisible] = useState(false);
   const [busy, setBusy] = useState(false);
   const { addToast } = useToast();
@@ -144,10 +141,7 @@ export default function PushOptIn({
     try {
       const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
       if (!publicKey) {
-        addToast(
-          'Notifications non configurees sur ce serveur (cle VAPID manquante).',
-          'error'
-        );
+        addToast(t.errVapidMissing, 'error');
         setVisible(false);
         return;
       }
@@ -160,10 +154,7 @@ export default function PushOptIn({
           } catch {
             // Ignore.
           }
-          addToast(
-            'Permission refusee. Tu peux la reactiver depuis les reglages du navigateur.',
-            'warning'
-          );
+          addToast(t.permDenied, 'warning');
         }
         setVisible(false);
         return;
@@ -194,28 +185,24 @@ export default function PushOptIn({
 
       addToast(
         audience === 'caster'
-          ? 'Notifications caster activees. Tu recevras tes assignations et signaux Director.'
+          ? t.successCaster
           : audience === 'player'
-            ? 'Notifications activees. Tu recevras tes alertes match, check-in et scrim.'
-            : 'Notifications activees. Tu recevras les alertes match, scrim et support.',
+            ? t.successPlayer
+            : t.successDefault,
         'success'
       );
       setVisible(false);
     } catch (err) {
       logger.error('[PushOptIn] activate failed', err);
-      addToast(
-        (err as Error)?.message ||
-          'Impossible d activer les notifications. Reessaie plus tard.',
-        'error'
-      );
+      addToast((err as Error)?.message || t.errActivate, 'error');
     } finally {
       setBusy(false);
     }
-  }, [addToast, adminFetchJson, audience, busy]);
+  }, [addToast, adminFetchJson, audience, busy, t]);
 
   if (!visible) return null;
 
-  const copy = message ?? DEFAULT_MESSAGES[audience];
+  const copy = message ?? defaultMessages[audience];
 
   if (variant === 'card') {
     return (
@@ -239,9 +226,7 @@ export default function PushOptIn({
             />
           </svg>
           <div className="min-w-0 flex-1">
-            <h3 className="text-sm font-semibold mb-1">
-              Notifications navigateur
-            </h3>
+            <h3 className="text-sm font-semibold mb-1">{t.cardTitle}</h3>
             <p className="text-xs text-purple-200/80 leading-snug">{copy}</p>
             <div className="mt-3 flex items-center gap-2">
               <button
@@ -251,7 +236,7 @@ export default function PushOptIn({
                 className="px-3 py-1.5 text-xs rounded-md bg-purple-500 hover:bg-purple-400 text-white font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 data-testid="push-optin-activate"
               >
-                {busy ? 'Activation...' : 'Activer'}
+                {busy ? t.activating : t.activate}
               </button>
               <button
                 type="button"
@@ -260,7 +245,7 @@ export default function PushOptIn({
                 className="px-3 py-1.5 text-xs rounded-md border border-purple-500/30 hover:bg-purple-500/10 transition-colors disabled:opacity-50"
                 data-testid="push-optin-dismiss"
               >
-                Plus tard
+                {t.later}
               </button>
             </div>
           </div>
@@ -297,7 +282,7 @@ export default function PushOptIn({
             className="px-3 py-1.5 text-sm rounded-md border border-purple-500/30 hover:bg-purple-500/10 transition-colors disabled:opacity-50"
             data-testid="push-optin-dismiss"
           >
-            Plus tard
+            {t.later}
           </button>
           <button
             type="button"
@@ -306,7 +291,7 @@ export default function PushOptIn({
             className="px-3 py-1.5 text-sm rounded-md bg-purple-500 hover:bg-purple-400 text-white font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             data-testid="push-optin-activate"
           >
-            {busy ? 'Activation...' : 'Activer'}
+            {busy ? t.activating : t.activate}
           </button>
         </div>
       </div>

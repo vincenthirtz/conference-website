@@ -10,6 +10,7 @@ import Button from '@/components/Buttons/button';
 import { supabaseAdmin } from '@/utils/supabase';
 import type { MatchStatus } from '@/types/admin';
 import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
+import { useT, format } from '@/lib/i18n/useT';
 
 import { logger } from '../../../utils/logger';
 type Team = {
@@ -181,6 +182,7 @@ export default function TeamStatsPage({
   mapStats,
   matchesPlayed,
 }: Props) {
+  const t = useT('teamStats');
   const name = team.name;
   const shortName = team.short_name || null;
   const logo = team.logo_url || null;
@@ -234,7 +236,7 @@ export default function TeamStatsPage({
               <div>
                 <div className="inline-flex items-center gap-2 px-2 py-1 rounded-full bg-white/5 border border-white/10 text-[10px] uppercase tracking-wide mb-1">
                   <span className="px-1.5 py-[2px] rounded-full bg-gradient-to-r from-emerald-400/90 to-cyan-400/90 text-black font-semibold">
-                    Stats équipe
+                    {t.badge}
                   </span>
                 </div>
 
@@ -258,29 +260,29 @@ export default function TeamStatsPage({
                   type="button"
                   className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-blue-400"
                 >
-                  ← Fiche équipe
+                  {t.backToTeam}
                 </Button>
               </Link>
             </div>
           </div>
 
           <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <StatCard label="Matchs joués" value={totalMatches} />
-            <StatCard label="Bilan" value={`${wins} - ${losses}`} />
+            <StatCard label={t.statMatchesPlayed} value={totalMatches} />
+            <StatCard label={t.statRecord} value={`${wins} - ${losses}`} />
             <StatCard
-              label="Winrate"
+              label={t.statWinrate}
               value={totalMatches > 0 ? `${winrate.toFixed(0)}%` : '—'}
             />
             <StatCard
-              label="Maps"
+              label={t.statMaps}
               value={`${mapsWon}-${mapsLost}`}
               hint={
                 totalMatches > 0
                   ? mapDiff > 0
-                    ? `+${mapDiff} diff`
+                    ? format(t.diffPositive, { diff: mapDiff })
                     : mapDiff < 0
-                      ? `${mapDiff} diff`
-                      : 'diff neutre'
+                      ? format(t.diffNegative, { diff: mapDiff })
+                      : t.diffNeutral
                   : undefined
               }
             />
@@ -292,43 +294,50 @@ export default function TeamStatsPage({
           <div className="bg-black/60 border border-white/5 rounded-2xl p-4">
             {mapStats.length === 0 && (
               <Paragraph typeStyle="body-sm" textColor="text-gray-300">
-                Pas encore assez de données de maps enregistrées pour calculer
-                des statistiques détaillées.
+                {t.emptyMaps}
               </Paragraph>
             )}
 
             {mapStats.length > 0 && (
               <>
                 <p className="text-[11px] uppercase tracking-wide text-gray-400 mb-2">
-                  Profil de maps de l&apos;équipe
+                  {t.mapProfileLabel}
                 </p>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
-                  <StatCard label="Maps distinctes" value={mapStats.length} />
                   <StatCard
-                    label="Games maps"
+                    label={t.statDistinctMaps}
+                    value={mapStats.length}
+                  />
+                  <StatCard
+                    label={t.statMapGames}
                     value={mapStats.reduce((acc, m) => acc + m.gamesPlayed, 0)}
                   />
                   <StatCard
-                    label="Map préférée"
+                    label={t.statFavoriteMap}
                     value={bestMap ? bestMap.mapName : '—'}
                     hint={
                       bestMap
-                        ? `${bestMap.gamesPlayed} games · ${(bestMap.winrate * 100).toFixed(0)}% WR`
+                        ? format(t.favoriteMapHint, {
+                            games: bestMap.gamesPlayed,
+                            wr: (bestMap.winrate * 100).toFixed(0),
+                          })
                         : undefined
                     }
                   />
                   <StatCard
-                    label="Map la plus jouée"
+                    label={t.statMostPlayedMap}
                     value={mostPlayed ? mostPlayed.mapName : '—'}
                     hint={
-                      mostPlayed ? `${mostPlayed.gamesPlayed} games` : undefined
+                      mostPlayed
+                        ? format(t.mostPlayedHint, {
+                            games: mostPlayed.gamesPlayed,
+                          })
+                        : undefined
                     }
                   />
                 </div>
                 <Paragraph typeStyle="body-sm" textColor="text-gray-400">
-                  Les statistiques sont calculées sur l&apos;ensemble des matchs
-                  joués (tous tournois confondus) et enregistrés dans la base de
-                  données.
+                  {t.statsNote}
                 </Paragraph>
               </>
             )}
@@ -340,21 +349,23 @@ export default function TeamStatsPage({
           <section>
             <div className="bg-black/60 border border-white/5 rounded-2xl p-4">
               <p className="text-[11px] uppercase tracking-wide text-gray-400 mb-3">
-                Stats détaillées par map
+                {t.detailedByMapTitle}
               </p>
 
               <div className="overflow-x-auto">
                 <table className="min-w-full text-[11px]">
                   <thead>
                     <tr className="text-gray-400 border-b border-white/10">
-                      <th className="text-left py-1.5 pr-3">Map</th>
-                      <th className="text-right py-1.5 px-3">Games</th>
-                      <th className="text-right py-1.5 px-3">W</th>
-                      <th className="text-right py-1.5 px-3">L</th>
-                      <th className="text-right py-1.5 px-3">Winrate</th>
-                      <th className="text-right py-1.5 px-3">Rounds (+/-)</th>
-                      <th className="text-right py-1.5 px-3">OTs</th>
-                      <th className="text-right py-1.5 pl-3">Tiebreakers</th>
+                      <th className="text-left py-1.5 pr-3">{t.thMap}</th>
+                      <th className="text-right py-1.5 px-3">{t.thGames}</th>
+                      <th className="text-right py-1.5 px-3">{t.thW}</th>
+                      <th className="text-right py-1.5 px-3">{t.thL}</th>
+                      <th className="text-right py-1.5 px-3">{t.thWinrate}</th>
+                      <th className="text-right py-1.5 px-3">{t.thRounds}</th>
+                      <th className="text-right py-1.5 px-3">{t.thOTs}</th>
+                      <th className="text-right py-1.5 pl-3">
+                        {t.thTiebreakers}
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -413,8 +424,7 @@ export default function TeamStatsPage({
               </div>
 
               <p className="mt-2 text-[10px] text-gray-500">
-                Les overtimes et tiebreakers sont comptés à partir des flags
-                stockés sur chaque game.
+                {t.overtimesNote}
               </p>
             </div>
           </section>

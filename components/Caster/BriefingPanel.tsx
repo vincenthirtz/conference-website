@@ -7,6 +7,7 @@
 import { useEffect, useState } from 'react';
 import { logger } from '@/utils/logger';
 import { maskBattleTag } from '@/utils/battleTag';
+import { useT, format } from '@/lib/i18n/useT';
 
 type TeamMember = {
   id: string;
@@ -60,6 +61,7 @@ type Props = {
 };
 
 export default function BriefingPanel({ matchId, accessToken }: Props) {
+  const t = useT('briefingPanel');
   const [briefing, setBriefing] = useState<Briefing | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -78,13 +80,15 @@ export default function BriefingPanel({ matchId, accessToken }: Props) {
         });
         if (!res.ok) {
           if (res.status === 404) {
-            setError('Match introuvable pour ton tenant.');
+            setError(t.matchNotFound);
             return;
           }
           const body = (await res.json().catch(() => null)) as {
             error?: string;
           } | null;
-          throw new Error(body?.error || `Erreur ${res.status}`);
+          throw new Error(
+            body?.error || format(t.errorWithStatus, { status: res.status })
+          );
         }
         const json = (await res.json()) as Briefing;
         if (!cancelled) {
@@ -94,7 +98,7 @@ export default function BriefingPanel({ matchId, accessToken }: Props) {
       } catch (err) {
         logger.error('[BriefingPanel] error', err);
         if (!cancelled) {
-          setError((err as Error)?.message || 'Erreur de chargement.');
+          setError((err as Error)?.message || t.loadError);
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -103,15 +107,17 @@ export default function BriefingPanel({ matchId, accessToken }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [accessToken, matchId]);
+  }, [accessToken, matchId, t]);
 
   if (loading) {
     return (
       <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-        <div className="text-sm font-semibold text-white mb-2">Briefing</div>
+        <div className="text-sm font-semibold text-white mb-2">
+          {t.briefingLabel}
+        </div>
         <div className="flex items-center gap-2 text-xs text-gray-400">
           <div className="w-4 h-4 border-2 border-neutral-600 border-t-purple-400 rounded-full animate-spin" />
-          Chargement du briefing...
+          {t.loadingBriefing}
         </div>
       </div>
     );
@@ -120,7 +126,9 @@ export default function BriefingPanel({ matchId, accessToken }: Props) {
   if (error) {
     return (
       <div className="rounded-2xl border border-red-500/30 bg-red-900/15 p-4">
-        <div className="text-sm font-semibold text-white mb-1">Briefing</div>
+        <div className="text-sm font-semibold text-white mb-1">
+          {t.briefingLabel}
+        </div>
         <p className="text-xs text-red-100/80">{error}</p>
       </div>
     );
@@ -134,7 +142,9 @@ export default function BriefingPanel({ matchId, accessToken }: Props) {
   return (
     <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
       <div className="flex items-center justify-between mb-3">
-        <div className="text-sm font-semibold text-white">Briefing match</div>
+        <div className="text-sm font-semibold text-white">
+          {t.briefingTitle}
+        </div>
         {briefing.match.matchFormat && (
           <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-white/10 text-gray-200">
             {briefing.match.matchFormat}
@@ -175,7 +185,7 @@ export default function BriefingPanel({ matchId, accessToken }: Props) {
               <ul className="space-y-1">
                 {team.members.length === 0 ? (
                   <li className="text-[11px] text-gray-500 italic">
-                    Pas de roster importe
+                    {t.noRoster}
                   </li>
                 ) : (
                   team.members.slice(0, 8).map((m) => (
@@ -209,7 +219,7 @@ export default function BriefingPanel({ matchId, accessToken }: Props) {
               key={`empty-${idx}`}
               className="rounded-xl border border-white/5 bg-black/20 p-3 text-[11px] text-gray-500 italic"
             >
-              Equipe indisponible
+              {t.teamUnavailable}
             </div>
           )
         )}
@@ -217,19 +227,19 @@ export default function BriefingPanel({ matchId, accessToken }: Props) {
 
       <div className="rounded-xl border border-white/10 bg-black/30 p-3 mb-4">
         <div className="text-[10px] uppercase tracking-wider text-gray-400 mb-1">
-          H2H
+          {t.h2hLabel}
         </div>
         {h2h.totalMeetings === 0 ? (
-          <div className="text-xs text-gray-300">
-            Pas de rencontre precedente entre ces equipes.
-          </div>
+          <div className="text-xs text-gray-300">{t.noPreviousMeeting}</div>
         ) : (
           <div className="flex items-center justify-between text-sm">
             <span className="font-mono text-white">{h2h.aWins}</span>
             <span className="text-[10px] text-gray-400">
-              {h2h.totalMeetings} rencontre
-              {h2h.totalMeetings > 1 ? 's' : ''}
-              {h2h.draws > 0 ? ` • ${h2h.draws} nuls` : ''}
+              {format(
+                h2h.totalMeetings > 1 ? t.meetings_other : t.meetings_one,
+                { count: h2h.totalMeetings }
+              )}
+              {h2h.draws > 0 ? format(t.drawsSuffix, { count: h2h.draws }) : ''}
             </span>
             <span className="font-mono text-white">{h2h.bWins}</span>
           </div>
@@ -239,7 +249,7 @@ export default function BriefingPanel({ matchId, accessToken }: Props) {
       {briefing.recentNews.length > 0 && (
         <div>
           <div className="text-[10px] uppercase tracking-wider text-gray-400 mb-1.5">
-            News recentes
+            {t.recentNews}
           </div>
           <ul className="space-y-1.5">
             {briefing.recentNews.slice(0, 3).map((n) => (

@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { useToast } from '@/components/Toast';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
+import { useT, format } from '@/lib/i18n/useT';
 
 // Idempotency-Key pour un POST public/anonyme (pas de session Supabase, donc
 // useIdempotentMutation/useAdminFetch ne s'appliquent pas ici). On génère une
@@ -58,6 +59,7 @@ type MemberForm = {
 const WOMEN_TOURNAMENT_ID_2026 = 'e8fa740c-d92b-49d8-a654-05a37d0eea3b';
 
 export default function PublicCreateTeamPage() {
+  const t = useT('teamCreate');
   const router = useRouter();
   const tournamentIdParam =
     typeof router.query.tournament === 'string'
@@ -209,18 +211,14 @@ export default function PublicCreateTeamPage() {
           (m) => !m.battle_tag || !battleTagRegex.test(m.battle_tag)
         );
         if (preparedMembers.length && missingBattle) {
-          throw new Error(
-            "BattleTag requis pour chaque membre (format Pseudo#0000) lors d'une inscription à un tournoi."
-          );
+          throw new Error(t.errorBattleTagRequired);
         }
       } else {
         const invalidBattle = preparedMembers.find(
           (m) => m.battle_tag && !battleTagRegex.test(m.battle_tag)
         );
         if (invalidBattle) {
-          throw new Error(
-            'Format BattleTag invalide (attendu : Pseudo#0000). Laisse vide si tu préfères ne pas le renseigner.'
-          );
+          throw new Error(t.errorBattleTagInvalid);
         }
       }
 
@@ -254,7 +252,7 @@ export default function PublicCreateTeamPage() {
         // Le token captcha est à usage unique : on en récupère un nouveau pour
         // que l'utilisateur puisse réessayer sans recharger la page.
         refreshCaptcha();
-        const message = (json as any)?.error || "Impossible de créer l'équipe";
+        const message = (json as any)?.error || t.errorCreateFailed;
         throw new Error(message);
       }
 
@@ -265,10 +263,7 @@ export default function PublicCreateTeamPage() {
       // pour éviter tout doublon de texte à l'écran. On précise que les
       // co-équipières sont INVITÉES (en attente d'acceptation), pas ajoutées
       // immédiatement à l'équipe.
-      addToast(
-        'Équipe créée ! Les joueuses invitées doivent accepter l’invitation pour rejoindre.',
-        'success'
-      );
+      addToast(t.toastCreated, 'success');
       setName('');
       setShortName('');
       setCountry('');
@@ -283,7 +278,7 @@ export default function PublicCreateTeamPage() {
       // Nouveau challenge captcha pour une éventuelle prochaine création.
       refreshCaptcha();
     } catch (err: unknown) {
-      const message = (err as Error)?.message ?? 'Erreur inattendue';
+      const message = (err as Error)?.message ?? t.errorUnexpected;
       setErrorMsg(message);
       addToast(message, 'error');
     } finally {
@@ -300,15 +295,13 @@ export default function PublicCreateTeamPage() {
           <header className="mb-10 space-y-3 text-center">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[11px] uppercase tracking-[0.18em] text-gray-300">
               <span className="px-2 py-[2px] rounded-full bg-emerald-400/90 text-black font-semibold">
-                Public
+                {t.badgePublic}
               </span>
-              <span>Équipe</span>
+              <span>{t.badgeTeam}</span>
             </div>
-            <h1 className="text-3xl md:text-4xl font-bold">Créer une équipe</h1>
+            <h1 className="text-3xl md:text-4xl font-bold">{t.title}</h1>
             <p className="text-sm text-gray-300 max-w-2xl mx-auto">
-              Ajoute les infos principales de ton équipe et, si tu veux,
-              renseigne tout le roster (emails existants ou comptes créés
-              automatiquement) en une seule fois.
+              {t.subtitle}
             </p>
           </header>
 
@@ -316,10 +309,10 @@ export default function PublicCreateTeamPage() {
             <div className="mb-8 rounded-2xl border border-blue-500/30 bg-blue-500/5 px-4 py-3 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
               <div>
                 <p className="text-[11px] uppercase tracking-[0.14em] text-blue-200/80">
-                  Inscription au tournoi
+                  {t.tournamentEyebrow}
                 </p>
                 <p className="text-sm text-blue-50/90">
-                  Ton équipe sera automatiquement inscrite au tournoi{' '}
+                  {t.tournamentRegisteredText}{' '}
                   <span className="font-semibold text-white">
                     {tournamentInfo.name}
                   </span>
@@ -341,37 +334,32 @@ export default function PublicCreateTeamPage() {
           <div className="mb-8 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 px-4 py-3 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
             <div>
               <p className="text-[11px] uppercase tracking-[0.14em] text-emerald-200/80">
-                Inscriptions équipes
+                {t.registrationsEyebrow}
               </p>
               <p className="text-sm text-emerald-50/90">
-                Les jalons et dates clés sont détaillés dans la roadmap.
-                Consulte la timeline 2026 pour anticiper les prochaines étapes.
+                {t.registrationsDesc}
               </p>
             </div>
             <Link
               href="/timeline-2026"
               className="inline-flex items-center justify-center px-4 py-2 rounded-xl text-sm font-semibold bg-emerald-500 text-black hover:bg-emerald-400 transition"
             >
-              Voir la timeline 2026 ↗
+              {t.viewTimeline}
             </Link>
           </div>
 
           <div className="mb-8 rounded-2xl border border-purple-500/30 bg-gradient-to-br from-purple-500/10 via-white/[0.02] to-cyan-500/10 px-4 py-3 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
             <div>
               <p className="text-[11px] uppercase tracking-[0.14em] text-purple-200/80">
-                Première fois ?
+                {t.firstTimeEyebrow}
               </p>
-              <p className="text-sm text-purple-50/90">
-                Découvre en images ce que tu peux faire depuis ton espace
-                capitaine : roster, candidatures, scrims, check-in et
-                messagerie.
-              </p>
+              <p className="text-sm text-purple-50/90">{t.firstTimeDesc}</p>
             </div>
             <Link
               href="/guide/gerer-mon-equipe"
               className="inline-flex items-center justify-center px-4 py-2 rounded-xl text-sm font-semibold bg-white/10 border border-white/15 text-white hover:bg-white/20 transition whitespace-nowrap"
             >
-              Voir le guide capitaine ↗
+              {t.viewGuide}
             </Link>
           </div>
 
@@ -384,37 +372,37 @@ export default function PublicCreateTeamPage() {
                 <div className="flex items-center justify-between flex-wrap gap-3">
                   <div>
                     <p className="text-[11px] uppercase tracking-[0.14em] text-gray-400">
-                      Informations équipe
+                      {t.teamInfoEyebrow}
                     </p>
                     <h2 className="text-xl font-semibold">
-                      Détails principaux
+                      {t.mainDetailsTitle}
                     </h2>
                   </div>
                   <Link
                     href="/"
                     className="text-sm text-gray-300 hover:text-white"
                   >
-                    ← Retour à l&apos;accueil
+                    {t.backHomeArrow}
                   </Link>
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-2">
                   <div>
                     <label className="block text-xs font-semibold uppercase tracking-[0.14em] text-gray-300 mb-2">
-                      Nom de l&apos;équipe *
+                      {t.nameLabel} *
                     </label>
                     <input
                       required
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       className="w-full rounded-xl border border-white/15 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-400/70 focus:border-emerald-400/70 transition"
-                      placeholder="Ex : Phénix"
+                      placeholder={t.namePlaceholder}
                     />
                   </div>
 
                   <div>
                     <label className="block text-xs font-semibold uppercase tracking-[0.14em] text-gray-300 mb-2">
-                      Tag / short name
+                      {t.shortNameLabel}
                     </label>
                     <input
                       value={shortName}
@@ -428,19 +416,19 @@ export default function PublicCreateTeamPage() {
                 <div className="grid gap-4 md:grid-cols-2">
                   <div>
                     <label className="block text-xs font-semibold uppercase tracking-[0.14em] text-gray-300 mb-2">
-                      Pays / région
+                      {t.countryLabel}
                     </label>
                     <input
                       value={country}
                       onChange={(e) => setCountry(e.target.value)}
                       className="w-full rounded-xl border border-white/15 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-400/70 focus:border-emerald-400/70 transition"
-                      placeholder="France, Europe…"
+                      placeholder={t.countryPlaceholder}
                     />
                   </div>
 
                   <div>
                     <label className="block text-xs font-semibold uppercase tracking-[0.14em] text-gray-300 mb-2">
-                      Discord / contact (optionnel)
+                      {t.discordLabel}
                     </label>
                     <input
                       value={discord}
@@ -454,7 +442,7 @@ export default function PublicCreateTeamPage() {
                 <div className="grid gap-4 md:grid-cols-2">
                   <div>
                     <label className="block text-xs font-semibold uppercase tracking-[0.14em] text-gray-300 mb-2">
-                      Logo (URL)
+                      {t.logoLabel}
                     </label>
                     <input
                       value={logoUrl}
@@ -466,7 +454,7 @@ export default function PublicCreateTeamPage() {
 
                   <div>
                     <label className="block text-xs font-semibold uppercase tracking-[0.14em] text-gray-300 mb-2">
-                      Site web (optionnel)
+                      {t.websiteLabel}
                     </label>
                     <input
                       value={website}
@@ -479,14 +467,14 @@ export default function PublicCreateTeamPage() {
 
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-[0.14em] text-gray-300 mb-2">
-                    Description
+                    {t.descriptionLabel}
                   </label>
                   <textarea
                     rows={4}
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     className="w-full rounded-xl border border-white/15 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-400/70 focus:border-emerald-400/70 transition"
-                    placeholder="Pitch rapide, palmarès, ambitions…"
+                    placeholder={t.descriptionPlaceholder}
                   />
                 </div>
               </section>
@@ -495,15 +483,11 @@ export default function PublicCreateTeamPage() {
                 <div className="flex items-center justify-between flex-wrap gap-3">
                   <div>
                     <p className="text-[11px] uppercase tracking-[0.14em] text-gray-400">
-                      Roster (optionnel)
+                      {t.rosterEyebrow}
                     </p>
-                    <h3 className="text-lg font-semibold">
-                      Ajouter plusieurs joueuses
-                    </h3>
+                    <h3 className="text-lg font-semibold">{t.rosterTitle}</h3>
                   </div>
-                  <span className="text-xs text-gray-400">
-                    Jusqu&apos;à 5 personnes
-                  </span>
+                  <span className="text-xs text-gray-400">{t.rosterMax}</span>
                 </div>
 
                 <div className="space-y-3">
@@ -514,7 +498,7 @@ export default function PublicCreateTeamPage() {
                     >
                       <div>
                         <label className="block text-xs font-semibold uppercase tracking-[0.14em] text-gray-300 mb-1">
-                          Email {idx + 1}
+                          {t.emailLabel} {idx + 1}
                         </label>
                         <input
                           type="email"
@@ -523,13 +507,13 @@ export default function PublicCreateTeamPage() {
                             handleMemberChange(idx, 'email', e.target.value)
                           }
                           className="w-full rounded-xl border border-white/15 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-400/70 focus:border-emerald-400/70 transition"
-                          placeholder="joueuse@email.tld"
+                          placeholder={t.emailPlaceholder}
                         />
                       </div>
 
                       <div>
                         <label className="block text-xs font-semibold uppercase tracking-[0.14em] text-gray-300 mb-1">
-                          Rôle
+                          {t.roleLabel}
                         </label>
                         <input
                           value={member.role}
@@ -543,7 +527,8 @@ export default function PublicCreateTeamPage() {
 
                       <div>
                         <label className="block text-xs font-semibold uppercase tracking-[0.14em] text-gray-300 mb-1">
-                          BattleTag{tournamentIdParam ? ' *' : ''}
+                          {t.battleTagLabel}
+                          {tournamentIdParam ? ' *' : ''}
                         </label>
                         <input
                           value={member.battleTag}
@@ -551,7 +536,7 @@ export default function PublicCreateTeamPage() {
                             handleMemberChange(idx, 'battleTag', e.target.value)
                           }
                           className="w-full rounded-xl border border-white/15 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-400/70 focus:border-emerald-400/70 transition"
-                          placeholder="Pseudo#0000"
+                          placeholder={t.battleTagPlaceholder}
                           required={
                             !!tournamentIdParam &&
                             member.email.trim().length > 0
@@ -559,31 +544,27 @@ export default function PublicCreateTeamPage() {
                         />
                         {!tournamentIdParam && (
                           <p className="mt-1 text-[10px] text-gray-500">
-                            Optionnel hors inscription tournoi.
+                            {t.battleTagOptionalNote}
                           </p>
                         )}
                       </div>
 
                       <div>
                         <label className="block text-xs font-semibold uppercase tracking-[0.14em] text-gray-300 mb-1">
-                          Spécialité
+                          {t.specialtyLabel}
                         </label>
                         <select
                           value={member.specialty}
                           onChange={(e) =>
-                            handleMemberChange(
-                              idx,
-                              'specialty',
-                              e.target.value
-                            )
+                            handleMemberChange(idx, 'specialty', e.target.value)
                           }
                           className="w-full rounded-xl border border-white/15 bg-black/60 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-400/70 focus:border-emerald-400/70 transition"
                         >
-                          <option value="">Non précisée</option>
-                          <option value="tank">Tank</option>
-                          <option value="dps">DPS</option>
-                          <option value="support">Support</option>
-                          <option value="flex">Flex</option>
+                          <option value="">{t.specialtyNone}</option>
+                          <option value="tank">{t.specialtyTank}</option>
+                          <option value="dps">{t.specialtyDps}</option>
+                          <option value="support">{t.specialtySupport}</option>
+                          <option value="flex">{t.specialtyFlex}</option>
                         </select>
                       </div>
 
@@ -596,7 +577,7 @@ export default function PublicCreateTeamPage() {
                             onChange={() => setCaptainIndex(idx)}
                             className="h-4 w-4 rounded-full border-gray-500 bg-black/60"
                           />
-                          <span>Capitaine</span>
+                          <span>{t.captainLabel}</span>
                         </label>
                         {members.length > 1 && (
                           <button
@@ -604,7 +585,7 @@ export default function PublicCreateTeamPage() {
                             onClick={() => removeMemberRow(idx)}
                             className="text-xs text-gray-400 hover:text-white"
                           >
-                            Retirer
+                            {t.removeMember}
                           </button>
                         )}
                       </div>
@@ -623,13 +604,9 @@ export default function PublicCreateTeamPage() {
                         : 'bg-emerald-500/20 border border-emerald-400/40 text-emerald-100'
                     }`}
                   >
-                    Ajouter une personne
+                    {t.addMember}
                   </button>
-                  <p className="text-xs text-gray-400">
-                    On recherche l&apos;utilisateur par email ; si aucun compte
-                    n&apos;existe, il est créé automatiquement avant d&apos;être
-                    ajouté.
-                  </p>
+                  <p className="text-xs text-gray-400">{t.addMemberHint}</p>
                 </div>
               </section>
 
@@ -658,7 +635,7 @@ export default function PublicCreateTeamPage() {
 
               <section className="space-y-2">
                 <label className="block text-xs font-semibold uppercase tracking-[0.14em] text-gray-300">
-                  Vérification anti-bot *
+                  {t.captchaLabel} *
                 </label>
                 <div className="flex items-center gap-3">
                   <span className="rounded-xl border border-white/15 bg-black/60 px-3 py-2 text-sm text-white font-mono">
@@ -670,14 +647,14 @@ export default function PublicCreateTeamPage() {
                     value={captchaAnswer}
                     onChange={(e) => setCaptchaAnswer(e.target.value)}
                     className="w-32 rounded-xl border border-white/15 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-400/70 focus:border-emerald-400/70 transition"
-                    placeholder="Réponse"
+                    placeholder={t.captchaPlaceholder}
                   />
                   <button
                     type="button"
                     onClick={refreshCaptcha}
                     className="text-xs text-gray-400 hover:text-white"
                   >
-                    Autre question ↻
+                    {t.captchaRefresh}
                   </button>
                 </div>
               </section>
@@ -702,37 +679,38 @@ export default function PublicCreateTeamPage() {
                       : 'bg-emerald-500 hover:bg-emerald-400 text-black'
                   }`}
                 >
-                  {loading ? 'Création...' : "Créer l'équipe"}
+                  {loading ? t.submitting : t.submit}
                 </button>
 
                 <Link
                   href="/"
                   className="text-sm text-gray-300 hover:text-white"
                 >
-                  Retour à l&apos;accueil
+                  {t.backHome}
                 </Link>
               </div>
             </form>
 
             <aside className="bg-white/[0.04] border border-white/10 rounded-2xl p-5 space-y-4 sticky top-28">
-              <h2 className="text-lg font-semibold">Résultat</h2>
+              <h2 className="text-lg font-semibold">{t.resultTitle}</h2>
 
               {result ? (
                 <div className="space-y-2 text-sm">
                   <div className="rounded-xl border border-emerald-500/60 bg-emerald-500/10 px-3 py-2 text-emerald-100">
-                    {result.info || 'Équipe créée'}
+                    {result.info || t.resultCreatedFallback}
                   </div>
                   <p className="text-gray-300">
-                    Équipe :{' '}
+                    {t.resultTeamLabel}{' '}
                     <span className="font-semibold">{result.team.name}</span>
                   </p>
                   <p className="text-gray-400 text-xs break-all">
-                    ID : {result.team.id}
+                    {t.resultIdLabel} {result.team.id}
                   </p>
                   {result.tournament && (
                     <div className="rounded-xl border border-blue-500/60 bg-blue-500/10 px-3 py-2 text-blue-100">
-                      Inscrite au tournoi &laquo;&nbsp;
-                      {result.tournament.tournament_name}&nbsp;&raquo;
+                      {format(t.resultRegistered, {
+                        name: result.tournament.tournament_name,
+                      })}
                     </div>
                   )}
                   {teamSlug && (
@@ -740,18 +718,17 @@ export default function PublicCreateTeamPage() {
                       href={`/team/${teamSlug}`}
                       className="inline-flex items-center gap-2 text-sm text-emerald-300 hover:text-white"
                     >
-                      Voir la page équipe ↗
+                      {t.viewTeamPage}
                     </Link>
                   )}
 
                   {result.members && result.members.length > 0 && (
                     <div className="mt-3 rounded-xl border border-white/10 bg-white/5 px-3 py-3 space-y-2">
                       <p className="text-sm font-semibold">
-                        Joueuses invitées
+                        {t.invitedPlayers}
                       </p>
                       <p className="text-[11px] text-gray-400">
-                        Elles doivent accepter l&apos;invitation depuis leur
-                        espace joueuse pour rejoindre l&apos;équipe.
+                        {t.invitedPlayersHint}
                       </p>
                       <ul className="space-y-1 text-xs text-gray-300">
                         {result.members.map((m) => (
@@ -763,9 +740,13 @@ export default function PublicCreateTeamPage() {
                               {m.user_id}
                             </span>
                             <span className="text-gray-400">·</span>
-                            <span>role : {m.role}</span>
+                            <span>
+                              {t.memberRoleLabel} {m.role}
+                            </span>
                             <span className="text-gray-400">·</span>
-                            <span>capitaine : {m.captain ? 'oui' : 'non'}</span>
+                            <span>
+                              {t.memberCaptainLabel} {m.captain ? t.yes : t.no}
+                            </span>
                           </li>
                         ))}
                       </ul>
@@ -773,24 +754,14 @@ export default function PublicCreateTeamPage() {
                   )}
                 </div>
               ) : (
-                <p className="text-sm text-gray-300">
-                  Après validation, l&apos;équipe créée et les membres liés (si
-                  fournis) s&apos;afficheront ici.
-                </p>
+                <p className="text-sm text-gray-300">{t.resultEmpty}</p>
               )}
 
               <div className="text-xs text-gray-400 space-y-1">
-                <p>
-                  • Les membres sont recherchés par email dans Supabase auth; un
-                  compte est créé si besoin.
-                </p>
-                <p>
-                  • Les co-équipières reçoivent une invitation : elles
-                  rejoignent l&apos;équipe une fois qu&apos;elles l&apos;ont
-                  acceptée.
-                </p>
-                <p>• Sélectionne un capitaine dans la liste si besoin.</p>
-                <p>• Le slug est généré automatiquement à partir du nom.</p>
+                <p>• {t.note1}</p>
+                <p>• {t.note2}</p>
+                <p>• {t.note3}</p>
+                <p>• {t.note4}</p>
               </div>
             </aside>
           </div>

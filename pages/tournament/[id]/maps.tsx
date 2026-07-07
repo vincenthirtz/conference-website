@@ -9,8 +9,10 @@ import Button from '@/components/Buttons/button';
 import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { findTournamentByIdOrSlug } from '@/utils/tournamentLookup';
+import { useT, format } from '@/lib/i18n/useT';
 
 import { logger } from '../../../utils/logger';
+type MapsDict = ReturnType<typeof useT<'tournamentMaps'>>;
 type Tournament = {
   id: string;
   slug?: string | null;
@@ -197,12 +199,13 @@ export default function TournamentMapsPage({
   maps,
   hasVetoData,
 }: Props) {
+  const t = useT('tournamentMaps');
   const tournamentPath = `/tournament/${tournament.slug || tournament.id}`;
   const dateRangeLabel = formatTournamentDates(
     tournament.start_date,
     tournament.end_date
   );
-  const statusLabel = getStatusLabel(tournament.status);
+  const statusLabel = getStatusLabel(tournament.status, t);
   const statusColor = getStatusChipColor(tournament.status);
 
   const totalMaps = maps.length;
@@ -212,7 +215,7 @@ export default function TournamentMapsPage({
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
       <Head>
-        <title>Top maps – {tournament.name} | OW Women&apos;s Cup</title>
+        <title>{format(t.headTitle, { name: tournament.name })}</title>
       </Head>
 
       <main className="container mx-auto px-4 pt-24 pb-16 max-w-6xl">
@@ -232,7 +235,7 @@ export default function TournamentMapsPage({
               </div>
 
               <Heading typeStyle="heading-md" className="text-gradient mb-1">
-                Top maps – {tournament.name}
+                {format(t.heading, { name: tournament.name })}
               </Heading>
               {dateRangeLabel && (
                 <p className="text-sm text-gray-300 mb-1">
@@ -251,9 +254,7 @@ export default function TournamentMapsPage({
                 textColor="text-gray-200"
                 className="max-w-xl"
               >
-                Un aperçu des cartes les plus jouées du tournoi, avec le nombre
-                de manches, d&apos;overtimes et de tiebreakers. Pratique pour
-                casters, analystes et strat-callers.
+                {t.description}
               </Paragraph>
             </div>
 
@@ -263,7 +264,7 @@ export default function TournamentMapsPage({
                   type="button"
                   className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-blue-400"
                 >
-                  ← Retour au tournoi
+                  {t.backToTournament}
                 </Button>
               </Link>
               <Link href={`${tournamentPath}/matches`}>
@@ -271,7 +272,7 @@ export default function TournamentMapsPage({
                   type="button"
                   className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-emerald-400"
                 >
-                  Tous les matchs
+                  {t.allMatches}
                 </Button>
               </Link>
               <Link href={`${tournamentPath}/bracket`}>
@@ -279,7 +280,7 @@ export default function TournamentMapsPage({
                   type="button"
                   className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-purple-400"
                 >
-                  Voir le bracket
+                  {t.viewBracket}
                 </Button>
               </Link>
             </div>
@@ -291,31 +292,30 @@ export default function TournamentMapsPage({
           <div className="bg-black/60 border border-white/5 rounded-2xl p-4">
             {totalGames === 0 && (
               <Paragraph typeStyle="body-sm" textColor="text-gray-300">
-                Aucun game enregistré pour ce tournoi pour l&apos;instant. Les
-                stats de maps apparaîtront au fur et à mesure des résultats.
+                {t.emptyGames}
               </Paragraph>
             )}
 
             {totalGames > 0 && (
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <StatCard label="Maps distinctes" value={totalMaps} />
-                <StatCard label="Games joués" value={totalGames} />
+                <StatCard label={t.statDistinctMaps} value={totalMaps} />
+                <StatCard label={t.statGamesPlayed} value={totalGames} />
                 <StatCard
-                  label="Overtimes"
+                  label={t.statOvertimes}
                   value={maps.reduce((acc, m) => acc + m.overtimes, 0)}
                 />
                 <StatCard
-                  label="Tiebreakers"
+                  label={t.statTiebreakers}
                   value={maps.reduce((acc, m) => acc + m.tiebreakers, 0)}
                 />
                 {hasVetoData && (
                   <>
                     <StatCard
-                      label="Total bans"
+                      label={t.statTotalBans}
                       value={maps.reduce((acc, m) => acc + m.timesBanned, 0)}
                     />
                     <StatCard
-                      label="Map la + bannie"
+                      label={t.statMostBanned}
                       value={
                         [...maps].sort(
                           (a, b) => b.timesBanned - a.timesBanned
@@ -325,7 +325,11 @@ export default function TournamentMapsPage({
                         [...maps].sort(
                           (a, b) => b.timesBanned - a.timesBanned
                         )[0]
-                          ? `${[...maps].sort((a, b) => b.timesBanned - a.timesBanned)[0].timesBanned} bans`
+                          ? format(t.hintBans, {
+                              count: [...maps].sort(
+                                (a, b) => b.timesBanned - a.timesBanned
+                              )[0].timesBanned,
+                            })
                           : undefined
                       }
                     />
@@ -341,7 +345,7 @@ export default function TournamentMapsPage({
           <section className="mb-6">
             <div className="bg-black/60 border border-white/5 rounded-2xl p-4">
               <p className="text-[11px] uppercase tracking-wide text-gray-400 mb-2">
-                Top 3 maps du tournoi
+                {t.top3Heading}
               </p>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 {bestMaps.map((m, index) => (
@@ -357,24 +361,34 @@ export default function TournamentMapsPage({
           <section>
             <div className="bg-black/60 border border-white/5 rounded-2xl p-4">
               <p className="text-[11px] uppercase tracking-wide text-gray-400 mb-3">
-                Toutes les maps jouées
+                {t.allMapsHeading}
               </p>
 
               <div className="overflow-x-auto">
                 <table className="min-w-full text-[11px]">
                   <thead>
                     <tr className="text-gray-400 border-b border-white/10">
-                      <th className="text-left py-1.5 pr-3">Map</th>
-                      <th className="text-right py-1.5 px-3">Games</th>
-                      <th className="text-right py-1.5 px-3">Rounds moy.</th>
-                      <th className="text-right py-1.5 px-3">Overtimes</th>
+                      <th className="text-left py-1.5 pr-3">{t.colMap}</th>
+                      <th className="text-right py-1.5 px-3">{t.colGames}</th>
+                      <th className="text-right py-1.5 px-3">
+                        {t.colAvgRounds}
+                      </th>
+                      <th className="text-right py-1.5 px-3">
+                        {t.colOvertimes}
+                      </th>
                       {hasVetoData && (
                         <>
-                          <th className="text-right py-1.5 px-3">Bans</th>
-                          <th className="text-right py-1.5 px-3">Picks</th>
+                          <th className="text-right py-1.5 px-3">
+                            {t.colBans}
+                          </th>
+                          <th className="text-right py-1.5 px-3">
+                            {t.colPicks}
+                          </th>
                         </>
                       )}
-                      <th className="text-right py-1.5 pl-3">Winrates</th>
+                      <th className="text-right py-1.5 pl-3">
+                        {t.colWinrates}
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -441,7 +455,10 @@ export default function TournamentMapsPage({
                                     {(tw.winrate * 100).toFixed(0)}%
                                   </span>
                                   <span className="text-gray-500 ml-0.5">
-                                    ({tw.wins}V-{tw.losses}D)
+                                    {format(t.winLossAbbrev, {
+                                      wins: tw.wins,
+                                      losses: tw.losses,
+                                    })}
                                   </span>
                                 </span>
                               ))}
@@ -456,10 +473,7 @@ export default function TournamentMapsPage({
                 </table>
               </div>
 
-              <p className="mt-2 text-[10px] text-gray-500">
-                Note : les stats sont calculées à partir des games enregistrés
-                pour ce tournoi, en excluant les matchs bye.
-              </p>
+              <p className="mt-2 text-[10px] text-gray-500">{t.note}</p>
             </div>
           </section>
         )}
@@ -631,7 +645,9 @@ function StatCard({
 }
 
 function TopMapCard({ rank, stat }: { rank: number; stat: MapStat }) {
-  const rankLabel = rank === 1 ? '1er' : rank === 2 ? '2e' : '3e';
+  const t = useT('tournamentMaps');
+  const rankLabel =
+    rank === 1 ? t.rankMapFirst : rank === 2 ? t.rankMapSecond : t.rankMapThird;
 
   const chipClass =
     rank === 1
@@ -649,21 +665,24 @@ function TopMapCard({ rank, stat }: { rank: number; stat: MapStat }) {
             chipClass
           }
         >
-          {rankLabel} map
+          {rankLabel}
         </span>
         <span className="text-[10px] text-gray-400">
-          {stat.gamesPlayed} game
-          {stat.gamesPlayed > 1 ? 's' : ''}
+          {format(
+            stat.gamesPlayed > 1 ? t.gamesCount_other : t.gamesCount_one,
+            { count: stat.gamesPlayed }
+          )}
         </span>
       </div>
       <p className="text-sm font-semibold text-white">{stat.mapName}</p>
       <div className="flex flex-wrap gap-2 text-[10px] text-gray-300 mt-1">
         <span>
-          Rounds moyen :{' '}
+          {t.avgRoundsLabel}{' '}
           <span className="text-gray-100">{stat.avgRounds.toFixed(1)}</span>
         </span>
         <span>
-          Overtimes : <span className="text-gray-100">{stat.overtimes}</span>{' '}
+          {t.overtimesLabel}{' '}
+          <span className="text-gray-100">{stat.overtimes}</span>{' '}
           <span className="text-gray-500">
             ({(stat.overtimesRate * 100).toFixed(0)}
             %)
@@ -671,12 +690,14 @@ function TopMapCard({ rank, stat }: { rank: number; stat: MapStat }) {
         </span>
         {stat.timesBanned > 0 && (
           <span>
-            Bans : <span className="text-red-300">{stat.timesBanned}</span>
+            {t.bansLabel}{' '}
+            <span className="text-red-300">{stat.timesBanned}</span>
           </span>
         )}
         {stat.timesPicked > 0 && (
           <span>
-            Picks : <span className="text-emerald-300">{stat.timesPicked}</span>
+            {t.picksLabel}{' '}
+            <span className="text-emerald-300">{stat.timesPicked}</span>
           </span>
         )}
       </div>
@@ -720,16 +741,16 @@ function formatTournamentDates(
   return `Jusqu'au ${e.toLocaleDateString('fr-FR', opts)}`;
 }
 
-function getStatusLabel(status: string): string {
+function getStatusLabel(status: string, t: MapsDict): string {
   switch (status) {
     case 'upcoming':
-      return 'À venir';
+      return t.statusUpcoming;
     case 'running':
     case 'ongoing':
-      return 'En cours';
+      return t.statusOngoing;
     case 'finished':
     case 'completed':
-      return 'Terminé';
+      return t.statusFinished;
     default:
       return status;
   }

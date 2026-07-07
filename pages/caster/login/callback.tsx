@@ -21,13 +21,19 @@ import { useRouter } from 'next/router';
 import { supabaseClient } from '@/utils/supabase';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { logger } from '@/utils/logger';
+import { useT } from '@/lib/i18n/useT';
 
 const POLL_DELAY_MS = 250;
 const MAX_TRIES = 20; // 5s total
 
 const CasterLoginCallbackPage = () => {
   const router = useRouter();
-  const [status, setStatus] = useState('Validation du lien...');
+  const t = useT('casterLoginCallback');
+  const [status, setStatus] = useState<string>('');
+
+  useEffect(() => {
+    setStatus((s) => s || t.statusValidating);
+  }, [t]);
 
   useEffect(() => {
     let cancelled = false;
@@ -39,7 +45,7 @@ const CasterLoginCallbackPage = () => {
           const url = new URL(window.location.href);
           const code = url.searchParams.get('code');
           if (code) {
-            setStatus('Echange du code...');
+            setStatus(t.statusExchanging);
             const { error } = await supabaseClient.auth.exchangeCodeForSession(
               window.location.href
             );
@@ -73,7 +79,7 @@ const CasterLoginCallbackPage = () => {
           return;
         }
 
-        setStatus('Verification du profil caster...');
+        setStatus(t.statusVerifying);
 
         // /api/caster/me passe par withCasterRoute qui exige :
         //   - role staff >= caster
@@ -95,7 +101,7 @@ const CasterLoginCallbackPage = () => {
           return;
         }
 
-        setStatus('Redirection vers le cockpit...');
+        setStatus(t.statusRedirecting);
         if (!cancelled) {
           await router.replace('/caster/cockpit');
         }
@@ -111,19 +117,17 @@ const CasterLoginCallbackPage = () => {
     return () => {
       cancelled = true;
     };
-  }, [router]);
+  }, [router, t]);
 
   return (
     <div className="min-h-screen bg-black text-white flex items-center justify-center px-4">
       <Head>
-        <title>Connexion en cours...</title>
+        <title>{t.docTitle}</title>
       </Head>
       <div className="text-center space-y-3">
         <div className="w-10 h-10 border-2 border-neutral-700 border-t-purple-400 rounded-full animate-spin mx-auto" />
         <div className="text-lg font-semibold">{status}</div>
-        <div className="text-sm text-gray-400 max-w-sm">
-          Merci de patienter pendant la finalisation de la connexion.
-        </div>
+        <div className="text-sm text-gray-400 max-w-sm">{t.pleaseWait}</div>
       </div>
     </div>
   );

@@ -10,6 +10,9 @@
 
 import type { DraftState, GameHero, MatchDraftStep } from '@/types/draft';
 import { DraftTimer } from '@/components/admin/draft/DraftTimer';
+import { useT, format } from '@/lib/i18n/useT';
+
+type DraftSpectatorDict = ReturnType<typeof useT<'draftSpectator'>>;
 
 type Props = {
   state: DraftState | null;
@@ -24,12 +27,12 @@ const SIDE_COLOR: Record<string, string> = {
   dire: 'from-orange-600/40 via-orange-700/20 to-transparent',
 };
 
-const SIDE_LABEL: Record<string, string> = {
-  blue: 'BLUE SIDE',
-  red: 'RED SIDE',
-  radiant: 'RADIANT',
-  dire: 'DIRE',
-};
+const getSideLabel = (t: DraftSpectatorDict): Record<string, string> => ({
+  blue: t.sideBlue,
+  red: t.sideRed,
+  radiant: t.sideRadiant,
+  dire: t.sideDire,
+});
 
 function heroFor(
   step: MatchDraftStep,
@@ -55,6 +58,7 @@ function PickSlot({
   isCurrent: boolean;
   side: 'left' | 'right';
 }) {
+  const t = useT('draftSpectator');
   return (
     <div
       className={`relative h-24 overflow-hidden rounded-xl border ${
@@ -86,8 +90,8 @@ function PickSlot({
       >
         <div className={side === 'right' ? 'text-right' : ''}>
           <div className="text-[10px] uppercase tracking-widest text-neutral-400">
-            Pick #{step.step_number}
-            {step.auto_picked ? ' · AUTO' : ''}
+            {format(t.pickLabel, { num: step.step_number })}
+            {step.auto_picked ? t.autoSuffix : ''}
           </div>
           <div className="text-xl font-bold leading-tight text-white">
             {hero?.name ?? '—'}
@@ -112,12 +116,17 @@ function BanSlot({
   hero: GameHero | null;
   isCurrent: boolean;
 }) {
+  const t = useT('draftSpectator');
   return (
     <div
       className={`relative h-12 w-12 overflow-hidden rounded border ${
         isCurrent ? 'border-amber-400' : 'border-neutral-800'
       } bg-neutral-950`}
-      title={hero ? `${hero.name} (banned)` : `Awaiting ban #${step.step_number}`}
+      title={
+        hero
+          ? format(t.banned, { name: hero.name })
+          : format(t.awaitingBan, { num: step.step_number })
+      }
     >
       {hero?.icon_url ? (
         // eslint-disable-next-line @next/next/no-img-element
@@ -150,6 +159,8 @@ function TeamColumn({
   team: 'team1' | 'team2';
   side: 'left' | 'right';
 }) {
+  const t = useT('draftSpectator');
+  const SIDE_LABEL = getSideLabel(t);
   const sideKey =
     team === 'team1' ? state.draft.team1_side : state.draft.team2_side;
   const gradient = sideKey ? SIDE_COLOR[sideKey] : 'from-neutral-800/60 via-transparent to-transparent';
@@ -186,12 +197,13 @@ function TeamColumn({
 }
 
 function BansRow({ state }: { state: DraftState }) {
+  const t = useT('draftSpectator');
   const bans = state.steps.filter((s) => s.action === 'ban');
   const currentStepNumber = state.draft.current_step + 1;
   return (
     <div className="rounded-2xl bg-neutral-950/60 p-3">
       <div className="mb-2 text-xs uppercase tracking-widest text-neutral-500">
-        Bans
+        {t.bans}
       </div>
       <div className="flex flex-wrap items-center gap-2">
         {bans.map((step) => (
@@ -226,10 +238,11 @@ function StatusBadge({ state }: { state: DraftState }) {
 }
 
 export function SpectatorView({ state, title }: Props) {
+  const t = useT('draftSpectator');
   if (!state) {
     return (
       <div className="flex h-screen items-center justify-center bg-neutral-950 text-neutral-500">
-        Draft not started yet
+        {t.draftNotStarted}
       </div>
     );
   }
@@ -244,11 +257,12 @@ export function SpectatorView({ state, title }: Props) {
         <header className="flex items-center justify-between gap-3">
           <div>
             <div className="text-[10px] uppercase tracking-widest text-neutral-500">
-              {state.draft.game.toUpperCase()} · Game {state.draft.game_index}
-              {state.draft.fearless ? ' · FEARLESS' : ''}
+              {state.draft.game.toUpperCase()} · {t.gameShort}{' '}
+              {state.draft.game_index}
+              {state.draft.fearless ? t.fearlessSuffix : ''}
             </div>
             <h1 className="text-xl font-bold text-white">
-              {title ?? 'MOBA Draft'}
+              {title ?? t.draftTitle}
             </h1>
           </div>
           <div className="flex items-center gap-3">
@@ -265,7 +279,7 @@ export function SpectatorView({ state, title }: Props) {
           <div className="hidden items-center justify-center md:flex">
             <div className="rounded-2xl border border-neutral-800 bg-neutral-900/70 px-3 py-6 text-center">
               <div className="text-[10px] uppercase tracking-widest text-neutral-500">
-                Step
+                {t.step}
               </div>
               <div className="text-3xl font-bold text-white">
                 {Math.min(state.draft.current_step + 1, state.flow.steps.length)}

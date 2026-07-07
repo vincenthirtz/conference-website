@@ -13,6 +13,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useDraftState } from '@/hooks/useDraftState';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { SpectatorView } from '@/components/draft/SpectatorView';
+import { useT, format } from '@/lib/i18n/useT';
 
 type PublicDraftPayload = {
   draft: unknown;
@@ -29,6 +30,7 @@ const PUBLIC_DRAFT_FETCHER = async <T,>(url: string): Promise<T> => {
 
 function PublicDraftPage() {
   const router = useRouter();
+  const t = useT('draftPage');
   const matchIdRaw = router.query.matchId;
   const gameIndexRaw = router.query.gameIndex;
   const titleRaw = router.query.title;
@@ -84,7 +86,7 @@ function PublicDraftPage() {
   if (!validIds) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-neutral-950 text-neutral-400">
-        Invalid draft URL
+        {t.invalidUrl}
       </main>
     );
   }
@@ -92,7 +94,9 @@ function PublicDraftPage() {
   return (
     <>
       <Head>
-        <title>{title ? `${title} · Draft` : 'MOBA Draft'}</title>
+        <title>
+          {title ? format(t.docTitle, { name: title }) : t.draftTitle}
+        </title>
         <meta name="robots" content="noindex" />
       </Head>
       {error ? (
@@ -102,7 +106,7 @@ function PublicDraftPage() {
       ) : null}
       {loading && !state ? (
         <main className="flex min-h-screen items-center justify-center bg-neutral-950 text-neutral-500">
-          Loading draft…
+          {t.loadingDraft}
         </main>
       ) : null}
       {state ? <SpectatorView state={state} title={title} /> : null}

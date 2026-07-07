@@ -7,6 +7,7 @@ import type { AdminLink } from '@/types/components';
 import { formatStaffRoleLabel, type StaffRole } from '@/utils/staff';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useRealtimeChannel } from '@/hooks/useRealtimeChannel';
+import { useT, format } from '@/lib/i18n/useT';
 
 // TenantSwitcher intentionally not rendered here: on the
 // conference-website domain the active tenant is always DEFAULT_TENANT_ID
@@ -51,6 +52,7 @@ export default function AdminTopBar({
   height,
   onLogout,
 }: AdminTopBarProps) {
+  const t = useT('adminTopBar');
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [openSubMenu, setOpenSubMenu] = useState<string | null>(null);
   const menuAreaRef = useRef<HTMLDivElement>(null);
@@ -186,7 +188,7 @@ export default function AdminTopBar({
         <Link
           href="/"
           className="flex h-full shrink-0 items-center border-r border-white/[0.06] pr-4"
-          aria-label="Accueil"
+          aria-label={t.accueilAria}
         >
           <Image
             src="/img/logos/2025-logo.png"
@@ -204,7 +206,7 @@ export default function AdminTopBar({
             <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
           </span>
           <span className="font-medium text-neutral-100">
-            {staffName || 'Staff'}
+            {staffName || t.staffFallback}
           </span>
           {staffRole && (
             <span className="rounded-md border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-neutral-300">
@@ -218,7 +220,7 @@ export default function AdminTopBar({
           className="relative flex flex-1 items-center gap-1 overflow-visible whitespace-nowrap"
         >
           <DropdownButton
-            label="Site"
+            label={t.siteMenu}
             open={openMenu === SITE_MENU_KEY}
             onToggle={() => toggleMenu(SITE_MENU_KEY)}
           />
@@ -258,8 +260,18 @@ export default function AdminTopBar({
                   >
                     {showBadge && (
                       <span
-                        title={`${alertsCount} alerte${alertsCount! > 1 ? 's' : ''} active${alertsCount! > 1 ? 's' : ''}`}
-                        aria-label={`${alertsCount} alerte${alertsCount! > 1 ? 's' : ''} active${alertsCount! > 1 ? 's' : ''}`}
+                        title={format(
+                          alertsCount! > 1
+                            ? t.alertsActive_other
+                            : t.alertsActive_one,
+                          { count: alertsCount! }
+                        )}
+                        aria-label={format(
+                          alertsCount! > 1
+                            ? t.alertsActive_other
+                            : t.alertsActive_one,
+                          { count: alertsCount! }
+                        )}
                         role="status"
                         className={`relative inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold leading-none ${
                           alertsCount! >= 5
@@ -354,7 +366,7 @@ export default function AdminTopBar({
           onClick={onLogout}
           className="whitespace-nowrap rounded-lg px-3 py-1.5 text-[11px] font-medium uppercase tracking-wide text-neutral-400 transition-all hover:bg-red-500/10 hover:text-red-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500/40"
         >
-          Déconnexion
+          {t.logout}
         </button>
       </div>
     </div>

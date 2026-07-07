@@ -9,6 +9,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
+import { useT } from '@/lib/i18n/useT';
 
 type StatusResp = {
   id: string;
@@ -22,6 +23,7 @@ const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function OnboardCheckEmailPage() {
+  const t = useT('onboardCheckEmail');
   const router = useRouter();
   const rawId = router.query.id;
   const id = typeof rawId === 'string' ? rawId : undefined;
@@ -100,35 +102,26 @@ function OnboardCheckEmailPage() {
             </div>
             <div>
               <h1 className="text-xl md:text-2xl font-bold text-white">
-                Email envoyé
+                {t.title}
               </h1>
-              <p className="text-xs text-gray-400">
-                Étape 2/3 — Confirmation par email
-              </p>
+              <p className="text-xs text-gray-400">{t.step}</p>
             </div>
           </div>
 
-          <p className="text-sm text-gray-300 leading-relaxed mb-3">
-            Cliquez sur le lien dans l&apos;email que nous venons d&apos;envoyer
-            pour confirmer votre demande. Le lien est valable pour une seule
-            utilisation.
-          </p>
-          <p className="text-xs text-gray-400 mb-5">
-            Pensez à vérifier vos courriers indésirables si vous ne le voyez pas
-            après quelques minutes.
-          </p>
+          <p className="text-sm text-gray-300 leading-relaxed mb-3">{t.body}</p>
+          <p className="text-xs text-gray-400 mb-5">{t.spamNote}</p>
 
           {unreachable ? (
             <div
               className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-100"
               role="alert"
             >
-              Identifiant de demande manquant ou invalide.{' '}
+              {t.unreachable}{' '}
               <Link
                 href="/onboard/request"
                 className="underline hover:no-underline"
               >
-                Recommencer la demande
+                {t.restart}
               </Link>
               .
             </div>
@@ -140,27 +133,23 @@ function OnboardCheckEmailPage() {
                   aria-hidden
                 />
               )}
-              <span>
-                On surveille la confirmation en arrière-plan — vous serez
-                redirigé·e automatiquement dès clic sur le lien.
-              </span>
+              <span>{t.polling}</span>
             </div>
           )}
 
           <div className="mt-6 rounded-xl border border-white/10 bg-white/[0.02] p-4">
             <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">
-              Vous avez perdu l&apos;email ?
+              {t.lostEmailTitle}
             </h2>
             <p className="text-xs text-gray-300">
-              Le renvoi automatique n&apos;est pas encore disponible. Pour
-              récupérer un nouveau lien, contactez le staff sur{' '}
+              {t.lostEmailBody}{' '}
               <a
                 href="https://discord.gg/gERSsjC3Vd"
                 target="_blank"
                 rel="noreferrer noopener"
                 className="text-purple-300 hover:text-purple-200"
               >
-                notre Discord
+                {t.ourDiscord}
               </a>
               .
             </p>
@@ -168,7 +157,7 @@ function OnboardCheckEmailPage() {
 
           <div className="mt-6 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-400">
             <Link href="/onboard" className="hover:text-white">
-              ← Retour à la présentation
+              {t.backToIntro}
             </Link>
             {id && (
               <span className="text-[10px] text-gray-600 font-mono">

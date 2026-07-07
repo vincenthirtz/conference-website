@@ -15,6 +15,7 @@ import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import SecretRevealCard from '@/components/onboard/SecretRevealCard';
 import { getSiteUrl } from '@/utils/onboard';
 import { logger } from '@/utils/logger';
+import { useT, format } from '@/lib/i18n/useT';
 
 type SuccessProps = {
   kind: 'success';
@@ -149,6 +150,7 @@ function OnboardSecretsPage(props: ServerProps) {
 }
 
 function ErrorView({ status, message }: ErrorProps) {
+  const t = useT('onboardSecrets');
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
       <main className="px-4 pt-28 pb-20 md:pt-32 flex items-center justify-center">
@@ -172,7 +174,7 @@ function ErrorView({ status, message }: ErrorProps) {
             </div>
             <div>
               <h1 className="text-lg font-semibold text-white">
-                Secrets indisponibles
+                {t.errorTitle}
               </h1>
               <p className="text-xs text-red-100/80 font-mono mt-1">
                 HTTP {status}
@@ -181,27 +183,23 @@ function ErrorView({ status, message }: ErrorProps) {
           </div>
           <p className="text-sm text-red-100/90 leading-relaxed">{message}</p>
           <div className="mt-5 rounded-xl border border-white/10 bg-white/[0.04] p-4 text-xs text-gray-300">
-            <p className="font-semibold text-white mb-1">
-              Récupération possible ?
-            </p>
+            <p className="font-semibold text-white mb-1">{t.recoveryTitle}</p>
             <p>
-              Si vous n&apos;avez jamais ouvert la page (ou si l&apos;email est
-              très récent), réessayez le lien d&apos;origine. Sinon, demandez
-              une rotation des secrets au staff via{' '}
+              {t.recoveryBody}{' '}
               <a
                 href="https://discord.gg/gERSsjC3Vd"
                 target="_blank"
                 rel="noreferrer noopener"
                 className="text-purple-300 hover:text-purple-200"
               >
-                notre Discord
+                {t.ourDiscord}
               </a>
               .
             </p>
           </div>
           <div className="mt-4">
             <Link href="/" className="text-xs text-gray-400 hover:text-white">
-              ← Retour à l&apos;accueil
+              {t.backHome}
             </Link>
           </div>
         </div>
@@ -213,6 +211,7 @@ function ErrorView({ status, message }: ErrorProps) {
 function SuccessView(props: SuccessProps) {
   const { botApiKey, botWebhookSecret, tenantId, tenantSlug, tenantName } =
     props;
+  const t = useT('onboardSecrets');
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
       <main className="px-4 pt-28 pb-20 md:pt-32 flex justify-center">
@@ -220,23 +219,23 @@ function SuccessView(props: SuccessProps) {
           <div className="flex flex-col items-center text-center mb-8">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[10px] uppercase tracking-[0.16em] text-gray-300">
               <span className="px-1.5 py-[2px] rounded-full bg-gradient-to-r from-purple-400/90 to-pink-400/90 text-black font-semibold">
-                Réussi
+                {t.successBadge}
               </span>
-              <span>Secrets de votre bot</span>
+              <span>{t.secretsBadgeSub}</span>
             </div>
             <h1 className="text-3xl font-bold text-gradient mt-4">
               {tenantName
-                ? `Bienvenue, ${tenantName}`
-                : 'Vos secrets sont prêts'}
+                ? format(t.welcome, { name: tenantName })
+                : t.secretsReady}
             </h1>
             <p className="text-sm text-gray-300 mt-2 max-w-md">
-              Cette page n&apos;est{' '}
-              <span className="font-semibold">affichée qu&apos;une fois</span>.
-              Sauvegardez les valeurs ci-dessous avant de quitter.
+              {t.onceBefore}{' '}
+              <span className="font-semibold">{t.onceHighlight}</span>
+              {t.onceAfter}
               {tenantSlug && (
                 <>
                   {' '}
-                  Slug :{' '}
+                  {t.slugLabel}{' '}
                   <span className="font-mono text-white">{tenantSlug}</span>.
                 </>
               )}
@@ -253,7 +252,7 @@ function SuccessView(props: SuccessProps) {
 
           <div className="mt-8 rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-xl p-6 shadow-2xl">
             <h2 className="text-base font-semibold text-white mb-3">
-              Et maintenant ?
+              {t.nextTitle}
             </h2>
             <ol className="space-y-3 text-sm text-gray-300">
               <li className="flex items-start gap-3">
@@ -261,12 +260,11 @@ function SuccessView(props: SuccessProps) {
                   1
                 </span>
                 <span>
-                  Collez les variables ci-dessus dans le fichier{' '}
-                  <span className="font-mono text-white">.env</span> du bot (par
-                  ex.{' '}
+                  {t.step1a} <span className="font-mono text-white">.env</span>{' '}
+                  {t.step1b}{' '}
                   <span className="font-mono">services/discord-bot/.env</span>{' '}
-                  côté <code className="font-mono">docker-box</code>), puis
-                  redémarrez le bot.
+                  {t.step1c} <code className="font-mono">docker-box</code>
+                  {t.step1d}
                 </span>
               </li>
               <li className="flex items-start gap-3">
@@ -274,9 +272,8 @@ function SuccessView(props: SuccessProps) {
                   2
                 </span>
                 <span>
-                  Lancez une commande de test sur votre serveur Discord (ex.{' '}
-                  <span className="font-mono">/help</span>) — si le bot répond,
-                  la liaison est complète.
+                  {t.step2a} <span className="font-mono">/help</span>
+                  {t.step2b}
                 </span>
               </li>
               <li className="flex items-start gap-3">
@@ -284,15 +281,14 @@ function SuccessView(props: SuccessProps) {
                   3
                 </span>
                 <span>
-                  Finalisez la configuration depuis l&apos;
+                  {t.step3a}
                   <Link
                     href="/admin"
                     className="text-purple-300 hover:text-purple-200"
                   >
-                    espace admin
+                    {t.adminSpace}
                   </Link>{' '}
-                  (rôles staff, salons, branding…). TODO : le portail staff
-                  multi-tenant n&apos;est pas encore fait.
+                  {t.step3b}
                 </span>
               </li>
             </ol>
@@ -303,11 +299,11 @@ function SuccessView(props: SuccessProps) {
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 hover:opacity-90 px-5 py-2.5 text-sm font-semibold text-white transition"
                 data-test="onboard-secrets-go-admin"
               >
-                J&apos;ai sauvegardé les secrets
+                {t.savedButton}
                 <span aria-hidden>→</span>
               </Link>
               <Link href="/" className="text-xs text-gray-400 hover:text-white">
-                Retour à l&apos;accueil
+                {t.backHomePlain}
               </Link>
             </div>
           </div>

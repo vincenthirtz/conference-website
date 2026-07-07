@@ -7,6 +7,7 @@ import Paragraph from '@/components/Typography/paragraph';
 import Button from '@/components/Buttons/button';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { supabaseAdmin } from '@/utils/supabase';
+import { useT } from '@/lib/i18n/useT';
 
 type PatchNote = {
   id: string;
@@ -93,6 +94,7 @@ export const getStaticProps: GetStaticProps<ActualitesProps> = async () => {
 };
 
 function ActualitesPage({ patchNotes, news, loadError }: ActualitesProps) {
+  const t = useT('actualitesPage');
   const [activeTab, setActiveTab] = useState<'all' | 'patch' | 'news'>('all');
 
   const renderPatchNoteCard = (note: PatchNote) => {
@@ -116,7 +118,7 @@ function ActualitesPage({ patchNotes, news, loadError }: ActualitesProps) {
         <div className="p-5 flex flex-col h-full">
           <div className="flex items-center justify-between gap-3 text-xs">
             <span className="px-2.5 py-1 rounded-full bg-orange-500/20 text-orange-300 font-medium uppercase tracking-wide">
-              Patch Notes
+              {t.badgePatch}
             </span>
             <span className="text-neutral-400">{note.date}</span>
           </div>
@@ -163,7 +165,7 @@ function ActualitesPage({ patchNotes, news, loadError }: ActualitesProps) {
           )}
 
           <div className="mt-auto pt-4 flex items-center gap-2 text-sm text-orange-300 group-hover:text-orange-200 transition">
-            <span>Lire les détails</span>
+            <span>{t.readDetails}</span>
             <span className="transition transform group-hover:translate-x-1">
               →
             </span>
@@ -197,7 +199,7 @@ function ActualitesPage({ patchNotes, news, loadError }: ActualitesProps) {
       <div className="p-5 flex flex-col flex-1">
         <div className="flex items-center justify-between gap-3 text-xs">
           <span className="px-2.5 py-1 rounded-full bg-blue-500/20 text-blue-300 font-medium uppercase tracking-wide">
-            {item.category || 'Actualité'}
+            {item.category || t.categoryFallback}
           </span>
           {item.date && <span className="text-neutral-400">{item.date}</span>}
         </div>
@@ -210,7 +212,7 @@ function ActualitesPage({ patchNotes, news, loadError }: ActualitesProps) {
           </p>
         )}
         <div className="mt-auto pt-4 flex items-center gap-2 text-sm text-blue-300 group-hover:text-blue-200 transition">
-          <span>Lire l&apos;article</span>
+          <span>{t.readArticle}</span>
           <span className="transition transform group-hover:translate-x-1">
             →
           </span>
@@ -242,19 +244,18 @@ function ActualitesPage({ patchNotes, news, loadError }: ActualitesProps) {
           {/* Header */}
           <div className="text-center mb-12">
             <div className="inline-block text-lg text-white font-semibold border-b-2 border-blue-400 mb-4">
-              Actualités Blizzard
+              {t.headerEyebrow}
             </div>
             <Heading
               typeStyle="heading-lg"
               level="h1"
               className="text-gradient"
             >
-              Actualités Overwatch
+              {t.headerTitle}
             </Heading>
             <div className="max-w-2xl mx-auto mt-4">
               <Paragraph typeStyle="body-lg" textColor="text-neutral-300">
-                Patch notes, mises à jour et actualités officielles du jeu,
-                directement depuis Blizzard.
+                {t.headerSubtitle}
               </Paragraph>
             </div>
             <div className="mt-5">
@@ -262,7 +263,7 @@ function ActualitesPage({ patchNotes, news, loadError }: ActualitesProps) {
                 href="/news"
                 className="inline-flex items-center gap-1.5 rounded-xl border border-purple-400/40 bg-purple-500/10 px-4 py-2 text-sm font-medium text-purple-200 transition hover:border-purple-400/70 hover:bg-purple-500/20"
               >
-                Voir les actualités du site
+                {t.siteNewsLink}
                 <span aria-hidden>→</span>
               </Link>
             </div>
@@ -271,9 +272,9 @@ function ActualitesPage({ patchNotes, news, loadError }: ActualitesProps) {
           {/* Tabs */}
           <div className="flex justify-center gap-2 mb-10">
             {[
-              { key: 'all', label: 'Tout' },
-              { key: 'patch', label: 'Patch Notes' },
-              { key: 'news', label: 'Actualités' },
+              { key: 'all', label: t.tabAll },
+              { key: 'patch', label: t.tabPatch },
+              { key: 'news', label: t.tabNews },
             ].map((tab) => (
               <button
                 key={tab.key}
@@ -302,13 +303,12 @@ function ActualitesPage({ patchNotes, news, loadError }: ActualitesProps) {
           {/* Content */}
           {loadError ? (
             <div className="mx-auto max-w-xl rounded-2xl border border-red-500/40 bg-red-500/10 px-6 py-8 text-center text-red-100">
-              Impossible de charger les actualités Blizzard pour le moment.
-              Réessaie dans quelques instants.
+              {t.loadError}
             </div>
           ) : filteredItems.length === 0 ? (
             <div className="text-center py-20">
               <Paragraph textColor="text-neutral-400" className="text-lg">
-                Aucune actualité disponible pour le moment.
+                {t.empty}
               </Paragraph>
             </div>
           ) : (
@@ -328,7 +328,7 @@ function ActualitesPage({ patchNotes, news, loadError }: ActualitesProps) {
                 type="button"
                 className="px-6 py-3 bg-orange-600 hover:bg-orange-500"
               >
-                Tous les Patch Notes
+                {t.allPatchNotes}
               </Button>
             </Link>
             <Link href={NEWS_SOURCE} target="_blank" rel="noreferrer">
@@ -336,7 +336,7 @@ function ActualitesPage({ patchNotes, news, loadError }: ActualitesProps) {
                 type="button"
                 className="px-6 py-3 bg-blue-600 hover:bg-blue-500"
               >
-                Toutes les Actualités
+                {t.allNews}
               </Button>
             </Link>
           </div>

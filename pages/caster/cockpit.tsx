@@ -26,6 +26,7 @@ import { logger } from '@/utils/logger';
 import type { EventRun, EventSegment } from '@/types/events';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { computeRunSchedule } from '@/utils/eventSchedule';
+import { useT, format } from '@/lib/i18n/useT';
 
 import CockpitHeader from '@/components/Caster/CockpitHeader';
 import LiveSegmentBlock from '@/components/Caster/LiveSegmentBlock';
@@ -54,6 +55,7 @@ function CockpitPage() {
   const router = useRouter();
   const { addToast } = useToast();
   const session = useCasterSession();
+  const t = useT('casterCockpit');
 
   // Empêche l'écran de s'éteindre tant que le caster est sur le cockpit
   // (un BO3 peut durer 40 min sans frappe clavier — la mise en veille
@@ -96,7 +98,9 @@ function CockpitPage() {
         const body = (await res.json().catch(() => null)) as {
           error?: string;
         } | null;
-        throw new Error(body?.error || `Erreur ${res.status}`);
+        throw new Error(
+          body?.error || format(t.errorWithStatus, { status: res.status })
+        );
       }
       const json = (await res.json()) as CurrentRunResponse;
       setRun(json.run);
@@ -104,11 +108,11 @@ function CockpitPage() {
       setErrorRun(null);
     } catch (err) {
       logger.error('[cockpit] fetchRun error', err);
-      setErrorRun((err as Error)?.message || 'Erreur de chargement.');
+      setErrorRun((err as Error)?.message || t.loadError);
     } finally {
       setLoadingRun(false);
     }
-  }, [session.accessToken]);
+  }, [session.accessToken, t]);
 
   useEffect(() => {
     if (session.loading) return;
@@ -284,7 +288,7 @@ function CockpitPage() {
       <div className="min-h-screen bg-black text-white flex items-center justify-center">
         <div className="text-center space-y-3">
           <div className="w-10 h-10 border-2 border-neutral-700 border-t-purple-400 rounded-full animate-spin mx-auto" />
-          <div className="text-sm text-gray-400">Connexion au cockpit...</div>
+          <div className="text-sm text-gray-400">{t.connecting}</div>
         </div>
       </div>
     );
@@ -294,17 +298,14 @@ function CockpitPage() {
     return (
       <div className="min-h-screen bg-black text-white flex items-center justify-center px-4">
         <div className="max-w-md text-center space-y-4">
-          <h1 className="text-xl font-semibold">Acces caster non actif</h1>
-          <p className="text-sm text-gray-300">
-            Ton compte est authentifie, mais aucune fiche caster active n y est
-            liee dans ce tenant. Contacte un admin pour activer ton acces.
-          </p>
+          <h1 className="text-xl font-semibold">{t.accessInactiveTitle}</h1>
+          <p className="text-sm text-gray-300">{t.accessInactiveBody}</p>
           <button
             type="button"
             onClick={() => session.signOut()}
             className="px-4 py-2 rounded-md border border-white/15 text-sm hover:bg-white/10 transition"
           >
-            Se deconnecter
+            {t.signOut}
           </button>
         </div>
       </div>
@@ -315,17 +316,14 @@ function CockpitPage() {
     return (
       <div className="min-h-screen bg-black text-white flex items-center justify-center px-4">
         <div className="max-w-md text-center space-y-4">
-          <h1 className="text-xl font-semibold">Erreur de connexion</h1>
-          <p className="text-sm text-gray-300">
-            Impossible de charger ton profil caster. Verifie ta connexion
-            internet et reessaie.
-          </p>
+          <h1 className="text-xl font-semibold">{t.connectionErrorTitle}</h1>
+          <p className="text-sm text-gray-300">{t.connectionErrorBody}</p>
           <button
             type="button"
             onClick={() => session.refresh()}
             className="px-4 py-2 rounded-md bg-purple-500 hover:bg-purple-400 text-sm font-semibold transition"
           >
-            Reessayer
+            {t.retry}
           </button>
         </div>
       </div>
@@ -336,21 +334,21 @@ function CockpitPage() {
 
   const handleSignOut = async () => {
     await session.signOut();
-    addToast('Tu es deconnecte.', 'info');
+    addToast(t.signedOut, 'info');
     router.replace('/caster/login');
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#080510] to-black text-white">
       <Head>
-        <title>Cockpit caster | OW Women&apos;s Cup</title>
+        <title>{t.docTitle}</title>
       </Head>
       <CockpitHeader caster={caster} onSignOut={handleSignOut} />
 
       <div className="px-4 pt-4 pb-12 max-w-2xl mx-auto space-y-4">
         {loadingRun ? (
           <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 text-center text-xs text-gray-400">
-            Chargement de la run en cours...
+            {t.loadingRun}
           </div>
         ) : errorRun ? (
           <div className="rounded-2xl border border-red-500/30 bg-red-900/15 p-4 text-xs text-red-100">

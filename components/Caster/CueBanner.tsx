@@ -15,14 +15,17 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { EventCueSeverity } from '@/types/events';
 import type { CueWithAck } from '@/hooks/useCueStream';
+import { useT, format } from '@/lib/i18n/useT';
+
+type CueBannerDict = ReturnType<typeof useT<'cueBanner'>>;
 
 const RECENT_WINDOW_MS = 10 * 60_000;
 
-const SEV_LABEL: Record<EventCueSeverity, string> = {
-  info: 'Info',
-  warn: 'Attention',
-  urgent: 'URGENT',
-};
+const getSevLabel = (t: CueBannerDict): Record<EventCueSeverity, string> => ({
+  info: t.sevInfo,
+  warn: t.sevWarn,
+  urgent: t.sevUrgent,
+});
 
 const SEV_CLS: Record<EventCueSeverity, string> = {
   info: 'bg-slate-600/70 text-slate-50',
@@ -37,6 +40,8 @@ type Props = {
 };
 
 export default function CueBanner({ cues, seenLocally }: Props) {
+  const t = useT('cueBanner');
+  const SEV_LABEL = getSevLabel(t);
   // Tick local pour evaluer la fenetre "recent" sans appeler Date.now() en render.
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -95,10 +100,10 @@ export default function CueBanner({ cues, seenLocally }: Props) {
       </span>
       <span className="flex-1 min-w-0 text-sm text-white truncate">
         {extraCount > 0
-          ? `${unseen.length} nouvelles consignes`
+          ? format(t.newCues, { count: unseen.length })
           : headline.body}
       </span>
-      <span className="flex-shrink-0 text-[11px] text-gray-400">Voir</span>
+      <span className="flex-shrink-0 text-[11px] text-gray-400">{t.see}</span>
     </button>
   );
 }

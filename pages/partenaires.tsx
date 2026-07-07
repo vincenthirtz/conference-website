@@ -2,6 +2,9 @@ import Link from 'next/link';
 import type { GetStaticProps } from 'next';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { supabaseAdmin } from '@/utils/supabase';
+import { useT, format } from '@/lib/i18n/useT';
+
+type PartnersDict = ReturnType<typeof useT<'partenairesPage'>>;
 
 type Partner = {
   id: string;
@@ -50,51 +53,48 @@ type PartnerCategory = {
   partners: Partner[];
 };
 
-const highlights = [
+const getHighlights = (t: PartnersDict) => [
   {
-    title: 'Visibilité en live',
-    detail:
-      'Overlay Twitch, habillage des scores, mentions antenne et activations lors des moments forts.',
+    title: t.h1Title,
+    detail: t.h1Detail,
   },
   {
-    title: 'Communauté engagée',
-    detail:
-      'Rencontres avec les joueuses, ateliers, contenus co-brandés et relais sur nos réseaux.',
+    title: t.h2Title,
+    detail: t.h2Detail,
   },
   {
-    title: 'Impact associatif',
-    detail:
-      'Chaque partenaire finance directement les récompenses des équipes, la production et les actions inclusives.',
+    title: t.h3Title,
+    detail: t.h3Detail,
   },
 ];
 
-const categoryMeta: Record<
-  string,
-  { title: string; summary: string; accent: string }
-> = {
+const getCategoryMeta = (
+  t: PartnersDict
+): Record<string, { title: string; summary: string; accent: string }> => ({
   super: {
-    title: 'Super partenaire',
-    summary:
-      "Le soutien titre qui porte l'édition (naming, présence live, activités principales, animations IRL).",
+    title: t.superTitle,
+    summary: t.superSummary,
     accent: 'from-amber-300 via-pink-400 to-purple-600',
   },
   major: {
-    title: 'Partenaire majeur',
-    summary:
-      'Marques qui financent la production, le cashprize ou le matériel et apparaissent sur chaque émission.',
+    title: t.majorTitle,
+    summary: t.majorSummary,
     accent: 'from-indigo-300 via-purple-400 to-pink-400',
   },
   cultural: {
-    title: 'Partenaire culturel',
-    summary:
-      'Institutions et acteurs culturels qui soutiennent la mise en avant des talents féminins et la médiation.',
+    title: t.culturalTitle,
+    summary: t.culturalSummary,
     accent: 'from-emerald-300 via-cyan-300 to-blue-500',
   },
-};
+});
 
-function groupPartnersByCategory(partners: Partner[]): PartnerCategory[] {
+function groupPartnersByCategory(
+  partners: Partner[],
+  t: PartnersDict
+): PartnerCategory[] {
   const categories: PartnerCategory[] = [];
   const order = ['super', 'major', 'cultural'];
+  const categoryMeta = getCategoryMeta(t);
 
   for (const catId of order) {
     const meta = categoryMeta[catId];
@@ -112,7 +112,9 @@ function groupPartnersByCategory(partners: Partner[]): PartnerCategory[] {
 }
 
 function PartnersPage({ partners }: PartnersPageProps) {
-  const partnerCategories = groupPartnersByCategory(partners);
+  const t = useT('partenairesPage');
+  const highlights = getHighlights(t);
+  const partnerCategories = groupPartnersByCategory(partners, t);
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
@@ -125,15 +127,13 @@ function PartnersPage({ partners }: PartnersPageProps) {
 
         <div className="relative mx-auto max-w-6xl px-6 pt-32 pb-16">
           <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.18em] text-gray-200">
-            Partenaires 2026
+            {t.heroBadge}
           </p>
           <h1 className="mt-4 text-4xl font-bold leading-tight sm:text-5xl md:text-6xl">
-            Ils soutiennent la prochaine édition
+            {t.heroTitle}
           </h1>
           <p className="mt-4 max-w-3xl text-lg text-gray-200">
-            Marque, institution ou média : découvrez comment rejoindre l&apos;OW
-            Women&apos;s Cup et donner de l&apos;ampleur à la scène Overwatch
-            féminine.
+            {t.heroSubtitle}
           </p>
 
           <div className="mt-6 flex flex-wrap items-center gap-4">
@@ -141,13 +141,13 @@ function PartnersPage({ partners }: PartnersPageProps) {
               href="/partenaires/demande"
               className="rounded-full bg-gradient-to-r from-purple-500 to-pink-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition hover:brightness-110"
             >
-              Devenir partenaire
+              {t.ctaBecomePartner}
             </Link>
             <Link
               href="/don"
               className="rounded-full border border-white/15 px-6 py-3 text-sm font-semibold text-white transition hover:border-white/40 hover:bg-white/10"
             >
-              Faire un don
+              {t.ctaDonate}
             </Link>
           </div>
         </div>
@@ -174,16 +174,10 @@ function PartnersPage({ partners }: PartnersPageProps) {
         <section className="space-y-8">
           <div className="flex flex-col gap-2">
             <p className="text-xs uppercase tracking-[0.18em] text-gray-300">
-              Catégories
+              {t.catEyebrow}
             </p>
-            <h3 className="text-3xl font-bold text-white">
-              Les formats de soutien
-            </h3>
-            <p className="text-sm text-gray-300 max-w-3xl">
-              Trois niveaux pour aligner vos objectifs avec la compétition : du
-              naming à l&apos;activation culturelle auprès des talents et de la
-              communauté.
-            </p>
+            <h3 className="text-3xl font-bold text-white">{t.catTitle}</h3>
+            <p className="text-sm text-gray-300 max-w-3xl">{t.catDesc}</p>
           </div>
 
           <div className="space-y-6">
@@ -231,7 +225,7 @@ function PartnersPage({ partners }: PartnersPageProps) {
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
                               src={partner.logo_url}
-                              alt={`Logo ${partner.name}`}
+                              alt={format(t.logoAlt, { name: partner.name })}
                               width={120}
                               height={56}
                               loading="lazy"
@@ -250,7 +244,7 @@ function PartnersPage({ partners }: PartnersPageProps) {
                             rel="noopener noreferrer"
                             className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-purple-200 underline decoration-purple-400/60 underline-offset-4 transition hover:text-white"
                           >
-                            Découvrir le partenaire
+                            {t.discoverPartner}
                             <span aria-hidden>↗</span>
                           </a>
                         )}
@@ -263,10 +257,12 @@ function PartnersPage({ partners }: PartnersPageProps) {
                     >
                       <span className="text-2xl mb-2">+</span>
                       <span className="text-sm font-semibold text-purple-200">
-                        Rejoindre le programme
+                        {t.joinProgram}
                       </span>
                       <span className="text-xs text-gray-400 mt-1">
-                        Devenir {category.title.toLowerCase()}
+                        {format(t.becomeCategory, {
+                          category: category.title.toLowerCase(),
+                        })}
                       </span>
                     </Link>
                   </div>
@@ -278,28 +274,24 @@ function PartnersPage({ partners }: PartnersPageProps) {
 
         <section className="rounded-2xl border border-white/10 bg-white/[0.05] p-6 sm:p-8 text-center">
           <p className="text-sm uppercase tracking-[0.14em] text-gray-300">
-            Contact
+            {t.contactEyebrow}
           </p>
-          <h4 className="mt-2 text-2xl font-semibold">
-            Envie de rejoindre la page partenaires ?
-          </h4>
+          <h4 className="mt-2 text-2xl font-semibold">{t.contactTitle}</h4>
           <p className="mt-3 text-sm text-gray-200 max-w-3xl mx-auto">
-            On co-construit les activations (contenus, présence sur les lives,
-            ateliers, prêts matériels) pour mettre en valeur votre marque et la
-            scène féminine.
+            {t.contactDesc}
           </p>
           <div className="mt-5 flex justify-center gap-3">
             <Link
               href="/partenaires/demande"
               className="rounded-full bg-gradient-to-r from-purple-500 to-pink-500 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition hover:brightness-110"
             >
-              Faire une demande
+              {t.makeRequest}
             </Link>
             <Link
               href="/association"
               className="rounded-full border border-white/20 px-5 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
             >
-              Découvrir l&apos;asso
+              {t.discoverAsso}
             </Link>
           </div>
         </section>

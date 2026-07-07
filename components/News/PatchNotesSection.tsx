@@ -3,6 +3,7 @@ import { useEffect, useState, JSX } from 'react';
 import Button from '@/components/Buttons/button';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
+import { useT } from '@/lib/i18n/useT';
 
 import { logger } from '../../utils/logger';
 type PatchNote = {
@@ -18,6 +19,7 @@ const PATCH_NOTES_SOURCE =
   'https://overwatch.blizzard.com/fr-fr/news/patch-notes/';
 
 function PatchNotesSection(): JSX.Element {
+  const t = useT('patchNotesSection');
   const [notes, setNotes] = useState<PatchNote[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -50,7 +52,7 @@ function PatchNotesSection(): JSX.Element {
       } catch (err) {
         logger.error('Failed to load patch notes', err);
         if (isMounted) {
-          setError('Impossible de charger les patch notes pour le moment.');
+          setError(t.errLoad);
         }
       } finally {
         if (isMounted) {
@@ -90,11 +92,10 @@ function PatchNotesSection(): JSX.Element {
       return (
         <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-center">
           <Paragraph textColor="text-gray-200" className="text-lg">
-            {error ||
-              "Impossible d'afficher les dernières notes de mise à jour pour l'instant."}
+            {error || t.unavailable}
           </Paragraph>
           <Paragraph textColor="text-gray-400" className="mt-2">
-            Consultez-les directement sur le site officiel.
+            {t.checkOfficial}
           </Paragraph>
           <div className="mt-5 flex justify-center">
             <Link
@@ -103,7 +104,7 @@ function PatchNotesSection(): JSX.Element {
               rel="noreferrer noopener"
             >
               <Button type="button" className="px-6 h-[50px]">
-                Voir les patch notes
+                {t.seePatchNotes}
               </Button>
             </Link>
           </div>
@@ -117,7 +118,7 @@ function PatchNotesSection(): JSX.Element {
           const groupedHeroes = note.heroes?.reduce<
             Record<string, typeof note.heroes>
           >((acc, hero) => {
-            const key = hero.category || 'Autres mises à jour';
+            const key = hero.category || t.categoryFallback;
             if (!acc[key]) acc[key] = [];
             acc[key].push(hero);
             return acc;
@@ -132,7 +133,7 @@ function PatchNotesSection(): JSX.Element {
               className="group relative flex h-full flex-col rounded-2xl border border-white/10 bg-white/5 p-5 transition duration-200 hover:border-blue-300/70 hover:shadow-[0_16px_40px_rgba(0,0,0,0.35)]"
             >
               <div className="flex items-center justify-between gap-3 text-xs uppercase tracking-wide">
-                <span className="text-blue-200/80">Patch notes</span>
+                <span className="text-blue-200/80">{t.patchNotesLabel}</span>
                 <span className="text-gray-300">{note.date}</span>
               </div>
               <h3 className="mt-3 text-lg font-semibold text-white transition group-hover:text-blue-100">
@@ -184,7 +185,7 @@ function PatchNotesSection(): JSX.Element {
                 </div>
               )}
               <div className="mt-auto flex items-center gap-2 pt-4 text-sm text-blue-200 transition group-hover:text-blue-100">
-                <span>Lire sur overwatch.blizzard.com</span>
+                <span>{t.readOn}</span>
                 <span
                   aria-hidden
                   className="transition transform group-hover:translate-x-1"
@@ -207,13 +208,13 @@ function PatchNotesSection(): JSX.Element {
     >
       <div className="flex flex-col items-center text-center">
         <div className="text-xl text-white font-semibold border-b-2 border-blue-400 mb-1">
-          Actualités
+          {t.eyebrow}
         </div>
         <Heading
           typeStyle="heading-md"
           className="text-gradient text-center lg:mt-3"
         >
-          Patch notes Overwatch
+          {t.title}
         </Heading>
         <div className="max-w-2xl">
           <Paragraph
@@ -221,8 +222,7 @@ function PatchNotesSection(): JSX.Element {
             className="mt-4"
             textColor="text-gray-200"
           >
-            Les dernières mises à jour officielles d&apos;Overwatch, à jour
-            directement depuis le site de Blizzard.
+            {t.subtitle}
           </Paragraph>
         </div>
       </div>
@@ -237,7 +237,7 @@ function PatchNotesSection(): JSX.Element {
             rel="noreferrer noopener"
           >
             <Button type="button" className="px-8 h-[52px]">
-              Voir plus
+              {t.seeMore}
             </Button>
           </Link>
         </div>

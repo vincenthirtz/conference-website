@@ -10,8 +10,10 @@ import Button from '@/components/Buttons/button';
 import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { findTournamentByIdOrSlug } from '@/utils/tournamentLookup';
+import { useT, format } from '@/lib/i18n/useT';
 
 import { logger } from '../../../utils/logger';
+type StatsDict = ReturnType<typeof useT<'tournamentStats'>>;
 type Tournament = {
   id: string;
   slug?: string | null;
@@ -182,11 +184,12 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
 };
 
 export default function TournamentStatsPage({ tournament, teamStats }: Props) {
+  const t = useT('tournamentStats');
   const dateRangeLabel = formatTournamentDates(
     tournament.start_date,
     tournament.end_date
   );
-  const statusLabel = getStatusLabel(tournament.status);
+  const statusLabel = getStatusLabel(tournament.status, t);
   const statusColor = getStatusChipColor(tournament.status);
 
   const totalTeams = teamStats.length;
@@ -207,7 +210,7 @@ export default function TournamentStatsPage({ tournament, teamStats }: Props) {
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
       <Head>
-        <title>Stats équipes – {tournament.name} | OW Women&apos;s Cup</title>
+        <title>{format(t.headTitle, { name: tournament.name })}</title>
       </Head>
 
       <main className="container mx-auto px-4 pt-24 pb-16 max-w-6xl">
@@ -227,7 +230,7 @@ export default function TournamentStatsPage({ tournament, teamStats }: Props) {
               </div>
 
               <Heading typeStyle="heading-md" className="text-gradient mb-1">
-                Stats équipes – {tournament.name}
+                {format(t.heading, { name: tournament.name })}
               </Heading>
               {dateRangeLabel && (
                 <p className="text-sm text-gray-300 mb-1">
@@ -246,9 +249,7 @@ export default function TournamentStatsPage({ tournament, teamStats }: Props) {
                 textColor="text-gray-200"
                 className="max-w-xl"
               >
-                Classement des équipes sur ce tournoi selon leurs victoires,
-                leur différence de maps et leur régularité. Parfait pour
-                préparer un cast ou une analyse desk.
+                {t.description}
               </Paragraph>
             </div>
 
@@ -258,7 +259,7 @@ export default function TournamentStatsPage({ tournament, teamStats }: Props) {
                   type="button"
                   className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-blue-400"
                 >
-                  ← Retour au tournoi
+                  {t.backToTournament}
                 </Button>
               </Link>
               <Link href={`${tournamentPath}/matches`}>
@@ -266,7 +267,7 @@ export default function TournamentStatsPage({ tournament, teamStats }: Props) {
                   type="button"
                   className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-emerald-400"
                 >
-                  Tous les matchs
+                  {t.allMatches}
                 </Button>
               </Link>
               <Link href={`${tournamentPath}/maps`}>
@@ -274,7 +275,7 @@ export default function TournamentStatsPage({ tournament, teamStats }: Props) {
                   type="button"
                   className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-purple-400"
                 >
-                  Top maps
+                  {t.topMaps}
                 </Button>
               </Link>
               <Link href={`${tournamentPath}/mvp`}>
@@ -282,7 +283,7 @@ export default function TournamentStatsPage({ tournament, teamStats }: Props) {
                   type="button"
                   className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-yellow-400"
                 >
-                  MVP
+                  {t.mvp}
                 </Button>
               </Link>
               <Link href={`${tournamentPath}/bracket`}>
@@ -290,7 +291,7 @@ export default function TournamentStatsPage({ tournament, teamStats }: Props) {
                   type="button"
                   className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-pink-400"
                 >
-                  Bracket
+                  {t.bracket}
                 </Button>
               </Link>
             </div>
@@ -302,22 +303,20 @@ export default function TournamentStatsPage({ tournament, teamStats }: Props) {
           <div className="bg-black/60 border border-white/5 rounded-2xl p-4">
             {teamStats.length === 0 && (
               <Paragraph typeStyle="body-sm" textColor="text-gray-300">
-                Aucune statistique n&apos;est disponible pour ce tournoi pour
-                l&apos;instant. Les stats apparaîtront dès que des matchs auront
-                été joués et enregistrés.
+                {t.empty}
               </Paragraph>
             )}
 
             {teamStats.length > 0 && (
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <StatCard label="Équipes" value={totalTeams} />
+                <StatCard label={t.statTeams} value={totalTeams} />
                 <StatCard
-                  label="Matchs joués"
+                  label={t.statMatchesPlayed}
                   value={Math.round(totalMatches / 2)}
-                  hint={`${totalMatches} participations au total`}
+                  hint={format(t.hintParticipations, { count: totalMatches })}
                 />
                 <StatCard
-                  label="Top winrate"
+                  label={t.statTopWinrate}
                   value={
                     topTeams[0]
                       ? `${(topTeams[0].winrate * 100).toFixed(0)}%`
@@ -330,7 +329,7 @@ export default function TournamentStatsPage({ tournament, teamStats }: Props) {
                   }
                 />
                 <StatCard
-                  label="Meilleure diff maps"
+                  label={t.statBestMapDiff}
                   value={
                     bestMapDiff
                       ? bestMapDiff.mapDiff > 0
@@ -354,7 +353,7 @@ export default function TournamentStatsPage({ tournament, teamStats }: Props) {
           <section className="mb-6">
             <div className="bg-black/60 border border-white/5 rounded-2xl p-4">
               <p className="text-[11px] uppercase tracking-wide text-gray-400 mb-2">
-                Top 3 équipes du tournoi
+                {t.top3Heading}
               </p>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 {topTeams.map((t, index) => (
@@ -370,7 +369,7 @@ export default function TournamentStatsPage({ tournament, teamStats }: Props) {
           <section>
             <div className="bg-black/60 border border-white/5 rounded-2xl p-4">
               <p className="text-[11px] uppercase tracking-wide text-gray-400 mb-3">
-                Classement complet des équipes
+                {t.fullRankingHeading}
               </p>
 
               <div className="overflow-x-auto">
@@ -378,12 +377,12 @@ export default function TournamentStatsPage({ tournament, teamStats }: Props) {
                   <thead>
                     <tr className="text-gray-400 border-b border-white/10">
                       <th className="text-left py-1.5 pr-3">#</th>
-                      <th className="text-left py-1.5 pr-3">Équipe</th>
-                      <th className="text-right py-1.5 px-3">Matchs</th>
-                      <th className="text-right py-1.5 px-3">V</th>
-                      <th className="text-right py-1.5 px-3">D</th>
-                      <th className="text-right py-1.5 px-3">Winrate</th>
-                      <th className="text-right py-1.5 px-3">Maps (+/-)</th>
+                      <th className="text-left py-1.5 pr-3">{t.colTeam}</th>
+                      <th className="text-right py-1.5 px-3">{t.colMatches}</th>
+                      <th className="text-right py-1.5 px-3">{t.colWins}</th>
+                      <th className="text-right py-1.5 px-3">{t.colLosses}</th>
+                      <th className="text-right py-1.5 px-3">{t.colWinrate}</th>
+                      <th className="text-right py-1.5 px-3">{t.colMaps}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -462,10 +461,7 @@ export default function TournamentStatsPage({ tournament, teamStats }: Props) {
                 </table>
               </div>
 
-              <p className="mt-2 text-[10px] text-gray-500">
-                Les statistiques sont calculées à partir des matchs joués sur ce
-                tournoi, en excluant les matchs automatiquement gagnés par bye.
-              </p>
+              <p className="mt-2 text-[10px] text-gray-500">{t.note}</p>
             </div>
           </section>
         )}
@@ -584,7 +580,13 @@ function StatCard({
 }
 
 function TopTeamCard({ rank, stat }: { rank: number; stat: TeamStat }) {
-  const rankLabel = rank === 1 ? '1er' : rank === 2 ? '2e' : '3e';
+  const t = useT('tournamentStats');
+  const rankLabel =
+    rank === 1
+      ? t.rankTeamFirst
+      : rank === 2
+        ? t.rankTeamSecond
+        : t.rankTeamThird;
 
   const chipClass =
     rank === 1
@@ -602,10 +604,12 @@ function TopTeamCard({ rank, stat }: { rank: number; stat: TeamStat }) {
             chipClass
           }
         >
-          {rankLabel} équipe
+          {rankLabel}
         </span>
         <span className="text-[10px] text-gray-400">
-          {(stat.winrate * 100).toFixed(0)}% de victoire
+          {format(t.winratePct, {
+            rate: (stat.winrate * 100).toFixed(0),
+          })}
         </span>
       </div>
 
@@ -637,14 +641,15 @@ function TopTeamCard({ rank, stat }: { rank: number; stat: TeamStat }) {
 
       <div className="mt-1 flex flex-wrap gap-2 text-[10px] text-gray-300">
         <span>
-          Matchs : <span className="text-gray-100">{stat.matchesPlayed}</span>
+          {t.matchesLabel}{' '}
+          <span className="text-gray-100">{stat.matchesPlayed}</span>
         </span>
         <span>
-          V/D : <span className="text-emerald-300">{stat.wins}</span>/
+          {t.wdLabel} <span className="text-emerald-300">{stat.wins}</span>/
           <span className="text-red-300">{stat.losses}</span>
         </span>
         <span>
-          Maps :{' '}
+          {t.mapsLabel}{' '}
           <span className="text-gray-100">
             {stat.mapsWon}-{stat.mapsLost}
           </span>{' '}
@@ -705,16 +710,16 @@ function formatTournamentDates(
   return `Jusqu'au ${e.toLocaleDateString('fr-FR', opts)}`;
 }
 
-function getStatusLabel(status: string): string {
+function getStatusLabel(status: string, t: StatsDict): string {
   switch (status) {
     case 'upcoming':
-      return 'À venir';
+      return t.statusUpcoming;
     case 'running':
     case 'ongoing':
-      return 'En cours';
+      return t.statusOngoing;
     case 'finished':
     case 'completed':
-      return 'Terminé';
+      return t.statusFinished;
     default:
       return status;
   }

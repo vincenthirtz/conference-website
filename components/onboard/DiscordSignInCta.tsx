@@ -16,6 +16,7 @@ import { useState } from 'react';
 import { supabaseClient } from '@/utils/supabase';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { logger } from '@/utils/logger';
+import { useT } from '@/lib/i18n/useT';
 
 type Props = {
   /** Path the user lands on after the OAuth round-trip. */
@@ -27,8 +28,10 @@ type Props = {
 export default function DiscordSignInCta({
   next = '/onboard/request',
   className = '',
-  label = 'Se connecter avec Discord',
+  label,
 }: Props) {
+  const t = useT('discordSignInCta');
+  const displayLabel = label ?? t.defaultLabel;
   const { user } = useAuthSession();
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -63,9 +66,7 @@ export default function DiscordSignInCta({
           options: { redirectTo, scopes: 'identify email' },
         });
         if (error) {
-          throw new Error(
-            error.message || 'Impossible de lier votre compte Discord.'
-          );
+          throw new Error(error.message || t.errorLink);
         }
         if (data?.url) {
           window.location.href = data.url;
@@ -83,16 +84,11 @@ export default function DiscordSignInCta({
         options: { redirectTo, scopes: 'identify email' },
       });
       if (error) {
-        throw new Error(
-          error.message || 'Impossible de démarrer la connexion Discord.'
-        );
+        throw new Error(error.message || t.errorStart);
       }
     } catch (err: unknown) {
       logger.warn('[onboard] discord oauth start failed', err);
-      setErrorMsg(
-        (err as Error)?.message ||
-          'Une erreur est survenue avec Discord. Réessayez dans un instant.'
-      );
+      setErrorMsg((err as Error)?.message || t.errorGeneric);
       setLoading(false);
     }
   };
@@ -121,7 +117,7 @@ export default function DiscordSignInCta({
             fill="currentColor"
           />
         </svg>
-        <span>{loading ? 'Redirection…' : label}</span>
+        <span>{loading ? t.redirecting : displayLabel}</span>
       </button>
       {errorMsg && (
         <p className="mt-2 text-xs text-red-300" role="alert">

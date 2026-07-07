@@ -11,6 +11,7 @@ import Paragraph from '@/components/Typography/paragraph';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
+import { useT } from '@/lib/i18n/useT';
 
 import { logger } from '../../utils/logger';
 
@@ -84,6 +85,7 @@ export const getStaticProps: GetStaticProps<NewsIndexProps> = async () => {
 };
 
 function NewsCard({ item }: { item: NewsItem }) {
+  const t = useT('newsIndex');
   const dateStr =
     item.publishedAt || item.createdAt
       ? new Date(item.publishedAt || item.createdAt || '').toLocaleDateString(
@@ -131,7 +133,7 @@ function NewsCard({ item }: { item: NewsItem }) {
           </p>
         )}
         <div className="mt-auto pt-4 flex items-center gap-2 text-sm text-blue-300 transition group-hover:text-blue-200">
-          <span>Lire l&apos;article</span>
+          <span>{t.readArticle}</span>
           <span className="transition transform group-hover:translate-x-1">
             →
           </span>
@@ -142,6 +144,7 @@ function NewsCard({ item }: { item: NewsItem }) {
 }
 
 function NewsIndexPage({ news, loadError }: NewsIndexProps) {
+  const t = useT('newsIndex');
   const [visible, setVisible] = useState(PAGE_SIZE);
   const shown = news.slice(0, visible);
   const hasMore = visible < news.length;
@@ -152,23 +155,21 @@ function NewsIndexPage({ news, loadError }: NewsIndexProps) {
         {/* Header */}
         <div className="mb-12 text-center">
           <div className="mb-4 inline-block border-b-2 border-purple-400 text-lg font-semibold text-white">
-            Le blog
+            {t.headerEyebrow}
           </div>
           <Heading typeStyle="heading-lg" level="h1" className="text-gradient">
-            Actualités du site
+            {t.headerTitle}
           </Heading>
           <div className="mx-auto mt-4 max-w-2xl">
             <Paragraph typeStyle="body-lg" textColor="text-neutral-300">
-              Annonces, coulisses et nouvelles de l&apos;OW Women&apos;s Cup.
-              Pour les patch notes et l&apos;actu officielle Overwatch,
-              rends-toi sur la page{' '}
+              {t.headerSubtitleBefore}
               <Link
                 href="/actualites"
                 className="text-blue-300 underline hover:text-blue-200"
               >
-                Actualités Overwatch
+                {t.headerSubtitleLink}
               </Link>
-              .
+              {t.headerSubtitleAfter}
             </Paragraph>
           </div>
         </div>
@@ -176,13 +177,12 @@ function NewsIndexPage({ news, loadError }: NewsIndexProps) {
         {/* Content */}
         {loadError ? (
           <div className="mx-auto max-w-xl rounded-2xl border border-red-500/40 bg-red-500/10 px-6 py-8 text-center text-red-100">
-            Impossible de charger les actualités pour le moment. Réessaie dans
-            quelques instants.
+            {t.loadError}
           </div>
         ) : news.length === 0 ? (
           <div className="py-20 text-center">
             <Paragraph textColor="text-neutral-400" className="text-lg">
-              Aucune actualité publiée pour le moment. Reviens bientôt !
+              {t.empty}
             </Paragraph>
           </div>
         ) : (
@@ -200,7 +200,7 @@ function NewsIndexPage({ news, loadError }: NewsIndexProps) {
                   onClick={() => setVisible((v) => v + PAGE_SIZE)}
                   className="rounded-xl border border-white/15 bg-white/5 px-6 py-3 text-sm font-medium text-white transition hover:border-white/30 hover:bg-white/10"
                 >
-                  Voir plus d&apos;actualités
+                  {t.loadMore}
                 </button>
               </div>
             )}

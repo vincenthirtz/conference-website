@@ -15,6 +15,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { playChime } from '@/utils/playChime';
 import type { CueWithAck } from '@/hooks/useCueStream';
+import { useT } from '@/lib/i18n/useT';
 
 type Props = {
   cue: CueWithAck;
@@ -23,6 +24,7 @@ type Props = {
 };
 
 export default function UrgentCueModal({ cue, onAck }: Props) {
+  const t = useT('urgentCueModal');
   const trapRef = useFocusTrap<HTMLDivElement>();
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -79,7 +81,7 @@ export default function UrgentCueModal({ cue, onAck }: Props) {
       // Pas de close() ici : le parent retire la modal en voyant
       // acked_by_me=true via le hook useCueStream.
     } catch (err) {
-      setError((err as Error)?.message || 'Echec de l ack, reessayer.');
+      setError((err as Error)?.message || t.ackFailed);
     } finally {
       setSubmitting(false);
     }
@@ -104,11 +106,9 @@ export default function UrgentCueModal({ cue, onAck }: Props) {
             id="urgent-cue-title"
             className="text-[11px] uppercase tracking-widest px-2 py-0.5 rounded-full bg-red-600 text-white font-bold animate-pulse"
           >
-            URGENT
+            {t.urgent}
           </span>
-          <span className="text-[11px] text-red-200/80">
-            Consigne Director
-          </span>
+          <span className="text-[11px] text-red-200/80">{t.directorCue}</span>
         </div>
 
         <p
@@ -139,7 +139,7 @@ export default function UrgentCueModal({ cue, onAck }: Props) {
           }`}
           data-testid="urgent-cue-ack"
         >
-          {submitting ? 'Envoi…' : error ? 'Reessayer' : 'Vu'}
+          {submitting ? t.sending : error ? t.retry : t.seen}
         </button>
       </div>
     </div>

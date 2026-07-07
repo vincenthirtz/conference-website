@@ -7,6 +7,9 @@ import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import Button from '@/components/Buttons/button';
 import { supabaseAdmin } from '@/utils/supabase';
+import { useT, format } from '@/lib/i18n/useT';
+
+type LoreDict = ReturnType<typeof useT<'lorePage'>>;
 
 type MediaType = 'comic' | 'story' | 'music' | 'screenshot';
 
@@ -23,7 +26,9 @@ type BlizzardMedia = {
 
 const MEDIA_SOURCE = 'https://overwatch.blizzard.com/fr-fr/media/';
 
-const TYPE_CONFIG: Record<
+const getTypeConfig = (
+  t: LoreDict
+): Record<
   MediaType,
   {
     label: string;
@@ -33,9 +38,9 @@ const TYPE_CONFIG: Record<
     hoverBorder: string;
     shadow: string;
   }
-> = {
+> => ({
   comic: {
-    label: 'Bande dessinée',
+    label: t.labelComic,
     color: 'text-purple-300',
     bgColor: 'bg-purple-500/20',
     borderColor: 'border-purple-500/30',
@@ -43,7 +48,7 @@ const TYPE_CONFIG: Record<
     shadow: 'hover:shadow-[0_16px_40px_rgba(168,85,247,0.15)]',
   },
   story: {
-    label: 'Nouvelle',
+    label: t.labelStory,
     color: 'text-amber-300',
     bgColor: 'bg-amber-500/20',
     borderColor: 'border-amber-500/30',
@@ -51,7 +56,7 @@ const TYPE_CONFIG: Record<
     shadow: 'hover:shadow-[0_16px_40px_rgba(245,158,11,0.15)]',
   },
   music: {
-    label: 'Musique',
+    label: t.labelMusic,
     color: 'text-green-300',
     bgColor: 'bg-green-500/20',
     borderColor: 'border-green-500/30',
@@ -59,14 +64,14 @@ const TYPE_CONFIG: Record<
     shadow: 'hover:shadow-[0_16px_40px_rgba(34,197,94,0.15)]',
   },
   screenshot: {
-    label: 'Image',
+    label: t.labelScreenshot,
     color: 'text-cyan-300',
     bgColor: 'bg-cyan-500/20',
     borderColor: 'border-cyan-500/30',
     hoverBorder: 'hover:border-cyan-400/60',
     shadow: 'hover:shadow-[0_16px_40px_rgba(6,182,212,0.15)]',
   },
-};
+});
 
 type LorePageProps = {
   media: BlizzardMedia[];
@@ -93,6 +98,8 @@ export const getStaticProps: GetStaticProps<LorePageProps> = async () => {
 };
 
 export default function LorePage({ media }: LorePageProps) {
+  const t = useT('lorePage');
+  const typeConfig = getTypeConfig(t);
   const [activeTab, setActiveTab] = useState<'all' | MediaType>('all');
   const loading = false;
 
@@ -115,7 +122,7 @@ export default function LorePage({ media }: LorePageProps) {
   );
 
   const renderMediaCard = (item: BlizzardMedia) => {
-    const config = TYPE_CONFIG[item.type];
+    const config = typeConfig[item.type];
 
     return (
       <Link
@@ -138,7 +145,7 @@ export default function LorePage({ media }: LorePageProps) {
             <div className="absolute inset-0 bg-gradient-to-t from-neutral-900 via-transparent to-transparent" />
             {item.parts > 1 && (
               <div className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-black/60 text-xs text-white font-medium backdrop-blur-sm">
-                {item.parts} parties
+                {format(t.partsCount, { count: item.parts })}
               </div>
             )}
           </div>
@@ -167,12 +174,12 @@ export default function LorePage({ media }: LorePageProps) {
           >
             <span>
               {item.type === 'comic'
-                ? 'Lire la BD'
+                ? t.ctaComic
                 : item.type === 'story'
-                  ? 'Lire la nouvelle'
+                  ? t.ctaStory
                   : item.type === 'music'
-                    ? 'Écouter'
-                    : 'Voir les images'}
+                    ? t.ctaMusic
+                    : t.ctaScreenshot}
             </span>
             <span className="transition transform group-hover:translate-x-1">
               →
@@ -196,21 +203,18 @@ export default function LorePage({ media }: LorePageProps) {
   );
 
   const tabs: { key: 'all' | MediaType; label: string }[] = [
-    { key: 'all', label: 'Tout' },
-    { key: 'comic', label: 'BD' },
-    { key: 'story', label: 'Nouvelles' },
-    { key: 'music', label: 'Musique' },
-    { key: 'screenshot', label: 'Images' },
+    { key: 'all', label: t.tabAll },
+    { key: 'comic', label: t.tabComic },
+    { key: 'story', label: t.tabStory },
+    { key: 'music', label: t.tabMusic },
+    { key: 'screenshot', label: t.tabScreenshot },
   ];
 
   return (
     <>
       <Head>
-        <title>Lore & Médias Overwatch | OW World Cup</title>
-        <meta
-          name="description"
-          content="Découvrez l'univers d'Overwatch : bandes dessinées, nouvelles, musiques et images officielles de Blizzard."
-        />
+        <title>{t.headTitle}</title>
+        <meta name="description" content={t.headDesc} />
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950">
@@ -218,15 +222,14 @@ export default function LorePage({ media }: LorePageProps) {
           {/* Header */}
           <div className="text-center mb-12">
             <div className="inline-block text-lg text-white font-semibold border-b-2 border-purple-400 mb-4">
-              Univers & Lore
+              {t.eyebrow}
             </div>
             <Heading typeStyle="heading-lg" className="text-gradient">
-              Médias Overwatch
+              {t.title}
             </Heading>
             <div className="max-w-2xl mx-auto mt-4">
               <Paragraph typeStyle="body-lg" textColor="text-neutral-300">
-                Plongez dans l&apos;univers d&apos;Overwatch avec les bandes
-                dessinées, nouvelles, musiques et visuels officiels de Blizzard.
+                {t.intro}
               </Paragraph>
             </div>
           </div>
@@ -236,7 +239,7 @@ export default function LorePage({ media }: LorePageProps) {
             {tabs.map((tab) => {
               const count =
                 tab.key === 'all' ? media.length : counts[tab.key] || 0;
-              const config = tab.key !== 'all' ? TYPE_CONFIG[tab.key] : null;
+              const config = tab.key !== 'all' ? typeConfig[tab.key] : null;
 
               return (
                 <button
@@ -267,7 +270,7 @@ export default function LorePage({ media }: LorePageProps) {
           ) : filteredItems.length === 0 ? (
             <div className="text-center py-20">
               <Paragraph textColor="text-neutral-400" className="text-lg">
-                Aucun média disponible pour le moment.
+                {t.empty}
               </Paragraph>
             </div>
           ) : (
@@ -283,7 +286,7 @@ export default function LorePage({ media }: LorePageProps) {
                 type="button"
                 className="px-6 py-3 bg-purple-600 hover:bg-purple-500"
               >
-                Voir tous les médias sur Blizzard
+                {t.viewAllBlizzard}
               </Button>
             </Link>
           </div>
