@@ -38,6 +38,7 @@ import { readPlayerProfile } from '@/utils/rating/readPlayerProfile';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
+import { useToast } from '@/components/Toast';
 
 type PlayerProfileDict = ReturnType<typeof useT<'playerPublicProfile'>>;
 
@@ -365,6 +366,137 @@ function SeasonsSection({ seasons }: { seasons: ProfileSeason[] }) {
   );
 }
 
+// --- Partage ----------------------------------------------------------------
+// Bouton « Partager » : navigator.share (mobile) sinon copie du lien canonique
+// dans le presse-papiers + toast « Lien copié ». Complété d'une rangée compacte
+// d'intents X / Bluesky ouvrant une preview préremplie dans un nouvel onglet.
+function buildProfileUrl(userId: string): string {
+  if (typeof window !== 'undefined') return window.location.href;
+  const base = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') || '';
+  return `${base}/player/${encodeURIComponent(userId)}`;
+}
+
+function ShareButtons({
+  player,
+  label,
+}: {
+  player: PlayerProfileCore;
+  label: string;
+}) {
+  const t = useT('playerPublicProfile');
+  const { addToast } = useToast();
+
+  const shareTitle = format(t.shareTitle, { name: label });
+
+  const copyLink = useCallback(async (url: string) => {
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+        return true;
+      }
+      const textarea = document.createElement('textarea');
+      textarea.value = url;
+      textarea.setAttribute('readonly', '');
+      textarea.style.position = 'absolute';
+      textarea.style.left = '-9999px';
+      document.body.appendChild(textarea);
+      textarea.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(textarea);
+      return ok;
+    } catch {
+      return false;
+    }
+  }, []);
+
+  const handleShare = useCallback(async () => {
+    const url = buildProfileUrl(player.userId);
+    // navigator.share : feuille de partage native (mobile). On ignore
+    // l'AbortError (l'utilisatrice a fermé la feuille) sans afficher d'erreur.
+    if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+      try {
+        await navigator.share({ title: shareTitle, url });
+        return;
+      } catch (err) {
+        if (err instanceof DOMException && err.name === 'AbortError') return;
+        // Sinon on retombe sur la copie du lien ci-dessous.
+      }
+    }
+    const ok = await copyLink(url);
+    addToast(ok ? t.linkCopied : t.shareError, ok ? 'success' : 'error');
+  }, [player.userId, shareTitle, copyLink, addToast, t.linkCopied, t.shareError]);
+
+  const url = buildProfileUrl(player.userId);
+  const encodedUrl = encodeURIComponent(url);
+  const encodedText = encodeURIComponent(shareTitle);
+  const xUrl = `https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`;
+  const blueskyUrl = `https://bsky.app/intent/compose?text=${encodeURIComponent(
+    `${shareTitle} ${url}`
+  )}`;
+
+  return (
+    <div className="flex shrink-0 items-center gap-2">
+      <button
+        type="button"
+        onClick={handleShare}
+        className="inline-flex items-center gap-2 rounded-md border border-purple-500/40 bg-purple-500/15 px-3 py-1.5 text-sm font-semibold text-purple-200 transition-colors hover:border-purple-400 hover:bg-purple-500/25 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400"
+        aria-label={t.shareAriaLabel}
+      >
+        <svg
+          className="h-4 w-4"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={1.8}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <circle cx="18" cy="5" r="3" />
+          <circle cx="6" cy="12" r="3" />
+          <circle cx="18" cy="19" r="3" />
+          <path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" />
+        </svg>
+        {t.share}
+      </button>
+      <a
+        href={xUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={t.shareOnX}
+        title={t.shareOnX}
+        className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-white/10 bg-white/5 text-neutral-300 transition-colors hover:border-white/20 hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
+      >
+        <svg
+          className="h-4 w-4"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          aria-hidden="true"
+        >
+          <path d="M18.9 2H22l-7.5 8.6L23 22h-6.9l-5.4-7-6.2 7H1.4l8-9.2L1 2h7l4.9 6.5L18.9 2zm-2.4 18h1.9L7.6 3.9H5.6L16.5 20z" />
+        </svg>
+      </a>
+      <a
+        href={blueskyUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={t.shareOnBluesky}
+        title={t.shareOnBluesky}
+        className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-white/10 bg-white/5 text-neutral-300 transition-colors hover:border-white/20 hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
+      >
+        <svg
+          className="h-4 w-4"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          aria-hidden="true"
+        >
+          <path d="M12 10.8C10.9 8.6 7.9 4.5 5.1 3 3.6 2.1 2 2.8 2 5.1c0 1.4.8 5.9 1.3 6.6.7 1.2 2 1.6 3.4 1.4-2 .3-3.7 1-.9 4 3 3.2 4.2-.9 4.2-2.8 0 1.9 1.1 6 4.2 2.8 2.8-3 1.1-3.7-.9-4 1.4.2 2.7-.2 3.4-1.4.5-.7 1.3-5.2 1.3-6.6 0-2.3-1.6-3-3.1-2.1C16.1 4.5 13.1 8.6 12 10.8z" />
+        </svg>
+      </a>
+    </div>
+  );
+}
+
 function ProfileHeader({
   player,
   label,
@@ -394,10 +526,15 @@ function ProfileHeader({
         )}
 
         <div className="flex-1 text-center sm:text-left">
-          <h1 className="text-2xl font-bold sm:text-3xl">{label}</h1>
-          {player.displayName && player.battleTag ? (
-            <p className="text-sm text-neutral-500">{player.battleTag}</p>
-          ) : null}
+          <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h1 className="text-2xl font-bold sm:text-3xl">{label}</h1>
+              {player.displayName && player.battleTag ? (
+                <p className="text-sm text-neutral-500">{player.battleTag}</p>
+              ) : null}
+            </div>
+            <ShareButtons player={player} label={label} />
+          </div>
           <div className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-sm text-neutral-400 sm:justify-start">
             <span>
               {t.rankLabel}{' '}
@@ -811,13 +948,22 @@ function buildPlayerSeo(profile: PlayerProfileResponse): SeoProps {
     },
   };
 
+  // Carte sociale dynamique (1200×630) générée par /api/og/player/[userId].
+  // Absolue (DefaultSeo n'ajoute pas d'origine aux URLs déjà absolues). En
+  // l'absence de NEXT_PUBLIC_SITE_URL (dev), on retombe sur le chemin relatif,
+  // que DefaultSeo laisse tel quel.
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') || '';
+  const ogImage = `${baseUrl}/api/og/player/${encodeURIComponent(
+    player.userId
+  )}`;
+
   return {
     title: {
       fr: `Profil de ${label} — ${rating}`,
       en: `${label}'s profile — ${rating}`,
     },
     description: { fr: descriptionFr, en: descriptionEn },
-    ...(player.avatarUrl ? { image: player.avatarUrl } : {}),
+    image: ogImage,
     jsonLd,
   };
 }

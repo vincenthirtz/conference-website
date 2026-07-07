@@ -2196,7 +2196,14 @@
     "viewLeaderboard": "Voir le classement",
     "errorTitle": "Impossible de charger ce profil",
     "errorBody": "Une erreur est survenue. Réessayez dans quelques instants.",
-    "retry": "Réessayer"
+    "retry": "Réessayer",
+    "share": "Partager",
+    "shareAriaLabel": "Partager ce profil",
+    "shareTitle": "Profil de {name} sur OW Women's Cup",
+    "linkCopied": "Lien copié",
+    "shareError": "Impossible de copier le lien",
+    "shareOnX": "Partager sur X",
+    "shareOnBluesky": "Partager sur Bluesky"
   },
   "onboardIndex": {
     "badge": "Self-service",

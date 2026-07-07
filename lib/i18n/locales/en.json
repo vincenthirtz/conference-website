@@ -2196,7 +2196,14 @@
     "viewLeaderboard": "View leaderboard",
     "errorTitle": "Unable to load this profile",
     "errorBody": "An error occurred. Please try again in a moment.",
-    "retry": "Retry"
+    "retry": "Retry",
+    "share": "Share",
+    "shareAriaLabel": "Share this profile",
+    "shareTitle": "{name}'s profile on OW Women's Cup",
+    "linkCopied": "Link copied",
+    "shareError": "Could not copy the link",
+    "shareOnX": "Share on X",
+    "shareOnBluesky": "Share on Bluesky"
   },
   "onboardIndex": {
     "badge": "Self-service",
