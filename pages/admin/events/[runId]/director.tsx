@@ -36,6 +36,7 @@ import { useEventRunRealtime } from '@/hooks/useEventRunRealtime';
 import { useOverrunWatcher } from '@/hooks/useOverrunWatcher';
 import { useToast } from '@/components/Toast';
 import { withStaffPage } from '@/utils/staff';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { computeRunSchedule } from '@/utils/eventSchedule';
 import type { StaffProps } from '@/types/admin';
 import type {
@@ -57,6 +58,7 @@ export const getServerSideProps = withStaffPage('manager');
 const POLL_INTERVAL_MS = 30_000;
 
 function DirectorPage(_props: StaffProps) {
+  const t = useAdminT('adminEventDirector');
   const router = useRouter();
   const runId =
     typeof router.query.runId === 'string' ? router.query.runId : null;
@@ -102,11 +104,11 @@ function DirectorPage(_props: StaffProps) {
       setStations(json.stations ?? []);
       setErrorMsg(null);
     } catch (err) {
-      setErrorMsg((err as Error)?.message ?? 'Erreur de chargement.');
+      setErrorMsg((err as Error)?.message ?? t.errorLoad);
     } finally {
       setLoading(false);
     }
-  }, [adminFetchJson, runId]);
+  }, [adminFetchJson, runId, t.errorLoad]);
 
   useEffect(() => {
     setLoading(true);
@@ -260,7 +262,7 @@ function DirectorPage(_props: StaffProps) {
         }),
       });
       if (!res.ok) {
-        let msg = `Auto-cue echoue (${res.status}).`;
+        let msg = format(t.autoCueFailed, { status: res.status });
         try {
           const payload = await res.json();
           if (payload?.error) msg = String(payload.error);
@@ -270,7 +272,7 @@ function DirectorPage(_props: StaffProps) {
         throw new Error(msg);
       }
     },
-    [adminFetch, runId]
+    [adminFetch, runId, t.autoCueFailed]
   );
 
   useOverrunWatcher({
@@ -295,16 +297,18 @@ function DirectorPage(_props: StaffProps) {
       });
       const payload = await res.json().catch(() => null);
       if (!res.ok) {
-        throw new Error(payload?.error ?? `Demarrage echoue (${res.status}).`);
+        throw new Error(
+          payload?.error ?? format(t.startFailedStatus, { status: res.status })
+        );
       }
       if (payload?.alreadyStarted) {
-        addToast('Le run etait deja en direct.', 'info');
+        addToast(t.runAlreadyLive, 'info');
       } else {
-        addToast('Run demarre.', 'success');
+        addToast(t.runStarted, 'success');
       }
       if (payload?.run) setRun(payload.run);
     } catch (err) {
-      addToast((err as Error)?.message ?? 'Demarrage echoue.', 'error');
+      addToast((err as Error)?.message ?? t.startFailed, 'error');
     } finally {
       setBusy(false);
     }
@@ -313,11 +317,10 @@ function DirectorPage(_props: StaffProps) {
   async function handleEndRun() {
     if (!runId || !run) return;
     const ok = await confirm({
-      title: 'Terminer ce run ?',
-      subtitle:
-        'Tous les segments non termines passeront en "done". Cette action est irreversible.',
+      title: t.confirmEndRunTitle,
+      subtitle: t.confirmEndRunSubtitle,
       variant: 'warning',
-      confirmLabel: 'Terminer',
+      confirmLabel: t.confirmEndRunLabel,
     });
     if (!ok) return;
     setBusy(true);
@@ -328,17 +331,19 @@ function DirectorPage(_props: StaffProps) {
       });
       const payload = await res.json().catch(() => null);
       if (!res.ok) {
-        throw new Error(payload?.error ?? `Fin echouee (${res.status}).`);
+        throw new Error(
+          payload?.error ?? format(t.endFailedStatus, { status: res.status })
+        );
       }
       addToast(
-        payload?.alreadyEnded ? 'Le run etait deja termine.' : 'Run termine.',
+        payload?.alreadyEnded ? t.runAlreadyEnded : t.runEnded,
         payload?.alreadyEnded ? 'info' : 'success'
       );
       if (payload?.run) setRun(payload.run);
       // Refresh segments aussi (l'API les a force en done).
       fetchData();
     } catch (err) {
-      addToast((err as Error)?.message ?? 'Fin echouee.', 'error');
+      addToast((err as Error)?.message ?? t.endFailed, 'error');
     } finally {
       setBusy(false);
     }
@@ -359,10 +364,12 @@ function DirectorPage(_props: StaffProps) {
       );
       const payload = await res.json().catch(() => null);
       if (!res.ok) {
-        throw new Error(payload?.error ?? `Demarrage echoue (${res.status}).`);
+        throw new Error(
+          payload?.error ?? format(t.startFailedStatus, { status: res.status })
+        );
       }
       addToast(
-        payload?.alreadyStarted ? 'Deja en direct.' : 'Segment demarre.',
+        payload?.alreadyStarted ? t.segmentAlreadyLive : t.segmentStarted,
         payload?.alreadyStarted ? 'info' : 'success'
       );
       // Realtime mettra a jour les autres segments forces en done.
@@ -372,7 +379,7 @@ function DirectorPage(_props: StaffProps) {
         );
       }
     } catch (err) {
-      addToast((err as Error)?.message ?? 'Demarrage echoue.', 'error');
+      addToast((err as Error)?.message ?? t.startFailed, 'error');
     } finally {
       setBusy(false);
     }
@@ -381,11 +388,10 @@ function DirectorPage(_props: StaffProps) {
   async function handleSkipSegment(segment: EventSegment) {
     if (!runId) return;
     const ok = await confirm({
-      title: `Passer "${segment.title}" ?`,
-      subtitle:
-        'Le segment sera marque "passe" et ne sera pas joue. Action irreversible.',
+      title: format(t.confirmSkipTitle, { title: segment.title }),
+      subtitle: t.confirmSkipSubtitle,
       variant: 'warning',
-      confirmLabel: 'Passer',
+      confirmLabel: t.confirmSkipLabel,
     });
     if (!ok) return;
     setBusy(true);
@@ -397,16 +403,18 @@ function DirectorPage(_props: StaffProps) {
       );
       const payload = await res.json().catch(() => null);
       if (!res.ok) {
-        throw new Error(payload?.error ?? `Skip echoue (${res.status}).`);
+        throw new Error(
+          payload?.error ?? format(t.skipFailedStatus, { status: res.status })
+        );
       }
-      addToast('Segment passe.', 'success');
+      addToast(t.segmentSkipped, 'success');
       if (payload?.segment) {
         setSegments((prev) =>
           prev.map((s) => (s.id === payload.segment.id ? payload.segment : s))
         );
       }
     } catch (err) {
-      addToast((err as Error)?.message ?? 'Skip echoue.', 'error');
+      addToast((err as Error)?.message ?? t.skipFailed, 'error');
     } finally {
       setBusy(false);
     }
@@ -423,16 +431,18 @@ function DirectorPage(_props: StaffProps) {
       );
       const payload = await res.json().catch(() => null);
       if (!res.ok) {
-        throw new Error(payload?.error ?? `Fin echouee (${res.status}).`);
+        throw new Error(
+          payload?.error ?? format(t.endFailedStatus, { status: res.status })
+        );
       }
-      addToast('Segment termine.', 'success');
+      addToast(t.segmentEnded, 'success');
       if (payload?.segment) {
         setSegments((prev) =>
           prev.map((s) => (s.id === payload.segment.id ? payload.segment : s))
         );
       }
     } catch (err) {
-      addToast((err as Error)?.message ?? 'Fin echouee.', 'error');
+      addToast((err as Error)?.message ?? t.endFailed, 'error');
     } finally {
       setBusy(false);
     }
@@ -441,10 +451,10 @@ function DirectorPage(_props: StaffProps) {
   async function handleDeleteSegment(segment: EventSegment) {
     if (!runId) return;
     const ok = await confirm({
-      title: `Supprimer "${segment.title}" ?`,
-      subtitle: 'Le segment sera definitivement supprime.',
+      title: format(t.confirmDeleteSegTitle, { title: segment.title }),
+      subtitle: t.confirmDeleteSegSubtitle,
       variant: 'danger',
-      confirmLabel: 'Supprimer',
+      confirmLabel: t.confirmDeleteLabel,
     });
     if (!ok) return;
     setBusy(true);
@@ -457,14 +467,14 @@ function DirectorPage(_props: StaffProps) {
       if (!res.ok) {
         const payload = await res.json().catch(() => null);
         throw new Error(
-          payload?.error ?? `Suppression echouee (${res.status}).`
+          payload?.error ?? format(t.deleteFailedStatus, { status: res.status })
         );
       }
-      addToast('Segment supprime.', 'success');
+      addToast(t.segmentDeleted, 'success');
       setSegments((prev) => prev.filter((s) => s.id !== segment.id));
       if (selectedId === segment.id) setSelectedId(null);
     } catch (err) {
-      addToast((err as Error)?.message ?? 'Suppression echouee.', 'error');
+      addToast((err as Error)?.message ?? t.deleteFailed, 'error');
     } finally {
       setBusy(false);
     }
@@ -503,10 +513,7 @@ function DirectorPage(_props: StaffProps) {
       // L'API renvoie l'etat canonique — on l'applique.
       if (json.segments) setSegments(json.segments);
     } catch (err) {
-      addToast(
-        (err as Error)?.message ?? 'Reorder echoue, restauration.',
-        'error'
-      );
+      addToast((err as Error)?.message ?? t.reorderFailed, 'error');
       // Rollback : remet les segments dans l'ordre precedent.
       setSegments((prev) => {
         const byId = new Map(prev.map((s) => [s.id, s]));
@@ -525,7 +532,7 @@ function DirectorPage(_props: StaffProps) {
     match_id?: string | null;
     duration_min?: number | null;
   }) {
-    if (!runId) throw new Error('Run introuvable.');
+    if (!runId) throw new Error(t.errorRunNotFound);
     regenerate();
     const json = await mutateJson<EventSegment>(
       `/api/admin/events/${runId}/segments`,
@@ -542,7 +549,7 @@ function DirectorPage(_props: StaffProps) {
       return next;
     });
     setShowAddModal(false);
-    addToast('Segment ajoute.', 'success');
+    addToast(t.segmentAdded, 'success');
   }
 
   async function handleSaveSegment(patch: {
@@ -552,8 +559,7 @@ function DirectorPage(_props: StaffProps) {
     broadcast_message?: EventBroadcastMessage | null;
     caster_checklist?: EventCasterChecklistItem[];
   }) {
-    if (!runId || !selectedSegment)
-      throw new Error('Aucun segment selectionne.');
+    if (!runId || !selectedSegment) throw new Error(t.errorNoSegment);
     regenerate();
     const json = await mutateJson<EventSegment>(
       `/api/admin/events/${runId}/segments/${selectedSegment.id}`,
@@ -563,7 +569,7 @@ function DirectorPage(_props: StaffProps) {
       }
     );
     setSegments((prev) => prev.map((s) => (s.id === json.id ? json : s)));
-    addToast('Segment sauvegarde.', 'success');
+    addToast(t.segmentSaved, 'success');
   }
 
   /* -----------------------------------------------------------
@@ -574,8 +580,7 @@ function DirectorPage(_props: StaffProps) {
     wave_id?: string | null;
     station_id?: string | null;
   }) {
-    if (!runId || !selectedSegment)
-      throw new Error('Aucun segment selectionne.');
+    if (!runId || !selectedSegment) throw new Error(t.errorNoSegment);
     regenerate();
     const json = await mutateJson<EventSegment>(
       `/api/admin/events/${runId}/segments/${selectedSegment.id}`,
@@ -585,7 +590,7 @@ function DirectorPage(_props: StaffProps) {
       }
     );
     setSegments((prev) => prev.map((s) => (s.id === json.id ? json : s)));
-    addToast('Assignation mise a jour.', 'success');
+    addToast(t.assignmentUpdated, 'success');
   }
 
   /* -----------------------------------------------------------
@@ -611,9 +616,9 @@ function DirectorPage(_props: StaffProps) {
         }
       );
       setWaves((prev) => [...prev, json.wave].sort((a, b) => a.ord - b.ord));
-      addToast('Wave creee.', 'success');
+      addToast(t.waveCreated, 'success');
     } catch (err) {
-      addToast((err as Error)?.message ?? 'Creation echouee.', 'error');
+      addToast((err as Error)?.message ?? t.createFailed, 'error');
     } finally {
       setBusy(false);
     }
@@ -636,9 +641,9 @@ function DirectorPage(_props: StaffProps) {
           .map((w) => (w.id === json.wave.id ? json.wave : w))
           .sort((a, b) => a.ord - b.ord)
       );
-      addToast('Wave mise a jour.', 'success');
+      addToast(t.waveUpdated, 'success');
     } catch (err) {
-      addToast((err as Error)?.message ?? 'Mise a jour echouee.', 'error');
+      addToast((err as Error)?.message ?? t.updateFailed, 'error');
     } finally {
       setBusy(false);
     }
@@ -648,10 +653,10 @@ function DirectorPage(_props: StaffProps) {
     if (!runId) return;
     if (status === 'skipped') {
       const ok = await confirm({
-        title: `Passer la wave "${wave.title}" ?`,
-        subtitle: 'La wave sera marquee "passee".',
+        title: format(t.confirmSkipWaveTitle, { title: wave.title }),
+        subtitle: t.confirmSkipWaveSubtitle,
         variant: 'warning',
-        confirmLabel: 'Passer',
+        confirmLabel: t.skipWaveLabel,
       });
       if (!ok) return;
     }
@@ -665,9 +670,9 @@ function DirectorPage(_props: StaffProps) {
       setWaves((prev) =>
         prev.map((w) => (w.id === json.wave.id ? json.wave : w))
       );
-      addToast('Statut de la wave mis a jour.', 'success');
+      addToast(t.waveStatusUpdated, 'success');
     } catch (err) {
-      addToast((err as Error)?.message ?? 'Changement echoue.', 'error');
+      addToast((err as Error)?.message ?? t.statusChangeFailed, 'error');
     } finally {
       setBusy(false);
     }
@@ -676,11 +681,10 @@ function DirectorPage(_props: StaffProps) {
   async function handleDeleteWave(wave: EventWave) {
     if (!runId) return;
     const ok = await confirm({
-      title: `Supprimer la wave "${wave.title}" ?`,
-      subtitle:
-        'Les segments rattaches ne seront pas supprimes mais detaches de la wave.',
+      title: format(t.confirmDeleteWaveTitle, { title: wave.title }),
+      subtitle: t.confirmDeleteWaveSubtitle,
       variant: 'danger',
-      confirmLabel: 'Supprimer',
+      confirmLabel: t.confirmDeleteLabel,
     });
     if (!ok) return;
     setBusy(true);
@@ -692,7 +696,7 @@ function DirectorPage(_props: StaffProps) {
       if (!res.ok) {
         const payload = await res.json().catch(() => null);
         throw new Error(
-          payload?.error ?? `Suppression echouee (${res.status}).`
+          payload?.error ?? format(t.deleteFailedStatus, { status: res.status })
         );
       }
       setWaves((prev) => prev.filter((w) => w.id !== wave.id));
@@ -700,9 +704,9 @@ function DirectorPage(_props: StaffProps) {
       setSegments((prev) =>
         prev.map((s) => (s.wave_id === wave.id ? { ...s, wave_id: null } : s))
       );
-      addToast('Wave supprimee.', 'success');
+      addToast(t.waveDeleted, 'success');
     } catch (err) {
-      addToast((err as Error)?.message ?? 'Suppression echouee.', 'error');
+      addToast((err as Error)?.message ?? t.deleteFailed, 'error');
     } finally {
       setBusy(false);
     }
@@ -734,10 +738,7 @@ function DirectorPage(_props: StaffProps) {
       );
       if (json.waves) setWaves(json.waves);
     } catch (err) {
-      addToast(
-        (err as Error)?.message ?? 'Reorder echoue, restauration.',
-        'error'
-      );
+      addToast((err as Error)?.message ?? t.reorderFailed, 'error');
       setWaves(prev);
     } finally {
       setBusy(false);
@@ -760,9 +761,9 @@ function DirectorPage(_props: StaffProps) {
       setStations((prev) =>
         [...prev, json.station].sort((a, b) => a.ord - b.ord)
       );
-      addToast('Station creee.', 'success');
+      addToast(t.stationCreated, 'success');
     } catch (err) {
-      addToast((err as Error)?.message ?? 'Creation echouee.', 'error');
+      addToast((err as Error)?.message ?? t.createFailed, 'error');
     } finally {
       setBusy(false);
     }
@@ -783,9 +784,9 @@ function DirectorPage(_props: StaffProps) {
       setStations((prev) =>
         prev.map((s) => (s.id === json.station.id ? json.station : s))
       );
-      addToast('Station mise a jour.', 'success');
+      addToast(t.stationUpdated, 'success');
     } catch (err) {
-      addToast((err as Error)?.message ?? 'Mise a jour echouee.', 'error');
+      addToast((err as Error)?.message ?? t.updateFailed, 'error');
     } finally {
       setBusy(false);
     }
@@ -807,7 +808,7 @@ function DirectorPage(_props: StaffProps) {
         prev.map((s) => (s.id === json.station.id ? json.station : s))
       );
     } catch (err) {
-      addToast((err as Error)?.message ?? 'Changement echoue.', 'error');
+      addToast((err as Error)?.message ?? t.statusChangeFailed, 'error');
     } finally {
       setBusy(false);
     }
@@ -816,11 +817,10 @@ function DirectorPage(_props: StaffProps) {
   async function handleDeleteStation(station: EventStation) {
     if (!runId) return;
     const ok = await confirm({
-      title: `Supprimer la station "${station.name}" ?`,
-      subtitle:
-        'Les segments rattaches ne seront pas supprimes mais detaches de la station.',
+      title: format(t.confirmDeleteStationTitle, { name: station.name }),
+      subtitle: t.confirmDeleteStationSubtitle,
       variant: 'danger',
-      confirmLabel: 'Supprimer',
+      confirmLabel: t.confirmDeleteLabel,
     });
     if (!ok) return;
     setBusy(true);
@@ -833,7 +833,7 @@ function DirectorPage(_props: StaffProps) {
       if (!res.ok) {
         const payload = await res.json().catch(() => null);
         throw new Error(
-          payload?.error ?? `Suppression echouee (${res.status}).`
+          payload?.error ?? format(t.deleteFailedStatus, { status: res.status })
         );
       }
       setStations((prev) => prev.filter((s) => s.id !== station.id));
@@ -842,9 +842,9 @@ function DirectorPage(_props: StaffProps) {
           s.station_id === station.id ? { ...s, station_id: null } : s
         )
       );
-      addToast('Station supprimee.', 'success');
+      addToast(t.stationDeleted, 'success');
     } catch (err) {
-      addToast((err as Error)?.message ?? 'Suppression echouee.', 'error');
+      addToast((err as Error)?.message ?? t.deleteFailed, 'error');
     } finally {
       setBusy(false);
     }
@@ -857,25 +857,29 @@ function DirectorPage(_props: StaffProps) {
   return (
     <>
       <Head>
-        <title>Director – {run?.name ? `${run.name} · ` : ''}Run of show</title>
+        <title>
+          {run?.name
+            ? format(t.pageTitleWithRun, { name: run.name })
+            : t.pageTitleNoRun}
+        </title>
       </Head>
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
         <div className="w-full px-4 sm:px-6 lg:px-8 pt-20 pb-12 max-w-[1600px] mx-auto">
           <Breadcrumb
             items={[
-              { label: 'Admin', href: '/admin' },
-              { label: 'Run of show', href: '/admin/events' },
-              { label: run?.name ?? 'Director' },
+              { label: t.breadcrumbAdmin, href: '/admin' },
+              { label: t.breadcrumbRunOfShow, href: '/admin/events' },
+              { label: run?.name ?? t.breadcrumbDirectorFallback },
             ]}
           />
 
           {loading ? (
             <div className="py-24">
-              <LoadingSpinner label="Chargement…" />
+              <LoadingSpinner label={t.loading} />
             </div>
           ) : !run ? (
             <AlertBanner
-              message={errorMsg ?? 'Event introuvable.'}
+              message={errorMsg ?? t.eventNotFound}
               variant="error"
             />
           ) : (
@@ -910,10 +914,10 @@ function DirectorPage(_props: StaffProps) {
                 <div className="lg:col-span-4 order-1">
                   <div className="mb-3 flex items-center justify-between">
                     <h2 className="text-sm font-semibold text-neutral-300 uppercase tracking-wide">
-                      Timeline
+                      {t.timelineHeading}
                     </h2>
                     <span className="text-xs text-neutral-500">
-                      Glisse pour reordonner
+                      {t.dragToReorder}
                     </span>
                   </div>
                   <TimelineBuilder
@@ -935,7 +939,7 @@ function DirectorPage(_props: StaffProps) {
                 <div className="lg:col-span-3 space-y-6 order-2 lg:order-2">
                   <div>
                     <h2 className="mb-3 text-sm font-semibold text-neutral-300 uppercase tracking-wide">
-                      Edition
+                      {t.editionHeading}
                     </h2>
                     <SegmentEditor
                       segment={selectedSegment}
@@ -949,7 +953,7 @@ function DirectorPage(_props: StaffProps) {
                   </div>
                   <div className="order-4 lg:order-none">
                     <h2 className="mb-3 text-sm font-semibold text-neutral-300 uppercase tracking-wide">
-                      Casters
+                      {t.castersHeading}
                     </h2>
                     <CasterStatusPanel
                       segments={segments}
@@ -963,7 +967,7 @@ function DirectorPage(_props: StaffProps) {
                 <div className="lg:col-span-3 space-y-6 order-3 lg:order-3">
                   <div>
                     <h2 className="mb-3 text-sm font-semibold text-neutral-300 uppercase tracking-wide">
-                      Comms
+                      {t.commsHeading}
                     </h2>
                     <div className="lg:sticky lg:top-20">
                       <CueComposer
@@ -984,7 +988,7 @@ function DirectorPage(_props: StaffProps) {
               {/* Waves + Stations — regroupements logiques et postes de prod. */}
               <div>
                 <h2 className="mb-3 text-sm font-semibold text-neutral-300 uppercase tracking-wide">
-                  Waves &amp; Stations
+                  {t.wavesStationsHeading}
                 </h2>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <WaveBoard

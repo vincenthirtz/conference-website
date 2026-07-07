@@ -7,6 +7,9 @@ import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
 import Modal from '@/components/admin/Modal';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
+
+type Dict = ReturnType<typeof useAdminT<'adminCampaigns'>>;
 
 type StaffShape = {
   id: string;
@@ -82,24 +85,30 @@ type SendResult = {
 
 export const getServerSideProps = withStaffPage('admin');
 
-const STATUS_STYLES: Record<string, { label: string; className: string }> = {
-  active: {
-    label: 'Active',
-    className: 'bg-emerald-600/20 text-emerald-300 border-emerald-500/30',
-  },
-  draft: {
-    label: 'Brouillon',
-    className: 'bg-amber-600/20 text-amber-300 border-amber-500/30',
-  },
-  archived: {
-    label: 'Archivée',
-    className: 'bg-neutral-600/20 text-neutral-300 border-neutral-500/30',
-  },
-};
+function getStatusStyles(
+  t: Dict
+): Record<string, { label: string; className: string }> {
+  return {
+    active: {
+      label: t.statusActive,
+      className: 'bg-emerald-600/20 text-emerald-300 border-emerald-500/30',
+    },
+    draft: {
+      label: t.statusDraft,
+      className: 'bg-amber-600/20 text-amber-300 border-amber-500/30',
+    },
+    archived: {
+      label: t.statusArchived,
+      className: 'bg-neutral-600/20 text-neutral-300 border-neutral-500/30',
+    },
+  };
+}
 
-const AUDIENCE_LABELS: Record<string, string> = {
-  'all-confirmed-users': 'Tous les comptes confirmés',
-};
+function getAudienceLabels(t: Dict): Record<string, string> {
+  return {
+    'all-confirmed-users': t.audienceAllConfirmed,
+  };
+}
 
 function formatDateTime(iso: string | null) {
   if (!iso) return '—';
@@ -117,6 +126,7 @@ function formatDateTime(iso: string | null) {
 }
 
 function AdminCampaignsPage(_props: Props) {
+  const t = useAdminT('adminCampaigns');
   const router = useRouter();
 
   const [campaigns, setCampaigns] = useState<CampaignSummary[]>([]);
@@ -155,11 +165,11 @@ function AdminCampaignsPage(_props: Props) {
       setCampaigns(json.campaigns || []);
       setTotal(typeof json.total === 'number' ? json.total : null);
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
+      setErrorMsg((err as Error)?.message ?? t.errorUnexpected);
     } finally {
       setLoading(false);
     }
-  }, [limit, offset, adminFetchJson]);
+  }, [limit, offset, adminFetchJson, t.errorUnexpected]);
 
   useEffect(() => {
     fetchCampaigns();
@@ -168,33 +178,30 @@ function AdminCampaignsPage(_props: Props) {
   const deleteCampaign = useCallback(
     async (campaign: CampaignSummary) => {
       const ok = await confirm({
-        title: 'Supprimer cette campagne ?',
-        subtitle:
-          `La campagne « ${campaign.name} » sera définitivement supprimée. ` +
-          'Toute programmation par vagues associée est également annulée. ' +
-          'Cette action est irréversible.',
+        title: t.confirmDeleteTitle,
+        subtitle: format(t.confirmDeleteSubtitle, { name: campaign.name }),
         variant: 'danger',
-        confirmLabel: 'Supprimer',
-        cancelLabel: 'Annuler',
+        confirmLabel: t.confirmDeleteLabel,
+        cancelLabel: t.cancel,
       });
       if (!ok) return;
       try {
         await mutateJson(`/api/admin/broadcast/${campaign.id}`, {
           method: 'DELETE',
         });
-        addToast(`Campagne « ${campaign.name} » supprimée.`, 'success');
+        addToast(format(t.campaignDeleted, { name: campaign.name }), 'success');
         await fetchCampaigns();
       } catch (err: unknown) {
-        addToast((err as Error)?.message || 'Suppression échouée', 'error');
+        addToast((err as Error)?.message || t.deleteFailed, 'error');
       }
     },
-    [confirm, mutateJson, addToast, fetchCampaigns]
+    [confirm, mutateJson, addToast, fetchCampaigns, t]
   );
 
   return (
     <>
       <Head>
-        <title>Admin – Campagnes emails</title>
+        <title>{t.pageTitle}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
@@ -219,19 +226,23 @@ function AdminCampaignsPage(_props: Props) {
                   d="M15 19l-7-7 7-7"
                 />
               </svg>
-              Retour au dashboard admin
+              {t.backDashboard}
             </button>
 
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-                  Campagnes emails
+                  {t.heading}
                 </h1>
                 <p className="text-neutral-400 text-sm mt-1">
-                  Diffusion d&rsquo;annonces aux comptes confirm&eacute;s du
-                  site (annonces, &eacute;v&eacute;nements, communaut&eacute;).
+                  {t.subtitle}
                   {total !== null
-                    ? ` ${total} campagne${total > 1 ? 's' : ''} déclarée${total > 1 ? 's' : ''}.`
+                    ? format(
+                        total > 1
+                          ? t.subtitleCount_other
+                          : t.subtitleCount_one,
+                        { total }
+                      )
                     : ''}
                 </p>
               </div>
@@ -254,10 +265,10 @@ function AdminCampaignsPage(_props: Props) {
                       d="M12 4v16m8-8H4"
                     />
                   </svg>
-                  Créer une campagne
+                  {t.createCampaign}
                 </button>
                 <div className="text-xs text-neutral-500 bg-neutral-800/50 px-3 py-2 rounded-xl border border-neutral-700/50">
-                  Brevo gratuit : 300 emails/jour
+                  {t.brevoQuota}
                 </div>
               </div>
             </div>
@@ -283,7 +294,7 @@ function AdminCampaignsPage(_props: Props) {
                 onClick={() => fetchCampaigns()}
                 className="flex-shrink-0 px-3 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-xs font-medium transition-colors"
               >
-                Réessayer
+                {t.retry}
               </button>
             </div>
           )}
@@ -295,13 +306,13 @@ function AdminCampaignsPage(_props: Props) {
             </div>
           ) : campaigns.length === 0 ? (
             <div className="bg-neutral-800/50 border border-neutral-700/50 rounded-2xl p-10 text-center text-neutral-400">
-              Aucune campagne disponible pour le moment.
+              {t.emptyTitle}
               <p className="text-xs text-neutral-500 mt-2">
-                Utilise le bouton
+                {t.emptyHintPrefix}
                 <span className="mx-1 px-1.5 py-0.5 rounded bg-neutral-900 text-neutral-300 font-medium text-[11px]">
-                  Créer une campagne
+                  {t.emptyHintButton}
                 </span>
-                ci-dessus pour en composer une.
+                {t.emptyHintSuffix}
               </p>
             </div>
           ) : (
@@ -340,12 +351,12 @@ function AdminCampaignsPage(_props: Props) {
                     d="M15 19l-7-7 7-7"
                   />
                 </svg>
-                Precedent
+                {t.prev}
               </button>
 
               <span className="text-neutral-400 text-sm">
                 {offset + 1} – {offset + campaigns.length}
-                {total ? ` sur ${total}` : ''}
+                {total ? format(t.paginationOf, { total }) : ''}
               </span>
 
               <button
@@ -354,7 +365,7 @@ function AdminCampaignsPage(_props: Props) {
                 onClick={() => setOffset(offset + limit)}
                 className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
-                Suivant
+                {t.next}
                 <svg
                   className="w-4 h-4"
                   fill="none"
@@ -415,11 +426,12 @@ function CampaignCard({
   onEdit: () => void;
   onDelete: () => void;
 }) {
-  const status = STATUS_STYLES[campaign.status] ?? {
+  const t = useAdminT('adminCampaigns');
+  const status = getStatusStyles(t)[campaign.status] ?? {
     label: campaign.status,
     className: 'bg-neutral-600/20 text-neutral-300 border-neutral-500/30',
   };
-  const audience = AUDIENCE_LABELS[campaign.audience] ?? campaign.audience;
+  const audience = getAudienceLabels(t)[campaign.audience] ?? campaign.audience;
   const isArchived = campaign.status === 'archived';
   const editable = campaign.source === 'db';
 
@@ -460,7 +472,7 @@ function CampaignCard({
                     d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
                   />
                 </svg>
-                Modifier
+                {t.edit}
               </button>
               <button
                 type="button"
@@ -480,7 +492,7 @@ function CampaignCard({
                     d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
                   />
                 </svg>
-                Supprimer
+                {t.delete}
               </button>
             </>
           )}
@@ -503,21 +515,24 @@ function CampaignCard({
                 d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
               />
             </svg>
-            Gérer
+            {t.manage}
           </button>
         </div>
       </div>
 
       <p className="text-xs text-neutral-500 italic mb-4 truncate">
-        Sujet : {campaign.subject}
+        {format(t.subjectPrefix, { subject: campaign.subject })}
       </p>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <Stat label="Audience" value={audience} />
-        <Stat label="Envois cumulés" value={String(campaign.stats.totalSent)} />
-        <Stat label="Échecs" value={String(campaign.stats.totalFailed)} />
+        <Stat label={t.statAudience} value={audience} />
         <Stat
-          label="Dernier envoi"
+          label={t.statTotalSent}
+          value={String(campaign.stats.totalSent)}
+        />
+        <Stat label={t.statFailed} value={String(campaign.stats.totalFailed)} />
+        <Stat
+          label={t.statLastSent}
           value={formatDateTime(campaign.stats.lastRunAt)}
         />
       </div>
@@ -526,27 +541,33 @@ function CampaignCard({
         <div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/[0.06] p-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
           <span className="px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-200 border border-amber-500/30 font-semibold uppercase tracking-wider text-[10px]">
             {campaign.schedule.status === 'scheduled'
-              ? 'Vagues programmées'
+              ? t.scheduleScheduled
               : campaign.schedule.status === 'completed'
-                ? 'Vagues terminées'
-                : 'En pause'}
+                ? t.scheduleCompleted
+                : t.schedulePaused}
           </span>
           <span className="text-neutral-300">
-            {campaign.schedule.sent} / {campaign.schedule.totalRecipients}{' '}
-            envoy&eacute;s
+            {format(t.scheduleSentOf, {
+              sent: campaign.schedule.sent,
+              total: campaign.schedule.totalRecipients,
+            })}
             {campaign.schedule.failed > 0
-              ? ` · ${campaign.schedule.failed} échec(s)`
+              ? format(t.scheduleFailedSuffix, {
+                  failed: campaign.schedule.failed,
+                })
               : ''}
           </span>
           <span className="text-neutral-400">
-            Vague :{' '}
+            {t.scheduleWaveLabel}{' '}
             <strong className="text-neutral-200">
               {campaign.schedule.waveSize}
             </strong>
-            /jour
+            {t.scheduleWavePerDay}
           </span>
           <span className="text-neutral-500">
-            Dernière vague&nbsp;: {formatDateTime(campaign.schedule.lastWaveAt)}
+            {format(t.scheduleLastWave, {
+              date: formatDateTime(campaign.schedule.lastWaveAt),
+            })}
           </span>
         </div>
       )}
@@ -576,6 +597,7 @@ function CampaignDrawer({
   onAfterSend: () => void;
   onRefresh: () => void | Promise<void>;
 }) {
+  const t = useAdminT('adminCampaigns');
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
   const { mutateJson } = useIdempotentMutation();
   const { adminFetch } = useAdminFetch();
@@ -611,28 +633,25 @@ function CampaignDrawer({
   async function postSchedule() {
     const parsed = Number(waveSize);
     if (!Number.isFinite(parsed) || parsed < 1 || parsed > 290) {
-      setScheduleError(
-        'La taille de vague doit être un entier entre 1 et 290.'
-      );
+      setScheduleError(t.errorWaveSize);
       return;
     }
     const wave = Math.floor(parsed);
 
     const recipientLine =
       schedule && typeof schedule.totalRecipients === 'number'
-        ? `${schedule.totalRecipients} destinataire(s) au total`
-        : 'la liste actuelle des comptes confirmés';
+        ? format(t.recipientTotal, { count: schedule.totalRecipients })
+        : t.recipientCurrentList;
     const ok = await confirm({
-      title: schedule
-        ? 'Mettre à jour la programmation ?'
-        : 'Programmer cette campagne par vagues ?',
-      subtitle:
-        `Campagne « ${campaign.name} » : envoi de ${wave} email(s)/jour ` +
-        `vers ${recipientLine}, jusqu'à épuisement. Les envois partiront ` +
-        'automatiquement via le cron quotidien.',
+      title: schedule ? t.scheduleUpdateTitle : t.scheduleCreateTitle,
+      subtitle: format(t.scheduleConfirmSubtitle, {
+        name: campaign.name,
+        wave,
+        recipients: recipientLine,
+      }),
       variant: 'warning',
-      confirmLabel: schedule ? 'Mettre à jour' : 'Programmer',
-      cancelLabel: 'Annuler',
+      confirmLabel: schedule ? t.scheduleUpdateLabel : t.scheduleCreateLabel,
+      cancelLabel: t.cancel,
     });
     if (!ok) return;
 
@@ -648,15 +667,18 @@ function CampaignDrawer({
         }
       );
       setScheduleNotice(
-        `Planning enregistré : ${json.totalRecipients} destinataire(s), ${wave}/jour.`
+        format(t.scheduleSavedNotice, {
+          count: json.totalRecipients,
+          wave,
+        })
       );
       addToast(
-        `Programmation enregistrée : ${json.totalRecipients} destinataire(s).`,
+        format(t.scheduleSavedToast, { count: json.totalRecipients }),
         'success'
       );
       await onRefresh();
     } catch (err: unknown) {
-      const msg = (err as Error)?.message || 'Échec de la planification';
+      const msg = (err as Error)?.message || t.scheduleFailed;
       setScheduleError(msg);
       addToast(msg, 'error');
     } finally {
@@ -668,17 +690,18 @@ function CampaignDrawer({
     const pending = schedule?.pending;
     const recipientLine =
       typeof pending === 'number'
-        ? `${pending} destinataire(s) en attente`
-        : 'les destinataires restants';
+        ? format(t.recipientPending, { count: pending })
+        : t.recipientRemaining;
     const ok = await confirm({
-      title: 'Lancer une vague maintenant ?',
-      subtitle:
-        `Campagne « ${campaign.name} » : envoi immédiat de ${recipientLine} ` +
-        `(plafonné à ${schedule?.waveSize ?? '?'} par vague). Action ` +
-        'irréversible — les emails partent réellement.',
+      title: t.waveNowTitle,
+      subtitle: format(t.waveNowSubtitle, {
+        name: campaign.name,
+        recipients: recipientLine,
+        cap: schedule?.waveSize ?? '?',
+      }),
       variant: 'warning',
-      confirmLabel: 'Envoyer la vague',
-      cancelLabel: 'Annuler',
+      confirmLabel: t.waveNowConfirm,
+      cancelLabel: t.cancel,
     });
     if (!ok) return;
 
@@ -694,15 +717,19 @@ function CampaignDrawer({
         method: 'POST',
       });
       setScheduleNotice(
-        `Vague envoyée : ${json.sent} succès / ${json.failed} échec(s) — ${json.remainingPending} restants.`
+        format(t.waveSentNotice, {
+          sent: json.sent,
+          failed: json.failed,
+          remaining: json.remainingPending,
+        })
       );
       addToast(
-        `Vague envoyée : ${json.sent} succès, ${json.failed} échec(s).`,
+        format(t.waveSentToast, { sent: json.sent, failed: json.failed }),
         json.failed > 0 ? 'warning' : 'success'
       );
       await onRefresh();
     } catch (err: unknown) {
-      const msg = (err as Error)?.message || 'Vague échouée';
+      const msg = (err as Error)?.message || t.waveFailed;
       setScheduleError(msg);
       addToast(msg, 'error');
     } finally {
@@ -712,12 +739,11 @@ function CampaignDrawer({
 
   async function cancelSchedule() {
     const ok = await confirm({
-      title: 'Annuler la programmation de cette campagne ?',
-      subtitle:
-        'Les emails deja envoyes restent dans l historique. Les destinataires non encore traites ne recevront pas la campagne.',
+      title: t.cancelScheduleTitle,
+      subtitle: t.cancelScheduleSubtitle,
       variant: 'warning',
-      confirmLabel: 'Annuler la programmation',
-      cancelLabel: 'Garder',
+      confirmLabel: t.cancelScheduleConfirm,
+      cancelLabel: t.keep,
     });
     if (!ok) return;
     setScheduleBusy(true);
@@ -727,11 +753,11 @@ function CampaignDrawer({
       await mutateJson(`/api/admin/broadcast/${campaign.id}/schedule`, {
         method: 'DELETE',
       });
-      setScheduleNotice('Programmation annulée.');
-      addToast('Programmation annulée.', 'success');
+      setScheduleNotice(t.scheduleCancelledNotice);
+      addToast(t.scheduleCancelledNotice, 'success');
       await onRefresh();
     } catch (err: unknown) {
-      const msg = (err as Error)?.message || 'Annulation échouée';
+      const msg = (err as Error)?.message || t.cancelFailed;
       setScheduleError(msg);
       addToast(msg, 'error');
     } finally {
@@ -776,15 +802,16 @@ function CampaignDrawer({
         }
       );
       if (json.success) {
-        setTestResult({ ok: true, msg: `Email de test envoyé à ${to}.` });
-        addToast(`Email de test envoyé à ${to}.`, 'success');
+        const okMsg = format(t.testSentResult, { to });
+        setTestResult({ ok: true, msg: okMsg });
+        addToast(okMsg, 'success');
       } else {
-        const msg = json.error || 'Échec';
+        const msg = json.error || t.testFailedGeneric;
         setTestResult({ ok: false, msg });
         addToast(msg, 'error');
       }
     } catch (err: unknown) {
-      const msg = (err as Error)?.message || 'Erreur réseau';
+      const msg = (err as Error)?.message || t.testNetworkError;
       setTestResult({ ok: false, msg });
       addToast(msg, 'error');
     } finally {
@@ -804,7 +831,7 @@ function CampaignDrawer({
       });
       const json = await res.json();
       if (!res.ok || json.error) {
-        throw new Error(json.error || 'Dry-run échoué');
+        throw new Error(json.error || t.dryRunFailed);
       }
       setDryRun({
         totalConfirmedUsers: json.totalConfirmedUsers,
@@ -838,12 +865,12 @@ function CampaignDrawer({
         errors: json.errors,
       });
       addToast(
-        `Diffusion terminée : ${json.sent} envoyé(s), ${json.failed} échec(s).`,
+        format(t.sendDoneToast, { sent: json.sent, failed: json.failed }),
         json.failed > 0 ? 'warning' : 'success'
       );
       setConfirming(false);
     } catch (err: unknown) {
-      const msg = (err as Error)?.message || 'Envoi échoué';
+      const msg = (err as Error)?.message || t.sendFailed;
       setActionError(msg);
       addToast(msg, 'error');
       setConfirming(false);
@@ -866,7 +893,7 @@ function CampaignDrawer({
           <div className="sticky top-0 z-10 bg-neutral-900/95 backdrop-blur border-b border-neutral-800 px-6 py-4 flex items-center justify-between">
             <div className="min-w-0">
               <p className="text-xs uppercase tracking-wider text-neutral-500">
-                Campagne
+                {t.campaignKicker}
               </p>
               <h2 className="text-lg font-semibold truncate">
                 {campaign.name}
@@ -876,7 +903,7 @@ function CampaignDrawer({
               type="button"
               onClick={onClose}
               className="rounded-lg p-2 text-neutral-400 hover:bg-neutral-800 hover:text-white transition-colors"
-              aria-label="Fermer"
+              aria-label={t.closeAria}
             >
               <svg
                 className="w-5 h-5"
@@ -900,11 +927,11 @@ function CampaignDrawer({
                 {campaign.description}
               </p>
               <div className="mt-4 grid grid-cols-1 gap-2 text-sm">
-                <Field label="Sujet">{campaign.subject}</Field>
-                <Field label="Audience">
-                  {AUDIENCE_LABELS[campaign.audience] ?? campaign.audience}
+                <Field label={t.fieldSubject}>{campaign.subject}</Field>
+                <Field label={t.fieldAudience}>
+                  {getAudienceLabels(t)[campaign.audience] ?? campaign.audience}
                 </Field>
-                <Field label="ID">
+                <Field label={t.fieldId}>
                   <code className="font-mono text-xs">{campaign.id}</code>
                 </Field>
               </div>
@@ -915,11 +942,10 @@ function CampaignDrawer({
               <div className="flex flex-wrap items-end justify-between gap-3 mb-3">
                 <div>
                   <h3 className="text-sm font-semibold text-neutral-200">
-                    Aper&ccedil;u live
+                    {t.previewHeading}
                   </h3>
                   <p className="text-xs text-neutral-500 mt-0.5">
-                    Rendu HTML r&eacute;el de l&rsquo;email. Modifie le label
-                    pour tester le greeting.
+                    {t.previewHint}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -937,7 +963,7 @@ function CampaignDrawer({
                     rel="noreferrer"
                     className="px-3 py-1.5 rounded-lg bg-neutral-700 hover:bg-neutral-600 border border-neutral-600 text-xs font-medium transition-colors"
                   >
-                    Ouvrir
+                    {t.previewOpen}
                   </a>
                 </div>
               </div>
@@ -945,7 +971,7 @@ function CampaignDrawer({
                 <iframe
                   key={previewSrc}
                   src={previewSrc}
-                  title="Aperçu de l'email"
+                  title={t.iframeTitle}
                   sandbox="allow-same-origin"
                   className="w-full h-[520px] bg-white"
                 />
@@ -955,12 +981,9 @@ function CampaignDrawer({
             {/* Test send */}
             <section className="bg-neutral-800/50 border border-neutral-700/50 rounded-xl p-4">
               <h3 className="text-sm font-semibold text-neutral-200 mb-1">
-                Envoyer un test
+                {t.testHeading}
               </h3>
-              <p className="text-xs text-neutral-500 mb-3">
-                Envoie cet email &agrave; une seule adresse pour le visualiser
-                dans ton inbox avant la diffusion.
-              </p>
+              <p className="text-xs text-neutral-500 mb-3">{t.testHint}</p>
               <div className="flex flex-wrap gap-3 items-end">
                 <div className="flex-1 min-w-[200px]">
                   <input
@@ -981,7 +1004,7 @@ function CampaignDrawer({
                   {testSending ? (
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                   ) : null}
-                  Envoyer le test
+                  {t.sendTest}
                 </button>
               </div>
               {testResult && (
@@ -1001,14 +1024,12 @@ function CampaignDrawer({
             <section className="bg-neutral-800/50 border border-neutral-700/50 rounded-xl p-4 space-y-3">
               <div>
                 <h3 className="text-sm font-semibold text-neutral-200">
-                  Programmation par vagues
+                  {t.waveSchedulingHeading}
                 </h3>
                 <p className="text-xs text-neutral-500 mt-0.5">
-                  Snapshot la liste actuelle, puis le cron quotidien envoie
+                  {t.waveSchedulingHintPrefix}
                   <strong className="text-neutral-300"> waveSize </strong>
-                  emails par jour jusqu&rsquo;&agrave; &eacute;puisement.
-                  Recommand&eacute; pour rester sous le quota Brevo gratuit
-                  (300/jour).
+                  {t.waveSchedulingHintSuffix}
                 </p>
               </div>
 
@@ -1018,17 +1039,17 @@ function CampaignDrawer({
                     <div className="flex flex-wrap items-center gap-2 mb-2">
                       <span className="px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-200 border border-amber-500/30 text-[10px] uppercase tracking-wider font-semibold">
                         {schedule.status === 'scheduled'
-                          ? 'En cours'
+                          ? t.statusInProgress
                           : schedule.status === 'completed'
-                            ? 'Termin&eacute;e'
-                            : 'En pause'}
+                            ? t.statusCompletedFem
+                            : t.statusPaused}
                       </span>
                       <span className="text-xs text-neutral-400">
-                        Vague :{' '}
+                        {t.scheduleWaveLabel}{' '}
                         <strong className="text-neutral-200">
                           {schedule.waveSize}
                         </strong>
-                        /jour
+                        {t.scheduleWavePerDay}
                       </span>
                     </div>
                     <Progress
@@ -1042,23 +1063,24 @@ function CampaignDrawer({
                         <strong className="text-emerald-300">
                           {schedule.sent}
                         </strong>{' '}
-                        envoy&eacute;s
+                        {t.sentWord}
                       </span>
                       <span>
                         <strong className="text-rose-300">
                           {schedule.failed}
                         </strong>{' '}
-                        &eacute;chec(s)
+                        {t.failedWord}
                       </span>
                       <span>
                         <strong className="text-neutral-200">
                           {schedule.pending}
                         </strong>{' '}
-                        en attente
+                        {t.pendingWord}
                       </span>
                       <span className="text-neutral-500">
-                        Derni&egrave;re vague :{' '}
-                        {formatDateTime(schedule.lastWaveAt)}
+                        {format(t.scheduleLastWave, {
+                          date: formatDateTime(schedule.lastWaveAt),
+                        })}
                       </span>
                     </div>
                   </div>
@@ -1066,7 +1088,7 @@ function CampaignDrawer({
                   <div className="flex flex-wrap items-end gap-2">
                     <div>
                       <label className="block text-xs text-neutral-400 mb-1">
-                        Modifier la taille
+                        {t.modifySize}
                       </label>
                       <input
                         type="number"
@@ -1083,7 +1105,7 @@ function CampaignDrawer({
                       disabled={scheduleBusy}
                       className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors"
                     >
-                      Mettre &agrave; jour
+                      {t.updateBtn}
                     </button>
                     <button
                       type="button"
@@ -1091,7 +1113,7 @@ function CampaignDrawer({
                       disabled={scheduleBusy || schedule.pending === 0}
                       className="px-4 py-2 rounded-xl bg-neutral-700 hover:bg-neutral-600 border border-neutral-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors"
                     >
-                      Lancer une vague maintenant
+                      {t.launchWaveNow}
                     </button>
                     <button
                       type="button"
@@ -1099,7 +1121,7 @@ function CampaignDrawer({
                       disabled={scheduleBusy}
                       className="px-4 py-2 rounded-xl border border-rose-500/40 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 disabled:opacity-50 text-sm font-medium transition-colors"
                     >
-                      Annuler
+                      {t.cancel}
                     </button>
                   </div>
                 </>
@@ -1107,7 +1129,7 @@ function CampaignDrawer({
                 <div className="flex flex-wrap items-end gap-2">
                   <div>
                     <label className="block text-xs text-neutral-400 mb-1">
-                      Emails par jour
+                      {t.emailsPerDay}
                     </label>
                     <input
                       type="number"
@@ -1128,7 +1150,7 @@ function CampaignDrawer({
                     {scheduleBusy ? (
                       <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     ) : null}
-                    Planifier les vagues
+                    {t.planWaves}
                   </button>
                 </div>
               )}
@@ -1149,39 +1171,38 @@ function CampaignDrawer({
             <section className="bg-neutral-800/50 border border-neutral-700/50 rounded-xl p-4 space-y-4">
               <div>
                 <h3 className="text-sm font-semibold text-neutral-200 mb-1">
-                  Diffusion imm&eacute;diate
+                  {t.broadcastHeading}
                 </h3>
                 <p className="text-xs text-neutral-500">
-                  Le quota Brevo gratuit est de 300 emails/jour. Au-del&agrave;,
-                  segmente l&rsquo;envoi avec
+                  {t.broadcastHintPrefix}
                   <code className="mx-1 px-1.5 py-0.5 rounded bg-neutral-900 text-neutral-300 font-mono text-[11px]">
                     limit
                   </code>
-                  et
+                  {t.broadcastHintMid}
                   <code className="mx-1 px-1.5 py-0.5 rounded bg-neutral-900 text-neutral-300 font-mono text-[11px]">
                     offset
                   </code>
-                  .
+                  {t.broadcastHintSuffix}
                 </p>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs text-neutral-400 mb-1">
-                    Limite (vide = tout)
+                    {t.limitLabel}
                   </label>
                   <input
                     type="number"
                     min="1"
                     value={limit}
                     onChange={(e) => setLimit(e.target.value)}
-                    placeholder="ex. 250"
+                    placeholder={t.limitPlaceholder}
                     className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   />
                 </div>
                 <div>
                   <label className="block text-xs text-neutral-400 mb-1">
-                    Offset
+                    {t.offsetLabel}
                   </label>
                   <input
                     type="number"
@@ -1204,7 +1225,7 @@ function CampaignDrawer({
                   {dryRunBusy ? (
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                   ) : null}
-                  Pr&eacute;visualiser (dry-run)
+                  {t.dryRunBtn}
                 </button>
                 <button
                   type="button"
@@ -1225,7 +1246,7 @@ function CampaignDrawer({
                       d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
                     />
                   </svg>
-                  Lancer la diffusion
+                  {t.launchBroadcast}
                 </button>
               </div>
 
@@ -1238,23 +1259,21 @@ function CampaignDrawer({
               {dryRun && (
                 <div className="rounded-xl bg-neutral-900/50 border border-neutral-700/40 p-4">
                   <p className="text-xs text-neutral-500 uppercase tracking-wider mb-2">
-                    Aper&ccedil;u
+                    {t.previewResultHeading}
                   </p>
                   <ul className="text-sm text-neutral-200 space-y-1">
                     <li>
-                      Comptes confirm&eacute;s :{' '}
+                      {t.dryConfirmedUsers}{' '}
                       <strong>{dryRun.totalConfirmedUsers}</strong>
                     </li>
                     <li>
-                      Envois pour ce batch :{' '}
-                      <strong>{dryRun.windowSize}</strong>
+                      {t.dryBatch} <strong>{dryRun.windowSize}</strong>
                     </li>
                     <li>
-                      Avec greeting personnalis&eacute; :{' '}
-                      <strong>{dryRun.withLabel}</strong>
+                      {t.dryWithGreeting} <strong>{dryRun.withLabel}</strong>
                     </li>
                     <li>
-                      Sans label (greeting g&eacute;n&eacute;rique) :{' '}
+                      {t.dryWithoutLabel}{' '}
                       <strong>{dryRun.withoutLabel}</strong>
                     </li>
                   </ul>
@@ -1264,22 +1283,23 @@ function CampaignDrawer({
               {sendResult && (
                 <div className="rounded-xl bg-emerald-900/30 border border-emerald-500/40 p-4">
                   <p className="text-xs text-emerald-400 uppercase tracking-wider mb-2">
-                    Diffusion termin&eacute;e
+                    {t.broadcastDoneHeading}
                   </p>
                   <ul className="text-sm text-emerald-100 space-y-1">
                     <li>
-                      Envoy&eacute;s : <strong>{sendResult.sent}</strong> /{' '}
+                      {t.sentLabelColon} <strong>{sendResult.sent}</strong> /{' '}
                       {sendResult.windowSize}
                     </li>
                     <li>
-                      &Eacute;checs : <strong>{sendResult.failed}</strong>
+                      {t.failedLabelColon} <strong>{sendResult.failed}</strong>
                     </li>
                   </ul>
                   {sendResult.errors && sendResult.errors.length > 0 && (
                     <details className="mt-2 text-xs text-red-200">
                       <summary className="cursor-pointer text-red-300">
-                        {sendResult.errors.length} erreur(s) — voir le
-                        d&eacute;tail
+                        {format(t.errorsDetails, {
+                          count: sendResult.errors.length,
+                        })}
                       </summary>
                       <ul className="mt-2 space-y-1 max-h-40 overflow-auto">
                         {sendResult.errors.map((e, i) => (
@@ -1295,7 +1315,7 @@ function CampaignDrawer({
                     onClick={onAfterSend}
                     className="mt-3 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs font-medium transition-colors"
                   >
-                    Fermer et rafra&icirc;chir
+                    {t.closeAndRefresh}
                   </button>
                 </div>
               )}
@@ -1312,9 +1332,7 @@ function CampaignDrawer({
           zIndexClassName="z-[210]"
           backdropClassName="bg-black/70"
           panelChromeClassName="rounded-2xl bg-neutral-900 border border-neutral-700"
-          title={
-            <h3 className="text-lg font-semibold">Confirmer l&rsquo;envoi</h3>
-          }
+          title={<h3 className="text-lg font-semibold">{t.confirmSendTitle}</h3>}
           footer={
             <>
               <button
@@ -1323,7 +1341,7 @@ function CampaignDrawer({
                 disabled={sendBusy}
                 className="px-4 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-sm font-medium transition-colors"
               >
-                Annuler
+                {t.cancel}
               </button>
               <button
                 type="button"
@@ -1334,18 +1352,22 @@ function CampaignDrawer({
                 {sendBusy ? (
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 ) : null}
-                Confirmer la diffusion
+                {t.confirmSendBtn}
               </button>
             </>
           }
         >
           <p className="text-sm text-neutral-300">
-            Cette action va envoyer la campagne &laquo; {campaign.name} &raquo;
-            aux comptes confirm&eacute;s du site
-            {limit ? ` (limite : ${limit})` : ''}
-            {Number(offset) > 0 ? `, en sautant les ${offset} premiers` : ''}.
+            {format(t.confirmSendBody, {
+              name: campaign.name,
+              limitPart: limit ? format(t.confirmSendLimit, { limit }) : '',
+              offsetPart:
+                Number(offset) > 0
+                  ? format(t.confirmSendOffset, { offset })
+                  : '',
+            })}
             <br />
-            <strong>Action irr&eacute;versible.</strong>
+            <strong>{t.confirmSendIrreversible}</strong>
           </p>
         </Modal>
       </div>
@@ -1353,11 +1375,13 @@ function CampaignDrawer({
   );
 }
 
-const FORM_STATUS_OPTIONS: { value: string; label: string }[] = [
-  { value: 'draft', label: 'Brouillon' },
-  { value: 'active', label: 'Active' },
-  { value: 'archived', label: 'Archivée' },
-];
+function getFormStatusOptions(t: Dict): { value: string; label: string }[] {
+  return [
+    { value: 'draft', label: t.statusDraft },
+    { value: 'active', label: t.statusActive },
+    { value: 'archived', label: t.statusArchived },
+  ];
+}
 
 function CampaignFormModal({
   campaign,
@@ -1368,6 +1392,7 @@ function CampaignFormModal({
   onClose: () => void;
   onSaved: () => void | Promise<void>;
 }) {
+  const t = useAdminT('adminCampaigns');
   const isEdit = campaign !== null;
   const { mutateJson } = useIdempotentMutation();
   const { addToast } = useToast();
@@ -1413,25 +1438,23 @@ function CampaignFormModal({
     setFormError(null);
 
     if (!name.trim()) {
-      setFormError('Le nom est requis.');
+      setFormError(t.errorNameRequired);
       return;
     }
     if (!subject.trim()) {
-      setFormError('L’objet est requis.');
+      setFormError(t.errorSubjectRequired);
       return;
     }
     if (!heading.trim()) {
-      setFormError('Le titre de l’email est requis.');
+      setFormError(t.errorHeadingRequired);
       return;
     }
     if (bodyParagraphs.length === 0) {
-      setFormError('Le corps doit contenir au moins un paragraphe.');
+      setFormError(t.errorBodyRequired);
       return;
     }
     if (ctaMismatch) {
-      setFormError(
-        'Le bouton requiert un libellé ET une URL (ou aucun des deux).'
-      );
+      setFormError(t.errorCtaMismatch);
       return;
     }
 
@@ -1455,17 +1478,20 @@ function CampaignFormModal({
           method: 'PATCH',
           body: JSON.stringify(payload),
         });
-        addToast(`Campagne « ${name.trim()} » mise à jour.`, 'success');
+        addToast(
+          format(t.campaignUpdated, { name: name.trim() }),
+          'success'
+        );
       } else {
         await mutateJson('/api/admin/broadcast', {
           method: 'POST',
           body: JSON.stringify(payload),
         });
-        addToast(`Campagne « ${name.trim()} » créée.`, 'success');
+        addToast(format(t.campaignCreated, { name: name.trim() }), 'success');
       }
       await onSaved();
     } catch (err: unknown) {
-      const msg = (err as Error)?.message || 'Enregistrement échoué';
+      const msg = (err as Error)?.message || t.saveFailed;
       setFormError(msg);
       addToast(msg, 'error');
     } finally {
@@ -1485,17 +1511,17 @@ function CampaignFormModal({
         <div className="sticky top-0 z-10 bg-neutral-900/95 backdrop-blur border-b border-neutral-800 px-6 py-4 flex items-center justify-between">
           <div className="min-w-0">
             <p className="text-xs uppercase tracking-wider text-neutral-500">
-              {isEdit ? 'Modifier' : 'Nouvelle campagne'}
+              {isEdit ? t.editKicker : t.newKicker}
             </p>
             <h2 className="text-lg font-semibold truncate">
-              {isEdit ? campaign?.name : 'Composer un email'}
+              {isEdit ? campaign?.name : t.composeEmail}
             </h2>
           </div>
           <button
             type="button"
             onClick={onClose}
             className="rounded-lg p-2 text-neutral-400 hover:bg-neutral-800 hover:text-white transition-colors"
-            aria-label="Fermer"
+            aria-label={t.closeAria}
           >
             <svg
               className="w-5 h-5"
@@ -1516,50 +1542,47 @@ function CampaignFormModal({
         <form onSubmit={handleSubmit} className="px-6 py-6 space-y-5">
           {/* Meta */}
           <div className="grid grid-cols-1 gap-4">
-            <FormField label="Nom" required>
+            <FormField label={t.nameLabel} required>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 maxLength={120}
-                placeholder="Annonce ouverture des inscriptions"
+                placeholder={t.namePlaceholder}
                 className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
               />
             </FormField>
 
-            <FormField label="Objet de l’email" required>
+            <FormField label={t.subjectLabel} required>
               <input
                 type="text"
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
                 maxLength={200}
-                placeholder="Les inscriptions sont ouvertes !"
+                placeholder={t.subjectPlaceholder}
                 className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
               />
             </FormField>
 
-            <FormField
-              label="Description"
-              hint="Courte note interne, affichée dans la liste."
-            >
+            <FormField label={t.descriptionLabel} hint={t.descriptionHint}>
               <input
                 type="text"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 maxLength={280}
-                placeholder="Email transactionnel envoyé aux confirmés"
+                placeholder={t.descriptionPlaceholder}
                 className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
               />
             </FormField>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <FormField label="Statut">
+              <FormField label={t.statusLabel}>
                 <select
                   value={status}
                   onChange={(e) => setStatus(e.target.value)}
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                 >
-                  {FORM_STATUS_OPTIONS.map((o) => (
+                  {getFormStatusOptions(t).map((o) => (
                     <option key={o.value} value={o.value}>
                       {o.label}
                     </option>
@@ -1567,13 +1590,10 @@ function CampaignFormModal({
                 </select>
               </FormField>
 
-              <FormField
-                label="Audience"
-                hint="Fixée côté serveur, non modifiable."
-              >
+              <FormField label={t.audienceLabel} hint={t.audienceHint}>
                 <input
                   type="text"
-                  value="Tous les inscrits confirmés"
+                  value={t.audienceValue}
                   disabled
                   readOnly
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/30 border border-neutral-700 text-neutral-400 text-sm cursor-not-allowed"
@@ -1585,13 +1605,13 @@ function CampaignFormModal({
           <hr className="border-neutral-800" />
 
           {/* Template body */}
-          <FormField label="Titre de l’email" required>
+          <FormField label={t.headingLabel} required>
             <input
               type="text"
               value={heading}
               onChange={(e) => setHeading(e.target.value)}
               maxLength={160}
-              placeholder="Bienvenue dans l’aventure"
+              placeholder={t.headingPlaceholder}
               className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
             />
           </FormField>
@@ -1604,69 +1624,61 @@ function CampaignFormModal({
               className="mt-0.5 w-4 h-4 rounded border-neutral-600 bg-neutral-900 text-blue-600 focus:ring-blue-500"
             />
             <span className="text-sm text-neutral-300">
-              Personnaliser avec le prénom
+              {t.greetingLabel}
               <span className="block text-xs text-neutral-500">
-                Ajoute « Bonjour Prénom, » en tête de l’email.
+                {t.greetingHint}
               </span>
             </span>
           </label>
 
-          <FormField
-            label="Corps"
-            required
-            hint="Sépare chaque paragraphe par une ligne vide."
-          >
+          <FormField label={t.bodyLabel} required hint={t.bodyHint}>
             <textarea
               value={bodyText}
               onChange={(e) => setBodyText(e.target.value)}
               rows={8}
-              placeholder={
-                'Premier paragraphe d’introduction.\n\nDeuxième paragraphe avec les détails.'
-              }
+              placeholder={t.bodyPlaceholder}
               className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm resize-y leading-relaxed"
             />
             <p className="text-xs text-neutral-500 mt-1">
-              {bodyParagraphs.length} paragraphe
-              {bodyParagraphs.length > 1 ? 's' : ''} détecté
-              {bodyParagraphs.length > 1 ? 's' : ''}.
+              {format(
+                bodyParagraphs.length > 1
+                  ? t.paragraphsDetected_other
+                  : t.paragraphsDetected_one,
+                { count: bodyParagraphs.length }
+              )}
             </p>
           </FormField>
 
-          <FormField
-            label="Bouton (optionnel)"
-            hint="Libellé + URL http(s). Laisse les deux vides pour aucun bouton."
-          >
+          <FormField label={t.ctaLabel} hint={t.ctaHint}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <input
                 type="text"
                 value={ctaLabel}
                 onChange={(e) => setCtaLabel(e.target.value)}
                 maxLength={80}
-                placeholder="S’inscrire maintenant"
+                placeholder={t.ctaLabelPlaceholder}
                 className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
               />
               <input
                 type="url"
                 value={ctaUrl}
                 onChange={(e) => setCtaUrl(e.target.value)}
-                placeholder="https://exemple.com/inscription"
+                placeholder={t.ctaUrlPlaceholder}
                 className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
               />
             </div>
             {ctaMismatch && (
-              <p className="text-xs text-amber-300 mt-1">
-                Renseigne le libellé ET l’URL, ou laisse les deux vides.
-              </p>
+              <p className="text-xs text-amber-300 mt-1">{t.ctaMismatchHint}</p>
             )}
           </FormField>
 
-          <FormField label="Note de bas de page (optionnel)">
+          <FormField label={t.footerLabel}>
             <input
               type="text"
               value={footerNote}
               onChange={(e) => setFooterNote(e.target.value)}
               maxLength={280}
-              placeholder="Tu reçois cet email car tu as un compte confirmé."
+              placeholder={t.footerPlaceholder}
               className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
             />
           </FormField>
@@ -1684,7 +1696,7 @@ function CampaignFormModal({
               disabled={submitting}
               className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-sm font-medium transition-colors disabled:opacity-50"
             >
-              Annuler
+              {t.cancel}
             </button>
             <button
               type="submit"
@@ -1694,7 +1706,7 @@ function CampaignFormModal({
               {submitting ? (
                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               ) : null}
-              {isEdit ? 'Enregistrer' : 'Créer la campagne'}
+              {isEdit ? t.save : t.createCampaignBtn}
             </button>
           </div>
         </form>

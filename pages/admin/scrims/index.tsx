@@ -6,7 +6,10 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { withStaffPage } from '@/utils/staff';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { StaffProps, ScrimStatus } from '@/types/admin';
+
+type Dict = ReturnType<typeof useAdminT<'adminScrimsList'>>;
 
 type ScrimRow = {
   id: string;
@@ -23,18 +26,18 @@ type ScrimRow = {
   team2?: { id: string; name: string; logo_url: string | null } | null;
 };
 
-function statusLabel(status: string) {
+function statusLabel(status: string, t: Dict) {
   switch (status) {
     case 'draft':
-      return 'Brouillon';
+      return t.statusDraft;
     case 'scheduled':
-      return 'Planifie';
+      return t.statusScheduled;
     case 'running':
-      return 'En cours';
+      return t.statusRunning;
     case 'completed':
-      return 'Termine';
+      return t.statusCompleted;
     case 'cancelled':
-      return 'Annule';
+      return t.statusCancelled;
     default:
       return status;
   }
@@ -75,6 +78,7 @@ function formatDate(d: string | null) {
 export const getServerSideProps = withStaffPage('manager');
 
 function AdminScrimsPage(_props: StaffProps) {
+  const t = useAdminT('adminScrimsList');
   const { adminFetchJson } = useAdminFetch();
   const [scrims, setScrims] = useState<ScrimRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -92,11 +96,11 @@ function AdminScrimsPage(_props: StaffProps) {
       );
       setScrims(json.scrims || []);
     } catch (err) {
-      setErrorMsg((err as Error)?.message || 'Erreur de chargement.');
+      setErrorMsg((err as Error)?.message || t.errorLoad);
     } finally {
       setLoading(false);
     }
-  }, [adminFetchJson, statusFilter]);
+  }, [adminFetchJson, statusFilter, t.errorLoad]);
 
   useEffect(() => {
     fetchScrims();
@@ -105,43 +109,41 @@ function AdminScrimsPage(_props: StaffProps) {
   return (
     <>
       <Head>
-        <title>Admin – Scrims</title>
+        <title>{t.pageTitle}</title>
       </Head>
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
         <div className="w-full px-4 sm:px-6 lg:px-8 pt-20 pb-12">
           <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
             <div>
               <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-                Gestion des scrims
+                {t.heading}
               </h1>
-              <p className="text-neutral-400 text-sm mt-1">
-                Sessions de matchs amicaux entre 2 equipes.
-              </p>
+              <p className="text-neutral-400 text-sm mt-1">{t.subtitle}</p>
             </div>
             <Link
               href="/admin/scrims/create"
               className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors"
             >
-              + Nouveau scrim
+              {t.newScrim}
             </Link>
           </div>
 
           <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-4 mb-6 flex gap-3 items-end">
             <div className="min-w-[180px]">
               <label className="block text-sm text-neutral-400 mb-1">
-                Statut
+                {t.statusFilterLabel}
               </label>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600"
               >
-                <option value="">Tous</option>
-                <option value="draft">Brouillon</option>
-                <option value="scheduled">Planifie</option>
-                <option value="running">En cours</option>
-                <option value="completed">Termine</option>
-                <option value="cancelled">Annule</option>
+                <option value="">{t.filterAll}</option>
+                <option value="draft">{t.statusDraft}</option>
+                <option value="scheduled">{t.statusScheduled}</option>
+                <option value="running">{t.statusRunning}</option>
+                <option value="completed">{t.statusCompleted}</option>
+                <option value="cancelled">{t.statusCancelled}</option>
               </select>
             </div>
           </section>
@@ -153,10 +155,10 @@ function AdminScrimsPage(_props: StaffProps) {
           )}
 
           {loading ? (
-            <div className="text-neutral-400 text-sm">Chargement…</div>
+            <div className="text-neutral-400 text-sm">{t.loading}</div>
           ) : scrims.length === 0 ? (
             <div className="rounded-xl border border-neutral-700/50 bg-neutral-800/30 px-6 py-12 text-center text-neutral-400">
-              Aucun scrim pour ce filtre.
+              {t.empty}
             </div>
           ) : (
             <div className="grid gap-3">
@@ -173,12 +175,12 @@ function AdminScrimsPage(_props: StaffProps) {
                           s.status
                         )}`}
                       >
-                        {statusLabel(s.status)}
+                        {statusLabel(s.status, t)}
                       </span>
                       <span className="font-medium">{s.name}</span>
                       {s.is_public && (
                         <span className="text-xs text-emerald-400">
-                          • Public
+                          {t.publicBadge}
                         </span>
                       )}
                     </div>
@@ -187,7 +189,10 @@ function AdminScrimsPage(_props: StaffProps) {
                     </div>
                   </div>
                   <div className="mt-2 text-sm text-neutral-300">
-                    {(s.team1?.name || '—') + ' vs ' + (s.team2?.name || '—')}
+                    {format(t.teamsVs, {
+                      team1: s.team1?.name || '—',
+                      team2: s.team2?.name || '—',
+                    })}
                   </div>
                 </Link>
               ))}

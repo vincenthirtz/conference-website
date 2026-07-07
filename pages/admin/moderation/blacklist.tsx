@@ -18,6 +18,7 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import type { StaffProps } from '@/types/admin';
 import { useUrlFilters } from '@/utils/useUrlFilters';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 type BlacklistEntry = {
   id: string;
@@ -50,14 +51,15 @@ type BlacklistAlert = {
 
 const ALERTS_PAGE_SIZE = 50;
 
-const SOURCE_LABELS: Record<AlertSource, string> = {
-  bot_scan: 'Scan du bot',
-  bot_member_add: 'Arrivée membre',
-  registration: 'Inscription site',
-};
+type Dict = ReturnType<typeof useAdminT<'adminModerationBlacklist'>>;
 
-function sourceLabel(source: string): string {
-  return SOURCE_LABELS[source as AlertSource] ?? source;
+function sourceLabel(source: string, tx: Dict): string {
+  const map: Record<AlertSource, string> = {
+    bot_scan: tx.sourceBotScan,
+    bot_member_add: tx.sourceBotMemberAdd,
+    registration: tx.sourceRegistration,
+  };
+  return map[source as AlertSource] ?? source;
 }
 
 const FILTER_KEYS = ['search', 'active'] as const;
@@ -80,6 +82,7 @@ function formatDateFr(value: string): string {
 export const getServerSideProps = withStaffPage('manager');
 
 function AdminBlacklistPage(_: StaffProps) {
+  const tx = useAdminT('adminModerationBlacklist');
   const { addToast } = useToast();
   const { confirm, dialog } = useConfirmDialog();
   const { adminFetchJson } = useAdminFetch();
@@ -200,10 +203,7 @@ function AdminBlacklistPage(_: StaffProps) {
 
   async function createEntry() {
     if (!hasIdentifier) {
-      addToast(
-        'Au moins un identifiant requis (BattleTag, pseudo ou ID Discord).',
-        'error'
-      );
+      addToast(tx.errorIdentifierRequired, 'error');
       return;
     }
     setCreating(true);
@@ -221,7 +221,7 @@ function AdminBlacklistPage(_: StaffProps) {
         method: 'POST',
         body: JSON.stringify(body),
       });
-      addToast('Entrée ajoutée à la blacklist.', 'success');
+      addToast(tx.entryAdded, 'success');
       setForm({
         battle_tag: '',
         display_name: '',
@@ -245,7 +245,7 @@ function AdminBlacklistPage(_: StaffProps) {
         body: JSON.stringify({ active: !entry.active }),
       });
       addToast(
-        entry.active ? 'Entrée désactivée.' : 'Entrée réactivée.',
+        entry.active ? tx.entryDeactivated : tx.entryReactivated,
         'success'
       );
       setEntries((prev) =>
@@ -285,7 +285,7 @@ function AdminBlacklistPage(_: StaffProps) {
           notes: editNotes.trim() || null,
         }),
       });
-      addToast('Entrée mise à jour.', 'success');
+      addToast(tx.entryUpdated, 'success');
       setEntries((prev) =>
         prev.map((e) =>
           e.id === entry.id
@@ -310,12 +310,12 @@ function AdminBlacklistPage(_: StaffProps) {
       entry.battle_tag ||
       entry.display_name ||
       entry.discord_user_id ||
-      'cette entrée';
+      tx.deleteFallbackLabel;
     const ok = await confirm({
-      title: 'Supprimer cette entrée ?',
-      subtitle: `« ${label} » sera retiré définitivement de la blacklist.`,
+      title: tx.confirmDeleteTitle,
+      subtitle: format(tx.confirmDeleteSubtitle, { label }),
       variant: 'danger',
-      confirmLabel: 'Supprimer',
+      confirmLabel: tx.confirmDeleteLabel,
     });
     if (!ok) return;
 
@@ -324,7 +324,7 @@ function AdminBlacklistPage(_: StaffProps) {
       await adminFetchJson(`/api/admin/moderation/blacklist/${entry.id}`, {
         method: 'DELETE',
       });
-      addToast('Entrée supprimée.', 'success');
+      addToast(tx.entryDeleted, 'success');
       setEntries((prev) => prev.filter((e) => e.id !== entry.id));
       setTotal((t) => (typeof t === 'number' ? Math.max(0, t - 1) : t));
     } catch (err) {
@@ -337,7 +337,7 @@ function AdminBlacklistPage(_: StaffProps) {
   return (
     <>
       <Head>
-        <title>Admin – Blacklist joueurs</title>
+        <title>{tx.pageTitle}</title>
       </Head>
 
       {dialog}
@@ -345,39 +345,31 @@ function AdminBlacklistPage(_: StaffProps) {
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-12">
           <div className="mb-6">
-            <h1 className="text-3xl font-bold tracking-tight">
-              Blacklist joueurs
-            </h1>
-            <p className="text-sm text-neutral-400 mt-1">
-              Joueurs bannis pour ce tenant. Une entrée inactive est conservée
-              pour l&apos;historique mais n&apos;est plus appliquée.
-            </p>
+            <h1 className="text-3xl font-bold tracking-tight">{tx.heading}</h1>
+            <p className="text-sm text-neutral-400 mt-1">{tx.subtitle}</p>
           </div>
 
           {/* Formulaire d'ajout */}
           <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-5 mb-6">
             <h2 className="text-sm font-semibold text-neutral-200 mb-3">
-              Ajouter une entrée
+              {tx.addHeading}
             </h2>
-            <p className="text-xs text-neutral-500 mb-4">
-              Au moins un identifiant requis : BattleTag, pseudo
-              d&apos;affichage ou ID Discord.
-            </p>
+            <p className="text-xs text-neutral-500 mb-4">{tx.addHelp}</p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
               <Input
-                label="BattleTag"
+                label={tx.battleTagLabel}
                 value={form.battle_tag}
                 onChange={(v) => setForm((f) => ({ ...f, battle_tag: v }))}
                 placeholder="Joueur#1234"
               />
               <Input
-                label="Pseudo d'affichage"
+                label={tx.displayNameLabel}
                 value={form.display_name}
                 onChange={(v) => setForm((f) => ({ ...f, display_name: v }))}
-                placeholder="Pseudo"
+                placeholder={tx.displayNamePlaceholder}
               />
               <Input
-                label="ID Discord"
+                label={tx.discordIdLabel}
                 value={form.discord_user_id}
                 onChange={(v) => setForm((f) => ({ ...f, discord_user_id: v }))}
                 placeholder="123456789012345678"
@@ -385,16 +377,16 @@ function AdminBlacklistPage(_: StaffProps) {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
               <Input
-                label="Raison (optionnel)"
+                label={tx.reasonLabel}
                 value={form.reason}
                 onChange={(v) => setForm((f) => ({ ...f, reason: v }))}
-                placeholder="Comportement toxique, triche…"
+                placeholder={tx.reasonPlaceholder}
               />
               <Input
-                label="Notes internes (optionnel)"
+                label={tx.notesLabel}
                 value={form.notes}
                 onChange={(v) => setForm((f) => ({ ...f, notes: v }))}
-                placeholder="Contexte, références…"
+                placeholder={tx.notesPlaceholder}
               />
             </div>
             <div className="flex justify-end">
@@ -404,7 +396,7 @@ function AdminBlacklistPage(_: StaffProps) {
                 disabled={creating || !hasIdentifier}
                 className="px-4 py-2 rounded-xl bg-red-700 hover:bg-red-600 text-sm font-medium transition-colors disabled:opacity-50"
               >
-                {creating ? 'Ajout…' : 'Ajouter à la blacklist'}
+                {creating ? tx.adding : tx.addToBlacklist}
               </button>
             </div>
           </section>
@@ -419,7 +411,7 @@ function AdminBlacklistPage(_: StaffProps) {
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') submitSearch();
                 }}
-                placeholder="Rechercher (BattleTag, pseudo, ID Discord)…"
+                placeholder={tx.searchPlaceholder}
                 className="flex-1 px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
               />
               <button
@@ -427,7 +419,7 @@ function AdminBlacklistPage(_: StaffProps) {
                 onClick={submitSearch}
                 className="px-3 py-2 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm transition-colors"
               >
-                Rechercher
+                {tx.searchBtn}
               </button>
             </div>
 
@@ -436,9 +428,9 @@ function AdminBlacklistPage(_: StaffProps) {
               value={activeFilter}
               onChange={(e) => setFilters({ active: e.target.value || null })}
             >
-              <option value="">Tous statuts</option>
-              <option value="true">Actifs</option>
-              <option value="false">Inactifs</option>
+              <option value="">{tx.filterAllStatus}</option>
+              <option value="true">{tx.filterActive}</option>
+              <option value="false">{tx.filterInactive}</option>
             </select>
 
             <button
@@ -446,7 +438,7 @@ function AdminBlacklistPage(_: StaffProps) {
               onClick={fetchEntries}
               className="px-3 py-2 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm transition-colors"
             >
-              Rafraîchir
+              {tx.refresh}
             </button>
           </section>
 
@@ -462,13 +454,16 @@ function AdminBlacklistPage(_: StaffProps) {
             </div>
           ) : entries.length === 0 ? (
             <div className="text-center py-20 text-neutral-500 text-sm">
-              Aucune entrée dans la blacklist.
+              {tx.emptyEntries}
             </div>
           ) : (
             <>
               {typeof total === 'number' && (
                 <p className="text-xs text-neutral-500 mb-2">
-                  {total} entrée{total > 1 ? 's' : ''}
+                  {format(
+                    total > 1 ? tx.entriesCount_other : tx.entriesCount_one,
+                    { total }
+                  )}
                 </p>
               )}
               <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden">
@@ -489,7 +484,7 @@ function AdminBlacklistPage(_: StaffProps) {
                                     : 'bg-neutral-600/20 text-neutral-300 border-neutral-500/40'
                                 }`}
                               >
-                                {entry.active ? 'Actif' : 'Inactif'}
+                                {entry.active ? tx.statusActive : tx.statusInactive}
                               </span>
                               <span className="text-xs text-neutral-500">
                                 {formatDateFr(entry.created_at)}
@@ -508,7 +503,9 @@ function AdminBlacklistPage(_: StaffProps) {
                               )}
                               {entry.discord_user_id && (
                                 <span className="font-mono text-indigo-300 text-xs self-center">
-                                  Discord: {entry.discord_user_id}
+                                  {format(tx.discordLine, {
+                                    id: entry.discord_user_id,
+                                  })}
                                 </span>
                               )}
                             </div>
@@ -521,14 +518,14 @@ function AdminBlacklistPage(_: StaffProps) {
                                   onChange={(e) =>
                                     setEditReason(e.target.value)
                                   }
-                                  placeholder="Raison"
+                                  placeholder={tx.editReasonPlaceholder}
                                   className="w-full px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                                 />
                                 <textarea
                                   value={editNotes}
                                   onChange={(e) => setEditNotes(e.target.value)}
                                   rows={2}
-                                  placeholder="Notes internes"
+                                  placeholder={tx.editNotesPlaceholder}
                                   className="w-full px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                                 />
                                 <div className="flex gap-2">
@@ -538,9 +535,7 @@ function AdminBlacklistPage(_: StaffProps) {
                                     disabled={savingEdit}
                                     className="px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-xs font-medium transition-colors disabled:opacity-50"
                                   >
-                                    {savingEdit
-                                      ? 'Enregistrement…'
-                                      : 'Enregistrer'}
+                                    {savingEdit ? tx.savingEdit : tx.saveEdit}
                                   </button>
                                   <button
                                     type="button"
@@ -548,7 +543,7 @@ function AdminBlacklistPage(_: StaffProps) {
                                     disabled={savingEdit}
                                     className="px-3 py-1.5 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-xs transition-colors disabled:opacity-50"
                                   >
-                                    Annuler
+                                    {tx.cancel}
                                   </button>
                                 </div>
                               </div>
@@ -566,7 +561,9 @@ function AdminBlacklistPage(_: StaffProps) {
                                 )}
                                 {entry.banned_by && (
                                   <p className="text-xs text-neutral-600 mt-1 font-mono">
-                                    Banni par : {entry.banned_by}
+                                    {format(tx.bannedBy, {
+                                      who: entry.banned_by,
+                                    })}
                                   </p>
                                 )}
                               </>
@@ -582,7 +579,7 @@ function AdminBlacklistPage(_: StaffProps) {
                                 disabled={isBusy}
                                 className="px-3 py-1.5 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-xs transition-colors disabled:opacity-50"
                               >
-                                Éditer
+                                {tx.edit}
                               </button>
                               <button
                                 type="button"
@@ -594,7 +591,7 @@ function AdminBlacklistPage(_: StaffProps) {
                                     : 'bg-emerald-700 hover:bg-emerald-600'
                                 }`}
                               >
-                                {entry.active ? 'Désactiver' : 'Réactiver'}
+                                {entry.active ? tx.deactivate : tx.reactivate}
                               </button>
                               <button
                                 type="button"
@@ -602,7 +599,7 @@ function AdminBlacklistPage(_: StaffProps) {
                                 disabled={isBusy}
                                 className="px-3 py-1.5 rounded-lg bg-red-800 hover:bg-red-700 text-xs font-medium transition-colors disabled:opacity-50"
                               >
-                                Supprimer
+                                {tx.delete}
                               </button>
                             </div>
                           )}
@@ -618,18 +615,17 @@ function AdminBlacklistPage(_: StaffProps) {
           {/* Historique des détections */}
           <div className="mt-12 mb-6">
             <h2 className="text-2xl font-bold tracking-tight">
-              Historique des détections
+              {tx.historyHeading}
             </h2>
             <p className="text-sm text-neutral-400 mt-1">
-              Journal des correspondances détectées par le bot (scan, arrivée
-              d&apos;un membre) ou lors d&apos;une inscription sur le site.
+              {tx.historySubtitle}
             </p>
           </div>
 
           {/* Filtres alertes */}
           <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-4 mb-4 flex flex-wrap gap-3 items-center">
             <label className="flex items-center gap-2 text-sm">
-              <span className="text-neutral-400">Force</span>
+              <span className="text-neutral-400">{tx.forceLabel}</span>
               <select
                 className="px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 text-sm"
                 value={alertStrength}
@@ -637,14 +633,14 @@ function AdminBlacklistPage(_: StaffProps) {
                   setAlertStrength(e.target.value as '' | AlertStrength)
                 }
               >
-                <option value="">Toutes</option>
-                <option value="strong">Forte (strong)</option>
-                <option value="soft">Faible (soft)</option>
+                <option value="">{tx.forceAll}</option>
+                <option value="strong">{tx.forceStrong}</option>
+                <option value="soft">{tx.forceSoft}</option>
               </select>
             </label>
 
             <label className="flex items-center gap-2 text-sm">
-              <span className="text-neutral-400">Source</span>
+              <span className="text-neutral-400">{tx.sourceFilterLabel}</span>
               <select
                 className="px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 text-sm"
                 value={alertSource}
@@ -652,10 +648,10 @@ function AdminBlacklistPage(_: StaffProps) {
                   setAlertSource(e.target.value as '' | AlertSource)
                 }
               >
-                <option value="">Toutes</option>
-                <option value="bot_scan">Scan du bot</option>
-                <option value="bot_member_add">Arrivée membre</option>
-                <option value="registration">Inscription site</option>
+                <option value="">{tx.sourceAll}</option>
+                <option value="bot_scan">{tx.sourceBotScan}</option>
+                <option value="bot_member_add">{tx.sourceBotMemberAdd}</option>
+                <option value="registration">{tx.sourceRegistration}</option>
               </select>
             </label>
 
@@ -664,7 +660,7 @@ function AdminBlacklistPage(_: StaffProps) {
               onClick={() => fetchAlerts(null)}
               className="px-3 py-2 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm transition-colors"
             >
-              Rafraîchir
+              {tx.refresh}
             </button>
           </section>
 
@@ -680,7 +676,7 @@ function AdminBlacklistPage(_: StaffProps) {
             </div>
           ) : alerts.length === 0 ? (
             <div className="text-center py-20 text-neutral-500 text-sm">
-              Aucune détection enregistrée.
+              {tx.emptyAlerts}
             </div>
           ) : (
             <>
@@ -697,13 +693,13 @@ function AdminBlacklistPage(_: StaffProps) {
                           }`}
                         >
                           {alert.strength === 'strong'
-                            ? 'Forte'
+                            ? tx.alertStrong
                             : alert.strength === 'soft'
-                              ? 'Faible'
+                              ? tx.alertSoft
                               : alert.strength}
                         </span>
                         <span className="px-2 py-0.5 rounded-full text-xs font-medium border bg-indigo-600/20 text-indigo-200 border-indigo-500/40">
-                          {sourceLabel(alert.source)}
+                          {sourceLabel(alert.source, tx)}
                         </span>
                         <span className="text-xs text-neutral-500">
                           {formatDateFr(alert.createdAt)}
@@ -722,12 +718,12 @@ function AdminBlacklistPage(_: StaffProps) {
                           </span>
                         )}
                         <span className="font-mono text-indigo-300 text-xs self-center">
-                          Discord: {alert.discordUserId}
+                          {format(tx.discordLine, { id: alert.discordUserId })}
                         </span>
                       </div>
 
                       <p className="text-xs text-neutral-400 mt-1">
-                        Critère :{' '}
+                        {tx.criterionLabel}{' '}
                         <span className="text-neutral-200">
                           {alert.matchedOn}
                         </span>
@@ -735,7 +731,7 @@ function AdminBlacklistPage(_: StaffProps) {
 
                       {alert.context && (
                         <p className="text-xs text-neutral-500 mt-0.5">
-                          Contexte : {alert.context}
+                          {format(tx.contextLine, { context: alert.context })}
                         </p>
                       )}
                       {alert.reason && (
@@ -756,7 +752,7 @@ function AdminBlacklistPage(_: StaffProps) {
                     disabled={alertsLoadingMore}
                     className="px-4 py-2 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors disabled:opacity-50"
                   >
-                    {alertsLoadingMore ? 'Chargement…' : 'Charger plus'}
+                    {alertsLoadingMore ? tx.loadingMore : tx.loadMore}
                   </button>
                 </div>
               )}

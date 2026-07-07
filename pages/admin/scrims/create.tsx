@@ -7,6 +7,7 @@ import { useRouter } from 'next/router';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { withStaffPage } from '@/utils/staff';
+import { useAdminT } from '@/lib/i18n/useAdminT';
 import type { StaffProps, Scrim } from '@/types/admin';
 
 type TeamOption = { id: string; name: string; short_name: string | null };
@@ -14,6 +15,7 @@ type TeamOption = { id: string; name: string; short_name: string | null };
 export const getServerSideProps = withStaffPage('manager');
 
 function AdminScrimCreatePage(_props: StaffProps) {
+  const t = useAdminT('adminScrimsCreate');
   const router = useRouter();
   const { adminFetchJson } = useAdminFetch();
   const { mutateJson } = useIdempotentMutation();
@@ -47,12 +49,12 @@ function AdminScrimCreatePage(_props: StaffProps) {
     setError(null);
     try {
       if (!form.name.trim()) {
-        setError('Le nom est obligatoire.');
+        setError(t.errorNameRequired);
         setSubmitting(false);
         return;
       }
       if (form.team1_id && form.team2_id && form.team1_id === form.team2_id) {
-        setError('Les deux equipes doivent etre distinctes.');
+        setError(t.errorTeamsDistinct);
         setSubmitting(false);
         return;
       }
@@ -75,7 +77,7 @@ function AdminScrimCreatePage(_props: StaffProps) {
       });
       router.push(`/admin/scrims/${json.scrim.id}`);
     } catch (err) {
-      setError((err as Error)?.message || 'Erreur de creation.');
+      setError((err as Error)?.message || t.errorCreate);
     } finally {
       setSubmitting(false);
     }
@@ -84,11 +86,11 @@ function AdminScrimCreatePage(_props: StaffProps) {
   return (
     <>
       <Head>
-        <title>Admin – Nouveau scrim</title>
+        <title>{t.pageTitle}</title>
       </Head>
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
         <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-12">
-          <h1 className="text-3xl font-bold mb-6">Nouveau scrim</h1>
+          <h1 className="text-3xl font-bold mb-6">{t.heading}</h1>
 
           <form
             onSubmit={submit}
@@ -96,7 +98,7 @@ function AdminScrimCreatePage(_props: StaffProps) {
           >
             <div>
               <label className="block text-sm text-neutral-400 mb-1">
-                Nom *
+                {t.nameLabel} *
               </label>
               <input
                 value={form.name}
@@ -109,7 +111,7 @@ function AdminScrimCreatePage(_props: StaffProps) {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Equipe 1
+                  {t.team1Label}
                 </label>
                 <select
                   value={form.team1_id}
@@ -118,17 +120,17 @@ function AdminScrimCreatePage(_props: StaffProps) {
                   }
                   className="w-full px-3 py-2.5 rounded-lg bg-neutral-900/50 border border-neutral-600"
                 >
-                  <option value="">— Choisir —</option>
-                  {teams.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name}
+                  <option value="">{t.teamPlaceholder}</option>
+                  {teams.map((team) => (
+                    <option key={team.id} value={team.id}>
+                      {team.name}
                     </option>
                   ))}
                 </select>
               </div>
               <div>
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Equipe 2
+                  {t.team2Label}
                 </label>
                 <select
                   value={form.team2_id}
@@ -137,10 +139,10 @@ function AdminScrimCreatePage(_props: StaffProps) {
                   }
                   className="w-full px-3 py-2.5 rounded-lg bg-neutral-900/50 border border-neutral-600"
                 >
-                  <option value="">— Choisir —</option>
-                  {teams.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name}
+                  <option value="">{t.teamPlaceholder}</option>
+                  {teams.map((team) => (
+                    <option key={team.id} value={team.id}>
+                      {team.name}
                     </option>
                   ))}
                 </select>
@@ -150,7 +152,7 @@ function AdminScrimCreatePage(_props: StaffProps) {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Date prevue
+                  {t.scheduledLabel}
                 </label>
                 <input
                   type="datetime-local"
@@ -163,25 +165,25 @@ function AdminScrimCreatePage(_props: StaffProps) {
               </div>
               <div>
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Statut
+                  {t.statusLabel}
                 </label>
                 <select
                   value={form.status}
                   onChange={(e) => setForm({ ...form, status: e.target.value })}
                   className="w-full px-3 py-2.5 rounded-lg bg-neutral-900/50 border border-neutral-600"
                 >
-                  <option value="draft">Brouillon</option>
-                  <option value="scheduled">Planifie</option>
-                  <option value="running">En cours</option>
-                  <option value="completed">Termine</option>
-                  <option value="cancelled">Annule</option>
+                  <option value="draft">{t.statusDraft}</option>
+                  <option value="scheduled">{t.statusScheduled}</option>
+                  <option value="running">{t.statusRunning}</option>
+                  <option value="completed">{t.statusCompleted}</option>
+                  <option value="cancelled">{t.statusCancelled}</option>
                 </select>
               </div>
             </div>
 
             <div>
               <label className="block text-sm text-neutral-400 mb-1">
-                Jeu
+                {t.gameLabel}
               </label>
               <input
                 value={form.game}
@@ -193,7 +195,7 @@ function AdminScrimCreatePage(_props: StaffProps) {
 
             <div>
               <label className="block text-sm text-neutral-400 mb-1">
-                Description
+                {t.descriptionLabel}
               </label>
               <textarea
                 value={form.description}
@@ -207,7 +209,7 @@ function AdminScrimCreatePage(_props: StaffProps) {
 
             <div>
               <label className="block text-sm text-neutral-400 mb-1">
-                URL du stream
+                {t.streamUrlLabel}
               </label>
               <input
                 value={form.stream_url}
@@ -227,7 +229,7 @@ function AdminScrimCreatePage(_props: StaffProps) {
                   setForm({ ...form, is_public: e.target.checked })
                 }
               />
-              Visible publiquement
+              {t.isPublicLabel}
             </label>
 
             {error && (
@@ -242,14 +244,14 @@ function AdminScrimCreatePage(_props: StaffProps) {
                 disabled={submitting}
                 className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-sm font-medium"
               >
-                {submitting ? 'Creation…' : 'Creer le scrim'}
+                {submitting ? t.submitting : t.submit}
               </button>
               <button
                 type="button"
                 onClick={() => router.push('/admin/scrims')}
                 className="px-5 py-2.5 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm font-medium"
               >
-                Annuler
+                {t.cancel}
               </button>
             </div>
           </form>

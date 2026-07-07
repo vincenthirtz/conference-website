@@ -11,6 +11,7 @@ import type { StaffProps } from '@/types/admin';
 import { useUrlFilters } from '@/utils/useUrlFilters';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 type Severity = 'low' | 'medium' | 'high';
 type Category = 'dispute' | 'behavior' | 'technical' | 'other';
@@ -50,19 +51,25 @@ const FILTER_KEYS = ['status', 'severity', 'category', 'search'] as const;
 
 const PAGE_SIZE = 50;
 
-const CATEGORY_LABEL: Record<Category, string> = {
-  dispute: '⚖️ Litige',
-  behavior: '🚨 Safety',
-  technical: '🛠️ Technique',
-  other: '📬 Autre',
-};
+type Dict = ReturnType<typeof useAdminT<'adminSupport'>>;
 
-const STATUS_LABEL: Record<Status, string> = {
-  open: 'Ouvert',
-  in_progress: 'En cours',
-  resolved: 'Résolu',
-  closed: 'Fermé',
-};
+function getCategoryLabels(tx: Dict): Record<Category, string> {
+  return {
+    dispute: tx.catDispute,
+    behavior: tx.catBehavior,
+    technical: tx.catTechnical,
+    other: tx.catOther,
+  };
+}
+
+function getStatusLabels(tx: Dict): Record<Status, string> {
+  return {
+    open: tx.statusOpen,
+    in_progress: tx.statusInProgress,
+    resolved: tx.statusResolved,
+    closed: tx.statusClosed,
+  };
+}
 
 function formatDateFr(value: string): string {
   try {
@@ -118,6 +125,9 @@ type TicketsResponse = {
 type TicketUpdateResponse = { ticket: Ticket };
 
 function AdminSupportPage(_: StaffProps) {
+  const tx = useAdminT('adminSupport');
+  const categoryLabels = getCategoryLabels(tx);
+  const statusLabels = getStatusLabels(tx);
   const { addToast } = useToast();
   const { filters, setFilters } = useUrlFilters(FILTER_KEYS);
   const { adminFetchJson } = useAdminFetch();
@@ -216,7 +226,10 @@ function AdminSupportPage(_: StaffProps) {
     setResolutionNote(t.resolution_note || '');
     setBlacklistRows(['']);
     setBlacklistReason(
-      `Signalement #${t.id.slice(0, 8)} (${CATEGORY_LABEL[t.category]})`
+      format(tx.blacklistReasonDefault, {
+        id: t.id.slice(0, 8),
+        category: categoryLabels[t.category],
+      })
     );
   }
 
@@ -241,7 +254,7 @@ function AdminSupportPage(_: StaffProps) {
       .map((r) => r.trim())
       .filter((r) => r.length > 0);
     if (entries.length === 0) {
-      addToast('Aucun pseudo à ajouter.', 'error');
+      addToast(tx.noBlacklistPseudo, 'error');
       return;
     }
 
@@ -285,14 +298,16 @@ function AdminSupportPage(_: StaffProps) {
 
       if (failed === 0) {
         addToast(
-          `${added} pseudo${added > 1 ? 's' : ''} ajouté${added > 1 ? 's' : ''} à la blacklist.`,
+          format(added > 1 ? tx.blacklistAdded_other : tx.blacklistAdded_one, {
+            count: added,
+          }),
           'success'
         );
         setBlacklistRows(['']);
       } else if (added === 0) {
-        addToast(`Échec de l'ajout (${failed} en erreur).`, 'error');
+        addToast(format(tx.blacklistAllFailed, { failed }), 'error');
       } else {
-        addToast(`${added} ajouté(s), ${failed} en erreur.`, 'error');
+        addToast(format(tx.blacklistPartial, { added, failed }), 'error');
       }
     } finally {
       setBlacklisting(false);
@@ -312,7 +327,7 @@ function AdminSupportPage(_: StaffProps) {
           body: JSON.stringify(body),
         }
       );
-      addToast('Ticket mis à jour', 'success');
+      addToast(tx.ticketUpdated, 'success');
       setSelected(json.ticket);
       await fetchTickets();
     } catch (err) {
@@ -335,31 +350,22 @@ function AdminSupportPage(_: StaffProps) {
   return (
     <>
       <Head>
-        <title>Admin – Support</title>
+        <title>{tx.pageTitle}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-12">
           <div className="mb-6">
-            <h1 className="text-3xl font-bold tracking-tight">
-              Tickets de support
-            </h1>
-            <p className="text-sm text-neutral-400 mt-1">
-              Litiges, safety, technique. Les sévérités HAUTES déclenchent un
-              ping immédiat de la modération sur Discord.
-            </p>
+            <h1 className="text-3xl font-bold tracking-tight">{tx.heading}</h1>
+            <p className="text-sm text-neutral-400 mt-1">{tx.subtitle}</p>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-            <Stat label="Tickets" value={stats.total} />
-            <Stat label="Ouverts" value={stats.open} accent="red" />
+            <Stat label={tx.statTickets} value={stats.total} />
+            <Stat label={tx.statOpen} value={stats.open} accent="red" />
+            <Stat label={tx.statHigh} value={stats.high} accent="amber" />
             <Stat
-              label="Haute sévérité (actifs)"
-              value={stats.high}
-              accent="amber"
-            />
-            <Stat
-              label="Résolus / fermés"
+              label={tx.statResolved}
               value={stats.resolved}
               accent="emerald"
             />
@@ -385,7 +391,7 @@ function AdminSupportPage(_: StaffProps) {
                 type="text"
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
-                placeholder="Rechercher (sujet, message, auteur)…"
+                placeholder={tx.searchPlaceholder}
                 className="w-full pl-10 pr-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
               />
             </div>
@@ -395,11 +401,11 @@ function AdminSupportPage(_: StaffProps) {
               value={status}
               onChange={(e) => setFilters({ status: e.target.value || null })}
             >
-              <option value="">Tous statuts</option>
-              <option value="open">Ouvert</option>
-              <option value="in_progress">En cours</option>
-              <option value="resolved">Résolu</option>
-              <option value="closed">Fermé</option>
+              <option value="">{tx.filterAllStatus}</option>
+              <option value="open">{tx.statusOpen}</option>
+              <option value="in_progress">{tx.statusInProgress}</option>
+              <option value="resolved">{tx.statusResolved}</option>
+              <option value="closed">{tx.statusClosed}</option>
             </select>
 
             <select
@@ -407,10 +413,10 @@ function AdminSupportPage(_: StaffProps) {
               value={severity}
               onChange={(e) => setFilters({ severity: e.target.value || null })}
             >
-              <option value="">Toutes sévérités</option>
-              <option value="high">Haute</option>
-              <option value="medium">Moyenne</option>
-              <option value="low">Basse</option>
+              <option value="">{tx.filterAllSeverity}</option>
+              <option value="high">{tx.sevHigh}</option>
+              <option value="medium">{tx.sevMedium}</option>
+              <option value="low">{tx.sevLow}</option>
             </select>
 
             <select
@@ -418,11 +424,11 @@ function AdminSupportPage(_: StaffProps) {
               value={category}
               onChange={(e) => setFilters({ category: e.target.value || null })}
             >
-              <option value="">Toutes catégories</option>
-              <option value="dispute">Litige</option>
-              <option value="behavior">Safety</option>
-              <option value="technical">Technique</option>
-              <option value="other">Autre</option>
+              <option value="">{tx.filterAllCategory}</option>
+              <option value="dispute">{tx.catFilterDispute}</option>
+              <option value="behavior">{tx.catFilterBehavior}</option>
+              <option value="technical">{tx.catFilterTechnical}</option>
+              <option value="other">{tx.catFilterOther}</option>
             </select>
 
             <button
@@ -430,7 +436,7 @@ function AdminSupportPage(_: StaffProps) {
               onClick={fetchTickets}
               className="ml-auto px-3 py-2 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm transition-colors"
             >
-              Rafraîchir
+              {tx.refresh}
             </button>
           </section>
 
@@ -441,14 +447,14 @@ function AdminSupportPage(_: StaffProps) {
           )}
 
           {loading ? (
-            <LoadingSpinner className="py-20" label="Chargement des tickets…" />
+            <LoadingSpinner className="py-20" label={tx.loadingTickets} />
           ) : tickets.length === 0 ? (
             <EmptyState
-              title="Aucun ticket à afficher"
+              title={tx.emptyTitle}
               description={
                 status || severity || category || search
-                  ? 'Aucun ticket ne correspond aux filtres ou à la recherche.'
-                  : 'Aucun ticket de support pour le moment.'
+                  ? tx.emptyFiltered
+                  : tx.emptyNone
               }
             />
           ) : (
@@ -470,13 +476,13 @@ function AdminSupportPage(_: StaffProps) {
                       <span
                         className={`px-2 py-0.5 rounded-full text-xs font-medium border ${statusBadge(t.status)}`}
                       >
-                        {STATUS_LABEL[t.status]}
+                        {statusLabels[t.status]}
                       </span>
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-xs text-neutral-400">
-                          {CATEGORY_LABEL[t.category]}
+                          {categoryLabels[t.category]}
                         </span>
                         <span className="text-xs text-neutral-600">·</span>
                         <span className="text-xs text-neutral-500">
@@ -484,12 +490,12 @@ function AdminSupportPage(_: StaffProps) {
                         </span>
                         {t.source === 'discord_bot' && (
                           <span className="text-xs px-1.5 py-0.5 rounded bg-indigo-700/30 text-indigo-200 border border-indigo-500/40">
-                            Discord
+                            {tx.discordBadge}
                           </span>
                         )}
                         {t.is_anonymous && (
                           <span className="text-xs text-purple-300">
-                            _anonyme_
+                            {tx.anonymousTag}
                           </span>
                         )}
                       </div>
@@ -546,13 +552,13 @@ function AdminSupportPage(_: StaffProps) {
                     d="M15 19l-7-7 7-7"
                   />
                 </svg>
-                Précédent
+                {tx.prev}
               </button>
 
               <span className="text-neutral-400 text-sm">
                 {tickets.length > 0 ? offset + 1 : 0} –{' '}
                 {offset + tickets.length}
-                {total !== null ? ` sur ${total}` : ''}
+                {total !== null ? format(tx.paginationOf, { total }) : ''}
               </span>
 
               <button
@@ -565,7 +571,7 @@ function AdminSupportPage(_: StaffProps) {
                 onClick={() => setOffset(offset + PAGE_SIZE)}
                 className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
-                Suivant
+                {tx.next}
                 <svg
                   className="w-4 h-4"
                   fill="none"
@@ -606,14 +612,14 @@ function AdminSupportPage(_: StaffProps) {
                   <span
                     className={`px-2 py-0.5 rounded-full text-xs font-medium border ${statusBadge(selected.status)}`}
                   >
-                    {STATUS_LABEL[selected.status]}
+                    {statusLabels[selected.status]}
                   </span>
                   <span className="text-xs text-neutral-400">
-                    {CATEGORY_LABEL[selected.category]}
+                    {categoryLabels[selected.category]}
                   </span>
                 </div>
                 <h3 className="text-lg font-semibold text-white">
-                  {selected.subject || 'Signalement sans sujet'}
+                  {selected.subject || tx.subjectFallback}
                 </h3>
                 <p className="text-xs text-neutral-500 mt-0.5 font-mono">
                   {selected.id}
@@ -641,14 +647,16 @@ function AdminSupportPage(_: StaffProps) {
             </div>
 
             <div className="space-y-3 mb-5">
-              <Field label="Auteur">
+              <Field label={tx.fieldAuthor}>
                 {selected.is_anonymous ? (
-                  <span className="text-purple-300 italic">Anonyme</span>
+                  <span className="text-purple-300 italic">
+                    {tx.authorAnonymous}
+                  </span>
                 ) : (
                   <>
                     {selected.reporter_name ||
                       selected.discord_username ||
-                      '_(pas de nom)_'}
+                      tx.authorNoName}
                     {selected.reporter_email && (
                       <span className="block text-xs text-neutral-400 font-mono mt-0.5">
                         {selected.reporter_email}
@@ -656,11 +664,15 @@ function AdminSupportPage(_: StaffProps) {
                     )}
                     {selected.discord_username && (
                       <span className="block text-xs text-indigo-300 font-mono mt-0.5">
-                        Discord: @{selected.discord_username}
+                        {format(tx.discordAuthor, {
+                          username: selected.discord_username,
+                        })}
                         {selected.discord_user_id && (
                           <span className="text-neutral-500">
                             {' '}
-                            (ID: {selected.discord_user_id})
+                            {format(tx.discordIdSuffix, {
+                              id: selected.discord_user_id,
+                            })}
                           </span>
                         )}
                       </span>
@@ -669,20 +681,22 @@ function AdminSupportPage(_: StaffProps) {
                 )}
               </Field>
               {selected.source && (
-                <Field label="Source">
+                <Field label={tx.fieldSource}>
                   {selected.source === 'discord_bot'
-                    ? '🤖 Bot Discord'
-                    : '🌐 Formulaire web'}
+                    ? tx.sourceBot
+                    : tx.sourceWeb}
                 </Field>
               )}
-              <Field label="Créé le">{formatDateFr(selected.created_at)}</Field>
-              <Field label="Message">
+              <Field label={tx.fieldCreatedAt}>
+                {formatDateFr(selected.created_at)}
+              </Field>
+              <Field label={tx.fieldMessage}>
                 <div className="bg-neutral-900/50 border border-neutral-700 rounded-xl p-3 text-sm whitespace-pre-wrap leading-relaxed">
                   {selected.message}
                 </div>
               </Field>
               {selected.resolved_at && (
-                <Field label="Résolu le">
+                <Field label={tx.fieldResolvedAt}>
                   {formatDateFr(selected.resolved_at)}
                 </Field>
               )}
@@ -691,12 +705,10 @@ function AdminSupportPage(_: StaffProps) {
             <div className="space-y-3 border-t border-neutral-700 pt-4">
               <div>
                 <label className="block text-sm font-medium text-neutral-200">
-                  Ajouter à la blacklist
+                  {tx.blacklistHeading}
                 </label>
                 <p className="text-xs text-neutral-500 mt-1">
-                  Une ligne par pseudo. Si la valeur contient «&nbsp;#&nbsp;»
-                  elle est traitée comme un BattleTag, sinon comme un pseudo
-                  d&apos;affichage.
+                  {tx.blacklistHelp}
                 </p>
               </div>
 
@@ -707,14 +719,14 @@ function AdminSupportPage(_: StaffProps) {
                       type="text"
                       value={row}
                       onChange={(e) => setBlacklistRow(i, e.target.value)}
-                      placeholder="Pseudo ou BattleTag (ex: Joueur#1234)"
+                      placeholder={tx.blacklistRowPlaceholder}
                       className="flex-1 px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                     />
                     <button
                       type="button"
                       onClick={() => removeBlacklistRow(i)}
                       disabled={blacklisting}
-                      aria-label="Retirer la ligne"
+                      aria-label={tx.removeRowAria}
                       className="p-2 rounded-lg text-neutral-400 hover:text-red-300 hover:bg-neutral-700 transition-colors disabled:opacity-50"
                     >
                       <svg
@@ -739,19 +751,19 @@ function AdminSupportPage(_: StaffProps) {
                   disabled={blacklisting}
                   className="text-xs text-blue-300 hover:text-blue-200 transition-colors disabled:opacity-50"
                 >
-                  + Ajouter une ligne
+                  {tx.addRow}
                 </button>
               </div>
 
               <div>
                 <label className="block text-xs text-neutral-500 uppercase tracking-wide mb-1">
-                  Raison (optionnel)
+                  {tx.reasonLabel}
                 </label>
                 <input
                   type="text"
                   value={blacklistReason}
                   onChange={(e) => setBlacklistReason(e.target.value)}
-                  placeholder="Raison de l'ajout à la blacklist"
+                  placeholder={tx.reasonPlaceholder}
                   className="w-full px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                 />
               </div>
@@ -766,21 +778,21 @@ function AdminSupportPage(_: StaffProps) {
                   }
                   className="px-3 py-2 rounded-xl bg-red-700 hover:bg-red-600 text-sm font-medium transition-colors disabled:opacity-50"
                 >
-                  {blacklisting ? 'Ajout…' : 'Ajouter à la blacklist'}
+                  {blacklisting ? tx.blacklisting : tx.addToBlacklist}
                 </button>
               </div>
             </div>
 
             <div className="space-y-3 border-t border-neutral-700 pt-4">
               <label className="block text-sm font-medium text-neutral-200">
-                Note de résolution (visible uniquement par le staff)
+                {tx.resolutionLabel}
               </label>
               <textarea
                 value={resolutionNote}
                 onChange={(e) => setResolutionNote(e.target.value)}
                 rows={3}
                 className="w-full px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                placeholder="Action prise, contexte..."
+                placeholder={tx.resolutionPlaceholder}
               />
               <div className="flex flex-wrap gap-2 justify-end">
                 <button
@@ -789,7 +801,7 @@ function AdminSupportPage(_: StaffProps) {
                   disabled={updating || selected.status === 'in_progress'}
                   className="px-3 py-2 rounded-xl bg-amber-700 hover:bg-amber-600 text-sm font-medium transition-colors disabled:opacity-50"
                 >
-                  Marquer &laquo;&nbsp;en cours&nbsp;&raquo;
+                  {tx.markInProgress}
                 </button>
                 <button
                   type="button"
@@ -797,7 +809,7 @@ function AdminSupportPage(_: StaffProps) {
                   disabled={updating || selected.status === 'resolved'}
                   className="px-3 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-sm font-medium transition-colors disabled:opacity-50"
                 >
-                  Marquer résolu
+                  {tx.markResolved}
                 </button>
                 <button
                   type="button"
@@ -805,7 +817,7 @@ function AdminSupportPage(_: StaffProps) {
                   disabled={updating || selected.status === 'closed'}
                   className="px-3 py-2 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors disabled:opacity-50"
                 >
-                  Fermer
+                  {tx.close}
                 </button>
               </div>
             </div>

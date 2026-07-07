@@ -8,6 +8,7 @@ import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { MatchStatus } from '@/types/admin';
 import MatchHistoryDrawer from '@/components/admin/MatchHistoryDrawer';
 import Modal from '@/components/admin/Modal';
@@ -100,22 +101,24 @@ function statusColor(status: MatchStatus) {
   }
 }
 
-function statusLabel(status: MatchStatus) {
+type Dict = ReturnType<typeof useAdminT<'adminMatchDetail'>>;
+
+function statusLabel(status: MatchStatus, t: Dict) {
   switch (status) {
     case 'pending':
-      return 'À venir';
+      return t.statusPending;
     case 'ongoing':
-      return 'En cours';
+      return t.statusOngoing;
     case 'finished':
-      return 'Terminé';
+      return t.statusFinished;
     case 'cancelled':
-      return 'Annulé';
+      return t.statusCancelled;
     case 'disputed':
-      return 'En dispute';
+      return t.statusDisputed;
     case 'walkover':
-      return 'Forfait';
+      return t.statusWalkover;
     case 'postponed':
-      return 'Reporté';
+      return t.statusPostponed;
     default:
       return status || '—';
   }
@@ -139,6 +142,7 @@ type StaffProps = {
 };
 
 function MatchViewPage(_: StaffProps) {
+  const t = useAdminT('adminMatchDetail');
   const router = useRouter();
   const { matchId } = router.query;
   const matchIdStr = Array.isArray(matchId) ? matchId[0] : matchId;
@@ -173,7 +177,7 @@ function MatchViewPage(_: StaffProps) {
   async function openDispute() {
     if (!matchIdStr) return;
     if (disputeReason.trim().length === 0) {
-      setDisputeMsg('Saisis une raison.');
+      setDisputeMsg(t.errorReasonRequired);
       return;
     }
     setDisputeBusy(true);
@@ -187,7 +191,7 @@ function MatchViewPage(_: StaffProps) {
       setDisputeReason('');
       await fetchMatch();
     } catch (e: unknown) {
-      setDisputeMsg((e as Error).message || 'Erreur ouverture dispute');
+      setDisputeMsg((e as Error).message || t.errorOpenDispute);
     } finally {
       setDisputeBusy(false);
     }
@@ -196,7 +200,7 @@ function MatchViewPage(_: StaffProps) {
   async function resolveDispute() {
     if (!matchIdStr) return;
     if (resolveText.trim().length === 0) {
-      setDisputeMsg('Saisis une décision.');
+      setDisputeMsg(t.errorDecisionRequired);
       return;
     }
     setDisputeBusy(true);
@@ -225,7 +229,7 @@ function MatchViewPage(_: StaffProps) {
       setResolveTeam2Score('');
       await fetchMatch();
     } catch (e: unknown) {
-      setDisputeMsg((e as Error).message || 'Erreur résolution');
+      setDisputeMsg((e as Error).message || t.errorResolve);
     } finally {
       setDisputeBusy(false);
     }
@@ -233,10 +237,7 @@ function MatchViewPage(_: StaffProps) {
 
   async function cancelDispute() {
     if (!matchIdStr) return;
-    if (
-      !confirm('Annuler cette dispute (sans décision) ? Le motif sera effacé.')
-    )
-      return;
+    if (!confirm(t.confirmCancelDispute)) return;
     setDisputeBusy(true);
     setDisputeMsg(null);
     try {
@@ -246,7 +247,7 @@ function MatchViewPage(_: StaffProps) {
       );
       await fetchMatch();
     } catch (e: unknown) {
-      setDisputeMsg((e as Error).message || 'Erreur annulation');
+      setDisputeMsg((e as Error).message || t.errorCancel);
     } finally {
       setDisputeBusy(false);
     }
@@ -256,13 +257,13 @@ function MatchViewPage(_: StaffProps) {
     setLoading(true);
     setErrorMsg(null);
     try {
-      if (!matchIdStr) throw new Error('Match ID manquant');
+      if (!matchIdStr) throw new Error(t.errorMatchIdMissing);
       const json = await adminFetchJson<{ match: MatchRow }>(
         `/api/admin/matches/${matchIdStr}?includeGames=1`
       );
       setMatch(json.match as MatchRow);
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message || 'Erreur de chargement');
+      setErrorMsg((err as Error)?.message || t.errorLoad);
     } finally {
       setLoading(false);
     }
@@ -274,21 +275,22 @@ function MatchViewPage(_: StaffProps) {
   return (
     <>
       <Head>
-        <title>Admin · Match {matchIdStr}</title>
+        <title>{format(t.pageTitle, { id: matchIdStr ?? '' })}</title>
       </Head>
       <div className="min-h-screen bg-neutral-950 text-white pt-24">
         <div className="max-w-6xl mx-auto px-6 py-10">
           <div className="flex items-center justify-between gap-4 mb-6">
             <div>
               <p className="text-xs uppercase tracking-[0.18em] text-purple-200/80">
-                Admin · Match
+                {t.kicker}
               </p>
               <h1 className="text-2xl font-semibold">
-                {match?.round_name || 'Match'} {matchIdStr}
+                {match?.round_name || t.headingMatchFallback} {matchIdStr}
               </h1>
               {match?.tournament && (
                 <p className="text-sm text-gray-300">
-                  Tournoi : {match.tournament.name || match.tournament.id}
+                  {t.tournamentPrefix}{' '}
+                  {match.tournament.name || match.tournament.id}
                   {match.stage?.name ? ` • ${match.stage.name}` : ''}
                 </p>
               )}
@@ -298,21 +300,21 @@ function MatchViewPage(_: StaffProps) {
                 <span
                   className={`px-3 py-1 rounded-full text-sm font-medium ${statusColor(match.status)}`}
                 >
-                  {statusLabel(match.status)}
+                  {statusLabel(match.status, t)}
                 </span>
               )}
               <Link
                 href={`/admin/matches/${matchIdStr}/edit`}
                 className="px-3 py-1.5 rounded-lg bg-white/10 border border-white/15 text-sm hover:bg-white/15"
               >
-                Éditer
+                {t.edit}
               </Link>
               <button
                 onClick={() => setShowHistory(true)}
                 className="px-3 py-1.5 rounded-lg bg-white/10 border border-white/15 text-sm hover:bg-white/15"
-                title="Historique des modifications staff (score, statut, planning, dispute…)"
+                title={t.historyTitle}
               >
-                Historique
+                {t.history}
               </button>
               {match && match.status === 'disputed' ? (
                 <>
@@ -327,14 +329,14 @@ function MatchViewPage(_: StaffProps) {
                     }}
                     className="px-3 py-1.5 rounded-lg bg-emerald-600/80 border border-emerald-400/40 text-sm hover:bg-emerald-500"
                   >
-                    Résoudre la dispute
+                    {t.resolveDispute}
                   </button>
                   <button
                     onClick={cancelDispute}
                     disabled={disputeBusy}
                     className="px-3 py-1.5 rounded-lg bg-white/10 border border-white/15 text-sm hover:bg-white/15 disabled:opacity-50"
                   >
-                    Annuler la dispute
+                    {t.cancelDispute}
                   </button>
                 </>
               ) : (
@@ -348,7 +350,7 @@ function MatchViewPage(_: StaffProps) {
                     }}
                     className="px-3 py-1.5 rounded-lg bg-orange-600/80 border border-orange-400/40 text-sm hover:bg-orange-500"
                   >
-                    Ouvrir une dispute
+                    {t.openDispute}
                   </button>
                 )
               )}
@@ -356,14 +358,14 @@ function MatchViewPage(_: StaffProps) {
                 onClick={() => fetchMatch()}
                 className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-sm hover:bg-white/10"
               >
-                Rafraîchir
+                {t.refresh}
               </button>
             </div>
           </div>
 
           {loading && (
             <div className="p-4 rounded-lg bg-white/5 border border-white/10">
-              Chargement…
+              {t.loading}
             </div>
           )}
 
@@ -386,19 +388,21 @@ function MatchViewPage(_: StaffProps) {
                   <div className="flex items-start justify-between gap-4 mb-2">
                     <h2 className="text-lg font-semibold">
                       {match.status === 'disputed'
-                        ? 'Dispute en cours'
-                        : 'Dispute résolue'}
+                        ? t.disputeOngoingHeading
+                        : t.disputeResolvedHeading}
                     </h2>
                     {match.dispute_opened_at && (
                       <span className="text-xs text-gray-300">
-                        Ouverte : {formatDateTime(match.dispute_opened_at)}
+                        {format(t.disputeOpenedAt, {
+                          date: formatDateTime(match.dispute_opened_at),
+                        })}
                       </span>
                     )}
                   </div>
                   {match.dispute_reason && (
                     <div className="mb-3">
                       <p className="text-xs uppercase tracking-[0.16em] text-gray-400">
-                        Motif
+                        {t.motifLabel}
                       </p>
                       <p className="text-sm text-gray-100 whitespace-pre-wrap">
                         {match.dispute_reason}
@@ -408,7 +412,7 @@ function MatchViewPage(_: StaffProps) {
                   {match.dispute_resolution && (
                     <div>
                       <p className="text-xs uppercase tracking-[0.16em] text-gray-400">
-                        Décision
+                        {t.decisionLabel}
                         {match.dispute_resolved_at &&
                           ` · ${formatDateTime(match.dispute_resolved_at)}`}
                       </p>
@@ -419,8 +423,7 @@ function MatchViewPage(_: StaffProps) {
                   )}
                   {match.status === 'disputed' && (
                     <p className="text-xs text-orange-200 mt-3">
-                      Tant que cette dispute est ouverte, le score ne peut pas
-                      être modifié et la propagation bracket est bloquée.
+                      {t.disputeBlockedNote}
                     </p>
                   )}
                 </div>
@@ -429,17 +432,21 @@ function MatchViewPage(_: StaffProps) {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="p-4 rounded-xl bg-white/5 border border-white/10">
                   <p className="text-xs uppercase tracking-[0.16em] text-gray-400">
-                    Planification
+                    {t.planningHeading}
                   </p>
                   <p className="text-sm text-gray-200">
-                    Début : {formatDateTime(match.scheduled_at)}
+                    {format(t.startLabel, {
+                      date: formatDateTime(match.scheduled_at),
+                    })}
                   </p>
                   <p className="text-sm text-gray-200">
-                    Fin : {formatDateTime(match.completed_at)}
+                    {format(t.endLabel, {
+                      date: formatDateTime(match.completed_at),
+                    })}
                   </p>
                   {match.stream_url && (
                     <p className="text-sm text-indigo-200 mt-2 break-all">
-                      Stream :{' '}
+                      {t.streamLabel}{' '}
                       <a
                         href={match.stream_url}
                         target="_blank"
@@ -453,38 +460,44 @@ function MatchViewPage(_: StaffProps) {
                 </div>
                 <div className="p-4 rounded-xl bg-white/5 border border-white/10">
                   <p className="text-xs uppercase tracking-[0.16em] text-gray-400">
-                    Format
+                    {t.formatHeading}
                   </p>
                   <p className="text-sm text-gray-200">
-                    BO : {match.match_format || '—'}
+                    {format(t.boLabel, { value: match.match_format || '—' })}
                   </p>
                   <p className="text-sm text-gray-200">
-                    Round : {match.round_name || match.round_number || '—'}
+                    {format(t.roundLabel, {
+                      value: match.round_name || match.round_number || '—',
+                    })}
                   </p>
                   {match.lobby_code && (
                     <p className="text-sm text-gray-200 mt-2">
-                      Lobby : {match.lobby_code}
+                      {format(t.lobbyLabel, { code: match.lobby_code })}
                     </p>
                   )}
                 </div>
                 <div className="p-4 rounded-xl bg-white/5 border border-white/10">
                   <p className="text-xs uppercase tracking-[0.16em] text-gray-400">
-                    Résumé
+                    {t.summaryHeading}
                   </p>
                   <p className="text-sm text-gray-200">
-                    Score : {match.team1_score ?? 0} - {match.team2_score ?? 0}
+                    {format(t.scoreLabel, {
+                      s1: match.team1_score ?? 0,
+                      s2: match.team2_score ?? 0,
+                    })}
                   </p>
                   <p className="text-sm text-gray-200">
-                    Vainqueur :{' '}
-                    {match.winner_team_id
-                      ? match.winner_team_id === match.team1_id
-                        ? team1?.name || 'Équipe 1'
-                        : team2?.name || 'Équipe 2'
-                      : '—'}
+                    {format(t.winnerLabel, {
+                      name: match.winner_team_id
+                        ? match.winner_team_id === match.team1_id
+                          ? team1?.name || t.team1Fallback
+                          : team2?.name || t.team2Fallback
+                        : '—',
+                    })}
                   </p>
                   {match.notes && (
                     <p className="text-sm text-gray-300 mt-2 whitespace-pre-wrap">
-                      Notes : {match.notes}
+                      {format(t.notesLabel, { notes: match.notes })}
                     </p>
                   )}
                 </div>
@@ -511,9 +524,9 @@ function MatchViewPage(_: StaffProps) {
               {match.games && match.games.length > 0 && (
                 <div className="p-4 rounded-xl bg-white/5 border border-white/10">
                   <div className="flex items-center justify-between mb-3">
-                    <h2 className="text-lg font-semibold">Détails des maps</h2>
+                    <h2 className="text-lg font-semibold">{t.mapsHeading}</h2>
                     <span className="text-sm text-gray-400">
-                      {match.games.length} map(s)
+                      {format(t.mapsCount, { count: match.games.length })}
                     </span>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -533,10 +546,12 @@ function MatchViewPage(_: StaffProps) {
                           <div className="flex items-center justify-between">
                             <div>
                               <p className="text-sm font-semibold">
-                                {g.map_name || 'Map'}
+                                {g.map_name || t.mapFallback}
                               </p>
                               <p className="text-xs text-gray-400">
-                                Ordre : {g.map_order ?? '—'}
+                                {format(t.orderLabel, {
+                                  order: g.map_order ?? '—',
+                                })}
                               </p>
                             </div>
                             <div className="text-sm font-mono bg-white/10 px-2 py-1 rounded">
@@ -544,8 +559,8 @@ function MatchViewPage(_: StaffProps) {
                             </div>
                           </div>
                           <div className="text-xs text-gray-400 mt-1">
-                            {g.is_tiebreaker ? 'Tiebreaker · ' : ''}
-                            {g.went_overtime ? 'Overtime' : 'Temps regl.'}
+                            {g.is_tiebreaker ? t.tiebreakerPrefix : ''}
+                            {g.went_overtime ? t.overtime : t.regularTime}
                           </div>
                         </div>
                       ))}
@@ -572,8 +587,8 @@ function MatchViewPage(_: StaffProps) {
         disableBackdropClose={disputeBusy}
         panelChromeClassName="bg-neutral-900 border border-neutral-700 rounded-2xl shadow-2xl"
         size="lg"
-        title="Ouvrir une dispute"
-        subtitle="Le match passera en statut « disputed ». Tant qu'il y est, le score ne peut pas être modifié et la propagation bracket est bloquée."
+        title={t.openDisputeTitle}
+        subtitle={t.openDisputeSubtitle}
         footer={
           <>
             <button
@@ -581,25 +596,27 @@ function MatchViewPage(_: StaffProps) {
               disabled={disputeBusy}
               className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium disabled:opacity-50"
             >
-              Annuler
+              {t.cancel}
             </button>
             <button
               onClick={openDispute}
               disabled={disputeBusy || disputeReason.trim().length === 0}
               className="px-4 py-2 rounded-lg bg-orange-600 hover:bg-orange-500 text-sm font-medium disabled:opacity-50"
             >
-              {disputeBusy ? 'Ouverture...' : 'Ouvrir la dispute'}
+              {disputeBusy ? t.opening : t.openDisputeSubmit}
             </button>
           </>
         }
       >
-        <label className="block text-sm mb-1 text-neutral-300">Motif</label>
+        <label className="block text-sm mb-1 text-neutral-300">
+          {t.motifModalLabel}
+        </label>
         <textarea
           value={disputeReason}
           onChange={(e) => setDisputeReason(e.target.value)}
           rows={5}
           maxLength={2000}
-          placeholder="Ex : score contesté par l'équipe X, capture d'écran fournie..."
+          placeholder={t.motifPlaceholder}
           className="w-full px-3 py-2 rounded bg-neutral-800 border border-neutral-700 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
         />
         {disputeMsg && (
@@ -614,8 +631,8 @@ function MatchViewPage(_: StaffProps) {
         disableBackdropClose={disputeBusy}
         panelChromeClassName="bg-neutral-900 border border-neutral-700 rounded-2xl shadow-2xl"
         size="lg"
-        title="Résoudre la dispute"
-        subtitle="Saisis la décision finale. Tu peux corriger le score si nécessaire — la propagation bracket sera relancée automatiquement."
+        title={t.resolveDisputeTitle}
+        subtitle={t.resolveDisputeSubtitle}
         footer={
           <>
             <button
@@ -623,14 +640,14 @@ function MatchViewPage(_: StaffProps) {
               disabled={disputeBusy}
               className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium disabled:opacity-50"
             >
-              Annuler
+              {t.cancel}
             </button>
             <button
               onClick={resolveDispute}
               disabled={disputeBusy || resolveText.trim().length === 0}
               className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-sm font-medium disabled:opacity-50"
             >
-              {disputeBusy ? 'Résolution...' : 'Appliquer la décision'}
+              {disputeBusy ? t.resolving : t.applyDecision}
             </button>
           </>
         }
@@ -638,19 +655,19 @@ function MatchViewPage(_: StaffProps) {
         {match && (
           <>
             <label className="block text-sm mb-1 text-neutral-300">
-              Décision
+              {t.decisionModalLabel}
             </label>
             <textarea
               value={resolveText}
               onChange={(e) => setResolveText(e.target.value)}
               rows={4}
               maxLength={2000}
-              placeholder="Ex : score corrigé en 2-1, screenshot validé, etc."
+              placeholder={t.decisionPlaceholder}
               className="w-full px-3 py-2 rounded bg-neutral-800 border border-neutral-700 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 mb-3"
             />
 
             <label className="block text-sm mb-1 text-neutral-300">
-              Statut après résolution
+              {t.statusAfterLabel}
             </label>
             <select
               value={resolveResumeStatus}
@@ -659,10 +676,10 @@ function MatchViewPage(_: StaffProps) {
               }
               className="w-full px-3 py-2 rounded bg-neutral-800 border border-neutral-700 text-sm mb-3"
             >
-              <option value="finished">Terminé (avec score)</option>
-              <option value="walkover">Forfait</option>
-              <option value="ongoing">En cours</option>
-              <option value="pending">À venir</option>
+              <option value="finished">{t.resumeFinished}</option>
+              <option value="walkover">{t.resumeWalkover}</option>
+              <option value="ongoing">{t.resumeOngoing}</option>
+              <option value="pending">{t.resumePending}</option>
             </select>
 
             {(resolveResumeStatus === 'finished' ||
@@ -670,8 +687,12 @@ function MatchViewPage(_: StaffProps) {
               <div className="grid grid-cols-2 gap-2 mb-3">
                 <div>
                   <label className="block text-xs mb-1 text-neutral-400">
-                    Score{' '}
-                    {match.team1?.short_name || match.team1?.name || 'Équipe 1'}
+                    {format(t.scoreFor, {
+                      team:
+                        match.team1?.short_name ||
+                        match.team1?.name ||
+                        t.team1Fallback,
+                    })}
                   </label>
                   <input
                     type="number"
@@ -683,8 +704,12 @@ function MatchViewPage(_: StaffProps) {
                 </div>
                 <div>
                   <label className="block text-xs mb-1 text-neutral-400">
-                    Score{' '}
-                    {match.team2?.short_name || match.team2?.name || 'Équipe 2'}
+                    {format(t.scoreFor, {
+                      team:
+                        match.team2?.short_name ||
+                        match.team2?.name ||
+                        t.team2Fallback,
+                    })}
                   </label>
                   <input
                     type="number"
@@ -716,6 +741,7 @@ function TeamLine({
   side: 'home' | 'away';
   score: number | null | undefined;
 }) {
+  const t = useAdminT('adminMatchDetail');
   return (
     <div className="flex items-center gap-3 min-w-0">
       <div className="w-10 h-10 rounded-full bg-white/10 border border-white/15 flex items-center justify-center text-sm font-semibold">
@@ -723,9 +749,12 @@ function TeamLine({
       </div>
       <div className="min-w-0">
         <div className="text-sm font-semibold truncate">
-          {team?.name || `Équipe ${side === 'home' ? '1' : '2'}`}
+          {team?.name ||
+            format(t.teamFallback, { n: side === 'home' ? '1' : '2' })}
         </div>
-        <div className="text-xs text-gray-400">Score : {score ?? 0}</div>
+        <div className="text-xs text-gray-400">
+          {format(t.teamScore, { score: score ?? 0 })}
+        </div>
       </div>
     </div>
   );

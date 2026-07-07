@@ -23,6 +23,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast/ToastContext';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { useDraftState } from '@/hooks/useDraftState';
 import { withStaffPage } from '@/utils/staff';
 import { supabaseAdmin } from '@/utils/supabase';
@@ -61,18 +62,23 @@ function errMsg(err: unknown): string {
 }
 
 function AdminDraftPage({ blockReason }: PageProps) {
+  const t = useAdminT('adminMatchDraft');
   if (blockReason) {
     const label =
       blockReason.code === 'MATCH_NOT_FOUND'
-        ? 'Ce match est introuvable dans ton tenant.'
+        ? t.blockMatchNotFound
         : blockReason.code === 'NO_TOURNAMENT'
-          ? 'Ce match n’est rattaché à aucun tournoi — impossible de résoudre le jeu.'
-          : `Ce match n’a pas de jeu draftable${
-              blockReason.detail ? ` (jeu actuel : ${blockReason.detail})` : ''
-            }. Le draft est uniquement disponible pour LoL et Dota 2.`;
+          ? t.blockNoTournament
+          : format(t.blockNotDraftable, {
+              detail: blockReason.detail
+                ? format(t.blockNotDraftableDetail, {
+                    detail: blockReason.detail,
+                  })
+                : '',
+            });
     return (
       <main className="mx-auto max-w-3xl p-6 text-neutral-200">
-        <h1 className="text-2xl font-bold text-white">Draft indisponible</h1>
+        <h1 className="text-2xl font-bold text-white">{t.unavailableHeading}</h1>
         <p className="mt-3 text-neutral-300">{label}</p>
       </main>
     );

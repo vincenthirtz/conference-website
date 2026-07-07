@@ -8,6 +8,7 @@ import { useRouter } from 'next/router';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { withStaffPage } from '@/utils/staff';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { StaffProps, Scrim } from '@/types/admin';
 
 type TeamOption = { id: string; name: string; short_name: string | null };
@@ -48,6 +49,7 @@ function toLocalInput(iso: string | null): string {
 }
 
 function AdminScrimEditPage(_props: StaffProps) {
+  const t = useAdminT('adminScrimDetail');
   const router = useRouter();
   const { adminFetchJson } = useAdminFetch();
   const { mutateJson } = useIdempotentMutation();
@@ -66,7 +68,7 @@ function AdminScrimEditPage(_props: StaffProps) {
     setLoading(true);
     setError(null);
     try {
-      const [s, m, t] = await Promise.all([
+      const [s, m, teamsRes] = await Promise.all([
         adminFetchJson<{ scrim: ScrimWithTeams }>(`/api/admin/scrims/${id}`),
         adminFetchJson<{ matches: ScrimMatch[] }>(
           `/api/admin/scrims/${id}/matches`
@@ -77,13 +79,13 @@ function AdminScrimEditPage(_props: StaffProps) {
       ]);
       setScrim(s.scrim);
       setMatches(m.matches || []);
-      setTeams(t.teams || []);
+      setTeams(teamsRes.teams || []);
     } catch (err) {
-      setError((err as Error)?.message || 'Erreur de chargement.');
+      setError((err as Error)?.message || t.errorLoad);
     } finally {
       setLoading(false);
     }
-  }, [adminFetchJson, id]);
+  }, [adminFetchJson, id, t.errorLoad]);
 
   useEffect(() => {
     if (!router.isReady) return;
@@ -112,7 +114,7 @@ function AdminScrimEditPage(_props: StaffProps) {
       });
       await fetchAll();
     } catch (err) {
-      setError((err as Error)?.message || 'Erreur d enregistrement.');
+      setError((err as Error)?.message || t.errorSave);
     } finally {
       setSaving(false);
     }
@@ -128,19 +130,19 @@ function AdminScrimEditPage(_props: StaffProps) {
       });
       await fetchAll();
     } catch (err) {
-      setError((err as Error)?.message || 'Erreur de creation du match.');
+      setError((err as Error)?.message || t.errorCreateMatch);
     } finally {
       setCreatingMatch(false);
     }
   }
 
   async function deleteScrim() {
-    if (!confirm('Supprimer ce scrim et ses matchs ?')) return;
+    if (!confirm(t.confirmDelete)) return;
     try {
       await adminFetchJson(`/api/admin/scrims/${id}`, { method: 'DELETE' });
       router.push('/admin/scrims');
     } catch (err) {
-      setError((err as Error)?.message || 'Erreur de suppression.');
+      setError((err as Error)?.message || t.errorDelete);
     }
   }
 
@@ -153,7 +155,7 @@ function AdminScrimEditPage(_props: StaffProps) {
               {error}
             </div>
           ) : (
-            <div className="text-neutral-400 text-sm">Chargement…</div>
+            <div className="text-neutral-400 text-sm">{t.loading}</div>
           )}
         </div>
       </div>
@@ -163,7 +165,7 @@ function AdminScrimEditPage(_props: StaffProps) {
   return (
     <>
       <Head>
-        <title>{scrim.name} – Scrim admin</title>
+        <title>{format(t.headTitle, { name: scrim.name })}</title>
       </Head>
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-12 space-y-6">
@@ -173,18 +175,18 @@ function AdminScrimEditPage(_props: StaffProps) {
                 href="/admin/scrims"
                 className="text-sm text-neutral-400 hover:text-white"
               >
-                ← Tous les scrims
+                {t.backAll}
               </Link>
               <h1 className="text-3xl font-bold mt-1">{scrim.name}</h1>
               <p className="text-xs text-neutral-500 mt-1">
-                Slug : {scrim.slug || '—'}
+                {format(t.slug, { slug: scrim.slug || '—' })}
               </p>
             </div>
             <button
               onClick={deleteScrim}
               className="px-3 py-2 rounded-lg bg-red-700 hover:bg-red-600 text-xs"
             >
-              Supprimer
+              {t.delete}
             </button>
           </div>
 
@@ -195,11 +197,11 @@ function AdminScrimEditPage(_props: StaffProps) {
           )}
 
           <section className="bg-neutral-800/50 border border-neutral-700/50 rounded-2xl p-6 space-y-4">
-            <h2 className="text-lg font-semibold">Informations</h2>
+            <h2 className="text-lg font-semibold">{t.infoHeading}</h2>
 
             <div>
               <label className="block text-sm text-neutral-400 mb-1">
-                Nom
+                {t.nameLabel}
               </label>
               <input
                 value={scrim.name}
@@ -211,7 +213,7 @@ function AdminScrimEditPage(_props: StaffProps) {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Equipe 1
+                  {t.team1Label}
                 </label>
                 <select
                   value={scrim.team1_id || ''}
@@ -220,17 +222,17 @@ function AdminScrimEditPage(_props: StaffProps) {
                   }
                   className="w-full px-3 py-2.5 rounded-lg bg-neutral-900/50 border border-neutral-600"
                 >
-                  <option value="">— Aucune —</option>
-                  {teams.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name}
+                  <option value="">{t.teamNone}</option>
+                  {teams.map((team) => (
+                    <option key={team.id} value={team.id}>
+                      {team.name}
                     </option>
                   ))}
                 </select>
               </div>
               <div>
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Equipe 2
+                  {t.team2Label}
                 </label>
                 <select
                   value={scrim.team2_id || ''}
@@ -239,10 +241,10 @@ function AdminScrimEditPage(_props: StaffProps) {
                   }
                   className="w-full px-3 py-2.5 rounded-lg bg-neutral-900/50 border border-neutral-600"
                 >
-                  <option value="">— Aucune —</option>
-                  {teams.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name}
+                  <option value="">{t.teamNone}</option>
+                  {teams.map((team) => (
+                    <option key={team.id} value={team.id}>
+                      {team.name}
                     </option>
                   ))}
                 </select>
@@ -252,7 +254,7 @@ function AdminScrimEditPage(_props: StaffProps) {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Date prevue
+                  {t.scheduledLabel}
                 </label>
                 <input
                   type="datetime-local"
@@ -270,7 +272,7 @@ function AdminScrimEditPage(_props: StaffProps) {
               </div>
               <div>
                 <label className="block text-sm text-neutral-400 mb-1">
-                  Statut
+                  {t.statusLabel}
                 </label>
                 <select
                   value={scrim.status}
@@ -279,18 +281,18 @@ function AdminScrimEditPage(_props: StaffProps) {
                   }
                   className="w-full px-3 py-2.5 rounded-lg bg-neutral-900/50 border border-neutral-600"
                 >
-                  <option value="draft">Brouillon</option>
-                  <option value="scheduled">Planifie</option>
-                  <option value="running">En cours</option>
-                  <option value="completed">Termine</option>
-                  <option value="cancelled">Annule</option>
+                  <option value="draft">{t.statusDraft}</option>
+                  <option value="scheduled">{t.statusScheduled}</option>
+                  <option value="running">{t.statusRunning}</option>
+                  <option value="completed">{t.statusCompleted}</option>
+                  <option value="cancelled">{t.statusCancelled}</option>
                 </select>
               </div>
             </div>
 
             <div>
               <label className="block text-sm text-neutral-400 mb-1">
-                URL du stream
+                {t.streamUrlLabel}
               </label>
               <input
                 value={scrim.stream_url || ''}
@@ -303,7 +305,7 @@ function AdminScrimEditPage(_props: StaffProps) {
 
             <div>
               <label className="block text-sm text-neutral-400 mb-1">
-                Description
+                {t.descriptionLabel}
               </label>
               <textarea
                 value={scrim.description || ''}
@@ -323,7 +325,7 @@ function AdminScrimEditPage(_props: StaffProps) {
                   setScrim({ ...scrim, is_public: e.target.checked })
                 }
               />
-              Visible publiquement
+              {t.isPublicLabel}
             </label>
 
             <div className="flex gap-3 pt-2">
@@ -332,7 +334,7 @@ function AdminScrimEditPage(_props: StaffProps) {
                 disabled={saving}
                 className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-sm font-medium"
               >
-                {saving ? 'Enregistrement…' : 'Enregistrer'}
+                {saving ? t.saving : t.save}
               </button>
             </div>
           </section>
@@ -340,22 +342,19 @@ function AdminScrimEditPage(_props: StaffProps) {
           <section className="bg-neutral-800/50 border border-neutral-700/50 rounded-2xl p-6">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold">
-                Matchs ({matches.length})
+                {format(t.matchesHeading, { count: matches.length })}
               </h2>
               <button
                 onClick={addMatch}
                 disabled={creatingMatch}
                 className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-xs font-medium"
               >
-                + Ajouter un match
+                {t.addMatch}
               </button>
             </div>
 
             {matches.length === 0 ? (
-              <p className="text-sm text-neutral-400">
-                Aucun match. Ajoute un premier match pour cette journee de
-                scrim.
-              </p>
+              <p className="text-sm text-neutral-400">{t.matchesEmpty}</p>
             ) : (
               <ul className="space-y-2">
                 {matches.map((m, i) => (
@@ -368,9 +367,10 @@ function AdminScrimEditPage(_props: StaffProps) {
                         #{i + 1}
                       </span>
                       <span className="text-sm">
-                        {(m.team1?.name || 'Equipe 1') +
-                          ' vs ' +
-                          (m.team2?.name || 'Equipe 2')}
+                        {format(t.matchTeamsVs, {
+                          team1: m.team1?.name || t.defaultTeam1,
+                          team2: m.team2?.name || t.defaultTeam2,
+                        })}
                       </span>
                       <span className="text-xs text-neutral-400">
                         {m.team1_score ?? '—'} – {m.team2_score ?? '—'}
@@ -383,7 +383,7 @@ function AdminScrimEditPage(_props: StaffProps) {
                       href={`/admin/matches/${m.id}/edit`}
                       className="text-xs text-blue-400 hover:underline"
                     >
-                      Editer →
+                      {t.edit}
                     </Link>
                   </li>
                 ))}

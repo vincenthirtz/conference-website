@@ -13,6 +13,7 @@ import MatchTimeline from '@/components/admin/MatchTimeline';
 import MatchCastAssignments from '@/components/admin/MatchCastAssignments';
 import { useToast } from '@/components/Toast';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type {
   StaffProps,
   Match,
@@ -21,6 +22,8 @@ import type {
   StageMini,
   TeamMini,
 } from '@/types/admin';
+
+type Dict = ReturnType<typeof useAdminT<'adminMatchEdit'>>;
 
 const STATUS_ORDER: Record<string, number> = {
   pending: 0,
@@ -79,22 +82,22 @@ function formatDateTimeNice(iso: string | null): string {
   }
 }
 
-function statusLabel(status: MatchStatus) {
+function statusLabel(status: MatchStatus, t: Dict) {
   switch (status) {
     case 'pending':
-      return 'À venir';
+      return t.statusPending;
     case 'ongoing':
-      return 'En cours';
+      return t.statusOngoing;
     case 'finished':
-      return 'Terminé';
+      return t.statusFinished;
     case 'cancelled':
-      return 'Annulé';
+      return t.statusCancelled;
     case 'postponed':
-      return 'Reporté';
+      return t.statusPostponed;
     case 'disputed':
-      return 'Contesté';
+      return t.statusDisputed;
     case 'walkover':
-      return 'Walkover';
+      return t.statusWalkover;
     default:
       return status;
   }
@@ -122,6 +125,7 @@ function statusColor(status: MatchStatus) {
 }
 
 function AdminMatchEditPage({ staff }: StaffProps) {
+  const t = useAdminT('adminMatchEdit');
   const router = useRouter();
   const { matchId } = router.query;
   const { addToast } = useToast();
@@ -209,7 +213,7 @@ function AdminMatchEditPage({ staff }: StaffProps) {
       );
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || 'Impossible de charger le match');
+        throw new Error(json.error || t.errorLoadMatch);
       }
 
       const json: ApiResponse = await res.json();
@@ -253,10 +257,7 @@ function AdminMatchEditPage({ staff }: StaffProps) {
         team2_score: m.team2_score != null ? String(m.team2_score) : '',
       });
     } catch (err: unknown) {
-      setErrorMsg(
-        (err as Error)?.message ??
-          'Erreur inattendue lors du chargement du match'
-      );
+      setErrorMsg((err as Error)?.message ?? t.errorLoadUnexpected);
     } finally {
       setLoading(false);
     }
@@ -292,10 +293,7 @@ function AdminMatchEditPage({ staff }: StaffProps) {
       if (!metaRes.ok) {
         const json = await metaRes.json().catch(() => ({}));
         if (metaRes.status === 409 || json.code === 'CONFLICT') {
-          setConflictMsg(
-            json.error ||
-              'Ce match a été modifié par un autre utilisateur. Rechargez la page et réessayez.'
-          );
+          setConflictMsg(json.error || t.conflictMsg);
           setConflictServerTime(json.server_updated_at ?? null);
           await fetchMatch();
           return;
@@ -304,7 +302,7 @@ function AdminMatchEditPage({ staff }: StaffProps) {
           setErrorMsg(json.error);
           return;
         }
-        throw new Error(json.error || 'Erreur lors de la mise à jour du match');
+        throw new Error(json.error || t.errorUpdateMatch);
       }
 
       // Check for warnings (e.g., scheduled outside tournament dates)
@@ -348,17 +346,12 @@ function AdminMatchEditPage({ staff }: StaffProps) {
         if (!scoreRes.ok) {
           const json = await scoreRes.json().catch(() => ({}));
           if (scoreRes.status === 409 || json.code === 'CONFLICT') {
-            setConflictMsg(
-              json.error ||
-                'Ce match a été modifié par un autre utilisateur. Rechargez la page et réessayez.'
-            );
+            setConflictMsg(json.error || t.conflictMsg);
             setConflictServerTime(json.server_updated_at ?? null);
             await fetchMatch();
             return;
           }
-          throw new Error(
-            json.error || 'Erreur lors de la mise à jour du score'
-          );
+          throw new Error(json.error || t.errorUpdateScore);
         }
       }
 
@@ -376,20 +369,16 @@ function AdminMatchEditPage({ staff }: StaffProps) {
 
         if (!gamesRes.ok) {
           const json = await gamesRes.json().catch(() => ({}));
-          throw new Error(
-            json.error || 'Erreur lors de la sauvegarde des maps'
-          );
+          throw new Error(json.error || t.errorSaveMaps);
         }
       }
 
       // Refresh match data
       await fetchMatch();
 
-      addToast('Match mis à jour avec succès.', 'success');
+      addToast(t.matchUpdated, 'success');
     } catch (err: unknown) {
-      setErrorMsg(
-        (err as Error)?.message ?? 'Erreur inattendue lors de la mise à jour'
-      );
+      setErrorMsg((err as Error)?.message ?? t.errorUpdateUnexpected);
     } finally {
       setSaving(false);
     }
@@ -433,17 +422,15 @@ function AdminMatchEditPage({ staff }: StaffProps) {
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || 'Erreur lors du forfait');
+        throw new Error(json.error || t.errorForfeit);
       }
 
       setShowForfeitDialog(false);
       setForfeitTeamId(null);
       await fetchMatch();
-      addToast('Forfait enregistré avec succès.', 'success');
+      addToast(t.forfeitSaved, 'success');
     } catch (err: unknown) {
-      setForfeitError(
-        (err as Error)?.message ?? 'Erreur inattendue lors du forfait'
-      );
+      setForfeitError((err as Error)?.message ?? t.errorForfeitUnexpected);
     } finally {
       setForfeitSaving(false);
     }
@@ -457,14 +444,14 @@ function AdminMatchEditPage({ staff }: StaffProps) {
   return (
     <>
       <Head>
-        <title>Admin – Éditer le match</title>
+        <title>{t.pageTitle}</title>
       </Head>
 
       <div className="min-h-screen bg-neutral-900 text-white p-6 pt-20">
         <Breadcrumb
           items={[
-            { label: 'Matchs', href: '/admin/matches' },
-            { label: 'Modifier match' },
+            { label: t.breadcrumbMatches, href: '/admin/matches' },
+            { label: t.breadcrumbEdit },
           ]}
         />
         {/* Header */}
@@ -475,19 +462,19 @@ function AdminMatchEditPage({ staff }: StaffProps) {
               onClick={() => router.push(backAdminUrl)}
               className="mb-2 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white"
             >
-              ← Retour au match (admin)
+              {t.backToMatch}
             </button>
-            <h1 className="text-3xl font-bold">Éditer le match</h1>
+            <h1 className="text-3xl font-bold">{t.heading}</h1>
 
             {match && (
               <p className="text-neutral-400 text-sm mt-1">
-                Match{' '}
+                {t.matchWord}{' '}
                 <span className="font-mono bg-neutral-800 border border-neutral-700 px-2 py-0.5 rounded text-xs">
                   #{match.id.slice(0, 8)}
                 </span>{' '}
                 {tournament && (
                   <>
-                    • Tournoi{' '}
+                    {t.tournamentBullet}{' '}
                     <Link
                       href={backTournamentUrl}
                       className="font-semibold hover:underline"
@@ -499,7 +486,7 @@ function AdminMatchEditPage({ staff }: StaffProps) {
                 {stage && (
                   <>
                     {' '}
-                    • Phase{' '}
+                    {t.phaseBullet}{' '}
                     <Link
                       href={`/admin/stages/${stage.id}`}
                       className="hover:underline"
@@ -518,7 +505,7 @@ function AdminMatchEditPage({ staff }: StaffProps) {
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-sm font-medium transition-colors"
-              title="Ouvrir le dashboard caster (lobby code, veto live, H2H, rosters)"
+              title={t.casterViewTitle}
             >
               <svg
                 className="w-4 h-4"
@@ -533,7 +520,7 @@ function AdminMatchEditPage({ staff }: StaffProps) {
                   d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
                 />
               </svg>
-              Vue caster
+              {t.casterView}
               <svg
                 className="w-3 h-3"
                 fill="none"
@@ -559,18 +546,17 @@ function AdminMatchEditPage({ staff }: StaffProps) {
             </span>
             <div>
               <p className="font-semibold text-amber-200 mb-1">
-                Modification concurrente
+                {t.conflictTitle}
               </p>
               <p className="text-amber-100/80">{conflictMsg}</p>
               {conflictServerTime && (
                 <p className="text-amber-100/60 text-xs mt-1">
-                  Dernière modification serveur :{' '}
+                  {t.lastServerEditPrefix}{' '}
                   {new Date(conflictServerTime).toLocaleString('fr-FR')}
                 </p>
               )}
               <p className="text-amber-100/60 text-xs mt-1">
-                Le formulaire a été rechargé avec les données à jour. Vérifiez
-                les champs et réessayez.
+                {t.conflictReloadedNote}
               </p>
               <button
                 type="button"
@@ -581,7 +567,7 @@ function AdminMatchEditPage({ staff }: StaffProps) {
                 }}
                 className="mt-2 px-3 py-1 rounded bg-amber-700/50 hover:bg-amber-700/80 text-amber-100 text-xs font-medium transition-colors"
               >
-                Fermer et recharger
+                {t.closeAndReload}
               </button>
             </div>
           </div>
@@ -593,7 +579,7 @@ function AdminMatchEditPage({ staff }: StaffProps) {
         )}
         {warningMsgs.length > 0 && (
           <div className="mb-4 rounded bg-amber-900/40 border border-amber-600/60 px-4 py-3 text-sm text-amber-200">
-            <p className="font-semibold mb-1">Avertissements</p>
+            <p className="font-semibold mb-1">{t.warningsTitle}</p>
             <ul className="list-disc list-inside space-y-0.5">
               {warningMsgs.map((w, i) => (
                 <li key={i}>{w}</li>
@@ -603,11 +589,11 @@ function AdminMatchEditPage({ staff }: StaffProps) {
         )}
 
         {loading && !match && (
-          <div className="text-neutral-300">Chargement du match…</div>
+          <div className="text-neutral-300">{t.loadingMatch}</div>
         )}
 
         {!loading && !match && !errorMsg && (
-          <div className="text-neutral-300">Match introuvable.</div>
+          <div className="text-neutral-300">{t.matchNotFound}</div>
         )}
 
         {!loading && match && (
@@ -617,11 +603,13 @@ function AdminMatchEditPage({ staff }: StaffProps) {
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Statut & round */}
                 <section className="space-y-4">
-                  <h2 className="font-semibold text-lg">Statut & round</h2>
+                  <h2 className="font-semibold text-lg">
+                    {t.statusRoundHeading}
+                  </h2>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-sm mb-1 text-neutral-300">
-                        Statut
+                        {t.statusFieldLabel}
                       </label>
                       <select
                         className="w-full px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -630,19 +618,19 @@ function AdminMatchEditPage({ staff }: StaffProps) {
                           updateField('status', e.target.value as MatchStatus)
                         }
                       >
-                        <option value="pending">À venir</option>
-                        <option value="ongoing">En cours</option>
-                        <option value="finished">Terminé</option>
-                        <option value="cancelled">Annulé</option>
-                        <option value="postponed">Reporté</option>
-                        <option value="disputed">Contesté</option>
-                        <option value="walkover">Walkover</option>
+                        <option value="pending">{t.statusPending}</option>
+                        <option value="ongoing">{t.statusOngoing}</option>
+                        <option value="finished">{t.statusFinished}</option>
+                        <option value="cancelled">{t.statusCancelled}</option>
+                        <option value="postponed">{t.statusPostponed}</option>
+                        <option value="disputed">{t.statusDisputed}</option>
+                        <option value="walkover">{t.statusWalkover}</option>
                       </select>
                     </div>
 
                     <div>
                       <label className="block text-sm mb-1 text-neutral-300">
-                        Round #
+                        {t.roundHashLabel}
                       </label>
                       <input
                         type="number"
@@ -657,7 +645,7 @@ function AdminMatchEditPage({ staff }: StaffProps) {
 
                     <div>
                       <label className="block text-sm mb-1 text-neutral-300">
-                        Format (BO)
+                        {t.formatBoLabel}
                       </label>
                       <input
                         type="number"
@@ -673,11 +661,13 @@ function AdminMatchEditPage({ staff }: StaffProps) {
 
                 {/* Planning & stream */}
                 <section className="space-y-4">
-                  <h2 className="font-semibold text-lg">Planning & stream</h2>
+                  <h2 className="font-semibold text-lg">
+                    {t.planningStreamHeading}
+                  </h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm mb-1 text-neutral-300">
-                        Horaire prévu
+                        {t.scheduledLabel}
                       </label>
                       <input
                         type="datetime-local"
@@ -688,14 +678,13 @@ function AdminMatchEditPage({ staff }: StaffProps) {
                         }
                       />
                       <p className="text-xs text-neutral-500 mt-1">
-                        Utilisé par l&apos;auto-scheduler & la vue publique du
-                        match.
+                        {t.scheduledHint}
                       </p>
                     </div>
 
                     <div>
                       <label className="block text-sm mb-1 text-neutral-300">
-                        URL du stream
+                        {t.streamUrlLabel}
                       </label>
                       <input
                         type="text"
@@ -712,11 +701,11 @@ function AdminMatchEditPage({ staff }: StaffProps) {
 
                 {/* Score */}
                 <section className="space-y-4">
-                  <h2 className="font-semibold text-lg">Score</h2>
+                  <h2 className="font-semibold text-lg">{t.scoreHeading}</h2>
                   <div className="flex items-center gap-4">
                     <div className="flex-1">
                       <label className="block text-sm mb-1 text-neutral-300">
-                        {team1?.name || 'Équipe 1'}
+                        {team1?.name || t.team1Fallback}
                       </label>
                       <input
                         type="number"
@@ -734,7 +723,7 @@ function AdminMatchEditPage({ staff }: StaffProps) {
                     </span>
                     <div className="flex-1">
                       <label className="block text-sm mb-1 text-neutral-300">
-                        {team2?.name || 'Équipe 2'}
+                        {team2?.name || t.team2Fallback}
                       </label>
                       <input
                         type="number"
@@ -748,10 +737,7 @@ function AdminMatchEditPage({ staff }: StaffProps) {
                       />
                     </div>
                   </div>
-                  <p className="text-xs text-neutral-500">
-                    Remplir le score et sauvegarder appliquera le résultat et
-                    propagera dans le bracket automatiquement.
-                  </p>
+                  <p className="text-xs text-neutral-500">{t.scoreHint}</p>
                 </section>
 
                 {/* Forfait / No-show */}
@@ -760,11 +746,10 @@ function AdminMatchEditPage({ staff }: StaffProps) {
                   match.status !== 'finished' && (
                     <section className="space-y-4">
                       <h2 className="font-semibold text-lg">
-                        Forfait / No-show
+                        {t.forfeitHeading}
                       </h2>
                       <p className="text-xs text-neutral-500">
-                        Déclarer un forfait termine le match et attribue la
-                        victoire à l&apos;équipe adverse.
+                        {t.forfeitHint}
                       </p>
                       <div className="flex gap-3">
                         <button
@@ -776,7 +761,9 @@ function AdminMatchEditPage({ staff }: StaffProps) {
                           }}
                           className="flex-1 px-3 py-2 rounded bg-red-900/40 border border-red-700/60 text-red-300 hover:bg-red-900/60 text-sm font-medium transition-colors"
                         >
-                          Forfait {team1?.name || 'Équipe 1'}
+                          {format(t.forfeitTeam, {
+                            team: team1?.name || t.team1Fallback,
+                          })}
                         </button>
                         <button
                           type="button"
@@ -787,7 +774,9 @@ function AdminMatchEditPage({ staff }: StaffProps) {
                           }}
                           className="flex-1 px-3 py-2 rounded bg-red-900/40 border border-red-700/60 text-red-300 hover:bg-red-900/60 text-sm font-medium transition-colors"
                         >
-                          Forfait {team2?.name || 'Équipe 2'}
+                          {format(t.forfeitTeam, {
+                            team: team2?.name || t.team2Fallback,
+                          })}
                         </button>
                       </div>
                     </section>
@@ -797,7 +786,7 @@ function AdminMatchEditPage({ staff }: StaffProps) {
                 <section className="space-y-4">
                   <div className="flex items-center justify-between">
                     <h2 className="font-semibold text-lg">
-                      Maps ({games.length})
+                      {format(t.mapsHeading, { count: games.length })}
                     </h2>
                     <button
                       type="button"
@@ -816,15 +805,12 @@ function AdminMatchEditPage({ staff }: StaffProps) {
                       }
                       className="px-3 py-1.5 rounded bg-blue-600 hover:bg-blue-700 text-xs font-medium transition-colors"
                     >
-                      + Ajouter une map
+                      {t.addMap}
                     </button>
                   </div>
 
                   {games.length === 0 && (
-                    <p className="text-sm text-neutral-500">
-                      Aucune map enregistrée. Cliquez sur « Ajouter une map »
-                      pour détailler le score par map.
-                    </p>
+                    <p className="text-sm text-neutral-500">{t.mapsEmpty}</p>
                   )}
 
                   <div className="space-y-3">
@@ -836,7 +822,7 @@ function AdminMatchEditPage({ staff }: StaffProps) {
                         <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-3">
                           <div className="col-span-2 md:col-span-1">
                             <label className="block text-xs text-neutral-400 mb-1">
-                              Map
+                              {t.mapLabel}
                             </label>
                             <input
                               type="text"
@@ -850,12 +836,12 @@ function AdminMatchEditPage({ staff }: StaffProps) {
                                 };
                                 setGames(updated);
                               }}
-                              placeholder="Nom de la map"
+                              placeholder={t.mapNamePlaceholder}
                             />
                           </div>
                           <div>
                             <label className="block text-xs text-neutral-400 mb-1">
-                              {team1?.short_name || team1?.name || 'Éq. 1'}
+                              {team1?.short_name || team1?.name || t.teamShort1Fallback}
                             </label>
                             <input
                               type="number"
@@ -874,7 +860,7 @@ function AdminMatchEditPage({ staff }: StaffProps) {
                           </div>
                           <div>
                             <label className="block text-xs text-neutral-400 mb-1">
-                              {team2?.short_name || team2?.name || 'Éq. 2'}
+                              {team2?.short_name || team2?.name || t.teamShort2Fallback}
                             </label>
                             <input
                               type="number"
@@ -908,7 +894,7 @@ function AdminMatchEditPage({ staff }: StaffProps) {
                               }}
                               className="rounded border-neutral-600 bg-neutral-700"
                             />
-                            OT
+                            {t.ot}
                           </label>
                           <label className="flex items-center gap-1.5 text-xs text-neutral-400 cursor-pointer">
                             <input
@@ -924,7 +910,7 @@ function AdminMatchEditPage({ staff }: StaffProps) {
                               }}
                               className="rounded border-neutral-600 bg-neutral-700"
                             />
-                            TB
+                            {t.tb}
                           </label>
                         </div>
 
@@ -934,7 +920,7 @@ function AdminMatchEditPage({ staff }: StaffProps) {
                             setGames((prev) => prev.filter((_, i) => i !== idx))
                           }
                           className="mt-5 p-1.5 rounded hover:bg-red-900/50 text-neutral-500 hover:text-red-400 transition-colors"
-                          title="Supprimer cette map"
+                          title={t.deleteMapTitle}
                         >
                           <svg
                             className="w-4 h-4"
@@ -957,12 +943,12 @@ function AdminMatchEditPage({ staff }: StaffProps) {
 
                 {/* Notes internes */}
                 <section className="space-y-3">
-                  <h2 className="font-semibold text-lg">Notes internes</h2>
+                  <h2 className="font-semibold text-lg">{t.notesHeading}</h2>
                   <textarea
                     className="w-full min-h-[120px] px-3 py-2 rounded bg-neutral-900 border border-neutral-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     value={form.notes}
                     onChange={(e) => updateField('notes', e.target.value)}
-                    placeholder="Infos pour les arbitres / casters (setup, lobby code, casters, spécificités, etc.)."
+                    placeholder={t.notesPlaceholder}
                   />
                 </section>
 
@@ -974,7 +960,7 @@ function AdminMatchEditPage({ staff }: StaffProps) {
                     onClick={() => router.push(backAdminUrl)}
                     disabled={saving}
                   >
-                    Annuler
+                    {t.cancel}
                   </button>
 
                   <button
@@ -986,9 +972,7 @@ function AdminMatchEditPage({ staff }: StaffProps) {
                         : 'bg-blue-600 hover:bg-blue-700'
                     }`}
                   >
-                    {saving
-                      ? 'Enregistrement...'
-                      : 'Enregistrer les modifications'}
+                    {saving ? t.saving : t.saveChanges}
                   </button>
                 </div>
               </form>
@@ -997,44 +981,48 @@ function AdminMatchEditPage({ staff }: StaffProps) {
             {/* Résumé match / équipes */}
             <aside className="space-y-4">
               <section className="bg-neutral-800 border border-neutral-700 rounded-xl p-5 space-y-3">
-                <h2 className="text-lg font-semibold mb-1">Résumé du match</h2>
+                <h2 className="text-lg font-semibold mb-1">
+                  {t.summaryHeading}
+                </h2>
                 <div className="text-sm space-y-1">
                   <div className="flex justify-between gap-4">
-                    <span className="text-neutral-400">Statut actuel</span>
+                    <span className="text-neutral-400">{t.currentStatus}</span>
                     <span
                       className={`px-2 py-1 rounded-full text-xs font-semibold ${statusColor(
                         match.status
                       )}`}
                     >
-                      {statusLabel(match.status)}
+                      {statusLabel(match.status, t)}
                     </span>
                   </div>
                   <div className="flex justify-between gap-4">
-                    <span className="text-neutral-400">Round</span>
+                    <span className="text-neutral-400">{t.roundLabel}</span>
                     <span className="text-neutral-200">
                       {match.round_number ?? '—'}
                     </span>
                   </div>
                   <div className="flex justify-between gap-4">
-                    <span className="text-neutral-400">Format</span>
+                    <span className="text-neutral-400">{t.formatLabel}</span>
                     <span className="text-neutral-200">
                       {match.best_of ? `BO${match.best_of}` : '—'}
                     </span>
                   </div>
                   <div className="flex justify-between gap-4">
-                    <span className="text-neutral-400">Prévu</span>
+                    <span className="text-neutral-400">
+                      {t.scheduledSummary}
+                    </span>
                     <span className="text-neutral-200">
                       {formatDateTimeNice(match.scheduled_at)}
                     </span>
                   </div>
                   <div className="flex justify-between gap-4 text-xs">
-                    <span className="text-neutral-500">Débuté</span>
+                    <span className="text-neutral-500">{t.startedLabel}</span>
                     <span className="text-neutral-300">
                       {formatDateTimeNice(match.started_at)}
                     </span>
                   </div>
                   <div className="flex justify-between gap-4 text-xs">
-                    <span className="text-neutral-500">Terminé</span>
+                    <span className="text-neutral-500">{t.finishedLabel}</span>
                     <span className="text-neutral-300">
                       {formatDateTimeNice(match.completed_at)}
                     </span>
@@ -1042,7 +1030,7 @@ function AdminMatchEditPage({ staff }: StaffProps) {
                 </div>
 
                 <div className="mt-3 pt-3 border-t border-neutral-700 text-xs text-neutral-500">
-                  ID complet :{' '}
+                  {t.fullIdLabel}{' '}
                   <span className="font-mono bg-neutral-900 px-2 py-1 rounded border border-neutral-700">
                     {match.id}
                   </span>
@@ -1050,10 +1038,10 @@ function AdminMatchEditPage({ staff }: StaffProps) {
               </section>
 
               <section className="bg-neutral-800 border border-neutral-700 rounded-xl p-5 space-y-4">
-                <h2 className="text-lg font-semibold">Équipes</h2>
+                <h2 className="text-lg font-semibold">{t.teamsHeading}</h2>
 
                 <TeamSummaryCard
-                  label="Équipe 1"
+                  label={t.team1Fallback}
                   team={team1}
                   teamId={match.team1_id}
                   score={match.team1_score}
@@ -1061,7 +1049,7 @@ function AdminMatchEditPage({ staff }: StaffProps) {
                 />
 
                 <TeamSummaryCard
-                  label="Équipe 2"
+                  label={t.team2Fallback}
                   team={team2}
                   teamId={match.team2_id}
                   score={match.team2_score}
@@ -1069,15 +1057,12 @@ function AdminMatchEditPage({ staff }: StaffProps) {
                 />
 
                 <div className="mt-3 pt-3 border-t border-neutral-700 text-xs text-neutral-400 space-y-1">
-                  <p>
-                    Le score et les maps se modifient dans le formulaire
-                    principal. La propagation bracket est automatique.
-                  </p>
+                  <p>{t.summaryNote}</p>
                   <Link
                     href={backAdminUrl}
                     className="inline-flex items-center gap-1 text-blue-300 hover:underline"
                   >
-                    Voir le détail du match →
+                    {t.viewDetail}
                   </Link>
                 </div>
               </section>
@@ -1099,7 +1084,9 @@ function AdminMatchEditPage({ staff }: StaffProps) {
               <MatchCastAssignments matchId={match.id} />
 
               <section className="bg-neutral-800 border border-neutral-700 rounded-xl p-5">
-                <h2 className="text-lg font-semibold mb-3">Historique</h2>
+                <h2 className="text-lg font-semibold mb-3">
+                  {t.historyHeading}
+                </h2>
                 <MatchTimeline matchId={match.id} />
               </section>
             </aside>
@@ -1110,12 +1097,15 @@ function AdminMatchEditPage({ staff }: StaffProps) {
       {/* Status regression confirmation dialog */}
       {showStatusConfirm && (
         <ConfirmDialog
-          title="Régression de statut"
-          subtitle={`Vous allez passer le statut de « ${statusLabel(match!.status)} » à « ${statusLabel(form.status)} ».`}
+          title={t.statusRegressionTitle}
+          subtitle={format(t.statusRegressionSubtitle, {
+            from: statusLabel(match!.status, t),
+            to: statusLabel(form.status, t),
+          })}
           variant="warning"
           loading={saving}
-          confirmLabel="Confirmer le changement"
-          confirmingLabel="Enregistrement..."
+          confirmLabel={t.confirmChange}
+          confirmingLabel={t.confirmingLabel}
           onCancel={() => {
             setShowStatusConfirm(false);
             setPendingSubmit(null);
@@ -1128,28 +1118,25 @@ function AdminMatchEditPage({ staff }: StaffProps) {
             }
           }}
         >
-          <p className="text-sm text-neutral-300">
-            Cette action ramène le match à un état antérieur. Les données de
-            score et de propagation pourraient être impactées. Voulez-vous
-            continuer ?
-          </p>
+          <p className="text-sm text-neutral-300">{t.statusRegressionBody}</p>
         </ConfirmDialog>
       )}
 
       {/* Forfeit confirmation dialog */}
       {showForfeitDialog && forfeitTeamId && (
         <ConfirmDialog
-          title="Confirmer le forfait"
-          subtitle={`${
-            forfeitTeamId === match!.team1_id
-              ? team1?.name || 'Équipe 1'
-              : team2?.name || 'Équipe 2'
-          } sera déclaré forfait.`}
+          title={t.forfeitConfirmTitle}
+          subtitle={format(t.forfeitConfirmSubtitle, {
+            team:
+              forfeitTeamId === match!.team1_id
+                ? team1?.name || t.team1Fallback
+                : team2?.name || t.team2Fallback,
+          })}
           variant="danger"
           loading={forfeitSaving}
           errorMsg={forfeitError}
-          confirmLabel="Déclarer forfait"
-          confirmingLabel="Enregistrement..."
+          confirmLabel={t.declareForfeit}
+          confirmingLabel={t.confirmingLabel}
           onCancel={() => {
             setShowForfeitDialog(false);
             setForfeitTeamId(null);
@@ -1158,14 +1145,13 @@ function AdminMatchEditPage({ staff }: StaffProps) {
           onConfirm={handleForfeitConfirm}
         >
           <p className="text-sm text-neutral-300">
-            La victoire sera attribuée à{' '}
+            {t.forfeitBodyPrefix}{' '}
             <strong>
               {forfeitTeamId === match!.team1_id
-                ? team2?.name || 'Équipe 2'
-                : team1?.name || 'Équipe 1'}
+                ? team2?.name || t.team2Fallback
+                : team1?.name || t.team1Fallback}
             </strong>{' '}
-            et le match sera marqué comme terminé. Cette action sera propagée
-            dans le bracket.
+            {t.forfeitBodySuffix}
           </p>
         </ConfirmDialog>
       )}
@@ -1188,7 +1174,8 @@ function TeamSummaryCard({
   score,
   isWinner,
 }: TeamSummaryProps) {
-  const displayName = team?.name || teamId || 'TBD';
+  const t = useAdminT('adminMatchEdit');
+  const displayName = team?.name || teamId || t.tbd;
 
   return (
     <div className="flex items-center gap-3">
@@ -1214,7 +1201,7 @@ function TeamSummaryCard({
             <div className="text-[11px] text-neutral-500">{label}</div>
           </div>
           <div className="text-right">
-            <div className="text-xs text-neutral-400">Score</div>
+            <div className="text-xs text-neutral-400">{t.scoreLabelShort}</div>
             <div className="text-lg font-semibold">
               {score != null ? score : '—'}
             </div>
@@ -1257,6 +1244,7 @@ type MvpPollData = {
 };
 
 function MvpSection({ matchId }: { matchId: string }) {
+  const t = useAdminT('adminMatchEdit');
   const { adminFetchJson } = useAdminFetch();
   const [data, setData] = useState<MvpPollData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -1304,7 +1292,7 @@ function MvpSection({ matchId }: { matchId: string }) {
   }
 
   async function clear() {
-    if (!confirm('Effacer le MVP enregistré ?')) return;
+    if (!confirm(t.confirmClearMvp)) return;
     setSaving(true);
     try {
       await adminFetchJson(`/api/admin/matches/${matchId}/mvp`, {
@@ -1335,16 +1323,16 @@ function MvpSection({ matchId }: { matchId: string }) {
 
   return (
     <section className="bg-neutral-800 border border-neutral-700 rounded-xl p-5">
-      <h2 className="text-lg font-semibold mb-3">MVP du match</h2>
+      <h2 className="text-lg font-semibold mb-3">{t.mvpHeading}</h2>
 
       {loading ? (
-        <div className="text-sm text-neutral-400">Chargement...</div>
+        <div className="text-sm text-neutral-400">{t.mvpLoading}</div>
       ) : (
         <div className="space-y-3">
           <div className="text-xs text-neutral-400">
             {poll?.posted_at ? (
               <>
-                Sondage Discord posté le{' '}
+                {t.mvpPollPostedPrefix}{' '}
                 <span className="text-neutral-200">
                   {new Date(poll.posted_at).toLocaleString('fr-FR', {
                     day: '2-digit',
@@ -1354,12 +1342,11 @@ function MvpSection({ matchId }: { matchId: string }) {
                     timeZone: 'Europe/Paris',
                   })}
                 </span>{' '}
-                — durée {poll.duration_hours}h
+                {format(t.mvpPollDuration, { hours: poll.duration_hours })}
               </>
             ) : (
               <span>
-                Aucun sondage Discord posté (webhook <code>mvp_polls</code> non
-                configuré ou moins de 2 candidates).
+                {t.mvpNoPollPrefix} <code>mvp_polls</code> {t.mvpNoPollSuffix}
               </span>
             )}
           </div>
@@ -1369,7 +1356,7 @@ function MvpSection({ matchId }: { matchId: string }) {
               <span className="text-2xl">🏅</span>
               <div className="flex-1 min-w-0">
                 <div className="text-xs text-amber-300 uppercase tracking-wide">
-                  MVP enregistré
+                  {t.mvpRegistered}
                 </div>
                 <div className="text-sm font-semibold text-white">
                   {winnerMember.battleTag || '—'}
@@ -1378,7 +1365,7 @@ function MvpSection({ matchId }: { matchId: string }) {
                   {winnerMember.teamName || ''}{' '}
                   {poll.winner_imported_at && (
                     <>
-                      · importé le{' '}
+                      {t.mvpImportedPrefix}{' '}
                       {new Date(poll.winner_imported_at).toLocaleString(
                         'fr-FR',
                         { day: '2-digit', month: 'short' }
@@ -1393,26 +1380,27 @@ function MvpSection({ matchId }: { matchId: string }) {
                 disabled={saving}
                 className="px-3 py-1.5 rounded-lg text-xs bg-neutral-700 hover:bg-neutral-600 transition-colors disabled:opacity-50"
               >
-                Effacer
+                {t.clearBtn}
               </button>
             </div>
           ) : null}
 
           <div>
             <label className="block text-xs text-neutral-400 mb-1">
-              Sélectionner la MVP (vainqueur du sondage Discord)
+              {t.mvpSelectLabel}
             </label>
             <select
               value={selected}
               onChange={(e) => setSelected(e.target.value)}
               className="w-full px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm"
             >
-              <option value="">— Choisir une joueuse —</option>
+              <option value="">{t.mvpSelectPlaceholder}</option>
               {Object.entries(grouped).map(([teamName, members]) => (
                 <optgroup key={teamName} label={teamName}>
                   {members.map((m) => (
                     <option key={m.id} value={m.id}>
-                      {m.battleTag || `(membre ${m.id.slice(0, 6)})`}
+                      {m.battleTag ||
+                        format(t.mvpMemberFallback, { id: m.id.slice(0, 6) })}
                     </option>
                   ))}
                 </optgroup>
@@ -1434,7 +1422,7 @@ function MvpSection({ matchId }: { matchId: string }) {
             }
             className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-sm font-medium transition-colors disabled:opacity-50"
           >
-            {saving ? 'Enregistrement...' : 'Enregistrer le MVP'}
+            {saving ? t.mvpSaving : t.mvpSave}
           </button>
         </div>
       )}

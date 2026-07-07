@@ -13,6 +13,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { StaffProps } from '@/types/admin';
 
 type Classification = 'breached' | 'approaching' | 'fresh';
@@ -57,6 +58,7 @@ const PAGE_SIZE = 50;
 export const getServerSideProps = withStaffPage('caster');
 
 function DisputesBoardPage(_: StaffProps) {
+  const t = useAdminT('adminDisputes');
   const router = useRouter();
   const { adminFetchJson } = useAdminFetch();
 
@@ -104,11 +106,11 @@ function DisputesBoardPage(_: StaffProps) {
       setData(json);
     } catch (err) {
       const e = err as AdminFetchError;
-      setError(e.message || 'Erreur de chargement');
+      setError(e.message || t.errorLoad);
     } finally {
       setLoading(false);
     }
-  }, [adminFetchJson, tournamentFilter, filter, offset]);
+  }, [adminFetchJson, tournamentFilter, filter, offset, t.errorLoad]);
 
   useEffect(() => {
     fetchTournaments();
@@ -137,21 +139,18 @@ function DisputesBoardPage(_: StaffProps) {
   return (
     <>
       <Head>
-        <title>Admin – Disputes ouvertes</title>
+        <title>{t.pageTitle}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-12">
           <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">
-                Disputes ouvertes
-              </h1>
+              <h1 className="text-3xl font-bold tracking-tight">{t.heading}</h1>
               <p className="text-sm text-neutral-400 mt-1">
-                Board cross-tournoi avec SLA. Une dispute en{' '}
-                <SLAPill cls="breached" />a dépassé la fenêtre SLA et a
-                déclenché une escalation Discord (ou est sur le point de le
-                faire). Triées par âge décroissant par défaut.
+                {t.introPrefix}{' '}
+                <SLAPill cls="breached" />
+                {t.introSuffix}
               </p>
             </div>
             <button
@@ -159,33 +158,33 @@ function DisputesBoardPage(_: StaffProps) {
               onClick={fetchData}
               className="px-4 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors"
             >
-              Rafraîchir
+              {t.refresh}
             </button>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
             <Stat
-              label="Total"
+              label={t.statTotal}
               value={data?.counts.total ?? 0}
               active={filter === 'all'}
               onClick={() => changeFilter('all')}
             />
             <Stat
-              label="Breached"
+              label={t.statBreached}
               value={data?.counts.breached ?? 0}
               accent="red"
               active={filter === 'breached'}
               onClick={() => changeFilter('breached')}
             />
             <Stat
-              label="Approaching"
+              label={t.statApproaching}
               value={data?.counts.approaching ?? 0}
               accent="amber"
               active={filter === 'approaching'}
               onClick={() => changeFilter('approaching')}
             />
             <Stat
-              label="Fresh"
+              label={t.statFresh}
               value={data?.counts.fresh ?? 0}
               accent="emerald"
               active={filter === 'fresh'}
@@ -194,25 +193,27 @@ function DisputesBoardPage(_: StaffProps) {
           </div>
 
           <div className="mb-4 flex flex-wrap items-center gap-2">
-            <label className="text-xs text-neutral-400">Tournoi :</label>
+            <label className="text-xs text-neutral-400">
+              {t.tournamentLabel}
+            </label>
             <select
               value={tournamentFilter}
               onChange={(e) => changeTournament(e.target.value)}
               className="rounded-md bg-neutral-950 border border-neutral-700 px-2 py-1 text-sm"
             >
-              <option value="">— Tous —</option>
-              {tournaments.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                  {t.slug ? ` (${t.slug})` : ''}
+              <option value="">{t.tournamentAll}</option>
+              {tournaments.map((tour) => (
+                <option key={tour.id} value={tour.id}>
+                  {tour.name}
+                  {tour.slug ? ` (${tour.slug})` : ''}
                 </option>
               ))}
             </select>
             <span className="ml-auto text-xs text-neutral-500">
               {total !== null
-                ? `${total} résultat(s)`
-                : `${disputes.length} affichée(s)`}{' '}
-              · auto-refresh 60s
+                ? format(t.resultsCount, { count: total })
+                : format(t.shownCount, { count: disputes.length })}{' '}
+              {t.autoRefresh}
             </span>
           </div>
 
@@ -224,14 +225,15 @@ function DisputesBoardPage(_: StaffProps) {
 
           {loading && !data && (
             <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 px-4 py-8 text-center text-sm text-neutral-400">
-              Chargement…
+              {t.loading}
             </div>
           )}
 
           {!loading && disputes.length === 0 && (
             <div className="rounded-xl border border-neutral-800 bg-neutral-900/40 px-4 py-8 text-center text-sm text-neutral-500">
-              Aucune dispute {filter !== 'all' ? `(${filter})` : ''} pour
-              l&apos;instant. ✨
+              {format(t.empty, {
+                filter: filter !== 'all' ? `(${filter})` : '',
+              })}
             </div>
           )}
 
@@ -250,12 +252,15 @@ function DisputesBoardPage(_: StaffProps) {
                 onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}
                 className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                ← Précédent
+                {t.prev}
               </button>
 
               <span className="text-neutral-400 text-sm">
-                {offset + 1} – {offset + disputes.length}
-                {total !== null ? ` sur ${total}` : ''}
+                {format(t.paginationRange, {
+                  from: offset + 1,
+                  to: offset + disputes.length,
+                })}
+                {total !== null ? format(t.paginationOf, { total }) : ''}
               </span>
 
               <button
@@ -264,7 +269,7 @@ function DisputesBoardPage(_: StaffProps) {
                 onClick={() => setOffset(offset + PAGE_SIZE)}
                 className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Suivant →
+                {t.next}
               </button>
             </div>
           )}
@@ -310,17 +315,18 @@ function Stat({
 }
 
 function SLAPill({ cls }: { cls: Classification }) {
+  const t = useAdminT('adminDisputes');
   const map: Record<Classification, { label: string; className: string }> = {
     breached: {
-      label: 'Breached',
+      label: t.statBreached,
       className: 'bg-red-900/40 text-red-200 border-red-500/40',
     },
     approaching: {
-      label: 'Approaching',
+      label: t.statApproaching,
       className: 'bg-amber-900/30 text-amber-200 border-amber-500/40',
     },
     fresh: {
-      label: 'Fresh',
+      label: t.statFresh,
       className: 'bg-emerald-900/30 text-emerald-200 border-emerald-500/40',
     },
   };
@@ -346,6 +352,7 @@ function formatAge(minutes: number | null): string {
 }
 
 function DisputeCard({ dispute: d }: { dispute: DisputeRow }) {
+  const t = useAdminT('adminDisputes');
   const matchHref = `/admin/matches/${d.matchId}`;
   const ageLabel = formatAge(d.ageMinutes);
 
@@ -356,9 +363,9 @@ function DisputeCard({ dispute: d }: { dispute: DisputeRow }) {
           <div className="flex items-center gap-2 text-xs text-neutral-400 mb-1">
             <SLAPill cls={d.classification} />
             <span className="font-mono">{ageLabel}</span>
-            <span>/ SLA {d.slaMinutes} min</span>
+            <span>{format(t.slaLine, { min: d.slaMinutes })}</span>
             {d.escalationPingedAt && (
-              <span className="text-amber-300">· escaladé ✉️</span>
+              <span className="text-amber-300">{t.escalated}</span>
             )}
             {d.tournament && (
               <>
@@ -373,7 +380,8 @@ function DisputeCard({ dispute: d }: { dispute: DisputeRow }) {
             )}
           </div>
           <div className="text-base font-medium">
-            {d.team1?.name ?? '?'} <span className="text-neutral-500">vs</span>{' '}
+            {d.team1?.name ?? '?'}{' '}
+            <span className="text-neutral-500">{t.vs}</span>{' '}
             {d.team2?.name ?? '?'}
           </div>
           {d.disputeReason && (
@@ -386,7 +394,7 @@ function DisputeCard({ dispute: d }: { dispute: DisputeRow }) {
           href={matchHref}
           className="self-center px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-sm font-medium transition-colors"
         >
-          Résoudre →
+          {t.resolve}
         </Link>
       </div>
     </div>

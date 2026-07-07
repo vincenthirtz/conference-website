@@ -25,6 +25,7 @@ import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useToast } from '@/components/Toast';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { withStaffPage } from '@/utils/staff';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import {
   runStatusBadgeClasses,
   runStatusDotClasses,
@@ -56,6 +57,7 @@ function formatDate(d: string | null) {
 }
 
 function AdminEventsIndexPage(_props: StaffProps) {
+  const t = useAdminT('adminEventsList');
   const router = useRouter();
   const { adminFetchJson } = useAdminFetch();
   const { mutate } = useIdempotentMutation({ autoRegenerateOnSuccess: true });
@@ -83,11 +85,11 @@ function AdminEventsIndexPage(_props: StaffProps) {
       );
       setItems(json.items ?? []);
     } catch (err) {
-      setErrorMsg((err as Error)?.message ?? 'Erreur de chargement.');
+      setErrorMsg((err as Error)?.message ?? t.errorLoad);
     } finally {
       setLoading(false);
     }
-  }, [adminFetchJson, statusFilter]);
+  }, [adminFetchJson, statusFilter, t.errorLoad]);
 
   useEffect(() => {
     fetchRuns();
@@ -95,11 +97,10 @@ function AdminEventsIndexPage(_props: StaffProps) {
 
   async function handleDelete(run: EventRun) {
     const ok = await confirm({
-      title: `Supprimer "${run.name}" ?`,
-      subtitle:
-        'Cette action supprimera definitivement le run et tous ses segments. Irreversible.',
+      title: format(t.confirmDeleteTitle, { name: run.name }),
+      subtitle: t.confirmDeleteSubtitle,
       variant: 'danger',
-      confirmLabel: 'Supprimer',
+      confirmLabel: t.confirmDeleteLabel,
     });
     if (!ok) return;
     try {
@@ -109,13 +110,13 @@ function AdminEventsIndexPage(_props: StaffProps) {
       if (!res.ok) {
         const payload = await res.json().catch(() => null);
         throw new Error(
-          payload?.error ?? `Suppression echouee (${res.status}).`
+          payload?.error ?? format(t.deleteFailedStatus, { status: res.status })
         );
       }
-      addToast('Event supprime.', 'success');
+      addToast(t.eventDeleted, 'success');
       setItems((prev) => prev.filter((r) => r.id !== run.id));
     } catch (err) {
-      addToast((err as Error)?.message ?? 'Suppression echouee.', 'error');
+      addToast((err as Error)?.message ?? t.deleteFailed, 'error');
     }
   }
 
@@ -130,26 +131,23 @@ function AdminEventsIndexPage(_props: StaffProps) {
   return (
     <>
       <Head>
-        <title>Admin – Run of show</title>
+        <title>{t.pageTitle}</title>
       </Head>
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
         <div className="w-full px-4 sm:px-6 lg:px-8 pt-20 pb-12">
           <Breadcrumb
             items={[
-              { label: 'Admin', href: '/admin' },
-              { label: 'Run of show' },
+              { label: t.breadcrumbAdmin, href: '/admin' },
+              { label: t.breadcrumbRunOfShow },
             ]}
           />
 
           <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
             <div>
               <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-                Run of show
+                {t.heading}
               </h1>
-              <p className="text-neutral-400 text-sm mt-1">
-                Planifie le deroule d&apos;une soiree : segments, matches,
-                pauses, intros.
-              </p>
+              <p className="text-neutral-400 text-sm mt-1">{t.subtitle}</p>
             </div>
             <button
               type="button"
@@ -157,7 +155,7 @@ function AdminEventsIndexPage(_props: StaffProps) {
               data-testid="events-new"
               className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors"
             >
-              + Nouvel event
+              {t.newEvent}
             </button>
           </div>
 
@@ -165,26 +163,26 @@ function AdminEventsIndexPage(_props: StaffProps) {
           <div className="mb-6 flex flex-wrap gap-2">
             {(
               [
-                { v: 'all', label: 'Tous', count: items.length },
-                { v: 'draft', label: 'Brouillons', count: counts.draft },
-                { v: 'live', label: 'En direct', count: counts.live },
-                { v: 'done', label: 'Termines', count: counts.done },
+                { v: 'all', label: t.tabAll, count: items.length },
+                { v: 'draft', label: t.tabDraft, count: counts.draft },
+                { v: 'live', label: t.tabLive, count: counts.live },
+                { v: 'done', label: t.tabDone, count: counts.done },
               ] as const
-            ).map((t) => (
+            ).map((tab) => (
               <button
-                key={t.v}
+                key={tab.v}
                 type="button"
-                onClick={() => setStatusFilter(t.v)}
+                onClick={() => setStatusFilter(tab.v)}
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
-                  statusFilter === t.v
+                  statusFilter === tab.v
                     ? 'bg-purple-600/30 border-purple-500/60 text-white'
                     : 'bg-neutral-800/50 border-neutral-700/60 text-neutral-300 hover:bg-neutral-800'
                 }`}
               >
-                {t.label}
-                {t.v !== 'all' && (
+                {tab.label}
+                {tab.v !== 'all' && (
                   <span className="ml-2 text-xs text-neutral-400">
-                    {t.count}
+                    {tab.count}
                   </span>
                 )}
               </button>
@@ -200,20 +198,20 @@ function AdminEventsIndexPage(_props: StaffProps) {
 
           {loading ? (
             <div className="py-16">
-              <LoadingSpinner label="Chargement…" />
+              <LoadingSpinner label={t.loading} />
             </div>
           ) : items.length === 0 ? (
             <div className="rounded-2xl border border-neutral-700/50 bg-neutral-800/30">
               <EmptyState
-                title="Aucun event pour ce filtre."
-                description="Cree ton premier run-of-show pour planifier les segments d'une soiree."
+                title={t.emptyTitle}
+                description={t.emptyDescription}
                 action={
                   <button
                     type="button"
                     onClick={() => setCreateOpen(true)}
                     className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-medium"
                   >
-                    Nouvel event
+                    {t.emptyAction}
                   </button>
                 }
               />
@@ -223,12 +221,12 @@ function AdminEventsIndexPage(_props: StaffProps) {
               <table className="w-full text-sm">
                 <thead className="text-left text-neutral-400 border-b border-neutral-700/50">
                   <tr>
-                    <th className="px-4 py-3 font-medium">Nom</th>
-                    <th className="px-4 py-3 font-medium">Slug</th>
-                    <th className="px-4 py-3 font-medium">Date prevue</th>
-                    <th className="px-4 py-3 font-medium">Statut</th>
+                    <th className="px-4 py-3 font-medium">{t.colName}</th>
+                    <th className="px-4 py-3 font-medium">{t.colSlug}</th>
+                    <th className="px-4 py-3 font-medium">{t.colScheduled}</th>
+                    <th className="px-4 py-3 font-medium">{t.colStatus}</th>
                     <th className="px-4 py-3 font-medium text-right">
-                      Actions
+                      {t.colActions}
                     </th>
                   </tr>
                 </thead>
@@ -280,14 +278,14 @@ function AdminEventsIndexPage(_props: StaffProps) {
                             href={`/admin/events/${r.id}/director`}
                             className="px-3 py-1.5 rounded-lg text-xs font-medium bg-purple-600/30 hover:bg-purple-600/50 text-purple-200 border border-purple-500/40"
                           >
-                            Ouvrir le Director
+                            {t.openDirector}
                           </Link>
                           <button
                             type="button"
                             onClick={() => handleDelete(r)}
                             className="px-3 py-1.5 rounded-lg text-xs font-medium bg-neutral-700/50 hover:bg-red-700/40 text-neutral-300 hover:text-red-200 border border-neutral-600/40"
                           >
-                            Supprimer
+                            {t.delete}
                           </button>
                         </div>
                       </td>
@@ -305,7 +303,7 @@ function AdminEventsIndexPage(_props: StaffProps) {
           onClose={() => setCreateOpen(false)}
           onCreated={(run) => {
             setCreateOpen(false);
-            addToast(`Event "${run.name}" cree.`, 'success');
+            addToast(format(t.eventCreatedToast, { name: run.name }), 'success');
             router.push(`/admin/events/${run.id}/director`);
           }}
         />
@@ -326,6 +324,7 @@ type CreateRunModalProps = {
 };
 
 function CreateRunModal({ onClose, onCreated }: CreateRunModalProps) {
+  const t = useAdminT('adminEventsList');
   const { mutateJson } = useIdempotentMutation();
   const { addToast } = useToast();
   const ref = useFocusTrap<HTMLDivElement>();
@@ -360,11 +359,11 @@ function CreateRunModal({ onClose, onCreated }: CreateRunModalProps) {
     e.preventDefault();
     setError(null);
     if (!name.trim()) {
-      setError('Le nom est obligatoire.');
+      setError(t.nameRequired);
       return;
     }
     if (!scheduledAt) {
-      setError('La date prevue est obligatoire.');
+      setError(t.scheduledRequired);
       return;
     }
     setSubmitting(true);
@@ -381,7 +380,7 @@ function CreateRunModal({ onClose, onCreated }: CreateRunModalProps) {
       });
       onCreated(json);
     } catch (err) {
-      const msg = (err as Error)?.message ?? 'Creation echouee.';
+      const msg = (err as Error)?.message ?? t.createFailed;
       setError(msg);
       addToast(msg, 'error');
     } finally {
@@ -405,29 +404,29 @@ function CreateRunModal({ onClose, onCreated }: CreateRunModalProps) {
       >
         <div className="px-6 py-4 border-b border-neutral-700/60">
           <h2 id="create-run-title" className="text-lg font-semibold">
-            Nouvel event
+            {t.modalTitle}
           </h2>
-          <p className="text-xs text-neutral-400 mt-0.5">
-            Un event_run en mode draft. Tu pourras ajouter les segments ensuite.
-          </p>
+          <p className="text-xs text-neutral-400 mt-0.5">{t.modalSubtitle}</p>
         </div>
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
           <div>
             <label className="block text-sm text-neutral-300 mb-1">
-              Nom <span className="text-red-400">*</span>
+              {t.nameLabel} <span className="text-red-400">*</span>
             </label>
             <input
               autoFocus
               value={name}
               onChange={(e) => setName(e.target.value)}
               data-testid="create-run-name"
-              placeholder="Conference du 21 mai"
+              placeholder={t.namePlaceholder}
               className="w-full px-3 py-2.5 rounded-lg bg-neutral-900/80 border border-neutral-700 text-white placeholder:text-neutral-500 focus:outline-none focus:border-purple-500"
               required
             />
           </div>
           <div>
-            <label className="block text-sm text-neutral-300 mb-1">Slug</label>
+            <label className="block text-sm text-neutral-300 mb-1">
+              {t.slugLabel}
+            </label>
             <input
               value={slug}
               onChange={(e) => {
@@ -438,13 +437,11 @@ function CreateRunModal({ onClose, onCreated }: CreateRunModalProps) {
               placeholder="conference-21-mai"
               className="w-full px-3 py-2.5 rounded-lg bg-neutral-900/80 border border-neutral-700 text-white placeholder:text-neutral-500 focus:outline-none focus:border-purple-500 font-mono text-sm"
             />
-            <p className="text-xs text-neutral-500 mt-1">
-              Auto-genere depuis le nom. Editable si tu veux personnaliser.
-            </p>
+            <p className="text-xs text-neutral-500 mt-1">{t.slugHint}</p>
           </div>
           <div>
             <label className="block text-sm text-neutral-300 mb-1">
-              Date prevue <span className="text-red-400">*</span>
+              {t.scheduledLabel} <span className="text-red-400">*</span>
             </label>
             <input
               type="datetime-local"
@@ -457,14 +454,14 @@ function CreateRunModal({ onClose, onCreated }: CreateRunModalProps) {
           </div>
           <div>
             <label className="block text-sm text-neutral-300 mb-1">
-              Description
+              {t.descriptionLabel}
             </label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
               data-testid="create-run-description"
-              placeholder="Note optionnelle visible uniquement par le staff."
+              placeholder={t.descriptionPlaceholder}
               className="w-full px-3 py-2.5 rounded-lg bg-neutral-900/80 border border-neutral-700 text-white placeholder:text-neutral-500 focus:outline-none focus:border-purple-500"
             />
           </div>
@@ -480,7 +477,7 @@ function CreateRunModal({ onClose, onCreated }: CreateRunModalProps) {
               disabled={submitting}
               className="px-4 py-2 rounded-lg text-sm font-medium bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 disabled:opacity-50"
             >
-              Annuler
+              {t.cancel}
             </button>
             <button
               type="submit"
@@ -488,7 +485,7 @@ function CreateRunModal({ onClose, onCreated }: CreateRunModalProps) {
               data-testid="create-run-submit"
               className="px-4 py-2 rounded-lg text-sm font-medium bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50"
             >
-              {submitting ? 'Creation…' : 'Creer'}
+              {submitting ? t.submitting : t.submit}
             </button>
           </div>
         </form>
