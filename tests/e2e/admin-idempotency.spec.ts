@@ -132,10 +132,13 @@ test.describe.serial('Admin idempotency middleware', () => {
     page,
   }) => {
     await loginAsUI(page, STAFF_EMAIL);
-    await page.goto('/admin/scrims/create');
+    // La création est désormais une modale in-place (deep-link ?new=1) ; la
+    // liste des teams est chargée à l'ouverture de la modale.
+    await page.goto('/admin/scrims?new=1');
+    await expect(page.getByRole('dialog')).toBeVisible({ timeout: 10000 });
 
-    // Le hook charge la liste des teams au mount — on attend que le formulaire
-    // soit interactif (le champ Nom est rendu de toute façon, pas dépendant).
+    // On attend que le formulaire soit interactif (le champ Nom est rendu de
+    // toute façon, pas dépendant du fetch teams).
     const nameInput = page.locator('input[required]').first();
     await nameInput.waitFor({ state: 'visible', timeout: 10000 });
     await nameInput.fill(`E2E Idem UI ${TS}`);
@@ -150,7 +153,7 @@ test.describe.serial('Admin idempotency middleware', () => {
 
     const headers = req.headers();
     const key = headers['idempotency-key'];
-    expect(key, "Idempotency-Key header doit être présent").toBeTruthy();
+    expect(key, 'Idempotency-Key header doit être présent').toBeTruthy();
     // UUID v4 : 8-4-4-4-12 hex chars + tirets. Tolère un format fallback aussi.
     expect(key!.length).toBeGreaterThanOrEqual(16);
 

@@ -69,12 +69,12 @@ test.describe.serial('Admin tenants UI (S7)', () => {
       page.getByRole('heading', { name: /Tenants/i, level: 1 })
     ).toBeVisible({ timeout: 15000 });
 
-    // Create CTA always visible regardless of API state
+    // Create CTA always visible regardless of API state. It now opens the
+    // creation modal in place (deep-link ?new=1) instead of navigating away.
     await expect(page.getByTestId('tenants-create-cta')).toBeVisible();
-    await expect(page.getByTestId('tenants-create-cta')).toHaveAttribute(
-      'href',
-      '/admin/tenants/new'
-    );
+    await page.getByTestId('tenants-create-cta').click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await expect(page.getByTestId('tenant-name-input')).toBeVisible();
 
     // Either a table (with at least the conference row) or an empty state.
     const tableRow = page.locator('[data-testid^="tenant-row-"]');
@@ -90,11 +90,10 @@ test.describe.serial('Admin tenants UI (S7)', () => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
 
     await loginAsAdmin(page);
-    await page.goto('/admin/tenants/new');
+    // Creation is now an in-place modal; ?new=1 deep-links it open.
+    await page.goto('/admin/tenants?new=1');
 
-    await expect(
-      page.getByRole('heading', { name: /Nouveau tenant/i, level: 1 })
-    ).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole('dialog')).toBeVisible({ timeout: 15000 });
 
     // Slug auto-generated from name
     await page.getByTestId('tenant-name-input').fill('My New Event');
@@ -115,7 +114,8 @@ test.describe.serial('Admin tenants UI (S7)', () => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
 
     await loginAsAdmin(page);
-    await page.goto('/admin/tenants/new');
+    await page.goto('/admin/tenants?new=1');
+    await expect(page.getByRole('dialog')).toBeVisible({ timeout: 15000 });
 
     await page.getByTestId('tenant-name-input').fill(TEST_TENANT_NAME);
     await page.getByTestId('tenant-slug-input').fill(TEST_TENANT_SLUG);
@@ -132,9 +132,9 @@ test.describe.serial('Admin tenants UI (S7)', () => {
     }
 
     await page.getByTestId('tenant-create-submit').click();
-    // Either we're redirected to the detail page, or an error toast appears.
+    // On success the modal closes (we stay on the list); otherwise an error shows.
     await Promise.race([
-      page.waitForURL(/\/admin\/tenants\/[0-9a-f-]+/, { timeout: 8000 }),
+      page.getByRole('dialog').waitFor({ state: 'detached', timeout: 8000 }),
       page.waitForSelector('text=/Création impossible|Erreur|invalide/i', {
         timeout: 8000,
       }),

@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import AlertBanner from '@/components/admin/AlertBanner';
 import Breadcrumb from '@/components/admin/Breadcrumb';
 import EmptyState from '@/components/admin/EmptyState';
 import LoadingSpinner from '@/components/admin/LoadingSpinner';
+import TenantFormModal from '@/components/admin/tenants/TenantFormModal';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 import { logger } from '../../../utils/logger';
@@ -58,12 +60,14 @@ function formatDate(s: string | null): string {
 
 function AdminTenantsListPage(_props: Props) {
   const t = useAdminT('adminTenantsList');
+  const router = useRouter();
   const { adminFetchJson } = useAdminFetch();
   const [tenants, setTenants] = useState<TenantRow[] | null>(null);
   const [pending, setPending] = useState<PendingLink[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'all' | 'active' | 'archived'>('all');
+  const [modalOpen, setModalOpen] = useState(false);
 
   const fetchData = useCallback(async () => {
     setError(null);
@@ -86,6 +90,24 @@ function AdminTenantsListPage(_props: Props) {
     fetchData();
   }, [fetchData]);
 
+  // Deep-link : `?new=1` (ancienne route /new) ouvre la modale de création.
+  useEffect(() => {
+    if (!router.isReady) return;
+    if (router.query.new) setModalOpen(true);
+  }, [router.isReady, router.query.new]);
+
+  const closeModal = useCallback(() => {
+    setModalOpen(false);
+    if (router.query.new) {
+      const { new: _omit, ...rest } = router.query;
+      void router.replace(
+        { pathname: router.pathname, query: rest },
+        undefined,
+        { shallow: true }
+      );
+    }
+  }, [router]);
+
   const visible = useMemo(() => {
     if (!tenants) return [];
     const q = search.trim().toLowerCase();
@@ -104,6 +126,12 @@ function AdminTenantsListPage(_props: Props) {
       <Head>
         <title>{t.pageTitle}</title>
       </Head>
+
+      <TenantFormModal
+        open={modalOpen}
+        onClose={closeModal}
+        onCreated={fetchData}
+      />
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
         <div className="w-full px-4 sm:px-6 lg:px-8 pt-20 pb-12">
@@ -131,8 +159,9 @@ function AdminTenantsListPage(_props: Props) {
               </p>
             </div>
 
-            <Link
-              href="/admin/tenants/new"
+            <button
+              type="button"
+              onClick={() => setModalOpen(true)}
               className="px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-sm font-medium transition-colors inline-flex items-center gap-2"
               data-testid="tenants-create-cta"
             >
@@ -150,7 +179,7 @@ function AdminTenantsListPage(_props: Props) {
                 />
               </svg>
               {t.createTenant}
-            </Link>
+            </button>
           </div>
 
           {pending.length > 0 && (

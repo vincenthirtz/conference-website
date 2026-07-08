@@ -4,8 +4,10 @@
 import { useEffect, useState, useCallback } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { withStaffPage } from '@/utils/staff';
+import ScrimFormModal from '@/components/admin/scrims/ScrimFormModal';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { StaffProps, ScrimStatus } from '@/types/admin';
 
@@ -79,11 +81,13 @@ export const getServerSideProps = withStaffPage('manager');
 
 function AdminScrimsPage(_props: StaffProps) {
   const t = useAdminT('adminScrimsList');
+  const router = useRouter();
   const { adminFetchJson } = useAdminFetch();
   const [scrims, setScrims] = useState<ScrimRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('');
+  const [modalOpen, setModalOpen] = useState(false);
 
   const fetchScrims = useCallback(async () => {
     setLoading(true);
@@ -106,11 +110,34 @@ function AdminScrimsPage(_props: StaffProps) {
     fetchScrims();
   }, [fetchScrims]);
 
+  // Deep-link : `?new=1` (ancienne route /create) ouvre la modale de création.
+  useEffect(() => {
+    if (!router.isReady) return;
+    if (router.query.new) setModalOpen(true);
+  }, [router.isReady, router.query.new]);
+
+  const closeModal = useCallback(() => {
+    setModalOpen(false);
+    if (router.query.new) {
+      const { new: _omit, ...rest } = router.query;
+      void router.replace(
+        { pathname: router.pathname, query: rest },
+        undefined,
+        { shallow: true }
+      );
+    }
+  }, [router]);
+
   return (
     <>
       <Head>
         <title>{t.pageTitle}</title>
       </Head>
+      <ScrimFormModal
+        open={modalOpen}
+        onClose={closeModal}
+        onCreated={fetchScrims}
+      />
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
         <div className="w-full px-4 sm:px-6 lg:px-8 pt-20 pb-12">
           <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
@@ -120,12 +147,13 @@ function AdminScrimsPage(_props: StaffProps) {
               </h1>
               <p className="text-neutral-400 text-sm mt-1">{t.subtitle}</p>
             </div>
-            <Link
-              href="/admin/scrims/create"
+            <button
+              type="button"
+              onClick={() => setModalOpen(true)}
               className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors"
             >
               {t.newScrim}
-            </Link>
+            </button>
           </div>
 
           <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-4 mb-6 flex gap-3 items-end">
