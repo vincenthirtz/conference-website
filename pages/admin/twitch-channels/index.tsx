@@ -7,6 +7,7 @@ import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useAdminResource } from '@/hooks/useAdminResource';
 import TwitchChannelFormModal from '@/components/admin/twitch-channels/TwitchChannelFormModal';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
@@ -55,31 +56,29 @@ function AdminTwitchChannelsPage({ staff }: Props) {
   const { adminFetch, adminFetchJson } = useAdminFetch();
   const { addToast } = useToast();
   const { confirm, dialog } = useConfirmDialog();
-  const [loading, setLoading] = useState(false);
-  const [channels, setChannels] = useState<TwitchChannelRow[]>([]);
   const [search, setSearch] = useState('');
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [overIdx, setOverIdx] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-
-    try {
-      const json = await adminFetchJson<ApiResponse>(
-        '/api/admin/twitch-channels?includeInactive=true'
-      );
-      setChannels(json.items || []);
-    } catch (err) {
-      logger.error('Error fetching twitch channels', err);
-    } finally {
-      setLoading(false);
+  // Liste complète chargée en une fois : la recherche est filtrée côté client
+  // (voir `filteredChannels`). `limit: 100` réplique le défaut de
+  // /api/admin/twitch-channels (l'ancienne requête n'envoyait pas de limite) ;
+  // pas de COUNT nécessaire (includeTotal: false).
+  const {
+    data: channels,
+    loading,
+    refresh: fetchData,
+    mutate,
+  } = useAdminResource<TwitchChannelRow, ApiResponse>(
+    '/api/admin/twitch-channels',
+    {
+      limit: 100,
+      includeTotal: false,
+      params: { includeInactive: true },
+      select: (res) => res.items || [],
     }
-  }, [adminFetchJson]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  );
 
   // Deep-link : `?new=1` (ancienne route /new) ouvre la modale de création.
   useEffect(() => {
@@ -142,8 +141,8 @@ function AdminTwitchChannelsPage({ staff }: Props) {
         }
       });
 
-      // Optimistic update
-      setChannels(reordered.map((c, i) => ({ ...c, sort_order: i })));
+      // Optimistic update (patch local des rows, écrasé au prochain fetch).
+      mutate(reordered.map((c, i) => ({ ...c, sort_order: i })));
       setDragIdx(null);
       setOverIdx(null);
 
@@ -162,12 +161,13 @@ function AdminTwitchChannelsPage({ staff }: Props) {
       } catch (err: unknown) {
         logger.error('Reorder error', err);
         addToast(t.errorReorder, 'error');
+        // Rollback : re-fetch la source de vérité (annule l'ordre optimiste).
         fetchData();
       } finally {
         setSaving(false);
       }
     },
-    [channels, fetchData, adminFetch, addToast, t]
+    [channels, fetchData, mutate, adminFetch, addToast, t]
   );
 
   const filteredChannels = channels.filter(

@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { withStaffPage } from '@/utils/staff';
-import { useDebounce } from '@/hooks/useDebounce';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useAdminResource } from '@/hooks/useAdminResource';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 import { logger } from '../../../utils/logger';
@@ -78,20 +78,14 @@ function AdminAdherentsPage({ staff }: Props) {
   const t = useAdminT('adminAdherentsList');
   const paymentStatusLabels = getPaymentStatusLabels(t);
   const roleLabels = getRoleLabels(t);
-  const [loading, setLoading] = useState(false);
-  const [adherents, setAdherents] = useState<AdherentRow[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [search, setSearch] = useState('');
-  const debouncedSearch = useDebounce(search, 300);
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<string | null>(
     null
   );
   const [yearFilter, setYearFilter] = useState<string | null>(null);
   const [roleFilter, setRoleFilter] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
-  const [total, setTotal] = useState<number | null>(null);
-  const [offset, setOffset] = useState(0);
-  const limit = 50;
   const [cotisationAmount, setCotisationAmount] = useState<number>(0);
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<string | null>(null);
@@ -101,70 +95,65 @@ function AdminAdherentsPage({ staff }: Props) {
   const { addToast } = useToast();
   const { confirm, dialog } = useConfirmDialog();
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-
-    try {
-      const params = new URLSearchParams();
-      params.set('limit', String(limit));
-      params.set('offset', String(offset));
-      params.set('includeTotal', '1');
-      if (debouncedSearch.trim()) params.set('search', debouncedSearch.trim());
-      if (paymentStatusFilter) params.set('paymentStatus', paymentStatusFilter);
-      if (yearFilter) params.set('year', yearFilter);
-      if (roleFilter) params.set('role', roleFilter);
-      if (activeFilter) params.set('active', activeFilter);
-
-      const json = await adminFetchJson<{
-        items?: AdherentRow[];
-        stats?: Stats;
-        total?: number | null;
-      }>(`/api/admin/adherents?${params.toString()}`);
-
-      setAdherents(json.items || []);
-      setStats(json.stats || null);
-      setTotal(typeof json.total === 'number' ? json.total : null);
-
-      // Récupérer le montant de cotisation
-      const settingsJson = await adminFetchJson<{
-        items?: { key: string; value: string }[];
-      }>('/api/admin/site-settings');
-      const cotisation = settingsJson.items?.find(
-        (s: { key: string }) => s.key === 'cotisation_amount'
-      );
-      if (cotisation?.value) {
-        setCotisationAmount(parseFloat(cotisation.value) || 0);
-      }
-    } catch (err) {
-      logger.error('Error fetching adherents', err);
-    } finally {
-      setLoading(false);
-    }
-  }, [
-    debouncedSearch,
-    paymentStatusFilter,
-    yearFilter,
-    roleFilter,
-    activeFilter,
+  // Liste paginée + filtrée côté serveur. `limit: 50` réplique le défaut de
+  // /api/admin/adherents (parsePagination limit:50). Les stats agrégées
+  // reviennent dans le même payload → captées via `onData` (pas de 2e requête).
+  // Le hook gère le debounce recherche + reset d'offset via `query`.
+  const {
+    data: adherents,
+    total,
+    loading,
     offset,
     limit,
-    adminFetchJson,
-  ]);
+    setOffset,
+    refresh: fetchData,
+    resetOffset,
+  } = useAdminResource<
+    AdherentRow,
+    { items?: AdherentRow[]; stats?: Stats; total?: number | null }
+  >('/api/admin/adherents', {
+    limit: 50,
+    query: search,
+    params: {
+      paymentStatus: paymentStatusFilter,
+      year: yearFilter,
+      role: roleFilter,
+      active: activeFilter,
+    },
+    select: (res) => res.items || [],
+    onData: (res) => setStats(res.stats || null),
+  });
 
+  // Le changement de filtre repart de la première page (le reset lié à la
+  // recherche est déjà géré par le hook via `query`).
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    resetOffset();
+  }, [paymentStatusFilter, yearFilter, roleFilter, activeFilter, resetOffset]);
 
-  // Réinitialise la pagination quand un filtre/recherche change.
+  // Montant de cotisation : endpoint distinct (site-settings), hors périmètre
+  // du hook liste — chargé une fois au montage.
   useEffect(() => {
-    setOffset(0);
-  }, [
-    debouncedSearch,
-    paymentStatusFilter,
-    yearFilter,
-    roleFilter,
-    activeFilter,
-  ]);
+    let active = true;
+    (async () => {
+      try {
+        const settingsJson = await adminFetchJson<{
+          items?: { key: string; value: string }[];
+        }>('/api/admin/site-settings');
+        if (!active) return;
+        const cotisation = settingsJson.items?.find(
+          (s: { key: string }) => s.key === 'cotisation_amount'
+        );
+        if (cotisation?.value) {
+          setCotisationAmount(parseFloat(cotisation.value) || 0);
+        }
+      } catch (err) {
+        logger.error('Error fetching site settings', err);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [adminFetchJson]);
 
   const onDelete = async (id: string, name: string) => {
     const ok = await confirm({

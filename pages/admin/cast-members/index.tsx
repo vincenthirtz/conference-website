@@ -1,12 +1,14 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
+import { useDebounce } from '@/hooks/useDebounce';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useAdminResource } from '@/hooks/useAdminResource';
 import CastMemberFormModal from '@/components/admin/cast-members/CastMemberFormModal';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
@@ -57,84 +59,57 @@ function AdminCastMembersPage({ staff }: Props) {
   const tx = useAdminT('adminCastMembersList');
   const router = useRouter();
   const [modalOpen, setModalOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [members, setMembers] = useState<CastMemberRow[]>([]);
-  const [total, setTotal] = useState<number | null>(null);
   const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 300);
   const [status, setStatus] = useState<'all' | 'active' | 'inactive'>('all');
-  const [offset, setOffset] = useState(0);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [overIdx, setOverIdx] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
-  const { adminFetch, adminFetchJson } = useAdminFetch();
+  const { adminFetch } = useAdminFetch();
   const { addToast } = useToast();
   const { confirm, dialog } = useConfirmDialog();
+
+  // Filtre statut → params serveur (reproduit exactement l'ancien fetch).
+  // 'active'/'inactive' → filtre explicite ; 'all' → includeInactive.
+  const statusParams =
+    status === 'active'
+      ? { status: 'active' }
+      : status === 'inactive'
+        ? { status: 'inactive' }
+        : { includeInactive: true };
+
+  // Liste paginée + filtrée côté serveur. `limit: PAGE_SIZE` (=50) réplique le
+  // défaut de /api/admin/cast-members (parsePagination limit:50). Le hook gère
+  // le debounce recherche + reset d'offset ; l'AbortController remplace le
+  // guard de séquence manuel (réponses périmées annulées).
+  const {
+    data: members,
+    total,
+    loading,
+    offset,
+    setOffset,
+    refresh: fetchData,
+    mutate,
+    resetOffset,
+  } = useAdminResource<CastMemberRow, ApiResponse>('/api/admin/cast-members', {
+    limit: PAGE_SIZE,
+    query: debouncedSearch,
+    debounceMs: 0,
+    params: statusParams,
+    select: (res) => res.items || [],
+  });
+
+  // Le changement de filtre statut repart de la première page (le reset lié à
+  // la recherche est déjà géré par le hook via `query`).
+  useEffect(() => {
+    resetOffset();
+  }, [status, resetOffset]);
 
   // Le drag-reorder n'a de sens que sur la liste complète, triée par
   // sort_order ASC, page 0. On le désactive dès qu'un filtre/recherche
   // restreint ou réordonne le jeu de résultats côté serveur.
   const canReorder =
     !debouncedSearch.trim() && status === 'all' && offset === 0;
-
-  // Debounce de la recherche (~300ms) avant de requêter le serveur.
-  useEffect(() => {
-    const t = setTimeout(() => {
-      setDebouncedSearch(search);
-    }, 300);
-    return () => clearTimeout(t);
-  }, [search]);
-
-  // Toute modification de recherche/filtre repart de la première page.
-  useEffect(() => {
-    setOffset(0);
-  }, [debouncedSearch, status]);
-
-  // Guard de séquence : le reset d'offset (effet ci-dessus) et le changement
-  // de filtre déclenchent deux fetchs successifs dans le même commit ; seule
-  // la dernière requête lancée peut appliquer sa réponse (sinon une réponse
-  // périmée — ancien offset — peut revenir après la bonne et l'écraser).
-  const fetchSeqRef = useRef(0);
-
-  const fetchData = useCallback(async () => {
-    const seq = ++fetchSeqRef.current;
-    setLoading(true);
-
-    try {
-      const params = new URLSearchParams();
-      params.set('limit', String(PAGE_SIZE));
-      params.set('offset', String(offset));
-      params.set('includeTotal', '1');
-      if (status === 'active') {
-        params.set('status', 'active');
-      } else if (status === 'inactive') {
-        params.set('status', 'inactive');
-      } else {
-        // 'all' => inclure les inactives
-        params.set('includeInactive', 'true');
-      }
-      if (debouncedSearch.trim()) {
-        params.set('search', debouncedSearch.trim());
-      }
-
-      const json = await adminFetchJson<ApiResponse>(
-        `/api/admin/cast-members?${params.toString()}`
-      );
-
-      if (seq !== fetchSeqRef.current) return; // réponse périmée
-      setMembers(json.items || []);
-      setTotal(typeof json.total === 'number' ? json.total : null);
-    } catch (err) {
-      if (seq !== fetchSeqRef.current) return;
-      logger.error('Error fetching cast members', err);
-    } finally {
-      if (seq === fetchSeqRef.current) setLoading(false);
-    }
-  }, [adminFetchJson, offset, status, debouncedSearch]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
 
   // Deep-link : `?new=1` (ancienne route /new) ouvre la modale de création.
   useEffect(() => {
@@ -208,8 +183,8 @@ function AdminCastMembersPage({ staff }: Props) {
         }
       });
 
-      // Optimistic update
-      setMembers(reordered.map((m, i) => ({ ...m, sort_order: i })));
+      // Optimistic update (patch local des rows, écrasé au prochain fetch).
+      mutate(reordered.map((m, i) => ({ ...m, sort_order: i })));
       setDragIdx(null);
       setOverIdx(null);
 
@@ -240,12 +215,13 @@ function AdminCastMembersPage({ staff }: Props) {
       } catch (err: unknown) {
         logger.error('Reorder error', err);
         addToast(tx.errorReorder, 'error');
+        // Rollback : re-fetch la source de vérité (annule l'ordre optimiste).
         fetchData();
       } finally {
         setSaving(false);
       }
     },
-    [members, fetchData, adminFetch, addToast, tx]
+    [members, fetchData, mutate, adminFetch, addToast, tx]
   );
 
   return (
