@@ -2,7 +2,7 @@
 // Formulaire structuré pour éditer les règles d'avancement (advancement_rules)
 // d'un stage, à la place d'un JSON brut.
 
-import { useState, useEffect } from 'react';
+import { memo, useState, useEffect } from 'react';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 
 type Dict = ReturnType<typeof useAdminT<'adminAdvancementRulesEditor'>>;
@@ -43,7 +43,7 @@ function getSeedByOptions(
 
 type Mode = 'top_n' | 'per_group';
 
-export default function AdvancementRulesEditor({
+function AdvancementRulesEditor({
   value,
   availableStages,
   onChange,
@@ -319,3 +319,10 @@ export default function AdvancementRulesEditor({
     </div>
   );
 }
+
+// Mémoïsé : monté dans pages/admin/stages/[stageId].tsx sur le même écran que
+// d'autres champs de config. Toutes les props passées par le parent sont
+// référentiellement stables (value/availableStages/disabled = state,
+// onChange = dispatcher setState, sourceStageType = primitif), donc le memo
+// suffit à couper les re-renders déclenchés par un autre état de la page.
+export default memo(AdvancementRulesEditor);

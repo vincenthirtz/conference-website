@@ -8,7 +8,7 @@
 // endpoints FFA (/api/admin/stages/[stageId]/lobbies et
 // /api/admin/lobbies/[lobbyId]/*).
 
-import { useCallback, useEffect, useState } from 'react';
+import { memo, useCallback, useEffect, useState } from 'react';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
@@ -100,7 +100,7 @@ function statusColor(status: string): string {
   }
 }
 
-export default function FfaLobbiesManager({
+function FfaLobbiesManager({
   stageId,
   tournamentId,
 }: {
@@ -646,3 +646,9 @@ function tiebreakLabel(tiebreak: LobbiesResponse['tiebreak'], t: Dict): string {
       return t.tiebreakBestPlacement;
   }
 }
+
+// Mémoïsé : monté dans pages/admin/stages/[stageId].tsx (phases FFA) sur le même
+// écran que les champs de config d'avancement. Ses deux props (stageId,
+// tournamentId) sont des chaînes primitives stables, donc le memo seul empêche
+// les re-renders inutiles déclenchés par un autre état de la page.
+export default memo(FfaLobbiesManager);
