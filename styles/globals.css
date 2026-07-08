@@ -378,6 +378,84 @@ select option {
   animation: GradientAnimation 50s ease infinite alternate;
 }
 
+/* ─────────────────────────────────────────────────────────
+ * REBRAND — utilitaires « les 3 couleurs ressortent » (accents vifs sur
+ * fond sombre). À appliquer aux titres de sections, boutons, cartes/badges,
+ * fonds de section du public. Le thème reste sombre ; ce sont des ACCENTS.
+ * ───────────────────────────────────────────────────────── */
+
+/* Titre de section : texte clippé violet → vert → jaune (statique, lisible). */
+.text-brand-gradient {
+  background: linear-gradient(
+    100deg,
+    var(--color-violet) 0%,
+    var(--color-green) 52%,
+    var(--color-yellow) 100%
+  );
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+/* Filet / séparateur de marque (sous un titre, entre deux sections). */
+.brand-rule {
+  height: 3px;
+  width: 64px;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    var(--color-violet),
+    var(--color-green),
+    var(--color-yellow)
+  );
+}
+
+/* Puce / point d'accent (badges, listes, tags). */
+.brand-dot {
+  background: linear-gradient(135deg, var(--color-violet), var(--color-green));
+}
+
+/* Carte à liseré de marque : bordure + halo violet discrets sur fond sombre. */
+.card-brand {
+  border: 1px solid color-mix(in srgb, var(--color-violet) 45%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-violet) 12%, transparent),
+    0 18px 40px -24px color-mix(in srgb, var(--color-violet) 70%, transparent);
+}
+.card-brand:hover {
+  border-color: color-mix(in srgb, var(--color-green) 55%, transparent);
+}
+
+/* Bande de fond de section : halo radial tri-couleur très diffus, discret. */
+.section-brand-bg {
+  position: relative;
+  isolation: isolate;
+}
+.section-brand-bg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      40% 60% at 12% 0%,
+      color-mix(in srgb, var(--color-violet) 22%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      36% 55% at 88% 20%,
+      color-mix(in srgb, var(--color-green) 18%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      30% 50% at 60% 100%,
+      color-mix(in srgb, var(--color-yellow) 14%, transparent),
+      transparent 70%
+    );
+}
+
 @keyframes GradientAnimation {
   0% {
     background-position: 0% 50%;
