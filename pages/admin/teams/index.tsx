@@ -1,13 +1,13 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { supabaseAdmin } from '@/utils/supabase';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useAdminResource } from '@/hooks/useAdminResource';
 import {
   useIdempotentMutation,
   BgSyncQueuedError,
@@ -27,9 +27,18 @@ type AdminTeamsProps = {
     role: string | null;
     display_name: string | null;
   };
+  // SSR first-paint hydration — seeds the shared read hook so the list shows
+  // instantly (no flash, gating/SEO preserved) while pagination/filters/search
+  // are then driven CLIENT-side by useAdminResource.
+  initialTeams: TeamRow[];
+  initialTotal: number | null;
+  initialOffset: number;
+  errorMsg: string | null;
+};
+
+type TeamsApiResponse = {
   teams: TeamRow[];
   total: number | null;
-  errorMsg: string | null;
 };
 
 function formatDate(d: string | null) {
@@ -45,12 +54,16 @@ function formatDate(d: string | null) {
   }
 }
 
-const FILTER_KEYS = ['search', 'isActive', 'tournamentId', 'offset'] as const;
+// Filters (search / isActive / tournamentId) stay URL-driven for deep-linking
+// and are passed as server params; pagination is owned by the hook (offset is
+// no longer synced to the URL — mirrors PartnersListPanel).
+const FILTER_KEYS = ['search', 'isActive', 'tournamentId'] as const;
 const LIMIT = 25;
 
 function AdminTeamsListPage({
-  teams,
-  total,
+  initialTeams,
+  initialTotal,
+  initialOffset,
   errorMsg: ssrError,
 }: AdminTeamsProps) {
   const t = useAdminT('adminTeamsList');
@@ -60,14 +73,50 @@ function AdminTeamsListPage({
   const { mutateJson: mutateBulk } = useIdempotentMutation();
   const { mutate: mutateImport } = useIdempotentMutation();
   const { adminFetch, adminFetchJson } = useAdminFetch();
-  const router = useRouter();
-  const { filters, setFilter, setFilters } = useUrlFilters(FILTER_KEYS);
+  const { filters, setFilters } = useUrlFilters(FILTER_KEYS);
 
   const search = filters.search ?? '';
   const activeFilter = filters.isActive ?? '';
   const tournamentFilter = filters.tournamentId ?? '';
-  const offset = Number(filters.offset) || 0;
-  const loading = false;
+
+  // Client-side reads via the shared hook, seeded from SSR for the first paint.
+  // Params mirror EXACTLY the SSR loader (isActive / tournamentId filters +
+  // name/slug/short_name search + created_at desc order + limit 25) so the
+  // hydrated page matches what the hook would fetch — no flash / incoherence.
+  const {
+    data: teams,
+    total,
+    loading,
+    error: hookError,
+    refresh: fetchTeams,
+    offset,
+    setOffset,
+    resetOffset,
+  } = useAdminResource<TeamRow, TeamsApiResponse>('/api/admin/teams', {
+    limit: LIMIT,
+    initialData: initialTeams,
+    initialTotal,
+    initialOffset,
+    params: {
+      isActive: activeFilter,
+      tournamentId: tournamentFilter,
+      search,
+    },
+    select: (res) => res.teams || [],
+    selectTotal: (res) => (typeof res.total === 'number' ? res.total : null),
+  });
+
+  // Any server-filter change returns to the first page — but NOT on the very
+  // first render (that would clobber a deep-linked SSR offset before the
+  // hydrated data is shown).
+  const skipFirstReset = useRef(true);
+  useEffect(() => {
+    if (skipFirstReset.current) {
+      skipFirstReset.current = false;
+      return;
+    }
+    resetOffset();
+  }, [activeFilter, tournamentFilter, search, resetOffset]);
 
   const [errorMsg, setErrorMsg] = useState<string | null>(ssrError);
   const [deleteTarget, setDeleteTarget] = useState<TeamRow | null>(null);
@@ -136,10 +185,6 @@ function AdminTeamsListPage({
   // Local search input (synced to URL on submit)
   const [searchInput, setSearchInput] = useState(search);
 
-  const fetchTeams = useCallback(() => {
-    router.replace(router.asPath, undefined, { scroll: false });
-  }, [router]);
-
   async function handleDelete(team: TeamRow) {
     if (!team?.id) return;
     setDeleting(true);
@@ -170,7 +215,7 @@ function AdminTeamsListPage({
 
   function handleSearchSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setFilters({ search: searchInput.trim() || null, offset: null });
+    setFilters({ search: searchInput.trim() || null });
   }
 
   // Bulk selection helpers
@@ -461,7 +506,7 @@ function AdminTeamsListPage({
           </div>
 
           {/* Messages */}
-          {errorMsg && (
+          {(errorMsg ?? hookError) && (
             <div className="mb-6 rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm flex items-center gap-2">
               <svg
                 className="w-5 h-5 text-red-400 flex-shrink-0"
@@ -474,7 +519,7 @@ function AdminTeamsListPage({
                   clipRule="evenodd"
                 />
               </svg>
-              <span className="flex-1">{errorMsg}</span>
+              <span className="flex-1">{errorMsg ?? hookError}</span>
               <button
                 type="button"
                 onClick={() => fetchTeams()}
@@ -529,7 +574,6 @@ function AdminTeamsListPage({
                   onChange={(e) => {
                     setFilters({
                       isActive: e.target.value || null,
-                      offset: null,
                     });
                   }}
                 >
@@ -550,7 +594,6 @@ function AdminTeamsListPage({
                   onChange={(e) => {
                     setFilters({
                       tournamentId: e.target.value || null,
-                      offset: null,
                     });
                   }}
                 >
@@ -813,9 +856,7 @@ function AdminTeamsListPage({
             <button
               type="button"
               disabled={offset === 0 || loading}
-              onClick={() =>
-                setFilter('offset', String(Math.max(0, offset - LIMIT)) || null)
-              }
+              onClick={() => setOffset(Math.max(0, offset - LIMIT))}
               className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               <svg
@@ -845,7 +886,7 @@ function AdminTeamsListPage({
             <button
               type="button"
               disabled={loading || (total !== null && offset + LIMIT >= total)}
-              onClick={() => setFilter('offset', String(offset + LIMIT))}
+              onClick={() => setOffset(offset + LIMIT)}
               className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {t.next}
@@ -1368,7 +1409,12 @@ export const getServerSideProps = withStaffPage(
     const offset = Math.max(0, Number(query.offset) || 0);
 
     if (!supabaseAdmin) {
-      return { teams: [], total: null, errorMsg: 'Service indisponible' };
+      return {
+        initialTeams: [],
+        initialTotal: null,
+        initialOffset: offset,
+        errorMsg: 'Service indisponible',
+      };
     }
 
     const { tenantId } = staffCtx;
@@ -1394,7 +1440,12 @@ export const getServerSideProps = withStaffPage(
         .eq('tournament_id', tournamentId);
       const teamIds = (regs || []).map((r) => r.team_id).filter(Boolean);
       if (teamIds.length === 0) {
-        return { teams: [], total: 0, errorMsg: null };
+        return {
+          initialTeams: [],
+          initialTotal: 0,
+          initialOffset: offset,
+          errorMsg: null,
+        };
       }
       q = q.in('id', teamIds);
     }
@@ -1403,12 +1454,18 @@ export const getServerSideProps = withStaffPage(
 
     if (error) {
       logger.error('admin teams SSR error:', error);
-      return { teams: [], total: null, errorMsg: 'Erreur lors du chargement' };
+      return {
+        initialTeams: [],
+        initialTotal: null,
+        initialOffset: offset,
+        errorMsg: 'Erreur lors du chargement',
+      };
     }
 
     return {
-      teams: (data || []) as TeamRow[],
-      total: typeof count === 'number' ? count : null,
+      initialTeams: (data || []) as TeamRow[],
+      initialTotal: typeof count === 'number' ? count : null,
+      initialOffset: offset,
       errorMsg: null,
     };
   }
