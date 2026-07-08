@@ -58,6 +58,7 @@ import { SEED_COLORS } from '@/components/admin/simulator/SimMatchCard';
 import {
   EliminationView,
   groupByRound,
+  type RoundGroup,
 } from '@/components/admin/simulator/EliminationView';
 import { SummaryCard } from '@/components/admin/simulator/SummaryCard';
 
@@ -483,6 +484,72 @@ function TournamentSimulatorPage() {
     },
     [setStages]
   );
+
+  // --- Referentially stable props for EliminationView / SimMatchCard ---------
+  // The match handlers above are re-created on every state change (their dep
+  // chain reaches `occurrences` via setStages -> pushUndo). To keep the
+  // memoized bracket cards from re-rendering on every interaction, we dispatch
+  // through a ref: the per-stage handler objects below stay stable forever and
+  // always call the latest handler.
+  const matchActionsRef = useRef({
+    simulate: handleSimulateMatch,
+    reset: handleResetMatch,
+    toggleLock: handleToggleLock,
+  });
+  matchActionsRef.current.simulate = handleSimulateMatch;
+  matchActionsRef.current.reset = handleResetMatch;
+  matchActionsRef.current.toggleLock = handleToggleLock;
+
+  // Stable factory returning cached, per-stageIdx handler bundles. Empty deps:
+  // the returned arrows only close over `stageIdx` and the (stable) ref.
+  const getStageHandlers = useMemo(() => {
+    const cache = new Map<
+      number,
+      {
+        onSimulate: (id: string) => void;
+        onReset: (id: string) => void;
+        onToggleLock: (id: string) => void;
+      }
+    >();
+    return (stageIdx: number) => {
+      let entry = cache.get(stageIdx);
+      if (!entry) {
+        entry = {
+          onSimulate: (id: string) =>
+            matchActionsRef.current.simulate(stageIdx, id),
+          onReset: (id: string) => matchActionsRef.current.reset(stageIdx, id),
+          onToggleLock: (id: string) =>
+            matchActionsRef.current.toggleLock(stageIdx, id),
+        };
+        cache.set(stageIdx, entry);
+      }
+      return entry;
+    };
+  }, []);
+
+  // Stable no-op handlers for read-only bracket views (compare panel).
+  const noopSimAction = useCallback((_id: string) => {}, []);
+
+  // Memoized groupByRound: caches per (matches ref, side). Unchanged stages
+  // keep the same `matches` reference across renders, so this returns the same
+  // RoundGroup[] and lets memo(EliminationView) skip them.
+  const groupByRoundMemo = useMemo(() => {
+    const cache = new WeakMap<SimMatch[], Map<string, RoundGroup[]>>();
+    return (matches: SimMatch[], side?: 'wb' | 'lb' | 'final') => {
+      let bySide = cache.get(matches);
+      if (!bySide) {
+        bySide = new Map();
+        cache.set(matches, bySide);
+      }
+      const key = side ?? '';
+      let result = bySide.get(key);
+      if (!result) {
+        result = groupByRound(matches, side);
+        bySide.set(key, result);
+      }
+      return result;
+    };
+  }, []);
 
   /** Import config from file */
   const handleImportConfig = useCallback(
@@ -2191,13 +2258,11 @@ function TournamentSimulatorPage() {
                         <>
                           {/* WB */}
                           <EliminationView
-                            rounds={groupByRound(stage.matches, 'wb')}
-                            onSimulate={(id) =>
-                              handleSimulateMatch(stageIdx, id)
-                            }
-                            onReset={(id) => handleResetMatch(stageIdx, id)}
-                            onToggleLock={(id) =>
-                              handleToggleLock(stageIdx, id)
+                            rounds={groupByRoundMemo(stage.matches, 'wb')}
+                            onSimulate={getStageHandlers(stageIdx).onSimulate}
+                            onReset={getStageHandlers(stageIdx).onReset}
+                            onToggleLock={
+                              getStageHandlers(stageIdx).onToggleLock
                             }
                             label={
                               stage.matches.some((m) => m.bracket_side === 'lb')
@@ -2211,13 +2276,13 @@ function TournamentSimulatorPage() {
                           ) && (
                             <div className="mt-6">
                               <EliminationView
-                                rounds={groupByRound(stage.matches, 'lb')}
-                                onSimulate={(id) =>
-                                  handleSimulateMatch(stageIdx, id)
+                                rounds={groupByRoundMemo(stage.matches, 'lb')}
+                                onSimulate={
+                                  getStageHandlers(stageIdx).onSimulate
                                 }
-                                onReset={(id) => handleResetMatch(stageIdx, id)}
-                                onToggleLock={(id) =>
-                                  handleToggleLock(stageIdx, id)
+                                onReset={getStageHandlers(stageIdx).onReset}
+                                onToggleLock={
+                                  getStageHandlers(stageIdx).onToggleLock
                                 }
                                 label={tx.losersBracket}
                                 accentColor="text-red-300"
@@ -2230,13 +2295,16 @@ function TournamentSimulatorPage() {
                           ) && (
                             <div className="mt-6">
                               <EliminationView
-                                rounds={groupByRound(stage.matches, 'final')}
-                                onSimulate={(id) =>
-                                  handleSimulateMatch(stageIdx, id)
+                                rounds={groupByRoundMemo(
+                                  stage.matches,
+                                  'final'
+                                )}
+                                onSimulate={
+                                  getStageHandlers(stageIdx).onSimulate
                                 }
-                                onReset={(id) => handleResetMatch(stageIdx, id)}
-                                onToggleLock={(id) =>
-                                  handleToggleLock(stageIdx, id)
+                                onReset={getStageHandlers(stageIdx).onReset}
+                                onToggleLock={
+                                  getStageHandlers(stageIdx).onToggleLock
                                 }
                                 label={tx.grandFinal}
                                 accentColor="text-amber-300"
@@ -2250,10 +2318,10 @@ function TournamentSimulatorPage() {
                         stage.stage_type === 'round_robin' ||
                         stage.stage_type === 'group') && (
                         <EliminationView
-                          rounds={groupByRound(stage.matches)}
-                          onSimulate={(id) => handleSimulateMatch(stageIdx, id)}
-                          onReset={(id) => handleResetMatch(stageIdx, id)}
-                          onToggleLock={(id) => handleToggleLock(stageIdx, id)}
+                          rounds={groupByRoundMemo(stage.matches)}
+                          onSimulate={getStageHandlers(stageIdx).onSimulate}
+                          onReset={getStageHandlers(stageIdx).onReset}
+                          onToggleLock={getStageHandlers(stageIdx).onToggleLock}
                         />
                       )}
                     </div>
@@ -3247,16 +3315,16 @@ function TournamentSimulatorPage() {
                                 {stage.name}
                               </p>
                               <EliminationView
-                                rounds={groupByRound(
+                                rounds={groupByRoundMemo(
                                   stage.matches,
                                   stage.stage_type === 'bracket'
                                     ? 'wb'
                                     : undefined
                                 )}
-                                onSimulate={(id) =>
-                                  handleSimulateMatch(stageIdx, id)
+                                onSimulate={
+                                  getStageHandlers(stageIdx).onSimulate
                                 }
-                                onReset={(id) => handleResetMatch(stageIdx, id)}
+                                onReset={getStageHandlers(stageIdx).onReset}
                               />
                             </div>
                           ))}
@@ -3310,14 +3378,14 @@ function TournamentSimulatorPage() {
                                 {stage.name}
                               </p>
                               <EliminationView
-                                rounds={groupByRound(
+                                rounds={groupByRoundMemo(
                                   stage.matches,
                                   stage.stage_type === 'bracket'
                                     ? 'wb'
                                     : undefined
                                 )}
-                                onSimulate={() => {}}
-                                onReset={() => {}}
+                                onSimulate={noopSimAction}
+                                onReset={noopSimAction}
                               />
                             </div>
                           ))}

@@ -2,6 +2,7 @@
 // main simulator page. Re-exports SEED_COLORS and CARD_H because both are
 // referenced from the page (standings table) and from the bracket layout.
 
+import { memo } from 'react';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { STATUS_CONFIG } from '@/utils/statusConfig';
 import { computeWinProbability } from '@/utils/simulator';
@@ -87,16 +88,20 @@ function SimTeamRow({
   );
 }
 
-export function SimMatchCard({
+// Handlers receive the match id and are called internally, so callers can pass
+// a single stable reference per stage instead of a fresh arrow per match. This
+// keeps props referentially stable, which is what makes the memo() below skip
+// re-rendering unchanged cards when sibling matches update.
+function SimMatchCardComponent({
   match,
   onSimulate,
   onReset,
   onToggleLock,
 }: {
   match: SimMatch;
-  onSimulate: () => void;
-  onReset: () => void;
-  onToggleLock?: () => void;
+  onSimulate: (matchId: string) => void;
+  onReset: (matchId: string) => void;
+  onToggleLock?: (matchId: string) => void;
 }) {
   const t = useAdminT('adminSimulatorSimMatchCard');
   const statusCfg = STATUS_CONFIG[match.status];
@@ -198,7 +203,7 @@ export function SimMatchCard({
           match.team2 &&
           !match.locked && (
             <button
-              onClick={onSimulate}
+              onClick={() => onSimulate(match.id)}
               className="flex-1 text-[10px] py-1.5 text-emerald-400 hover:bg-emerald-500/10 transition-colors font-semibold"
             >
               {t.simulate}
@@ -206,7 +211,7 @@ export function SimMatchCard({
           )}
         {match.status === 'finished' && !match.locked && (
           <button
-            onClick={onReset}
+            onClick={() => onReset(match.id)}
             className="flex-1 text-[10px] py-1.5 text-amber-400 hover:bg-amber-500/10 transition-colors font-semibold"
           >
             Reset
@@ -228,7 +233,7 @@ export function SimMatchCard({
           (match.status === 'finished' ||
             (match.status === 'pending' && match.team1 && match.team2)) && (
             <button
-              onClick={onToggleLock}
+              onClick={() => onToggleLock(match.id)}
               className={`px-2.5 text-[10px] py-1.5 transition-colors font-semibold border-l border-white/[0.05] ${
                 match.locked
                   ? 'text-amber-400 hover:bg-amber-500/10'
@@ -275,3 +280,8 @@ export function SimMatchCard({
     </div>
   );
 }
+
+// Memoized: only re-renders when its own `match` object (or a handler ref)
+// changes. Callers pass stable per-stage handlers, so simulating/resetting one
+// match no longer re-renders the whole bracket.
+export const SimMatchCard = memo(SimMatchCardComponent);

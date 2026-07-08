@@ -2,6 +2,7 @@
 // Renders either a flat grid (Swiss / Round-Robin) or a tree layout
 // (single/double elimination) depending on whether the round sizes shrink.
 
+import { memo } from 'react';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { SimMatchCard, CARD_H } from './SimMatchCard';
 import type { SimMatch } from '@/utils/simulator';
@@ -34,7 +35,7 @@ export function groupByRound(
   return Array.from(map.values()).sort((a, b) => a.roundNumber - b.roundNumber);
 }
 
-export function EliminationView({
+function EliminationViewComponent({
   rounds,
   onSimulate,
   onReset,
@@ -93,11 +94,9 @@ export function EliminationView({
                     <SimMatchCard
                       key={m.id}
                       match={m}
-                      onSimulate={() => onSimulate(m.id)}
-                      onReset={() => onReset(m.id)}
-                      onToggleLock={
-                        onToggleLock ? () => onToggleLock(m.id) : undefined
-                      }
+                      onSimulate={onSimulate}
+                      onReset={onReset}
+                      onToggleLock={onToggleLock}
                     />
                   ))}
                 </div>
@@ -277,11 +276,9 @@ export function EliminationView({
                       >
                         <SimMatchCard
                           match={m}
-                          onSimulate={() => onSimulate(m.id)}
-                          onReset={() => onReset(m.id)}
-                          onToggleLock={
-                            onToggleLock ? () => onToggleLock(m.id) : undefined
-                          }
+                          onSimulate={onSimulate}
+                          onReset={onReset}
+                          onToggleLock={onToggleLock}
                         />
                       </div>
                     ))}
@@ -295,3 +292,8 @@ export function EliminationView({
     </div>
   );
 }
+
+// Memoized: with stable handler props and referentially stable `rounds`
+// (the page memoizes groupByRound per stage), an unchanged stage skips
+// re-rendering entirely when another stage's matches update.
+export const EliminationView = memo(EliminationViewComponent);
