@@ -1,4 +1,5 @@
 import type { GetStaticProps } from 'next';
+import { useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import Header from '@/components/Header/header';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
@@ -258,9 +259,30 @@ function Home({
   loadError,
 }: HomeProps) {
   const t = useT('home');
+
+  // Perf : met en pause les animations décoratives du hero (aurora + connecteur)
+  // dès qu'il quitte le viewport — coût GPU/CPU nul hors-écran, rendu identique
+  // quand visible.
+  const heroRef = useRef<HTMLDivElement>(null);
+  const [heroPaused, setHeroPaused] = useState(false);
+  useEffect(() => {
+    const el = heroRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+    const io = new IntersectionObserver(
+      ([entry]) => setHeroPaused(!entry.isIntersecting),
+      { threshold: 0 }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
   return (
     <div>
-      <Header />
+      <div
+        ref={heroRef}
+        className={heroPaused ? 'hero-anim-paused' : undefined}
+      >
+        <Header />
 
       {loadError && (
         <div className="container mx-auto px-4 mt-6">
@@ -285,6 +307,7 @@ function Home({
           <span className="hero-connector__diamond" />
           <span className="hero-connector__halo hero-connector__halo--bottom" />
         </div>
+      </div>
       </div>
 
       <HomeCountdown targetDate={countdownTarget} />

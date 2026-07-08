@@ -768,6 +768,21 @@ select option {
   }
 }
 
+/* Perf : le hero pose la classe `hero-anim-paused` (via IntersectionObserver)
+   dès qu'il quitte le viewport → on gèle toutes ses animations décoratives
+   (coût GPU/CPU nul hors-écran). Rendu identique quand visible. */
+.hero-anim-paused .hero-aurora::before,
+.hero-anim-paused .hero-aurora::after,
+.hero-anim-paused .hero-aurora__violet,
+.hero-anim-paused .text-gradient,
+.hero-anim-paused .esport-cta,
+.hero-anim-paused .hero-connector__beam,
+.hero-anim-paused .hero-connector__pulse,
+.hero-anim-paused .hero-connector__diamond,
+.hero-anim-paused .hero-connector__halo {
+  animation-play-state: paused;
+}
+
 .hero-title {
   letter-spacing: -1px;
   line-height: 1.1;
