@@ -328,7 +328,11 @@ export const getStaticProps: GetStaticProps<TeamPageProps> = async (ctx) => {
     // Recent matches
     supabaseAdmin
       .from('matches')
-      .select('*')
+      // Colonnes explicites (au lieu de `*`) : 10 lignes × table matches large →
+      // on ne récupère que ce que le mapping RecentMatch consomme réellement.
+      .select(
+        'id, scheduled_at, status, team1_id, team2_id, team1_score, team2_score, winner_team_id, round_name, tournament_id'
+      )
       .eq('tenant_id', tenantId)
       .or(`team1_id.eq.${teamId},team2_id.eq.${teamId}`)
       .order('scheduled_at', { ascending: false, nullsFirst: false })
