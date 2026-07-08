@@ -3980,6 +3980,78 @@ components:
         prize:
           type: string
           nullable: true
+    PublicV1ArbitrationMetrics:
+      type: object
+      description: >
+        Métriques d'arbitrage AGRÉGÉES et NON-NOMINATIVES d'un tournoi. Aucun
+        identifiant (équipe / match / joueur), aucune raison de litige : que des
+        compteurs, durées et taux.
+      required:
+        - totalDisputes
+        - open
+        - resolved
+        - withinSlaCount
+        - openBreakdown
+        - slaMinutes
+      properties:
+        totalDisputes:
+          type: integer
+          description: Matchs ayant eu un litige (opened_at set OU status=disputed OU résolus).
+        open:
+          type: integer
+          description: Litiges non résolus (status=disputed).
+        resolved:
+          type: integer
+          description: Litiges avec un timestamp de résolution.
+        avgResolutionMinutes:
+          type: integer
+          nullable: true
+          description: Temps moyen de résolution (minutes) sur les résolus ; null si aucun.
+        medianResolutionMinutes:
+          type: integer
+          nullable: true
+          description: Temps médian de résolution (minutes) sur les résolus ; null si aucun.
+        withinSlaCount:
+          type: integer
+          description: Litiges résolus dans le SLA (durée <= slaMinutes).
+        slaComplianceRate:
+          type: number
+          nullable: true
+          description: withinSlaCount / resolved (0..1) ; null si resolved=0.
+        openBreakdown:
+          type: object
+          description: Répartition SLA des litiges OUVERTS.
+          required:
+            - breached
+            - approaching
+            - fresh
+          properties:
+            breached:
+              type: integer
+            approaching:
+              type: integer
+            fresh:
+              type: integer
+        slaMinutes:
+          type: integer
+          description: Fenêtre SLA (minutes) du tenant utilisée pour le calcul.
+    PublicV1TournamentArbitration:
+      type: object
+      required:
+        - tournamentId
+        - tournamentName
+        - metrics
+      properties:
+        tournamentId:
+          type: string
+          format: uuid
+        tournamentName:
+          type: string
+        tournamentSlug:
+          type: string
+          nullable: true
+        metrics:
+          $ref: '#/components/schemas/PublicV1ArbitrationMetrics'
     PublicV1TeamMember:
       type: object
       properties:
@@ -22476,6 +22548,45 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/PublicV1Standing'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/public/v1/tournaments/{id}/arbitration:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: Id (UUID) ou slug du tournoi.
+        schema:
+          type: string
+    get:
+      tags:
+        - public/v1
+      summary: Métriques d'arbitrage agrégées (non-nominatives) du tournoi.
+      description: >
+        Agrégat de l'activité d'arbitrage (litiges) d'un tournoi public :
+        volume, résolution, respect du SLA, répartition des litiges ouverts.
+        AUCUN identifiant ni raison — que des nombres. 404 si le tournoi n'est
+        pas public (draft / archived / inconnu).
+      operationId: publicV1GetTournamentArbitration
+      security: []
+      responses:
+        '200':
+          description: Métriques d'arbitrage agrégées du tournoi.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PublicV1TournamentArbitration'
         '400':
           $ref: '#/components/responses/BadRequest'
         '404':
