@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import {
@@ -9,11 +9,10 @@ import {
 } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useAdminResource } from '@/hooks/useAdminResource';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import Modal from '@/components/admin/Modal';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
-
-import { logger } from '../../../utils/logger';
 
 type Dict = ReturnType<typeof useAdminT<'adminUsersManage'>>;
 type StaffShape = {
@@ -125,22 +124,53 @@ function canGrantRole(requesterRole: string | null, role: string): boolean {
 
 export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
   const t = useAdminT('adminUsersManage');
-  const [loading, setLoading] = useState(false);
-  const [users, setUsers] = useState<UserLite[]>([]);
   const [total, setTotal] = useState<number | null>(null);
 
   // filters
   const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<string | null>(null);
-
-  const [limit] = useState(20);
-  const [offset, setOffset] = useState(0);
 
   const [updating, setUpdating] = useState<string | null>(null);
   const { addToast } = useToast();
   const { adminFetchJson } = useAdminFetch();
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
+
+  // Liste paginée + recherche (debounce ~300ms géré par le hook via `query`) +
+  // filtre serveur `role`. `limit: 20` réplique le défaut de
+  // /api/admin/users/manage. `total` revient toujours dans le payload →
+  // includeTotal:false garde la requête identique
+  // (?limit=20&offset=0[&search][&role]). Le total est capté en local via
+  // `onData` pour permettre son décrément optimiste à la suppression.
+  // L'AbortController du hook remplace l'ancien garde de séquence (fetchSeqRef).
+  const {
+    data: users,
+    loading,
+    offset,
+    limit,
+    setOffset,
+    resetOffset,
+    mutate,
+    error: loadError,
+  } = useAdminResource<UserLite, ApiResponse>('/api/admin/users/manage', {
+    limit: 20,
+    includeTotal: false,
+    query: search,
+    params: { role: roleFilter },
+    select: (res) => res.items || [],
+    onData: (res) => setTotal(res.total ?? res.items?.length ?? 0),
+  });
+
+  // Le changement de filtre rôle repart de la première page (le reset lié à la
+  // recherche est déjà géré par le hook via `query`).
+  useEffect(() => {
+    resetOffset();
+  }, [roleFilter, resetOffset]);
+
+  // Les erreurs de chargement étaient signalées par un toast (la page n'a pas
+  // de bannière d'erreur) — on relaie l'erreur du hook de la même façon.
+  useEffect(() => {
+    if (loadError) addToast(loadError, 'error');
+  }, [loadError, addToast]);
 
   // Battle tag edit modal
   const [editingBattleTag, setEditingBattleTag] = useState<{
@@ -166,62 +196,11 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
   // Resend credentials
   const [resendingUser, setResendingUser] = useState<string | null>(null);
 
-  // Debounce de la recherche (~300ms) avant de requêter le serveur.
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(search);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [search]);
-
-  // Toute modification de recherche/filtre repart de la première page.
-  useEffect(() => {
-    setOffset(0);
-  }, [debouncedSearch, roleFilter]);
-
-  // Guard de séquence : seule la dernière requête lancée peut appliquer sa
-  // réponse (évite qu'une réponse périmée écrase la liste courante).
-  const fetchSeqRef = useRef(0);
-
-  const fetchData = useCallback(async () => {
-    const seq = ++fetchSeqRef.current;
-    setLoading(true);
-
-    try {
-      const params = new URLSearchParams();
-      params.set('limit', String(limit));
-      params.set('offset', String(offset));
-
-      if (debouncedSearch.trim()) params.set('search', debouncedSearch);
-      if (roleFilter) params.set('role', roleFilter);
-
-      const json = await adminFetchJson<ApiResponse>(
-        `/api/admin/users/manage?${params.toString()}`
-      );
-
-      if (seq !== fetchSeqRef.current) return; // réponse périmée
-      setUsers(json.items || []);
-      setTotal(json.total ?? json.items?.length ?? 0);
-    } catch (err) {
-      if (seq !== fetchSeqRef.current) return;
-      logger.error('Error fetching users', err);
-      addToast((err as Error)?.message || t.errLoadUsers, 'error');
-    } finally {
-      if (seq === fetchSeqRef.current) setLoading(false);
-    }
-  }, [limit, offset, debouncedSearch, roleFilter, adminFetchJson, addToast, t]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
   function handleSearchSubmit(e: React.FormEvent) {
     e.preventDefault();
-    // Flush du debounce : applique la saisie immédiatement. Le fetch part via
-    // l'effet [fetchData] dès que debouncedSearch/offset changent (pas de
-    // double requête).
-    setDebouncedSearch(search);
-    setOffset(0);
+    // La recherche est déjà suivie en direct par le hook (`query: search`,
+    // debounce ~300ms + reset d'offset). Le submit force juste le retour page 1.
+    resetOffset();
   }
 
   const changeRole = async (userId: string, role: string) => {
@@ -259,9 +238,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
         body: JSON.stringify({ userId, role }),
       });
 
-      setUsers((prev) =>
-        prev.map((u) => (u.id === userId ? { ...u, role } : u))
-      );
+      mutate((prev) => prev.map((u) => (u.id === userId ? { ...u, role } : u)));
       addToast(t.toastRoleUpdated, 'success');
     } catch (err: unknown) {
       addToast((err as Error)?.message || t.errRoleUpdate, 'error');
@@ -302,7 +279,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
         }),
       });
 
-      setUsers((prev) =>
+      mutate((prev) =>
         prev.map((u) => {
           if (u.id === editingBattleTag.userId && u.team_memberships) {
             return {
@@ -347,7 +324,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
         }),
       });
 
-      setUsers((prev) =>
+      mutate((prev) =>
         prev.map((u) =>
           u.id === editingUser.id
             ? { ...u, display_name: editDisplayName.trim() || null }
@@ -411,7 +388,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
         body: JSON.stringify({ userId: deletingUser.id }),
       });
 
-      setUsers((prev) => prev.filter((u) => u.id !== deletingUser!.id));
+      mutate((prev) => prev.filter((u) => u.id !== deletingUser!.id));
       setTotal((prev) => (prev !== null ? prev - 1 : prev));
       setDeletingUser(null);
       addToast(t.toastUserDeleted, 'success');

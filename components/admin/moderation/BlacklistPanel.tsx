@@ -14,6 +14,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useAdminResource } from '@/hooks/useAdminResource';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useUrlFilters } from '@/utils/useUrlFilters';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
@@ -85,11 +86,6 @@ export default function BlacklistPanel() {
   const { mutateJson: createMutateJson } = useIdempotentMutation();
   const { filters, setFilters } = useUrlFilters(FILTER_KEYS);
 
-  const [entries, setEntries] = useState<BlacklistEntry[]>([]);
-  const [total, setTotal] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
   // Recherche : input local débrancé du filtre URL pour éviter un refetch à
   // chaque frappe (on synchronise au submit / Entrée).
   const searchFilter = filters.search ?? '';
@@ -99,6 +95,32 @@ export default function BlacklistPanel() {
   useEffect(() => {
     setSearchInput(searchFilter);
   }, [searchFilter]);
+
+  // `total` gardé en local (via onData) pour permettre son décrément optimiste
+  // à la suppression — le hook n'expose que `data`.
+  const [total, setTotal] = useState<number | null>(null);
+
+  // Entrées : filtres serveur `search`/`active` réactifs (portés par l'URL).
+  // `limit: 50` réplique le défaut du handler (parsePagination limit:50 ; pas
+  // de pagination UI). `total` revient toujours dans le payload →
+  // includeTotal:false garde la requête alignée. `refresh` remplace l'ancien
+  // fetchEntries ; `mutateEntries` porte l'UI optimiste (toggle/edit/delete).
+  const {
+    data: entries,
+    loading,
+    error: errorMsg,
+    refresh: fetchEntries,
+    mutate: mutateEntries,
+  } = useAdminResource<
+    BlacklistEntry,
+    { items?: BlacklistEntry[]; total?: number }
+  >('/api/admin/moderation/blacklist', {
+    limit: 50,
+    includeTotal: false,
+    params: { search: searchFilter, active: activeFilter },
+    select: (res) => res.items || [],
+    onData: (res) => setTotal(typeof res.total === 'number' ? res.total : null),
+  });
 
   // Formulaire d'ajout.
   const [form, setForm] = useState({
@@ -127,30 +149,6 @@ export default function BlacklistPanel() {
   const [alertsCursor, setAlertsCursor] = useState<string | null>(null);
   const [alertStrength, setAlertStrength] = useState<'' | AlertStrength>('');
   const [alertSource, setAlertSource] = useState<'' | AlertSource>('');
-
-  const fetchEntries = useCallback(async () => {
-    setLoading(true);
-    setErrorMsg(null);
-    const params = new URLSearchParams();
-    if (searchFilter) params.set('search', searchFilter);
-    if (activeFilter) params.set('active', activeFilter);
-    try {
-      const json = await adminFetchJson<{
-        items?: BlacklistEntry[];
-        total?: number;
-      }>(`/api/admin/moderation/blacklist?${params.toString()}`);
-      setEntries(json.items || []);
-      setTotal(typeof json.total === 'number' ? json.total : null);
-    } catch (err) {
-      setErrorMsg((err as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  }, [searchFilter, activeFilter, adminFetchJson]);
-
-  useEffect(() => {
-    fetchEntries();
-  }, [fetchEntries]);
 
   const fetchAlerts = useCallback(
     async (cursor: string | null) => {
@@ -244,7 +242,7 @@ export default function BlacklistPanel() {
         entry.active ? tx.entryDeactivated : tx.entryReactivated,
         'success'
       );
-      setEntries((prev) =>
+      mutateEntries((prev) =>
         prev.map((e) =>
           e.id === entry.id ? { ...e, active: !entry.active } : e
         )
@@ -282,7 +280,7 @@ export default function BlacklistPanel() {
         }),
       });
       addToast(tx.entryUpdated, 'success');
-      setEntries((prev) =>
+      mutateEntries((prev) =>
         prev.map((e) =>
           e.id === entry.id
             ? {
@@ -321,7 +319,7 @@ export default function BlacklistPanel() {
         method: 'DELETE',
       });
       addToast(tx.entryDeleted, 'success');
-      setEntries((prev) => prev.filter((e) => e.id !== entry.id));
+      mutateEntries((prev) => prev.filter((e) => e.id !== entry.id));
       setTotal((t) => (typeof t === 'number' ? Math.max(0, t - 1) : t));
     } catch (err) {
       addToast((err as Error).message, 'error');

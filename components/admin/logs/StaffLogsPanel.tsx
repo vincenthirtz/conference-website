@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useAdminResource } from '@/hooks/useAdminResource';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 import { logger } from '../../../utils/logger';
@@ -63,18 +64,14 @@ function shortId(id: string | null | undefined) {
  * filters and pagination.
  */
 export default function StaffLogsPanel() {
-  const { adminFetch, adminFetchJson } = useAdminFetch();
+  const { adminFetch } = useAdminFetch();
   const t = useAdminT('adminLogs');
-
-  const [logs, setLogs] = useState<StaffLog[]>([]);
-  const [total, setTotal] = useState<number | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const [tournaments, setTournaments] = useState<TournamentMini[]>([]);
   const [loadingTournaments, setLoadingTournaments] = useState(false);
 
-  // Filtres
+  // Filtres réactifs : refetch immédiat sur changement, SANS reset d'offset
+  // (comportement d'origine).
   const [entityType, setEntityType] = useState('');
   const [action, setAction] = useState('');
   const [staffId, setStaffId] = useState('');
@@ -82,81 +79,74 @@ export default function StaffLogsPanel() {
   const [stageId, setStageId] = useState('');
   const [matchId, setMatchId] = useState('');
   const [teamId, setTeamId] = useState('');
+
+  // Filtres appliqués au submit uniquement (recherche + plage de dates) :
+  // l'input local n'agit qu'après « Filtrer » (comme avant).
   const [search, setSearch] = useState('');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
+  const [appliedSearch, setAppliedSearch] = useState('');
+  const [appliedFrom, setAppliedFrom] = useState('');
+  const [appliedTo, setAppliedTo] = useState('');
 
-  const [limit] = useState(100);
-  const [offset, setOffset] = useState(0);
-
-  useEffect(() => {
-    fetchTournaments();
-  }, []);
-
-  useEffect(() => {
-    fetchLogs();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
+  // Liste paginée. `limit: 100` réplique le défaut de /api/admin/logs.
+  // includeTotal reste actif (le handler ne renvoie le count exact que sous ce
+  // flag). Filtres réactifs + appliqués passés en `params` : un changement de
+  // filtre réactif refetch sans toucher l'offset ; le submit applique la
+  // recherche/dates et repart page 1 via resetOffset().
+  const {
+    data: logs,
+    total,
+    loading,
+    error: errorMsg,
     offset,
-    entityType,
-    action,
-    staffId,
-    tournamentId,
-    stageId,
-    matchId,
-    teamId,
-  ]);
+    limit,
+    setOffset,
+    resetOffset,
+  } = useAdminResource<StaffLog, LogsApiResponse>('/api/admin/logs', {
+    limit: 100,
+    params: {
+      entityType: entityType.trim(),
+      action: action.trim(),
+      staffId: staffId.trim(),
+      tournamentId: tournamentId.trim(),
+      stageId: stageId.trim(),
+      matchId: matchId.trim(),
+      teamId: teamId.trim(),
+      search: appliedSearch.trim(),
+      from: appliedFrom,
+      to: appliedTo,
+    },
+    select: (res) => res.logs || [],
+  });
 
-  async function fetchTournaments() {
-    try {
-      setLoadingTournaments(true);
-      const res = await adminFetch('/api/admin/tournaments?limit=200');
-      if (!res.ok) return;
-      const json: TournamentsApiResponse = await res.json();
-      setTournaments(json.tournaments || []);
-    } catch (e) {
-      logger.error('Failed to load tournaments for logs filter', e);
-    } finally {
-      setLoadingTournaments(false);
-    }
-  }
-
-  async function fetchLogs() {
-    setLoading(true);
-    setErrorMsg(null);
-
-    try {
-      const params = new URLSearchParams();
-      params.set('limit', String(limit));
-      params.set('offset', String(offset));
-      params.set('includeTotal', '1');
-      if (entityType.trim()) params.set('entityType', entityType.trim());
-      if (action.trim()) params.set('action', action.trim());
-      if (staffId.trim()) params.set('staffId', staffId.trim());
-      if (tournamentId.trim()) params.set('tournamentId', tournamentId.trim());
-      if (stageId.trim()) params.set('stageId', stageId.trim());
-      if (matchId.trim()) params.set('matchId', matchId.trim());
-      if (teamId.trim()) params.set('teamId', teamId.trim());
-      if (search.trim()) params.set('search', search.trim());
-      if (fromDate) params.set('from', fromDate);
-      if (toDate) params.set('to', toDate);
-
-      const json = await adminFetchJson<LogsApiResponse>(
-        '/api/admin/logs?' + params.toString()
-      );
-      setLogs(json.logs || []);
-      setTotal(typeof json.total === 'number' ? json.total : null);
-    } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? t.errorUnexpected);
-    } finally {
-      setLoading(false);
-    }
-  }
+  // Dropdown tournois : endpoint distinct, chargé une fois au montage.
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        setLoadingTournaments(true);
+        const res = await adminFetch('/api/admin/tournaments?limit=200');
+        if (!res.ok) return;
+        const json: TournamentsApiResponse = await res.json();
+        if (active) setTournaments(json.tournaments || []);
+      } catch (e) {
+        logger.error('Failed to load tournaments for logs filter', e);
+      } finally {
+        if (active) setLoadingTournaments(false);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [adminFetch]);
 
   function handleFilterSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setOffset(0);
-    fetchLogs();
+    setAppliedSearch(search);
+    setAppliedFrom(fromDate);
+    setAppliedTo(toDate);
+    resetOffset();
   }
 
   return (

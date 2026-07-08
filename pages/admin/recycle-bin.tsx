@@ -1,12 +1,13 @@
 // pages/admin/recycle-bin.tsx
 
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useAdminResource } from '@/hooks/useAdminResource';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 type Dict = ReturnType<typeof useAdminT<'adminRecycleBin'>>;
@@ -120,41 +121,35 @@ function AdminRecycleBinPage({ staff }: StaffProps) {
   const { adminFetchJson } = useAdminFetch();
   const t = useAdminT('adminRecycleBin');
 
-  const [loading, setLoading] = useState(true);
-  const [items, setItems] = useState<DeletedItem[]>([]);
-  const [total, setTotal] = useState<number | null>(null);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [typeFilter, setTypeFilter] = useState<string>('');
-  const [offset, setOffset] = useState(0);
   const [restoringId, setRestoringId] = useState<string | null>(null);
+  // Erreur d'action « restaurer » — affichée dans la même bannière que les
+  // erreurs de chargement (portées par le hook via `error`).
+  const [restoreError, setRestoreError] = useState<string | null>(null);
 
-  const fetchItems = useCallback(async () => {
-    setLoading(true);
-    setErrorMsg(null);
-
-    try {
-      const params = new URLSearchParams();
-      if (typeFilter) params.set('type', typeFilter);
-      params.set('limit', String(PAGE_SIZE));
-      params.set('offset', String(offset));
-
-      const json = await adminFetchJson<RecycleBinResponse>(
-        `/api/admin/recycle-bin?${params.toString()}`
-      );
-      setItems(json.items || []);
-      setTotal(typeof json.total === 'number' ? json.total : null);
-    } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? t.errorUnexpected);
-    } finally {
-      setLoading(false);
+  // Liste paginée + filtre serveur `type`. `limit: PAGE_SIZE` (50) réplique le
+  // défaut de /api/admin/recycle-bin (parsePagination limit:50). `total` revient
+  // toujours dans le payload → includeTotal:false garde la requête identique.
+  const {
+    data: items,
+    total,
+    loading,
+    error: fetchError,
+    offset,
+    setOffset,
+    resetOffset,
+    refresh: fetchItems,
+  } = useAdminResource<DeletedItem, RecycleBinResponse>(
+    '/api/admin/recycle-bin',
+    {
+      limit: PAGE_SIZE,
+      includeTotal: false,
+      params: { type: typeFilter },
+      select: (res) => res.items || [],
     }
-  }, [adminFetchJson, typeFilter, offset, t]);
+  );
 
-  // Recharge à chaque changement de filtre/page. Le reset d'offset sur
-  // changement de filtre est géré dans le onChange du select.
-  useEffect(() => {
-    fetchItems();
-  }, [fetchItems]);
+  const errorMsg = restoreError ?? fetchError;
 
   async function handleRestore(item: DeletedItem) {
     const ok = await confirm({
@@ -168,7 +163,7 @@ function AdminRecycleBinPage({ staff }: StaffProps) {
     if (!ok) return;
 
     setRestoringId(item.id);
-    setErrorMsg(null);
+    setRestoreError(null);
 
     try {
       await adminFetchJson('/api/admin/recycle-bin', {
@@ -185,7 +180,7 @@ function AdminRecycleBinPage({ staff }: StaffProps) {
       );
       fetchItems();
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? t.errorRestore);
+      setRestoreError((err as Error)?.message ?? t.errorRestore);
     } finally {
       setRestoringId(null);
     }
@@ -262,7 +257,8 @@ function AdminRecycleBinPage({ staff }: StaffProps) {
               value={typeFilter}
               onChange={(e) => {
                 // Tout changement de filtre repart à la page 1.
-                setOffset(0);
+                resetOffset();
+                setRestoreError(null);
                 setTypeFilter(e.target.value);
               }}
             >
@@ -280,7 +276,10 @@ function AdminRecycleBinPage({ staff }: StaffProps) {
 
             <button
               type="button"
-              onClick={fetchItems}
+              onClick={() => {
+                setRestoreError(null);
+                fetchItems();
+              }}
               disabled={loading}
               className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50"
             >

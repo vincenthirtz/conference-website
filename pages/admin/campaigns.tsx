@@ -1,10 +1,11 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useAdminResource } from '@/hooks/useAdminResource';
 import { useToast } from '@/components/Toast';
 import Modal from '@/components/admin/Modal';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
@@ -129,16 +130,7 @@ function AdminCampaignsPage(_props: Props) {
   const t = useAdminT('adminCampaigns');
   const router = useRouter();
 
-  const [campaigns, setCampaigns] = useState<CampaignSummary[]>([]);
-  const [total, setTotal] = useState<number | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
-  const [limit] = useState(25);
-  const [offset, setOffset] = useState(0);
-
   const [activeId, setActiveId] = useState<string | null>(null);
-  const activeCampaign = campaigns.find((c) => c.id === activeId) ?? null;
 
   // Create / edit form: `null` = closed, `'new'` = create, otherwise the
   // db campaign currently being edited.
@@ -148,32 +140,31 @@ function AdminCampaignsPage(_props: Props) {
 
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
   const { mutateJson } = useIdempotentMutation();
-  const { adminFetchJson } = useAdminFetch();
   const { addToast } = useToast();
 
-  const fetchCampaigns = useCallback(async () => {
-    setLoading(true);
-    setErrorMsg(null);
-    try {
-      const params = new URLSearchParams();
-      params.set('limit', String(limit));
-      params.set('offset', String(offset));
-      const json = await adminFetchJson<{
-        campaigns?: CampaignSummary[];
-        total?: number;
-      }>('/api/admin/broadcast?' + params.toString());
-      setCampaigns(json.campaigns || []);
-      setTotal(typeof json.total === 'number' ? json.total : null);
-    } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? t.errorUnexpected);
-    } finally {
-      setLoading(false);
-    }
-  }, [limit, offset, adminFetchJson, t.errorUnexpected]);
+  // Liste paginée. `limit: 25` réplique le défaut de /api/admin/broadcast
+  // (parsePagination limit:25). `total` revient toujours dans le payload (non
+  // conditionné par includeTotal), donc includeTotal:false garde la requête
+  // identique (?limit=25&offset=0). `refresh` remplace l'ancien fetchCampaigns.
+  const {
+    data: campaigns,
+    total,
+    loading,
+    error: errorMsg,
+    offset,
+    limit,
+    setOffset,
+    refresh: fetchCampaigns,
+  } = useAdminResource<
+    CampaignSummary,
+    { campaigns?: CampaignSummary[]; total?: number }
+  >('/api/admin/broadcast', {
+    limit: 25,
+    includeTotal: false,
+    select: (res) => res.campaigns || [],
+  });
 
-  useEffect(() => {
-    fetchCampaigns();
-  }, [fetchCampaigns]);
+  const activeCampaign = campaigns.find((c) => c.id === activeId) ?? null;
 
   const deleteCampaign = useCallback(
     async (campaign: CampaignSummary) => {
@@ -238,9 +229,7 @@ function AdminCampaignsPage(_props: Props) {
                   {t.subtitle}
                   {total !== null
                     ? format(
-                        total > 1
-                          ? t.subtitleCount_other
-                          : t.subtitleCount_one,
+                        total > 1 ? t.subtitleCount_other : t.subtitleCount_one,
                         { total }
                       )
                     : ''}
@@ -1273,8 +1262,7 @@ function CampaignDrawer({
                       {t.dryWithGreeting} <strong>{dryRun.withLabel}</strong>
                     </li>
                     <li>
-                      {t.dryWithoutLabel}{' '}
-                      <strong>{dryRun.withoutLabel}</strong>
+                      {t.dryWithoutLabel} <strong>{dryRun.withoutLabel}</strong>
                     </li>
                   </ul>
                 </div>
@@ -1332,7 +1320,9 @@ function CampaignDrawer({
           zIndexClassName="z-[210]"
           backdropClassName="bg-black/70"
           panelChromeClassName="rounded-2xl bg-neutral-900 border border-neutral-700"
-          title={<h3 className="text-lg font-semibold">{t.confirmSendTitle}</h3>}
+          title={
+            <h3 className="text-lg font-semibold">{t.confirmSendTitle}</h3>
+          }
           footer={
             <>
               <button
@@ -1478,10 +1468,7 @@ function CampaignFormModal({
           method: 'PATCH',
           body: JSON.stringify(payload),
         });
-        addToast(
-          format(t.campaignUpdated, { name: name.trim() }),
-          'success'
-        );
+        addToast(format(t.campaignUpdated, { name: name.trim() }), 'success');
       } else {
         await mutateJson('/api/admin/broadcast', {
           method: 'POST',
