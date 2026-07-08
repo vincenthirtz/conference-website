@@ -17,6 +17,7 @@ import { useUrlFilters } from '@/utils/useUrlFilters';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useAdminResource } from '@/hooks/useAdminResource';
 import PartnerFormModal from '@/components/admin/partners/PartnerFormModal';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
@@ -74,11 +75,27 @@ export default function PartnersListPanel() {
   // Champ de recherche local (debounce → query param `search`)
   const [searchInput, setSearchInput] = useState(searchFilter);
 
-  const [partners, setPartners] = useState<PartnerRow[]>([]);
-  const [total, setTotal] = useState<number | null>(null);
-  const [offset, setOffset] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  // Filtres (category/active/search) restent pilotés par l'URL (partage de
+  // lien) et passés en params serveur ; la pagination est détenue par le hook.
+  const {
+    data: partners,
+    total,
+    loading,
+    error: errorMsg,
+    refresh: fetchPartners,
+    offset,
+    resetOffset,
+    setOffset,
+  } = useAdminResource<PartnerRow, PartnersApiResponse>('/api/admin/partners', {
+    limit: PAGE_LIMIT,
+    params: {
+      category: categoryFilter,
+      active: activeFilter,
+      search: searchFilter,
+    },
+    select: (res) => res.items || [],
+    selectTotal: (res) => (typeof res.total === 'number' ? res.total : null),
+  });
 
   // Garde le champ local en phase si l'URL change (navigation, partage de lien)
   useEffect(() => {
@@ -89,7 +106,7 @@ export default function PartnersListPanel() {
   useEffect(() => {
     if (searchInput === searchFilter) return;
     const t = setTimeout(() => {
-      setOffset(0);
+      resetOffset();
       setFilters({ search: searchInput.trim() || null });
     }, 300);
     return () => clearTimeout(t);
@@ -98,37 +115,8 @@ export default function PartnersListPanel() {
 
   // Tout changement de filtre serveur revient à la première page
   useEffect(() => {
-    setOffset(0);
-  }, [categoryFilter, activeFilter, searchFilter]);
-
-  const fetchPartners = useCallback(async () => {
-    setLoading(true);
-    setErrorMsg(null);
-    try {
-      const params = new URLSearchParams();
-      params.set('limit', String(PAGE_LIMIT));
-      params.set('offset', String(offset));
-      params.set('includeTotal', '1');
-      if (categoryFilter) params.set('category', categoryFilter);
-      if (activeFilter) params.set('active', activeFilter);
-      if (searchFilter) params.set('search', searchFilter);
-
-      const json = await adminFetchJson<PartnersApiResponse>(
-        '/api/admin/partners?' + params.toString()
-      );
-      setPartners(json.items || []);
-      setTotal(typeof json.total === 'number' ? json.total : null);
-    } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message || tx.errorLoad);
-    } finally {
-      setLoading(false);
-    }
-  }, [adminFetchJson, offset, categoryFilter, activeFilter, searchFilter, tx]);
-
-  // Re-fetch à chaque changement de filtre serveur / pagination
-  useEffect(() => {
-    fetchPartners();
-  }, [fetchPartners]);
+    resetOffset();
+  }, [categoryFilter, activeFilter, searchFilter, resetOffset]);
 
   // Deep-link : `?new=1` (ancienne route /new) ouvre la modale de création.
   useEffect(() => {

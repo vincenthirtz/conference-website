@@ -5,7 +5,7 @@ import { useEffect, useState, useCallback } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useAdminResource } from '@/hooks/useAdminResource';
 import { withStaffPage } from '@/utils/staff';
 import ScrimFormModal from '@/components/admin/scrims/ScrimFormModal';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
@@ -82,33 +82,23 @@ export const getServerSideProps = withStaffPage('manager');
 function AdminScrimsPage(_props: StaffProps) {
   const t = useAdminT('adminScrimsList');
   const router = useRouter();
-  const { adminFetchJson } = useAdminFetch();
-  const [scrims, setScrims] = useState<ScrimRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [modalOpen, setModalOpen] = useState(false);
 
-  const fetchScrims = useCallback(async () => {
-    setLoading(true);
-    setErrorMsg(null);
-    try {
-      const params = new URLSearchParams();
-      if (statusFilter) params.set('status', statusFilter);
-      const json = await adminFetchJson<{ scrims: ScrimRow[] }>(
-        `/api/admin/scrims?${params.toString()}`
-      );
-      setScrims(json.scrims || []);
-    } catch (err) {
-      setErrorMsg((err as Error)?.message || t.errorLoad);
-    } finally {
-      setLoading(false);
-    }
-  }, [adminFetchJson, statusFilter, t.errorLoad]);
-
-  useEffect(() => {
-    fetchScrims();
-  }, [fetchScrims]);
+  // `statusFilter` reste un filtre serveur (param `status`), comme avant.
+  // `limit: 50` réplique le défaut de l'API (l'ancienne requête n'envoyait
+  // pas de limite) ; pas de pagination UI sur cette liste.
+  const {
+    data: scrims,
+    loading,
+    error: errorMsg,
+    refresh,
+  } = useAdminResource<ScrimRow, { scrims: ScrimRow[] }>('/api/admin/scrims', {
+    limit: 50,
+    includeTotal: false,
+    params: { status: statusFilter },
+    select: (res) => res.scrims || [],
+  });
 
   // Deep-link : `?new=1` (ancienne route /create) ouvre la modale de création.
   useEffect(() => {
@@ -136,7 +126,7 @@ function AdminScrimsPage(_props: StaffProps) {
       <ScrimFormModal
         open={modalOpen}
         onClose={closeModal}
-        onCreated={fetchScrims}
+        onCreated={refresh}
       />
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
         <div className="w-full px-4 sm:px-6 lg:px-8 pt-20 pb-12">

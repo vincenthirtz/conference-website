@@ -7,11 +7,10 @@ import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useAdminResource } from '@/hooks/useAdminResource';
 import PoleMemberFormModal from '@/components/admin/pole-members/PoleMemberFormModal';
 import { POLE_KEYS, POLE_LABELS, type PoleKey } from '@/utils/associationPoles';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
-
-import { logger } from '../../../utils/logger';
 
 type PoleMemberRow = {
   id: string;
@@ -49,31 +48,26 @@ function AdminPoleMembersPage({ staff }: Props) {
   const t = useAdminT('adminPoleMembersList');
   const router = useRouter();
   const [modalOpen, setModalOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [members, setMembers] = useState<PoleMemberRow[]>([]);
   const [search, setSearch] = useState('');
   const [poleFilter, setPoleFilter] = useState<'all' | PoleKey>('all');
-  const { adminFetch, adminFetchJson } = useAdminFetch();
+  const { adminFetch } = useAdminFetch();
   const { addToast } = useToast();
   const { confirm, dialog } = useConfirmDialog();
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const json = await adminFetchJson<ApiResponse>(
-        '/api/admin/pole-members?includeInactive=true'
-      );
-      setMembers(json.items || []);
-    } catch (err) {
-      logger.error('Error fetching pole members', err);
-    } finally {
-      setLoading(false);
-    }
-  }, [adminFetchJson]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  // Liste complète chargée en une fois : le filtrage (recherche + pôle) et le
+  // regroupement restent côté client (voir `grouped`). `limit: 200` réplique le
+  // défaut de l'API (l'ancienne requête n'envoyait pas de limite) ; pas de
+  // COUNT nécessaire (includeTotal: false).
+  const {
+    data: members,
+    loading,
+    refresh: fetchData,
+  } = useAdminResource<PoleMemberRow, ApiResponse>('/api/admin/pole-members', {
+    limit: 200,
+    includeTotal: false,
+    params: { includeInactive: true },
+    select: (res) => res.items || [],
+  });
 
   // Deep-link : `?new=1` (ancienne route /new) ouvre la modale de création.
   // `?pole=<key>` pré-sélectionne le pôle (ancien comportement de /new).
