@@ -280,7 +280,7 @@ function AdminBracketBuilderPage(_: StaffProps) {
   }
   .bracket-container { display: flex; gap: 0; align-items: stretch; }
   .bracket-round { display: flex; flex-direction: column; justify-content: space-around; min-width: ${colWidthPx}px; padding: 0 4px; }
-  .bracket-round-title { text-align: center; font-weight: 700; font-size: 10px; color: #b24be0; text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px; white-space: nowrap; }
+  .bracket-round-title { text-align: center; font-weight: 700; font-size: 10px; color: #6d1a9c; text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px; white-space: nowrap; }
   .bracket-match { border: 1px solid #ddd; border-radius: 5px; margin: 3px 0; overflow: hidden; }
   .bracket-team { padding: 3px 6px; font-size: 10px; display: flex; justify-content: space-between; border-bottom: 1px solid #eee; }
   .bracket-team:last-child { border-bottom: none; }
