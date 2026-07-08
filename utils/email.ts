@@ -130,12 +130,12 @@ function emailLayout(body: string): string {
 }
 
 function gradientBar(): string {
-  return '<div style="height:3px;border-radius:2px;background:linear-gradient(90deg,#2dccfd,#ad20e2);margin:0 0 28px;"></div>';
+  return '<div style="height:3px;border-radius:2px;background:linear-gradient(90deg,#7bc96a,#b24be0);margin:0 0 28px;"></div>';
 }
 
 function ctaButton(href: string, label: string): string {
   return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px auto 0;">
-    <tr><td align="center" style="background:linear-gradient(225deg,#2dccfd 9%,#ad20e2 88%);border-radius:8px;">
+    <tr><td align="center" style="background:linear-gradient(225deg,#7bc96a 9%,#b24be0 88%);border-radius:8px;">
       <a href="${href}" target="_blank" style="display:inline-block;padding:12px 28px;color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;letter-spacing:0.02em;">${label}</a>
     </td></tr>
   </table>`;
@@ -170,11 +170,11 @@ export function sendWelcomeEmail(
         <tr>
           <td style="padding:14px 20px;">
             <span style="font-size:12px;color:#9081B0;text-transform:uppercase;letter-spacing:0.1em;">Mot de passe</span><br/>
-            <code style="font-size:15px;color:#2dccfd;font-family:'Fira Code',monospace;font-weight:500;">${escapeHtml(password)}</code>
+            <code style="font-size:15px;color:#7bc96a;font-family:'Fira Code',monospace;font-weight:500;">${escapeHtml(password)}</code>
           </td>
         </tr>
       </table>
-      <p style="margin:0 0 20px;font-size:13px;color:#e74694;line-height:1.5;background:rgba(231,70,148,0.08);border:1px solid rgba(231,70,148,0.15);border-radius:8px;padding:10px 14px;">
+      <p style="margin:0 0 20px;font-size:13px;color:#f59e0b;line-height:1.5;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.15);border-radius:8px;padding:10px 14px;">
         Nous vous recommandons de changer votre mot de passe d&egrave;s votre premi&egrave;re connexion.
       </p>
       ${ctaButton(SITE_URL + '/login', 'Se connecter')}
@@ -200,7 +200,7 @@ export function sendTeamJoinEmail(
       <p style="margin:0 0 24px;font-size:15px;color:#C6BED9;line-height:1.6;">
         Vous avez &eacute;t&eacute; ajout&eacute;(e) &agrave; l'&eacute;quipe
         <strong style="color:#ffffff;">${escapeHtml(teamName)}</strong>
-        en tant que <strong style="color:#2dccfd;">${escapeHtml(role)}</strong>.
+        en tant que <strong style="color:#7bc96a;">${escapeHtml(role)}</strong>.
       </p>
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:rgba(255,255,255,0.05);border-radius:10px;border:1px solid rgba(255,255,255,0.08);margin:0 0 24px;">
         <tr><td style="padding:16px 20px;">
@@ -208,7 +208,7 @@ export function sendTeamJoinEmail(
             Connectez-vous pour voir votre &eacute;quipe et les prochains matchs.
           </p>
           <p style="margin:0;font-size:14px;color:#E8E2F4;line-height:1.5;">
-            <strong style="color:#ff9c29;">Important&nbsp;:</strong> rejoignez le
+            <strong style="color:#f0e63c;">Important&nbsp;:</strong> rejoignez le
             <a href="${DISCORD_URL}" style="color:#5865F2;text-decoration:underline;font-weight:600;">Discord du tournoi</a>
             pour rester inform&eacute;(e) des matchs et annonces.
           </p>
@@ -286,7 +286,7 @@ export function buildIdahobitLiveEmailHtml(
       ${greeting}
     </p>
     <p style="margin:0 0 20px;font-size:15px;color:#C6BED9;line-height:1.6;">
-      Dimanche <strong style="color:#2dccfd;">17 mai &agrave; 14h</strong>, on se retrouve en direct sur Twitch pour la
+      Dimanche <strong style="color:#7bc96a;">17 mai &agrave; 14h</strong>, on se retrouve en direct sur Twitch pour la
       <strong style="color:#ffffff;">Journ&eacute;e mondiale contre l&rsquo;homophobie, la transphobie et la biphobie</strong>.
     </p>
     <p style="margin:0 0 20px;font-size:15px;color:#C6BED9;line-height:1.6;">
@@ -435,7 +435,7 @@ export function sendTournamentNotificationEmail(
       <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;">Nouveau tournoi !</h1>
       <p style="margin:0 0 24px;font-size:15px;color:#C6BED9;line-height:1.6;">
         Le tournoi <strong style="color:#ffffff;">${escapeHtml(tournamentName)}</strong>
-        est maintenant ouvert aux inscriptions${dateStr ? ` et d&eacute;butera le <strong style="color:#2dccfd;">${escapeHtml(dateStr)}</strong>` : ''}.
+        est maintenant ouvert aux inscriptions${dateStr ? ` et d&eacute;butera le <strong style="color:#7bc96a;">${escapeHtml(dateStr)}</strong>` : ''}.
       </p>
       <p style="margin:0 0 24px;font-size:15px;color:#C6BED9;line-height:1.6;">
         En tant que capitaine d'&eacute;quipe, vous pouvez inscrire votre &eacute;quipe
@@ -481,7 +481,7 @@ export function sendMatchCheckinEmail(opts: {
       ${gradientBar()}
       <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;">Check-in requis</h1>
       <p style="margin:0 0 24px;font-size:15px;color:#C6BED9;line-height:1.6;">
-        Votre prochain match d&eacute;bute dans environ <strong style="color:#2dccfd;">1 heure</strong>.
+        Votre prochain match d&eacute;bute dans environ <strong style="color:#7bc96a;">1 heure</strong>.
         Confirmez votre pr&eacute;sence pour &eacute;viter le forfait automatique.
       </p>
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:rgba(255,255,255,0.05);border-radius:10px;border:1px solid rgba(255,255,255,0.08);margin:0 0 24px;">
@@ -500,11 +500,11 @@ export function sendMatchCheckinEmail(opts: {
         <tr>
           <td style="padding:14px 20px;">
             <span style="font-size:12px;color:#9081B0;text-transform:uppercase;letter-spacing:0.1em;">D&eacute;but pr&eacute;vu</span><br/>
-            <span style="font-size:15px;color:#2dccfd;font-weight:500;">${escapeHtml(dateStr)}</span>
+            <span style="font-size:15px;color:#7bc96a;font-weight:500;">${escapeHtml(dateStr)}</span>
           </td>
         </tr>
       </table>
-      <p style="margin:0 0 8px;font-size:13px;color:#e74694;line-height:1.5;background:rgba(231,70,148,0.08);border:1px solid rgba(231,70,148,0.15);border-radius:8px;padding:10px 14px;">
+      <p style="margin:0 0 8px;font-size:13px;color:#f59e0b;line-height:1.5;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.15);border-radius:8px;padding:10px 14px;">
         Sans check-in avant le d&eacute;but du match, votre &eacute;quipe sera d&eacute;clar&eacute;e forfait automatiquement.
       </p>
       ${ctaButton(opts.checkinUrl, 'Confirmer ma présence')}
@@ -555,8 +555,8 @@ export function sendCheckinReminderEmail(opts: {
       ${gradientBar()}
       <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;">Dernier rappel — check-in</h1>
       <p style="margin:0 0 24px;font-size:15px;color:#C6BED9;line-height:1.6;">
-        Votre match commence dans <strong style="color:#ff9c29;">${mins} minutes</strong>
-        et votre &eacute;quipe n&apos;a <strong style="color:#e74694;">toujours pas confirm&eacute; sa pr&eacute;sence</strong>.
+        Votre match commence dans <strong style="color:#f0e63c;">${mins} minutes</strong>
+        et votre &eacute;quipe n&apos;a <strong style="color:#f59e0b;">toujours pas confirm&eacute; sa pr&eacute;sence</strong>.
         Confirmez maintenant pour &eacute;viter le forfait automatique.
       </p>
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:rgba(255,255,255,0.05);border-radius:10px;border:1px solid rgba(255,255,255,0.08);margin:0 0 24px;">
@@ -575,11 +575,11 @@ export function sendCheckinReminderEmail(opts: {
         <tr>
           <td style="padding:14px 20px;">
             <span style="font-size:12px;color:#9081B0;text-transform:uppercase;letter-spacing:0.1em;">D&eacute;but pr&eacute;vu</span><br/>
-            <span style="font-size:15px;color:#2dccfd;font-weight:500;">${escapeHtml(dateStr)}</span>
+            <span style="font-size:15px;color:#7bc96a;font-weight:500;">${escapeHtml(dateStr)}</span>
           </td>
         </tr>
       </table>
-      <p style="margin:0 0 8px;font-size:13px;color:#e74694;line-height:1.5;background:rgba(231,70,148,0.08);border:1px solid rgba(231,70,148,0.15);border-radius:8px;padding:10px 14px;">
+      <p style="margin:0 0 8px;font-size:13px;color:#f59e0b;line-height:1.5;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.15);border-radius:8px;padding:10px 14px;">
         Sans check-in avant le d&eacute;but du match, votre &eacute;quipe sera d&eacute;clar&eacute;e <strong>forfait</strong> automatiquement.
       </p>
       ${ctaButton(opts.checkinUrl, 'Confirmer ma présence maintenant')}
@@ -630,7 +630,7 @@ export function sendCheckinForfeitEmail(opts: {
       <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;">Forfait automatique</h1>
       <p style="margin:0 0 24px;font-size:15px;color:#C6BED9;line-height:1.6;">
         Votre &eacute;quipe <strong style="color:#ffffff;">${escapeHtml(opts.teamName)}</strong>
-        a &eacute;t&eacute; d&eacute;clar&eacute;e <strong style="color:#e74694;">forfait</strong> sur ce match&nbsp;:
+        a &eacute;t&eacute; d&eacute;clar&eacute;e <strong style="color:#f59e0b;">forfait</strong> sur ce match&nbsp;:
         ${escapeHtml(reason)}.
       </p>
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:rgba(255,255,255,0.05);border-radius:10px;border:1px solid rgba(255,255,255,0.08);margin:0 0 24px;">
@@ -649,7 +649,7 @@ export function sendCheckinForfeitEmail(opts: {
         <tr>
           <td style="padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.06);">
             <span style="font-size:12px;color:#9081B0;text-transform:uppercase;letter-spacing:0.1em;">D&eacute;but pr&eacute;vu</span><br/>
-            <span style="font-size:15px;color:#2dccfd;font-weight:500;">${escapeHtml(dateStr)}</span>
+            <span style="font-size:15px;color:#7bc96a;font-weight:500;">${escapeHtml(dateStr)}</span>
           </td>
         </tr>
         <tr>
@@ -704,7 +704,7 @@ export function sendSupportConfirmationEmail(opts: {
         <tr>
           <td style="padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.06);">
             <span style="font-size:12px;color:#9081B0;text-transform:uppercase;letter-spacing:0.1em;">R&eacute;f&eacute;rence ticket</span><br/>
-            <code style="font-size:13px;color:#2dccfd;font-family:'Fira Code',monospace;">${escapeHtml(opts.ticketId.slice(0, 8))}</code>
+            <code style="font-size:13px;color:#7bc96a;font-family:'Fira Code',monospace;">${escapeHtml(opts.ticketId.slice(0, 8))}</code>
           </td>
         </tr>
         <tr>
@@ -746,7 +746,7 @@ function detailsTable(
         const border =
           i < last ? 'border-bottom:1px solid rgba(255,255,255,0.06);' : '';
         const valueHtml = r.isCode
-          ? `<code style="font-size:14px;color:#2dccfd;font-family:'Fira Code',monospace;">${escapeHtml(r.value)}</code>`
+          ? `<code style="font-size:14px;color:#7bc96a;font-family:'Fira Code',monospace;">${escapeHtml(r.value)}</code>`
           : `<span style="font-size:15px;color:#ffffff;font-weight:500;">${escapeHtml(r.value)}</span>`;
         return `<tr><td style="padding:14px 20px;${border}"><span style="font-size:12px;color:#9081B0;text-transform:uppercase;letter-spacing:0.1em;">${escapeHtml(r.label)}</span><br/>${valueHtml}</td></tr>`;
       })
@@ -907,7 +907,7 @@ export function sendPasswordResetEmail(opts: {
         Vous avez demandé à réinitialiser votre mot de passe. Cliquez sur le bouton
         ci-dessous pour définir un nouveau mot de passe.
       </p>
-      <p style="margin:0 0 20px;font-size:13px;color:#e74694;line-height:1.5;background:rgba(231,70,148,0.08);border:1px solid rgba(231,70,148,0.15);border-radius:8px;padding:10px 14px;">
+      <p style="margin:0 0 20px;font-size:13px;color:#f59e0b;line-height:1.5;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.15);border-radius:8px;padding:10px 14px;">
         Ce lien est valable une heure. Si vous n&apos;êtes pas à l&apos;origine de cette
         demande, ignorez simplement cet email.
       </p>
@@ -1013,7 +1013,7 @@ export function sendDigestEmail(opts: {
         <tr><td style="padding:18px 20px;">
           <p style="margin:0 0 6px;font-size:16px;font-weight:600;color:#ffffff;line-height:1.4;">${escapeHtml(item.heading)}</p>
           <p style="margin:0 0 12px;font-size:14px;color:#C6BED9;line-height:1.6;">${escapeHtml(item.body)}</p>
-          <a href="${href}" target="_blank" style="display:inline-block;font-size:13px;font-weight:600;color:#2dccfd;text-decoration:none;">Ouvrir &rarr;</a>
+          <a href="${href}" target="_blank" style="display:inline-block;font-size:13px;font-weight:600;color:#7bc96a;text-decoration:none;">Ouvrir &rarr;</a>
         </td></tr>
       </table>`;
     })

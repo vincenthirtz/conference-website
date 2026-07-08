@@ -7,8 +7,8 @@
 
 import { sendEmail, type SendEmailResult } from './email';
 
-const PRIMARY_COLOR = '#2dccfd';
-const SECONDARY_COLOR = '#ad20e2';
+const PRIMARY_COLOR = '#7bc96a';
+const SECONDARY_COLOR = '#b24be0';
 const TEXT_COLOR = '#C6BED9';
 const BG_COLOR = '#130d22';
 const CARD_BG = '#1b1130';

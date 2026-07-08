@@ -59,18 +59,18 @@ type DiscordWebhookPayload = {
 };
 
 const COLORS = {
-  matchAnnouncement: 0x3b82f6, // blue-500
+  matchAnnouncement: 0xb24be0, // violet (marque)
   matchResult: 0x10b981, // emerald-500
-  bracket: 0x6366f1, // indigo-500
-  announcement: 0xf59e0b, // amber-500
-  veto: 0xa855f7, // purple-500
-  scrim: 0x06b6d4, // cyan-500
+  bracket: 0xb24be0, // violet (marque)
+  announcement: 0xf0e63c, // jaune (marque)
+  veto: 0xb24be0, // violet (marque)
+  scrim: 0x7bc96a, // vert (marque)
   checkinReminder: 0xef4444, // red-500
   checkinForfeit: 0x991b1b, // red-800
   supportLow: 0x3b82f6, // blue-500
   supportMedium: 0xf59e0b, // amber-500
   supportHigh: 0xdc2626, // red-600
-  mvpPoll: 0xfbbf24, // amber-400
+  mvpPoll: 0xf0e63c, // jaune (marque)
 };
 
 /* -----------------------------------------------------------
