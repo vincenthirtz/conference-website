@@ -85,12 +85,6 @@ export const ADMIN_NAV: AdminNavNode[] = [
     minRole: 'caster',
   },
   {
-    id: 'profile',
-    topBarLabel: 'Mon profil',
-    href: '/admin/profile',
-    minRole: 'caster',
-  },
-  {
     id: 'tournoi-en-cours',
     topBarLabel: 'Tournoi en cours',
     href: '/admin/tournoi-en-cours',
@@ -222,7 +216,7 @@ export const ADMIN_NAV: AdminNavNode[] = [
       {
         id: 'scrims-create',
         topBarLabel: 'Créer un scrim',
-        href: '/admin/scrims/create',
+        href: '/admin/scrims?new=1',
         minRole: 'manager',
       },
       {
@@ -556,7 +550,7 @@ export const ADMIN_NAV: AdminNavNode[] = [
           {
             id: 'tenants-new',
             topBarLabel: 'Créer un tenant',
-            href: '/admin/tenants/new',
+            href: '/admin/tenants?new=1',
             minRole: 'manager',
           },
         ],

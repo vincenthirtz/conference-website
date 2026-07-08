@@ -392,7 +392,7 @@ function AdminDashboardPage({ staff }: Props) {
               </p>
             </div>
             <Link
-              href="/admin/profile"
+              href="/admin?profile=1"
               className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-medium text-neutral-200 transition-colors hover:bg-white/[0.08]"
             >
               <svg
@@ -564,7 +564,7 @@ function AdminDashboardPage({ staff }: Props) {
                 description={t.emptySectionsDesc}
                 action={
                   <Link
-                    href="/admin/profile"
+                    href="/admin?profile=1"
                     className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
                   >
                     {t.myProfile}

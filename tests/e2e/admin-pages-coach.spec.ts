@@ -63,10 +63,16 @@ test.describe.serial('Admin pages — Test Coach', () => {
 
   // ─── Dashboard / Profil ─────────────────────────────────────────
 
-  test('Page profil admin (GET /admin)', async ({ page }) => {
+  test('Modale profil admin (deep-link /admin?profile=1)', async ({ page }) => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
     await loginAsCoach(page);
 
+    // Le profil staff n'est plus une page dédiée : c'est une modale globale
+    // déclenchée depuis le top-bar admin. Le deep-link `?profile=1` (vers lequel
+    // l'ancienne route `/admin/profile` 308-redirige) l'ouvre. Le titre de la
+    // modale ("Mon profil") est rendu comme un heading par le composant Modal.
+    await page.goto('/admin?profile=1');
+    await expect(page.getByRole('dialog')).toBeVisible({ timeout: 10000 });
     await expect(
       page.getByRole('heading', { name: 'Mon profil', exact: true })
     ).toBeVisible({ timeout: 10000 });

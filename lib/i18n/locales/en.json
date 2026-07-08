@@ -3527,6 +3527,7 @@
   },
   "adminTopBar": {
     "accueilAria": "Home",
+    "openProfileAria": "Open my profile",
     "staffFallback": "Staff",
     "siteMenu": "Site",
     "logout": "Log out",
