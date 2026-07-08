@@ -1,6 +1,6 @@
 // pages/admin/tournament/[id]/matches.ts
 
-import { useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -141,9 +141,10 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
 
   // inline quick-score
+  // L'état d'édition (score1/score2) vit dans <QuickScoreEditor> pour ne pas
+  // re-render toute la page à chaque frappe ; ici on ne garde que la ligne en
+  // cours d'édition (une seule à la fois) et l'état de sauvegarde.
   const [quickScoreId, setQuickScoreId] = useState<string | null>(null);
-  const [qs1, setQs1] = useState('');
-  const [qs2, setQs2] = useState('');
   const [qsSaving, setQsSaving] = useState(false);
 
   // Bulk selection
@@ -152,10 +153,18 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
   );
 
   // Bulk scheduling
+  // Les valeurs par ligne vivent dans <BulkScheduleRow> (state local) et sont
+  // remontées dans une ref (pas de state page) pour ne pas re-render toute la
+  // page à chaque frappe. La ref est la source de vérité lue au submit.
   const [bulkScheduleMode, setBulkScheduleMode] = useState(false);
-  const [bulkScheduleInputs, setBulkScheduleInputs] = useState<
-    Record<string, string>
-  >({});
+  const bulkScheduleValuesRef = useRef<Record<string, string>>({});
+  const bulkScheduleInitialRef = useRef<Record<string, string>>({});
+  // Diffusion « appliquer la même date/heure à tout » : le bump de nonce
+  // pousse la valeur dans chaque ligne via un effet (action rare, pas frappe).
+  const [bulkBroadcast, setBulkBroadcast] = useState<{
+    value: string;
+    nonce: number;
+  }>({ value: '', nonce: 0 });
   const [bulkScheduleSaving, setBulkScheduleSaving] = useState(false);
 
   // Bulk delete
@@ -356,13 +365,20 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
       setTotal(typeof json.total === 'number' ? json.total : null);
       setSelectedMatchIds(new Set());
       setBulkScheduleMode(false);
-      setBulkScheduleInputs({});
+      bulkScheduleValuesRef.current = {};
+      bulkScheduleInitialRef.current = {};
+      setBulkBroadcast({ value: '', nonce: 0 });
     } catch (err: unknown) {
       setErrorMsg((err as Error)?.message ?? t.errorUnexpected);
     } finally {
       setLoading(false);
     }
   }
+
+  // Ref sur fetchMatches pour que les handlers mémoïsés (useCallback) puissent
+  // rafraîchir sans dépendre des multiples filtres capturés par la closure.
+  const fetchMatchesRef = useRef(fetchMatches);
+  fetchMatchesRef.current = fetchMatches;
 
   // Hydratation des filtres depuis l'URL à l'arrivée sur la page.
   // Le router Next n'est pas ready au premier render : on attend router.isReady
@@ -460,39 +476,45 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
     }
   }
 
-  function openQuickScore(m: Match) {
-    setQuickScoreId(m.id);
-    setQs1(m.team1_score != null ? String(m.team1_score) : '');
-    setQs2(m.team2_score != null ? String(m.team2_score) : '');
-  }
+  // Toggle open/close de l'éditeur inline pour une ligne (une seule à la fois).
+  const handleToggleQuickScore = useCallback((matchId: string) => {
+    setQuickScoreId((prev) => (prev === matchId ? null : matchId));
+  }, []);
 
-  async function handleQuickScore(matchId: string) {
-    if (qs1 === '' || qs2 === '') return;
-    setQsSaving(true);
-    setErrorMsg(null);
+  const handleQuickScoreCancel = useCallback(() => {
+    setQuickScoreId(null);
+  }, []);
 
-    try {
-      await adminFetchJson(`/api/admin/matches/${matchId}`, {
-        method: 'PUT',
-        body: JSON.stringify({
-          mode: 'score',
-          team1Score: Number(qs1),
-          team2Score: Number(qs2),
-          propagate: true,
-        }),
-      });
+  const handleQuickScore = useCallback(
+    async (matchId: string, s1: string, s2: string) => {
+      if (s1 === '' || s2 === '') return;
+      setQsSaving(true);
+      setErrorMsg(null);
 
-      setQuickScoreId(null);
-      fetchMatches();
-    } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? t.errorQuickScore);
-    } finally {
-      setQsSaving(false);
-    }
-  }
+      try {
+        await adminFetchJson(`/api/admin/matches/${matchId}`, {
+          method: 'PUT',
+          body: JSON.stringify({
+            mode: 'score',
+            team1Score: Number(s1),
+            team2Score: Number(s2),
+            propagate: true,
+          }),
+        });
+
+        setQuickScoreId(null);
+        fetchMatchesRef.current();
+      } catch (err: unknown) {
+        setErrorMsg((err as Error)?.message ?? t.errorQuickScore);
+      } finally {
+        setQsSaving(false);
+      }
+    },
+    [adminFetchJson, t]
+  );
 
   // --- Bulk selection ---
-  function toggleMatchSelection(matchId: string) {
+  const toggleMatchSelection = useCallback((matchId: string) => {
     setSelectedMatchIds((prev) => {
       const next = new Set(prev);
       if (next.has(matchId)) {
@@ -502,7 +524,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
       }
       return next;
     });
-  }
+  }, []);
 
   function toggleSelectAll() {
     if (selectedMatchIds.size === matches.length) {
@@ -522,7 +544,9 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
         inputs[m.id] = formatToInputDateTime(m.scheduled_at);
       }
     });
-    setBulkScheduleInputs(inputs);
+    bulkScheduleInitialRef.current = inputs;
+    bulkScheduleValuesRef.current = { ...inputs };
+    setBulkBroadcast({ value: '', nonce: 0 });
   }
 
   function setBulkScheduleForAll(dateTime: string) {
@@ -530,8 +554,20 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
     selectedMatchIds.forEach((matchId) => {
       inputs[matchId] = dateTime;
     });
-    setBulkScheduleInputs(inputs);
+    bulkScheduleValuesRef.current = inputs;
+    setBulkBroadcast((prev) => ({ value: dateTime, nonce: prev.nonce + 1 }));
   }
+
+  // Remontée d'une valeur de ligne dans la ref (aucun re-render page).
+  const handleBulkInputChange = useCallback(
+    (matchId: string, value: string) => {
+      bulkScheduleValuesRef.current = {
+        ...bulkScheduleValuesRef.current,
+        [matchId]: value,
+      };
+    },
+    []
+  );
 
   async function handleBulkScheduleSave() {
     if (!stageFilter) {
@@ -539,7 +575,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
       return;
     }
 
-    const schedules = Object.entries(bulkScheduleInputs).map(
+    const schedules = Object.entries(bulkScheduleValuesRef.current).map(
       ([matchId, dt]) => ({
         matchId,
         scheduled_at: dt ? new Date(dt).toISOString() : null,
@@ -1345,26 +1381,14 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                 {matches
                   .filter((m) => selectedMatchIds.has(m.id))
                   .map((m) => (
-                    <div key={m.id} className="flex items-center gap-3 text-sm">
-                      <span className="w-48 truncate text-neutral-300">
-                        {m.team1?.short_name || m.team1?.name || 'TBD'} vs{' '}
-                        {m.team2?.short_name || m.team2?.name || 'TBD'}
-                      </span>
-                      <span className="text-xs text-neutral-500 font-mono">
-                        R{m.round_number ?? '?'}
-                      </span>
-                      <input
-                        type="datetime-local"
-                        className="px-2 py-1.5 rounded-lg bg-neutral-900 border border-neutral-600 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        value={bulkScheduleInputs[m.id] ?? ''}
-                        onChange={(e) =>
-                          setBulkScheduleInputs((prev) => ({
-                            ...prev,
-                            [m.id]: e.target.value,
-                          }))
-                        }
-                      />
-                    </div>
+                    <BulkScheduleRow
+                      key={m.id}
+                      match={m}
+                      initialValue={bulkScheduleInitialRef.current[m.id] ?? ''}
+                      broadcastValue={bulkBroadcast.value}
+                      broadcastNonce={bulkBroadcast.nonce}
+                      onChange={handleBulkInputChange}
+                    />
                   ))}
               </div>
 
@@ -1853,186 +1877,19 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                   </div>
 
                   {matches.map((m) => (
-                    <div
+                    <MatchRow
                       key={m.id}
-                      className={`p-4 hover:bg-neutral-700/30 transition-colors ${
-                        selectedMatchIds.has(m.id) ? 'bg-blue-900/15' : ''
-                      } ${conflictMatchIds.has(m.id) ? 'border-l-4 border-l-orange-500' : ''}`}
-                    >
-                      <div className="flex items-center gap-4 flex-wrap">
-                        {/* Conflict indicator */}
-                        {conflictMatchIds.has(m.id) && (
-                          <span
-                            title="Conflit horaire"
-                            className="text-orange-400 flex-shrink-0"
-                          >
-                            <svg
-                              className="w-5 h-5"
-                              fill="currentColor"
-                              viewBox="0 0 20 20"
-                            >
-                              <path
-                                fillRule="evenodd"
-                                d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                                clipRule="evenodd"
-                              />
-                            </svg>
-                          </span>
-                        )}
-
-                        {/* Checkbox */}
-                        <input
-                          type="checkbox"
-                          checked={selectedMatchIds.has(m.id)}
-                          onChange={() => toggleMatchSelection(m.id)}
-                          className="accent-blue-500 flex-shrink-0"
-                        />
-
-                        {/* Stage & Round info */}
-                        <div className="w-40 flex-shrink-0">
-                          <div className="font-medium text-sm">
-                            {stageLabel(t, m.stage)}
-                          </div>
-                          <div className="text-xs text-neutral-400">
-                            {format(t.roundLabel, {
-                              round: m.round_number ?? '—',
-                            })}
-                            {m.best_of ? ` • BO${m.best_of}` : ''}
-                          </div>
-                          <div className="text-[10px] text-neutral-500 font-mono mt-1">
-                            #{m.id.slice(0, 8)}
-                          </div>
-                        </div>
-
-                        {/* Teams & Score */}
-                        <div className="flex-1 flex items-center justify-center gap-4 min-w-[300px]">
-                          <TeamCell
-                            team={m.team1}
-                            fallbackId={m.team1?.name || undefined}
-                            isWinner={m.winner_team_id === m.team1_id}
-                            align="right"
-                          />
-
-                          <div className="flex flex-col items-center">
-                            <div className="text-xl font-bold px-4 py-1 bg-neutral-900/50 rounded-lg">
-                              {typeof m.team1_score === 'number' ||
-                              typeof m.team2_score === 'number'
-                                ? `${m.team1_score ?? 0} - ${m.team2_score ?? 0}`
-                                : 'vs'}
-                            </div>
-                            <span
-                              className={`mt-2 px-2 py-0.5 rounded-full text-xs font-medium ${statusColor(
-                                m.status
-                              )}`}
-                            >
-                              {statusLabel(t, m.status)}
-                            </span>
-                          </div>
-
-                          <TeamCell
-                            team={m.team2}
-                            fallbackId={m.team2?.name || undefined}
-                            isWinner={m.winner_team_id === m.team2_id}
-                            align="left"
-                          />
-                        </div>
-
-                        {/* Schedule */}
-                        <div className="w-32 text-right flex-shrink-0">
-                          <div className="text-sm text-neutral-300">
-                            {formatDateTime(m.scheduled_at)}
-                          </div>
-                          {m.completed_at && (
-                            <div className="text-[10px] text-neutral-500">
-                              {format(t.finishedAt, {
-                                date: formatDateTime(m.completed_at),
-                              })}
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Actions */}
-                        <div className="flex gap-2 flex-shrink-0">
-                          {m.status !== 'cancelled' && (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                quickScoreId === m.id
-                                  ? setQuickScoreId(null)
-                                  : openQuickScore(m)
-                              }
-                              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                                quickScoreId === m.id
-                                  ? 'bg-amber-600 text-white'
-                                  : 'bg-amber-600/20 text-amber-300 hover:bg-amber-600/40'
-                              }`}
-                            >
-                              {t.score}
-                            </button>
-                          )}
-                          <Link
-                            href={`/admin/matches/${m.id}/edit`}
-                            className="px-3 py-1.5 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-xs font-medium transition-colors"
-                          >
-                            {t.edit}
-                          </Link>
-                          <Link
-                            href={`/match/${m.id}`}
-                            target="_blank"
-                            className="px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-xs font-medium transition-colors"
-                          >
-                            {t.view}
-                          </Link>
-                        </div>
-                      </div>
-
-                      {/* Inline Quick Score */}
-                      {quickScoreId === m.id && (
-                        <div className="mt-3 flex items-center gap-3 pl-40">
-                          <span className="text-xs text-neutral-400 w-20 text-right truncate">
-                            {m.team1?.short_name ||
-                              m.team1?.name ||
-                              t.team1Fallback}
-                          </span>
-                          <input
-                            type="number"
-                            min={0}
-                            className="w-16 px-2 py-1.5 rounded-lg bg-neutral-900 border border-neutral-600 text-sm text-center focus:outline-none focus:ring-2 focus:ring-amber-500"
-                            value={qs1}
-                            onChange={(e) => setQs1(e.target.value)}
-                            autoFocus
-                          />
-                          <span className="text-neutral-500 font-bold">—</span>
-                          <input
-                            type="number"
-                            min={0}
-                            className="w-16 px-2 py-1.5 rounded-lg bg-neutral-900 border border-neutral-600 text-sm text-center focus:outline-none focus:ring-2 focus:ring-amber-500"
-                            value={qs2}
-                            onChange={(e) => setQs2(e.target.value)}
-                          />
-                          <span className="text-xs text-neutral-400 w-20 truncate">
-                            {m.team2?.short_name ||
-                              m.team2?.name ||
-                              t.team2Fallback}
-                          </span>
-                          <button
-                            type="button"
-                            disabled={qs1 === '' || qs2 === '' || qsSaving}
-                            onClick={() => handleQuickScore(m.id)}
-                            className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {qsSaving ? t.validating : t.validate}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setQuickScoreId(null)}
-                            className="px-2 py-1.5 rounded-lg text-neutral-500 hover:text-neutral-300 text-xs transition-colors"
-                          >
-                            {t.cancel}
-                          </button>
-                        </div>
-                      )}
-                    </div>
+                      t={t}
+                      match={m}
+                      selected={selectedMatchIds.has(m.id)}
+                      hasConflict={conflictMatchIds.has(m.id)}
+                      quickScoreOpen={quickScoreId === m.id}
+                      qsSaving={qsSaving}
+                      onToggleSelect={toggleMatchSelection}
+                      onToggleQuickScore={handleToggleQuickScore}
+                      onQuickScoreSubmit={handleQuickScore}
+                      onQuickScoreCancel={handleQuickScoreCancel}
+                    />
                   ))}
                 </div>
               )}
@@ -2181,5 +2038,292 @@ function TeamCell({
     </div>
   );
 }
+
+// --- Éditeur quick-score inline -------------------------------------------
+// L'état d'édition (score1/score2) est LOCAL à ce composant : taper n'entraîne
+// donc AUCUN re-render de la page ni des autres lignes. À l'ouverture, les
+// valeurs initiales sont dérivées du match (le composant est monté/démonté par
+// `quickScoreOpen` côté page, ce qui garantit un reset propre).
+type QuickScoreEditorProps = {
+  t: Dict;
+  match: Match;
+  saving: boolean;
+  onSubmit: (matchId: string, s1: string, s2: string) => void;
+  onCancel: () => void;
+};
+
+function QuickScoreEditor({
+  t,
+  match,
+  saving,
+  onSubmit,
+  onCancel,
+}: QuickScoreEditorProps) {
+  const [score1, setScore1] = useState(
+    match.team1_score != null ? String(match.team1_score) : ''
+  );
+  const [score2, setScore2] = useState(
+    match.team2_score != null ? String(match.team2_score) : ''
+  );
+
+  return (
+    <div className="mt-3 flex items-center gap-3 pl-40">
+      <span className="text-xs text-neutral-400 w-20 text-right truncate">
+        {match.team1?.short_name || match.team1?.name || t.team1Fallback}
+      </span>
+      <input
+        type="number"
+        min={0}
+        className="w-16 px-2 py-1.5 rounded-lg bg-neutral-900 border border-neutral-600 text-sm text-center focus:outline-none focus:ring-2 focus:ring-amber-500"
+        value={score1}
+        onChange={(e) => setScore1(e.target.value)}
+        autoFocus
+      />
+      <span className="text-neutral-500 font-bold">—</span>
+      <input
+        type="number"
+        min={0}
+        className="w-16 px-2 py-1.5 rounded-lg bg-neutral-900 border border-neutral-600 text-sm text-center focus:outline-none focus:ring-2 focus:ring-amber-500"
+        value={score2}
+        onChange={(e) => setScore2(e.target.value)}
+      />
+      <span className="text-xs text-neutral-400 w-20 truncate">
+        {match.team2?.short_name || match.team2?.name || t.team2Fallback}
+      </span>
+      <button
+        type="button"
+        disabled={score1 === '' || score2 === '' || saving}
+        onClick={() => onSubmit(match.id, score1, score2)}
+        className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {saving ? t.validating : t.validate}
+      </button>
+      <button
+        type="button"
+        onClick={onCancel}
+        className="px-2 py-1.5 rounded-lg text-neutral-500 hover:text-neutral-300 text-xs transition-colors"
+      >
+        {t.cancel}
+      </button>
+    </div>
+  );
+}
+
+// --- Ligne du panneau de planification groupée ----------------------------
+// Valeur locale (pas de state page) → taper ne re-render que cette ligne. La
+// valeur est remontée dans une ref via `onChange`. Le broadcast « même
+// date/heure pour toutes » est appliqué via un effet piloté par un nonce.
+type BulkScheduleRowProps = {
+  match: Match;
+  initialValue: string;
+  broadcastValue: string;
+  broadcastNonce: number;
+  onChange: (matchId: string, value: string) => void;
+};
+
+function BulkScheduleRow({
+  match,
+  initialValue,
+  broadcastValue,
+  broadcastNonce,
+  onChange,
+}: BulkScheduleRowProps) {
+  const [value, setValue] = useState(initialValue);
+  const seenNonce = useRef(broadcastNonce);
+
+  useEffect(() => {
+    // On ignore le nonce initial (montage) ; on ne réagit qu'aux bumps.
+    if (broadcastNonce === seenNonce.current) return;
+    seenNonce.current = broadcastNonce;
+    setValue(broadcastValue);
+  }, [broadcastNonce, broadcastValue]);
+
+  return (
+    <div className="flex items-center gap-3 text-sm">
+      <span className="w-48 truncate text-neutral-300">
+        {match.team1?.short_name || match.team1?.name || 'TBD'} vs{' '}
+        {match.team2?.short_name || match.team2?.name || 'TBD'}
+      </span>
+      <span className="text-xs text-neutral-500 font-mono">
+        R{match.round_number ?? '?'}
+      </span>
+      <input
+        type="datetime-local"
+        className="px-2 py-1.5 rounded-lg bg-neutral-900 border border-neutral-600 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+        value={value}
+        onChange={(e) => {
+          setValue(e.target.value);
+          onChange(match.id, e.target.value);
+        }}
+      />
+    </div>
+  );
+}
+
+// --- Ligne de match (liste principale) ------------------------------------
+// Mémoïsée : avec des props stables (handlers en useCallback côté page,
+// `t`/`match` stables), une frappe dans le filtre de recherche ou l'ouverture
+// d'un quick-score sur une AUTRE ligne ne re-render pas cette ligne.
+type MatchRowProps = {
+  t: Dict;
+  match: Match;
+  selected: boolean;
+  hasConflict: boolean;
+  quickScoreOpen: boolean;
+  qsSaving: boolean;
+  onToggleSelect: (matchId: string) => void;
+  onToggleQuickScore: (matchId: string) => void;
+  onQuickScoreSubmit: (matchId: string, s1: string, s2: string) => void;
+  onQuickScoreCancel: () => void;
+};
+
+const MatchRow = memo(function MatchRow({
+  t,
+  match: m,
+  selected,
+  hasConflict,
+  quickScoreOpen,
+  qsSaving,
+  onToggleSelect,
+  onToggleQuickScore,
+  onQuickScoreSubmit,
+  onQuickScoreCancel,
+}: MatchRowProps) {
+  return (
+    <div
+      className={`p-4 hover:bg-neutral-700/30 transition-colors ${
+        selected ? 'bg-blue-900/15' : ''
+      } ${hasConflict ? 'border-l-4 border-l-orange-500' : ''}`}
+    >
+      <div className="flex items-center gap-4 flex-wrap">
+        {/* Conflict indicator */}
+        {hasConflict && (
+          <span
+            title="Conflit horaire"
+            className="text-orange-400 flex-shrink-0"
+          >
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path
+                fillRule="evenodd"
+                d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </span>
+        )}
+
+        {/* Checkbox */}
+        <input
+          type="checkbox"
+          checked={selected}
+          onChange={() => onToggleSelect(m.id)}
+          className="accent-blue-500 flex-shrink-0"
+        />
+
+        {/* Stage & Round info */}
+        <div className="w-40 flex-shrink-0">
+          <div className="font-medium text-sm">{stageLabel(t, m.stage)}</div>
+          <div className="text-xs text-neutral-400">
+            {format(t.roundLabel, {
+              round: m.round_number ?? '—',
+            })}
+            {m.best_of ? ` • BO${m.best_of}` : ''}
+          </div>
+          <div className="text-[10px] text-neutral-500 font-mono mt-1">
+            #{m.id.slice(0, 8)}
+          </div>
+        </div>
+
+        {/* Teams & Score */}
+        <div className="flex-1 flex items-center justify-center gap-4 min-w-[300px]">
+          <TeamCell
+            team={m.team1}
+            fallbackId={m.team1?.name || undefined}
+            isWinner={m.winner_team_id === m.team1_id}
+            align="right"
+          />
+
+          <div className="flex flex-col items-center">
+            <div className="text-xl font-bold px-4 py-1 bg-neutral-900/50 rounded-lg">
+              {typeof m.team1_score === 'number' ||
+              typeof m.team2_score === 'number'
+                ? `${m.team1_score ?? 0} - ${m.team2_score ?? 0}`
+                : 'vs'}
+            </div>
+            <span
+              className={`mt-2 px-2 py-0.5 rounded-full text-xs font-medium ${statusColor(
+                m.status
+              )}`}
+            >
+              {statusLabel(t, m.status)}
+            </span>
+          </div>
+
+          <TeamCell
+            team={m.team2}
+            fallbackId={m.team2?.name || undefined}
+            isWinner={m.winner_team_id === m.team2_id}
+            align="left"
+          />
+        </div>
+
+        {/* Schedule */}
+        <div className="w-32 text-right flex-shrink-0">
+          <div className="text-sm text-neutral-300">
+            {formatDateTime(m.scheduled_at)}
+          </div>
+          {m.completed_at && (
+            <div className="text-[10px] text-neutral-500">
+              {format(t.finishedAt, {
+                date: formatDateTime(m.completed_at),
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-2 flex-shrink-0">
+          {m.status !== 'cancelled' && (
+            <button
+              type="button"
+              onClick={() => onToggleQuickScore(m.id)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                quickScoreOpen
+                  ? 'bg-amber-600 text-white'
+                  : 'bg-amber-600/20 text-amber-300 hover:bg-amber-600/40'
+              }`}
+            >
+              {t.score}
+            </button>
+          )}
+          <Link
+            href={`/admin/matches/${m.id}/edit`}
+            className="px-3 py-1.5 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-xs font-medium transition-colors"
+          >
+            {t.edit}
+          </Link>
+          <Link
+            href={`/match/${m.id}`}
+            target="_blank"
+            className="px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-xs font-medium transition-colors"
+          >
+            {t.view}
+          </Link>
+        </div>
+      </div>
+
+      {/* Inline Quick Score */}
+      {quickScoreOpen && (
+        <QuickScoreEditor
+          t={t}
+          match={m}
+          saving={qsSaving}
+          onSubmit={onQuickScoreSubmit}
+          onCancel={onQuickScoreCancel}
+        />
+      )}
+    </div>
+  );
+});
 
 export default AdminTournamentMatchesPage;
