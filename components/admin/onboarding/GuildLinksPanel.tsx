@@ -11,8 +11,7 @@ import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import AlertBanner from '@/components/admin/AlertBanner';
 import Modal from '@/components/admin/Modal';
-import EmptyState from '@/components/admin/EmptyState';
-import LoadingSpinner from '@/components/admin/LoadingSpinner';
+import AdminListShell from '@/components/admin/AdminListShell';
 import {
   useAccessibleTenants,
   type AccessibleTenant,
@@ -189,13 +188,14 @@ export default function GuildLinksPanel() {
       <AlertBanner message={error} className="mb-4" />
 
       <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden">
-        {loading && links.length === 0 ? (
-          <div className="py-16">
-            <LoadingSpinner label={t.loading} />
-          </div>
-        ) : links.length === 0 ? (
-          <EmptyState title={t.emptyTitle} description={t.emptyDesc} />
-        ) : (
+        <AdminListShell
+          loading={loading}
+          error={null}
+          isEmpty={links.length === 0}
+          loadingLabel={t.loading}
+          emptyTitle={t.emptyTitle}
+          emptyMessage={t.emptyDesc}
+        >
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-neutral-900/50 text-neutral-400 text-xs uppercase tracking-wider">
@@ -251,7 +251,7 @@ export default function GuildLinksPanel() {
               </tbody>
             </table>
           </div>
-        )}
+        </AdminListShell>
       </section>
 
       <Modal

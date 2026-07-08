@@ -8,6 +8,7 @@ import { useRouter } from 'next/router';
 import { useAdminResource } from '@/hooks/useAdminResource';
 import { withStaffPage } from '@/utils/staff';
 import ScrimFormModal from '@/components/admin/scrims/ScrimFormModal';
+import AdminListShell from '@/components/admin/AdminListShell';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { StaffProps, ScrimStatus } from '@/types/admin';
 
@@ -166,19 +167,13 @@ function AdminScrimsPage(_props: StaffProps) {
             </div>
           </section>
 
-          {errorMsg && (
-            <div className="mb-6 rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm">
-              {errorMsg}
-            </div>
-          )}
-
-          {loading ? (
-            <div className="text-neutral-400 text-sm">{t.loading}</div>
-          ) : scrims.length === 0 ? (
-            <div className="rounded-xl border border-neutral-700/50 bg-neutral-800/30 px-6 py-12 text-center text-neutral-400">
-              {t.empty}
-            </div>
-          ) : (
+          <AdminListShell
+            loading={loading}
+            error={errorMsg}
+            isEmpty={scrims.length === 0}
+            loadingLabel={t.loading}
+            emptyTitle={t.empty}
+          >
             <div className="grid gap-3">
               {scrims.map((s) => (
                 <Link
@@ -215,7 +210,7 @@ function AdminScrimsPage(_props: StaffProps) {
                 </Link>
               ))}
             </div>
-          )}
+          </AdminListShell>
         </div>
       </div>
     </>

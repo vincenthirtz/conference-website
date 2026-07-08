@@ -13,6 +13,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminResource } from '@/hooks/useAdminResource';
+import AdminListShell from '@/components/admin/AdminListShell';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 type Classification = 'breached' | 'approaching' | 'fresh';
@@ -201,31 +202,23 @@ export default function DisputesPanel() {
         </span>
       </div>
 
-      {error && (
-        <div className="mb-4 rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm">
-          {error}
+      <AdminListShell
+        loading={loading}
+        error={error}
+        isEmpty={disputes.length === 0}
+        onRetry={fetchData}
+        retryLabel={t.refresh}
+        loadingLabel={t.loading}
+        emptyTitle={format(t.empty, {
+          filter: filter !== 'all' ? `(${filter})` : '',
+        })}
+      >
+        <div className="space-y-2">
+          {disputes.map((d) => (
+            <DisputeCard key={d.matchId} dispute={d} />
+          ))}
         </div>
-      )}
-
-      {loading && counts === null && (
-        <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 px-4 py-8 text-center text-sm text-neutral-400">
-          {t.loading}
-        </div>
-      )}
-
-      {!loading && disputes.length === 0 && (
-        <div className="rounded-xl border border-neutral-800 bg-neutral-900/40 px-4 py-8 text-center text-sm text-neutral-500">
-          {format(t.empty, {
-            filter: filter !== 'all' ? `(${filter})` : '',
-          })}
-        </div>
-      )}
-
-      <div className="space-y-2">
-        {disputes.map((d) => (
-          <DisputeCard key={d.matchId} dispute={d} />
-        ))}
-      </div>
+      </AdminListShell>
 
       {/* Pagination */}
       {disputes.length > 0 && (

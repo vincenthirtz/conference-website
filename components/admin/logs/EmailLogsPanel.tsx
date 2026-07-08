@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminResource } from '@/hooks/useAdminResource';
+import AdminListShell from '@/components/admin/AdminListShell';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 type Dict = ReturnType<typeof useAdminT<'adminEmailLogs'>>;
@@ -370,14 +371,15 @@ export default function EmailLogsPanel() {
 
       {/* Events list */}
       <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden">
-        {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <div className="w-8 h-8 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
-          </div>
-        ) : events.length === 0 ? (
-          <div className="text-center py-20 text-neutral-400">
+        <AdminListShell
+          loading={loading}
+          error={null}
+          isEmpty={events.length === 0}
+          loadingClassName="py-20"
+          emptyTitle={t.empty}
+          emptyIcon={
             <svg
-              className="w-12 h-12 mx-auto mb-4 text-neutral-600"
+              className="w-12 h-12"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -389,9 +391,8 @@ export default function EmailLogsPanel() {
                 d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
               />
             </svg>
-            {t.empty}
-          </div>
-        ) : (
+          }
+        >
           <div className="divide-y divide-neutral-700/50">
             {events.map((ev, i) => {
               const style = eventLabels[ev.event] || {
@@ -456,7 +457,7 @@ export default function EmailLogsPanel() {
               );
             })}
           </div>
-        )}
+        </AdminListShell>
       </section>
 
       {/* Pagination */}
