@@ -21,9 +21,6 @@ const HomeTwitchEmbed = dynamic(
 // Below-the-fold: code-split into separate chunks. SSR stays on so news
 // excerpts, tournament info and press logos remain in the initial HTML
 // (good for SEO and content visibility before JS hydrates).
-const HomeIdahobitScrim = dynamic(
-  () => import('@/components/Home/HomeIdahobitScrim')
-);
 const HomeEvents = dynamic(() => import('@/components/Home/HomeEvents'));
 const HomeNewsSection = dynamic(
   () => import('@/components/News/HomeNewsSection')
@@ -312,7 +309,6 @@ function Home({
 
       <HomeCountdown targetDate={countdownTarget} />
       <HomeTwitchEmbed />
-      <HomeIdahobitScrim />
       <HomeEvents tournament={upcomingTournament} />
       <HomeNewsSection initialNews={news} />
       <HomeSponsors partners={partners} />
