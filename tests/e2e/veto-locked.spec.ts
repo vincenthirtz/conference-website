@@ -164,7 +164,10 @@ test.describe.serial('Veto locked flow (P0 matches)', () => {
         .eq('id', tournamentId);
     }
     for (const tid of [team1Id, team2Id].filter(Boolean)) {
-      await supabaseTestClient.from('teams').delete().eq('id', tid as string);
+      await supabaseTestClient
+        .from('teams')
+        .delete()
+        .eq('id', tid as string);
     }
     await deleteTestStaff(ADMIN_EMAIL);
     await deleteTestStaff(MANAGER_EMAIL);
@@ -280,7 +283,7 @@ test.describe.serial('Veto locked flow (P0 matches)', () => {
     await setVetoLocked(matchId!, new Date().toISOString());
 
     await loginAsUI(page, MANAGER_EMAIL);
-    await page.goto(`/admin/tournament/${tournamentId}/veto`);
+    await page.goto(`/admin/tournament/${tournamentId}/bracket?tab=veto`);
 
     // Sélectionne le match dans le dropdown.
     const select = page.locator('select').first();
@@ -302,7 +305,7 @@ test.describe.serial('Veto locked flow (P0 matches)', () => {
   }) => {
     // Garde locked depuis le test précédent.
     await loginAsUI(page, ADMIN_EMAIL);
-    await page.goto(`/admin/tournament/${tournamentId}/veto`);
+    await page.goto(`/admin/tournament/${tournamentId}/bracket?tab=veto`);
 
     const select = page.locator('select').first();
     await select.waitFor({ state: 'visible', timeout: 10000 });

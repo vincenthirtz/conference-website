@@ -91,7 +91,7 @@ function getQuickLinks(tx: Dict): QuickLink[] {
     {
       label: tx.quickBracketBuilderLabel,
       icon: '🛠️',
-      href: (id) => `/admin/tournament/${id}/bracket-builder`,
+      href: (id) => `/admin/tournament/${id}/bracket?tab=builder`,
       description: tx.quickBracketBuilderDesc,
     },
     {
@@ -103,13 +103,13 @@ function getQuickLinks(tx: Dict): QuickLink[] {
     {
       label: tx.quickMapDrawLabel,
       icon: '🎲',
-      href: (id) => `/admin/tournament/${id}/map-draw`,
+      href: (id) => `/admin/tournament/${id}/bracket?tab=map-draw`,
       description: tx.quickMapDrawDesc,
     },
     {
       label: tx.quickVetoLabel,
       icon: '🚫',
-      href: (id) => `/admin/tournament/${id}/veto`,
+      href: (id) => `/admin/tournament/${id}/bracket?tab=veto`,
       description: tx.quickVetoDesc,
     },
     {
@@ -715,7 +715,10 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
                       { count: sig.supportHighOpen }
                     )}
                     message={tx.supportCriticalMsg}
-                    cta={{ label: tx.open, href: '/admin/moderation?tab=support' }}
+                    cta={{
+                      label: tx.open,
+                      href: '/admin/moderation?tab=support',
+                    }}
                   />
                 )}
                 {liveRosterLock &&

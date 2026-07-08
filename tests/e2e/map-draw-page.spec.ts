@@ -1,11 +1,11 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Page tirage de maps (sans auth → redirect)', () => {
-  test('GET /admin/tournament/fake-id/map-draw redirige vers login', async ({
+  test('GET /admin/tournament/fake-id/bracket?tab=map-draw redirige vers login', async ({
     page,
   }) => {
     await page.goto(
-      '/admin/tournament/00000000-0000-0000-0000-000000000000/map-draw'
+      '/admin/tournament/00000000-0000-0000-0000-000000000000/bracket?tab=map-draw'
     );
     await page.waitForTimeout(1000);
     const url = page.url();
