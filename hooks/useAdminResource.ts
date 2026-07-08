@@ -64,6 +64,21 @@ export type UseAdminResourceOptions<T, R = unknown> = UseAdminFetchOptions & {
   includeTotal?: boolean;
   /** When false, no request is fired (e.g. waiting on a dependency). Default: true. */
   enabled?: boolean;
+  /**
+   * SSR hydration: initial rows for the first paint. When provided, the hook
+   * seeds `data` (and `total` from `initialTotal`) with these values AND skips
+   * the mount fetch — so an SSR-rendered list shows instantly with no flash and
+   * no redundant client round-trip. A fetch only fires when the resolved URL
+   * changes (filter / search / pagination) or `refresh()` is called.
+   *
+   * Omit this option and behaviour is identical to before (fetch on mount).
+   */
+  initialData?: T[];
+  /**
+   * SSR hydration: initial total to seed pagination alongside `initialData`.
+   * Only read when `initialData` is provided. Defaults to `null`.
+   */
+  initialTotal?: number | null;
 };
 
 export type UseAdminResourceResult<T> = {
@@ -102,6 +117,52 @@ function defaultSelectTotal<R>(payload: R): number | null {
   return null;
 }
 
+/**
+ * Builds the resolved request URL (base + query string) from the pagination /
+ * search / static params. Extracted as a pure function so the URL contract —
+ * which is what decides whether a change should trigger a refetch — is unit
+ * testable without a React renderer (the hook itself can't be tested in this
+ * harness: no jsdom / @testing-library, forbidden by the zero-dependency
+ * policy). The param ordering is stable: limit, offset, includeTotal, search,
+ * then static params in insertion order.
+ */
+export function buildAdminResourceUrl(
+  url: string,
+  opts: {
+    limit: number;
+    offset: number;
+    includeTotal: boolean;
+    search?: string;
+    searchParam?: string;
+    params?: Record<string, string | number | boolean | null | undefined>;
+  }
+): string {
+  const {
+    limit,
+    offset,
+    includeTotal,
+    search = '',
+    searchParam = 'search',
+    params,
+  } = opts;
+
+  const sp = new URLSearchParams();
+  sp.set('limit', String(limit));
+  sp.set('offset', String(offset));
+  if (includeTotal) sp.set('includeTotal', '1');
+
+  const trimmed = search.trim();
+  if (trimmed) sp.set(searchParam, trimmed);
+
+  for (const [key, value] of Object.entries(params ?? {})) {
+    if (value === null || value === undefined || value === '') continue;
+    sp.set(key, String(value));
+  }
+
+  const qs = sp.toString();
+  return qs ? `${url}?${qs}` : url;
+}
+
 export function useAdminResource<T, R = unknown>(
   /** Base endpoint, without query string (e.g. `/api/admin/comments`). */
   url: string,
@@ -120,18 +181,34 @@ export function useAdminResource<T, R = unknown>(
     includeTotal = true,
     enabled = true,
     loginPath,
+    initialData,
+    initialTotal = null,
   } = options;
 
   const { adminFetchJson } = useAdminFetch({ loginPath });
 
-  const [data, setData] = useState<T[]>([]);
-  const [total, setTotal] = useState<number | null>(null);
+  // When SSR-hydrated, seed state from the initial props and skip the mount
+  // fetch (see the fetch effect below). `hasInitialData` is captured once.
+  const hasInitialData = initialData !== undefined;
+  const [data, setData] = useState<T[]>(initialData ?? []);
+  const [total, setTotal] = useState<number | null>(
+    hasInitialData ? initialTotal : null
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [offset, setOffsetState] = useState(initialOffset);
   const [debouncedQuery, setDebouncedQuery] = useState(query ?? '');
   // Bumped by refresh() to force a re-run without changing the URL.
   const [refreshTick, setRefreshTick] = useState(0);
+
+  // SSR hydration: when initialData is provided, consume (skip) exactly the
+  // first fetch that would otherwise fire — the one on mount, whose resolved
+  // URL matches the initial SSR state. Any later fetch (URL change via a
+  // filter/search/page, or refresh()) proceeds normally. One-shot: the ref is
+  // flipped to false the first time the effect reaches the fetch branch, so
+  // subsequent runs are never skipped. Without initialData it starts false, so
+  // existing consumers keep fetching on mount (unchanged behaviour).
+  const skipNextFetchRef = useRef(hasInitialData);
 
   // Keep mapper refs stable so inline-defined selectors don't retrigger fetches.
   const selectRef = useRef(select);
@@ -159,22 +236,18 @@ export function useAdminResource<T, R = unknown>(
   const paramsKey = useMemo(() => JSON.stringify(params ?? {}), [params]);
 
   const resolvedUrl = useMemo(() => {
-    const sp = new URLSearchParams();
-    sp.set('limit', String(limit));
-    sp.set('offset', String(offset));
-    if (includeTotal) sp.set('includeTotal', '1');
-
-    const trimmed = debouncedQuery.trim();
-    if (trimmed) sp.set(searchParam, trimmed);
-
-    const staticParams = JSON.parse(paramsKey) as Record<string, unknown>;
-    for (const [key, value] of Object.entries(staticParams)) {
-      if (value === null || value === undefined || value === '') continue;
-      sp.set(key, String(value));
-    }
-
-    const qs = sp.toString();
-    return qs ? `${url}?${qs}` : url;
+    const staticParams = JSON.parse(paramsKey) as Record<
+      string,
+      string | number | boolean | null | undefined
+    >;
+    return buildAdminResourceUrl(url, {
+      limit,
+      offset,
+      includeTotal,
+      search: debouncedQuery,
+      searchParam,
+      params: staticParams,
+    });
   }, [
     url,
     limit,
@@ -187,6 +260,13 @@ export function useAdminResource<T, R = unknown>(
 
   useEffect(() => {
     if (!enabled) return;
+
+    // SSR-hydrated first paint: skip the mount fetch exactly once (see
+    // skipNextFetchRef). Later URL/refresh-driven runs fall through and fetch.
+    if (skipNextFetchRef.current) {
+      skipNextFetchRef.current = false;
+      return;
+    }
 
     const controller = new AbortController();
     let active = true;
