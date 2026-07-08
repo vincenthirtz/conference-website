@@ -668,39 +668,6 @@ select option {
   min-height: clamp(520px, 70vh, 760px);
 }
 
-.hero-glow {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center;
-  pointer-events: none;
-  user-select: none;
-  z-index: -1;
-  opacity: 0.6;
-  mask-image: linear-gradient(180deg, black 0%, black 70%, transparent 100%);
-  -webkit-mask-image: linear-gradient(
-    180deg,
-    black 0%,
-    black 70%,
-    transparent 100%
-  );
-  animation: hero-glow-breathe 8s ease-in-out infinite;
-}
-
-@keyframes hero-glow-breathe {
-  0%,
-  100% {
-    opacity: 0.78;
-    filter: saturate(1) brightness(1);
-  }
-  50% {
-    opacity: 0.92;
-    filter: saturate(1.15) brightness(1.06);
-  }
-}
-
 /* Aurora backdrop layer — sits behind the hero title, sweeps slowly.
  * Three radial blobs (cyan/magenta/violet) blurred and animated to give
  * the hero a sense of depth and motion without overpowering the title. */
@@ -793,7 +760,7 @@ select option {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hero-glow,
+  .text-gradient,
   .hero-aurora::before,
   .hero-aurora::after,
   .hero-aurora__violet {

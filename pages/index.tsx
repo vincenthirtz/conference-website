@@ -1,6 +1,5 @@
 import type { GetStaticProps } from 'next';
 import dynamic from 'next/dynamic';
-import Head from 'next/head';
 import Header from '@/components/Header/header';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { type HomeNewsItem } from '@/components/News/HomeNewsSection';
@@ -261,16 +260,6 @@ function Home({
   const t = useT('home');
   return (
     <div>
-      <Head>
-        <link
-          rel="preload"
-          as="image"
-          type="image/avif"
-          imageSrcSet="/img/illustra-640.avif 640w, /img/illustra-1024.avif 1024w"
-          imageSizes="(max-width: 768px) 640px, 1024px"
-          fetchPriority="high"
-        />
-      </Head>
       <Header />
 
       {loadError && (
