@@ -13,8 +13,17 @@ import {
 import type { AdminLink } from '../../types/components';
 import type { StaffRole } from '../../utils/staff';
 
+// Recherche récursive : depuis le regroupement « Compétition », plusieurs
+// entrées (Tournoi en cours, Tournois, Scrims, Équipes) vivent au 2e niveau.
 function findByTitle(links: AdminLink[], title: string): AdminLink | undefined {
-  return links.find((l) => l.title === title);
+  for (const l of links) {
+    if (l.title === title) return l;
+    if (l.children) {
+      const found = findByTitle(l.children, title);
+      if (found) return found;
+    }
+  }
+  return undefined;
 }
 
 describe('filterAdminLinks – static structure invariants', () => {
@@ -33,12 +42,27 @@ describe('filterAdminLinks – static structure invariants', () => {
   it('returns the same set of top-level entries for owner as for admin or higher', () => {
     const owner = filterAdminLinks('owner').map((l) => l.title);
     expect(owner).toContain('Dashboard');
-    expect(owner).toContain('Tournoi en cours');
-    expect(owner).toContain('Tournois');
-    expect(owner).toContain('Équipes');
+    // Tournoi en cours / Tournois / Scrims / Équipes sont regroupés sous
+    // l'entrée top-bar « Compétition » (ne sont plus au premier niveau).
+    expect(owner).toContain('Compétition');
+    expect(owner).not.toContain('Tournois');
+    expect(owner).not.toContain('Tournoi en cours');
     expect(owner).toContain('Contenu');
     expect(owner).toContain('Communication');
     expect(owner).toContain('Configuration');
+  });
+
+  it('groups Tournoi en cours, Tournois, Scrims, Équipes sous "Compétition"', () => {
+    const competition = filterAdminLinks('owner').find(
+      (l) => l.title === 'Compétition'
+    );
+    expect(competition).toBeDefined();
+    expect(competition?.children?.map((c) => c.title)).toEqual([
+      'Tournoi en cours',
+      'Tournois',
+      'Scrims',
+      'Équipes',
+    ]);
   });
 });
 

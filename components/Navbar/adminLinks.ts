@@ -17,21 +17,26 @@ export function filterAdminLinks(
   const canAccess = (minRole?: StaffRole) =>
     hasAtLeastRole(staffRole, minRole ?? 'admin');
 
-  return links
-    .map((item): AdminLink | null => {
-      const itemMinRole = item.minRole ?? 'admin';
-      const children: AdminLink[] =
-        item.children
-          ?.map((child) => ({
-            ...child,
-            minRole: child.minRole ?? itemMinRole,
-          }))
-          .filter((child) => canAccess(child.minRole)) ?? [];
+  // Filtrage RÉCURSIF (profondeur arbitraire) : depuis le regroupement
+  // « Compétition », l'arbre a 3 niveaux (section → sous-section → item). Un
+  // nœud sans `minRole` hérite du rôle effectif de son parent ; un conteneur
+  // est conservé s'il est lui-même accessible (self-ref) OU s'il reste au moins
+  // un descendant accessible.
+  const filterLevel = (
+    items: AdminLink[],
+    inheritedMinRole: StaffRole
+  ): AdminLink[] =>
+    items
+      .map((item): AdminLink | null => {
+        const itemMinRole = item.minRole ?? inheritedMinRole;
+        const children = item.children
+          ? filterLevel(item.children, itemMinRole)
+          : [];
+        const selfAccessible = !!item.ref && canAccess(itemMinRole);
+        if (!selfAccessible && children.length === 0) return null;
+        return { ...item, minRole: itemMinRole, children };
+      })
+      .filter((item): item is AdminLink => item !== null);
 
-      const selfAccessible = !!item.ref && canAccess(itemMinRole);
-      if (!selfAccessible && children.length === 0) return null;
-
-      return { ...item, children };
-    })
-    .filter((item): item is AdminLink => item !== null);
+  return filterLevel(links, 'admin');
 }
