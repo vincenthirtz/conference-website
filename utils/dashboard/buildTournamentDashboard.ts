@@ -579,21 +579,21 @@ export async function fetchDashboardData(
       return { ok: false, status: 404, error: 'Tournament not found' };
     }
 
-    // Stages
-    const { data: stagesData } = await supabaseAdmin
-      .from('tournament_stages')
-      .select('id, name, stage_type, order_index, is_active')
-      .eq('tournament_id', tournamentId)
-      .eq('tenant_id', tenantId)
-      .order('order_index', { ascending: true });
-
-    const stages = stagesData || [];
-
-    // Matches (with everything we need for signals)
-    const { data: matchesData } = await supabaseAdmin
-      .from('matches')
-      .select(
-        `id, stage_id, status, round_number, round_name, scheduled_at, stream_url,
+    // Stages, matches et tournament teams sont indépendants une fois le tournoi
+    // validé → chargement en parallèle pour raccourcir le chemin critique
+    // (ce builder tourne aussi en getServerSideProps, donc bloque le TTFB).
+    const [stagesRes, matchesRes, tournamentTeamsRes] = await Promise.all([
+      supabaseAdmin
+        .from('tournament_stages')
+        .select('id, name, stage_type, order_index, is_active')
+        .eq('tournament_id', tournamentId)
+        .eq('tenant_id', tenantId)
+        .order('order_index', { ascending: true }),
+      // Matches (with everything we need for signals)
+      supabaseAdmin
+        .from('matches')
+        .select(
+          `id, stage_id, status, round_number, round_name, scheduled_at, stream_url,
          team1_id, team2_id, winner_team_id, is_bye, bracket_side,
          match_format, team1_score, team2_score,
          dispute_reason, dispute_opened_at,
@@ -601,20 +601,19 @@ export async function fetchDashboardData(
          next_match_lose_id, next_match_lose_slot,
          team1_checked_in_at, team2_checked_in_at, forfeit_processed_at,
          completed_at`
-      )
-      .eq('tournament_id', tournamentId)
-      .eq('tenant_id', tenantId);
+        )
+        .eq('tournament_id', tournamentId)
+        .eq('tenant_id', tenantId),
+      supabaseAdmin
+        .from('tournament_teams')
+        .select('team_id, status')
+        .eq('tournament_id', tournamentId)
+        .eq('tenant_id', tenantId),
+    ]);
 
-    const matches = matchesData || [];
-
-    // Tournament teams
-    const { data: tournamentTeamsData } = await supabaseAdmin
-      .from('tournament_teams')
-      .select('team_id, status')
-      .eq('tournament_id', tournamentId)
-      .eq('tenant_id', tenantId);
-
-    const tournamentTeams = tournamentTeamsData || [];
+    const stages = stagesRes.data || [];
+    const matches = matchesRes.data || [];
+    const tournamentTeams = tournamentTeamsRes.data || [];
 
     // Stage teams counts
     const stageTeamCounts = new Map<string, number>();
