@@ -793,9 +793,12 @@ select option {
  * Pure CSS, respects prefers-reduced-motion.
  */
 .hero-connector {
+  /* Hauteur hoistée en variable pour que les pastilles animent translateY
+     (compositable) au lieu de `top` (reflow/frame). */
+  --hero-connector-h: clamp(170px, 22vh, 260px);
   position: relative;
   width: 2px;
-  height: clamp(170px, 22vh, 260px);
+  height: var(--hero-connector-h);
 }
 
 .hero-connector__beam {
@@ -902,22 +905,22 @@ select option {
 
 @keyframes hero-connector-travel {
   0% {
-    top: -4px;
     opacity: 0;
-    transform: translate(-50%, -50%) scale(0.8);
+    transform: translate(-50%, calc(-50% - 4px)) scale(0.8);
   }
   12% {
     opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
+    transform: translate(-50%, calc(-50% + var(--hero-connector-h) * 0.12))
+      scale(1);
   }
   88% {
     opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
+    transform: translate(-50%, calc(-50% + var(--hero-connector-h) * 0.88))
+      scale(1);
   }
   100% {
-    top: 100%;
     opacity: 0;
-    transform: translate(-50%, -50%) scale(0.6);
+    transform: translate(-50%, calc(-50% + var(--hero-connector-h))) scale(0.6);
   }
 }
 
