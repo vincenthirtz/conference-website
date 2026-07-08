@@ -4777,7 +4777,12 @@
     "editionHeading": "Edition",
     "castersHeading": "Casters",
     "commsHeading": "Comms",
-    "wavesStationsHeading": "Waves & Stations"
+    "wavesStationsHeading": "Waves & Stations",
+    "conflictsHeading": "Conflits de planning",
+    "conflictsSubtitle": "Une équipe est programmée sur des matchs qui se chevauchent. Vérifiez le planning avant le direct.",
+    "conflictLine": ": « {matchA} » chevauche « {matchB} »",
+    "conflictOverlap": "chevauchement {start} – {end}",
+    "conflictUnknownTeam": "Équipe inconnue"
   },
   "adminCampaigns": {
     "statusActive": "Active",

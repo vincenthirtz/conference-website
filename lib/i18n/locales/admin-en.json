@@ -4777,7 +4777,12 @@
     "editionHeading": "Editing",
     "castersHeading": "Casters",
     "commsHeading": "Comms",
-    "wavesStationsHeading": "Waves & Stations"
+    "wavesStationsHeading": "Waves & Stations",
+    "conflictsHeading": "Schedule conflicts",
+    "conflictsSubtitle": "A team is scheduled on overlapping matches. Review the schedule before going live.",
+    "conflictLine": ": \"{matchA}\" overlaps \"{matchB}\"",
+    "conflictOverlap": "overlap {start} – {end}",
+    "conflictUnknownTeam": "Unknown team"
   },
   "adminCampaigns": {
     "statusActive": "Active",

@@ -29,6 +29,7 @@ import WaveBoard, {
 import StationBoard, {
   type StationFormPatch,
 } from '@/components/admin/director/StationBoard';
+import ScheduleConflictsBanner from '@/components/admin/director/ScheduleConflictsBanner';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
@@ -38,6 +39,10 @@ import { useToast } from '@/components/Toast';
 import { withStaffPage } from '@/utils/staff';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { computeRunSchedule } from '@/utils/eventSchedule';
+import {
+  detectTeamScheduleConflicts,
+  type MatchTeams,
+} from '@/utils/eventScheduleConflicts';
 import type { StaffProps } from '@/types/admin';
 import type {
   EventBroadcastMessage,
@@ -229,6 +234,107 @@ function DirectorPage(_props: StaffProps) {
   const schedule = useMemo(
     () => (run ? computeRunSchedule(run, segments, nowMs) : null),
     [run, segments, nowMs]
+  );
+
+  /* -----------------------------------------------------------
+   * Roadmap #04 — detection des conflits de planning d'equipe.
+   *
+   * Une equipe programmee sur 2 matchs dont les plages horaires PLANIFIEES se
+   * chevauchent = conflit. On a besoin des equipes par match ; les segments ne
+   * portent que match_id. On resout donc match_id -> equipes via l'endpoint
+   * admin existant /api/admin/matches/[matchId] (lecture seule, role manager,
+   * pas de modif d'API). Fetch UNIQUE par match (cache dans matchTeams) : on ne
+   * refetch que les match_ids nouvellement apparus, jamais a chaque tick 1s.
+   * ---------------------------------------------------------*/
+  const [matchTeams, setMatchTeams] = useState<Map<string, MatchTeams>>(
+    () => new Map()
+  );
+
+  // Ids distincts des segments-match (non skipped) a resoudre. Memoise sur
+  // `segments` -> ref stable tant que la liste ne change pas.
+  const matchIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const s of segments) {
+      if (s.type === 'match' && s.match_id && s.status !== 'skipped') {
+        ids.add(s.match_id);
+      }
+    }
+    return Array.from(ids).sort();
+  }, [segments]);
+
+  useEffect(() => {
+    if (!runId || matchIds.length === 0) return;
+    // On ne fetch que les ids pas encore connus (evite tout refetch inutile ;
+    // quand matchTeams se met a jour, l'effet re-run mais `missing` est vide).
+    const missing = matchIds.filter((id) => !matchTeams.has(id));
+    if (missing.length === 0) return;
+
+    let cancelled = false;
+    (async () => {
+      const resolved = await Promise.all(
+        missing.map(async (id) => {
+          try {
+            const json = await adminFetchJson<{
+              match: {
+                id: string;
+                team1_id: string | null;
+                team2_id: string | null;
+                team1?: { name?: string | null } | null;
+                team2?: { name?: string | null } | null;
+              };
+            }>(`/api/admin/matches/${id}`);
+            const m = json.match;
+            const entry: MatchTeams = {
+              team1Id: m.team1_id ?? null,
+              team2Id: m.team2_id ?? null,
+              team1Name: m.team1?.name ?? null,
+              team2Name: m.team2?.name ?? null,
+            };
+            return [id, entry] as const;
+          } catch {
+            // Match introuvable / erreur : on ignore ce match pour la detection
+            // (pas de blocage du Director).
+            return null;
+          }
+        })
+      );
+      if (cancelled) return;
+      setMatchTeams((prev) => {
+        const next = new Map(prev);
+        for (const r of resolved) {
+          if (r) next.set(r[0], r[1]);
+        }
+        return next;
+      });
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [runId, matchIds, matchTeams, adminFetchJson]);
+
+  /* -----------------------------------------------------------
+   * Conflits : calcules sur les HORAIRES PLANIFIES uniquement (plannedStart/
+   * plannedEnd), qui NE dependent PAS de nowMs. On recalcule donc un schedule
+   * dedie avec nowMs=0 (fige) memoise sur [run, segments] -> pas de recompute
+   * chaque seconde. Puis la detection memoise sur [scheduleForConflicts,
+   * segments, matchTeams].
+   * ---------------------------------------------------------*/
+  const scheduleForConflicts = useMemo(
+    () => (run ? computeRunSchedule(run, segments, 0) : null),
+    [run, segments]
+  );
+
+  const scheduleConflicts = useMemo(
+    () =>
+      scheduleForConflicts
+        ? detectTeamScheduleConflicts(
+            scheduleForConflicts,
+            segments,
+            matchTeams
+          )
+        : [],
+    [scheduleForConflicts, segments, matchTeams]
   );
 
   /* -----------------------------------------------------------
@@ -893,6 +999,8 @@ function DirectorPage(_props: StaffProps) {
                 onEndRun={handleEndRun}
                 busy={busy}
               />
+
+              <ScheduleConflictsBanner conflicts={scheduleConflicts} />
 
               {errorMsg && (
                 <AlertBanner
