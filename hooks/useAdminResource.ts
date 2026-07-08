@@ -34,6 +34,14 @@ export type UseAdminResourceOptions<T, R = unknown> = UseAdminFetchOptions & {
    * reading a numeric `total` field, falling back to `null`.
    */
   selectTotal?: (payload: R) => number | null;
+  /**
+   * Called with the raw payload on every successful fetch, after `data`/`total`
+   * are set. Use it to capture extra fields that live alongside the row list in
+   * the same response (aggregate stats, config values, …) without firing a
+   * second request. Kept in a ref internally, so an inline callback never
+   * retriggers a fetch.
+   */
+  onData?: (payload: R) => void;
   /** Page size. Default: 30. */
   limit?: number;
   /** Initial offset. Default: 0. */
@@ -65,6 +73,13 @@ export type UseAdminResourceResult<T> = {
   error: string | null;
   /** Re-runs the current request (e.g. after a mutation). */
   refresh: () => void;
+  /**
+   * Locally patches the current rows for optimistic UI (e.g. drag reorder before
+   * persistence). Accepts the next array or an updater. The value is authoritative
+   * only until the next successful fetch, which overwrites it — pair an optimistic
+   * `mutate` with `refresh()` on failure to roll back.
+   */
+  mutate: (next: T[] | ((prev: T[]) => T[])) => void;
   offset: number;
   limit: number;
   setOffset: (offset: number) => void;
@@ -95,6 +110,7 @@ export function useAdminResource<T, R = unknown>(
   const {
     select,
     selectTotal,
+    onData,
     limit = 30,
     initialOffset = 0,
     query,
@@ -120,9 +136,11 @@ export function useAdminResource<T, R = unknown>(
   // Keep mapper refs stable so inline-defined selectors don't retrigger fetches.
   const selectRef = useRef(select);
   const selectTotalRef = useRef(selectTotal);
+  const onDataRef = useRef(onData);
   useEffect(() => {
     selectRef.current = select;
     selectTotalRef.current = selectTotal;
+    onDataRef.current = onData;
   });
 
   // Debounce the search query and reset pagination when it changes.
@@ -183,6 +201,7 @@ export function useAdminResource<T, R = unknown>(
         const mapTotal = selectTotalRef.current ?? defaultSelectTotal<R>;
         setData(mapSelect(payload));
         setTotal(mapTotal(payload));
+        onDataRef.current?.(payload);
       })
       .catch((err: unknown) => {
         // Aborted requests are expected churn, not errors.
@@ -225,6 +244,7 @@ export function useAdminResource<T, R = unknown>(
     loading,
     error,
     refresh,
+    mutate: setData,
     offset,
     limit,
     setOffset,
