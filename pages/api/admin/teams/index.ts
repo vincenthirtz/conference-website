@@ -4,7 +4,11 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
-import { parsePagination, sanitizeSearch } from '@/utils/apiHelpers';
+import {
+  parsePagination,
+  sanitizeSearch,
+  escapePostgrestValue,
+} from '@/utils/apiHelpers';
 
 import { logger } from '../../../../utils/logger';
 export type TeamRow = {
@@ -72,9 +76,12 @@ async function handleGet(
     query = query.eq('is_active', activeFilter);
   }
 
+  // Search across name + slug + short_name (mirrors the SSR loader in
+  // pages/admin/teams/index.tsx). Sanitised via escapePostgrestValue so user
+  // input can't alter the PostgREST `.or(...)` filter structure.
   if (search) {
-    const s = `%${search}%`;
-    query = query.ilike('name', s);
+    const s = `%${escapePostgrestValue(search)}%`;
+    query = query.or(`name.ilike.${s},slug.ilike.${s},short_name.ilike.${s}`);
   }
 
   // Filter by tournament: find team IDs linked via tournament_teams

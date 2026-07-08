@@ -53,11 +53,20 @@ export type DemandeRow = {
 };
 
 type DemandeWithRelations = DemandeRow & {
+  // Shape mirrors the SSR loader in pages/admin/demandes/index.tsx (UserMini) so
+  // the list page can migrate to the shared read hook with no display change.
   user?: {
     id: string;
-    username: string | null;
+    email: string | null;
+    display_name: string | null;
+    avatar_url: string | null;
     battle_tag: string | null;
     discord: string | null;
+    /**
+     * Legacy field from the previous GET shape, kept for backward-compat with
+     * any pre-existing consumer. Equals `display_name || email` (same as before).
+     */
+    username: string | null;
   } | null;
   team?: {
     id: string;
@@ -69,6 +78,11 @@ type DemandeWithRelations = DemandeRow & {
     id: string;
     name: string;
     slug: string | null;
+  } | null;
+  // Staff handler (mirrors the SSR loader's StaffMini enrichment).
+  processed_by?: {
+    id: string;
+    display_name: string | null;
   } | null;
 };
 
@@ -296,21 +310,17 @@ async function handleGet(
     ? data
     : []) as unknown as DemandeWithRelations[];
 
-  // Enrich with user data from Supabase Auth when requested
+  // Enrich with user data from Supabase Auth when requested. The produced shape
+  // is IDENTICAL to the SSR loader (email/display_name/avatar_url/battle_tag/
+  // discord) so the page can hydrate the shared read hook without a diff. The
+  // legacy `username` field is kept for backward-compat.
   if (withUser && safeDemandes.length > 0) {
     const uniqueUserIds = [
       ...new Set(safeDemandes.map((d) => d.user_id).filter(Boolean)),
     ] as string[];
 
-    const userMap = new Map<
-      string,
-      {
-        id: string;
-        username: string | null;
-        battle_tag: string | null;
-        discord: string | null;
-      }
-    >();
+    type UserMini = NonNullable<DemandeWithRelations['user']>;
+    const userMap = new Map<string, UserMini>();
 
     await Promise.all(
       uniqueUserIds.map(async (uid) => {
@@ -318,13 +328,23 @@ async function handleGet(
           const { data: userData } =
             await supabaseAdmin!.auth.admin.getUserById(uid);
           if (userData?.user) {
-            const meta = userData.user.user_metadata ?? {};
+            const meta = (userData.user.user_metadata ?? {}) as Record<
+              string,
+              unknown
+            >;
+            const email = userData.user.email ?? null;
             userMap.set(uid, {
               id: uid,
-              username:
-                (meta.display_name as string) || userData.user.email || null,
+              email,
+              display_name:
+                (meta.display_name as string) ||
+                (meta.full_name as string) ||
+                email ||
+                null,
+              avatar_url: (meta.avatar_url as string) || null,
               battle_tag: (meta.battle_tag as string) || null,
               discord: (meta.discord as string) || null,
+              username: (meta.display_name as string) || email || null,
             });
           }
         } catch {
@@ -337,6 +357,41 @@ async function handleGet(
       if (demande.user_id && userMap.has(demande.user_id)) {
         demande.user = userMap.get(demande.user_id)!;
       }
+    }
+  }
+
+  // Enrich with the staff handler (processed_by). The SSR loader always batch-
+  // loads this, so we mirror it unconditionally (single .in query, bounded by
+  // the current page). Every row gets `processed_by` set (null when unhandled).
+  if (safeDemandes.length > 0) {
+    const staffIds = [
+      ...new Set(
+        safeDemandes.map((d) => d.processed_by_staff_id).filter(Boolean)
+      ),
+    ] as string[];
+
+    const staffMap = new Map<
+      string,
+      { id: string; display_name: string | null }
+    >();
+
+    if (staffIds.length > 0) {
+      const { data: staffRows } = await supabaseAdmin
+        .from('staff')
+        .select('id, display_name')
+        .in('id', staffIds);
+      for (const s of (staffRows ?? []) as Array<{
+        id: string;
+        display_name: string | null;
+      }>) {
+        staffMap.set(s.id, { id: s.id, display_name: s.display_name ?? null });
+      }
+    }
+
+    for (const demande of safeDemandes) {
+      demande.processed_by = demande.processed_by_staff_id
+        ? (staffMap.get(demande.processed_by_staff_id) ?? null)
+        : null;
     }
   }
 

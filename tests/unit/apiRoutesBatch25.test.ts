@@ -805,7 +805,7 @@ describe('/api/admin/demandes', () => {
     expect((res.body as any).total).toBe(2);
   });
 
-  it('GET enriches with user data when includeUser=true', async () => {
+  it('GET enriches with user data when includeUser=true (SSR-aligned shape)', async () => {
     store.demandes = [
       {
         id: 'd1',
@@ -815,16 +815,96 @@ describe('/api/admin/demandes', () => {
         created_at: '2026',
       },
     ] as any;
-    setAdminUser('u-x', 'someone@example.com');
+    setAdminUser('u-x', 'someone@example.com', {
+      user_metadata: {
+        display_name: 'Someone',
+        avatar_url: 'https://cdn.example.com/a.png',
+        battle_tag: 'Someone#1234',
+        discord: 'someone#0001',
+      },
+    });
     const res = makeRes();
     await adminDemandesHandler(
       makeReq({ method: 'GET', query: { includeUser: '1' } }),
       res
     );
-    expect(
-      (res.body as any).demandes[0].user.username ||
-        (res.body as any).demandes[0].user.battle_tag !== undefined
-    ).toBeTruthy();
+    expect(res.statusCode).toBe(200);
+    const user = (res.body as any).demandes[0].user;
+    // Same keys the SSR loader produces (UserMini) so the page can migrate to
+    // the shared read hook with no display change.
+    expect(user).toMatchObject({
+      id: 'u-x',
+      email: 'someone@example.com',
+      display_name: 'Someone',
+      avatar_url: 'https://cdn.example.com/a.png',
+      battle_tag: 'Someone#1234',
+      discord: 'someone#0001',
+    });
+    // Legacy field retained for backward-compat.
+    expect(user.username).toBe('Someone');
+  });
+
+  it('GET includeUser falls back display_name to email when metadata is bare', async () => {
+    store.demandes = [
+      {
+        id: 'd1',
+        type: 'join',
+        status: 'pending',
+        user_id: 'u-y',
+        created_at: '2026',
+      },
+    ] as any;
+    setAdminUser('u-y', 'bare@example.com');
+    const res = makeRes();
+    await adminDemandesHandler(
+      makeReq({ method: 'GET', query: { includeUser: '1' } }),
+      res
+    );
+    const user = (res.body as any).demandes[0].user;
+    expect(user.display_name).toBe('bare@example.com');
+    expect(user.avatar_url).toBeNull();
+    expect(user.battle_tag).toBeNull();
+  });
+
+  it('GET populates processed_by with the staff handler (display_name)', async () => {
+    store.demandes = [
+      {
+        id: 'd1',
+        type: 'join',
+        status: 'approved',
+        created_at: '2026',
+        processed_by_staff_id: 'staff-handler',
+      },
+      {
+        id: 'd2',
+        type: 'join',
+        status: 'pending',
+        created_at: '2026',
+        processed_by_staff_id: null,
+      },
+    ] as any;
+    store.staff = [
+      makeStaffRow('caster'),
+      {
+        id: 'staff-handler',
+        auth_user_id: 'u-handler',
+        email: 'h@h.com',
+        role: 'manager',
+        display_name: 'Handler Jane',
+        avatar_url: null,
+        created_at: '2026',
+      },
+    ] as any;
+    const res = makeRes();
+    await adminDemandesHandler(makeReq({ method: 'GET' }), res);
+    expect(res.statusCode).toBe(200);
+    const [d1, d2] = (res.body as any).demandes;
+    expect(d1.processed_by).toEqual({
+      id: 'staff-handler',
+      display_name: 'Handler Jane',
+    });
+    // Unhandled demandes get processed_by: null (mirrors the SSR loader).
+    expect(d2.processed_by).toBeNull();
   });
 
   it('POST 400 when action missing', async () => {
