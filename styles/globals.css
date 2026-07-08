@@ -232,13 +232,16 @@
   --bg-color: white;
 
   /* ─────── Gradients (single source of truth) ─────── */
+  /* Signature marque : les 3 couleurs du logo doivent RESSORTIR (violet →
+   * vert → jaune). Utilisée par .text-gradient (titre hero) → le H1 cycle
+   * visiblement à travers les 3 couleurs. */
   --gradient-text: linear-gradient(
     230deg,
-    var(--brand-accent),
-    var(--color-blue),
-    var(--color-teal),
-    var(--color-blue),
-    var(--brand-accent)
+    var(--color-violet),
+    var(--color-green),
+    var(--color-yellow),
+    var(--color-green),
+    var(--color-violet)
   );
   --gradient-brand: linear-gradient(
     225deg,
@@ -597,7 +600,7 @@ select option {
   pointer-events: none;
   user-select: none;
   z-index: -1;
-  opacity: 0.85;
+  opacity: 0.6;
   mask-image: linear-gradient(180deg, black 0%, black 70%, transparent 100%);
   -webkit-mask-image: linear-gradient(
     180deg,
@@ -638,8 +641,8 @@ select option {
   width: 60vmin;
   height: 60vmin;
   border-radius: 9999px;
-  filter: blur(70px);
-  opacity: 0.55;
+  filter: blur(64px);
+  opacity: 0.85;
   mix-blend-mode: screen;
   will-change: transform;
 }
@@ -673,8 +676,8 @@ select option {
   width: 55vmin;
   height: 55vmin;
   border-radius: 9999px;
-  filter: blur(80px);
-  opacity: 0.45;
+  filter: blur(74px);
+  opacity: 0.75;
   mix-blend-mode: screen;
   background: radial-gradient(
     circle,
