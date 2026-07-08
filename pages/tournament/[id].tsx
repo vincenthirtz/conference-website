@@ -7,6 +7,7 @@ import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import Button from '@/components/Buttons/button';
 import ShareEmbedPanel from '@/components/tournament/ShareEmbedPanel';
+import ArbitrationPanel from '@/components/tournament/ArbitrationPanel';
 import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import type { MatchStatus } from '@/types/admin';
@@ -730,6 +731,9 @@ export default function TournamentPage({
             </div>
           </div>
         </section>
+
+        {/* ARBITRAGE — dashboard public de résolution des litiges (roadmap #09) */}
+        <ArbitrationPanel slugOrId={tournament.slug || tournament.id} />
 
         {/* TEAMS + MAPS */}
         <section className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1.3fr)] gap-6">
