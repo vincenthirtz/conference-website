@@ -1,6 +1,6 @@
 // pages/admin/tournament/[id]/edit.tsx
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
@@ -101,6 +101,16 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
   ) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
+
+  // Stable references derived from the current game so the memoized
+  // RegistrationFieldsEditor doesn't re-render when other form fields change.
+  // `getGame` returns a stable registry object; the `?? []` fallback below is
+  // what would otherwise create a fresh array (and re-render) on every keystroke.
+  const gameConfig = useMemo(() => getGame(form.game), [form.game]);
+  const registrationPresets = useMemo(
+    () => gameConfig?.registrationPresets ?? [],
+    [gameConfig]
+  );
 
   async function handleRulesPdfChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -813,8 +823,8 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
                       fields={registrationFields}
                       onChange={setRegistrationFields}
                       disabled={saving}
-                      presets={getGame(form.game)?.registrationPresets ?? []}
-                      presetsGameLabel={getGame(form.game)?.label}
+                      presets={registrationPresets}
+                      presetsGameLabel={gameConfig?.label}
                     />
                   </div>
 

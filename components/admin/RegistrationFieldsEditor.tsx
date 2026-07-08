@@ -7,7 +7,7 @@
 // (utils/registrationFields.ts) so a save doesn't 400 — but the server stays the
 // source of truth.
 
-import { useMemo } from 'react';
+import { memo, useMemo } from 'react';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type {
   RegistrationField,
@@ -42,7 +42,9 @@ export function slugifyKey(label: string): string {
  * hard rules (charset, uniqueness, non-empty label, select needs an option).
  * Returns true when at least one field is invalid.
  */
-export function hasRegistrationFieldErrors(fields: RegistrationField[]): boolean {
+export function hasRegistrationFieldErrors(
+  fields: RegistrationField[]
+): boolean {
   const seen = new Set<string>();
   for (const f of fields) {
     if (!KEY_RE.test(f.key)) return true;
@@ -369,9 +371,7 @@ function RegistrationFieldsEditor({
                     value={field.key}
                     disabled={disabled}
                     maxLength={40}
-                    onChange={(e) =>
-                      patchField(index, { key: e.target.value })
-                    }
+                    onChange={(e) => patchField(index, { key: e.target.value })}
                   />
                   <p className="text-[11px] text-neutral-500 mt-1">
                     {t.keyHelp}
@@ -434,7 +434,8 @@ function RegistrationFieldsEditor({
                     placeholder={t.helpPlaceholder}
                     onChange={(e) =>
                       patchField(index, {
-                        help: e.target.value === '' ? undefined : e.target.value,
+                        help:
+                          e.target.value === '' ? undefined : e.target.value,
                       })
                     }
                   />
@@ -557,4 +558,7 @@ function RegistrationFieldsEditor({
   );
 }
 
-export default RegistrationFieldsEditor;
+// Memoized: with referentially-stable props (fields/onChange/presets), typing in
+// an unrelated field on the tournament edit form no longer re-renders this heavy
+// (~560-line) editor. Default shallow-prop comparison is sufficient here.
+export default memo(RegistrationFieldsEditor);
