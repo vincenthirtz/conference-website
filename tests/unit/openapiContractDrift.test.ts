@@ -145,6 +145,7 @@ type AuthKind =
   | 'staff-manager'
   | 'staff-caster'
   | 'player'
+  | 'public-token'
   | 'cron'
   | 'public'
   | 'unknown';
@@ -196,6 +197,7 @@ function detectAuth(src: string): AuthKind {
     return 'staff-admin';
   }
   if (/\bwithAuthRoute\s*\(/.test(src)) return 'player';
+  if (/\bwithPublicWrite\s*(?:<[^>]*>)?\s*\(/.test(src)) return 'public-token';
   if (/CRON_SECRET|requireCronAuth|isCronAuthorized|x-cron-secret/i.test(src)) return 'cron';
   return 'public';
 }
@@ -347,6 +349,8 @@ function authToSecurity(auth: AuthKind): Set<string> {
       return new Set(['StaffSession']);
     case 'player':
       return new Set(['PlayerBearer']);
+    case 'public-token':
+      return new Set(['PublicApiToken']);
     case 'cron':
       return new Set(['CronSecret']);
     case 'public':

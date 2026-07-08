@@ -122,6 +122,14 @@ components:
       description: |
         Token partagé entre Netlify scheduled functions et l'API. Vérifié
         par `requireCronAuth()`. Routes idempotentes côté serveur.
+    PublicApiToken:
+      type: http
+      scheme: bearer
+      description: |
+        Token API public scopé (`Authorization: Bearer pk_live_…`), découplé du
+        bot. Vérifié par `withPublicWrite` : sha256 → `tenant_api_tokens` (non
+        révoqué) ; le tenant est autoritaire, les `scopes` (`resource:action`,
+        ex. `matches:write`) gouvernent l'accès. CSRF-immune (bearer).
   parameters:
     XApiKey:
       $ref: '#/components/parameters/__hoist_BotApiKey'
@@ -14450,6 +14458,107 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /api/admin/api-tokens:
+    get:
+      summary: List the active tenant's public API tokens (metadata only).
+      operationId: adminListApiTokens
+      tags:
+        - admin/misc
+      security:
+        - StaffSession: []
+      responses:
+        '200':
+          description: Tokens (jamais le hash ni le plain).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tokens:
+                    type: array
+                    items:
+                      type: object
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      summary: Mint a new scoped public API token (plain returned once).
+      operationId: adminCreateApiToken
+      tags:
+        - admin/misc
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - scopes
+              properties:
+                name:
+                  type: string
+                scopes:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '201':
+          description: Token créé — `token` (plain) renvoyé une seule fois.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  tokenMeta:
+                    type: object
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/admin/api-tokens/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: Id (UUID) du token.
+        schema:
+          type: string
+          format: uuid
+    delete:
+      summary: Revoke (soft) a public API token.
+      operationId: adminRevokeApiToken
+      tags:
+        - admin/misc
+      security:
+        - StaffSession: []
+      responses:
+        '200':
+          description: Token révoqué (idempotent).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  revokedAt:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/admin/tenants:
     get:
       summary: List tenants visible to the current operator.
@@ -22375,6 +22484,81 @@ paths:
           $ref: '#/components/responses/RateLimited'
         '500':
           $ref: '#/components/responses/ServerError'
+  /api/public/v1/matches/{id}/result:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: Id (UUID) du match.
+        schema:
+          type: string
+          format: uuid
+    post:
+      tags:
+        - public/v1
+      summary: Pose le score final d'un match (écriture publique authentifiée).
+      description: |
+        Écriture publique autoritaire (pas de consensus capitaine) — réutilise
+        `applyMatchScore`. Idempotent (`Idempotency-Key`). Requiert le scope
+        `matches:write`.
+      operationId: publicV1ReportMatchResult
+      security:
+        - PublicApiToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - team1Score
+                - team2Score
+              properties:
+                team1Score:
+                  type: integer
+                  minimum: 0
+                  maximum: 99
+                team2Score:
+                  type: integer
+                  minimum: 0
+                  maximum: 99
+      responses:
+        '200':
+          description: Match finalisé.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      matchId:
+                        type: string
+                        format: uuid
+                      status:
+                        type: string
+                      team1Score:
+                        type: integer
+                      team2Score:
+                        type: integer
+                      winnerTeamId:
+                        type: string
+                        nullable: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
   /api/public/v1/matches/{id}:
     parameters:
       - name: id
