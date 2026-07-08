@@ -10,14 +10,13 @@
 // La page détail d'une demande reste une route à part
 // (/admin/partnership-requests/[id]). minRole 'admin' (miroir des routes API).
 
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useAdminResource } from '@/hooks/useAdminResource';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
-
-import { logger } from '../../../utils/logger';
 
 type Dict = ReturnType<typeof useAdminT<'adminPartnershipRequestsList'>>;
 type RequestRow = {
@@ -88,58 +87,44 @@ export default function PartnershipRequestsPanel() {
   const { adminFetchJson } = useAdminFetch();
   const { addToast } = useToast();
   const { confirm, dialog } = useConfirmDialog();
-  const [loading, setLoading] = useState(false);
-  const [requests, setRequests] = useState<RequestRow[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
-  const [total, setTotal] = useState<number | null>(null);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [offset, setOffset] = useState(0);
 
-  // Debounce de la recherche (requête serveur)
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(search.trim()), 350);
-    return () => clearTimeout(t);
-  }, [search]);
-
-  // Tout changement de filtre/recherche réinitialise la pagination
-  useEffect(() => {
-    setOffset(0);
-  }, [statusFilter, categoryFilter, debouncedSearch]);
-
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-
-    try {
-      const params = new URLSearchParams();
-      params.set('limit', String(PAGE_SIZE));
-      params.set('offset', String(offset));
-      params.set('includeTotal', '1');
-      if (statusFilter) params.set('status', statusFilter);
-      if (categoryFilter) params.set('category', categoryFilter);
-      if (debouncedSearch) params.set('search', debouncedSearch);
-
-      const json = await adminFetchJson<{
-        items?: RequestRow[];
-        counts?: Record<string, number>;
-        total?: number | null;
-      }>(`/api/admin/partnership-requests?${params.toString()}`);
-
-      setRequests(json.items || []);
-      setCounts(json.counts || {});
-      setTotal(typeof json.total === 'number' ? json.total : null);
-    } catch (err) {
-      logger.error('Error fetching partnership requests', err);
-    } finally {
-      setLoading(false);
+  // Filtres status/category → params serveur ; recherche → `query` (debounce
+  // 350ms + reset d'offset gérés par le hook). Les compteurs par statut
+  // reviennent dans le même payload → captés via `onData` (pas de 2e requête).
+  const {
+    data: requests,
+    total,
+    loading,
+    refresh: fetchData,
+    offset,
+    setOffset,
+    resetOffset,
+  } = useAdminResource<
+    RequestRow,
+    {
+      items?: RequestRow[];
+      counts?: Record<string, number>;
+      total?: number | null;
     }
-  }, [statusFilter, categoryFilter, debouncedSearch, offset, adminFetchJson]);
+  >('/api/admin/partnership-requests', {
+    limit: PAGE_SIZE,
+    query: search,
+    debounceMs: 350,
+    params: { status: statusFilter, category: categoryFilter },
+    select: (res) => res.items || [],
+    selectTotal: (res) => (typeof res.total === 'number' ? res.total : null),
+    onData: (res) => setCounts(res.counts || {}),
+  });
 
+  // Le changement de filtre revient à la première page (le reset lié à la
+  // recherche est déjà géré par le hook via `query`).
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    resetOffset();
+  }, [statusFilter, categoryFilter, resetOffset]);
 
   const onDelete = async (id: string) => {
     const ok = await confirm({

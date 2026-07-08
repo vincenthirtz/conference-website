@@ -4,14 +4,13 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useAdminResource } from '@/hooks/useAdminResource';
 import AlertBanner from '@/components/admin/AlertBanner';
 import Breadcrumb from '@/components/admin/Breadcrumb';
 import EmptyState from '@/components/admin/EmptyState';
 import LoadingSpinner from '@/components/admin/LoadingSpinner';
 import TenantFormModal from '@/components/admin/tenants/TenantFormModal';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
-
-import { logger } from '../../../utils/logger';
 
 type TenantRow = {
   id: string;
@@ -62,33 +61,43 @@ function AdminTenantsListPage(_props: Props) {
   const t = useAdminT('adminTenantsList');
   const router = useRouter();
   const { adminFetchJson } = useAdminFetch();
-  const [tenants, setTenants] = useState<TenantRow[] | null>(null);
   const [pending, setPending] = useState<PendingLink[]>([]);
-  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'all' | 'active' | 'archived'>('all');
   const [modalOpen, setModalOpen] = useState(false);
 
-  const fetchData = useCallback(async () => {
-    setError(null);
-    try {
-      const [t, p] = await Promise.all([
-        adminFetchJson<TenantsResponse>('/api/admin/tenants'),
-        adminFetchJson<PendingLinksResponse>(
-          '/api/admin/pending-guild-links'
-        ).catch(() => ({ links: [] }) as PendingLinksResponse),
-      ]);
-      setTenants(t.tenants || []);
-      setPending(p.links || []);
-    } catch (err) {
-      logger.error('AdminTenantsListPage: fetch error', err);
-      setError((err as Error)?.message || t.errorLoad);
-    }
-  }, [adminFetchJson, t]);
+  // Liste globale des tenants (visibilité manager+). L'endpoint ne pagine pas
+  // et ne renvoie pas de total → `includeTotal: false` ; le filtrage
+  // search/statut reste 100 % client (voir `visible`).
+  const {
+    data: tenants,
+    loading,
+    error,
+    refresh: refreshTenants,
+  } = useAdminResource<TenantRow, TenantsResponse>('/api/admin/tenants', {
+    includeTotal: false,
+    select: (res) => res.tenants || [],
+  });
+
+  // Les liens Discord en attente vivent sur un endpoint distinct (owner-only) ;
+  // chargé en parallèle et dégradé silencieusement (403 manager → 0 lien).
+  const fetchPending = useCallback(async () => {
+    const p = await adminFetchJson<PendingLinksResponse>(
+      '/api/admin/pending-guild-links'
+    ).catch(() => ({ links: [] }) as PendingLinksResponse);
+    setPending(p.links || []);
+  }, [adminFetchJson]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    void fetchPending();
+  }, [fetchPending]);
+
+  // Après création d'un tenant : rafraîchir la liste ET la file d'attente
+  // (une création peut consommer un lien en attente).
+  const refreshAll = useCallback(() => {
+    refreshTenants();
+    void fetchPending();
+  }, [refreshTenants, fetchPending]);
 
   // Deep-link : `?new=1` (ancienne route /new) ouvre la modale de création.
   useEffect(() => {
@@ -109,7 +118,6 @@ function AdminTenantsListPage(_props: Props) {
   }, [router]);
 
   const visible = useMemo(() => {
-    if (!tenants) return [];
     const q = search.trim().toLowerCase();
     return tenants.filter((t) => {
       if (filter === 'active' && !t.is_active) return false;
@@ -130,7 +138,7 @@ function AdminTenantsListPage(_props: Props) {
       <TenantFormModal
         open={modalOpen}
         onClose={closeModal}
-        onCreated={fetchData}
+        onCreated={refreshAll}
       />
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
@@ -148,14 +156,14 @@ function AdminTenantsListPage(_props: Props) {
                 {t.heading}
               </h1>
               <p className="mt-1 text-sm text-neutral-400">
-                {tenants
-                  ? format(
+                {loading
+                  ? t.loading
+                  : format(
                       tenants.length > 1
                         ? t.countTenants_other
                         : t.countTenants_one,
                       { count: tenants.length }
-                    )
-                  : t.loading}
+                    )}
               </p>
             </div>
 
@@ -230,7 +238,7 @@ function AdminTenantsListPage(_props: Props) {
           </section>
 
           <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden">
-            {tenants === null ? (
+            {loading ? (
               <div className="py-16">
                 <LoadingSpinner label={t.loadingTenants} />
               </div>

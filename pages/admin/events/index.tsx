@@ -10,7 +10,7 @@
 // on n'affiche pas la colonne "nb segments" pour ne pas faire N+1 GET. La page
 // Director affiche le compteur a sa place.
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -19,7 +19,7 @@ import Breadcrumb from '@/components/admin/Breadcrumb';
 import AlertBanner from '@/components/admin/AlertBanner';
 import EmptyState from '@/components/admin/EmptyState';
 import LoadingSpinner from '@/components/admin/LoadingSpinner';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useAdminResource } from '@/hooks/useAdminResource';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useToast } from '@/components/Toast';
@@ -59,41 +59,38 @@ function formatDate(d: string | null) {
 function AdminEventsIndexPage(_props: StaffProps) {
   const t = useAdminT('adminEventsList');
   const router = useRouter();
-  const { adminFetchJson } = useAdminFetch();
   const { mutate } = useIdempotentMutation({ autoRegenerateOnSuccess: true });
   const { confirm, dialog } = useConfirmDialog();
   const { addToast } = useToast();
 
-  const [items, setItems] = useState<EventRun[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<EventRunStatus | 'all'>(
     'all'
   );
 
   const [createOpen, setCreateOpen] = useState(false);
 
-  const fetchRuns = useCallback(async () => {
-    setLoading(true);
-    setErrorMsg(null);
-    try {
-      const params = new URLSearchParams();
-      params.set('limit', '100');
-      if (statusFilter !== 'all') params.set('status', statusFilter);
-      const json = await adminFetchJson<ListResponse>(
-        `/api/admin/events?${params.toString()}`
-      );
-      setItems(json.items ?? []);
-    } catch (err) {
-      setErrorMsg((err as Error)?.message ?? t.errorLoad);
-    } finally {
-      setLoading(false);
-    }
-  }, [adminFetchJson, statusFilter, t.errorLoad]);
+  // Filtre statut → param serveur (`status`). `limit: 100` réplique la requête
+  // d'origine ; `includeTotal: false` car aucun total serveur n'est affiché
+  // (les compteurs d'onglets sont dérivés côté client de `items`).
+  const {
+    data: items,
+    loading,
+    error: fetchError,
+    mutate: mutateItems,
+  } = useAdminResource<EventRun, ListResponse>('/api/admin/events', {
+    limit: 100,
+    includeTotal: false,
+    params: { status: statusFilter === 'all' ? undefined : statusFilter },
+    select: (res) => res.items ?? [],
+  });
 
+  // La bannière d'erreur reste manuellement masquable (onDismiss) : on superpose
+  // un flag de rejet à l'erreur du hook, réinitialisé à chaque nouvelle erreur.
+  const [errorDismissed, setErrorDismissed] = useState(false);
   useEffect(() => {
-    fetchRuns();
-  }, [fetchRuns]);
+    setErrorDismissed(false);
+  }, [fetchError]);
+  const errorMsg = errorDismissed ? null : fetchError;
 
   async function handleDelete(run: EventRun) {
     const ok = await confirm({
@@ -114,7 +111,7 @@ function AdminEventsIndexPage(_props: StaffProps) {
         );
       }
       addToast(t.eventDeleted, 'success');
-      setItems((prev) => prev.filter((r) => r.id !== run.id));
+      mutateItems((prev) => prev.filter((r) => r.id !== run.id));
     } catch (err) {
       addToast((err as Error)?.message ?? t.deleteFailed, 'error');
     }
@@ -192,7 +189,7 @@ function AdminEventsIndexPage(_props: StaffProps) {
           <AlertBanner
             message={errorMsg}
             variant="error"
-            onDismiss={() => setErrorMsg(null)}
+            onDismiss={() => setErrorDismissed(true)}
             className="mb-4"
           />
 
@@ -303,7 +300,10 @@ function AdminEventsIndexPage(_props: StaffProps) {
           onClose={() => setCreateOpen(false)}
           onCreated={(run) => {
             setCreateOpen(false);
-            addToast(format(t.eventCreatedToast, { name: run.name }), 'success');
+            addToast(
+              format(t.eventCreatedToast, { name: run.name }),
+              'success'
+            );
             router.push(`/admin/events/${run.id}/director`);
           }}
         />

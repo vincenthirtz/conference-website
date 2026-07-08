@@ -4,8 +4,8 @@
 // Extracted from the former /admin/pending-guild-links page: staff claim a
 // Discord guild that invited the bot but isn't linked to a tenant yet.
 
-import { useCallback, useEffect, useState } from 'react';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useState } from 'react';
+import { useAdminResource } from '@/hooks/useAdminResource';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
@@ -18,7 +18,6 @@ import {
   type AccessibleTenant,
 } from '@/hooks/useAccessibleTenants';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
-import { logger } from '@/utils/logger';
 
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
@@ -63,31 +62,25 @@ type ClaimModalState = {
 export default function GuildLinksPanel() {
   const t = useAdminT('adminPendingGuildLinks');
   const { addToast } = useToast();
-  const { adminFetchJson } = useAdminFetch();
   const { mutateJson } = useIdempotentMutation();
   const { confirm, dialog } = useConfirmDialog();
   const { tenants } = useAccessibleTenants();
 
-  const [links, setLinks] = useState<PendingLink[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [modal, setModal] = useState<ClaimModalState | null>(null);
 
-  const fetchData = useCallback(async () => {
-    setError(null);
-    try {
-      const json = await adminFetchJson<PendingLinksResponse>(
-        '/api/admin/pending-guild-links'
-      );
-      setLinks(json.links || []);
-    } catch (err) {
-      logger.error('AdminPendingGuildLinksPage: fetch error', err);
-      setError((err as Error)?.message || t.errorLoad);
+  // Liste non paginée (endpoint owner-only) → `includeTotal: false`.
+  const {
+    data: links,
+    loading,
+    error,
+    refresh: fetchData,
+  } = useAdminResource<PendingLink, PendingLinksResponse>(
+    '/api/admin/pending-guild-links',
+    {
+      includeTotal: false,
+      select: (res) => res.links || [],
     }
-  }, [adminFetchJson, t]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  );
 
   const openClaim = (guild: PendingLink) => {
     setModal({
@@ -149,7 +142,7 @@ export default function GuildLinksPanel() {
       );
       addToast(t.toastAssigned, 'success');
       closeModal();
-      await fetchData();
+      fetchData();
     } catch (err) {
       setModal((prev) =>
         prev
@@ -178,7 +171,7 @@ export default function GuildLinksPanel() {
         method: 'DELETE',
       });
       addToast(t.toastRejected, 'success');
-      await fetchData();
+      fetchData();
     } catch (err) {
       addToast((err as Error)?.message || t.errorReject, 'error');
     }
@@ -196,7 +189,7 @@ export default function GuildLinksPanel() {
       <AlertBanner message={error} className="mb-4" />
 
       <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden">
-        {links === null ? (
+        {loading && links.length === 0 ? (
           <div className="py-16">
             <LoadingSpinner label={t.loading} />
           </div>

@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useAdminResource } from '@/hooks/useAdminResource';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useToast } from '@/components/Toast';
@@ -336,35 +336,26 @@ function CreateLeagueForm({ onCreated, onCancel }: CreateFormProps) {
 function AdminLeaguesPage(_props: StaffProps) {
   const t = useAdminT('adminLeaguesList');
   const router = useRouter();
-  const { adminFetchJson } = useAdminFetch();
   const { mutate } = useIdempotentMutation();
   const { confirm, dialog } = useConfirmDialog();
   const { addToast } = useToast();
 
-  const [leagues, setLeagues] = useState<League[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setErrorMsg(null);
-    try {
-      const data =
-        await adminFetchJson<LeaguesListResponse>('/api/admin/leagues');
-      setLeagues(data.leagues ?? []);
-    } catch (err: unknown) {
-      logger.error('load leagues error', err);
-      setErrorMsg((err as Error)?.message || t.errLoad);
-    } finally {
-      setLoading(false);
-    }
-  }, [adminFetchJson, t.errLoad]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
+  // Liste complète des leagues du tenant : l'endpoint ne pagine pas
+  // (aucun total ni filtre serveur), d'où `includeTotal: false`. Le patch
+  // local `mutateLeagues` sert à la suppression optimiste.
+  const {
+    data: leagues,
+    loading,
+    error: errorMsg,
+    refresh: load,
+    mutate: mutateLeagues,
+  } = useAdminResource<League, LeaguesListResponse>('/api/admin/leagues', {
+    includeTotal: false,
+    select: (res) => res.leagues ?? [],
+  });
 
   async function handleDelete(league: League) {
     const ok = await confirm({
@@ -383,7 +374,7 @@ function AdminLeaguesPage(_props: StaffProps) {
       if (!res.ok && res.status !== 204) {
         throw new Error(format(t.errDeleteStatus, { status: res.status }));
       }
-      setLeagues((prev) => prev.filter((l) => l.id !== league.id));
+      mutateLeagues((prev) => prev.filter((l) => l.id !== league.id));
       addToast(t.toastDeleted, 'success');
     } catch (err: unknown) {
       logger.error('delete league error', err);

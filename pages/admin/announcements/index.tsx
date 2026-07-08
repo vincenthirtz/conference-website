@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { withStaffPage } from '@/utils/staff';
 import DeleteConfirmModal from '@/components/admin/DeleteConfirmModal';
 import { useUrlFilters } from '@/utils/useUrlFilters';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useAdminResource } from '@/hooks/useAdminResource';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 type Dict = ReturnType<typeof useAdminT<'adminAnnouncementsList'>>;
@@ -36,7 +37,7 @@ type Props = {
   };
 };
 
-const A_FILTER_KEYS = ['search', 'status', 'offset'] as const;
+const A_FILTER_KEYS = ['search', 'status'] as const;
 const LIMIT = 20;
 const SEARCH_DEBOUNCE_MS = 300;
 
@@ -69,54 +70,48 @@ export const getServerSideProps = withStaffPage('admin');
 
 function AdminAnnouncementsPage(_props: Props) {
   const t = useAdminT('adminAnnouncementsList');
-  const { adminFetch, adminFetchJson } = useAdminFetch();
-  const { filters, setFilter, setFilters } = useUrlFilters(A_FILTER_KEYS);
+  const { adminFetch } = useAdminFetch();
+  const { filters, setFilters } = useUrlFilters(A_FILTER_KEYS);
 
   const search = filters.search ?? '';
   const statusFilter = filters.status ?? null;
-  const offset = Number(filters.offset) || 0;
   const limit = LIMIT;
-
-  const [announcements, setAnnouncements] = useState<AnnouncementRow[]>([]);
-  const [total, setTotal] = useState<number | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const [searchInput, setSearchInput] = useState(search);
   const [deleteTarget, setDeleteTarget] = useState<AnnouncementRow | null>(
     null
   );
   const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    setErrorMsg(null);
-    try {
-      const params = new URLSearchParams();
-      params.set('limit', String(limit));
-      params.set('offset', String(offset));
-      params.set('includeTotal', '1');
-      // Toujours inclure inactifs côté API ; le filtrage statut est explicite.
-      params.set('includeInactive', 'true');
-      if (statusFilter) params.set('status', statusFilter);
-      if (search.trim()) params.set('search', search.trim());
-
-      const json = await adminFetchJson<AnnouncementsApiResponse>(
-        '/api/admin/announcements?' + params.toString()
-      );
-      setAnnouncements(json.items || []);
-      setTotal(typeof json.total === 'number' ? json.total : null);
-    } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? t.errorLoad);
-    } finally {
-      setLoading(false);
+  // Filtres (search/status) restent pilotés par l'URL (partage de lien) et
+  // passés en params serveur ; la pagination est détenue par le hook.
+  // `includeInactive: true` toujours envoyé — le filtrage statut est explicite.
+  const {
+    data: announcements,
+    total,
+    loading,
+    error: fetchError,
+    refresh: fetchData,
+    offset,
+    setOffset,
+    resetOffset,
+  } = useAdminResource<AnnouncementRow, AnnouncementsApiResponse>(
+    '/api/admin/announcements',
+    {
+      limit: LIMIT,
+      params: {
+        includeInactive: true,
+        status: statusFilter,
+        search,
+      },
+      select: (res) => res.items || [],
+      selectTotal: (res) => (typeof res.total === 'number' ? res.total : null),
     }
-  }, [adminFetchJson, limit, offset, search, statusFilter, t]);
+  );
 
-  // Refetch when the server-side query params change.
-  useEffect(() => {
-    void fetchData();
-  }, [fetchData]);
+  // Bannière = erreur de suppression prioritaire, sinon erreur de chargement.
+  const errorMsg = deleteError ?? fetchError;
 
   // Keep the search input in sync if the URL search param changes externally.
   useEffect(() => {
@@ -131,14 +126,16 @@ function AdminAnnouncementsPage(_props: Props) {
     debounceRef.current = setTimeout(() => {
       const next = value.trim();
       if (next === (search.trim() || '')) return;
-      setFilters({ search: next || null, offset: null });
+      resetOffset();
+      setFilters({ search: next || null });
     }, SEARCH_DEBOUNCE_MS);
   }
 
   function handleSearchSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    setFilters({ search: searchInput.trim() || null, offset: null });
+    resetOffset();
+    setFilters({ search: searchInput.trim() || null });
   }
 
   useEffect(() => {
@@ -150,7 +147,7 @@ function AdminAnnouncementsPage(_props: Props) {
   const handleDelete = async (item: AnnouncementRow) => {
     if (!item?.id) return;
     setDeleting(true);
-    setErrorMsg(null);
+    setDeleteError(null);
     try {
       const res = await adminFetch(`/api/admin/announcements/${item.id}`, {
         method: 'DELETE',
@@ -160,9 +157,9 @@ function AdminAnnouncementsPage(_props: Props) {
         throw new Error(json?.error || t.errorDeleteFailed);
       }
       setDeleteTarget(null);
-      void fetchData();
+      fetchData();
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message || t.errorDelete);
+      setDeleteError((err as Error)?.message || t.errorDelete);
     } finally {
       setDeleting(false);
     }
@@ -233,7 +230,7 @@ function AdminAnnouncementsPage(_props: Props) {
               <span className="flex-1">{errorMsg}</span>
               <button
                 type="button"
-                onClick={() => void fetchData()}
+                onClick={() => fetchData()}
                 className="flex-shrink-0 px-3 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-xs font-medium transition-colors"
               >
                 {t.retry}
@@ -282,9 +279,10 @@ function AdminAnnouncementsPage(_props: Props) {
                 <select
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={statusFilter || ''}
-                  onChange={(e) =>
-                    setFilters({ status: e.target.value || null, offset: null })
-                  }
+                  onChange={(e) => {
+                    resetOffset();
+                    setFilters({ status: e.target.value || null });
+                  }}
                 >
                   <option value="">{t.statusAll}</option>
                   <option value="active">{t.statusActive}</option>
@@ -428,12 +426,7 @@ function AdminAnnouncementsPage(_props: Props) {
               <button
                 type="button"
                 disabled={offset === 0}
-                onClick={() =>
-                  setFilter(
-                    'offset',
-                    String(Math.max(0, offset - limit)) || null
-                  )
-                }
+                onClick={() => setOffset(Math.max(0, offset - limit))}
                 className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 <svg
@@ -460,7 +453,7 @@ function AdminAnnouncementsPage(_props: Props) {
               <button
                 type="button"
                 disabled={total !== null && offset + limit >= total}
-                onClick={() => setFilter('offset', String(offset + limit))}
+                onClick={() => setOffset(offset + limit)}
                 className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 {t.next}

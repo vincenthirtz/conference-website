@@ -11,7 +11,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useAdminResource } from '@/hooks/useAdminResource';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 type Classification = 'breached' | 'approaching' | 'fresh';
@@ -58,9 +59,10 @@ export default function DisputesPanel() {
   const router = useRouter();
   const { adminFetchJson } = useAdminFetch();
 
-  const [data, setData] = useState<ApiResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Breakdown agrégé (Stat cards) capté dans le même payload que la page via
+  // `onData` ; sert aussi de sentinelle « premier chargement » (null tant
+  // qu'aucune réponse n'est arrivée).
+  const [counts, setCounts] = useState<ApiResponse['counts'] | null>(null);
 
   // Server-side classification filter (drives Stat cards + the `status` query).
   const [filter, setFilter] = useState<'all' | Classification>('all');
@@ -70,8 +72,6 @@ export default function DisputesPanel() {
       ? router.query.tournament_id
       : '';
   const [tournamentFilter, setTournamentFilter] = useState(initialTournament);
-
-  const [offset, setOffset] = useState(0);
 
   const [tournaments, setTournaments] = useState<TournamentMini[]>([]);
 
@@ -86,51 +86,48 @@ export default function DisputesPanel() {
     }
   }, [adminFetchJson]);
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const params = new URLSearchParams();
-      params.set('limit', String(PAGE_SIZE));
-      params.set('offset', String(offset));
-      params.set('includeTotal', '1');
-      if (tournamentFilter) params.set('tournament_id', tournamentFilter);
-      if (filter !== 'all') params.set('status', filter);
-      const json = await adminFetchJson<ApiResponse>(
-        `/api/admin/disputes?${params.toString()}`
-      );
-      setData(json);
-    } catch (err) {
-      const e = err as AdminFetchError;
-      setError(e.message || t.errorLoad);
-    } finally {
-      setLoading(false);
-    }
-  }, [adminFetchJson, tournamentFilter, filter, offset, t.errorLoad]);
+  // Filtres classification/tournoi → params serveur ; pagination détenue par le
+  // hook. `limit: PAGE_SIZE` (=50) réplique le défaut de l'endpoint.
+  const {
+    data: disputes,
+    total,
+    loading,
+    error,
+    refresh: fetchData,
+    offset,
+    setOffset,
+    resetOffset,
+  } = useAdminResource<DisputeRow, ApiResponse>('/api/admin/disputes', {
+    limit: PAGE_SIZE,
+    params: {
+      status: filter === 'all' ? undefined : filter,
+      tournament_id: tournamentFilter || undefined,
+    },
+    select: (res) => res.disputes ?? [],
+    selectTotal: (res) => res.total ?? null,
+    onData: (res) => setCounts(res.counts),
+  });
 
   useEffect(() => {
     fetchTournaments();
   }, [fetchTournaments]);
 
+  // Auto-refresh 1 min : rejoue la requête courante (mêmes filtres/offset).
   useEffect(() => {
-    fetchData();
-    const handle = setInterval(fetchData, 60_000); // 1 min auto-refresh
+    const handle = setInterval(fetchData, 60_000);
     return () => clearInterval(handle);
   }, [fetchData]);
 
   // Reset to the first page when a filter changes.
   function changeFilter(next: 'all' | Classification) {
-    setOffset(0);
+    resetOffset();
     setFilter(next);
   }
 
   function changeTournament(next: string) {
-    setOffset(0);
+    resetOffset();
     setTournamentFilter(next);
   }
-
-  const disputes = data?.disputes ?? [];
-  const total = data?.total ?? null;
 
   return (
     <>
@@ -154,27 +151,27 @@ export default function DisputesPanel() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         <Stat
           label={t.statTotal}
-          value={data?.counts.total ?? 0}
+          value={counts?.total ?? 0}
           active={filter === 'all'}
           onClick={() => changeFilter('all')}
         />
         <Stat
           label={t.statBreached}
-          value={data?.counts.breached ?? 0}
+          value={counts?.breached ?? 0}
           accent="red"
           active={filter === 'breached'}
           onClick={() => changeFilter('breached')}
         />
         <Stat
           label={t.statApproaching}
-          value={data?.counts.approaching ?? 0}
+          value={counts?.approaching ?? 0}
           accent="amber"
           active={filter === 'approaching'}
           onClick={() => changeFilter('approaching')}
         />
         <Stat
           label={t.statFresh}
-          value={data?.counts.fresh ?? 0}
+          value={counts?.fresh ?? 0}
           accent="emerald"
           active={filter === 'fresh'}
           onClick={() => changeFilter('fresh')}
@@ -210,7 +207,7 @@ export default function DisputesPanel() {
         </div>
       )}
 
-      {loading && !data && (
+      {loading && counts === null && (
         <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 px-4 py-8 text-center text-sm text-neutral-400">
           {t.loading}
         </div>

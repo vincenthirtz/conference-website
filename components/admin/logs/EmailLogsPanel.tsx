@@ -1,5 +1,6 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useState } from 'react';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useAdminResource } from '@/hooks/useAdminResource';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 type Dict = ReturnType<typeof useAdminT<'adminEmailLogs'>>;
@@ -27,6 +28,8 @@ const EVENT_TYPES = [
   'invalid',
   'deferred',
 ] as const;
+
+const PAGE_LIMIT = 50;
 
 const getEventLabels = (
   t: Dict
@@ -96,23 +99,15 @@ type TestEmailResponse = { success?: boolean; id?: string; error?: string };
  * admin or above (see the tabbed page).
  */
 export default function EmailLogsPanel() {
-  const { adminFetch, adminFetchJson } = useAdminFetch();
+  const { adminFetch } = useAdminFetch();
   const t = useAdminT('adminEmailLogs');
   const eventLabels = getEventLabels(t);
-
-  const [events, setEvents] = useState<BrevoEvent[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // Filters
   const [emailFilter, setEmailFilter] = useState('');
   const [eventFilter, setEventFilter] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-
-  // Pagination
-  const [limit] = useState(50);
-  const [offset, setOffset] = useState(0);
 
   // Test email
   const [testTo, setTestTo] = useState('');
@@ -122,46 +117,34 @@ export default function EmailLogsPanel() {
     msg: string;
   } | null>(null);
 
-  const fetchEvents = useCallback(async () => {
-    setLoading(true);
-    setErrorMsg(null);
-
-    try {
-      const params = new URLSearchParams();
-      params.set('limit', String(limit));
-      params.set('offset', String(offset));
-      if (emailFilter.trim()) params.set('email', emailFilter.trim());
-      if (eventFilter) params.set('event', eventFilter);
-      if (startDate) params.set('startDate', startDate);
-      if (endDate) params.set('endDate', endDate);
-
-      const json = await adminFetchJson<EmailLogsResponse>(
-        '/api/admin/email-logs?' + params.toString()
-      );
-      setEvents(json.events || []);
-    } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? t.errorUnexpected);
-    } finally {
-      setLoading(false);
-    }
-  }, [
-    limit,
+  // Événements Brevo : source paginée sans total (l'API ne renvoie pas de
+  // count) → `includeTotal: false` ; le bouton « suivant » se désactive quand
+  // la page est incomplète (`events.length < PAGE_LIMIT`). Les filtres sont des
+  // params serveur réactifs (refetch immédiat à chaque changement, comme avant).
+  const {
+    data: events,
+    loading,
+    error: errorMsg,
+    refresh: fetchEvents,
     offset,
-    emailFilter,
-    eventFilter,
-    startDate,
-    endDate,
-    adminFetchJson,
-    t,
-  ]);
-
-  useEffect(() => {
-    fetchEvents();
-  }, [fetchEvents]);
+    resetOffset,
+    nextPage,
+    prevPage,
+  } = useAdminResource<BrevoEvent, EmailLogsResponse>('/api/admin/email-logs', {
+    limit: PAGE_LIMIT,
+    includeTotal: false,
+    params: {
+      email: emailFilter.trim(),
+      event: eventFilter,
+      startDate,
+      endDate,
+    },
+    select: (res) => res.events || [],
+  });
 
   function handleFilterSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setOffset(0);
+    resetOffset();
     fetchEvents();
   }
 
@@ -482,7 +465,7 @@ export default function EmailLogsPanel() {
           <button
             type="button"
             disabled={offset === 0}
-            onClick={() => setOffset(Math.max(0, offset - limit))}
+            onClick={prevPage}
             className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             <svg
@@ -507,8 +490,8 @@ export default function EmailLogsPanel() {
 
           <button
             type="button"
-            disabled={events.length < limit}
-            onClick={() => setOffset(offset + limit)}
+            disabled={events.length < PAGE_LIMIT}
+            onClick={nextPage}
             className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             {t.next}
