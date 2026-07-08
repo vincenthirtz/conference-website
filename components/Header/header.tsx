@@ -10,29 +10,8 @@ function Header(): JSX.Element {
 
   return (
     <header className="hero-section relative isolate overflow-hidden">
-      <picture>
-        <source
-          type="image/avif"
-          srcSet="/img/illustra-640.avif 640w, /img/illustra-1024.avif 1024w"
-          sizes="(max-width: 768px) 640px, 1024px"
-        />
-        <source
-          type="image/webp"
-          srcSet="/img/illustra-640.webp 640w, /img/illustra-1024.webp 1024w"
-          sizes="(max-width: 768px) 640px, 1024px"
-        />
-        {}
-        <img
-          src="/img/illustra.png"
-          alt=""
-          width={1024}
-          height={1024}
-          decoding="async"
-          fetchPriority="high"
-          className="hero-glow"
-        />
-      </picture>
-
+      {/* Fond illustration retiré : hero épuré = fond sombre + aurora de marque
+          (violet/vert/jaune) derrière le titre. */}
       <div className="hero-aurora" aria-hidden="true">
         <span className="hero-aurora__violet" />
       </div>
