@@ -15,12 +15,16 @@
 // Apres envoi reussi : on clear l'input, on regarde le focus (reste sur le
 // textarea pour permettre la frappe du cue suivant), on garde la severite.
 
-import { useCallback, useRef, useState } from 'react';
+import { memo, useCallback, useRef, useState } from 'react';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
 import { logger } from '@/utils/logger';
-import type { EventCue, EventCueSeverity, EventRunStatus } from '@/types/events';
+import type {
+  EventCue,
+  EventCueSeverity,
+  EventRunStatus,
+} from '@/types/events';
 
 const MAX_BODY = 500;
 
@@ -62,11 +66,11 @@ const SEVERITY_BUTTONS: Array<{
   },
 ];
 
-export default function CueComposer({
-  runId,
-  runStatus,
-  onCueCreated,
-}: Props) {
+// Memoise : la page Director tick `nowMs` toutes les 1s (timing/drift), ce qui
+// re-render le parent chaque seconde. Le composer n'a aucune prop dependante du
+// temps (runId/runStatus primitifs, onCueCreated = setState stable), donc on le
+// decouple du tick pour que la frappe ne subisse pas le re-render 1s.
+function CueComposer({ runId, runStatus, onCueCreated }: Props) {
   const t = useAdminT('adminDirectorCueComposer');
   const { mutateJson, regenerate } = useIdempotentMutation();
   const { addToast } = useToast();
@@ -78,7 +82,8 @@ export default function CueComposer({
 
   const isLive = runStatus === 'live';
   const trimmed = body.trim();
-  const canSend = isLive && trimmed.length > 0 && trimmed.length <= MAX_BODY && !busy;
+  const canSend =
+    isLive && trimmed.length > 0 && trimmed.length <= MAX_BODY && !busy;
 
   const handleSend = useCallback(async () => {
     if (!canSend) return;
@@ -92,10 +97,7 @@ export default function CueComposer({
           body: JSON.stringify({ severity, body: trimmed }),
         }
       );
-      addToast(
-        severity === 'urgent' ? t.cueUrgentSent : t.cueSent,
-        'success'
-      );
+      addToast(severity === 'urgent' ? t.cueUrgentSent : t.cueSent, 'success');
       setBody('');
       onCueCreated?.(json.cue);
       // Focus reste sur le textarea pour enchainer.
@@ -238,3 +240,5 @@ export default function CueComposer({
     </div>
   );
 }
+
+export default memo(CueComposer);

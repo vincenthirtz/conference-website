@@ -21,7 +21,7 @@
 // premier render (pour ne pas beep en arrivant sur la page si des cues
 // urgents traineg deja).
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import LoadingSpinner from '@/components/admin/LoadingSpinner';
@@ -88,7 +88,12 @@ function formatTime(iso: string): string {
   }
 }
 
-export default function CueFeed({ runId, casters, optimisticCue }: Props) {
+// Memoise : la page Director tick `nowMs` toutes les 1s (timing/drift) et
+// re-render le parent. Les props du feed (runId primitif, casters/optimisticCue
+// = refs d'etat stables) ne dependent pas de ce tick. Le feed gere son PROPRE
+// tick 1s en interne (timestamps relatifs) ; on evite juste le re-render
+// supplementaire pousse par le parent a chaque seconde.
+function CueFeed({ runId, casters, optimisticCue }: Props) {
   const t = useAdminT('adminDirectorCueFeed');
   const { adminFetchJson } = useAdminFetch();
   const [data, setData] = useState<ApiResponse | null>(null);
@@ -302,3 +307,5 @@ export default function CueFeed({ runId, casters, optimisticCue }: Props) {
     </div>
   );
 }
+
+export default memo(CueFeed);
