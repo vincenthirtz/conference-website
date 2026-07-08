@@ -58,11 +58,10 @@ describe('filterAdminLinks – owner role', () => {
     expect(tournois!.children!).toHaveLength(5);
   });
 
-  it('keeps admin-only sub-sections of "Contenu" (Twitch, Casteuses, Partenaires, Modération)', () => {
+  it('keeps admin-only sub-sections of "Contenu" (Twitch, Partenaires, Modération)', () => {
     const contenu = findByTitle(links, 'Contenu');
     const childTitles = contenu?.children?.map((c) => c.title) ?? [];
     expect(childTitles).toContain('Chaînes Twitch');
-    expect(childTitles).toContain('Casteuses');
     expect(childTitles).toContain('Partenaires');
     // Lot B : Commentaires / Support / Blacklist fusionnés en un seul
     // hub "Modération" (page à onglets /admin/moderation).
@@ -71,18 +70,21 @@ describe('filterAdminLinks – owner role', () => {
     expect(childTitles).not.toContain('Tickets de support');
     // Lot D : Annonces / News déplacées vers la section "Communication".
     expect(childTitles).not.toContain('Annonces');
-    expect(childTitles).not.toContain('News');
+    expect(childTitles).not.toContain('Actualités');
+    // Points ouverts : Casteuses / Pôles déplacées vers "Staff & Asso".
+    expect(childTitles).not.toContain('Casteuses');
+    expect(childTitles).not.toContain('Pôles de l’asso');
   });
 
-  it('groups Annonces, News, Campagnes emails et Notifications sous "Communication"', () => {
+  it('groups Annonces, Actualités, Campagnes emails et Notifications sous "Communication"', () => {
     // Lot D : regroupement de navigation (routes/rôles inchangés). Les
-    // sous-sections Annonces / News conservent leurs éditeurs dédiés.
+    // sous-sections Annonces / Actualités conservent leurs éditeurs dédiés.
     const comm = findByTitle(links, 'Communication');
     expect(comm).toBeDefined();
     const childTitles = comm?.children?.map((c) => c.title) ?? [];
     expect(childTitles).toEqual([
       'Annonces',
-      'News',
+      'Actualités',
       'Campagnes emails',
       'Notifications',
     ]);
@@ -91,10 +93,30 @@ describe('filterAdminLinks – owner role', () => {
       'Liste des annonces',
       'Créer une annonce',
     ]);
-    const news = comm?.children?.find((c) => c.title === 'News');
+    const news = comm?.children?.find((c) => c.title === 'Actualités');
     expect(news?.children?.map((c) => c.title)).toEqual([
-      'Liste des news',
-      'Créer une news',
+      'Liste des actualités',
+      'Créer une actualité',
+    ]);
+  });
+
+  it('groups People/Staff (Utilisateurs, Casteuses, Pôles, Adhérents) sous "Staff & Asso"', () => {
+    // Points ouverts : regroupement de navigation (routes/rôles inchangés) des
+    // écrans auparavant dispersés entre Contenu et Configuration.
+    const staff = findByTitle(links, 'Staff & Asso');
+    expect(staff).toBeDefined();
+    const childTitles = staff?.children?.map((c) => c.title) ?? [];
+    expect(childTitles).toEqual([
+      'Gérer les utilisateurs',
+      'Créer un utilisateur',
+      'Casteuses',
+      'Pôles de l’asso',
+      'Adhérents',
+    ]);
+    const adherents = staff?.children?.find((c) => c.title === 'Adhérents');
+    expect(adherents?.children?.map((c) => c.title)).toEqual([
+      'Liste des adhérents',
+      'Ajouter un adhérent',
     ]);
   });
 });
@@ -129,7 +151,7 @@ describe('filterAdminLinks – manager role', () => {
     const contenu = findByTitle(links, 'Contenu');
     const titles = contenu?.children?.map((c) => c.title) ?? [];
     expect(titles).not.toContain('Annonces');
-    expect(titles).not.toContain('News');
+    expect(titles).not.toContain('Actualités');
     expect(titles).not.toContain('Chaînes Twitch');
     expect(titles).not.toContain('Casteuses');
     expect(titles).not.toContain('Partenaires');

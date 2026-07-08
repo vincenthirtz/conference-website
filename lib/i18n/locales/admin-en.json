@@ -184,6 +184,10 @@
     "navSiteSettingsDesc": "General site configuration.",
     "navApiTokensTitle": "Tokens API",
     "navApiTokensDesc": "Tokens d'accès scopés à l'API publique.",
+    "navRecycleBinTitle": "Recycle bin",
+    "navRecycleBinDesc": "Restore deleted items (stages, teams, matches…).",
+    "navAideTournoiTitle": "Tournament help",
+    "navAideTournoiDesc": "Staff guide: organisation commands and procedures.",
     "alertDisputesTitle_one": "{count} pending dispute",
     "alertDisputesTitle_other": "{count} pending disputes",
     "alertDisputesMsg": "Contested matches require a decision.",
@@ -6181,6 +6185,14 @@
     "tabDisputes": "Litiges",
     "tabBlacklist": "Blacklist",
     "tabSupport": "Support"
+  },
+  "adminPartnersHub": {
+    "pageTitle": "Admin – Partners",
+    "heading": "Partners",
+    "subtitle": "Site partners and incoming partnership requests.",
+    "tabsAriaLabel": "Partner sections",
+    "tabList": "Partners",
+    "tabRequests": "Requests"
   },
   "adminOnboarding": {
     "pageTitle": "Admin – Onboarding",

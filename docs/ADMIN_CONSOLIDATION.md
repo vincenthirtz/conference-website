@@ -4,11 +4,22 @@ Refactor d'architecture de l'espace `pages/admin/*` : réduire la dispersion des
 pages, privilégier les onglets et les modales, et unifier la navigation en une
 source unique — sans casser les favoris (redirections 308) ni élargir les droits.
 
-**Statut :** livré en 2 vagues sur la branche `work`.
+**Statut :** livré en 2 vagues sur la branche `work`, points ouverts tranchés.
+
 - Vague 1 — commit `f1d869c4` (quick wins, modales, sous-écrans tournoi, nav unifiée)
 - Vague 2 — commit `6a192a82` (hubs stages / modération / onboarding, section Communication)
+- Vague 3 — points ouverts : audit gating (résolu), rename **News → Actualités**,
+  nouvelle section top-bar **Staff & Asso** (regroupement People/Staff), et
+  **fusion du cluster Bracket** en une route à onglets (`bracket` + `builder` +
+  `map-draw` + `veto`)
+- Vague 4 — améliorations continues : **hub Partenaires** (fusion
+  `partners` + `partnership-requests` en onglets Liste · Demandes), et
+  **découvrabilité** des pages orphelines `recycle-bin` (Corbeille) et
+  `aide-tournoi` exposées en cartes dashboard-only
 
-**Reste à faire avant merge `work → master`** : voir [§ Points ouverts](#points-ouverts).
+**Reste à faire avant merge `work → master`** : passage e2e authentifié sur les
+hubs (voir [§ Vérification](#vérification)). Toutes les décisions produit sont
+tranchées — voir [§ Points ouverts](#points-ouverts).
 
 ---
 
@@ -41,14 +52,14 @@ Deux problèmes se cumulaient :
 
 ## Briques réutilisables introduites
 
-| Brique | Rôle |
-|--------|------|
-| `components/admin/Tabs.tsx` | Composant onglets accessible (WAI-ARIA tablist, flèches/Home/End, roving tabindex) + hook `useQueryTab` (deep-link `?tab=`) + helpers d'ids. |
-| `components/admin/navigation/adminNav.ts` | **Source unique de navigation.** Arbre `ADMIN_NAV` (sections → items) portant `href`, `minRole`, `topBarLabel?`, `card?`. Dérive le top-bar (`buildAdminLinks`) ET les cartes dashboard (`collectAdminNavCards`). |
-| `components/admin/tournament/TournamentTabsNav.tsx` | Barre d'onglets contextuelle partagée en tête des sous-écrans tournoi. |
-| `components/admin/stages/StageTabsNav.tsx` | Idem pour les sous-écrans de stage (onglets conditionnels au format). |
-| `utils/moderationRedirect.ts`, `utils/onboardingRedirect.ts` | Helpers de shim 308 avec préservation des query params. |
-| `components/admin/Modal.tsx` | *(préexistant)* Modale a11y avec focus-trap ; socle des formulaires de création en modale. |
+| Brique                                                       | Rôle                                                                                                                                                                                                              |
+| ------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `components/admin/Tabs.tsx`                                  | Composant onglets accessible (WAI-ARIA tablist, flèches/Home/End, roving tabindex) + hook `useQueryTab` (deep-link `?tab=`) + helpers d'ids.                                                                      |
+| `components/admin/navigation/adminNav.ts`                    | **Source unique de navigation.** Arbre `ADMIN_NAV` (sections → items) portant `href`, `minRole`, `topBarLabel?`, `card?`. Dérive le top-bar (`buildAdminLinks`) ET les cartes dashboard (`collectAdminNavCards`). |
+| `components/admin/tournament/TournamentTabsNav.tsx`          | Barre d'onglets contextuelle partagée en tête des sous-écrans tournoi.                                                                                                                                            |
+| `components/admin/stages/StageTabsNav.tsx`                   | Idem pour les sous-écrans de stage (onglets conditionnels au format).                                                                                                                                             |
+| `utils/moderationRedirect.ts`, `utils/onboardingRedirect.ts` | Helpers de shim 308 avec préservation des query params.                                                                                                                                                           |
+| `components/admin/Modal.tsx`                                 | _(préexistant)_ Modale a11y avec focus-trap ; socle des formulaires de création en modale.                                                                                                                        |
 
 ---
 
@@ -56,26 +67,32 @@ Deux problèmes se cumulaient :
 
 ### Fusions à onglets (une route, plusieurs onglets)
 
-| Hub | URL canonique | Onglets | Pages fusionnées |
-|-----|---------------|---------|------------------|
-| Statistiques | `/admin/stats` | Équipes · Maps | `stats/teams`, `stats/maps` |
-| Journaux | `/admin/logs` | Staff · Emails | `logs`, `email-logs` |
-| Paramètres du site | `/admin/site-settings` | Général · Discord · Rôles d'équipe | `site-settings/{index,discord,team-roles}` |
-| Modération | `/admin/moderation` | Commentaires · Litiges · Blacklist · Support | `comments`, `disputes`, `moderation/blacklist`, `support` |
-| Onboarding | `/admin/onboarding` | File d'onboarding · Demandes tenant · Liens Discord | `onboarding-queue`, `tenant-requests`, `pending-guild-links` |
+| Hub                | URL canonique          | Onglets                                             | Pages fusionnées                                             |
+| ------------------ | ---------------------- | --------------------------------------------------- | ------------------------------------------------------------ |
+| Statistiques       | `/admin/stats`         | Équipes · Maps                                      | `stats/teams`, `stats/maps`                                  |
+| Journaux           | `/admin/logs`          | Staff · Emails                                      | `logs`, `email-logs`                                         |
+| Paramètres du site | `/admin/site-settings` | Général · Discord · Rôles d'équipe                  | `site-settings/{index,discord,team-roles}`                   |
+| Modération         | `/admin/moderation`    | Commentaires · Litiges · Blacklist · Support        | `comments`, `disputes`, `moderation/blacklist`, `support`    |
+| Onboarding         | `/admin/onboarding`    | File d'onboarding · Demandes tenant · Liens Discord | `onboarding-queue`, `tenant-requests`, `pending-guild-links` |
+| Partenaires        | `/admin/partners`      | Liste · Demandes                                    | `partners`, `partnership-requests` (vague 4)                 |
 
 Les corps de page ont été extraits en `components/admin/<domaine>/*Panel.tsx`
-(via `git mv` pour préserver l'historique) ; les anciennes routes sont des shims
-308.
+(via `git mv` pour préserver l'historique) ; les anciennes routes sont des shims 308. Le hub Partenaires conserve la modale de création (`?new=1`) sur l'onglet
+Liste ; la route détail `partnership-requests/[id]` reste une page à part.
 
 ### Sous-écrans regroupés sous une barre d'onglets partagée
 
 - **Tournoi** (`tournament/[id]/*`) : 17 sous-écrans → **11 onglets**
   (`TournamentTabsNav`). Fusions internes : `checkin` + `checkin/live` ;
   `stats` + `analytics` + `podium`. Le cluster **Bracket** (`bracket`,
-  `bracket-builder`, `map-draw`, `veto`) est **unifié visuellement mais gardé en
-  routes séparées** (code stateful interdépendant, trop risqué à fusionner sans
-  e2e authentifié).
+  `bracket-builder`, `map-draw`, `veto`) est **fusionné** (vague 3) en une route
+  à onglets `/admin/tournament/[id]/bracket?tab=view|builder|map-draw|veto` :
+  corps extraits en `components/admin/tournament/{Bracket,BracketBuilder,MapDraw,Veto}Panel.tsx`
+  (via `git mv`), anciennes routes en shims 308, liens internes recâblés en
+  deep-links `?tab=`. Audit préalable : les 4 écrans sont tournament-scoped,
+  self-contained (fetch client), gating-only `manager` — le risque « stateful
+  interdépendant » était surévalué (veto a un sélecteur de match interne, pas de
+  param par-match).
 - **Stage** (`stages/[stageId]/*`) : 6 sous-écrans sous `StageTabsNav`, avec
   **onglets conditionnels au format** (Groupes visible pour un stage à poules,
   Swiss pour un stage suisse ; fallback : onglet affiché si format inconnu).
@@ -95,9 +112,23 @@ ancienne route `*/new` en shim 308 :
 ### Navigation
 
 - **Source unique** `adminNav.ts` alimentant top-bar + cartes dashboard.
-- Nouvelle section top-bar **Communication** regroupant Annonces, News,
+- Nouvelle section top-bar **Communication** regroupant Annonces, Actualités,
   Campagnes emails, Notifications (regroupement de menu — **aucune page
   fusionnée**, les éditeurs restent des pages).
+- Nouvelle section top-bar **Staff & Asso** (vague 3) regroupant Gérer les
+  utilisateurs, Casteuses, Pôles de l'asso, Adhérents — écrans « People/Staff »
+  auparavant dispersés entre Contenu et Configuration. Regroupement de menu pur
+  (routes/rôles inchangés, tous admin-gated). La carte dashboard « Gérer les
+  utilisateurs » (order 9) suit son nœud et reste rendue.
+- Rename du libellé top-bar **News → Actualités** (vague 3, cohérence FR-first) ;
+  routes `/admin/news` **inchangées**, seuls les libellés de menu changent.
+- **Découvrabilité des pages orphelines** (vague 4) : `recycle-bin` (Corbeille,
+  admin) et `aide-tournoi` (caster) étaient des pages fonctionnelles mais sans
+  aucun lien entrant (accessibles seulement par URL). Exposées en **cartes
+  dashboard-only** (pas d'entrée top-bar, comme quick-bracket / leagues /
+  ratings / api-tokens). Deux icônes ajoutées à la map `ICON` (`trash`, `help`).
+  Distinct d'une suppression : la page morte se supprime (cf. `api-docs`), la
+  page utile mais cachée se **rend découvrable**.
 
 ### Suppression
 
@@ -115,13 +146,26 @@ ses onglets ; les onglets plus restrictifs sont re-gatés côté rendu.
 > SSR-gatée à un rôle élevé devient un onglet d'un hub gaté plus bas, son
 > gating passe **côté client** (l'onglet est masqué pour les rôles insuffisants)
 > plutôt qu'en SSR. Cas concernés :
+>
 > - `tenant-requests` (owner) → onglet du hub Onboarding (host manager)
 > - `moderation/blacklist`, `support` (manager) → onglets du hub Modération
 > - `disputes` (caster) reste l'onglet le plus permissif de son hub
 >
 > **La donnée reste protégée à l'API** dans tous ces cas (ex.
 > `/api/admin/tenant-requests` reste owner-only) — le masquage d'onglet est de
-> l'UX, pas la frontière de sécurité. À valider lors de la revue.
+> l'UX, pas la frontière de sécurité.
+>
+> ✅ **Validé (vague 3).** Audit du gating des trois hubs :
+>
+> - `tenant-requests` : API `withStaffRoute(handler, 'owner')` (+ `expire`/`reject`
+>   owner) ; panel rendu seulement si `active === 'tenant-requests' && isOwner`.
+> - `blacklist`, `support` : API `withStaffRoute(handler, 'manager')` ; panels
+>   rendus seulement si `&& isManager`.
+> - `disputes` : API `withStaffRoute(handler, 'caster')` — onglet fallback.
+>
+> Les panels sont **doublement gatés** : un deep-link `?tab=` d'un rôle
+> insuffisant retombe sur le fallback, il ne rend jamais le panel privilégié.
+> Conclusion : **aucun shim gaté nécessaire**, la frontière tient à l'API.
 
 ---
 
@@ -152,19 +196,28 @@ compilation des hôtes (307 → `/admin/login` pour un anonyme).
 
 ---
 
-## Points ouverts
+## Points ouverts — tranchés (vague 3)
 
-À trancher avant/pendant la revue :
+1. ✅ **Bascule owner→client** sur `tenant-requests` (et blacklist/support) —
+   **résolu par audit, aucun shim gaté nécessaire.** La frontière de sécurité
+   tient à l'API (owner/manager/caster au bon rôle) et les panels sont doublement
+   gatés. Détails dans l'encadré [§ Sécurité](#sécurité--gating).
+2. ✅ **Libellé « News » → « Actualités ».** Renommé dans `adminNav.ts`
+   (section + éditeurs), test `navbarAdminLinks.test.ts` mis à jour. Routes
+   `/admin/news` inchangées.
+3. ✅ **Cluster Bracket** — **fusionné** (le « lot dédié » a été réalisé). Route
+   à onglets `bracket?tab=view|builder|map-draw|veto`, 4 panels extraits, 3 shims
+   308, deep-links `?tab=` recâblés. Aucune logique métier touchée (pick/ban,
+   éditeur, export inchangés). Specs e2e `map-draw-page` / `veto-locked` mises à
+   jour vers les nouvelles URLs. Voir [§ Sous-écrans regroupés](#sous-écrans-regroupés-sous-une-barre-donglets-partagée).
 
-1. **Bascule owner→client** sur `tenant-requests` (et blacklist/support) — voir
-   [§ Sécurité](#sécurité--gating). Convient ou faut-il un shim gaté ?
-2. **Libellé « News »** conservé tel quel (pas « Actualités ») pour
-   l'équivalence fonctionnelle — à renommer ?
-3. **Cluster Bracket** laissé séparé — fusion possible dans un lot dédié, avec
-   e2e authentifié pour sécuriser les interactions pick/ban et l'export.
+## Pistes restantes
 
-## Pistes restantes (non faites)
-
-- Regrouper les listes « People/Staff » : `adherents`, `cast-members`,
-  `pole-members`, `users` sous une section cohérente.
-- Traiter `teams/my` (redondance potentielle avec `teams`).
+- ✅ **Regrouper les listes « People/Staff »** (`adherents`, `cast-members`,
+  `pole-members`, `users`) — fait : nouvelle section top-bar **Staff & Asso**
+  (regroupement de menu pur, routes/rôles inchangés). Voir
+  [§ Navigation](#navigation).
+- ⏸️ **`teams/my`** — **décision : laissé séparé.** Ce n'est pas une redondance :
+  `teams/my` est la vue capitaine (caster, self-service sur sa propre équipe)
+  tandis que `teams` est le CRUD complet (manager). Fusionner mêlerait deux
+  gatings distincts pour un gain nul.

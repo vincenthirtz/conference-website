@@ -42,7 +42,9 @@ export type AdminNavIcon =
   | 'chart'
   | 'medal'
   | 'bolt'
-  | 'key';
+  | 'key'
+  | 'trash'
+  | 'help';
 
 /** Métadonnées propres à la carte dashboard (absentes du top-bar). */
 export type AdminNavCardMeta = {
@@ -188,6 +190,21 @@ export const ADMIN_NAV: AdminNavNode[] = [
           accent: 'border-blue-500/30 from-blue-500/10 text-blue-300',
         },
       },
+      // Aide tournoi : miroir staff (caster+) de l'aide `/aide-tournoi` du bot
+      // Discord. Page existante mais jusque-là orpheline (aucun lien) → exposée
+      // en carte dashboard-only pour la rendre découvrable.
+      {
+        id: 'aide-tournoi',
+        href: '/admin/aide-tournoi',
+        minRole: 'caster',
+        card: {
+          order: 16,
+          titleKey: 'navAideTournoiTitle',
+          descKey: 'navAideTournoiDesc',
+          icon: 'help',
+          accent: 'border-emerald-500/30 from-emerald-500/10 text-emerald-300',
+        },
+      },
     ],
   },
   {
@@ -275,36 +292,16 @@ export const ADMIN_NAV: AdminNavNode[] = [
         minRole: 'admin',
       },
       {
-        id: 'cast-members',
-        topBarLabel: 'Casteuses',
-        href: '/admin/cast-members',
-        minRole: 'admin',
-      },
-      {
-        id: 'pole-members',
-        topBarLabel: 'Pôles de l’asso',
-        href: '/admin/pole-members',
-        minRole: 'admin',
-      },
-      {
+        // Hub « Partenaires » : fusion des ex-pages Partenaires – liste et
+        // Demandes de partenariat en une page à onglets (/admin/partners?tab=…).
+        // Comme pour les fusions Modération / Onboarding, une SEULE entrée
+        // top-bar pointe vers le hub — les onglets (« Partenaires » / « Demandes »)
+        // se découvrent sur la page. L'ex-route /admin/partnership-requests
+        // 308-redirige vers `?tab=requests`.
         id: 'partners',
         topBarLabel: 'Partenaires',
-        href: '',
+        href: '/admin/partners',
         minRole: 'admin',
-        children: [
-          {
-            id: 'partners-list',
-            topBarLabel: 'Partenaires – liste',
-            href: '/admin/partners',
-            minRole: 'admin',
-          },
-          {
-            id: 'partnership-requests',
-            topBarLabel: 'Demandes de partenariat',
-            href: '/admin/partnership-requests',
-            minRole: 'admin',
-          },
-        ],
       },
       {
         // Hub « Modération » (lot B) : fusion des ex-pages Commentaires,
@@ -379,19 +376,19 @@ export const ADMIN_NAV: AdminNavNode[] = [
       },
       {
         id: 'news',
-        topBarLabel: 'News',
+        topBarLabel: 'Actualités',
         href: '',
         minRole: 'admin',
         children: [
           {
             id: 'news-list',
-            topBarLabel: 'Liste des news',
+            topBarLabel: 'Liste des actualités',
             href: '/admin/news',
             minRole: 'admin',
           },
           {
             id: 'news-new',
-            topBarLabel: 'Créer une news',
+            topBarLabel: 'Créer une actualité',
             href: '/admin/news/new',
             minRole: 'admin',
           },
@@ -419,24 +416,18 @@ export const ADMIN_NAV: AdminNavNode[] = [
     ],
   },
   {
-    id: 'configuration',
-    topBarLabel: 'Configuration',
+    // Section « Staff & Asso » : REGROUPEMENT de navigation des écrans
+    // « People/Staff » auparavant dispersés entre Contenu (Casteuses, Pôles)
+    // et Configuration (Utilisateurs, Adhérents). Aucune page fusionnée, aucun
+    // shim : routes et rôles INCHANGÉS — pur regroupement de menu. Les quatre
+    // domaines sont tous admin-gated, d'où un conteneur admin homogène. La carte
+    // dashboard « Gérer les utilisateurs » (order 9) suit son nœud et reste
+    // rendue (collectAdminNavCards parcourt tout l'arbre).
+    id: 'staff-asso',
+    topBarLabel: 'Staff & Asso',
     href: '',
-    minRole: 'manager',
+    minRole: 'admin',
     children: [
-      {
-        id: 'site-settings',
-        topBarLabel: 'Paramètres du site',
-        href: '/admin/site-settings',
-        minRole: 'admin',
-        card: {
-          order: 13,
-          titleKey: 'navSiteSettingsTitle',
-          descKey: 'navSiteSettingsDesc',
-          icon: 'cog',
-          accent: 'border-amber-500/30 from-amber-500/10 text-amber-300',
-        },
-      },
       {
         id: 'users-manage',
         topBarLabel: 'Gérer les utilisateurs',
@@ -454,6 +445,18 @@ export const ADMIN_NAV: AdminNavNode[] = [
         id: 'users-new',
         topBarLabel: 'Créer un utilisateur',
         href: '/admin/users/new',
+        minRole: 'admin',
+      },
+      {
+        id: 'cast-members',
+        topBarLabel: 'Casteuses',
+        href: '/admin/cast-members',
+        minRole: 'admin',
+      },
+      {
+        id: 'pole-members',
+        topBarLabel: 'Pôles de l’asso',
+        href: '/admin/pole-members',
         minRole: 'admin',
       },
       {
@@ -475,6 +478,27 @@ export const ADMIN_NAV: AdminNavNode[] = [
             minRole: 'admin',
           },
         ],
+      },
+    ],
+  },
+  {
+    id: 'configuration',
+    topBarLabel: 'Configuration',
+    href: '',
+    minRole: 'manager',
+    children: [
+      {
+        id: 'site-settings',
+        topBarLabel: 'Paramètres du site',
+        href: '/admin/site-settings',
+        minRole: 'admin',
+        card: {
+          order: 13,
+          titleKey: 'navSiteSettingsTitle',
+          descKey: 'navSiteSettingsDesc',
+          icon: 'cog',
+          accent: 'border-amber-500/30 from-amber-500/10 text-amber-300',
+        },
       },
       {
         id: 'logs-stats',
@@ -548,6 +572,21 @@ export const ADMIN_NAV: AdminNavNode[] = [
           descKey: 'navApiTokensDesc',
           icon: 'key',
           accent: 'border-teal-500/30 from-teal-500/10 text-teal-300',
+        },
+      },
+      // Corbeille : UI de restauration soft-delete (stages/équipes/matchs/…).
+      // Outil de récupération occasionnel → dashboard-only (pas de top-bar),
+      // comme les autres utilitaires ci-dessus, pour ne pas surcharger le menu.
+      {
+        id: 'recycle-bin',
+        href: '/admin/recycle-bin',
+        minRole: 'admin',
+        card: {
+          order: 15,
+          titleKey: 'navRecycleBinTitle',
+          descKey: 'navRecycleBinDesc',
+          icon: 'trash',
+          accent: 'border-amber-500/30 from-amber-500/10 text-amber-300',
         },
       },
     ],

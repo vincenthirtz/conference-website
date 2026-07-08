@@ -148,7 +148,7 @@ function AdminPartnershipRequestDetailPage({ staff }: Props) {
         <div className="text-center">
           <p className="text-neutral-400 mb-4">{t.notFound}</p>
           <Link
-            href="/admin/partnership-requests"
+            href="/admin/partners?tab=requests"
             className="text-blue-400 hover:underline"
           >
             {t.backToRequests}
@@ -169,7 +169,7 @@ function AdminPartnershipRequestDetailPage({ staff }: Props) {
           {/* Header */}
           <div className="mb-8">
             <Link
-              href="/admin/partnership-requests"
+              href="/admin/partners?tab=requests"
               className="inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white transition mb-4"
             >
               <svg
