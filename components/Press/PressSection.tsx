@@ -29,10 +29,11 @@ function PressSection(): JSX.Element {
         </div>
         <Heading
           typeStyle="heading-md"
-          className="text-gradient text-center lg:mt-3"
+          className="text-brand-gradient text-center lg:mt-3"
         >
           {t.title}
         </Heading>
+        <span className="brand-rule mx-auto mt-3" aria-hidden />
         <Paragraph
           typeStyle="body-lg"
           className="mt-3 max-w-2xl"
@@ -49,7 +50,7 @@ function PressSection(): JSX.Element {
             href={item.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="press-card rounded-2xl border border-white/10 bg-white/5 p-5 flex flex-col gap-3 transition-all duration-300 w-full max-w-sm"
+            className="press-card card-brand rounded-2xl bg-white/5 p-5 flex flex-col gap-3 transition-all duration-300 w-full max-w-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-yellow)]"
           >
             {item.logo ? (
               /* eslint-disable-next-line @next/next/no-img-element */
@@ -67,7 +68,7 @@ function PressSection(): JSX.Element {
             <h3 className="text-lg font-semibold text-white leading-snug">
               {item.title}
             </h3>
-            <span className="text-sm neon-text-cyan mt-auto inline-flex items-center gap-1 press-card__cta">
+            <span className="text-sm text-[var(--color-yellow)] mt-auto inline-flex items-center gap-1 press-card__cta">
               {t.readArticle} <span aria-hidden>→</span>
             </span>
           </a>

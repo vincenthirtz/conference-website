@@ -92,10 +92,11 @@ function HomeNewsSection({
         </div>
         <Heading
           typeStyle="heading-md"
-          className="text-gradient text-center lg:mt-3"
+          className="text-brand-gradient text-center lg:mt-3"
         >
           {t.title}
         </Heading>
+        <span className="brand-rule mx-auto mt-3" aria-hidden />
         <Paragraph
           typeStyle="body-lg"
           className="mt-3 max-w-2xl"
@@ -149,7 +150,7 @@ function HomeNewsSection({
       <div className="flex justify-center">
         <Link
           href="/actualites"
-          className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-5 py-2 text-sm font-medium text-white transition hover:bg-white/10"
+          className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-5 py-2 text-sm font-medium text-white transition hover:border-[var(--color-yellow)]/60 hover:bg-[var(--color-yellow)]/10 hover:text-[var(--color-yellow)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-yellow)]"
         >
           {t.allNews}
           <span aria-hidden>→</span>
@@ -168,7 +169,7 @@ function FeaturedCard({ item }: { item: HomeNewsItem }) {
   return (
     <Link
       href={`/news/${item.slug}`}
-      className="news-featured group relative flex h-full flex-col overflow-hidden rounded-3xl border border-white/10 bg-white/5 transition-all duration-300"
+      className="news-featured card-brand group relative flex h-full flex-col overflow-hidden rounded-3xl bg-white/5 transition-all duration-300"
     >
       {item.imageUrl ? (
         <div className="relative aspect-[16/9] w-full overflow-hidden">
@@ -187,7 +188,7 @@ function FeaturedCard({ item }: { item: HomeNewsItem }) {
       )}
       <div className="flex flex-1 flex-col gap-3 p-5 md:p-6">
         <div className="flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-[0.16em] text-blue-200/80">
-          <span className="inline-flex items-center rounded-full border border-neon-cyan/50 bg-neon-cyan/10 px-2.5 py-1 text-[10px] font-semibold neon-text-cyan">
+          <span className="inline-flex items-center rounded-full border border-[var(--color-yellow)]/50 bg-[var(--color-yellow)]/10 px-2.5 py-1 text-[10px] font-semibold text-[var(--color-yellow)]">
             {t.featured}
           </span>
           {item.tag && (
@@ -213,7 +214,7 @@ function FeaturedCard({ item }: { item: HomeNewsItem }) {
         >
           {getExcerpt(item, t.excerptFallback, 220)}
         </Paragraph>
-        <span className="mt-auto inline-flex items-center gap-1 text-sm font-medium neon-text-cyan transition group-hover:gap-2">
+        <span className="mt-auto inline-flex items-center gap-1 text-sm font-medium text-[var(--color-green)] transition group-hover:gap-2">
           {t.readArticle} <span aria-hidden>→</span>
         </span>
       </div>
@@ -227,7 +228,7 @@ function CompactCard({ item }: { item: HomeNewsItem }) {
   return (
     <Link
       href={`/news/${item.slug}`}
-      className="news-compact group flex gap-3 overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-3 transition-all duration-300"
+      className="news-compact card-brand group flex gap-3 overflow-hidden rounded-2xl bg-white/5 p-3 transition-all duration-300"
     >
       <div className="relative h-20 w-24 shrink-0 overflow-hidden rounded-xl bg-white/5">
         {item.imageUrl ? (
@@ -275,8 +276,8 @@ function FilterPill({
       onClick={onClick}
       className={`filter-pill px-3 py-1.5 rounded-full border text-xs uppercase tracking-[0.16em] transition-all duration-300 ${
         active
-          ? 'filter-pill--active border-neon-cyan/60 bg-neon-cyan/15 text-white'
-          : 'border-white/15 bg-white/5 text-gray-200 hover:border-white/30'
+          ? 'filter-pill--active border-[var(--color-violet)]/60 bg-[var(--color-violet)]/15 text-white'
+          : 'border-white/15 bg-white/5 text-gray-200 hover:border-[var(--color-violet)]/40'
       }`}
     >
       {label}

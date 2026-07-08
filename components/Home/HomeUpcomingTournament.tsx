@@ -68,7 +68,7 @@ export default function TournamentCard({
     : `/tournament/${tournament.id}`;
 
   return (
-    <div className="neon-card p-6 md:p-8">
+    <div className="neon-card card-brand p-6 md:p-8">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.16em] text-blue-200/80">
@@ -102,7 +102,7 @@ export default function TournamentCard({
                 {' / '}
                 <span>{tournament.maxTeams}</span> {t.teamsRegisteredSuffix}
                 {slotsLeft != null && slotsLeft > 0 && !isRunning && (
-                  <span className="ml-2 inline-flex items-center rounded-full border border-emerald-400/40 bg-emerald-500/10 px-2 py-0.5 text-[11px] text-emerald-100">
+                  <span className="ml-2 inline-flex items-center rounded-full border border-[var(--color-green)]/45 bg-[var(--color-green)]/12 px-2 py-0.5 text-[11px] text-[var(--color-green-light)]">
                     {format(
                       slotsLeft > 1 ? t.slotsLeft_other : t.slotsLeft_one,
                       { count: slotsLeft }
@@ -119,14 +119,14 @@ export default function TournamentCard({
           <div className="flex flex-row items-center gap-3">
             <Link
               href={detailHref}
-              className="rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/10"
+              className="rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm font-medium text-white transition-colors hover:border-[var(--color-green)]/60 hover:bg-[var(--color-green)]/10 hover:text-[var(--color-green-light)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-green)]"
             >
               {t.viewMatches}
             </Link>
             {!isRunning && (
               <Link
                 href="/team/create"
-                className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-neutral-900 shadow hover:-translate-y-0.5 hover:shadow-lg transition"
+                className="rounded-full bg-[var(--color-violet)] px-4 py-2 text-sm font-semibold text-white shadow transition hover:-translate-y-0.5 hover:bg-[var(--color-violet-deep)] hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
               >
                 {t.register}
               </Link>

@@ -94,9 +94,15 @@ export default function HomeIdahobitScrim() {
           <span className="mb-3 inline-flex items-center gap-2 rounded-full border border-pink-300/40 bg-gradient-to-r from-pink-500/20 via-fuchsia-500/20 to-violet-500/20 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-pink-100">
             🏳️‍🌈 IDAHOBIT · {formatDate(EVENT_DATE_ISO, locale)}
           </span>
-          <Heading typeStyle="heading-md" level="h2" textColor="text-white">
+          <Heading
+            typeStyle="heading-md"
+            level="h2"
+            textColor=""
+            className="text-brand-gradient"
+          >
             {t.title}
           </Heading>
+          <span className="brand-rule block mx-auto mt-3" aria-hidden />
           <Paragraph className="mt-2 mx-auto max-w-2xl text-white/70">
             {t.subtitle}
           </Paragraph>

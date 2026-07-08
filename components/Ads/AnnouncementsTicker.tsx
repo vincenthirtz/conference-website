@@ -76,7 +76,7 @@ export default function AnnouncementsTicker({
 
   return (
     <div className="w-full px-4 mt-6">
-      <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-r from-[#0f172a] via-[#111827] to-[#0b1220] shadow-2xl px-5 py-3">
+      <div className="relative overflow-hidden rounded-2xl border border-[var(--color-violet)]/35 bg-gradient-to-r from-[#0f172a] via-[#111827] to-[#0b1220] shadow-2xl px-5 py-3">
         <div className="flex items-center gap-3">
           <div className="relative flex-1 min-w-0 h-8 overflow-hidden">
             <div
@@ -99,7 +99,7 @@ export default function AnnouncementsTicker({
               href={current.ctaUrl}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-1 rounded-full bg-white text-neutral-900 px-3 py-1.5 text-xs font-semibold shadow hover:-translate-y-0.5 hover:shadow-lg transition"
+              className="inline-flex items-center gap-1 rounded-full bg-[var(--color-violet)] text-white px-3 py-1.5 text-xs font-semibold shadow transition hover:-translate-y-0.5 hover:bg-[var(--color-violet-deep)] hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
             >
               {current.ctaLabel || t.discover}
               <span aria-hidden>↗</span>
@@ -115,7 +115,7 @@ export default function AnnouncementsTicker({
                 type="button"
                 onClick={() => setIndex(i)}
                 className={`h-1 rounded-full transition-all ${
-                  i === index ? 'w-4 bg-white' : 'w-2 bg-white/40'
+                  i === index ? 'w-4 bg-[var(--color-violet-light)]' : 'w-2 bg-white/40'
                 }`}
                 aria-label={format(t.goToAnnouncement, { n: i + 1 })}
               />

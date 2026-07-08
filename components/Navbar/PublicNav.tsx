@@ -255,7 +255,7 @@ export default function PublicNav({
           <Link
             href="/register"
             data-test="nav-Inscription"
-            className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-fuchsia-400/40 bg-gradient-to-r from-fuchsia-500 to-purple-500 px-4 py-1.5 text-[13px] font-semibold text-white shadow-[0_0_20px_-6px_rgba(178,75,224,0.7)] transition-all hover:from-fuchsia-400 hover:to-purple-400 hover:shadow-[0_0_24px_-4px_rgba(178,75,224,0.85)] focus:outline-none focus-visible:ring-2 focus-visible:ring-fuchsia-400/50"
+            className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-[var(--color-violet)]/50 bg-[var(--color-violet)] px-4 py-1.5 text-[13px] font-semibold text-white shadow-[0_0_20px_-6px_rgba(178,75,224,0.7)] transition-all hover:bg-[var(--color-violet-deep)] hover:shadow-[0_0_24px_-4px_rgba(178,75,224,0.85)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
           >
             <span>{tNav.signup}</span>
           </Link>
@@ -269,7 +269,7 @@ function Underline({ active }: { active: boolean }) {
   return (
     <span
       aria-hidden
-      className={`pointer-events-none absolute inset-x-3 -bottom-px h-px origin-center bg-gradient-to-r from-transparent via-white/80 to-transparent transition-transform duration-300 ${
+      className={`pointer-events-none absolute inset-x-3 -bottom-px h-[2px] origin-center rounded-full bg-gradient-to-r from-[var(--color-violet)] via-[var(--color-green)] to-[var(--color-yellow)] transition-transform duration-300 ${
         active ? 'scale-x-100' : 'scale-x-0 group-hover/link:scale-x-100'
       }`}
     />

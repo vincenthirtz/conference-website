@@ -82,10 +82,11 @@ export default function HomeTwitchEmbed(): JSX.Element | null {
         </div>
         <Heading
           typeStyle="heading-md"
-          className="text-gradient text-center lg:mt-3"
+          className="text-brand-gradient text-center lg:mt-3"
         >
           {info.title || t.liveDefaultTitle}
         </Heading>
+        <span className="brand-rule mx-auto mt-3" aria-hidden />
         {typeof info.viewer_count === 'number' && (
           <Paragraph className="mt-2 text-sm" textColor="text-gray-300">
             {format(info.viewer_count > 1 ? t.viewers_other : t.viewers_one, {

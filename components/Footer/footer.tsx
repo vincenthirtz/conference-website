@@ -152,6 +152,7 @@ function Footer(): JSX.Element {
               <p className="text-sm font-semibold uppercase tracking-[0.18em] text-white">
                 {siteName}
               </p>
+              <span className="brand-rule mt-2" aria-hidden />
               <p className="mt-2 text-sm text-gray-400 leading-relaxed max-w-xs">
                 {t.tagline}
               </p>
@@ -165,7 +166,7 @@ function Footer(): JSX.Element {
                     rel="noreferrer"
                     aria-label={label}
                     title={label}
-                    className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-gray-300 transition-colors hover:border-white/20 hover:bg-white/[0.08] hover:text-white"
+                    className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-gray-300 transition-colors hover:border-[var(--color-green)]/50 hover:bg-[var(--color-green)]/10 hover:text-[var(--color-green-light)]"
                   >
                     <Icon className="w-4 h-4" fill="currentColor" />
                   </a>

@@ -46,7 +46,7 @@ function CountdownSkeleton({
     >
       <div className="neon-card p-6 md:p-8">
         <div className="flex flex-col items-center text-center gap-1 mb-5">
-          <span className="text-xs font-semibold uppercase tracking-[0.2em] neon-text-cyan">
+          <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-violet-light)]">
             {label}
           </span>
           <span className="text-base md:text-lg text-gray-200">
@@ -56,6 +56,7 @@ function CountdownSkeleton({
               timeZone: 'Europe/Paris',
             })}
           </span>
+          <span className="brand-rule mt-2" aria-hidden />
         </div>
         <div
           className="grid grid-cols-4 gap-2 sm:gap-3 max-w-xl mx-auto"
@@ -65,7 +66,7 @@ function CountdownSkeleton({
             (cellLabel) => (
             <div
               key={cellLabel}
-              className="countdown-cell flex flex-col items-center justify-center rounded-2xl border border-white/10 bg-[var(--bg-elevated)]/60 py-3 sm:py-4"
+              className="countdown-cell flex flex-col items-center justify-center rounded-2xl border border-[var(--color-violet)]/25 bg-[var(--bg-elevated)]/60 py-3 sm:py-4"
             >
               <span className="text-2xl sm:text-4xl font-extrabold text-white/30 tabular-nums leading-none">
                 ––
@@ -125,7 +126,7 @@ export default function HomeCountdown({
     >
       <div className="neon-card p-6 md:p-8">
         <div className="flex flex-col items-center text-center gap-1 mb-5">
-          <span className="text-xs font-semibold uppercase tracking-[0.2em] neon-text-cyan">
+          <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-violet-light)]">
             {effectiveLabel}
           </span>
           <span className="text-base md:text-lg text-gray-200">
@@ -135,12 +136,13 @@ export default function HomeCountdown({
               timeZone: 'Europe/Paris',
             })}
           </span>
+          <span className="brand-rule mt-2" aria-hidden />
         </div>
         <div className="grid grid-cols-4 gap-2 sm:gap-3 max-w-xl mx-auto">
           {cells.map(({ value, label: cellLabel }) => (
             <div
               key={cellLabel}
-              className="countdown-cell flex flex-col items-center justify-center rounded-2xl border border-white/10 bg-[var(--bg-elevated)]/60 py-3 sm:py-4"
+              className="countdown-cell flex flex-col items-center justify-center rounded-2xl border border-[var(--color-violet)]/25 bg-[var(--bg-elevated)]/60 py-3 sm:py-4"
             >
               <span className="countdown-digit text-2xl sm:text-4xl font-extrabold text-white tabular-nums leading-none">
                 {pad(value)}

@@ -45,7 +45,7 @@ function PartnerLogo({ partner }: { partner: HomePartner }) {
       target="_blank"
       rel="noopener noreferrer sponsored"
       aria-label={partner.name}
-      className="flex h-16 md:h-20 items-center justify-center px-6 md:px-10 outline-none focus-visible:ring-2 focus-visible:ring-white/40 rounded-md"
+      className="flex h-16 md:h-20 items-center justify-center px-6 md:px-10 outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-green)] rounded-md"
     >
       {inner}
     </a>
@@ -69,7 +69,7 @@ export default function HomeSponsors({
   return (
     <section
       id="sponsors"
-      className="container mt-20 flex flex-col gap-8 px-4 md:px-0"
+      className="section-brand-bg container mt-20 flex flex-col gap-8 px-4 md:px-0"
     >
       <div className="flex flex-col items-center text-center">
         <div className="section-eyebrow text-xl text-white font-semibold mb-1">
@@ -77,10 +77,11 @@ export default function HomeSponsors({
         </div>
         <Heading
           typeStyle="heading-md"
-          className="text-gradient text-center lg:mt-3"
+          className="text-brand-gradient text-center lg:mt-3"
         >
           {t.title}
         </Heading>
+        <span className="brand-rule mx-auto mt-3" aria-hidden />
         <Paragraph
           typeStyle="body-lg"
           className="mt-3 max-w-2xl"
@@ -115,7 +116,7 @@ export default function HomeSponsors({
       <div className="text-center">
         <Link
           href="/partenaires"
-          className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-5 py-2 text-sm font-medium text-white transition hover:bg-white/10"
+          className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-5 py-2 text-sm font-medium text-white transition hover:border-[var(--color-green)]/60 hover:bg-[var(--color-green)]/10 hover:text-[var(--color-green-light)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-green)]"
         >
           {t.viewAll}
           <span aria-hidden>→</span>

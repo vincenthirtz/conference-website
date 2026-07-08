@@ -64,7 +64,7 @@ function EventCard({ event }: { event: HomepageEvent }) {
   const meta = LOCATION_META[event.location];
   const Icon = meta.Icon;
   return (
-    <div className="neon-card p-6 md:p-8">
+    <div className="neon-card card-brand p-6 md:p-8">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.16em] text-blue-200/80">
@@ -104,7 +104,7 @@ function EventCard({ event }: { event: HomepageEvent }) {
               href={event.ctaUrl}
               target={event.ctaUrl.startsWith('http') ? '_blank' : undefined}
               rel={event.ctaUrl.startsWith('http') ? 'noreferrer' : undefined}
-              className="inline-flex items-center gap-1 rounded-full bg-white px-4 py-2 text-sm font-semibold text-neutral-900 shadow hover:-translate-y-0.5 hover:shadow-lg transition"
+              className="inline-flex items-center gap-1 rounded-full bg-white px-4 py-2 text-sm font-semibold text-neutral-900 shadow transition hover:-translate-y-0.5 hover:bg-[var(--color-green)] hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-green)]"
             >
               {event.ctaLabel || t.learnMore}
               <span aria-hidden>↗</span>
@@ -177,17 +177,18 @@ export default function HomeEvents({
   if (!items.length) return null;
 
   return (
-    <section className="container mt-20 flex flex-col gap-6 px-4 md:px-0">
+    <section className="section-brand-bg container mt-20 flex flex-col gap-6 px-4 md:px-0">
       <div className="flex flex-col items-center text-center">
         <div className="section-eyebrow text-xl text-white font-semibold mb-1">
           {t.eyebrow}
         </div>
         <Heading
           typeStyle="heading-md"
-          className="text-gradient text-center lg:mt-3"
+          className="text-brand-gradient text-center lg:mt-3"
         >
           {t.title}
         </Heading>
+        <span className="brand-rule mx-auto mt-3" aria-hidden />
         <Paragraph
           typeStyle="body-lg"
           className="mt-3 max-w-2xl"
