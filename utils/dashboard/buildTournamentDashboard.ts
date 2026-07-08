@@ -300,6 +300,242 @@ const STAFF_ACTION_LABEL: Record<string, string> = {
 };
 
 /* -----------------------------------------------------------
+ * Helpers de calcul PURS (partagés builder ↔ chemin léger)
+ *
+ * Ces fonctions ne font AUCUN accès DB : elles prennent les lignes déjà
+ * chargées et renvoient un signal. Le builder complet ET le chemin léger
+ * `fetchAlertsSignals` les réutilisent, ce qui GARANTIT que les compteurs du
+ * badge navbar sont strictement identiques à ceux du dashboard.
+ * ---------------------------------------------------------*/
+
+/** Colonnes minimales lues par la détection de conflits d'horaire. */
+export type ConflictMatchInput = {
+  id: string;
+  status: string | null;
+  scheduled_at: string | null;
+  is_bye: boolean | null;
+  match_format: string | null;
+  team1_id: string | null;
+  team2_id: string | null;
+};
+
+/**
+ * Détecte les chevauchements de créneaux pour une même équipe.
+ * `count` = nombre total de conflits ; `list` = top 5 détaillés (tooltip).
+ * `teamNameMap` est optionnel : le chemin léger n'a pas besoin des noms (il
+ * ne consomme que `count`), le builder passe sa map pour enrichir la liste.
+ */
+export function computeScheduleConflicts(
+  matches: ConflictMatchInput[],
+  teamNameMap?: Map<string, string>
+): { count: number; list: ConflictDetail[] } {
+  const nameMap = teamNameMap ?? new Map<string, string>();
+  const teamMatchSlots = new Map<
+    string,
+    { id: string; start: number; end: number }[]
+  >();
+  for (const m of matches) {
+    if (m.is_bye || m.status === 'cancelled' || !m.scheduled_at) continue;
+    const fmt = (m.match_format || 'bo3') as string;
+    const dur = MATCH_DURATION_MIN[fmt] ?? 45;
+    const start = new Date(m.scheduled_at).getTime();
+    const end = start + dur * 60_000;
+    for (const tid of [m.team1_id, m.team2_id]) {
+      if (!tid) continue;
+      const arr = teamMatchSlots.get(tid) ?? [];
+      arr.push({ id: m.id, start, end });
+      teamMatchSlots.set(tid, arr);
+    }
+  }
+  let count = 0;
+  const list: ConflictDetail[] = [];
+  for (const [teamId, slots] of teamMatchSlots) {
+    slots.sort((a, b) => a.start - b.start);
+    for (let i = 0; i < slots.length - 1; i++) {
+      if (slots[i].end > slots[i + 1].start) {
+        count++;
+        if (list.length < 5) {
+          const overlapMs = slots[i].end - slots[i + 1].start;
+          list.push({
+            teamId,
+            teamName: nameMap.get(teamId) ?? null,
+            matchAId: slots[i].id,
+            matchAScheduledAt: new Date(slots[i].start).toISOString(),
+            matchBId: slots[i + 1].id,
+            matchBScheduledAt: new Date(slots[i + 1].start).toISOString(),
+            overlapMinutes: Math.max(1, Math.round(overlapMs / 60_000)),
+          });
+        }
+      }
+    }
+  }
+  return { count, list };
+}
+
+/** Colonnes minimales lues par le calcul check-in 24h. */
+export type CheckinMatchInput = {
+  is_bye: boolean | null;
+  status: string | null;
+  scheduled_at: string | null;
+  forfeit_processed_at: string | null;
+  team1_checked_in_at: string | null;
+  team2_checked_in_at: string | null;
+};
+
+/** Compte les matchs à venir (fenêtre -30min → +24h) par état de check-in. */
+export function computeCheckin24h(
+  matches: CheckinMatchInput[],
+  nowMs: number
+): DashboardSignals['checkinNext24h'] {
+  const checkin24h = {
+    upcoming: 0,
+    bothCheckedIn: 0,
+    oneSide: 0,
+    missing: 0,
+    forfeited: 0,
+  };
+  for (const m of matches) {
+    if (m.is_bye) continue;
+    if (!m.scheduled_at) continue;
+    const at = new Date(m.scheduled_at).getTime();
+    if (at < nowMs - 30 * 60_000) continue;
+    if (at > nowMs + 24 * 60 * 60_000) continue;
+    if (m.status === 'cancelled') continue;
+    checkin24h.upcoming++;
+    if (m.forfeit_processed_at) {
+      checkin24h.forfeited++;
+      continue;
+    }
+    const t1 = !!m.team1_checked_in_at;
+    const t2 = !!m.team2_checked_in_at;
+    if (t1 && t2) checkin24h.bothCheckedIn++;
+    else if (t1 || t2) checkin24h.oneSide++;
+    else checkin24h.missing++;
+  }
+  return checkin24h;
+}
+
+/**
+ * Proximité du roster lock. `hoursLeft` ne dépend que de `rosterLockedAt` et
+ * `nowMs` ; `teamsBelowMin` (non utilisé par le badge) dépend de min_players +
+ * membres. Le chemin léger passe des tableaux vides pour éviter de charger
+ * team_members, ce qui n'affecte QUE `teamsBelowMin`, pas le badge.
+ */
+export function computeRosterLockProximity(params: {
+  rosterLockedAt: string | null;
+  minPlayers: number | null;
+  nowMs: number;
+  registeredTeamIds: string[];
+  memberRows: { team_id: string }[];
+}): DashboardSignals['rosterLockProximity'] {
+  const { rosterLockedAt, minPlayers, nowMs, registeredTeamIds, memberRows } =
+    params;
+  const proximity: DashboardSignals['rosterLockProximity'] = {
+    lockedAt: rosterLockedAt,
+    hoursLeft: null,
+    teamsBelowMin: 0,
+  };
+  if (rosterLockedAt) {
+    const lockTs = new Date(rosterLockedAt).getTime();
+    const diffMs = lockTs - nowMs;
+    proximity.hoursLeft = diffMs > 0 ? Math.ceil(diffMs / 3_600_000) : 0;
+
+    if (minPlayers && minPlayers > 0 && diffMs > 0) {
+      const counts = new Map<string, number>();
+      for (const r of memberRows) {
+        counts.set(r.team_id, (counts.get(r.team_id) ?? 0) + 1);
+      }
+      let below = 0;
+      for (const teamId of new Set(registeredTeamIds)) {
+        if ((counts.get(teamId) ?? 0) < minPlayers) below++;
+      }
+      proximity.teamsBelowMin = below;
+    }
+  }
+  return proximity;
+}
+
+/**
+ * Une phase est "prête à avancer" (côté complétion des matchs) quand elle est
+ * active, contient au moins un match, et tous ses matchs sont finished ou
+ * cancelled. Partagé pour éviter toute divergence de comptage.
+ */
+export function isStageMatchesComplete(sp: {
+  is_active: boolean;
+  totalMatches: number;
+  finishedMatches: number;
+  cancelledMatches: number;
+}): boolean {
+  return (
+    sp.is_active &&
+    sp.totalMatches > 0 &&
+    sp.finishedMatches + sp.cancelledMatches === sp.totalMatches
+  );
+}
+
+/** Les `settings` d'une phase portent-ils des règles d'avancement valides ? */
+export function hasValidAdvancementRules(settings: unknown): boolean {
+  const rules = (settings as { advancement_rules?: unknown } | null)
+    ?.advancement_rules as
+    | {
+        target_stage_id?: unknown;
+        advance_top?: unknown;
+        advance_per_group?: unknown;
+      }
+    | undefined;
+  return !!(
+    rules &&
+    rules.target_stage_id &&
+    (rules.advance_top || rules.advance_per_group)
+  );
+}
+
+/**
+ * Chemin léger : dérive la liste des phases prêtes à avancer directement à
+ * partir des phases (avec `settings`) et des matchs. Réplique EXACTEMENT la
+ * logique du builder (isStageMatchesComplete + hasValidAdvancementRules) mais
+ * en une seule passe, sans requête settings séparée.
+ */
+export function computeStagesReadyToAdvance(
+  stages: {
+    id: string;
+    name: string;
+    is_active: boolean;
+    settings?: unknown;
+  }[],
+  matches: { stage_id: string | null; status: string | null }[]
+): StageReady[] {
+  const perStage = new Map<
+    string,
+    { totalMatches: number; finishedMatches: number; cancelledMatches: number }
+  >();
+  for (const m of matches) {
+    if (!m.stage_id) continue;
+    const c = perStage.get(m.stage_id) ?? {
+      totalMatches: 0,
+      finishedMatches: 0,
+      cancelledMatches: 0,
+    };
+    c.totalMatches++;
+    if (m.status === 'finished') c.finishedMatches++;
+    else if (m.status === 'cancelled') c.cancelledMatches++;
+    perStage.set(m.stage_id, c);
+  }
+  const ready: StageReady[] = [];
+  for (const s of stages) {
+    const c = perStage.get(s.id) ?? {
+      totalMatches: 0,
+      finishedMatches: 0,
+      cancelledMatches: 0,
+    };
+    if (!isStageMatchesComplete({ is_active: s.is_active, ...c })) continue;
+    if (!hasValidAdvancementRules(s.settings)) continue;
+    ready.push({ stageId: s.id, stageName: s.name });
+  }
+  return ready;
+}
+
+/* -----------------------------------------------------------
  * Calcul principal
  * ---------------------------------------------------------*/
 
@@ -664,7 +900,10 @@ export async function fetchDashboardData(
       'finished',
       'walkover',
     ]);
-    const blockingDownstreamMatches: { sourceMatchId: string; impactedMatchIds: string[] }[] = [];
+    const blockingDownstreamMatches: {
+      sourceMatchId: string;
+      impactedMatchIds: string[];
+    }[] = [];
     for (const d of disputedRows) {
       const teamsOfDispute = new Set<string>();
       if (d.team1_id) teamsOfDispute.add(d.team1_id);
@@ -672,7 +911,11 @@ export async function fetchDashboardData(
       const impacted: string[] = [];
 
       const winId = (d as any).next_match_win_id as string | null | undefined;
-      const winSlot = (d as any).next_match_win_slot as 1 | 2 | null | undefined;
+      const winSlot = (d as any).next_match_win_slot as
+        | 1
+        | 2
+        | null
+        | undefined;
       if (winId && winSlot) {
         const wm = matchById.get(winId);
         if (wm && liveStatusesForBlock.has(wm.status)) {
@@ -682,7 +925,11 @@ export async function fetchDashboardData(
       }
 
       const loseId = (d as any).next_match_lose_id as string | null | undefined;
-      const loseSlot = (d as any).next_match_lose_slot as 1 | 2 | null | undefined;
+      const loseSlot = (d as any).next_match_lose_slot as
+        | 1
+        | 2
+        | null
+        | undefined;
       if (loseId && loseSlot) {
         const lm = matchById.get(loseId);
         if (lm && liveStatusesForBlock.has(lm.status)) {
@@ -759,73 +1006,12 @@ export async function fetchDashboardData(
       };
     });
 
-    // Check-in 24h
-    const checkin24h = {
-      upcoming: 0,
-      bothCheckedIn: 0,
-      oneSide: 0,
-      missing: 0,
-      forfeited: 0,
-    };
-    for (const m of matches) {
-      if (m.is_bye) continue;
-      if (!m.scheduled_at) continue;
-      const at = new Date(m.scheduled_at).getTime();
-      if (at < NOW_MS - 30 * 60_000) continue;
-      if (at > NOW_MS + 24 * 60 * 60_000) continue;
-      if (m.status === 'cancelled') continue;
-      checkin24h.upcoming++;
-      if (m.forfeit_processed_at) {
-        checkin24h.forfeited++;
-        continue;
-      }
-      const t1 = !!m.team1_checked_in_at;
-      const t2 = !!m.team2_checked_in_at;
-      if (t1 && t2) checkin24h.bothCheckedIn++;
-      else if (t1 || t2) checkin24h.oneSide++;
-      else checkin24h.missing++;
-    }
+    // Check-in 24h (helper pur partagé avec le chemin léger du badge)
+    const checkin24h = computeCheckin24h(matches, NOW_MS);
 
-    // Conflits — on calcule le count + une short-list (top 5) pour le tooltip
-    const teamMatchSlots = new Map<
-      string,
-      { id: string; start: number; end: number }[]
-    >();
-    for (const m of matches) {
-      if (m.is_bye || m.status === 'cancelled' || !m.scheduled_at) continue;
-      const fmt = (m.match_format || 'bo3') as string;
-      const dur = MATCH_DURATION_MIN[fmt] ?? 45;
-      const start = new Date(m.scheduled_at).getTime();
-      const end = start + dur * 60_000;
-      for (const tid of [m.team1_id, m.team2_id]) {
-        if (!tid) continue;
-        const arr = teamMatchSlots.get(tid) ?? [];
-        arr.push({ id: m.id, start, end });
-        teamMatchSlots.set(tid, arr);
-      }
-    }
-    let conflictsCount = 0;
-    const conflictsList: ConflictDetail[] = [];
-    for (const [teamId, slots] of teamMatchSlots) {
-      slots.sort((a, b) => a.start - b.start);
-      for (let i = 0; i < slots.length - 1; i++) {
-        if (slots[i].end > slots[i + 1].start) {
-          conflictsCount++;
-          if (conflictsList.length < 5) {
-            const overlapMs = slots[i].end - slots[i + 1].start;
-            conflictsList.push({
-              teamId,
-              teamName: teamNameMap.get(teamId) ?? null,
-              matchAId: slots[i].id,
-              matchAScheduledAt: new Date(slots[i].start).toISOString(),
-              matchBId: slots[i + 1].id,
-              matchBScheduledAt: new Date(slots[i + 1].start).toISOString(),
-              overlapMinutes: Math.max(1, Math.round(overlapMs / 60_000)),
-            });
-          }
-        }
-      }
-    }
+    // Conflits — count + short-list (top 5) via le helper pur partagé.
+    const { count: conflictsCount, list: conflictsList } =
+      computeScheduleConflicts(matches, teamNameMap);
     // Pour les conflits sans nom d'équipe, on essaye de combler
     const missingConflictTeamIds = conflictsList
       .filter((c) => !c.teamName)
@@ -843,49 +1029,21 @@ export async function fetchDashboardData(
       }
     }
 
-    // Roster lock proximity
-    const lockedAtIso = tournament.roster_locked_at ?? null;
-    const rosterLockProximity: DashboardSignals['rosterLockProximity'] = {
-      lockedAt: lockedAtIso,
-      hoursLeft: null,
-      teamsBelowMin: 0,
-    };
-    if (lockedAtIso) {
-      const lockTs = new Date(lockedAtIso).getTime();
-      const diffMs = lockTs - NOW_MS;
-      rosterLockProximity.hoursLeft =
-        diffMs > 0 ? Math.ceil(diffMs / 3_600_000) : 0;
+    // Roster lock proximity (helper pur partagé avec le chemin léger du badge)
+    const rosterLockProximity = computeRosterLockProximity({
+      rosterLockedAt: tournament.roster_locked_at ?? null,
+      minPlayers: tournament.min_players ?? null,
+      nowMs: NOW_MS,
+      registeredTeamIds: tournamentTeams
+        .map((tt) => tt.team_id)
+        .filter((x): x is string => !!x),
+      memberRows: (teamMembersCountRes.data ?? []) as { team_id: string }[],
+    });
 
-      if (tournament.min_players && tournament.min_players > 0 && diffMs > 0) {
-        const memberRows = (teamMembersCountRes.data ?? []) as {
-          team_id: string;
-        }[];
-        const counts = new Map<string, number>();
-        for (const r of memberRows) {
-          counts.set(r.team_id, (counts.get(r.team_id) ?? 0) + 1);
-        }
-        const registeredTeamIds = new Set(
-          tournamentTeams
-            .map((tt) => tt.team_id)
-            .filter((x): x is string => !!x)
-        );
-        let below = 0;
-        for (const teamId of registeredTeamIds) {
-          if ((counts.get(teamId) ?? 0) < tournament.min_players) below++;
-        }
-        rosterLockProximity.teamsBelowMin = below;
-      }
-    }
-
-    // Stages prêts à advance
+    // Stages prêts à advance — mêmes prédicats partagés que le chemin léger.
     const stagesReadyToAdvance: StageReady[] = [];
     const candidateStageIds = stageProgress
-      .filter(
-        (sp) =>
-          sp.is_active &&
-          sp.totalMatches > 0 &&
-          sp.finishedMatches + sp.cancelledMatches === sp.totalMatches
-      )
+      .filter(isStageMatchesComplete)
       .map((sp) => sp.id);
     if (candidateStageIds.length > 0) {
       const { data: stageSettings } = await supabaseAdmin
@@ -894,12 +1052,7 @@ export async function fetchDashboardData(
         .eq('tenant_id', tenantId)
         .in('id', candidateStageIds);
       for (const s of stageSettings || []) {
-        const rules = (s as any).settings?.advancement_rules;
-        if (
-          rules &&
-          rules.target_stage_id &&
-          (rules.advance_top || rules.advance_per_group)
-        ) {
+        if (hasValidAdvancementRules((s as any).settings)) {
           stagesReadyToAdvance.push({ stageId: s.id, stageName: s.name });
         }
       }
@@ -1207,13 +1360,32 @@ export type AlertsSummary = {
 };
 
 /**
- * Calcule le total d'alertes actives à partir d'un payload dashboard.
- * Utilisé par le badge navbar (combiné à `resolveCurrentTournamentId`).
+ * Entrée bas-niveau du calcul de résumé d'alertes : exactement les 8 signaux
+ * (+ l'id tournoi) que consomme le badge. Le builder complet ET le chemin
+ * léger `fetchAlertsSignals` alimentent cette même structure, garantissant un
+ * total/breakdown strictement identiques quelle que soit la source.
  */
-export function computeAlertsSummary(
-  data: DashboardData | null
+export type AlertsSignalsInput = {
+  tournamentId: string;
+  disputes: number;
+  conflicts: number;
+  supportHigh: number;
+  pendingTeams: number;
+  checkinMissing: number;
+  rosterLockedAt: string | null;
+  rosterHoursLeft: number | null;
+  stagesReady: number;
+  activeMvpPolls: number;
+};
+
+/**
+ * Source unique de vérité pour le total + breakdown du badge. Ne dépend que
+ * des 8 signaux normalisés — aucune connaissance de la provenance des données.
+ */
+export function summarizeAlerts(
+  input: AlertsSignalsInput | null
 ): AlertsSummary {
-  if (!data) {
+  if (!input) {
     return {
       tournamentId: null,
       total: 0,
@@ -1230,22 +1402,21 @@ export function computeAlertsSummary(
     };
   }
 
-  const s = data.signals;
   const rosterLockSoon =
-    !!s.rosterLockProximity.lockedAt &&
-    s.rosterLockProximity.hoursLeft !== null &&
-    s.rosterLockProximity.hoursLeft > 0 &&
-    s.rosterLockProximity.hoursLeft <= 24;
+    !!input.rosterLockedAt &&
+    input.rosterHoursLeft !== null &&
+    input.rosterHoursLeft > 0 &&
+    input.rosterHoursLeft <= 24;
 
   const breakdown = {
-    disputes: s.disputesOpen.count,
-    conflicts: s.conflictsCount,
-    supportHigh: s.supportHighOpen,
-    pendingTeams: s.pendingTeamsCount,
-    checkinMissing: s.checkinNext24h.missing,
+    disputes: input.disputes,
+    conflicts: input.conflicts,
+    supportHigh: input.supportHigh,
+    pendingTeams: input.pendingTeams,
+    checkinMissing: input.checkinMissing,
     rosterLockSoon,
-    stagesReady: s.stagesReadyToAdvance.length,
-    activeMvpPolls: s.activeMvpPolls,
+    stagesReady: input.stagesReady,
+    activeMvpPolls: input.activeMvpPolls,
   };
 
   const total =
@@ -1259,8 +1430,34 @@ export function computeAlertsSummary(
     breakdown.activeMvpPolls;
 
   return {
-    tournamentId: data.tournament.id,
+    tournamentId: input.tournamentId,
     total,
     breakdown,
   };
+}
+
+/**
+ * Calcule le total d'alertes actives à partir d'un payload dashboard complet.
+ * Utilisé par le badge navbar (combiné à `resolveCurrentTournamentId`) et par
+ * la page dashboard. Adapte `DashboardData` vers `summarizeAlerts` — sortie
+ * strictement inchangée.
+ */
+export function computeAlertsSummary(
+  data: DashboardData | null
+): AlertsSummary {
+  if (!data) return summarizeAlerts(null);
+
+  const s = data.signals;
+  return summarizeAlerts({
+    tournamentId: data.tournament.id,
+    disputes: s.disputesOpen.count,
+    conflicts: s.conflictsCount,
+    supportHigh: s.supportHighOpen,
+    pendingTeams: s.pendingTeamsCount,
+    checkinMissing: s.checkinNext24h.missing,
+    rosterLockedAt: s.rosterLockProximity.lockedAt,
+    rosterHoursLeft: s.rosterLockProximity.hoursLeft,
+    stagesReady: s.stagesReadyToAdvance.length,
+    activeMvpPolls: s.activeMvpPolls,
+  });
 }

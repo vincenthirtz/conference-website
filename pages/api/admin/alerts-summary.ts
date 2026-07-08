@@ -4,18 +4,15 @@
 // pour signaler "où ça brûle" sans charger tout le dashboard.
 
 import type { NextApiRequest, NextApiResponse } from 'next';
-import {
-  withStaffRoute,
-  type AuthenticatedStaffContext,
-} from '@/utils/staff';
+import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { resolveCurrentTournamentId } from '@/utils/currentTournament';
 import {
-  fetchDashboardData,
-  computeAlertsSummary,
+  summarizeAlerts,
   type AlertsSummary,
 } from '@/utils/dashboard/buildTournamentDashboard';
+import { fetchAlertsSignals } from '@/utils/dashboard/alertsSignals';
 
 type ApiResponse = AlertsSummary | { error: string };
 
@@ -56,14 +53,16 @@ async function handler(
   if (!tournamentId) {
     // Pas de tournoi en cours : pas d'alertes. Réponse 200 avec total=0.
     res.setHeader('Cache-Control', 'private, max-age=30');
-    return res.status(200).json(computeAlertsSummary(null));
+    return res.status(200).json(summarizeAlerts(null));
   }
 
-  const result = await fetchDashboardData(tournamentId, ctx.tenantId);
+  // Chemin LÉGER : ne charge que les 8 signaux du badge (6 requêtes) au lieu
+  // du builder complet (~18 requêtes) qui alimente tout le dashboard.
+  const result = await fetchAlertsSignals(tournamentId, ctx.tenantId);
   if (!result.ok) {
     return res.status(result.status).json({ error: result.error });
   }
 
   res.setHeader('Cache-Control', 'private, max-age=30');
-  return res.status(200).json(computeAlertsSummary(result.data));
+  return res.status(200).json(result.summary);
 }

@@ -16,19 +16,19 @@ import type { StaffMember } from '../../types/staff';
 const {
   sendTestEmail,
   sendContactStaffEmail,
-  fetchDashboardData,
-  computeAlertsSummary,
+  fetchAlertsSignals,
+  summarizeAlerts,
   resolveCurrentTournamentId,
   fetchMemberships,
   fetchForms,
 } = vi.hoisted(() => ({
   sendTestEmail: vi.fn(async () => ({ success: true as const })),
   sendContactStaffEmail: vi.fn(async () => ({ success: true as const })),
-  fetchDashboardData: vi.fn(async () => ({
+  fetchAlertsSignals: vi.fn(async () => ({
     ok: true as const,
-    data: {} as any,
+    summary: { total: 0 } as any,
   })),
-  computeAlertsSummary: vi.fn(() => ({ total: 0 })),
+  summarizeAlerts: vi.fn(() => ({ total: 0 })),
   resolveCurrentTournamentId: vi.fn(async () => null as string | null),
   fetchMemberships: vi.fn(async () => ({
     data: [],
@@ -47,9 +47,9 @@ const {
 
 vi.mock('@/utils/email', () => ({ sendTestEmail, sendContactStaffEmail }));
 vi.mock('@/utils/dashboard/buildTournamentDashboard', () => ({
-  fetchDashboardData,
-  computeAlertsSummary,
+  summarizeAlerts,
 }));
+vi.mock('@/utils/dashboard/alertsSignals', () => ({ fetchAlertsSignals }));
 vi.mock('@/utils/currentTournament', () => ({ resolveCurrentTournamentId }));
 vi.mock('@/utils/helloasso', () => ({ fetchMemberships, fetchForms }));
 
@@ -136,8 +136,8 @@ beforeEach(() => {
   invalidateStaffCache();
   sendTestEmail.mockClear();
   sendContactStaffEmail.mockClear();
-  fetchDashboardData.mockClear();
-  computeAlertsSummary.mockClear();
+  fetchAlertsSignals.mockClear();
+  summarizeAlerts.mockClear();
   resolveCurrentTournamentId.mockClear();
   fetchMemberships.mockClear();
   fetchForms.mockClear();
@@ -238,15 +238,14 @@ describe('/api/admin/alerts-summary', () => {
     const res = makeRes();
     await alertsSummaryHandler(makeAuthedReq({ method: 'GET' }), res);
     expect(res.statusCode).toBe(200);
-    expect(computeAlertsSummary).toHaveBeenCalledWith(null);
+    expect(summarizeAlerts).toHaveBeenCalledWith(null);
   });
 
   it('200 with override id', async () => {
-    fetchDashboardData.mockResolvedValueOnce({
+    fetchAlertsSignals.mockResolvedValueOnce({
       ok: true,
-      data: { foo: 1 } as any,
+      summary: { total: 3 } as any,
     } as any);
-    computeAlertsSummary.mockReturnValueOnce({ total: 3 } as any);
     const res = makeRes();
     await alertsSummaryHandler(
       makeAuthedReq({
@@ -259,8 +258,8 @@ describe('/api/admin/alerts-summary', () => {
     expect((res.body as any).total).toBe(3);
   });
 
-  it('error from fetchDashboardData propagates status', async () => {
-    fetchDashboardData.mockResolvedValueOnce({
+  it('error from fetchAlertsSignals propagates status', async () => {
+    fetchAlertsSignals.mockResolvedValueOnce({
       ok: false,
       status: 404,
       error: 'no tournament',
