@@ -75,15 +75,25 @@ export default function ShareEmbedPanel({
   const [copiedWidget, setCopiedWidget] = useState<WidgetKey | null>(null);
   const dialogRef = useFocusTrap<HTMLDivElement>();
 
-  // Base URL: env var first, then the current origin (client-only).
+  // Base URL canonique (pour les snippets iframe à coller sur un site tiers) :
+  // env d'abord, sinon l'origine courante. On retire tout slash final pour ne
+  // pas produire d'URL `//embed/...` (double slash → 404 côté routeur).
   const [base, setBase] = useState<string>(
-    process.env.NEXT_PUBLIC_SITE_URL ?? ''
+    (process.env.NEXT_PUBLIC_SITE_URL ?? '').replace(/\/+$/, '')
   );
   useEffect(() => {
     if (!base && typeof window !== 'undefined') {
-      setBase(window.location.origin);
+      setBase(window.location.origin.replace(/\/+$/, ''));
     }
   }, [base]);
+
+  // Base pour le lien « Ouvrir le widget » (prévisualisation) : l'origine
+  // réelle où l'utilisateur navigue, pour que l'aperçu s'ouvre sur le MÊME
+  // serveur (marche quel que soit le port de dev, indépendamment de l'env).
+  const openBase =
+    typeof window !== 'undefined'
+      ? window.location.origin.replace(/\/+$/, '')
+      : base;
 
   const publicPath = `/tournament/${slugOrId}`;
   const publicUrl = base ? `${base}${publicPath}` : publicPath;
@@ -352,8 +362,11 @@ export default function ShareEmbedPanel({
 
                 <div className="space-y-3">
                   {widgets.map((w) => {
-                    const url = `${base}/embed/tournament/${slugOrId}/${w.key}?theme=${theme}`;
-                    const snippet = `<iframe src="${url}" width="100%" height="${w.height}" style="border:0;border-radius:12px" loading="lazy" title="${w.name}"></iframe>`;
+                    const embedPath = `/embed/tournament/${slugOrId}/${w.key}?theme=${theme}`;
+                    // Snippet = URL canonique (env) à intégrer sur un site tiers.
+                    const snippet = `<iframe src="${base}${embedPath}" width="100%" height="${w.height}" style="border:0;border-radius:12px" loading="lazy" title="${w.name}"></iframe>`;
+                    // Lien d'aperçu = origine courante (fonctionne sur n'importe quel port).
+                    const url = `${openBase}${embedPath}`;
                     return (
                       <div
                         key={w.key}
