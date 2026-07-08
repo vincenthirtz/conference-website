@@ -1,6 +1,6 @@
 import { useEffect, useId, useState } from 'react';
 import Modal from '@/components/admin/Modal';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { POLE_KEYS, POLE_LABELS, type PoleKey } from '@/utils/associationPoles';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 
@@ -24,7 +24,7 @@ export default function PoleMemberFormModal({
   initialPole = 'direction',
 }: PoleMemberFormModalProps) {
   const t = useAdminT('adminPoleMembersNew');
-  const { adminFetchJson } = useAdminFetch();
+  const { mutateJson } = useIdempotentMutation();
   const formId = useId();
 
   const [form, setForm] = useState({
@@ -84,7 +84,7 @@ export default function PoleMemberFormModal({
         sortOrder: form.sortOrder ? parseInt(form.sortOrder, 10) : undefined,
       };
 
-      await adminFetchJson('/api/admin/pole-members', {
+      await mutateJson('/api/admin/pole-members', {
         method: 'POST',
         body: JSON.stringify(payload),
       });

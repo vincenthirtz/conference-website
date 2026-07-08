@@ -5,6 +5,7 @@
 // /veto routes redirect here.
 
 import Head from 'next/head';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useAdminT } from '@/lib/i18n/useAdminT';
@@ -14,11 +15,35 @@ import Tabs, {
   tabButtonId,
 } from '@/components/admin/Tabs';
 import TournamentTabsNav from '@/components/admin/tournament/TournamentTabsNav';
-import BracketPanel from '@/components/admin/tournament/BracketPanel';
-import BracketBuilderPanel from '@/components/admin/tournament/BracketBuilderPanel';
-import MapDrawPanel from '@/components/admin/tournament/MapDrawPanel';
-import VetoPanel from '@/components/admin/tournament/VetoPanel';
+import LoadingSpinner from '@/components/admin/LoadingSpinner';
 import type { StaffProps } from '@/types/admin';
+
+// Placeholder de chargement partagé par les panels code-splittés.
+const PanelLoading = () => (
+  <div className="flex justify-center py-16">
+    <LoadingSpinner size="lg" />
+  </div>
+);
+
+// Un seul onglet est monté à la fois : on charge chaque panel à la demande
+// (next/dynamic, ssr:false) pour ne pas embarquer les 3 autres (~2700 l.
+// cumulées) dans le chunk initial de la route.
+const BracketPanel = dynamic(
+  () => import('@/components/admin/tournament/BracketPanel'),
+  { ssr: false, loading: PanelLoading }
+);
+const BracketBuilderPanel = dynamic(
+  () => import('@/components/admin/tournament/BracketBuilderPanel'),
+  { ssr: false, loading: PanelLoading }
+);
+const MapDrawPanel = dynamic(
+  () => import('@/components/admin/tournament/MapDrawPanel'),
+  { ssr: false, loading: PanelLoading }
+);
+const VetoPanel = dynamic(
+  () => import('@/components/admin/tournament/VetoPanel'),
+  { ssr: false, loading: PanelLoading }
+);
 
 const ID_BASE = 'admin-tournament-bracket';
 

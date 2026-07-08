@@ -1,6 +1,6 @@
 import { useEffect, useId, useState } from 'react';
 import Modal from '@/components/admin/Modal';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 
 type TwitchChannelFormModalProps = {
@@ -31,7 +31,7 @@ export default function TwitchChannelFormModal({
   onCreated,
 }: TwitchChannelFormModalProps) {
   const t = useAdminT('adminTwitchChannelsNew');
-  const { adminFetchJson } = useAdminFetch();
+  const { mutateJson } = useIdempotentMutation();
   const formId = useId();
 
   const [form, setForm] = useState({ ...EMPTY_FORM });
@@ -72,7 +72,7 @@ export default function TwitchChannelFormModal({
         sortOrder: form.sortOrder ? parseInt(form.sortOrder, 10) : undefined,
       };
 
-      await adminFetchJson('/api/admin/twitch-channels', {
+      await mutateJson('/api/admin/twitch-channels', {
         method: 'POST',
         body: JSON.stringify(payload),
       });

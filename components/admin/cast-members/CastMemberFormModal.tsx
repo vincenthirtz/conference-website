@@ -1,6 +1,6 @@
 import { useEffect, useId, useState } from 'react';
 import Modal from '@/components/admin/Modal';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import CastMemberStaffPicker from '@/components/admin/CastMemberStaffPicker';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 
@@ -34,7 +34,7 @@ export default function CastMemberFormModal({
   onCreated,
 }: CastMemberFormModalProps) {
   const t = useAdminT('adminCastMembersNew');
-  const { adminFetchJson } = useAdminFetch();
+  const { mutateJson } = useIdempotentMutation();
   const formId = useId();
 
   const [form, setForm] = useState({ ...EMPTY_FORM });
@@ -81,7 +81,7 @@ export default function CastMemberFormModal({
         authUserId: form.authUserId,
       };
 
-      await adminFetchJson('/api/admin/cast-members', {
+      await mutateJson('/api/admin/cast-members', {
         method: 'POST',
         body: JSON.stringify(payload),
       });

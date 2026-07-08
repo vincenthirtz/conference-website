@@ -1,6 +1,6 @@
 import { useEffect, useId, useState } from 'react';
 import Modal from '@/components/admin/Modal';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 
 type PartnerFormModalProps = {
@@ -42,7 +42,7 @@ export default function PartnerFormModal({
   onCreated,
 }: PartnerFormModalProps) {
   const t = useAdminT('adminPartnersNew');
-  const { adminFetchJson } = useAdminFetch();
+  const { mutateJson } = useIdempotentMutation();
   const formId = useId();
 
   const [form, setForm] = useState<FormData>({ ...EMPTY_FORM });
@@ -85,7 +85,7 @@ export default function PartnerFormModal({
 
     setSaving(true);
     try {
-      await adminFetchJson('/api/admin/partners', {
+      await mutateJson('/api/admin/partners', {
         method: 'POST',
         body: JSON.stringify(form),
       });

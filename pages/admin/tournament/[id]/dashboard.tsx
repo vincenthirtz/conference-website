@@ -33,7 +33,15 @@ import {
  * Constantes UI
  * ---------------------------------------------------------*/
 
-const REFRESH_INTERVAL_MS = 30_000;
+// Le realtime (canal `matches`) assure la fraîcheur immédiate. Le polling
+// n'est qu'un filet de sécurité si la souscription tombe → intervalle large
+// pour éviter les refetch complets redondants pendant un tournoi live.
+const REFRESH_INTERVAL_MS = 90_000;
+
+// Fenêtre de coalescing des rafales d'UPDATE de matchs (score → statut →
+// scheduled_at…) : on regroupe les notifications realtime rapprochées en un
+// seul refetch du payload dashboard.
+const REALTIME_DEBOUNCE_MS = 400;
 
 const STATUS_PILL_STYLE: Record<string, string> = {
   draft: 'bg-gray-500/20 text-gray-300 border-gray-500/30',
@@ -241,6 +249,7 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
   const [stale, setStale] = useState(false);
   const [nowMs, setNowMs] = useState(() => Date.now());
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
   // Modales d'actions inline
   type MatchTarget = {
@@ -283,6 +292,32 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
     }
   }, [tournamentId, tx]);
 
+  // Référence stable vers le dernier fetchDashboard : permet à la fonction
+  // debouncée d'avoir des deps vides (référence stable, pas de re-souscription
+  // realtime à chaque changement de `tx`) sans stale closure.
+  const fetchDashboardRef = useRef(fetchDashboard);
+  useEffect(() => {
+    fetchDashboardRef.current = fetchDashboard;
+  }, [fetchDashboard]);
+
+  // Refetch coalescé : appelé par le realtime. Regroupe les rafales d'UPDATE
+  // en un seul fetch après REALTIME_DEBOUNCE_MS d'inactivité.
+  const debouncedFetch = useCallback(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      debounceRef.current = null;
+      fetchDashboardRef.current();
+    }, REALTIME_DEBOUNCE_MS);
+  }, []);
+
+  // Nettoyage du timer de debounce au démontage (évite fuite / setState sur
+  // composant démonté).
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
+
   // Auto-refresh (pause si onglet caché). Pas de fetch initial : SSR a déjà
   // chargé les données via getServerSideProps. Sert aussi de filet de
   // securite si la souscription realtime tombe (cf. useRealtimeChannel).
@@ -309,7 +344,7 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
     channel: `dashboard-matches-${tournamentId}`,
     table: 'matches',
     filter: tournamentId ? `tournament_id=eq.${tournamentId}` : undefined,
-    onChange: fetchDashboard,
+    onChange: debouncedFetch,
   });
 
   // Tick "now" toutes les 60s pour le compteur roster-lock et la fraîcheur de l'ETA.
