@@ -397,6 +397,222 @@ describe('/api/admin/tournament/[id]/matches', () => {
     expect((res.body as any).matches.map((m: any) => m.id)).toEqual(['m-tie']);
   });
 
+  it('GET ?roundNumber filters by round_number', async () => {
+    store.matches = [
+      {
+        id: 'r1',
+        tournament_id: TID,
+        status: 'pending',
+        round_number: 1,
+        is_bye: false,
+        created_at: '2026',
+      },
+      {
+        id: 'r2',
+        tournament_id: TID,
+        status: 'pending',
+        round_number: 2,
+        is_bye: false,
+        created_at: '2026',
+      },
+    ] as any;
+    const res = makeRes();
+    await tournamentMatchesHandler(
+      makeReq({ method: 'GET', query: { id: TID, roundNumber: '2' } }, true),
+      res
+    );
+    expect((res.body as any).matches.map((m: any) => m.id)).toEqual(['r2']);
+  });
+
+  it('GET ignores non-numeric roundNumber', async () => {
+    store.matches = [
+      {
+        id: 'r1',
+        tournament_id: TID,
+        status: 'pending',
+        round_number: 1,
+        is_bye: false,
+        created_at: '2026',
+      },
+      {
+        id: 'r2',
+        tournament_id: TID,
+        status: 'pending',
+        round_number: 2,
+        is_bye: false,
+        created_at: '2026',
+      },
+    ] as any;
+    const res = makeRes();
+    await tournamentMatchesHandler(
+      makeReq({ method: 'GET', query: { id: TID, roundNumber: 'abc' } }, true),
+      res
+    );
+    expect((res.body as any).matches).toHaveLength(2);
+  });
+
+  it('GET ?includeStages=1 returns stages + tournament, omitted otherwise', async () => {
+    store.matches = [
+      {
+        id: 'm1',
+        tournament_id: TID,
+        status: 'pending',
+        is_bye: false,
+        created_at: '2026',
+      },
+    ] as any;
+    store.tournament_stages = [
+      {
+        id: 's2',
+        tournament_id: TID,
+        name: 'Phase 2',
+        stage_type: 'bracket',
+        order_index: 2,
+      },
+      {
+        id: 's1',
+        tournament_id: TID,
+        name: 'Phase 1',
+        stage_type: 'group',
+        order_index: 1,
+      },
+    ] as any;
+    store.tournaments = [
+      { id: TID, name: 'My Cup', slug: 'my-cup', status: 'running' },
+    ] as any;
+
+    // With flag: stages + tournament present
+    const res = makeRes();
+    await tournamentMatchesHandler(
+      makeReq({ method: 'GET', query: { id: TID, includeStages: '1' } }, true),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    const body = res.body as any;
+    // Note: the in-memory mock treats .order() as a no-op, so we assert on the
+    // set of returned stages + their shape rather than DB ordering.
+    expect(body.stages.map((s: any) => s.id).sort()).toEqual(['s1', 's2']);
+    const s1 = body.stages.find((s: any) => s.id === 's1');
+    expect(s1).toMatchObject({
+      id: 's1',
+      name: 'Phase 1',
+      stage_type: 'group',
+      order_index: 1,
+    });
+    expect(body.tournament).toMatchObject({
+      id: TID,
+      name: 'My Cup',
+      slug: 'my-cup',
+    });
+    expect(body.matches).toHaveLength(1);
+    expect('total' in body).toBe(false);
+
+    // Without flag: no stages/tournament/total keys
+    const res2 = makeRes();
+    await tournamentMatchesHandler(
+      makeReq({ method: 'GET', query: { id: TID } }, true),
+      res2
+    );
+    const body2 = res2.body as any;
+    expect('stages' in body2).toBe(false);
+    expect('tournament' in body2).toBe(false);
+    expect('total' in body2).toBe(false);
+    expect(body2.matches).toHaveLength(1);
+  });
+
+  it('GET ?includeTotal=1 returns total consistent with filters (ignores range)', async () => {
+    store.matches = [
+      {
+        id: 'f1',
+        tournament_id: TID,
+        status: 'finished',
+        is_bye: false,
+        created_at: '2026',
+      },
+      {
+        id: 'f2',
+        tournament_id: TID,
+        status: 'finished',
+        is_bye: false,
+        created_at: '2026',
+      },
+      {
+        id: 'p1',
+        tournament_id: TID,
+        status: 'pending',
+        is_bye: false,
+        created_at: '2026',
+      },
+    ] as any;
+    const res = makeRes();
+    await tournamentMatchesHandler(
+      makeReq(
+        {
+          method: 'GET',
+          query: {
+            id: TID,
+            status: 'finished',
+            includeTotal: '1',
+            limit: '1',
+          },
+        },
+        true
+      ),
+      res
+    );
+    const body = res.body as any;
+    // range caps the page at 1, but total reflects all finished matches (2)
+    expect(body.matches).toHaveLength(1);
+    expect(body.total).toBe(2);
+  });
+
+  it('GET ?search=... still returns matches without error (backward-safe)', async () => {
+    store.matches = [
+      {
+        id: 'm1',
+        tournament_id: TID,
+        status: 'pending',
+        round_name: 'Quarts',
+        is_bye: false,
+        created_at: '2026',
+      },
+    ] as any;
+    store.teams = [] as any;
+    const res = makeRes();
+    await tournamentMatchesHandler(
+      makeReq({ method: 'GET', query: { id: TID, search: 'Quarts' } }, true),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    expect(Array.isArray((res.body as any).matches)).toBe(true);
+  });
+
+  it('GET layout=bracket (no include flags) returns only { matches }', async () => {
+    store.matches = [
+      {
+        id: 'm1',
+        tournament_id: TID,
+        status: 'pending',
+        is_bye: false,
+        created_at: '2026',
+      },
+    ] as any;
+    const res = makeRes();
+    await tournamentMatchesHandler(
+      makeReq(
+        {
+          method: 'GET',
+          query: { id: TID, layout: 'bracket', limit: '1' },
+        },
+        true
+      ),
+      res
+    );
+    const body = res.body as any;
+    expect(Object.keys(body)).toEqual(['matches']);
+    expect(body.matches).toHaveLength(1);
+  });
+
   it('POST 400 when matches array missing', async () => {
     const res = makeRes();
     await tournamentMatchesHandler(

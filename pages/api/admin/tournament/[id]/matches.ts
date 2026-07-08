@@ -7,8 +7,18 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
-import type { MatchStatus, BracketSide } from '@/types/admin';
-import { isValidUUID, parsePagination } from '@/utils/apiHelpers';
+import type {
+  MatchStatus,
+  BracketSide,
+  StageSummary,
+  TournamentMini,
+} from '@/types/admin';
+import {
+  isValidUUID,
+  parsePagination,
+  sanitizeSearch,
+  escapePostgrestValue,
+} from '@/utils/apiHelpers';
 
 import { logger } from '../../../../../utils/logger';
 export type { MatchStatus } from '@/types/admin';
@@ -67,7 +77,11 @@ export type MatchCreateInput = {
 // Rôle minimum : manager
 export default withStaffRoute(handler, 'manager');
 
-async function handler(req: NextApiRequest, res: NextApiResponse, ctx: AuthenticatedStaffContext) {
+async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  ctx: AuthenticatedStaffContext
+) {
   const { id } = req.query;
 
   if (!id || Array.isArray(id) || !isValidUUID(id)) {
@@ -101,12 +115,31 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: Authentic
  *  - status?: string
  *  - bracketSide?: "wb" | "lb" | "final" | "none"
  *  - groupKey?: string
+ *  - roundNumber?: number       filtre .eq('round_number', N) (ignoré si non numérique)
+ *  - result?: "win" | "bye" | "no_result"
+ *  - dateFrom?, dateTo?: ISO    borne scheduled_at
+ *  - search?: string            recherche texte (voir périmètre ci-dessous)
  *  - includeTeams?: "1" | "true"
  *  - includeGames?: "1" | "true"
+ *  - includeStages?: "1" | "true"   ajoute `stages` (StageSummary[]) à la réponse
+ *  - includeTotal?: "1" | "true"    ajoute `total` (count exact, mêmes filtres, sans range)
  *  - orderBy?: "round_number" | "scheduled_at" | "created_at"
  *  - orderDir?: "asc" | "desc"
  *  - limit?: number (par défaut 200)
  *  - offset?: number (par défaut 0)
+ *
+ * Réponse : `{ matches }` TOUJOURS présent (forme inchangée). Champs additifs
+ * uniquement quand demandés :
+ *  - `stages` : présent ssi includeStages.
+ *  - `total`  : présent ssi includeTotal (compte exact avec les MÊMES filtres).
+ *  - `tournament` : entête tournoi (id, name, slug, status) présent ssi
+ *    includeStages OU includeTotal (utilisé par la page admin/matches).
+ *
+ * Périmètre de `search` : on résout d'abord les équipes dont name/short_name
+ * matchent (ILIKE), puis on filtre les matchs sur team1_id/team2_id de ces
+ * équipes OU round_name/lobby_code/notes ILIKE OU id exact (si UUID). Le
+ * placeholder UI est « Équipe, ID… » — la recherche couvre donc bien le nom
+ * d'équipe (via lookup, pas de jointe PostgREST) et l'identifiant du match.
  * ---------------------------------------------------------*/
 
 async function handleGet(
@@ -122,11 +155,14 @@ async function handleGet(
     groupKey,
     includeTeams,
     includeGames,
+    includeStages,
+    includeTotal,
     orderBy,
     orderDir,
     result,
     dateFrom,
     dateTo,
+    roundNumber,
   } = req.query;
 
   const { limit: limitNum, offset: offsetNum } = parsePagination(req, {
@@ -145,6 +181,101 @@ async function handleGet(
 
   const withTeams = includeTeams === '1' || includeTeams === 'true';
   const withGames = includeGames === '1' || includeGames === 'true';
+  const withStages = includeStages === '1' || includeStages === 'true';
+  const withTotal = includeTotal === '1' || includeTotal === 'true';
+
+  // roundNumber : valide que c'est un entier ; sinon on ignore le filtre.
+  const roundRaw = Array.isArray(roundNumber) ? roundNumber[0] : roundNumber;
+  const roundParsed =
+    roundRaw !== undefined && roundRaw !== '' ? Number(roundRaw) : NaN;
+  const roundFilter = Number.isInteger(roundParsed) ? roundParsed : null;
+
+  // search : périmètre résolu en amont (team ids matchants), réutilisé par la
+  // requête de données ET la requête de count.
+  const searchTerm = sanitizeSearch(req.query.search, 100);
+  const searchSafe = searchTerm ? escapePostgrestValue(searchTerm) : '';
+  let matchingTeamIds: string[] = [];
+  if (searchSafe) {
+    const pattern = `%${searchSafe}%`;
+    const teamsRes = await supabaseAdmin
+      .from('teams')
+      .select('id')
+      .eq('tenant_id', ctx.tenantId)
+      .or(`name.ilike.${pattern},short_name.ilike.${pattern}`)
+      .limit(50);
+    if (teamsRes.error) {
+      logger.error(
+        'admin GET tournament matches teams lookup error:',
+        teamsRes.error
+      );
+    }
+    matchingTeamIds = (teamsRes.data ?? [])
+      .map((r) => (r as { id: string }).id)
+      .filter(Boolean);
+  }
+
+  // Applique tous les filtres (tenant, tournament, stage, status, ...) sur une
+  // query — partagé entre la liste (avec range) et le count (head, sans range).
+  type MatchesQuery = ReturnType<
+    ReturnType<typeof supabaseAdmin.from>['select']
+  >;
+  const applyFilters = (q: MatchesQuery): MatchesQuery => {
+    q = q.eq('tenant_id', ctx.tenantId).eq('tournament_id', tournamentId);
+
+    if (stageId && !Array.isArray(stageId)) {
+      q = q.eq('stage_id', stageId);
+    }
+    if (status && !Array.isArray(status)) {
+      q = q.eq('status', status);
+    }
+    if (bracketSide && !Array.isArray(bracketSide)) {
+      q = q.eq('bracket_side', bracketSide);
+    }
+    if (groupKey && !Array.isArray(groupKey)) {
+      q = q.eq('group_key', groupKey);
+    }
+    if (roundFilter !== null) {
+      q = q.eq('round_number', roundFilter);
+    }
+
+    // Result filter: win (has winner), bye, no_result (finished without winner)
+    if (result && !Array.isArray(result)) {
+      if (result === 'bye') {
+        q = q.eq('is_bye', true);
+      } else if (result === 'win') {
+        q = q.not('winner_team_id', 'is', null);
+      } else if (result === 'no_result') {
+        q = q.eq('status', 'finished').is('winner_team_id', null);
+      }
+    }
+
+    if (dateFrom && !Array.isArray(dateFrom)) {
+      q = q.gte('scheduled_at', dateFrom);
+    }
+    if (dateTo && !Array.isArray(dateTo)) {
+      q = q.lte('scheduled_at', dateTo);
+    }
+
+    if (searchSafe) {
+      const pattern = `%${searchSafe}%`;
+      const clauses: string[] = [
+        `round_name.ilike.${pattern}`,
+        `lobby_code.ilike.${pattern}`,
+        `notes.ilike.${pattern}`,
+      ];
+      if (matchingTeamIds.length > 0) {
+        const list = matchingTeamIds.join(',');
+        clauses.push(`team1_id.in.(${list})`);
+        clauses.push(`team2_id.in.(${list})`);
+      }
+      if (isValidUUID(searchTerm)) {
+        clauses.push(`id.eq.${searchTerm}`);
+      }
+      q = q.or(clauses.join(','));
+    }
+
+    return q;
+  };
 
   let baseSelect = `
     id,
@@ -188,46 +319,7 @@ async function handleGet(
     `;
   }
 
-  let query = supabaseAdmin
-    .from('matches')
-    .select(baseSelect)
-    .eq('tenant_id', ctx.tenantId)
-    .eq('tournament_id', tournamentId);
-
-  if (stageId && !Array.isArray(stageId)) {
-    query = query.eq('stage_id', stageId);
-  }
-
-  if (status && !Array.isArray(status)) {
-    query = query.eq('status', status);
-  }
-
-  if (bracketSide && !Array.isArray(bracketSide)) {
-    query = query.eq('bracket_side', bracketSide);
-  }
-
-  if (groupKey && !Array.isArray(groupKey)) {
-    query = query.eq('group_key', groupKey);
-  }
-
-  // Result filter: win (has winner), bye, no_result (finished without winner)
-  if (result && !Array.isArray(result)) {
-    if (result === 'bye') {
-      query = query.eq('is_bye', true);
-    } else if (result === 'win') {
-      query = query.not('winner_team_id', 'is', null);
-    } else if (result === 'no_result') {
-      query = query.eq('status', 'finished').is('winner_team_id', null);
-    }
-  }
-
-  if (dateFrom && !Array.isArray(dateFrom)) {
-    query = query.gte('scheduled_at', dateFrom);
-  }
-
-  if (dateTo && !Array.isArray(dateTo)) {
-    query = query.lte('scheduled_at', dateTo);
-  }
+  let query = applyFilters(supabaseAdmin.from('matches').select(baseSelect));
 
   query = query
     .order(orderField, { ascending })
@@ -242,9 +334,59 @@ async function handleGet(
     });
   }
 
-  return res.status(200).json({
+  const body: {
+    matches: MatchRow[];
+    stages?: StageSummary[];
+    total?: number;
+    tournament?: TournamentMini | null;
+  } = {
     matches: (data || []) as unknown as MatchRow[],
-  });
+  };
+
+  // total : count exact avec les MÊMES filtres, sans range.
+  if (withTotal) {
+    const { count, error: countErr } = await applyFilters(
+      supabaseAdmin.from('matches').select('id', { count: 'exact', head: true })
+    );
+    if (countErr) {
+      logger.error('admin GET tournament matches count error:', countErr);
+    }
+    body.total = typeof count === 'number' ? count : 0;
+  }
+
+  // stages : liste allégée pour le dropdown de filtre (StageSummary).
+  if (withStages) {
+    const { data: stagesData, error: stagesErr } = await supabaseAdmin
+      .from('tournament_stages')
+      .select(
+        'id, name, stage_type, order_index, is_active, is_public, start_date, end_date'
+      )
+      .eq('tenant_id', ctx.tenantId)
+      .eq('tournament_id', tournamentId)
+      .order('order_index', { ascending: true });
+    if (stagesErr) {
+      logger.error('admin GET tournament matches stages error:', stagesErr);
+    }
+    body.stages = (stagesData || []) as unknown as StageSummary[];
+  }
+
+  // tournament : entête (id, name, slug, status). Chargé quand la page admin
+  // demande stages ou total — les autres consommateurs (bracket/veto) ne le
+  // reçoivent pas, la forme `{ matches }` reste intacte pour eux.
+  if (withStages || withTotal) {
+    const { data: tData, error: tErr } = await supabaseAdmin
+      .from('tournaments')
+      .select('id, name, slug, status')
+      .eq('tenant_id', ctx.tenantId)
+      .eq('id', tournamentId)
+      .maybeSingle();
+    if (tErr) {
+      logger.error('admin GET tournament matches tournament error:', tErr);
+    }
+    body.tournament = (tData as TournamentMini | null) ?? null;
+  }
+
+  return res.status(200).json(body);
 }
 
 /* -----------------------------------------------------------
