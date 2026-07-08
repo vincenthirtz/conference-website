@@ -9,6 +9,7 @@ import { useToast } from '@/components/Toast';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import Breadcrumb from '@/components/admin/Breadcrumb';
+import StageTabsNav from '@/components/admin/stages/StageTabsNav';
 import Modal from '@/components/admin/Modal';
 import type { StaffProps, Stage, StageType, Tournament } from '@/types/admin';
 import AdvancementRulesEditor from '@/components/admin/AdvancementRulesEditor';
@@ -790,26 +791,13 @@ function AdminStagePage({ staff }: StaffProps) {
                 { label: stage?.name || t.stageFallback },
               ]}
             />
-            <button
-              type="button"
-              onClick={() => router.push(tournamentDashboardUrl)}
-              className="mb-4 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white transition-colors"
-            >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 19l-7-7 7-7"
-                />
-              </svg>
-              {t.backToTournament}
-            </button>
+            <StageTabsNav
+              stageId={String(stageId ?? '')}
+              active="overview"
+              stageType={stage?.stage_type}
+              tournamentId={stage?.tournament_id ?? tournament?.id}
+              tournamentName={tournament?.name}
+            />
 
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="flex items-center gap-4">

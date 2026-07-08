@@ -37,6 +37,7 @@ describe('filterAdminLinks – static structure invariants', () => {
     expect(owner).toContain('Tournois');
     expect(owner).toContain('Équipes');
     expect(owner).toContain('Contenu');
+    expect(owner).toContain('Communication');
     expect(owner).toContain('Configuration');
   });
 });
@@ -51,21 +52,50 @@ describe('filterAdminLinks – owner role', () => {
   it('keeps every direct child of "Tournois"', () => {
     const tournois = findByTitle(links, 'Tournois');
     expect(tournois?.children).toBeDefined();
-    // Lot 4 ajoute "Disputes ouvertes (board)" (5e), Lot 7 ajoute
-    // "Broadcast live (cockpit)" (6e).
-    expect(tournois!.children!).toHaveLength(6);
+    // Lot 7 ajoute "Broadcast live (cockpit)". Lot B a retiré "Disputes
+    // ouvertes (board)" d'ici : les litiges vivent désormais dans le hub
+    // "Modération" (onglet Litiges), sous la section Contenu.
+    expect(tournois!.children!).toHaveLength(5);
   });
 
-  it('keeps admin-only sub-sections of "Contenu" (Annonces, News, Twitch…)', () => {
+  it('keeps admin-only sub-sections of "Contenu" (Twitch, Casteuses, Partenaires, Modération)', () => {
     const contenu = findByTitle(links, 'Contenu');
     const childTitles = contenu?.children?.map((c) => c.title) ?? [];
-    expect(childTitles).toContain('Annonces');
-    expect(childTitles).toContain('News');
     expect(childTitles).toContain('Chaînes Twitch');
     expect(childTitles).toContain('Casteuses');
     expect(childTitles).toContain('Partenaires');
-    expect(childTitles).toContain('Commentaires');
-    expect(childTitles).toContain('Tickets de support');
+    // Lot B : Commentaires / Support / Blacklist fusionnés en un seul
+    // hub "Modération" (page à onglets /admin/moderation).
+    expect(childTitles).toContain('Modération');
+    expect(childTitles).not.toContain('Commentaires');
+    expect(childTitles).not.toContain('Tickets de support');
+    // Lot D : Annonces / News déplacées vers la section "Communication".
+    expect(childTitles).not.toContain('Annonces');
+    expect(childTitles).not.toContain('News');
+  });
+
+  it('groups Annonces, News, Campagnes emails et Notifications sous "Communication"', () => {
+    // Lot D : regroupement de navigation (routes/rôles inchangés). Les
+    // sous-sections Annonces / News conservent leurs éditeurs dédiés.
+    const comm = findByTitle(links, 'Communication');
+    expect(comm).toBeDefined();
+    const childTitles = comm?.children?.map((c) => c.title) ?? [];
+    expect(childTitles).toEqual([
+      'Annonces',
+      'News',
+      'Campagnes emails',
+      'Notifications',
+    ]);
+    const annonces = comm?.children?.find((c) => c.title === 'Annonces');
+    expect(annonces?.children?.map((c) => c.title)).toEqual([
+      'Liste des annonces',
+      'Créer une annonce',
+    ]);
+    const news = comm?.children?.find((c) => c.title === 'News');
+    expect(news?.children?.map((c) => c.title)).toEqual([
+      'Liste des news',
+      'Créer une news',
+    ]);
   });
 });
 
@@ -103,15 +133,27 @@ describe('filterAdminLinks – manager role', () => {
     expect(titles).not.toContain('Chaînes Twitch');
     expect(titles).not.toContain('Casteuses');
     expect(titles).not.toContain('Partenaires');
-    expect(titles).toContain('Commentaires');
-    expect(titles).toContain('Tickets de support');
+    // Lot B : le hub "Modération" (manager) remplace les entrées éparses
+    // Commentaires / Support / Blacklist.
+    expect(titles).toContain('Modération');
+    expect(titles).not.toContain('Commentaires');
+    expect(titles).not.toContain('Tickets de support');
   });
 
-  it('keeps "Configuration" with Notifications (caster-visible) + Logs & stats + Tenants (manager)', () => {
+  it('keeps "Configuration" with Logs & stats + Tenants (manager)', () => {
+    // Lot D : Notifications (+ Campagnes) déplacées vers "Communication".
     const config = findByTitle(links, 'Configuration');
     expect(config).toBeDefined();
     const titles = config?.children?.map((c) => c.title) ?? [];
-    expect(titles).toEqual(['Notifications', 'Logs & stats', 'Tenants']);
+    expect(titles).toEqual(['Logs & stats', 'Tenants']);
+  });
+
+  it('keeps "Communication" but only with the caster-level "Notifications" child', () => {
+    // Annonces / News / Campagnes sont admin → masqués pour un manager.
+    const comm = findByTitle(links, 'Communication');
+    expect(comm).toBeDefined();
+    const titles = comm?.children?.map((c) => c.title) ?? [];
+    expect(titles).toEqual(['Notifications']);
   });
 });
 
@@ -138,10 +180,15 @@ describe('filterAdminLinks – caster role', () => {
     expect(findByTitle(links, 'Contenu')).toBeUndefined();
   });
 
-  it('keeps "Configuration" but only with the caster-level "Notifications" child', () => {
-    const config = findByTitle(links, 'Configuration');
-    expect(config).toBeDefined();
-    const titles = config?.children?.map((c) => c.title) ?? [];
+  it('drops "Configuration" entirely (no caster-level child anymore)', () => {
+    // Lot D : sa seule entrée caster (Notifications) a migré vers Communication.
+    expect(findByTitle(links, 'Configuration')).toBeUndefined();
+  });
+
+  it('keeps "Communication" but only with the caster-level "Notifications" child', () => {
+    const comm = findByTitle(links, 'Communication');
+    expect(comm).toBeDefined();
+    const titles = comm?.children?.map((c) => c.title) ?? [];
     expect(titles).toEqual(['Notifications']);
   });
 });

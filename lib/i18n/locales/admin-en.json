@@ -2328,6 +2328,17 @@
     "errUnexpected": "Unexpected error",
     "emailExamplePlaceholder": "player@example.com"
   },
+  "adminStageNav": {
+    "ariaLabel": "Stage navigation",
+    "backTournaments": "← Tournaments",
+    "backTournamentFallback": "Tournament",
+    "tabOverview": "Overview",
+    "tabTeams": "Teams",
+    "tabSeeding": "Seeding",
+    "tabGroups": "Groups",
+    "tabSwiss": "Swiss",
+    "tabHistory": "History"
+  },
   "adminStageDetail": {
     "typeGroup": "Groups / Pools",
     "typeBracket": "Bracket",
@@ -6160,5 +6171,26 @@
     "tabsAriaLabel": "Types de journaux",
     "tabStaff": "Staff",
     "tabEmails": "Emails"
+  },
+  "adminModeration": {
+    "pageTitle": "Admin – Modération",
+    "heading": "Modération",
+    "subtitle": "Commentaires, litiges, blacklist joueurs et tickets de support.",
+    "tabsAriaLabel": "Sections de modération",
+    "tabComments": "Commentaires",
+    "tabDisputes": "Litiges",
+    "tabBlacklist": "Blacklist",
+    "tabSupport": "Support"
+  },
+  "adminOnboarding": {
+    "pageTitle": "Admin – Onboarding",
+    "heading": "Onboarding",
+    "subtitle": "Files d'approbation plateforme : demandes self-service, liens Discord en attente.",
+    "breadcrumbAdmin": "Admin",
+    "breadcrumbCurrent": "Onboarding",
+    "tabsAriaLabel": "Sections d'onboarding",
+    "tabQueue": "File d'onboarding",
+    "tabTenantRequests": "Demandes de tenant",
+    "tabGuildLinks": "Liens Discord"
   }
 }

@@ -290,11 +290,13 @@ test.describe.serial('Admin pages — Test Coach', () => {
 
   // ─── Contenu : Commentaires ─────────────────────────────────────
 
-  test('Page commentaires (GET /admin/comments)', async ({ page }) => {
+  test('Page commentaires (onglet /admin/moderation?tab=comments)', async ({
+    page,
+  }) => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
     await loginAsCoach(page);
 
-    await page.goto('/admin/comments');
+    await page.goto('/admin/moderation?tab=comments');
     await page.waitForLoadState('networkidle');
     await expectPageLoaded(page);
   });

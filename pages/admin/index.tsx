@@ -206,7 +206,7 @@ function buildAlerts(summary: AlertsSummary | null, t: Dict) {
         { count: b.disputes }
       ),
       message: t.alertDisputesMsg,
-      cta: { label: t.ctaResolve, href: '/admin/disputes' },
+      cta: { label: t.ctaResolve, href: '/admin/moderation?tab=disputes' },
     });
   }
   if (b.conflicts > 0) {
@@ -232,7 +232,7 @@ function buildAlerts(summary: AlertsSummary | null, t: Dict) {
         { count: b.supportHigh }
       ),
       message: t.alertSupportHighMsg,
-      cta: { label: t.ctaOpenSupport, href: '/admin/support' },
+      cta: { label: t.ctaOpenSupport, href: '/admin/moderation?tab=support' },
     });
   }
   if (b.checkinMissing > 0) {

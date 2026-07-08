@@ -3,7 +3,10 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
+import StageTabsNav from '@/components/admin/stages/StageTabsNav';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import type { StageType } from '@/types/admin';
 
 type StaffShape = {
   id: string;
@@ -57,10 +60,15 @@ function AdminStageHistoryPage({ staff }: StaffProps) {
   const t = useAdminT('adminStageHistory');
   const router = useRouter();
   const { stageId } = router.query;
+  const { adminFetch } = useAdminFetch();
 
   const [logs, setLogs] = useState<FormattedStaffLog[]>([]);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Contexte de la phase, uniquement pour la barre d'onglets (gating + retour).
+  const [stageType, setStageType] = useState<StageType | null>(null);
+  const [tournamentId, setTournamentId] = useState<string | null>(null);
 
   // filtres
   const [entityType, setEntityType] = useState('');
@@ -104,6 +112,26 @@ function AdminStageHistoryPage({ staff }: StaffProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stageId, limit]);
 
+  // Charge le type de phase + le tournoi parent pour la barre d'onglets.
+  useEffect(() => {
+    if (!stageId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await adminFetch(`/api/admin/stages/${stageId}`);
+        if (!res.ok || cancelled) return;
+        const json = await res.json();
+        setStageType(json.stage?.stage_type ?? null);
+        setTournamentId(json.stage?.tournament_id ?? null);
+      } catch {
+        // best-effort : la barre reste utilisable sans ces infos.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [stageId, adminFetch]);
+
   function handleFilterSubmit(e: React.FormEvent) {
     e.preventDefault();
     fetchLogs();
@@ -117,15 +145,14 @@ function AdminStageHistoryPage({ staff }: StaffProps) {
 
       <div className="min-h-screen bg-neutral-900 text-white p-6 pt-20">
         {/* Header */}
+        <StageTabsNav
+          stageId={String(stageId ?? '')}
+          active="history"
+          stageType={stageType}
+          tournamentId={tournamentId}
+        />
         <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
           <div>
-            <button
-              type="button"
-              onClick={() => router.push(`/admin/stages/${stageId}`)}
-              className="mb-2 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white"
-            >
-              {t.back}
-            </button>
             <h1 className="text-3xl font-bold">{t.heading}</h1>
             <p className="text-neutral-400 text-sm mt-1">{t.subtitle}</p>
           </div>

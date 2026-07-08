@@ -15,10 +15,17 @@ import { createTestStaff, deleteTestStaff } from '../utils/supabaseTestClient';
  * gate (e.g. withStaffPage('admin') silently becoming 'caster') is caught.
  *
  * Pages under test, with their real requiredRole (verified against pages/admin):
- *   - /admin/tenant-requests -> owner   (pages/admin/tenant-requests/index.tsx)
+ *   - /admin/onboarding      -> manager (pages/admin/onboarding/index.tsx)
  *   - /admin/users/manage    -> admin   (pages/admin/users/manage.tsx)
  *   - /admin/site-settings   -> admin   (pages/admin/site-settings/index.tsx)
  *   - /admin/tenants         -> manager (pages/admin/tenants/index.tsx)
+ *
+ * NB (Lot C): the former owner-gated /admin/tenant-requests page was folded
+ * into the merged /admin/onboarding hub as its owner-only "Demandes de tenant"
+ * tab. The old route is now a 308 shim, so its SSR gate is the manager-gated
+ * host; owner-gating for that tab is enforced client-side (tab hidden) + at the
+ * API level (/api/admin/tenant-requests stays owner-only). Hence the sample
+ * below uses the manager-gated host instead.
  */
 
 const TEST_PASSWORD = 'TestPassw0rd!';
@@ -35,7 +42,7 @@ const skipIfNoServiceRole = () =>
 type Gate = { path: string; requiredRole: 'owner' | 'admin' | 'manager' };
 
 const GATES: Gate[] = [
-  { path: '/admin/tenant-requests', requiredRole: 'owner' },
+  { path: '/admin/onboarding', requiredRole: 'manager' },
   { path: '/admin/users/manage', requiredRole: 'admin' },
   { path: '/admin/site-settings', requiredRole: 'admin' },
   { path: '/admin/tenants', requiredRole: 'manager' },

@@ -158,7 +158,7 @@ function getQuickLinks(tx: Dict): QuickLink[] {
     {
       label: tx.quickSupportLabel,
       icon: '🛂',
-      href: () => `/admin/support`,
+      href: () => `/admin/moderation?tab=support`,
       description: tx.quickSupportDesc,
     },
     {
@@ -715,7 +715,7 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
                       { count: sig.supportHighOpen }
                     )}
                     message={tx.supportCriticalMsg}
-                    cta={{ label: tx.open, href: '/admin/support' }}
+                    cta={{ label: tx.open, href: '/admin/moderation?tab=support' }}
                   />
                 )}
                 {liveRosterLock &&
@@ -1100,7 +1100,7 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
                         ? sig.tickets.totalOpen
                         : undefined
                     }
-                    ctaHref={`/admin/support?tournament_id=${tournamentId}&status=open`}
+                    ctaHref={`/admin/moderation?tab=support&tournament_id=${tournamentId}&status=open`}
                     ctaLabel={tx.open}
                   >
                     <SupportTicketsDonut tickets={sig.tickets} />

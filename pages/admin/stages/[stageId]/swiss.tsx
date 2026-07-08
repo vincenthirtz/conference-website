@@ -11,6 +11,7 @@ import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import StageTabsNav from '@/components/admin/stages/StageTabsNav';
 import type { MatchStatus } from '@/types/admin';
 
 type Dict = ReturnType<typeof useAdminT<'adminStageSwiss'>>;
@@ -295,7 +296,6 @@ function AdminSwissStagePage({ staff }: StaffProps) {
     window.open(`/api/admin/stages/${stageId}/standings?export=csv`, '_blank');
   }
 
-  const backStageUrl = `/admin/stages/${stageId}`;
   const backTournamentUrl = tournament?.id
     ? `/admin/tournament/${tournament.id}`
     : '/admin/tournaments';
@@ -309,15 +309,15 @@ function AdminSwissStagePage({ staff }: StaffProps) {
 
       <div className="min-h-screen bg-neutral-900 text-white p-6 pt-20">
         {/* Header */}
+        <StageTabsNav
+          stageId={String(stageId ?? '')}
+          active="swiss"
+          stageType={stage?.stage_type}
+          tournamentId={tournament?.id}
+          tournamentName={tournament?.name}
+        />
         <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
           <div>
-            <button
-              type="button"
-              onClick={() => router.push(backStageUrl)}
-              className="mb-2 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white"
-            >
-              {t.back}
-            </button>
             <h1 className="text-3xl font-bold">{t.heading}</h1>
 
             {stage && (

@@ -12,7 +12,8 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
-import type { StaffProps } from '@/types/admin';
+import StageTabsNav from '@/components/admin/stages/StageTabsNav';
+import type { StaffProps, StageType } from '@/types/admin';
 
 type TeamInfo = {
   teamId: string;
@@ -65,6 +66,7 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
   const [saving, setSaving] = useState(false);
 
   const [stageName, setStageName] = useState('');
+  const [stageType, setStageType] = useState<StageType | null>(null);
   const [tournamentId, setTournamentId] = useState('');
   const [tournamentName, setTournamentName] = useState('');
 
@@ -116,6 +118,7 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
       if (stageRes.ok) {
         const stageJson = await stageRes.json();
         setStageName(stageJson.stage?.name || '');
+        setStageType(stageJson.stage?.stage_type ?? null);
         setTournamentId(stageJson.stage?.tournament_id || '');
         if (stageJson.stage?.tournament_id) {
           const tRes = await adminFetch(
@@ -347,30 +350,13 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-12">
           {/* Header */}
           <div className="mb-8">
-            <button
-              type="button"
-              onClick={() =>
-                router.push(
-                  stageId ? `/admin/stages/${stageId}` : '/admin/tournaments'
-                )
-              }
-              className="mb-4 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white transition-colors"
-            >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 19l-7-7 7-7"
-                />
-              </svg>
-              {t.back}
-            </button>
+            <StageTabsNav
+              stageId={String(stageId ?? '')}
+              active="groups"
+              stageType={stageType}
+              tournamentId={tournamentId || undefined}
+              tournamentName={tournamentName || undefined}
+            />
 
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>

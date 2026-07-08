@@ -18,6 +18,7 @@ import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import StageTabsNav from '@/components/admin/stages/StageTabsNav';
 import type { StaffProps } from '@/types/admin';
 
 type Dict = ReturnType<typeof useAdminT<'adminStageSeeding'>>;
@@ -437,26 +438,12 @@ function SeedingComparatorPage(_: StaffProps) {
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-12">
-          <button
-            type="button"
-            onClick={() => router.push(`/admin/stages/${id}`)}
-            className="mb-4 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white transition-colors"
-          >
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 19l-7-7 7-7"
-              />
-            </svg>
-            {t.back}
-          </button>
+          <StageTabsNav
+            stageId={String(id ?? '')}
+            active="seeding"
+            stageType="bracket"
+            tournamentId={data?.stage.tournament_id}
+          />
 
           <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
             <div>

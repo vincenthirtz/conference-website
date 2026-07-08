@@ -1,8 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import {
-  createTestStaff,
-  deleteTestStaff,
-} from '../utils/supabaseTestClient';
+import { createTestStaff, deleteTestStaff } from '../utils/supabaseTestClient';
 
 const TEST_PASSWORD = 'TestPassw0rd!';
 const ADMIN_EMAIL = 'hirtzvincent+e2e-tenants@gmail.com';
@@ -162,13 +159,16 @@ test.describe.serial('Admin tenants UI (S7)', () => {
     }
   });
 
-  test('Pending guild links page mounts (empty state by default)', async ({
+  test('Pending guild links tab mounts (empty state by default)', async ({
     page,
   }) => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
 
     await loginAsAdmin(page);
-    await page.goto('/admin/pending-guild-links');
+    // Lot C: the pending guild links list is now the "Liens Discord" tab of the
+    // merged /admin/onboarding hub. The legacy /admin/pending-guild-links route
+    // 308-redirects here, but we navigate straight to the tab.
+    await page.goto('/admin/onboarding?tab=guild-links');
 
     await expect(
       page.getByRole('heading', {

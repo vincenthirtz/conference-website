@@ -139,12 +139,6 @@ export const ADMIN_NAV: AdminNavNode[] = [
         minRole: 'manager',
       },
       {
-        id: 'disputes',
-        topBarLabel: 'Disputes ouvertes (board)',
-        href: '/admin/disputes',
-        minRole: 'manager',
-      },
-      {
         id: 'broadcast-live',
         topBarLabel: 'Broadcast live (cockpit)',
         href: '/admin/broadcast/live',
@@ -275,6 +269,95 @@ export const ADMIN_NAV: AdminNavNode[] = [
     minRole: 'manager',
     children: [
       {
+        id: 'twitch-channels',
+        topBarLabel: 'Chaînes Twitch',
+        href: '/admin/twitch-channels',
+        minRole: 'admin',
+      },
+      {
+        id: 'cast-members',
+        topBarLabel: 'Casteuses',
+        href: '/admin/cast-members',
+        minRole: 'admin',
+      },
+      {
+        id: 'pole-members',
+        topBarLabel: 'Pôles de l’asso',
+        href: '/admin/pole-members',
+        minRole: 'admin',
+      },
+      {
+        id: 'partners',
+        topBarLabel: 'Partenaires',
+        href: '',
+        minRole: 'admin',
+        children: [
+          {
+            id: 'partners-list',
+            topBarLabel: 'Partenaires – liste',
+            href: '/admin/partners',
+            minRole: 'admin',
+          },
+          {
+            id: 'partnership-requests',
+            topBarLabel: 'Demandes de partenariat',
+            href: '/admin/partnership-requests',
+            minRole: 'admin',
+          },
+        ],
+      },
+      {
+        // Hub « Modération » (lot B) : fusion des ex-pages Commentaires,
+        // Litiges, Blacklist et Support en une page à onglets
+        // (/admin/moderation?tab=…). Comme pour les fusions stats/logs, une
+        // SEULE entrée top-bar pointe vers le hub — les onglets se découvrent
+        // sur la page (le filtre nav n'a que 2 niveaux, un sous-menu par onglet
+        // sur-exposerait des onglets manager à un caster). L'onglet Litiges
+        // reste joignable par URL/deep-link pour les casters (host caster-gated),
+        // comme l'ex-board disputes l'était sous la section Tournois (manager).
+        id: 'moderation',
+        topBarLabel: 'Modération',
+        href: '/admin/moderation',
+        minRole: 'manager',
+        card: {
+          order: 6,
+          titleKey: 'navModerationTitle',
+          descKey: 'navModerationDesc',
+          icon: 'shield',
+          accent: 'border-red-500/30 from-red-500/10 text-red-300',
+        },
+      },
+      // Carte dashboard « Support » (dashboard-only) : deep-link direct vers
+      // l'onglet Support du hub Modération, conservée telle quelle.
+      {
+        id: 'moderation-support-card',
+        href: '/admin/moderation?tab=support',
+        minRole: 'manager',
+        card: {
+          order: 5,
+          titleKey: 'navSupportTitle',
+          descKey: 'navSupportDesc',
+          icon: 'ticket',
+          accent: 'border-purple-500/30 from-purple-500/10 text-purple-300',
+        },
+      },
+    ],
+  },
+  {
+    // Section « Communication » (lot D) : simple REGROUPEMENT de navigation —
+    // aucune fusion de page, aucun shim. Les éditeurs `announcements/new` et
+    // `news/new` restent des pages à part entière (trop lourds pour des
+    // modales/onglets) ; on se contente de rassembler leurs accès dispersés
+    // (ex-Contenu → Annonces/News + ex-Configuration → Campagnes/Notifications)
+    // sous une seule entrée top-bar pour réduire la dispersion perçue. Routes et
+    // rôles INCHANGÉS. Le conteneur est caster-gated car il contient une entrée
+    // caster (Notifications) ; chaque item conserve son propre gating.
+    id: 'communication',
+    topBarLabel: 'Communication',
+    href: '',
+    minRole: 'caster',
+    children: [
+      {
         id: 'announcements',
         topBarLabel: 'Annonces',
         href: '',
@@ -315,74 +398,23 @@ export const ADMIN_NAV: AdminNavNode[] = [
         ],
       },
       {
-        id: 'twitch-channels',
-        topBarLabel: 'Chaînes Twitch',
-        href: '/admin/twitch-channels',
+        id: 'campaigns',
+        topBarLabel: 'Campagnes emails',
+        href: '/admin/campaigns',
         minRole: 'admin',
-      },
-      {
-        id: 'cast-members',
-        topBarLabel: 'Casteuses',
-        href: '/admin/cast-members',
-        minRole: 'admin',
-      },
-      {
-        id: 'pole-members',
-        topBarLabel: 'Pôles de l’asso',
-        href: '/admin/pole-members',
-        minRole: 'admin',
-      },
-      {
-        id: 'partners',
-        topBarLabel: 'Partenaires',
-        href: '',
-        minRole: 'admin',
-        children: [
-          {
-            id: 'partners-list',
-            topBarLabel: 'Partenaires – liste',
-            href: '/admin/partners',
-            minRole: 'admin',
-          },
-          {
-            id: 'partnership-requests',
-            topBarLabel: 'Demandes de partenariat',
-            href: '/admin/partnership-requests',
-            minRole: 'admin',
-          },
-        ],
-      },
-      {
-        id: 'comments',
-        topBarLabel: 'Commentaires',
-        href: '/admin/comments',
-        minRole: 'manager',
         card: {
-          order: 6,
-          titleKey: 'navModerationTitle',
-          descKey: 'navModerationDesc',
-          icon: 'shield',
-          accent: 'border-red-500/30 from-red-500/10 text-red-300',
+          order: 7,
+          titleKey: 'navCampaignsTitle',
+          descKey: 'navCampaignsDesc',
+          icon: 'mail',
+          accent: 'border-blue-500/30 from-blue-500/10 text-blue-300',
         },
       },
       {
-        id: 'support',
-        topBarLabel: 'Tickets de support',
-        href: '/admin/support',
-        minRole: 'manager',
-        card: {
-          order: 5,
-          titleKey: 'navSupportTitle',
-          descKey: 'navSupportDesc',
-          icon: 'ticket',
-          accent: 'border-purple-500/30 from-purple-500/10 text-purple-300',
-        },
-      },
-      {
-        id: 'blacklist',
-        topBarLabel: 'Blacklist joueurs',
-        href: '/admin/moderation/blacklist',
-        minRole: 'manager',
+        id: 'notifications',
+        topBarLabel: 'Notifications',
+        href: '/admin/notifications',
+        minRole: 'caster',
       },
     ],
   },
@@ -392,12 +424,6 @@ export const ADMIN_NAV: AdminNavNode[] = [
     href: '',
     minRole: 'manager',
     children: [
-      {
-        id: 'notifications',
-        topBarLabel: 'Notifications',
-        href: '/admin/notifications',
-        minRole: 'caster',
-      },
       {
         id: 'site-settings',
         topBarLabel: 'Paramètres du site',
@@ -451,19 +477,6 @@ export const ADMIN_NAV: AdminNavNode[] = [
         ],
       },
       {
-        id: 'campaigns',
-        topBarLabel: 'Campagnes emails',
-        href: '/admin/campaigns',
-        minRole: 'admin',
-        card: {
-          order: 7,
-          titleKey: 'navCampaignsTitle',
-          descKey: 'navCampaignsDesc',
-          icon: 'mail',
-          accent: 'border-blue-500/30 from-blue-500/10 text-blue-300',
-        },
-      },
-      {
         id: 'logs-stats',
         topBarLabel: 'Logs & stats',
         href: '',
@@ -497,9 +510,17 @@ export const ADMIN_NAV: AdminNavNode[] = [
         minRole: 'manager',
         children: [
           {
-            id: 'onboarding-queue',
-            topBarLabel: 'Onboarding queue (unifiée)',
-            href: '/admin/onboarding-queue',
+            // Hub « Onboarding » (lot C) : fusion des ex-pages File d'onboarding
+            // (onboarding-queue), Demandes self-service (tenant-requests) et
+            // Serveurs Discord en attente (pending-guild-links) en une page à
+            // onglets (/admin/onboarding?tab=…). Comme pour les fusions Stats /
+            // Logs / Modération, une SEULE entrée top-bar pointe vers le hub ;
+            // les onglets se découvrent sur la page. Le host est manager-gated
+            // (rôle le plus permissif des 3) ; l'onglet « Demandes de tenant »
+            // reste owner-only (re-gaté côté page, données owner-only en API).
+            id: 'onboarding',
+            topBarLabel: 'Onboarding',
+            href: '/admin/onboarding',
             minRole: 'manager',
           },
           {
@@ -513,18 +534,6 @@ export const ADMIN_NAV: AdminNavNode[] = [
             topBarLabel: 'Créer un tenant',
             href: '/admin/tenants/new',
             minRole: 'manager',
-          },
-          {
-            id: 'pending-guild-links',
-            topBarLabel: 'Serveurs Discord en attente',
-            href: '/admin/pending-guild-links',
-            minRole: 'manager',
-          },
-          {
-            id: 'tenant-requests',
-            topBarLabel: 'Demandes self-service',
-            href: '/admin/tenant-requests',
-            minRole: 'owner',
           },
         ],
       },

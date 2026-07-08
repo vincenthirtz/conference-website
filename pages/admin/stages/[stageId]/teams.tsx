@@ -7,6 +7,7 @@ import { withStaffPage } from '@/utils/staff';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
+import StageTabsNav from '@/components/admin/stages/StageTabsNav';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 import { logger } from '../../../../utils/logger';
@@ -371,15 +372,15 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
 
       <div className="min-h-screen bg-neutral-900 text-white p-6 pt-20">
         {/* Header */}
+        <StageTabsNav
+          stageId={String(stageId ?? '')}
+          active="teams"
+          stageType={stage?.stage_type}
+          tournamentId={stage?.tournament_id ?? tournament?.id}
+          tournamentName={tournament?.name}
+        />
         <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
           <div>
-            <button
-              type="button"
-              onClick={() => router.push(`/admin/stages/${stageId}`)}
-              className="mb-2 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white"
-            >
-              {t.back}
-            </button>
             <h1 className="text-3xl font-bold">{t.heading}</h1>
             <p className="text-neutral-400 text-sm mt-1">{t.subtitle}</p>
           </div>

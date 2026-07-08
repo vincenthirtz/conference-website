@@ -71,7 +71,7 @@ const SECONDARY_PAGES = [
   { path: '/admin/recycle-bin', label: 'Corbeille' },
   { path: '/admin/site-settings', label: 'Parametres du site' },
   { path: '/admin/partnership-requests', label: 'Demandes partenariat' },
-  { path: '/admin/comments', label: 'Commentaires' },
+  { path: '/admin/moderation?tab=comments', label: 'Commentaires' },
   { path: '/admin/stats?tab=teams', label: 'Stats equipes' },
   { path: '/admin/stats?tab=maps', label: 'Stats maps' },
 ];
