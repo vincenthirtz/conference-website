@@ -97,10 +97,11 @@ function GuidePage(): JSX.Element {
           <Heading
             level="h1"
             typeStyle="heading-lg"
-            className="mt-4 text-gradient font-extrabold leading-tight"
+            className="mt-4 text-brand-gradient font-extrabold leading-tight"
           >
             {t.heroTitle}
           </Heading>
+          <span className="brand-rule mx-auto mt-4" aria-hidden />
           <Paragraph
             typeStyle="body-lg"
             className="mx-auto mt-4 max-w-3xl"
@@ -111,14 +112,14 @@ function GuidePage(): JSX.Element {
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Link
               href={REGISTER_TEAM_HREF}
-              className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition hover:brightness-110"
+              className="inline-flex items-center gap-2 rounded-full bg-[var(--color-violet)] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition hover:bg-[var(--color-violet-deep)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
             >
               {t.createTeam}
               <span aria-hidden>→</span>
             </Link>
             <Link
               href={PLAYER_HREF}
-              className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-6 py-3 text-sm font-medium text-white transition hover:bg-white/10"
+              className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-6 py-3 text-sm font-medium text-white transition hover:border-[var(--color-green)]/60 hover:bg-[var(--color-green)]/10 hover:text-[var(--color-green-light)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-green)]"
             >
               {t.goToSpace}
             </Link>
@@ -172,16 +173,20 @@ function GuidePage(): JSX.Element {
 
       {/* Features grid */}
       <section className="relative mx-auto max-w-6xl px-4 md:px-6 pb-20">
-        <div className="mb-8 text-center">
-          <Heading typeStyle="heading-md" className="text-gradient text-center">
+        <div className="mb-8 flex flex-col items-center text-center">
+          <Heading
+            typeStyle="heading-md"
+            className="text-brand-gradient text-center"
+          >
             {t.alsoTitle}
           </Heading>
+          <span className="brand-rule mt-3" aria-hidden />
         </div>
         <div className="grid gap-4 md:grid-cols-2">
           {features.map((f) => (
             <article
               key={f.title}
-              className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 backdrop-blur"
+              className="card-brand rounded-2xl bg-white/[0.03] p-6 backdrop-blur"
             >
               <h3 className="text-lg font-semibold text-white">{f.title}</h3>
               <p className="mt-2 text-sm text-gray-300 leading-relaxed">
@@ -194,22 +199,23 @@ function GuidePage(): JSX.Element {
 
       {/* Final CTA */}
       <section className="relative mx-auto max-w-4xl px-6 pb-24">
-        <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-purple-500/10 via-white/[0.03] to-cyan-500/10 p-8 md:p-10 text-center">
-          <h2 className="text-2xl md:text-3xl font-bold text-white">
+        <div className="section-brand-bg card-brand rounded-3xl bg-gradient-to-br from-purple-500/10 via-white/[0.03] to-cyan-500/10 p-8 md:p-10 text-center">
+          <h2 className="text-2xl md:text-3xl font-bold text-brand-gradient">
             {t.ctaTitle}
           </h2>
+          <span className="brand-rule mx-auto mt-3" aria-hidden />
           <p className="mt-3 text-gray-300">{t.ctaDesc}</p>
           <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
             <Link
               href={REGISTER_TEAM_HREF}
-              className="inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-semibold text-neutral-900 shadow transition hover:-translate-y-0.5 hover:shadow-lg"
+              className="inline-flex items-center gap-2 rounded-full bg-[var(--color-violet)] px-6 py-3 text-sm font-semibold text-white shadow transition hover:-translate-y-0.5 hover:bg-[var(--color-violet-deep)] hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
             >
               {t.createTeam}
               <span aria-hidden>→</span>
             </Link>
             <Link
               href="/espace-capitaine#faq"
-              className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/5 px-6 py-3 text-sm font-medium text-white transition hover:bg-white/10"
+              className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/5 px-6 py-3 text-sm font-medium text-white transition hover:border-[var(--color-green)]/60 hover:bg-[var(--color-green)]/10 hover:text-[var(--color-green-light)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-green)]"
             >
               {t.readFaq}
             </Link>

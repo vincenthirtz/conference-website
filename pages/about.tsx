@@ -231,7 +231,9 @@ function AboutPage({ videoUrl }: AboutPageProps) {
               </p>
               <h1 className="mt-5 text-4xl font-bold leading-[1.1] sm:text-5xl lg:text-6xl">
                 {t.heroTitleLine1}
-                <span className="block text-gradient">{t.heroTitleLine2}</span>
+                <span className="block text-brand-gradient">
+                  {t.heroTitleLine2}
+                </span>
               </h1>
               <p className="mt-6 max-w-lg text-lg leading-relaxed text-gray-300 mx-auto lg:mx-0">
                 {t.heroSubtitle}
@@ -239,13 +241,13 @@ function AboutPage({ videoUrl }: AboutPageProps) {
               <div className="mt-8 flex flex-wrap gap-4 justify-center lg:justify-start">
                 <Link
                   href="/register"
-                  className="rounded-full bg-gradient-to-r from-purple-500 to-pink-500 px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition-all hover:shadow-xl hover:shadow-purple-900/50 hover:-translate-y-0.5"
+                  className="rounded-full bg-[var(--color-violet)] px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition-all hover:bg-[var(--color-violet-deep)] hover:shadow-xl hover:shadow-purple-900/50 hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
                 >
                   {t.ctaRegister}
                 </Link>
                 <Link
                   href="/association"
-                  className="rounded-full border border-white/15 bg-white/5 backdrop-blur-sm px-7 py-3.5 text-sm font-semibold text-white transition hover:border-white/30 hover:bg-white/10"
+                  className="rounded-full border border-white/15 bg-white/5 backdrop-blur-sm px-7 py-3.5 text-sm font-semibold text-white transition hover:border-[var(--color-green)]/60 hover:bg-[var(--color-green)]/10 hover:text-[var(--color-green-light)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-green)]"
                 >
                   {t.ctaDiscoverAsso}
                 </Link>
@@ -334,15 +336,16 @@ function AboutPage({ videoUrl }: AboutPageProps) {
         </section>
 
         {/* ── Notre mission ──────────────────────────────── */}
-        <section>
-          <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#140a24] via-[#1c0f33] to-[#2a0d3d] p-8 sm:p-12">
+        <section className="section-brand-bg">
+          <div className="card-brand rounded-3xl bg-gradient-to-br from-[#140a24] via-[#1c0f33] to-[#2a0d3d] p-8 sm:p-12">
             <div className="max-w-3xl mx-auto text-center">
               <p className="text-xs uppercase tracking-[0.18em] text-purple-300">
                 {t.missionEyebrow}
               </p>
-              <h2 className="mt-3 text-3xl font-bold sm:text-4xl">
+              <h2 className="mt-3 text-3xl font-bold text-brand-gradient sm:text-4xl">
                 {t.missionTitle}
               </h2>
+              <span className="brand-rule mx-auto mt-3" aria-hidden />
               <p className="mt-5 text-gray-300 leading-relaxed">
                 {t.missionP1}
               </p>
@@ -359,16 +362,17 @@ function AboutPage({ videoUrl }: AboutPageProps) {
             <p className="text-xs uppercase tracking-[0.18em] text-pink-300">
               {t.howEyebrow}
             </p>
-            <h2 className="mt-2 text-3xl font-bold sm:text-4xl">
+            <h2 className="mt-2 text-3xl font-bold text-brand-gradient sm:text-4xl">
               {t.howTitle}
             </h2>
+            <span className="brand-rule mx-auto mt-3" aria-hidden />
           </div>
 
           <div className="grid gap-6 md:grid-cols-3">
             {steps.map((item) => (
               <div
                 key={item.step}
-                className="group relative rounded-2xl border border-white/10 bg-white/[0.04] p-6 transition hover:-translate-y-1 hover:bg-white/[0.06] hover:shadow-xl hover:shadow-black/20"
+                className="group card-brand relative rounded-2xl bg-white/[0.04] p-6 transition hover:-translate-y-1 hover:bg-white/[0.06] hover:shadow-xl hover:shadow-black/20"
               >
                 <div className="flex items-center gap-4 mb-4">
                   <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 border border-white/10 flex items-center justify-center text-purple-300 group-hover:text-white transition-colors">
@@ -393,9 +397,10 @@ function AboutPage({ videoUrl }: AboutPageProps) {
             <p className="text-xs uppercase tracking-[0.18em] text-cyan-300">
               {t.valuesEyebrow}
             </p>
-            <h2 className="mt-2 text-3xl font-bold sm:text-4xl">
+            <h2 className="mt-2 text-3xl font-bold text-brand-gradient sm:text-4xl">
               {t.valuesTitle}
             </h2>
+            <span className="brand-rule mx-auto mt-3" aria-hidden />
             <p className="mt-3 mx-auto max-w-xl text-sm text-gray-400">
               {t.valuesIntro}
             </p>
@@ -424,15 +429,16 @@ function AboutPage({ videoUrl }: AboutPageProps) {
         </section>
 
         {/* ── L'equipe / Asso teaser ─────────────────────── */}
-        <section className="rounded-3xl border border-white/10 bg-white/[0.03] overflow-hidden">
+        <section className="card-brand rounded-3xl bg-white/[0.03] overflow-hidden">
           <div className="flex flex-col md:flex-row">
             <div className="flex-1 p-8 sm:p-12 flex flex-col justify-center">
               <p className="text-xs uppercase tracking-[0.18em] text-purple-300">
                 {t.teamEyebrow}
               </p>
-              <h2 className="mt-2 text-2xl font-bold sm:text-3xl">
+              <h2 className="mt-2 text-2xl font-bold text-brand-gradient sm:text-3xl">
                 {t.teamTitle}
               </h2>
+              <span className="brand-rule mt-3" aria-hidden />
               <p className="mt-4 text-gray-400 leading-relaxed">{t.teamDesc}</p>
               <div className="mt-6 flex flex-wrap gap-2">
                 {[
@@ -443,7 +449,7 @@ function AboutPage({ videoUrl }: AboutPageProps) {
                 ].map((pole) => (
                   <span
                     key={pole}
-                    className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-gray-300"
+                    className="rounded-full border border-[var(--color-violet)]/40 bg-[var(--color-violet)]/10 px-3 py-1.5 text-xs text-[var(--color-violet-light)]"
                   >
                     {pole}
                   </span>
@@ -452,7 +458,7 @@ function AboutPage({ videoUrl }: AboutPageProps) {
               <div className="mt-8">
                 <Link
                   href="/association"
-                  className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/10 hover:border-white/30"
+                  className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-6 py-3 text-sm font-semibold text-white transition hover:border-[var(--color-green)]/60 hover:bg-[var(--color-green)]/10 hover:text-[var(--color-green-light)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-green)]"
                 >
                   {t.discoverAssoLink}
                   <svg
@@ -489,22 +495,23 @@ function AboutPage({ videoUrl }: AboutPageProps) {
           <p className="text-xs uppercase tracking-[0.18em] text-gray-400">
             {t.partnersEyebrow}
           </p>
-          <h2 className="mt-2 text-2xl font-bold sm:text-3xl">
+          <h2 className="mt-2 text-2xl font-bold text-brand-gradient sm:text-3xl">
             {t.partnersTitle}
           </h2>
+          <span className="brand-rule mx-auto mt-3" aria-hidden />
           <p className="mt-3 mx-auto max-w-md text-sm text-gray-400">
             {t.partnersDesc}
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-4">
             <Link
               href="/partenaires"
-              className="rounded-full border border-white/15 bg-white/5 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/10 hover:border-white/30"
+              className="rounded-full border border-white/15 bg-white/5 px-6 py-3 text-sm font-semibold text-white transition hover:border-[var(--color-green)]/60 hover:bg-[var(--color-green)]/10 hover:text-[var(--color-green-light)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-green)]"
             >
               {t.viewPartners}
             </Link>
             <Link
               href="/partenaires#devenir-partenaire"
-              className="rounded-full bg-gradient-to-r from-purple-500 to-pink-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition-all hover:shadow-xl hover:shadow-purple-900/50 hover:-translate-y-0.5"
+              className="rounded-full bg-[var(--color-violet)] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition-all hover:bg-[var(--color-violet-deep)] hover:shadow-xl hover:shadow-purple-900/50 hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
             >
               {t.becomeSponsor}
             </Link>
@@ -519,20 +526,23 @@ function AboutPage({ videoUrl }: AboutPageProps) {
             <div className="absolute -left-20 -bottom-20 h-[300px] w-[300px] rounded-full bg-pink-500/10 blur-[80px]" />
           </div>
           <div className="relative p-8 sm:p-14 text-center">
-            <h2 className="text-3xl font-bold sm:text-4xl">{t.ctaTitle}</h2>
+            <h2 className="text-3xl font-bold text-brand-gradient sm:text-4xl">
+              {t.ctaTitle}
+            </h2>
+            <span className="brand-rule mx-auto mt-3" aria-hidden />
             <p className="mt-4 mx-auto max-w-lg text-gray-300 leading-relaxed">
               {t.ctaDesc}
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-4">
               <Link
                 href="/register"
-                className="rounded-full bg-gradient-to-r from-purple-500 to-pink-500 px-8 py-4 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition-all hover:shadow-xl hover:shadow-purple-900/50 hover:-translate-y-0.5"
+                className="rounded-full bg-[var(--color-violet)] px-8 py-4 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition-all hover:bg-[var(--color-violet-deep)] hover:shadow-xl hover:shadow-purple-900/50 hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
               >
                 {t.ctaCreateTeam}
               </Link>
               <Link
                 href="/contact"
-                className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 backdrop-blur-sm px-8 py-4 text-sm font-semibold text-white transition hover:bg-white/10 hover:border-white/30"
+                className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 backdrop-blur-sm px-8 py-4 text-sm font-semibold text-white transition hover:border-[var(--color-green)]/60 hover:bg-[var(--color-green)]/10 hover:text-[var(--color-green-light)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-green)]"
               >
                 <svg
                   className="w-4 h-4"

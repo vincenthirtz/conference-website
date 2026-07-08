@@ -218,7 +218,7 @@ export default function TournamentMatchesPage({
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
               <div className="inline-flex items-center gap-2 px-2 py-1 rounded-full bg-white/5 border border-white/10 mb-3 text-[10px] uppercase tracking-wide">
-                <span className="px-1.5 py-[2px] rounded-full bg-gradient-to-r from-pink-500/80 to-orange-400/80 text-black font-semibold">
+                <span className="px-1.5 py-[2px] rounded-full bg-gradient-to-r from-[var(--color-violet)] to-[var(--color-green)] text-black font-semibold">
                   OW Women&apos;s Cup
                 </span>
                 <span className="text-gray-200">
@@ -228,9 +228,13 @@ export default function TournamentMatchesPage({
                 <span className={statusColor}>{statusLabel}</span>
               </div>
 
-              <Heading typeStyle="heading-md" className="text-gradient mb-1">
+              <Heading
+                typeStyle="heading-md"
+                className="text-brand-gradient mb-1"
+              >
                 {format(t.heading, { name: tournament.name })}
               </Heading>
+              <span className="brand-rule mb-2" aria-hidden />
               {dateRangeLabel && (
                 <p className="text-sm text-gray-300 mb-1">
                   {dateRangeLabel}
@@ -256,7 +260,7 @@ export default function TournamentMatchesPage({
               <Link href={tournamentPath}>
                 <Button
                   type="button"
-                  className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-blue-400"
+                  className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-[var(--color-violet)]"
                 >
                   {t.backToTournament}
                 </Button>
@@ -264,7 +268,7 @@ export default function TournamentMatchesPage({
               <Link href={`${tournamentPath}/bracket`}>
                 <Button
                   type="button"
-                  className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-purple-400"
+                  className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-[var(--color-green)]"
                 >
                   {t.viewBracket}
                 </Button>
@@ -272,7 +276,7 @@ export default function TournamentMatchesPage({
               <Link href={`${tournamentPath}/maps`}>
                 <Button
                   type="button"
-                  className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-emerald-400"
+                  className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-[var(--color-yellow)]"
                 >
                   {t.topMaps}
                 </Button>

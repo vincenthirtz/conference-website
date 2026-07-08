@@ -169,9 +169,11 @@ function Detail({ data }: { data: LeagueDetailResponse }) {
 
   return (
     <>
-      <header className="rounded-2xl border border-neutral-800 bg-neutral-900/40 p-6">
+      <header className="card-brand rounded-2xl border border-neutral-800 bg-neutral-900/40 p-6">
         <div className="mb-3 flex flex-wrap items-center gap-3">
-          <h1 className="text-2xl font-bold sm:text-3xl">{league.name}</h1>
+          <h1 className="text-brand-gradient text-2xl font-bold sm:text-3xl">
+            {league.name}
+          </h1>
           <span
             className={`rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide ${STATUS_CLASSES[league.status]}`}
           >
@@ -192,14 +194,14 @@ function Detail({ data }: { data: LeagueDetailResponse }) {
       </header>
 
       <section className="mt-8">
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-purple-300">
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-[var(--color-violet-light)]">
           {t.standingsHeading}
         </h2>
         <Standings standings={standings} />
       </section>
 
       <section className="mt-8">
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-purple-300">
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-[var(--color-violet-light)]">
           {t.tournamentsHeading}
         </h2>
         <Tournaments tournaments={tournaments} />
@@ -213,7 +215,7 @@ function Standings({ standings }: { standings: LeagueStandingPublic[] }) {
   if (standings.length === 0) {
     return (
       <div className="rounded-2xl border border-neutral-800 bg-neutral-900/40 py-12 text-center">
-        <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-purple-500/10 text-xl">
+        <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[var(--color-violet)]/10 text-xl">
           📊
         </div>
         <p className="text-sm text-neutral-400">{t.standingsEmpty}</p>
@@ -269,7 +271,7 @@ function Standings({ standings }: { standings: LeagueStandingPublic[] }) {
                       {s.teamSlug ? (
                         <Link
                           href={`/team/${s.teamSlug}`}
-                          className="font-medium hover:text-purple-300"
+                          className="font-medium hover:text-[var(--color-violet-light)]"
                         >
                           {name}
                         </Link>
@@ -315,7 +317,7 @@ function Tournaments({ tournaments }: { tournaments: LeagueTournamentRef[] }) {
           <div className="flex items-center justify-between gap-3 px-4 py-3">
             <span className="truncate text-neutral-200">{name}</span>
             {tr.weight !== 1 && (
-              <span className="shrink-0 rounded-full bg-purple-500/15 px-2.5 py-1 text-xs font-semibold text-purple-300">
+              <span className="shrink-0 rounded-full bg-[var(--color-violet)]/15 px-2.5 py-1 text-xs font-semibold text-[var(--color-violet-light)]">
                 ×{tr.weight}
               </span>
             )}
@@ -326,7 +328,7 @@ function Tournaments({ tournaments }: { tournaments: LeagueTournamentRef[] }) {
             {tr.slug ? (
               <Link
                 href={`/tournament/${tr.slug}`}
-                className="block text-sm transition-colors hover:bg-white/[0.03] hover:text-purple-300"
+                className="block text-sm transition-colors hover:bg-white/[0.03] hover:text-[var(--color-violet-light)]"
               >
                 {inner}
               </Link>
@@ -362,7 +364,7 @@ function NotFoundState() {
       </p>
       <Link
         href="/leagues"
-        className="rounded-md bg-purple-500 px-4 py-2 text-sm font-semibold transition-colors hover:bg-purple-400"
+        className="rounded-md bg-[var(--color-violet)] px-4 py-2 text-sm font-semibold transition-colors hover:bg-[var(--color-violet-deep)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
       >
         {t.viewLeagues}
       </Link>
@@ -394,7 +396,7 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
       <button
         type="button"
         onClick={onRetry}
-        className="rounded-md bg-purple-500 px-4 py-2 text-sm font-semibold transition-colors hover:bg-purple-400"
+        className="rounded-md bg-[var(--color-violet)] px-4 py-2 text-sm font-semibold transition-colors hover:bg-[var(--color-violet-deep)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
       >
         {t.retry}
       </button>

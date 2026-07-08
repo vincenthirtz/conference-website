@@ -94,7 +94,7 @@ function TournamentsPage({ tournaments, loadError }: TournamentsPageProps) {
             <button
               type="button"
               onClick={() => window.location.reload()}
-              className="px-4 py-2 rounded-md bg-purple-500 hover:bg-purple-400 text-sm font-semibold transition-colors"
+              className="px-4 py-2 rounded-md bg-[var(--color-violet)] hover:bg-[var(--color-violet-deep)] text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
             >
               {t.retry}
             </button>

@@ -154,9 +154,13 @@ export default function BuildsPage({ builds, error }: BuildsPageProps) {
       <main className="container mx-auto max-w-5xl px-4 pt-24 pb-16">
         <header className="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
-            <Heading typeStyle="heading-md" className="text-gradient mb-1">
+            <Heading
+              typeStyle="heading-md"
+              className="text-brand-gradient mb-1"
+            >
               {t.heading}
             </Heading>
+            <span className="brand-rule mb-3" aria-hidden />
             <Paragraph
               typeStyle="body-sm"
               textColor="text-gray-300"
@@ -174,7 +178,7 @@ export default function BuildsPage({ builds, error }: BuildsPageProps) {
           </div>
         </header>
 
-        <section className="bg-white/5 border border-white/10 rounded-2xl p-4">
+        <section className="card-brand bg-white/5 rounded-2xl p-4">
           {error && (
             <p className="text-sm text-red-300">
               {format(t.loadError, { error })}
@@ -194,7 +198,7 @@ export default function BuildsPage({ builds, error }: BuildsPageProps) {
                 >
                   <div className="flex flex-col gap-1">
                     <div className="flex items-center gap-2">
-                      <span className="px-2 py-[2px] rounded-full bg-white/10 text-white border border-white/30 text-[11px]">
+                      <span className="px-2 py-[2px] rounded-full border border-[var(--color-yellow)]/40 bg-[var(--color-yellow)]/10 text-[var(--color-yellow)] text-[11px]">
                         {stateLabel(build.state, t)}
                       </span>
                       {build.context && (
@@ -229,7 +233,7 @@ export default function BuildsPage({ builds, error }: BuildsPageProps) {
                           href={build.commit_url}
                           target="_blank"
                           rel="noreferrer"
-                          className="text-blue-300 hover:text-blue-100"
+                          className="text-[var(--color-yellow)] hover:text-[var(--color-yellow-light)]"
                         >
                           {t.viewCommit}
                         </a>

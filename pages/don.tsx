@@ -132,9 +132,10 @@ function DonationPage() {
           <p className="mx-auto inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.18em] text-gray-200">
             {t.heroBadge}
           </p>
-          <h1 className="mt-3 text-4xl font-bold leading-tight sm:text-5xl md:text-6xl">
+          <h1 className="mt-3 text-4xl font-bold leading-tight text-brand-gradient sm:text-5xl md:text-6xl">
             {t.heroTitle}
           </h1>
+          <span className="brand-rule mx-auto mt-4" aria-hidden />
           <p className="mx-auto mt-4 max-w-3xl text-lg text-gray-200">
             {t.heroSubtitle}
           </p>
@@ -153,14 +154,14 @@ function DonationPage() {
                     .getElementById('don-prenom')
                     ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }}
-                className="flex items-center justify-center rounded-full bg-gradient-to-r from-purple-500 to-pink-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition hover:brightness-110"
+                className="flex items-center justify-center rounded-full bg-[var(--color-violet)] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition hover:bg-[var(--color-violet-deep)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
               >
                 {t.donateOnline}
               </a>
             )}
             <Link
               href="/tournoi"
-              className="rounded-full border border-white/15 px-6 py-3 text-sm font-semibold text-white transition hover:border-white/40 hover:bg-white/10"
+              className="rounded-full border border-white/15 px-6 py-3 text-sm font-semibold text-white transition hover:border-[var(--color-yellow)]/60 hover:bg-[var(--color-yellow)]/10 hover:text-[var(--color-yellow)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-yellow)]"
             >
               {t.discoverProject}
             </Link>
@@ -179,7 +180,7 @@ function DonationPage() {
                       className="rounded-2xl border border-white/10 bg-white/[0.03] p-4"
                     >
                       <div className="flex items-start gap-3">
-                        <div className="mt-1 h-2 w-2 flex-none rounded-full bg-gradient-to-r from-purple-400 to-pink-400" />
+                        <div className="brand-dot mt-1 h-2 w-2 flex-none rounded-full" />
                         <div>
                           <p className="text-lg font-semibold text-white">
                             {item.title}
@@ -224,9 +225,7 @@ function DonationPage() {
         )}
         {paymentStatus === 'error' && (
           <div className="rounded-2xl border border-red-400/30 bg-red-500/10 p-6 text-center">
-            <p className="text-lg font-semibold text-red-100">
-              {t.errorTitle}
-            </p>
+            <p className="text-lg font-semibold text-red-100">{t.errorTitle}</p>
             <p className="mt-2 text-sm text-red-50">{t.errorBody}</p>
           </div>
         )}
@@ -237,7 +236,10 @@ function DonationPage() {
               <p className="text-sm uppercase tracking-[0.14em] text-gray-300">
                 {t.chooseAmountLabel}
               </p>
-              <h2 className="text-3xl font-bold">{t.chooseAmountTitle}</h2>
+              <h2 className="text-3xl font-bold text-brand-gradient">
+                {t.chooseAmountTitle}
+              </h2>
+              <span className="brand-rule mt-3" aria-hidden />
             </div>
             <p className="text-sm text-gray-300">{t.chooseAmountHint}</p>
           </div>
@@ -246,12 +248,12 @@ function DonationPage() {
             {tiers.map((tier) => (
               <div
                 key={tier.label}
-                className="group rounded-2xl border border-white/10 bg-white/[0.04] p-5 shadow-xl transition hover:-translate-y-1 hover:border-purple-300/40 hover:bg-white/[0.07]"
+                className="group card-brand rounded-2xl bg-white/[0.04] p-5 shadow-xl transition hover:-translate-y-1 hover:bg-white/[0.07]"
               >
                 <p className="text-xs uppercase tracking-[0.14em] text-gray-300">
                   {tier.label}
                 </p>
-                <p className="mt-3 text-3xl font-bold text-white">
+                <p className="mt-3 text-3xl font-bold text-[var(--color-yellow)]">
                   {tier.amount}
                 </p>
                 <p className="mt-4 text-sm text-gray-200">{tier.impact}</p>
@@ -261,8 +263,8 @@ function DonationPage() {
         </section>
 
         {/* Online donation form via HelloAsso */}
-        <section>
-          <div className="relative rounded-3xl border border-white/10 bg-gradient-to-r from-[#140a24] via-[#1c0f33] to-[#2a0d3d] p-6 sm:p-10 shadow-2xl">
+        <section className="section-brand-bg">
+          <div className="relative card-brand rounded-3xl bg-gradient-to-r from-[#140a24] via-[#1c0f33] to-[#2a0d3d] p-6 sm:p-10 shadow-2xl">
             {COMING_SOON && (
               <div className="absolute inset-0 z-10 flex flex-col items-center justify-center rounded-3xl bg-black/70 backdrop-blur-sm">
                 <p className="text-sm uppercase tracking-[0.18em] text-purple-300">
@@ -283,7 +285,10 @@ function DonationPage() {
                 <p className="text-sm uppercase tracking-[0.14em] text-gray-200">
                   {t.formEyebrow}
                 </p>
-                <h3 className="mt-2 text-2xl font-bold">{t.formTitle}</h3>
+                <h3 className="mt-2 text-2xl font-bold text-brand-gradient">
+                  {t.formTitle}
+                </h3>
+                <span className="brand-rule mt-3" aria-hidden />
                 <p className="mt-3 text-sm text-gray-100">{t.formDesc}</p>
                 <div className="mt-5 flex flex-col items-center gap-2 rounded-2xl border border-white/10 bg-white/5 p-4">
                   <Image
@@ -317,7 +322,7 @@ function DonationPage() {
                         }}
                         className={`rounded-lg border px-4 py-2 text-sm font-semibold transition ${
                           !customAmount && selectedAmount === cents
-                            ? 'border-purple-400 bg-purple-500/30 text-white'
+                            ? 'border-[var(--color-yellow)] bg-[var(--color-yellow)]/20 text-white'
                             : 'border-white/15 bg-white/5 text-gray-200 hover:bg-white/10'
                         }`}
                       >
@@ -406,7 +411,7 @@ function DonationPage() {
                   overlay
                   type="submit"
                   disabled={loading || COMING_SOON}
-                  className="h-auto w-full justify-center rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 px-6 py-3 text-sm font-semibold disabled:opacity-50"
+                  className="h-auto w-full justify-center rounded-lg bg-[var(--color-violet)] px-6 py-3 text-sm font-semibold transition hover:bg-[var(--color-violet-deep)] disabled:opacity-50"
                 >
                   {loading
                     ? t.submitRedirecting
@@ -432,9 +437,12 @@ function DonationPage() {
             <p className="text-sm uppercase tracking-[0.14em] text-gray-300">
               {t.otherMeansLabel}
             </p>
-            <h3 className="mt-2 text-2xl font-bold">{t.otherMeansTitle}</h3>
+            <h3 className="mt-2 text-2xl font-bold text-brand-gradient">
+              {t.otherMeansTitle}
+            </h3>
+            <span className="brand-rule mt-3" aria-hidden />
             <div className="mt-6 grid gap-4 md:grid-cols-2">
-              <div className="rounded-2xl border border-white/15 bg-white/5 p-4">
+              <div className="card-brand rounded-2xl bg-white/5 p-4">
                 <p className="text-lg font-semibold text-white">
                   {t.transferTitle}
                 </p>
@@ -442,14 +450,14 @@ function DonationPage() {
                 <Button
                   overlay
                   type="button"
-                  className="mt-4 h-auto w-full justify-center rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 px-4 py-3 text-sm font-semibold"
+                  className="mt-4 h-auto w-full justify-center rounded-lg bg-[var(--color-violet)] px-4 py-3 text-sm font-semibold transition hover:bg-[var(--color-violet-deep)]"
                   onClick={() => window.location.assign(donationMail)}
                 >
                   {t.transferBtn}
                 </Button>
               </div>
 
-              <div className="rounded-2xl border border-white/15 bg-white/5 p-4">
+              <div className="card-brand rounded-2xl bg-white/5 p-4">
                 <p className="text-lg font-semibold text-white">
                   {t.companiesTitle}
                 </p>
@@ -481,12 +489,15 @@ function DonationPage() {
             <p className="text-sm uppercase tracking-[0.14em] text-gray-300">
               {t.questionLabel}
             </p>
-            <h4 className="mt-2 text-2xl font-semibold">{t.questionTitle}</h4>
+            <h4 className="mt-2 text-2xl font-semibold text-brand-gradient">
+              {t.questionTitle}
+            </h4>
+            <span className="brand-rule mx-auto mt-3" aria-hidden />
             <p className="mt-3 text-sm text-gray-200">{t.questionBody}</p>
             <div className="mt-5 flex justify-center">
               <a
                 href={donationMail}
-                className="rounded-full border border-white/20 px-5 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
+                className="rounded-full border border-white/20 px-5 py-2 text-sm font-semibold text-white transition hover:border-[var(--color-yellow)]/60 hover:bg-[var(--color-yellow)]/10 hover:text-[var(--color-yellow)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-yellow)]"
               >
                 {contactEmail}
               </a>

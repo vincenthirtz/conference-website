@@ -44,7 +44,7 @@ const getEngagements = (t: LiveDict): Engagement[] => [
         href={ASSO_TWITCH_URL}
         target="_blank"
         rel="noreferrer"
-        className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-purple-300 underline decoration-purple-400/40 underline-offset-2 transition hover:text-purple-200 hover:decoration-purple-300"
+        className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-[var(--color-violet-light)] underline decoration-[var(--color-violet)]/40 underline-offset-2 transition hover:text-white hover:decoration-[var(--color-violet-light)]"
       >
         twitch.tv/owwomenscup
         <svg
@@ -121,7 +121,7 @@ function CardGrid({ items, accent }: { items: Engagement[]; accent: string }) {
       {items.map((item) => (
         <div
           key={item.title}
-          className="group rounded-2xl border border-white/10 bg-white/[0.03] p-6 backdrop-blur-xl transition hover:-translate-y-0.5 hover:border-purple-400/40 hover:bg-white/[0.05]"
+          className="group card-brand rounded-2xl border border-white/10 bg-white/[0.03] p-6 backdrop-blur-xl transition hover:-translate-y-0.5 hover:bg-white/[0.05]"
         >
           <div className="flex items-start justify-between gap-3">
             <h3 className="text-lg font-semibold text-white">{item.title}</h3>
@@ -152,22 +152,23 @@ function LivePage({ channels, loadError }: Props) {
       {/* ── Hero ─────────────────────────────────────────── */}
       <div className="relative overflow-hidden">
         <div className="pointer-events-none absolute inset-0" aria-hidden>
-          <div className="absolute -left-40 -top-40 h-[500px] w-[500px] rounded-full bg-purple-600/25 blur-[120px]" />
-          <div className="absolute right-0 top-0 h-[400px] w-[400px] rounded-full bg-fuchsia-500/15 blur-[100px]" />
-          <div className="absolute bottom-0 left-1/2 h-[300px] w-[600px] -translate-x-1/2 rounded-full bg-pink-500/10 blur-[100px]" />
+          <div className="absolute -left-40 -top-40 h-[500px] w-[500px] rounded-full bg-[var(--color-violet)]/25 blur-[120px]" />
+          <div className="absolute right-0 top-0 h-[400px] w-[400px] rounded-full bg-[var(--color-green)]/15 blur-[100px]" />
+          <div className="absolute bottom-0 left-1/2 h-[300px] w-[600px] -translate-x-1/2 rounded-full bg-[var(--color-yellow)]/10 blur-[100px]" />
         </div>
 
         <div className="relative mx-auto max-w-4xl px-6 pt-36 pb-16 text-center">
           <LiveEventBanner />
 
           <p className="mx-auto inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.18em] text-gray-300 backdrop-blur-sm">
-            <span className="h-1.5 w-1.5 rounded-full bg-fuchsia-400 animate-pulse" />
+            <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-violet-light)] animate-pulse" />
             {t.heroBadge}
           </p>
 
           <h1 className="mt-5 text-4xl font-bold leading-[1.1] sm:text-5xl md:text-6xl">
-            <span className="block text-gradient">{t.heroTitle}</span>
+            <span className="block text-brand-gradient">{t.heroTitle}</span>
           </h1>
+          <span className="brand-rule mx-auto mt-5" aria-hidden />
 
           <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-gray-300">
             {t.heroSubtitle}
@@ -183,38 +184,40 @@ function LivePage({ channels, loadError }: Props) {
         {/* ── Tes engagements ─────────────────────────────── */}
         <section>
           <div className="text-center">
-            <p className="text-xs uppercase tracking-[0.18em] text-purple-300">
+            <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-violet-light)]">
               {t.engagementsEyebrow}
             </p>
             <Heading
               typeStyle="heading-md"
-              className="mt-2 text-gradient text-center"
+              className="mt-2 text-brand-gradient text-center"
             >
               {t.engagementsTitle}
             </Heading>
+            <span className="brand-rule mx-auto mt-3" aria-hidden />
           </div>
           <CardGrid
             items={engagements}
-            accent="border-fuchsia-400/30 bg-fuchsia-500/10 text-fuchsia-200"
+            accent="border-[var(--color-green)]/30 bg-[var(--color-green)]/10 text-[var(--color-green-light)]"
           />
         </section>
 
         {/* ── Tes bonus ───────────────────────────────────── */}
         <section>
           <div className="text-center">
-            <p className="text-xs uppercase tracking-[0.18em] text-pink-300">
+            <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-yellow)]">
               {t.bonusesEyebrow}
             </p>
             <Heading
               typeStyle="heading-md"
-              className="mt-2 text-gradient text-center"
+              className="mt-2 text-brand-gradient text-center"
             >
               {t.bonusesTitle}
             </Heading>
+            <span className="brand-rule mx-auto mt-3" aria-hidden />
           </div>
           <CardGrid
             items={bonuses}
-            accent="border-purple-400/30 bg-purple-500/10 text-purple-200"
+            accent="border-[var(--color-violet)]/30 bg-[var(--color-violet)]/10 text-[var(--color-violet-light)]"
           />
         </section>
 
@@ -223,11 +226,11 @@ function LivePage({ channels, loadError }: Props) {
           {/* Le principe clé — callout sombre */}
           <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-[#0F0820] via-[#1c0f33] to-[#2a0d3d] p-8 shadow-2xl">
             <div
-              className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-fuchsia-500/20 blur-[90px]"
+              className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-[var(--color-green)]/20 blur-[90px]"
               aria-hidden
             />
             <div className="relative">
-              <p className="inline-flex items-center gap-2 rounded-full border border-fuchsia-400/30 bg-fuchsia-500/10 px-3 py-1 text-[11px] uppercase tracking-[0.16em] text-fuchsia-200">
+              <p className="inline-flex items-center gap-2 rounded-full border border-[var(--color-green)]/30 bg-[var(--color-green)]/10 px-3 py-1 text-[11px] uppercase tracking-[0.16em] text-[var(--color-green-light)]">
                 {t.calloutKeyBadge}
               </p>
               <p className="mt-4 text-sm leading-relaxed text-gray-200">
@@ -237,16 +240,16 @@ function LivePage({ channels, loadError }: Props) {
           </div>
 
           {/* Notre ambition — callout clair (violet clair) */}
-          <div className="relative overflow-hidden rounded-3xl border border-purple-300/30 bg-gradient-to-br from-purple-500/20 via-fuchsia-500/15 to-pink-500/15 p-8 shadow-2xl">
+          <div className="relative overflow-hidden rounded-3xl border border-[var(--color-violet-light)]/30 bg-gradient-to-br from-[var(--color-violet)]/20 via-[var(--color-green)]/12 to-[var(--color-yellow)]/12 p-8 shadow-2xl">
             <div
-              className="pointer-events-none absolute -left-16 -bottom-16 h-48 w-48 rounded-full bg-purple-400/25 blur-[90px]"
+              className="pointer-events-none absolute -left-16 -bottom-16 h-48 w-48 rounded-full bg-[var(--color-violet)]/25 blur-[90px]"
               aria-hidden
             />
             <div className="relative">
-              <p className="inline-flex items-center gap-2 rounded-full border border-purple-200/40 bg-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.16em] text-purple-100">
+              <p className="inline-flex items-center gap-2 rounded-full border border-[var(--color-violet-light)]/40 bg-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.16em] text-white">
                 {t.calloutAmbitionBadge}
               </p>
-              <p className="mt-4 text-sm leading-relaxed text-purple-50">
+              <p className="mt-4 text-sm leading-relaxed text-gray-100">
                 {t.calloutAmbitionBody}
               </p>
             </div>
@@ -269,7 +272,7 @@ function LivePage({ channels, loadError }: Props) {
               <button
                 type="button"
                 onClick={() => window.location.reload()}
-                className="rounded-md bg-purple-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-purple-400"
+                className="rounded-md bg-[var(--color-violet)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-violet-deep)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
               >
                 {t.retry}
               </button>
@@ -286,9 +289,12 @@ function LivePage({ channels, loadError }: Props) {
 
         {/* ── CTA final ───────────────────────────────────── */}
         <section className="relative overflow-hidden rounded-3xl border border-white/10">
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-purple-600/20 via-fuchsia-600/10 to-pink-600/10" />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-[var(--color-violet)]/20 via-[var(--color-green)]/10 to-[var(--color-yellow)]/10" />
           <div className="relative p-8 text-center sm:p-12">
-            <Heading typeStyle="heading-md" className="text-gradient text-center">
+            <Heading
+              typeStyle="heading-md"
+              className="text-brand-gradient text-center"
+            >
               {t.ctaTitle}
             </Heading>
             <p className="mx-auto mt-4 max-w-lg text-sm leading-relaxed text-gray-300">
@@ -299,7 +305,7 @@ function LivePage({ channels, loadError }: Props) {
                 href={DISCORD_INVITE_URL}
                 target="_blank"
                 rel="noreferrer"
-                className="group inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-fuchsia-500 to-purple-500 px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition-all hover:-translate-y-0.5 hover:shadow-xl hover:shadow-purple-900/50"
+                className="group inline-flex items-center gap-2 rounded-full bg-[var(--color-violet)] px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-[var(--color-violet-deep)]/40 transition-all hover:-translate-y-0.5 hover:bg-[var(--color-violet-deep)] hover:shadow-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
               >
                 {t.ctaButton}
                 <svg

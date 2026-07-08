@@ -24,21 +24,21 @@ export default function TournamentBracketPage() {
       <Head>
         <title>{t.headTitle}</title>
       </Head>
-      <div className="space-y-4 max-w-xl">
-        <h1 className="text-3xl font-semibold">{t.heading}</h1>
+      <div className="flex flex-col items-center space-y-4 max-w-xl">
+        <h1 className="text-brand-gradient text-3xl font-semibold">
+          {t.heading}
+        </h1>
+        <span className="brand-rule" aria-hidden />
         <p className="text-neutral-300">{t.body}</p>
         {id && (
           <div className="flex flex-wrap items-center justify-center gap-3">
             <Link
               href={`/tournament/${id}/matches`}
-              className="inline-flex items-center gap-2 rounded-full bg-pink-500/80 hover:bg-pink-500 px-4 py-2 text-sm font-medium text-white transition"
+              className="inline-flex items-center gap-2 rounded-full bg-[var(--color-violet)] hover:bg-[var(--color-violet-deep)] px-4 py-2 text-sm font-medium text-white transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
             >
               {t.viewMatches}
             </Link>
-            <ShareEmbedPanel
-              slugOrId={String(id)}
-              variant="compact"
-            />
+            <ShareEmbedPanel slugOrId={String(id)} variant="compact" />
           </div>
         )}
       </div>

@@ -110,13 +110,22 @@ export default function TournamentFfaPage({
         </Link>
 
         <header className="mb-8">
-          <p className="text-[10px] uppercase tracking-widest text-purple-300 mb-2">
+          <p className="text-[10px] uppercase tracking-widest text-[var(--color-green-light)] mb-2">
             {t.eyebrow}
           </p>
-          <Heading typeStyle="heading-md" level="h1" className="text-gradient">
+          <Heading
+            typeStyle="heading-md"
+            level="h1"
+            className="text-brand-gradient"
+          >
             {t.heading}
           </Heading>
-          <Paragraph typeStyle="body-sm" textColor="text-gray-300" className="mt-1">
+          <span className="brand-rule mt-3" aria-hidden />
+          <Paragraph
+            typeStyle="body-sm"
+            textColor="text-gray-300"
+            className="mt-1"
+          >
             {stageName ? `${tournamentName} · ${stageName}` : tournamentName}
           </Paragraph>
         </header>
@@ -128,7 +137,7 @@ export default function TournamentFfaPage({
             </Paragraph>
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.03]">
+          <div className="card-brand overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.03]">
             <table className="w-full min-w-[560px] border-collapse text-sm">
               <thead>
                 <tr className="border-b border-white/10 text-[11px] uppercase tracking-wider text-gray-400">

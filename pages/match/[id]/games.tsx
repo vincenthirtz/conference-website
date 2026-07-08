@@ -175,7 +175,7 @@ export default function MatchGamesPage({ match }: Props) {
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
               <div className="inline-flex items-center gap-2 px-2 py-1 rounded-full bg-white/5 border border-white/10 mb-3 text-[10px] uppercase tracking-wide">
-                <span className="px-1.5 py-[2px] rounded-full bg-gradient-to-r from-pink-500/80 to-orange-400/80 text-black font-semibold">
+                <span className="px-1.5 py-[2px] rounded-full bg-gradient-to-r from-[var(--color-violet)] to-[var(--color-green)] text-white font-semibold">
                   OW Women&apos;s Cup
                 </span>
                 <span className="text-gray-200">
@@ -189,11 +189,12 @@ export default function MatchGamesPage({ match }: Props) {
                 </span>
               </div>
 
-              <Heading typeStyle="heading-md" className="mb-1 text-gradient">
+              <Heading typeStyle="heading-md" className="mb-1 text-brand-gradient">
                 {t.detailHeading} – {t1Name}{' '}
                 {!isBye && <span className="text-gray-400">{t.vs}</span>}{' '}
                 {t2Name}
               </Heading>
+              <span className="brand-rule mb-2 block" aria-hidden />
 
               <div className="flex flex-wrap items-center gap-2 text-[11px] text-gray-300 mb-1">
                 <Link
@@ -235,7 +236,7 @@ export default function MatchGamesPage({ match }: Props) {
               <Link href={`/match/${match.id}`}>
                 <Button
                   type="button"
-                  className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-blue-400"
+                  className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-[var(--color-violet)] focus-visible:ring-2 focus-visible:ring-[var(--color-violet)] focus-visible:outline-none"
                 >
                   {t.backToSummary}
                 </Button>
@@ -243,7 +244,7 @@ export default function MatchGamesPage({ match }: Props) {
               <Link href={tournamentPath}>
                 <Button
                   type="button"
-                  className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-emerald-400"
+                  className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-[var(--color-green)] focus-visible:ring-2 focus-visible:ring-[var(--color-green)] focus-visible:outline-none"
                 >
                   {t.tournament}
                 </Button>
@@ -251,7 +252,7 @@ export default function MatchGamesPage({ match }: Props) {
               <Link href={`${tournamentPath}/maps`}>
                 <Button
                   type="button"
-                  className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-purple-400"
+                  className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-[var(--color-yellow)] focus-visible:ring-2 focus-visible:ring-[var(--color-yellow)] focus-visible:outline-none"
                 >
                   {t.topMaps}
                 </Button>

@@ -66,12 +66,13 @@ function ScrimPage({ teams }: Props) {
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
       <main className="container mx-auto max-w-5xl px-4 pt-24 pb-16">
         <section className="mb-10 text-center">
-          <span className="inline-block px-3 py-1 rounded-full border border-cyan-500/40 bg-cyan-500/10 text-cyan-200 text-xs uppercase tracking-wide mb-4">
+          <span className="inline-block px-3 py-1 rounded-full border border-[var(--color-green)]/40 bg-[var(--color-green)]/10 text-[var(--color-green-light)] text-xs uppercase tracking-wide mb-4">
             {t.badge}
           </span>
-          <Heading typeStyle="heading-lg" className="text-gradient mb-3">
+          <Heading typeStyle="heading-lg" className="text-brand-gradient mb-3">
             {t.heading}
           </Heading>
+          <span className="brand-rule mx-auto mb-3" aria-hidden />
           <Paragraph
             typeStyle="body-md"
             textColor="text-gray-300"
@@ -85,10 +86,10 @@ function ScrimPage({ teams }: Props) {
           {steps.map((step, i) => (
             <div
               key={step.title}
-              className="rounded-2xl border border-white/10 bg-white/[0.03] p-5"
+              className="card-brand rounded-2xl border border-white/10 bg-white/[0.03] p-5"
             >
               <div className="flex items-center gap-3 mb-2">
-                <span className="w-8 h-8 rounded-full bg-cyan-500/20 border border-cyan-500/40 text-cyan-200 text-sm font-semibold flex items-center justify-center">
+                <span className="w-8 h-8 rounded-full bg-[var(--color-green)]/20 border border-[var(--color-green)]/40 text-[var(--color-green-light)] text-sm font-semibold flex items-center justify-center">
                   {i + 1}
                 </span>
                 <p className="text-sm font-semibold text-white">{step.title}</p>
@@ -122,7 +123,7 @@ function ScrimPage({ teams }: Props) {
                   key={team.id}
                   href={`/team/${encodeURIComponent(team.slug || team.id)}`}
                 >
-                  <div className="group flex items-center gap-3 rounded-2xl border border-white/10 bg-black/40 p-4 hover:border-cyan-500/60 hover:bg-cyan-500/5 transition-colors">
+                  <div className="group flex items-center gap-3 rounded-2xl border border-white/10 bg-black/40 p-4 hover:border-[var(--color-green)]/60 hover:bg-[var(--color-green)]/5 transition-colors">
                     {team.logo_url ? (
                       <Image
                         src={team.logo_url}
@@ -137,7 +138,7 @@ function ScrimPage({ teams }: Props) {
                       </div>
                     )}
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold text-white truncate group-hover:text-cyan-200">
+                      <p className="text-sm font-semibold text-white truncate group-hover:text-[var(--color-green-light)]">
                         {team.name}
                       </p>
                       <div className="flex items-center gap-2 text-xs text-gray-500">
@@ -152,7 +153,7 @@ function ScrimPage({ teams }: Props) {
                         )}
                       </div>
                     </div>
-                    <span className="text-xs text-cyan-300 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                    <span className="text-xs text-[var(--color-green-light)] opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
                       {t.propose}
                     </span>
                   </div>

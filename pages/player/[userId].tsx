@@ -133,7 +133,7 @@ function Profile({ data }: { data: PlayerProfileResponse }) {
       <BadgesSection badges={achievements.badges} />
 
       <section className="mt-8">
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-purple-300">
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-brand-gradient">
           {t.ratingProgression}
         </h2>
         <RatingChart history={history} />
@@ -178,7 +178,7 @@ function BadgesSection({ badges }: { badges: ProfileBadge[] }) {
 
   return (
     <section className="mt-8">
-      <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-purple-300">
+      <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-brand-gradient">
         {t.badges}
       </h2>
       <ul className="flex flex-wrap gap-2">
@@ -210,7 +210,7 @@ function PalmaresSection({ placements }: { placements: ProfilePlacement[] }) {
 
   return (
     <section className="mt-8">
-      <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-purple-300">
+      <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-brand-gradient">
         {t.palmares}
       </h2>
       <ul className="divide-y divide-neutral-800/60 overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-900/40">
@@ -225,7 +225,7 @@ function PalmaresSection({ placements }: { placements: ProfilePlacement[] }) {
                 {p.tournamentName ? (
                   <Link
                     href={`/tournament/${p.tournamentSlug ?? p.tournamentId}`}
-                    className="hover:text-purple-300 hover:underline"
+                    className="hover:text-[var(--color-violet-light)] hover:underline"
                   >
                     {p.tournamentName}
                   </Link>
@@ -240,7 +240,7 @@ function PalmaresSection({ placements }: { placements: ProfilePlacement[] }) {
                   {t.withTeam}{' '}
                   <Link
                     href={`/team/${p.teamId}`}
-                    className="hover:text-purple-300 hover:underline"
+                    className="hover:text-[var(--color-violet-light)] hover:underline"
                   >
                     {p.teamName}
                   </Link>
@@ -312,7 +312,7 @@ function SeasonsSection({ seasons }: { seasons: ProfileSeason[] }) {
 
   return (
     <section className="mt-8">
-      <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-purple-300">
+      <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-brand-gradient">
         {t.seasons}
       </h2>
       <div className="overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-900/40">
@@ -335,7 +335,7 @@ function SeasonsSection({ seasons }: { seasons: ProfileSeason[] }) {
                     s.leagueSlug ? (
                       <Link
                         href={`/leagues/${s.leagueSlug}`}
-                        className="hover:text-purple-300 hover:underline"
+                        className="hover:text-[var(--color-violet-light)] hover:underline"
                       >
                         {s.leagueName}
                       </Link>
@@ -439,7 +439,7 @@ function ShareButtons({
       <button
         type="button"
         onClick={handleShare}
-        className="inline-flex items-center gap-2 rounded-md border border-purple-500/40 bg-purple-500/15 px-3 py-1.5 text-sm font-semibold text-purple-200 transition-colors hover:border-purple-400 hover:bg-purple-500/25 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400"
+        className="inline-flex items-center gap-2 rounded-md border border-[var(--color-violet)]/40 bg-[var(--color-violet)]/15 px-3 py-1.5 text-sm font-semibold text-[var(--color-violet-light)] transition-colors hover:border-[var(--color-violet)] hover:bg-[var(--color-violet)]/25 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet)]"
         aria-label={t.shareAriaLabel}
       >
         <svg
@@ -509,7 +509,7 @@ function ProfileHeader({
   const winRate = total > 0 ? Math.round((player.wins / total) * 100) : null;
 
   return (
-    <div className="rounded-2xl border border-neutral-800 bg-neutral-900/40 p-6">
+    <div className="card-brand rounded-2xl bg-neutral-900/40 p-6">
       <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-center">
         {player.avatarUrl ? (
           <Image
@@ -559,7 +559,7 @@ function ProfileHeader({
         </div>
 
         <div className="text-center">
-          <div className="text-4xl font-bold text-purple-300">
+          <div className="text-brand-gradient text-4xl font-bold">
             {Math.round(player.rating)}
           </div>
           <div
@@ -682,15 +682,15 @@ function RatingChart({ history }: { history: PlayerProfileHistoryPoint[] }) {
       >
         <defs>
           <linearGradient id="ratingFill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="rgb(168 85 247)" stopOpacity="0.35" />
-            <stop offset="100%" stopColor="rgb(168 85 247)" stopOpacity="0" />
+            <stop offset="0%" stopColor="var(--color-violet)" stopOpacity="0.35" />
+            <stop offset="100%" stopColor="var(--color-violet)" stopOpacity="0" />
           </linearGradient>
         </defs>
         <path d={areaPath} fill="url(#ratingFill)" />
         <path
           d={linePath}
           fill="none"
-          stroke="rgb(192 132 252)"
+          stroke="var(--color-violet-light)"
           strokeWidth={2}
           strokeLinejoin="round"
           strokeLinecap="round"
@@ -702,7 +702,7 @@ function RatingChart({ history }: { history: PlayerProfileHistoryPoint[] }) {
             cx={p.x}
             cy={p.y}
             r={2.5}
-            fill="rgb(216 180 254)"
+            fill="var(--color-violet-light)"
             vectorEffect="non-scaling-stroke"
           />
         ))}
@@ -716,7 +716,7 @@ function RecentMatches({ matches }: { matches: PlayerProfileRecentMatch[] }) {
   const locale = useLocale();
   return (
     <section>
-      <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-purple-300">
+      <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-brand-gradient">
         {t.recentMatches}
       </h2>
       {matches.length === 0 ? (
@@ -740,7 +740,7 @@ function RecentMatches({ matches }: { matches: PlayerProfileRecentMatch[] }) {
                       {t.vs}{' '}
                       <Link
                         href={`/team/${m.opponentTeamId}`}
-                        className="hover:text-purple-300 hover:underline"
+                        className="hover:text-[var(--color-violet-light)] hover:underline"
                       >
                         {m.opponentTeamName}
                       </Link>
@@ -786,7 +786,7 @@ function HeadToHead({ rows }: { rows: PlayerProfileH2H[] }) {
   const t = useT('playerPublicProfile');
   return (
     <section>
-      <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-purple-300">
+      <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-brand-gradient">
         {t.headToHead}
       </h2>
       {rows.length === 0 ? (
@@ -817,7 +817,7 @@ function HeadToHead({ rows }: { rows: PlayerProfileH2H[] }) {
                     <td className="px-4 py-3">
                       <Link
                         href={`/player/${r.opponentUserId}`}
-                        className="hover:text-purple-300"
+                        className="hover:text-[var(--color-violet-light)]"
                       >
                         {oppLabel}
                       </Link>
@@ -863,7 +863,7 @@ function NotFoundState() {
       </p>
       <Link
         href="/leaderboard"
-        className="rounded-md bg-purple-500 px-4 py-2 text-sm font-semibold transition-colors hover:bg-purple-400"
+        className="rounded-md bg-[var(--color-violet)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet)]"
       >
         {t.viewLeaderboard}
       </Link>
@@ -895,7 +895,7 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
       <button
         type="button"
         onClick={onRetry}
-        className="rounded-md bg-purple-500 px-4 py-2 text-sm font-semibold transition-colors hover:bg-purple-400"
+        className="rounded-md bg-[var(--color-violet)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet)]"
       >
         {t.retry}
       </button>

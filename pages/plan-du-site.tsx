@@ -98,19 +98,20 @@ function SiteMapPage() {
           <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.18em] text-gray-200">
             {t.heroBadge}
           </p>
-          <h1 className="mt-4 text-4xl font-bold leading-tight sm:text-5xl">
+          <h1 className="mt-4 text-4xl font-bold leading-tight text-brand-gradient sm:text-5xl">
             {t.heroTitle}
           </h1>
+          <span className="brand-rule mt-4" aria-hidden />
           <p className="mt-4 max-w-3xl text-lg text-gray-200">
             {t.heroSubtitle}
           </p>
           <div className="mt-6 inline-flex items-center gap-3 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-gray-200">
-            <span className="rounded-full bg-purple-500/20 px-2 py-[2px] text-[11px] font-semibold uppercase tracking-[0.18em] text-purple-100">
+            <span className="rounded-full border border-[var(--color-green)]/40 bg-[var(--color-green)]/15 px-2 py-[2px] text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-green-light)]">
               {t.resourceBadge}
             </span>
             <Link
               href="/sitemap.xml"
-              className="font-semibold text-white underline decoration-purple-300/60 decoration-2 underline-offset-4"
+              className="font-semibold text-white underline decoration-[var(--color-green)]/60 decoration-2 underline-offset-4 hover:text-[var(--color-green-light)]"
             >
               {t.openSitemap}
             </Link>
@@ -123,7 +124,7 @@ function SiteMapPage() {
           {siteSections.map((section) => (
             <div
               key={section.title}
-              className="rounded-2xl border border-white/10 bg-white/[0.04] p-6 shadow-xl shadow-black/25"
+              className="card-brand rounded-2xl bg-white/[0.04] p-6 shadow-xl shadow-black/25"
             >
               <div className="flex items-start justify-between gap-4">
                 <div>
@@ -140,10 +141,10 @@ function SiteMapPage() {
                   <Link
                     key={link.href}
                     href={link.href}
-                    className="group flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white transition hover:border-white/30 hover:bg-white/10"
+                    className="group flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white transition hover:border-[var(--color-green)]/50 hover:bg-[var(--color-green)]/10"
                   >
                     <span className="flex items-center gap-3">
-                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-purple-500/20 text-xs text-purple-100 transition group-hover:bg-purple-500/40">
+                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--color-green)]/20 text-xs text-[var(--color-green-light)] transition group-hover:bg-[var(--color-green)]/40">
                         &gt;
                       </span>
                       {link.label}

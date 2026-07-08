@@ -106,7 +106,7 @@ function linkifyDescription(text: string) {
           href={part}
           target="_blank"
           rel="noreferrer noopener"
-          className="text-purple-200 underline underline-offset-4"
+          className="text-[var(--color-green-light)] underline underline-offset-4"
         >
           {part}
         </a>
@@ -460,17 +460,18 @@ function Tournoi() {
     <div className="min-h-screen bg-neutral-950 text-white">
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute -left-32 -top-32 w-[420px] h-[420px] rounded-full bg-purple-600/30 blur-3xl" />
-          <div className="absolute right-10 top-10 w-[360px] h-[360px] rounded-full bg-pink-500/20 blur-3xl" />
+          <div className="absolute -left-32 -top-32 w-[420px] h-[420px] rounded-full bg-[var(--color-green)]/25 blur-3xl" />
+          <div className="absolute right-10 top-10 w-[360px] h-[360px] rounded-full bg-[var(--color-violet)]/25 blur-3xl" />
         </div>
 
         <div className="max-w-6xl mx-auto px-6 pt-32 pb-14 relative">
-          <p className="text-xs uppercase tracking-[0.24em] text-purple-200/80">
+          <p className="text-xs uppercase tracking-[0.24em] text-[var(--color-green-light)]/90">
             {t.eyebrow}
           </p>
-          <h1 className="text-4xl md:text-5xl font-bold mt-3 leading-tight">
+          <h1 className="text-brand-gradient text-4xl md:text-5xl font-bold mt-3 leading-tight">
             {t.heroTitle}
           </h1>
+          <span className="brand-rule mt-4" aria-hidden />
           <p className="text-neutral-300 text-lg mt-4 max-w-2xl">
             {t.heroSubtitle}
           </p>
@@ -478,17 +479,18 @@ function Tournoi() {
       </div>
 
       <div className="max-w-6xl mx-auto px-6 pb-20">
-        <section id="teams" className="mt-10">
+        <section id="teams" className="section-brand-bg mt-10">
           <div className="flex flex-col items-center text-center">
-            <div className="text-xl text-white font-semibold border-b-2 border-blue-400 mb-1">
+            <div className="text-xl text-white font-semibold border-b-2 border-[var(--color-green)] mb-1">
               {t.teamsTab}
             </div>
             <Heading
               typeStyle="heading-md"
-              className="text-gradient text-center lg:mt-3"
+              className="text-brand-gradient text-center lg:mt-3"
             >
               {t.teamsHeading}
             </Heading>
+            <span className="brand-rule mx-auto mt-3" aria-hidden />
             <div className="max-w-3xl">
               <Paragraph
                 typeStyle="body-lg"
@@ -527,7 +529,7 @@ function Tournoi() {
         </section>
 
         <section className="mt-6">
-          <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white mb-4">
+          <h2 className="text-brand-gradient text-2xl md:text-3xl font-extrabold tracking-tight mb-4">
             {t.standingsHeading}
           </h2>
           <div className="p-5 rounded-2xl bg-white/5 border border-white/10">
@@ -592,7 +594,7 @@ function Tournoi() {
 
         {/* Matchs */}
         <section className="mt-12">
-          <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white mb-4">
+          <h2 className="text-brand-gradient text-2xl md:text-3xl font-extrabold tracking-tight mb-4">
             {t.scheduleHeading}
           </h2>
           <div className="grid md:grid-cols-2 gap-4">
@@ -604,7 +606,7 @@ function Tournoi() {
 
         {/* Finale */}
         <section className="mt-12">
-          <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white mb-2">
+          <h2 className="text-brand-gradient text-2xl md:text-3xl font-extrabold tracking-tight mb-2">
             {t.finalHeading}
           </h2>
           {!finalMatch ? (
@@ -614,8 +616,8 @@ function Tournoi() {
               <div className="text-gray-300">
                 {formatDateHuman(finalMatch.date, locale)}
               </div>
-              <div className="p-4 rounded-2xl bg-yellow-500/10 border border-yellow-500/20">
-                <div className="text-sm uppercase tracking-wider mb-2">
+              <div className="p-4 rounded-2xl bg-[var(--color-yellow)]/10 border border-[var(--color-yellow)]/25">
+                <div className="text-sm uppercase tracking-wider mb-2 text-[var(--color-yellow)]">
                   {t.finalBo5Label}
                 </div>
                 <div className="flex items-center justify-between gap-4">
@@ -642,10 +644,10 @@ function Tournoi() {
         {/* Rediffusions */}
         <section className="mt-16">
           <div className="mb-6">
-            <p className="text-xs uppercase tracking-[0.24em] text-purple-200/80">
+            <p className="text-xs uppercase tracking-[0.24em] text-[var(--color-green-light)]/90">
               {t.replaysEyebrow}
             </p>
-            <h2 className="text-3xl font-extrabold tracking-tight text-white">
+            <h2 className="text-brand-gradient text-3xl font-extrabold tracking-tight">
               {t.replaysHeading}
             </h2>
             <p className="text-neutral-300 text-base mt-2 max-w-2xl">
@@ -660,7 +662,7 @@ function Tournoi() {
               {replays.map((replay: Replay) => (
                 <div
                   key={replay.title}
-                  className="bg-neutral-900 border border-white/10 rounded-2xl p-4 shadow-xl shadow-black/20"
+                  className="card-brand bg-neutral-900 border border-white/10 rounded-2xl p-4 shadow-xl shadow-black/20"
                 >
                   <div className="aspect-video rounded-xl overflow-hidden border border-white/10 bg-black/40">
                     {replay.youtubeId.includes('VIDEO_ID') ? (
@@ -681,7 +683,7 @@ function Tournoi() {
                     <div className="flex items-center justify-between gap-2">
                       <h3 className="text-lg font-semibold">{replay.title}</h3>
                       {replay.date && (
-                        <span className="text-xs px-2 py-1 rounded-full bg-purple-500/15 border border-purple-500/30 text-purple-100">
+                        <span className="text-xs px-2 py-1 rounded-full bg-[var(--color-violet)]/15 border border-[var(--color-violet)]/30 text-[var(--color-violet-light)]">
                           {replay.date}
                         </span>
                       )}

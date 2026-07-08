@@ -48,7 +48,7 @@ function GameCard({ game }: { game: GameDef }) {
     GAME_GRADIENT[game.slug] ?? 'from-purple-500 via-fuchsia-500 to-pink-500';
 
   return (
-    <article className="group relative flex flex-col overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04] shadow-2xl shadow-black/30 transition hover:border-white/25 hover:bg-white/[0.06]">
+    <article className="group relative flex flex-col overflow-hidden card-brand rounded-3xl bg-white/[0.04] shadow-2xl shadow-black/30 transition hover:bg-white/[0.06]">
       {/* Visuel hero : degrade decoratif avec le label en filigrane */}
       <div
         aria-hidden
@@ -172,9 +172,10 @@ function GamesPage() {
           <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.18em] text-gray-200">
             {t.badgeMulti}
           </p>
-          <h1 className="mt-4 text-4xl font-bold leading-tight sm:text-5xl md:text-6xl">
+          <h1 className="mt-4 text-4xl font-bold leading-tight text-brand-gradient sm:text-5xl md:text-6xl">
             {t.heroTitle}
           </h1>
+          <span className="brand-rule mt-4" aria-hidden />
           <p className="mt-4 max-w-3xl text-lg text-gray-200">
             {t.heroSubtitlePart1}
             <strong>{t.heroSubtitleStrong}</strong>
@@ -184,13 +185,13 @@ function GamesPage() {
           <div className="mt-6 flex flex-wrap items-center gap-4">
             <Link
               href="/inscription-2026"
-              className="rounded-full bg-gradient-to-r from-purple-500 to-pink-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition hover:brightness-110"
+              className="rounded-full bg-[var(--color-violet)] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition hover:bg-[var(--color-violet-deep)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
             >
               {t.ctaRegisterTeam}
             </Link>
             <Link
               href="/tournaments"
-              className="rounded-full border border-white/15 px-6 py-3 text-sm font-semibold text-white transition hover:border-white/40 hover:bg-white/10"
+              className="rounded-full border border-white/15 px-6 py-3 text-sm font-semibold text-white transition hover:border-[var(--color-green)]/60 hover:bg-[var(--color-green)]/10 hover:text-[var(--color-green-light)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-green)]"
             >
               {t.ctaViewTournaments}
             </Link>
@@ -208,7 +209,7 @@ function GamesPage() {
             {heroStats.map((stat) => (
               <div
                 key={stat.label}
-                className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] p-4 shadow-xl shadow-black/20"
+                className="relative overflow-hidden card-brand rounded-2xl bg-white/[0.04] p-4 shadow-xl shadow-black/20"
               >
                 <div
                   aria-hidden
@@ -238,10 +239,11 @@ function GamesPage() {
             </p>
             <h2
               id="games-grid-heading"
-              className="text-3xl font-bold text-white"
+              className="text-3xl font-bold text-brand-gradient"
             >
               {format(t.catalogueTitle, { count: games.length })}
             </h2>
+            <span className="brand-rule" aria-hidden />
             <p className="text-sm text-gray-300 max-w-3xl">{t.catalogueDesc}</p>
           </div>
 
@@ -258,9 +260,13 @@ function GamesPage() {
             <p className="text-xs uppercase tracking-[0.18em] text-gray-300">
               {t.compareEyebrow}
             </p>
-            <h2 id="compare-heading" className="text-3xl font-bold text-white">
+            <h2
+              id="compare-heading"
+              className="text-3xl font-bold text-brand-gradient"
+            >
               {t.compareTitle}
             </h2>
+            <span className="brand-rule" aria-hidden />
             <p className="text-sm text-gray-300 max-w-3xl">{t.compareDesc}</p>
           </div>
 
@@ -352,9 +358,13 @@ function GamesPage() {
             <p className="text-xs uppercase tracking-[0.18em] text-gray-300">
               {t.howEyebrow}
             </p>
-            <h2 id="how-heading" className="text-3xl font-bold text-white">
+            <h2
+              id="how-heading"
+              className="text-3xl font-bold text-brand-gradient"
+            >
               {t.howTitle}
             </h2>
+            <span className="brand-rule" aria-hidden />
             <p className="text-sm text-gray-300 max-w-3xl">{t.howDesc}</p>
           </div>
 
@@ -378,7 +388,7 @@ function GamesPage() {
             ].map((item) => (
               <div
                 key={item.step}
-                className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.05] p-6 shadow-xl shadow-black/20"
+                className="relative overflow-hidden card-brand rounded-2xl bg-white/[0.05] p-6 shadow-xl shadow-black/20"
               >
                 <span
                   aria-hidden
@@ -404,9 +414,13 @@ function GamesPage() {
             <p className="text-xs uppercase tracking-[0.18em] text-gray-300">
               {t.botEyebrow}
             </p>
-            <h2 id="bot-heading" className="text-3xl font-bold text-white">
+            <h2
+              id="bot-heading"
+              className="text-3xl font-bold text-brand-gradient"
+            >
               {t.botTitle}
             </h2>
+            <span className="brand-rule" aria-hidden />
             <p className="text-sm text-gray-300 max-w-3xl">{t.botDesc}</p>
           </div>
 
@@ -493,7 +507,7 @@ function GamesPage() {
             ].map((cap) => (
               <div
                 key={cap.title}
-                className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/[0.05] p-5 shadow-xl shadow-black/20 transition hover:border-white/25 hover:bg-white/[0.07]"
+                className="flex flex-col gap-3 card-brand rounded-2xl bg-white/[0.05] p-5 shadow-xl shadow-black/20 transition hover:bg-white/[0.07]"
               >
                 <div className="flex items-start justify-between gap-3">
                   <h3 className="text-lg font-semibold text-white">
@@ -546,7 +560,7 @@ function GamesPage() {
             </p>
             <Link
               href="/onboard"
-              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-900/40 transition hover:brightness-110"
+              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-[var(--color-violet)] px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-900/40 transition hover:bg-[var(--color-violet-deep)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
             >
               <svg
                 aria-hidden
@@ -566,9 +580,13 @@ function GamesPage() {
             <p className="text-xs uppercase tracking-[0.18em] text-gray-300">
               {t.faqEyebrow}
             </p>
-            <h2 id="faq-heading" className="text-3xl font-bold text-white">
+            <h2
+              id="faq-heading"
+              className="text-3xl font-bold text-brand-gradient"
+            >
               {t.faqTitle}
             </h2>
+            <span className="brand-rule" aria-hidden />
             <p className="text-sm text-gray-300 max-w-3xl">
               {t.faqIntroBefore}
               <code className="rounded border border-white/10 bg-neutral-900/80 px-1.5 py-0.5 font-mono text-[12px] text-cyan-200">
@@ -610,24 +628,27 @@ function GamesPage() {
         </section>
 
         {/* CTA final */}
-        <section className="rounded-2xl border border-white/10 bg-white/[0.05] p-6 sm:p-8 text-center">
+        <section className="section-brand-bg card-brand rounded-2xl bg-white/[0.05] p-6 sm:p-8 text-center">
           <p className="text-sm uppercase tracking-[0.14em] text-gray-300">
             {t.ctaEyebrow}
           </p>
-          <h3 className="mt-2 text-2xl font-semibold">{t.ctaTitle}</h3>
+          <h3 className="mt-2 text-2xl font-semibold text-brand-gradient">
+            {t.ctaTitle}
+          </h3>
+          <span className="brand-rule mx-auto mt-3" aria-hidden />
           <p className="mt-3 text-sm text-gray-200 max-w-3xl mx-auto">
             {t.ctaDesc}
           </p>
           <div className="mt-5 flex flex-wrap justify-center gap-3">
             <Link
               href="/contact"
-              className="rounded-full bg-gradient-to-r from-purple-500 to-pink-500 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition hover:brightness-110"
+              className="rounded-full bg-[var(--color-violet)] px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition hover:bg-[var(--color-violet-deep)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
             >
               {t.ctaContact}
             </Link>
             <Link
               href="/partenaires"
-              className="rounded-full border border-white/20 px-5 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
+              className="rounded-full border border-white/20 px-5 py-2 text-sm font-semibold text-white transition hover:border-[var(--color-green)]/60 hover:bg-[var(--color-green)]/10 hover:text-[var(--color-green-light)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-green)]"
             >
               {t.ctaBecomePartner}
             </Link>

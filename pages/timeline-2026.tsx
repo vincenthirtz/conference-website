@@ -256,9 +256,9 @@ function MatchRow({ match }: { match: SimpleMatch }) {
   return (
     <Link
       href={`/match/${match.id}`}
-      className="group grid grid-cols-[64px_minmax(0,1fr)_auto] gap-3 items-center px-3 py-2.5 rounded-xl bg-white/[0.03] border border-white/10 hover:border-pink-400/50 hover:bg-pink-500/5 transition"
+      className="group grid grid-cols-[64px_minmax(0,1fr)_auto] gap-3 items-center px-3 py-2.5 rounded-xl bg-white/[0.03] border border-white/10 transition hover:border-[var(--color-yellow)]/50 hover:bg-[var(--color-yellow)]/5"
     >
-      <span className="text-sm font-mono text-pink-100">
+      <span className="text-sm font-mono text-[var(--color-yellow)]">
         {formatMatchTime(match.scheduled_at, t, locale)}
       </span>
 
@@ -344,9 +344,10 @@ function Timeline2026Page({ matches, tournamentSlug }: Props) {
           <p className="text-xs uppercase tracking-[0.24em] text-purple-200/80">
             {t.heroEyebrow}
           </p>
-          <h1 className="text-4xl md:text-5xl font-bold mt-3 leading-tight">
+          <h1 className="text-4xl md:text-5xl font-bold mt-3 leading-tight text-brand-gradient">
             {t.heroTitle}
           </h1>
+          <span className="brand-rule mt-4" aria-hidden />
           <p className="text-neutral-300 text-lg mt-4 max-w-2xl">
             {t.heroSubtitle}
           </p>
@@ -420,7 +421,7 @@ function Timeline2026Page({ matches, tournamentSlug }: Props) {
                           href={TWITCH_URL}
                           target="_blank"
                           rel="noreferrer noopener"
-                          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-purple-500 text-white hover:bg-purple-400 transition"
+                          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-[var(--color-violet)] text-white transition hover:bg-[var(--color-violet-deep)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
                         >
                           {t.followTwitch}
                         </a>
@@ -430,7 +431,7 @@ function Timeline2026Page({ matches, tournamentSlug }: Props) {
                       <div className="mt-4">
                         <Link
                           href={`/team/create?tournament=${WOMEN_TOURNAMENT_ID_2026}`}
-                          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-emerald-500 text-black hover:bg-emerald-400 transition"
+                          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-[var(--color-green)] text-black transition hover:bg-[var(--color-green-deep)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-green-light)]"
                         >
                           {t.registerTeam}
                         </Link>
@@ -452,16 +453,17 @@ function Timeline2026Page({ matches, tournamentSlug }: Props) {
               <p className="text-xs uppercase tracking-[0.24em] text-purple-200/80">
                 {t.calEyebrow}
               </p>
-              <h2 className="text-3xl md:text-4xl font-bold mt-2 leading-tight">
+              <h2 className="text-3xl md:text-4xl font-bold mt-2 leading-tight text-brand-gradient">
                 {t.calTitle}
               </h2>
+              <span className="brand-rule mt-3" aria-hidden />
               <p className="text-neutral-300 text-base mt-2 max-w-2xl">
                 {t.calSubtitle}
               </p>
             </div>
             <Link
               href={`/tournament/${tournamentIdentifier}/matches`}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border border-white/20 text-white hover:border-pink-400/60 hover:bg-pink-500/10 transition"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border border-white/20 text-white transition hover:border-[var(--color-yellow)]/60 hover:bg-[var(--color-yellow)]/10 hover:text-[var(--color-yellow)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-yellow)]"
             >
               {t.viewAllTournament}
             </Link>
@@ -477,7 +479,7 @@ function Timeline2026Page({ matches, tournamentSlug }: Props) {
               {grouped.map((day) => (
                 <div
                   key={day.key}
-                  className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:p-5"
+                  className="card-brand rounded-2xl bg-white/[0.03] p-4 sm:p-5"
                 >
                   <div className="flex items-center justify-between mb-3">
                     <p className="text-sm font-semibold text-white capitalize">

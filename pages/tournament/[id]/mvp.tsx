@@ -256,16 +256,17 @@ export default function TournamentMvpPage({
           <section className="mb-6">
             <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
               <div>
-                <p className="text-xs uppercase tracking-[0.18em] text-purple-200/80">
+                <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-yellow)]/90">
                   {t.eyebrow}
                 </p>
                 <Heading
                   level="h1"
                   typeStyle="heading-md"
-                  className="text-gradient mb-2"
+                  className="text-brand-gradient mb-2"
                 >
                   {t.heading}
                 </Heading>
+                <span className="brand-rule mb-2" aria-hidden />
                 <p className="text-sm text-gray-300">{tournament.name}</p>
                 <Paragraph
                   typeStyle="body-sm"
@@ -283,7 +284,7 @@ export default function TournamentMvpPage({
                 <Link href={tournamentPath}>
                   <Button
                     type="button"
-                    className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-blue-400"
+                    className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-[var(--color-violet)]"
                   >
                     {t.backToTournament}
                   </Button>
@@ -291,7 +292,7 @@ export default function TournamentMvpPage({
                 <Link href={`${tournamentPath}/stats`}>
                   <Button
                     type="button"
-                    className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-emerald-400"
+                    className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-[var(--color-green)]"
                   >
                     {t.teamStats}
                   </Button>
@@ -299,7 +300,7 @@ export default function TournamentMvpPage({
                 <Link href={`${tournamentPath}/matches`}>
                   <Button
                     type="button"
-                    className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-pink-400"
+                    className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-[var(--color-yellow)]"
                   >
                     {t.allMatches}
                   </Button>
@@ -370,7 +371,7 @@ export default function TournamentMvpPage({
                         <div className="col-span-3 text-sm text-gray-300 truncate">
                           {m.roundName || '—'}
                         </div>
-                        <div className="col-span-3 text-sm font-medium text-purple-200 truncate">
+                        <div className="col-span-3 text-sm font-medium text-[var(--color-violet-light)] truncate">
                           {m.battleTag || '—'}
                         </div>
                         <div className="col-span-3 text-sm text-gray-300 truncate text-right">

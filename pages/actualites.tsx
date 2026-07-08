@@ -113,16 +113,16 @@ function ActualitesPage({ patchNotes, news, loadError }: ActualitesProps) {
         href={note.link}
         target="_blank"
         rel="noreferrer noopener"
-        className="group relative flex flex-col rounded-2xl border border-orange-500/30 bg-gradient-to-br from-orange-950/30 to-neutral-900/50 overflow-hidden transition hover:border-orange-400/60 hover:shadow-[0_16px_40px_rgba(249,115,22,0.15)]"
+        className="group relative flex flex-col rounded-2xl border border-[var(--color-yellow)]/30 bg-gradient-to-br from-[var(--color-yellow)]/5 to-neutral-900/50 overflow-hidden transition hover:border-[var(--color-yellow)]/60"
       >
         <div className="p-5 flex flex-col h-full">
           <div className="flex items-center justify-between gap-3 text-xs">
-            <span className="px-2.5 py-1 rounded-full bg-orange-500/20 text-orange-300 font-medium uppercase tracking-wide">
+            <span className="px-2.5 py-1 rounded-full bg-[var(--color-yellow)]/15 text-[var(--color-yellow)] font-medium uppercase tracking-wide">
               {t.badgePatch}
             </span>
             <span className="text-neutral-400">{note.date}</span>
           </div>
-          <h3 className="mt-4 text-lg font-semibold text-white group-hover:text-orange-200 transition line-clamp-2">
+          <h3 className="mt-4 text-lg font-semibold text-white group-hover:text-[var(--color-yellow)] transition line-clamp-2">
             {note.title}
           </h3>
           <p className="mt-3 text-sm text-neutral-300 leading-relaxed line-clamp-3">
@@ -135,7 +135,7 @@ function ActualitesPage({ patchNotes, news, loadError }: ActualitesProps) {
                 .slice(0, 2)
                 .map(([category, heroes]) => (
                   <div key={category} className="flex items-center gap-2">
-                    <span className="text-[10px] uppercase tracking-wide text-orange-300/70">
+                    <span className="text-[10px] uppercase tracking-wide text-[var(--color-yellow)]/70">
                       {category}:
                     </span>
                     <div className="flex -space-x-2">
@@ -164,7 +164,7 @@ function ActualitesPage({ patchNotes, news, loadError }: ActualitesProps) {
             </div>
           )}
 
-          <div className="mt-auto pt-4 flex items-center gap-2 text-sm text-orange-300 group-hover:text-orange-200 transition">
+          <div className="mt-auto pt-4 flex items-center gap-2 text-sm text-[var(--color-yellow)] group-hover:text-[var(--color-yellow-light)] transition">
             <span>{t.readDetails}</span>
             <span className="transition transform group-hover:translate-x-1">
               →
@@ -181,7 +181,7 @@ function ActualitesPage({ patchNotes, news, loadError }: ActualitesProps) {
       href={item.link}
       target="_blank"
       rel="noreferrer noopener"
-      className="group relative flex flex-col rounded-2xl border border-blue-500/30 bg-gradient-to-br from-blue-950/30 to-neutral-900/50 overflow-hidden transition hover:border-blue-400/60 hover:shadow-[0_16px_40px_rgba(59,130,246,0.15)]"
+      className="group relative flex flex-col rounded-2xl border border-[var(--color-green)]/30 bg-gradient-to-br from-[var(--color-green)]/5 to-neutral-900/50 overflow-hidden transition hover:border-[var(--color-green)]/60"
     >
       {item.image_url && (
         <div className="relative h-40 overflow-hidden">
@@ -198,12 +198,12 @@ function ActualitesPage({ patchNotes, news, loadError }: ActualitesProps) {
       )}
       <div className="p-5 flex flex-col flex-1">
         <div className="flex items-center justify-between gap-3 text-xs">
-          <span className="px-2.5 py-1 rounded-full bg-blue-500/20 text-blue-300 font-medium uppercase tracking-wide">
+          <span className="px-2.5 py-1 rounded-full bg-[var(--color-green)]/15 text-[var(--color-green)] font-medium uppercase tracking-wide">
             {item.category || t.categoryFallback}
           </span>
           {item.date && <span className="text-neutral-400">{item.date}</span>}
         </div>
-        <h3 className="mt-4 text-lg font-semibold text-white group-hover:text-blue-200 transition line-clamp-2">
+        <h3 className="mt-4 text-lg font-semibold text-white group-hover:text-[var(--color-green)] transition line-clamp-2">
           {item.title}
         </h3>
         {item.summary && (
@@ -211,7 +211,7 @@ function ActualitesPage({ patchNotes, news, loadError }: ActualitesProps) {
             {item.summary}
           </p>
         )}
-        <div className="mt-auto pt-4 flex items-center gap-2 text-sm text-blue-300 group-hover:text-blue-200 transition">
+        <div className="mt-auto pt-4 flex items-center gap-2 text-sm text-[var(--color-green)] group-hover:text-[var(--color-green-light)] transition">
           <span>{t.readArticle}</span>
           <span className="transition transform group-hover:translate-x-1">
             →
@@ -243,16 +243,17 @@ function ActualitesPage({ patchNotes, news, loadError }: ActualitesProps) {
         <div className="container mx-auto px-4 pt-28 pb-16">
           {/* Header */}
           <div className="text-center mb-12">
-            <div className="inline-block text-lg text-white font-semibold border-b-2 border-blue-400 mb-4">
+            <div className="inline-block text-lg text-white font-semibold border-b-2 border-[var(--color-violet)] mb-4">
               {t.headerEyebrow}
             </div>
             <Heading
               typeStyle="heading-lg"
               level="h1"
-              className="text-gradient"
+              className="text-brand-gradient"
             >
               {t.headerTitle}
             </Heading>
+            <div className="brand-rule mx-auto mt-3" aria-hidden />
             <div className="max-w-2xl mx-auto mt-4">
               <Paragraph typeStyle="body-lg" textColor="text-neutral-300">
                 {t.headerSubtitle}
@@ -261,7 +262,7 @@ function ActualitesPage({ patchNotes, news, loadError }: ActualitesProps) {
             <div className="mt-5">
               <Link
                 href="/news"
-                className="inline-flex items-center gap-1.5 rounded-xl border border-purple-400/40 bg-purple-500/10 px-4 py-2 text-sm font-medium text-purple-200 transition hover:border-purple-400/70 hover:bg-purple-500/20"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--color-violet)]/40 bg-[var(--color-violet)]/10 px-4 py-2 text-sm font-medium text-[var(--color-violet-light)] transition hover:border-[var(--color-violet)]/70 hover:bg-[var(--color-violet)]/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet)]"
               >
                 {t.siteNewsLink}
                 <span aria-hidden>→</span>
@@ -279,20 +280,20 @@ function ActualitesPage({ patchNotes, news, loadError }: ActualitesProps) {
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key as typeof activeTab)}
-                className={`px-5 py-2.5 rounded-xl text-sm font-medium transition ${
+                className={`px-5 py-2.5 rounded-xl text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet)] ${
                   activeTab === tab.key
-                    ? 'bg-white/10 text-white border border-white/20'
+                    ? 'bg-[var(--color-violet)]/15 text-white border border-[var(--color-violet)]/60'
                     : 'text-neutral-400 hover:text-white hover:bg-white/5'
                 }`}
               >
                 {tab.label}
                 {tab.key === 'patch' && (
-                  <span className="ml-2 text-xs text-orange-400">
+                  <span className="ml-2 text-xs text-[var(--color-yellow)]">
                     ({patchNotes.length})
                   </span>
                 )}
                 {tab.key === 'news' && (
-                  <span className="ml-2 text-xs text-blue-400">
+                  <span className="ml-2 text-xs text-[var(--color-green)]">
                     ({news.length})
                   </span>
                 )}
@@ -326,7 +327,7 @@ function ActualitesPage({ patchNotes, news, loadError }: ActualitesProps) {
             <Link href={PATCH_NOTES_SOURCE} target="_blank" rel="noreferrer">
               <Button
                 type="button"
-                className="px-6 py-3 bg-orange-600 hover:bg-orange-500"
+                className="px-6 py-3 bg-[var(--color-violet)] hover:brightness-110 focus-visible:ring-2 focus-visible:ring-[var(--color-violet)] focus-visible:outline-none"
               >
                 {t.allPatchNotes}
               </Button>
@@ -334,7 +335,7 @@ function ActualitesPage({ patchNotes, news, loadError }: ActualitesProps) {
             <Link href={NEWS_SOURCE} target="_blank" rel="noreferrer">
               <Button
                 type="button"
-                className="px-6 py-3 bg-blue-600 hover:bg-blue-500"
+                className="px-6 py-3 bg-[var(--color-green-deep)] hover:bg-[var(--color-green)] focus-visible:ring-2 focus-visible:ring-[var(--color-green)] focus-visible:outline-none"
               >
                 {t.allNews}
               </Button>

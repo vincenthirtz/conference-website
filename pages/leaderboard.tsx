@@ -102,11 +102,14 @@ export default function LeaderboardPage({
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
       <main className="container mx-auto max-w-5xl px-4 pb-16 pt-24">
-        <header className="mb-8 text-center">
-          <p className="mb-2 text-xs uppercase tracking-widest text-purple-300">
+        <header className="mb-8 flex flex-col items-center text-center">
+          <p className="mb-2 text-xs uppercase tracking-widest text-[var(--color-yellow)]">
             {t.eyebrow}
           </p>
-          <h1 className="text-3xl font-bold sm:text-4xl">{t.title}</h1>
+          <h1 className="text-brand-gradient text-3xl font-bold sm:text-4xl">
+            {t.title}
+          </h1>
+          <span className="brand-rule mt-3" aria-hidden />
           <p className="mx-auto mt-3 max-w-2xl text-sm text-neutral-400">
             {t.subtitle}
           </p>
@@ -120,7 +123,7 @@ export default function LeaderboardPage({
           <EmptyState />
         ) : (
           <>
-            <div className="overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-900/40">
+            <div className="card-brand overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-900/40">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead className="bg-neutral-900/80 text-xs uppercase text-neutral-400">
@@ -152,7 +155,7 @@ export default function LeaderboardPage({
                           <td className="px-4 py-3">
                             <Link
                               href={`/player/${p.userId}`}
-                              className="flex items-center gap-3 hover:text-purple-300"
+                              className="flex items-center gap-3 hover:text-[var(--color-yellow)]"
                             >
                               {p.avatarUrl ? (
                                 <Image
@@ -207,7 +210,7 @@ export default function LeaderboardPage({
                   type="button"
                   onClick={() => void fetchMore(offset)}
                   disabled={loadingMore}
-                  className="rounded-md bg-purple-500 px-6 py-2 text-sm font-semibold transition-colors hover:bg-purple-400 disabled:opacity-50"
+                  className="rounded-md bg-[var(--color-violet)] px-6 py-2 text-sm font-semibold transition-colors hover:bg-[var(--color-violet-deep)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)] disabled:opacity-50"
                 >
                   {loadingMore ? t.loading : t.loadMore}
                 </button>
@@ -242,7 +245,7 @@ function EmptyState() {
   const t = useT('leaderboardPage');
   return (
     <section className="rounded-2xl border border-neutral-800 bg-neutral-900/40 py-16 text-center">
-      <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-purple-500/10 text-2xl">
+      <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--color-yellow)]/10 text-2xl">
         🏆
       </div>
       <h2 className="mb-2 text-lg font-semibold">{t.emptyTitle}</h2>
@@ -275,7 +278,7 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
       <button
         type="button"
         onClick={onRetry}
-        className="rounded-md bg-purple-500 px-4 py-2 text-sm font-semibold transition-colors hover:bg-purple-400"
+        className="rounded-md bg-[var(--color-violet)] px-4 py-2 text-sm font-semibold transition-colors hover:bg-[var(--color-violet-deep)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
       >
         {t.retry}
       </button>

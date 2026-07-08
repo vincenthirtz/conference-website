@@ -184,11 +184,14 @@ export default function TournamentPodiumPage({ tournament, rankings }: Props) {
             {t.backToTournament}
           </Link>
 
-          <div className="text-center mb-10">
-            <p className="text-xs uppercase tracking-widest text-purple-300 mb-2">
+          <div className="flex flex-col items-center text-center mb-10">
+            <p className="text-xs uppercase tracking-widest text-[var(--color-yellow)] mb-2">
               {t.eyebrow}
             </p>
-            <Heading level="h1">{tournament.name}</Heading>
+            <Heading level="h1" className="text-brand-gradient">
+              {tournament.name}
+            </Heading>
+            <span className="brand-rule mt-3" aria-hidden />
             {frozenAtLabel && (
               <Paragraph className="text-neutral-400 mt-2">
                 {format(t.closedOn, { date: frozenAtLabel })}
@@ -234,7 +237,7 @@ export default function TournamentPodiumPage({ tournament, rankings }: Props) {
                         {r.team_slug ? (
                           <Link
                             href={`/team/${r.team_slug}`}
-                            className="font-bold text-lg hover:text-purple-300"
+                            className="font-bold text-lg hover:text-[var(--color-yellow)]"
                           >
                             {r.team_name}
                           </Link>
@@ -244,7 +247,7 @@ export default function TournamentPodiumPage({ tournament, rankings }: Props) {
                           </span>
                         )}
                         {r.prize && (
-                          <div className="mt-2 text-sm text-purple-200">
+                          <div className="mt-2 text-sm text-[var(--color-yellow-light)]">
                             {r.prize}
                           </div>
                         )}
@@ -293,7 +296,7 @@ export default function TournamentPodiumPage({ tournament, rankings }: Props) {
                         {r.team_slug ? (
                           <Link
                             href={`/team/${r.team_slug}`}
-                            className="hover:text-purple-300"
+                            className="hover:text-[var(--color-yellow)]"
                           >
                             {r.team_name}
                           </Link>

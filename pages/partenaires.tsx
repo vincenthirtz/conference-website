@@ -129,9 +129,10 @@ function PartnersPage({ partners }: PartnersPageProps) {
           <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.18em] text-gray-200">
             {t.heroBadge}
           </p>
-          <h1 className="mt-4 text-4xl font-bold leading-tight sm:text-5xl md:text-6xl">
+          <h1 className="mt-4 text-4xl font-bold leading-tight text-brand-gradient sm:text-5xl md:text-6xl">
             {t.heroTitle}
           </h1>
+          <span className="brand-rule mt-4" aria-hidden />
           <p className="mt-4 max-w-3xl text-lg text-gray-200">
             {t.heroSubtitle}
           </p>
@@ -139,13 +140,13 @@ function PartnersPage({ partners }: PartnersPageProps) {
           <div className="mt-6 flex flex-wrap items-center gap-4">
             <Link
               href="/partenaires/demande"
-              className="rounded-full bg-gradient-to-r from-purple-500 to-pink-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition hover:brightness-110"
+              className="rounded-full bg-[var(--color-violet)] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition hover:bg-[var(--color-violet-deep)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
             >
               {t.ctaBecomePartner}
             </Link>
             <Link
               href="/don"
-              className="rounded-full border border-white/15 px-6 py-3 text-sm font-semibold text-white transition hover:border-white/40 hover:bg-white/10"
+              className="rounded-full border border-white/15 px-6 py-3 text-sm font-semibold text-white transition hover:border-[var(--color-green)]/60 hover:bg-[var(--color-green)]/10 hover:text-[var(--color-green-light)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-green)]"
             >
               {t.ctaDonate}
             </Link>
@@ -158,7 +159,7 @@ function PartnersPage({ partners }: PartnersPageProps) {
           {highlights.map((item) => (
             <div
               key={item.title}
-              className="rounded-2xl border border-white/10 bg-white/[0.05] p-5 shadow-xl shadow-black/20"
+              className="card-brand rounded-2xl bg-white/[0.05] p-5 shadow-xl shadow-black/20"
             >
               <p className="text-xs uppercase tracking-[0.16em] text-purple-200">
                 {item.title}
@@ -176,7 +177,10 @@ function PartnersPage({ partners }: PartnersPageProps) {
             <p className="text-xs uppercase tracking-[0.18em] text-gray-300">
               {t.catEyebrow}
             </p>
-            <h3 className="text-3xl font-bold text-white">{t.catTitle}</h3>
+            <h3 className="text-3xl font-bold text-brand-gradient">
+              {t.catTitle}
+            </h3>
+            <span className="brand-rule" aria-hidden />
             <p className="text-sm text-gray-300 max-w-3xl">{t.catDesc}</p>
           </div>
 
@@ -184,7 +188,7 @@ function PartnersPage({ partners }: PartnersPageProps) {
             {partnerCategories.map((category) => (
               <div
                 key={category.id}
-                className="relative overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04] p-6 shadow-2xl shadow-black/30 sm:p-8"
+                className="relative overflow-hidden card-brand rounded-3xl bg-white/[0.04] p-6 shadow-2xl shadow-black/30 sm:p-8"
               >
                 <div
                   aria-hidden
@@ -242,7 +246,7 @@ function PartnersPage({ partners }: PartnersPageProps) {
                             href={partner.website_url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-purple-200 underline decoration-purple-400/60 underline-offset-4 transition hover:text-white"
+                            className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-[var(--color-green-light)] underline decoration-[var(--color-green)]/60 underline-offset-4 transition hover:text-white"
                           >
                             {t.discoverPartner}
                             <span aria-hidden>↗</span>
@@ -253,10 +257,10 @@ function PartnersPage({ partners }: PartnersPageProps) {
                     {/* CTA to join */}
                     <Link
                       href="/partenaires/demande"
-                      className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-white/20 bg-white/[0.02] p-4 text-center transition hover:border-purple-400/50 hover:bg-white/[0.04]"
+                      className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-white/20 bg-white/[0.02] p-4 text-center transition hover:border-[var(--color-green)]/50 hover:bg-[var(--color-green)]/5"
                     >
                       <span className="text-2xl mb-2">+</span>
-                      <span className="text-sm font-semibold text-purple-200">
+                      <span className="text-sm font-semibold text-[var(--color-green-light)]">
                         {t.joinProgram}
                       </span>
                       <span className="text-xs text-gray-400 mt-1">
@@ -272,24 +276,27 @@ function PartnersPage({ partners }: PartnersPageProps) {
           </div>
         </section>
 
-        <section className="rounded-2xl border border-white/10 bg-white/[0.05] p-6 sm:p-8 text-center">
+        <section className="section-brand-bg card-brand rounded-2xl bg-white/[0.05] p-6 sm:p-8 text-center">
           <p className="text-sm uppercase tracking-[0.14em] text-gray-300">
             {t.contactEyebrow}
           </p>
-          <h4 className="mt-2 text-2xl font-semibold">{t.contactTitle}</h4>
+          <h4 className="mt-2 text-2xl font-semibold text-brand-gradient">
+            {t.contactTitle}
+          </h4>
+          <span className="brand-rule mx-auto mt-3" aria-hidden />
           <p className="mt-3 text-sm text-gray-200 max-w-3xl mx-auto">
             {t.contactDesc}
           </p>
           <div className="mt-5 flex justify-center gap-3">
             <Link
               href="/partenaires/demande"
-              className="rounded-full bg-gradient-to-r from-purple-500 to-pink-500 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition hover:brightness-110"
+              className="rounded-full bg-[var(--color-violet)] px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition hover:bg-[var(--color-violet-deep)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
             >
               {t.makeRequest}
             </Link>
             <Link
               href="/association"
-              className="rounded-full border border-white/20 px-5 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
+              className="rounded-full border border-white/20 px-5 py-2 text-sm font-semibold text-white transition hover:border-[var(--color-green)]/60 hover:bg-[var(--color-green)]/10 hover:text-[var(--color-green-light)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-green)]"
             >
               {t.discoverAsso}
             </Link>

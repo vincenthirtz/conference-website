@@ -64,7 +64,7 @@ export const getStaticProps: GetStaticProps<ScrimsPageProps> = async () => {
   }
 
   return {
-    props: { scrims: ((data || []) as unknown) as PublicScrim[] },
+    props: { scrims: (data || []) as unknown as PublicScrim[] },
     revalidate: 300,
   };
 };
@@ -122,7 +122,8 @@ function ScrimsPage({ scrims }: ScrimsPageProps) {
     const past: PublicScrim[] = [];
     for (const s of scrims) {
       if (s.status === 'running') running.push(s);
-      else if (s.status === 'completed' || s.status === 'cancelled') past.push(s);
+      else if (s.status === 'completed' || s.status === 'cancelled')
+        past.push(s);
       else upcoming.push(s);
     }
     return { upcoming, running, past };
@@ -131,17 +132,24 @@ function ScrimsPage({ scrims }: ScrimsPageProps) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-16">
-        <Heading level="h1" className="!text-4xl md:!text-5xl">
+        <Heading
+          level="h1"
+          className="text-brand-gradient !text-4xl md:!text-5xl"
+        >
           {t.title}
         </Heading>
-        <Paragraph className="text-neutral-400 mt-2 max-w-2xl">
+        <span className="brand-rule mt-3" aria-hidden />
+        <Paragraph className="text-neutral-400 mt-3 max-w-2xl">
           {t.subtitle}
         </Paragraph>
 
         {scrims.length === 0 && (
           <div className="mt-10 rounded-2xl border border-neutral-700/50 bg-neutral-800/30 p-8 text-center text-neutral-400">
             {t.emptyBefore}{' '}
-            <Link href="/scrim" className="text-blue-400 hover:underline">
+            <Link
+              href="/scrim"
+              className="text-[var(--color-green-light)] hover:underline"
+            >
               {t.emptyLink}
             </Link>
             {t.emptyAfter}
@@ -173,7 +181,10 @@ function ScrimSection({
   const locale = useLocale();
   return (
     <section className="mt-10">
-      <h2 className="text-xl font-semibold mb-4 text-neutral-200">{title}</h2>
+      <h2 className="text-xl font-semibold mb-4 text-neutral-200 flex items-center gap-2">
+        <span className="brand-dot h-2 w-2 rounded-full" aria-hidden />
+        {title}
+      </h2>
       <div className="grid gap-3">
         {scrims.map((s) => (
           <Link

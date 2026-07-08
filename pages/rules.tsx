@@ -60,9 +60,10 @@ function RulesPage() {
           <p className="mx-auto inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.18em] text-gray-200">
             {t.heroBadge}
           </p>
-          <h1 className="mt-3 text-4xl font-bold leading-tight sm:text-5xl md:text-6xl">
+          <h1 className="mt-3 text-4xl font-bold leading-tight text-brand-gradient sm:text-5xl md:text-6xl">
             {t.heroTitle}
           </h1>
+          <span className="brand-rule mx-auto mt-4" aria-hidden />
           <p className="mx-auto mt-4 max-w-3xl text-lg text-gray-200">
             {t.heroSubtitle}
           </p>
@@ -74,7 +75,7 @@ function RulesPage() {
           {ruleSections.map((section) => (
             <div
               key={section.title}
-              className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 shadow-xl shadow-black/20"
+              className="card-brand rounded-2xl bg-white/[0.04] p-5 shadow-xl shadow-black/20"
             >
               <h2 className="text-xl font-semibold text-white">
                 {section.title}
@@ -83,7 +84,7 @@ function RulesPage() {
                 {section.items.map((item) => (
                   <li key={item} className="flex items-start gap-2">
                     <span
-                      className="mt-[6px] h-2 w-2 rounded-full bg-purple-400"
+                      className="brand-dot mt-[6px] h-2 w-2 rounded-full"
                       aria-hidden
                     />
                     <span>
@@ -112,13 +113,16 @@ function RulesPage() {
           ))}
         </section>
 
-        <section className="rounded-3xl border border-white/10 bg-gradient-to-r from-[#140a24] via-[#1c0f33] to-[#2a0d3d] p-6 sm:p-10 shadow-2xl">
+        <section className="section-brand-bg card-brand rounded-3xl bg-gradient-to-r from-[#140a24] via-[#1c0f33] to-[#2a0d3d] p-6 sm:p-10 shadow-2xl">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-xs uppercase tracking-[0.18em] text-gray-200">
                 {t.modesEyebrow}
               </p>
-              <h3 className="text-2xl font-bold">{t.modesTitle}</h3>
+              <h3 className="text-2xl font-bold text-brand-gradient">
+                {t.modesTitle}
+              </h3>
+              <span className="brand-rule mt-3" aria-hidden />
             </div>
             <p className="text-sm text-gray-200">{t.modesNote}</p>
           </div>
@@ -127,9 +131,9 @@ function RulesPage() {
             {modeDetails.map((item) => (
               <div
                 key={item.mode}
-                className="rounded-2xl border border-white/10 bg-white/[0.06] p-4"
+                className="rounded-2xl border border-white/10 bg-white/[0.06] p-4 transition hover:border-[var(--color-green)]/40"
               >
-                <p className="text-sm uppercase tracking-[0.14em] text-purple-200">
+                <p className="text-sm uppercase tracking-[0.14em] text-[var(--color-green-light)]">
                   {item.mode}
                 </p>
                 <p className="mt-2 text-sm text-gray-100">{item.rules}</p>
@@ -143,9 +147,10 @@ function RulesPage() {
             <p className="text-xs uppercase tracking-[0.18em] text-gray-300">
               {t.referencesEyebrow}
             </p>
-            <h3 className="text-2xl font-bold text-white">
+            <h3 className="text-2xl font-bold text-brand-gradient">
               {t.referencesTitle}
             </h3>
+            <span className="brand-rule mt-3" aria-hidden />
             <p className="text-sm text-gray-300">{t.referencesNote}</p>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -155,7 +160,7 @@ function RulesPage() {
                 href={ref.href}
                 target="_blank"
                 rel="noreferrer noopener"
-                className="rounded-xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm text-white hover:border-purple-300/50 hover:bg-white/[0.1] transition"
+                className="rounded-xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm text-white transition hover:border-[var(--color-green)]/60 hover:bg-[var(--color-green)]/10 hover:text-[var(--color-green-light)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-green)]"
               >
                 {ref.label} ↗
               </Link>

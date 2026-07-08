@@ -13,12 +13,7 @@ type AssoDict = ReturnType<typeof useT<'associationPage'>>;
 const ADHESION_URL =
   'https://www.helloasso.com/associations/women-s-cup/adhesions/adhesion-2026-2027-women-s-cup';
 
-const getAdhesionPerks = (t: AssoDict) => [
-  t.perk1,
-  t.perk2,
-  t.perk3,
-  t.perk4,
-];
+const getAdhesionPerks = (t: AssoDict) => [t.perk1, t.perk2, t.perk3, t.perk4];
 
 import { logger } from '../utils/logger';
 type CastMember = {
@@ -365,7 +360,10 @@ function AssociationPage({ castMembers, poleMembers }: Props) {
       image_url: m.image_url,
       link_url: m.twitch_url,
     }));
-  membersByPole.production = [...membersByPole.production, ...castAsPoleMembers];
+  membersByPole.production = [
+    ...membersByPole.production,
+    ...castAsPoleMembers,
+  ];
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
@@ -384,7 +382,7 @@ function AssociationPage({ castMembers, poleMembers }: Props) {
           </p>
           <h1 className="mt-5 text-4xl font-bold leading-[1.1] sm:text-5xl md:text-6xl lg:text-7xl">
             <span className="block">{t.heroTitle1}</span>
-            <span className="block text-gradient">{t.heroTitle2}</span>
+            <span className="block text-brand-gradient">{t.heroTitle2}</span>
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-gray-300">
             {t.heroSubtitle}
@@ -394,19 +392,19 @@ function AssociationPage({ castMembers, poleMembers }: Props) {
               href={ADHESION_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="group relative rounded-full bg-gradient-to-r from-purple-500 to-pink-500 px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition-all hover:shadow-xl hover:shadow-purple-900/50 hover:-translate-y-0.5"
+              className="group relative rounded-full bg-[var(--color-violet)] px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition-all hover:bg-[var(--color-violet-deep)] hover:shadow-xl hover:shadow-purple-900/50 hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
             >
               {t.ctaAdhere2627}
             </a>
             <Link
               href="/don"
-              className="rounded-full border border-white/15 bg-white/5 backdrop-blur-sm px-7 py-3.5 text-sm font-semibold text-white transition hover:border-white/30 hover:bg-white/10"
+              className="rounded-full border border-white/15 bg-white/5 backdrop-blur-sm px-7 py-3.5 text-sm font-semibold text-white transition hover:border-[var(--color-green)]/60 hover:bg-[var(--color-green)]/10 hover:text-[var(--color-green-light)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-green)]"
             >
               {t.ctaDonate}
             </Link>
             <Link
               href="#adhesion"
-              className="rounded-full border border-white/15 bg-white/5 backdrop-blur-sm px-7 py-3.5 text-sm font-semibold text-white transition hover:border-white/30 hover:bg-white/10"
+              className="rounded-full border border-white/15 bg-white/5 backdrop-blur-sm px-7 py-3.5 text-sm font-semibold text-white transition hover:border-[var(--color-green)]/60 hover:bg-[var(--color-green)]/10 hover:text-[var(--color-green-light)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-green)]"
             >
               {t.ctaSeePerks}
             </Link>
@@ -436,9 +434,10 @@ function AssociationPage({ castMembers, poleMembers }: Props) {
             <p className="text-xs uppercase tracking-[0.18em] text-purple-300">
               {t.historyEyebrow}
             </p>
-            <h2 className="mt-2 text-3xl font-bold sm:text-4xl">
+            <h2 className="mt-2 text-3xl font-bold text-brand-gradient sm:text-4xl">
               {t.historyTitle}
             </h2>
+            <span className="brand-rule mx-auto mt-3" aria-hidden />
           </div>
 
           <div className="relative">
@@ -453,9 +452,9 @@ function AssociationPage({ castMembers, poleMembers }: Props) {
                     <div className="h-3 w-3 rounded-full bg-gradient-to-r from-purple-400 to-pink-400 ring-4 ring-neutral-950" />
                   </div>
 
-                  <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-6 transition hover:bg-white/[0.06] hover:border-white/15">
+                  <div className="card-brand rounded-2xl bg-white/[0.04] p-6 transition hover:bg-white/[0.06]">
                     <div className="flex items-center gap-3 mb-3">
-                      <span className="rounded-full bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 px-3 py-1 text-xs font-bold text-purple-300">
+                      <span className="rounded-full border border-[var(--color-green)]/40 bg-[var(--color-green)]/10 px-3 py-1 text-xs font-bold text-[var(--color-green-light)]">
                         {item.year}
                       </span>
                       <h3 className="text-lg font-semibold">{item.title}</h3>
@@ -476,9 +475,10 @@ function AssociationPage({ castMembers, poleMembers }: Props) {
             <p className="text-xs uppercase tracking-[0.18em] text-pink-300">
               {t.pillarsEyebrow}
             </p>
-            <h2 className="mt-2 text-3xl font-bold sm:text-4xl">
+            <h2 className="mt-2 text-3xl font-bold text-brand-gradient sm:text-4xl">
               {t.pillarsTitle}
             </h2>
+            <span className="brand-rule mx-auto mt-3" aria-hidden />
             <p className="mt-3 mx-auto max-w-xl text-sm text-gray-400">
               {t.pillarsIntro}
             </p>
@@ -507,17 +507,20 @@ function AssociationPage({ castMembers, poleMembers }: Props) {
         </section>
 
         {/* ── Engagements ─────────────────────────────────── */}
-        <section className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#140a24] via-[#1c0f33] to-[#2a0d3d] p-8 sm:p-12 shadow-2xl">
+        <section className="section-brand-bg card-brand rounded-3xl bg-gradient-to-br from-[#140a24] via-[#1c0f33] to-[#2a0d3d] p-8 sm:p-12 shadow-2xl">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between mb-8">
             <div>
               <p className="text-xs uppercase tracking-[0.18em] text-emerald-300">
                 {t.commitmentsEyebrow}
               </p>
-              <h3 className="mt-1 text-2xl font-bold sm:text-3xl">
+              <h3 className="mt-1 text-2xl font-bold text-brand-gradient sm:text-3xl">
                 {t.commitmentsTitle}
               </h3>
+              <span className="brand-rule mt-3" aria-hidden />
             </div>
-            <p className="text-sm text-gray-400 max-w-xs">{t.commitmentsIntro}</p>
+            <p className="text-sm text-gray-400 max-w-xs">
+              {t.commitmentsIntro}
+            </p>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
@@ -553,7 +556,9 @@ function AssociationPage({ castMembers, poleMembers }: Props) {
               </p>
               <h3 className="mt-4 text-3xl font-bold sm:text-4xl">
                 <span className="block">{t.adhesionTitle1}</span>
-                <span className="block text-gradient">{t.adhesionTitle2}</span>
+                <span className="block text-brand-gradient">
+                  {t.adhesionTitle2}
+                </span>
               </h3>
               <p className="mt-4 max-w-xl text-sm leading-relaxed text-gray-300">
                 {t.adhesionBody}
@@ -588,7 +593,7 @@ function AssociationPage({ castMembers, poleMembers }: Props) {
                   href={ADHESION_URL}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="group inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition-all hover:shadow-xl hover:shadow-purple-900/50 hover:-translate-y-0.5"
+                  className="group inline-flex items-center gap-2 rounded-full bg-[var(--color-violet)] px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition-all hover:bg-[var(--color-violet-deep)] hover:shadow-xl hover:shadow-purple-900/50 hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
                 >
                   {t.adhereHelloasso}
                   <svg
@@ -639,9 +644,10 @@ function AssociationPage({ castMembers, poleMembers }: Props) {
             <p className="text-xs uppercase tracking-[0.18em] text-cyan-300">
               {t.polesEyebrow}
             </p>
-            <h3 className="mt-2 text-2xl font-bold sm:text-3xl">
+            <h3 className="mt-2 text-2xl font-bold text-brand-gradient sm:text-3xl">
               {t.polesTitle}
             </h3>
+            <span className="brand-rule mx-auto mt-3" aria-hidden />
             <p className="mt-3 mx-auto max-w-xl text-sm text-gray-400">
               {t.polesIntro}
             </p>
@@ -651,70 +657,74 @@ function AssociationPage({ castMembers, poleMembers }: Props) {
             {teamRoles.map((role) => {
               const members = membersByPole[role.poleKey] ?? [];
               return (
-              <div
-                key={role.title}
-                className={`group flex flex-col gap-4 rounded-2xl border border-white/10 bg-gradient-to-br ${role.accent} p-5 transition hover:-translate-y-0.5 hover:border-white/20 hover:shadow-lg hover:shadow-black/20`}
-              >
-                <div className="flex items-start gap-4">
-                  <div
-                    className={`w-11 h-11 rounded-xl bg-white/[0.06] border border-white/10 flex items-center justify-center ${role.iconColor} flex-shrink-0 group-hover:text-white transition-colors`}
-                  >
-                    {role.icon}
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-semibold text-white">{role.title}</p>
-                    <p className="mt-1 text-sm text-gray-400">{role.desc}</p>
-                  </div>
-                </div>
-
-                {members.length > 0 && (
-                  <div className="border-t border-white/5 pt-3">
-                    <p className="mb-2 text-[11px] uppercase tracking-[0.16em] text-gray-500">
-                      {t.membersLabel}
-                    </p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {members.map((member) => {
-                        const content = (
-                          <span className="inline-flex items-center gap-2">
-                            {member.image_url ? (
-                              <Image
-                                src={member.image_url}
-                                alt=""
-                                width={18}
-                                height={18}
-                                className="h-4.5 w-4.5 rounded-full object-cover"
-                                unoptimized
-                              />
-                            ) : null}
-                            <span className="font-medium">{member.name}</span>
-                            {member.title ? (
-                              <span className="opacity-70">— {member.title}</span>
-                            ) : null}
-                          </span>
-                        );
-                        const className = `inline-flex items-center rounded-full border ${role.badge} px-2.5 py-1 text-xs font-medium ${
-                          member.link_url ? 'transition hover:bg-white/10' : ''
-                        }`;
-                        return member.link_url ? (
-                          <a
-                            key={member.id}
-                            href={member.link_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className={className}
-                          >
-                            {content}
-                          </a>
-                        ) : (
-                          <span key={member.id} className={className}>
-                            {content}
-                          </span>
-                        );
-                      })}
+                <div
+                  key={role.title}
+                  className={`group flex flex-col gap-4 rounded-2xl border border-white/10 bg-gradient-to-br ${role.accent} p-5 transition hover:-translate-y-0.5 hover:border-white/20 hover:shadow-lg hover:shadow-black/20`}
+                >
+                  <div className="flex items-start gap-4">
+                    <div
+                      className={`w-11 h-11 rounded-xl bg-white/[0.06] border border-white/10 flex items-center justify-center ${role.iconColor} flex-shrink-0 group-hover:text-white transition-colors`}
+                    >
+                      {role.icon}
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-white">{role.title}</p>
+                      <p className="mt-1 text-sm text-gray-400">{role.desc}</p>
                     </div>
                   </div>
-                )}
-              </div>
+
+                  {members.length > 0 && (
+                    <div className="border-t border-white/5 pt-3">
+                      <p className="mb-2 text-[11px] uppercase tracking-[0.16em] text-gray-500">
+                        {t.membersLabel}
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {members.map((member) => {
+                          const content = (
+                            <span className="inline-flex items-center gap-2">
+                              {member.image_url ? (
+                                <Image
+                                  src={member.image_url}
+                                  alt=""
+                                  width={18}
+                                  height={18}
+                                  className="h-4.5 w-4.5 rounded-full object-cover"
+                                  unoptimized
+                                />
+                              ) : null}
+                              <span className="font-medium">{member.name}</span>
+                              {member.title ? (
+                                <span className="opacity-70">
+                                  — {member.title}
+                                </span>
+                              ) : null}
+                            </span>
+                          );
+                          const className = `inline-flex items-center rounded-full border ${role.badge} px-2.5 py-1 text-xs font-medium ${
+                            member.link_url
+                              ? 'transition hover:bg-white/10'
+                              : ''
+                          }`;
+                          return member.link_url ? (
+                            <a
+                              key={member.id}
+                              href={member.link_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={className}
+                            >
+                              {content}
+                            </a>
+                          ) : (
+                            <span key={member.id} className={className}>
+                              {content}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
               );
             })}
           </div>
@@ -739,14 +749,17 @@ function AssociationPage({ castMembers, poleMembers }: Props) {
                 />
               </svg>
             </div>
-            <h4 className="text-2xl font-bold sm:text-3xl">{t.contactTitle}</h4>
+            <h4 className="text-2xl font-bold text-brand-gradient sm:text-3xl">
+              {t.contactTitle}
+            </h4>
+            <span className="brand-rule mx-auto mt-3" aria-hidden />
             <p className="mt-3 mx-auto max-w-md text-sm text-gray-300">
               {t.contactBody}
             </p>
             <div className="mt-7 flex flex-wrap justify-center gap-4">
               <a
                 href={`mailto:${contactEmail}?subject=Rejoindre%20l%27association%20OW%20Women%27s%20Cup`}
-                className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/5 backdrop-blur-sm px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/10 hover:border-white/30"
+                className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/5 backdrop-blur-sm px-6 py-3 text-sm font-semibold text-white transition hover:border-[var(--color-green)]/60 hover:bg-[var(--color-green)]/10 hover:text-[var(--color-green-light)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-green)]"
               >
                 <svg
                   className="w-4 h-4"
@@ -767,13 +780,13 @@ function AssociationPage({ castMembers, poleMembers }: Props) {
                 href={ADHESION_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="rounded-full bg-gradient-to-r from-purple-500 to-pink-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition-all hover:shadow-xl hover:shadow-purple-900/50 hover:-translate-y-0.5"
+                className="rounded-full bg-[var(--color-violet)] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition-all hover:bg-[var(--color-violet-deep)] hover:shadow-xl hover:shadow-purple-900/50 hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
               >
                 {t.ctaAdhere}
               </a>
               <Link
                 href="/don"
-                className="rounded-full border border-white/20 bg-white/5 backdrop-blur-sm px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/10 hover:border-white/30"
+                className="rounded-full border border-white/20 bg-white/5 backdrop-blur-sm px-6 py-3 text-sm font-semibold text-white transition hover:border-[var(--color-green)]/60 hover:bg-[var(--color-green)]/10 hover:text-[var(--color-green-light)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-green)]"
               >
                 {t.ctaDonate}
               </Link>

@@ -40,7 +40,7 @@ function linkifyContent(text: string): ReactNode {
         href={part}
         target="_blank"
         rel="noopener noreferrer"
-        className="text-purple-300 underline hover:text-purple-200 break-all"
+        className="text-[var(--color-violet-light)] underline hover:text-[var(--color-violet)] break-all"
       >
         {part}
       </a>
@@ -241,7 +241,7 @@ export default function NewsSlugPage({
       <div className="container max-w-4xl px-4 pt-24">
         <Link
           href="/"
-          className="text-sm text-purple-200 hover:text-purple-100"
+          className="text-sm text-[var(--color-violet-light)] hover:text-[var(--color-violet)]"
         >
           {t.backHome}
         </Link>
@@ -253,7 +253,7 @@ export default function NewsSlugPage({
         ) : (
           <article>
             <div className="mt-6 flex flex-col gap-3">
-              <div className="flex items-center gap-3 text-xs uppercase tracking-[0.16em] text-blue-200/80">
+              <div className="flex items-center gap-3 text-xs uppercase tracking-[0.16em] text-[var(--color-green)]/90">
                 {articlePublishedTime ? (
                   <time dateTime={articlePublishedTime}>
                     {displayDate || t.newsLabel}
@@ -262,14 +262,15 @@ export default function NewsSlugPage({
                   <span>{displayDate || t.newsLabel}</span>
                 )}
                 {formattedTag && (
-                  <span className="px-3 py-1 rounded-full border border-blue-300/40 bg-blue-500/10 text-[10px] tracking-[0.14em] text-blue-100">
+                  <span className="px-3 py-1 rounded-full border border-[var(--color-green)]/40 bg-[var(--color-green)]/10 text-[10px] tracking-[0.14em] text-[var(--color-green-light)]">
                     {formattedTag}
                   </span>
                 )}
               </div>
-              <Heading typeStyle="heading-md" className="text-gradient">
+              <Heading typeStyle="heading-md" className="text-brand-gradient">
                 {title}
               </Heading>
+              <span className="brand-rule mt-1" aria-hidden />
               {imageUrl && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -414,8 +415,8 @@ function Comments({ newsId }: { newsId: string }) {
   };
 
   return (
-    <div className="mt-12 rounded-2xl border border-white/10 bg-white/5 p-6 space-y-4">
-      <Heading typeStyle="heading-sm" className="text-white">
+    <div className="mt-12 card-brand rounded-2xl bg-white/5 p-6 space-y-4">
+      <Heading typeStyle="heading-sm" className="text-brand-gradient">
         {t.commentsTitle}
       </Heading>
 
@@ -431,7 +432,7 @@ function Comments({ newsId }: { newsId: string }) {
               value={content}
               onChange={(e) => setContent(e.target.value)}
               placeholder={t.commentPlaceholder}
-              className="w-full rounded-xl border border-white/15 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/70 focus:border-purple-400/70 transition"
+              className="w-full rounded-xl border border-white/15 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[var(--color-violet)]/70 focus:border-[var(--color-violet)]/70 transition"
             />
           </div>
           <div className="flex flex-col gap-2">
@@ -444,7 +445,7 @@ function Comments({ newsId }: { newsId: string }) {
               value={author}
               onChange={(e) => setAuthor(e.target.value)}
               placeholder={t.authorPlaceholder}
-              className="w-full rounded-xl border border-white/15 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/70 focus:border-purple-400/70 transition"
+              className="w-full rounded-xl border border-white/15 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[var(--color-violet)]/70 focus:border-[var(--color-violet)]/70 transition"
             />
             <label htmlFor="comment-captcha" className="sr-only">
               {captchaQuestion
@@ -461,7 +462,7 @@ function Comments({ newsId }: { newsId: string }) {
                   ? format(t.captchaPlaceholder, { question: captchaQuestion })
                   : t.captchaLoading
               }
-              className="w-full rounded-xl border border-white/15 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/70 focus:border-purple-400/70 transition"
+              className="w-full rounded-xl border border-white/15 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[var(--color-violet)]/70 focus:border-[var(--color-violet)]/70 transition"
             />
             {/* Honeypot anti-bot */}
             <input

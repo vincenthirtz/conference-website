@@ -91,11 +91,14 @@ export default function LeaguesPage({
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
       <main className="container mx-auto max-w-5xl px-4 pb-16 pt-24">
-        <header className="mb-8 text-center">
-          <p className="mb-2 text-xs uppercase tracking-widest text-purple-300">
+        <header className="mb-8 flex flex-col items-center text-center">
+          <p className="mb-2 text-xs uppercase tracking-widest text-[var(--color-violet-light)]">
             {t.eyebrow}
           </p>
-          <h1 className="text-3xl font-bold sm:text-4xl">{t.heading}</h1>
+          <h1 className="text-brand-gradient text-3xl font-bold sm:text-4xl">
+            {t.heading}
+          </h1>
+          <span className="brand-rule mt-3" aria-hidden />
           <p className="mx-auto mt-3 max-w-2xl text-sm text-neutral-400">
             {t.subtitle}
           </p>
@@ -115,10 +118,10 @@ export default function LeaguesPage({
                 <li key={league.id}>
                   <Link
                     href={`/leagues/${league.slug}`}
-                    className="group flex h-full flex-col rounded-2xl border border-neutral-800 bg-neutral-900/40 p-5 transition-colors hover:border-purple-500/40 hover:bg-neutral-900/70"
+                    className="group card-brand flex h-full flex-col rounded-2xl border border-neutral-800 bg-neutral-900/40 p-5 transition-colors hover:bg-neutral-900/70"
                   >
                     <div className="mb-3 flex items-start justify-between gap-3">
-                      <h2 className="text-lg font-semibold group-hover:text-purple-300">
+                      <h2 className="text-lg font-semibold group-hover:text-[var(--color-violet-light)]">
                         {league.name}
                       </h2>
                       <span
@@ -168,7 +171,7 @@ function EmptyState() {
   const t = useT('leaguesIndex');
   return (
     <section className="rounded-2xl border border-neutral-800 bg-neutral-900/40 py-16 text-center">
-      <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-purple-500/10 text-2xl">
+      <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--color-violet)]/10 text-2xl">
         📅
       </div>
       <h2 className="mb-2 text-lg font-semibold">{t.emptyHeading}</h2>
@@ -201,7 +204,7 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
       <button
         type="button"
         onClick={onRetry}
-        className="rounded-md bg-purple-500 px-4 py-2 text-sm font-semibold transition-colors hover:bg-purple-400"
+        className="rounded-md bg-[var(--color-violet)] px-4 py-2 text-sm font-semibold transition-colors hover:bg-[var(--color-violet-deep)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
       >
         {t.retry}
       </button>

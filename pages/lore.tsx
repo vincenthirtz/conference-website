@@ -224,9 +224,10 @@ export default function LorePage({ media }: LorePageProps) {
             <div className="inline-block text-lg text-white font-semibold border-b-2 border-purple-400 mb-4">
               {t.eyebrow}
             </div>
-            <Heading typeStyle="heading-lg" className="text-gradient">
+            <Heading typeStyle="heading-lg" className="text-brand-gradient">
               {t.title}
             </Heading>
+            <span className="brand-rule mx-auto mt-4" aria-hidden />
             <div className="max-w-2xl mx-auto mt-4">
               <Paragraph typeStyle="body-lg" textColor="text-neutral-300">
                 {t.intro}
@@ -247,7 +248,7 @@ export default function LorePage({ media }: LorePageProps) {
                   onClick={() => setActiveTab(tab.key)}
                   className={`px-5 py-2.5 rounded-xl text-sm font-medium transition ${
                     activeTab === tab.key
-                      ? 'bg-white/10 text-white border border-white/20'
+                      ? 'border border-[var(--color-violet)]/60 bg-[var(--color-violet)]/15 text-white'
                       : 'text-neutral-400 hover:text-white hover:bg-white/5'
                   }`}
                 >
@@ -284,7 +285,7 @@ export default function LorePage({ media }: LorePageProps) {
             <Link href={MEDIA_SOURCE} target="_blank" rel="noreferrer">
               <Button
                 type="button"
-                className="px-6 py-3 bg-purple-600 hover:bg-purple-500"
+                className="px-6 py-3 bg-[var(--color-violet)] hover:bg-[var(--color-violet-deep)]"
               >
                 {t.viewAllBlizzard}
               </Button>

@@ -336,9 +336,9 @@ export default function TournamentPage({
         className="pointer-events-none fixed inset-0 overflow-hidden"
         aria-hidden="true"
       >
-        <div className="absolute -top-40 -left-40 w-[600px] h-[600px] rounded-full bg-purple-600/8 blur-3xl" />
-        <div className="absolute top-1/3 -right-32 w-[500px] h-[500px] rounded-full bg-pink-500/6 blur-3xl" />
-        <div className="absolute bottom-0 left-1/4 w-[400px] h-[400px] rounded-full bg-blue-500/5 blur-3xl" />
+        <div className="absolute -top-40 -left-40 w-[600px] h-[600px] rounded-full bg-[var(--color-violet)]/10 blur-3xl" />
+        <div className="absolute top-1/3 -right-32 w-[500px] h-[500px] rounded-full bg-[var(--color-green)]/6 blur-3xl" />
+        <div className="absolute bottom-0 left-1/4 w-[400px] h-[400px] rounded-full bg-[var(--color-yellow)]/5 blur-3xl" />
       </div>
 
       <main className="relative container mx-auto px-4 pt-28 pb-20 max-w-6xl">
@@ -348,7 +348,7 @@ export default function TournamentPage({
             {/* Left: title + description */}
             <div>
               <div className="inline-flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-white/5 backdrop-blur-sm border border-white/10 mb-5 text-[10px] uppercase tracking-widest">
-                <span className="px-2 py-[3px] rounded-full bg-gradient-to-r from-pink-500 to-orange-400 text-black font-bold text-[9px]">
+                <span className="px-2 py-[3px] rounded-full bg-gradient-to-r from-[var(--color-violet)] to-[var(--color-green)] text-black font-bold text-[9px]">
                   OW Women&apos;s Cup
                 </span>
                 <span className="text-gray-300">
@@ -361,15 +361,16 @@ export default function TournamentPage({
               <Heading
                 typeStyle="heading-lg"
                 level="h1"
-                className="text-gradient mb-2"
+                className="text-brand-gradient mb-2"
               >
                 {tournament.name}
               </Heading>
+              <span className="brand-rule mb-3" aria-hidden />
 
               {dateRangeLabel && (
                 <p className="text-sm text-gray-400 mb-3 flex items-center gap-2">
                   <svg
-                    className="w-3.5 h-3.5 text-purple-400"
+                    className="w-3.5 h-3.5 text-[var(--color-violet-light)]"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -401,9 +402,9 @@ export default function TournamentPage({
                   </span>
                   {leagues.map((league) => (
                     <Link key={league.slug} href={`/leagues/${league.slug}`}>
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[11px] font-medium text-gray-200 hover:border-purple-400/50 hover:bg-purple-500/10 hover:text-purple-200 transition-colors cursor-pointer">
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[11px] font-medium text-gray-200 hover:border-[var(--color-violet)]/50 hover:bg-[var(--color-violet)]/10 hover:text-[var(--color-violet-light)] transition-colors cursor-pointer">
                         <svg
-                          className="w-3 h-3 text-purple-400"
+                          className="w-3 h-3 text-[var(--color-violet-light)]"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -434,7 +435,7 @@ export default function TournamentPage({
                 <Link href={`${tournamentPath}/bracket`}>
                   <Button
                     type="button"
-                    className="px-6 py-2.5 text-xs font-bold rounded-full bg-white text-black hover:bg-gray-100 shadow-lg shadow-white/10 transition-all hover:shadow-white/20 hover:scale-[1.02]"
+                    className="px-6 py-2.5 text-xs font-bold rounded-full bg-[var(--color-violet)] text-white hover:bg-[var(--color-violet-deep)] shadow-lg shadow-[var(--color-violet-deep)]/30 transition-all hover:scale-[1.02] focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
                   >
                     {t.ctaBracket}
                   </Button>
@@ -443,7 +444,7 @@ export default function TournamentPage({
                 <Link href={`${tournamentPath}/matches`}>
                   <Button
                     type="button"
-                    className="px-6 py-2.5 text-xs font-semibold rounded-full bg-white/5 backdrop-blur-sm border border-white/20 hover:border-emerald-400/60 hover:bg-emerald-500/10 transition-all"
+                    className="px-6 py-2.5 text-xs font-semibold rounded-full bg-white/5 backdrop-blur-sm border border-white/20 hover:border-[var(--color-green)]/60 hover:bg-[var(--color-green)]/10 transition-all"
                   >
                     {t.ctaAllMatches}
                   </Button>
@@ -452,7 +453,7 @@ export default function TournamentPage({
                 <Link href={`${tournamentPath}/maps`}>
                   <Button
                     type="button"
-                    className="px-6 py-2.5 text-xs font-semibold rounded-full bg-white/5 backdrop-blur-sm border border-white/20 hover:border-blue-400/60 hover:bg-blue-500/10 transition-all"
+                    className="px-6 py-2.5 text-xs font-semibold rounded-full bg-white/5 backdrop-blur-sm border border-white/20 hover:border-[var(--color-yellow)]/60 hover:bg-[var(--color-yellow)]/10 transition-all"
                   >
                     {t.ctaTopMaps}
                   </Button>
@@ -462,7 +463,7 @@ export default function TournamentPage({
                   <Link href={`${tournamentPath}/ffa`}>
                     <Button
                       type="button"
-                      className="px-6 py-2.5 text-xs font-semibold rounded-full bg-white/5 backdrop-blur-sm border border-white/20 hover:border-amber-400/60 hover:bg-amber-500/10 transition-all"
+                      className="px-6 py-2.5 text-xs font-semibold rounded-full bg-white/5 backdrop-blur-sm border border-white/20 hover:border-[var(--color-yellow)]/60 hover:bg-[var(--color-yellow)]/10 transition-all"
                     >
                       {t.ctaFfaStandings}
                     </Button>
@@ -485,7 +486,7 @@ export default function TournamentPage({
                     <Link href={`/team/create?tournament=${tournament.id}`}>
                       <Button
                         type="button"
-                        className="px-6 py-2.5 text-xs font-bold rounded-full bg-gradient-to-r from-pink-500 to-orange-400 text-black hover:from-pink-400 hover:to-orange-300 shadow-lg shadow-pink-500/20 transition-all hover:shadow-pink-500/30 hover:scale-[1.02]"
+                        className="px-6 py-2.5 text-xs font-bold rounded-full bg-gradient-to-r from-[var(--color-green)] to-[var(--color-yellow)] text-black hover:from-[var(--color-green-light)] hover:to-[var(--color-yellow-light)] shadow-lg shadow-[var(--color-green-deep)]/20 transition-all hover:scale-[1.02]"
                       >
                         {t.ctaRegisterTeam}
                       </Button>
@@ -505,7 +506,7 @@ export default function TournamentPage({
                     href={tournament.rules_url}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex items-center gap-1.5 text-[11px] text-gray-400 hover:text-purple-300 transition-colors"
+                    className="inline-flex items-center gap-1.5 text-[11px] text-gray-400 hover:text-[var(--color-violet-light)] transition-colors"
                   >
                     <svg
                       className="w-3 h-3"
@@ -633,7 +634,7 @@ export default function TournamentPage({
                 {stages.map((s) => (
                   <li
                     key={s.id}
-                    className="flex items-start justify-between gap-3 rounded-xl bg-gradient-to-r from-white/5 to-transparent border border-white/8 px-4 py-3 hover:border-purple-500/30 transition-colors"
+                    className="flex items-start justify-between gap-3 rounded-xl bg-gradient-to-r from-white/5 to-transparent border border-white/8 px-4 py-3 hover:border-[var(--color-violet)]/40 transition-colors"
                   >
                     <div>
                       <p className="text-sm font-semibold text-white">
@@ -656,7 +657,7 @@ export default function TournamentPage({
                       )}
                     </div>
                     <Link href={`${tournamentPath}/bracket`}>
-                      <span className="mt-1 inline-flex items-center gap-1 px-2.5 py-1 rounded-full border border-purple-400/40 text-purple-200 bg-purple-900/20 hover:bg-purple-900/40 cursor-pointer text-[10px] transition-colors">
+                      <span className="mt-1 inline-flex items-center gap-1 px-2.5 py-1 rounded-full border border-[var(--color-violet)]/40 text-[var(--color-violet-light)] bg-[var(--color-violet-deep)]/25 hover:bg-[var(--color-violet-deep)]/45 cursor-pointer text-[10px] transition-colors">
                         <svg
                           className="w-2.5 h-2.5"
                           fill="none"
@@ -686,7 +687,7 @@ export default function TournamentPage({
                 {t.keyMatchesHeading}
               </p>
               <Link href={`${tournamentPath}/matches`}>
-                <span className="text-[11px] text-blue-400 hover:text-blue-300 cursor-pointer transition-colors">
+                <span className="text-[11px] text-[var(--color-violet-light)] hover:text-white cursor-pointer transition-colors">
                   {t.viewAllMatches}
                 </span>
               </Link>
@@ -695,7 +696,7 @@ export default function TournamentPage({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Upcoming */}
               <div>
-                <p className="text-[10px] uppercase tracking-widest text-emerald-400/70 mb-2 font-medium">
+                <p className="text-[10px] uppercase tracking-widest text-[var(--color-green-light)]/80 mb-2 font-medium">
                   {t.upcomingHeading}
                 </p>
                 <div className="space-y-2">
@@ -712,7 +713,7 @@ export default function TournamentPage({
 
               {/* Recent */}
               <div>
-                <p className="text-[10px] uppercase tracking-widest text-orange-400/70 mb-2 font-medium">
+                <p className="text-[10px] uppercase tracking-widest text-[var(--color-yellow)]/80 mb-2 font-medium">
                   {t.recentHeading}
                 </p>
                 <div className="space-y-2">
@@ -761,8 +762,8 @@ export default function TournamentPage({
                     key={team.id}
                     href={`/team/${encodeURIComponent(team.slug || team.id)}`}
                   >
-                    <div className="group flex flex-col items-center gap-2.5 bg-gradient-to-b from-white/5 to-transparent border border-white/8 rounded-2xl px-3 py-4 cursor-pointer hover:border-emerald-400/50 hover:bg-emerald-500/5 transition-all hover:scale-[1.02]">
-                      <div className="w-14 h-14 rounded-full bg-gradient-to-br from-white/10 to-white/5 border border-white/10 flex items-center justify-center overflow-hidden group-hover:border-emerald-400/30 transition-colors">
+                    <div className="group flex flex-col items-center gap-2.5 bg-gradient-to-b from-white/5 to-transparent border border-white/8 rounded-2xl px-3 py-4 cursor-pointer hover:border-[var(--color-green)]/50 hover:bg-[var(--color-green)]/5 transition-all hover:scale-[1.02]">
+                      <div className="w-14 h-14 rounded-full bg-gradient-to-br from-white/10 to-white/5 border border-white/10 flex items-center justify-center overflow-hidden group-hover:border-[var(--color-green)]/30 transition-colors">
                         {team.logo_url ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
@@ -775,7 +776,7 @@ export default function TournamentPage({
                             className="w-full h-full object-cover"
                           />
                         ) : (
-                          <span className="text-xs font-bold text-gray-400 group-hover:text-emerald-300 transition-colors">
+                          <span className="text-xs font-bold text-gray-400 group-hover:text-[var(--color-green-light)] transition-colors">
                             {initials(team.short_name || team.name)}
                           </span>
                         )}
@@ -808,7 +809,7 @@ export default function TournamentPage({
                 {t.mapsHeading}
               </p>
               <Link href={`${tournamentPath}/maps`}>
-                <span className="text-[11px] text-blue-400 hover:text-blue-300 cursor-pointer transition-colors">
+                <span className="text-[11px] text-[var(--color-violet-light)] hover:text-white cursor-pointer transition-colors">
                   {t.viewAllMaps}
                 </span>
               </Link>
@@ -822,11 +823,11 @@ export default function TournamentPage({
               {t.mapsDescription}
             </Paragraph>
 
-            <div className="border border-white/8 rounded-xl px-4 py-3 bg-gradient-to-r from-blue-500/5 to-transparent">
+            <div className="border border-white/8 rounded-xl px-4 py-3 bg-gradient-to-r from-[var(--color-yellow)]/8 to-transparent">
               <p className="text-[11px] text-gray-400">
                 {t.mapsNoteBefore}
                 <Link href={`${tournamentPath}/maps`}>
-                  <span className="text-blue-400 hover:text-blue-300 cursor-pointer transition-colors font-medium">
+                  <span className="text-[var(--color-violet-light)] hover:text-white cursor-pointer transition-colors font-medium">
                     {t.mapsNoteLink}
                   </span>
                 </Link>
@@ -845,10 +846,22 @@ export default function TournamentPage({
  * ────────────────────────────────────────────*/
 
 const ACCENT_STYLES: Record<string, { border: string; glow: string }> = {
-  purple: { border: 'border-purple-500/20', glow: 'from-purple-500/10' },
-  emerald: { border: 'border-emerald-500/20', glow: 'from-emerald-500/10' },
-  blue: { border: 'border-blue-500/20', glow: 'from-blue-500/10' },
-  pink: { border: 'border-pink-500/20', glow: 'from-pink-500/10' },
+  purple: {
+    border: 'border-[var(--color-violet)]/25',
+    glow: 'from-[var(--color-violet)]/10',
+  },
+  emerald: {
+    border: 'border-[var(--color-green)]/25',
+    glow: 'from-[var(--color-green)]/10',
+  },
+  blue: {
+    border: 'border-[var(--color-yellow)]/25',
+    glow: 'from-[var(--color-yellow)]/10',
+  },
+  pink: {
+    border: 'border-[var(--color-violet-light)]/25',
+    glow: 'from-[var(--color-violet-light)]/10',
+  },
 };
 
 function StatCard({
@@ -907,7 +920,7 @@ function MatchLine({
 
   return (
     <Link href={`/match/${match.id}`}>
-      <div className="group flex flex-col gap-1 px-3 py-2 rounded-xl bg-white/[0.03] border border-white/8 hover:border-emerald-400/40 hover:bg-emerald-500/5 cursor-pointer transition-all text-[11px]">
+      <div className="group flex flex-col gap-1 px-3 py-2 rounded-xl bg-white/[0.03] border border-white/8 hover:border-[var(--color-green)]/40 hover:bg-[var(--color-green)]/5 cursor-pointer transition-all text-[11px]">
         <div className="flex items-center justify-between gap-2">
           <p className="text-gray-100 truncate font-medium">
             {t1}{' '}

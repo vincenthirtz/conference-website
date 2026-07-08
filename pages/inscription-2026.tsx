@@ -135,18 +135,18 @@ function Inscription2026Page() {
       {/* Hero */}
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute -left-32 -top-32 h-[420px] w-[420px] rounded-full bg-purple-600/30 blur-3xl" />
-          <div className="absolute right-10 top-10 h-[360px] w-[360px] rounded-full bg-pink-500/20 blur-3xl" />
+          <div className="absolute -left-32 -top-32 h-[420px] w-[420px] rounded-full bg-[var(--color-violet)]/30 blur-3xl" />
+          <div className="absolute right-10 top-10 h-[360px] w-[360px] rounded-full bg-[var(--color-green)]/20 blur-3xl" />
         </div>
 
         <div className="relative mx-auto max-w-5xl px-6 pt-32 pb-16 text-center">
           <p className="mx-auto inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.18em] text-gray-200">
-            <span className="rounded-full bg-gradient-to-r from-pink-400 to-purple-400 px-2 py-[2px] text-[10px] font-semibold text-black">
+            <span className="rounded-full bg-gradient-to-r from-[var(--color-violet)] to-[var(--color-green)] px-2 py-[2px] text-[10px] font-semibold text-white">
               {t.heroBadgeTournament}
             </span>
             <span>{t.heroBadgeAction}</span>
           </p>
-          <h1 className="mt-4 text-4xl font-bold leading-tight sm:text-5xl md:text-6xl">
+          <h1 className="text-brand-gradient mt-4 text-4xl font-bold leading-tight sm:text-5xl md:text-6xl">
             {t.heroTitle}
           </h1>
           <p className="mx-auto mt-4 max-w-3xl text-lg text-gray-200">
@@ -155,7 +155,7 @@ function Inscription2026Page() {
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Link
               href={REGISTER_HREF}
-              className="rounded-full bg-gradient-to-r from-pink-500 to-orange-400 px-6 py-3 text-sm font-bold text-black shadow-lg shadow-pink-500/20 transition hover:brightness-110"
+              className="rounded-full bg-[var(--color-violet)] px-6 py-3 text-sm font-bold text-white shadow-lg shadow-[var(--color-violet)]/30 transition hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet)]"
             >
               {t.ctaRegister} <span aria-hidden="true">↗</span>
             </Link>
@@ -193,18 +193,19 @@ function Inscription2026Page() {
         {/* Prerequisites */}
         <section>
           <div className="mb-6">
-            <p className="text-xs uppercase tracking-[0.24em] text-purple-200/80">
+            <p className="text-xs uppercase tracking-[0.24em] text-[var(--color-violet-light)]">
               {t.prereqEyebrow}
             </p>
-            <h2 className="mt-2 text-3xl font-extrabold tracking-tight">
+            <h2 className="text-brand-gradient mt-2 text-3xl font-extrabold tracking-tight">
               {t.prereqTitle}
             </h2>
+            <span className="brand-rule mt-3 block" aria-hidden />
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             {prerequisites.map((item) => (
               <div
                 key={item.title}
-                className="rounded-2xl border border-white/10 bg-white/[0.05] p-5 shadow-xl shadow-black/20"
+                className="card-brand rounded-2xl bg-white/[0.05] p-5"
               >
                 <h3 className="text-lg font-semibold text-white">
                   {item.title}
@@ -216,23 +217,24 @@ function Inscription2026Page() {
         </section>
 
         {/* Steps */}
-        <section id="etapes">
+        <section id="etapes" className="section-brand-bg">
           <div className="mb-6">
-            <p className="text-xs uppercase tracking-[0.24em] text-purple-200/80">
+            <p className="text-xs uppercase tracking-[0.24em] text-[var(--color-green)]">
               {t.stepsEyebrow}
             </p>
-            <h2 className="mt-2 text-3xl font-extrabold tracking-tight">
+            <h2 className="text-brand-gradient mt-2 text-3xl font-extrabold tracking-tight">
               {t.stepsTitle}
             </h2>
+            <span className="brand-rule mt-3 block" aria-hidden />
             <p className="mt-3 max-w-2xl text-sm text-gray-300">{t.stepsIntro}</p>
           </div>
           <ol className="space-y-4">
             {steps.map((step) => (
               <li
                 key={step.number}
-                className="flex flex-col gap-4 rounded-2xl border border-white/10 bg-white/[0.05] p-5 shadow-xl shadow-black/20 sm:flex-row sm:items-start"
+                className="card-brand flex flex-col gap-4 rounded-2xl bg-white/[0.05] p-5 sm:flex-row sm:items-start"
               >
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500/40 to-pink-500/40 font-mono text-lg font-bold text-white ring-1 ring-white/15">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--color-violet)] to-[var(--color-green)] font-mono text-lg font-bold text-white ring-1 ring-white/15">
                   {step.number}
                 </div>
                 <div className="flex-1">
@@ -248,14 +250,14 @@ function Inscription2026Page() {
                         href={step.cta.href}
                         target="_blank"
                         rel="noreferrer noopener"
-                        className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-purple-200 underline decoration-purple-400/60 underline-offset-4 transition hover:text-white"
+                        className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-[var(--color-violet-light)] underline decoration-[var(--color-violet)]/60 underline-offset-4 transition hover:text-white"
                       >
                         {step.cta.label} <span aria-hidden="true">↗</span>
                       </a>
                     ) : (
                       <Link
                         href={step.cta.href}
-                        className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-purple-200 underline decoration-purple-400/60 underline-offset-4 transition hover:text-white"
+                        className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-[var(--color-violet-light)] underline decoration-[var(--color-violet)]/60 underline-offset-4 transition hover:text-white"
                       >
                         {step.cta.label} <span aria-hidden="true">↗</span>
                       </Link>
@@ -278,7 +280,7 @@ function Inscription2026Page() {
             </div>
             <Link
               href={REGISTER_HREF}
-              className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-pink-500 to-orange-400 px-6 py-3 text-sm font-bold text-black shadow-lg shadow-pink-500/20 transition hover:brightness-110"
+              className="inline-flex items-center justify-center rounded-full bg-[var(--color-violet)] px-6 py-3 text-sm font-bold text-white shadow-lg shadow-[var(--color-violet)]/30 transition hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet)]"
             >
               {t.ctaRegister} <span aria-hidden="true">↗</span>
             </Link>
@@ -288,24 +290,25 @@ function Inscription2026Page() {
         {/* FAQ */}
         <section id="faq" className="scroll-mt-24">
           <div className="mb-6">
-            <p className="text-xs uppercase tracking-[0.24em] text-purple-200/80">
+            <p className="text-xs uppercase tracking-[0.24em] text-[var(--color-yellow)]">
               {t.faqEyebrow}
             </p>
-            <h2 className="mt-2 text-3xl font-extrabold tracking-tight">
+            <h2 className="text-brand-gradient mt-2 text-3xl font-extrabold tracking-tight">
               {t.faqTitle}
             </h2>
+            <span className="brand-rule mt-3 block" aria-hidden />
           </div>
           <div className="space-y-3">
             {faqs.map((faq) => (
               <details
                 key={faq.question}
-                className="group rounded-2xl border border-white/10 bg-white/[0.05] p-5 shadow-xl shadow-black/20 open:border-purple-400/40"
+                className="group card-brand rounded-2xl bg-white/[0.05] p-5 open:border-[var(--color-violet)]/60"
               >
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-base font-semibold text-white">
                   {faq.question}
                   <span
                     aria-hidden
-                    className="text-purple-200 transition group-open:rotate-45"
+                    className="text-[var(--color-violet-light)] transition group-open:rotate-45"
                   >
                     +
                   </span>

@@ -155,7 +155,7 @@ export default function TournamentsList({ tournaments }: TournamentsListProps) {
         {/* Header */}
         <section className="mb-12 text-center">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[10px] uppercase tracking-[0.16em] text-gray-300 mb-4">
-            <span className="px-1.5 py-[2px] rounded-full bg-gradient-to-r from-purple-400/90 to-pink-400/90 text-black font-semibold">
+            <span className="px-1.5 py-[2px] rounded-full bg-gradient-to-r from-[var(--color-violet)] to-[var(--color-green)] text-black font-semibold">
               {t.badgeCompetition}
             </span>
             <span>Overwatch</span>
@@ -164,10 +164,11 @@ export default function TournamentsList({ tournaments }: TournamentsListProps) {
           <Heading
             typeStyle="heading-lg"
             level="h1"
-            className="text-gradient mb-4"
+            className="text-brand-gradient mb-4"
           >
             {t.title}
           </Heading>
+          <span className="brand-rule mx-auto mb-4" aria-hidden />
 
           <Paragraph
             typeStyle="body-lg"
@@ -196,9 +197,9 @@ export default function TournamentsList({ tournaments }: TournamentsListProps) {
                     role="tab"
                     aria-selected={active}
                     onClick={() => setStatusFilter(tab.value)}
-                    className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-colors ${
+                    className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)] ${
                       active
-                        ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
+                        ? 'bg-[var(--color-violet)] text-white'
                         : 'text-gray-300 hover:text-white'
                     }`}
                   >
@@ -222,7 +223,7 @@ export default function TournamentsList({ tournaments }: TournamentsListProps) {
                     id={gameSelectId}
                     value={gameFilter}
                     onChange={(e) => setGameFilter(e.target.value)}
-                    className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:border-purple-400/60 focus:outline-none focus:ring-1 focus:ring-purple-400/40"
+                    className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:border-[var(--color-violet-light)]/60 focus:outline-none focus:ring-1 focus:ring-[var(--color-violet)]/40"
                   >
                     <option value="all">{t.allGames}</option>
                     {availableGames.map((g) => (
@@ -248,7 +249,7 @@ export default function TournamentsList({ tournaments }: TournamentsListProps) {
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder={t.searchPlaceholder}
-                  className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:border-purple-400/60 focus:outline-none focus:ring-1 focus:ring-purple-400/40"
+                  className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:border-[var(--color-violet-light)]/60 focus:outline-none focus:ring-1 focus:ring-[var(--color-violet)]/40"
                 />
               </div>
             </div>
@@ -363,7 +364,7 @@ export default function TournamentsList({ tournaments }: TournamentsListProps) {
                   setGameFilter('all');
                   setSearch('');
                 }}
-                className="px-4 py-2 rounded-md bg-purple-500 hover:bg-purple-400 text-sm font-semibold transition-colors"
+                className="px-4 py-2 rounded-md bg-[var(--color-violet)] hover:bg-[var(--color-violet-deep)] text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
               >
                 {t.resetFilters}
               </button>
@@ -420,9 +421,9 @@ function TournamentCard({ tournament, status }: TournamentCardProps) {
 
   return (
     <Link href={href}>
-      <div className="group relative rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl overflow-hidden hover:border-purple-400/50 transition-all cursor-pointer">
+      <div className="group card-brand relative rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl overflow-hidden transition-all cursor-pointer">
         {/* Banner */}
-        <div className="relative h-32 bg-gradient-to-br from-purple-900/40 to-pink-900/40">
+        <div className="relative h-32 bg-gradient-to-br from-[var(--color-violet-deep)]/40 to-[var(--color-green-deep)]/30">
           {/* Status badge */}
           <div className="absolute top-3 right-3">
             <span
@@ -446,7 +447,7 @@ function TournamentCard({ tournament, status }: TournamentCardProps) {
 
         {/* Content */}
         <div className="p-4">
-          <h3 className="font-semibold text-white mb-1 line-clamp-1 group-hover:text-purple-200 transition-colors">
+          <h3 className="font-semibold text-white mb-1 line-clamp-1 group-hover:text-[var(--color-violet-light)] transition-colors">
             {tournament.name}
           </h3>
 
@@ -481,12 +482,12 @@ function TournamentCard({ tournament, status }: TournamentCardProps) {
                   href={`/team/create?tournament=${tournament.id}`}
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <span className="px-3 py-1 rounded-full text-[11px] font-semibold bg-gradient-to-r from-pink-500 to-orange-400 text-black hover:from-pink-400 hover:to-orange-300 transition-colors">
+                  <span className="px-3 py-1 rounded-full text-[11px] font-semibold bg-gradient-to-r from-[var(--color-green)] to-[var(--color-yellow)] text-black hover:from-[var(--color-green-light)] hover:to-[var(--color-yellow-light)] transition-colors">
                     {t.register}
                   </span>
                 </Link>
               )}
-              <span className="text-xs text-purple-300 group-hover:text-purple-200 transition-colors">
+              <span className="text-xs text-[var(--color-violet-light)] group-hover:text-white transition-colors">
                 {t.viewCard}
               </span>
             </div>

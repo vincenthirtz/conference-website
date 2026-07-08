@@ -74,22 +74,23 @@ function ContactPage() {
           <p className="mx-auto inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.18em] text-gray-200">
             {t.badge}
           </p>
-          <h1 className="mt-3 text-4xl font-bold leading-tight sm:text-5xl md:text-6xl">
+          <h1 className="mt-3 text-4xl font-bold leading-tight text-brand-gradient sm:text-5xl md:text-6xl">
             {t.title}
           </h1>
+          <span className="brand-rule mx-auto mt-4" aria-hidden />
           <p className="mx-auto mt-4 max-w-3xl text-lg text-gray-200">
             {t.intro}
           </p>
           <div className="mt-6 flex flex-wrap items-center justify-center gap-4">
             <a
               href="#formulaire"
-              className="rounded-full bg-gradient-to-r from-purple-500 to-pink-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition hover:brightness-110"
+              className="rounded-full bg-[var(--color-violet)] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition hover:bg-[var(--color-violet-deep)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
             >
               {t.openForm}
             </a>
             <a
               href={`mailto:${contactEmail}?subject=Contact%20OW%20Women%27s%20Cup`}
-              className="rounded-full border border-white/15 px-6 py-3 text-sm font-semibold text-white transition hover:border-white/40 hover:bg-white/10"
+              className="rounded-full border border-white/15 px-6 py-3 text-sm font-semibold text-white transition hover:border-[var(--color-yellow)]/60 hover:bg-[var(--color-yellow)]/10 hover:text-[var(--color-yellow)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-yellow)]"
             >
               {t.writeEmail}
             </a>
@@ -102,7 +103,7 @@ function ContactPage() {
           {contactChannels.map((channel) => (
             <div
               key={channel.title}
-              className="rounded-2xl border border-white/10 bg-white/[0.05] p-5 shadow-xl shadow-black/20"
+              className="card-brand rounded-2xl bg-white/[0.05] p-5 shadow-xl shadow-black/20"
             >
               <p className="text-xs uppercase tracking-[0.18em] text-purple-200">
                 {channel.title}
@@ -113,7 +114,7 @@ function ContactPage() {
               <p className="mt-2 text-sm text-gray-200">{channel.desc}</p>
               <a
                 href={channel.cta.href}
-                className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-purple-200 underline decoration-purple-400/60 underline-offset-4 transition hover:text-white"
+                className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-[var(--color-yellow)] underline decoration-[var(--color-yellow)]/60 underline-offset-4 transition hover:text-white"
               >
                 {channel.cta.label} ↗
               </a>
@@ -121,13 +122,16 @@ function ContactPage() {
           ))}
         </section>
 
-        <section className="rounded-3xl border border-white/10 bg-gradient-to-r from-[#140a24] via-[#1c0f33] to-[#2a0d3d] p-6 sm:p-10 shadow-2xl">
+        <section className="section-brand-bg card-brand rounded-3xl bg-gradient-to-r from-[#140a24] via-[#1c0f33] to-[#2a0d3d] p-6 sm:p-10 shadow-2xl">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-xs uppercase tracking-[0.18em] text-gray-200">
                 {t.supportLabel}
               </p>
-              <h3 className="text-2xl font-bold">{t.supportHeading}</h3>
+              <h3 className="text-2xl font-bold text-brand-gradient">
+                {t.supportHeading}
+              </h3>
+              <span className="brand-rule mt-3" aria-hidden />
             </div>
             <p className="text-sm text-gray-200">{t.supportDesc}</p>
           </div>
@@ -135,7 +139,7 @@ function ContactPage() {
             {helpPoints.map((item) => (
               <li key={item} className="flex items-start gap-2">
                 <span
-                  className="mt-[6px] h-2 w-2 rounded-full bg-emerald-400"
+                  className="brand-dot mt-[6px] h-2 w-2 rounded-full"
                   aria-hidden
                 />
                 <span>{item}</span>
@@ -150,13 +154,16 @@ function ContactPage() {
 
         <section
           id="formulaire"
-          className="rounded-2xl border border-white/10 bg-white/[0.05] p-6 sm:p-8 shadow-xl shadow-black/20"
+          className="card-brand rounded-2xl bg-white/[0.05] p-6 sm:p-8 shadow-xl shadow-black/20"
         >
-          <div className="flex flex-col gap-2 text-center">
+          <div className="flex flex-col items-center gap-2 text-center">
             <p className="text-xs uppercase tracking-[0.18em] text-gray-300">
               {t.formLabel}
             </p>
-            <h3 className="text-2xl font-bold text-white">{t.formHeading}</h3>
+            <h3 className="text-2xl font-bold text-brand-gradient">
+              {t.formHeading}
+            </h3>
+            <span className="brand-rule" aria-hidden />
           </div>
           <div className="mt-8">
             <Contact />

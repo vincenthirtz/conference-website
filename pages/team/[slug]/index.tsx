@@ -765,7 +765,7 @@ export default function TeamPage({
                 )}
               </div>
 
-              <Heading typeStyle="heading-lg" className="text-gradient mb-2">
+              <Heading typeStyle="heading-lg" className="text-brand-gradient mb-2">
                 {team.name}
               </Heading>
 
@@ -951,7 +951,7 @@ export default function TeamPage({
         {/* Achievements */}
         {achievements.length > 0 && (
           <section className="mb-6 rounded-2xl border border-white/5 bg-black/60 p-5">
-            <p className="text-xs uppercase tracking-wide text-gray-400 mb-4">
+            <p className="text-xs uppercase tracking-wide text-brand-gradient mb-4">
               {t.achievementsTitle}
             </p>
             <ul className="space-y-2">
@@ -1004,7 +1004,7 @@ export default function TeamPage({
         {/* Sponsors */}
         {sponsors.length > 0 && (
           <section className="mb-6 rounded-2xl border border-white/5 bg-black/60 p-5">
-            <p className="text-xs uppercase tracking-wide text-gray-400 mb-4">
+            <p className="text-xs uppercase tracking-wide text-brand-gradient mb-4">
               {t.sponsorsTitle}
             </p>
             <div className="flex flex-wrap gap-3">
@@ -1016,9 +1016,9 @@ export default function TeamPage({
         )}
 
         {/* Public scrim CTA */}
-        <section className="mb-6 rounded-2xl border border-cyan-500/20 bg-gradient-to-r from-cyan-500/10 via-cyan-500/5 to-transparent px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <section className="mb-6 rounded-2xl border border-[var(--color-violet)]/25 bg-gradient-to-r from-[var(--color-violet)]/10 via-[var(--color-violet)]/5 to-transparent px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-cyan-200">
+            <p className="text-sm font-semibold text-[var(--color-violet-light)]">
               {format(t.scrimCtaTitle, { name: team.name })}
             </p>
             <p className="text-xs text-gray-400 mt-1">{t.scrimCtaDesc}</p>
@@ -1026,7 +1026,7 @@ export default function TeamPage({
           <button
             type="button"
             onClick={() => setScrimDialogOpen(true)}
-            className="flex-shrink-0 px-4 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-sm font-medium text-white"
+            className="flex-shrink-0 px-4 py-2 rounded-lg bg-[var(--color-violet)] hover:brightness-110 text-sm font-medium text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet)]"
           >
             {t.scrimCtaBtn}
           </button>
@@ -1052,7 +1052,7 @@ export default function TeamPage({
                 return (
                   <>
                     <div className="flex items-center justify-between mb-4">
-                      <p className="text-xs uppercase tracking-wide text-gray-400">
+                      <p className="text-xs uppercase tracking-wide text-brand-gradient">
                         {t.rosterLabel}
                       </p>
                       <span className="text-xs text-gray-500">
@@ -1111,7 +1111,7 @@ export default function TeamPage({
             {/* Recent Matches */}
             <section className="bg-black/60 border border-white/5 rounded-2xl p-5">
               <div className="flex items-center justify-between mb-4">
-                <p className="text-xs uppercase tracking-wide text-gray-400">
+                <p className="text-xs uppercase tracking-wide text-brand-gradient">
                   {t.recentMatchesTitle}
                 </p>
               </div>
@@ -1135,7 +1135,7 @@ export default function TeamPage({
             {/* Tournaments */}
             <section className="bg-black/60 border border-white/5 rounded-2xl p-5">
               <div className="flex items-center justify-between mb-4">
-                <p className="text-xs uppercase tracking-wide text-gray-400">
+                <p className="text-xs uppercase tracking-wide text-brand-gradient">
                   {t.tournamentsTitle}
                 </p>
                 <span className="text-xs text-gray-500">
@@ -1169,9 +1169,9 @@ export default function TeamPage({
                             className="w-8 h-8 rounded-lg object-cover"
                           />
                         ) : (
-                          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-600/30 to-pink-600/30 flex items-center justify-center">
+                          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--color-violet)]/30 to-[var(--color-green)]/30 flex items-center justify-center">
                             <svg
-                              className="w-4 h-4 text-purple-300"
+                              className="w-4 h-4 text-[var(--color-violet-light)]"
                               fill="none"
                               stroke="currentColor"
                               viewBox="0 0 24 24"
@@ -1217,7 +1217,7 @@ export default function TeamPage({
 
             {/* Quick Stats */}
             <section className="bg-black/60 border border-white/5 rounded-2xl p-5">
-              <p className="text-xs uppercase tracking-wide text-gray-400 mb-4">
+              <p className="text-xs uppercase tracking-wide text-brand-gradient mb-4">
                 {t.statisticsTitle}
               </p>
 
@@ -1280,7 +1280,7 @@ export default function TeamPage({
                     <div className="flex flex-wrap gap-2">
                       {activeTournaments.slice(0, 3).map((t) => (
                         <Link key={t.id} href={`/tournament/${t.slug || t.id}`}>
-                          <span className="px-2 py-1 rounded-full bg-purple-500/20 text-purple-200 border border-purple-500/40 text-[10px] hover:bg-purple-500/30 transition-colors cursor-pointer">
+                          <span className="px-2 py-1 rounded-full bg-[var(--color-violet)]/20 text-[var(--color-violet-light)] border border-[var(--color-violet)]/40 text-[10px] hover:bg-[var(--color-violet)]/30 transition-colors cursor-pointer">
                             {t.name}
                           </span>
                         </Link>
@@ -1404,7 +1404,7 @@ function MemberCard({
             // Maillage interne : lien vers le profil public de la joueuse.
             <Link
               href={`/player/${encodeURIComponent(member.user_id)}`}
-              className={`text-sm font-semibold truncate hover:underline ${substitute ? 'text-gray-300 hover:text-white' : 'text-white hover:text-purple-200'}`}
+              className={`text-sm font-semibold truncate hover:underline ${substitute ? 'text-gray-300 hover:text-white' : 'text-white hover:text-[var(--color-violet-light)]'}`}
             >
               {name}
             </Link>

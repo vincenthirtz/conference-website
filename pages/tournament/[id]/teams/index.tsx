@@ -104,20 +104,21 @@ export default function TournamentTeamsPage({ tournament, teams }: Props) {
       <main className="bg-neutral-950 text-white min-h-screen pt-24 pb-16">
         <div className="max-w-5xl mx-auto px-4">
           <section className="mb-8">
-            <p className="text-xs uppercase tracking-[0.18em] text-purple-200/80">
+            <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-green-light)]/90">
               {t.eyebrow}
             </p>
             <Heading
               level="h1"
               typeStyle="heading-md"
-              className="text-gradient mb-1"
+              className="text-brand-gradient mb-1"
             >
               {t.heading}
             </Heading>
+            <span className="brand-rule mb-2" aria-hidden />
             <p className="text-sm text-gray-300">
               <Link
                 href={tournamentPath}
-                className="text-purple-300 hover:text-purple-200 underline"
+                className="text-[var(--color-green-light)] hover:text-white underline"
               >
                 {tournament.name}
               </Link>{' '}
@@ -136,7 +137,7 @@ export default function TournamentTeamsPage({ tournament, teams }: Props) {
               <Link href={tournamentPath} className="mt-4 inline-block">
                 <Button
                   type="button"
-                  className="px-6 py-2.5 text-xs font-semibold rounded-full bg-white/5 border border-white/20 hover:border-purple-400/60 hover:bg-purple-500/10 transition-all"
+                  className="px-6 py-2.5 text-xs font-semibold rounded-full bg-white/5 border border-white/20 hover:border-[var(--color-green)]/60 hover:bg-[var(--color-green)]/10 transition-all"
                 >
                   {t.backToTournament}
                 </Button>
@@ -148,7 +149,7 @@ export default function TournamentTeamsPage({ tournament, teams }: Props) {
                 <li key={team.id}>
                   <Link
                     href={`${tournamentPath}/teams/${team.id}`}
-                    className="group flex items-center gap-4 rounded-xl border border-white/10 bg-white/[0.03] p-4 transition-all hover:border-purple-400/50 hover:bg-purple-500/[0.07]"
+                    className="group card-brand flex items-center gap-4 rounded-xl border border-white/10 bg-white/[0.03] p-4 transition-all hover:bg-[var(--color-green)]/[0.07]"
                   >
                     {team.logo_url ? (
                       <Image
@@ -159,12 +160,12 @@ export default function TournamentTeamsPage({ tournament, teams }: Props) {
                         className="h-14 w-14 rounded-lg object-cover bg-neutral-900 border border-white/10"
                       />
                     ) : (
-                      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-neutral-900 border border-white/10 text-lg font-bold text-purple-200">
+                      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-neutral-900 border border-white/10 text-lg font-bold text-[var(--color-green-light)]">
                         {(team.short_name || team.name).charAt(0).toUpperCase()}
                       </div>
                     )}
                     <div className="min-w-0">
-                      <p className="truncate font-semibold text-white group-hover:text-purple-200">
+                      <p className="truncate font-semibold text-white group-hover:text-[var(--color-green-light)]">
                         {team.name}
                       </p>
                       {team.short_name && (

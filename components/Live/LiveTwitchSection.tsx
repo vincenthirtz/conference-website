@@ -107,16 +107,17 @@ export default function LiveTwitchSection({
       id="tickets"
       className="flex items-center flex-col justify-center pt-20"
     >
-      <div className="text-xl text-white font-semibold border-b-2 border-blue-400 mb-1">
+      <div className="text-xl text-white font-semibold border-b-2 border-[var(--color-violet)] mb-1">
         {eyebrowLabel}
       </div>
       <div data-test="ticket-section" className="flex flex-col items-center ">
         <Heading
           typeStyle="heading-md"
-          className="text-gradient text-center lg:mt-10"
+          className="text-brand-gradient text-center lg:mt-10"
         >
           {titleLabel}
         </Heading>
+        <span className="brand-rule mt-3" aria-hidden />
         <div className="max-w-3xl sm:w-full text-center">
           <Paragraph
             typeStyle="body-lg"
@@ -140,13 +141,13 @@ export default function LiveTwitchSection({
                   return (
                     <div
                       key={channel}
-                      className="group rounded-2xl border border-white/10 bg-white/5 overflow-hidden shadow-[0_18px_60px_rgba(0,0,0,0.35)] transition hover:border-purple-400/60 hover:-translate-y-1"
+                      className="group rounded-2xl border border-white/10 bg-white/5 overflow-hidden shadow-[0_18px_60px_rgba(0,0,0,0.35)] transition hover:border-[var(--color-violet)]/60 hover:-translate-y-1"
                     >
                       <div className="p-6 space-y-4">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
                             <div
-                              className="h-12 w-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 text-white font-semibold flex items-center justify-center uppercase"
+                              className="h-12 w-12 rounded-full bg-gradient-to-br from-[var(--color-violet)] to-[var(--color-green)] text-white font-semibold flex items-center justify-center uppercase"
                               style={{
                                 backgroundSize: 'cover',
                                 backgroundImage: background
@@ -197,7 +198,7 @@ export default function LiveTwitchSection({
                           >
                             <Button
                               type="button"
-                              className="w-full md:w-auto px-4 py-2 bg-purple-600 hover:bg-purple-500"
+                              className="w-full md:w-auto px-4 py-2 bg-[var(--color-violet)] hover:bg-[var(--color-violet-deep)]"
                             >
                               {t.viewChannel}
                             </Button>

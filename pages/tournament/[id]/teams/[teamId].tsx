@@ -355,20 +355,21 @@ export default function TournamentTeamPage({
                 />
               )}
               <div className="flex-1">
-                <p className="text-xs uppercase tracking-[0.18em] text-purple-200/80">
+                <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-green-light)]/90">
                   {t.eyebrow}
                 </p>
                 <Heading
                   level="h1"
                   typeStyle="heading-md"
-                  className="text-gradient mb-1"
+                  className="text-brand-gradient mb-1"
                 >
                   {team.name}
                 </Heading>
+                <span className="brand-rule mb-2" aria-hidden />
                 <p className="text-sm text-gray-300">
                   <Link
                     href={tournamentPath}
-                    className="text-purple-300 hover:text-purple-200 underline"
+                    className="text-[var(--color-green-light)] hover:text-white underline"
                   >
                     {tournament.name}
                   </Link>
@@ -390,7 +391,7 @@ export default function TournamentTeamPage({
                 >
                   <Button
                     type="button"
-                    className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-blue-400"
+                    className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-[var(--color-violet)]"
                   >
                     {t.globalProfile}
                   </Button>
@@ -398,7 +399,7 @@ export default function TournamentTeamPage({
                 <Link href={tournamentPath}>
                   <Button
                     type="button"
-                    className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-emerald-400"
+                    className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-[var(--color-green)]"
                   >
                     {t.backToTournament}
                   </Button>
