@@ -14,6 +14,10 @@ import ActionableAlert, {
 } from '@/components/admin/dashboard/ActionableAlert';
 import { Skeleton } from '@/components/admin/Skeleton';
 import EmptyState from '@/components/admin/EmptyState';
+import {
+  collectAdminNavCards,
+  type AdminNavIcon,
+} from '@/components/admin/navigation/adminNav';
 import type { AlertsSummary } from '@/utils/dashboard/buildTournamentDashboard';
 
 import { logger } from '../../utils/logger';
@@ -61,7 +65,7 @@ type NavCard = {
   accent: string;
 };
 
-const ICON = {
+const ICON: Record<AdminNavIcon, ReactNode> = {
   trophy: (
     <path
       strokeLinecap="round"
@@ -168,128 +172,21 @@ const ICON = {
   ),
 };
 
-const getNavCards = (t: Dict): NavCard[] => [
-  {
-    title: t.navTournoiEnCoursTitle,
-    description: t.navTournoiEnCoursDesc,
-    href: '/admin/tournoi-en-cours',
-    minRole: 'caster',
-    icon: ICON.signal,
-    accent: 'border-pink-500/30 from-pink-500/10 text-pink-300',
-  },
-  {
-    title: t.navTournoisTitle,
-    description: t.navTournoisDesc,
-    href: '/admin/tournaments',
-    minRole: 'manager',
-    icon: ICON.trophy,
-    accent: 'border-amber-500/30 from-amber-500/10 text-amber-300',
-  },
-  {
-    title: t.navQuickBracketTitle,
-    description: t.navQuickBracketDesc,
-    href: '/admin/quick-bracket',
-    minRole: 'manager',
-    icon: ICON.bolt,
-    accent: 'border-amber-500/30 from-amber-500/10 text-amber-300',
-  },
-  {
-    title: t.navTeamsTitle,
-    description: t.navTeamsDesc,
-    href: '/admin/teams',
-    minRole: 'manager',
-    icon: ICON.users,
-    accent: 'border-blue-500/30 from-blue-500/10 text-blue-300',
-  },
-  {
-    title: t.navDemandesTitle,
-    description: t.navDemandesDesc,
-    href: '/admin/demandes',
-    minRole: 'manager',
-    icon: ICON.inbox,
-    accent: 'border-emerald-500/30 from-emerald-500/10 text-emerald-300',
-  },
-  {
-    title: t.navSupportTitle,
-    description: t.navSupportDesc,
-    href: '/admin/support',
-    minRole: 'manager',
-    icon: ICON.ticket,
-    accent: 'border-purple-500/30 from-purple-500/10 text-purple-300',
-  },
-  {
-    title: t.navModerationTitle,
-    description: t.navModerationDesc,
-    href: '/admin/comments',
-    minRole: 'manager',
-    icon: ICON.shield,
-    accent: 'border-red-500/30 from-red-500/10 text-red-300',
-  },
-  {
-    title: t.navCampaignsTitle,
-    description: t.navCampaignsDesc,
-    href: '/admin/campaigns',
-    minRole: 'admin',
-    icon: ICON.mail,
-    accent: 'border-blue-500/30 from-blue-500/10 text-blue-300',
-  },
-  {
-    title: t.navRunOfShowTitle,
-    description: t.navRunOfShowDesc,
-    href: '/admin/broadcast/live',
-    minRole: 'manager',
-    icon: ICON.clock,
-    accent: 'border-pink-500/30 from-pink-500/10 text-pink-300',
-  },
-  {
-    title: t.navUsersTitle,
-    description: t.navUsersDesc,
-    href: '/admin/users/manage',
-    minRole: 'admin',
-    icon: ICON.users,
-    accent: 'border-emerald-500/30 from-emerald-500/10 text-emerald-300',
-  },
-  {
-    title: t.navStatsTitle,
-    description: t.navStatsDesc,
-    href: '/admin/stats/teams',
-    minRole: 'manager',
-    icon: ICON.chart,
-    accent: 'border-purple-500/30 from-purple-500/10 text-purple-300',
-  },
-  {
-    title: t.navLeaguesTitle,
-    description: t.navLeaguesDesc,
-    href: '/admin/leagues',
-    minRole: 'manager',
-    icon: ICON.medal,
-    accent: 'border-amber-500/30 from-amber-500/10 text-amber-300',
-  },
-  {
-    title: t.navRatingsTitle,
-    description: t.navRatingsDesc,
-    href: '/admin/ratings',
-    minRole: 'manager',
-    icon: ICON.chart,
-    accent: 'border-blue-500/30 from-blue-500/10 text-blue-300',
-  },
-  {
-    title: t.navSiteSettingsTitle,
-    description: t.navSiteSettingsDesc,
-    href: '/admin/site-settings',
-    minRole: 'admin',
-    icon: ICON.cog,
-    accent: 'border-amber-500/30 from-amber-500/10 text-amber-300',
-  },
-  {
-    title: t.navApiTokensTitle,
-    description: t.navApiTokensDesc,
-    href: '/admin/api-tokens',
-    minRole: 'admin',
-    icon: ICON.key,
-    accent: 'border-teal-500/30 from-teal-500/10 text-teal-300',
-  },
-];
+/**
+ * Cartes de navigation dérivées de la source unique `ADMIN_NAV`
+ * (`components/admin/navigation/adminNav.ts`), partagée avec le menu top-bar.
+ * Les libellés/descriptions restent i18n (via `t`), les icônes SVG (map ICON)
+ * et l'ordre (card.order) restent pilotés côté source.
+ */
+const getNavCards = (t: Dict): NavCard[] =>
+  collectAdminNavCards().map((c) => ({
+    title: t[c.card.titleKey as keyof Dict] as string,
+    description: t[c.card.descKey as keyof Dict] as string,
+    href: c.href,
+    minRole: c.minRole,
+    icon: ICON[c.card.icon],
+    accent: c.card.accent,
+  }));
 
 function buildAlerts(summary: AlertsSummary | null, t: Dict) {
   if (!summary || summary.total === 0) return [];

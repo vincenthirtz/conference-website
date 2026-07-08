@@ -136,13 +136,16 @@ test.describe.serial('Admin pages — Test Coach', () => {
     await expectPageLoaded(page);
   });
 
-  test('Page ajouter membre equipe (GET /admin/teams/add-member)', async ({
+  test('Ancienne route ajouter membre equipe redirige vers la liste (GET /admin/teams/add-member)', async ({
     page,
   }) => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
     await loginAsCoach(page);
 
+    // La page autonome a été remplacée par la modale AddMemberModal sur la
+    // page d'édition d'équipe : l'ancienne route redirige (308) vers la liste.
     await page.goto('/admin/teams/add-member');
+    await page.waitForURL(/\/admin\/teams(\?|$)/, { timeout: 10000 });
     await page.waitForLoadState('networkidle');
     await expectPageLoaded(page);
   });
@@ -167,15 +170,19 @@ test.describe.serial('Admin pages — Test Coach', () => {
     await expectPageLoaded(page);
   });
 
-  test('Page nouveau partenaire (GET /admin/partners/new)', async ({
+  test('Ancienne route nouveau partenaire ouvre la modale (GET /admin/partners/new)', async ({
     page,
   }) => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
     await loginAsCoach(page);
 
+    // La création se fait dans une modale sur la liste : l'ancienne route
+    // redirige (308) vers `?new=1`, qui ouvre la modale.
     await page.goto('/admin/partners/new');
+    await page.waitForURL(/\/admin\/partners\?new=1/, { timeout: 10000 });
     await page.waitForLoadState('networkidle');
     await expectPageLoaded(page);
+    await expect(page.getByRole('dialog')).toBeVisible({ timeout: 10000 });
   });
 
   test('Page demandes partenariat (GET /admin/partnership-requests)', async ({
@@ -242,15 +249,19 @@ test.describe.serial('Admin pages — Test Coach', () => {
     await expectPageLoaded(page);
   });
 
-  test('Page nouvelle chaine Twitch (GET /admin/twitch-channels/new)', async ({
+  test('Ancienne route nouvelle chaine Twitch ouvre la modale (GET /admin/twitch-channels/new)', async ({
     page,
   }) => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
     await loginAsCoach(page);
 
     await page.goto('/admin/twitch-channels/new');
+    await page.waitForURL(/\/admin\/twitch-channels\?new=1/, {
+      timeout: 10000,
+    });
     await page.waitForLoadState('networkidle');
     await expectPageLoaded(page);
+    await expect(page.getByRole('dialog')).toBeVisible({ timeout: 10000 });
   });
 
   // ─── Contenu : Cast members ─────────────────────────────────────
@@ -264,15 +275,17 @@ test.describe.serial('Admin pages — Test Coach', () => {
     await expectPageLoaded(page);
   });
 
-  test('Page nouvelle casteuse (GET /admin/cast-members/new)', async ({
+  test('Ancienne route nouvelle casteuse ouvre la modale (GET /admin/cast-members/new)', async ({
     page,
   }) => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
     await loginAsCoach(page);
 
     await page.goto('/admin/cast-members/new');
+    await page.waitForURL(/\/admin\/cast-members\?new=1/, { timeout: 10000 });
     await page.waitForLoadState('networkidle');
     await expectPageLoaded(page);
+    await expect(page.getByRole('dialog')).toBeVisible({ timeout: 10000 });
   });
 
   // ─── Contenu : Commentaires ─────────────────────────────────────
@@ -326,20 +339,20 @@ test.describe.serial('Admin pages — Test Coach', () => {
     await expectPageLoaded(page);
   });
 
-  test('Page stats equipes (GET /admin/stats/teams)', async ({ page }) => {
+  test('Page stats equipes (GET /admin/stats?tab=teams)', async ({ page }) => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
     await loginAsCoach(page);
 
-    await page.goto('/admin/stats/teams');
+    await page.goto('/admin/stats?tab=teams');
     await page.waitForLoadState('networkidle');
     await expectPageLoaded(page);
   });
 
-  test('Page stats maps (GET /admin/stats/maps)', async ({ page }) => {
+  test('Page stats maps (GET /admin/stats?tab=maps)', async ({ page }) => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
     await loginAsCoach(page);
 
-    await page.goto('/admin/stats/maps');
+    await page.goto('/admin/stats?tab=maps');
     await page.waitForLoadState('networkidle');
     await expectPageLoaded(page);
   });

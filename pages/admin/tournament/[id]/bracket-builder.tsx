@@ -13,6 +13,7 @@ import { formatDateHeader } from '@/utils/dateFormatters';
 import { STATUS_CONFIG } from '@/utils/statusConfig';
 import AlertBanner from '@/components/admin/AlertBanner';
 import LoadingSpinner from '@/components/admin/LoadingSpinner';
+import TournamentTabsNav from '@/components/admin/tournament/TournamentTabsNav';
 import {
   MatchCard,
   MatchListView,
@@ -535,28 +536,10 @@ ${day.matches
           <div className="absolute inset-0 bg-gradient-to-br from-purple-900/40 via-transparent to-indigo-900/30" />
           <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImciIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAwIDYwIEwgNjAgMCIgc3Ryb2tlPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMDMpIiBzdHJva2Utd2lkdGg9IjEiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IGZpbGw9InVybCgjZykiIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiLz48L3N2Zz4=')] opacity-50" />
           <div className="relative max-w-6xl mx-auto px-4 sm:px-6 pt-24 pb-8">
-            <button
-              type="button"
-              onClick={() => router.push(`/admin/tournament/${id}`)}
-              className="mb-4 inline-flex items-center gap-1.5 text-sm text-purple-300/70 hover:text-purple-200 transition-colors"
-            >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 16 16"
-                fill="none"
-                className="opacity-70"
-              >
-                <path
-                  d="M10 12L6 8l4-4"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              {t.back}
-            </button>
+            <TournamentTabsNav
+              tournamentId={String(id ?? '')}
+              active="bracket"
+            />
 
             <div className="flex items-end justify-between flex-wrap gap-4">
               <div>

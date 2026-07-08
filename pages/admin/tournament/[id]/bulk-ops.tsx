@@ -10,6 +10,7 @@ import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
 import Breadcrumb from '@/components/admin/Breadcrumb';
+import TournamentTabsNav from '@/components/admin/tournament/TournamentTabsNav';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { StaffProps, StageSummary, TournamentMini } from '@/types/admin';
 
@@ -286,6 +287,11 @@ function BulkOpsPage(_: StaffProps) {
               },
               { label: t.breadcrumbBulkOps },
             ]}
+          />
+
+          <TournamentTabsNav
+            tournamentId={String(tournamentId ?? '')}
+            active="tools"
           />
 
           <div className="flex items-center justify-between gap-4 mb-6">

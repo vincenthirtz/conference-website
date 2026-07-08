@@ -5,6 +5,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
+import TournamentTabsNav from '@/components/admin/tournament/TournamentTabsNav';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 type StaffShape = {
@@ -114,16 +115,10 @@ function AdminTournamentHistoryPage({ staff }: StaffProps) {
       </Head>
 
       <div className="min-h-screen bg-neutral-900 text-white p-6 pt-20">
+        <TournamentTabsNav tournamentId={String(id ?? '')} active="history" />
         {/* Header */}
         <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
           <div>
-            <button
-              type="button"
-              onClick={() => router.push(`/admin/tournament/${id}`)}
-              className="mb-2 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white"
-            >
-              {t.backToTournament}
-            </button>
             <h1 className="text-3xl font-bold">{t.heading}</h1>
             <p className="text-neutral-400 text-sm mt-1">{t.intro}</p>
           </div>

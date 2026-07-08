@@ -10,6 +10,7 @@ import { useToast } from '@/components/Toast';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import Breadcrumb from '@/components/admin/Breadcrumb';
+import TournamentTabsNav from '@/components/admin/tournament/TournamentTabsNav';
 import Modal from '@/components/admin/Modal';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import {
@@ -242,6 +243,10 @@ function StagesPage(_: StaffProps) {
               },
               { label: t.breadcrumbStages },
             ]}
+          />
+          <TournamentTabsNav
+            tournamentId={String(tournamentId ?? '')}
+            active="stages"
           />
           <div className="flex items-center justify-between gap-4 mb-6">
             <div>

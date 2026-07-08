@@ -67,13 +67,13 @@ const ADMIN_PAGES = [
 ];
 
 const SECONDARY_PAGES = [
-  { path: '/admin/email-logs', label: 'Logs email' },
+  { path: '/admin/logs?tab=emails', label: 'Logs email' },
   { path: '/admin/recycle-bin', label: 'Corbeille' },
   { path: '/admin/site-settings', label: 'Parametres du site' },
   { path: '/admin/partnership-requests', label: 'Demandes partenariat' },
   { path: '/admin/comments', label: 'Commentaires' },
-  { path: '/admin/stats/teams', label: 'Stats equipes' },
-  { path: '/admin/stats/maps', label: 'Stats maps' },
+  { path: '/admin/stats?tab=teams', label: 'Stats equipes' },
+  { path: '/admin/stats?tab=maps', label: 'Stats maps' },
 ];
 
 const API_ENDPOINTS = [

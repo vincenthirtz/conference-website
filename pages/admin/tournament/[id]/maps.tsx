@@ -10,6 +10,7 @@ import { withStaffPage } from '@/utils/staff';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import Modal from '@/components/admin/Modal';
+import TournamentTabsNav from '@/components/admin/tournament/TournamentTabsNav';
 import { getGame, type GameDef } from '@/config/games';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
@@ -379,6 +380,10 @@ function AdminTournamentMapsPage(_: StaffProps) {
       </Head>
       <div className="min-h-screen bg-neutral-950 text-white pt-24">
         <div className="max-w-6xl mx-auto px-6 py-10">
+          <TournamentTabsNav
+            tournamentId={String(tournamentId ?? '')}
+            active="maps"
+          />
           <div className="flex items-center justify-between gap-4 mb-6">
             <div>
               <p className="text-xs uppercase tracking-[0.18em] text-purple-200/80">

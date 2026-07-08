@@ -23,7 +23,7 @@ test.describe('Admin menu categories', () => {
     }
   });
 
-  test('Le menu admin affiche la catégorie Gestion partenaires', async ({
+  test('Le menu admin expose les liens partenaires sous Contenu', async ({
     page,
   }) => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
@@ -41,14 +41,14 @@ test.describe('Admin menu categories', () => {
     // Wait for the page to fully load
     await page.waitForLoadState('networkidle');
 
-    // Verify the "Gestion partenaires" category is visible
-    await expect(page.getByText('Gestion partenaires')).toBeVisible({
+    // Ouvre la catégorie "Contenu" du top-bar, puis la sous-section "Partenaires"
+    await page.getByRole('button', { name: 'Contenu' }).click();
+    await page.getByRole('button', { name: 'Partenaires' }).click();
+
+    // Les liens partenaires de la sous-section sont visibles
+    await expect(page.getByText('Partenaires – liste')).toBeVisible({
       timeout: 10000,
     });
-
-    // Verify the partner links are present
-    await expect(page.getByText('Partenaires – liste')).toBeVisible();
-    await expect(page.getByText('Ajouter un partenaire')).toBeVisible();
     await expect(page.getByText('Demandes de partenariat')).toBeVisible();
   });
 
@@ -64,7 +64,9 @@ test.describe('Admin menu categories', () => {
     await page.waitForTimeout(3000);
     await page.waitForLoadState('networkidle');
 
-    // Click on "Partenaires – liste"
+    // Déploie Contenu > Partenaires puis clique sur "Partenaires – liste"
+    await page.getByRole('button', { name: 'Contenu' }).click();
+    await page.getByRole('button', { name: 'Partenaires' }).click();
     await page.getByText('Partenaires – liste').click();
     await page.waitForTimeout(1000);
     expect(page.url()).toContain('/admin/partners');

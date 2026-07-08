@@ -133,7 +133,7 @@ function AdminTeamDetailPage({ staff }: StaffProps) {
                     {t.edit}
                   </Button>
                 </Link>
-                <Link href="/admin/teams/add-member">
+                <Link href={`/admin/teams/${teamId}/edit?add-member=1`}>
                   <Button type="button" size="compact" className="px-4">
                     {t.addMember}
                   </Button>
@@ -214,7 +214,7 @@ function AdminTeamDetailPage({ staff }: StaffProps) {
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold">{t.members}</h2>
               <Link
-                href="/admin/teams/add-member"
+                href={`/admin/teams/${teamId}/edit?add-member=1`}
                 className="text-sm underline"
               >
                 {t.addMember}

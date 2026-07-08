@@ -336,6 +336,23 @@ function AdminEditTeamPage({
     setShowAddMemberModal(true);
   }, []);
 
+  // Deep-link : `?add-member=1` (ancienne route /admin/teams/add-member, et
+  // liens « Ajouter un membre » de la fiche équipe) ouvre la modale d'ajout.
+  const addMemberDeepLinkRef = useRef(false);
+  useEffect(() => {
+    if (!router.isReady || addMemberDeepLinkRef.current) return;
+    if (router.query['add-member']) {
+      addMemberDeepLinkRef.current = true;
+      openAddMemberModal();
+      const { 'add-member': _omit, ...rest } = router.query;
+      void router.replace(
+        { pathname: router.pathname, query: rest },
+        undefined,
+        { shallow: true }
+      );
+    }
+  }, [router.isReady, router.query, router, openAddMemberModal]);
+
   // La recherche joueur tape une API coûteuse (listUsers + jointures + N
   // getUserById). On débounce la frappe et on annule la requête précédente pour
   // ne lancer qu'un fetch par pause de saisie, et ignorer les réponses périmées.

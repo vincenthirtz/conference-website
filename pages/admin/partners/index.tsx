@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useUrlFilters } from '@/utils/useUrlFilters';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import PartnerFormModal from '@/components/admin/partners/PartnerFormModal';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 type Dict = ReturnType<typeof useAdminT<'adminPartnersList'>>;
@@ -56,6 +58,8 @@ const categoryColors: Record<string, string> = {
 function AdminPartnersPage(_props: Props) {
   const tx = useAdminT('adminPartnersList');
   const categoryLabels = getCategoryLabels(tx);
+  const router = useRouter();
+  const [modalOpen, setModalOpen] = useState(false);
   const { adminFetchJson } = useAdminFetch();
   const { addToast } = useToast();
   const { confirm, dialog } = useConfirmDialog();
@@ -124,6 +128,24 @@ function AdminPartnersPage(_props: Props) {
     fetchPartners();
   }, [fetchPartners]);
 
+  // Deep-link : `?new=1` (ancienne route /new) ouvre la modale de création.
+  useEffect(() => {
+    if (!router.isReady) return;
+    if (router.query.new) setModalOpen(true);
+  }, [router.isReady, router.query.new]);
+
+  const closeModal = useCallback(() => {
+    setModalOpen(false);
+    if (router.query.new) {
+      const { new: _omit, ...rest } = router.query;
+      void router.replace(
+        { pathname: router.pathname, query: rest },
+        undefined,
+        { shallow: true }
+      );
+    }
+  }, [router]);
+
   const onDelete = async (id: string) => {
     const ok = await confirm({
       title: tx.deleteConfirmTitle,
@@ -157,6 +179,11 @@ function AdminPartnersPage(_props: Props) {
   return (
     <>
       {dialog}
+      <PartnerFormModal
+        open={modalOpen}
+        onClose={closeModal}
+        onCreated={fetchPartners}
+      />
       <Head>
         <title>{tx.pageTitle}</title>
       </Head>
@@ -179,8 +206,9 @@ function AdminPartnersPage(_props: Props) {
                 </p>
               </div>
 
-              <Link
-                href="/admin/partners/new"
+              <button
+                type="button"
+                onClick={() => setModalOpen(true)}
                 className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors flex items-center gap-2"
               >
                 <svg
@@ -197,7 +225,7 @@ function AdminPartnersPage(_props: Props) {
                   />
                 </svg>
                 {tx.newButton}
-              </Link>
+              </button>
             </div>
           </div>
 

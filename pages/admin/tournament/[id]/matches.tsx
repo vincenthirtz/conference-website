@@ -11,6 +11,7 @@ import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import Breadcrumb from '@/components/admin/Breadcrumb';
+import TournamentTabsNav from '@/components/admin/tournament/TournamentTabsNav';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type {
@@ -568,7 +569,9 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
       const successCount = json.successCount ?? 0;
       addToast(
         format(
-          successCount > 1 ? t.toastBulkScheduled_other : t.toastBulkScheduled_one,
+          successCount > 1
+            ? t.toastBulkScheduled_other
+            : t.toastBulkScheduled_one,
           { count: successCount }
         ),
         'info'
@@ -816,8 +819,6 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
     }
   }
 
-  const backUrl = `/admin/tournament/${id}`;
-
   return (
     <>
       {confirmDialog}
@@ -839,26 +840,10 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                 { label: t.breadcrumbMatches },
               ]}
             />
-            <button
-              type="button"
-              onClick={() => router.push(backUrl)}
-              className="mb-4 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white transition-colors"
-            >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 19l-7-7 7-7"
-                />
-              </svg>
-              {t.back}
-            </button>
+            <TournamentTabsNav
+              tournamentId={String(id ?? '')}
+              active="matches"
+            />
 
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
@@ -1245,7 +1230,9 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                         <span
                           className={`inline-block px-1.5 py-0.5 rounded text-[10px] mr-1 ${c.type === 'team' ? 'bg-orange-700/50' : 'bg-purple-700/50'}`}
                         >
-                          {c.type === 'team' ? t.conflictTeam : t.conflictStream}
+                          {c.type === 'team'
+                            ? t.conflictTeam
+                            : t.conflictStream}
                         </span>
                         <span className="font-medium">{c.label}</span> —{' '}
                         {format(t.conflictDetail, {
@@ -1392,7 +1379,9 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                       : 'bg-blue-600 hover:bg-blue-700'
                   }`}
                 >
-                  {bulkScheduleSaving ? t.bulkScheduleSaving : t.bulkScheduleSave}
+                  {bulkScheduleSaving
+                    ? t.bulkScheduleSaving
+                    : t.bulkScheduleSave}
                 </button>
                 <button
                   type="button"
@@ -2001,7 +1990,9 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                       {quickScoreId === m.id && (
                         <div className="mt-3 flex items-center gap-3 pl-40">
                           <span className="text-xs text-neutral-400 w-20 text-right truncate">
-                            {m.team1?.short_name || m.team1?.name || t.team1Fallback}
+                            {m.team1?.short_name ||
+                              m.team1?.name ||
+                              t.team1Fallback}
                           </span>
                           <input
                             type="number"
@@ -2020,7 +2011,9 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                             onChange={(e) => setQs2(e.target.value)}
                           />
                           <span className="text-xs text-neutral-400 w-20 truncate">
-                            {m.team2?.short_name || m.team2?.name || t.team2Fallback}
+                            {m.team2?.short_name ||
+                              m.team2?.name ||
+                              t.team2Fallback}
                           </span>
                           <button
                             type="button"

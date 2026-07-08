@@ -8,6 +8,7 @@ import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import TournamentTabsNav from '@/components/admin/tournament/TournamentTabsNav';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import {
   DISCORD_CHANNEL_TYPES,
@@ -209,32 +210,18 @@ function DiscordConfigPage(_: StaffProps) {
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-12">
-          <button
-            type="button"
-            onClick={() => router.push(`/admin/tournament/${tournamentId}`)}
-            className="mb-4 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white transition-colors"
-          >
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 19l-7-7 7-7"
-              />
-            </svg>
-            {t.backToTournament}
-          </button>
+          <TournamentTabsNav
+            tournamentId={String(tournamentId ?? '')}
+            active="discord"
+          />
 
-          <h1 className="text-3xl font-bold tracking-tight mb-1">{t.heading}</h1>
+          <h1 className="text-3xl font-bold tracking-tight mb-1">
+            {t.heading}
+          </h1>
           <p className="text-sm text-neutral-400 mb-4">
             {t.introBefore}
             <Link
-              href="/admin/site-settings/discord"
+              href="/admin/site-settings?tab=discord"
               className="underline hover:text-white"
             >
               {t.introLinkMaster}
@@ -261,7 +248,7 @@ function DiscordConfigPage(_: StaffProps) {
             <div className="text-xs text-indigo-100/90">
               {t.strategyBefore}
               <Link
-                href="/admin/site-settings/discord"
+                href="/admin/site-settings?tab=discord"
                 className="underline font-semibold hover:text-white"
               >
                 {t.strategyLink}
@@ -312,7 +299,7 @@ function DiscordConfigPage(_: StaffProps) {
                           </span>
                         ) : fallback ? (
                           <Link
-                            href="/admin/site-settings/discord"
+                            href="/admin/site-settings?tab=discord"
                             title={t.masterFallbackTitle}
                             className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-600/20 text-amber-300 border border-amber-500/30 hover:bg-amber-600/30 transition-colors"
                           >

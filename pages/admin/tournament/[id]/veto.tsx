@@ -9,6 +9,7 @@ import { withStaffPage } from '@/utils/staff';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import TournamentTabsNav from '@/components/admin/tournament/TournamentTabsNav';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { VetoFlowStep, VetoStep, MatchVetoState } from '@/types/veto';
 
@@ -389,6 +390,10 @@ function AdminVetoPage({ staff }: StaffProps) {
       </Head>
       <div className="min-h-screen bg-neutral-950 text-white pt-24">
         <div className="max-w-6xl mx-auto px-6 py-10">
+          <TournamentTabsNav
+            tournamentId={String(tournamentId ?? '')}
+            active="bracket"
+          />
           {/* Header */}
           <div className="flex items-center justify-between gap-4 mb-6">
             <div>

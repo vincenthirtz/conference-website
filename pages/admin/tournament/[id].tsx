@@ -1379,7 +1379,7 @@ function AdminTournamentPage({
                   {tx.checkin}
                 </Link>
                 <Link
-                  href={`/admin/tournament/${tournament.id}/podium`}
+                  href={`/admin/tournament/${tournament.id}/stats?tab=podium`}
                   className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-sm font-medium transition-colors flex items-center gap-2"
                 >
                   <svg

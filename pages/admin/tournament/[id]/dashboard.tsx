@@ -23,6 +23,7 @@ import DisputeResolveModal from '@/components/admin/dashboard/DisputeResolveModa
 import ConfirmAdvanceModal from '@/components/admin/dashboard/ConfirmAdvanceModal';
 import SupportTicketsDonut from '@/components/admin/dashboard/SupportTicketsDonut';
 import DiscordHealthGrid from '@/components/admin/dashboard/DiscordHealthGrid';
+import TournamentTabsNav from '@/components/admin/tournament/TournamentTabsNav';
 import {
   fetchDashboardData,
   type DashboardData,
@@ -132,7 +133,7 @@ function getQuickLinks(tx: Dict): QuickLink[] {
     {
       label: tx.quickAnalyticsLabel,
       icon: '📈',
-      href: (id) => `/admin/tournament/${id}/analytics`,
+      href: (id) => `/admin/tournament/${id}/stats?tab=analytics`,
       description: tx.quickAnalyticsDesc,
     },
     {
@@ -380,28 +381,11 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
         <div className="mx-auto max-w-[1500px] px-4 pb-14 pt-20 sm:px-6 lg:px-8">
           {/* ─── Header ────────────────────────────────────────────── */}
+          <TournamentTabsNav
+            tournamentId={String(tournamentId ?? '')}
+            active="dashboard"
+          />
           <div className="mb-6">
-            <button
-              type="button"
-              onClick={() => router.push(`/admin/tournament/${tournamentId}`)}
-              className="mb-3 inline-flex items-center gap-2 text-xs text-neutral-400 transition-colors hover:text-white"
-            >
-              <svg
-                className="h-3.5 w-3.5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 19l-7-7 7-7"
-                />
-              </svg>
-              {tx.back}
-            </button>
-
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-3">
@@ -562,7 +546,9 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
                   label={tx.kpiEta}
                   value={
                     liveEta?.label ??
-                    (sig.velocity.remainingMatches === 0 ? tx.kpiCompleted : '—')
+                    (sig.velocity.remainingMatches === 0
+                      ? tx.kpiCompleted
+                      : '—')
                   }
                   hint={
                     liveEta?.iso
@@ -619,7 +605,8 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
                     icon={<span>🧱</span>}
                     title={format(tx.disputesBlockingTitle, {
                       disputes: sig.disputesBlockingDownstream.count,
-                      matches: sig.disputesBlockingDownstream.impactedMatchCount,
+                      matches:
+                        sig.disputesBlockingDownstream.impactedMatchCount,
                     })}
                     message={tx.disputesBlockingMsg}
                     cta={{
@@ -794,7 +781,9 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
                     severity="info"
                     icon={<span>🏅</span>}
                     title={format(
-                      sig.activeMvpPolls > 1 ? tx.mvpTitle_other : tx.mvpTitle_one,
+                      sig.activeMvpPolls > 1
+                        ? tx.mvpTitle_other
+                        : tx.mvpTitle_one,
                       { count: sig.activeMvpPolls }
                     )}
                     message={tx.mvpMsg}

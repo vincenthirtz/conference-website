@@ -15,7 +15,7 @@ import { createTestStaff, deleteTestStaff } from '../utils/supabaseTestClient';
  * gate (e.g. withStaffPage('admin') silently becoming 'caster') is caught.
  *
  * Pages under test, with their real requiredRole (verified against pages/admin):
- *   - /admin/api-docs        -> owner   (pages/admin/api-docs.tsx)
+ *   - /admin/tenant-requests -> owner   (pages/admin/tenant-requests/index.tsx)
  *   - /admin/users/manage    -> admin   (pages/admin/users/manage.tsx)
  *   - /admin/site-settings   -> admin   (pages/admin/site-settings/index.tsx)
  *   - /admin/tenants         -> manager (pages/admin/tenants/index.tsx)
@@ -35,7 +35,7 @@ const skipIfNoServiceRole = () =>
 type Gate = { path: string; requiredRole: 'owner' | 'admin' | 'manager' };
 
 const GATES: Gate[] = [
-  { path: '/admin/api-docs', requiredRole: 'owner' },
+  { path: '/admin/tenant-requests', requiredRole: 'owner' },
   { path: '/admin/users/manage', requiredRole: 'admin' },
   { path: '/admin/site-settings', requiredRole: 'admin' },
   { path: '/admin/tenants', requiredRole: 'manager' },

@@ -9,6 +9,7 @@ import { useToast } from '@/components/Toast';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import Breadcrumb from '@/components/admin/Breadcrumb';
+import TournamentTabsNav from '@/components/admin/tournament/TournamentTabsNav';
 import RegistrationFieldsEditor, {
   hasRegistrationFieldErrors,
 } from '@/components/admin/RegistrationFieldsEditor';
@@ -193,9 +194,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
       });
 
       setRegistrationFields(
-        Array.isArray(tour.registration_fields)
-          ? tour.registration_fields
-          : []
+        Array.isArray(tour.registration_fields) ? tour.registration_fields : []
       );
 
       setFormReady(true);
@@ -313,26 +312,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
                 { label: t.breadcrumbEdit },
               ]}
             />
-            <button
-              type="button"
-              onClick={() => router.push(`/admin/tournament/${id}`)}
-              className="mb-4 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white transition-colors"
-            >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 19l-7-7 7-7"
-                />
-              </svg>
-              {t.back}
-            </button>
+            <TournamentTabsNav tournamentId={String(id ?? '')} active="edit" />
 
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
@@ -396,7 +376,8 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm mb-1 text-neutral-300">
-                            {t.nameLabel} <span className="text-red-400">*</span>
+                            {t.nameLabel}{' '}
+                            <span className="text-red-400">*</span>
                           </label>
                           <input
                             type="text"
@@ -453,9 +434,13 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
                             }
                           >
                             <option value="draft">{t.statusDraft}</option>
-                            <option value="published">{t.statusPublished}</option>
+                            <option value="published">
+                              {t.statusPublished}
+                            </option>
                             <option value="running">{t.statusRunning}</option>
-                            <option value="completed">{t.statusCompleted}</option>
+                            <option value="completed">
+                              {t.statusCompleted}
+                            </option>
                             <option value="archived">{t.statusArchived}</option>
                           </select>
                         </div>

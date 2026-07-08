@@ -10,6 +10,7 @@ import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import Breadcrumb from '@/components/admin/Breadcrumb';
+import TournamentTabsNav from '@/components/admin/tournament/TournamentTabsNav';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 type StaffProps = {
@@ -111,10 +112,7 @@ function AdminBracketPage(_: StaffProps) {
       }
 
       const json = await res.json();
-      addToast(
-        format(t.toastCreated, { count: json.match_count }),
-        'success'
-      );
+      addToast(format(t.toastCreated, { count: json.match_count }), 'success');
       setTimeout(() => {
         router.push(`/admin/tournament/${tournamentId}/bracket-builder`);
       }, 1000);
@@ -171,15 +169,12 @@ function AdminBracketPage(_: StaffProps) {
               { label: t.breadcrumbBracket },
             ]}
           />
+          <TournamentTabsNav
+            tournamentId={String(tournamentId ?? '')}
+            active="bracket"
+          />
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div>
-              <button
-                type="button"
-                onClick={() => router.push(`/admin/tournament/${tournamentId}`)}
-                className="mb-2 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white"
-              >
-                {t.back}
-              </button>
               <p className="text-xs uppercase tracking-[0.18em] text-purple-200/80">
                 {t.eyebrow}
               </p>
@@ -213,7 +208,9 @@ function AdminBracketPage(_: StaffProps) {
           {!loading && !hasMatches && (
             <div className="rounded-xl border border-white/10 bg-white/5 p-6 space-y-6">
               <div>
-                <h2 className="text-lg font-semibold mb-1">{t.createHeading}</h2>
+                <h2 className="text-lg font-semibold mb-1">
+                  {t.createHeading}
+                </h2>
                 <p className="text-sm text-neutral-400">{t.createDesc}</p>
               </div>
 

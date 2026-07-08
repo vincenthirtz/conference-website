@@ -2,10 +2,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import CastMemberFormModal from '@/components/admin/cast-members/CastMemberFormModal';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 import { logger } from '../../../utils/logger';
@@ -53,6 +55,8 @@ function statusColor(isActive: boolean) {
 
 function AdminCastMembersPage({ staff }: Props) {
   const tx = useAdminT('adminCastMembersList');
+  const router = useRouter();
+  const [modalOpen, setModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [members, setMembers] = useState<CastMemberRow[]>([]);
   const [total, setTotal] = useState<number | null>(null);
@@ -131,6 +135,26 @@ function AdminCastMembersPage({ staff }: Props) {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Deep-link : `?new=1` (ancienne route /new) ouvre la modale de création.
+  useEffect(() => {
+    if (!router.isReady) return;
+    if (router.query.new) setModalOpen(true);
+  }, [router.isReady, router.query.new]);
+
+  const closeModal = useCallback(() => {
+    setModalOpen(false);
+    if (router.query.new) {
+      const { new: _omit, ...rest } = router.query;
+      void router.replace(
+        { pathname: router.pathname, query: rest },
+        undefined,
+        {
+          shallow: true,
+        }
+      );
+    }
+  }, [router]);
 
   const onDelete = async (id: string) => {
     const ok = await confirm({
@@ -227,6 +251,11 @@ function AdminCastMembersPage({ staff }: Props) {
   return (
     <>
       {dialog}
+      <CastMemberFormModal
+        open={modalOpen}
+        onClose={closeModal}
+        onCreated={fetchData}
+      />
       <Head>
         <title>{tx.pageTitle}</title>
       </Head>
@@ -249,8 +278,9 @@ function AdminCastMembersPage({ staff }: Props) {
                 </p>
               </div>
 
-              <Link
-                href="/admin/cast-members/new"
+              <button
+                type="button"
+                onClick={() => setModalOpen(true)}
                 className="px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-sm font-medium transition-colors flex items-center gap-2"
               >
                 <svg
@@ -267,7 +297,7 @@ function AdminCastMembersPage({ staff }: Props) {
                   />
                 </svg>
                 {tx.addButton}
-              </Link>
+              </button>
             </div>
           </div>
 

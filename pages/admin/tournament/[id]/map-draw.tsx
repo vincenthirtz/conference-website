@@ -9,6 +9,7 @@ import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { sanitizeUrl } from '@/utils/apiHelpers';
+import TournamentTabsNav from '@/components/admin/tournament/TournamentTabsNav';
 import { useAdminT, format as fmt } from '@/lib/i18n/useAdminT';
 
 type Dict = ReturnType<typeof useAdminT<'adminTournamentMapDraw'>>;
@@ -406,6 +407,10 @@ ${selectedSlots
       </Head>
       <div className="min-h-screen bg-neutral-950 text-white pt-24">
         <div className="max-w-7xl mx-auto px-6 py-10">
+          <TournamentTabsNav
+            tournamentId={String(tournamentId ?? '')}
+            active="bracket"
+          />
           {/* Header */}
           <div className="flex items-center justify-between gap-4 mb-6">
             <div>

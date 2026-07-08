@@ -2,10 +2,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import PoleMemberFormModal from '@/components/admin/pole-members/PoleMemberFormModal';
 import { POLE_KEYS, POLE_LABELS, type PoleKey } from '@/utils/associationPoles';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
@@ -45,6 +47,8 @@ function statusColor(isActive: boolean) {
 
 function AdminPoleMembersPage({ staff }: Props) {
   const t = useAdminT('adminPoleMembersList');
+  const router = useRouter();
+  const [modalOpen, setModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [members, setMembers] = useState<PoleMemberRow[]>([]);
   const [search, setSearch] = useState('');
@@ -70,6 +74,33 @@ function AdminPoleMembersPage({ staff }: Props) {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Deep-link : `?new=1` (ancienne route /new) ouvre la modale de création.
+  // `?pole=<key>` pré-sélectionne le pôle (ancien comportement de /new).
+  useEffect(() => {
+    if (!router.isReady) return;
+    if (router.query.new) setModalOpen(true);
+  }, [router.isReady, router.query.new]);
+
+  const initialPole: PoleKey =
+    typeof router.query.pole === 'string' &&
+    (POLE_KEYS as readonly string[]).includes(router.query.pole)
+      ? (router.query.pole as PoleKey)
+      : poleFilter !== 'all'
+        ? poleFilter
+        : 'direction';
+
+  const closeModal = useCallback(() => {
+    setModalOpen(false);
+    if (router.query.new || router.query.pole) {
+      const { new: _n, pole: _p, ...rest } = router.query;
+      void router.replace(
+        { pathname: router.pathname, query: rest },
+        undefined,
+        { shallow: true }
+      );
+    }
+  }, [router]);
 
   const onDelete = async (id: string) => {
     const ok = await confirm({
@@ -129,6 +160,12 @@ function AdminPoleMembersPage({ staff }: Props) {
   return (
     <>
       {dialog}
+      <PoleMemberFormModal
+        open={modalOpen}
+        onClose={closeModal}
+        onCreated={fetchData}
+        initialPole={initialPole}
+      />
       <Head>
         <title>{t.pageTitle}</title>
       </Head>
@@ -149,8 +186,9 @@ function AdminPoleMembersPage({ staff }: Props) {
                 </p>
               </div>
 
-              <Link
-                href="/admin/pole-members/new"
+              <button
+                type="button"
+                onClick={() => setModalOpen(true)}
                 className="px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-sm font-medium transition-colors flex items-center gap-2"
               >
                 <svg
@@ -167,7 +205,7 @@ function AdminPoleMembersPage({ staff }: Props) {
                   />
                 </svg>
                 {t.addButton}
-              </Link>
+              </button>
             </div>
           </div>
 
