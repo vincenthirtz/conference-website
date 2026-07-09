@@ -2,8 +2,10 @@ import { test, expect } from '@playwright/test';
 import { supabaseTestClient } from '../utils/supabaseTestClient';
 
 test.describe('Admin adherents pages (sans auth)', () => {
-  test('GET /admin/adherents redirige vers login', async ({ page }) => {
-    await page.goto('/admin/adherents');
+  test('GET /admin/association?tab=adherents redirige vers login', async ({
+    page,
+  }) => {
+    await page.goto('/admin/association?tab=adherents');
     await page.waitForTimeout(1000);
 
     const url = page.url();
@@ -12,7 +14,7 @@ test.describe('Admin adherents pages (sans auth)', () => {
 
     expect(
       redirectedToLogin || redirectedTo403,
-      `/admin/adherents devrait rediriger vers login ou 403. URL actuelle: ${url}`
+      `/admin/association?tab=adherents devrait rediriger vers login ou 403. URL actuelle: ${url}`
     ).toBeTruthy();
   });
 

@@ -2,14 +2,16 @@ import { test, expect } from '@playwright/test';
 import { supabaseTestClient } from '../utils/supabaseTestClient';
 
 test.describe('Admin pole-members pages (sans auth)', () => {
-  test('GET /admin/pole-members redirige vers login', async ({ page }) => {
-    await page.goto('/admin/pole-members');
+  test('GET /admin/association?tab=poles redirige vers login', async ({
+    page,
+  }) => {
+    await page.goto('/admin/association?tab=poles');
     await page.waitForTimeout(1000);
 
     const url = page.url();
     expect(
       url.includes('/login') || url.includes('/403'),
-      `/admin/pole-members devrait rediriger vers login ou 403. URL actuelle: ${url}`
+      `/admin/association?tab=poles devrait rediriger vers login ou 403. URL actuelle: ${url}`
     ).toBeTruthy();
   });
 

@@ -1,6 +1,7 @@
 // tests/e2e/admin-notifications.spec.ts
 //
-// E2E pour la page /admin/notifications (PWA Web Push UI).
+// E2E pour le panneau notifications du hub /admin/communications?tab=notifications
+// (PWA Web Push UI).
 //
 // Couvre :
 //   - Auth gate : sans session, redirige vers /login ou /403
@@ -33,10 +34,10 @@ async function loginAsAdmin(page: Page) {
 }
 
 test.describe('Admin notifications (sans auth)', () => {
-  test('GET /admin/notifications redirige vers login ou 403', async ({
+  test('GET /admin/communications?tab=notifications redirige vers login ou 403', async ({
     page,
   }) => {
-    await page.goto('/admin/notifications');
+    await page.goto('/admin/communications?tab=notifications');
     await page.waitForTimeout(1000);
 
     const url = page.url();
@@ -45,7 +46,7 @@ test.describe('Admin notifications (sans auth)', () => {
 
     expect(
       redirectedToLogin || redirectedTo403,
-      `/admin/notifications devrait rediriger vers login ou 403. URL actuelle: ${url}`
+      `/admin/communications?tab=notifications devrait rediriger vers login ou 403. URL actuelle: ${url}`
     ).toBeTruthy();
   });
 });
@@ -68,11 +69,12 @@ test.describe.serial('Admin notifications page (staff session)', () => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
 
     await loginAsAdmin(page);
-    await page.goto('/admin/notifications');
+    await page.goto('/admin/communications?tab=notifications');
 
-    // Heading principal
+    // Heading principal du hub Communication (les notifications sont désormais
+    // dans un panneau à onglet, plus une page dédiée avec son propre h1).
     await expect(
-      page.getByRole('heading', { name: /Notifications/i, level: 1 })
+      page.getByRole('heading', { name: /Communication/i, level: 1 })
     ).toBeVisible({ timeout: 10000 });
 
     // Section "État de ce device"
@@ -105,7 +107,7 @@ test.describe.serial('Admin notifications page (staff session)', () => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
 
     await loginAsAdmin(page);
-    await page.goto('/admin/notifications');
+    await page.goto('/admin/communications?tab=notifications');
 
     // Attend le chargement des prefs.
     const toggle = page.getByTestId('pref-toggle-news.published');

@@ -2,8 +2,10 @@ import { test, expect } from '@playwright/test';
 import { supabaseTestClient } from '../utils/supabaseTestClient';
 
 test.describe('Admin announcements pages (sans auth)', () => {
-  test('GET /admin/announcements redirige vers login', async ({ page }) => {
-    await page.goto('/admin/announcements');
+  test('GET /admin/communications?tab=announcements redirige vers login', async ({
+    page,
+  }) => {
+    await page.goto('/admin/communications?tab=announcements');
     await page.waitForTimeout(1000);
 
     const url = page.url();
@@ -12,7 +14,7 @@ test.describe('Admin announcements pages (sans auth)', () => {
 
     expect(
       redirectedToLogin || redirectedTo403,
-      `/admin/announcements devrait rediriger vers login ou 403. URL actuelle: ${url}`
+      `/admin/communications?tab=announcements devrait rediriger vers login ou 403. URL actuelle: ${url}`
     ).toBeTruthy();
   });
 

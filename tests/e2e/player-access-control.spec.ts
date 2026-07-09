@@ -22,7 +22,7 @@ test.describe('Access control', () => {
       '/admin',
       '/admin/tournaments',
       '/admin/teams',
-      '/admin/news',
+      '/admin/communications?tab=news',
       '/admin/demandes',
     ];
 

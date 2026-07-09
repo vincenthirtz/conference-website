@@ -37,19 +37,19 @@ const LISTING_PAGES = [
   },
   {
     label: 'Adherents',
-    url: '/admin/adherents',
+    url: '/admin/association?tab=adherents',
     heading: /Gestion des adhérents/i,
     loadedSignal: /\d+\s+adhérent/i,
   },
   {
     label: 'Announcements',
-    url: '/admin/announcements',
+    url: '/admin/communications?tab=announcements',
     heading: /Gestion des annonces/i,
     loadedSignal: null,
   },
   {
     label: 'News',
-    url: '/admin/news',
+    url: '/admin/communications?tab=news',
     heading: /Gestion des news/i,
     loadedSignal: null,
   },
@@ -61,7 +61,7 @@ const LISTING_PAGES = [
   },
   {
     label: 'Cast members',
-    url: '/admin/cast-members',
+    url: '/admin/association?tab=cast',
     heading: /Pôle Production/i,
     loadedSignal: null,
   },

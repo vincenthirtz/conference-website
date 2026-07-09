@@ -204,11 +204,13 @@ test.describe.serial('Admin pages — Test Coach', () => {
 
   // ─── Contenu : Annonces ─────────────────────────────────────────
 
-  test('Page liste annonces (GET /admin/announcements)', async ({ page }) => {
+  test('Page liste annonces (GET /admin/communications?tab=announcements)', async ({
+    page,
+  }) => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
     await loginAsCoach(page);
 
-    await page.goto('/admin/announcements');
+    await page.goto('/admin/communications?tab=announcements');
     await page.waitForLoadState('networkidle');
     await expectPageLoaded(page);
   });
@@ -226,11 +228,13 @@ test.describe.serial('Admin pages — Test Coach', () => {
 
   // ─── Contenu : News ─────────────────────────────────────────────
 
-  test('Page liste news (GET /admin/news)', async ({ page }) => {
+  test('Page liste news (GET /admin/communications?tab=news)', async ({
+    page,
+  }) => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
     await loginAsCoach(page);
 
-    await page.goto('/admin/news');
+    await page.goto('/admin/communications?tab=news');
     await page.waitForLoadState('networkidle');
     await expectPageLoaded(page);
   });
@@ -272,11 +276,13 @@ test.describe.serial('Admin pages — Test Coach', () => {
 
   // ─── Contenu : Cast members ─────────────────────────────────────
 
-  test('Page liste casteuses (GET /admin/cast-members)', async ({ page }) => {
+  test('Page liste casteuses (GET /admin/association?tab=cast)', async ({
+    page,
+  }) => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
     await loginAsCoach(page);
 
-    await page.goto('/admin/cast-members');
+    await page.goto('/admin/association?tab=cast');
     await page.waitForLoadState('networkidle');
     await expectPageLoaded(page);
   });
@@ -309,11 +315,13 @@ test.describe.serial('Admin pages — Test Coach', () => {
 
   // ─── Adherents ──────────────────────────────────────────────────
 
-  test('Page liste adherents (GET /admin/adherents)', async ({ page }) => {
+  test('Page liste adherents (GET /admin/association?tab=adherents)', async ({
+    page,
+  }) => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
     await loginAsCoach(page);
 
-    await page.goto('/admin/adherents');
+    await page.goto('/admin/association?tab=adherents');
     await page.waitForLoadState('networkidle');
     await expectPageLoaded(page);
   });

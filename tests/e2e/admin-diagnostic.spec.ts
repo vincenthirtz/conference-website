@@ -57,11 +57,11 @@ const ADMIN_PAGES = [
   { path: '/admin', label: 'Dashboard / Profil' },
   { path: '/admin/tournaments', label: 'Tournois' },
   { path: '/admin/teams', label: 'Equipes' },
-  { path: '/admin/news', label: 'Actualites' },
+  { path: '/admin/communications?tab=news', label: 'Actualites' },
   { path: '/admin/partners', label: 'Partenaires' },
-  { path: '/admin/announcements', label: 'Annonces' },
-  { path: '/admin/cast-members', label: 'Cast' },
-  { path: '/admin/adherents', label: 'Adherents' },
+  { path: '/admin/communications?tab=announcements', label: 'Annonces' },
+  { path: '/admin/association?tab=cast', label: 'Cast' },
+  { path: '/admin/association?tab=adherents', label: 'Adherents' },
   { path: '/admin/logs', label: 'Logs staff' },
   { path: '/admin/users/manage', label: 'Utilisateurs' },
 ];
@@ -475,9 +475,9 @@ test.describe.serial('Diagnostic admin', () => {
       const pages = [
         '/admin/tournaments',
         '/admin/teams',
-        '/admin/news',
+        '/admin/communications?tab=news',
         '/admin/partners',
-        '/admin/announcements',
+        '/admin/communications?tab=announcements',
       ];
       const start = Date.now();
 
@@ -655,7 +655,7 @@ test.describe.serial('Diagnostic admin', () => {
       const criticalPages = [
         '/admin/tournaments',
         '/admin/teams',
-        '/admin/news',
+        '/admin/communications?tab=news',
         '/admin/logs',
       ];
       for (const pagePath of criticalPages) {
