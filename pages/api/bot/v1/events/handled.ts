@@ -95,4 +95,7 @@ export default withBotRoute(handler, {
   rateLimit: { max: 240, key: 'bot-events-handled' },
   idempotent: false, // l'endpoint est lui-même idempotent (INSERT ON CONFLICT)
   bodySchema: handledBodySchema,
+  // NON gaté : fait partie de la boucle de livraison d'outbox (pending →
+  // process → handled), infra du bot et non une feature tenant. Le gating des
+  // opérations de production (qui CRÉENT les cues) vit sur cast/runs/broadcast.
 });

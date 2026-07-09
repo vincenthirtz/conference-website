@@ -146,4 +146,6 @@ export default withBotRoute(handler, {
   rateLimit: { max: 60, key: 'bot-match-discord' },
   idempotent: true,
   querySchema: discordQuerySchema,
+  // Régie+ : liaison salons/threads Discord d'un match (production).
+  requireCapability: 'discordEventOps:full',
 });

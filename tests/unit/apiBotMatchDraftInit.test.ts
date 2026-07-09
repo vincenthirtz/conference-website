@@ -52,7 +52,14 @@ function makeRes() {
 }
 
 function seed() {
-  store.tenants = [{ id: CONFERENCE_TENANT }] as any;
+  store.tenants = [
+    {
+      id: CONFERENCE_TENANT,
+      plan: 'foundation',
+      plan_status: 'active',
+      plan_expires_at: null,
+    },
+  ] as any;
   store.matches = [
     {
       id: MATCH,

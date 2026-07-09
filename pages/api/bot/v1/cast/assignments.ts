@@ -175,4 +175,6 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
 export default withBotRoute(handler, {
   methods: ['GET'],
   rateLimit: { max: 30, key: 'bot-cast-assignments' },
+  // Régie+ : assignments de casting (production).
+  requireCapability: 'discordEventOps:full',
 });

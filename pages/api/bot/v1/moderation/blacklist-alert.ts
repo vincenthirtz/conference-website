@@ -94,4 +94,7 @@ export default withBotRoute(handler, {
   // Le bot peut renvoyer la même détection sur un retry réseau : Idempotency-Key
   // évite la double row (même mécanisme que les autres writes bot).
   idempotent: true,
+  // Régie+ : alerte modération/arbitrage (blacklist). NB : la LECTURE de la
+  // blacklist (moderation/blacklist.ts) reste BASIC — sécurité, ouverte à tous.
+  requireCapability: 'arbitration',
 });

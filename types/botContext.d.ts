@@ -17,6 +17,7 @@
 // (400/404 otherwise) so handlers can safely assume the field is set.
 
 import 'next';
+import type { TenantPlanState } from '../utils/billing/planFeatures';
 
 declare module 'next' {
   interface NextApiRequest {
@@ -27,6 +28,13 @@ declare module 'next' {
        * the header is absent or malformed.
        */
       tenantId: string;
+      /**
+       * État plan `{ plan, plan_status, plan_expires_at }` du tenant, chargé par
+       * `withBotRoute` UNIQUEMENT sur les routes premium (`requireCapability`).
+       * `undefined` sur les routes de base (pas de round-trip). Le gate a déjà
+       * refusé un tenant non entitled en 403 avant d'atteindre le handler.
+       */
+      plan?: TenantPlanState;
     };
     /**
      * Parsed + typed request body, set by `withBotRoute` when a `bodySchema`

@@ -304,4 +304,6 @@ export default withBotRoute(handler, {
   },
   idempotent: true,
   querySchema: resolveDisputeQuerySchema,
+  // Régie+ : résolution d'un litige (arbitrage).
+  requireCapability: 'arbitration',
 });

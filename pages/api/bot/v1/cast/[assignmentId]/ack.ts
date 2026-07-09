@@ -121,4 +121,6 @@ export default withBotRoute(handler, {
   idempotent: true,
   bodySchema: ackBodySchema,
   querySchema: ackQuerySchema,
+  // Régie+ : accusé de briefing d'un caster (production).
+  requireCapability: 'discordEventOps:full',
 });

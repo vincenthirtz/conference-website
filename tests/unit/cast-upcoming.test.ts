@@ -71,7 +71,7 @@ beforeEach(() => {
   // Per-tenant bot auth: x-api-key resolves to CONFERENCE_TENANT_ID.
   seedBotAuth();
   // V2 strict tenant header — withBotRoute checks existence in `tenants`.
-  store.tenants = [{ id: CONFERENCE_TENANT_ID }] as any;
+  store.tenants = [{ id: CONFERENCE_TENANT_ID, plan: 'foundation', plan_status: 'active', plan_expires_at: null }] as any;
 
   const now = Date.now();
   const inTenMin = new Date(now + 10 * 60_000).toISOString();

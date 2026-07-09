@@ -328,4 +328,6 @@ export default withBotRoute(handler, {
   },
   idempotent: true,
   querySchema: vetoQuerySchema,
+  // Régie+ : veto de map d'un match (production).
+  requireCapability: 'discordEventOps:full',
 });

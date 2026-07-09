@@ -179,4 +179,6 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
 export default withBotRoute(handler, {
   methods: ['GET'],
   rateLimit: { max: 60, key: 'bot-match-dispute' },
+  // Régie+ : consultation du litige d'un match (arbitrage).
+  requireCapability: 'arbitration',
 });

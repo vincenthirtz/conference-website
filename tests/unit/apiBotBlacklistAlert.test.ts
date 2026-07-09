@@ -86,7 +86,7 @@ beforeEach(async () => {
   resetSupabaseMock();
   await __resetBotIdempotencyCache();
   seedBotAuth();
-  store.tenants = [{ id: CONFERENCE_TENANT_ID }] as any;
+  store.tenants = [{ id: CONFERENCE_TENANT_ID, plan: 'foundation', plan_status: 'active', plan_expires_at: null }] as any;
   store.blacklist_alerts = [] as any;
   vi.spyOn(console, 'warn').mockImplementation(() => {});
   vi.spyOn(console, 'error').mockImplementation(() => {});

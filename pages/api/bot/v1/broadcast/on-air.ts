@@ -29,4 +29,6 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
 export default withBotRoute(handler, {
   methods: ['GET'],
   rateLimit: { max: 60, key: 'bot-broadcast-on-air' },
+  // Régie+ : production / broadcast on-air (run-of-show).
+  requireCapability: 'discordEventOps:full',
 });

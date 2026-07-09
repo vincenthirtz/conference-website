@@ -164,4 +164,6 @@ export default withBotRoute(handler, {
   idempotent: true,
   bodySchema: draftsBodySchema,
   querySchema: draftsQuerySchema,
+  // Régie+ : draft de map d'un match (production).
+  requireCapability: 'discordEventOps:full',
 });

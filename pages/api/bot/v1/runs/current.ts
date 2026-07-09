@@ -95,4 +95,6 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
 export default withBotRoute(handler, {
   methods: ['GET'],
   rateLimit: { max: 60, key: 'bot-runs-current' },
+  // Régie+ : run-of-show courant (timeline / segments).
+  requireCapability: 'discordEventOps:full',
 });

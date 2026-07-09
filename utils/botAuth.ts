@@ -22,6 +22,12 @@ import { isBotMaintenanceMode } from './maintenance';
 import { logger } from './logger';
 import { formatZodError } from './validation';
 import { DEFAULT_TENANT_ID } from './tenant';
+import {
+  loadTenantPlanStateForBot,
+  checkBotPlanCapability,
+  type BotCapabilityRequirement,
+} from './billing/botPlanGate';
+import type { TenantPlanState } from './billing/planFeatures';
 
 // Fallback tenant bucket pour les routes `crossTenant: true` qui utilisent
 // l'idempotency cache. Voir le commentaire dans le bloc idempotency.
@@ -200,6 +206,31 @@ export type BotRouteOptions = {
    */
   crossTenant?: boolean;
   /**
+   * Gate PLAN « Régie solidaire » (Phase 0b → branchée). Déclare qu'une route
+   * bot est une FEATURE PREMIUM et exige une capacité du plan effectif du tenant
+   * appelant (cf. utils/billing/botPlanGate.ts) :
+   *   - `'discordEventOps:full'` : run-of-show / production (cast, veto, drafts,
+   *     broadcast on-air, events, runs — Régie+),
+   *   - `'arbitration'` : arbitrage litiges (disputes, resolve-dispute,
+   *     blacklist-alert — Régie+),
+   *   - `'ratings'` : rating joueur (réservé, pas d'endpoint bot pour l'instant).
+   *
+   * DÉFAUT = aucune exigence : la route est « basic », ouverte à tous les
+   * tenants actifs (y compris le palier gratuit `discovery`). Le plan du tenant
+   * n'est chargé (1 round-trip `tenants`) QUE si ce champ est présent → les
+   * routes de base ne paient aucun coût.
+   *
+   * Si le tenant ne remplit pas l'exigence → 403 { error:'plan_required',
+   * message, requiredCapability }. `foundation` a toutes les capacités → passe
+   * toujours ; un plan payant expiré retombe sur `discovery` → 403.
+   *
+   * INCOMPATIBLE avec `crossTenant: true` (aucun tenant résolu → rien à gater) :
+   * sur une route crossTenant, ce champ est ignoré (warn en dev). Les résolveurs
+   * globaux (events/pending, cast/upcoming, events/[id]/ack) restent non gatés au
+   * niveau middleware ; cf. docs/BOT_API_CONTRACT.md § Gate PLAN.
+   */
+  requireCapability?: BotCapabilityRequirement;
+  /**
    * Schéma zod validant le body sur les méthodes non-safe (POST/PATCH/DELETE).
    * En cas d'échec → 400 { error, code:'INVALID_BODY', fields }. Le résultat
    * parsé/typé est injecté dans `req.botInput` (le handler le lit via
@@ -224,7 +255,7 @@ export type BotRouteOptions = {
  * `req.botContext.tenantId` sans `!`.
  */
 export type BotTenantRequest = NextApiRequest & {
-  botContext: { tenantId: string };
+  botContext: { tenantId: string; plan?: TenantPlanState };
 };
 
 /**
@@ -334,6 +365,35 @@ export function withBotRoute(
         ...(req.botContext ?? {}),
         tenantId: authResult.tenantId,
       };
+
+      // Gate PLAN « Régie solidaire » : une route premium déclare
+      // `requireCapability`. On charge le plan du tenant (fail-closed
+      // `discovery`) et on refuse en 403 si l'entitlement manque. Aucune
+      // exigence (routes de base) → aucun round-trip, ouvert à tous les tenants
+      // actifs. Le plan chargé est attaché à `req.botContext.plan` pour le
+      // handler.
+      if (options.requireCapability) {
+        const planState = await loadTenantPlanStateForBot(authResult.tenantId);
+        req.botContext.plan = planState;
+        const denial = checkBotPlanCapability(
+          planState,
+          options.requireCapability
+        );
+        if (denial) {
+          return res.status(403).json(denial);
+        }
+      }
+    } else if (options.requireCapability) {
+      // crossTenant + requireCapability = config incohérente : aucun tenant
+      // résolu, donc rien à gater. On l'ignore (le résolveur global reste
+      // ouvert) et on le signale — c'est un bug de déclaration de route.
+      logger.warn(
+        '[bot/plan] requireCapability ignoré sur une route crossTenant (aucun tenant à gater)',
+        {
+          route: options.rateLimit.key,
+          requireCapability: options.requireCapability,
+        }
+      );
     }
 
     // Maintenance mode : si actif, on bloque tous les writes (POST/PATCH/
@@ -359,9 +419,7 @@ export function withBotRoute(
       const actorFromBody =
         typeof (req.body as Record<string, unknown> | null)?.[actorField] ===
         'string'
-          ? (
-              (req.body as Record<string, unknown>)[actorField] as string
-            ).trim()
+          ? ((req.body as Record<string, unknown>)[actorField] as string).trim()
           : '';
       const actorFromQuery =
         typeof req.query[actorField] === 'string'

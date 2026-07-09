@@ -563,7 +563,7 @@ describe('/api/bot/scrims', () => {
   beforeEach(() => {
     seedBotAuth();
     // V2 strict tenant header — withBotRoute checks existence in `tenants`.
-    store.tenants = [{ id: CONFERENCE_TENANT_ID }] as any;
+    store.tenants = [{ id: CONFERENCE_TENANT_ID, plan: 'foundation', plan_status: 'active', plan_expires_at: null }] as any;
     store.user_discord_links = [
       { discord_user_id: DISCORD_ID, auth_user_id: 'user-1' },
     ] as any;
@@ -662,7 +662,7 @@ describe('/api/bot/scrims', () => {
 describe('/api/bot/scrims/[scrimId]', () => {
   beforeEach(() => {
     seedBotAuth();
-    store.tenants = [{ id: CONFERENCE_TENANT_ID }] as any;
+    store.tenants = [{ id: CONFERENCE_TENANT_ID, plan: 'foundation', plan_status: 'active', plan_expires_at: null }] as any;
     store.user_discord_links = [
       { discord_user_id: DISCORD_ID, auth_user_id: 'user-1' },
     ] as any;
@@ -796,7 +796,7 @@ describe('/api/bot/scrims/[scrimId]/matches/[matchId]', () => {
 
   beforeEach(() => {
     seedBotAuth();
-    store.tenants = [{ id: CONFERENCE_TENANT_ID }] as any;
+    store.tenants = [{ id: CONFERENCE_TENANT_ID, plan: 'foundation', plan_status: 'active', plan_expires_at: null }] as any;
     store.user_discord_links = [
       { discord_user_id: DISCORD_ID, auth_user_id: 'user-1' },
     ] as any;
@@ -940,7 +940,7 @@ describe('/api/bot/scrims/[scrimId]/matches/[matchId]', () => {
 describe('/api/bot/scrims/[scrimId]/matches', () => {
   beforeEach(() => {
     seedBotAuth();
-    store.tenants = [{ id: CONFERENCE_TENANT_ID }] as any;
+    store.tenants = [{ id: CONFERENCE_TENANT_ID, plan: 'foundation', plan_status: 'active', plan_expires_at: null }] as any;
     store.user_discord_links = [
       { discord_user_id: DISCORD_ID, auth_user_id: 'user-1' },
     ] as any;

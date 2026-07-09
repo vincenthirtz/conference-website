@@ -143,6 +143,42 @@ curl -sS https://site.example/api/bot/v1/teams \
   -H "x-tenant-id: ce69a726-773e-4d12-b5eb-d2503aa752b4"
 ```
 
+### Plan gate (« Régie solidaire »)
+
+Bot features honour the **billing plan** of the resolved `x-tenant-id` (see
+[`utils/billing/planFeatures.ts`](../utils/billing/planFeatures.ts) and
+[`utils/billing/botPlanGate.ts`](../utils/billing/botPlanGate.ts)). A route may
+declare `requireCapability` in `withBotRoute({ ... })`; the middleware loads the
+tenant's plan (`plan`/`plan_status`/`plan_expires_at`, fail-closed to `discovery`)
+and, if the effective plan lacks the capability, returns:
+
+```json
+{
+  "error": "plan_required",
+  "message": "…",
+  "requiredCapability": "discordEventOps:full"
+}
+```
+
+with HTTP **403**. An expired / `past_due` paid plan downgrades to `discovery`
+(via `effectivePlan`); the flagship `foundation` has every capability and is never
+gated. **Base features are ungated** — a free `discovery` tenant keeps a working
+bot (registration, player/match reads, check-in/report, autocomplete,
+announcements, demandes, leaderboards, safety moderation, reminders, role-sync).
+The outbox delivery loop (`events/pending`, `events/handled`, `events/[id]/ack`,
+all `crossTenant`) is **infra, not a feature → never gated**.
+
+Gated routes:
+
+| Capability             | Routes                                                                                                                                                                                         | Plan   |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| `discordEventOps:full` | `runs/current`, `broadcast/on-air`, `cast/assignments`, `cast/[assignmentId]/ack`, `matches/[matchId]/cast`, `matches/[matchId]/discord`, `matches/[matchId]/drafts`, `matches/[matchId]/veto` | Régie+ |
+| `arbitration`          | `disputes`, `disputes/escalations`, `matches/[matchId]/dispute`, `matches/[matchId]/resolve-dispute`, `moderation/blacklist-alert`                                                             | Régie+ |
+
+**Bot client (docker-box `services/discord-bot/api-client.js`) — à gérer** : traiter
+un **403 `plan_required`** comme un refus de capacité (ne pas retenter, désactiver
+la feature pour ce tenant, logguer) plutôt qu'une erreur transitoire.
+
 ### Outbox events carry their tenant
 
 Outbound events emitted via `emitBotEvent()` (see [`utils/botEvents.ts`](../utils/botEvents.ts))
@@ -660,7 +696,9 @@ nouvelles déclenchent. La réponse ajoute alors :
 
 ```json
 {
-  "blacklist": [ /* … */ ],
+  "blacklist": [
+    /* … */
+  ],
   "alertedDiscordUserIds": ["1300000000000000001", "1300000000000000002"]
 }
 ```
@@ -1404,6 +1442,7 @@ string[]` est remplace par 4 colonnes typees
 
 > **Accueil des nouveaux arrivants** (2026-07-01) : `discord_config` expose
 > 4 nouvelles cles pour l'onboarding par serveur :
+>
 > - `welcome_enabled` (boolean, defaut `false`) — active/desactive l'accueil.
 > - `welcome_channel_id` (snowflake nullable) — salon ou poster le message.
 > - `welcome_message` (string nullable) — gabarit du message in-channel.

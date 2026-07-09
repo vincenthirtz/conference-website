@@ -273,4 +273,6 @@ export default withBotRoute(handler, {
   },
   idempotent: true,
   querySchema: castQuerySchema,
+  // Régie+ : casting d'un match (production).
+  requireCapability: 'discordEventOps:full',
 });

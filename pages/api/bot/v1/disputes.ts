@@ -140,4 +140,6 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
 export default withBotRoute(handler, {
   methods: ['GET'],
   rateLimit: { max: 30, key: 'bot-disputes' },
+  // Régie+ : arbitrage des litiges.
+  requireCapability: 'arbitration',
 });

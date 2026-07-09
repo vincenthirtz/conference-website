@@ -58,7 +58,7 @@ beforeEach(() => {
   // Per-tenant bot auth: x-api-key resolves to CONFERENCE_TENANT_ID.
   seedBotAuth();
   // V2 strict tenant header — withBotRoute checks existence in `tenants`.
-  store.tenants = [{ id: CONFERENCE_TENANT_ID }] as any;
+  store.tenants = [{ id: CONFERENCE_TENANT_ID, plan: 'foundation', plan_status: 'active', plan_expires_at: null }] as any;
 
   store.user_discord_links = [
     { discord_user_id: CAPTAIN_DISCORD, auth_user_id: CAPTAIN_AUTH },
