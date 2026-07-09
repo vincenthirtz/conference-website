@@ -10,6 +10,10 @@ import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
 import {
+  findScrimConflicts,
+  type SlotConflict,
+} from '@/utils/teams/scrimConflicts';
+import {
   emitScrimEvent,
   statusTransitionEvent,
 } from '@/utils/scrimEvents';
@@ -38,6 +42,7 @@ const PATCHABLE_FIELDS = [
   'description',
   'stream_url',
   'settings',
+  'duration_minutes',
 ] as const;
 type PatchField = (typeof PATCHABLE_FIELDS)[number];
 
@@ -164,6 +169,16 @@ async function handlePatch(
     return res.status(400).json({ error: 'scheduled_date invalide' });
   }
 
+  if (updatePayload.duration_minutes !== undefined && updatePayload.duration_minutes !== null) {
+    const dm = Number(updatePayload.duration_minutes);
+    if (!Number.isInteger(dm) || dm < 15 || dm > 720) {
+      return res
+        .status(400)
+        .json({ error: 'duration_minutes doit être un entier entre 15 et 720' });
+    }
+    updatePayload.duration_minutes = dm;
+  }
+
   // Slug unique si modifie
   if (typeof updatePayload.slug === 'string' && updatePayload.slug.trim()) {
     const slug = (updatePayload.slug as string).trim();
@@ -248,7 +263,26 @@ async function handlePatch(
     });
   }
 
-  return res.status(200).json({ success: true, scrim: after });
+  // Replanification : si scheduled_date a changé et que le scrim est planifié,
+  // on remonte (sans bloquer) les conflits de créneau détectés (P0 réutilisé) —
+  // l'agenda affiche un avertissement « une équipe est déjà prise ».
+  let conflicts: SlotConflict[] = [];
+  if (
+    updatePayload.scheduled_date !== undefined &&
+    after.scheduled_date &&
+    after.status === 'scheduled'
+  ) {
+    conflicts = await findScrimConflicts(supabaseAdmin!, {
+      tenantId: ctx.tenantId,
+      teamIds: [after.team1_id as string, after.team2_id as string],
+      slotIso: after.scheduled_date as string,
+      excludeScrimId: id,
+    });
+  }
+
+  return res
+    .status(200)
+    .json({ success: true, scrim: after, conflicts });
 }
 
 async function handleDelete(

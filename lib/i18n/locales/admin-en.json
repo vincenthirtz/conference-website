@@ -4182,7 +4182,20 @@
     "calNextWeek": "Next week",
     "calThisWeek": "This week",
     "calWeekOf": "Week of {date}",
-    "calCreateHint": "Click a slot to create a scrim"
+    "calCreateHint": "Click a slot to create a scrim",
+    "calViewWeek": "Week",
+    "calViewMonth": "Month",
+    "calMatchTag": "Match",
+    "calMonthPrev": "Previous month",
+    "calMonthNext": "Next month",
+    "calFilterTeam": "Team",
+    "calFilterStatus": "Status",
+    "calFilterAllTeams": "All teams",
+    "calConflictWarning": "Slot conflicts with a team already booked.",
+    "calRescheduled": "Scrim rescheduled.",
+    "calResized": "Scrim duration updated.",
+    "calMoreEvents": "+{count}",
+    "calUpdateError": "Could not update the scrim."
   },
   "adminScrimsCreate": {
     "pageTitle": "Admin – New scrim",

@@ -12189,6 +12189,41 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /api/admin/scrims/calendar:
+    get:
+      summary: Scrims (editable) + matches (read-only) in a date range for the admin agenda.
+      operationId: adminScrimsCalendar
+      tags:
+        - admin/scrims
+      security:
+        - StaffSession: []
+      parameters:
+        - name: from
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Calendar events.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /api/admin/scrims/forward:
     post:
       summary: Forward a scrim request to one or more captains.

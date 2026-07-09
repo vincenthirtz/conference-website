@@ -146,6 +146,8 @@ export type Scrim = {
   team1_id: string | null;
   team2_id: string | null;
   scheduled_date: string | null;
+  /** Durée en minutes (agenda admin). NULL → 120 par défaut côté UI. */
+  duration_minutes: number | null;
   timezone: string | null;
   is_public: boolean;
   logo_url: string | null;

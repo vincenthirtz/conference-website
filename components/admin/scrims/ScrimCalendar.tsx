@@ -1,12 +1,16 @@
 // components/admin/scrims/ScrimCalendar.tsx
-// Agenda admin (vue semaine) pour poser des scrims directement sur un créneau.
-// Colonnes = 7 jours (lun→dim), axe horaire continu à gauche. Les scrims
-// existants sont rendus comme des blocs positionnés par scheduled_date (dans le
-// fuseau `tz`) ; cliquer un scrim → onOpenScrim(id), cliquer une zone vide →
-// onCreateAt(dayYmd, minuteOfDay) (snap 30 min) pour ouvrir la création
-// pré-remplie. Présentation pure (aucun fetch).
+// Agenda admin (vue semaine) pour poser / replanifier des scrims sur un créneau.
+// Colonnes = 7 jours (lun→dim), axe horaire continu à gauche (8h→minuit).
+//   - Scrims : blocs colorés par statut, DÉPLAÇABLES (drag) et REDIMENSIONNABLES
+//     (poignée basse) via pointer events (souris + tactile). Cliquer (sans
+//     drag) → onOpenScrim(id).
+//   - Matches : blocs gris hachurés, LECTURE SEULE (tag « Match ») ; cliquer →
+//     onOpenMatch(id). Rend les collisions scrim/match visibles à l'œil.
+//   - Zone vide : clic → onCreateAt(dayYmd, minuteOfDay) (snap 30 min).
+// Présentation pure : aucun fetch. Les mutations sont remontées au parent
+// (onMoveScrim / onResizeScrim) qui persiste et rafraîchit.
 
-import { useMemo } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   weekDaysFrom,
   dateAndMinuteInTz,
@@ -18,6 +22,15 @@ export type CalendarScrim = {
   name: string;
   status: string;
   scheduled_date: string | null;
+  duration_minutes?: number | null;
+  team1Name?: string | null;
+  team2Name?: string | null;
+};
+
+export type CalendarMatch = {
+  id: string;
+  status: string;
+  scheduled_at: string | null;
   team1Name?: string | null;
   team2Name?: string | null;
 };
@@ -29,13 +42,19 @@ export type ScrimCalendarLabels = {
   thisWeek: string;
   weekOf: string; // reçoit {date}
   createHint: string;
+  matchTag: string;
 };
 
 const DAY_START_MIN = 8 * 60; // 08:00
 const DAY_END_MIN = 24 * 60; // minuit
 const HOUR_PX = 44;
-const SNAP_MIN = 30;
+const SNAP_MIN = 30; // snap création (clic zone vide)
+const DND_SNAP_MIN = 15; // snap drag & drop / resize
 const DEFAULT_DURATION_MIN = 120;
+const DEFAULT_MATCH_DURATION_MIN = 60;
+const MIN_DURATION_MIN = 15;
+const MAX_DURATION_MIN = 720;
+const DRAG_THRESHOLD_PX = 4;
 const pxPerMin = HOUR_PX / 60;
 
 const STATUS_BLOCK: Record<string, string> = {
@@ -48,6 +67,8 @@ const STATUS_BLOCK: Record<string, string> = {
 
 const pad2 = (n: number) => String(n).padStart(2, '0');
 const fmtHour = (m: number) => `${pad2(Math.floor(m / 60))}:${pad2(m % 60)}`;
+const clamp = (v: number, lo: number, hi: number) =>
+  Math.max(lo, Math.min(hi, v));
 
 function fmtDayHeader(ymd: string, tz: string): { dow: string; day: string } {
   const d = new Date(`${ymd}T12:00:00Z`);
@@ -61,40 +82,132 @@ function fmtDayHeader(ymd: string, tz: string): { dow: string; day: string } {
   };
 }
 
+type DragState = {
+  id: string;
+  mode: 'move' | 'resize';
+  startX: number;
+  startY: number;
+  moved: boolean;
+  originMinute: number;
+  originDuration: number;
+  curDay: string;
+  curMinute: number;
+  curDuration: number;
+};
+
 export default function ScrimCalendar({
   tz,
   weekStart,
   scrims,
+  matches = [],
   labels,
   onWeekChange,
   onCreateAt,
   onOpenScrim,
+  onOpenMatch,
+  onMoveScrim,
+  onResizeScrim,
 }: {
   tz: string;
   /** Lundi de la semaine affichée ('YYYY-MM-DD'). */
   weekStart: string;
   scrims: CalendarScrim[];
+  matches?: CalendarMatch[];
   labels: ScrimCalendarLabels;
   onWeekChange: (mondayYmd: string) => void;
   onCreateAt: (dayYmd: string, minuteOfDay: number) => void;
   onOpenScrim: (id: string) => void;
+  onOpenMatch: (id: string) => void;
+  onMoveScrim: (id: string, dayYmd: string, minuteOfDay: number) => void;
+  onResizeScrim: (id: string, durationMinutes: number) => void;
 }) {
   const days = useMemo(() => weekDaysFrom(weekStart), [weekStart]);
   const colHeight = ((DAY_END_MIN - DAY_START_MIN) / 60) * HOUR_PX;
   const todayYmd = useMemo(() => todayYmdInTz(tz), [tz]);
 
-  // Positionne chaque scrim daté sur (jour, minute) dans le fuseau.
-  const eventsByDay = useMemo(() => {
-    const map: Record<string, { scrim: CalendarScrim; minute: number }[]> = {};
+  // Refs des colonnes-jour pour retrouver le jour cible depuis le pointeur.
+  const colRefs = useRef<(HTMLDivElement | null)[]>([]);
+  // Drag en cours : source de vérité en ref (pas de re-render par mutation),
+  // `dragTick` force un re-render à chaque frame pour refléter la position.
+  const dragRef = useRef<DragState | null>(null);
+  const [dragTick, setDragTick] = useState(0);
+  const rerender = useCallback(() => setDragTick((t) => t + 1), []);
+  // Avale le clic synthétique qui suit un vrai drag (souris).
+  const justDraggedRef = useRef(false);
+
+  const scrimBasePos = useMemo(() => {
+    const map = new Map<
+      string,
+      { ymd: string; minute: number; duration: number; dayIdx: number }
+    >();
     for (const s of scrims) {
       if (!s.scheduled_date) continue;
       const pos = dateAndMinuteInTz(s.scheduled_date, tz);
       if (!pos) continue;
-      if (!days.includes(pos.ymd)) continue;
-      (map[pos.ymd] ??= []).push({ scrim: s, minute: pos.minute });
+      const dayIdx = days.indexOf(pos.ymd);
+      if (dayIdx < 0) continue;
+      map.set(s.id, {
+        ymd: pos.ymd,
+        minute: pos.minute,
+        duration: s.duration_minutes ?? DEFAULT_DURATION_MIN,
+        dayIdx,
+      });
     }
     return map;
   }, [scrims, tz, days]);
+
+  // Position d'affichage (base + override du drag en cours). `dragTick` est une
+  // dépendance volontaire : dragRef est muté sans déclencher de render.
+  const placedScrims = useMemo(() => {
+    void dragTick;
+    const drag = dragRef.current;
+    const out: {
+      scrim: CalendarScrim;
+      ymd: string;
+      minute: number;
+      duration: number;
+      dragging: boolean;
+    }[] = [];
+    for (const s of scrims) {
+      const base = scrimBasePos.get(s.id);
+      if (!base) continue;
+      if (drag && drag.id === s.id) {
+        out.push({
+          scrim: s,
+          ymd: drag.mode === 'move' ? drag.curDay : base.ymd,
+          minute: drag.mode === 'move' ? drag.curMinute : base.minute,
+          duration: drag.mode === 'resize' ? drag.curDuration : base.duration,
+          dragging: true,
+        });
+      } else {
+        out.push({
+          scrim: s,
+          ymd: base.ymd,
+          minute: base.minute,
+          duration: base.duration,
+          dragging: false,
+        });
+      }
+    }
+    return out;
+  }, [scrims, scrimBasePos, dragTick]);
+
+  const scrimsByDay = useMemo(() => {
+    const map: Record<string, typeof placedScrims> = {};
+    for (const p of placedScrims) (map[p.ymd] ??= []).push(p);
+    return map;
+  }, [placedScrims]);
+
+  const matchesByDay = useMemo(() => {
+    const map: Record<string, { match: CalendarMatch; minute: number }[]> = {};
+    for (const m of matches) {
+      if (!m.scheduled_at) continue;
+      const pos = dateAndMinuteInTz(m.scheduled_at, tz);
+      if (!pos || !days.includes(pos.ymd)) continue;
+      (map[pos.ymd] ??= []).push({ match: m, minute: pos.minute });
+    }
+    return map;
+  }, [matches, tz, days]);
 
   const hourMarks = useMemo(() => {
     const marks: { top: number; label: string }[] = [];
@@ -104,12 +217,114 @@ export default function ScrimCalendar({
     return marks;
   }, []);
 
+  const colIndexAt = useCallback(
+    (clientX: number): number | null => {
+      const rects = colRefs.current;
+      for (let i = 0; i < rects.length; i++) {
+        const el = rects[i];
+        if (!el) continue;
+        const r = el.getBoundingClientRect();
+        if (clientX >= r.left && clientX <= r.right) return i;
+      }
+      const first = rects[0]?.getBoundingClientRect();
+      if (first && clientX < first.left) return 0;
+      const last = rects[days.length - 1]?.getBoundingClientRect();
+      if (last && clientX > last.right) return days.length - 1;
+      return null;
+    },
+    [days.length]
+  );
+
+  const startDrag = useCallback(
+    (e: React.PointerEvent, scrim: CalendarScrim, mode: 'move' | 'resize') => {
+      const base = scrimBasePos.get(scrim.id);
+      if (!base) return;
+      (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+      justDraggedRef.current = false;
+      dragRef.current = {
+        id: scrim.id,
+        mode,
+        startX: e.clientX,
+        startY: e.clientY,
+        moved: false,
+        originMinute: base.minute,
+        originDuration: base.duration,
+        curDay: base.ymd,
+        curMinute: base.minute,
+        curDuration: base.duration,
+      };
+      rerender();
+    },
+    [scrimBasePos, rerender]
+  );
+
+  const moveDrag = useCallback(
+    (e: React.PointerEvent) => {
+      const d = dragRef.current;
+      if (!d) return;
+      const dy = e.clientY - d.startY;
+      const dist = Math.abs(e.clientX - d.startX) + Math.abs(dy);
+      if (!d.moved && dist > DRAG_THRESHOLD_PX) d.moved = true;
+      const deltaMin = Math.round(dy / pxPerMin / DND_SNAP_MIN) * DND_SNAP_MIN;
+      if (d.mode === 'resize') {
+        d.curDuration = clamp(
+          d.originDuration + deltaMin,
+          MIN_DURATION_MIN,
+          MAX_DURATION_MIN
+        );
+      } else {
+        d.curMinute = clamp(
+          d.originMinute + deltaMin,
+          DAY_START_MIN,
+          DAY_END_MIN - DND_SNAP_MIN
+        );
+        const idx = colIndexAt(e.clientX);
+        if (idx !== null) d.curDay = days[idx];
+      }
+      rerender();
+    },
+    [colIndexAt, days, rerender]
+  );
+
+  const endDrag = useCallback(
+    (e: React.PointerEvent) => {
+      (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
+      const d = dragRef.current;
+      dragRef.current = null;
+      if (d?.moved) {
+        justDraggedRef.current = true;
+        if (d.mode === 'move') onMoveScrim(d.id, d.curDay, d.curMinute);
+        else onResizeScrim(d.id, d.curDuration);
+      }
+      rerender();
+    },
+    [onMoveScrim, onResizeScrim, rerender]
+  );
+
+  const cancelDrag = useCallback(() => {
+    if (dragRef.current) {
+      dragRef.current = null;
+      rerender();
+    }
+  }, [rerender]);
+
   const handleColClick = (dayYmd: string) => (e: React.MouseEvent) => {
+    if (justDraggedRef.current) return;
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const y = e.clientY - rect.top;
     let minute = DAY_START_MIN + Math.round(y / pxPerMin / SNAP_MIN) * SNAP_MIN;
-    minute = Math.max(DAY_START_MIN, Math.min(DAY_END_MIN - SNAP_MIN, minute));
+    minute = clamp(minute, DAY_START_MIN, DAY_END_MIN - SNAP_MIN);
     onCreateAt(dayYmd, minute);
+  };
+
+  const handleScrimClick = (id: string) => (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (justDraggedRef.current) {
+      justDraggedRef.current = false;
+      e.preventDefault();
+      return;
+    }
+    onOpenScrim(id);
   };
 
   const weekLabel = fmtDayHeader(days[0], tz).day;
@@ -168,9 +383,10 @@ export default function ScrimCalendar({
 
           {/* Colonnes-jour */}
           <div className="flex flex-1 gap-1">
-            {days.map((day) => {
+            {days.map((day, dayIdx) => {
               const isToday = day === todayYmd;
-              const events = eventsByDay[day] ?? [];
+              const dayScrims = scrimsByDay[day] ?? [];
+              const dayMatches = matchesByDay[day] ?? [];
               return (
                 <div key={day} className="flex-1 min-w-[92px]">
                   <div
@@ -187,6 +403,9 @@ export default function ScrimCalendar({
                   </div>
 
                   <div
+                    ref={(el) => {
+                      colRefs.current[dayIdx] = el;
+                    }}
                     className="relative cursor-copy rounded-lg border border-neutral-800 bg-neutral-950/40 hover:bg-neutral-900/40"
                     style={{ height: colHeight }}
                     onClick={handleColClick(day)}
@@ -200,15 +419,53 @@ export default function ScrimCalendar({
                       />
                     ))}
 
-                    {events.map(({ scrim, minute }) => {
+                    {/* Matches (lecture seule) */}
+                    {dayMatches.map(({ match, minute }) => {
                       const top = Math.max(
                         0,
                         (minute - DAY_START_MIN) * pxPerMin
                       );
                       const height = Math.max(
                         18,
-                        DEFAULT_DURATION_MIN * pxPerMin - 2
+                        DEFAULT_MATCH_DURATION_MIN * pxPerMin - 2
                       );
+                      const vs =
+                        match.team1Name || match.team2Name
+                          ? `${match.team1Name ?? '?'} vs ${match.team2Name ?? '?'}`
+                          : labels.matchTag;
+                      return (
+                        <button
+                          type="button"
+                          key={`m-${match.id}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onOpenMatch(match.id);
+                          }}
+                          className="absolute inset-x-0.5 overflow-hidden rounded-md border border-neutral-500/40 px-1.5 py-1 text-left text-[10px] leading-tight text-neutral-300 hover:brightness-125"
+                          style={{
+                            top,
+                            height,
+                            backgroundColor: '#3f3f46',
+                            backgroundImage:
+                              'repeating-linear-gradient(45deg, rgba(255,255,255,0.06) 0, rgba(255,255,255,0.06) 4px, transparent 4px, transparent 8px)',
+                          }}
+                          title={`${labels.matchTag} — ${vs} — ${fmtHour(minute)}`}
+                        >
+                          <span className="mb-0.5 inline-block rounded-sm bg-neutral-900/70 px-1 text-[8px] font-semibold uppercase tracking-wide text-neutral-300">
+                            {labels.matchTag}
+                          </span>
+                          <span className="block truncate">{vs}</span>
+                        </button>
+                      );
+                    })}
+
+                    {/* Scrims (déplaçables / redimensionnables) */}
+                    {dayScrims.map(({ scrim, minute, duration, dragging }) => {
+                      const top = Math.max(
+                        0,
+                        (minute - DAY_START_MIN) * pxPerMin
+                      );
+                      const height = Math.max(18, duration * pxPerMin - 2);
                       const cls =
                         STATUS_BLOCK[scrim.status] ?? STATUS_BLOCK.draft;
                       const vs =
@@ -219,11 +476,14 @@ export default function ScrimCalendar({
                         <button
                           type="button"
                           key={scrim.id}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onOpenScrim(scrim.id);
-                          }}
-                          className={`absolute inset-x-0.5 overflow-hidden rounded-md border px-1.5 py-1 text-left text-[10px] leading-tight shadow-sm hover:brightness-110 ${cls}`}
+                          onPointerDown={(e) => startDrag(e, scrim, 'move')}
+                          onPointerMove={moveDrag}
+                          onPointerUp={endDrag}
+                          onPointerCancel={cancelDrag}
+                          onClick={handleScrimClick(scrim.id)}
+                          className={`absolute inset-x-0.5 touch-none cursor-grab overflow-hidden rounded-md border px-1.5 py-1 text-left text-[10px] leading-tight shadow-sm hover:brightness-110 active:cursor-grabbing ${cls} ${
+                            dragging ? 'z-20 ring-2 ring-white/60' : ''
+                          }`}
                           style={{ top, height }}
                           title={`${vs} — ${fmtHour(minute)}`}
                         >
@@ -231,13 +491,24 @@ export default function ScrimCalendar({
                             {fmtHour(minute)}
                           </span>
                           <span className="block truncate">{vs}</span>
+                          {/* Poignée de redimensionnement (durée) */}
+                          <span
+                            role="presentation"
+                            onPointerDown={(e) => {
+                              e.stopPropagation();
+                              startDrag(e, scrim, 'resize');
+                            }}
+                            onPointerMove={moveDrag}
+                            onPointerUp={endDrag}
+                            onPointerCancel={cancelDrag}
+                            onClick={(e) => e.stopPropagation()}
+                            className="absolute inset-x-0 bottom-0 h-2 cursor-ns-resize touch-none bg-white/10 hover:bg-white/25"
+                          />
                         </button>
                       );
                     })}
 
-                    {isToday && (
-                      <TodayLine tz={tz} />
-                    )}
+                    {isToday && <TodayLine tz={tz} />}
                   </div>
                 </div>
               );

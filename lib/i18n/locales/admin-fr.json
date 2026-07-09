@@ -4182,7 +4182,20 @@
     "calNextWeek": "Semaine suivante",
     "calThisWeek": "Cette semaine",
     "calWeekOf": "Semaine du {date}",
-    "calCreateHint": "Clique sur un créneau pour créer un scrim"
+    "calCreateHint": "Clique sur un créneau pour créer un scrim",
+    "calViewWeek": "Semaine",
+    "calViewMonth": "Mois",
+    "calMatchTag": "Match",
+    "calMonthPrev": "Mois précédent",
+    "calMonthNext": "Mois suivant",
+    "calFilterTeam": "Équipe",
+    "calFilterStatus": "Statut",
+    "calFilterAllTeams": "Toutes les équipes",
+    "calConflictWarning": "Créneau en conflit avec une équipe déjà prise.",
+    "calRescheduled": "Scrim replanifié.",
+    "calResized": "Durée du scrim mise à jour.",
+    "calMoreEvents": "+{count}",
+    "calUpdateError": "Impossible de mettre à jour le scrim."
   },
   "adminScrimsCreate": {
     "pageTitle": "Admin – Nouveau scrim",
