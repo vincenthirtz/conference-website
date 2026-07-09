@@ -4,6 +4,10 @@ import type { HelloAssoWebhookEvent } from '@/utils/helloasso';
 import { emitBotEvent } from '@/utils/botEvents';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { applyRateLimit } from '@/utils/rateLimit';
+import {
+  resolvePlanCorrelation,
+  applyTenantPlanPayment,
+} from '@/utils/billing/tenantPlanBilling';
 
 import { logger } from '../../../utils/logger';
 /**
@@ -127,6 +131,30 @@ export default async function handler(
         err
       )
     );
+
+    // ── AJOUT « Régie solidaire » : don ciblé tenant + plan ────────────────
+    // Corrélation via la metadata du checkout-intent (canal primaire) ou le
+    // mapping tenant_plan_checkouts (fallback). Un don GÉNÉRIQUE (sans
+    // metadata plan) ne matche pas → comportement inchangé.
+    try {
+      const correlation = await resolvePlanCorrelation(event);
+      if (correlation) {
+        const result = await applyTenantPlanPayment({
+          helloassoPaymentId: event.data.id,
+          tenantId: correlation.tenantId,
+          plan: correlation.plan,
+          amountCents: event.data.amount,
+          checkoutIntentId: correlation.checkoutIntentId,
+        });
+        logger.info(
+          `[helloasso/webhook] tenant plan payment ${event.data.id}: ${result.status} tenant=${correlation.tenantId} plan=${correlation.plan} via=${correlation.source}`
+        );
+      }
+    } catch (err) {
+      // Ne casse jamais l'ACK webhook : on log et on répond 200 (HelloAsso ne
+      // doit pas retenter en boucle sur une erreur applicative).
+      logger.error('[helloasso/webhook] tenant plan apply error', err);
+    }
   }
 
   // Always respond 200 so HelloAsso doesn't retry

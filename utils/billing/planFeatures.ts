@@ -169,3 +169,42 @@ export const PLAN_LABELS: Record<TenantPlan, string> = {
   circuit: 'Circuit',
   editor: 'Éditeur',
 };
+
+/**
+ * Prix annuel public d'un plan, EN EUROS (pas en centimes).
+ *
+ * Source unique du barème « Régie solidaire ». Le paiement passe par HelloAsso
+ * (don ciblé tenant+plan) ; l'endpoint de génération de lien convertit en
+ * centimes (`* 100`) pour l'API checkout-intents.
+ *
+ * - `foundation` / `discovery` : gratuit (0). La Fondation est offerte par
+ *   mission ; Découverte est le palier gratuit à marque partagée.
+ * - `regie` : 290 €/an. `circuit` : 790 €/an.
+ * - `editor` : `null` = sur-devis (pas de prix catalogue → pas de lien
+ *   self-service ; un accord commercial fixe le montant hors barème).
+ *
+ * `null` signifie explicitement « pas de tarif catalogue » (≠ gratuit).
+ */
+export const PLAN_PRICES_EUR: Record<TenantPlan, number | null> = {
+  foundation: 0,
+  discovery: 0,
+  regie: 290,
+  circuit: 790,
+  editor: null,
+};
+
+/**
+ * Plans qu'un owner peut activer/renouveler via un lien de paiement HelloAsso
+ * ciblé : ceux qui ont un prix catalogue strictement positif. `editor`
+ * (sur-devis) et les paliers gratuits en sont exclus.
+ */
+export type PurchasablePlan = 'regie' | 'circuit';
+
+/**
+ * Un plan est-il « achetable » en self-service (prix catalogue > 0) ?
+ * Narrows le type vers `PurchasablePlan` pour l'extraction typée côté API.
+ */
+export function isPurchasablePlan(plan: string): plan is PurchasablePlan {
+  const price = PLAN_PRICES_EUR[plan as TenantPlan];
+  return (plan === 'regie' || plan === 'circuit') && typeof price === 'number';
+}

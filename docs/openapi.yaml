@@ -14980,6 +14980,85 @@ paths:
           $ref: '#/components/responses/NotFound'
         '429':
           $ref: '#/components/responses/RateLimited'
+  /api/admin/tenants/{id}/plan-checkout:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      summary: Generate a HelloAsso payment link to activate/renew a tenant plan.
+      description: |
+        « Régie solidaire » (Phase 1). Requires `owner` role. Creates a HelloAsso
+        checkout-intent (a targeted "don") for the given tenant + paid plan,
+        attaching `metadata: { kind: 'tenant_plan', tenant_id, plan }` so the
+        webhook can correlate the payment back to the tenant and activate/renew
+        the plan (+1 year). Returns the payment URL to send to the partner.
+        Only `regie` and `circuit` (catalog-priced) plans are accepted.
+        Rate-limited 10/min per IP.
+      operationId: adminGenerateTenantPlanCheckout
+      tags:
+        - admin/tenants
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - plan
+              properties:
+                plan:
+                  type: string
+                  enum: [regie, circuit]
+      responses:
+        '200':
+          description: Payment link created.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - redirectUrl
+                  - checkoutIntentId
+                  - plan
+                  - amountEur
+                properties:
+                  redirectUrl:
+                    type: string
+                    description: HelloAsso payment URL to send to the partner.
+                  checkoutIntentId:
+                    type: integer
+                    format: int64
+                  plan:
+                    type: string
+                    enum: [regie, circuit]
+                  amountEur:
+                    type: number
+                    description: Annual catalog price in EUR.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '502':
+          description: HelloAsso checkout creation failed.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
   /api/admin/tenants/{id}/staff:
     parameters:
       - in: path

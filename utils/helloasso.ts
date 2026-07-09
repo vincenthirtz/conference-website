@@ -72,8 +72,12 @@ async function getAccessToken(): Promise<string> {
 export type CheckoutInitRequest = {
   /** Amount in cents (e.g. 2500 = 25 €) */
   totalAmount: number;
-  /** Payer info */
-  payer: {
+  /**
+   * Payer info. Optional: HelloAsso only pre-fills the checkout page with it.
+   * Targeted plan links (owner → partner) omit it — the partner fills their own
+   * details on HelloAsso's page.
+   */
+  payer?: {
     firstName: string;
     lastName: string;
     email: string;
@@ -84,6 +88,14 @@ export type CheckoutInitRequest = {
   errorUrl: string;
   /** Metadata / label shown on the HelloAsso payment page */
   itemName?: string;
+  /**
+   * Free-form metadata attached to the checkout-intent. HelloAsso stores it on
+   * the intent and echoes it back in the payment notification (webhook) — this
+   * is the documented correlation channel (`data.metadata`). Used to tie a
+   * "don" back to a tenant + plan (`{ kind: 'tenant_plan', tenant_id, plan }`).
+   * @see https://dev.helloasso.com/docs/checkout — "metadata"
+   */
+  metadata?: Record<string, unknown>;
 };
 
 export type CheckoutInitResponse = {
@@ -103,7 +115,7 @@ export async function createCheckoutIntent(
   const token = await getAccessToken();
   const { orgSlug } = getConfig();
 
-  const body = {
+  const body: Record<string, unknown> = {
     totalAmount: opts.totalAmount,
     initialAmount: opts.totalAmount,
     itemName: opts.itemName || "Don pour l'association",
@@ -111,12 +123,20 @@ export async function createCheckoutIntent(
     errorUrl: opts.errorUrl,
     returnUrl: opts.returnUrl,
     containsDonation: true,
-    payer: {
+  };
+  if (opts.payer) {
+    body.payer = {
       firstName: opts.payer.firstName,
       lastName: opts.payer.lastName,
       email: opts.payer.email,
-    },
-  };
+    };
+  }
+  // Attach metadata only when provided — HelloAsso echoes it back in the
+  // payment webhook (`data.metadata`) so we can correlate the don to a
+  // tenant + plan. Generic dons pass no metadata → unchanged behaviour.
+  if (opts.metadata && Object.keys(opts.metadata).length > 0) {
+    body.metadata = opts.metadata;
+  }
 
   const res = await fetch(
     `${API_BASE}/v5/organizations/${encodeURIComponent(orgSlug)}/checkout-intents`,
@@ -283,6 +303,12 @@ export async function fetchForms(): Promise<
  */
 export type HelloAssoWebhookEvent = {
   eventType: 'Payment' | 'Order' | string;
+  /**
+   * Checkout-intent metadata echoed at the notification root (some HelloAsso
+   * configs surface it here rather than under `data.metadata`). Read
+   * defensively from both places.
+   */
+  metadata?: Record<string, unknown>;
   data: {
     id: number;
     amount: number;
@@ -296,6 +322,8 @@ export type HelloAssoWebhookEvent = {
       name?: string;
       amount?: number;
     }>;
+    /** Checkout-intent metadata echoed back by HelloAsso (primary channel). */
+    metadata?: Record<string, unknown>;
     [key: string]: unknown;
   };
 };
