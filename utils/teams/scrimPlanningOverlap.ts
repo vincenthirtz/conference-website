@@ -210,6 +210,36 @@ export function isFullOverlap(cell: HeatmapCell | undefined): boolean {
   return !!cell && cell.count >= PLANNING_PARTIES.length;
 }
 
+/**
+ * Réplique le motif horaire du PREMIER jour peint sur tous les jours de
+ * l'horizon (« copier lundi → toute la semaine »). Renvoie la nouvelle liste de
+ * créneaux ISO, ordonnée selon la grille. Si rien n'est peint, renvoie l'entrée.
+ */
+export function copyFirstPaintedDayAcrossHorizon(
+  cfg: PlanningConfig,
+  slots: string[]
+): string[] {
+  const days = horizonDates(cfg);
+  const minutes = slotMinutesOfDay(cfg);
+  const selected = new Set(slots);
+
+  let templateMinutes: number[] | null = null;
+  for (const day of days) {
+    const mins = minutes.filter((m) => selected.has(slotKey(cfg, day, m)));
+    if (mins.length > 0) {
+      templateMinutes = mins;
+      break;
+    }
+  }
+  if (!templateMinutes) return slots.slice();
+
+  const out = new Set<string>();
+  for (const day of days) {
+    for (const m of templateMinutes) out.add(slotKey(cfg, day, m));
+  }
+  return slotKeysForHorizon(cfg).filter((k) => out.has(k));
+}
+
 export type RankedSlot = {
   slot: string;
   count: number;

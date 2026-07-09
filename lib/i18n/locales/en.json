@@ -3742,6 +3742,12 @@
     "calWeekOf": "Week of {date}",
     "calPrevWeek": "Previous week",
     "calNextWeek": "Next week",
-    "calToday": "Today"
+    "calToday": "Today",
+    "quickFillAll": "Select all",
+    "quickCopyDay": "Copy first day",
+    "quickClear": "Clear all",
+    "addToCalendar": "Add to my calendar",
+    "timezoneNote": "Times shown in {tz}",
+    "timezoneViewer": "your timezone: {tz}"
   }
 }

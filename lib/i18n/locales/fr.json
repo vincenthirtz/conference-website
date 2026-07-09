@@ -3742,6 +3742,12 @@
     "calWeekOf": "Semaine du {date}",
     "calPrevWeek": "Semaine précédente",
     "calNextWeek": "Semaine suivante",
-    "calToday": "Aujourd'hui"
+    "calToday": "Aujourd'hui",
+    "quickFillAll": "Tout sélectionner",
+    "quickCopyDay": "Copier le 1er jour",
+    "quickClear": "Tout effacer",
+    "addToCalendar": "Ajouter à mon agenda",
+    "timezoneNote": "Horaires affichés en {tz}",
+    "timezoneViewer": "ton fuseau : {tz}"
   }
 }

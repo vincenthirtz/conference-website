@@ -15,6 +15,7 @@ import {
   isSlotValidatable,
   isFullOverlap,
   rankValidatableSlots,
+  copyFirstPaintedDayAcrossHorizon,
   type PlanningConfig,
 } from '../../utils/teams/scrimPlanningOverlap';
 
@@ -184,5 +185,36 @@ describe('rankValidatableSlots', () => {
   it('renvoie [] quand aucun créneau n\'a les 2 équipes', () => {
     const hm = buildHeatmap([{ party: 'team1', userId: 'a', slots: [s1] }]);
     expect(rankValidatableSlots(hm)).toEqual([]);
+  });
+});
+
+describe('copyFirstPaintedDayAcrossHorizon', () => {
+  // 2 jours, créneaux 1h, 18h→21h Paris (été = UTC+2).
+  const cfg2: PlanningConfig = {
+    horizonStart: '2026-07-10',
+    horizonDays: 2,
+    slotMinutes: 60,
+    dayStartMin: 18 * 60,
+    dayEndMin: 21 * 60,
+    timezone: 'Europe/Paris',
+  };
+  const d0_18 = '2026-07-10T16:00:00.000Z';
+  const d0_19 = '2026-07-10T17:00:00.000Z';
+  const d1_18 = '2026-07-11T16:00:00.000Z';
+  const d1_19 = '2026-07-11T17:00:00.000Z';
+
+  it('réplique le motif du premier jour peint sur tous les jours', () => {
+    const out = copyFirstPaintedDayAcrossHorizon(cfg2, [d0_18, d0_19]);
+    expect(out.sort()).toEqual([d0_18, d0_19, d1_18, d1_19].sort());
+  });
+
+  it('renvoie l\'entrée inchangée si rien n\'est peint', () => {
+    expect(copyFirstPaintedDayAcrossHorizon(cfg2, [])).toEqual([]);
+  });
+
+  it('prend le PREMIER jour peint comme modèle (ignore un jour 2 différent)', () => {
+    // jour 0 = 18h seulement ; jour 1 = 19h. Modèle = jour 0 (18h) → tous à 18h.
+    const out = copyFirstPaintedDayAcrossHorizon(cfg2, [d0_18, d1_19]);
+    expect(out.sort()).toEqual([d0_18, d1_18].sort());
   });
 });

@@ -12,7 +12,7 @@
 // Idiome dark aligné sur components/player/ScrimSlotPicker.tsx : rounded-xl,
 // border-white/15, bg-black/60.
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import AvailabilityGrid, {
   type AvailabilityGridLabels,
 } from '@/components/scrim/AvailabilityGrid';
@@ -22,6 +22,11 @@ import AvailabilityCalendar, {
 import { useToast } from '@/components/Toast';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
+import {
+  slotKeysForHorizon,
+  copyFirstPaintedDayAcrossHorizon,
+} from '@/utils/teams/scrimPlanningOverlap';
+import { buildScrimIcs, downloadIcs } from '@/utils/teams/scrimIcs';
 import type { ScrimPlanning, ScrimPlanningParty } from '@/types/admin';
 import type {
   PlanningConfig,
@@ -69,6 +74,15 @@ export default function ScrimPlanningPanel({
   const [saving, setSaving] = useState(false);
   const [mode, setMode] = useState<'paint' | 'heatmap'>('paint');
   const [view, setView] = useState<'grid' | 'calendar'>('calendar');
+  // Fuseau du visiteur (client-only pour éviter un mismatch SSR).
+  const [viewerTz, setViewerTz] = useState<string | null>(null);
+  useEffect(() => {
+    try {
+      setViewerTz(Intl.DateTimeFormat().resolvedOptions().timeZone);
+    } catch {
+      setViewerTz(null);
+    }
+  }, []);
 
   const config = useMemo<PlanningConfig>(
     () => ({
@@ -118,6 +132,30 @@ export default function ScrimPlanningPanel({
     }),
     [gridLabels, t]
   );
+
+  // Remplissage rapide (P3-9).
+  const fillAll = () => setSlots(slotKeysForHorizon(config));
+  const copyFirstDay = () =>
+    setSlots(copyFirstPaintedDayAcrossHorizon(config, slots));
+  const clearAll = () => setSlots([]);
+
+  // Ajouter le scrim validé à mon agenda (.ics, P3-10).
+  const addToCalendar = () => {
+    if (!planning.validated_slot) return;
+    const title = `Scrim : ${teamNames?.team1 || t.myPartyTeam1} vs ${
+      teamNames?.team2 || t.myPartyTeam2
+    }`;
+    const ics = buildScrimIcs({
+      uid: `${planning.id}@owwomenscup.fr`,
+      title,
+      startIso: planning.validated_slot,
+      url:
+        typeof window !== 'undefined'
+          ? `${window.location.origin}/player/scrim-planning/${planning.id}`
+          : undefined,
+    });
+    downloadIcs(`scrim-${planning.id}`, ics);
+  };
 
   const accent = myParty === 'staff' ? 'purple' : 'blue';
 
@@ -200,12 +238,58 @@ export default function ScrimPlanningPanel({
         </span>
       </div>
 
+      {/* Fuseau de référence (P3-11) */}
+      <p className="mb-3 text-xs text-gray-500">
+        {format(t.timezoneNote, { tz: planning.timezone })}
+        {viewerTz && viewerTz !== planning.timezone
+          ? ` · ${format(t.timezoneViewer, { tz: viewerTz })}`
+          : ''}
+      </p>
+
       {/* Créneau validé */}
       {planning.validated_slot && (
-        <div className="mb-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
-          {format(t.validatedNotice, {
-            date: formatSlot(planning.validated_slot),
-          })}
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
+          <span>
+            {format(t.validatedNotice, {
+              date: formatSlot(planning.validated_slot),
+            })}
+            {viewerTz && viewerTz !== planning.timezone && (
+              <span className="ml-1 text-emerald-200/70">
+                (
+                {new Date(planning.validated_slot).toLocaleString(locale, {
+                  weekday: 'short',
+                  day: 'numeric',
+                  month: 'short',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  timeZone: viewerTz,
+                })}{' '}
+                {viewerTz})
+              </span>
+            )}
+          </span>
+          <button
+            type="button"
+            onClick={addToCalendar}
+            className="inline-flex flex-shrink-0 items-center gap-1.5 rounded-lg border border-emerald-400/40 bg-emerald-500/15 px-3 py-1.5 text-xs font-medium text-emerald-100 hover:bg-emerald-500/25 transition"
+          >
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <rect x="3" y="4" width="18" height="18" rx="2" />
+              <line x1="16" y1="2" x2="16" y2="6" />
+              <line x1="8" y1="2" x2="8" y2="6" />
+              <line x1="3" y1="10" x2="21" y2="10" />
+            </svg>
+            {t.addToCalendar}
+          </button>
         </div>
       )}
 
@@ -270,6 +354,35 @@ export default function ScrimPlanningPanel({
           </div>
         )}
       </div>
+
+      {/* Remplissage rapide (P3-9) */}
+      {!readOnly && effectiveMode === 'paint' && (
+        <div className="mb-3 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={fillAll}
+            className="rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-medium text-gray-200 hover:bg-white/10 transition"
+          >
+            {t.quickFillAll}
+          </button>
+          <button
+            type="button"
+            onClick={copyFirstDay}
+            disabled={slots.length === 0}
+            className="rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-medium text-gray-200 hover:bg-white/10 disabled:opacity-40 transition"
+          >
+            {t.quickCopyDay}
+          </button>
+          <button
+            type="button"
+            onClick={clearAll}
+            disabled={slots.length === 0}
+            className="rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-medium text-gray-300 hover:bg-red-500/15 hover:text-red-200 hover:border-red-500/40 disabled:opacity-40 transition"
+          >
+            {t.quickClear}
+          </button>
+        </div>
+      )}
 
       {view === 'calendar' ? (
         <AvailabilityCalendar
