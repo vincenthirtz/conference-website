@@ -6383,6 +6383,14 @@
     "confirmExtendSubtitle": "The availability window will be extended by one week and the reminder will be re-armed.",
     "extendConfirm": "Extend",
     "extended": "Horizon extended by one week.",
-    "staffRequiredBadge": "Staff required"
+    "staffRequiredBadge": "Staff required",
+    "myAvailHeading": "My availability (staff)",
+    "myAvailHelp": "Set your slots as staff; they count toward the overlap above.",
+    "myAvailSave": "Save my availability",
+    "myAvailSaving": "Saving…",
+    "myAvailSaved": "Your availability has been saved.",
+    "myAvailError": "Error while saving your availability.",
+    "myAvailCount": "{count} slot(s)",
+    "myAvailClosed": "The grid is not open: you can no longer edit your availability."
   }
 }

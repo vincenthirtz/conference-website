@@ -42,6 +42,7 @@ import adminValidateHandler from '../../pages/api/admin/scrim-plannings/[plannin
 import playerListHandler from '../../pages/api/teams/scrim-plannings/index';
 import playerDetailHandler from '../../pages/api/teams/scrim-plannings/[planningId]/index';
 import playerAvailabilityHandler from '../../pages/api/teams/scrim-plannings/[planningId]/availability';
+import adminAvailabilityHandler from '../../pages/api/admin/scrim-plannings/[planningId]/availability';
 
 /* -----------------------------------------------------------
  * Fixtures
@@ -655,5 +656,81 @@ describe('/api/teams/scrim-plannings (player list)', () => {
     await playerListHandler(makeAuthedReq({ method: 'GET' }), res);
     expect(res.statusCode).toBe(200);
     expect((res.body as any).plannings).toEqual([]);
+  });
+});
+
+/* -----------------------------------------------------------
+ * /api/admin/scrim-plannings/[planningId]/availability (staff)
+ * ---------------------------------------------------------*/
+
+describe('/api/admin/scrim-plannings/[planningId]/availability', () => {
+  beforeEach(() => {
+    store.scrim_plannings = [basePlanning()] as any;
+    store.scrim_planning_availabilities = [];
+  });
+
+  it('GET returns my staff slots', async () => {
+    store.scrim_planning_availabilities = [
+      {
+        id: 'a1',
+        tenant_id: undefined,
+        planning_id: PLANNING_ID,
+        party: 'staff',
+        user_id: 'user-1',
+        slots: [SLOT_1],
+      },
+    ] as any;
+    const res = makeRes();
+    await adminAvailabilityHandler(
+      makeAuthedReq({ method: 'GET', query: { planningId: PLANNING_ID } }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    expect((res.body as any).slots).toEqual([SLOT_1]);
+  });
+
+  it('PUT upserts my staff availability', async () => {
+    const res = makeRes();
+    await adminAvailabilityHandler(
+      makeAuthedReq({
+        method: 'PUT',
+        query: { planningId: PLANNING_ID },
+        body: { slots: [SLOT_1] },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    expect((res.body as any).slots).toEqual([SLOT_1]);
+    const row = (store.scrim_planning_availabilities as any[]).find(
+      (r) => r.user_id === 'user-1'
+    );
+    expect(row.party).toBe('staff');
+  });
+
+  it('PUT 409 when planning not open', async () => {
+    store.scrim_plannings = [basePlanning({ status: 'validated' })] as any;
+    const res = makeRes();
+    await adminAvailabilityHandler(
+      makeAuthedReq({
+        method: 'PUT',
+        query: { planningId: PLANNING_ID },
+        body: { slots: [SLOT_1] },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(409);
+  });
+
+  it('PUT 400 on out-of-grid slot', async () => {
+    const res = makeRes();
+    await adminAvailabilityHandler(
+      makeAuthedReq({
+        method: 'PUT',
+        query: { planningId: PLANNING_ID },
+        body: { slots: [OUT_OF_GRID] },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(400);
   });
 });

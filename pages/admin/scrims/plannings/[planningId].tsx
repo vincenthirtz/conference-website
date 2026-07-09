@@ -79,6 +79,10 @@ function AdminScrimPlanningDetailPage(_props: StaffProps) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  // Mes propres dispos staff sur cette grille (party='staff', peinture perso).
+  const [mySlots, setMySlots] = useState<string[]>([]);
+  const [savingAvail, setSavingAvail] = useState(false);
+
   const fetchAll = useCallback(async () => {
     if (!id) return;
     setLoading(true);
@@ -98,6 +102,16 @@ function AdminScrimPlanningDetailPage(_props: StaffProps) {
       setAvailabilities(detail.availabilities || []);
       setApiHeatmap(detail.heatmap || null);
       setTeams(teamsRes.teams || []);
+      // Récupère mes propres créneaux staff (peinture perso) sur cette grille.
+      try {
+        const mine = await adminFetchJson<{ slots: string[] }>(
+          `/api/admin/scrim-plannings/${id}/availability`
+        );
+        setMySlots(mine.slots || []);
+      } catch {
+        // Non-bloquant : la peinture perso reste vide si l'appel échoue.
+        setMySlots([]);
+      }
     } catch (err) {
       setError((err as Error)?.message || t.errorLoad);
     } finally {
@@ -333,6 +347,34 @@ function AdminScrimPlanningDetailPage(_props: StaffProps) {
       setError((err as Error)?.message || t.errorPatch);
     } finally {
       setBusy(false);
+    }
+  }
+
+  // Enregistre mes créneaux staff (party='staff') sur cette grille, puis
+  // rafraîchit la heatmap d'overlap au-dessus pour intégrer mes dispos.
+  async function saveMyAvailability() {
+    if (!planning) return;
+    setSavingAvail(true);
+    setError(null);
+    try {
+      const res = await mutateJson<{ success: boolean; slots: string[] }>(
+        `/api/admin/scrim-plannings/${planning.id}/availability`,
+        {
+          method: 'PUT',
+          body: JSON.stringify({ slots: mySlots }),
+        }
+      );
+      setMySlots(res.slots || []);
+      addToast(t.myAvailSaved, 'success');
+      await fetchAll();
+    } catch (err) {
+      const msg =
+        err instanceof AdminFetchError
+          ? (err.payload as { error?: string } | null)?.error || t.myAvailError
+          : (err as Error)?.message || t.myAvailError;
+      addToast(msg, 'error');
+    } finally {
+      setSavingAvail(false);
     }
   }
 
@@ -637,6 +679,46 @@ function AdminScrimPlanningDetailPage(_props: StaffProps) {
                 onSlotClick={canValidate ? onSlotClick : undefined}
                 disabled={!canValidate || busy}
               />
+            )}
+          </section>
+
+          {/* Mes disponibilités staff (peinture perso, party='staff') */}
+          <section className="bg-neutral-800/50 border border-neutral-700/50 rounded-2xl p-6 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold">{t.myAvailHeading}</h2>
+                <p className="mt-1 text-xs text-neutral-400">{t.myAvailHelp}</p>
+              </div>
+              <span className="inline-flex items-center rounded-full bg-purple-900/30 border border-purple-500/40 px-2.5 py-0.5 text-xs font-medium text-purple-200">
+                {format(t.myAvailCount, { count: mySlots.length })}
+              </span>
+            </div>
+
+            {planning.status === 'open' ? (
+              <>
+                <AvailabilityCalendar
+                  config={config}
+                  mode="paint"
+                  labels={calendarLabels}
+                  accent="purple"
+                  value={mySlots}
+                  onChange={setMySlots}
+                  requireStaff={requireStaff}
+                  disabled={savingAvail}
+                />
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => saveMyAvailability()}
+                    disabled={savingAvail}
+                    className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-xs font-semibold"
+                  >
+                    {savingAvail ? t.myAvailSaving : t.myAvailSave}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <p className="text-sm text-neutral-500">{t.myAvailClosed}</p>
             )}
           </section>
         </div>

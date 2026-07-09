@@ -6383,6 +6383,14 @@
     "confirmExtendSubtitle": "La fenêtre de disponibilités sera allongée d'une semaine et le rappel sera réarmé.",
     "extendConfirm": "Prolonger",
     "extended": "Horizon prolongé d'une semaine.",
-    "staffRequiredBadge": "Staff requis"
+    "staffRequiredBadge": "Staff requis",
+    "myAvailHeading": "Mes disponibilités (staff)",
+    "myAvailHelp": "Indique tes créneaux en tant que staff ; ils comptent dans l'overlap ci-dessus.",
+    "myAvailSave": "Enregistrer mes dispos",
+    "myAvailSaving": "Enregistrement…",
+    "myAvailSaved": "Tes disponibilités ont été enregistrées.",
+    "myAvailError": "Erreur lors de l'enregistrement de tes disponibilités.",
+    "myAvailCount": "{count} créneau(x)",
+    "myAvailClosed": "La grille n'est pas ouverte : tu ne peux plus modifier tes disponibilités."
   }
 }

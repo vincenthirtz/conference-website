@@ -12584,6 +12584,74 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+  /api/admin/scrim-plannings/{planningId}/availability:
+    parameters:
+      - name: planningId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: My (staff) availability slots on this planning grid.
+      operationId: adminGetScrimPlanningStaffAvailability
+      tags:
+        - admin/scrims
+      security:
+        - StaffSession: []
+      responses:
+        '200':
+          description: My staff slots.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      summary: Upsert my (staff) availability slots on this planning grid.
+      operationId: adminPutScrimPlanningStaffAvailability
+      tags:
+        - admin/scrims
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - slots
+              properties:
+                slots:
+                  type: array
+                  items:
+                    type: string
+                    format: date-time
+      responses:
+        '200':
+          description: Saved.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Planning not open.
   /api/admin/scrim-plannings/{planningId}/validate:
     parameters:
       - name: planningId
