@@ -391,6 +391,67 @@ describe('/api/admin/scrim-plannings/[planningId]/validate', () => {
     expect(res.statusCode).toBe(201);
     expect((res.body as any).warning).toBeTruthy();
   });
+
+  it('409 SLOT_CONFLICT when a team already has a scheduled scrim at that slot', async () => {
+    // Un scrim déjà programmé pour TEAM_A pile sur le créneau visé.
+    store.scrims = [
+      {
+        id: 'existing-scrim',
+        name: 'Phoenix vs Someone',
+        status: 'scheduled',
+        team1_id: TEAM_A,
+        team2_id: '550e8400-e29b-41d4-a716-4466554400c9',
+        scheduled_date: SLOT_1,
+        deleted_at: null,
+        source_planning_id: null,
+      },
+    ] as any;
+
+    const res = makeRes();
+    await adminValidateHandler(
+      makeAuthedReq({
+        method: 'POST',
+        query: { planningId: PLANNING_ID },
+        body: { slot: SLOT_1 },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(409);
+    expect((res.body as any).code).toBe('SLOT_CONFLICT');
+    expect((res.body as any).conflicts).toHaveLength(1);
+    expect((res.body as any).conflicts[0].type).toBe('scrim');
+    // Aucun nouveau scrim créé : seul le scrim préexistant reste.
+    expect(store.scrims).toHaveLength(1);
+  });
+
+  it('force: true overrides the conflict and creates the scrim with a warning', async () => {
+    store.scrims = [
+      {
+        id: 'existing-scrim',
+        name: 'Phoenix vs Someone',
+        status: 'scheduled',
+        team1_id: TEAM_A,
+        team2_id: '550e8400-e29b-41d4-a716-4466554400c9',
+        scheduled_date: SLOT_1,
+        deleted_at: null,
+        source_planning_id: null,
+      },
+    ] as any;
+
+    const res = makeRes();
+    await adminValidateHandler(
+      makeAuthedReq({
+        method: 'POST',
+        query: { planningId: PLANNING_ID },
+        body: { slot: SLOT_1, force: true },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(201);
+    expect((res.body as any).scrim.source_planning_id).toBe(PLANNING_ID);
+    expect((res.body as any).warning).toContain('conflit');
+    expect(store.scrims).toHaveLength(2);
+  });
 });
 
 /* -----------------------------------------------------------

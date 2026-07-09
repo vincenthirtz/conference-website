@@ -7,7 +7,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useToast } from '@/components/Toast';
@@ -171,6 +171,50 @@ function AdminScrimPlanningDetailPage(_props: StaffProps) {
   const isActionable =
     planning?.status === 'open' && !planning?.validated_slot && !busy;
 
+  const runValidate = useCallback(
+    async (planningId: string, slot: string, force: boolean) => {
+      setBusy(true);
+      setError(null);
+      try {
+        const res = await mutateJson<{
+          scrim: { id: string };
+          planning: ScrimPlanning;
+          warning?: string;
+        }>(`/api/admin/scrim-plannings/${planningId}/validate`, {
+          method: 'POST',
+          body: JSON.stringify(force ? { slot, force: true } : { slot }),
+        });
+        addToast(res.warning ? t.validatedWithWarning : t.validated, 'success');
+        void router.push(`/admin/scrims/${res.scrim.id}`);
+      } catch (err) {
+        // Conflit de créneau (double-booking) : proposer un override forcé.
+        if (
+          err instanceof AdminFetchError &&
+          err.status === 409 &&
+          (err.payload as { code?: string } | null)?.code === 'SLOT_CONFLICT'
+        ) {
+          const conflicts =
+            (err.payload as { conflicts?: unknown[] }).conflicts ?? [];
+          setBusy(false);
+          const forceOk = await confirm({
+            title: t.confirmConflictTitle,
+            subtitle: format(t.confirmConflictSubtitle, {
+              count: conflicts.length,
+            }),
+            variant: 'danger',
+            confirmLabel: t.confirmConflictConfirm,
+            cancelLabel: t.confirmValidateCancel,
+          });
+          if (forceOk) await runValidate(planningId, slot, true);
+          return;
+        }
+        setError((err as Error)?.message || t.errorValidate);
+        setBusy(false);
+      }
+    },
+    [mutateJson, router, addToast, confirm, t]
+  );
+
   const onSlotClick = useCallback(
     async (slot: string) => {
       if (!planning || !isActionable) return;
@@ -189,34 +233,9 @@ function AdminScrimPlanningDetailPage(_props: StaffProps) {
         cancelLabel: t.confirmValidateCancel,
       });
       if (!ok) return;
-      setBusy(true);
-      setError(null);
-      try {
-        const res = await mutateJson<{
-          scrim: { id: string };
-          planning: ScrimPlanning;
-          warning?: string;
-        }>(`/api/admin/scrim-plannings/${planning.id}/validate`, {
-          method: 'POST',
-          body: JSON.stringify({ slot }),
-        });
-        addToast(res.warning ? t.validatedWithWarning : t.validated, 'success');
-        void router.push(`/admin/scrims/${res.scrim.id}`);
-      } catch (err) {
-        setError((err as Error)?.message || t.errorValidate);
-        setBusy(false);
-      }
+      await runValidate(planning.id, slot, false);
     },
-    [
-      planning,
-      isActionable,
-      heatmap,
-      confirm,
-      mutateJson,
-      router,
-      addToast,
-      t,
-    ]
+    [planning, isActionable, heatmap, confirm, addToast, t, runValidate]
   );
 
   async function patchStatus(status: 'cancelled' | 'closed') {

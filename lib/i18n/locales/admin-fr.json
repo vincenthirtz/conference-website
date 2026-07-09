@@ -6338,6 +6338,9 @@
     "calWeekOf": "Semaine du {date}",
     "calPrevWeek": "Semaine précédente",
     "calNextWeek": "Semaine suivante",
-    "calToday": "Aujourd'hui"
+    "calToday": "Aujourd'hui",
+    "confirmConflictTitle": "Conflit de créneau",
+    "confirmConflictSubtitle": "{count} conflit(s) détecté(s) : une équipe est déjà prise à cette heure. Valider quand même ?",
+    "confirmConflictConfirm": "Valider quand même"
   }
 }

@@ -6338,6 +6338,9 @@
     "calWeekOf": "Week of {date}",
     "calPrevWeek": "Previous week",
     "calNextWeek": "Next week",
-    "calToday": "Today"
+    "calToday": "Today",
+    "confirmConflictTitle": "Slot conflict",
+    "confirmConflictSubtitle": "{count} conflict(s) detected: a team is already booked at this time. Validate anyway?",
+    "confirmConflictConfirm": "Validate anyway"
   }
 }
