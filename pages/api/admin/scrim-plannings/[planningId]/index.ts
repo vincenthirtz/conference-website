@@ -31,6 +31,8 @@ const PATCHABLE_FIELDS = [
   'day_end_min',
   'timezone',
   'is_public',
+  // Permet de ré-armer la relance en prolongeant l'horizon (PATCH le remet à null).
+  'reminder_pinged_at',
 ] as const;
 
 export default withStaffRoute(handler, 'manager');

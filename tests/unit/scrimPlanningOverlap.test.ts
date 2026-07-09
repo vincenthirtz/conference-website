@@ -14,6 +14,7 @@ import {
   buildHeatmap,
   isSlotValidatable,
   isFullOverlap,
+  rankValidatableSlots,
   type PlanningConfig,
 } from '../../utils/teams/scrimPlanningOverlap';
 
@@ -156,5 +157,32 @@ describe('isSlotValidatable / isFullOverlap', () => {
 
   it('PLANNING_PARTIES contient bien 3 parties', () => {
     expect(PLANNING_PARTIES).toHaveLength(3);
+  });
+});
+
+describe('rankValidatableSlots', () => {
+  const s1 = '2026-07-10T16:00:00.000Z';
+  const s2 = '2026-07-10T17:00:00.000Z';
+  const s3 = '2026-07-11T16:00:00.000Z';
+
+  it('classe overlap parfait en tête, puis par date croissante', () => {
+    const hm = buildHeatmap([
+      // s1 : les 2 équipes (validatable, count 2)
+      { party: 'team1', userId: 'a', slots: [s1, s3] },
+      { party: 'team2', userId: 'b', slots: [s1, s2, s3] },
+      // s3 : full (team1+team2+staff)
+      { party: 'staff', userId: 'c', slots: [s3] },
+      // s2 : seulement team2 → non validatable
+    ]);
+    const ranked = rankValidatableSlots(hm);
+    // s3 (full, count 3) devant s1 (count 2). s2 exclu.
+    expect(ranked.map((r) => r.slot)).toEqual([s3, s1]);
+    expect(ranked[0].full).toBe(true);
+    expect(ranked[1].full).toBe(false);
+  });
+
+  it('renvoie [] quand aucun créneau n\'a les 2 équipes', () => {
+    const hm = buildHeatmap([{ party: 'team1', userId: 'a', slots: [s1] }]);
+    expect(rankValidatableSlots(hm)).toEqual([]);
   });
 });

@@ -209,3 +209,26 @@ export function isSlotValidatable(cell: HeatmapCell | undefined): boolean {
 export function isFullOverlap(cell: HeatmapCell | undefined): boolean {
   return !!cell && cell.count >= PLANNING_PARTIES.length;
 }
+
+export type RankedSlot = {
+  slot: string;
+  count: number;
+  full: boolean;
+};
+
+/**
+ * Classe les créneaux « planifiables » (les 2 équipes présentes) du meilleur au
+ * moins bon : d'abord par nombre de parties dispo décroissant (overlap parfait
+ * en tête), puis par date croissante (le plus tôt possible à qualité égale).
+ * Sert à suggérer le meilleur créneau à valider côté admin.
+ */
+export function rankValidatableSlots(heatmap: Heatmap): RankedSlot[] {
+  return Object.entries(heatmap)
+    .filter(([, cell]) => isSlotValidatable(cell))
+    .map(([slot, cell]) => ({
+      slot,
+      count: cell.count,
+      full: isFullOverlap(cell),
+    }))
+    .sort((a, b) => b.count - a.count || (a.slot < b.slot ? -1 : a.slot > b.slot ? 1 : 0));
+}

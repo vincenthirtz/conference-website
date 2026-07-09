@@ -6341,6 +6341,23 @@
     "calToday": "Today",
     "confirmConflictTitle": "Slot conflict",
     "confirmConflictSubtitle": "{count} conflict(s) detected: a team is already booked at this time. Validate anyway?",
-    "confirmConflictConfirm": "Validate anyway"
+    "confirmConflictConfirm": "Validate anyway",
+    "participationHeading": "Participation",
+    "partyTeam1": "Team 1",
+    "partyTeam2": "Team 2",
+    "partyStaff": "Staff ({count})",
+    "painted": "✓",
+    "notPainted": "—",
+    "bestSlotHeading": "Suggested best slot",
+    "bestSlotValidate": "Validate",
+    "bestSlotValidateBest": "Validate the best slot",
+    "bestSlotFull": "3/3 available",
+    "bestSlotPartial": "2/3",
+    "noValidatableSlot": "No slot where both teams overlap.",
+    "extendWeek": "Extend by one week",
+    "confirmExtendTitle": "Extend the horizon?",
+    "confirmExtendSubtitle": "The availability window will be extended by one week and the reminder will be re-armed.",
+    "extendConfirm": "Extend",
+    "extended": "Horizon extended by one week."
   }
 }

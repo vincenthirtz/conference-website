@@ -23,6 +23,7 @@ import {
   buildHeatmap,
   isSlotValidatable,
   isFullOverlap,
+  rankValidatableSlots,
   type Heatmap,
   type PlanningAvailabilityInput,
 } from '@/utils/teams/scrimPlanningOverlap';
@@ -168,6 +169,27 @@ function AdminScrimPlanningDetailPage(_props: StaffProps) {
     [heatmap]
   );
 
+  // Suivi de participation (P2-8) : quelles parties ont peint ≥1 créneau ?
+  const participation = useMemo(() => {
+    const team1 = availabilities.some(
+      (av) => av.party === 'team1' && av.slots.length > 0
+    );
+    const team2 = availabilities.some(
+      (av) => av.party === 'team2' && av.slots.length > 0
+    );
+    const staffUsers = new Map<string, string>();
+    for (const av of availabilities) {
+      if (av.party === 'staff' && av.slots.length > 0) {
+        staffUsers.set(av.user_id, av.display_name || av.user_id);
+      }
+    }
+    const staffNames = Array.from(staffUsers.values());
+    return { team1, team2, staffCount: staffNames.length, staffNames };
+  }, [availabilities]);
+
+  // Classement des créneaux planifiables (P2-6), meilleur d'abord.
+  const ranked = useMemo(() => rankValidatableSlots(heatmap), [heatmap]);
+
   const isActionable =
     planning?.status === 'open' && !planning?.validated_slot && !busy;
 
@@ -266,6 +288,36 @@ function AdminScrimPlanningDetailPage(_props: StaffProps) {
     }
   }
 
+  // Prolonger l'horizon d'une semaine (P2-7) : rallonge la fenêtre de dispos
+  // et réarme le cron de rappel (reminder_pinged_at → null).
+  async function extendHorizon() {
+    if (!planning) return;
+    const ok = await confirm({
+      title: t.confirmExtendTitle,
+      subtitle: t.confirmExtendSubtitle,
+      variant: 'info',
+      confirmLabel: t.extendConfirm,
+    });
+    if (!ok) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await mutateJson(`/api/admin/scrim-plannings/${planning.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          horizon_days: planning.horizon_days + 7,
+          reminder_pinged_at: null,
+        }),
+      });
+      addToast(t.extended, 'success');
+      await fetchAll();
+    } catch (err) {
+      setError((err as Error)?.message || t.errorPatch);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   if (loading || !planning || !config) {
     return (
       <div className="min-h-screen bg-neutral-950 text-white">
@@ -317,6 +369,13 @@ function AdminScrimPlanningDetailPage(_props: StaffProps) {
             <div className="flex flex-wrap gap-2">
               {planning.status === 'open' && (
                 <>
+                  <button
+                    onClick={() => extendHorizon()}
+                    disabled={busy}
+                    className="px-3 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 disabled:opacity-50 text-xs"
+                  >
+                    {t.extendWeek}
+                  </button>
                   <button
                     onClick={() => patchStatus('closed')}
                     disabled={busy}
@@ -387,6 +446,100 @@ function AdminScrimPlanningDetailPage(_props: StaffProps) {
               <div className="text-sm font-medium">{planning.timezone}</div>
             </div>
           </section>
+
+          {/* Suivi de participation (P2-8) */}
+          <section className="bg-neutral-800/50 border border-neutral-700/50 rounded-2xl p-6 space-y-4">
+            <h2 className="text-lg font-semibold">{t.participationHeading}</h2>
+            <div className="flex flex-wrap gap-2">
+              <span
+                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium ${
+                  participation.team1
+                    ? 'bg-emerald-900/40 border border-emerald-500/40 text-emerald-200'
+                    : 'bg-neutral-800/70 border border-neutral-700 text-neutral-500'
+                }`}
+              >
+                {t.partyTeam1}{' '}
+                {participation.team1 ? t.painted : t.notPainted}
+              </span>
+              <span
+                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium ${
+                  participation.team2
+                    ? 'bg-emerald-900/40 border border-emerald-500/40 text-emerald-200'
+                    : 'bg-neutral-800/70 border border-neutral-700 text-neutral-500'
+                }`}
+              >
+                {t.partyTeam2}{' '}
+                {participation.team2 ? t.painted : t.notPainted}
+              </span>
+              <span
+                title={participation.staffNames.join(', ')}
+                className={`inline-flex max-w-full items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium ${
+                  participation.staffCount > 0
+                    ? 'bg-emerald-900/40 border border-emerald-500/40 text-emerald-200'
+                    : 'bg-neutral-800/70 border border-neutral-700 text-neutral-500'
+                }`}
+              >
+                {format(t.partyStaff, { count: participation.staffCount })}
+                {participation.staffCount > 0 && (
+                  <span className="truncate text-emerald-300/70">
+                    · {participation.staffNames.join(', ')}
+                  </span>
+                )}
+              </span>
+            </div>
+          </section>
+
+          {/* Meilleur créneau suggéré (P2-6) */}
+          {canValidate && ranked.length > 0 && (
+            <section className="bg-neutral-800/50 border border-neutral-700/50 rounded-2xl p-6 space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h2 className="text-lg font-semibold">{t.bestSlotHeading}</h2>
+                <button
+                  onClick={() => runValidate(planning.id, ranked[0].slot, false)}
+                  disabled={busy}
+                  className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-xs font-semibold"
+                >
+                  {t.bestSlotValidateBest}
+                </button>
+              </div>
+              <ul className="space-y-2">
+                {ranked.slice(0, 3).map((r) => (
+                  <li
+                    key={r.slot}
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-neutral-900/50 border border-neutral-700/50 px-4 py-3"
+                  >
+                    <div className="flex flex-wrap items-center gap-3">
+                      <span className="text-sm font-medium">
+                        {formatDate(r.slot)}
+                      </span>
+                      <span
+                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                          r.full
+                            ? 'bg-emerald-900/40 border border-emerald-500/40 text-emerald-200'
+                            : 'bg-amber-900/30 border border-amber-500/40 text-amber-200'
+                        }`}
+                      >
+                        {r.full ? t.bestSlotFull : t.bestSlotPartial}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => runValidate(planning.id, r.slot, false)}
+                      disabled={busy}
+                      className="px-3 py-1.5 rounded-lg bg-neutral-700 hover:bg-neutral-600 disabled:opacity-50 text-xs"
+                    >
+                      {t.bestSlotValidate}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+          {canValidate && ranked.length === 0 && (
+            <section className="bg-neutral-800/50 border border-neutral-700/50 rounded-2xl p-6">
+              <h2 className="text-lg font-semibold mb-2">{t.bestSlotHeading}</h2>
+              <p className="text-sm text-neutral-500">{t.noValidatableSlot}</p>
+            </section>
+          )}
 
           {/* Grille heatmap */}
           <section className="bg-neutral-800/50 border border-neutral-700/50 rounded-2xl p-6 space-y-4">

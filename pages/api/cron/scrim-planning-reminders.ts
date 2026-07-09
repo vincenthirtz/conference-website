@@ -43,10 +43,18 @@ function isAuthorized(req: NextApiRequest): boolean {
   return false;
 }
 
+const pad2 = (n: number) => String(n).padStart(2, '0');
+
 function ymdPlusDays(days: number): string {
   const d = new Date(Date.now() + days * 86_400_000);
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
+  return `${d.getUTCFullYear()}-${pad2(d.getUTCMonth() + 1)}-${pad2(d.getUTCDate())}`;
+}
+
+/** Ajoute `days` jours à une date calendaire 'YYYY-MM-DD' (arithmétique UTC). */
+function addDays(dateStr: string, days: number): string {
+  const [y, m, d] = dateStr.split('-').map((v) => parseInt(v, 10));
+  const next = new Date(Date.UTC(y, m - 1, d) + days * 86_400_000);
+  return `${next.getUTCFullYear()}-${pad2(next.getUTCMonth() + 1)}-${pad2(next.getUTCDate())}`;
 }
 
 export async function runScrimPlanningReminders(): Promise<Counters> {
@@ -140,6 +148,74 @@ export async function runScrimPlanningReminders(): Promise<Counters> {
   return counters;
 }
 
+type CloseCounters = {
+  tenants_scanned: number;
+  plannings_closed: number;
+  duration_ms: number;
+};
+
+/**
+ * Clôture les grilles ouvertes dont l'horizon est ENTIÈREMENT passé (dernier
+ * jour = horizon_start + horizon_days) et jamais validées → status='closed'.
+ * Évite qu'une grille expirée reste « ouverte » (compteur cloche, listes).
+ */
+export async function runScrimPlanningAutoClose(): Promise<CloseCounters> {
+  const start = Date.now();
+  const counters: CloseCounters = {
+    tenants_scanned: 0,
+    plannings_closed: 0,
+    duration_ms: 0,
+  };
+  if (!supabaseAdmin) {
+    counters.duration_ms = Date.now() - start;
+    return counters;
+  }
+
+  const { data: tenants } = await supabaseAdmin
+    .from('tenants')
+    .select('id')
+    .eq('is_active', true);
+
+  const today = ymdPlusDays(0);
+  const nowIso = new Date().toISOString();
+
+  for (const tenant of (tenants ?? []) as Array<{ id: string }>) {
+    counters.tenants_scanned += 1;
+
+    // Candidates : ouvertes, non supprimées, dont l'horizon a commencé avant
+    // aujourd'hui (celles qui commencent aujourd'hui/plus tard ne peuvent pas
+    // être expirées). L'expiration exacte est calculée par ligne (horizon_days).
+    const { data: plannings } = await supabaseAdmin
+      .from('scrim_plannings')
+      .select('id, horizon_start, horizon_days')
+      .eq('tenant_id', tenant.id)
+      .eq('status', 'open')
+      .is('deleted_at', null)
+      .lt('horizon_start', today);
+
+    const expiredIds: string[] = [];
+    for (const p of plannings ?? []) {
+      const end = addDays(p.horizon_start as string, (p.horizon_days as number) || 0);
+      if (end <= today) expiredIds.push(p.id as string);
+    }
+    if (expiredIds.length === 0) continue;
+
+    const { error } = await supabaseAdmin
+      .from('scrim_plannings')
+      .update({ status: 'closed', updated_at: nowIso })
+      .in('id', expiredIds)
+      .eq('tenant_id', tenant.id);
+    if (error) {
+      logger.error('[cron/scrim-planning-reminders] auto-close error', error);
+      continue;
+    }
+    counters.plannings_closed += expiredIds.length;
+  }
+
+  counters.duration_ms = Date.now() - start;
+  return counters;
+}
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -153,14 +229,16 @@ export default async function handler(
   }
   try {
     const counters = await runScrimPlanningReminders();
+    const closed = await runScrimPlanningAutoClose();
     logger.info(
-      '[cron/scrim-planning-reminders] tick tenants=%d plannings=%d emitted=%d duration_ms=%d',
+      '[cron/scrim-planning-reminders] tick tenants=%d plannings=%d emitted=%d closed=%d duration_ms=%d',
       counters.tenants_scanned,
       counters.plannings_scanned,
       counters.reminders_emitted,
+      closed.plannings_closed,
       counters.duration_ms
     );
-    return res.status(200).json(counters);
+    return res.status(200).json({ ...counters, closed });
   } catch (err) {
     logger.error('[cron/scrim-planning-reminders] handler error', err);
     return res.status(500).json({ error: 'Internal server error' });
