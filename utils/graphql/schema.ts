@@ -29,6 +29,7 @@ import { readPublicTeam } from '@/utils/public/readTeam';
 import { applyMatchScore } from '@/utils/matches/applyScore';
 import { supabaseAdmin } from '@/utils/supabase';
 import { hasScope } from '@/utils/apiScopes';
+import { checkApiTokenAccess } from '@/utils/billing/apiPlanGate';
 import { logger } from '@/utils/logger';
 import type { GraphQLContext } from './context';
 
@@ -166,10 +167,28 @@ const typeDefs = /* GraphQL */ `
 const TERMINAL_STATUSES = new Set(['finished', 'walkover', 'cancelled']);
 
 /** Exige un scope sur le token du contexte, sinon lève une GraphQLError. */
-function requireScope(ctx: GraphQLContext, scope: Parameters<typeof hasScope>[1]) {
+function requireScope(
+  ctx: GraphQLContext,
+  scope: Parameters<typeof hasScope>[1]
+) {
   if (!ctx.token) {
     throw new GraphQLError('Authentication required.', {
       extensions: { code: 'UNAUTHENTICATED' },
+    });
+  }
+  // Plan gate : l'écriture via clé API est un produit payant. Le suffixe du
+  // scope (`resource:write`) dérive l'action → capacité apiWrite (apiRead pour
+  // `:read`). Une clé `comp` (partenaire) bypasse le gate. `foundation` passe ;
+  // `discovery` / plan payant expiré (sans comp) → 403.
+  const action = scope.endsWith(':write') ? 'write' : 'read';
+  const planDenial = checkApiTokenAccess(ctx.token, action, Date.now());
+  if (planDenial) {
+    throw new GraphQLError(planDenial.message, {
+      extensions: {
+        code: 'FORBIDDEN',
+        reason: planDenial.error,
+        requiredCapability: planDenial.requiredCapability,
+      },
     });
   }
   if (!hasScope(ctx.token.scopes, scope)) {
@@ -188,7 +207,12 @@ const resolvers = {
   Query: {
     tournaments: async (
       _root: unknown,
-      args: { status?: string | null; game?: string | null; limit?: number; offset?: number },
+      args: {
+        status?: string | null;
+        game?: string | null;
+        limit?: number;
+        offset?: number;
+      },
       ctx: GraphQLContext
     ) => {
       const limit = clampLimit(args.limit ?? 50);
@@ -269,15 +293,17 @@ const resolvers = {
         });
       }
       if (match.is_bye || !match.team1_id || !match.team2_id) {
-        throw new GraphQLError('Match non jouable (bye ou équipes manquantes).', {
-          extensions: { code: 'BAD_USER_INPUT' },
-        });
+        throw new GraphQLError(
+          'Match non jouable (bye ou équipes manquantes).',
+          {
+            extensions: { code: 'BAD_USER_INPUT' },
+          }
+        );
       }
       if (TERMINAL_STATUSES.has(match.status)) {
-        throw new GraphQLError(
-          `Match déjà clôturé (status=${match.status}).`,
-          { extensions: { code: 'CONFLICT' } }
-        );
+        throw new GraphQLError(`Match déjà clôturé (status=${match.status}).`, {
+          extensions: { code: 'CONFLICT' },
+        });
       }
 
       const result = await applyMatchScore({

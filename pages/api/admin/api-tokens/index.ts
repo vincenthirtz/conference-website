@@ -22,6 +22,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import {
   withStaffRoute,
+  hasAtLeastRole,
   type AuthenticatedStaffContext,
 } from '@/utils/staff';
 import { applyRateLimit } from '@/utils/rateLimit';
@@ -43,6 +44,14 @@ function generateToken(): { plain: string; hash: string; prefix: string } {
 const createBodySchema = z.object({
   name: z.string().trim().min(1).max(120),
   scopes: z.array(z.string()).min(1),
+  /**
+   * Exemption partenaire : la clé bypasse le gate de plan (accès gratuit).
+   * Poser `true` exige le rôle `owner` (cf. handleCreate) — un simple admin ne
+   * peut pas s'auto-exempter du modèle payant.
+   */
+  comp: z.boolean().optional().default(false),
+  /** Note libre traçant le partenaire / la raison de l'exemption. */
+  comp_note: z.string().trim().max(500).optional(),
 });
 
 async function handler(
@@ -72,7 +81,7 @@ async function handleList(
   const { data, error } = await supabaseAdmin
     .from('tenant_api_tokens')
     .select(
-      'id, name, token_prefix, scopes, created_at, last_used_at, revoked_at'
+      'id, name, token_prefix, scopes, created_at, last_used_at, revoked_at, comp, comp_note'
     )
     .eq('tenant_id', ctx.tenantId)
     .order('created_at', { ascending: false });
@@ -108,6 +117,16 @@ async function handleCreate(
     });
   }
 
+  // Poser une exemption partenaire (accès API gratuit) est réservé à l'owner :
+  // c'est un bypass total du modèle payant, pas une action self-service admin.
+  const comp = parsed.data.comp === true;
+  if (comp && !hasAtLeastRole(ctx.role, 'owner')) {
+    return res.status(403).json({
+      error: 'Seul un owner peut émettre une clé partenaire (comp).',
+      code: 'FORBIDDEN_COMP',
+    });
+  }
+
   const { plain, hash, prefix } = generateToken();
 
   const { data, error } = await supabaseAdmin
@@ -118,8 +137,10 @@ async function handleCreate(
       token_prefix: prefix,
       name: parsed.data.name,
       scopes: scopeResult.scopes,
+      comp,
+      comp_note: comp ? (parsed.data.comp_note ?? null) : null,
     })
-    .select('id, name, token_prefix, scopes, created_at')
+    .select('id, name, token_prefix, scopes, created_at, comp, comp_note')
     .single();
 
   if (error || !data) {
@@ -141,6 +162,7 @@ async function handleCreate(
       name: data.name,
       scopes: scopeResult.scopes,
       prefix,
+      comp,
     },
   });
 

@@ -14604,6 +14604,50 @@ paths:
         schema:
           type: string
           format: uuid
+    patch:
+      summary: Update a token's partner exemption (comp).
+      description: >
+        Met à jour l'exemption partenaire d'une clé API (`comp` / `comp_note`).
+        Une clé `comp = true` bypasse le gate de plan (accès API gratuit).
+        Activer `comp` exige le rôle owner (403 FORBIDDEN_COMP sinon) ; le
+        désactiver est permis à un admin.
+      operationId: adminUpdateApiTokenComp
+      tags:
+        - admin/misc
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                comp:
+                  type: boolean
+                  description: Exemption partenaire (owner requis pour l'activer).
+                comp_note:
+                  type: string
+                  nullable: true
+                  description: Note libre traçant le partenaire / la raison.
+      responses:
+        '200':
+          description: Token mis à jour.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: object
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
     delete:
       summary: Revoke (soft) a public API token.
       operationId: adminRevokeApiToken

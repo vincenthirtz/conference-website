@@ -35,6 +35,16 @@ import { isBotMaintenanceMode } from './maintenance';
 import { logger } from './logger';
 import { formatZodError } from './validation';
 import { hasScope, type ApiScope } from './apiScopes';
+import {
+  apiActionForMethod,
+  checkApiTokenAccess,
+  type ApiPlanDenial,
+} from './billing/apiPlanGate';
+import type {
+  TenantPlan,
+  PlanStatus,
+  TenantPlanState,
+} from './billing/planFeatures';
 
 /** Codes d'erreur normalisés surfacés par l'API publique d'écriture. */
 export type PublicWriteErrorCode =
@@ -55,6 +65,33 @@ export type PublicApiToken = {
   id: string;
   tenantId: string;
   scopes: string[];
+  /**
+   * État plan du tenant propriétaire du token, chargé au moment de la
+   * résolution. Consommé par le gate PLAN (`checkApiTokenAccess`) : l'accès API
+   * (lecture/écriture) est un produit payant. `foundation` a tout ; un tenant
+   * `discovery` ou un plan payant expiré est refusé (403 `plan_required`).
+   */
+  plan: TenantPlanState;
+  /**
+   * Exemption partenaire (`tenant_api_tokens.comp`). `true` → cette clé bypasse
+   * ENTIÈREMENT le gate de plan (accès gratuit en lecture ET écriture, quel que
+   * soit le plan du tenant). Posé par l'opérateur plateforme.
+   */
+  comp: boolean;
+};
+
+/**
+ * État plan par défaut quand la row `tenants` est introuvable / dépourvue des
+ * colonnes de plan. Fail-closed sur le palier gratuit `discovery` (ni apiRead
+ * ni apiWrite) : un token dont on ne peut pas prouver l'entitlement ne doit pas
+ * ouvrir un accès payant. En pratique la FK garantit une row `tenants`, et la
+ * migration billing garantit les colonnes → ce fallback ne mord que sur un état
+ * de données corrompu.
+ */
+const FALLBACK_PLAN_STATE: TenantPlanState = {
+  plan: 'discovery',
+  plan_status: 'active',
+  plan_expires_at: null,
 };
 
 const BEARER_PREFIX = 'Bearer ';
@@ -113,7 +150,7 @@ export async function resolveApiTokenFromHeader(
   const hash = sha256Hex(plain);
   const { data, error } = await supabaseAdmin
     .from('tenant_api_tokens')
-    .select('id, tenant_id, scopes, revoked_at')
+    .select('id, tenant_id, scopes, revoked_at, comp')
     .eq('token_hash', hash)
     .maybeSingle();
 
@@ -132,13 +169,48 @@ export async function resolveApiTokenFromHeader(
       if (e) logger.error('[public-write] last_used_at bump error', e);
     });
 
+  // Charge l'état plan du tenant propriétaire — nécessaire au gate PLAN qui
+  // détermine si cette clé a droit à la lecture/écriture (produit payant).
+  const plan = await loadTenantPlanState(data.tenant_id as string);
+
   return {
     ok: true,
     token: {
       id: data.id as string,
       tenantId: data.tenant_id as string,
       scopes: Array.isArray(data.scopes) ? (data.scopes as string[]) : [],
+      plan,
+      comp: data.comp === true,
     },
+  };
+}
+
+/**
+ * Charge `{ plan, plan_status, plan_expires_at }` d'un tenant. Fail-closed sur
+ * `discovery` (cf. FALLBACK_PLAN_STATE) si la row est absente / la requête
+ * échoue — on ne veut jamais ouvrir un accès API payant sur un état inconnu.
+ */
+async function loadTenantPlanState(tenantId: string): Promise<TenantPlanState> {
+  if (!supabaseAdmin) return FALLBACK_PLAN_STATE;
+  const { data, error } = await supabaseAdmin
+    .from('tenants')
+    .select('plan, plan_status, plan_expires_at')
+    .eq('id', tenantId)
+    .maybeSingle();
+
+  if (error) {
+    logger.error('[public-write] tenant plan lookup error', error);
+    return FALLBACK_PLAN_STATE;
+  }
+  if (!data) return FALLBACK_PLAN_STATE;
+
+  return {
+    plan: (data.plan as TenantPlan) ?? FALLBACK_PLAN_STATE.plan,
+    plan_status:
+      (data.plan_status as PlanStatus) ?? FALLBACK_PLAN_STATE.plan_status,
+    plan_expires_at:
+      (data.plan_expires_at as string | null) ??
+      FALLBACK_PLAN_STATE.plan_expires_at,
   };
 }
 
@@ -274,7 +346,9 @@ export function withPublicWrite<B = unknown, Q = unknown>(
 ): (req: NextApiRequest, res: NextApiResponse) => Promise<void> {
   const allowed = new Set(opts.methods.map((m) => m.toUpperCase()));
   const allowHeader = opts.methods.join(', ');
-  const perTokenMax = opts.rateLimit.perTokenMax ?? Math.max(1, Math.ceil(opts.rateLimit.max / 2));
+  const perTokenMax =
+    opts.rateLimit.perTokenMax ??
+    Math.max(1, Math.ceil(opts.rateLimit.max / 2));
 
   return async function publicWriteRoute(
     req: NextApiRequest,
@@ -293,7 +367,10 @@ export function withPublicWrite<B = unknown, Q = unknown>(
       applyRateLimit(
         req,
         res,
-        { max: opts.rateLimit.max, windowMs: opts.rateLimit.windowMs ?? 60_000 },
+        {
+          max: opts.rateLimit.max,
+          windowMs: opts.rateLimit.windowMs ?? 60_000,
+        },
         opts.rateLimit.key
       )
     ) {
@@ -307,7 +384,12 @@ export function withPublicWrite<B = unknown, Q = unknown>(
     // Auth : token Bearer scopé.
     const auth = await verifyPublicApiToken(req);
     if (!auth.ok) {
-      return sendError(res, 401, 'Invalid or missing API token.', 'UNAUTHORIZED');
+      return sendError(
+        res,
+        401,
+        'Invalid or missing API token.',
+        'UNAUTHORIZED'
+      );
     }
     const { token } = auth;
 
@@ -320,6 +402,21 @@ export function withPublicWrite<B = unknown, Q = unknown>(
         opts.rateLimit.key
       )
     ) {
+      return;
+    }
+
+    // Plan gate : l'accès API (lecture/écriture) est un produit payant. On
+    // dérive l'action de la méthode (safe → read/apiRead, sinon write/apiWrite)
+    // et on refuse 403 `plan_required` si le tenant n'a pas la capacité. Une clé
+    // `comp` (partenaire) bypasse ce gate. `foundation` passe toujours ; un
+    // tenant `discovery` / plan expiré (sans comp) échoue.
+    const planDenial: ApiPlanDenial | null = checkApiTokenAccess(
+      token,
+      apiActionForMethod(method),
+      Date.now()
+    );
+    if (planDenial) {
+      res.status(403).json(planDenial);
       return;
     }
 

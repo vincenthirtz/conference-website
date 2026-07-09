@@ -40,7 +40,14 @@ function sha256Hex(input: string): string {
   return crypto.createHash('sha256').update(input).digest('hex');
 }
 
-function seedToken(scopes: string[] = ['matches:write']): string {
+function seedToken(
+  scopes: string[] = ['matches:write'],
+  plan: {
+    plan?: string;
+    plan_status?: string;
+    plan_expires_at?: string | null;
+  } = {}
+): string {
   (store.tenant_api_tokens ||= []).push({
     id: 'tok-1',
     tenant_id: TENANT,
@@ -50,6 +57,17 @@ function seedToken(scopes: string[] = ['matches:write']): string {
     scopes,
     revoked_at: null,
   });
+  // Seed the owning tenant with a billing plan so the API PLAN gate resolves.
+  // Default `foundation` = full access (does not perturb pre-gate assertions).
+  const tenants = (store.tenants ||= []);
+  if (!tenants.some((r) => r.id === TENANT)) {
+    tenants.push({
+      id: TENANT,
+      plan: plan.plan ?? 'foundation',
+      plan_status: plan.plan_status ?? 'active',
+      plan_expires_at: plan.plan_expires_at ?? null,
+    });
+  }
   return PLAIN_TOKEN;
 }
 

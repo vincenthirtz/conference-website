@@ -32,9 +32,34 @@ function sha256Hex(input: string): string {
   return crypto.createHash('sha256').update(input).digest('hex');
 }
 
+type PlanOver = {
+  plan?: string;
+  plan_status?: string;
+  plan_expires_at?: string | null;
+};
+
+/**
+ * Seed (or upsert) a `tenants` row carrying billing plan columns so the token
+ * resolver can load the tenant's entitlement. Defaults to `foundation` (full
+ * access) — the flagship posture, so plain token tests keep passing.
+ */
+function seedTenantPlan(tenantId: string, plan: PlanOver = {}): void {
+  const rows = (store.tenants ||= []);
+  const existing = rows.find((r) => r.id === tenantId);
+  const row = {
+    id: tenantId,
+    plan: plan.plan ?? 'foundation',
+    plan_status: plan.plan_status ?? 'active',
+    plan_expires_at: plan.plan_expires_at ?? null,
+  };
+  if (existing) Object.assign(existing, row);
+  else rows.push(row);
+}
+
 /**
  * Seed a `tenant_api_tokens` row. Returns the plaintext token to send in the
- * Authorization header.
+ * Authorization header. Also seeds a matching `tenants` row (default plan
+ * `foundation`) unless `seedTenant: false`.
  */
 function seedToken(
   over: Partial<{
@@ -43,18 +68,24 @@ function seedToken(
     scopes: string[];
     revoked_at: string | null;
     plain: string;
+    plan: PlanOver;
+    seedTenant: boolean;
+    comp: boolean;
   }> = {}
 ): string {
   const plain = over.plain ?? PLAIN_TOKEN;
+  const tenantId = over.tenant_id ?? TENANT;
   (store.tenant_api_tokens ||= []).push({
     id: over.id ?? 'tok-1',
-    tenant_id: over.tenant_id ?? TENANT,
+    tenant_id: tenantId,
     token_hash: sha256Hex(plain),
     token_prefix: plain.slice(0, 16),
     name: 'test token',
     scopes: over.scopes ?? ['matches:write'],
     revoked_at: over.revoked_at ?? null,
+    comp: over.comp ?? false,
   });
+  if (over.seedTenant !== false) seedTenantPlan(tenantId, over.plan ?? {});
   return plain;
 }
 
@@ -126,12 +157,16 @@ describe('resolveApiTokenFromHeader', () => {
     expect((await resolveApiTokenFromHeader('')).ok).toBe(false);
     expect((await resolveApiTokenFromHeader('Basic abc')).ok).toBe(false);
     expect((await resolveApiTokenFromHeader('Bearer ')).ok).toBe(false);
-    expect((await resolveApiTokenFromHeader('Bearer sk_live_x')).ok).toBe(false);
+    expect((await resolveApiTokenFromHeader('Bearer sk_live_x')).ok).toBe(
+      false
+    );
   });
 
   it('rejects an unknown token (no matching hash)', async () => {
     seedToken();
-    const result = await resolveApiTokenFromHeader('Bearer pk_live_totally_wrong');
+    const result = await resolveApiTokenFromHeader(
+      'Bearer pk_live_totally_wrong'
+    );
     expect(result.ok).toBe(false);
   });
 
@@ -200,7 +235,9 @@ describe('withPublicWrite gates', () => {
     const plain = seedToken({ revoked_at: '2026-01-01T00:00:00.000Z' });
     const handler = vi.fn();
     const route = withPublicWrite(handler, OPTS);
-    const req = makeReq({ headers: { host: 'h', authorization: `Bearer ${plain}` } });
+    const req = makeReq({
+      headers: { host: 'h', authorization: `Bearer ${plain}` },
+    });
     const res = makeRes();
     await route(req, res);
     expect(res.statusCode).toBe(401);
@@ -211,7 +248,9 @@ describe('withPublicWrite gates', () => {
     const plain = seedToken({ scopes: ['matches:read'] });
     const handler = vi.fn();
     const route = withPublicWrite(handler, OPTS);
-    const req = makeReq({ headers: { host: 'h', authorization: `Bearer ${plain}` } });
+    const req = makeReq({
+      headers: { host: 'h', authorization: `Bearer ${plain}` },
+    });
     const res = makeRes();
     await route(req, res);
     expect(res.statusCode).toBe(403);
@@ -245,6 +284,200 @@ describe('withPublicWrite gates', () => {
     expect(seen.query).toEqual({ id: 'abc' });
     // no-store cache posture
     expect(res.headers['Cache-Control']).toBe('no-store');
+  });
+});
+
+/* ------------------------------------------------------------------ *
+ * withPublicWrite — PLAN gate (tenant_api_tokens billing entitlement)
+ *
+ * The API keys are a paid product: read needs `apiRead` (Régie+), write needs
+ * `apiWrite` (Circuit+). `foundation` has both; `discovery` / expired paid
+ * plans have neither → 403 `plan_required`.
+ * ------------------------------------------------------------------ */
+
+const WRITE_OPTS = {
+  methods: ['POST'] as const,
+  scope: 'matches:write' as const,
+  rateLimit: { max: 60, key: 'plan-write' },
+};
+const READ_OPTS = {
+  methods: ['GET'] as const,
+  scope: 'matches:read' as const,
+  rateLimit: { max: 60, key: 'plan-read' },
+};
+
+/** Run a write (POST) request for a tenant on `plan`, return the res. */
+async function runWrite(plan: PlanOver, plainOver?: string, comp = false) {
+  const plain = seedToken({
+    scopes: ['matches:read', 'matches:write'],
+    plan,
+    plain: plainOver,
+    comp,
+  });
+  const handler = vi.fn(async (_req: any, res: any) =>
+    res.status(200).json({ data: { ok: true } })
+  );
+  const route = withPublicWrite(handler, WRITE_OPTS);
+  const req = makeReq({
+    method: 'POST',
+    headers: { host: 'h', authorization: `Bearer ${plain}` },
+    body: {},
+  });
+  const res = makeRes();
+  await route(req, res);
+  return { res, handler };
+}
+
+/** Run a read (GET) request for a tenant on `plan`, return the res. */
+async function runRead(plan: PlanOver, plainOver?: string, comp = false) {
+  const plain = seedToken({
+    scopes: ['matches:read', 'matches:write'],
+    plan,
+    plain: plainOver,
+    comp,
+  });
+  const handler = vi.fn(async (_req: any, res: any) =>
+    res.status(200).json({ data: { ok: true } })
+  );
+  const route = withPublicWrite(handler, READ_OPTS);
+  const req = makeReq({
+    method: 'GET',
+    headers: { host: 'h', authorization: `Bearer ${plain}` },
+  });
+  const res = makeRes();
+  await route(req, res);
+  return { res, handler };
+}
+
+describe('withPublicWrite plan gate', () => {
+  it('foundation: read AND write pass the plan gate', async () => {
+    const w = await runWrite({ plan: 'foundation' }, 'pk_live_found_write');
+    expect(w.res.statusCode).toBe(200);
+    expect(w.handler).toHaveBeenCalledTimes(1);
+
+    const r = await runRead({ plan: 'foundation' }, 'pk_live_found_read');
+    expect(r.res.statusCode).toBe(200);
+    expect(r.handler).toHaveBeenCalledTimes(1);
+  });
+
+  it('discovery: 403 plan_required on read AND write', async () => {
+    const w = await runWrite({ plan: 'discovery' }, 'pk_live_disc_write');
+    expect(w.res.statusCode).toBe(403);
+    expect((w.res.body as any).error).toBe('plan_required');
+    expect((w.res.body as any).requiredCapability).toBe('apiWrite');
+    expect(w.handler).not.toHaveBeenCalled();
+
+    const r = await runRead({ plan: 'discovery' }, 'pk_live_disc_read');
+    expect(r.res.statusCode).toBe(403);
+    expect((r.res.body as any).error).toBe('plan_required');
+    expect((r.res.body as any).requiredCapability).toBe('apiRead');
+    expect(r.handler).not.toHaveBeenCalled();
+  });
+
+  it('regie: read OK, write 403 (read-only paid tier)', async () => {
+    const r = await runRead({ plan: 'regie' }, 'pk_live_regie_read');
+    expect(r.res.statusCode).toBe(200);
+    expect(r.handler).toHaveBeenCalledTimes(1);
+
+    const w = await runWrite({ plan: 'regie' }, 'pk_live_regie_write');
+    expect(w.res.statusCode).toBe(403);
+    expect((w.res.body as any).error).toBe('plan_required');
+    expect((w.res.body as any).requiredCapability).toBe('apiWrite');
+    expect(w.handler).not.toHaveBeenCalled();
+  });
+
+  it('circuit: read AND write pass', async () => {
+    const r = await runRead({ plan: 'circuit' }, 'pk_live_circ_read');
+    expect(r.res.statusCode).toBe(200);
+    const w = await runWrite({ plan: 'circuit' }, 'pk_live_circ_write');
+    expect(w.res.statusCode).toBe(200);
+    expect(w.handler).toHaveBeenCalledTimes(1);
+  });
+
+  it('regie EXPIRED downgrades to discovery: 403 on read AND write', async () => {
+    const expired = {
+      plan: 'regie',
+      plan_status: 'active',
+      plan_expires_at: '2000-01-01T00:00:00.000Z',
+    };
+    const r = await runRead(expired, 'pk_live_exp_read');
+    expect(r.res.statusCode).toBe(403);
+    expect((r.res.body as any).requiredCapability).toBe('apiRead');
+
+    const w = await runWrite(expired, 'pk_live_exp_write');
+    expect(w.res.statusCode).toBe(403);
+    expect((w.res.body as any).requiredCapability).toBe('apiWrite');
+  });
+
+  it('regie past_due downgrades to discovery: 403 on read', async () => {
+    const r = await runRead(
+      { plan: 'regie', plan_status: 'past_due' },
+      'pk_live_pd_read'
+    );
+    expect(r.res.statusCode).toBe(403);
+    expect((r.res.body as any).error).toBe('plan_required');
+  });
+
+  it('missing tenants row fails closed (discovery): 403', async () => {
+    const plain = seedToken({
+      scopes: ['matches:read'],
+      seedTenant: false,
+      plain: 'pk_live_no_tenant',
+    });
+    const handler = vi.fn();
+    const route = withPublicWrite(handler, READ_OPTS);
+    const req = makeReq({
+      method: 'GET',
+      headers: { host: 'h', authorization: `Bearer ${plain}` },
+    });
+    const res = makeRes();
+    await route(req, res);
+    expect(res.statusCode).toBe(403);
+    expect((res.body as any).error).toBe('plan_required');
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  it('comp key on discovery: bypasses the gate — read AND write pass', async () => {
+    const r = await runRead({ plan: 'discovery' }, 'pk_live_comp_read', true);
+    expect(r.res.statusCode).toBe(200);
+    expect(r.handler).toHaveBeenCalledTimes(1);
+
+    const w = await runWrite({ plan: 'discovery' }, 'pk_live_comp_write', true);
+    expect(w.res.statusCode).toBe(200);
+    expect(w.handler).toHaveBeenCalledTimes(1);
+  });
+
+  it('comp key on an EXPIRED paid plan: still bypasses the gate', async () => {
+    const w = await runWrite(
+      {
+        plan: 'regie',
+        plan_status: 'active',
+        plan_expires_at: '2000-01-01T00:00:00.000Z',
+      },
+      'pk_live_comp_exp',
+      true
+    );
+    expect(w.res.statusCode).toBe(200);
+    expect(w.handler).toHaveBeenCalledTimes(1);
+  });
+
+  it('resolveApiTokenFromHeader attaches the tenant plan state and comp flag', async () => {
+    const plain = seedToken({ plan: { plan: 'circuit' }, comp: true });
+    const result = await resolveApiTokenFromHeader(`Bearer ${plain}`);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.token.plan.plan).toBe('circuit');
+      expect(result.token.plan.plan_status).toBe('active');
+      expect(result.token.plan.plan_expires_at).toBeNull();
+      expect(result.token.comp).toBe(true);
+    }
+  });
+
+  it('resolveApiTokenFromHeader defaults comp to false when absent', async () => {
+    const plain = seedToken({ plan: { plan: 'discovery' } });
+    const result = await resolveApiTokenFromHeader(`Bearer ${plain}`);
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.token.comp).toBe(false);
   });
 });
 
