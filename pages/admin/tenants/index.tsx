@@ -10,7 +10,9 @@ import Breadcrumb from '@/components/admin/Breadcrumb';
 import EmptyState from '@/components/admin/EmptyState';
 import LoadingSpinner from '@/components/admin/LoadingSpinner';
 import TenantFormModal from '@/components/admin/tenants/TenantFormModal';
+import PlanCheckoutModal from '@/components/admin/tenants/PlanCheckoutModal';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import { PLAN_LABELS, type TenantPlan } from '@/utils/billing/planFeatures';
 
 type TenantRow = {
   id: string;
@@ -21,6 +23,9 @@ type TenantRow = {
   guild_count: number;
   staff_count: number;
   created_at: string;
+  plan: TenantPlan | null;
+  plan_status: string | null;
+  plan_expires_at: string | null;
 };
 
 type TenantsResponse = {
@@ -57,7 +62,36 @@ function formatDate(s: string | null): string {
   }
 }
 
-function AdminTenantsListPage(_props: Props) {
+function planStatusLabel(
+  t: Record<string, string>,
+  status: string | null
+): string {
+  switch (status) {
+    case 'active':
+      return t.planStatusActive;
+    case 'past_due':
+      return t.planStatusPastDue;
+    case 'canceled':
+      return t.planStatusCanceled;
+    default:
+      return status ?? '';
+  }
+}
+
+// Teinte du badge plan selon l'entitlement : vert = actif, ambre = past_due,
+// gris = annulé.
+function planBadgeClass(status: string | null): string {
+  switch (status) {
+    case 'past_due':
+      return 'bg-amber-500/15 text-amber-300 border-amber-500/30';
+    case 'canceled':
+      return 'bg-neutral-700/40 text-neutral-400 border-neutral-600/40';
+    default:
+      return 'bg-purple-600/15 text-purple-300 border-purple-500/30';
+  }
+}
+
+function AdminTenantsListPage({ staff }: Props) {
   const t = useAdminT('adminTenantsList');
   const router = useRouter();
   const { adminFetchJson } = useAdminFetch();
@@ -65,6 +99,12 @@ function AdminTenantsListPage(_props: Props) {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'all' | 'active' | 'archived'>('all');
   const [modalOpen, setModalOpen] = useState(false);
+  const [checkoutTenant, setCheckoutTenant] = useState<TenantRow | null>(null);
+
+  // Miroir UX du gate serveur : seul un owner peut générer un lien de paiement
+  // (POST /plan-checkout est withStaffRoute('owner')). L'API reste la vraie
+  // barrière ; ici on désactive l'action + hint pour éviter le faux espoir.
+  const isOwner = staff.role === 'owner';
 
   // Liste globale des tenants (visibilité manager+). L'endpoint ne pagine pas
   // et ne renvoie pas de total → `includeTotal: false` ; le filtrage
@@ -140,6 +180,13 @@ function AdminTenantsListPage(_props: Props) {
         onClose={closeModal}
         onCreated={refreshAll}
       />
+
+      {checkoutTenant && (
+        <PlanCheckoutModal
+          tenant={checkoutTenant}
+          onClose={() => setCheckoutTenant(null)}
+        />
+      )}
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
         <div className="w-full px-4 sm:px-6 lg:px-8 pt-20 pb-12">
@@ -257,6 +304,7 @@ function AdminTenantsListPage(_props: Props) {
                       <th className="px-4 py-3 text-left">{t.colSlug}</th>
                       <th className="px-4 py-3 text-left">{t.colName}</th>
                       <th className="px-4 py-3 text-left">{t.colStatus}</th>
+                      <th className="px-4 py-3 text-left">{t.colPlan}</th>
                       <th className="px-4 py-3 text-left">{t.colGuilds}</th>
                       <th className="px-4 py-3 text-left">{t.colStaff}</th>
                       <th className="px-4 py-3 text-left">{t.colCreated}</th>
@@ -287,6 +335,33 @@ function AdminTenantsListPage(_props: Props) {
                             {row.is_active ? t.statusActive : t.statusArchived}
                           </span>
                         </td>
+                        <td className="px-4 py-3">
+                          {row.plan ? (
+                            <span
+                              className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium border ${planBadgeClass(
+                                row.plan_status
+                              )}`}
+                              title={
+                                row.plan_expires_at
+                                  ? format(t.planExpires, {
+                                      date: formatDate(row.plan_expires_at),
+                                    })
+                                  : undefined
+                              }
+                              data-testid={`tenant-plan-badge-${row.slug}`}
+                            >
+                              {PLAN_LABELS[row.plan]}
+                              {row.plan_status &&
+                                row.plan_status !== 'active' && (
+                                  <span className="opacity-80">
+                                    · {planStatusLabel(t, row.plan_status)}
+                                  </span>
+                                )}
+                            </span>
+                          ) : (
+                            <span className="text-neutral-500 text-xs">—</span>
+                          )}
+                        </td>
                         <td className="px-4 py-3 text-neutral-300">
                           {row.guild_count}
                         </td>
@@ -298,6 +373,18 @@ function AdminTenantsListPage(_props: Props) {
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setCheckoutTenant(row)}
+                              disabled={!isOwner}
+                              title={
+                                isOwner ? undefined : t.generateLinkOwnerOnly
+                              }
+                              className="px-3 py-1.5 rounded-lg border border-emerald-500/40 text-emerald-300 hover:border-emerald-400 text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-emerald-500/40"
+                              data-testid={`tenant-plan-checkout-btn-${row.slug}`}
+                            >
+                              {t.generateLink}
+                            </button>
                             <Link
                               href={`/admin/tenants/${row.id}`}
                               className="px-3 py-1.5 rounded-lg border border-neutral-600 hover:border-neutral-500 text-sm transition-colors"

@@ -32,6 +32,9 @@ type TenantRow = {
   is_active: boolean;
   default_locale: string;
   created_at: string;
+  plan: string;
+  plan_status: string;
+  plan_expires_at: string | null;
 };
 
 async function handler(
@@ -54,7 +57,9 @@ async function handler(
   if (req.method === 'GET') {
     const { data: tenants, error } = await supabaseAdmin
       .from('tenants')
-      .select('id, slug, name, is_active, default_locale, created_at')
+      .select(
+        'id, slug, name, is_active, default_locale, created_at, plan, plan_status, plan_expires_at'
+      )
       .order('slug', { ascending: true });
 
     if (error) {
@@ -120,12 +125,10 @@ async function handler(
       slug.length < SLUG_MIN ||
       slug.length > SLUG_MAX
     ) {
-      return res
-        .status(400)
-        .json({
-          error: 'slug must match ^[a-z0-9-]+$ and be 2-50 chars.',
-          code: 'INVALID_SLUG',
-        });
+      return res.status(400).json({
+        error: 'slug must match ^[a-z0-9-]+$ and be 2-50 chars.',
+        code: 'INVALID_SLUG',
+      });
     }
     if (name.length < NAME_MIN || name.length > NAME_MAX) {
       return res
@@ -133,12 +136,10 @@ async function handler(
         .json({ error: 'name must be 1-200 chars.', code: 'INVALID_NAME' });
     }
     if (!LOCALE_RE.test(defaultLocale)) {
-      return res
-        .status(400)
-        .json({
-          error: 'default_locale must be like "fr" or "en-US".',
-          code: 'INVALID_LOCALE',
-        });
+      return res.status(400).json({
+        error: 'default_locale must be like "fr" or "en-US".',
+        code: 'INVALID_LOCALE',
+      });
     }
 
     // 1) Insert tenant.
@@ -152,12 +153,10 @@ async function handler(
       // Unique violation slug → 409.
       const code = (insertErr as { code?: string } | null)?.code;
       if (code === '23505') {
-        return res
-          .status(409)
-          .json({
-            error: 'A tenant with this slug already exists.',
-            code: 'DUPLICATE_SLUG',
-          });
+        return res.status(409).json({
+          error: 'A tenant with this slug already exists.',
+          code: 'DUPLICATE_SLUG',
+        });
       }
       logger.error('[admin/tenants] insert error', insertErr);
       return res.status(500).json({ error: 'Failed to create the tenant.' });
