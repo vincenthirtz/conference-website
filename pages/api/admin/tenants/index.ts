@@ -11,7 +11,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import {
   withStaffRoute,
-  hasAtLeastRole,
+  requireOwner,
   type AuthenticatedStaffContext,
 } from '@/utils/staff';
 import { withAdminIdempotency } from '@/utils/adminIdempotency';
@@ -108,9 +108,7 @@ async function handler(
 
   if (req.method === 'POST') {
     // Owner-only : creation d'un tenant est une operation strategique.
-    if (!hasAtLeastRole(ctx.role, 'owner')) {
-      return res.status(403).json({ error: 'Forbidden.' });
-    }
+    if (!requireOwner(ctx, res)) return;
     const body = (req.body ?? {}) as Record<string, unknown>;
     const slug =
       typeof body.slug === 'string' ? body.slug.trim().toLowerCase() : '';

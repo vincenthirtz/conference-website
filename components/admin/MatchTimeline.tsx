@@ -4,6 +4,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 
 type Dict = ReturnType<typeof useAdminT<'adminMatchTimeline'>>;
 
@@ -69,6 +70,7 @@ const ROLE_COLORS: Record<string, string> = {
 
 export default function MatchTimeline({ matchId }: Props) {
   const t = useAdminT('adminMatchTimeline');
+  const { adminFetch } = useAdminFetch();
   const [logs, setLogs] = useState<HistoryLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -80,7 +82,7 @@ export default function MatchTimeline({ matchId }: Props) {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/admin/matches/${matchId}/history`);
+      const res = await adminFetch(`/api/admin/matches/${matchId}/history`);
       if (!res.ok) {
         setError(t.errorLoad);
         return;
@@ -92,7 +94,7 @@ export default function MatchTimeline({ matchId }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [matchId, t]);
+  }, [matchId, t, adminFetch]);
 
   useEffect(() => {
     fetchHistory();

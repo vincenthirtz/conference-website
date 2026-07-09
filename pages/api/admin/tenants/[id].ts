@@ -3,10 +3,10 @@
 // S7 :
 //  - GET    : detail d'un tenant + guilds + staff (manager+ OU staff du
 //             tenant).
-//  - PATCH  : edite name/default_locale/is_active (manager+). Le slug
+//  - PATCH  : edite name/default_locale/is_active (owner-only). Le slug
 //             n'est volontairement PAS modifiable (impacterait les URLs
 //             publiques V2).
-//  - DELETE : soft-delete (is_active = false). Le hard-delete est interdit
+//  - DELETE : soft-delete (is_active = false, owner-only). Le hard-delete est interdit
 //             pour eviter les cascades RESTRICT (les ~32 tables tier 1/2
 //             pointent sur tenants(id) avec ON DELETE RESTRICT). Le slug
 //             `conference` est protege en dur (tenant historique).
@@ -16,6 +16,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import {
   withStaffRoute,
   hasAtLeastRole,
+  requireOwner,
   type AuthenticatedStaffContext,
 } from '@/utils/staff';
 import { withAdminIdempotency } from '@/utils/adminIdempotency';
@@ -131,9 +132,7 @@ async function handler(
   if (req.method === 'PATCH') {
     // Owner-only : editer un tenant (name/locale/is_active) impacte tous
     // les utilisateurs scope dessus.
-    if (!hasAtLeastRole(ctx.role, 'owner')) {
-      return res.status(403).json({ error: 'Forbidden.' });
-    }
+    if (!requireOwner(ctx, res)) return;
 
     const body = (req.body ?? {}) as Record<string, unknown>;
     const update: Record<string, unknown> = {};
@@ -286,9 +285,7 @@ async function handler(
   // ---------- DELETE (soft) ----------
   if (req.method === 'DELETE') {
     // Owner-only : suppression (soft) d'un tenant.
-    if (!hasAtLeastRole(ctx.role, 'owner')) {
-      return res.status(403).json({ error: 'Forbidden.' });
-    }
+    if (!requireOwner(ctx, res)) return;
 
     // Protection : interdit pour le tenant historique (`conference`).
     const { data: existing, error: lookupErr } = await supabaseAdmin
@@ -334,6 +331,6 @@ async function handler(
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'admin-tenants-mutate' }),
   // caster : OK pour GET (gating fin a l'interieur). PATCH/DELETE
-  // re-checkent manager+.
+  // re-checkent owner-only via requireOwner().
   'caster'
 );

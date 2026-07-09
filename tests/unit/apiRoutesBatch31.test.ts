@@ -16,6 +16,7 @@ import { invalidateStaffCache } from '../../utils/staff';
 
 import tournamentMapsHandler from '../../pages/api/tournament/[id]/maps';
 import advanceHandler from '../../pages/api/admin/stages/[stageId]/advance';
+import { getGame } from '../../config/games';
 
 /* -----------------------------------------------------------
  * Helpers
@@ -299,6 +300,145 @@ describe('/api/tournament/[id]/maps', () => {
 });
 
 /* -----------------------------------------------------------
+ * POST { defaults: true } — ajout groupé des maps par défaut
+ * Source prioritaire = tenant_map_pool, fallback = config/games.
+ * ---------------------------------------------------------*/
+
+describe('POST /api/tournament/[id]/maps { defaults: true }', () => {
+  it('404 when tournament not found', async () => {
+    store.tournaments = [];
+    const res = makeRes();
+    await tournamentMapsHandler(
+      makeReq({
+        method: 'POST',
+        query: { id: TID },
+        body: { defaults: true },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(404);
+  });
+
+  it('uses tenant_map_pool (enabled only) when it has rows → source=tenant', async () => {
+    store.tournaments = [{ id: TID, game: 'overwatch' }] as any;
+    store.tournament_maps = [];
+    store.tenant_map_pool = [
+      {
+        id: 'p1',
+        game: 'overwatch',
+        map_name: 'Custom A',
+        map_type: 'control',
+        image_url: 'a.jpg',
+        enabled: true,
+        order_index: 0,
+      },
+      {
+        id: 'p2',
+        game: 'overwatch',
+        map_name: 'Custom B',
+        map_type: 'push',
+        image_url: 'b.jpg',
+        enabled: true,
+        order_index: 1,
+      },
+      // Désactivée → ne doit pas être ajoutée.
+      {
+        id: 'p3',
+        game: 'overwatch',
+        map_name: 'Disabled',
+        enabled: false,
+        order_index: 2,
+      },
+    ] as any;
+
+    const res = makeRes();
+    await tournamentMapsHandler(
+      makeReq({
+        method: 'POST',
+        query: { id: TID },
+        body: { defaults: true },
+      }),
+      res
+    );
+
+    expect(res.statusCode).toBe(200);
+    expect((res.body as any).source).toBe('tenant');
+    expect((res.body as any).imported).toBe(2);
+    const names = (store.tournament_maps as any)
+      .filter((m: any) => m.tournament_id === TID)
+      .map((m: any) => m.map_name)
+      .sort();
+    expect(names).toEqual(['Custom A', 'Custom B']);
+  });
+
+  it('falls back to config/games when tenant pool is empty → source=defaults', async () => {
+    store.tournaments = [{ id: TID, game: 'overwatch' }] as any;
+    store.tournament_maps = [];
+    store.tenant_map_pool = [];
+
+    const expected = getGame('overwatch')!.mapPool.length;
+
+    const res = makeRes();
+    await tournamentMapsHandler(
+      makeReq({
+        method: 'POST',
+        query: { id: TID },
+        body: { defaults: true },
+      }),
+      res
+    );
+
+    expect(res.statusCode).toBe(200);
+    expect((res.body as any).source).toBe('defaults');
+    expect((res.body as any).imported).toBe(expected);
+    expect(
+      (store.tournament_maps as any).filter((m: any) => m.tournament_id === TID)
+    ).toHaveLength(expected);
+  });
+
+  it('skips maps already present on the tournament (case-insensitive dedup)', async () => {
+    store.tournaments = [{ id: TID, game: 'overwatch' }] as any;
+    store.tenant_map_pool = [
+      {
+        id: 'p1',
+        game: 'overwatch',
+        map_name: 'Busan',
+        enabled: true,
+        order_index: 0,
+      },
+      {
+        id: 'p2',
+        game: 'overwatch',
+        map_name: 'Nepal',
+        enabled: true,
+        order_index: 1,
+      },
+    ] as any;
+    store.tournament_maps = [
+      { id: 'm1', tournament_id: TID, map_name: 'busan', order_index: 0 },
+    ] as any;
+
+    const res = makeRes();
+    await tournamentMapsHandler(
+      makeReq({
+        method: 'POST',
+        query: { id: TID },
+        body: { defaults: true },
+      }),
+      res
+    );
+
+    expect(res.statusCode).toBe(200);
+    expect((res.body as any).imported).toBe(1);
+    const names = (store.tournament_maps as any)
+      .filter((m: any) => m.tournament_id === TID)
+      .map((m: any) => m.map_name.toLowerCase())
+      .sort();
+    expect(names).toEqual(['busan', 'nepal']);
+  });
+});
+
+/* -----------------------------------------------------------
  * /api/admin/stages/[stageId]/advance
  * ---------------------------------------------------------*/
 
@@ -429,7 +569,11 @@ describe('POST /api/admin/stages/[stageId]/advance', () => {
         method: 'POST',
         query: { stageId: STAGE_ID },
         body,
-        headers: { host: 'h', authorization: freshBearer(), 'idempotency-key': idemKey },
+        headers: {
+          host: 'h',
+          authorization: freshBearer(),
+          'idempotency-key': idemKey,
+        },
       }),
       res1
     );
@@ -445,7 +589,11 @@ describe('POST /api/admin/stages/[stageId]/advance', () => {
         method: 'POST',
         query: { stageId: STAGE_ID },
         body,
-        headers: { host: 'h', authorization: freshBearer(), 'idempotency-key': idemKey },
+        headers: {
+          host: 'h',
+          authorization: freshBearer(),
+          'idempotency-key': idemKey,
+        },
       }),
       res2
     );

@@ -462,6 +462,28 @@ export function withStaffRoute(
 }
 
 /**
+ * Re-check owner-level à l'intérieur d'un handler dont le wrapper `withStaffRoute`
+ * autorise un rôle inférieur (gating fin par méthode HTTP : GET ouvert à un rôle
+ * bas, writes réservés à owner).
+ *
+ * Écrit une réponse 403 et retourne `false` si le contexte n'est pas owner,
+ * `true` sinon. Usage : `if (!requireOwner(ctx, res)) return;`
+ *
+ * Centralise l'intention owner-only pour la rendre visible et testable de façon
+ * homogène plutôt qu'enfouie dans un `if (!hasAtLeastRole(...))` répété par handler.
+ */
+export function requireOwner(
+  ctx: { role: StaffRole | null },
+  res: NextApiResponse
+): boolean {
+  if (!hasAtLeastRole(ctx.role, 'owner')) {
+    res.status(403).json({ error: 'Forbidden.' });
+    return false;
+  }
+  return true;
+}
+
+/**
  * Helper pour les API routes user-level (joueur, capitaine d'équipe) :
  * - Lit le header `Authorization: Bearer <token>`
  * - Résout l'utilisateur (avec cache token→user)

@@ -4,6 +4,7 @@
 
 import { useEffect, useState } from 'react';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 
 type Dict = ReturnType<typeof useAdminT<'adminMatchHistoryDrawer'>>;
 
@@ -32,6 +33,7 @@ type Props = {
 
 export default function MatchHistoryDrawer({ matchId, open, onClose }: Props) {
   const t = useAdminT('adminMatchHistoryDrawer');
+  const { adminFetch } = useAdminFetch();
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [logs, setLogs] = useState<FormattedLog[]>([]);
@@ -44,7 +46,7 @@ export default function MatchHistoryDrawer({ matchId, open, onClose }: Props) {
       setLoading(true);
       setErrorMsg(null);
       try {
-        const res = await fetch(`/api/admin/matches/${matchId}/history`);
+        const res = await adminFetch(`/api/admin/matches/${matchId}/history`);
         const json = await res.json();
         if (!res.ok) throw new Error(json.error || t.errorHistory);
         if (!cancelled) setLogs(json.logs || []);
@@ -57,7 +59,7 @@ export default function MatchHistoryDrawer({ matchId, open, onClose }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [open, matchId, t]);
+  }, [open, matchId, t, adminFetch]);
 
   if (!open) return null;
 

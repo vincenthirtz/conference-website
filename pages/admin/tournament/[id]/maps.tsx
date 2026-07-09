@@ -9,6 +9,8 @@ import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { useToast } from '@/components/Toast';
 import Modal from '@/components/admin/Modal';
 import TournamentTabsNav from '@/components/admin/tournament/TournamentTabsNav';
 import { getGame, type GameDef } from '@/config/games';
@@ -79,6 +81,8 @@ function AdminTournamentMapsPage(_: StaffProps) {
   const { adminFetchJson } = useAdminFetch();
   const { mutate: addMapMutate } = useIdempotentMutation();
   const { mutate: addAllMapsMutate } = useIdempotentMutation();
+  const { confirm, dialog } = useConfirmDialog();
+  const { addToast } = useToast();
 
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -143,7 +147,7 @@ function AdminTournamentMapsPage(_: StaffProps) {
 
     if (forceCustom) {
       if (!customMapName.trim()) {
-        alert(t.alertEnterMapName);
+        addToast(t.alertEnterMapName, 'error');
         return;
       }
       mapName = customMapName.trim();
@@ -151,7 +155,7 @@ function AdminTournamentMapsPage(_: StaffProps) {
       imageUrl = customMapImage.trim();
     } else {
       if (!selectedPoolMap) {
-        alert(t.alertSelectMap);
+        addToast(t.alertSelectMap, 'error');
         return;
       }
       const selected = gamePool.find((m) => m.name === selectedPoolMap);
@@ -198,7 +202,8 @@ function AdminTournamentMapsPage(_: StaffProps) {
 
   async function handleDeleteMap(mapId: string) {
     if (!tournamentId) return;
-    if (!confirm(t.confirmDeleteMap)) return;
+    const ok = await confirm({ title: t.confirmDeleteMap, variant: 'danger' });
+    if (!ok) return;
 
     setDeleting(mapId);
     setErrorMsg(null);
@@ -220,7 +225,8 @@ function AdminTournamentMapsPage(_: StaffProps) {
 
   async function handleDeleteAllMaps() {
     if (!tournamentId) return;
-    if (!confirm(t.confirmDeleteAll)) return;
+    const ok = await confirm({ title: t.confirmDeleteAll, variant: 'danger' });
+    if (!ok) return;
 
     setErrorMsg(null);
 
@@ -304,53 +310,37 @@ function AdminTournamentMapsPage(_: StaffProps) {
   async function handleAddAllMaps() {
     if (!tournamentId) return;
     if (!gameDef || !gameDef.hasMapVeto) return;
-    if (!confirm(format(t.confirmAddAll, { game: gameDef.label }))) return;
+    const ok = await confirm({
+      title: format(t.confirmAddAll, { game: gameDef.label }),
+      variant: 'info',
+    });
+    if (!ok) return;
 
     setAddingAll(true);
     setErrorMsg(null);
 
     try {
-      // Maps déjà présentes
-      const existingNames = new Set(maps.map((m) => m.map_name));
-      const missing = gamePool.filter((m) => !existingNames.has(m.name));
-
-      if (missing.length === 0) {
-        alert(t.alertAllMapsPresent);
-        setAddingAll(false);
-        return;
-      }
-
-      // Construire la liste complète : existantes + manquantes
-      const allMaps = [
-        ...maps.map((m) => ({
-          map_name: m.map_name,
-          map_slug: m.map_slug,
-          map_type: m.map_type,
-          image_url: m.image_url,
-          enabled: m.enabled,
-          order_index: m.order_index,
-        })),
-        ...missing.map((m, idx) => ({
-          map_name: m.name,
-          map_slug: null,
-          map_type: m.type,
-          image_url: m.image,
-          enabled: true,
-          order_index: maps.length + idx,
-        })),
-      ];
-
+      // Le serveur source d'abord le pool tenant éditable (tenant_map_pool),
+      // et retombe sur le catalogue statique config/games s'il est vide. Il
+      // déduplique côté serveur (par lower(map_name)).
       const res = await addAllMapsMutate(
         `/api/tournament/${tournamentId}/maps`,
         {
-          method: 'PUT',
-          body: JSON.stringify({ maps: allMaps }),
+          method: 'POST',
+          body: JSON.stringify({ defaults: true }),
         }
       );
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
         throw new Error(json.error || t.errorAddAll);
+      }
+
+      const json = (await res.json().catch(() => ({}))) as {
+        imported?: number;
+      };
+      if ((json.imported ?? 0) === 0) {
+        addToast(t.alertAllMapsPresent, 'info');
       }
 
       await fetchMaps();
@@ -803,6 +793,8 @@ function AdminTournamentMapsPage(_: StaffProps) {
               </div>
             </div>
           </Modal>
+
+          {dialog}
         </div>
       </div>
     </>

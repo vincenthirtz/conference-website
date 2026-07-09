@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { withStaffPage } from '@/utils/staff';
+import { withStaffPage, hasAtLeastRole } from '@/utils/staff';
+import type { StaffRole } from '@/utils/staff';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminResource } from '@/hooks/useAdminResource';
 import AlertBanner from '@/components/admin/AlertBanner';
@@ -104,7 +105,7 @@ function AdminTenantsListPage({ staff }: Props) {
   // Miroir UX du gate serveur : seul un owner peut générer un lien de paiement
   // (POST /plan-checkout est withStaffRoute('owner')). L'API reste la vraie
   // barrière ; ici on désactive l'action + hint pour éviter le faux espoir.
-  const isOwner = staff.role === 'owner';
+  const isOwner = hasAtLeastRole(staff.role as StaffRole, 'owner');
 
   // Liste globale des tenants (visibilité manager+). L'endpoint ne pagine pas
   // et ne renvoie pas de total → `includeTotal: false` ; le filtrage

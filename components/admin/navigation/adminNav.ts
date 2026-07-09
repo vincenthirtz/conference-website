@@ -42,6 +42,8 @@ export type AdminNavIcon =
   | 'chart'
   | 'medal'
   | 'bolt'
+  | 'beaker'
+  | 'map'
   | 'key'
   | 'trash'
   | 'help';
@@ -169,6 +171,36 @@ export const ADMIN_NAV: AdminNavNode[] = [
               descKey: 'navQuickBracketDesc',
               icon: 'bolt',
               accent: 'border-amber-500/30 from-amber-500/10 text-amber-300',
+            },
+          },
+          // Simulateur de tournoi : outil « what-if » (test de formats/scénarios
+          // de bracket sans toucher aux vraies données). Dashboard-only, groupé
+          // avec les autres outils tournoi.
+          {
+            id: 'tournament-simulator',
+            href: '/admin/tournament-simulator',
+            minRole: 'manager',
+            card: {
+              order: 17,
+              titleKey: 'navSimulatorTitle',
+              descKey: 'navSimulatorDesc',
+              icon: 'beaker',
+              accent: 'border-indigo-500/30 from-indigo-500/10 text-indigo-300',
+            },
+          },
+          // Map pool (global tenant) : catalogue réutilisable de maps par jeu,
+          // édité une fois puis pioché par le flux par-tournoi. Dashboard-only,
+          // groupé avec les autres outils tournoi.
+          {
+            id: 'map-pool',
+            href: '/admin/map-pool',
+            minRole: 'manager',
+            card: {
+              order: 18,
+              titleKey: 'navMapPoolTitle',
+              descKey: 'navMapPoolDesc',
+              icon: 'map',
+              accent: 'border-teal-500/30 from-teal-500/10 text-teal-300',
             },
           },
           {

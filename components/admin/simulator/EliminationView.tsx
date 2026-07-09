@@ -142,7 +142,7 @@ function EliminationViewComponent({
         </p>
       )}
       <div className="overflow-x-auto pb-4">
-        <div className="flex min-w-max" style={{ gap: 0 }}>
+        <div className="flex min-w-max gap-0">
           {rounds.map((round, roundIdx) => {
             const ys = yPositions[roundIdx];
             const prevYs = roundIdx > 0 ? yPositions[roundIdx - 1] : null;

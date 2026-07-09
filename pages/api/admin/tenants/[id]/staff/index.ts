@@ -11,6 +11,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import {
   withStaffRoute,
   hasAtLeastRole,
+  requireOwner,
   STAFF_ROLES,
   type StaffRole,
   type AuthenticatedStaffContext,
@@ -101,9 +102,7 @@ async function handler(
 
   if (req.method === 'POST') {
     // Owner-only : assigner un staff a un tenant.
-    if (!hasAtLeastRole(ctx.role, 'owner')) {
-      return res.status(403).json({ error: 'Forbidden.' });
-    }
+    if (!requireOwner(ctx, res)) return;
 
     const body = (req.body ?? {}) as Record<string, unknown>;
     const staffId =

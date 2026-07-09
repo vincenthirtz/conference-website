@@ -258,7 +258,7 @@ function MyTeamPage({ staff }: StaffProps) {
         await load();
       }
     } catch (err: unknown) {
-      alert((err as Error)?.message || t.errSave);
+      addToast((err as Error)?.message || t.errSave, 'error');
     } finally {
       setSaving(false);
     }
@@ -337,13 +337,16 @@ function MyTeamPage({ staff }: StaffProps) {
       });
       const json = await res.json();
       if (!res.ok) {
-        alert(json?.error || t.errAdd);
+        addToast(json?.error || t.errAdd, 'error');
         return;
       }
       // L'email d'invitation est best-effort cote API : on previent l'admin
       // si le membre a bien ete ajoute mais que le mail n'est pas parti.
       if (json?.emailWarning) {
-        alert(format(t.memberAddedWithWarning, { warning: json.emailWarning }));
+        addToast(
+          format(t.memberAddedWithWarning, { warning: json.emailWarning }),
+          'warning'
+        );
       }
       // Reset and reload
       setShowAddModal(false);
@@ -359,7 +362,7 @@ function MyTeamPage({ staff }: StaffProps) {
         await load();
       }
     } catch (err: unknown) {
-      alert((err as Error)?.message || t.errAdd);
+      addToast((err as Error)?.message || t.errAdd, 'error');
     } finally {
       setAddingMember(false);
     }
@@ -392,7 +395,7 @@ function MyTeamPage({ staff }: StaffProps) {
       if (res.ok) {
         setIsJoinable(json.is_joinable);
       } else {
-        alert(json?.error || t.errGeneric);
+        addToast(json?.error || t.errGeneric, 'error');
       }
     } catch (err) {
       logger.error('Toggle joinable error:', err);
@@ -424,7 +427,7 @@ function MyTeamPage({ staff }: StaffProps) {
           }
         }
       } else {
-        alert(json?.error || t.errGeneric);
+        addToast(json?.error || t.errGeneric, 'error');
       }
     } catch (err) {
       logger.error('Join request action error:', err);

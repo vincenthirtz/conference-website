@@ -15,7 +15,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
-import { withStaffPage } from '@/utils/staff';
+import { withStaffPage, hasAtLeastRole } from '@/utils/staff';
+import type { StaffRole } from '@/utils/staff';
 import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
@@ -96,7 +97,7 @@ function AdminApiTokensPage({ staff }: Props) {
   // une exemption partenaire (comp). Défense en profondeur — l'API bloque
   // réellement (403 FORBIDDEN_COMP), l'UI masque/désactive pour éviter le
   // faux espoir.
-  const isOwner = staff.role === 'owner';
+  const isOwner = hasAtLeastRole(staff.role as StaffRole, 'owner');
 
   const t = useAdminT('adminApiTokens');
   const { adminFetchJson } = useAdminFetch();
