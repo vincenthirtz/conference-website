@@ -17295,6 +17295,59 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '500':
           $ref: '#/components/responses/ServerError'
+  /api/cron/scrim-planning-reminders:
+    get:
+      tags:
+        - cron
+      summary: Nudge scrim-planning grids with missing team availability.
+      operationId: cronScrimPlanningRemindersGet
+      description: |
+        Schedule: twice daily (`0 9,18 * * *`) via Netlify scheduled function
+        `scrim-planning-reminders-cron`.
+
+        For each active tenant, scans `scrim_plannings` with `status='open'`,
+        `deleted_at IS NULL`, `reminder_pinged_at IS NULL` whose `horizon_start`
+        is within the next 2 days. If either team has not painted any slot,
+        emits a `scrim.planning.reminder` outbox event (push/email fanout to the
+        two teams' captains/managers + staff), then stamps `reminder_pinged_at`
+        so each grid is nudged at most once.
+
+        Auth: `Authorization: Bearer <CRON_SECRET>` header OR
+        `?secret=<CRON_SECRET>` query string. Both GET and POST accepted.
+      security:
+        - CronSecret: []
+      responses:
+        '200':
+          description: Counters from the reminder tick.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      tags:
+        - cron
+      summary: Nudge scrim-planning grids with missing team availability.
+      operationId: cronScrimPlanningRemindersPost
+      description: Same as `GET /api/cron/scrim-planning-reminders`.
+      security:
+        - CronSecret: []
+      responses:
+        '200':
+          description: Counters from the reminder tick.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
   /api/cron/outbox-maintenance:
     get:
       tags:

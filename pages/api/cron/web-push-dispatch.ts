@@ -68,6 +68,7 @@ import {
   loadStaffUserIdsForTenant,
   loadPlayerUserIdsForMatch,
   loadCasterUserIdsForMatch,
+  loadCaptainManagerUserIdsForTeams,
   loadOptedOutUserIds,
   type OutboxRow,
 } from '@/utils/notificationAudience';
@@ -571,6 +572,33 @@ export async function runWebPushDispatcher(): Promise<TickCounters> {
             : null;
       if (matchId) {
         playerUserIds = await loadPlayerUserIdsForMatch(matchId);
+      }
+    } else if (event.event_name.startsWith('scrim.planning.')) {
+      // Scrim planning : audience player = capitaines/managers des 2 équipes
+      // (les décideurs de la grille de dispos). Le staff du tenant reste
+      // destinataire par défaut (staffUserIds ci-dessus). Ils reçoivent l'URL
+      // /player/scrim-planning/<id> via playerUrlForEvent (perspective player).
+      const data = (event.payload ?? {}) as Record<string, unknown>;
+      const inner =
+        data.data && typeof data.data === 'object'
+          ? (data.data as Record<string, unknown>)
+          : data;
+      const teamId = (side: 'team1' | 'team2'): string | null => {
+        const t = inner[side];
+        if (t && typeof t === 'object' && !Array.isArray(t)) {
+          const id = (t as Record<string, unknown>).id;
+          return typeof id === 'string' && id.length > 0 ? id : null;
+        }
+        return null;
+      };
+      const teamIds = [teamId('team1'), teamId('team2')].filter(
+        (v): v is string => Boolean(v)
+      );
+      if (teamIds.length > 0) {
+        playerUserIds = await loadCaptainManagerUserIdsForTeams(
+          teamIds,
+          event.tenant_id
+        );
       }
     }
 

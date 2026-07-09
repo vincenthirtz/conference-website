@@ -19,6 +19,7 @@ import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
 import { CHECKIN_OPEN_MINUTES } from '@/utils/checkin';
 import { getManagedTeam } from '@/utils/teams/managementAccess';
+import { getStaffRole } from '@/utils/staff';
 import { resolveTenantIdForUserRequest } from '@/utils/tenant';
 
 export type PlayerNotificationsPayload = {
@@ -40,6 +41,8 @@ export type PlayerNotificationsPayload = {
   /** Pending team invitations addressed to this user (invitee view). */
   pendingInvites: number;
   checkinPending: 0 | 1;
+  /** Open scrim-planning grids awaiting this user's availability input. */
+  pendingPlannings: number;
   total: number;
 };
 
@@ -164,12 +167,51 @@ export default withAuthRoute(async function handler(
     }
   }
 
+  // Open scrim-planning grids awaiting my availability : je suis participant
+  // (capitaine/manager d'une des 2 équipes OU staff) et je n'ai pas encore
+  // peint de créneau. Le staff peut peindre sur n'importe quelle grille ouverte
+  // du tenant ; un capitaine/manager uniquement sur celles de son équipe.
+  let pendingPlannings = 0;
+  const staffRole = await getStaffRole(user.id);
+  if (managedTeamId || staffRole) {
+    let query = supabaseAdmin!
+      .from('scrim_plannings')
+      .select('id')
+      .eq('tenant_id', tenantId)
+      .eq('status', 'open')
+      .is('deleted_at', null);
+    // Non-staff : restreint aux grilles impliquant mon équipe managée.
+    if (!staffRole && managedTeamId) {
+      query = query.or(
+        `team1_id.eq.${managedTeamId},team2_id.eq.${managedTeamId}`
+      );
+    }
+    const { data: openPlannings } = await query;
+    const ids = (openPlannings ?? []).map((p) => p.id as string);
+    if (ids.length > 0) {
+      const { data: mine } = await supabaseAdmin!
+        .from('scrim_planning_availabilities')
+        .select('planning_id, slots')
+        .eq('user_id', user.id)
+        .in('planning_id', ids);
+      const painted = new Set(
+        (mine ?? [])
+          .filter(
+            (r) => Array.isArray(r.slots) && (r.slots as unknown[]).length > 0
+          )
+          .map((r) => r.planning_id as string)
+      );
+      pendingPlannings = ids.filter((id) => !painted.has(id)).length;
+    }
+  }
+
   const total =
     unreadMessages +
     pendingScrims +
     pendingJoinRequests +
     pendingInvites +
-    checkinPending;
+    checkinPending +
+    pendingPlannings;
 
   res.setHeader('Cache-Control', 'private, max-age=10');
   return res.status(200).json({
@@ -183,6 +225,7 @@ export default withAuthRoute(async function handler(
     pendingJoinRequests,
     pendingInvites,
     checkinPending,
+    pendingPlannings,
     total,
   });
 });

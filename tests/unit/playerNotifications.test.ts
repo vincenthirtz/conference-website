@@ -308,3 +308,49 @@ describe('/api/player/notifications — check-in pending flag', () => {
     expect(res.body.checkinPending).toBe(0);
   });
 });
+
+describe('/api/player/notifications — pending scrim plannings', () => {
+  it('counts an open planning for my team where I have not painted', async () => {
+    seedCaptain();
+    store.scrim_plannings = [
+      {
+        id: 'plan-1',
+        tenant_id: undefined,
+        status: 'open',
+        team1_id: TEAM_ID,
+        team2_id: OTHER_TEAM_ID,
+        deleted_at: null,
+      },
+    ] as any;
+    store.scrim_planning_availabilities = [];
+    const res = makeRes();
+    await notificationsHandler(makeReq(), res);
+    expect(res.body.pendingPlannings).toBe(1);
+    expect(res.body.total).toBeGreaterThanOrEqual(1);
+  });
+
+  it('does not count a planning where I already painted slots', async () => {
+    seedCaptain();
+    store.scrim_plannings = [
+      {
+        id: 'plan-1',
+        tenant_id: undefined,
+        status: 'open',
+        team1_id: TEAM_ID,
+        team2_id: OTHER_TEAM_ID,
+        deleted_at: null,
+      },
+    ] as any;
+    store.scrim_planning_availabilities = [
+      {
+        id: 'av-1',
+        planning_id: 'plan-1',
+        user_id: USER_ID,
+        slots: ['2026-08-01T18:00:00.000Z'],
+      },
+    ] as any;
+    const res = makeRes();
+    await notificationsHandler(makeReq(), res);
+    expect(res.body.pendingPlannings).toBe(0);
+  });
+});

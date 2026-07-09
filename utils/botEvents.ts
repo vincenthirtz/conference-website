@@ -43,6 +43,7 @@ export type BotEventName =
   | 'scrim.deleted'
   | 'scrim.planning.opened'
   | 'scrim.planning.validated'
+  | 'scrim.planning.reminder'
   | 'cast.assigned'
   | 'cast.unassigned'
   | 'cast.briefing.rescheduled'

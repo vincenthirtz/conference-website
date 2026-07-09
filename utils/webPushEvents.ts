@@ -40,6 +40,12 @@ export const WEB_PUSH_EVENT_TYPES = [
   // Note : cast.hotkey_triggered N'EST PAS ajouté ici — par design, on ne
   // push pas les highlights en temps réel (Discord-only).
   'event_segment.transitioned',
+  // Scrim planning (grille de dispos partagée entre 2 équipes). Audience =
+  // staff du tenant + capitaines/managers des 2 équipes (cf. dispatcher +
+  // loadCaptainManagerUserIdsForTeams). URL player = /player/scrim-planning/<id>.
+  'scrim.planning.opened',
+  'scrim.planning.reminder',
+  'scrim.planning.validated',
 ] as const;
 
 export type WebPushEventType = (typeof WEB_PUSH_EVENT_TYPES)[number];
@@ -69,7 +75,7 @@ export function isWebPushEventType(value: string): value is WebPushEventType {
  */
 export function playerUrlForEvent(
   eventName: string,
-  _payload: EventPayload
+  payload: EventPayload
 ): string | null {
   switch (eventName) {
     case 'match.starting':
@@ -77,6 +83,15 @@ export function playerUrlForEvent(
     case 'match.score_reported':
     case 'checkin.opened':
       return '/player';
+    case 'scrim.planning.opened':
+    case 'scrim.planning.reminder':
+    case 'scrim.planning.validated': {
+      // Deep-link vers la grille de dispos de la joueuse. Pour `validated`, la
+      // même page affiche le créneau retenu. Guard : sans planningId on n'a pas
+      // d'URL player exploitable.
+      const planningId = str(unwrap(payload), 'planningId');
+      return planningId ? `/player/scrim-planning/${planningId}` : null;
+    }
     case 'news.published':
       // V1 : pas de fanout player news (audience trop large), géré V2.
       return null;
@@ -114,6 +129,9 @@ export const EMAIL_EVENT_TYPES = [
   'checkin.opened',
   'team.forfeit',
   'scrim.scheduled',
+  'scrim.planning.opened',
+  'scrim.planning.reminder',
+  'scrim.planning.validated',
   'news.published',
 ] as const;
 
@@ -130,6 +148,9 @@ export const PLAYER_PUSH_EVENT_TYPES = [
   'checkin.opened',
   'scrim.invitation',
   'scrim.confirmed',
+  'scrim.planning.opened',
+  'scrim.planning.reminder',
+  'scrim.planning.validated',
   'team.forfeit',
   'news.published',
 ] as const satisfies readonly WebPushEventType[];
@@ -183,6 +204,28 @@ function matchLabel(payload: EventPayload): string {
   const b = pickTeamName(payload, 'B');
   if (a && b) return `${a} vs ${b}`;
   return str(payload, 'match_label') || 'Match';
+}
+
+/**
+ * Nom d'affichage d'une équipe côté scrim planning : le payload porte des
+ * objets `team1` / `team2` de forme { id, name, short_name } (cf.
+ * emitScrimPlanningEvent). On préfère `name`, fallback `short_name`.
+ */
+function scrimTeamName(payload: EventPayload, key: 'team1' | 'team2'): string {
+  const team = payload[key];
+  if (team && typeof team === 'object' && !Array.isArray(team)) {
+    const t = team as Record<string, unknown>;
+    if (typeof t.name === 'string' && t.name.length > 0) return t.name;
+    if (typeof t.short_name === 'string' && t.short_name.length > 0) {
+      return t.short_name;
+    }
+  }
+  return 'Équipe';
+}
+
+/** "TeamA vs TeamB" pour un event scrim.planning.* (data déjà unwrappé). */
+function scrimPlanningLabel(payload: EventPayload): string {
+  return `${scrimTeamName(payload, 'team1')} vs ${scrimTeamName(payload, 'team2')}`;
 }
 
 function matchUrl(payload: EventPayload): string {
@@ -467,6 +510,36 @@ export function renderWebPushPayload(
         actions: [{ action: 'cockpit', title: 'Ouvrir le cockpit' }],
       };
     }
+    case 'scrim.planning.opened': {
+      const data = unwrap(payload);
+      const url = playerUrlForEvent(eventName, payload) ?? '/player';
+      return {
+        title: '🗓️ Grille de dispo ouverte',
+        body: `${scrimPlanningLabel(data)} — indique tes créneaux.`,
+        url,
+        actions: [{ action: 'view', title: 'Remplir mes dispos' }],
+      };
+    }
+    case 'scrim.planning.reminder': {
+      const data = unwrap(payload);
+      const url = playerUrlForEvent(eventName, payload) ?? '/player';
+      return {
+        title: '⏰ Dispos scrim à remplir',
+        body: `${scrimPlanningLabel(data)} — il manque encore tes créneaux.`,
+        url,
+        actions: [{ action: 'view', title: 'Remplir mes dispos' }],
+      };
+    }
+    case 'scrim.planning.validated': {
+      const data = unwrap(payload);
+      const url = playerUrlForEvent(eventName, payload) ?? '/player';
+      return {
+        title: '✅ Scrim planifié',
+        body: `${scrimPlanningLabel(data)} — créneau validé.`,
+        url,
+        actions: [{ action: 'view', title: 'Voir le créneau' }],
+      };
+    }
     default:
       // Fallback safe : un event_name inconnu n'arrivera pas (filtré par
       // WEB_PUSH_EVENT_TYPES côté query), mais on protège tout de même.
@@ -551,6 +624,27 @@ export function renderEmailPayload(
         body: str(data, 'team_name')
           ? `Un scrim a été planifié avec ${str(data, 'team_name')}.`
           : 'Un scrim a été planifié.',
+        url,
+      };
+    }
+    case 'scrim.planning.opened': {
+      return {
+        heading: 'Grille de dispo ouverte',
+        body: `${scrimPlanningLabel(data)} : indique tes créneaux de scrim.`,
+        url,
+      };
+    }
+    case 'scrim.planning.reminder': {
+      return {
+        heading: 'Dispos scrim à remplir',
+        body: `${scrimPlanningLabel(data)} : il manque encore tes créneaux.`,
+        url,
+      };
+    }
+    case 'scrim.planning.validated': {
+      return {
+        heading: 'Scrim planifié',
+        body: `${scrimPlanningLabel(data)} : le créneau a été validé.`,
         url,
       };
     }

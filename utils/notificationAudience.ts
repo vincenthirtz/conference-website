@@ -18,6 +18,10 @@
 
 import { supabaseAdmin } from './supabase';
 import { logger } from './logger';
+import {
+  loadTeamRolesFromSupabase,
+  privilegedRoleValues,
+} from './teamRoles';
 
 export type OutboxRow = {
   id: number;
@@ -160,6 +164,72 @@ export async function loadPlayerUserIdsForMatch(
   for (const r of (members ?? []) as Array<{ user_id: string | null }>) {
     if (r.user_id) userIds.add(r.user_id);
   }
+  return Array.from(userIds);
+}
+
+/**
+ * Renvoie les auth user ids qui sont capitaine OU manager (rôle privilégié)
+ * d'au moins une des équipes fournies, scopé au tenant. Utilisé pour le fanout
+ * des events scrim.planning.* (une grille de dispo concerne les 2 équipes, et
+ * seuls leurs décideurs — capitaine / manager — sont ciblés côté player, en
+ * plus du staff du tenant).
+ *
+ * Résolution (mirroir de getManagedTeam) :
+ *   - `teams.captain_id` pour les team ids donnés (scopé tenant), UNION
+ *   - `team_members` de ces teams dont `role` ∈ privilegedRoleValues(...).
+ *
+ * De-dup + drop des nulls. Retourne [] si la liste d'entrée est vide.
+ */
+export async function loadCaptainManagerUserIdsForTeams(
+  teamIds: string[],
+  tenantId: string
+): Promise<string[]> {
+  const ids = teamIds.filter(
+    (v): v is string => typeof v === 'string' && v.length > 0
+  );
+  if (ids.length === 0) return [];
+
+  const userIds = new Set<string>();
+
+  // 1. Capitaines des équipes (scopé tenant).
+  const { data: captainRows, error: captainErr } = await supabaseAdmin
+    .from('teams')
+    .select('captain_id')
+    .in('id', ids)
+    .eq('tenant_id', tenantId);
+  if (captainErr) {
+    logger.error(
+      '[notificationAudience] loadCaptainManagerUserIdsForTeams captain err',
+      captainErr
+    );
+  }
+  for (const r of (captainRows ?? []) as Array<{
+    captain_id: string | null;
+  }>) {
+    if (r.captain_id) userIds.add(r.captain_id);
+  }
+
+  // 2. Membres au rôle privilégié (>=1 permission) dans ces équipes.
+  const roles = await loadTeamRolesFromSupabase(supabaseAdmin);
+  const privileged = privilegedRoleValues(roles);
+  if (privileged.length > 0) {
+    const { data: mgrRows, error: mgrErr } = await supabaseAdmin
+      .from('team_members')
+      .select('user_id')
+      .in('team_id', ids)
+      .eq('tenant_id', tenantId)
+      .in('role', privileged);
+    if (mgrErr) {
+      logger.error(
+        '[notificationAudience] loadCaptainManagerUserIdsForTeams manager err',
+        mgrErr
+      );
+    }
+    for (const r of (mgrRows ?? []) as Array<{ user_id: string | null }>) {
+      if (r.user_id) userIds.add(r.user_id);
+    }
+  }
+
   return Array.from(userIds);
 }
 

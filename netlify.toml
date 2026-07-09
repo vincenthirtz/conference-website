@@ -82,6 +82,13 @@
 [functions."draft-auto-pick-cron"]
   schedule = "* * * * *"
 
+# Scheduled function: relance des grilles de dispo scrim. Deux fois par jour,
+# émet un `scrim.planning.reminder` pour chaque grille ouverte dont l'horizon
+# approche et où une équipe n'a pas encore peint (idempotent via
+# scrim_plannings.reminder_pinged_at).
+[functions."scrim-planning-reminders-cron"]
+  schedule = "0 9,18 * * *"
+
 [[headers]]
   for = "/*"
   [headers.values]

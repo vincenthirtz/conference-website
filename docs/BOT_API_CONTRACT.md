@@ -246,6 +246,7 @@ catalog can grow without forcing a bot deploy.
 | `team.*` / `scrim.*` / `cast.*`   | various admin / bot routes                                                                    | see emitter call sites                                                                                                        |
 | `scrim.planning.opened`           | `pages/api/admin/scrim-plannings/index.ts` (POST) — grille de dispos ouverte entre 2 équipes  | `{ planningId, title, game, status, team1, team2, horizonStart, horizonDays }`                                               |
 | `scrim.planning.validated`        | `pages/api/admin/scrim-plannings/[planningId]/validate.ts` — créneau validé → scrim créé      | `{ planningId, validatedSlot, scrimId, team1, team2 }` (le `scrim.scheduled` du scrim créé est émis en parallèle)            |
+| `scrim.planning.reminder`         | `emitScrimPlanningEvent('scrim.planning.reminder', ...)` — relance : dispos encore manquantes  | `{ planningId, title, game, status, team1, team2, horizonStart, horizonDays }` (fanout push/email : staff + capitaines/managers des 2 équipes) |
 | `event_segment.transitioned`      | Admin `/api/admin/events/.../segments/.../{start,skip,end}.ts` (Lot 2 run-of-show)            | `{ runId, segmentId, fromStatus, toStatus, tenantId, broadcastMessage, segment: { ord, type, title, durationMin, matchId } }` |
 
 #### `event_segment.transitioned` (Lot 2 run-of-show)

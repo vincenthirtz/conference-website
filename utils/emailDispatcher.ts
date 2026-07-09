@@ -35,6 +35,7 @@ import {
   loadStaffUserIdsForTenant,
   loadPlayerUserIdsForMatch,
   loadCasterUserIdsForMatch,
+  loadCaptainManagerUserIdsForTeams,
   loadEmailOptedInUserIds,
   type OutboxRow,
 } from './notificationAudience';
@@ -136,6 +137,30 @@ async function resolveEmailAudience(event: OutboxRow): Promise<string[]> {
   ) {
     for (const u of await loadPlayerUserIdsForMatch(matchId)) audience.add(u);
     for (const u of await loadCasterUserIdsForMatch(matchId)) audience.add(u);
+  }
+
+  // Fanout scrim planning : capitaines/managers des 2 équipes de la grille
+  // (en plus du staff du tenant, déjà ajouté au-dessus).
+  if (event.event_name.startsWith('scrim.planning.')) {
+    const teamId = (side: 'team1' | 'team2'): string | null => {
+      const t = inner[side];
+      if (t && typeof t === 'object' && !Array.isArray(t)) {
+        const id = (t as Record<string, unknown>).id;
+        return typeof id === 'string' && id.length > 0 ? id : null;
+      }
+      return null;
+    };
+    const teamIds = [teamId('team1'), teamId('team2')].filter(
+      (v): v is string => Boolean(v)
+    );
+    if (teamIds.length > 0) {
+      for (const u of await loadCaptainManagerUserIdsForTeams(
+        teamIds,
+        event.tenant_id
+      )) {
+        audience.add(u);
+      }
+    }
   }
 
   if (audience.size === 0) return [];
