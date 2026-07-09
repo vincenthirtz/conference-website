@@ -144,9 +144,12 @@ async function handler(
     })
   );
   const heatmap = buildHeatmap(heatmapInput);
-  const overlapWarning = isSlotValidatable(heatmap[slotIso])
+  const requireStaff = planning.staff_required === true;
+  const overlapWarning = isSlotValidatable(heatmap[slotIso], requireStaff)
     ? undefined
-    : 'Créneau validé sans overlap complet des deux équipes.';
+    : requireStaff
+      ? 'Créneau validé sans les deux équipes ET le staff (staff requis).'
+      : 'Créneau validé sans overlap complet des deux équipes.';
 
   // 5b) Conflits : le créneau ne doit pas chevaucher (± fenêtre) un scrim déjà
   //     planifié ni un match programmé pour l'une des deux équipes. Bloque en

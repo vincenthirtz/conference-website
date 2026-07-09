@@ -16,6 +16,9 @@ import {
   isFullOverlap,
   rankValidatableSlots,
   copyFirstPaintedDayAcrossHorizon,
+  weekdayAndMinuteInTz,
+  availabilityPatternFromSlots,
+  slotsFromPattern,
   type PlanningConfig,
 } from '../../utils/teams/scrimPlanningOverlap';
 
@@ -156,6 +159,14 @@ describe('isSlotValidatable / isFullOverlap', () => {
     expect(isFullOverlap({ ...bothTeams, parties: [...bothTeams.parties] })).toBe(false);
   });
 
+  it('requireStaff : les 2 équipes ne suffisent pas sans le staff', () => {
+    const bt = { ...bothTeams, parties: [...bothTeams.parties] };
+    expect(isSlotValidatable(bt, false)).toBe(true);
+    expect(isSlotValidatable(bt, true)).toBe(false);
+    const fu = { ...full, parties: [...full.parties] };
+    expect(isSlotValidatable(fu, true)).toBe(true);
+  });
+
   it('PLANNING_PARTIES contient bien 3 parties', () => {
     expect(PLANNING_PARTIES).toHaveLength(3);
   });
@@ -216,5 +227,48 @@ describe('copyFirstPaintedDayAcrossHorizon', () => {
     // jour 0 = 18h seulement ; jour 1 = 19h. Modèle = jour 0 (18h) → tous à 18h.
     const out = copyFirstPaintedDayAcrossHorizon(cfg2, [d0_18, d1_19]);
     expect(out.sort()).toEqual([d0_18, d1_18].sort());
+  });
+});
+
+describe('dispos habituelles (motif weekday:minute)', () => {
+  // 2026-07-10 = vendredi ; 20h Paris été = 18:00Z.
+  it('weekdayAndMinuteInTz mappe un ISO vers (jour, minute) locaux', () => {
+    const wm = weekdayAndMinuteInTz('2026-07-10T18:00:00.000Z', 'Europe/Paris');
+    expect(wm).toEqual({ weekday: 5, minute: 20 * 60 }); // vendredi, 20:00
+  });
+
+  it('availabilityPatternFromSlots → slotsFromPattern rejoue les mêmes jours', () => {
+    const cfg: PlanningConfig = {
+      horizonStart: '2026-07-10', // vendredi
+      horizonDays: 8, // couvre le vendredi suivant (2026-07-17)
+      slotMinutes: 60,
+      dayStartMin: 18 * 60,
+      dayEndMin: 22 * 60,
+      timezone: 'Europe/Paris',
+    };
+    // Peinture passée : vendredi 20h (18:00Z).
+    const pattern = availabilityPatternFromSlots(
+      ['2026-07-10T18:00:00.000Z'],
+      'Europe/Paris'
+    );
+    expect(pattern).toEqual(['5:1200']);
+    const slots = slotsFromPattern(cfg, pattern);
+    // Doit ressortir les deux vendredis de l'horizon à 20h.
+    expect(slots).toEqual([
+      '2026-07-10T18:00:00.000Z',
+      '2026-07-17T18:00:00.000Z',
+    ]);
+  });
+
+  it('slotsFromPattern renvoie [] pour un motif vide', () => {
+    const cfg: PlanningConfig = {
+      horizonStart: '2026-07-10',
+      horizonDays: 2,
+      slotMinutes: 60,
+      dayStartMin: 18 * 60,
+      dayEndMin: 20 * 60,
+      timezone: 'Europe/Paris',
+    };
+    expect(slotsFromPattern(cfg, [])).toEqual([]);
   });
 });

@@ -18996,6 +18996,39 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+  /api/teams/scrim-plannings/{planningId}/suggest:
+    parameters:
+      - name: planningId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags:
+        - public/teams
+      summary: Suggest "usual availability" slots for the caller on this grid.
+      operationId: suggestScrimPlanningAvailability
+      description: |
+        Derives the caller's most recent painted availability (from another
+        planning) into a weekday:minute pattern and replays it onto this grid.
+        Returns `{ slots: string[] }` (empty if no history).
+      security:
+        - PlayerBearer: []
+      responses:
+        '200':
+          description: Suggested slots.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/teams/scrim-plannings/{planningId}/availability:
     parameters:
       - name: planningId

@@ -3746,6 +3746,11 @@
     "quickFillAll": "Select all",
     "quickCopyDay": "Copy first day",
     "quickClear": "Clear all",
+    "quickReuse": "Reuse my usual availability",
+    "reuseApplied": "Usual availability applied.",
+    "reuseNone": "No usual availability found.",
+    "reuseError": "Unable to fetch your usual availability.",
+    "staffRequiredNote": "Staff is required for this scrim.",
     "addToCalendar": "Add to my calendar",
     "timezoneNote": "Times shown in {tz}",
     "timezoneViewer": "your timezone: {tz}"

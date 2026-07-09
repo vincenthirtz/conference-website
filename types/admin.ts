@@ -199,6 +199,8 @@ export type ScrimPlanning = {
   day_start_min: number;
   day_end_min: number;
   timezone: string;
+  /** true = le staff doit être présent pour qu'un créneau soit planifiable. */
+  staff_required: boolean;
   validated_slot: string | null;
   is_public: boolean;
   created_at: string;

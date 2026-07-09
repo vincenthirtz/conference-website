@@ -56,6 +56,8 @@ export type AvailabilityGridProps = {
   selectedSlot?: string | null;
   /** Désactive toute interaction (lecture seule). */
   disabled?: boolean;
+  /** Session `staff_required` : un créneau n'est planifiable qu'avec le staff. */
+  requireStaff?: boolean;
 };
 
 const ACCENT_RING: Record<string, string> = {
@@ -109,6 +111,7 @@ export default function AvailabilityGrid({
   onSlotClick,
   selectedSlot,
   disabled = false,
+  requireStaff = false,
 }: AvailabilityGridProps) {
   const days = useMemo(() => horizonDates(config), [config]);
   const rows = useMemo(() => slotMinutesOfDay(config), [config]);
@@ -269,7 +272,7 @@ export default function AvailabilityGrid({
                     )} ${
                       cellInteractive ? 'cursor-pointer hover:brightness-125' : ''
                     } ${
-                      mode === 'heatmap' && isSlotValidatable(cell)
+                      mode === 'heatmap' && isSlotValidatable(cell, requireStaff)
                         ? 'after:absolute after:inset-x-1 after:bottom-0.5 after:h-0.5 after:rounded-full after:bg-emerald-200/70 after:content-[""]'
                         : ''
                     }`}
@@ -291,7 +294,7 @@ export default function AvailabilityGrid({
                 {labels.fullOverlap}
               </span>
             )}
-            {!isFullOverlap(hover.cell) && isSlotValidatable(hover.cell) && (
+            {!isFullOverlap(hover.cell) && isSlotValidatable(hover.cell, requireStaff) && (
               <span className="ml-2 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-300">
                 {labels.validatable}
               </span>

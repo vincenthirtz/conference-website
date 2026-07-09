@@ -121,6 +121,10 @@ function AdminScrimPlanningDetailPage(_props: StaffProps) {
     [planning]
   );
 
+  // Un créneau n'est « planifiable » qu'avec le staff dispo quand la grille
+  // l'exige (staff_required). Ce flag pilote heatmap, compteurs et ranking.
+  const requireStaff = planning?.staff_required ?? false;
+
   // Heatmap : celle renvoyée par l'API, sinon reconstruite depuis les dispos.
   const heatmap = useMemo<Heatmap>(() => {
     if (apiHeatmap) return apiHeatmap;
@@ -161,8 +165,10 @@ function AdminScrimPlanningDetailPage(_props: StaffProps) {
 
   const validatableCount = useMemo(
     () =>
-      Object.values(heatmap).filter((cell) => isSlotValidatable(cell)).length,
-    [heatmap]
+      Object.values(heatmap).filter((cell) =>
+        isSlotValidatable(cell, requireStaff)
+      ).length,
+    [heatmap, requireStaff]
   );
   const fullOverlapCount = useMemo(
     () => Object.values(heatmap).filter((cell) => isFullOverlap(cell)).length,
@@ -188,7 +194,10 @@ function AdminScrimPlanningDetailPage(_props: StaffProps) {
   }, [availabilities]);
 
   // Classement des créneaux planifiables (P2-6), meilleur d'abord.
-  const ranked = useMemo(() => rankValidatableSlots(heatmap), [heatmap]);
+  const ranked = useMemo(
+    () => rankValidatableSlots(heatmap, requireStaff),
+    [heatmap, requireStaff]
+  );
 
   const isActionable =
     planning?.status === 'open' && !planning?.validated_slot && !busy;
@@ -241,7 +250,7 @@ function AdminScrimPlanningDetailPage(_props: StaffProps) {
     async (slot: string) => {
       if (!planning || !isActionable) return;
       const cell = heatmap[slot];
-      if (!isSlotValidatable(cell)) {
+      if (!isSlotValidatable(cell, requireStaff)) {
         addToast(t.notValidatable, 'warning');
         return;
       }
@@ -257,7 +266,16 @@ function AdminScrimPlanningDetailPage(_props: StaffProps) {
       if (!ok) return;
       await runValidate(planning.id, slot, false);
     },
-    [planning, isActionable, heatmap, confirm, addToast, t, runValidate]
+    [
+      planning,
+      isActionable,
+      heatmap,
+      requireStaff,
+      confirm,
+      addToast,
+      t,
+      runValidate,
+    ]
   );
 
   async function patchStatus(status: 'cancelled' | 'closed') {
@@ -544,7 +562,14 @@ function AdminScrimPlanningDetailPage(_props: StaffProps) {
           {/* Grille heatmap */}
           <section className="bg-neutral-800/50 border border-neutral-700/50 rounded-2xl p-6 space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-lg font-semibold">{t.gridHeading}</h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-semibold">{t.gridHeading}</h2>
+                {requireStaff && (
+                  <span className="inline-flex items-center rounded-full bg-amber-900/30 border border-amber-500/40 px-2.5 py-0.5 text-xs font-medium text-amber-200">
+                    {t.staffRequiredBadge}
+                  </span>
+                )}
+              </div>
               <div className="flex flex-wrap gap-4 text-xs text-neutral-400">
                 <span>
                   {format(t.statValidatable, { count: validatableCount })}
@@ -595,6 +620,7 @@ function AdminScrimPlanningDetailPage(_props: StaffProps) {
                 accent="emerald"
                 heatmap={heatmap}
                 maxParties={3}
+                requireStaff={requireStaff}
                 onSlotClick={canValidate ? onSlotClick : undefined}
                 selectedSlot={null}
                 disabled={!canValidate || busy}
@@ -607,6 +633,7 @@ function AdminScrimPlanningDetailPage(_props: StaffProps) {
                 accent="emerald"
                 heatmap={heatmap}
                 maxParties={3}
+                requireStaff={requireStaff}
                 onSlotClick={canValidate ? onSlotClick : undefined}
                 disabled={!canValidate || busy}
               />

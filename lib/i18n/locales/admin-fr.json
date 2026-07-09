@@ -3042,7 +3042,8 @@
     "reject": "Refuser",
     "treated": "Cette demande a été traitée",
     "treatedBy": " par ",
-    "treatedOn": " le {date}"
+    "treatedOn": " le {date}",
+    "createPlanningGrid": "Créer une grille de dispo"
   },
   "adminAdherentsList": {
     "statusPending": "En attente",
@@ -6287,7 +6288,10 @@
     "errorTeamsRequired": "Les deux équipes sont obligatoires.",
     "errorTeamsDistinct": "Les deux équipes doivent être distinctes.",
     "errorTimeBand": "La fin de journée doit être après le début.",
-    "errorCreate": "Erreur de création."
+    "errorCreate": "Erreur de création.",
+    "errorDuplicateDemande": "Une grille existe déjà pour cette demande de scrim.",
+    "staffRequiredLabel": "Staff requis",
+    "staffRequiredHelp": "Un créneau ne sera planifiable que si le staff est aussi disponible (les 3 parties)."
   },
   "adminScrimPlanningsDetail": {
     "headTitle": "{title} – Grille de scrim",
@@ -6358,6 +6362,7 @@
     "confirmExtendTitle": "Prolonger l'horizon ?",
     "confirmExtendSubtitle": "La fenêtre de disponibilités sera allongée d'une semaine et le rappel sera réarmé.",
     "extendConfirm": "Prolonger",
-    "extended": "Horizon prolongé d'une semaine."
+    "extended": "Horizon prolongé d'une semaine.",
+    "staffRequiredBadge": "Staff requis"
   }
 }

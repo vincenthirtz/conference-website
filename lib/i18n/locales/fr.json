@@ -3746,6 +3746,11 @@
     "quickFillAll": "Tout sélectionner",
     "quickCopyDay": "Copier le 1er jour",
     "quickClear": "Tout effacer",
+    "quickReuse": "Reprendre mes dispos habituelles",
+    "reuseApplied": "Dispos habituelles appliquées.",
+    "reuseNone": "Aucune dispo habituelle trouvée.",
+    "reuseError": "Impossible de récupérer tes dispos habituelles.",
+    "staffRequiredNote": "Le staff est requis pour ce scrim.",
     "addToCalendar": "Ajouter à mon agenda",
     "timezoneNote": "Horaires affichés en {tz}",
     "timezoneViewer": "ton fuseau : {tz}"

@@ -1,7 +1,7 @@
 import { useEffect, useId, useState } from 'react';
 import { useRouter } from 'next/router';
 import Modal from '@/components/admin/Modal';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
 import { useAdminT } from '@/lib/i18n/useAdminT';
@@ -14,6 +14,12 @@ type PlanningFormModalProps = {
   onClose: () => void;
   /** Called after a planning is successfully created (e.g. to refresh a list). */
   onCreated?: () => void;
+  /** Préselectionne l'équipe 1 (ex. « Passer en grille » depuis une négo). */
+  initialTeam1Id?: string;
+  /** Préselectionne l'équipe 2. */
+  initialTeam2Id?: string;
+  /** Lie la grille à la demande de scrim source (source_demande_id). */
+  sourceDemandeId?: string;
 };
 
 /** Bande horaire par défaut : 18:00 → 23:00 (heures de scrim typiques). */
@@ -49,6 +55,7 @@ const EMPTY_FORM = {
   day_start: minutesToTime(DEFAULT_DAY_START_MIN),
   day_end: minutesToTime(DEFAULT_DAY_END_MIN),
   timezone: 'Europe/Paris',
+  staff_required: false,
 };
 
 /**
@@ -60,6 +67,9 @@ export default function PlanningFormModal({
   open,
   onClose,
   onCreated,
+  initialTeam1Id,
+  initialTeam2Id,
+  sourceDemandeId,
 }: PlanningFormModalProps) {
   const t = useAdminT('adminScrimPlanningsCreate');
   const router = useRouter();
@@ -76,7 +86,12 @@ export default function PlanningFormModal({
   // Repart d'un formulaire vierge et (re)charge les équipes à l'ouverture.
   useEffect(() => {
     if (!open) return;
-    setForm({ ...EMPTY_FORM, horizon_start: todayIso() });
+    setForm({
+      ...EMPTY_FORM,
+      horizon_start: todayIso(),
+      team1_id: initialTeam1Id ?? '',
+      team2_id: initialTeam2Id ?? '',
+    });
     setError(null);
     setSubmitting(false);
     adminFetchJson<{ teams: TeamOption[] }>(
@@ -84,7 +99,7 @@ export default function PlanningFormModal({
     )
       .then((json) => setTeams(json.teams || []))
       .catch(() => setTeams([]));
-  }, [open, adminFetchJson]);
+  }, [open, adminFetchJson, initialTeam1Id, initialTeam2Id]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -119,6 +134,8 @@ export default function PlanningFormModal({
         day_start_min: dayStart,
         day_end_min: dayEnd,
         timezone: form.timezone,
+        staff_required: form.staff_required,
+        ...(sourceDemandeId ? { source_demande_id: sourceDemandeId } : {}),
       };
       const { planning } = await mutateJson<{ planning: ScrimPlanning }>(
         '/api/admin/scrim-plannings',
@@ -132,7 +149,13 @@ export default function PlanningFormModal({
       onClose();
       void router.push(`/admin/scrims/plannings/${planning.id}`);
     } catch (err) {
-      setError((err as Error)?.message || t.errorCreate);
+      // Index partiel UNIQUE sur source_demande_id : une grille existe déjà
+      // pour cette négociation → message dédié plutôt que l'erreur brute.
+      if (err instanceof AdminFetchError && err.status === 409) {
+        setError(t.errorDuplicateDemande);
+      } else {
+        setError((err as Error)?.message || t.errorCreate);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -311,6 +334,27 @@ export default function PlanningFormModal({
             placeholder="Europe/Paris"
             className="w-full px-3 py-2.5 rounded-lg bg-neutral-900/50 border border-neutral-600"
           />
+        </div>
+
+        <div className="rounded-lg bg-neutral-900/40 border border-neutral-700/60 px-3 py-3">
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={form.staff_required}
+              onChange={(e) =>
+                setForm({ ...form, staff_required: e.target.checked })
+              }
+              className="mt-0.5 w-4 h-4 rounded border-neutral-600 bg-neutral-900"
+            />
+            <span>
+              <span className="block text-sm font-medium text-neutral-200">
+                {t.staffRequiredLabel}
+              </span>
+              <span className="block text-xs text-neutral-500 mt-0.5">
+                {t.staffRequiredHelp}
+              </span>
+            </span>
+          </label>
         </div>
 
         {error && (

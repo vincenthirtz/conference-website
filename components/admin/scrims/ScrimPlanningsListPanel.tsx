@@ -6,6 +6,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminResource } from '@/hooks/useAdminResource';
 import PlanningFormModal from '@/components/admin/scrims/PlanningFormModal';
@@ -75,10 +76,48 @@ function formatHorizon(start: string, days: number) {
 
 export default function ScrimPlanningsListPanel() {
   const t = useAdminT('adminScrimPlanningsList');
+  const router = useRouter();
   const { adminFetchJson } = useAdminFetch();
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [modalOpen, setModalOpen] = useState(false);
   const [teams, setTeams] = useState<TeamOption[]>([]);
+
+  // Préremplissage « Passer en grille » depuis une négociation de scrim :
+  // /admin/scrims?tab=plannings&new=1&team1=<id>&team2=<id>&fromDemande=<id>.
+  const prefillTeam1 =
+    typeof router.query.team1 === 'string' ? router.query.team1 : undefined;
+  const prefillTeam2 =
+    typeof router.query.team2 === 'string' ? router.query.team2 : undefined;
+  const prefillDemande =
+    typeof router.query.fromDemande === 'string'
+      ? router.query.fromDemande
+      : undefined;
+
+  // Ouvre automatiquement la modale (une seule fois) quand `?new=1` est présent.
+  useEffect(() => {
+    if (!router.isReady) return;
+    if (router.query.new === '1') setModalOpen(true);
+  }, [router.isReady, router.query.new]);
+
+  function closeModal() {
+    setModalOpen(false);
+    // Nettoie les paramètres de préremplissage pour qu'une réouverture manuelle
+    // reparte d'un formulaire vierge (et ne rouvre pas la modale au remount).
+    if (router.query.new || prefillTeam1 || prefillTeam2 || prefillDemande) {
+      const {
+        new: _new,
+        team1: _team1,
+        team2: _team2,
+        fromDemande: _fromDemande,
+        ...rest
+      } = router.query;
+      void router.replace(
+        { pathname: router.pathname, query: rest },
+        undefined,
+        { shallow: true }
+      );
+    }
+  }
 
   const {
     data: plannings,
@@ -113,8 +152,11 @@ export default function ScrimPlanningsListPanel() {
     <>
       <PlanningFormModal
         open={modalOpen}
-        onClose={() => setModalOpen(false)}
+        onClose={closeModal}
         onCreated={refresh}
+        initialTeam1Id={prefillTeam1}
+        initialTeam2Id={prefillTeam2}
+        sourceDemandeId={prefillDemande}
       />
 
       <div className="mb-6 flex justify-end">

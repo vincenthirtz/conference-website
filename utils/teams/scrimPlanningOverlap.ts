@@ -198,11 +198,19 @@ export function buildHeatmap(
 
 /**
  * Une cellule est « planifiable » dès que les DEUX équipes sont dispo (minimum
- * pour caler un scrim). La présence du staff est un bonus (overlap parfait).
+ * pour caler un scrim). La présence du staff est un bonus (overlap parfait) —
+ * sauf si `requireStaff` est vrai (session `staff_required`), auquel cas le
+ * staff doit aussi être présent.
  */
-export function isSlotValidatable(cell: HeatmapCell | undefined): boolean {
+export function isSlotValidatable(
+  cell: HeatmapCell | undefined,
+  requireStaff = false
+): boolean {
   if (!cell) return false;
-  return cell.parties.includes('team1') && cell.parties.includes('team2');
+  const bothTeams =
+    cell.parties.includes('team1') && cell.parties.includes('team2');
+  if (!requireStaff) return bothTeams;
+  return bothTeams && cell.parties.includes('staff');
 }
 
 /** Overlap parfait : les 3 parties (2 équipes + staff) sont disponibles. */
@@ -240,6 +248,73 @@ export function copyFirstPaintedDayAcrossHorizon(
   return slotKeysForHorizon(cfg).filter((k) => out.has(k));
 }
 
+/** Jour de semaine (0=dim..6=sam) et minute-de-jour d'un instant ISO dans `tz`. */
+export function weekdayAndMinuteInTz(
+  iso: string,
+  tz: string
+): { weekday: number; minute: number } | null {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return null;
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: tz,
+    weekday: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(d);
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? '';
+  const wdMap: Record<string, number> = {
+    Sun: 0,
+    Mon: 1,
+    Tue: 2,
+    Wed: 3,
+    Thu: 4,
+    Fri: 5,
+    Sat: 6,
+  };
+  const weekday = wdMap[get('weekday')];
+  if (weekday === undefined) return null;
+  let hour = parseInt(get('hour'), 10);
+  if (hour === 24) hour = 0;
+  return { weekday, minute: hour * 60 + parseInt(get('minute'), 10) };
+}
+
+/**
+ * Motif « dispos habituelles » = ensemble de clés `weekday:minute` déduites de
+ * créneaux ISO passés, interprétés dans `tz`. Sert à ré-appliquer les dispos
+ * d'une session précédente sur une nouvelle grille.
+ */
+export function availabilityPatternFromSlots(
+  slots: string[],
+  tz: string
+): string[] {
+  const set = new Set<string>();
+  for (const iso of slots) {
+    const wm = weekdayAndMinuteInTz(iso, tz);
+    if (wm) set.add(`${wm.weekday}:${wm.minute}`);
+  }
+  return Array.from(set);
+}
+
+/** Applique un motif `weekday:minute` sur la grille d'une session → slots ISO. */
+export function slotsFromPattern(
+  cfg: PlanningConfig,
+  pattern: string[]
+): string[] {
+  const patternSet = new Set(pattern);
+  const minutes = slotMinutesOfDay(cfg);
+  const out: string[] = [];
+  for (const day of horizonDates(cfg)) {
+    const weekday = new Date(`${day}T12:00:00Z`).getUTCDay();
+    for (const m of minutes) {
+      if (patternSet.has(`${weekday}:${m}`)) {
+        out.push(slotKey(cfg, day, m));
+      }
+    }
+  }
+  return out;
+}
+
 export type RankedSlot = {
   slot: string;
   count: number;
@@ -252,9 +327,12 @@ export type RankedSlot = {
  * en tête), puis par date croissante (le plus tôt possible à qualité égale).
  * Sert à suggérer le meilleur créneau à valider côté admin.
  */
-export function rankValidatableSlots(heatmap: Heatmap): RankedSlot[] {
+export function rankValidatableSlots(
+  heatmap: Heatmap,
+  requireStaff = false
+): RankedSlot[] {
   return Object.entries(heatmap)
-    .filter(([, cell]) => isSlotValidatable(cell))
+    .filter(([, cell]) => isSlotValidatable(cell, requireStaff))
     .map(([slot, cell]) => ({
       slot,
       count: cell.count,

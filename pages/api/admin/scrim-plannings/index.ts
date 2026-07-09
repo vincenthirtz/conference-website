@@ -39,6 +39,7 @@ const createSchema = z
     day_start_min: z.number().int().min(0).max(1440).optional(),
     day_end_min: z.number().int().min(0).max(1440).optional(),
     timezone: z.string().trim().min(1).max(64).optional(),
+    staff_required: z.boolean().optional(),
     source_demande_id: z.string().uuid().optional().nullable(),
   })
   .refine((v) => v.team1_id !== v.team2_id, {
@@ -171,6 +172,7 @@ async function handlePost(
     day_end_min: body.day_end_min ?? 1440,
     timezone,
     is_public: false,
+    staff_required: body.staff_required ?? false,
     source_demande_id: body.source_demande_id ?? null,
   };
 

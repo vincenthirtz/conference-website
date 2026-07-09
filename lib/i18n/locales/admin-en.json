@@ -3042,7 +3042,8 @@
     "reject": "Reject",
     "treated": "This request has been processed",
     "treatedBy": " by ",
-    "treatedOn": " on {date}"
+    "treatedOn": " on {date}",
+    "createPlanningGrid": "Create an availability grid"
   },
   "adminAdherentsList": {
     "statusPending": "Pending",
@@ -6287,7 +6288,10 @@
     "errorTeamsRequired": "Both teams are required.",
     "errorTeamsDistinct": "The two teams must be distinct.",
     "errorTimeBand": "Day end must be after day start.",
-    "errorCreate": "Creation error."
+    "errorCreate": "Creation error.",
+    "errorDuplicateDemande": "A grid already exists for this scrim request.",
+    "staffRequiredLabel": "Staff required",
+    "staffRequiredHelp": "A slot is only schedulable when staff is also available (all 3 parties)."
   },
   "adminScrimPlanningsDetail": {
     "headTitle": "{title} – Scrim grid",
@@ -6358,6 +6362,7 @@
     "confirmExtendTitle": "Extend the horizon?",
     "confirmExtendSubtitle": "The availability window will be extended by one week and the reminder will be re-armed.",
     "extendConfirm": "Extend",
-    "extended": "Horizon extended by one week."
+    "extended": "Horizon extended by one week.",
+    "staffRequiredBadge": "Staff required"
   }
 }

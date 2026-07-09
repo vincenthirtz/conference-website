@@ -595,6 +595,29 @@ function AdminDemandeDetailPage() {
                 )}
               </div>
 
+              {/* Passer en grille de dispo (P4-14) : ouvre le flux de création
+                  d'une grille « When2Meet » préremplie avec les deux équipes,
+                  liée à cette négociation (source_demande_id). */}
+              {payload.from_team_id && demande.team_id && (
+                <div className="mt-4">
+                  <Link
+                    href={{
+                      pathname: '/admin/scrims',
+                      query: {
+                        tab: 'plannings',
+                        new: '1',
+                        team1: payload.from_team_id,
+                        team2: demande.team_id,
+                        fromDemande: demande.id,
+                      },
+                    }}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600/90 hover:bg-emerald-500 text-sm font-medium"
+                  >
+                    {t.createPlanningGrid}
+                  </Link>
+                </div>
+              )}
+
               {payload.forwarded_from && (
                 <div className="mt-4 rounded-lg bg-neutral-900/60 border border-neutral-700 px-3 py-2 text-xs text-neutral-400">
                   {t.forwardedFromPrefix}

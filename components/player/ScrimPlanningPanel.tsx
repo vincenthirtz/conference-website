@@ -72,6 +72,7 @@ export default function ScrimPlanningPanel({
     Array.isArray(mySlots) ? mySlots : []
   );
   const [saving, setSaving] = useState(false);
+  const [loadingSuggest, setLoadingSuggest] = useState(false);
   const [mode, setMode] = useState<'paint' | 'heatmap'>('paint');
   const [view, setView] = useState<'grid' | 'calendar'>('calendar');
   // Fuseau du visiteur (client-only pour éviter un mismatch SSR).
@@ -138,6 +139,32 @@ export default function ScrimPlanningPanel({
   const copyFirstDay = () =>
     setSlots(copyFirstPaintedDayAcrossHorizon(config, slots));
   const clearAll = () => setSlots([]);
+
+  // Reprendre mes dispos habituelles (P4-12) : rejoue les derniers créneaux
+  // peints par l'appelant sur une autre grille, remontés par l'API.
+  const reuseUsual = async () => {
+    if (loadingSuggest) return;
+    setLoadingSuggest(true);
+    try {
+      const res = await fetch(
+        `/api/teams/scrim-plannings/${planning.id}/suggest`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || t.reuseError);
+      const suggested: string[] = Array.isArray(data?.slots) ? data.slots : [];
+      if (suggested.length === 0) {
+        addToast(t.reuseNone, 'info');
+        return;
+      }
+      setSlots(suggested);
+      addToast(t.reuseApplied, 'success');
+    } catch (err) {
+      addToast((err as Error).message || t.reuseError, 'error');
+    } finally {
+      setLoadingSuggest(false);
+    }
+  };
 
   // Ajouter le scrim validé à mon agenda (.ics, P3-10).
   const addToCalendar = () => {
@@ -237,6 +264,13 @@ export default function ScrimPlanningPanel({
           {partyLabel}
         </span>
       </div>
+
+      {/* Staff requis pour ce scrim (P4-12) */}
+      {planning.staff_required && (
+        <p className="mb-3 text-xs text-purple-200/80">
+          {t.staffRequiredNote}
+        </p>
+      )}
 
       {/* Fuseau de référence (P3-11) */}
       <p className="mb-3 text-xs text-gray-500">
@@ -375,6 +409,14 @@ export default function ScrimPlanningPanel({
           </button>
           <button
             type="button"
+            onClick={reuseUsual}
+            disabled={loadingSuggest}
+            className="rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-medium text-gray-200 hover:bg-white/10 disabled:opacity-40 transition"
+          >
+            {t.quickReuse}
+          </button>
+          <button
+            type="button"
             onClick={clearAll}
             disabled={slots.length === 0}
             className="rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-medium text-gray-300 hover:bg-red-500/15 hover:text-red-200 hover:border-red-500/40 disabled:opacity-40 transition"
@@ -393,6 +435,7 @@ export default function ScrimPlanningPanel({
           value={slots}
           onChange={setSlots}
           heatmap={gridHeatmap}
+          requireStaff={planning.staff_required}
           disabled={readOnly && effectiveMode === 'paint'}
         />
       ) : (
@@ -404,6 +447,7 @@ export default function ScrimPlanningPanel({
           value={slots}
           onChange={setSlots}
           heatmap={gridHeatmap}
+          requireStaff={planning.staff_required}
           disabled={readOnly && effectiveMode === 'paint'}
         />
       )}

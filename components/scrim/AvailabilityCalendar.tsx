@@ -47,6 +47,8 @@ export type AvailabilityCalendarProps = {
   onSlotClick?: (slotKey: string) => void;
   selectedSlot?: string | null;
   disabled?: boolean;
+  /** Session `staff_required` : planifiable seulement avec le staff. */
+  requireStaff?: boolean;
 };
 
 const HOUR_PX = 48; // hauteur d'une heure pleine
@@ -118,6 +120,7 @@ export default function AvailabilityCalendar({
   onSlotClick,
   selectedSlot,
   disabled = false,
+  requireStaff = false,
 }: AvailabilityCalendarProps) {
   const allDays = useMemo(() => horizonDates(config), [config]);
   const rows = useMemo(() => slotMinutesOfDay(config), [config]);
@@ -367,7 +370,7 @@ export default function AvailabilityCalendar({
                                 ? 'ring-2 ring-emerald-300'
                                 : ''
                             } ${clickable ? 'cursor-pointer hover:brightness-125' : ''} ${
-                              isSlotValidatable(cell)
+                              isSlotValidatable(cell, requireStaff)
                                 ? 'border-b-2 border-emerald-200/70'
                                 : ''
                             }`}
