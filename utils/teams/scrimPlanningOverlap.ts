@@ -8,10 +8,12 @@
 // vient de la config de session ; les valeurs peintes sont des instants absolus.
 //
 // La bande horaire (day_start_min → day_end_min) et les jours sont interprétés
-// dans le fuseau `timezone` de la session, puis convertis en instant UTC. Le
-// calcul d'offset s'appuie sur Intl.DateTimeFormat (robuste, indépendant du
-// fuseau de la machine, gère le DST). Le client génère ses cellules avec les
-// mêmes helpers → les slots peints tombent exactement sur les clés valides.
+// dans le fuseau `timezone` de la session, puis convertis en instant UTC via
+// `getTimeZoneOffsetMs` (Intl.DateTimeFormat, robuste au fuseau machine, gère
+// le DST). Le client génère ses cellules avec les mêmes helpers → les slots
+// peints tombent exactement sur les clés valides.
+
+import { getTimeZoneOffsetMs } from '@/utils/timezone';
 
 export const PLANNING_PARTIES = ['team1', 'team2', 'staff'] as const;
 export type PlanningParty = (typeof PLANNING_PARTIES)[number];
@@ -82,38 +84,6 @@ export function slotMinutesOfDay(cfg: PlanningConfig): number[] {
   return out;
 }
 
-/**
- * Décalage (ms) entre le fuseau `timeZone` et UTC à l'instant `date` :
- * offset = (heure-murale dans timeZone) − (heure UTC). Ex. +7 200 000 pour
- * Europe/Paris en été. Basé sur Intl (indépendant du fuseau de la machine).
- */
-function tzOffsetMs(date: Date, timeZone: string): number {
-  const dtf = new Intl.DateTimeFormat('en-US', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-  });
-  const parts = dtf.formatToParts(date);
-  const get = (t: string) =>
-    parseInt(parts.find((p) => p.type === t)?.value ?? '0', 10);
-  let hour = get('hour');
-  if (hour === 24) hour = 0; // certains runtimes rendent minuit en « 24 »
-  const asUTC = Date.UTC(
-    get('year'),
-    get('month') - 1,
-    get('day'),
-    hour,
-    get('minute'),
-    get('second')
-  );
-  return asUTC - date.getTime();
-}
-
 /** Clé ISO (UTC) d'une cellule (jour + minute-de-jour) dans le fuseau de session. */
 export function slotKey(
   cfg: PlanningConfig,
@@ -126,9 +96,9 @@ export function slotKey(
   // Traite d'abord l'heure murale comme si elle était UTC, puis corrige de
   // l'offset du fuseau à cet instant. Deuxième passe pour les bascules DST.
   const guess = Date.UTC(y, mo - 1, d, hour, minute);
-  const off1 = tzOffsetMs(new Date(guess), cfg.timezone);
+  const off1 = getTimeZoneOffsetMs(new Date(guess), cfg.timezone);
   let utc = guess - off1;
-  const off2 = tzOffsetMs(new Date(utc), cfg.timezone);
+  const off2 = getTimeZoneOffsetMs(new Date(utc), cfg.timezone);
   if (off2 !== off1) utc = guess - off2;
   return new Date(utc).toISOString();
 }

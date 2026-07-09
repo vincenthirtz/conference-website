@@ -111,29 +111,44 @@ describe('localInputToUTC', () => {
     expect(result).toContain('Z');
   });
 
-  it('converts with explicit timezone and returns a valid ISO string', () => {
-    const result = localInputToUTC('2026-03-15T14:00', 'Europe/Paris');
-    expect(result).not.toBeNull();
-    expect(result!).toContain('Z');
-    // The result should be a valid ISO date
-    const date = new Date(result!);
-    expect(isNaN(date.getTime())).toBe(false);
+  it('converts with explicit timezone to the EXACT UTC instant (hiver, UTC+1)', () => {
+    // Paris en mars (avant le passage à l'heure d'été) = UTC+1.
+    // 14:00 Paris ⇒ 13:00Z. Doit être exact, indépendamment du fuseau machine.
+    expect(localInputToUTC('2026-03-15T14:00', 'Europe/Paris')).toBe(
+      '2026-03-15T13:00:00.000Z'
+    );
+  });
+
+  it('convertit exactement en été (Paris UTC+2)', () => {
+    expect(localInputToUTC('2026-06-15T14:00', 'Europe/Paris')).toBe(
+      '2026-06-15T12:00:00.000Z'
+    );
+  });
+
+  it('gère un fuseau sans DST (Tokyo UTC+9)', () => {
+    expect(localInputToUTC('2026-06-15T14:00', 'Asia/Tokyo')).toBe(
+      '2026-06-15T05:00:00.000Z'
+    );
   });
 
   it('different timezones produce different UTC results', () => {
     const paris = localInputToUTC('2026-06-15T14:00', 'Europe/Paris');
     const tokyo = localInputToUTC('2026-06-15T14:00', 'Asia/Tokyo');
-    expect(paris).not.toBeNull();
-    expect(tokyo).not.toBeNull();
-    // Paris (UTC+2 summer) and Tokyo (UTC+9) should give different UTC times
     expect(paris).not.toBe(tokyo);
   });
 
-  it('handles UTC timezone', () => {
-    const result = localInputToUTC('2026-03-15T14:00', 'UTC');
-    expect(result).not.toBeNull();
-    const date = new Date(result!);
-    expect(isNaN(date.getTime())).toBe(false);
+  it('gère la bascule DST (nuit du passage à l\'heure d\'été à Paris)', () => {
+    // 2026 : le passage été a lieu le 29 mars à 02:00 → 03:00. Un créneau à 03:30
+    // ce jour-là est déjà en UTC+2 ⇒ 01:30Z.
+    expect(localInputToUTC('2026-03-29T03:30', 'Europe/Paris')).toBe(
+      '2026-03-29T01:30:00.000Z'
+    );
+  });
+
+  it('handles UTC timezone à l\'identique', () => {
+    expect(localInputToUTC('2026-03-15T14:00', 'UTC')).toBe(
+      '2026-03-15T14:00:00.000Z'
+    );
   });
 
   it('falls back gracefully for malformed input with timezone', () => {

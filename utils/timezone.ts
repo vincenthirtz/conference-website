@@ -118,6 +118,40 @@ function getTimezoneAbbr(date: Date, timezone: string): string {
 }
 
 /**
+ * Décalage (ms) entre le fuseau `timeZone` et UTC à l'instant `date` :
+ * offset = (heure-murale dans timeZone) − (heure UTC). Ex. +7 200 000 pour
+ * Europe/Paris en été. Basé sur Intl.DateTimeFormat#formatToParts, donc
+ * INDÉPENDANT du fuseau de la machine (contrairement à `Date#toLocaleString`
+ * reparsé par `new Date(...)`, qui interprète dans le fuseau local du runtime).
+ */
+export function getTimeZoneOffsetMs(date: Date, timeZone: string): number {
+  const dtf = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
+  const parts = dtf.formatToParts(date);
+  const get = (t: string) =>
+    parseInt(parts.find((p) => p.type === t)?.value ?? '0', 10);
+  let hour = get('hour');
+  if (hour === 24) hour = 0; // certains runtimes rendent minuit en « 24 »
+  const asUTC = Date.UTC(
+    get('year'),
+    get('month') - 1,
+    get('day'),
+    hour,
+    get('minute'),
+    get('second')
+  );
+  return asUTC - date.getTime();
+}
+
+/**
  * Convertit une valeur datetime-local (sans timezone) en ISO UTC,
  * en interpretant la saisie comme étant dans le fuseau du tournoi.
  *
@@ -136,45 +170,29 @@ export function localInputToUTC(
   }
 
   try {
-    // Créer un formatteur pour le timezone cible afin de calculer l'offset
-    // On parse la date comme si c'était dans le timezone donné
-    const parts = localValue.match(/(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+    const parts = localValue.match(
+      /(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?/
+    );
     if (!parts) return new Date(localValue).toISOString();
 
-    const [, year, month, day, hour, minute] = parts;
+    const [, year, month, day, hour, minute, second] = parts;
 
-    // Utiliser Intl pour trouver l'offset UTC du timezone cible à cette date
-    const formatter = new Intl.DateTimeFormat('en-US', {
-      timeZone: timezone,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false,
-    });
-
-    // Approche itérative : créer une date UTC initiale, puis ajuster
-    const utcGuess = new Date(
-      Date.UTC(
-        parseInt(year),
-        parseInt(month) - 1,
-        parseInt(day),
-        parseInt(hour),
-        parseInt(minute)
-      )
+    // Traite d'abord l'heure murale comme si elle était UTC, puis corrige de
+    // l'offset du fuseau à cet instant. Deuxième passe pour les bascules DST
+    // (l'offset au « guess » peut différer de l'offset à l'instant réel).
+    const guess = Date.UTC(
+      parseInt(year),
+      parseInt(month) - 1,
+      parseInt(day),
+      parseInt(hour),
+      parseInt(minute),
+      second ? parseInt(second) : 0
     );
-
-    // Voir quelle heure ce UTC donne dans le timezone cible
-    const inTz = new Date(
-      utcGuess.toLocaleString('en-US', { timeZone: timezone })
-    );
-    const offsetMs = inTz.getTime() - utcGuess.getTime();
-
-    // Ajuster : si dans le TZ c'est +2h par rapport à UTC, soustraire 2h
-    const corrected = new Date(utcGuess.getTime() - offsetMs);
-    return corrected.toISOString();
+    const off1 = getTimeZoneOffsetMs(new Date(guess), timezone);
+    let utc = guess - off1;
+    const off2 = getTimeZoneOffsetMs(new Date(utc), timezone);
+    if (off2 !== off1) utc = guess - off2;
+    return new Date(utc).toISOString();
   } catch {
     return new Date(localValue).toISOString();
   }
