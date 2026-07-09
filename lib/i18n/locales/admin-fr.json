@@ -6224,6 +6224,15 @@
     "tabCampaigns": "Campagnes",
     "tabNotifications": "Notifications"
   },
+  "adminAssociationHub": {
+    "pageTitle": "Admin – Association",
+    "heading": "Association",
+    "subtitle": "Casteuses, pôles de l'asso et adhérents.",
+    "tabsAriaLabel": "Sections de l'association",
+    "tabCast": "Casteuses",
+    "tabPoles": "Pôles de l'asso",
+    "tabAdherents": "Adhérents"
+  },
   "adminOnboarding": {
     "pageTitle": "Admin – Onboarding",
     "heading": "Onboarding",

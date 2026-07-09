@@ -394,12 +394,16 @@ export const ADMIN_NAV: AdminNavNode[] = [
   },
   {
     // Section « Staff & Asso » : REGROUPEMENT de navigation des écrans
-    // « People/Staff » auparavant dispersés entre Contenu (Casteuses, Pôles)
-    // et Configuration (Utilisateurs, Adhérents). Aucune page fusionnée, aucun
-    // shim : routes et rôles INCHANGÉS — pur regroupement de menu. Les quatre
-    // domaines sont tous admin-gated, d'où un conteneur admin homogène. La carte
-    // dashboard « Gérer les utilisateurs » (order 9) suit son nœud et reste
-    // rendue (collectAdminNavCards parcourt tout l'arbre).
+    // « People/Staff » auparavant dispersés entre Contenu (Casteuses, Pôles) et
+    // Configuration (Utilisateurs, Adhérents). Les trois ex-listes Casteuses,
+    // Pôles de l'asso et Adhérents sont désormais FUSIONNÉES dans le hub à
+    // onglets /admin/association?tab=cast|poles|adherents. Comme pour les fusions
+    // Modération / Communication / Partenaires, une SEULE entrée top-bar
+    // « Association » pointe vers le hub ; les onglets se découvrent sur la page.
+    // Les trois domaines sont admin-gated, d'où un host admin homogène (pas de
+    // re-gate par onglet). Les éditeurs (adherents/new, cast/pole new + [id])
+    // restent des routes à part : l'entrée « Ajouter un adhérent » est conservée.
+    // La carte dashboard « Gérer les utilisateurs » (order 9) suit son nœud.
     id: 'staff-asso',
     topBarLabel: 'Staff & Asso',
     href: '',
@@ -425,36 +429,16 @@ export const ADMIN_NAV: AdminNavNode[] = [
         minRole: 'admin',
       },
       {
-        id: 'cast-members',
-        topBarLabel: 'Casteuses',
-        href: '/admin/cast-members',
+        id: 'association',
+        topBarLabel: 'Association',
+        href: '/admin/association',
         minRole: 'admin',
       },
       {
-        id: 'pole-members',
-        topBarLabel: 'Pôles de l’asso',
-        href: '/admin/pole-members',
+        id: 'adherents-new',
+        topBarLabel: 'Ajouter un adhérent',
+        href: '/admin/adherents/new',
         minRole: 'admin',
-      },
-      {
-        id: 'adherents',
-        topBarLabel: 'Adhérents',
-        href: '',
-        minRole: 'admin',
-        children: [
-          {
-            id: 'adherents-list',
-            topBarLabel: 'Liste des adhérents',
-            href: '/admin/adherents',
-            minRole: 'admin',
-          },
-          {
-            id: 'adherents-new',
-            topBarLabel: 'Ajouter un adhérent',
-            href: '/admin/adherents/new',
-            minRole: 'admin',
-          },
-        ],
       },
     ],
   },

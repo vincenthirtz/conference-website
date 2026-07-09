@@ -118,24 +118,24 @@ describe('filterAdminLinks – owner role', () => {
     expect(hub?.children ?? []).toEqual([]);
   });
 
-  it('groups People/Staff (Utilisateurs, Casteuses, Pôles, Adhérents) sous "Staff & Asso"', () => {
-    // Points ouverts : regroupement de navigation (routes/rôles inchangés) des
-    // écrans auparavant dispersés entre Contenu et Configuration.
+  it('collapses Casteuses, Pôles et Adhérents into the "Association" hub sous "Staff & Asso"', () => {
+    // Les trois ex-listes (Casteuses, Pôles de l'asso, Adhérents) sont
+    // désormais fusionnées dans le hub à onglets /admin/association. Une seule
+    // entrée « Association » y pointe ; les entrées Utilisateurs et l'éditeur
+    // « Ajouter un adhérent » restent des routes à part.
     const staff = findByTitle(links, 'Staff & Asso');
     expect(staff).toBeDefined();
     const childTitles = staff?.children?.map((c) => c.title) ?? [];
     expect(childTitles).toEqual([
       'Gérer les utilisateurs',
       'Créer un utilisateur',
-      'Casteuses',
-      'Pôles de l’asso',
-      'Adhérents',
-    ]);
-    const adherents = staff?.children?.find((c) => c.title === 'Adhérents');
-    expect(adherents?.children?.map((c) => c.title)).toEqual([
-      'Liste des adhérents',
+      'Association',
       'Ajouter un adhérent',
     ]);
+    const hub = staff?.children?.find((c) => c.title === 'Association');
+    expect(hub?.ref).toBe('/admin/association');
+    // Leaf hub entry: no sub-menu (the tabs are discovered on the page).
+    expect(hub?.children ?? []).toEqual([]);
   });
 });
 

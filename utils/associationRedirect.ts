@@ -1,0 +1,32 @@
+import type { GetServerSidePropsResult } from 'next';
+import type { ParsedUrlQuery } from 'querystring';
+
+/**
+ * Builds a permanent (308) redirect to the merged /admin/association hub for the
+ * three legacy list routes (cast-members, pole-members, adherents). Any incoming
+ * query params are preserved (e.g. `search`, `pole`, `paymentStatus`, `offset`),
+ * and the `tab` param is forced to the target tab. Array-valued params keep their
+ * first value — enough for the deep-links these pages actually receive. The
+ * `new`/`[id]` routes are NOT shimmed (they remain standalone).
+ */
+export function associationRedirect(
+  tab: 'cast' | 'poles' | 'adherents',
+  query: ParsedUrlQuery
+): GetServerSidePropsResult<never> {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (key === 'tab') continue; // forced below
+    if (Array.isArray(value)) {
+      if (value[0] !== undefined) params.set(key, value[0]);
+    } else if (value !== undefined) {
+      params.set(key, value);
+    }
+  }
+  params.set('tab', tab);
+  return {
+    redirect: {
+      destination: `/admin/association?${params.toString()}`,
+      permanent: true,
+    },
+  };
+}
