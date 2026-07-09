@@ -37,6 +37,7 @@ type TeamRow = {
   country: string | null;
   description: string | null;
   is_joinable?: boolean;
+  open_for_scrim?: boolean;
 };
 
 type MemberRow = {
@@ -170,7 +171,7 @@ async function loadTeamAndMembers(
     const { data: teamRowRaw, error: teamErr } = await supabaseAdmin
       .from('teams')
       .select(
-        'id, slug, name, short_name, logo_url, country, description, is_joinable'
+        'id, slug, name, short_name, logo_url, country, description, is_joinable, open_for_scrim'
       )
       .eq('id', teamId)
       .eq('tenant_id', tenantId)

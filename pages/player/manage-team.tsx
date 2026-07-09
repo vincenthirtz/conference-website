@@ -35,6 +35,7 @@ type TeamInfo = {
   country: string | null;
   description: string | null;
   is_joinable?: boolean;
+  open_for_scrim?: boolean;
 };
 
 type JoinRequest = {
@@ -148,6 +149,29 @@ export default function ManageTeamPage() {
       );
       void reloadTeam();
       showSuccess(data.is_joinable ? t.recruitmentOpen : t.recruitmentClosed);
+    } catch (err: unknown) {
+      setError((err as Error).message);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleToggleScrimOpen = async () => {
+    setActionLoading('scrim-open');
+    setError(null);
+    try {
+      const data = await adminFetchJson<{ open_for_scrim: boolean }>(
+        '/api/teams/toggle-scrim-open',
+        {
+          method: 'POST',
+          body: JSON.stringify({ open: !team?.open_for_scrim }),
+        }
+      );
+      setTeam((prev) =>
+        prev ? { ...prev, open_for_scrim: data.open_for_scrim } : prev
+      );
+      void reloadTeam();
+      showSuccess(data.open_for_scrim ? t.scrimOpenOn : t.scrimOpenOff);
     } catch (err: unknown) {
       setError((err as Error).message);
     } finally {
@@ -362,6 +386,30 @@ export default function ManageTeamPage() {
                 <span
                   className={`absolute top-1 w-5 h-5 rounded-full bg-white transition-transform ${
                     team.is_joinable ? 'left-6' : 'left-1'
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+
+          {/* Scrims toggle */}
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6 mb-6">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-semibold">{t.scrimOpenLabel}</h2>
+                <p className="text-sm text-gray-400 mt-1">{t.scrimOpenHelp}</p>
+              </div>
+              <button
+                onClick={handleToggleScrimOpen}
+                disabled={actionLoading === 'scrim-open'}
+                aria-label={t.scrimOpenLabel}
+                className={`relative w-12 h-7 rounded-full transition-colors flex-shrink-0 ${
+                  team.open_for_scrim ? 'bg-emerald-500' : 'bg-gray-600'
+                } ${actionLoading === 'scrim-open' ? 'opacity-50' : ''}`}
+              >
+                <span
+                  className={`absolute top-1 w-5 h-5 rounded-full bg-white transition-transform ${
+                    team.open_for_scrim ? 'left-6' : 'left-1'
                   }`}
                 />
               </button>

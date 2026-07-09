@@ -19267,6 +19267,26 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /api/teams/toggle-scrim-open:
+    post:
+      tags:
+        - public/teams
+      summary: Bascule le flag open_for_scrim de l'equipe (opt-in public /scrim).
+      operationId: toggleTeamScrimOpen
+      security:
+        - PlayerBearer: []
+      responses:
+        '200':
+          description: Nouveau flag applique.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /api/teams/transfer-captain:
     patch:
       tags:

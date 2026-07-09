@@ -21,6 +21,7 @@ type ScrimTeam = {
   short_name: string | null;
   logo_url: string | null;
   country: string | null;
+  open_for_scrim: boolean | null;
 };
 
 type Props = {
@@ -34,7 +35,7 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
     // S5d: getStaticProps → DEFAULT_TENANT_ID (TODO(S7) — SSR/ISR per tenant).
     const { data } = await supabaseAdmin
       .from('teams')
-      .select('id, slug, name, short_name, logo_url, country')
+      .select('id, slug, name, short_name, logo_url, country, open_for_scrim')
       .eq('tenant_id', DEFAULT_TENANT_ID)
       .eq('is_active', true)
       .order('name', { ascending: true });
@@ -62,6 +63,7 @@ function initials(name: string): string {
 function ScrimPage({ teams }: Props) {
   const t = useT('scrimLanding');
   const steps = getSteps(t);
+  const openTeams = teams.filter((team) => team.open_for_scrim === true);
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
       <main className="container mx-auto max-w-5xl px-4 pt-24 pb-16">
@@ -97,6 +99,56 @@ function ScrimPage({ teams }: Props) {
               <p className="text-sm text-gray-400">{step.body}</p>
             </div>
           ))}
+        </section>
+
+        <section className="mb-12">
+          <div className="rounded-2xl border border-[var(--color-green)]/40 bg-[var(--color-green)]/[0.06] p-5 sm:p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="w-2 h-2 rounded-full bg-[var(--color-green-light)] animate-pulse" />
+              <Heading typeStyle="heading-sm" className="text-white">
+                {t.openTeamsHeading}
+              </Heading>
+            </div>
+
+            {openTeams.length === 0 ? (
+              <Paragraph typeStyle="body-sm" textColor="text-gray-400">
+                {t.openTeamsEmpty}
+              </Paragraph>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {openTeams.map((team) => (
+                  <Link
+                    key={team.id}
+                    href={`/team/${encodeURIComponent(team.slug || team.id)}`}
+                  >
+                    <div className="group flex items-center gap-3 rounded-2xl border border-[var(--color-green)]/40 bg-black/40 p-4 hover:border-[var(--color-green)]/70 hover:bg-[var(--color-green)]/10 transition-colors h-full">
+                      {team.logo_url ? (
+                        <Image
+                          src={team.logo_url}
+                          alt=""
+                          width={48}
+                          height={48}
+                          className="w-12 h-12 rounded-xl object-cover border border-white/10 flex-shrink-0"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-neutral-800 to-neutral-900 border border-white/10 flex items-center justify-center text-sm font-semibold text-neutral-400 flex-shrink-0">
+                          {initials(team.short_name || team.name)}
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold text-white truncate group-hover:text-[var(--color-green-light)]">
+                          {team.name}
+                        </p>
+                        <span className="text-xs text-[var(--color-green-light)]">
+                          {t.openTeamsCta} →
+                        </span>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
         </section>
 
         <section>

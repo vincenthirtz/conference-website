@@ -12,6 +12,7 @@ import { invalidateStaffCache } from '../../utils/staff';
 import siteSettingsHandler from '../../pages/api/site-settings';
 import announcementsPublicHandler from '../../pages/api/announcements/index';
 import toggleJoinableHandler from '../../pages/api/teams/toggle-joinable';
+import toggleScrimOpenHandler from '../../pages/api/teams/toggle-scrim-open';
 import partnershipRequestsHandler from '../../pages/api/admin/partnership-requests/index';
 import supportTicketsHandler from '../../pages/api/admin/support/tickets';
 
@@ -270,6 +271,64 @@ describe('POST /api/teams/toggle-joinable', () => {
     );
     expect(res.statusCode).toBe(200);
     expect((res.body as any).is_joinable).toBe(false);
+  });
+});
+
+/* -----------------------------------------------------------
+ * /api/teams/toggle-scrim-open
+ * ---------------------------------------------------------*/
+
+describe('POST /api/teams/toggle-scrim-open', () => {
+  it('401 without Bearer token', async () => {
+    const res = makeRes();
+    await toggleScrimOpenHandler(makeReq({ method: 'POST' }), res);
+    expect(res.statusCode).toBe(401);
+  });
+
+  it('403 when user is not captain', async () => {
+    setAuthUser({ id: 'user-1' });
+    store.teams = [];
+    const res = makeRes();
+    await toggleScrimOpenHandler(makeReq({ method: 'POST', body: {} }, true), res);
+    expect(res.statusCode).toBe(403);
+  });
+
+  it('200 toggles open_for_scrim when no body value provided', async () => {
+    setAuthUser({ id: 'user-1' });
+    store.teams = [
+      {
+        id: 't1',
+        captain_id: 'user-1',
+        is_active: true,
+        open_for_scrim: false,
+        name: 'A',
+      },
+    ] as any;
+    const res = makeRes();
+    await toggleScrimOpenHandler(makeReq({ method: 'POST', body: {} }, true), res);
+    expect(res.statusCode).toBe(200);
+    expect((res.body as any).open_for_scrim).toBe(true);
+    expect((store.teams[0] as any).open_for_scrim).toBe(true);
+  });
+
+  it('200 sets explicit value from body', async () => {
+    setAuthUser({ id: 'user-1' });
+    store.teams = [
+      {
+        id: 't1',
+        captain_id: 'user-1',
+        is_active: true,
+        open_for_scrim: true,
+        name: 'A',
+      },
+    ] as any;
+    const res = makeRes();
+    await toggleScrimOpenHandler(
+      makeReq({ method: 'POST', body: { open: false } }, true),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    expect((res.body as any).open_for_scrim).toBe(false);
   });
 });
 

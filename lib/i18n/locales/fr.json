@@ -495,7 +495,11 @@
     "onboardingTitle": "Invite ta première joueuse",
     "onboardingBody": "Ton roster est vide pour l'instant. Ouvre le recrutement et partage la page publique de l'équipe pour recevoir des demandes.",
     "onboardingCta": "Voir la page de l'équipe",
-    "removeConsequences": "Conséquences : perte d'éligibilité au tournoi et des messages liés."
+    "removeConsequences": "Conséquences : perte d'éligibilité au tournoi et des messages liés.",
+    "scrimOpenLabel": "Ouverte aux scrims",
+    "scrimOpenHelp": "Ton équipe apparaît publiquement sur /scrim et peut recevoir des propositions de scrim.",
+    "scrimOpenOn": "Ton équipe est visible sur la page scrims publique",
+    "scrimOpenOff": "Ton équipe est masquée de la page scrims publique"
   },
   "freePlayers": {
     "title": "Joueurs cherchant une équipe",
@@ -1297,7 +1301,10 @@
     "teamsHeading": "Nos équipes ({count})",
     "viewTournaments": "Voir les tournois →",
     "noTeams": "Aucune équipe active pour le moment.",
-    "propose": "Proposer →"
+    "propose": "Proposer →",
+    "openTeamsHeading": "Équipes ouvertes aux scrims",
+    "openTeamsEmpty": "Aucune équipe ouverte aux scrims pour le moment.",
+    "openTeamsCta": "Proposer un scrim"
   },
   "tournamentsList": {
     "badgeCompetition": "Compétition",

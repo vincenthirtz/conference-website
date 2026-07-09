@@ -495,7 +495,11 @@
     "onboardingTitle": "Invite your first player",
     "onboardingBody": "Your roster is empty for now. Open recruitment and share your team's public page to start receiving requests.",
     "onboardingCta": "View team page",
-    "removeConsequences": "Consequences: loss of tournament eligibility and related messages."
+    "removeConsequences": "Consequences: loss of tournament eligibility and related messages.",
+    "scrimOpenLabel": "Open for scrims",
+    "scrimOpenHelp": "Your team is shown publicly on /scrim and can receive scrim proposals.",
+    "scrimOpenOn": "Your team is now visible on the public scrims page",
+    "scrimOpenOff": "Your team is now hidden from the public scrims page"
   },
   "freePlayers": {
     "title": "Players looking for a team",
@@ -1297,7 +1301,10 @@
     "teamsHeading": "Our teams ({count})",
     "viewTournaments": "See the tournaments →",
     "noTeams": "No active team at the moment.",
-    "propose": "Propose →"
+    "propose": "Propose →",
+    "openTeamsHeading": "Teams open for scrims",
+    "openTeamsEmpty": "No team is open for scrims at the moment.",
+    "openTeamsCta": "Propose a scrim"
   },
   "tournamentsList": {
     "badgeCompetition": "Competition",
