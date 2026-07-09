@@ -153,6 +153,7 @@ export type Scrim = {
   description: string | null;
   stream_url: string | null;
   source_demande_id: string | null;
+  source_planning_id: string | null;
   created_at: string;
   updated_at: string | null;
 };
@@ -166,6 +167,67 @@ export type ScrimSummary = {
   scheduled_date: string | null;
   team1_id: string | null;
   team2_id: string | null;
+};
+
+/* -----------------------------------------------------------
+ * Scrim planning (grille de disponibilités partagée)
+ * ---------------------------------------------------------*/
+
+export type ScrimPlanningStatus =
+  | 'open'
+  | 'validated'
+  | 'cancelled'
+  | 'closed';
+
+/** Une partie qui peint la grille : les deux équipes ou le staff. */
+export type ScrimPlanningParty = 'team1' | 'team2' | 'staff';
+
+export type ScrimPlanning = {
+  id: string;
+  tenant_id: string | null;
+  created_by: string | null;
+  team1_id: string;
+  team2_id: string;
+  source_demande_id: string | null;
+  scrim_id: string | null;
+  title: string | null;
+  game: string | null;
+  status: ScrimPlanningStatus | string;
+  horizon_start: string; // 'YYYY-MM-DD'
+  horizon_days: number;
+  slot_minutes: number;
+  day_start_min: number;
+  day_end_min: number;
+  timezone: string;
+  validated_slot: string | null;
+  is_public: boolean;
+  created_at: string;
+  updated_at: string | null;
+  deleted_at: string | null;
+};
+
+export type ScrimPlanningAvailability = {
+  id: string;
+  planning_id: string;
+  party: ScrimPlanningParty;
+  user_id: string;
+  display_name: string | null;
+  slots: string[];
+  updated_at: string | null;
+};
+
+/** Vue liste allégée (admin + espace capitaine). */
+export type ScrimPlanningSummary = {
+  id: string;
+  title: string | null;
+  game: string | null;
+  status: ScrimPlanningStatus | string;
+  team1_id: string;
+  team2_id: string;
+  horizon_start: string;
+  horizon_days: number;
+  validated_slot: string | null;
+  scrim_id: string | null;
 };
 
 /* -----------------------------------------------------------

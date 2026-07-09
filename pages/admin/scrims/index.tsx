@@ -138,13 +138,21 @@ function AdminScrimsPage(_props: StaffProps) {
               </h1>
               <p className="text-neutral-400 text-sm mt-1">{t.subtitle}</p>
             </div>
-            <button
-              type="button"
-              onClick={() => setModalOpen(true)}
-              className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors"
-            >
-              {t.newScrim}
-            </button>
+            <div className="flex flex-wrap gap-2">
+              <Link
+                href="/admin/scrims/plannings"
+                className="px-4 py-2.5 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
+              >
+                {t.planGrid}
+              </Link>
+              <button
+                type="button"
+                onClick={() => setModalOpen(true)}
+                className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors"
+              >
+                {t.newScrim}
+              </button>
+            </div>
           </div>
 
           <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-4 mb-6 flex gap-3 items-end">

@@ -25,6 +25,9 @@ const FULLY_OPAQUE_TABLES = [
   'team_members',
   'staff',
   'tournament_stages',
+  // Scrim planning (grille de dispos) : default-deny, tout passe par l'API.
+  'scrim_plannings',
+  'scrim_planning_availabilities',
 ] as const;
 
 // Tables avec policy SELECT publique conditionnelle (cf. migration).

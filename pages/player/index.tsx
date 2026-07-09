@@ -15,6 +15,7 @@ import QuickAction, {
 import NextMatchCard from '@/components/player/NextMatchCard';
 import { PlayerDashboardSkeleton } from '@/components/player/Skeletons';
 import ScrimSlotPicker from '@/components/player/ScrimSlotPicker';
+import ScrimPlanningsDashboardCard from '@/components/player/ScrimPlanningsDashboardCard';
 import SupportAssoCard from '@/components/player/SupportAssoCard';
 import PushOptIn from '@/components/shared/PushOptIn';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
@@ -290,7 +291,7 @@ function PlayerDashboard() {
   // not yet present in the typed locale.
   const tr = t as unknown as Record<string, string>;
   const locale = useLocale();
-  const { user, loading: authLoading, ready } = usePlayerSession();
+  const { user, token, loading: authLoading, ready } = usePlayerSession();
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
   const [loading, setLoading] = useState(true);
   const [team, setTeam] = useState<TeamInfo>(null);
@@ -841,6 +842,9 @@ function PlayerDashboard() {
               </div>
             </div>
           )}
+
+          {/* Grilles de dispo (scrim plannings ouverts) — s'auto-masque si vide */}
+          <ScrimPlanningsDashboardCard token={token} />
 
           <DemandesHistory demandes={demandes} onCancel={handleCancelDemande} />
 

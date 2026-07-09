@@ -12397,6 +12397,203 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /api/admin/scrim-plannings:
+    get:
+      summary: List scrim planning sessions (shared availability grids).
+      operationId: adminListScrimPlannings
+      tags:
+        - admin/scrims
+      security:
+        - StaffSession: []
+      responses:
+        '200':
+          description: Plannings.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      summary: Open a scrim planning session between two teams.
+      operationId: adminCreateScrimPlanning
+      tags:
+        - admin/scrims
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '201':
+          description: Planning created.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/admin/scrim-plannings/{planningId}:
+    parameters:
+      - name: planningId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Get a planning with all availabilities and the overlap heatmap.
+      operationId: adminGetScrimPlanning
+      tags:
+        - admin/scrims
+      security:
+        - StaffSession: []
+      responses:
+        '200':
+          description: Planning detail.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      summary: Update a scrim planning (title, game, status, grid config).
+      operationId: adminUpdateScrimPlanning
+      tags:
+        - admin/scrims
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      summary: Alias of PATCH — update a scrim planning.
+      operationId: adminUpdateScrimPlanningPut
+      tags:
+        - admin/scrims
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      summary: Soft-delete a scrim planning.
+      operationId: adminDeleteScrimPlanning
+      tags:
+        - admin/scrims
+      security:
+        - StaffSession: []
+      responses:
+        '200':
+          description: Deleted.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/admin/scrim-plannings/{planningId}/validate:
+    parameters:
+      - name: planningId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      summary: Validate a slot on a planning; materialises a scheduled scrim.
+      operationId: adminValidateScrimPlanning
+      tags:
+        - admin/scrims
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - slot
+              properties:
+                slot:
+                  type: string
+                  format: date-time
+      responses:
+        '201':
+          description: Scrim created and planning validated.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Planning not open.
   /api/admin/site-settings:
     get:
       summary: List site settings entries.
@@ -18699,6 +18896,98 @@ paths:
                 $ref: '#/components/schemas/Error'
         '429':
           $ref: '#/components/responses/RateLimited'
+  /api/teams/scrim-plannings:
+    get:
+      tags:
+        - public/teams
+      summary: List open scrim planning sessions visible to the caller (captain or staff).
+      operationId: listScrimPlannings
+      security:
+        - PlayerBearer: []
+      responses:
+        '200':
+          description: Open plannings with the caller's party and availability.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/teams/scrim-plannings/{planningId}:
+    parameters:
+      - name: planningId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags:
+        - public/teams
+      summary: Get a planning the caller participates in (anonymised heatmap).
+      operationId: getScrimPlanning
+      security:
+        - PlayerBearer: []
+      responses:
+        '200':
+          description: Planning, caller party, own slots, anonymised heatmap.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/teams/scrim-plannings/{planningId}/availability:
+    parameters:
+      - name: planningId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    put:
+      tags:
+        - public/teams
+      summary: Upsert the caller's painted availability on a planning grid.
+      operationId: putScrimPlanningAvailability
+      security:
+        - PlayerBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - slots
+              properties:
+                slots:
+                  type: array
+                  items:
+                    type: string
+                    format: date-time
+      responses:
+        '200':
+          description: Availability saved.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: Planning not open.
   /api/teams/scrim-requests:
     get:
       tags:
