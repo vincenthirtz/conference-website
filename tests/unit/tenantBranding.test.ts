@@ -29,6 +29,8 @@ const CONFERENCE_ID = 'ce69a726-773e-4d12-b5eb-d2503aa752b4';
 const CLUB_ID = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee';
 const PLAIN_ID = 'bbbbbbbb-cccc-4ddd-8eee-ffffffffffff';
 const ARCHIVED_ID = '99999999-9999-4999-8999-999999999999';
+const DISCOVERY_ID = 'cccccccc-dddd-4eee-8fff-000000000000';
+const EXPIRED_ID = 'dddddddd-eeee-4fff-8000-111111111111';
 
 function seedTenants() {
   store['tenants'] = [
@@ -48,6 +50,36 @@ function seedTenants() {
       logo_url: 'https://cdn.supabase.co/logos/club.png',
       primary_color: '#123abc',
       accent_color: '#ff00aa',
+      // plan payant actif → white-label accordé
+      plan: 'regie',
+      plan_status: 'active',
+      plan_expires_at: '2099-01-01T00:00:00.000Z',
+    },
+    {
+      // Custom branding MAIS palier gratuit discovery → white-label gaté → null
+      id: DISCOVERY_ID,
+      slug: 'discovery-club',
+      name: 'Discovery Club',
+      is_active: true,
+      custom_domain: 'discovery.example.com',
+      logo_url: 'https://cdn.supabase.co/logos/discovery.png',
+      primary_color: '#abcdef',
+      accent_color: '#123456',
+      plan: 'discovery',
+      plan_status: 'active',
+      plan_expires_at: null,
+    },
+    {
+      // Plan payant mais EXPIRÉ → downgrade discovery → white-label gaté → null
+      id: EXPIRED_ID,
+      slug: 'expired-club',
+      name: 'Expired Club',
+      is_active: true,
+      logo_url: 'https://cdn.supabase.co/logos/expired.png',
+      primary_color: '#abcdef',
+      plan: 'regie',
+      plan_status: 'active',
+      plan_expires_at: '2020-01-01T00:00:00.000Z',
     },
     {
       id: PLAIN_ID,
@@ -142,6 +174,14 @@ describe('readTenantBranding()', () => {
     expect(await readTenantBranding(PLAIN_ID)).toBeNull();
   });
 
+  it('gate white-label : renvoie null pour un tenant discovery malgré un branding custom', async () => {
+    expect(await readTenantBranding(DISCOVERY_ID)).toBeNull();
+  });
+
+  it('gate white-label : renvoie null pour un plan payant expiré (downgrade)', async () => {
+    expect(await readTenantBranding(EXPIRED_ID)).toBeNull();
+  });
+
   it('returns null for an inactive tenant even with a color set', async () => {
     expect(await readTenantBranding(ARCHIVED_ID)).toBeNull();
   });
@@ -156,6 +196,9 @@ describe('readTenantBranding()', () => {
         logo_url: 'javascript:alert(1)',
         primary_color: '#123abc',
         accent_color: 'red; } body { display:none }',
+        plan: 'regie',
+        plan_status: 'active',
+        plan_expires_at: '2099-01-01T00:00:00.000Z',
       },
     ];
     __resetTenantSlugCacheForTests();

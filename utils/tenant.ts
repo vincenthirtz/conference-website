@@ -60,6 +60,11 @@ import type { NextApiRequest } from 'next';
 import type { IncomingMessage } from 'http';
 import { supabaseAdmin } from './supabase';
 import { logger } from './logger';
+import {
+  tenantHasCapability,
+  type TenantPlan,
+  type PlanStatus,
+} from './billing/planFeatures';
 
 /**
  * Minimal "request-like" shape that both Next API routes (`NextApiRequest`)
@@ -629,7 +634,9 @@ export async function readTenantBranding(
   try {
     const { data, error } = await supabaseAdmin
       .from('tenants')
-      .select('name, slug, logo_url, primary_color, accent_color, is_active')
+      .select(
+        'name, slug, logo_url, primary_color, accent_color, is_active, plan, plan_status, plan_expires_at'
+      )
       .eq('id', tenantId)
       .maybeSingle();
 
@@ -648,21 +655,41 @@ export async function readTenantBranding(
       primary_color?: string | null;
       accent_color?: string | null;
       is_active?: boolean;
+      plan?: string | null;
+      plan_status?: string | null;
+      plan_expires_at?: string | null;
     } | null;
 
     if (row && row.is_active !== false) {
-      const logoUrl = sanitizeLogoUrl(row.logo_url);
-      const primaryColor = sanitizeHexColor(row.primary_color);
-      const accentColor = sanitizeHexColor(row.accent_color);
+      // Gate white-label (« Régie solidaire ») : le branding custom n'est
+      // appliqué que si le tenant a la capacité `whiteLabel`. Le palier gratuit
+      // `discovery` — et tout plan payant expiré / past_due, via effectivePlan —
+      // retombe sur la marque partagée (branding null). Le flagship `foundation`
+      // et les plans payants actifs (regie/circuit/editor) gardent le leur.
+      const canWhiteLabel = tenantHasCapability(
+        {
+          plan: (row.plan ?? 'discovery') as TenantPlan,
+          plan_status: (row.plan_status ?? 'active') as PlanStatus,
+          plan_expires_at: row.plan_expires_at ?? null,
+        },
+        'whiteLabel',
+        now
+      );
 
-      // Un override existe seulement si au moins un champ visuel est défini.
-      if (logoUrl || primaryColor || accentColor) {
-        const slug = typeof row.slug === 'string' ? row.slug : '';
-        const name =
-          typeof row.name === 'string' && row.name.trim()
-            ? row.name.trim()
-            : slug || "OW Women's Cup";
-        branding = { name, slug, logoUrl, primaryColor, accentColor };
+      if (canWhiteLabel) {
+        const logoUrl = sanitizeLogoUrl(row.logo_url);
+        const primaryColor = sanitizeHexColor(row.primary_color);
+        const accentColor = sanitizeHexColor(row.accent_color);
+
+        // Un override existe seulement si au moins un champ visuel est défini.
+        if (logoUrl || primaryColor || accentColor) {
+          const slug = typeof row.slug === 'string' ? row.slug : '';
+          const name =
+            typeof row.name === 'string' && row.name.trim()
+              ? row.name.trim()
+              : slug || "OW Women's Cup";
+          branding = { name, slug, logoUrl, primaryColor, accentColor };
+        }
       }
     }
   } catch (err) {
