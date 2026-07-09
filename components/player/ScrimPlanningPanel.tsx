@@ -16,6 +16,9 @@ import { useMemo, useState } from 'react';
 import AvailabilityGrid, {
   type AvailabilityGridLabels,
 } from '@/components/scrim/AvailabilityGrid';
+import AvailabilityCalendar, {
+  type AvailabilityCalendarLabels,
+} from '@/components/scrim/AvailabilityCalendar';
 import { useToast } from '@/components/Toast';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
@@ -65,6 +68,7 @@ export default function ScrimPlanningPanel({
   );
   const [saving, setSaving] = useState(false);
   const [mode, setMode] = useState<'paint' | 'heatmap'>('paint');
+  const [view, setView] = useState<'grid' | 'calendar'>('calendar');
 
   const config = useMemo<PlanningConfig>(
     () => ({
@@ -102,6 +106,17 @@ export default function ScrimPlanningPanel({
       empty: t.gridEmpty,
     }),
     [t]
+  );
+
+  const calendarLabels = useMemo<AvailabilityCalendarLabels>(
+    () => ({
+      ...gridLabels,
+      weekOf: t.calWeekOf,
+      prevWeek: t.calPrevWeek,
+      nextWeek: t.calNextWeek,
+      todayLabel: t.calToday,
+    }),
+    [gridLabels, t]
   );
 
   const accent = myParty === 'staff' ? 'purple' : 'blue';
@@ -201,44 +216,84 @@ export default function ScrimPlanningPanel({
         </div>
       )}
 
-      {/* Bascule paint / heatmap */}
-      {hasHeatmap && !readOnly && (
-        <div className="mb-4 inline-flex rounded-xl border border-white/10 bg-white/5 p-1 text-xs">
+      {/* Bascules : vue (agenda/grille) + mode (paint/heatmap) */}
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <div className="inline-flex rounded-xl border border-white/10 bg-white/5 p-1 text-xs">
           <button
             type="button"
-            onClick={() => setMode('paint')}
+            onClick={() => setView('calendar')}
             className={`rounded-lg px-3 py-1.5 font-medium transition ${
-              effectiveMode === 'paint'
+              view === 'calendar'
                 ? 'bg-white/15 text-white'
                 : 'text-gray-400 hover:text-white'
             }`}
           >
-            {t.modePaint}
+            {t.viewCalendar}
           </button>
           <button
             type="button"
-            onClick={() => setMode('heatmap')}
+            onClick={() => setView('grid')}
             className={`rounded-lg px-3 py-1.5 font-medium transition ${
-              effectiveMode === 'heatmap'
+              view === 'grid'
                 ? 'bg-white/15 text-white'
                 : 'text-gray-400 hover:text-white'
             }`}
           >
-            {t.modeHeatmap}
+            {t.viewGrid}
           </button>
         </div>
-      )}
 
-      <AvailabilityGrid
-        config={config}
-        mode={effectiveMode}
-        labels={gridLabels}
-        accent={effectiveMode === 'heatmap' ? 'emerald' : accent}
-        value={slots}
-        onChange={setSlots}
-        heatmap={gridHeatmap}
-        disabled={readOnly && effectiveMode === 'paint'}
-      />
+        {hasHeatmap && !readOnly && (
+          <div className="inline-flex rounded-xl border border-white/10 bg-white/5 p-1 text-xs">
+            <button
+              type="button"
+              onClick={() => setMode('paint')}
+              className={`rounded-lg px-3 py-1.5 font-medium transition ${
+                effectiveMode === 'paint'
+                  ? 'bg-white/15 text-white'
+                  : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              {t.modePaint}
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode('heatmap')}
+              className={`rounded-lg px-3 py-1.5 font-medium transition ${
+                effectiveMode === 'heatmap'
+                  ? 'bg-white/15 text-white'
+                  : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              {t.modeHeatmap}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {view === 'calendar' ? (
+        <AvailabilityCalendar
+          config={config}
+          mode={effectiveMode}
+          labels={calendarLabels}
+          accent={effectiveMode === 'heatmap' ? 'emerald' : accent}
+          value={slots}
+          onChange={setSlots}
+          heatmap={gridHeatmap}
+          disabled={readOnly && effectiveMode === 'paint'}
+        />
+      ) : (
+        <AvailabilityGrid
+          config={config}
+          mode={effectiveMode}
+          labels={gridLabels}
+          accent={effectiveMode === 'heatmap' ? 'emerald' : accent}
+          value={slots}
+          onChange={setSlots}
+          heatmap={gridHeatmap}
+          disabled={readOnly && effectiveMode === 'paint'}
+        />
+      )}
 
       {/* Pied : compteur + sauvegarde */}
       {!readOnly && effectiveMode === 'paint' && (

@@ -6332,6 +6332,12 @@
     "gridFullOverlap": "Full overlap",
     "gridPaintHint": "Click and drag to paint",
     "gridCellLabel": "Slot {when}",
-    "gridEmpty": "No availability yet."
+    "gridEmpty": "No availability yet.",
+    "viewCalendar": "Calendar",
+    "viewGrid": "Grid",
+    "calWeekOf": "Week of {date}",
+    "calPrevWeek": "Previous week",
+    "calNextWeek": "Next week",
+    "calToday": "Today"
   }
 }

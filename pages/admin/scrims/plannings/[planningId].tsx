@@ -16,6 +16,9 @@ import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import AvailabilityGrid, {
   type AvailabilityGridLabels,
 } from '@/components/scrim/AvailabilityGrid';
+import AvailabilityCalendar, {
+  type AvailabilityCalendarLabels,
+} from '@/components/scrim/AvailabilityCalendar';
 import {
   buildHeatmap,
   isSlotValidatable,
@@ -141,6 +144,19 @@ function AdminScrimPlanningDetailPage(_props: StaffProps) {
     }),
     [t]
   );
+
+  const calendarLabels: AvailabilityCalendarLabels = useMemo(
+    () => ({
+      ...gridLabels,
+      weekOf: t.calWeekOf,
+      prevWeek: t.calPrevWeek,
+      nextWeek: t.calNextWeek,
+      todayLabel: t.calToday,
+    }),
+    [gridLabels, t]
+  );
+
+  const [view, setView] = useState<'grid' | 'calendar'>('calendar');
 
   const validatableCount = useMemo(
     () =>
@@ -367,22 +383,62 @@ function AdminScrimPlanningDetailPage(_props: StaffProps) {
               </div>
             </div>
 
-            {canValidate ? (
-              <p className="text-xs text-neutral-400">{t.validateHint}</p>
-            ) : (
-              <p className="text-xs text-neutral-500">{t.readOnlyHint}</p>
-            )}
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              {canValidate ? (
+                <p className="text-xs text-neutral-400">{t.validateHint}</p>
+              ) : (
+                <p className="text-xs text-neutral-500">{t.readOnlyHint}</p>
+              )}
+              <div className="inline-flex rounded-xl border border-neutral-700 bg-neutral-900/50 p-1 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setView('calendar')}
+                  className={`rounded-lg px-3 py-1.5 font-medium transition ${
+                    view === 'calendar'
+                      ? 'bg-neutral-700 text-white'
+                      : 'text-neutral-400 hover:text-white'
+                  }`}
+                >
+                  {t.viewCalendar}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setView('grid')}
+                  className={`rounded-lg px-3 py-1.5 font-medium transition ${
+                    view === 'grid'
+                      ? 'bg-neutral-700 text-white'
+                      : 'text-neutral-400 hover:text-white'
+                  }`}
+                >
+                  {t.viewGrid}
+                </button>
+              </div>
+            </div>
 
-            <AvailabilityGrid
-              config={config}
-              mode="heatmap"
-              labels={gridLabels}
-              accent="emerald"
-              heatmap={heatmap}
-              maxParties={3}
-              onSlotClick={canValidate ? onSlotClick : undefined}
-              disabled={!canValidate || busy}
-            />
+            {view === 'calendar' ? (
+              <AvailabilityCalendar
+                config={config}
+                mode="heatmap"
+                labels={calendarLabels}
+                accent="emerald"
+                heatmap={heatmap}
+                maxParties={3}
+                onSlotClick={canValidate ? onSlotClick : undefined}
+                selectedSlot={null}
+                disabled={!canValidate || busy}
+              />
+            ) : (
+              <AvailabilityGrid
+                config={config}
+                mode="heatmap"
+                labels={gridLabels}
+                accent="emerald"
+                heatmap={heatmap}
+                maxParties={3}
+                onSlotClick={canValidate ? onSlotClick : undefined}
+                disabled={!canValidate || busy}
+              />
+            )}
           </section>
         </div>
       </div>

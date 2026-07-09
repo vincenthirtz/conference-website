@@ -3736,6 +3736,12 @@
     "dashVs": "{team1} vs {team2}",
     "dashMyParty": "Tu peins pour {party}",
     "dashOpenBadge": "Ouverte",
-    "dashUnknownTeam": "Équipe"
+    "dashUnknownTeam": "Équipe",
+    "viewCalendar": "Agenda",
+    "viewGrid": "Grille",
+    "calWeekOf": "Semaine du {date}",
+    "calPrevWeek": "Semaine précédente",
+    "calNextWeek": "Semaine suivante",
+    "calToday": "Aujourd'hui"
   }
 }

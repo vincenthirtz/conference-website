@@ -6332,6 +6332,12 @@
     "gridFullOverlap": "Overlap parfait",
     "gridPaintHint": "Clique-glisse pour peindre",
     "gridCellLabel": "Créneau {when}",
-    "gridEmpty": "Aucune disponibilité pour l'instant."
+    "gridEmpty": "Aucune disponibilité pour l'instant.",
+    "viewCalendar": "Agenda",
+    "viewGrid": "Grille",
+    "calWeekOf": "Semaine du {date}",
+    "calPrevWeek": "Semaine précédente",
+    "calNextWeek": "Semaine suivante",
+    "calToday": "Aujourd'hui"
   }
 }
