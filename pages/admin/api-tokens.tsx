@@ -16,7 +16,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import { withStaffPage } from '@/utils/staff';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
@@ -37,6 +37,8 @@ type ApiTokenRow = {
   created_at: string;
   last_used_at: string | null;
   revoked_at: string | null;
+  comp?: boolean | null;
+  comp_note?: string | null;
 };
 
 type ListResponse = { tokens: ApiTokenRow[] };
@@ -48,8 +50,21 @@ type CreateResponse = {
     token_prefix: string;
     scopes: string[];
     created_at: string;
+    comp?: boolean | null;
+    comp_note?: string | null;
   };
 };
+
+/** Détecte un refus 403 FORBIDDEN_COMP (activation d'exemption sans owner). */
+function isForbiddenComp(err: unknown): boolean {
+  return (
+    err instanceof AdminFetchError &&
+    err.status === 403 &&
+    typeof err.payload === 'object' &&
+    err.payload !== null &&
+    (err.payload as { code?: unknown }).code === 'FORBIDDEN_COMP'
+  );
+}
 
 type Props = {
   staff: {
@@ -77,7 +92,11 @@ function formatDate(s: string | null, fallback: string): string {
 export const getServerSideProps = withStaffPage('admin');
 
 function AdminApiTokensPage({ staff }: Props) {
-  void staff; // gate SSR uniquement ; pas lu côté client.
+  // Le rôle SSR est le miroir UX du gate serveur : seul un owner peut ACTIVER
+  // une exemption partenaire (comp). Défense en profondeur — l'API bloque
+  // réellement (403 FORBIDDEN_COMP), l'UI masque/désactive pour éviter le
+  // faux espoir.
+  const isOwner = staff.role === 'owner';
 
   const t = useAdminT('adminApiTokens');
   const { adminFetchJson } = useAdminFetch();
@@ -90,11 +109,14 @@ function AdminApiTokensPage({ staff }: Props) {
 
   const [name, setName] = useState('');
   const [selectedScopes, setSelectedScopes] = useState<Set<string>>(new Set());
+  const [comp, setComp] = useState(false);
+  const [compNote, setCompNote] = useState('');
   const [creating, setCreating] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
   const [revealedToken, setRevealedToken] = useState<string | null>(null);
   const [revokingId, setRevokingId] = useState<string | null>(null);
+  const [togglingCompId, setTogglingCompId] = useState<string | null>(null);
 
   const fetchTokens = useCallback(async () => {
     setLoadError(null);
@@ -137,6 +159,12 @@ function AdminApiTokensPage({ staff }: Props) {
         return;
       }
 
+      // Une exemption partenaire n'est activable qu'avec le rôle owner : on
+      // ignore la case côté client pour un non-owner (l'API refuserait de toute
+      // façon avec 403 FORBIDDEN_COMP).
+      const wantsComp = comp && isOwner;
+      const trimmedNote = compNote.trim();
+
       setCreating(true);
       try {
         const res = await mutateJson<CreateResponse>('/api/admin/api-tokens', {
@@ -144,16 +172,22 @@ function AdminApiTokensPage({ staff }: Props) {
           body: JSON.stringify({
             name: trimmedName,
             scopes: [...selectedScopes],
+            comp: wantsComp,
+            ...(wantsComp && trimmedNote ? { comp_note: trimmedNote } : {}),
           }),
         });
         addToast(t.toastCreated, 'success');
         setName('');
         setSelectedScopes(new Set());
+        setComp(false);
+        setCompNote('');
         setRevealedToken(res.token);
         await fetchTokens();
       } catch (err) {
         logger.error('[admin/api-tokens] create error', err);
-        const msg = (err as Error)?.message || t.errorCreate;
+        const msg = isForbiddenComp(err)
+          ? t.errorCompForbidden
+          : (err as Error)?.message || t.errorCreate;
         setFormError(msg);
         addToast(msg, 'error');
       } finally {
@@ -164,6 +198,9 @@ function AdminApiTokensPage({ staff }: Props) {
       creating,
       name,
       selectedScopes,
+      comp,
+      compNote,
+      isOwner,
       mutateJson,
       addToast,
       fetchTokens,
@@ -171,6 +208,7 @@ function AdminApiTokensPage({ staff }: Props) {
       t.errorScopesRequired,
       t.toastCreated,
       t.errorCreate,
+      t.errorCompForbidden,
     ]
   );
 
@@ -208,6 +246,62 @@ function AdminApiTokensPage({ staff }: Props) {
       t.confirmRevokeLabel,
       t.toastRevoked,
       t.errorRevoke,
+    ]
+  );
+
+  const handleToggleComp = useCallback(
+    async (token: ApiTokenRow) => {
+      const nextComp = !token.comp;
+
+      // Activer une exemption = bypass du modèle payant → owner requis + confirm.
+      if (nextComp) {
+        if (!isOwner) {
+          addToast(t.errorCompForbidden, 'error');
+          return;
+        }
+        const ok = await confirm({
+          title: t.confirmCompTitle,
+          subtitle: t.confirmCompSubtitle,
+          variant: 'danger',
+          confirmLabel: t.confirmCompLabel,
+        });
+        if (!ok) return;
+      }
+
+      setTogglingCompId(token.id);
+      try {
+        await mutateJson(`/api/admin/api-tokens/${token.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ comp: nextComp }),
+        });
+        addToast(
+          nextComp ? t.toastCompEnabled : t.toastCompDisabled,
+          'success'
+        );
+        await fetchTokens();
+      } catch (err) {
+        logger.error('[admin/api-tokens] toggle comp error', err);
+        const msg = isForbiddenComp(err)
+          ? t.errorCompForbidden
+          : (err as Error)?.message || t.errorComp;
+        addToast(msg, 'error');
+      } finally {
+        setTogglingCompId(null);
+      }
+    },
+    [
+      isOwner,
+      confirm,
+      mutateJson,
+      addToast,
+      fetchTokens,
+      t.errorCompForbidden,
+      t.confirmCompTitle,
+      t.confirmCompSubtitle,
+      t.confirmCompLabel,
+      t.toastCompEnabled,
+      t.toastCompDisabled,
+      t.errorComp,
     ]
   );
 
@@ -311,6 +405,65 @@ function AdminApiTokensPage({ staff }: Props) {
                 </div>
               </div>
 
+              {/* ===== Exemption partenaire (owner uniquement) ===== */}
+              <div
+                className="rounded-lg border border-amber-500/25 bg-amber-500/5 p-3"
+                data-testid="api-token-comp-section"
+              >
+                <label
+                  className={`flex items-start gap-3 ${
+                    isOwner ? 'cursor-pointer' : 'cursor-not-allowed opacity-70'
+                  }`}
+                  title={isOwner ? undefined : t.compOwnerOnly}
+                >
+                  <input
+                    type="checkbox"
+                    checked={comp}
+                    disabled={!isOwner}
+                    onChange={(e) => setComp(e.target.checked)}
+                    className="mt-0.5 w-4 h-4 rounded border-neutral-600 bg-neutral-900 text-amber-500 focus:ring-amber-500/50 disabled:cursor-not-allowed"
+                    data-testid="api-token-comp-checkbox"
+                  />
+                  <span>
+                    <span className="block text-sm font-medium text-amber-200">
+                      {t.compLabel}
+                    </span>
+                    <span className="block text-xs text-neutral-400 mt-0.5">
+                      {t.compHint}
+                    </span>
+                    {!isOwner && (
+                      <span
+                        className="block text-xs text-amber-400/80 mt-1"
+                        data-testid="api-token-comp-owner-hint"
+                      >
+                        {t.compOwnerOnly}
+                      </span>
+                    )}
+                  </span>
+                </label>
+
+                {isOwner && comp && (
+                  <div className="mt-3">
+                    <label
+                      htmlFor="api-token-comp-note"
+                      className="block text-xs text-neutral-400 mb-1"
+                    >
+                      {t.compNoteLabel}
+                    </label>
+                    <input
+                      id="api-token-comp-note"
+                      type="text"
+                      value={compNote}
+                      onChange={(e) => setCompNote(e.target.value)}
+                      placeholder={t.compNotePlaceholder}
+                      maxLength={500}
+                      className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm"
+                      data-testid="api-token-comp-note-input"
+                    />
+                  </div>
+                )}
+              </div>
+
               <div className="flex justify-end">
                 <button
                   type="submit"
@@ -372,7 +525,18 @@ function AdminApiTokensPage({ staff }: Props) {
                           data-testid={`api-token-row-${token.id}`}
                         >
                           <td className="px-6 py-4 font-medium text-white">
-                            {token.name}
+                            <div className="flex items-center gap-2">
+                              <span>{token.name}</span>
+                              {token.comp && (
+                                <span
+                                  className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-500/15 text-amber-300 border border-amber-500/30 whitespace-nowrap"
+                                  title={token.comp_note || undefined}
+                                  data-testid={`api-token-comp-badge-${token.id}`}
+                                >
+                                  {t.badgePartner}
+                                </span>
+                              )}
+                            </div>
                           </td>
                           <td className="px-6 py-4">
                             <code className="text-xs font-mono text-neutral-300">
@@ -410,17 +574,41 @@ function AdminApiTokensPage({ staff }: Props) {
                           </td>
                           <td className="px-6 py-4 text-right">
                             {!revoked && (
-                              <button
-                                type="button"
-                                onClick={() => handleRevoke(token)}
-                                disabled={revokingId === token.id}
-                                className="px-3 py-1.5 rounded-lg border border-red-500/40 text-red-300 hover:border-red-400 text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                data-testid={`api-token-revoke-btn-${token.id}`}
-                              >
-                                {revokingId === token.id
-                                  ? t.revoking
-                                  : t.revokeButton}
-                              </button>
+                              <div className="flex items-center justify-end gap-2">
+                                {/* Toggle exemption partenaire : owner peut
+                                    activer/désactiver ; un admin non-owner ne
+                                    peut que retirer une exemption existante. */}
+                                {(token.comp || isOwner) && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleToggleComp(token)}
+                                    disabled={togglingCompId === token.id}
+                                    className={`px-3 py-1.5 rounded-lg border text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                                      token.comp
+                                        ? 'border-neutral-500/40 text-neutral-300 hover:border-neutral-400'
+                                        : 'border-amber-500/40 text-amber-300 hover:border-amber-400'
+                                    }`}
+                                    data-testid={`api-token-comp-toggle-btn-${token.id}`}
+                                  >
+                                    {togglingCompId === token.id
+                                      ? t.compUpdating
+                                      : token.comp
+                                        ? t.compDisableButton
+                                        : t.compEnableButton}
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => handleRevoke(token)}
+                                  disabled={revokingId === token.id}
+                                  className="px-3 py-1.5 rounded-lg border border-red-500/40 text-red-300 hover:border-red-400 text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                  data-testid={`api-token-revoke-btn-${token.id}`}
+                                >
+                                  {revokingId === token.id
+                                    ? t.revoking
+                                    : t.revokeButton}
+                                </button>
+                              </div>
                             )}
                           </td>
                         </tr>
