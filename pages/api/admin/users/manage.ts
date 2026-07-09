@@ -98,6 +98,12 @@ async function handler(
       if (batch.length < perPage) break;
     }
 
+    // Normalize role casing IN MEMORY only (for display/sort/filter).
+    // GET is a hot read path (debounced search / pagination) and must never
+    // write: persisting the lowercase role here (updateUserById) is an audit
+    // P3 violation. The read still returns normalized roles; it just no longer
+    // rewrites them. If wrong-cased roles are actually stored in GoTrue
+    // metadata, fix them via a one-shot backfill, not on every read.
     const items: UserLite[] = allUsers.map((u) => ({
       id: u.id,
       email: u.email ?? null,
@@ -109,18 +115,6 @@ async function handler(
       last_sign_in_at: (u as { last_sign_in_at?: string | null })
         .last_sign_in_at ?? null,
     }));
-
-    // Auto-fix roles with wrong casing in user_metadata
-    for (const item of items) {
-      const raw = (
-        allUsers.find((u) => u.id === item.id)?.user_metadata as any
-      )?.role;
-      if (typeof raw === 'string' && raw !== raw.toLowerCase()) {
-        await supabaseAdmin.auth.admin.updateUserById(item.id, {
-          user_metadata: { role: raw.toLowerCase() },
-        });
-      }
-    }
 
     const userIds = items.map((u) => u.id);
     const teamMembershipsMap = new Map<string, TeamMembership[]>();

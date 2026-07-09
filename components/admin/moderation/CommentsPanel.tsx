@@ -278,6 +278,7 @@ export default function CommentsPanel() {
                     <Link
                       href={`/news/${c.news.slug || c.news.id}`}
                       target="_blank"
+                      rel="noopener noreferrer"
                       className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1 bg-neutral-800 px-2 py-1 rounded-lg"
                     >
                       <svg

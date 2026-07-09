@@ -258,6 +258,7 @@ function AdminTenantsListPage({ staff }: Props) {
           <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-4 mb-6 flex flex-wrap gap-3 items-center">
             <input
               type="text"
+              aria-label={t.searchPlaceholder}
               placeholder={t.searchPlaceholder}
               value={search}
               onChange={(e) => setSearch(e.target.value)}

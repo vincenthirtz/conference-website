@@ -138,10 +138,17 @@ function DirectorPage(_props: StaffProps) {
   }, [fetchData]);
 
   // Realtime : merge des changements dans l'etat local.
-  useEventRunRealtime({
-    enabled: !!runId,
-    runId,
-    onSegmentChange: (eventType, partial) => {
+  //
+  // Les 4 handlers sont memoises avec useCallback (deps vides : ils
+  // n'utilisent que des setters d'etat, stables). Sans ca, leur identite
+  // changerait a chaque render, ce qui ferait resouscrire les 4 canaux
+  // Supabase (removeChannel + subscribe) en boucle — cf. deps `onChange`
+  // dans useRealtimeChannel.
+  const handleSegmentChange = useCallback(
+    (
+      eventType: 'INSERT' | 'UPDATE' | 'DELETE',
+      partial: Partial<EventSegment> & { id?: string }
+    ) => {
       if (eventType === 'DELETE') {
         setSegments((prev) => prev.filter((s) => s.id !== partial.id));
         setSelectedId((prev) => (prev === partial.id ? null : prev));
@@ -164,12 +171,23 @@ function DirectorPage(_props: StaffProps) {
         return next;
       });
     },
-    onRunChange: (partial) => {
+    []
+  );
+
+  const handleRunChange = useCallback(
+    (partial: Partial<EventRun> & { id?: string }) => {
       setRun((prev) =>
         prev ? ({ ...prev, ...partial } as EventRun) : (partial as EventRun)
       );
     },
-    onWaveChange: (eventType, partial) => {
+    []
+  );
+
+  const handleWaveChange = useCallback(
+    (
+      eventType: 'INSERT' | 'UPDATE' | 'DELETE',
+      partial: Partial<EventWave> & { id?: string }
+    ) => {
       if (eventType === 'DELETE') {
         setWaves((prev) => prev.filter((w) => w.id !== partial.id));
         return;
@@ -188,7 +206,14 @@ function DirectorPage(_props: StaffProps) {
         return next;
       });
     },
-    onStationChange: (eventType, partial) => {
+    []
+  );
+
+  const handleStationChange = useCallback(
+    (
+      eventType: 'INSERT' | 'UPDATE' | 'DELETE',
+      partial: Partial<EventStation> & { id?: string }
+    ) => {
       if (eventType === 'DELETE') {
         setStations((prev) => prev.filter((s) => s.id !== partial.id));
         return;
@@ -207,6 +232,16 @@ function DirectorPage(_props: StaffProps) {
         return next;
       });
     },
+    []
+  );
+
+  useEventRunRealtime({
+    enabled: !!runId,
+    runId,
+    onSegmentChange: handleSegmentChange,
+    onRunChange: handleRunChange,
+    onWaveChange: handleWaveChange,
+    onStationChange: handleStationChange,
   });
 
   const selectedSegment = useMemo(

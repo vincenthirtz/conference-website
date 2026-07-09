@@ -1773,7 +1773,8 @@
     "errorNameRequired": "The tournament name is required.",
     "errorEndAfterStart": "The end date must be after the start date.",
     "errorCreate": "Error creating the tournament",
-    "errorCreateUnknown": "Unknown error creating the tournament"
+    "errorCreateUnknown": "Unknown error creating the tournament",
+    "errorTemplatesLoad": "Could not load custom templates."
   },
   "adminUserPlayerView": {
     "roleOwner": "Owner",

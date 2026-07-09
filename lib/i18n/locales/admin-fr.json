@@ -1773,7 +1773,8 @@
     "errorNameRequired": "Le nom du tournoi est obligatoire.",
     "errorEndAfterStart": "La date de fin doit être postérieure à la date de début.",
     "errorCreate": "Erreur lors de la création du tournoi",
-    "errorCreateUnknown": "Erreur inconnue lors de la création du tournoi"
+    "errorCreateUnknown": "Erreur inconnue lors de la création du tournoi",
+    "errorTemplatesLoad": "Impossible de charger les modèles personnalisés."
   },
   "adminUserPlayerView": {
     "roleOwner": "Owner",

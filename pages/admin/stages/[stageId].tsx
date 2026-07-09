@@ -301,39 +301,47 @@ function AdminStagePage({ staff }: StaffProps) {
       // Init advancement rules draft from settings
       setAdvancementRulesDraft(s.settings?.advancement_rules ?? null);
 
-      // Charger le tournoi parent + sibling stages
+      // Charger le tournoi parent + sibling stages. Ces deux lectures ne
+      // dependent que de tournament_id (connu apres l'etape 1) : on les lance
+      // en parallele. Chaque branche garde sa propre gestion d'erreur pour
+      // rester independante (l'une peut echouer sans casser l'autre).
       if (s.tournament_id) {
-        try {
-          const res2 = await adminFetch(
-            `/api/admin/tournament/${s.tournament_id}`
-          );
-          if (res2.ok) {
-            const json2: TournamentApiResponse = await res2.json();
-            setTournament(json2.tournament);
-          }
-        } catch (e) {
-          logger.error('fetch parent tournament error', e);
-        }
-
-        // Fetch sibling stages for advancement target dropdown
-        try {
-          const stagesRes = await adminFetch(
-            `/api/admin/tournament/${s.tournament_id}/stages`
-          );
-          if (stagesRes.ok) {
-            const stagesJson = await stagesRes.json();
-            const siblings = (stagesJson.stages || [])
-              .filter((st: any) => st.id !== s.id)
-              .map((st: any) => ({
-                id: st.id,
-                name: st.name,
-                stage_type: st.stage_type,
-              }));
-            setAdvancementSiblingStages(siblings);
-          }
-        } catch (e) {
-          logger.error('fetch sibling stages error', e);
-        }
+        await Promise.all([
+          (async () => {
+            try {
+              const res2 = await adminFetch(
+                `/api/admin/tournament/${s.tournament_id}`
+              );
+              if (res2.ok) {
+                const json2: TournamentApiResponse = await res2.json();
+                setTournament(json2.tournament);
+              }
+            } catch (e) {
+              logger.error('fetch parent tournament error', e);
+            }
+          })(),
+          (async () => {
+            // Fetch sibling stages for advancement target dropdown
+            try {
+              const stagesRes = await adminFetch(
+                `/api/admin/tournament/${s.tournament_id}/stages`
+              );
+              if (stagesRes.ok) {
+                const stagesJson = await stagesRes.json();
+                const siblings = (stagesJson.stages || [])
+                  .filter((st: any) => st.id !== s.id)
+                  .map((st: any) => ({
+                    id: st.id,
+                    name: st.name,
+                    stage_type: st.stage_type,
+                  }));
+                setAdvancementSiblingStages(siblings);
+              }
+            } catch (e) {
+              logger.error('fetch sibling stages error', e);
+            }
+          })(),
+        ]);
       }
     } catch (err: unknown) {
       setErrorMsg((err as Error)?.message ?? t.errUnexpected);

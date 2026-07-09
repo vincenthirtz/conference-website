@@ -1310,6 +1310,7 @@ function AdminTournamentPage({
                 <Link
                   href={publicUrl}
                   target="_blank"
+                  rel="noopener noreferrer"
                   className="px-4 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors flex items-center gap-2"
                 >
                   <svg
