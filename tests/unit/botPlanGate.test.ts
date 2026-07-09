@@ -5,10 +5,11 @@
 // Deux niveaux de couverture :
 //   1. Fonctions pures (utils/billing/botPlanGate.ts) : checkBotPlanCapability
 //      + loadTenantPlanStateForBot (fail-closed discovery).
-//   2. Intégration withBotRoute : une route déclare `requireCapability` ; on
-//      vérifie que foundation passe, discovery est refusé en 403 sur premium mais
-//      passe les routes basic, regie (full+arbitration) passe, et un regie expiré
-//      retombe sur discovery → 403.
+//   2. Intégration withBotRoute : baseline `discordBot` (le bot = foundation +
+//      plans payants) sur TOUTE route tenant-scopée → discovery est refusé en 403
+//      même sur une route basic ; foundation/regie passent ; un regie expiré
+//      retombe sur discovery → 403. Les routes premium (requireCapability) sont
+//      gatées en plus (mais le baseline fire avant pour un tenant sans bot).
 //
 // Le mock Supabase in-memory est réutilisé (pattern des tests bot existants) :
 // on seede une row `tenants` avec les colonnes plan + une row `tenant_secrets`
@@ -35,6 +36,7 @@ import { withBotRoute } from '../../utils/botAuth';
 import {
   checkBotPlanCapability,
   loadTenantPlanStateForBot,
+  __resetBotPlanCacheForTests,
   BOT_FALLBACK_PLAN_STATE,
 } from '../../utils/billing/botPlanGate';
 import type {
@@ -103,6 +105,7 @@ function makeRes() {
 
 beforeEach(() => {
   resetSupabaseMock();
+  __resetBotPlanCacheForTests();
   seedTenantWithPlan({
     tenantId: FOUNDATION,
     apiKey: KEY_FOUNDATION,
@@ -155,12 +158,27 @@ const regieExpiredState: TenantPlanState = {
 describe('checkBotPlanCapability()', () => {
   it('foundation satisfait toutes les capacités (null)', () => {
     for (const cap of [
+      'discordBot',
       'discordEventOps:full',
       'arbitration',
       'ratings',
     ] as const) {
       expect(checkBotPlanCapability(foundationState, cap, NOW)).toBeNull();
     }
+  });
+
+  it('discovery est refusé sur le baseline discordBot (plus de bot du tout)', () => {
+    expect(
+      checkBotPlanCapability(discoveryState, 'discordBot', NOW)
+    ).toMatchObject({
+      error: 'plan_required',
+      requiredCapability: 'discordBot',
+    });
+    // regie actif a le bot ; regie expiré retombe sur discovery → refusé.
+    expect(checkBotPlanCapability(regieState, 'discordBot', NOW)).toBeNull();
+    expect(
+      checkBotPlanCapability(regieExpiredState, 'discordBot', NOW)
+    ).toMatchObject({ error: 'plan_required' });
   });
 
   it('discovery est refusé sur toutes les capacités premium (403 shape)', () => {
@@ -265,7 +283,10 @@ describe('withBotRoute → gate PLAN premium (discordEventOps:full)', () => {
     expect(res.statusCode).toBe(200);
   });
 
-  it('discovery → 403 plan_required (requiredCapability stable)', async () => {
+  it('discovery → 403 (baseline discordBot fire AVANT le premium)', async () => {
+    // discovery n'a pas le bot du tout : le gate baseline `discordBot` refuse
+    // avant même d'évaluer `requireCapability` premium → requiredCapability =
+    // 'discordBot' (message « le bot nécessite un plan »), pas 'discordEventOps:full'.
     let called = false;
     const handler = withBotRoute((_req, res) => {
       called = true;
@@ -276,7 +297,7 @@ describe('withBotRoute → gate PLAN premium (discordEventOps:full)', () => {
     expect(res.statusCode).toBe(403);
     expect(res.body).toMatchObject({
       error: 'plan_required',
-      requiredCapability: 'discordEventOps:full',
+      requiredCapability: 'discordBot',
     });
     expect(called).toBe(false);
   });
@@ -300,7 +321,7 @@ describe('withBotRoute → gate PLAN premium (arbitration)', () => {
     expect(res.statusCode).toBe(200);
   });
 
-  it('discovery → 403 arbitration', async () => {
+  it('discovery → 403 (baseline discordBot fire avant arbitration)', async () => {
     const handler = withBotRoute((_req, res) => {
       res.status(200).json({ ok: true });
     }, ARBITRATION_OPTS);
@@ -309,31 +330,46 @@ describe('withBotRoute → gate PLAN premium (arbitration)', () => {
     expect(res.statusCode).toBe(403);
     expect(res.body).toMatchObject({
       error: 'plan_required',
-      requiredCapability: 'arbitration',
+      requiredCapability: 'discordBot',
     });
   });
 });
 
-describe('withBotRoute → endpoints BASIC restent ouverts (aucun requireCapability)', () => {
-  it('discovery → 200 sur une route basic + plan NON chargé', async () => {
+describe('withBotRoute → BASELINE discordBot (le bot = foundation + plans payants)', () => {
+  it('discovery → 403 plan_required (discordBot) même sur une route SANS requireCapability', async () => {
+    let called = false;
+    const handler = withBotRoute((_req, res) => {
+      called = true;
+      res.status(200).json({ ok: true });
+    }, BASIC_OPTS);
+    const res = makeRes();
+    await handler(makeReq(KEY_DISCOVERY), res);
+    expect(res.statusCode).toBe(403);
+    expect(res.body).toMatchObject({
+      error: 'plan_required',
+      requiredCapability: 'discordBot',
+    });
+    expect(called).toBe(false);
+  });
+
+  it('foundation → 200 sur une route basic + plan attaché', async () => {
     let seenPlan: TenantPlanState | undefined;
     const handler = withBotRoute((req, res) => {
       seenPlan = req.botContext?.plan;
       res.status(200).json({ ok: true });
     }, BASIC_OPTS);
     const res = makeRes();
-    await handler(makeReq(KEY_DISCOVERY), res);
+    await handler(makeReq(KEY_FOUNDATION), res);
     expect(res.statusCode).toBe(200);
-    // Pas de round-trip plan sur une route basic.
-    expect(seenPlan).toBeUndefined();
+    expect(seenPlan?.plan).toBe('foundation');
   });
 
-  it('foundation → 200 sur une route basic', async () => {
+  it('regie actif → 200 sur une route basic (a le bot)', async () => {
     const handler = withBotRoute((_req, res) => {
       res.status(200).json({ ok: true });
     }, BASIC_OPTS);
     const res = makeRes();
-    await handler(makeReq(KEY_FOUNDATION), res);
+    await handler(makeReq(KEY_REGIE), res);
     expect(res.statusCode).toBe(200);
   });
 });

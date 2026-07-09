@@ -42,6 +42,13 @@ export type PlanFeatures = {
   apiWrite: boolean;
   /** Gérer plusieurs tenants (réseau / agence). */
   multiTenant: boolean;
+  /**
+   * Accès à l'API du bot Discord maison. RÉSERVÉ à la Coupe féminine
+   * (`foundation`) et aux plans payants : le palier gratuit `discovery` n'a PAS
+   * le bot (ni base, ni premium). Seuls les admins Women's Cup utilisent le bot
+   * sans plan.
+   */
+  discordBot: boolean;
   /** Profondeur des opérations Discord (Director, waves/stations, voice). */
   discordEventOps: DiscordEventOps;
   /** Arbitrage litiges + SLA + dashboard. */
@@ -60,6 +67,7 @@ const FEATURES: Record<TenantPlan, PlanFeatures> = {
     apiRead: true,
     apiWrite: true,
     multiTenant: true,
+    discordBot: true,
     discordEventOps: 'full',
     arbitration: true,
     ratings: true,
@@ -71,7 +79,8 @@ const FEATURES: Record<TenantPlan, PlanFeatures> = {
     apiRead: false,
     apiWrite: false,
     multiTenant: false,
-    discordEventOps: 'basic',
+    discordBot: false,
+    discordEventOps: 'none',
     arbitration: false,
     ratings: false,
     maxLeagues: 0,
@@ -82,6 +91,7 @@ const FEATURES: Record<TenantPlan, PlanFeatures> = {
     apiRead: true,
     apiWrite: false,
     multiTenant: false,
+    discordBot: true,
     discordEventOps: 'full',
     arbitration: true,
     ratings: true,
@@ -93,6 +103,7 @@ const FEATURES: Record<TenantPlan, PlanFeatures> = {
     apiRead: true,
     apiWrite: true,
     multiTenant: true,
+    discordBot: true,
     discordEventOps: 'full',
     arbitration: true,
     ratings: true,
@@ -104,6 +115,7 @@ const FEATURES: Record<TenantPlan, PlanFeatures> = {
     apiRead: true,
     apiWrite: true,
     multiTenant: true,
+    discordBot: true,
     discordEventOps: 'full',
     arbitration: true,
     ratings: true,

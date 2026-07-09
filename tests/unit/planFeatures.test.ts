@@ -18,14 +18,24 @@ const state = (over: Partial<TenantPlanState>): TenantPlanState => ({
 });
 
 describe('planFeatures — matrice', () => {
-  it('discovery (gratuit) : ni API ni white-label ni multi-tenant', () => {
+  it('discovery (gratuit) : ni API ni white-label ni multi-tenant ni bot', () => {
     const f = getPlanFeatures('discovery');
     expect(f.apiRead).toBe(false);
     expect(f.apiWrite).toBe(false);
     expect(f.whiteLabel).toBe(false);
     expect(f.multiTenant).toBe(false);
     expect(f.maxLeagues).toBe(0);
-    expect(f.discordEventOps).toBe('basic');
+    // Le bot est réservé à la Coupe féminine + plans payants.
+    expect(f.discordBot).toBe(false);
+    expect(f.discordEventOps).toBe('none');
+  });
+
+  it('le bot (discordBot) : foundation + plans payants oui, discovery non', () => {
+    expect(getPlanFeatures('foundation').discordBot).toBe(true);
+    expect(getPlanFeatures('regie').discordBot).toBe(true);
+    expect(getPlanFeatures('circuit').discordBot).toBe(true);
+    expect(getPlanFeatures('editor').discordBot).toBe(true);
+    expect(getPlanFeatures('discovery').discordBot).toBe(false);
   });
 
   it('regie : white-label + API lecture, mais pas écriture ni multi-tenant', () => {

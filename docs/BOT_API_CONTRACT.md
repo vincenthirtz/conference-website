@@ -162,16 +162,24 @@ and, if the effective plan lacks the capability, returns:
 
 with HTTP **403**. An expired / `past_due` paid plan downgrades to `discovery`
 (via `effectivePlan`); the flagship `foundation` has every capability and is never
-gated. **Base features are ungated** — a free `discovery` tenant keeps a working
-bot (registration, player/match reads, check-in/report, autocomplete,
-announcements, demandes, leaderboards, safety moderation, reminders, role-sync).
-The outbox delivery loop (`events/pending`, `events/handled`, `events/[id]/ack`,
-all `crossTenant`) is **infra, not a feature → never gated**.
+gated.
 
-Gated routes:
+**BASELINE — the bot itself is gated.** Every tenant-scoped route requires the
+`discordBot` capability: the bot is reserved to the Women's Cup (`foundation`)
+and to paying plans (Régie+). A free `discovery` tenant (or an expired paid plan)
+gets **403 `plan_required` with `requiredCapability: "discordBot"` on EVERY
+route**, base ones included — _only Women's Cup admins use the bot without a
+plan_. The outbox delivery loop (`events/pending`, `events/handled`,
+`events/[id]/ack`, all `crossTenant`) is **infra, not a feature → never gated**.
+
+**PREMIUM — some features need more than the baseline.** On top of `discordBot`,
+these routes also require a specific capability (currently subsumed by the
+baseline since every bot-enabled plan is Régie+ with full ops, but declared for
+future finer tiers). The baseline denial fires first for a tenant with no bot.
 
 | Capability             | Routes                                                                                                                                                                                         | Plan   |
 | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| `discordBot` (baseline) | **toutes les routes tenant-scopées**                                                                                                                                                          | Régie+ / foundation |
 | `discordEventOps:full` | `runs/current`, `broadcast/on-air`, `cast/assignments`, `cast/[assignmentId]/ack`, `matches/[matchId]/cast`, `matches/[matchId]/discord`, `matches/[matchId]/drafts`, `matches/[matchId]/veto` | Régie+ |
 | `arbitration`          | `disputes`, `disputes/escalations`, `matches/[matchId]/dispute`, `matches/[matchId]/resolve-dispute`, `moderation/blacklist-alert`                                                             | Régie+ |
 

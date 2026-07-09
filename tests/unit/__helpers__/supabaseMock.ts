@@ -124,7 +124,17 @@ export function seedBotAuth(
   });
   if (opts.withTenantRow !== false) {
     if (!(s.tenants ||= []).some((r) => r.id === tenantId)) {
-      s.tenants.push({ id: tenantId });
+      // Défaut `foundation` : le gate « Régie solidaire » réserve le bot à la
+      // Coupe féminine + plans payants (baseline `discordBot`). Un tenant seedé
+      // sans plan retomberait fail-closed sur `discovery` → 403 sur toute route
+      // bot. Les tests qui veulent un autre plan poussent leur row `tenants`
+      // AVANT d'appeler seedBotAuth (existence par id → pas d'écrasement).
+      s.tenants.push({
+        id: tenantId,
+        plan: 'foundation',
+        plan_status: 'active',
+        plan_expires_at: null,
+      });
     }
   }
   return { tenantId, apiKey };

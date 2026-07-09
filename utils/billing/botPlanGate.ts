@@ -10,17 +10,20 @@
 // EXIGENCE de capacité déclarée par une route en décision d'accès, à partir du
 // plan effectif du tenant (cf. utils/billing/planFeatures.ts).
 //
-// PÉRIMÈTRE : ce gate ne s'applique qu'aux routes bot TENANT-SCOPÉES qui
-// déclarent `requireCapability` dans `withBotRoute({ ... })`. Les routes de BASE
-// (register-user, players/**, matches read/report/checkin, announcements, …)
-// n'ont AUCUNE exigence → elles restent ouvertes à tous les tenants actifs, y
-// compris le palier gratuit `discovery` : le palier gratuit garde un bot
-// fonctionnel.
+// DEUX niveaux (tous deux sur les routes TENANT-SCOPÉES ; les routes
+// `crossTenant` — outbox pending/handled/ack — sont l'infra du bot, jamais
+// gatées) :
+//   - BASELINE `discordBot` : le bot lui-même est réservé à la Coupe féminine
+//     (`foundation`) et aux plans payants. `withBotRoute` le vérifie sur TOUTE
+//     route tenant-scopée → un tenant `discovery` (gratuit) n'a PAS le bot (403
+//     sur toute route, base comprise). Seuls les admins Women's Cup utilisent le
+//     bot sans plan.
+//   - PREMIUM (`discordEventOps:full`, `arbitration`, `ratings`) : les routes de
+//     production live / arbitrage déclarent `requireCapability` en plus.
 //
-// Le tenant flagship `foundation` a toutes les capacités (`discordEventOps:
-// 'full'`, `arbitration`, `ratings`) → ce gate ne le mord jamais. Un plan payant
-// expiré / past_due retombe sur `discovery` (via `effectivePlan`) → 403 sur les
-// features premium, mais toujours 200 sur les features de base.
+// Le tenant flagship `foundation` a toutes les capacités → ce gate ne le mord
+// jamais. Un plan payant expiré / past_due retombe sur `discovery` (via
+// `effectivePlan`) → 403 (plus de bot du tout).
 
 import { supabaseAdmin } from '../supabase';
 import { logger } from '../logger';
@@ -44,6 +47,7 @@ import {
  * le message d'upgrade renvoyé.
  */
 export type BotCapabilityRequirement =
+  | 'discordBot'
   | 'discordEventOps:full'
   | 'arbitration'
   | 'ratings';
@@ -70,13 +74,33 @@ export const BOT_FALLBACK_PLAN_STATE: TenantPlanState = {
 };
 
 /**
+ * Cache court (60 s) du plan par tenant. Le gate BASELINE charge le plan à
+ * CHAQUE appel bot tenant-scopé (le bot poll souvent) → on évite un round-trip
+ * DB par requête. TTL court : un plan fraîchement activé (webhook HelloAsso)
+ * prend effet en ≤ 60 s. `__resetBotPlanCacheForTests` purge en test.
+ */
+const BOT_PLAN_CACHE_TTL_MS = 60_000;
+const botPlanCache = new Map<
+  string,
+  { state: TenantPlanState; expiresAt: number }
+>();
+
+export function __resetBotPlanCacheForTests(): void {
+  botPlanCache.clear();
+}
+
+/**
  * Charge `{ plan, plan_status, plan_expires_at }` d'un tenant pour le gate bot.
  * Fail-closed sur `discovery` (cf. BOT_FALLBACK_PLAN_STATE) si la row est
- * absente / la requête échoue.
+ * absente / la requête échoue. Résultat caché 60 s par tenant.
  */
 export async function loadTenantPlanStateForBot(
   tenantId: string
 ): Promise<TenantPlanState> {
+  const now = Date.now();
+  const cached = botPlanCache.get(tenantId);
+  if (cached && cached.expiresAt > now) return cached.state;
+
   if (!supabaseAdmin) return BOT_FALLBACK_PLAN_STATE;
   const { data, error } = await supabaseAdmin
     .from('tenants')
@@ -86,11 +110,11 @@ export async function loadTenantPlanStateForBot(
 
   if (error) {
     logger.error('[bot/plan] tenant plan lookup error', error);
-    return BOT_FALLBACK_PLAN_STATE;
+    return BOT_FALLBACK_PLAN_STATE; // erreur transitoire → ne pas cacher
   }
   if (!data) return BOT_FALLBACK_PLAN_STATE;
 
-  return {
+  const state: TenantPlanState = {
     plan: (data.plan as TenantPlan) ?? BOT_FALLBACK_PLAN_STATE.plan,
     plan_status:
       (data.plan_status as PlanStatus) ?? BOT_FALLBACK_PLAN_STATE.plan_status,
@@ -98,6 +122,11 @@ export async function loadTenantPlanStateForBot(
       (data.plan_expires_at as string | null) ??
       BOT_FALLBACK_PLAN_STATE.plan_expires_at,
   };
+  botPlanCache.set(tenantId, {
+    state,
+    expiresAt: now + BOT_PLAN_CACHE_TTL_MS,
+  });
+  return state;
 }
 
 /** Le tenant satisfait-il l'exigence de capacité, à l'instant `nowMs` ? */
@@ -108,6 +137,8 @@ function tenantSatisfies(
 ): boolean {
   const features = tenantFeatures(plan, nowMs);
   switch (requirement) {
+    case 'discordBot':
+      return features.discordBot === true;
     case 'discordEventOps:full':
       return features.discordEventOps === 'full';
     case 'arbitration':
@@ -123,6 +154,12 @@ function tenantSatisfies(
 /** Message d'upgrade actionnable — toutes ces capacités s'ouvrent à `regie`. */
 function upgradeMessage(requirement: BotCapabilityRequirement): string {
   switch (requirement) {
+    case 'discordBot':
+      return (
+        `Le bot Discord est réservé à la Coupe féminine et aux organisations ` +
+        `sur un plan payant (au minimum ${PLAN_LABELS.regie}). Souscrivez un ` +
+        `abonnement pour activer le bot sur votre serveur.`
+      );
     case 'discordEventOps:full':
       return (
         `Cette fonctionnalité de régie (run-of-show, cast, veto, production) ` +

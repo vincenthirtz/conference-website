@@ -366,15 +366,23 @@ export function withBotRoute(
         tenantId: authResult.tenantId,
       };
 
-      // Gate PLAN « Régie solidaire » : une route premium déclare
-      // `requireCapability`. On charge le plan du tenant (fail-closed
-      // `discovery`) et on refuse en 403 si l'entitlement manque. Aucune
-      // exigence (routes de base) → aucun round-trip, ouvert à tous les tenants
-      // actifs. Le plan chargé est attaché à `req.botContext.plan` pour le
-      // handler.
+      // Gate PLAN « Régie solidaire ».
+      //  - BASELINE : le bot lui-même est réservé à la Coupe féminine
+      //    (`foundation`) et aux plans payants. Un tenant `discovery` (gratuit)
+      //    ou un plan payant expiré/past_due n'a PAS le bot → 403 sur TOUTE route
+      //    tenant-scopée. Seuls les admins Women's Cup utilisent le bot sans plan.
+      //  - PREMIUM : sur une route qui déclare `requireCapability` (production
+      //    live, arbitrage), on gate en plus.
+      // Le plan (mis en cache 60 s) est attaché à `req.botContext.plan`.
+      const planState = await loadTenantPlanStateForBot(authResult.tenantId);
+      req.botContext.plan = planState;
+
+      const baselineDenial = checkBotPlanCapability(planState, 'discordBot');
+      if (baselineDenial) {
+        return res.status(403).json(baselineDenial);
+      }
+
       if (options.requireCapability) {
-        const planState = await loadTenantPlanStateForBot(authResult.tenantId);
-        req.botContext.plan = planState;
         const denial = checkBotPlanCapability(
           planState,
           options.requireCapability
