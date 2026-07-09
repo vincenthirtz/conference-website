@@ -100,28 +100,22 @@ describe('filterAdminLinks – owner role', () => {
     expect(childTitles).not.toContain('Pôles de l’asso');
   });
 
-  it('groups Annonces, Actualités, Campagnes emails et Notifications sous "Communication"', () => {
-    // Lot D : regroupement de navigation (routes/rôles inchangés). Les
-    // sous-sections Annonces / Actualités conservent leurs éditeurs dédiés.
+  it('collapses Annonces, Actualités, Campagnes et Notifications into the "Communications" hub under "Communication"', () => {
+    // Les quatre ex-listes sont désormais fusionnées dans le hub à onglets
+    // /admin/communications. Une seule entrée « Communications » y pointe ; les
+    // éditeurs dédiés (« Créer une annonce » / « Créer une actualité ») restent.
     const comm = findByTitle(links, 'Communication');
     expect(comm).toBeDefined();
     const childTitles = comm?.children?.map((c) => c.title) ?? [];
     expect(childTitles).toEqual([
-      'Annonces',
-      'Actualités',
-      'Campagnes emails',
-      'Notifications',
-    ]);
-    const annonces = comm?.children?.find((c) => c.title === 'Annonces');
-    expect(annonces?.children?.map((c) => c.title)).toEqual([
-      'Liste des annonces',
+      'Communications',
       'Créer une annonce',
-    ]);
-    const news = comm?.children?.find((c) => c.title === 'Actualités');
-    expect(news?.children?.map((c) => c.title)).toEqual([
-      'Liste des actualités',
       'Créer une actualité',
     ]);
+    const hub = comm?.children?.find((c) => c.title === 'Communications');
+    expect(hub?.ref).toBe('/admin/communications');
+    // Leaf hub entry: no sub-menu (the tabs are discovered on the page).
+    expect(hub?.children ?? []).toEqual([]);
   });
 
   it('groups People/Staff (Utilisateurs, Casteuses, Pôles, Adhérents) sous "Staff & Asso"', () => {
@@ -194,12 +188,14 @@ describe('filterAdminLinks – manager role', () => {
     expect(titles).toEqual(['Logs & stats', 'Tenants']);
   });
 
-  it('keeps "Communication" but only with the caster-level "Notifications" child', () => {
-    // Annonces / News / Campagnes sont admin → masqués pour un manager.
+  it('keeps "Communication" with only the caster-level "Communications" hub child', () => {
+    // Le hub « Communications » est caster-gated (contient l'onglet
+    // Notifications) ; les éditeurs « Créer … » sont admin → masqués pour un
+    // manager.
     const comm = findByTitle(links, 'Communication');
     expect(comm).toBeDefined();
     const titles = comm?.children?.map((c) => c.title) ?? [];
-    expect(titles).toEqual(['Notifications']);
+    expect(titles).toEqual(['Communications']);
   });
 });
 
@@ -231,11 +227,11 @@ describe('filterAdminLinks – caster role', () => {
     expect(findByTitle(links, 'Configuration')).toBeUndefined();
   });
 
-  it('keeps "Communication" but only with the caster-level "Notifications" child', () => {
+  it('keeps "Communication" with only the caster-level "Communications" hub child', () => {
     const comm = findByTitle(links, 'Communication');
     expect(comm).toBeDefined();
     const titles = comm?.children?.map((c) => c.title) ?? [];
-    expect(titles).toEqual(['Notifications']);
+    expect(titles).toEqual(['Communications']);
   });
 });
 

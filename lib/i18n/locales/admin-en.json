@@ -6214,6 +6214,16 @@
     "tabList": "Partners",
     "tabRequests": "Requests"
   },
+  "adminCommunicationsHub": {
+    "pageTitle": "Admin – Communication",
+    "heading": "Communication",
+    "subtitle": "News, announcements, email campaigns and staff push notifications.",
+    "tabsAriaLabel": "Communication sections",
+    "tabNews": "News",
+    "tabAnnouncements": "Announcements",
+    "tabCampaigns": "Campaigns",
+    "tabNotifications": "Notifications"
+  },
   "adminOnboarding": {
     "pageTitle": "Admin – Onboarding",
     "heading": "Onboarding",

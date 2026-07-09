@@ -350,64 +350,26 @@ export const ADMIN_NAV: AdminNavNode[] = [
     ],
   },
   {
-    // Section « Communication » (lot D) : simple REGROUPEMENT de navigation —
-    // aucune fusion de page, aucun shim. Les éditeurs `announcements/new` et
-    // `news/new` restent des pages à part entière (trop lourds pour des
-    // modales/onglets) ; on se contente de rassembler leurs accès dispersés
-    // (ex-Contenu → Annonces/News + ex-Configuration → Campagnes/Notifications)
-    // sous une seule entrée top-bar pour réduire la dispersion perçue. Routes et
-    // rôles INCHANGÉS. Le conteneur est caster-gated car il contient une entrée
-    // caster (Notifications) ; chaque item conserve son propre gating.
+    // Section « Communication » : REGROUPEMENT de navigation dont les quatre
+    // ex-listes (Annonces, Actualités, Campagnes, Notifications) sont désormais
+    // FUSIONNÉES dans le hub à onglets /admin/communications?tab=… Comme pour
+    // les fusions Modération / Partenaires / Onboarding, une SEULE entrée
+    // top-bar pointe vers le hub ; les onglets se découvrent sur la page. Le
+    // host est caster-gated (rôle le plus permissif : Notifications) et chaque
+    // onglet re-gate son propre minRole (news/annonces/campagnes = admin,
+    // notifications = caster). Les éditeurs `announcements/new` et `news/new`
+    // restent des pages à part entière (trop lourds pour des modales/onglets) :
+    // leurs entrées « Créer » sont conservées telles quelles.
     id: 'communication',
     topBarLabel: 'Communication',
     href: '',
     minRole: 'caster',
     children: [
       {
-        id: 'announcements',
-        topBarLabel: 'Annonces',
-        href: '',
-        minRole: 'admin',
-        children: [
-          {
-            id: 'announcements-list',
-            topBarLabel: 'Liste des annonces',
-            href: '/admin/announcements',
-            minRole: 'admin',
-          },
-          {
-            id: 'announcements-new',
-            topBarLabel: 'Créer une annonce',
-            href: '/admin/announcements/new',
-            minRole: 'admin',
-          },
-        ],
-      },
-      {
-        id: 'news',
-        topBarLabel: 'Actualités',
-        href: '',
-        minRole: 'admin',
-        children: [
-          {
-            id: 'news-list',
-            topBarLabel: 'Liste des actualités',
-            href: '/admin/news',
-            minRole: 'admin',
-          },
-          {
-            id: 'news-new',
-            topBarLabel: 'Créer une actualité',
-            href: '/admin/news/new',
-            minRole: 'admin',
-          },
-        ],
-      },
-      {
-        id: 'campaigns',
-        topBarLabel: 'Campagnes emails',
-        href: '/admin/campaigns',
-        minRole: 'admin',
+        id: 'communications',
+        topBarLabel: 'Communications',
+        href: '/admin/communications',
+        minRole: 'caster',
         card: {
           order: 7,
           titleKey: 'navCampaignsTitle',
@@ -417,10 +379,16 @@ export const ADMIN_NAV: AdminNavNode[] = [
         },
       },
       {
-        id: 'notifications',
-        topBarLabel: 'Notifications',
-        href: '/admin/notifications',
-        minRole: 'caster',
+        id: 'announcements-new',
+        topBarLabel: 'Créer une annonce',
+        href: '/admin/announcements/new',
+        minRole: 'admin',
+      },
+      {
+        id: 'news-new',
+        topBarLabel: 'Créer une actualité',
+        href: '/admin/news/new',
+        minRole: 'admin',
       },
     ],
   },
