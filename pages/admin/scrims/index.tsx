@@ -15,6 +15,7 @@ import Tabs, {
 } from '@/components/admin/Tabs';
 import ScrimsListPanel from '@/components/admin/scrims/ScrimsListPanel';
 import ScrimPlanningsListPanel from '@/components/admin/scrims/ScrimPlanningsListPanel';
+import ScrimCalendarPanel from '@/components/admin/scrims/ScrimCalendarPanel';
 import type { StaffProps } from '@/types/admin';
 
 const ID_BASE = 'admin-scrims';
@@ -25,6 +26,7 @@ function AdminScrimsPage(_props: StaffProps) {
   const t = useAdminT('adminScrimsList');
   const tabs = [
     { id: 'scrims', label: t.tabScrims },
+    { id: 'calendar', label: t.tabCalendar },
     { id: 'plannings', label: t.tabPlannings },
   ];
   const [active, setActive] = useQueryTab(tabs);
@@ -59,6 +61,7 @@ function AdminScrimsPage(_props: StaffProps) {
             aria-labelledby={tabButtonId(ID_BASE, active)}
           >
             {active === 'scrims' && <ScrimsListPanel />}
+            {active === 'calendar' && <ScrimCalendarPanel />}
             {active === 'plannings' && <ScrimPlanningsListPanel />}
           </div>
         </div>

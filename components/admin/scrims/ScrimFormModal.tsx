@@ -12,6 +12,11 @@ type ScrimFormModalProps = {
   onClose: () => void;
   /** Called after a scrim is successfully created. */
   onCreated: () => void;
+  /**
+   * Valeurs pré-remplies à l'ouverture (ex. clic sur un créneau de l'agenda :
+   * scheduled_date au format datetime-local + status 'scheduled').
+   */
+  defaults?: Partial<typeof EMPTY_FORM>;
 };
 
 const EMPTY_FORM = {
@@ -34,6 +39,7 @@ export default function ScrimFormModal({
   open,
   onClose,
   onCreated,
+  defaults,
 }: ScrimFormModalProps) {
   const t = useAdminT('adminScrimsCreate');
   const { adminFetchJson } = useAdminFetch();
@@ -45,12 +51,18 @@ export default function ScrimFormModal({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Repart d'un formulaire vierge et (re)charge les équipes à l'ouverture.
+  // (Ré)initialise le formulaire à l'ouverture ou quand les valeurs
+  // pré-remplies changent (ex. clic sur un autre créneau de l'agenda).
   useEffect(() => {
     if (!open) return;
-    setForm({ ...EMPTY_FORM });
+    setForm({ ...EMPTY_FORM, ...(defaults ?? {}) });
     setError(null);
     setSubmitting(false);
+  }, [open, defaults]);
+
+  // Charge les équipes à l'ouverture (sans dépendre des valeurs pré-remplies).
+  useEffect(() => {
+    if (!open) return;
     adminFetchJson<{ teams: TeamOption[] }>(
       '/api/admin/teams?limit=200&isActive=true'
     )

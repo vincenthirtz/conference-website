@@ -4175,7 +4175,14 @@
     "loading": "Loading…",
     "empty": "No scrims for this filter.",
     "publicBadge": "• Public",
-    "teamsVs": "{team1} vs {team2}"
+    "teamsVs": "{team1} vs {team2}",
+    "tabCalendar": "Calendar",
+    "calToday": "Today",
+    "calPrevWeek": "Previous week",
+    "calNextWeek": "Next week",
+    "calThisWeek": "This week",
+    "calWeekOf": "Week of {date}",
+    "calCreateHint": "Click a slot to create a scrim"
   },
   "adminScrimsCreate": {
     "pageTitle": "Admin – New scrim",
