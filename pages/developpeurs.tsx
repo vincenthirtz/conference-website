@@ -744,6 +744,22 @@ function DevelopersPage() {
             </p>
           </div>
 
+          {/* Accès sur demande — pas de libre-service */}
+          <div className="rounded-2xl border border-purple-400/30 bg-purple-500/[0.08] p-5">
+            <h3 className="text-base font-semibold text-white">
+              {t.writeAccessTitle}
+            </h3>
+            <p className="mt-2 max-w-3xl text-sm text-gray-300">
+              {t.writeAccessBody}
+            </p>
+            <Link
+              href="/contact"
+              className="mt-4 inline-flex items-center gap-2 rounded-lg bg-purple-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-purple-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-300"
+            >
+              {t.writeAccessCta}
+            </Link>
+          </div>
+
           {/* Authentification */}
           <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
             <h3 className="text-base font-semibold text-white">
