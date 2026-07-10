@@ -144,6 +144,31 @@ export default function ScrimPlanningPanel({
     return rankValidatableSlots(gridHeatmap, planning.staff_required).slice(0, 3);
   }, [gridHeatmap, planning.staff_required]);
 
+  // Qui a répondu ? Parties présentes dans ≥1 cellule de la heatmap anonymisée
+  // (aucun nom exposé) + ma peinture locale non encore persistée. Laisse le
+  // capitaine voir s'il attend encore l'autre équipe (ou le staff).
+  const paintedParties = useMemo(() => {
+    const s = new Set<string>();
+    if (heatmap) {
+      for (const v of Object.values(heatmap)) {
+        for (const p of v.parties) s.add(p);
+      }
+    }
+    if (slots.length > 0) s.add(myParty);
+    return s;
+  }, [heatmap, slots, myParty]);
+
+  const participationRows = useMemo(
+    () => [
+      { key: 'team1', label: teamNames?.team1 || t.myPartyTeam1 },
+      { key: 'team2', label: teamNames?.team2 || t.myPartyTeam2 },
+      ...(planning.staff_required
+        ? [{ key: 'staff', label: t.myPartyStaff }]
+        : []),
+    ],
+    [teamNames, planning.staff_required, t]
+  );
+
   const gridLabels = useMemo<AvailabilityGridLabels>(
     () => ({
       legendTitle: t.gridLegendTitle,
@@ -314,6 +339,43 @@ export default function ScrimPlanningPanel({
           ? ` · ${format(t.timezoneViewer, { tz: viewerTz })}`
           : ''}
       </p>
+
+      {/* Qui a répondu ? (participation) */}
+      {!readOnly && (
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <span className="text-xs font-medium text-gray-400">
+            {t.participationTitle}
+          </span>
+          {participationRows.map((r) => {
+            const done = paintedParties.has(r.key);
+            const isMe = r.key === myParty;
+            return (
+              <span
+                key={r.key}
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs ${
+                  done
+                    ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-100'
+                    : 'border-white/15 bg-white/5 text-gray-400'
+                }`}
+              >
+                <span
+                  className={`h-1.5 w-1.5 rounded-full ${
+                    done ? 'bg-emerald-400' : 'bg-gray-500'
+                  }`}
+                  aria-hidden="true"
+                />
+                {r.label}
+                {isMe ? ` (${t.participationYou})` : ''}
+                <span
+                  className={done ? 'text-emerald-300/80' : 'text-amber-300/70'}
+                >
+                  · {done ? t.participationPainted : t.participationWaiting}
+                </span>
+              </span>
+            );
+          })}
+        </div>
+      )}
 
       {/* Créneau validé */}
       {planning.validated_slot && (

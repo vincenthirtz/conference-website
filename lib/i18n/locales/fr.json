@@ -3764,6 +3764,10 @@
     "unsavedChanges": "Modifications non enregistrées",
     "bestSlotTitle": "Meilleur créneau commun",
     "bestSlotMeAvailable": "tu es dispo",
-    "bestSlotMeMissing": "tu n'es pas encore dispo"
+    "bestSlotMeMissing": "tu n'es pas encore dispo",
+    "participationTitle": "Qui a répondu :",
+    "participationYou": "toi",
+    "participationPainted": "a peint",
+    "participationWaiting": "en attente"
   }
 }

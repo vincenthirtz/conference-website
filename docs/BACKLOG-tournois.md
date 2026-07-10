@@ -138,3 +138,18 @@
 - **À NE PAS reprendre comme acquis** (réfuté par la vérification) : Battlefy « $99/mois white-label », start.gg « % de commission », Toornament « 500+ disciplines », pricing exact de Dragora.
 - **À reconfirmer** (non vérifié faute de quota) : détails registration fees Toornament, gap seeding Challonge, ladders FACEIT, Scrim Finder.
 - **Forces déjà en place** (ne pas réinventer) : négociation de scrims multi-créneaux, run-of-show/director, bot Discord + free players + ticketing, linking Discord, check-in, formats Swiss + two-stage.
+
+---
+
+## Agenda scrim — améliorations UX produit
+
+Suite au sweep qualité (Q022–Q026 dans [IMPROVEMENT_BACKLOG.md](./IMPROVEMENT_BACKLOG.md)), reliquat **produit/UX** de l'agenda de gestion des scrims (grille de dispos « When2Meet » + agenda admin).
+
+| # | Item | Effort | Statut |
+|---|------|--------|--------|
+| A1 | **Indicateur de participation joueur** — le capitaine voit qui a répondu (son équipe / l'adverse / le staff) et s'il attend encore l'autre équipe. | S | ✅ LIVRÉ |
+| A2 | Auto-save des dispos (debounce) — supprime la sauvegarde manuelle, garde le témoin « non enregistré » comme filet. | M | ⏳ |
+| A3 | Feedback d'échéance in-app — « il te reste X jours pour peindre » (dérivé de l'horizon / d'une deadline). | M | ⏳ |
+| A4 | Vue mois admin « +N » déroulable sur place (popover) au lieu de basculer en semaine. | S-M | ⏳ |
+| A5 | Vue mois côté joueur (aujourd'hui pagination 7 jours, horizon jusqu'à 42 j). | M-L | ⏳ |
+| A6 | Unification des 3 idiomes temporels (datetime-local négociation / grille When2Meet / agenda drag&drop). | L | ⏳ |

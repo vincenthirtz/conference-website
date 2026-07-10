@@ -3764,6 +3764,10 @@
     "unsavedChanges": "Unsaved changes",
     "bestSlotTitle": "Best common slot",
     "bestSlotMeAvailable": "you're available",
-    "bestSlotMeMissing": "you're not available yet"
+    "bestSlotMeMissing": "you're not available yet",
+    "participationTitle": "Who's in:",
+    "participationYou": "you",
+    "participationPainted": "painted",
+    "participationWaiting": "waiting"
   }
 }
