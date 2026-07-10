@@ -38,3 +38,7 @@ credentials.json
 *.log
 public/video/
 test-results/
+
+# Build cache TypeScript (généré, ne pas suivre)
+tsconfig.tsbuildinfo
+*.tsbuildinfo
