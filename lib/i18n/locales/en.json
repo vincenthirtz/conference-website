@@ -3769,6 +3769,9 @@
     "participationYou": "you",
     "participationPainted": "painted",
     "participationWaiting": "waiting",
-    "autoSaved": "Saved · auto"
+    "autoSaved": "Saved · auto",
+    "deadlineToday": "Slots start today — set your availability now.",
+    "deadlineDays_one": "{count} day left to set your availability.",
+    "deadlineDays_other": "{count} days left to set your availability."
   }
 }

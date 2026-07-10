@@ -149,7 +149,7 @@ Suite au sweep qualité (Q022–Q026 dans [IMPROVEMENT_BACKLOG.md](./IMPROVEMENT
 |---|------|--------|--------|
 | A1 | **Indicateur de participation joueur** — le capitaine voit qui a répondu (son équipe / l'adverse / le staff) et s'il attend encore l'autre équipe. | S | ✅ LIVRÉ |
 | A2 | Auto-save des dispos (debounce 1,2 s) — persistance auto après la dernière modif ; témoin d'état enregistrement/non enregistré/enregistré, bouton manuel conservé, garde beforeunload comme filet. | M | ✅ LIVRÉ |
-| A3 | Feedback d'échéance in-app — « il te reste X jours pour peindre » (dérivé de l'horizon / d'une deadline). | M | ⏳ |
+| A3 | Feedback d'échéance in-app — bandeau « plus que X jours pour indiquer tes dispos », dérivé du 1er jour de l'horizon (`horizon_start`) ; passe en amber à ≤ 2 jours. | M | ✅ LIVRÉ |
 | A4 | Vue mois admin « +N » déroulable sur place — clic sur « +N » affiche tous les événements du jour dans la cellule (+ « − réduire »), sans basculer en vue semaine. | S-M | ✅ LIVRÉ |
 | A5 | Vue mois côté joueur (aujourd'hui pagination 7 jours, horizon jusqu'à 42 j). | M-L | ⏳ |
 | A6 | Unification des 3 idiomes temporels (datetime-local négociation / grille When2Meet / agenda drag&drop). | L | ⏳ |

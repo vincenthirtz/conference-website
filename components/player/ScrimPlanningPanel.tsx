@@ -169,6 +169,25 @@ export default function ScrimPlanningPanel({
     [teamNames, planning.staff_required, t]
   );
 
+  // Échéance : nombre de jours avant le 1er jour de l'horizon (les créneaux
+  // commencent à `horizon_start`). Sert de nudge « réponds avant que ça commence ».
+  const daysUntilStart = useMemo(() => {
+    if (!planning.horizon_start) return null;
+    const todayStr = new Intl.DateTimeFormat('en-CA', {
+      timeZone: planning.timezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date());
+    const toUtc = (s: string) => {
+      const [y, m, d] = s.split('-').map((v) => parseInt(v, 10));
+      return Date.UTC(y, m - 1, d);
+    };
+    return Math.round(
+      (toUtc(planning.horizon_start) - toUtc(todayStr)) / 86_400_000
+    );
+  }, [planning.horizon_start, planning.timezone]);
+
   const gridLabels = useMemo<AvailabilityGridLabels>(
     () => ({
       legendTitle: t.gridLegendTitle,
@@ -390,6 +409,39 @@ export default function ScrimPlanningPanel({
               </span>
             );
           })}
+        </div>
+      )}
+
+      {/* Échéance : compte à rebours avant le 1er jour de créneaux */}
+      {!readOnly && daysUntilStart != null && daysUntilStart >= 0 && (
+        <div
+          className={`mb-4 flex items-center gap-2 rounded-xl border px-4 py-2.5 text-xs ${
+            daysUntilStart <= 2
+              ? 'border-amber-500/40 bg-amber-500/10 text-amber-100'
+              : 'border-white/10 bg-white/5 text-gray-300'
+          }`}
+        >
+          <svg
+            className="h-4 w-4 flex-shrink-0"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 7v5l3 2" />
+          </svg>
+          <span>
+            {daysUntilStart === 0
+              ? t.deadlineToday
+              : format(
+                  daysUntilStart === 1 ? t.deadlineDays_one : t.deadlineDays_other,
+                  { count: daysUntilStart }
+                )}
+          </span>
         </div>
       )}
 
