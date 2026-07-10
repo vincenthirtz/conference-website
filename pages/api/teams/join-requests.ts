@@ -18,6 +18,7 @@ import {
 } from '@/utils/teams/rosterLock';
 import { mapTeamRpcError } from '@/utils/teams/rpcErrors';
 import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
+import { fetchAdminUserProfiles } from '@/utils/adminUserProfiles';
 
 import { logger } from '../../../utils/logger';
 export default withAuthRoute(async function handler(
@@ -29,7 +30,9 @@ export default withAuthRoute(async function handler(
     return;
 
   const userId = user.id;
-  const tenantId = await resolveTenantIdForUserRequestAsync(req, { authUserId: userId });
+  const tenantId = await resolveTenantIdForUserRequestAsync(req, {
+    authUserId: userId,
+  });
 
   // Per-user cap : 5 actions/minute. Évite qu'un capitaine spamme
   // l'approve/reject (et donc trigger team_members + news).
@@ -105,39 +108,35 @@ async function handleGet(
     return res.status(500).json({ error: 'Echec du chargement des demandes.' });
   }
 
-  // Enrich with user info
-  const enriched = await Promise.all(
-    (demandes || []).map(async (d: any) => {
-      let userInfo = null;
-      if (d.user_id) {
-        try {
-          const { data: u } = await supabaseAdmin!.auth.admin.getUserById(
-            d.user_id
-          );
-          if (u?.user) {
-            const meta = u.user.user_metadata ?? {};
-            userInfo = {
-              id: d.user_id,
-              email: u.user.email || null,
-              display_name: meta.display_name || meta.full_name || null,
-              battle_tag: meta.battle_tag || null,
-            };
-          }
-        } catch {
-          // skip
-        }
-      }
-      return {
-        id: d.id,
-        user_id: d.user_id,
-        status: d.status,
-        comment: d.comment,
-        payload: d.payload,
-        created_at: d.created_at,
-        user: userInfo,
-      };
-    })
+  // Enrich with user info. Batch-resolve every auth user_id in ONE RPC instead
+  // of N getUserById round-trips; unknown ids stay absent from the Map.
+  const profiles = await fetchAdminUserProfiles(
+    (demandes || []).map((d: any) => d.user_id)
   );
+
+  const enriched = (demandes || []).map((d: any) => {
+    let userInfo = null;
+    if (d.user_id) {
+      const p = profiles.get(d.user_id);
+      if (p) {
+        userInfo = {
+          id: d.user_id,
+          email: p.email || null,
+          display_name: p.display_name || p.full_name || null,
+          battle_tag: p.battle_tag || null,
+        };
+      }
+    }
+    return {
+      id: d.id,
+      user_id: d.user_id,
+      status: d.status,
+      comment: d.comment,
+      payload: d.payload,
+      created_at: d.created_at,
+      user: userInfo,
+    };
+  });
 
   return res.status(200).json({ demandes: enriched });
 }

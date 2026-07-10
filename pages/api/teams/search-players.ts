@@ -11,6 +11,7 @@ import {
   TEAM_MANAGEMENT_FORBIDDEN,
 } from '@/utils/teams/managementAccess';
 import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
+import { fetchAdminUserProfiles } from '@/utils/adminUserProfiles';
 
 import { logger } from '../../../utils/logger';
 type PlayerResult = {
@@ -38,7 +39,9 @@ export default withAuthRoute(async function handler(
   )
     return;
 
-  const tenantId = await resolveTenantIdForUserRequestAsync(req, { authUserId: user.id });
+  const tenantId = await resolveTenantIdForUserRequestAsync(req, {
+    authUserId: user.id,
+  });
 
   // Check if user can manage a team (captain or manager)
   const access = await getManagedTeam(user.id, tenantId);
@@ -73,8 +76,9 @@ export default withAuthRoute(async function handler(
     // users tous tenants). On ne touche plus jamais à `auth.users` pour la
     // recherche : les candidats viennent uniquement de tables tenant-scopées
     // (`team_members` filtré par tenant_id, `profiles`). Les emails ne sont
-    // résolus (getUserById) QUE pour des candidats déjà confirmés du tenant
-    // courant, donc aucun email cross-tenant ne peut être renvoyé.
+    // résolus (via le RPC batch admin_get_user_profiles) QUE pour des candidats
+    // déjà confirmés du tenant courant, donc aucun email cross-tenant ne peut
+    // être renvoyé.
     type Candidate = {
       id: string;
       email: string | null;
@@ -170,27 +174,24 @@ export default withAuthRoute(async function handler(
     const needsAuth = limitedCandidates.filter(
       (c) => !c.email && membershipMap.has(c.id)
     );
+    // Batch-resolve emails/display_names in ONE RPC instead of N getUserById
+    // round-trips. Unknown ids stay absent (email/display_name remain null).
     const authMap = new Map<
       string,
       { email: string | null; display_name: string | null }
     >();
-    await Promise.all(
-      needsAuth.map(async (c) => {
-        try {
-          const { data: userData } =
-            await supabaseAdmin!.auth.admin.getUserById(c.id);
-          if (userData?.user) {
-            authMap.set(c.id, {
-              email: userData.user.email || null,
-              display_name:
-                (userData.user.user_metadata?.display_name as string) || null,
-            });
-          }
-        } catch {
-          // Skip users that can't be fetched
-        }
-      })
+    const authProfiles = await fetchAdminUserProfiles(
+      needsAuth.map((c) => c.id)
     );
+    for (const c of needsAuth) {
+      const p = authProfiles.get(c.id);
+      if (p) {
+        authMap.set(c.id, {
+          email: p.email || null,
+          display_name: p.display_name || null,
+        });
+      }
+    }
 
     // Assemble final results
     const players: PlayerResult[] = limitedCandidates.map((c) => {

@@ -12,7 +12,7 @@ import {
   store,
   resetSupabaseMock,
   setAuthUser,
-  setAdminUser,
+  setAuthListUsers,
 } from './__helpers__/supabaseMock';
 
 import { invalidateStaffCache } from '../../utils/staff';
@@ -133,7 +133,9 @@ describe('/api/teams/scrim-requests', () => {
         created_at: '2026',
       },
     ] as any;
-    setAdminUser('sender-1', 'sender@example.com');
+    // Auth-user enrichment now resolves through the batch
+    // admin_get_user_profiles RPC (fed by setAuthListUsers).
+    setAuthListUsers([{ id: 'sender-1', email: 'sender@example.com' }]);
     const res = makeRes();
     await scrimRequestsHandler(makeReq({ method: 'GET' }, true), res);
     expect(res.statusCode).toBe(200);

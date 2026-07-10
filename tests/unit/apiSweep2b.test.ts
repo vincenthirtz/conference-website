@@ -13,7 +13,7 @@ import {
   store,
   resetSupabaseMock,
   setAuthUser,
-  setAdminUser,
+  setAuthListUsers,
   setRpcResult,
   rpcCalls,
 } from './__helpers__/supabaseMock';
@@ -478,7 +478,8 @@ describe('/api/teams/transfer-requests', () => {
         payload: {},
       },
     ] as any;
-    setAdminUser('newp', 'newp@x.com');
+    // Enrichment now resolves through the batch admin_get_user_profiles RPC.
+    setAuthListUsers([{ id: 'newp', email: 'newp@x.com' }]);
     const res = makeRes();
     await transferRequestsHandler(makeAuthedReq({ method: 'GET' }), res);
     expect(res.statusCode).toBe(200);
@@ -750,7 +751,12 @@ describe('/api/teams/transfer-requests', () => {
     store.team_members = [];
     store.tournament_teams = [];
     setRpcResult('approve_transfer_request', {
-      data: { id: 'tm-sub', team_id: TEAM_A, user_id: 'user-y', is_substitute: true },
+      data: {
+        id: 'tm-sub',
+        team_id: TEAM_A,
+        user_id: 'user-y',
+        is_substitute: true,
+      },
       error: null,
     });
     const res = makeRes();
@@ -762,7 +768,9 @@ describe('/api/teams/transfer-requests', () => {
       res
     );
     expect(res.statusCode).toBe(200);
-    expect(rpcCalls.find((c) => c.fn === 'approve_transfer_request')).toBeTruthy();
+    expect(
+      rpcCalls.find((c) => c.fn === 'approve_transfer_request')
+    ).toBeTruthy();
   });
 });
 

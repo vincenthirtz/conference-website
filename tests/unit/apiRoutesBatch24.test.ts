@@ -4,7 +4,7 @@ import {
   store,
   resetSupabaseMock,
   setAuthUser,
-  setAdminUser,
+  setAuthListUsers,
   setRpcResult,
   rpcCalls,
 } from './__helpers__/supabaseMock';
@@ -76,7 +76,10 @@ describe('/api/teams/join-requests', () => {
   it('GET 200 lists pending join demandes for captain team', async () => {
     setAuthUser({ id: 'user-1' });
     store.teams = [
-      { id: 'team-1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'user-1',
+      {
+        id: 'team-1',
+        tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4',
+        captain_id: 'user-1',
         is_active: true,
         name: 'Alpha',
         logo_url: null,
@@ -100,7 +103,9 @@ describe('/api/teams/join-requests', () => {
         created_at: '2026',
       },
     ] as any;
-    setAdminUser('sender-1', 'sender@example.com');
+    // Auth-user enrichment now resolves through the batch
+    // admin_get_user_profiles RPC (fed by setAuthListUsers).
+    setAuthListUsers([{ id: 'sender-1', email: 'sender@example.com' }]);
     const res = makeRes();
     await joinRequestsHandler(makeReq({ method: 'GET' }, true), res);
     expect(res.statusCode).toBe(200);
@@ -109,10 +114,71 @@ describe('/api/teams/join-requests', () => {
     expect(list[0].user.email).toBe('sender@example.com');
   });
 
+  it('GET batch-enriches senders (full_name + battle_tag) and skips unknown ids', async () => {
+    setAuthUser({ id: 'user-1' });
+    store.teams = [
+      {
+        id: 'team-1',
+        tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4',
+        captain_id: 'user-1',
+        is_active: true,
+        name: 'Alpha',
+        logo_url: null,
+      },
+    ] as any;
+    store.demandes = [
+      {
+        id: 'd-known',
+        team_id: 'team-1',
+        type: 'join',
+        status: 'pending',
+        user_id: 'known',
+        created_at: '2026',
+      },
+      {
+        id: 'd-ghost',
+        team_id: 'team-1',
+        type: 'join',
+        status: 'pending',
+        user_id: 'ghost',
+        created_at: '2026',
+      },
+    ] as any;
+    // display_name falls back to full_name; battle_tag comes from metadata.
+    setAuthListUsers([
+      {
+        id: 'known',
+        email: 'known@example.com',
+        user_metadata: { full_name: 'Known Full', battle_tag: 'Known#9' },
+      },
+    ] as any);
+
+    const res = makeRes();
+    await joinRequestsHandler(makeReq({ method: 'GET' }, true), res);
+    expect(res.statusCode).toBe(200);
+    const list = (res.body as any).demandes;
+    const known = list.find((d: any) => d.id === 'd-known');
+    const ghost = list.find((d: any) => d.id === 'd-ghost');
+    expect(known.user).toEqual({
+      id: 'known',
+      email: 'known@example.com',
+      display_name: 'Known Full',
+      battle_tag: 'Known#9',
+    });
+    // Unknown id → skipped, userInfo null (best-effort).
+    expect(ghost.user).toBeNull();
+  });
+
   it('POST 400 with invalid demandeId', async () => {
     setAuthUser({ id: 'user-1' });
     store.teams = [
-      { id: 'team-1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'user-1', is_active: true, name: 'A' },
+      {
+        id: 'team-1',
+        tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4',
+        captain_id: 'user-1',
+        is_active: true,
+        name: 'A',
+      },
     ] as any;
     const res = makeRes();
     await joinRequestsHandler(
@@ -131,7 +197,13 @@ describe('/api/teams/join-requests', () => {
   it('POST 400 with invalid action', async () => {
     setAuthUser({ id: 'user-1' });
     store.teams = [
-      { id: 'team-1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'user-1', is_active: true, name: 'A' },
+      {
+        id: 'team-1',
+        tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4',
+        captain_id: 'user-1',
+        is_active: true,
+        name: 'A',
+      },
     ] as any;
     const res = makeRes();
     await joinRequestsHandler(
@@ -150,7 +222,13 @@ describe('/api/teams/join-requests', () => {
   it('POST 404 when demande not found / not pending', async () => {
     setAuthUser({ id: 'user-1' });
     store.teams = [
-      { id: 'team-1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'user-1', is_active: true, name: 'A' },
+      {
+        id: 'team-1',
+        tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4',
+        captain_id: 'user-1',
+        is_active: true,
+        name: 'A',
+      },
     ] as any;
     store.demandes = [];
     const res = makeRes();
@@ -170,7 +248,10 @@ describe('/api/teams/join-requests', () => {
   it('POST approve: calls the approve_join_request RPC and creates news', async () => {
     setAuthUser({ id: 'user-1' });
     store.teams = [
-      { id: 'team-1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'user-1',
+      {
+        id: 'team-1',
+        tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4',
+        captain_id: 'user-1',
         is_active: true,
         name: 'Alpha',
         logo_url: null,
@@ -221,7 +302,13 @@ describe('/api/teams/join-requests', () => {
   it('POST approve: 409 when roster is locked (RPC not called)', async () => {
     setAuthUser({ id: 'user-1' });
     store.teams = [
-      { id: 'team-1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'user-1', is_active: true, name: 'Alpha' },
+      {
+        id: 'team-1',
+        tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4',
+        captain_id: 'user-1',
+        is_active: true,
+        name: 'Alpha',
+      },
     ] as any;
     store.demandes = [
       {
@@ -234,11 +321,21 @@ describe('/api/teams/join-requests', () => {
       },
     ] as any;
     store.tournament_teams = [
-      { tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', team_id: 'team-1', tournament_id: 'tour-1' },
+      {
+        tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4',
+        team_id: 'team-1',
+        tournament_id: 'tour-1',
+      },
     ] as any;
     const past = new Date(Date.now() - 60_000).toISOString();
     store.tournaments = [
-      { id: 'tour-1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', name: 'Cup', roster_locked_at: past, status: 'in_progress' },
+      {
+        id: 'tour-1',
+        tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4',
+        name: 'Cup',
+        roster_locked_at: past,
+        status: 'in_progress',
+      },
     ] as any;
 
     const res = makeRes();
@@ -256,7 +353,13 @@ describe('/api/teams/join-requests', () => {
   it('POST approve: maps RPC 23505 (already in a team) to 409', async () => {
     setAuthUser({ id: 'user-1' });
     store.teams = [
-      { id: 'team-1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'user-1', is_active: true, name: 'Alpha' },
+      {
+        id: 'team-1',
+        tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4',
+        captain_id: 'user-1',
+        is_active: true,
+        name: 'Alpha',
+      },
     ] as any;
     store.demandes = [
       {
@@ -288,7 +391,13 @@ describe('/api/teams/join-requests', () => {
   it('POST approve: maps RPC demande_not_pending to 409', async () => {
     setAuthUser({ id: 'user-1' });
     store.teams = [
-      { id: 'team-1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'user-1', is_active: true, name: 'Alpha' },
+      {
+        id: 'team-1',
+        tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4',
+        captain_id: 'user-1',
+        is_active: true,
+        name: 'Alpha',
+      },
     ] as any;
     store.demandes = [
       {
@@ -320,7 +429,10 @@ describe('/api/teams/join-requests', () => {
   it('POST reject: marks demande rejected, no member added', async () => {
     setAuthUser({ id: 'user-1' });
     store.teams = [
-      { id: 'team-1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'user-1',
+      {
+        id: 'team-1',
+        tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4',
+        captain_id: 'user-1',
         is_active: true,
         name: 'Alpha',
       },
@@ -356,7 +468,10 @@ describe('/api/teams/join-requests', () => {
   it('POST approve: maps RPC 23514 (max_players trigger) to 400', async () => {
     setAuthUser({ id: 'user-1' });
     store.teams = [
-      { id: 'team-1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'user-1',
+      {
+        id: 'team-1',
+        tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4',
+        captain_id: 'user-1',
         is_active: true,
         name: 'Alpha',
       },
@@ -396,7 +511,13 @@ describe('/api/teams/join-requests', () => {
   it('returns 405 on unsupported method', async () => {
     setAuthUser({ id: 'user-1' });
     store.teams = [
-      { id: 'team-1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'user-1', is_active: true, name: 'A' },
+      {
+        id: 'team-1',
+        tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4',
+        captain_id: 'user-1',
+        is_active: true,
+        name: 'A',
+      },
     ] as any;
     const res = makeRes();
     await joinRequestsHandler(makeReq({ method: 'PATCH' }, true), res);
@@ -492,7 +613,13 @@ describe('/api/admin/teams/my', () => {
 
   it('PATCH 403 when not captain', async () => {
     setAuthUser({ id: 'user-1' });
-    store.teams = [{ id: 'team-1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'someone-else' }] as any;
+    store.teams = [
+      {
+        id: 'team-1',
+        tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4',
+        captain_id: 'someone-else',
+      },
+    ] as any;
     const res = makeRes();
     await myTeamHandler(
       makeReq(
@@ -506,7 +633,13 @@ describe('/api/admin/teams/my', () => {
 
   it('PATCH 400 on too-short name', async () => {
     setAuthUser({ id: 'user-1' });
-    store.teams = [{ id: 'team-1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'user-1' }] as any;
+    store.teams = [
+      {
+        id: 'team-1',
+        tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4',
+        captain_id: 'user-1',
+      },
+    ] as any;
     const res = makeRes();
     await myTeamHandler(
       makeReq({ method: 'PATCH', body: { teamId: 'team-1', name: 'X' } }, true),
@@ -517,7 +650,13 @@ describe('/api/admin/teams/my', () => {
 
   it('PATCH 400 on description too long', async () => {
     setAuthUser({ id: 'user-1' });
-    store.teams = [{ id: 'team-1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'user-1' }] as any;
+    store.teams = [
+      {
+        id: 'team-1',
+        tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4',
+        captain_id: 'user-1',
+      },
+    ] as any;
     const res = makeRes();
     await myTeamHandler(
       makeReq(
@@ -534,7 +673,13 @@ describe('/api/admin/teams/my', () => {
 
   it('PATCH 400 on invalid logo URL', async () => {
     setAuthUser({ id: 'user-1' });
-    store.teams = [{ id: 'team-1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'user-1' }] as any;
+    store.teams = [
+      {
+        id: 'team-1',
+        tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4',
+        captain_id: 'user-1',
+      },
+    ] as any;
     const res = makeRes();
     await myTeamHandler(
       makeReq(
@@ -552,7 +697,10 @@ describe('/api/admin/teams/my', () => {
   it('PATCH 200 updates fields', async () => {
     setAuthUser({ id: 'user-1' });
     store.teams = [
-      { id: 'team-1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'user-1',
+      {
+        id: 'team-1',
+        tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4',
+        captain_id: 'user-1',
         name: 'Old',
         country: 'FR',
         description: 'old',

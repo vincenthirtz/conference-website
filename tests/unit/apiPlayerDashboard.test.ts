@@ -22,6 +22,7 @@ import {
   resetSupabaseMock,
   setAuthUser,
   setAdminUser,
+  setAuthListUsers,
 } from './__helpers__/supabaseMock';
 
 import { invalidateStaffCache } from '../../utils/staff';
@@ -252,6 +253,65 @@ describe('/api/player/dashboard', () => {
       rosterSize: 4,
       shortfall: 3,
     });
+  });
+
+  it('batch-enriches pendingScrims senders and skips unknown ids', async () => {
+    seed({ minPlayers: 5, memberCount: 5 });
+    setAuthUser({ id: CAPTAIN_ID });
+
+    // One auth sender resolvable via the batch admin_get_user_profiles RPC…
+    setAuthListUsers([
+      {
+        id: 'known-sender',
+        email: 'known@x.tld',
+        user_metadata: { display_name: 'KnownGuy', discord: 'known#1' },
+      },
+    ] as any);
+
+    // …two pending scrims addressed to TEAM_ID: one from the known sender, one
+    // from an id absent from auth (must degrade to user: null, not throw).
+    store.demandes = [
+      {
+        id: 'scrim-known',
+        team_id: TEAM_ID,
+        user_id: 'known-sender',
+        type: 'scrim',
+        status: 'pending',
+        source: 'website',
+        comment: 'gg',
+        payload: {},
+        created_at: new Date().toISOString(),
+      },
+      {
+        id: 'scrim-ghost',
+        team_id: TEAM_ID,
+        user_id: 'ghost-sender',
+        type: 'scrim',
+        status: 'pending',
+        source: 'website',
+        comment: 'wp',
+        payload: {},
+        created_at: new Date().toISOString(),
+      },
+    ] as any;
+
+    const res = makeRes();
+    await dashboardHandler(makeReq(), res);
+    expect(res.statusCode).toBe(200);
+    const b = res.body as any;
+
+    expect(b.pendingScrims).toHaveLength(2);
+    const known = b.pendingScrims.find((s: any) => s.id === 'scrim-known');
+    const ghost = b.pendingScrims.find((s: any) => s.id === 'scrim-ghost');
+
+    expect(known.user).toEqual({
+      id: 'known-sender',
+      email: 'known@x.tld',
+      display_name: 'KnownGuy',
+      discord: 'known#1',
+    });
+    // Unknown id → skipped (best-effort enrichment), userInfo null.
+    expect(ghost.user).toBeNull();
   });
 
   it('non-captain plain player gets the reduced payload', async () => {

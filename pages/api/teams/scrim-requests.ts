@@ -22,16 +22,26 @@ import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
 import { readScrimNego, normalizeSlots } from '@/utils/teams/scrimNegotiation';
 import { notifyScrimCounterProposal } from '@/utils/discord';
 import { emitScrimEvent } from '@/utils/scrimEvents';
+import {
+  fetchAdminUserProfiles,
+  type AdminUserProfile,
+} from '@/utils/adminUserProfiles';
 
 import { logger } from '../../../utils/logger';
 
 type DemandeRow = Record<string, any>;
 
-/** Enrich a scrim demande with sender info (auth user OR public contact). */
-async function enrichScrim(
+/**
+ * Enrich a scrim demande with sender info (auth user OR public contact).
+ * Auth-user info is resolved from a pre-fetched `profiles` Map (batch RPC),
+ * so this is now synchronous and does no per-item round-trip. Unknown ids
+ * (absent from the Map) yield `user: null` — same best-effort behavior.
+ */
+function enrichScrim(
   d: DemandeRow,
-  myTeamId: string
-): Promise<Record<string, unknown>> {
+  myTeamId: string,
+  profiles: Map<string, AdminUserProfile>
+): Record<string, unknown> {
   let userInfo: {
     id: string | null;
     email: string | null;
@@ -40,21 +50,14 @@ async function enrichScrim(
   } | null = null;
 
   if (d.user_id) {
-    try {
-      const { data: u } = await supabaseAdmin!.auth.admin.getUserById(
-        d.user_id
-      );
-      if (u?.user) {
-        const meta = u.user.user_metadata ?? {};
-        userInfo = {
-          id: d.user_id,
-          email: u.user.email || null,
-          display_name: meta.display_name || meta.full_name || null,
-          discord: meta.discord || null,
-        };
-      }
-    } catch {
-      // best-effort enrichment
+    const p = profiles.get(d.user_id);
+    if (p) {
+      userInfo = {
+        id: d.user_id,
+        email: p.email || null,
+        display_name: p.display_name || p.full_name || null,
+        discord: p.discord || null,
+      };
     }
   } else if (d.source === 'public' && d.payload) {
     const p = d.payload as Record<string, any>;
@@ -100,7 +103,9 @@ export default withAuthRoute(async function handler(
     return;
 
   const userId = user.id;
-  const tenantId = await resolveTenantIdForUserRequestAsync(req, { authUserId: userId });
+  const tenantId = await resolveTenantIdForUserRequestAsync(req, {
+    authUserId: userId,
+  });
 
   // Per-user cap : refuser le spam de scrim accept/reject (a chaque
   // accept, on cree un scrim draft cote /admin/demandes auto-process).
@@ -183,8 +188,14 @@ export default withAuthRoute(async function handler(
         return nego.proposed_by !== myTeamId;
       });
 
-      const enriched = await Promise.all(
-        awaitingMe.map((d) => enrichScrim(d, myTeamId))
+      // Batch-resolve every auth user_id in ONE RPC (upstream of the map)
+      // instead of one getUserById per item.
+      const profiles = await fetchAdminUserProfiles(
+        awaitingMe.map((d) => d.user_id as string | null | undefined)
+      );
+
+      const enriched = awaitingMe.map((d) =>
+        enrichScrim(d, myTeamId, profiles)
       );
 
       return res.status(200).json({ demandes: enriched });

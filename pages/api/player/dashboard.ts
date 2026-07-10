@@ -25,6 +25,7 @@ import { getManagedTeam } from '@/utils/teams/managementAccess';
 import { resolveTenantIdForUserRequest } from '@/utils/tenant';
 import { CHECKIN_OPEN_MINUTES } from '@/utils/checkin';
 import { readScrimNego } from '@/utils/teams/scrimNegotiation';
+import { fetchAdminUserProfiles } from '@/utils/adminUserProfiles';
 
 import { logger } from '../../../utils/logger';
 
@@ -296,61 +297,55 @@ async function loadPendingScrims(
     });
 
     // Enrich with sender info (mirrors /api/teams/scrim-requests GET).
-    const enriched = await Promise.all(
-      (demandes || []).map(async (d: Record<string, unknown>) => {
-        let userInfo: PendingScrim['user'] = null;
-        if (d.user_id) {
-          try {
-            const { data: u } = await supabaseAdmin!.auth.admin.getUserById(
-              d.user_id as string
-            );
-            if (u?.user) {
-              const meta = u.user.user_metadata ?? {};
-              userInfo = {
-                id: d.user_id as string,
-                email: u.user.email || null,
-                display_name:
-                  (meta.display_name as string) ||
-                  (meta.full_name as string) ||
-                  null,
-                discord: (meta.discord as string) || null,
-              };
-            }
-          } catch {
-            // skip — enrichment is best-effort
-          }
-        } else if (d.source === 'public' && d.payload) {
-          const p = d.payload as Record<string, unknown>;
+    // Batch-resolve every auth user_id in ONE RPC instead of N getUserById
+    // round-trips; unknown ids simply stay absent from the Map (userInfo null).
+    const profiles = await fetchAdminUserProfiles(
+      (demandes || []).map((d) => d.user_id as string | null | undefined)
+    );
+
+    const enriched = (demandes || []).map((d: Record<string, unknown>) => {
+      let userInfo: PendingScrim['user'] = null;
+      if (d.user_id) {
+        const p = profiles.get(d.user_id as string);
+        if (p) {
           userInfo = {
-            id: null,
-            email: (p.requester_email as string) || null,
-            display_name: (p.requester_name as string) || null,
-            discord: (p.requester_discord as string) || null,
+            id: d.user_id as string,
+            email: p.email || null,
+            display_name: p.display_name || p.full_name || null,
+            discord: p.discord || null,
           };
         }
-        const payload = (d.payload as Record<string, unknown> | null) ?? null;
-        const nego = readScrimNego(payload || {});
-        const fromTeamId = (payload?.from_team_id as string | null) ?? null;
-        return {
-          id: d.id as string,
-          user_id: (d.user_id as string | null) ?? null,
-          source: (d.source as string | null) ?? null,
-          status: d.status as string,
-          comment: (d.comment as string | null) ?? null,
-          payload,
-          created_at: d.created_at as string,
-          user: userInfo,
-          scrimNego: {
-            slots: nego.slots,
-            proposedBy: nego.proposed_by,
-            rounds: nego.rounds,
-            agreedSlot: nego.agreed_slot,
-          },
-          iAmRequester: teamId === fromTeamId,
-          myTeamId: teamId,
+      } else if (d.source === 'public' && d.payload) {
+        const p = d.payload as Record<string, unknown>;
+        userInfo = {
+          id: null,
+          email: (p.requester_email as string) || null,
+          display_name: (p.requester_name as string) || null,
+          discord: (p.requester_discord as string) || null,
         };
-      })
-    );
+      }
+      const payload = (d.payload as Record<string, unknown> | null) ?? null;
+      const nego = readScrimNego(payload || {});
+      const fromTeamId = (payload?.from_team_id as string | null) ?? null;
+      return {
+        id: d.id as string,
+        user_id: (d.user_id as string | null) ?? null,
+        source: (d.source as string | null) ?? null,
+        status: d.status as string,
+        comment: (d.comment as string | null) ?? null,
+        payload,
+        created_at: d.created_at as string,
+        user: userInfo,
+        scrimNego: {
+          slots: nego.slots,
+          proposedBy: nego.proposed_by,
+          rounds: nego.rounds,
+          agreedSlot: nego.agreed_slot,
+        },
+        iAmRequester: teamId === fromTeamId,
+        myTeamId: teamId,
+      };
+    });
     return enriched;
   } catch (err) {
     logger.error('[player/dashboard] pendingScrims error:', err);
