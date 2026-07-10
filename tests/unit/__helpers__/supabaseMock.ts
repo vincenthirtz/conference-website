@@ -646,6 +646,93 @@ export const supabaseAdmin = {
         : undefined;
       return Promise.resolve({ data: found?.id ?? null, error: null as any });
     }
+    // Émulation de la RPC ciblée `admin_list_users` (audit perf P1) : reproduit
+    // la pagination/recherche/filtre SQL contre `_authListUsers` (même source
+    // que l'ancien scan listUsers) + `store.team_members` (pour la recherche
+    // battle_tag). Applique : filtre rôle (égalité insensible à la casse sur
+    // user_metadata.role), recherche sur email/display_name/role + battle_tag,
+    // tri created_at DESC, LIMIT/OFFSET, et total_count = taille de l'ensemble
+    // filtré exposé sur chaque ligne. Un `setRpcResult('admin_list_users', …)`
+    // explicite reste prioritaire (forcer un cas d'erreur).
+    if (fn === 'admin_list_users') {
+      const p = (params as any) ?? {};
+      const pQuery =
+        typeof p.p_query === 'string' && p.p_query.trim()
+          ? p.p_query.trim().toLowerCase()
+          : null;
+      const pRole =
+        typeof p.p_role === 'string' && p.p_role.trim()
+          ? p.p_role.trim().toLowerCase()
+          : null;
+      const pLimit = Number(p.p_limit);
+      const limit = Number.isFinite(pLimit) && pLimit > 0 ? pLimit : 20;
+      const pOffset = Number(p.p_offset);
+      const offset = Number.isFinite(pOffset) && pOffset >= 0 ? pOffset : 0;
+
+      const teamMembers = (store.team_members ?? []) as Array<{
+        user_id?: string;
+        battle_tag?: string | null;
+      }>;
+
+      const normalized = _authListUsers.map((u) => {
+        const meta = ((u as any).user_metadata ?? {}) as Record<
+          string,
+          unknown
+        >;
+        const role =
+          typeof meta.role === 'string' ? (meta.role as string) : null;
+        const displayName =
+          typeof meta.display_name === 'string'
+            ? (meta.display_name as string)
+            : null;
+        const battleTags = teamMembers
+          .filter((tm) => tm.user_id === u.id)
+          .map((tm) => (tm.battle_tag ? String(tm.battle_tag) : ''))
+          .filter(Boolean);
+        return {
+          id: u.id,
+          email: u.email ?? null,
+          role,
+          display_name: displayName,
+          created_at: ((u as any).created_at ?? null) as string | null,
+          last_sign_in_at: ((u as any).last_sign_in_at ?? null) as
+            | string
+            | null,
+          _battleTags: battleTags,
+        };
+      });
+
+      const filtered = normalized.filter((u) => {
+        if (pRole && (u.role ?? '').toLowerCase() !== pRole) return false;
+        if (pQuery) {
+          const matched =
+            (u.email ?? '').toLowerCase().includes(pQuery) ||
+            (u.display_name ?? '').toLowerCase().includes(pQuery) ||
+            (u.role ?? '').toLowerCase().includes(pQuery) ||
+            u._battleTags.some((bt) => bt.toLowerCase().includes(pQuery));
+          if (!matched) return false;
+        }
+        return true;
+      });
+
+      filtered.sort((a, b) => {
+        const ta = a.created_at ? Date.parse(a.created_at) : 0;
+        const tb = b.created_at ? Date.parse(b.created_at) : 0;
+        return tb - ta;
+      });
+
+      const totalCount = filtered.length;
+      const page = filtered.slice(offset, offset + limit).map((u) => ({
+        id: u.id,
+        email: u.email,
+        role: u.role,
+        display_name: u.display_name,
+        created_at: u.created_at,
+        last_sign_in_at: u.last_sign_in_at,
+        total_count: totalCount,
+      }));
+      return Promise.resolve({ data: page as any, error: null as any });
+    }
     return Promise.resolve({ data: null as any, error: null as any });
   },
   auth: {

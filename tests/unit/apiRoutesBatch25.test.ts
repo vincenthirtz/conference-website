@@ -436,6 +436,134 @@ describe('/api/admin/users/manage', () => {
     expect((res.body as any).items.map((u: any) => u.id)).toEqual(['u1']);
   });
 
+  it('GET search filters by display_name substring', async () => {
+    const helper = await import('./__helpers__/supabaseMock');
+    helper.setAuthListUsers([
+      {
+        id: 'u1',
+        email: 'x@a.com',
+        user_metadata: { display_name: 'Charlie' },
+      } as any,
+      {
+        id: 'u2',
+        email: 'y@b.com',
+        user_metadata: { display_name: 'Dana' },
+      } as any,
+    ]);
+    store.team_members = [];
+    const res = makeRes();
+    await usersManageHandler(
+      makeReq({ method: 'GET', query: { search: 'char' } }),
+      res
+    );
+    expect((res.body as any).items.map((u: any) => u.id)).toEqual(['u1']);
+  });
+
+  it('GET search filters by battle_tag substring', async () => {
+    const helper = await import('./__helpers__/supabaseMock');
+    helper.setAuthListUsers([
+      { id: 'u1', email: 'a@a.com', user_metadata: {} } as any,
+      { id: 'u2', email: 'b@b.com', user_metadata: {} } as any,
+    ]);
+    store.team_members = [
+      {
+        user_id: 'u1',
+        team_id: 't1',
+        role: 'player',
+        battle_tag: 'Zenyatta#4242',
+        team: { id: 't1', name: 'Alpha' },
+      },
+      {
+        user_id: 'u2',
+        team_id: 't2',
+        role: 'player',
+        battle_tag: 'Reaper#0001',
+        team: { id: 't2', name: 'Beta' },
+      },
+    ] as any;
+    const res = makeRes();
+    await usersManageHandler(
+      makeReq({ method: 'GET', query: { search: 'zenyatta' } }),
+      res
+    );
+    const body = res.body as any;
+    expect(body.items.map((u: any) => u.id)).toEqual(['u1']);
+    expect(body.items[0].team_memberships[0].battle_tag).toBe('Zenyatta#4242');
+  });
+
+  it('GET filters by role (case-insensitive) and lowercases output', async () => {
+    const helper = await import('./__helpers__/supabaseMock');
+    helper.setAuthListUsers([
+      { id: 'u1', email: 'a@a.com', user_metadata: { role: 'Caster' } } as any,
+      { id: 'u2', email: 'b@b.com', user_metadata: { role: 'player' } } as any,
+    ]);
+    store.team_members = [];
+    const res = makeRes();
+    await usersManageHandler(
+      makeReq({ method: 'GET', query: { role: 'caster' } }),
+      res
+    );
+    const body = res.body as any;
+    expect(body.items.map((u: any) => u.id)).toEqual(['u1']);
+    expect(body.items[0].role).toBe('caster');
+    expect(body.total).toBe(1);
+  });
+
+  it('GET paginates with limit/offset while reporting full total', async () => {
+    const helper = await import('./__helpers__/supabaseMock');
+    helper.setAuthListUsers([
+      {
+        id: 'u1',
+        email: 'a@a.com',
+        user_metadata: {},
+        created_at: '2026-01-03T00:00:00.000Z',
+      } as any,
+      {
+        id: 'u2',
+        email: 'b@b.com',
+        user_metadata: {},
+        created_at: '2026-01-02T00:00:00.000Z',
+      } as any,
+      {
+        id: 'u3',
+        email: 'c@c.com',
+        user_metadata: {},
+        created_at: '2026-01-01T00:00:00.000Z',
+      } as any,
+    ]);
+    store.team_members = [];
+
+    const page1 = makeRes();
+    await usersManageHandler(
+      makeReq({ method: 'GET', query: { limit: '2', offset: '0' } }),
+      page1
+    );
+    const b1 = page1.body as any;
+    // created_at DESC: u1, u2, u3
+    expect(b1.items.map((u: any) => u.id)).toEqual(['u1', 'u2']);
+    expect(b1.total).toBe(3);
+
+    const page2 = makeRes();
+    await usersManageHandler(
+      makeReq({ method: 'GET', query: { limit: '2', offset: '2' } }),
+      page2
+    );
+    const b2 = page2.body as any;
+    expect(b2.items.map((u: any) => u.id)).toEqual(['u3']);
+    expect(b2.total).toBe(3);
+  });
+
+  it('GET 500 when the RPC errors', async () => {
+    const helper = await import('./__helpers__/supabaseMock');
+    helper.setAuthListUsers([]);
+    helper.setRpcResult('admin_list_users', {
+      error: { message: 'boom' },
+    });
+    const res = makeRes();
+    await usersManageHandler(makeReq({ method: 'GET' }), res);
+    expect(res.statusCode).toBe(500);
+  });
+
   it('PATCH 400 when userId or role missing', async () => {
     const res = makeRes();
     await usersManageHandler(makeReq({ method: 'PATCH', body: {} }), res);

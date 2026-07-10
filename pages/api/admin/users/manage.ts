@@ -76,51 +76,58 @@ async function handler(
     const lim = Math.max(1, Math.min(200, Number(limit) || 20));
     const off = Math.max(0, Number(offset) || 0);
 
-    // Aggregate every auth user — listUsers paginates at perPage max 1000.
-    // Loop until we get a short page (or empty), with a safety cap.
-    type AuthUser = Awaited<
-      ReturnType<typeof supabaseAdmin.auth.admin.listUsers>
-    >['data']['users'][number];
-    const allUsers: AuthUser[] = [];
-    const perPage = 200;
-    for (let pageNum = 1; pageNum <= 50; pageNum++) {
-      const { data, error } = await supabaseAdmin.auth.admin.listUsers({
-        page: pageNum,
-        perPage,
-      });
-      if (error) {
-        logger.error('[admin/users/manage] list error:', error);
-        return res.status(500).json({ error: 'Failed to load users.' });
-      }
-      const batch = data?.users ?? [];
-      if (!batch.length) break;
-      allUsers.push(...batch);
-      if (batch.length < perPage) break;
+    // Perf P1 : pagination / recherche / filtre côté SQL via la RPC
+    // `admin_list_users`. Elle applique déjà le filtre rôle (égalité
+    // insensible à la casse sur user_metadata.role), la recherche sur
+    // email / display_name / role + battle_tag (EXISTS team_members), le tri
+    // created_at DESC, le LIMIT/OFFSET et expose total_count = count(*) OVER()
+    // sur l'ensemble filtré. On n'agrège plus tous les comptes auth en mémoire.
+    const normParam = (v: unknown): string | null => {
+      if (typeof v !== 'string') return null;
+      const t = v.trim();
+      return t ? t : null;
+    };
+
+    const { data, error } = await supabaseAdmin.rpc('admin_list_users', {
+      p_query: normParam(search),
+      p_role: normParam(roleFilter),
+      p_limit: lim,
+      p_offset: off,
+    });
+
+    if (error) {
+      logger.error('[admin/users/manage] list error:', error);
+      return res.status(500).json({ error: 'Failed to load users.' });
     }
 
-    // Normalize role casing IN MEMORY only (for display/sort/filter).
-    // GET is a hot read path (debounced search / pagination) and must never
-    // write: persisting the lowercase role here (updateUserById) is an audit
-    // P3 violation. The read still returns normalized roles; it just no longer
-    // rewrites them. If wrong-cased roles are actually stored in GoTrue
-    // metadata, fix them via a one-shot backfill, not on every read.
-    const items: UserLite[] = allUsers.map((u) => ({
-      id: u.id,
-      email: u.email ?? null,
-      role:
-        ((u.user_metadata as any)?.role as string | null)?.toLowerCase() ??
-        null,
-      display_name: (u.user_metadata as any)?.display_name ?? null,
-      created_at: u.created_at ?? null,
-      last_sign_in_at: (u as { last_sign_in_at?: string | null })
-        .last_sign_in_at ?? null,
+    type RpcRow = {
+      id: string;
+      email: string | null;
+      role: string | null;
+      display_name: string | null;
+      created_at: string | null;
+      last_sign_in_at: string | null;
+      total_count: number | string | null;
+    };
+    const rows = (data ?? []) as RpcRow[];
+    const total = Number(rows[0]?.total_count ?? 0);
+
+    // Normalize role casing for display parity with the previous handler.
+    const items: UserLite[] = rows.map((row) => ({
+      id: row.id,
+      email: row.email ?? null,
+      role: row.role?.toLowerCase() ?? null,
+      display_name: row.display_name ?? null,
+      created_at: row.created_at ?? null,
+      last_sign_in_at: row.last_sign_in_at ?? null,
     }));
 
-    const userIds = items.map((u) => u.id);
+    // Enrich team_memberships ONLY for the user ids on THIS page (≤ lim ids →
+    // cheap). Same SELECT + shape as before.
+    const pageUserIds = items.map((u) => u.id);
     const teamMembershipsMap = new Map<string, TeamMembership[]>();
 
-    if (userIds.length) {
-      // Fetch team memberships with battle_tag
+    if (pageUserIds.length) {
       const { data: teamMembers, error: tmErr } = await supabaseAdmin
         .from('team_members')
         .select(
@@ -132,7 +139,7 @@ async function handler(
           team:teams ( id, name )
         `
         )
-        .in('user_id', userIds);
+        .in('user_id', pageUserIds);
 
       if (!tmErr && teamMembers) {
         teamMembers.forEach((row: any) => {
@@ -151,41 +158,12 @@ async function handler(
       }
     }
 
-    const enriched = items.map((u) => ({
+    const enriched: UserLite[] = items.map((u) => ({
       ...u,
       team_memberships: teamMembershipsMap.get(u.id) || [],
     }));
 
-    const filtered = enriched.filter((u) => {
-      if (roleFilter && typeof roleFilter === 'string' && roleFilter.trim()) {
-        if ((u.role || '').toLowerCase() !== roleFilter.toLowerCase()) {
-          return false;
-        }
-      }
-      if (search && typeof search === 'string' && search.trim()) {
-        const term = search.toLowerCase();
-        const battleTagMatch = u.team_memberships?.some((tm) =>
-          (tm.battle_tag || '').toLowerCase().includes(term)
-        );
-        const matched =
-          (u.email || '').toLowerCase().includes(term) ||
-          (u.display_name || '').toLowerCase().includes(term) ||
-          (u.role || '').toLowerCase().includes(term) ||
-          battleTagMatch;
-        if (!matched) return false;
-      }
-      return true;
-    });
-
-    // Stable order: most recent first
-    filtered.sort((a, b) => {
-      const ta = a.created_at ? Date.parse(a.created_at) : 0;
-      const tb = b.created_at ? Date.parse(b.created_at) : 0;
-      return tb - ta;
-    });
-
-    const paged = filtered.slice(off, off + lim);
-    return res.status(200).json({ items: paged, total: filtered.length });
+    return res.status(200).json({ items: enriched, total });
   }
 
   if (req.method === 'PATCH') {
