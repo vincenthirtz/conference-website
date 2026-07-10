@@ -294,7 +294,7 @@ export default function AvailabilityGrid({
                     onClick={() => {
                       if (cellInteractive) onSlotClick?.(key);
                     }}
-                    className={`relative m-px h-6 rounded-md border transition-colors ${cellClass(
+                    className={`relative m-px h-8 sm:h-6 rounded-md border transition-colors ${cellClass(
                       key
                     )} ${
                       cellInteractive ? 'cursor-pointer hover:brightness-125' : ''
