@@ -1,6 +1,8 @@
 // components/admin/scrims/ScrimCalendar.tsx
 // Agenda admin (vue semaine) pour poser / replanifier des scrims sur un créneau.
-// Colonnes = 7 jours (lun→dim), axe horaire continu à gauche (8h→minuit).
+// Colonnes = 7 jours (lun→dim), axe horaire continu à gauche. La plage horaire
+// affichée est dynamique : par défaut 8h→minuit, élargie pour englober tout
+// scrim/match qui déborde (créneau matinal ou nocturne) — plus de bloc coupé.
 //   - Scrims : blocs colorés par statut, DÉPLAÇABLES (drag) et REDIMENSIONNABLES
 //     (poignée basse) via pointer events (souris + tactile). Cliquer (sans
 //     drag) → onOpenScrim(id).
@@ -15,6 +17,7 @@ import {
   weekDaysFrom,
   dateAndMinuteInTz,
   todayYmdInTz,
+  assignLanes,
 } from '@/utils/teams/scrimCalendar';
 
 export type CalendarScrim = {
@@ -45,8 +48,10 @@ export type ScrimCalendarLabels = {
   matchTag: string;
 };
 
-const DAY_START_MIN = 8 * 60; // 08:00
-const DAY_END_MIN = 24 * 60; // minuit
+const DEFAULT_DAY_START_MIN = 8 * 60; // 08:00 (borne haute du début visible)
+const DEFAULT_DAY_END_MIN = 24 * 60; // minuit (borne basse de la fin visible)
+const BAND_PAD_MIN = 30; // marge autour des événements hors plage par défaut
+const MAX_DAY_END_MIN = 30 * 60; // garde-fou : jamais au-delà de 06:00 (J+1)
 const HOUR_PX = 44;
 const SNAP_MIN = 30; // snap création (clic zone vide)
 const DND_SNAP_MIN = 15; // snap drag & drop / resize
@@ -67,6 +72,9 @@ const STATUS_BLOCK: Record<string, string> = {
 
 const pad2 = (n: number) => String(n).padStart(2, '0');
 const fmtHour = (m: number) => `${pad2(Math.floor(m / 60))}:${pad2(m % 60)}`;
+/** Label de graduation : au-delà de minuit, affiche l'heure J+1 avec un « +1 ». */
+const fmtMark = (m: number) =>
+  m >= 24 * 60 ? `${fmtHour(m - 24 * 60)}⁺¹` : fmtHour(m);
 const clamp = (v: number, lo: number, hi: number) =>
   Math.max(lo, Math.min(hi, v));
 
@@ -122,7 +130,6 @@ export default function ScrimCalendar({
   onResizeScrim: (id: string, durationMinutes: number) => void;
 }) {
   const days = useMemo(() => weekDaysFrom(weekStart), [weekStart]);
-  const colHeight = ((DAY_END_MIN - DAY_START_MIN) / 60) * HOUR_PX;
   const todayYmd = useMemo(() => todayYmdInTz(tz), [tz]);
 
   // Refs des colonnes-jour pour retrouver le jour cible depuis le pointeur.
@@ -209,13 +216,71 @@ export default function ScrimCalendar({
     return map;
   }, [matches, tz, days]);
 
+  // Plage horaire visible, dynamique : 8h→minuit par défaut, élargie pour
+  // englober tout scrim/match qui déborde (créneau matinal ou nocturne). Basée
+  // sur les positions de base (pas le drag) → la plage ne saute pas pendant un
+  // déplacement.
+  const band = useMemo(() => {
+    let earliest = DEFAULT_DAY_START_MIN;
+    let latest = DEFAULT_DAY_END_MIN;
+    for (const p of scrimBasePos.values()) {
+      earliest = Math.min(earliest, p.minute);
+      latest = Math.max(latest, p.minute + p.duration);
+    }
+    for (const list of Object.values(matchesByDay)) {
+      for (const { minute } of list) {
+        earliest = Math.min(earliest, minute);
+        latest = Math.max(latest, minute + DEFAULT_MATCH_DURATION_MIN);
+      }
+    }
+    const startMin = clamp(
+      Math.floor((earliest - BAND_PAD_MIN) / 60) * 60,
+      0,
+      DEFAULT_DAY_START_MIN
+    );
+    const endMin = clamp(
+      Math.ceil((latest + BAND_PAD_MIN) / 60) * 60,
+      DEFAULT_DAY_END_MIN,
+      MAX_DAY_END_MIN
+    );
+    return { startMin, endMin };
+  }, [scrimBasePos, matchesByDay]);
+
+  const colHeight = ((band.endMin - band.startMin) / 60) * HOUR_PX;
+
+  // Layout côte-à-côte : par jour, répartit matches + scrims chevauchants en
+  // colonnes pour qu'aucun bloc n'en recouvre un autre. Recalculé pendant le
+  // drag (scrimsByDay dépend de dragTick).
+  const layoutByDay = useMemo(() => {
+    const map: Record<string, Map<string, { col: number; cols: number }>> = {};
+    for (const day of days) {
+      const blocks: { id: string; start: number; end: number }[] = [];
+      for (const { match, minute } of matchesByDay[day] ?? []) {
+        blocks.push({
+          id: `m-${match.id}`,
+          start: minute,
+          end: minute + DEFAULT_MATCH_DURATION_MIN,
+        });
+      }
+      for (const p of scrimsByDay[day] ?? []) {
+        blocks.push({
+          id: p.scrim.id,
+          start: p.minute,
+          end: p.minute + p.duration,
+        });
+      }
+      map[day] = assignLanes(blocks);
+    }
+    return map;
+  }, [days, matchesByDay, scrimsByDay]);
+
   const hourMarks = useMemo(() => {
     const marks: { top: number; label: string }[] = [];
-    for (let m = DAY_START_MIN; m <= DAY_END_MIN; m += 60) {
-      marks.push({ top: (m - DAY_START_MIN) * pxPerMin, label: fmtHour(m) });
+    for (let m = band.startMin; m <= band.endMin; m += 60) {
+      marks.push({ top: (m - band.startMin) * pxPerMin, label: fmtMark(m) });
     }
     return marks;
-  }, []);
+  }, [band]);
 
   const colIndexAt = useCallback(
     (clientX: number): number | null => {
@@ -275,15 +340,15 @@ export default function ScrimCalendar({
       } else {
         d.curMinute = clamp(
           d.originMinute + deltaMin,
-          DAY_START_MIN,
-          DAY_END_MIN - DND_SNAP_MIN
+          band.startMin,
+          band.endMin - DND_SNAP_MIN
         );
         const idx = colIndexAt(e.clientX);
         if (idx !== null) d.curDay = days[idx];
       }
       rerender();
     },
-    [colIndexAt, days, rerender]
+    [colIndexAt, days, rerender, band]
   );
 
   const endDrag = useCallback(
@@ -312,8 +377,8 @@ export default function ScrimCalendar({
     if (justDraggedRef.current) return;
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const y = e.clientY - rect.top;
-    let minute = DAY_START_MIN + Math.round(y / pxPerMin / SNAP_MIN) * SNAP_MIN;
-    minute = clamp(minute, DAY_START_MIN, DAY_END_MIN - SNAP_MIN);
+    let minute = band.startMin + Math.round(y / pxPerMin / SNAP_MIN) * SNAP_MIN;
+    minute = clamp(minute, band.startMin, band.endMin - SNAP_MIN);
     onCreateAt(dayYmd, minute);
   };
 
@@ -423,12 +488,16 @@ export default function ScrimCalendar({
                     {dayMatches.map(({ match, minute }) => {
                       const top = Math.max(
                         0,
-                        (minute - DAY_START_MIN) * pxPerMin
+                        (minute - band.startMin) * pxPerMin
                       );
                       const height = Math.max(
                         18,
                         DEFAULT_MATCH_DURATION_MIN * pxPerMin - 2
                       );
+                      const lane = layoutByDay[day]?.get(`m-${match.id}`) ?? {
+                        col: 0,
+                        cols: 1,
+                      };
                       const vs =
                         match.team1Name || match.team2Name
                           ? `${match.team1Name ?? '?'} vs ${match.team2Name ?? '?'}`
@@ -441,10 +510,12 @@ export default function ScrimCalendar({
                             e.stopPropagation();
                             onOpenMatch(match.id);
                           }}
-                          className="absolute inset-x-0.5 overflow-hidden rounded-md border border-neutral-500/40 px-1.5 py-1 text-left text-[10px] leading-tight text-neutral-300 hover:brightness-125"
+                          className="absolute overflow-hidden rounded-md border border-neutral-500/40 px-1.5 py-1 text-left text-[10px] leading-tight text-neutral-300 hover:brightness-125"
                           style={{
                             top,
                             height,
+                            left: `calc(${(lane.col / lane.cols) * 100}% + 1px)`,
+                            width: `calc(${100 / lane.cols}% - 2px)`,
                             backgroundColor: '#3f3f46',
                             backgroundImage:
                               'repeating-linear-gradient(45deg, rgba(255,255,255,0.06) 0, rgba(255,255,255,0.06) 4px, transparent 4px, transparent 8px)',
@@ -463,9 +534,13 @@ export default function ScrimCalendar({
                     {dayScrims.map(({ scrim, minute, duration, dragging }) => {
                       const top = Math.max(
                         0,
-                        (minute - DAY_START_MIN) * pxPerMin
+                        (minute - band.startMin) * pxPerMin
                       );
                       const height = Math.max(18, duration * pxPerMin - 2);
+                      const lane = layoutByDay[day]?.get(scrim.id) ?? {
+                        col: 0,
+                        cols: 1,
+                      };
                       const cls =
                         STATUS_BLOCK[scrim.status] ?? STATUS_BLOCK.draft;
                       const vs =
@@ -481,10 +556,22 @@ export default function ScrimCalendar({
                           onPointerUp={endDrag}
                           onPointerCancel={cancelDrag}
                           onClick={handleScrimClick(scrim.id)}
-                          className={`absolute inset-x-0.5 touch-none cursor-grab overflow-hidden rounded-md border px-1.5 py-1 text-left text-[10px] leading-tight shadow-sm hover:brightness-110 active:cursor-grabbing ${cls} ${
+                          className={`absolute touch-none cursor-grab overflow-hidden rounded-md border px-1.5 py-1 text-left text-[10px] leading-tight shadow-sm hover:brightness-110 active:cursor-grabbing ${cls} ${
                             dragging ? 'z-20 ring-2 ring-white/60' : ''
                           }`}
-                          style={{ top, height }}
+                          style={{
+                            top,
+                            height,
+                            // Pendant le drag, on prend toute la largeur (repère
+                            // clair) ; sinon on respecte la lane anti-collision.
+                            left: dragging
+                              ? '2px'
+                              : `calc(${(lane.col / lane.cols) * 100}% + 1px)`,
+                            right: dragging ? '2px' : undefined,
+                            width: dragging
+                              ? undefined
+                              : `calc(${100 / lane.cols}% - 2px)`,
+                          }}
                           title={`${vs} — ${fmtHour(minute)}`}
                         >
                           <span className="block font-semibold tabular-nums">
@@ -508,7 +595,13 @@ export default function ScrimCalendar({
                       );
                     })}
 
-                    {isToday && <TodayLine tz={tz} />}
+                    {isToday && (
+                      <TodayLine
+                        tz={tz}
+                        startMin={band.startMin}
+                        endMin={band.endMin}
+                      />
+                    )}
                   </div>
                 </div>
               );
@@ -520,7 +613,15 @@ export default function ScrimCalendar({
   );
 }
 
-function TodayLine({ tz }: { tz: string }) {
+function TodayLine({
+  tz,
+  startMin,
+  endMin,
+}: {
+  tz: string;
+  startMin: number;
+  endMin: number;
+}) {
   const parts = new Intl.DateTimeFormat('en-GB', {
     timeZone: tz,
     hour: '2-digit',
@@ -530,11 +631,11 @@ function TodayLine({ tz }: { tz: string }) {
   const get = (t: string) =>
     parseInt(parts.find((p) => p.type === t)?.value ?? '0', 10);
   const nowMin = get('hour') * 60 + get('minute');
-  if (nowMin < DAY_START_MIN || nowMin > DAY_END_MIN) return null;
+  if (nowMin < startMin || nowMin > endMin) return null;
   return (
     <div
       className="pointer-events-none absolute inset-x-0 z-10 flex items-center"
-      style={{ top: (nowMin - DAY_START_MIN) * pxPerMin }}
+      style={{ top: (nowMin - startMin) * pxPerMin }}
     >
       <span className="h-1.5 w-1.5 -ml-0.5 rounded-full bg-red-500" />
       <span className="h-px flex-1 bg-red-500/80" />

@@ -91,3 +91,47 @@ export function localInputValue(ymd: string, minuteOfDay: number): string {
     minuteOfDay % 60
   )}`;
 }
+
+export type LaneBlock = { id: string; start: number; end: number };
+export type Lane = { col: number; cols: number };
+
+/**
+ * Répartit des blocs [start, end) (minutes) en colonnes côte-à-côte pour éviter
+ * la superposition visuelle dans une colonne-jour d'agenda. Renvoie, par id de
+ * bloc, sa colonne (`col`) et le nombre total de colonnes de son cluster de
+ * chevauchement (`cols`) → largeur d'affichage = 1 / cols, décalage = col / cols.
+ *
+ * Un « cluster » est une suite maximale de blocs transitivement chevauchants ;
+ * l'affectation est gloutonne (réutilise la première colonne libérée). Des blocs
+ * qui se touchent bord à bord (end === start) ne se chevauchent PAS.
+ */
+export function assignLanes(blocks: LaneBlock[]): Map<string, Lane> {
+  const out = new Map<string, Lane>();
+  const sorted = [...blocks].sort((a, b) => a.start - b.start || a.end - b.end);
+  let i = 0;
+  while (i < sorted.length) {
+    const cluster = [sorted[i]];
+    let clusterEnd = sorted[i].end;
+    let j = i + 1;
+    while (j < sorted.length && sorted[j].start < clusterEnd) {
+      cluster.push(sorted[j]);
+      clusterEnd = Math.max(clusterEnd, sorted[j].end);
+      j += 1;
+    }
+    const colEnds: number[] = [];
+    for (const b of cluster) {
+      let c = colEnds.findIndex((end) => end <= b.start);
+      if (c === -1) {
+        c = colEnds.length;
+        colEnds.push(b.end);
+      } else {
+        colEnds[c] = b.end;
+      }
+      out.set(b.id, { col: c, cols: 0 });
+    }
+    const cols = colEnds.length;
+    for (const b of cluster) out.get(b.id)!.cols = cols;
+    i = j;
+  }
+  return out;
+}
