@@ -44,6 +44,20 @@
 }
 
 /* ─────────────────────────────────────────────────────────
+ * Surfaces sombres du back-office admin. Centralise les quasi-noirs jusque-là
+ * saisis en hex arbitraires (bg-[#12121a]…) et divergents de page en page, en
+ * utilitaires nommés (bg-surface, bg-surface-raised/sunken/deep, via-surface-*).
+ * Valeurs préservées à l'identique (aucun changement visuel).
+ * ───────────────────────────────────────────────────────── */
+@theme {
+  --color-surface: #12121a; /* card / panneau par défaut */
+  --color-surface-raised: #15151f; /* panneau légèrement surélevé */
+  --color-surface-sunken: #0a0a12; /* cellules sticky sur fond sombre */
+  --color-surface-deep: #0a0a0f; /* panneau le plus profond */
+  --color-surface-black: #050509; /* arrêt de dégradé quasi-noir (écrans auth) */
+}
+
+/* ─────────────────────────────────────────────────────────
  * REBRAND Lot C — override des rampes Tailwind par défaut vers la
  * palette logo. Les utilitaires (bg-purple-N, text-cyan-N, from-pink-N …) des
  * ~200 composants basculent SANS édition fichier. Hues froids -> vert

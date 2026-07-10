@@ -116,7 +116,7 @@ function SimMatchCardComponent({
 
   return (
     <div
-      className={`rounded-xl border overflow-hidden bg-[#12121a] transition-all duration-300 ${
+      className={`rounded-xl border overflow-hidden bg-surface transition-all duration-300 ${
         match.locked
           ? 'border-amber-500/30 ring-1 ring-amber-500/10'
           : match.status === 'finished'

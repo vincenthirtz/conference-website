@@ -366,10 +366,10 @@ function BracketMatchCard({
       <div
         className={`rounded-xl border overflow-hidden transition-all ${fixedHeight ? 'h-full' : ''} ${
           isFinale
-            ? 'bg-gradient-to-br from-amber-950/30 via-[#12121a] to-purple-950/30 border-amber-500/20 shadow-xl shadow-amber-500/5'
+            ? 'bg-gradient-to-br from-amber-950/30 via-surface to-purple-950/30 border-amber-500/20 shadow-xl shadow-amber-500/5'
             : m.status === 'finished'
-              ? 'bg-[#12121a] border-white/[0.08]'
-              : 'bg-[#12121a] border-white/[0.06] hover:border-purple-500/20'
+              ? 'bg-surface border-white/[0.08]'
+              : 'bg-surface border-white/[0.06] hover:border-purple-500/20'
         }`}
       >
         <div

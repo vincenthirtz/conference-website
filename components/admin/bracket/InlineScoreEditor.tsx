@@ -67,7 +67,7 @@ export default function InlineScoreEditor({
 
   return (
     <div
-      className="absolute left-0 right-0 top-full z-50 mt-1 rounded-lg border border-purple-500/40 bg-[#15151f] p-2.5 shadow-2xl shadow-black/50"
+      className="absolute left-0 right-0 top-full z-50 mt-1 rounded-lg border border-purple-500/40 bg-surface-raised p-2.5 shadow-2xl shadow-black/50"
       onClick={(e) => e.stopPropagation()}
     >
       <div className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-purple-300">

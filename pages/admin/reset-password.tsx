@@ -133,7 +133,7 @@ export default function AdminResetPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
+    <div className="min-h-screen bg-gradient-to-b from-black via-surface-black to-black text-white">
       <Head>
         <title>{t.pageTitle}</title>
       </Head>

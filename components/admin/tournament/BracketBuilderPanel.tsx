@@ -559,7 +559,7 @@ ${day.matches
       </div>
 
       {/* ---- Toolbar ---- */}
-      <div className="sticky top-0 z-30 bg-[#0a0a0f]/80 backdrop-blur-xl border-b border-white/5">
+      <div className="sticky top-0 z-30 bg-surface-deep/80 backdrop-blur-xl border-b border-white/5">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-3 flex-wrap">
           {/* View mode toggle */}
           <div className="flex rounded-lg border border-white/10 overflow-hidden">

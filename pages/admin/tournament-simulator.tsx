@@ -2791,7 +2791,7 @@ function TournamentSimulatorPage() {
                             <table className="w-full text-xs">
                               <thead>
                                 <tr className="border-b border-white/10">
-                                  <th className="text-left py-2 pr-2 text-neutral-500 font-semibold sticky left-0 bg-[#0a0a12] z-10">
+                                  <th className="text-left py-2 pr-2 text-neutral-500 font-semibold sticky left-0 bg-surface-sunken z-10">
                                     {tx.vs}
                                   </th>
                                   {sortedTeams.map((t) => (
@@ -2810,7 +2810,7 @@ function TournamentSimulatorPage() {
                                     key={t1.id}
                                     className="border-b border-white/[0.03]"
                                   >
-                                    <td className="py-1.5 pr-2 font-medium text-neutral-300 sticky left-0 bg-[#0a0a12] z-10">
+                                    <td className="py-1.5 pr-2 font-medium text-neutral-300 sticky left-0 bg-surface-sunken z-10">
                                       {t1.short_name}
                                     </td>
                                     {sortedTeams.map((t2) => {

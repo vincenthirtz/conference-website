@@ -52,7 +52,7 @@ export default function MatchCard({
       className={`group relative rounded-xl border transition-all duration-200 hover:border-purple-500/30 ${
         isTBD
           ? 'bg-gradient-to-br from-purple-950/40 to-indigo-950/40 border-purple-500/20'
-          : 'bg-[#12121a] border-white/[0.06]'
+          : 'bg-surface border-white/[0.06]'
       }`}
     >
       {/* Top bar: time + status + format */}
