@@ -25,6 +25,7 @@ import { useLocale } from '@/lib/i18n/useLocale';
 import {
   slotKeysForHorizon,
   copyFirstPaintedDayAcrossHorizon,
+  rankValidatableSlots,
 } from '@/utils/teams/scrimPlanningOverlap';
 import { buildScrimIcs, downloadIcs } from '@/utils/teams/scrimIcs';
 import type { ScrimPlanning, ScrimPlanningParty } from '@/types/admin';
@@ -71,6 +72,10 @@ export default function ScrimPlanningPanel({
   const [slots, setSlots] = useState<string[]>(() =>
     Array.isArray(mySlots) ? mySlots : []
   );
+  // Dernier état persisté (pour détecter les modifications non enregistrées).
+  const [savedSlots, setSavedSlots] = useState<string[]>(() =>
+    Array.isArray(mySlots) ? mySlots : []
+  );
   const [saving, setSaving] = useState(false);
   const [loadingSuggest, setLoadingSuggest] = useState(false);
   const [mode, setMode] = useState<'paint' | 'heatmap'>('paint');
@@ -97,6 +102,27 @@ export default function ScrimPlanningPanel({
     [planning]
   );
 
+  // Modifications non enregistrées : la peinture locale diffère du dernier état
+  // persisté. Comparaison ensembliste (l'ordre canonique peut varier).
+  const dirty = useMemo(() => {
+    if (slots.length !== savedSlots.length) return true;
+    const saved = new Set(savedSlots);
+    return slots.some((s) => !saved.has(s));
+  }, [slots, savedSlots]);
+
+  // Garde-fou navigateur : avertit avant de quitter/recharger si des dispos
+  // peintes ne sont pas sauvegardées (les navigateurs affichent un message
+  // générique ; le texte custom est ignoré).
+  useEffect(() => {
+    if (readOnly || !dirty) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [dirty, readOnly]);
+
   // Adapte la heatmap anonymisée au type attendu par la grille (participants
   // vides = aucune fuite nominative, la tooltip n'affichera que le compteur).
   const gridHeatmap = useMemo<Heatmap | undefined>(() => {
@@ -109,6 +135,14 @@ export default function ScrimPlanningPanel({
   }, [heatmap]);
 
   const hasHeatmap = !!gridHeatmap && Object.keys(gridHeatmap).length > 0;
+
+  // Meilleurs créneaux où les deux équipes convergent (overlap parfait en tête,
+  // puis le plus tôt). Rendu côté joueur pour l'aider à viser le bon créneau —
+  // jusqu'ici seul l'admin voyait ce classement.
+  const topSlots = useMemo(() => {
+    if (!gridHeatmap) return [];
+    return rankValidatableSlots(gridHeatmap, planning.staff_required).slice(0, 3);
+  }, [gridHeatmap, planning.staff_required]);
 
   const gridLabels = useMemo<AvailabilityGridLabels>(
     () => ({
@@ -226,6 +260,7 @@ export default function ScrimPlanningPanel({
         ? data.mySlots
         : slots;
       setSlots(saved);
+      setSavedSlots(saved);
       onSaved?.(saved);
       addToast(t.saveSuccess, 'success');
     } catch (err) {
@@ -426,6 +461,54 @@ export default function ScrimPlanningPanel({
         </div>
       )}
 
+      {/* Meilleur créneau commun (les deux équipes convergent) */}
+      {topSlots.length > 0 && (
+        <div className="mb-4 rounded-xl border border-emerald-500/25 bg-emerald-500/5 px-4 py-3">
+          <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-emerald-200">
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M12 2l2.4 7.4H22l-6 4.6 2.3 7-6.3-4.6L5.7 21 8 14 2 9.4h7.6z" />
+            </svg>
+            {t.bestSlotTitle}
+          </p>
+          <ul className="flex flex-col gap-1.5">
+            {topSlots.map((r) => {
+              const mine = slots.includes(r.slot);
+              return (
+                <li
+                  key={r.slot}
+                  className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-emerald-50"
+                >
+                  <span className="font-medium">{formatSlot(r.slot)}</span>
+                  {r.full && (
+                    <span className="rounded-full border border-emerald-400/40 bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium text-emerald-100">
+                      {t.gridFullOverlap}
+                    </span>
+                  )}
+                  <span
+                    className={
+                      mine
+                        ? 'text-emerald-300'
+                        : 'text-amber-300'
+                    }
+                  >
+                    {mine ? t.bestSlotMeAvailable : t.bestSlotMeMissing}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+
       {view === 'calendar' ? (
         <AvailabilityCalendar
           config={config}
@@ -455,10 +538,16 @@ export default function ScrimPlanningPanel({
       {/* Pied : compteur + sauvegarde */}
       {!readOnly && effectiveMode === 'paint' && (
         <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-          <span className="text-xs text-gray-400">
+          <span className="flex flex-wrap items-center gap-2 text-xs text-gray-400">
             {format(slotsCount === 1 ? t.slotsPainted_one : t.slotsPainted_other, {
               count: slotsCount,
             })}
+            {dirty && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-amber-400/40 bg-amber-500/10 px-2 py-0.5 font-medium text-amber-200">
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-400" aria-hidden="true" />
+                {t.unsavedChanges}
+              </span>
+            )}
           </span>
           <button
             type="button"

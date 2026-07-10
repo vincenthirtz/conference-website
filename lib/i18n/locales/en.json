@@ -3760,6 +3760,10 @@
     "staffRequiredNote": "Staff is required for this scrim.",
     "addToCalendar": "Add to my calendar",
     "timezoneNote": "Times shown in {tz}",
-    "timezoneViewer": "your timezone: {tz}"
+    "timezoneViewer": "your timezone: {tz}",
+    "unsavedChanges": "Unsaved changes",
+    "bestSlotTitle": "Best common slot",
+    "bestSlotMeAvailable": "you're available",
+    "bestSlotMeMissing": "you're not available yet"
   }
 }

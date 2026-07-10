@@ -3760,6 +3760,10 @@
     "staffRequiredNote": "Le staff est requis pour ce scrim.",
     "addToCalendar": "Ajouter à mon agenda",
     "timezoneNote": "Horaires affichés en {tz}",
-    "timezoneViewer": "ton fuseau : {tz}"
+    "timezoneViewer": "ton fuseau : {tz}",
+    "unsavedChanges": "Modifications non enregistrées",
+    "bestSlotTitle": "Meilleur créneau commun",
+    "bestSlotMeAvailable": "tu es dispo",
+    "bestSlotMeMissing": "tu n'es pas encore dispo"
   }
 }
