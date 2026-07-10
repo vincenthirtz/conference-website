@@ -28,6 +28,7 @@ import {
   type PlanningAvailabilityInput,
 } from '@/utils/teams/scrimPlanningOverlap';
 import { planningConfigFromRow } from '@/utils/teams/scrimPlanningConfig';
+import type { SlotConflict } from '@/utils/teams/scrimConflicts';
 import type {
   StaffProps,
   ScrimPlanning,
@@ -216,6 +217,48 @@ function AdminScrimPlanningDetailPage(_props: StaffProps) {
   const isActionable =
     planning?.status === 'open' && !planning?.validated_slot && !busy;
 
+  // Aperçu des conflits (double-booking) des meilleurs créneaux, AVANT clic :
+  // mêmes conflits que le 409 de la validation (endpoint dédié réutilisant
+  // findScrimConflicts). Évite à l'admin de valider un créneau déjà pris.
+  const [conflictsBySlot, setConflictsBySlot] = useState<
+    Record<string, SlotConflict[]>
+  >({});
+
+  const canValidatePlanning =
+    planning?.status === 'open' && !planning?.validated_slot;
+
+  useEffect(() => {
+    if (!id || !canValidatePlanning) {
+      setConflictsBySlot({});
+      return;
+    }
+    const slots = ranked.slice(0, 16).map((r) => r.slot);
+    if (slots.length === 0) {
+      setConflictsBySlot({});
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await adminFetchJson<{
+          conflicts: Record<string, SlotConflict[]>;
+        }>(`/api/admin/scrim-plannings/${id}/conflicts`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ slots }),
+        });
+        if (!cancelled) setConflictsBySlot(res.conflicts || {});
+      } catch {
+        // Non-bloquant : l'aperçu reste vide, la validation reste protégée par
+        // le 409 côté serveur.
+        if (!cancelled) setConflictsBySlot({});
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [id, canValidatePlanning, ranked, adminFetchJson]);
+
   const runValidate = useCallback(
     async (planningId: string, slot: string, force: boolean) => {
       setBusy(true);
@@ -268,12 +311,21 @@ function AdminScrimPlanningDetailPage(_props: StaffProps) {
         addToast(t.notValidatable, 'warning');
         return;
       }
+      // Aperçu de conflit connu pour ce créneau → avertit dès la confirmation.
+      const conflictCount = (conflictsBySlot[slot] ?? []).length;
+      const baseSubtitle = format(t.confirmValidateSubtitle, {
+        when: formatDate(slot),
+      });
       const ok = await confirm({
         title: t.confirmValidateTitle,
-        subtitle: format(t.confirmValidateSubtitle, {
-          when: formatDate(slot),
-        }),
-        variant: isFullOverlap(cell) ? 'info' : 'warning',
+        subtitle:
+          conflictCount > 0
+            ? `${baseSubtitle} ${format(t.confirmValidateConflict, {
+                count: conflictCount,
+              })}`
+            : baseSubtitle,
+        variant:
+          conflictCount > 0 ? 'danger' : isFullOverlap(cell) ? 'info' : 'warning',
         confirmLabel: t.confirmValidateConfirm,
         cancelLabel: t.confirmValidateCancel,
       });
@@ -285,6 +337,7 @@ function AdminScrimPlanningDetailPage(_props: StaffProps) {
       isActionable,
       heatmap,
       requireStaff,
+      conflictsBySlot,
       confirm,
       addToast,
       t,
@@ -581,6 +634,30 @@ function AdminScrimPlanningDetailPage(_props: StaffProps) {
                       >
                         {r.full ? t.bestSlotFull : t.bestSlotPartial}
                       </span>
+                      {(conflictsBySlot[r.slot]?.length ?? 0) > 0 && (
+                        <span
+                          className="inline-flex items-center gap-1 rounded-full bg-red-900/40 border border-red-500/50 px-2.5 py-0.5 text-xs font-medium text-red-200"
+                          title={t.conflictBadgeTitle}
+                        >
+                          <svg
+                            className="h-3 w-3"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                            strokeWidth={2}
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            aria-hidden="true"
+                          >
+                            <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                            <line x1="12" y1="9" x2="12" y2="13" />
+                            <line x1="12" y1="17" x2="12.01" y2="17" />
+                          </svg>
+                          {format(t.conflictBadge, {
+                            count: conflictsBySlot[r.slot]!.length,
+                          })}
+                        </span>
+                      )}
                     </div>
                     <button
                       onClick={() => runValidate(planning.id, r.slot, false)}

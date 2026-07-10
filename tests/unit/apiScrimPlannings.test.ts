@@ -39,6 +39,7 @@ import { planningConfigFromRow } from '../../utils/teams/scrimPlanningConfig';
 import adminListHandler from '../../pages/api/admin/scrim-plannings/index';
 import adminDetailHandler from '../../pages/api/admin/scrim-plannings/[planningId]/index';
 import adminValidateHandler from '../../pages/api/admin/scrim-plannings/[planningId]/validate';
+import adminConflictsHandler from '../../pages/api/admin/scrim-plannings/[planningId]/conflicts';
 import playerListHandler from '../../pages/api/teams/scrim-plannings/index';
 import playerDetailHandler from '../../pages/api/teams/scrim-plannings/[planningId]/index';
 import playerAvailabilityHandler from '../../pages/api/teams/scrim-plannings/[planningId]/availability';
@@ -452,6 +453,89 @@ describe('/api/admin/scrim-plannings/[planningId]/validate', () => {
     expect((res.body as any).scrim.source_planning_id).toBe(PLANNING_ID);
     expect((res.body as any).warning).toContain('conflit');
     expect(store.scrims).toHaveLength(2);
+  });
+});
+
+/* -----------------------------------------------------------
+ * /api/admin/scrim-plannings/[planningId]/conflicts  (aperçu pré-validation)
+ * ---------------------------------------------------------*/
+
+describe('/api/admin/scrim-plannings/[planningId]/conflicts', () => {
+  beforeEach(() => {
+    store.scrim_plannings = [basePlanning()] as any;
+    store.scrims = [];
+  });
+
+  it('renvoie une map vide quand aucun conflit', async () => {
+    const res = makeRes();
+    await adminConflictsHandler(
+      makeAuthedReq({
+        method: 'POST',
+        query: { planningId: PLANNING_ID },
+        body: { slots: [SLOT_1, SLOT_2] },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    expect((res.body as any).conflicts[SLOT_1]).toEqual([]);
+    expect((res.body as any).conflicts[SLOT_2]).toEqual([]);
+  });
+
+  it('signale le scrim déjà programmé qui chevauche le créneau (± fenêtre)', async () => {
+    store.scrims = [
+      {
+        id: 'existing-scrim',
+        name: 'Phoenix vs Someone',
+        status: 'scheduled',
+        team1_id: TEAM_A,
+        team2_id: '550e8400-e29b-41d4-a716-4466554400c9',
+        scheduled_date: SLOT_1,
+        deleted_at: null,
+        source_planning_id: null,
+      },
+    ] as any;
+
+    const res = makeRes();
+    await adminConflictsHandler(
+      makeAuthedReq({
+        method: 'POST',
+        query: { planningId: PLANNING_ID },
+        body: { slots: [SLOT_1, SLOT_2] },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    // SLOT_1 (20h) et SLOT_2 (21h) tombent tous deux dans la fenêtre ±120 min
+    // du scrim préexistant à 20h → conflit signalé pour les deux.
+    expect((res.body as any).conflicts[SLOT_1]).toHaveLength(1);
+    expect((res.body as any).conflicts[SLOT_1][0].type).toBe('scrim');
+    expect((res.body as any).conflicts[SLOT_2]).toHaveLength(1);
+  });
+
+  it('404 quand la planning n’existe pas / mauvais tenant', async () => {
+    store.scrim_plannings = [] as any;
+    const res = makeRes();
+    await adminConflictsHandler(
+      makeAuthedReq({
+        method: 'POST',
+        query: { planningId: PLANNING_ID },
+        body: { slots: [SLOT_1] },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(404);
+  });
+
+  it('405 sur une méthode non POST', async () => {
+    const res = makeRes();
+    await adminConflictsHandler(
+      makeAuthedReq({
+        method: 'GET',
+        query: { planningId: PLANNING_ID },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(405);
   });
 });
 
