@@ -397,7 +397,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
   useEffect(() => {
     if (!id || !filtersHydrated) return;
     fetchMatches();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- deps volontairement curées : on relance sur les filtres « live » listés mais PAS sur `search` (appliqué au submit) ni sur `fetchMatches` (recréé à chaque render → boucle) ; les handlers passent par fetchMatchesRef
   }, [
     id,
     filtersHydrated,

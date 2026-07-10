@@ -119,6 +119,7 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
   useEffect(() => {
     if (!stageId) return;
     fetchStageTeams();
+    // Chargement unique par stageId : fetchStageTeams capture adminFetchJson (identité liée au router, non stable) ; l'inclure provoquerait des refetch parasites.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stageId]);
 

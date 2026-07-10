@@ -104,7 +104,7 @@ export default function TeamStatsPanel() {
 
   useEffect(() => {
     fetchStats();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- refetch piloté par les seuls filtres/offset listés ; fetchStats hors deps pour ne pas dupliquer les requêtes
   }, [offset, tournamentId, sortBy, sortDir, minMatches]);
 
   async function fetchTournaments() {

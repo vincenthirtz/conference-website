@@ -63,7 +63,7 @@ export default function BracketBuilderPanel() {
   useEffect(() => {
     if (!id) return;
     fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- (re)fetch uniquement au changement d'id de tournoi (URL) ; fetchData volontairement hors deps (dépend transitivement de router)
   }, [id]);
 
   async function fetchData() {

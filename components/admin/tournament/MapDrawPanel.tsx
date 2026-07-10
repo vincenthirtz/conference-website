@@ -127,7 +127,7 @@ export default function MapDrawPanel() {
   useEffect(() => {
     if (!tournamentId) return;
     fetchMaps();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- recharge uniquement quand l'id de tournoi (URL) change ; fetchMaps volontairement hors deps (dépend transitivement de router)
   }, [tournamentId]);
 
   // Reset slots when format changes

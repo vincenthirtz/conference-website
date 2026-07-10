@@ -2,7 +2,7 @@
 // pages/admin/tournament/[id]/maps.tsx
 // Gestion (lecture/ajout/suppression) du pool de maps d'un tournoi
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -124,13 +124,7 @@ function AdminTournamentMapsPage(_: StaffProps) {
   const [editImagePreview, setEditImagePreview] = useState('');
   const [updating, setUpdating] = useState(false);
 
-  useEffect(() => {
-    if (!tournamentId) return;
-    fetchMaps();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tournamentId]);
-
-  async function fetchMaps() {
+  const fetchMaps = useCallback(async () => {
     setLoading(true);
     setErrorMsg(null);
     try {
@@ -144,7 +138,12 @@ function AdminTournamentMapsPage(_: StaffProps) {
     } finally {
       setLoading(false);
     }
-  }
+  }, [tournamentId, adminFetchJson, t]);
+
+  useEffect(() => {
+    if (!tournamentId) return;
+    fetchMaps();
+  }, [tournamentId, fetchMaps]);
 
   async function handleAddMap() {
     if (!tournamentId) return;

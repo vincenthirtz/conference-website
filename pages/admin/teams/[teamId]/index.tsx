@@ -61,6 +61,7 @@ function AdminTeamDetailPage({ staff }: StaffProps) {
     if (!teamId) return;
     fetchTeam();
     fetchMembers();
+    // Chargement unique par teamId : les fetchers capturent adminFetchJson (identité liée au router, non stable) et les inclure provoquerait des refetch parasites.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [teamId]);
 

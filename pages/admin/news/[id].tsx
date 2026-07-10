@@ -83,6 +83,7 @@ export default function AdminNewsEdit({ staff }: Props) {
       }
     };
     fetchItem();
+    // Chargement unique par id de route : fetchItem capture adminFetchJson (identité liée au router, non stable) ; l'inclure provoquerait des refetch parasites.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 

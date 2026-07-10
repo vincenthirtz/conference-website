@@ -84,23 +84,26 @@ function DiscordConfigPage(_: StaffProps) {
       const json: ApiResponse = await res.json();
       setData(json);
 
-      // Hydrate drafts from scoped webhooks
-      const next = { ...drafts };
-      for (const w of json.scoped) {
-        next[w.channel_type] = {
-          webhookUrl: w.webhook_url,
-          roleMention: w.role_mention || '',
-          isActive: w.is_active,
-        };
-      }
-      setDrafts(next);
+      // Hydrate drafts from scoped webhooks. Updater fonctionnel : on repart
+      // du dernier état connu sans capturer `drafts` (sinon fetchData serait
+      // recréé à chaque frappe et l'effet [fetchData] rechargerait en boucle).
+      setDrafts((prev) => {
+        const next = { ...prev };
+        for (const w of json.scoped) {
+          next[w.channel_type] = {
+            webhookUrl: w.webhook_url,
+            roleMention: w.role_mention || '',
+            isActive: w.is_active,
+          };
+        }
+        return next;
+      });
     } catch (err) {
       setErrorMsg((err as Error).message);
     } finally {
       setLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tournamentId]);
+  }, [tournamentId, t]);
 
   useEffect(() => {
     fetchData();

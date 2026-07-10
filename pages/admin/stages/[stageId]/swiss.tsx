@@ -175,6 +175,7 @@ function AdminSwissStagePage({ staff }: StaffProps) {
   useEffect(() => {
     if (!stageId) return;
     fetchSwissData();
+    // Chargement unique par stageId : fetchSwissData capture adminFetchJson (identité liée au router, non stable) ; l'inclure provoquerait des refetch parasites.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stageId]);
 

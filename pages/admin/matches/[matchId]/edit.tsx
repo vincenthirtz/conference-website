@@ -197,13 +197,7 @@ function AdminMatchEditPage({ staff }: StaffProps) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
-  useEffect(() => {
-    if (!matchId) return;
-    fetchMatch();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [matchId]);
-
-  async function fetchMatch() {
+  const fetchMatch = useCallback(async () => {
     if (!matchId) return;
     setLoading(true);
     setErrorMsg(null);
@@ -262,7 +256,12 @@ function AdminMatchEditPage({ staff }: StaffProps) {
     } finally {
       setLoading(false);
     }
-  }
+  }, [matchId, adminFetch, t]);
+
+  useEffect(() => {
+    if (!matchId) return;
+    fetchMatch();
+  }, [matchId, fetchMatch]);
 
   const doSubmit = useCallback(async () => {
     if (!matchId || !match) return;
@@ -383,8 +382,17 @@ function AdminMatchEditPage({ staff }: StaffProps) {
     } finally {
       setSaving(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [matchId, match, form, games, gamesLoaded]);
+  }, [
+    matchId,
+    match,
+    form,
+    games,
+    gamesLoaded,
+    adminFetch,
+    fetchMatch,
+    t,
+    addToast,
+  ]);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

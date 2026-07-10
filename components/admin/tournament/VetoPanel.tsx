@@ -139,7 +139,7 @@ export default function VetoPanel() {
   useEffect(() => {
     if (!tournamentId) return;
     fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- recharge maps+matchs uniquement au changement d'id de tournoi (URL) ; fetchData volontairement hors deps (dépend transitivement de router)
   }, [tournamentId]);
 
   useEffect(() => {

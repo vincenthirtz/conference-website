@@ -872,7 +872,8 @@ function AdminTournamentPage({
     fetchTournamentTeams();
     fetchRecentMatches();
     fetchStatusGuards();
-  }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- chargement initial unique borné à [id] (sauté si SSR déjà présent) ; les 5 fetchers sont recréés à chaque render, les lister rechargerait tout le dashboard en boucle
+  }, [id]);
 
   function updateStatus(newStatus: string) {
     if (!id || !tournament) return;

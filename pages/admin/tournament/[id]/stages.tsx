@@ -1,7 +1,7 @@
 // pages/admin/tournament/[id]/stages.tsx
 // Liste des phases (stages) d'un tournoi pour le staff
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -78,13 +78,7 @@ function StagesPage(_: StaffProps) {
   const [applyingTemplate, setApplyingTemplate] = useState(false);
   const { addToast } = useToast();
 
-  useEffect(() => {
-    if (!tournamentId) return;
-    fetchStages();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tournamentId]);
-
-  async function fetchStages() {
+  const fetchStages = useCallback(async () => {
     setLoading(true);
     setErrorMsg(null);
     try {
@@ -111,7 +105,12 @@ function StagesPage(_: StaffProps) {
     } finally {
       setLoading(false);
     }
-  }
+  }, [tournamentId, adminFetchJson, adminFetch, t]);
+
+  useEffect(() => {
+    if (!tournamentId) return;
+    fetchStages();
+  }, [tournamentId, fetchStages]);
 
   function getSortedStages() {
     return [...stages].sort(

@@ -110,6 +110,7 @@ function AdminPartnershipRequestDetailPage({ staff }: Props) {
     }
 
     fetchRequest();
+    // Chargement unique par id de route : fetchRequest capture adminFetchJson (identité liée au router, non stable) ; l'inclure provoquerait des refetch parasites.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 

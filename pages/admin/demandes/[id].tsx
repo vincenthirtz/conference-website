@@ -193,6 +193,7 @@ function AdminDemandeDetailPage() {
   useEffect(() => {
     if (!id) return;
     fetchDemande();
+    // Chargement unique par id de route : fetchDemande capture adminFetchJson (identité liée au router, non stable) ; l'inclure provoquerait des refetch parasites.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 

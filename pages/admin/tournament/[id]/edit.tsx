@@ -162,7 +162,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
   useEffect(() => {
     if (!id) return;
     fetchTournament();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- chargement initial borné à [id] ; fetchTournament capture le helper local `toLocalInputValue` (recréé à chaque render), l'envelopper cascaderait en refetch/boucle
   }, [id]);
 
   async function fetchTournament() {

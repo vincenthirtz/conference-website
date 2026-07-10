@@ -85,7 +85,7 @@ function ProfileModal({ open, onClose }: ProfileModalProps) {
     };
 
     fetchProfile();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- (re)fetch du profil au seul passage open false->true ; adminFetchJson/t volontairement hors deps (dépend transitivement de router)
   }, [open]);
 
   const updateField = (k: 'displayName' | 'avatarUrl', v: string) =>

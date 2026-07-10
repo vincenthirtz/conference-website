@@ -100,8 +100,8 @@ function AdminTournamentHistoryPage({ staff }: StaffProps) {
   useEffect(() => {
     if (!id) return;
     fetchLogs();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, limit]); // les autres filtres se déclenchent via le bouton "Filtrer"
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- refetch volontairement borné à [id, limit] ; entityType/action ne s'appliquent qu'au clic sur « Filtrer » (fetchLogs les lirait via closure), sinon on rechargerait à chaque frappe
+  }, [id, limit]);
 
   function handleFilterSubmit(e: React.FormEvent) {
     e.preventDefault();

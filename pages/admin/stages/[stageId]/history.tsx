@@ -109,6 +109,7 @@ function AdminStageHistoryPage({ staff }: StaffProps) {
   useEffect(() => {
     if (!stageId) return;
     fetchLogs();
+    // Rechargement volontairement piloté par stageId/limit seuls ; fetchLogs lit aussi les filtres (entityType/action) appliqués via un bouton dédié, pas en réactif.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stageId, limit]);
 

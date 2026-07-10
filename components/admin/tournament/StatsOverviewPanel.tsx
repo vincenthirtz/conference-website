@@ -102,7 +102,7 @@ export default function StatsOverviewPanel() {
   useEffect(() => {
     if (!id) return;
     fetchStats();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- (re)fetch uniquement au changement d'id de tournoi (URL) ; fetchStats volontairement hors deps (dépend transitivement de router)
   }, [id]);
 
   return (

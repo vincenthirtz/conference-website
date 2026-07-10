@@ -66,7 +66,7 @@ export default function StatsAnalyticsPanel() {
   useEffect(() => {
     if (!id) return;
     fetchAnalytics();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- (re)fetch uniquement au changement d'id de tournoi (URL) ; fetchAnalytics volontairement hors deps (dépend transitivement de router)
   }, [id]);
 
   const analytics = data?.analytics ?? null;

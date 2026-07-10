@@ -110,7 +110,7 @@ export default function PartnersListPanel() {
       setFilters({ search: searchInput.trim() || null });
     }, 300);
     return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- debounce piloté par la seule saisie utilisateur ; ajouter searchFilter/setFilters/resetOffset réinitialiserait le timer
   }, [searchInput]);
 
   // Tout changement de filtre serveur revient à la première page

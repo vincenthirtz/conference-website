@@ -1,7 +1,7 @@
 // pages/admin/matches/[matchId]/index.tsx
 // Vue détaillée d'un match (lecture seule) pour le staff
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -170,12 +170,6 @@ function MatchViewPage(_: StaffProps) {
   const [disputeBusy, setDisputeBusy] = useState(false);
   const [disputeMsg, setDisputeMsg] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!matchIdStr) return;
-    fetchMatch();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [matchIdStr]);
-
   async function openDispute() {
     if (!matchIdStr) return;
     if (disputeReason.trim().length === 0) {
@@ -259,7 +253,7 @@ function MatchViewPage(_: StaffProps) {
     }
   }
 
-  async function fetchMatch() {
+  const fetchMatch = useCallback(async () => {
     setLoading(true);
     setErrorMsg(null);
     try {
@@ -273,7 +267,12 @@ function MatchViewPage(_: StaffProps) {
     } finally {
       setLoading(false);
     }
-  }
+  }, [matchIdStr, adminFetchJson, t]);
+
+  useEffect(() => {
+    if (!matchIdStr) return;
+    fetchMatch();
+  }, [matchIdStr, fetchMatch]);
 
   const team1 = match?.team1;
   const team2 = match?.team2;
