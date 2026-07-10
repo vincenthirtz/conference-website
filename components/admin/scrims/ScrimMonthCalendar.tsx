@@ -8,7 +8,7 @@
 // Présentation pure : aucun fetch. Réutilise dateAndMinuteInTz pour placer les
 // événements dans le fuseau `tz`.
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
   mondayOf,
   addDaysYmd,
@@ -25,6 +25,7 @@ export type ScrimMonthLabels = {
   monthNext: string;
   matchTag: string;
   moreEvents: string; // reçoit {count}
+  collapse: string; // « réduire » (replier les événements dépliés)
 };
 
 const MAX_CHIPS = 3;
@@ -76,6 +77,8 @@ export default function ScrimMonthCalendar({
   const anchorMonth = monthAnchor.slice(0, 7); // 'YYYY-MM'
   const todayYmd = useMemo(() => todayYmdInTz(tz), [tz]);
   const heads = useMemo(() => weekdayHeads(tz), [tz]);
+  // Jour dont on a déplié tous les événements sur place (« +N » → tout afficher).
+  const [expandedDay, setExpandedDay] = useState<string | null>(null);
 
   const gridDays = useMemo(() => {
     const start = mondayOf(monthAnchor);
@@ -171,7 +174,8 @@ export default function ScrimMonthCalendar({
               const inMonth = day.slice(0, 7) === anchorMonth;
               const isToday = day === todayYmd;
               const events = eventsByDay[day] ?? [];
-              const shown = events.slice(0, MAX_CHIPS);
+              const isExpanded = expandedDay === day;
+              const shown = isExpanded ? events : events.slice(0, MAX_CHIPS);
               const overflow = events.length - shown.length;
               const dayNum = parseInt(day.slice(8, 10), 10);
               return (
@@ -233,8 +237,43 @@ export default function ScrimMonthCalendar({
                       );
                     })}
                     {overflow > 0 && (
-                      <span className="px-1 text-[9px] text-neutral-500">
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setExpandedDay(day);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            setExpandedDay(day);
+                          }
+                        }}
+                        className="cursor-pointer rounded px-1 text-[9px] text-neutral-400 hover:text-neutral-200"
+                      >
                         {labels.moreEvents.replace('{count}', String(overflow))}
+                      </span>
+                    )}
+                    {isExpanded && events.length > MAX_CHIPS && (
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setExpandedDay(null);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            setExpandedDay(null);
+                          }
+                        }}
+                        className="cursor-pointer rounded px-1 text-[9px] text-neutral-400 hover:text-neutral-200"
+                      >
+                        {labels.collapse}
                       </span>
                     )}
                   </span>

@@ -212,6 +212,7 @@ export default function ScrimCalendarPanel() {
       monthNext: t.calMonthNext,
       matchTag: t.calMatchTag,
       moreEvents: t.calMoreEvents,
+      collapse: t.calCollapse,
     }),
     [t]
   );

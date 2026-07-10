@@ -4262,6 +4262,7 @@
     "calRescheduled": "Scrim replanifié.",
     "calResized": "Durée du scrim mise à jour.",
     "calMoreEvents": "+{count}",
+    "calCollapse": "− réduire",
     "calUpdateError": "Impossible de mettre à jour le scrim."
   },
   "adminScrimsCreate": {
