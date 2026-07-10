@@ -6375,6 +6375,8 @@
     "dayStartLabel": "Début de journée",
     "dayEndLabel": "Fin de journée",
     "timezoneLabel": "Fuseau horaire",
+    "timezoneCommon": "Fréquents",
+    "timezoneAll": "Tous les fuseaux",
     "submit": "Créer la grille",
     "submitting": "Création…",
     "cancel": "Annuler",

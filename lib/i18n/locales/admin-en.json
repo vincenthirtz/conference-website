@@ -6375,6 +6375,8 @@
     "dayStartLabel": "Day start",
     "dayEndLabel": "Day end",
     "timezoneLabel": "Timezone",
+    "timezoneCommon": "Common",
+    "timezoneAll": "All timezones",
     "submit": "Create grid",
     "submitting": "Creating…",
     "cancel": "Cancel",

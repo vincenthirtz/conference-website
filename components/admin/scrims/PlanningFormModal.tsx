@@ -26,6 +26,34 @@ type PlanningFormModalProps = {
 const DEFAULT_DAY_START_MIN = 18 * 60;
 const DEFAULT_DAY_END_MIN = 23 * 60;
 
+/** Fuseaux mis en avant (haut de la liste) — cas courants du tournoi. */
+const COMMON_TIMEZONES = [
+  'Europe/Paris',
+  'Europe/London',
+  'Europe/Madrid',
+  'Europe/Berlin',
+  'UTC',
+  'America/New_York',
+  'America/Los_Angeles',
+];
+
+/**
+ * Liste des fuseaux IANA valides. `Intl.supportedValuesOf('timeZone')` (ES2022,
+ * Node 18+ / navigateurs modernes) évite toute liste codée en dur ; fallback sur
+ * les fuseaux courants si l'API n'est pas dispo. Calculée une fois au chargement.
+ */
+const ALL_TIMEZONES: string[] = (() => {
+  try {
+    const supported = (
+      Intl as { supportedValuesOf?: (key: string) => string[] }
+    ).supportedValuesOf?.('timeZone');
+    if (Array.isArray(supported) && supported.length > 0) return supported;
+  } catch {
+    /* API indisponible → fallback */
+  }
+  return COMMON_TIMEZONES;
+})();
+
 function todayIso(): string {
   const d = new Date();
   const pad = (n: number) => String(n).padStart(2, '0');
@@ -328,12 +356,31 @@ export default function PlanningFormModal({
           <label className="block text-sm text-neutral-400 mb-1">
             {t.timezoneLabel}
           </label>
-          <input
+          <select
             value={form.timezone}
             onChange={(e) => setForm({ ...form, timezone: e.target.value })}
-            placeholder="Europe/Paris"
             className="w-full px-3 py-2.5 rounded-lg bg-neutral-900/50 border border-neutral-600"
-          />
+          >
+            {/* Sécurité : si la valeur courante (ex. legacy) n'est pas dans la
+                liste supportée, on l'expose quand même pour ne pas la perdre. */}
+            {!ALL_TIMEZONES.includes(form.timezone) && (
+              <option value={form.timezone}>{form.timezone}</option>
+            )}
+            <optgroup label={t.timezoneCommon}>
+              {COMMON_TIMEZONES.map((tz) => (
+                <option key={`common-${tz}`} value={tz}>
+                  {tz}
+                </option>
+              ))}
+            </optgroup>
+            <optgroup label={t.timezoneAll}>
+              {ALL_TIMEZONES.map((tz) => (
+                <option key={tz} value={tz}>
+                  {tz}
+                </option>
+              ))}
+            </optgroup>
+          </select>
         </div>
 
         <div className="rounded-lg bg-neutral-900/40 border border-neutral-700/60 px-3 py-3">
