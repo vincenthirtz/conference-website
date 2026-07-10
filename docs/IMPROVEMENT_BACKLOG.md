@@ -53,7 +53,18 @@ Voir [.claude/agents/backlog-auditor.md](../.claude/agents/backlog-auditor.md). 
 | Q019 | 2026-07-10 | a11y | moyenne | M | `tenants/[id].tsx`, `tournament-simulator.tsx`, `teams/index.tsx` (partiel) | open | Reste des barres d'onglets réinventées à migrer vers `components/admin/Tabs.tsx` (les 2 principales faites). |
 | Q020 | 2026-07-10 | dette | basse | M | pages publiques (`hero`/`lore`) | open | Hex de dégradé publics non tokenisés (hors périmètre R13, surfaces admin only) — à évaluer si un design system public est voulu. |
 | Q021 | 2026-07-10 | test-coverage | moyenne | L | `tests/e2e/*` | open | Couverture e2e déséquilibrée : `tournament/[id]/*` (veto, map-draw, bulk-ops, analytics), `stages/*` (swiss, seeding), `scrims/*`, `communications/campaigns` peu couverts. |
+| Q022 | 2026-07-10 | a11y | moyenne | M | `components/scrim/AvailabilityGrid.tsx` (cellules 24px) | open | Drag-to-paint sur cellules 24px : cibles tactiles < 44px → peinture mobile difficile sur grille dense ; agrandir/espacer ou basculer par défaut sur la vue calendrier à blocs en < sm. |
+| Q023 | 2026-07-10 | robustesse | moyenne | S | `components/admin/scrims/PlanningFormModal.tsx` (champ timezone) | open | `timezone` en champ texte libre (aucune validation IANA) → une saisie erronée casse le rendu de toute la grille (slotKey) ; remplacer par un sélecteur de fuseaux. |
+| Q024 | 2026-07-10 | robustesse | basse | M | `components/player/ScrimPlanningPanel.tsx`, `AvailabilityCalendar.tsx` | open | Grille toujours rendue dans le fuseau de la SESSION ; l'écart avec le fuseau du joueur n'est signalé qu'en texte → confusion pour une équipe étrangère ; ajouter un toggle « voir dans mon fuseau ». |
+| Q025 | 2026-07-10 | a11y | basse | S | `pages/admin/scrims/plannings/[planningId].tsx` (validation heatmap) | open | Valider un créneau = clic sur cellule soulignée ; affordance = soulignement + tooltip, pas de légende/CTA toujours visible → découvrabilité faible. |
+| Q026 | 2026-07-10 | test-coverage | moyenne | M | `tests/e2e/scrim-*.spec.ts` | open | Agenda admin (ScrimCalendar drag&drop, plage dynamique, layout anti-collision) et aperçu conflits non couverts en e2e ; seul le flux grille→validation l'est (recoupe Q021). |
 
 ---
 
-*Dernier passage auto : — (aucun encore ; seed manuel du 2026-07-10 issu des audits de session).*
+### Agenda scrim — livré 2026-07-10
+
+3 lots livrés en prod (commits `a72a994`, `f13d2d0`, `9cfaa3d`) : **joueur** (garde « modifications non enregistrées » + encart « meilleur créneau commun »), **admin agenda** (plage horaire dynamique + layout anti-collision côte-à-côte), **admin validation** (aperçu des conflits de double-booking avant clic). Reliquat qualité → Q022–Q026 ci-dessus. Améliorations **produit/UX** restantes (hors périmètre de ce backlog qualité, à verser dans [BACKLOG-tournois.md](./BACKLOG-tournois.md) si souhaité) : vue mois côté joueur, feedback d'échéance in-app (« X jours pour peindre »), indicateur de participation côté joueur (« on attend l'autre équipe »), vue mois admin avec « +N » déroulable, auto-save des dispos, unification des 3 idiomes temporels (datetime-local négociation / grille When2Meet / agenda drag&drop).
+
+---
+
+*Dernier passage auto : — (aucun encore ; seed manuel du 2026-07-10 issu des audits de session + points agenda scrim Q022–Q026).*
