@@ -1,7 +1,7 @@
 // pages/admin/demandes/[id].tsx
 // Page de détail d'une demande admin (tous types)
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -190,14 +190,7 @@ function AdminDemandeDetailPage() {
   const [forwardTargetId, setForwardTargetId] = useState('');
   const [forwarding, setForwarding] = useState(false);
 
-  useEffect(() => {
-    if (!id) return;
-    fetchDemande();
-    // Chargement unique par id de route : fetchDemande capture adminFetchJson (identité liée au router, non stable) ; l'inclure provoquerait des refetch parasites.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
-
-  async function fetchDemande() {
+  const fetchDemande = useCallback(async () => {
     if (!id) return;
     setLoading(true);
     setErrorMsg(null);
@@ -233,7 +226,14 @@ function AdminDemandeDetailPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [id, adminFetchJson, t]);
+
+  useEffect(() => {
+    if (!id) return;
+    fetchDemande();
+    // adminFetchJson et t sont désormais stables : fetchDemande ne varie qu'avec
+    // l'id de route → un seul chargement par id, sans refetch parasite.
+  }, [id, fetchDemande]);
 
   async function openForwardPanel() {
     setForwardOpen(true);

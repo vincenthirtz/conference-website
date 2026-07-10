@@ -1,6 +1,6 @@
 // pages/admin/stages/[stageId]/swiss.tsx
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -172,14 +172,7 @@ function AdminSwissStagePage({ staff }: StaffProps) {
   const [previewRound, setPreviewRound] = useState<number | null>(null);
   const [previewHasRematches, setPreviewHasRematches] = useState(false);
 
-  useEffect(() => {
-    if (!stageId) return;
-    fetchSwissData();
-    // Chargement unique par stageId : fetchSwissData capture adminFetchJson (identité liée au router, non stable) ; l'inclure provoquerait des refetch parasites.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stageId]);
-
-  async function fetchSwissData() {
+  const fetchSwissData = useCallback(async () => {
     if (!stageId) return;
     setLoading(true);
     setErrorMsg(null);
@@ -199,7 +192,14 @@ function AdminSwissStagePage({ staff }: StaffProps) {
     } finally {
       setLoading(false);
     }
-  }
+  }, [stageId, adminFetchJson, t]);
+
+  useEffect(() => {
+    if (!stageId) return;
+    fetchSwissData();
+    // adminFetchJson et t sont désormais stables : fetchSwissData ne varie
+    // qu'avec stageId → un seul chargement par stageId, sans refetch parasite.
+  }, [stageId, fetchSwissData]);
 
   function currentRoundNumber() {
     if (!rounds.length) return 0;

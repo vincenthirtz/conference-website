@@ -100,7 +100,7 @@ function AdminTournamentHistoryPage({ staff }: StaffProps) {
   useEffect(() => {
     if (!id) return;
     fetchLogs();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- refetch volontairement borné à [id, limit] ; entityType/action ne s'appliquent qu'au clic sur « Filtrer » (fetchLogs les lirait via closure), sinon on rechargerait à chaque frappe
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- GARDÉ : exclusion INTENTIONNELLE de entityType/action, appliqués seulement au clic « Filtrer » (fetchLogs les lit via closure au submit) ; les lister rechargerait à chaque frappe. (fetchLogs utilise `fetch` brut, pas adminFetch* : la stabilisation du hook ne change rien ici.)
   }, [id, limit]);
 
   function handleFilterSubmit(e: React.FormEvent) {

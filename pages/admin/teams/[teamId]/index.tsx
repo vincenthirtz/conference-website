@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -57,19 +57,11 @@ function AdminTeamDetailPage({ staff }: StaffProps) {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [membersError, setMembersError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!teamId) return;
-    fetchTeam();
-    fetchMembers();
-    // Chargement unique par teamId : les fetchers capturent adminFetchJson (identité liée au router, non stable) et les inclure provoquerait des refetch parasites.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [teamId]);
-
-  async function fetchTeam() {
+  const fetchTeam = useCallback(async () => {
     setLoading(true);
     setErrorMsg(null);
     try {
-      const json = await adminFetchJson<{ team: typeof team }>(
+      const json = await adminFetchJson<{ team: TeamRow | null }>(
         `/api/admin/teams/${teamId}`
       );
       setTeam(json.team);
@@ -78,14 +70,14 @@ function AdminTeamDetailPage({ staff }: StaffProps) {
     } finally {
       setLoading(false);
     }
-  }
+  }, [teamId, adminFetchJson, t]);
 
-  async function fetchMembers() {
+  const fetchMembers = useCallback(async () => {
     if (!teamId) return;
     setMembersLoading(true);
     setMembersError(null);
     try {
-      const json = await adminFetchJson<{ members?: typeof members }>(
+      const json = await adminFetchJson<{ members?: TeamMemberRow[] }>(
         `/api/admin/teams/${teamId}/members`
       );
       setMembers(json.members || []);
@@ -94,7 +86,15 @@ function AdminTeamDetailPage({ staff }: StaffProps) {
     } finally {
       setMembersLoading(false);
     }
-  }
+  }, [teamId, adminFetchJson, t]);
+
+  useEffect(() => {
+    if (!teamId) return;
+    fetchTeam();
+    fetchMembers();
+    // adminFetchJson et t sont désormais stables ; fetchTeam/fetchMembers ne
+    // changent qu'avec teamId → un seul chargement par teamId, sans refetch parasite.
+  }, [teamId, fetchTeam, fetchMembers]);
 
   const backUrl = '/admin/teams';
 

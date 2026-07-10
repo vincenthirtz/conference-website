@@ -63,7 +63,7 @@ export default function MapStatsPanel() {
 
   useEffect(() => {
     fetchStats();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- refetch piloté par les seuls filtres/offset listés ; fetchStats hors deps pour ne pas dupliquer les requêtes
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- refetch piloté par les seuls filtres/offset listés ; `searchMap` (réactif) est volontairement exclu (appliqué via handleFilterSubmit). adminFetch* est désormais stable mais fetchStats reste hors deps pour ne pas déclencher sur `searchMap`.
   }, [offset, sortBy, sortDir, minMatches]);
 
   async function fetchStats() {

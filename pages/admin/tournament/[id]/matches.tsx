@@ -397,7 +397,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
   useEffect(() => {
     if (!id || !filtersHydrated) return;
     fetchMatches();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- deps volontairement curées : on relance sur les filtres « live » listés mais PAS sur `search` (appliqué au submit) ni sur `fetchMatches` (recréé à chaque render → boucle) ; les handlers passent par fetchMatchesRef
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- GARDÉ : deps curées à dessein. `search` est exclu (appliqué au submit) ; `fetchMatches` ne peut pas être mémoïsé/listé sans casse : il est appelé à la fois par cet effet (qui NE doit PAS dépendre de `search`) et par handleFilterSubmit/handlers (qui DOIVENT lire le `search` courant → closure fraîche à chaque render, cf. fetchMatchesRef). adminFetch* est stable mais n'y change rien.
   }, [
     id,
     filtersHydrated,

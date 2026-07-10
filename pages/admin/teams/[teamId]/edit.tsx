@@ -221,11 +221,9 @@ function AdminEditTeamPage({
     fetchTeam();
     fetchMembers();
     fetchTournaments();
-    // On veut UN seul chargement par teamId. Les fetchers sont fonctionnellement
-    // stables (ils ne varient que via adminFetch/router, dont l'identité change
-    // au montage) ; les inclure ici déclenchait plusieurs vagues de fetch au boot.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [teamId]);
+    // adminFetch/adminFetchJson et t sont désormais stables : les fetchers ne
+    // varient que via teamId → un seul chargement par teamId, sans vagues parasites.
+  }, [teamId, fetchTeam, fetchMembers, fetchTournaments]);
 
   // Nettoie le timer de debounce + toute recherche en vol au démontage.
   useEffect(() => {

@@ -11,7 +11,7 @@
 //   - Maps : picks, bans, games joues, duree moy, % OT.
 //   - Heros : picks, bans, V-D, winrate % (masquee si vide).
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminT } from '@/lib/i18n/useAdminT';
@@ -47,7 +47,7 @@ export default function StatsAnalyticsPanel() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [data, setData] = useState<AnalyticsResponse | null>(null);
 
-  async function fetchAnalytics() {
+  const fetchAnalytics = useCallback(async () => {
     if (!id || Array.isArray(id)) return;
     setLoading(true);
     setErrorMsg(null);
@@ -61,13 +61,12 @@ export default function StatsAnalyticsPanel() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [id, adminFetchJson, t]);
 
   useEffect(() => {
     if (!id) return;
     fetchAnalytics();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- (re)fetch uniquement au changement d'id de tournoi (URL) ; fetchAnalytics volontairement hors deps (dépend transitivement de router)
-  }, [id]);
+  }, [id, fetchAnalytics]);
 
   const analytics = data?.analytics ?? null;
   const isEmpty =

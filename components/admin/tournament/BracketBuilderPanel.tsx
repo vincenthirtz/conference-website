@@ -60,13 +60,7 @@ export default function BracketBuilderPanel() {
   const [tournamentTeams, setTournamentTeams] = useState<TournamentTeam[]>([]);
   const printRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!id) return;
-    fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- (re)fetch uniquement au changement d'id de tournoi (URL) ; fetchData volontairement hors deps (dépend transitivement de router)
-  }, [id]);
-
-  async function fetchData() {
+  const fetchData = useCallback(async () => {
     if (!id) return;
     setLoading(true);
     setErrorMsg(null);
@@ -95,7 +89,12 @@ export default function BracketBuilderPanel() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [id, adminFetch, t]);
+
+  useEffect(() => {
+    if (!id) return;
+    fetchData();
+  }, [id, fetchData]);
 
   /** Teams already placed in a match slot — exclude from picker */
   const assignedTeamIds = useMemo(() => {

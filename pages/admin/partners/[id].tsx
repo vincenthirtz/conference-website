@@ -83,9 +83,9 @@ function AdminEditPartnerPage({ staff }: Props) {
     }
 
     fetchPartner();
-    // Chargement unique par id de route : fetchPartner capture adminFetchJson (identité liée au router, non stable) ; l'inclure provoquerait des refetch parasites.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+    // adminFetchJson et t sont désormais stables : l'effet ne se relance qu'au
+    // changement d'id de route, sans refetch parasite.
+  }, [id, adminFetchJson, t]);
 
   const updateField = <K extends keyof FormData>(
     field: K,

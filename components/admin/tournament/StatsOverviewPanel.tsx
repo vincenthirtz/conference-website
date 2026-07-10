@@ -3,7 +3,7 @@
 // from the former /admin/tournament/[id]/stats page; now the `overview` sub-tab
 // of the merged stats route.
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/router';
@@ -81,7 +81,7 @@ export default function StatsOverviewPanel() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [stats, setStats] = useState<TournamentStats | null>(null);
 
-  async function fetchStats() {
+  const fetchStats = useCallback(async () => {
     if (!id) return;
 
     setLoading(true);
@@ -97,13 +97,12 @@ export default function StatsOverviewPanel() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [id, adminFetchJson, t]);
 
   useEffect(() => {
     if (!id) return;
     fetchStats();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- (re)fetch uniquement au changement d'id de tournoi (URL) ; fetchStats volontairement hors deps (dépend transitivement de router)
-  }, [id]);
+  }, [id, fetchStats]);
 
   return (
     <>

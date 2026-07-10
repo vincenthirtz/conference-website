@@ -136,21 +136,7 @@ export default function VetoPanel() {
   const [vetoState, setVetoState] = useState<MatchVetoState | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    if (!tournamentId) return;
-    fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- recharge maps+matchs uniquement au changement d'id de tournoi (URL) ; fetchData volontairement hors deps (dépend transitivement de router)
-  }, [tournamentId]);
-
-  useEffect(() => {
-    if (selectedMatchId) {
-      fetchVetoState(selectedMatchId);
-    } else {
-      setVetoState(null);
-    }
-  }, [selectedMatchId]);
-
-  async function fetchData() {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     setErrorMsg(null);
     try {
@@ -193,7 +179,20 @@ export default function VetoPanel() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [tournamentId, adminFetch, t]);
+
+  useEffect(() => {
+    if (!tournamentId) return;
+    fetchData();
+  }, [tournamentId, fetchData]);
+
+  useEffect(() => {
+    if (selectedMatchId) {
+      fetchVetoState(selectedMatchId);
+    } else {
+      setVetoState(null);
+    }
+  }, [selectedMatchId]);
 
   async function fetchVetoState(matchId: string) {
     try {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -116,14 +116,24 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
   );
   const [bulkRemoving, setBulkRemoving] = useState(false);
 
-  useEffect(() => {
-    if (!stageId) return;
-    fetchStageTeams();
-    // Chargement unique par stageId : fetchStageTeams capture adminFetchJson (identité liée au router, non stable) ; l'inclure provoquerait des refetch parasites.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stageId]);
+  const fetchTournamentTeams = useCallback(
+    async (tournamentId: string) => {
+      setLoadingTeams(true);
+      try {
+        const json = await adminFetchJson<TournamentTeamsApiResponse>(
+          `/api/admin/tournament/${tournamentId}/teams`
+        );
+        setTournamentTeams(json.teams || []);
+      } catch (err) {
+        logger.error('fetchTournamentTeams error', err);
+      } finally {
+        setLoadingTeams(false);
+      }
+    },
+    [adminFetchJson]
+  );
 
-  async function fetchStageTeams() {
+  const fetchStageTeams = useCallback(async () => {
     if (!stageId) return;
     setLoading(true);
     setErrorMsg(null);
@@ -153,21 +163,14 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
     } finally {
       setLoading(false);
     }
-  }
+  }, [stageId, adminFetchJson, t, fetchTournamentTeams]);
 
-  async function fetchTournamentTeams(tournamentId: string) {
-    setLoadingTeams(true);
-    try {
-      const json = await adminFetchJson<TournamentTeamsApiResponse>(
-        `/api/admin/tournament/${tournamentId}/teams`
-      );
-      setTournamentTeams(json.teams || []);
-    } catch (err) {
-      logger.error('fetchTournamentTeams error', err);
-    } finally {
-      setLoadingTeams(false);
-    }
-  }
+  useEffect(() => {
+    if (!stageId) return;
+    fetchStageTeams();
+    // adminFetchJson et t sont désormais stables : fetchStageTeams ne varie
+    // qu'avec stageId → un seul chargement par stageId, sans refetch parasite.
+  }, [stageId, fetchStageTeams]);
 
   const availableTeamsForAdd = useMemo(() => {
     const inStageIds = new Set(stageTeams.map((st) => st.team_id));

@@ -124,18 +124,7 @@ export default function MapDrawPanel() {
   const slotCount = format === 'bo3' ? 3 : 5;
   const totalMapsNeeded = slotCount * CHOICES_PER_SLOT;
 
-  useEffect(() => {
-    if (!tournamentId) return;
-    fetchMaps();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- recharge uniquement quand l'id de tournoi (URL) change ; fetchMaps volontairement hors deps (dépend transitivement de router)
-  }, [tournamentId]);
-
-  // Reset slots when format changes
-  useEffect(() => {
-    setSelectedSlots(makeEmptySlots(slotCount));
-  }, [slotCount]);
-
-  async function fetchMaps() {
+  const fetchMaps = useCallback(async () => {
     setLoading(true);
     setErrorMsg(null);
     try {
@@ -153,7 +142,17 @@ export default function MapDrawPanel() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [tournamentId, adminFetchJson, t]);
+
+  useEffect(() => {
+    if (!tournamentId) return;
+    fetchMaps();
+  }, [tournamentId, fetchMaps]);
+
+  // Reset slots when format changes
+  useEffect(() => {
+    setSelectedSlots(makeEmptySlots(slotCount));
+  }, [slotCount]);
 
   /** Random draw — picks 3 maps of the same category per slot, different category per slot */
   function handleRandomDraw() {

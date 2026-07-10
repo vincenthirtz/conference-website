@@ -110,9 +110,9 @@ function AdminPartnershipRequestDetailPage({ staff }: Props) {
     }
 
     fetchRequest();
-    // Chargement unique par id de route : fetchRequest capture adminFetchJson (identité liée au router, non stable) ; l'inclure provoquerait des refetch parasites.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+    // adminFetchJson et t sont désormais stables : l'effet ne se relance qu'au
+    // changement d'id de route, sans refetch parasite.
+  }, [id, adminFetchJson, t]);
 
   const handleUpdate = async () => {
     setError(null);

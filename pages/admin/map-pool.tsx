@@ -121,9 +121,7 @@ function AdminMapPoolPage(_: StaffProps) {
     } finally {
       setLoading(false);
     }
-    // Refetch piloté par activeGame seul : adminFetchJson/t (capturés) ont une identité liée au router et les inclure provoquerait des refetch parasites.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeGame]);
+  }, [activeGame, adminFetchJson, t]);
 
   useEffect(() => {
     fetchMaps();

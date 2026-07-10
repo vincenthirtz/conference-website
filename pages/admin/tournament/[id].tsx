@@ -872,7 +872,7 @@ function AdminTournamentPage({
     fetchTournamentTeams();
     fetchRecentMatches();
     fetchStatusGuards();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- chargement initial unique borné à [id] (sauté si SSR déjà présent) ; les 5 fetchers sont recréés à chaque render, les lister rechargerait tout le dashboard en boucle
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- GARDÉ : les 5 fetchers sont désormais stables (adminFetch*/tx figés), mais le garde `if (initialData && tournament) return` LIT l'état mutable `tournament` ; le lister (comme l'exigerait exhaustive-deps) bouclerait dans le cas sans SSR (initialData null → garde toujours faux → fetchTournament setTournament → re-run → refetch). Chargement initial mono-shot volontaire borné à [id].
   }, [id]);
 
   function updateStatus(newStatus: string) {

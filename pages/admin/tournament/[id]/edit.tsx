@@ -1,6 +1,6 @@
 // pages/admin/tournament/[id]/edit.tsx
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
@@ -22,6 +22,24 @@ import { TOURNAMENT_TIMEZONES } from '@/utils/timezone';
 type ApiResponse = {
   tournament: Tournament;
 };
+
+// Convertit un ISO en valeur pour <input type="datetime-local"> (heure locale).
+// Fonction pure sans closure sur l'état → définie au niveau module pour une
+// identité stable, ce qui permet de mémoïser `fetchTournament` sans casse.
+function toLocalInputValue(iso: string): string {
+  try {
+    const d = new Date(iso);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const year = d.getFullYear();
+    const month = pad(d.getMonth() + 1);
+    const day = pad(d.getDate());
+    const hours = pad(d.getHours());
+    const minutes = pad(d.getMinutes());
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  } catch {
+    return '';
+  }
+}
 
 export const getServerSideProps = withStaffPage('manager');
 
@@ -159,13 +177,10 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
     }
   }
 
-  useEffect(() => {
-    if (!id) return;
-    fetchTournament();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- chargement initial borné à [id] ; fetchTournament capture le helper local `toLocalInputValue` (recréé à chaque render), l'envelopper cascaderait en refetch/boucle
-  }, [id]);
-
-  async function fetchTournament() {
+  // Chargement initial mémoïsé : deps toutes stables (id ; adminFetchJson figé
+  // par le hook ; t figé au niveau module par useAdminT). `toLocalInputValue`
+  // est désormais au niveau module, donc plus aucune closure instable ici.
+  const fetchTournament = useCallback(async () => {
     if (!id) return;
     setLoading(true);
     setErrorMsg(null);
@@ -213,22 +228,12 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
     } finally {
       setLoading(false);
     }
-  }
+  }, [id, adminFetchJson, t]);
 
-  function toLocalInputValue(iso: string): string {
-    try {
-      const d = new Date(iso);
-      const pad = (n: number) => String(n).padStart(2, '0');
-      const year = d.getFullYear();
-      const month = pad(d.getMonth() + 1);
-      const day = pad(d.getDate());
-      const hours = pad(d.getHours());
-      const minutes = pad(d.getMinutes());
-      return `${year}-${month}-${day}T${hours}:${minutes}`;
-    } catch {
-      return '';
-    }
-  }
+  useEffect(() => {
+    if (!id) return;
+    fetchTournament();
+  }, [id, fetchTournament]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
