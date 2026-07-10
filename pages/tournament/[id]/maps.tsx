@@ -376,25 +376,25 @@ export default function TournamentMapsPage({
                 <table className="min-w-full text-[11px]">
                   <thead>
                     <tr className="text-gray-400 border-b border-white/10">
-                      <th className="text-left py-1.5 pr-3">{t.colMap}</th>
-                      <th className="text-right py-1.5 px-3">{t.colGames}</th>
-                      <th className="text-right py-1.5 px-3">
+                      <th scope="col" className="text-left py-1.5 pr-3">{t.colMap}</th>
+                      <th scope="col" className="text-right py-1.5 px-3">{t.colGames}</th>
+                      <th scope="col" className="text-right py-1.5 px-3">
                         {t.colAvgRounds}
                       </th>
-                      <th className="text-right py-1.5 px-3">
+                      <th scope="col" className="text-right py-1.5 px-3">
                         {t.colOvertimes}
                       </th>
                       {hasVetoData && (
                         <>
-                          <th className="text-right py-1.5 px-3">
+                          <th scope="col" className="text-right py-1.5 px-3">
                             {t.colBans}
                           </th>
-                          <th className="text-right py-1.5 px-3">
+                          <th scope="col" className="text-right py-1.5 px-3">
                             {t.colPicks}
                           </th>
                         </>
                       )}
-                      <th className="text-right py-1.5 pl-3">
+                      <th scope="col" className="text-right py-1.5 pl-3">
                         {t.colWinrates}
                       </th>
                     </tr>

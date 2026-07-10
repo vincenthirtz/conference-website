@@ -360,7 +360,7 @@ ${matchDays
     (day) => `
 <h2>${day.label}${day.roundName ? ` — ${day.roundName}` : ''}</h2>
 <table>
-<thead><tr><th>${t.pdfColTime}</th><th>${t.pdfColTeam1}</th><th>${t.pdfColTeam2}</th><th>${t.pdfColFormat}</th><th>${t.pdfColStatus}</th></tr></thead>
+<thead><tr><th scope="col">${t.pdfColTime}</th><th scope="col">${t.pdfColTeam1}</th><th scope="col">${t.pdfColTeam2}</th><th scope="col">${t.pdfColFormat}</th><th scope="col">${t.pdfColStatus}</th></tr></thead>
 <tbody>
 ${day.matches
   .map(

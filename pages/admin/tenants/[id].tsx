@@ -719,16 +719,16 @@ function AdminTenantDetailPage({ tenantId }: Props) {
                       <table className="w-full text-sm">
                         <thead className="bg-neutral-900/50 text-neutral-400 text-xs uppercase tracking-wider">
                           <tr>
-                            <th className="px-4 py-3 text-left">
+                            <th scope="col" className="px-4 py-3 text-left">
                               {t.colGuildId}
                             </th>
-                            <th className="px-4 py-3 text-left">
+                            <th scope="col" className="px-4 py-3 text-left">
                               {t.colGuildName}
                             </th>
-                            <th className="px-4 py-3 text-left">
+                            <th scope="col" className="px-4 py-3 text-left">
                               {t.colJoinedAt}
                             </th>
-                            <th className="px-4 py-3 text-right">
+                            <th scope="col" className="px-4 py-3 text-right">
                               {t.colActions}
                             </th>
                           </tr>
@@ -831,19 +831,19 @@ function AdminTenantDetailPage({ tenantId }: Props) {
                         <table className="w-full text-sm">
                           <thead className="bg-neutral-900/50 text-neutral-400 text-xs uppercase tracking-wider">
                             <tr>
-                              <th className="px-4 py-3 text-left">
+                              <th scope="col" className="px-4 py-3 text-left">
                                 {t.colStaffName}
                               </th>
-                              <th className="px-4 py-3 text-left">
+                              <th scope="col" className="px-4 py-3 text-left">
                                 {t.colStaffEmail}
                               </th>
-                              <th className="px-4 py-3 text-left">
+                              <th scope="col" className="px-4 py-3 text-left">
                                 {t.colStaffRole}
                               </th>
-                              <th className="px-4 py-3 text-left">
+                              <th scope="col" className="px-4 py-3 text-left">
                                 {t.colAddedAt}
                               </th>
-                              <th className="px-4 py-3 text-right">
+                              <th scope="col" className="px-4 py-3 text-right">
                                 {t.colActions}
                               </th>
                             </tr>

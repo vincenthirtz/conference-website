@@ -384,13 +384,13 @@ export default function TournamentStatsPage({ tournament, teamStats }: Props) {
                 <table className="min-w-full text-[11px]">
                   <thead>
                     <tr className="text-gray-400 border-b border-white/10">
-                      <th className="text-left py-1.5 pr-3">#</th>
-                      <th className="text-left py-1.5 pr-3">{t.colTeam}</th>
-                      <th className="text-right py-1.5 px-3">{t.colMatches}</th>
-                      <th className="text-right py-1.5 px-3">{t.colWins}</th>
-                      <th className="text-right py-1.5 px-3">{t.colLosses}</th>
-                      <th className="text-right py-1.5 px-3">{t.colWinrate}</th>
-                      <th className="text-right py-1.5 px-3">{t.colMaps}</th>
+                      <th scope="col" className="text-left py-1.5 pr-3">#</th>
+                      <th scope="col" className="text-left py-1.5 pr-3">{t.colTeam}</th>
+                      <th scope="col" className="text-right py-1.5 px-3">{t.colMatches}</th>
+                      <th scope="col" className="text-right py-1.5 px-3">{t.colWins}</th>
+                      <th scope="col" className="text-right py-1.5 px-3">{t.colLosses}</th>
+                      <th scope="col" className="text-right py-1.5 px-3">{t.colWinrate}</th>
+                      <th scope="col" className="text-right py-1.5 px-3">{t.colMaps}</th>
                     </tr>
                   </thead>
                   <tbody>

@@ -319,9 +319,9 @@ function SeasonsSection({ seasons }: { seasons: ProfileSeason[] }) {
         <table className="w-full text-sm">
           <thead className="bg-neutral-900/80 text-xs uppercase text-neutral-400">
             <tr>
-              <th className="px-4 py-3 text-left">{t.thLeague}</th>
-              <th className="px-4 py-3 text-right">{t.thRank}</th>
-              <th className="px-4 py-3 text-right">{t.thPoints}</th>
+              <th scope="col" className="px-4 py-3 text-left">{t.thLeague}</th>
+              <th scope="col" className="px-4 py-3 text-right">{t.thRank}</th>
+              <th scope="col" className="px-4 py-3 text-right">{t.thPoints}</th>
             </tr>
           </thead>
           <tbody>
@@ -798,9 +798,9 @@ function HeadToHead({ rows }: { rows: PlayerProfileH2H[] }) {
           <table className="w-full text-sm">
             <thead className="bg-neutral-900/80 text-xs uppercase text-neutral-400">
               <tr>
-                <th className="px-4 py-3 text-left">{t.thOpponent}</th>
-                <th className="px-4 py-3 text-right">{t.thWinLoss}</th>
-                <th className="px-4 py-3 text-right">{t.thMatches}</th>
+                <th scope="col" className="px-4 py-3 text-left">{t.thOpponent}</th>
+                <th scope="col" className="px-4 py-3 text-right">{t.thWinLoss}</th>
+                <th scope="col" className="px-4 py-3 text-right">{t.thMatches}</th>
               </tr>
             </thead>
             <tbody>

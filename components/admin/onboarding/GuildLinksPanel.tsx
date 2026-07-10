@@ -200,10 +200,10 @@ export default function GuildLinksPanel() {
             <table className="w-full text-sm">
               <thead className="bg-neutral-900/50 text-neutral-400 text-xs uppercase tracking-wider">
                 <tr>
-                  <th className="px-4 py-3 text-left">{t.colGuild}</th>
-                  <th className="px-4 py-3 text-left">{t.colOwner}</th>
-                  <th className="px-4 py-3 text-left">{t.colRequested}</th>
-                  <th className="px-4 py-3 text-right">{t.colActions}</th>
+                  <th scope="col" className="px-4 py-3 text-left">{t.colGuild}</th>
+                  <th scope="col" className="px-4 py-3 text-left">{t.colOwner}</th>
+                  <th scope="col" className="px-4 py-3 text-left">{t.colRequested}</th>
+                  <th scope="col" className="px-4 py-3 text-right">{t.colActions}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-700/50">

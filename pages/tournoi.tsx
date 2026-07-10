@@ -537,21 +537,21 @@ function Tournoi() {
               <table className="min-w-full text-base md:text-[17px]">
                 <thead className="text-left text-gray-200 uppercase tracking-wider text-[11px] md:text-xs">
                   <tr className="text-gray-300">
-                    <th className="py-2">#</th>
-                    <th className="py-2">{t.colTeam}</th>
-                    <th className="py-2">
+                    <th scope="col" className="py-2">#</th>
+                    <th scope="col" className="py-2">{t.colTeam}</th>
+                    <th scope="col" className="py-2">
                       <abbr title={t.colMJTitle}>{t.colMJ}</abbr>
                     </th>
-                    <th className="py-2">
+                    <th scope="col" className="py-2">
                       <abbr title={t.colVTitle}>{t.colV}</abbr>
                     </th>
-                    <th className="py-2">
+                    <th scope="col" className="py-2">
                       <abbr title={t.colDTitle}>{t.colD}</abbr>
                     </th>
-                    <th className="py-2">
+                    <th scope="col" className="py-2">
                       <abbr title={t.colMapsTitle}>{t.colMaps}</abbr>
                     </th>
-                    <th className="py-2">
+                    <th scope="col" className="py-2">
                       <abbr title={t.colDiffTitle}>{t.colDiff}</abbr>
                     </th>
                   </tr>

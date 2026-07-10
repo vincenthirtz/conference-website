@@ -356,14 +356,14 @@ export default function TeamStatsPage({
                 <table className="min-w-full text-[11px]">
                   <thead>
                     <tr className="text-gray-400 border-b border-white/10">
-                      <th className="text-left py-1.5 pr-3">{t.thMap}</th>
-                      <th className="text-right py-1.5 px-3">{t.thGames}</th>
-                      <th className="text-right py-1.5 px-3">{t.thW}</th>
-                      <th className="text-right py-1.5 px-3">{t.thL}</th>
-                      <th className="text-right py-1.5 px-3">{t.thWinrate}</th>
-                      <th className="text-right py-1.5 px-3">{t.thRounds}</th>
-                      <th className="text-right py-1.5 px-3">{t.thOTs}</th>
-                      <th className="text-right py-1.5 pl-3">
+                      <th scope="col" className="text-left py-1.5 pr-3">{t.thMap}</th>
+                      <th scope="col" className="text-right py-1.5 px-3">{t.thGames}</th>
+                      <th scope="col" className="text-right py-1.5 px-3">{t.thW}</th>
+                      <th scope="col" className="text-right py-1.5 px-3">{t.thL}</th>
+                      <th scope="col" className="text-right py-1.5 px-3">{t.thWinrate}</th>
+                      <th scope="col" className="text-right py-1.5 px-3">{t.thRounds}</th>
+                      <th scope="col" className="text-right py-1.5 px-3">{t.thOTs}</th>
+                      <th scope="col" className="text-right py-1.5 pl-3">
                         {t.thTiebreakers}
                       </th>
                     </tr>

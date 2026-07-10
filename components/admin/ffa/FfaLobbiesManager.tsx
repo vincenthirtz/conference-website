@@ -423,13 +423,13 @@ function FfaLobbiesManager({
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="text-xs text-neutral-500 text-left">
-                          <th className="pb-2 font-normal">{t.team}</th>
-                          <th className="pb-2 font-normal w-24">
+                          <th scope="col" className="pb-2 font-normal">{t.team}</th>
+                          <th scope="col" className="pb-2 font-normal w-24">
                             {t.placement}
                           </th>
-                          <th className="pb-2 font-normal w-24">{t.score}</th>
-                          <th className="pb-2 font-normal w-20">{t.points}</th>
-                          <th className="pb-2 font-normal w-10" />
+                          <th scope="col" className="pb-2 font-normal w-24">{t.score}</th>
+                          <th scope="col" className="pb-2 font-normal w-20">{t.points}</th>
+                          <th scope="col" className="pb-2 font-normal w-10" />
                         </tr>
                       </thead>
                       <tbody>
@@ -589,12 +589,12 @@ function FfaLobbiesManager({
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-xs text-neutral-500 text-left">
-                    <th className="pb-2 font-normal w-12">#</th>
-                    <th className="pb-2 font-normal">{t.team}</th>
-                    <th className="pb-2 font-normal w-24">{t.totalPoints}</th>
-                    <th className="pb-2 font-normal w-24">{t.lobbiesPlayed}</th>
-                    <th className="pb-2 font-normal w-24">{t.bestPlacement}</th>
-                    <th className="pb-2 font-normal w-16">{t.firsts}</th>
+                    <th scope="col" className="pb-2 font-normal w-12">#</th>
+                    <th scope="col" className="pb-2 font-normal">{t.team}</th>
+                    <th scope="col" className="pb-2 font-normal w-24">{t.totalPoints}</th>
+                    <th scope="col" className="pb-2 font-normal w-24">{t.lobbiesPlayed}</th>
+                    <th scope="col" className="pb-2 font-normal w-24">{t.bestPlacement}</th>
+                    <th scope="col" className="pb-2 font-normal w-16">{t.firsts}</th>
                   </tr>
                 </thead>
                 <tbody>

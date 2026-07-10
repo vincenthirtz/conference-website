@@ -326,14 +326,14 @@ export default function MatchGamesPage({ match }: Props) {
                 <table className="min-w-full text-[11px]">
                   <thead>
                     <tr className="text-gray-400 border-b border-white/10">
-                      <th className="text-left py-1.5 pr-3">#</th>
-                      <th className="text-left py-1.5 pr-3">{t.colMap}</th>
-                      <th className="text-right py-1.5 px-3">{t1Name}</th>
-                      <th className="text-right py-1.5 px-3">{t2Name}</th>
-                      <th className="text-right py-1.5 px-3">
+                      <th scope="col" className="text-left py-1.5 pr-3">#</th>
+                      <th scope="col" className="text-left py-1.5 pr-3">{t.colMap}</th>
+                      <th scope="col" className="text-right py-1.5 px-3">{t1Name}</th>
+                      <th scope="col" className="text-right py-1.5 px-3">{t2Name}</th>
+                      <th scope="col" className="text-right py-1.5 px-3">
                         {t.colTotalRounds}
                       </th>
-                      <th className="text-right py-1.5 pl-3">{t.colTags}</th>
+                      <th scope="col" className="text-right py-1.5 pl-3">{t.colTags}</th>
                     </tr>
                   </thead>
                   <tbody>

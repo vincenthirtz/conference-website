@@ -774,19 +774,19 @@ function SeedingComparatorPage(_: StaffProps) {
                         <table className="w-full text-sm">
                           <thead>
                             <tr className="text-left text-[11px] uppercase tracking-wider text-neutral-500 border-b border-neutral-800">
-                              <th className="py-2 pr-3 font-medium">
+                              <th scope="col" className="py-2 pr-3 font-medium">
                                 {t.thRank}
                               </th>
-                              <th className="py-2 pr-3 font-medium">
+                              <th scope="col" className="py-2 pr-3 font-medium">
                                 {t.thTeam}
                               </th>
-                              <th className="py-2 pr-3 font-medium text-right">
+                              <th scope="col" className="py-2 pr-3 font-medium text-right">
                                 {t.thRating}
                               </th>
-                              <th className="py-2 pr-3 font-medium text-right">
+                              <th scope="col" className="py-2 pr-3 font-medium text-right">
                                 {t.thSos}
                               </th>
-                              <th className="py-2 pr-3 font-medium text-right">
+                              <th scope="col" className="py-2 pr-3 font-medium text-right">
                                 {t.thScore}
                               </th>
                             </tr>

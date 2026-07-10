@@ -1018,13 +1018,13 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
                             <table className="w-full text-sm">
                               <thead>
                                 <tr className="text-left text-xs uppercase tracking-wide text-neutral-500 border-b border-neutral-700/50">
-                                  <th className="px-4 py-2 font-medium">
+                                  <th scope="col" className="px-4 py-2 font-medium">
                                     {t.memberColName}
                                   </th>
-                                  <th className="px-4 py-2 font-medium">
+                                  <th scope="col" className="px-4 py-2 font-medium">
                                     {t.memberColBattleTag}
                                   </th>
-                                  <th className="px-4 py-2 font-medium">
+                                  <th scope="col" className="px-4 py-2 font-medium">
                                     {t.memberColRole}
                                   </th>
                                 </tr>

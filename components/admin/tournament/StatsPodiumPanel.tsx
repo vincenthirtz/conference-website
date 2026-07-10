@@ -329,11 +329,11 @@ export default function StatsPodiumPanel() {
             <table className="w-full text-sm">
               <thead className="bg-neutral-900/80 text-xs uppercase text-neutral-400">
                 <tr>
-                  <th className="px-3 py-2 text-left w-16">{t.colRank}</th>
-                  <th className="px-3 py-2 text-left">{t.colTeam}</th>
-                  <th className="px-3 py-2 text-left">{t.colSource}</th>
-                  <th className="px-3 py-2 text-left">{t.colPrize}</th>
-                  <th className="px-3 py-2 text-left">{t.colNotes}</th>
+                  <th scope="col" className="px-3 py-2 text-left w-16">{t.colRank}</th>
+                  <th scope="col" className="px-3 py-2 text-left">{t.colTeam}</th>
+                  <th scope="col" className="px-3 py-2 text-left">{t.colSource}</th>
+                  <th scope="col" className="px-3 py-2 text-left">{t.colPrize}</th>
+                  <th scope="col" className="px-3 py-2 text-left">{t.colNotes}</th>
                 </tr>
               </thead>
               <tbody>

@@ -503,13 +503,13 @@ function AdminApiTokensPage({ staff }: Props) {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="text-left text-xs uppercase tracking-wider text-neutral-500 border-b border-neutral-700/50">
-                      <th className="px-6 py-3 font-medium">{t.colName}</th>
-                      <th className="px-6 py-3 font-medium">{t.colPrefix}</th>
-                      <th className="px-6 py-3 font-medium">{t.colScopes}</th>
-                      <th className="px-6 py-3 font-medium">{t.colCreated}</th>
-                      <th className="px-6 py-3 font-medium">{t.colLastUsed}</th>
-                      <th className="px-6 py-3 font-medium">{t.colStatus}</th>
-                      <th className="px-6 py-3 font-medium text-right">
+                      <th scope="col" className="px-6 py-3 font-medium">{t.colName}</th>
+                      <th scope="col" className="px-6 py-3 font-medium">{t.colPrefix}</th>
+                      <th scope="col" className="px-6 py-3 font-medium">{t.colScopes}</th>
+                      <th scope="col" className="px-6 py-3 font-medium">{t.colCreated}</th>
+                      <th scope="col" className="px-6 py-3 font-medium">{t.colLastUsed}</th>
+                      <th scope="col" className="px-6 py-3 font-medium">{t.colStatus}</th>
+                      <th scope="col" className="px-6 py-3 font-medium text-right">
                         {t.colActions}
                       </th>
                     </tr>

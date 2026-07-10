@@ -777,18 +777,18 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
                           <table className="w-full text-xs">
                             <thead>
                               <tr className="text-neutral-500 text-left">
-                                <th className="pb-1 font-normal">#</th>
-                                <th className="pb-1 font-normal">{t.thTeam}</th>
-                                <th className="pb-1 font-normal text-center">
+                                <th scope="col" className="pb-1 font-normal">#</th>
+                                <th scope="col" className="pb-1 font-normal">{t.thTeam}</th>
+                                <th scope="col" className="pb-1 font-normal text-center">
                                   {t.thWins}
                                 </th>
-                                <th className="pb-1 font-normal text-center">
+                                <th scope="col" className="pb-1 font-normal text-center">
                                   {t.thLosses}
                                 </th>
-                                <th className="pb-1 font-normal text-center">
+                                <th scope="col" className="pb-1 font-normal text-center">
                                   {t.thDraws}
                                 </th>
-                                <th className="pb-1 font-normal text-right">
+                                <th scope="col" className="pb-1 font-normal text-right">
                                   {t.thPoints}
                                 </th>
                               </tr>

@@ -343,14 +343,14 @@ export default function TenantRequestsPanel({ currentStaffDiscordId }: Props) {
             <table className="w-full text-sm">
               <thead className="bg-neutral-900/50 text-neutral-400 text-xs uppercase tracking-wider">
                 <tr>
-                  <th className="px-4 py-3 text-left">{t.colStatus}</th>
-                  <th className="px-4 py-3 text-left">{t.colSlug}</th>
-                  <th className="px-4 py-3 text-left">{t.colName}</th>
-                  <th className="px-4 py-3 text-left">{t.colEmail}</th>
-                  <th className="px-4 py-3 text-left">{t.colDiscord}</th>
-                  <th className="px-4 py-3 text-left">{t.colCreated}</th>
-                  <th className="px-4 py-3 text-left">{t.colTenant}</th>
-                  <th className="px-4 py-3 text-right">{t.colActions}</th>
+                  <th scope="col" className="px-4 py-3 text-left">{t.colStatus}</th>
+                  <th scope="col" className="px-4 py-3 text-left">{t.colSlug}</th>
+                  <th scope="col" className="px-4 py-3 text-left">{t.colName}</th>
+                  <th scope="col" className="px-4 py-3 text-left">{t.colEmail}</th>
+                  <th scope="col" className="px-4 py-3 text-left">{t.colDiscord}</th>
+                  <th scope="col" className="px-4 py-3 text-left">{t.colCreated}</th>
+                  <th scope="col" className="px-4 py-3 text-left">{t.colTenant}</th>
+                  <th scope="col" className="px-4 py-3 text-right">{t.colActions}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-700/50">

@@ -469,28 +469,28 @@ export default function AdherentsListPanel() {
             <table className="w-full text-sm">
               <thead className="bg-neutral-900/50 border-b border-neutral-700/50">
                 <tr>
-                  <th className="text-left px-4 py-3 text-neutral-400 font-medium">
+                  <th scope="col" className="text-left px-4 py-3 text-neutral-400 font-medium">
                     {t.colMemberNumber}
                   </th>
-                  <th className="text-left px-4 py-3 text-neutral-400 font-medium">
+                  <th scope="col" className="text-left px-4 py-3 text-neutral-400 font-medium">
                     {t.colName}
                   </th>
-                  <th className="text-left px-4 py-3 text-neutral-400 font-medium">
+                  <th scope="col" className="text-left px-4 py-3 text-neutral-400 font-medium">
                     {t.colEmail}
                   </th>
-                  <th className="text-left px-4 py-3 text-neutral-400 font-medium">
+                  <th scope="col" className="text-left px-4 py-3 text-neutral-400 font-medium">
                     {t.colRole}
                   </th>
-                  <th className="text-left px-4 py-3 text-neutral-400 font-medium">
+                  <th scope="col" className="text-left px-4 py-3 text-neutral-400 font-medium">
                     {t.colYear}
                   </th>
-                  <th className="text-left px-4 py-3 text-neutral-400 font-medium">
+                  <th scope="col" className="text-left px-4 py-3 text-neutral-400 font-medium">
                     {t.colPayment}
                   </th>
-                  <th className="text-left px-4 py-3 text-neutral-400 font-medium">
+                  <th scope="col" className="text-left px-4 py-3 text-neutral-400 font-medium">
                     {t.colAmount}
                   </th>
-                  <th className="text-right px-4 py-3 text-neutral-400 font-medium">
+                  <th scope="col" className="text-right px-4 py-3 text-neutral-400 font-medium">
                     {t.colActions}
                   </th>
                 </tr>

@@ -92,12 +92,12 @@ export default function EmbedStandings({
                       : 'border-b border-white/10 text-left text-[11px] uppercase tracking-wider text-neutral-400'
                   }
                 >
-                  <th className="w-12 px-3 py-2 text-right tabular-nums">
+                  <th scope="col" className="w-12 px-3 py-2 text-right tabular-nums">
                     {t.rank}
                   </th>
-                  <th className="px-3 py-2">{t.team}</th>
+                  <th scope="col" className="px-3 py-2">{t.team}</th>
                   {hasPrize && (
-                    <th className="px-3 py-2 text-right">{t.prize}</th>
+                    <th scope="col" className="px-3 py-2 text-right">{t.prize}</th>
                   )}
                 </tr>
               </thead>

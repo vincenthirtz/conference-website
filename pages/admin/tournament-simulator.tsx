@@ -2791,11 +2791,12 @@ function TournamentSimulatorPage() {
                             <table className="w-full text-xs">
                               <thead>
                                 <tr className="border-b border-white/10">
-                                  <th className="text-left py-2 pr-2 text-neutral-500 font-semibold sticky left-0 bg-surface-sunken z-10">
+                                  <th scope="col" className="text-left py-2 pr-2 text-neutral-500 font-semibold sticky left-0 bg-surface-sunken z-10">
                                     {tx.vs}
                                   </th>
                                   {sortedTeams.map((t) => (
                                     <th
+                                      scope="col"
                                       key={t.id}
                                       className="text-center py-2 px-1 text-neutral-500 font-semibold min-w-[50px]"
                                     >
@@ -2998,13 +2999,14 @@ function TournamentSimulatorPage() {
                             <table className="w-full text-xs">
                               <thead>
                                 <tr className="border-b border-white/10">
-                                  <th className="text-left py-2 pr-4 text-neutral-500 font-semibold">
+                                  <th scope="col" className="text-left py-2 pr-4 text-neutral-500 font-semibold">
                                     {tx.thTeam}
                                   </th>
                                   {Array.from(
                                     { length: Math.min(teams.length, 8) },
                                     (_, i) => (
                                       <th
+                                        scope="col"
                                         key={i}
                                         className="text-center py-2 px-2 text-neutral-500 font-semibold"
                                       >

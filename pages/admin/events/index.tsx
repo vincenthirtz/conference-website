@@ -218,11 +218,11 @@ function AdminEventsIndexPage(_props: StaffProps) {
               <table className="w-full text-sm">
                 <thead className="text-left text-neutral-400 border-b border-neutral-700/50">
                   <tr>
-                    <th className="px-4 py-3 font-medium">{t.colName}</th>
-                    <th className="px-4 py-3 font-medium">{t.colSlug}</th>
-                    <th className="px-4 py-3 font-medium">{t.colScheduled}</th>
-                    <th className="px-4 py-3 font-medium">{t.colStatus}</th>
-                    <th className="px-4 py-3 font-medium text-right">
+                    <th scope="col" className="px-4 py-3 font-medium">{t.colName}</th>
+                    <th scope="col" className="px-4 py-3 font-medium">{t.colSlug}</th>
+                    <th scope="col" className="px-4 py-3 font-medium">{t.colScheduled}</th>
+                    <th scope="col" className="px-4 py-3 font-medium">{t.colStatus}</th>
+                    <th scope="col" className="px-4 py-3 font-medium text-right">
                       {t.colActions}
                     </th>
                   </tr>

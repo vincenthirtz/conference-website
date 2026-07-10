@@ -323,24 +323,24 @@ export default function MapStatsPanel() {
             <table className="min-w-full text-sm">
               <thead className="bg-neutral-900/50 text-neutral-400">
                 <tr>
-                  <th className="px-4 py-3 text-left font-medium">#</th>
-                  <th className="px-4 py-3 text-left font-medium">{t.thMap}</th>
-                  <th className="px-4 py-3 text-center font-medium">
+                  <th scope="col" className="px-4 py-3 text-left font-medium">#</th>
+                  <th scope="col" className="px-4 py-3 text-left font-medium">{t.thMap}</th>
+                  <th scope="col" className="px-4 py-3 text-center font-medium">
                     {t.thMatchesPlayed}
                   </th>
-                  <th className="px-4 py-3 text-center font-medium">
+                  <th scope="col" className="px-4 py-3 text-center font-medium">
                     {t.thWinsTeam1}
                   </th>
-                  <th className="px-4 py-3 text-center font-medium">
+                  <th scope="col" className="px-4 py-3 text-center font-medium">
                     {t.thWinsTeam2}
                   </th>
-                  <th className="px-4 py-3 text-center font-medium">
+                  <th scope="col" className="px-4 py-3 text-center font-medium">
                     {t.thWinrate}
                   </th>
-                  <th className="px-4 py-3 text-center font-medium">
+                  <th scope="col" className="px-4 py-3 text-center font-medium">
                     {t.thRoundsTotal}
                   </th>
-                  <th className="px-4 py-3 text-center font-medium">
+                  <th scope="col" className="px-4 py-3 text-center font-medium">
                     {t.thAvgRounds}
                   </th>
                 </tr>

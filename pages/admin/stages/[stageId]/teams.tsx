@@ -573,7 +573,7 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
                 <table className="w-full text-sm">
                   <thead className="bg-neutral-750 text-neutral-300">
                     <tr>
-                      <th className="px-3 py-2 text-center w-10">
+                      <th scope="col" className="px-3 py-2 text-center w-10">
                         <input
                           type="checkbox"
                           checked={
@@ -584,10 +584,10 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
                           className="accent-blue-500"
                         />
                       </th>
-                      <th className="px-4 py-2 text-left">{t.thSeed}</th>
-                      <th className="px-4 py-2 text-left">{t.thTeam}</th>
-                      <th className="px-4 py-2 text-left">{t.thNotes}</th>
-                      <th className="px-4 py-2 text-right">{t.thActions}</th>
+                      <th scope="col" className="px-4 py-2 text-left">{t.thSeed}</th>
+                      <th scope="col" className="px-4 py-2 text-left">{t.thTeam}</th>
+                      <th scope="col" className="px-4 py-2 text-left">{t.thNotes}</th>
+                      <th scope="col" className="px-4 py-2 text-right">{t.thActions}</th>
                     </tr>
                   </thead>
                   <tbody>

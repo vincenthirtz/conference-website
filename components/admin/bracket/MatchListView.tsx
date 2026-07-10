@@ -61,25 +61,25 @@ export default function MatchListView({ matchDays }: MatchListViewProps) {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-white/10">
-                  <th className="text-left px-3 py-2 text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">
+                  <th scope="col" className="text-left px-3 py-2 text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">
                     {t.colTime}
                   </th>
-                  <th className="text-left px-3 py-2 text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">
+                  <th scope="col" className="text-left px-3 py-2 text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">
                     {t.colTeam1}
                   </th>
-                  <th className="text-center px-2 py-2 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">
+                  <th scope="col" className="text-center px-2 py-2 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">
                     vs
                   </th>
-                  <th className="text-left px-3 py-2 text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">
+                  <th scope="col" className="text-left px-3 py-2 text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">
                     {t.colTeam2}
                   </th>
-                  <th className="text-left px-3 py-2 text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">
+                  <th scope="col" className="text-left px-3 py-2 text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">
                     {t.colFormat}
                   </th>
-                  <th className="text-left px-3 py-2 text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">
+                  <th scope="col" className="text-left px-3 py-2 text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">
                     {t.colRound}
                   </th>
-                  <th className="text-left px-3 py-2 text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">
+                  <th scope="col" className="text-left px-3 py-2 text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">
                     {t.colStatus}
                   </th>
                 </tr>

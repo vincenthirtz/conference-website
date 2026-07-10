@@ -154,22 +154,22 @@ const TeamMapsPage: NextPage<Props> = ({ team, mapStats }) => {
                 <table className="min-w-full text-sm border-collapse">
                   <thead>
                     <tr className="bg-neutral-900/80">
-                      <th className="text-left px-3 py-2 border-b border-neutral-700 font-medium">
+                      <th scope="col" className="text-left px-3 py-2 border-b border-neutral-700 font-medium">
                         {t.thMap}
                       </th>
-                      <th className="text-center px-3 py-2 border-b border-neutral-700 font-medium">
+                      <th scope="col" className="text-center px-3 py-2 border-b border-neutral-700 font-medium">
                         {t.thPlayed}
                       </th>
-                      <th className="text-center px-3 py-2 border-b border-neutral-700 font-medium">
+                      <th scope="col" className="text-center px-3 py-2 border-b border-neutral-700 font-medium">
                         {t.thW}
                       </th>
-                      <th className="text-center px-3 py-2 border-b border-neutral-700 font-medium">
+                      <th scope="col" className="text-center px-3 py-2 border-b border-neutral-700 font-medium">
                         {t.thL}
                       </th>
-                      <th className="text-center px-3 py-2 border-b border-neutral-700 font-medium">
+                      <th scope="col" className="text-center px-3 py-2 border-b border-neutral-700 font-medium">
                         {t.thWR}
                       </th>
-                      <th className="text-center px-3 py-2 border-b border-neutral-700 font-medium">
+                      <th scope="col" className="text-center px-3 py-2 border-b border-neutral-700 font-medium">
                         {t.thRounds}
                       </th>
                     </tr>

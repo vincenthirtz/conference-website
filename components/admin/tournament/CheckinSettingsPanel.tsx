@@ -371,16 +371,16 @@ export default function CheckinSettingsPanel() {
             <table className="w-full text-sm">
               <thead className="bg-neutral-800/80 text-xs uppercase tracking-wide text-neutral-400">
                 <tr>
-                  <th className="px-4 py-3 text-left">{t.thDate}</th>
-                  <th className="px-4 py-3 text-left">{t.thMatch}</th>
-                  <th className="px-4 py-3 text-center">{t.thStatus}</th>
-                  <th className="px-4 py-3 text-center">{t.thEmail}</th>
-                  <th className="px-4 py-3 text-center">{t.thT30}</th>
-                  <th className="px-4 py-3 text-center">{t.thT15}</th>
-                  <th className="px-4 py-3 text-center">{t.thTeam1}</th>
-                  <th className="px-4 py-3 text-center">{t.thTeam2}</th>
-                  <th className="px-4 py-3 text-left">{t.thReason}</th>
-                  <th className="px-4 py-3 text-right">{t.thAction}</th>
+                  <th scope="col" className="px-4 py-3 text-left">{t.thDate}</th>
+                  <th scope="col" className="px-4 py-3 text-left">{t.thMatch}</th>
+                  <th scope="col" className="px-4 py-3 text-center">{t.thStatus}</th>
+                  <th scope="col" className="px-4 py-3 text-center">{t.thEmail}</th>
+                  <th scope="col" className="px-4 py-3 text-center">{t.thT30}</th>
+                  <th scope="col" className="px-4 py-3 text-center">{t.thT15}</th>
+                  <th scope="col" className="px-4 py-3 text-center">{t.thTeam1}</th>
+                  <th scope="col" className="px-4 py-3 text-center">{t.thTeam2}</th>
+                  <th scope="col" className="px-4 py-3 text-left">{t.thReason}</th>
+                  <th scope="col" className="px-4 py-3 text-right">{t.thAction}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-700/50">

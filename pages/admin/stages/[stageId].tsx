@@ -2326,7 +2326,7 @@ function AdminStagePage({ staff }: StaffProps) {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-neutral-900/80 text-neutral-400 text-xs uppercase tracking-wider">
-                      <th className="px-3 py-2 text-left w-10">
+                      <th scope="col" className="px-3 py-2 text-left w-10">
                         <input
                           type="checkbox"
                           checked={
@@ -2348,12 +2348,12 @@ function AdminStagePage({ staff }: StaffProps) {
                           className="rounded border-neutral-500 bg-neutral-700"
                         />
                       </th>
-                      <th className="px-3 py-2 text-left">#</th>
-                      <th className="px-3 py-2 text-left">{t.thTeam}</th>
-                      <th className="px-3 py-2 text-center">{t.thWins}</th>
-                      <th className="px-3 py-2 text-center">{t.thLosses}</th>
-                      <th className="px-3 py-2 text-center">{t.thDraws}</th>
-                      <th className="px-3 py-2 text-right">{t.thPoints}</th>
+                      <th scope="col" className="px-3 py-2 text-left">#</th>
+                      <th scope="col" className="px-3 py-2 text-left">{t.thTeam}</th>
+                      <th scope="col" className="px-3 py-2 text-center">{t.thWins}</th>
+                      <th scope="col" className="px-3 py-2 text-center">{t.thLosses}</th>
+                      <th scope="col" className="px-3 py-2 text-center">{t.thDraws}</th>
+                      <th scope="col" className="px-3 py-2 text-right">{t.thPoints}</th>
                     </tr>
                   </thead>
                   <tbody>

@@ -141,20 +141,20 @@ export default function TournamentFfaPage({
             <table className="w-full min-w-[560px] border-collapse text-sm">
               <thead>
                 <tr className="border-b border-white/10 text-[11px] uppercase tracking-wider text-gray-400">
-                  <th className="w-14 px-4 py-3 text-right tabular-nums">
+                  <th scope="col" className="w-14 px-4 py-3 text-right tabular-nums">
                     {t.colRank}
                   </th>
-                  <th className="px-4 py-3 text-left">{t.colTeam}</th>
-                  <th className="px-4 py-3 text-right tabular-nums">
+                  <th scope="col" className="px-4 py-3 text-left">{t.colTeam}</th>
+                  <th scope="col" className="px-4 py-3 text-right tabular-nums">
                     {t.colPoints}
                   </th>
-                  <th className="px-4 py-3 text-right tabular-nums">
+                  <th scope="col" className="px-4 py-3 text-right tabular-nums">
                     {t.colLobbies}
                   </th>
-                  <th className="px-4 py-3 text-right tabular-nums">
+                  <th scope="col" className="px-4 py-3 text-right tabular-nums">
                     {t.colBest}
                   </th>
-                  <th className="px-4 py-3 text-right tabular-nums">
+                  <th scope="col" className="px-4 py-3 text-right tabular-nums">
                     {t.colFirsts}
                   </th>
                 </tr>

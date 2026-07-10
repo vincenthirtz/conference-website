@@ -106,9 +106,9 @@ function ImportBattleTagsModalComponent({
             <table className="w-full text-sm">
               <thead className="bg-neutral-900/60 text-neutral-400 text-xs uppercase">
                 <tr>
-                  <th className="text-left px-3 py-2">{t.colIdentifiant}</th>
-                  <th className="text-left px-3 py-2">BattleTag</th>
-                  <th className="text-left px-3 py-2">{t.colStatut}</th>
+                  <th scope="col" className="text-left px-3 py-2">{t.colIdentifiant}</th>
+                  <th scope="col" className="text-left px-3 py-2">BattleTag</th>
+                  <th scope="col" className="text-left px-3 py-2">{t.colStatut}</th>
                 </tr>
               </thead>
               <tbody>

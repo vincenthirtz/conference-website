@@ -96,20 +96,20 @@ export default function EmbedFfaStandings({
                       : 'border-b border-white/10 text-left text-[11px] uppercase tracking-wider text-neutral-400'
                   }
                 >
-                  <th className="w-12 px-3 py-2 text-right tabular-nums">
+                  <th scope="col" className="w-12 px-3 py-2 text-right tabular-nums">
                     {t.colRank}
                   </th>
-                  <th className="px-3 py-2">{t.colTeam}</th>
-                  <th className="px-3 py-2 text-right tabular-nums">
+                  <th scope="col" className="px-3 py-2">{t.colTeam}</th>
+                  <th scope="col" className="px-3 py-2 text-right tabular-nums">
                     {t.colPoints}
                   </th>
-                  <th className="px-3 py-2 text-right tabular-nums">
+                  <th scope="col" className="px-3 py-2 text-right tabular-nums">
                     {t.colLobbies}
                   </th>
-                  <th className="px-3 py-2 text-right tabular-nums">
+                  <th scope="col" className="px-3 py-2 text-right tabular-nums">
                     {t.colBest}
                   </th>
-                  <th className="px-3 py-2 text-right tabular-nums">
+                  <th scope="col" className="px-3 py-2 text-right tabular-nums">
                     {t.colFirsts}
                   </th>
                 </tr>

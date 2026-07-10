@@ -263,13 +263,13 @@ function TeamsTable({ teams }: { teams: TournamentAnalyticsTeam[] }) {
       <table className="w-full text-sm">
         <thead className="bg-neutral-750 text-neutral-300">
           <tr>
-            <th className="px-4 py-2 text-left">#</th>
-            <th className="px-4 py-2 text-left">{t.colTeam}</th>
-            <th className="px-4 py-2 text-center">{t.colPlayed}</th>
-            <th className="px-4 py-2 text-center">{t.colWins}</th>
-            <th className="px-4 py-2 text-center">{t.colLosses}</th>
-            <th className="px-4 py-2 text-center">{t.colWinrate}</th>
-            <th className="px-4 py-2 text-center">{t.colMaps}</th>
+            <th scope="col" className="px-4 py-2 text-left">#</th>
+            <th scope="col" className="px-4 py-2 text-left">{t.colTeam}</th>
+            <th scope="col" className="px-4 py-2 text-center">{t.colPlayed}</th>
+            <th scope="col" className="px-4 py-2 text-center">{t.colWins}</th>
+            <th scope="col" className="px-4 py-2 text-center">{t.colLosses}</th>
+            <th scope="col" className="px-4 py-2 text-center">{t.colWinrate}</th>
+            <th scope="col" className="px-4 py-2 text-center">{t.colMaps}</th>
           </tr>
         </thead>
         <tbody>
@@ -328,12 +328,12 @@ function MapsTable({ maps }: { maps: TournamentAnalyticsMap[] }) {
       <table className="w-full text-sm">
         <thead className="bg-neutral-750 text-neutral-300">
           <tr>
-            <th className="px-4 py-2 text-left">{t.colMap}</th>
-            <th className="px-4 py-2 text-center">{t.colPicks}</th>
-            <th className="px-4 py-2 text-center">{t.colBans}</th>
-            <th className="px-4 py-2 text-center">{t.colGames}</th>
-            <th className="px-4 py-2 text-center">{t.colAvgDuration}</th>
-            <th className="px-4 py-2 text-center">{t.colOvertime}</th>
+            <th scope="col" className="px-4 py-2 text-left">{t.colMap}</th>
+            <th scope="col" className="px-4 py-2 text-center">{t.colPicks}</th>
+            <th scope="col" className="px-4 py-2 text-center">{t.colBans}</th>
+            <th scope="col" className="px-4 py-2 text-center">{t.colGames}</th>
+            <th scope="col" className="px-4 py-2 text-center">{t.colAvgDuration}</th>
+            <th scope="col" className="px-4 py-2 text-center">{t.colOvertime}</th>
           </tr>
         </thead>
         <tbody>
@@ -379,12 +379,12 @@ function HeroesTable({ heroes }: { heroes: TournamentAnalyticsHero[] }) {
       <table className="w-full text-sm">
         <thead className="bg-neutral-750 text-neutral-300">
           <tr>
-            <th className="px-4 py-2 text-left">{t.colHero}</th>
-            <th className="px-4 py-2 text-center">{t.colPicks}</th>
-            <th className="px-4 py-2 text-center">{t.colBans}</th>
-            <th className="px-4 py-2 text-center">{t.colWins}</th>
-            <th className="px-4 py-2 text-center">{t.colLosses}</th>
-            <th className="px-4 py-2 text-center">{t.colWinrate}</th>
+            <th scope="col" className="px-4 py-2 text-left">{t.colHero}</th>
+            <th scope="col" className="px-4 py-2 text-center">{t.colPicks}</th>
+            <th scope="col" className="px-4 py-2 text-center">{t.colBans}</th>
+            <th scope="col" className="px-4 py-2 text-center">{t.colWins}</th>
+            <th scope="col" className="px-4 py-2 text-center">{t.colLosses}</th>
+            <th scope="col" className="px-4 py-2 text-center">{t.colWinrate}</th>
           </tr>
         </thead>
         <tbody>

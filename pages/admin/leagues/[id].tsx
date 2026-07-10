@@ -764,13 +764,13 @@ function AdminLeagueDetailPage(_props: StaffProps) {
                 <table className="w-full text-sm">
                   <thead className="bg-neutral-900/50 text-neutral-400">
                     <tr>
-                      <th className="text-left px-4 py-2.5 w-16">{t.thRank}</th>
-                      <th className="text-left px-4 py-2.5">{t.thTeam}</th>
-                      <th className="text-right px-4 py-2.5">{t.thPoints}</th>
-                      <th className="text-right px-4 py-2.5">
+                      <th scope="col" className="text-left px-4 py-2.5 w-16">{t.thRank}</th>
+                      <th scope="col" className="text-left px-4 py-2.5">{t.thTeam}</th>
+                      <th scope="col" className="text-right px-4 py-2.5">{t.thPoints}</th>
+                      <th scope="col" className="text-right px-4 py-2.5">
                         {t.thTournaments}
                       </th>
-                      <th className="text-right px-4 py-2.5">{t.thBestRank}</th>
+                      <th scope="col" className="text-right px-4 py-2.5">{t.thBestRank}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-neutral-700/50">
