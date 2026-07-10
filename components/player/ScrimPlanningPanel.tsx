@@ -12,7 +12,7 @@
 // Idiome dark aligné sur components/player/ScrimSlotPicker.tsx : rounded-xl,
 // border-white/15, bg-black/60.
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import AvailabilityGrid, {
   type AvailabilityGridLabels,
 } from '@/components/scrim/AvailabilityGrid';
@@ -264,36 +264,52 @@ export default function ScrimPlanningPanel({
   const effectiveMode: 'paint' | 'heatmap' =
     readOnly && hasHeatmap ? 'heatmap' : mode === 'heatmap' && hasHeatmap ? 'heatmap' : 'paint';
 
-  const handleSave = async () => {
-    if (saving || readOnly) return;
-    setSaving(true);
-    try {
-      const res = await fetch(
-        `/api/teams/scrim-plannings/${planning.id}/availability`,
-        {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ slots }),
-        }
-      );
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error || t.saveError);
-      const saved: string[] = Array.isArray(data?.mySlots)
-        ? data.mySlots
-        : slots;
-      setSlots(saved);
-      setSavedSlots(saved);
-      onSaved?.(saved);
-      addToast(t.saveSuccess, 'success');
-    } catch (err) {
-      addToast((err as Error).message || t.saveError, 'error');
-    } finally {
-      setSaving(false);
-    }
-  };
+  const handleSave = useCallback(
+    async (opts?: { silent?: boolean }) => {
+      if (saving || readOnly) return;
+      setSaving(true);
+      try {
+        const res = await fetch(
+          `/api/teams/scrim-plannings/${planning.id}/availability`,
+          {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ slots }),
+          }
+        );
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data?.error || t.saveError);
+        const saved: string[] = Array.isArray(data?.mySlots)
+          ? data.mySlots
+          : slots;
+        setSlots(saved);
+        setSavedSlots(saved);
+        onSaved?.(saved);
+        // Auto-save silencieux : pas de toast à chaque frappe (le témoin
+        // « enregistré » suffit) ; toast seulement sur sauvegarde explicite.
+        if (!opts?.silent) addToast(t.saveSuccess, 'success');
+      } catch (err) {
+        addToast((err as Error).message || t.saveError, 'error');
+      } finally {
+        setSaving(false);
+      }
+    },
+    [saving, readOnly, planning.id, token, slots, onSaved, addToast, t]
+  );
+
+  // Auto-save (debounce) : persiste les dispos ~1,2 s après la dernière
+  // modification. Le témoin « non enregistré » + la garde beforeunload couvrent
+  // la fenêtre avant l'écriture ; la sauvegarde manuelle reste possible.
+  useEffect(() => {
+    if (readOnly || !dirty || saving) return;
+    const id = setTimeout(() => {
+      void handleSave({ silent: true });
+    }, 1200);
+    return () => clearTimeout(id);
+  }, [dirty, readOnly, saving, handleSave]);
 
   const formatSlot = (iso: string) =>
     new Date(iso).toLocaleString(locale, {
@@ -606,16 +622,26 @@ export default function ScrimPlanningPanel({
             {format(slotsCount === 1 ? t.slotsPainted_one : t.slotsPainted_other, {
               count: slotsCount,
             })}
-            {dirty && (
+            {saving ? (
+              <span className="inline-flex items-center gap-1 text-gray-400">
+                <span className="h-1.5 w-1.5 rounded-full bg-gray-400 animate-pulse" aria-hidden="true" />
+                {t.saving}
+              </span>
+            ) : dirty ? (
               <span className="inline-flex items-center gap-1 rounded-full border border-amber-400/40 bg-amber-500/10 px-2 py-0.5 font-medium text-amber-200">
                 <span className="h-1.5 w-1.5 rounded-full bg-amber-400" aria-hidden="true" />
                 {t.unsavedChanges}
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 text-emerald-300/80">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" aria-hidden="true" />
+                {t.autoSaved}
               </span>
             )}
           </span>
           <button
             type="button"
-            onClick={handleSave}
+            onClick={() => handleSave()}
             disabled={saving}
             className={`px-5 py-2.5 rounded-xl font-semibold text-sm transition ${
               saving

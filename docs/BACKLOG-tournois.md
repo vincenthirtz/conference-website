@@ -148,7 +148,7 @@ Suite au sweep qualité (Q022–Q026 dans [IMPROVEMENT_BACKLOG.md](./IMPROVEMENT
 | # | Item | Effort | Statut |
 |---|------|--------|--------|
 | A1 | **Indicateur de participation joueur** — le capitaine voit qui a répondu (son équipe / l'adverse / le staff) et s'il attend encore l'autre équipe. | S | ✅ LIVRÉ |
-| A2 | Auto-save des dispos (debounce) — supprime la sauvegarde manuelle, garde le témoin « non enregistré » comme filet. | M | ⏳ |
+| A2 | Auto-save des dispos (debounce 1,2 s) — persistance auto après la dernière modif ; témoin d'état enregistrement/non enregistré/enregistré, bouton manuel conservé, garde beforeunload comme filet. | M | ✅ LIVRÉ |
 | A3 | Feedback d'échéance in-app — « il te reste X jours pour peindre » (dérivé de l'horizon / d'une deadline). | M | ⏳ |
 | A4 | Vue mois admin « +N » déroulable sur place (popover) au lieu de basculer en semaine. | S-M | ⏳ |
 | A5 | Vue mois côté joueur (aujourd'hui pagination 7 jours, horizon jusqu'à 42 j). | M-L | ⏳ |

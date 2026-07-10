@@ -3768,6 +3768,7 @@
     "participationTitle": "Qui a répondu :",
     "participationYou": "toi",
     "participationPainted": "a peint",
-    "participationWaiting": "en attente"
+    "participationWaiting": "en attente",
+    "autoSaved": "Enregistré · auto"
   }
 }
