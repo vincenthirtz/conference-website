@@ -10,6 +10,7 @@ import { test, expect } from '@playwright/test';
 import { createClient } from '@supabase/supabase-js';
 import {
   supabaseTestClient,
+  DEFAULT_TENANT_ID,
   deleteTeamsByName,
   deleteTestUser,
   createTestPlayer,
@@ -89,7 +90,12 @@ test.describe.serial('Scrim planning (grille de dispos)', () => {
 
     const { data: teamA } = await supabaseTestClient
       .from('teams')
-      .insert({ name: `${PREFIX}-teamA`, captain_id: captAId, is_active: true })
+      .insert({
+        name: `${PREFIX}-teamA`,
+        captain_id: captAId,
+        is_active: true,
+        tenant_id: DEFAULT_TENANT_ID,
+      })
       .select('id')
       .single();
     teamAId = teamA!.id;
@@ -99,7 +105,12 @@ test.describe.serial('Scrim planning (grille de dispos)', () => {
 
     const { data: teamB } = await supabaseTestClient
       .from('teams')
-      .insert({ name: `${PREFIX}-teamB`, captain_id: captBId, is_active: true })
+      .insert({
+        name: `${PREFIX}-teamB`,
+        captain_id: captBId,
+        is_active: true,
+        tenant_id: DEFAULT_TENANT_ID,
+      })
       .select('id')
       .single();
     teamBId = teamB!.id;
@@ -127,11 +138,14 @@ test.describe.serial('Scrim planning (grille de dispos)', () => {
 
   // ─── Auth guards ──────────────────────────────────────
 
-  test('admin create : 401 sans token', async ({ request }) => {
+  test('admin create : rejeté sans token', async ({ request }) => {
     const res = await request.post('/api/admin/scrim-plannings', {
       data: { team1_id: teamAId, team2_id: teamBId },
     });
-    expect(res.status()).toBe(401);
+    // POST state-changing sans Bearer ni Origin → rejeté au niveau CSRF (403,
+    // csrfCheck s'exécute avant l'auth) ; un token invalide donnerait 401. Les
+    // deux valident l'intention : la création non authentifiée est bloquée.
+    expect([401, 403]).toContain(res.status());
   });
 
   test('player list : 401 sans token', async ({ request }) => {
@@ -254,7 +268,9 @@ test.describe.serial('Scrim planning (grille de dispos)', () => {
     expect(res.status()).toBe(201);
     const body = await res.json();
     expect(body.scrim.status).toBe('scheduled');
-    expect(body.scrim.scheduled_date).toBe(commonSlot);
+    // Postgres resérialise le timestamptz en '+00:00' ; on compare l'INSTANT,
+    // pas la représentation textuelle (commonSlot est un '…000Z').
+    expect(new Date(body.scrim.scheduled_date).toISOString()).toBe(commonSlot);
     expect(body.scrim.source_planning_id).toBe(planningId);
     expect(body.planning.status).toBe('validated');
     // Overlap complet → pas de warning.
