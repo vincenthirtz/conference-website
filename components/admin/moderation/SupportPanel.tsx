@@ -6,6 +6,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useToast } from '@/components/Toast';
 import LoadingSpinner from '@/components/admin/LoadingSpinner';
 import EmptyState from '@/components/admin/EmptyState';
+import Modal from '@/components/admin/Modal';
 import { useUrlFilters } from '@/utils/useUrlFilters';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
@@ -576,59 +577,37 @@ export default function SupportPanel() {
 
       {/* Detail modal */}
       {selected && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
-          onClick={() => setSelected(null)}
-        >
-          <div
-            className="bg-neutral-800 border border-neutral-700 rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-start justify-between gap-3 mb-4">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap mb-1">
-                  <span
-                    className={`px-2 py-0.5 rounded-full text-xs font-medium border ${severityBadge(selected.severity)}`}
-                  >
-                    {selected.severity.toUpperCase()}
-                  </span>
-                  <span
-                    className={`px-2 py-0.5 rounded-full text-xs font-medium border ${statusBadge(selected.status)}`}
-                  >
-                    {statusLabels[selected.status]}
-                  </span>
-                  <span className="text-xs text-neutral-400">
-                    {categoryLabels[selected.category]}
-                  </span>
-                </div>
-                <h3 className="text-lg font-semibold text-white">
-                  {selected.subject || tx.subjectFallback}
-                </h3>
-                <p className="text-xs text-neutral-500 mt-0.5 font-mono">
-                  {selected.id}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelected(null)}
-                className="p-1 rounded-lg hover:bg-neutral-700 transition-colors"
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+        <Modal
+          open
+          onClose={() => setSelected(null)}
+          size="2xl"
+          title={
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap mb-1">
+                <span
+                  className={`px-2 py-0.5 rounded-full text-xs font-medium border ${severityBadge(selected.severity)}`}
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
+                  {selected.severity.toUpperCase()}
+                </span>
+                <span
+                  className={`px-2 py-0.5 rounded-full text-xs font-medium border ${statusBadge(selected.status)}`}
+                >
+                  {statusLabels[selected.status]}
+                </span>
+                <span className="text-xs text-neutral-400">
+                  {categoryLabels[selected.category]}
+                </span>
+              </div>
+              <h3 className="text-lg font-semibold text-white">
+                {selected.subject || tx.subjectFallback}
+              </h3>
+              <p className="text-xs text-neutral-500 mt-0.5 font-mono">
+                {selected.id}
+              </p>
             </div>
-
+          }
+        >
+          <>
             <div className="space-y-3 mb-5">
               <Field label={tx.fieldAuthor}>
                 {selected.is_anonymous ? (
@@ -804,8 +783,8 @@ export default function SupportPanel() {
                 </button>
               </div>
             </div>
-          </div>
-        </div>
+          </>
+        </Modal>
       )}
     </>
   );

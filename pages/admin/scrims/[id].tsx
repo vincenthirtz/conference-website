@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { withStaffPage } from '@/utils/staff';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { StaffProps, Scrim } from '@/types/admin';
@@ -52,6 +53,7 @@ function AdminScrimEditPage(_props: StaffProps) {
   const t = useAdminT('adminScrimDetail');
   const router = useRouter();
   const { adminFetchJson } = useAdminFetch();
+  const { confirm, dialog } = useConfirmDialog();
   const { mutateJson } = useIdempotentMutation();
   const id = typeof router.query.id === 'string' ? router.query.id : '';
 
@@ -137,7 +139,8 @@ function AdminScrimEditPage(_props: StaffProps) {
   }
 
   async function deleteScrim() {
-    if (!confirm(t.confirmDelete)) return;
+    const ok = await confirm({ title: t.confirmDelete, variant: 'danger' });
+    if (!ok) return;
     try {
       await adminFetchJson(`/api/admin/scrims/${id}`, { method: 'DELETE' });
       router.push('/admin/scrims');
@@ -164,6 +167,7 @@ function AdminScrimEditPage(_props: StaffProps) {
 
   return (
     <>
+      {dialog}
       <Head>
         <title>{format(t.headTitle, { name: scrim.name })}</title>
       </Head>

@@ -8,6 +8,7 @@ import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { MatchStatus } from '@/types/admin';
 import MatchHistoryDrawer from '@/components/admin/MatchHistoryDrawer';
@@ -147,6 +148,7 @@ function MatchViewPage(_: StaffProps) {
   const { matchId } = router.query;
   const matchIdStr = Array.isArray(matchId) ? matchId[0] : matchId;
   const { adminFetchJson } = useAdminFetch();
+  const { confirm, dialog } = useConfirmDialog();
   const { mutateJson: openDisputeMutate } = useIdempotentMutation();
 
   const [loading, setLoading] = useState(true);
@@ -237,7 +239,11 @@ function MatchViewPage(_: StaffProps) {
 
   async function cancelDispute() {
     if (!matchIdStr) return;
-    if (!confirm(t.confirmCancelDispute)) return;
+    const ok = await confirm({
+      title: t.confirmCancelDispute,
+      variant: 'danger',
+    });
+    if (!ok) return;
     setDisputeBusy(true);
     setDisputeMsg(null);
     try {
@@ -274,6 +280,7 @@ function MatchViewPage(_: StaffProps) {
 
   return (
     <>
+      {dialog}
       <Head>
         <title>{format(t.pageTitle, { id: matchIdStr ?? '' })}</title>
       </Head>

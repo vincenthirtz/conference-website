@@ -102,6 +102,7 @@ function ImportBattleTagsModalComponent({
             className="rounded-xl border border-neutral-700 overflow-hidden"
             data-testid="import-preview"
           >
+            <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-neutral-900/60 text-neutral-400 text-xs uppercase">
                 <tr>
@@ -160,6 +161,7 @@ function ImportBattleTagsModalComponent({
                 )}
               </tbody>
             </table>
+            </div>
           </div>
         )}
       </div>

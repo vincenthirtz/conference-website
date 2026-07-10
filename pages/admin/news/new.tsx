@@ -41,6 +41,12 @@ export default function AdminNewsCreate({ staff }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showDraftBanner, setShowDraftBanner] = useState(false);
+  // Fallback d'aperçu géré par état (réarmé à chaque changement d'URL).
+  const [previewError, setPreviewError] = useState(false);
+
+  useEffect(() => {
+    setPreviewError(false);
+  }, [form.imageUrl]);
 
   const { draftRestored, lastSaved, clearDraft, restoreDraft } = useAutoSave(
     form,
@@ -347,14 +353,15 @@ export default function AdminNewsCreate({ staff }: Props) {
 
                 <div className="space-y-3">
                   <div className="flex items-start gap-3">
-                    {form.imageUrl ? (
+                    {form.imageUrl && !previewError ? (
                       <img
                         src={form.imageUrl}
                         alt="Preview"
+                        width={64}
+                        height={64}
+                        loading="lazy"
                         className="w-16 h-16 rounded-xl object-cover border border-neutral-700"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = 'none';
-                        }}
+                        onError={() => setPreviewError(true)}
                       />
                     ) : (
                       <div className="w-16 h-16 rounded-xl bg-neutral-700/50 flex items-center justify-center border border-neutral-700 flex-shrink-0">

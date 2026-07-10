@@ -102,6 +102,17 @@ export default function MapDrawPanel() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [maps, setMaps] = useState<TournamentMapRow[]>([]);
   const [tournament, setTournament] = useState<TournamentMini | null>(null);
+  // Image fallback handled via React state (never imperative DOM mutation).
+  const [brokenImages, setBrokenImages] = useState<Set<string>>(new Set());
+
+  function markImageBroken(id: string) {
+    setBrokenImages((prev) => {
+      if (prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+  }
 
   const [format, setFormat] = useState<BoFormat>('bo3');
   // Each slot = array of 3 map choices (same category)
@@ -571,17 +582,18 @@ ${selectedSlots
                             {fmt(t.choiceLabel, { n: ci + 1 })}
                           </p>
 
-                          {/* Map image or placeholder */}
-                          {choice?.image_url ? (
+                          {/* Map image or placeholder (fallback géré par état) */}
+                          {choice?.image_url &&
+                          !brokenImages.has(choice.id) ? (
                             <div className="relative w-full h-20 rounded-lg overflow-hidden mb-2 bg-gradient-to-b from-purple-900/20 to-transparent">
                               <img
                                 src={choice.image_url}
                                 alt={choice.map_name}
+                                width={320}
+                                height={80}
+                                loading="lazy"
                                 className="w-full h-full object-cover"
-                                onError={(e) => {
-                                  (e.target as HTMLImageElement).style.display =
-                                    'none';
-                                }}
+                                onError={() => markImageBroken(choice.id)}
                               />
                             </div>
                           ) : (
@@ -655,16 +667,16 @@ ${selectedSlots
                           : 'border-white/10 opacity-100'
                       }`}
                     >
-                      {m.image_url && (
+                      {m.image_url && !brokenImages.has(m.id) && (
                         <div className="w-full h-20 bg-gradient-to-b from-purple-900/20 to-transparent">
                           <img
                             src={m.image_url}
                             alt={m.map_name}
+                            width={320}
+                            height={80}
+                            loading="lazy"
                             className="w-full h-full object-cover"
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).style.display =
-                                'none';
-                            }}
+                            onError={() => markImageBroken(m.id)}
                           />
                         </div>
                       )}

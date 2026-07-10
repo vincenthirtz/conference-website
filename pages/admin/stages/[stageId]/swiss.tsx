@@ -505,17 +505,31 @@ function AdminSwissStagePage({ staff }: StaffProps) {
                   <table className="min-w-full text-xs">
                     <thead className="bg-neutral-750 text-neutral-300">
                       <tr>
-                        <th className="px-3 py-2 text-left">#</th>
-                        <th className="px-3 py-2 text-left">{t.thTeam}</th>
-                        <th className="px-3 py-2 text-center">{t.thWins}</th>
-                        <th className="px-3 py-2 text-center">{t.thLosses}</th>
-                        <th className="px-3 py-2 text-center">{t.thDraws}</th>
-                        <th className="px-3 py-2 text-center">{t.thPoints}</th>
-                        <th className="px-3 py-2 text-center">{t.thMaps}</th>
-                        <th className="px-3 py-2 text-center">
+                        <th scope="col" className="px-3 py-2 text-left">
+                          #
+                        </th>
+                        <th scope="col" className="px-3 py-2 text-left">
+                          {t.thTeam}
+                        </th>
+                        <th scope="col" className="px-3 py-2 text-center">
+                          {t.thWins}
+                        </th>
+                        <th scope="col" className="px-3 py-2 text-center">
+                          {t.thLosses}
+                        </th>
+                        <th scope="col" className="px-3 py-2 text-center">
+                          {t.thDraws}
+                        </th>
+                        <th scope="col" className="px-3 py-2 text-center">
+                          {t.thPoints}
+                        </th>
+                        <th scope="col" className="px-3 py-2 text-center">
+                          {t.thMaps}
+                        </th>
+                        <th scope="col" className="px-3 py-2 text-center">
                           {t.thBuchholz}
                         </th>
-                        <th className="px-3 py-2 text-center">
+                        <th scope="col" className="px-3 py-2 text-center">
                           {t.thOppWinrate}
                         </th>
                       </tr>

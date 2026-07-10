@@ -7,6 +7,7 @@ import { withStaffPage } from '@/utils/staff';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import Breadcrumb from '@/components/admin/Breadcrumb';
 import LogoUpload from '@/components/admin/LogoUpload';
 import MembersSection from '@/components/admin/teams/MembersSection';
@@ -70,6 +71,7 @@ function AdminEditTeamPage({
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const { addToast } = useToast();
+  const { confirm, dialog } = useConfirmDialog();
   const { adminFetch, adminFetchJson } = useAdminFetch();
   const { mutate: addMemberMutate } = useIdempotentMutation();
   const { mutate: registerTournamentMutate } = useIdempotentMutation();
@@ -300,7 +302,11 @@ function AdminEditTeamPage({
 
   async function handleUnregisterFromTournament(tournamentId: string) {
     if (!teamId) return;
-    if (!confirm(t.confirmUnregister)) return;
+    const ok = await confirm({
+      title: t.confirmUnregister,
+      variant: 'danger',
+    });
+    if (!ok) return;
 
     setTournamentsLoading(true);
     try {
@@ -509,14 +515,13 @@ function AdminEditTeamPage({
   const handleDeleteMember = useCallback(
     async (member: TeamMemberRow) => {
       if (!teamId) return;
-      if (
-        !confirm(
-          format(t.confirmDeleteMember, {
-            member: member.battle_tag || member.user_id,
-          })
-        )
-      )
-        return;
+      const ok = await confirm({
+        title: format(t.confirmDeleteMember, {
+          member: member.battle_tag || member.user_id,
+        }),
+        variant: 'danger',
+      });
+      if (!ok) return;
 
       try {
         const res = await adminFetch(`/api/admin/teams/${teamId}/members`, {
@@ -533,20 +538,19 @@ function AdminEditTeamPage({
         // Silently fail
       }
     },
-    [teamId, adminFetch, addToast, fetchMembers, fetchTeam, t]
+    [teamId, adminFetch, addToast, fetchMembers, fetchTeam, confirm, t]
   );
 
   const handleSetCaptain = useCallback(
     async (member: TeamMemberRow) => {
       if (!teamId) return;
-      if (
-        !confirm(
-          format(t.confirmSetCaptain, {
-            member: member.battle_tag || member.user_id,
-          })
-        )
-      )
-        return;
+      const ok = await confirm({
+        title: format(t.confirmSetCaptain, {
+          member: member.battle_tag || member.user_id,
+        }),
+        variant: 'warning',
+      });
+      if (!ok) return;
 
       try {
         const json = await adminFetchJson<{ team: TeamRow }>(
@@ -563,7 +567,7 @@ function AdminEditTeamPage({
         setErrorMsg((err as Error)?.message ?? t.errUnexpected);
       }
     },
-    [teamId, adminFetchJson, addToast, t]
+    [teamId, adminFetchJson, addToast, confirm, t]
   );
 
   const handleSwap = useCallback(
@@ -681,10 +685,13 @@ function AdminEditTeamPage({
 
   const handleBulkRemove = useCallback(async () => {
     if (selectedIds.size === 0) return;
-    if (!confirm(format(t.confirmBulkRemove, { count: selectedIds.size })))
-      return;
+    const ok = await confirm({
+      title: format(t.confirmBulkRemove, { count: selectedIds.size }),
+      variant: 'danger',
+    });
+    if (!ok) return;
     await runBulk('remove');
-  }, [selectedIds, runBulk, t]);
+  }, [selectedIds, runBulk, confirm, t]);
 
   // Handlers bulk stables passés à MembersSection.
   const handleSelectAll = useCallback(
@@ -810,6 +817,7 @@ function AdminEditTeamPage({
 
   return (
     <>
+      {dialog}
       <Head>
         <title>
           {team?.name

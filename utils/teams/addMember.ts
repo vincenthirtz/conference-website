@@ -13,7 +13,7 @@ import { logger } from '../logger';
 import { emitRoleSyncEvent } from '../botRoleSync';
 import {
   findOrCreateUserByEmail,
-  listUsersEmailMap,
+  lookupUserIdByEmail,
 } from '../find-or-create-user';
 
 /* -----------------------------------------------------------
@@ -77,11 +77,9 @@ export async function resolveUserIdByEmail(
 
   if (opts.create) {
     try {
-      const emailMap = await listUsersEmailMap();
       const { userId, created } = await findOrCreateUserByEmail(
         email,
-        opts.defaultRole ?? 'player',
-        emailMap
+        opts.defaultRole ?? 'player'
       );
       return { ok: true, userId, created };
     } catch (err: unknown) {
@@ -94,29 +92,20 @@ export async function resolveUserIdByEmail(
     }
   }
 
-  // No create: look up existing users only (paginated to avoid silently
-  // missing users beyond the first page on big instances).
-  const emailLower = email.toLowerCase();
-  const PAGE_SIZE = 200;
-  for (let page = 1; page <= 50; page++) {
-    const { data, error } = await supabaseAdmin.auth.admin.listUsers({
-      page,
-      perPage: PAGE_SIZE,
-    });
-    if (error) {
-      logger.error('[addMember] listUsers error:', error);
-      return {
-        ok: false,
-        error: error.message || 'Failed to list users',
-        status: 500,
-      };
+  // No create: lookup ciblé (RPC get_user_id_by_email) au lieu d'un scan
+  // paginé de auth.users — audit perf P8.
+  try {
+    const userId = await lookupUserIdByEmail(email);
+    if (userId) {
+      return { ok: true, userId, created: false };
     }
-    const users = data?.users ?? [];
-    const found = users.find((u) => u.email?.toLowerCase() === emailLower);
-    if (found?.id) {
-      return { ok: true, userId: found.id, created: false };
-    }
-    if (users.length < PAGE_SIZE) break; // derniere page
+  } catch (err: unknown) {
+    logger.error('[addMember] lookupUserIdByEmail error:', err);
+    return {
+      ok: false,
+      error: (err as Error)?.message ?? 'Failed to look up user by email',
+      status: 500,
+    };
   }
 
   return { ok: false, error: 'User not found for this email', status: 404 };
@@ -235,7 +224,8 @@ export async function insertTeamMember(
       return {
         ok: false,
         status: 400,
-        error: "L'équipe a atteint la limite de joueur(s) imposée par un tournoi.",
+        error:
+          "L'équipe a atteint la limite de joueur(s) imposée par un tournoi.",
         isMaxPlayersViolation: true,
       };
     }

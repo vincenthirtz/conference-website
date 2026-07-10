@@ -3414,6 +3414,7 @@
     "tabGeneral": "Général",
     "tabDiscord": "Discord",
     "tabStaff": "Staff",
+    "tablistLabel": "Sections du tenant",
     "nameLabel": "Nom",
     "localeLabel": "Locale par défaut",
     "localeFr": "Français (fr)",
@@ -5469,6 +5470,7 @@
     "tabHistoryCount": "Historique ({count})",
     "tabCompare": "Comparaison",
     "tabTimeline": "Timeline",
+    "tablistLabel": "Vues du simulateur",
     "matchesCount": "({count} matchs)",
     "winnersBracket": "Winners Bracket",
     "losersBracket": "Losers Bracket",
@@ -5593,6 +5595,12 @@
     "cancel": "Annuler",
     "deleting": "Suppression...",
     "delete": "Supprimer"
+  },
+  "adminAlertBanner": {
+    "close": "Fermer"
+  },
+  "adminLoadingSpinner": {
+    "loading": "Chargement"
   },
   "adminDraftBanner": {
     "message": "Un brouillon non sauvegarde a ete trouve{suffix}.",

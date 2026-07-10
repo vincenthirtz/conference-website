@@ -46,7 +46,9 @@ import twitchLiveHandler from '../../pages/api/twitch/live';
 import {
   listUsersEmailMap,
   findOrCreateUserByEmail,
+  lookupUserIdByEmail,
 } from '../../utils/find-or-create-user';
+import { setRpcResult } from './__helpers__/supabaseMock';
 
 /* -----------------------------------------------------------
  * Helpers
@@ -511,6 +513,51 @@ describe('find-or-create-user', () => {
     );
     expect(out.userId).toBe('u-existing');
     expect(out.created).toBe(false);
+  });
+
+  it('lookupUserIdByEmail resolves an existing user via the RPC (case-insensitive)', async () => {
+    setAuthListUsers([{ id: 'u-rpc', email: 'Foo@Example.com' }]);
+    // Le mock émule get_user_id_by_email contre _authListUsers.
+    const id = await lookupUserIdByEmail('  FOO@EXAMPLE.COM ');
+    expect(id).toBe('u-rpc');
+  });
+
+  it('lookupUserIdByEmail returns null when no user matches', async () => {
+    setAuthListUsers([{ id: 'u-rpc', email: 'foo@example.com' }]);
+    const id = await lookupUserIdByEmail('missing@example.com');
+    expect(id).toBeNull();
+  });
+
+  it('lookupUserIdByEmail returns null on empty email without hitting the RPC', async () => {
+    const id = await lookupUserIdByEmail('   ');
+    expect(id).toBeNull();
+  });
+
+  it('lookupUserIdByEmail throws when the RPC errors', async () => {
+    setRpcResult('get_user_id_by_email', {
+      error: { message: 'boom' },
+    });
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    await expect(lookupUserIdByEmail('x@y.com')).rejects.toThrow(/boom/);
+    consoleSpy.mockRestore();
+  });
+
+  it('findOrCreateUserByEmail without a map resolves via the targeted RPC', async () => {
+    setAuthListUsers([{ id: 'u-existing', email: 'known@example.com' }]);
+    const out = await findOrCreateUserByEmail('Known@Example.com', 'player');
+    expect(out.userId).toBe('u-existing');
+    expect(out.created).toBe(false);
+  });
+
+  it('findOrCreateUserByEmail without a map creates when the RPC finds nobody', async () => {
+    setAuthListUsers([]);
+    setCreateUserResult({
+      data: { user: { id: 'made-user', email: 'fresh@example.com' } },
+      error: null,
+    });
+    const out = await findOrCreateUserByEmail('fresh@example.com', 'player');
+    expect(out.userId).toBe('made-user');
+    expect(out.created).toBe(true);
   });
 
   it('findOrCreateUserByEmail creates a new user when not found', async () => {

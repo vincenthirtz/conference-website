@@ -3,6 +3,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import Th from '@/components/admin/Th';
 
 import { logger } from '../../../utils/logger';
 
@@ -380,16 +381,16 @@ export default function TeamStatsPanel() {
             <table className="min-w-full text-sm">
               <thead className="bg-neutral-900/50 text-neutral-400 text-xs uppercase tracking-wider">
                 <tr>
-                  <th className="px-4 py-3 text-left">#</th>
-                  <th className="px-4 py-3 text-left">{t.thTeam}</th>
-                  <th className="px-4 py-3 text-left">{t.thTournament}</th>
-                  <th className="px-4 py-3 text-center">{t.thMatches}</th>
-                  <th className="px-4 py-3 text-center">{t.thWDL}</th>
-                  <th className="px-4 py-3 text-center">{t.thWinrate}</th>
-                  <th className="px-4 py-3 text-center">{t.thMaps}</th>
-                  <th className="px-4 py-3 text-center">{t.thMapWinrate}</th>
-                  <th className="px-4 py-3 text-center">{t.thPoints}</th>
-                  <th className="px-4 py-3 text-left">{t.thLastMatch}</th>
+                  <Th className="px-4 py-3 text-left">#</Th>
+                  <Th className="px-4 py-3 text-left">{t.thTeam}</Th>
+                  <Th className="px-4 py-3 text-left">{t.thTournament}</Th>
+                  <Th className="px-4 py-3 text-center">{t.thMatches}</Th>
+                  <Th className="px-4 py-3 text-center">{t.thWDL}</Th>
+                  <Th className="px-4 py-3 text-center">{t.thWinrate}</Th>
+                  <Th className="px-4 py-3 text-center">{t.thMaps}</Th>
+                  <Th className="px-4 py-3 text-center">{t.thMapWinrate}</Th>
+                  <Th className="px-4 py-3 text-center">{t.thPoints}</Th>
+                  <Th className="px-4 py-3 text-left">{t.thLastMatch}</Th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-700/50">

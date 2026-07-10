@@ -8,6 +8,11 @@ import { withStaffPage } from '@/utils/staff';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import Tabs, {
+  tabButtonId,
+  tabPanelId,
+  type TabItem,
+} from '@/components/admin/Tabs';
 import type { MatchStatus, FormatType, StageType } from '@/types/admin';
 import type { MatchForGraph } from '@/types/bracket';
 import { buildBracketGraph } from '@/utils/bracket/buildGraph';
@@ -79,6 +84,7 @@ type SimHistoryEntry = {
 };
 
 const MAX_HISTORY = 20;
+const SIM_TABS_ID_BASE = 'tournament-simulator';
 function TournamentSimulatorPage() {
   const tx = useAdminT('adminTournamentSimulator');
   const { addToast } = useToast();
@@ -2192,51 +2198,42 @@ function TournamentSimulatorPage() {
               </div>
 
               {/* Tabs */}
-              <div className="flex gap-1 mb-6 border-b border-white/10 pb-px overflow-x-auto">
-                {(
+              <Tabs
+                tabs={
                   [
-                    'bracket',
-                    'teams',
-                    'maps',
-                    'stats',
-                    'monte-carlo',
-                    'history',
-                    'compare',
-                    ...(occurrences.length > 1 ? ['timeline' as const] : []),
-                  ] as const
-                ).map((tab) => {
-                  const TAB_LABELS: Record<string, string> = {
-                    bracket: tx.tabBracket,
-                    teams: tx.tabTeams,
-                    maps: tx.tabMaps,
-                    stats: tx.tabStats,
-                    'monte-carlo': tx.tabMonteCarlo,
-                    history:
-                      simHistory.length > 0
-                        ? format(tx.tabHistoryCount, {
-                            count: simHistory.length,
-                          })
-                        : tx.tabHistory,
-                    compare: tx.tabCompare,
-                    timeline: tx.tabTimeline,
-                  };
-                  return (
-                    <button
-                      key={tab}
-                      onClick={() => setActiveTab(tab as typeof activeTab)}
-                      className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors whitespace-nowrap ${
-                        activeTab === tab
-                          ? 'bg-white/10 text-white border-b-2 border-purple-500'
-                          : 'text-neutral-400 hover:text-white hover:bg-white/5'
-                      }`}
-                    >
-                      {TAB_LABELS[tab] ?? tab}
-                    </button>
-                  );
-                })}
-              </div>
+                    { id: 'bracket', label: tx.tabBracket },
+                    { id: 'teams', label: tx.tabTeams },
+                    { id: 'maps', label: tx.tabMaps },
+                    { id: 'stats', label: tx.tabStats },
+                    { id: 'monte-carlo', label: tx.tabMonteCarlo },
+                    {
+                      id: 'history',
+                      label:
+                        simHistory.length > 0
+                          ? format(tx.tabHistoryCount, {
+                              count: simHistory.length,
+                            })
+                          : tx.tabHistory,
+                    },
+                    { id: 'compare', label: tx.tabCompare },
+                    ...(occurrences.length > 1
+                      ? [{ id: 'timeline', label: tx.tabTimeline }]
+                      : []),
+                  ] satisfies TabItem[]
+                }
+                active={activeTab}
+                onChange={(id) => setActiveTab(id as typeof activeTab)}
+                ariaLabel={tx.tablistLabel}
+                idBase={SIM_TABS_ID_BASE}
+                className="mb-6"
+              />
 
               {/* Tab content */}
+              <div
+                role="tabpanel"
+                id={tabPanelId(SIM_TABS_ID_BASE, activeTab)}
+                aria-labelledby={tabButtonId(SIM_TABS_ID_BASE, activeTab)}
+              >
               {activeTab === 'bracket' && (
                 <div className="space-y-8">
                   {stages.map((stage, stageIdx) => (
@@ -3585,6 +3582,7 @@ function TournamentSimulatorPage() {
                   </div>
                 </div>
               )}
+              </div>
             </>
           )}
         </div>

@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { logger } from '../../utils/logger';
 
@@ -54,6 +55,7 @@ function fmt(iso: string): string {
 export default function MatchCastAssignments({ matchId }: Props) {
   const { adminFetchJson } = useAdminFetch();
   const { addToast } = useToast();
+  const { confirm, dialog } = useConfirmDialog();
   const t = useAdminT('adminMatchCastAssignments');
 
   const [assignments, setAssignments] = useState<Assignment[]>([]);
@@ -131,7 +133,8 @@ export default function MatchCastAssignments({ matchId }: Props) {
   }
 
   async function handleDelete(assignmentId: string) {
-    if (!confirm(t.confirmRemove)) return;
+    const ok = await confirm({ title: t.confirmRemove, variant: 'danger' });
+    if (!ok) return;
     try {
       await adminFetchJson(
         `/api/admin/matches/${matchId}/cast-assignments/${assignmentId}`,
@@ -163,6 +166,8 @@ export default function MatchCastAssignments({ matchId }: Props) {
   }
 
   return (
+    <>
+      {dialog}
     <section className="bg-neutral-800 border border-neutral-700 rounded-xl p-5 space-y-4">
       <div>
         <h2 className="text-lg font-semibold">{t.heading}</h2>
@@ -274,5 +279,6 @@ export default function MatchCastAssignments({ matchId }: Props) {
         </>
       )}
     </section>
+    </>
   );
 }

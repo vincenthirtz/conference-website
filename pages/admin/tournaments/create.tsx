@@ -129,6 +129,12 @@ function AdminTournamentCreatePage({ staff }: Props) {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [dateError, setDateError] = useState<string | null>(null);
   const [showDraftBanner, setShowDraftBanner] = useState(false);
+  // Fallback d'aperçu du logo géré par état (réarmé à chaque changement d'URL).
+  const [logoError, setLogoError] = useState(false);
+
+  useEffect(() => {
+    setLogoError(false);
+  }, [form.logo_url]);
 
   const { draftRestored, lastSaved, clearDraft, restoreDraft } = useAutoSave(
     form,
@@ -659,14 +665,15 @@ function AdminTournamentCreatePage({ staff }: Props) {
 
                 <div className="space-y-3">
                   <div className="flex items-center gap-3">
-                    {form.logo_url ? (
+                    {form.logo_url && !logoError ? (
                       <img
                         src={form.logo_url}
                         alt={t.logoAlt}
+                        width={48}
+                        height={48}
+                        loading="lazy"
                         className="w-12 h-12 rounded-xl object-cover border border-neutral-700"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = 'none';
-                        }}
+                        onError={() => setLogoError(true)}
                       />
                     ) : (
                       <div className="w-12 h-12 rounded-xl bg-neutral-700/50 flex items-center justify-center border border-neutral-700">

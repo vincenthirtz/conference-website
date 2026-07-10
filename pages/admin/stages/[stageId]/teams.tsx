@@ -7,6 +7,7 @@ import { withStaffPage } from '@/utils/staff';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import StageTabsNav from '@/components/admin/stages/StageTabsNav';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
@@ -77,6 +78,7 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
   const router = useRouter();
   const { stageId } = router.query;
   const { addToast } = useToast();
+  const { confirm, dialog } = useConfirmDialog();
   const { adminFetchJson } = useAdminFetch();
   const { mutateJson: addTeamMutate } = useIdempotentMutation();
 
@@ -326,14 +328,14 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
     if (!stageId || selectedTeamIds.size === 0) return;
 
     const count = selectedTeamIds.size;
-    if (
-      !confirm(
-        format(
-          count > 1 ? t.confirmBulkRemove_other : t.confirmBulkRemove_one,
-          { count }
-        )
-      )
-    ) {
+    const ok = await confirm({
+      title: format(
+        count > 1 ? t.confirmBulkRemove_other : t.confirmBulkRemove_one,
+        { count }
+      ),
+      variant: 'danger',
+    });
+    if (!ok) {
       return;
     }
 
@@ -366,6 +368,7 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
 
   return (
     <>
+      {dialog}
       <Head>
         <title>{t.pageTitle}</title>
       </Head>
@@ -562,6 +565,7 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
                   {t.emptyTeams}
                 </div>
               ) : (
+                <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead className="bg-neutral-750 text-neutral-300">
                     <tr>
@@ -691,6 +695,7 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
                     ))}
                   </tbody>
                 </table>
+                </div>
               )}
             </section>
           </div>

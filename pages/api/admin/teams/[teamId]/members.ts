@@ -4,10 +4,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
-import {
-  findOrCreateUserByEmail,
-  listUsersEmailMap,
-} from '@/utils/find-or-create-user';
+import { findOrCreateUserByEmail } from '@/utils/find-or-create-user';
 import { sendTeamJoinEmail } from '@/utils/email';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { isValidUUID, validateRole } from '@/utils/apiHelpers';
@@ -97,10 +94,7 @@ async function handler(
     // Garde roster lock : refus si l'equipe est inscrite a un tournoi avec
     // roster_locked_at <= now() (sauf flag force=true).
     if (force !== true) {
-      const lockStatus = await isTeamRosterLocked(
-        ctx.tenantId,
-        String(teamId)
-      );
+      const lockStatus = await isTeamRosterLocked(ctx.tenantId, String(teamId));
       if (lockStatus.locked) {
         return res.status(409).json({
           error: rosterLockErrorMessage(lockStatus),
@@ -151,11 +145,9 @@ async function handler(
         }
 
         try {
-          const emailMap = await listUsersEmailMap();
           const { userId, created } = await findOrCreateUserByEmail(
             email,
-            validateRole(role),
-            emailMap
+            validateRole(role)
           );
           resolvedUserId = userId;
           if (created) {
@@ -258,10 +250,7 @@ async function handler(
       isSubstitute === undefined &&
       !swapWithMemberId;
     if (force !== true && !onlyBattleTagChange) {
-      const lockStatus = await isTeamRosterLocked(
-        ctx.tenantId,
-        String(teamId)
-      );
+      const lockStatus = await isTeamRosterLocked(ctx.tenantId, String(teamId));
       if (lockStatus.locked) {
         return res.status(409).json({
           error: rosterLockErrorMessage(lockStatus),
@@ -390,10 +379,7 @@ async function handler(
     }
 
     if (force !== true) {
-      const lockStatus = await isTeamRosterLocked(
-        ctx.tenantId,
-        String(teamId)
-      );
+      const lockStatus = await isTeamRosterLocked(ctx.tenantId, String(teamId));
       if (lockStatus.locked) {
         return res.status(409).json({
           error: rosterLockErrorMessage(lockStatus),

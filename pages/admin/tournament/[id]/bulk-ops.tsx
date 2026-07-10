@@ -9,6 +9,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import Breadcrumb from '@/components/admin/Breadcrumb';
 import TournamentTabsNav from '@/components/admin/tournament/TournamentTabsNav';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
@@ -26,6 +27,7 @@ function BulkOpsPage(_: StaffProps) {
   const { id } = router.query;
   const tournamentId = Array.isArray(id) ? id[0] : id;
   const { addToast } = useToast();
+  const { confirm, dialog } = useConfirmDialog();
 
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -147,14 +149,13 @@ function BulkOpsPage(_: StaffProps) {
       addToast(t.toastInvalidOffset, 'error');
       return;
     }
-    if (
-      !confirm(
-        format(t.confirmShift, {
-          offset: `${offset > 0 ? '+' : ''}${offset}`,
-        })
-      )
-    )
-      return;
+    const okShift = await confirm({
+      title: format(t.confirmShift, {
+        offset: `${offset > 0 ? '+' : ''}${offset}`,
+      }),
+      variant: 'warning',
+    });
+    if (!okShift) return;
     setShiftBusy(true);
     try {
       const res = await fetch(
@@ -201,8 +202,11 @@ function BulkOpsPage(_: StaffProps) {
       addToast(t.toastSameStage, 'error');
       return;
     }
-    if (!confirm(format(t.confirmReassign, { count: reassignSelected.size })))
-      return;
+    const okReassign = await confirm({
+      title: format(t.confirmReassign, { count: reassignSelected.size }),
+      variant: 'warning',
+    });
+    if (!okReassign) return;
     setReassignBusy(true);
     try {
       const res = await fetch(
@@ -273,6 +277,7 @@ function BulkOpsPage(_: StaffProps) {
 
   return (
     <>
+      {dialog}
       <Head>
         <title>{t.headTitle}</title>
       </Head>

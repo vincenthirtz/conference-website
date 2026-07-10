@@ -13,6 +13,7 @@ import MatchTimeline from '@/components/admin/MatchTimeline';
 import MatchCastAssignments from '@/components/admin/MatchCastAssignments';
 import { useToast } from '@/components/Toast';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type {
   StaffProps,
@@ -1246,6 +1247,7 @@ type MvpPollData = {
 function MvpSection({ matchId }: { matchId: string }) {
   const t = useAdminT('adminMatchEdit');
   const { adminFetchJson } = useAdminFetch();
+  const { confirm, dialog } = useConfirmDialog();
   const [data, setData] = useState<MvpPollData | null>(null);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<string>('');
@@ -1292,7 +1294,8 @@ function MvpSection({ matchId }: { matchId: string }) {
   }
 
   async function clear() {
-    if (!confirm(t.confirmClearMvp)) return;
+    const ok = await confirm({ title: t.confirmClearMvp, variant: 'danger' });
+    if (!ok) return;
     setSaving(true);
     try {
       await adminFetchJson(`/api/admin/matches/${matchId}/mvp`, {
@@ -1322,6 +1325,8 @@ function MvpSection({ matchId }: { matchId: string }) {
   }
 
   return (
+    <>
+      {dialog}
     <section className="bg-neutral-800 border border-neutral-700 rounded-xl p-5">
       <h2 className="text-lg font-semibold mb-3">{t.mvpHeading}</h2>
 
@@ -1427,6 +1432,7 @@ function MvpSection({ matchId }: { matchId: string }) {
         </div>
       )}
     </section>
+    </>
   );
 }
 

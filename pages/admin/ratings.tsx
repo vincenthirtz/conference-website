@@ -8,6 +8,7 @@ import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useToast } from '@/components/Toast';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import Breadcrumb from '@/components/admin/Breadcrumb';
+import Th from '@/components/admin/Th';
 import EmptyState from '@/components/admin/EmptyState';
 import { Skeleton } from '@/components/admin/Skeleton';
 import type { StaffProps } from '@/types/admin';
@@ -191,11 +192,11 @@ function AdminRatingsPage(_props: StaffProps) {
                 <table className="w-full text-sm">
                   <thead className="bg-neutral-900/50 text-neutral-400">
                     <tr>
-                      <th className="text-left px-4 py-2.5 w-16">#</th>
-                      <th className="text-left px-4 py-2.5">{t.colPlayer}</th>
-                      <th className="text-right px-4 py-2.5">{t.colRating}</th>
-                      <th className="text-right px-4 py-2.5">{t.colGames}</th>
-                      <th className="text-right px-4 py-2.5">{t.colWinLoss}</th>
+                      <Th className="text-left px-4 py-2.5 w-16">#</Th>
+                      <Th className="text-left px-4 py-2.5">{t.colPlayer}</Th>
+                      <Th className="text-right px-4 py-2.5">{t.colRating}</Th>
+                      <Th className="text-right px-4 py-2.5">{t.colGames}</Th>
+                      <Th className="text-right px-4 py-2.5">{t.colWinLoss}</Th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-neutral-700/50">

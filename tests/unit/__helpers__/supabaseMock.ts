@@ -632,7 +632,21 @@ export const supabaseAdmin = {
   rpc: (fn: string, params?: unknown) => {
     rpcCalls.push({ fn, params });
     const result = _rpcResults.get(fn);
-    return Promise.resolve(result ?? { data: null as any, error: null as any });
+    if (result) return Promise.resolve(result);
+    // Émulation de la RPC ciblée `get_user_id_by_email` (audit perf P8) : résout
+    // l'email contre `_authListUsers` (même source que l'ancien scan listUsers),
+    // insensible à la casse. Un `setRpcResult('get_user_id_by_email', …)`
+    // explicite (ci-dessus) reste prioritaire pour forcer un cas d'erreur.
+    if (fn === 'get_user_id_by_email') {
+      const email = String((params as any)?.p_email ?? '')
+        .trim()
+        .toLowerCase();
+      const found = email
+        ? _authListUsers.find((u) => u.email?.toLowerCase() === email)
+        : undefined;
+      return Promise.resolve({ data: found?.id ?? null, error: null as any });
+    }
+    return Promise.resolve({ data: null as any, error: null as any });
   },
   auth: {
     getUser: (_token?: string) =>

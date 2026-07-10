@@ -8,6 +8,7 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminResource } from '@/hooks/useAdminResource';
 import AlertBanner from '@/components/admin/AlertBanner';
 import Breadcrumb from '@/components/admin/Breadcrumb';
+import Th from '@/components/admin/Th';
 import EmptyState from '@/components/admin/EmptyState';
 import LoadingSpinner from '@/components/admin/LoadingSpinner';
 import TenantFormModal from '@/components/admin/tenants/TenantFormModal';
@@ -303,14 +304,14 @@ function AdminTenantsListPage({ staff }: Props) {
                 <table className="w-full text-sm">
                   <thead className="bg-neutral-900/50 text-neutral-400 text-xs uppercase tracking-wider">
                     <tr>
-                      <th className="px-4 py-3 text-left">{t.colSlug}</th>
-                      <th className="px-4 py-3 text-left">{t.colName}</th>
-                      <th className="px-4 py-3 text-left">{t.colStatus}</th>
-                      <th className="px-4 py-3 text-left">{t.colPlan}</th>
-                      <th className="px-4 py-3 text-left">{t.colGuilds}</th>
-                      <th className="px-4 py-3 text-left">{t.colStaff}</th>
-                      <th className="px-4 py-3 text-left">{t.colCreated}</th>
-                      <th className="px-4 py-3 text-right">{t.colActions}</th>
+                      <Th className="px-4 py-3 text-left">{t.colSlug}</Th>
+                      <Th className="px-4 py-3 text-left">{t.colName}</Th>
+                      <Th className="px-4 py-3 text-left">{t.colStatus}</Th>
+                      <Th className="px-4 py-3 text-left">{t.colPlan}</Th>
+                      <Th className="px-4 py-3 text-left">{t.colGuilds}</Th>
+                      <Th className="px-4 py-3 text-left">{t.colStaff}</Th>
+                      <Th className="px-4 py-3 text-left">{t.colCreated}</Th>
+                      <Th className="px-4 py-3 text-right">{t.colActions}</Th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-neutral-700/50">

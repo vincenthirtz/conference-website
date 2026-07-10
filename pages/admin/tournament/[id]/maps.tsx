@@ -88,6 +88,17 @@ function AdminTournamentMapsPage(_: StaffProps) {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [maps, setMaps] = useState<TournamentMapRow[]>([]);
   const [tournament, setTournament] = useState<TournamentMini | null>(null);
+  // Fallback d'image géré par état React (jamais de mutation impérative du DOM).
+  const [brokenImages, setBrokenImages] = useState<Set<string>>(new Set());
+
+  function markImageBroken(id: string) {
+    setBrokenImages((prev) => {
+      if (prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+  }
 
   // États pour l'ajout de map
   const [showAddForm, setShowAddForm] = useState(false);
@@ -619,17 +630,17 @@ function AdminTournamentMapsPage(_: StaffProps) {
                     key={m.id || `${m.map_name}-${idx}`}
                     className="rounded-xl bg-white/5 border border-white/10 overflow-hidden relative group"
                   >
-                    {/* Image de la map */}
-                    {m.image_url && (
+                    {/* Image de la map (fallback géré par état React) */}
+                    {m.image_url && !brokenImages.has(m.id) && (
                       <div className="relative w-full h-40 bg-gradient-to-b from-purple-900/20 to-transparent">
                         <img
                           src={m.image_url}
                           alt={m.map_name}
+                          width={640}
+                          height={160}
+                          loading="lazy"
                           className="w-full h-full object-cover"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).style.display =
-                              'none';
-                          }}
+                          onError={() => markImageBroken(m.id)}
                         />
                       </div>
                     )}

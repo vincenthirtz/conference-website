@@ -5,7 +5,8 @@
 // liste paginée, création/édition, drawer d'envoi (test, planification par
 // vagues, dry-run + broadcast). minRole 'admin' (re-gaté par le host).
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useId } from 'react';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
@@ -544,6 +545,18 @@ function CampaignDrawer({
   const { adminFetch } = useAdminFetch();
   const { addToast } = useToast();
 
+  const trapRef = useFocusTrap<HTMLDivElement>();
+  const titleId = useId();
+
+  // Close on Escape
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose();
+    }
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   // Live HTML preview
   const [previewLabel, setPreviewLabel] = useState('');
   const previewSrc = `/api/admin/broadcast/${encodeURIComponent(
@@ -828,6 +841,10 @@ function CampaignDrawer({
         onClick={onClose}
       >
         <div
+          ref={trapRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={titleId}
           className="w-full max-w-2xl h-full bg-neutral-900 border-l border-neutral-700/50 overflow-y-auto"
           onClick={(e) => e.stopPropagation()}
         >
@@ -836,7 +853,7 @@ function CampaignDrawer({
               <p className="text-xs uppercase tracking-wider text-neutral-500">
                 {t.campaignKicker}
               </p>
-              <h2 className="text-lg font-semibold truncate">
+              <h2 id={titleId} className="text-lg font-semibold truncate">
                 {campaign.name}
               </h2>
             </div>
@@ -1337,6 +1354,18 @@ function CampaignFormModal({
   const { mutateJson } = useIdempotentMutation();
   const { addToast } = useToast();
 
+  const trapRef = useFocusTrap<HTMLDivElement>();
+  const titleId = useId();
+
+  // Close on Escape
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose();
+    }
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   const [name, setName] = useState(campaign?.name ?? '');
   const [subject, setSubject] = useState(campaign?.subject ?? '');
   const [description, setDescription] = useState(campaign?.description ?? '');
@@ -1442,6 +1471,10 @@ function CampaignFormModal({
       onClick={onClose}
     >
       <div
+        ref={trapRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
         className="w-full max-w-2xl h-full bg-neutral-900 border-l border-neutral-700/50 overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
@@ -1450,7 +1483,7 @@ function CampaignFormModal({
             <p className="text-xs uppercase tracking-wider text-neutral-500">
               {isEdit ? t.editKicker : t.newKicker}
             </p>
-            <h2 className="text-lg font-semibold truncate">
+            <h2 id={titleId} className="text-lg font-semibold truncate">
               {isEdit ? campaign?.name : t.composeEmail}
             </h2>
           </div>

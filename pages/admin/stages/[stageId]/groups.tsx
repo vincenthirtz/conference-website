@@ -11,6 +11,7 @@ import { withStaffPage } from '@/utils/staff';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import StageTabsNav from '@/components/admin/stages/StageTabsNav';
 import type { StaffProps, StageType } from '@/types/admin';
@@ -58,6 +59,7 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
   const router = useRouter();
   const { stageId } = router.query;
   const { addToast } = useToast();
+  const { confirm, dialog } = useConfirmDialog();
   const { adminFetch, adminFetchJson } = useAdminFetch();
   const { mutate: mutateIdempotent } = useIdempotentMutation();
 
@@ -161,15 +163,14 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
 
   async function handleGenerateMatches() {
     if (!stageId) return;
-    if (
-      !confirm(
-        format(t.confirmGenerate, {
-          rounds: genRounds,
-          format: genMatchFormat,
-        })
-      )
-    )
-      return;
+    const ok = await confirm({
+      title: format(t.confirmGenerate, {
+        rounds: genRounds,
+        format: genMatchFormat,
+      }),
+      variant: 'warning',
+    });
+    if (!ok) return;
     setGenerating(true);
     setErrorMsg(null);
     try {
@@ -338,6 +339,7 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
 
   return (
     <>
+      {dialog}
       <Head>
         <title>
           {stageName
@@ -771,6 +773,7 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
                           <div className="mb-2">
                             <GroupLabel groupKey={gk} />
                           </div>
+                          <div className="overflow-x-auto">
                           <table className="w-full text-xs">
                             <thead>
                               <tr className="text-neutral-500 text-left">
@@ -818,6 +821,7 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
                               ))}
                             </tbody>
                           </table>
+                          </div>
                         </div>
                       ))}
                   </div>

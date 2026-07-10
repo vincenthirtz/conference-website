@@ -1010,65 +1010,78 @@ function AdminTeamsListPage({
         )}
       </Modal>
       {/* Import Modal (CSV + plateformes) */}
-      {showImportModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-neutral-800 border border-neutral-700 rounded-2xl p-6 w-full max-w-2xl shadow-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">{t.importModalTitle}</h3>
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowApiKeysModal(true);
-                    loadApiKeys();
-                  }}
-                  title={t.configApiKeysTitle}
-                  className="p-1.5 rounded-lg hover:bg-neutral-700 transition-colors"
-                >
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                    />
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                    />
-                  </svg>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowImportModal(false)}
-                  className="p-1.5 rounded-lg hover:bg-neutral-700 transition-colors"
-                >
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
-                </button>
-              </div>
-            </div>
-
-            {/* Tabs */}
-            <div className="flex gap-1 mb-5 border-b border-neutral-700">
+      <Modal
+        open={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        size="2xl"
+        title={
+          <div className="flex items-center gap-2">
+            <h3 className="text-lg font-semibold">{t.importModalTitle}</h3>
+            <button
+              type="button"
+              onClick={() => {
+                setShowApiKeysModal(true);
+                loadApiKeys();
+              }}
+              title={t.configApiKeysTitle}
+              aria-label={t.configApiKeysTitle}
+              className="p-1.5 rounded-lg hover:bg-neutral-700 transition-colors"
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                />
+              </svg>
+            </button>
+          </div>
+        }
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setShowImportModal(false)}
+              className="px-4 py-2.5 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
+            >
+              {t.close}
+            </button>
+            <button
+              type="button"
+              onClick={handleImport}
+              disabled={
+                importing ||
+                (activeTab === 'csv' ? !csvText.trim() : !platformRef.trim())
+              }
+              className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-sm font-semibold transition-colors disabled:opacity-50 flex items-center gap-2"
+            >
+              {importing ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  {t.importing}
+                </>
+              ) : (
+                t.importAction
+              )}
+            </button>
+          </>
+        }
+      >
+        <>
+          {/* Tabs */}
+          <div className="flex gap-1 mb-5 border-b border-neutral-700">
               {(
                 [
                   ['csv', 'CSV'],
@@ -1260,65 +1273,48 @@ function AdminTeamsListPage({
               </div>
             )}
 
-            <div className="flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setShowImportModal(false)}
-                className="px-4 py-2.5 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
-              >
-                {t.close}
-              </button>
-              <button
-                type="button"
-                onClick={handleImport}
-                disabled={
-                  importing ||
-                  (activeTab === 'csv' ? !csvText.trim() : !platformRef.trim())
-                }
-                className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-sm font-semibold transition-colors disabled:opacity-50 flex items-center gap-2"
-              >
-                {importing ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    {t.importing}
-                  </>
-                ) : (
-                  t.importAction
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+        </>
+      </Modal>
 
       {/* API keys config sub-modal */}
-      {showApiKeysModal && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-neutral-800 border border-neutral-700 rounded-2xl p-6 w-full max-w-lg shadow-2xl">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">{t.apiKeysModalTitle}</h3>
-              <button
-                type="button"
-                onClick={() => setShowApiKeysModal(false)}
-                className="p-1.5 rounded-lg hover:bg-neutral-700 transition-colors"
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
-            </div>
-
-            <p className="text-xs text-amber-300/80 mb-4">
+      <Modal
+        open={showApiKeysModal}
+        onClose={() => setShowApiKeysModal(false)}
+        size="lg"
+        zIndexClassName="z-[60]"
+        disableBackdropClose={apiKeysSaving}
+        disableEscapeClose={apiKeysSaving}
+        title={<h3 className="text-lg font-semibold">{t.apiKeysModalTitle}</h3>}
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setShowApiKeysModal(false)}
+              disabled={apiKeysSaving}
+              className="px-4 py-2.5 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
+            >
+              {t.cancel}
+            </button>
+            <button
+              type="button"
+              onClick={saveApiKeys}
+              disabled={apiKeysSaving || apiKeysLoading}
+              className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-sm font-semibold transition-colors disabled:opacity-50 flex items-center gap-2"
+            >
+              {apiKeysSaving ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  {t.saving}
+                </>
+              ) : (
+                t.save
+              )}
+            </button>
+          </>
+        }
+      >
+        <>
+          <p className="text-xs text-amber-300/80 mb-4">
               ⚠️ {t.apiKeysWarningBefore}
               <code className="bg-neutral-900 px-1 rounded">site_settings</code>
               {t.apiKeysWarningAfter}
@@ -1366,35 +1362,8 @@ function AdminTeamsListPage({
                 })}
               </div>
             )}
-
-            <div className="flex justify-end gap-3 mt-6">
-              <button
-                type="button"
-                onClick={() => setShowApiKeysModal(false)}
-                disabled={apiKeysSaving}
-                className="px-4 py-2.5 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
-              >
-                {t.cancel}
-              </button>
-              <button
-                type="button"
-                onClick={saveApiKeys}
-                disabled={apiKeysSaving || apiKeysLoading}
-                className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-sm font-semibold transition-colors disabled:opacity-50 flex items-center gap-2"
-              >
-                {apiKeysSaving ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    {t.saving}
-                  </>
-                ) : (
-                  t.save
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+        </>
+      </Modal>
     </>
   );
 }

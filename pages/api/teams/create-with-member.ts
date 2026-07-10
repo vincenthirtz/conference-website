@@ -1,10 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import slugify from 'slugify';
 import { supabaseAdmin } from '@/utils/supabase';
-import {
-  findOrCreateUserByEmail,
-  listUsersEmailMap,
-} from '@/utils/find-or-create-user';
+import { findOrCreateUserByEmail } from '@/utils/find-or-create-user';
 import { sendTeamJoinEmail } from '@/utils/email';
 import { applyRateLimit } from '@/utils/rateLimit';
 import {
@@ -234,13 +231,6 @@ export default async function handler(
     battle_tag: string | null;
     specialty: string | null;
   }[] = [];
-  let usersEmailMap: Map<string, string> | null = null;
-  const ensureUsersEmailMap = async () => {
-    if (usersEmailMap) return usersEmailMap;
-    usersEmailMap = await listUsersEmailMap();
-    return usersEmailMap;
-  };
-
   const validateBattleTag = (tag: string) => {
     const trimmed = tag.trim();
     const re = /^[A-Za-z0-9]{2,}#[0-9]{3,6}$/;
@@ -301,11 +291,9 @@ export default async function handler(
       });
     } else if (memberEmail) {
       try {
-        const emailMap = await ensureUsersEmailMap();
         const { userId } = await findOrCreateUserByEmail(
           memberEmail,
-          resolvedRole,
-          emailMap
+          resolvedRole
         );
 
         memberRecords.push({
@@ -356,12 +344,7 @@ export default async function handler(
       if (!m.email) continue;
 
       try {
-        const emailMap = await ensureUsersEmailMap();
-        const { userId } = await findOrCreateUserByEmail(
-          m.email,
-          resolvedRole,
-          emailMap
-        );
+        const { userId } = await findOrCreateUserByEmail(m.email, resolvedRole);
 
         memberRecords.push({
           user_id: userId,

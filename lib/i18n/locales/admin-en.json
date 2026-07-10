@@ -3414,6 +3414,7 @@
     "tabGeneral": "General",
     "tabDiscord": "Discord",
     "tabStaff": "Staff",
+    "tablistLabel": "Tenant sections",
     "nameLabel": "Name",
     "localeLabel": "Default locale",
     "localeFr": "Français (fr)",
@@ -5469,6 +5470,7 @@
     "tabHistoryCount": "History ({count})",
     "tabCompare": "Comparison",
     "tabTimeline": "Timeline",
+    "tablistLabel": "Simulator views",
     "matchesCount": "({count} matches)",
     "winnersBracket": "Winners Bracket",
     "losersBracket": "Losers Bracket",
@@ -5593,6 +5595,12 @@
     "cancel": "Cancel",
     "deleting": "Deleting...",
     "delete": "Delete"
+  },
+  "adminAlertBanner": {
+    "close": "Close"
+  },
+  "adminLoadingSpinner": {
+    "loading": "Loading"
   },
   "adminDraftBanner": {
     "message": "An unsaved draft was found{suffix}.",

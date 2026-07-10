@@ -2,6 +2,7 @@
 // Reusable alert banner for admin pages
 
 import type { ReactElement } from 'react';
+import { useAdminT } from '@/lib/i18n/useAdminT';
 
 type AlertVariant = 'error' | 'success' | 'info' | 'warning';
 
@@ -56,6 +57,7 @@ export default function AlertBanner({
   className = '',
   onDismiss,
 }: AlertBannerProps) {
+  const t = useAdminT('adminAlertBanner');
   if (!message) return null;
 
   const assertive = variant === 'error';
@@ -86,7 +88,7 @@ export default function AlertBanner({
           <button
             type="button"
             onClick={onDismiss}
-            aria-label="Fermer"
+            aria-label={t.close}
             className="flex-shrink-0 opacity-60 hover:opacity-100 transition-opacity"
           >
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none">

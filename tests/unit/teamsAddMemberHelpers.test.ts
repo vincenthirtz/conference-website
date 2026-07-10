@@ -106,7 +106,8 @@ describe('resolveUserIdByEmail', () => {
   });
 
   it('creates a new user when create=true and not found', async () => {
-    // findOrCreateUserByEmail uses listUsers internally to build its emailMap
+    // findOrCreateUserByEmail resolves existence via the targeted RPC
+    // (get_user_id_by_email, émulée contre _authListUsers) puis crée si absent.
     setAuthListUsers([]);
     setCreateUserResult({
       data: {

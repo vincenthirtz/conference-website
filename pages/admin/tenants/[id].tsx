@@ -13,6 +13,11 @@ import Breadcrumb from '@/components/admin/Breadcrumb';
 import EmptyState from '@/components/admin/EmptyState';
 import LoadingSpinner from '@/components/admin/LoadingSpinner';
 import BotSecretsRevealModal from '@/components/admin/BotSecretsRevealModal';
+import Tabs, {
+  tabButtonId,
+  tabPanelId,
+  type TabItem,
+} from '@/components/admin/Tabs';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 import { logger } from '../../../utils/logger';
@@ -61,6 +66,8 @@ type Props = {
 };
 
 type Tab = 'general' | 'discord' | 'staff';
+
+const TABS_ID_BASE = 'tenant-detail';
 
 const CONFERENCE_SLUG = 'conference';
 
@@ -342,42 +349,52 @@ function AdminTenantDetailPage({ tenantId }: Props) {
               </div>
 
               {/* Tabs */}
-              <div className="mb-6 border-b border-neutral-700/50 flex gap-1">
-                {(
+              <Tabs
+                tabs={
                   [
-                    ['general', t.tabGeneral],
-                    ['discord', t.tabDiscord],
-                    ['staff', t.tabStaff],
-                  ] as const
-                ).map(([key, label]) => (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => setTab(key)}
-                    className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
-                      tab === key
-                        ? 'border-purple-500 text-white'
-                        : 'border-transparent text-neutral-400 hover:text-white'
-                    }`}
-                    data-testid={`tenant-tab-${key}`}
-                  >
-                    {label}
-                    {key === 'discord' && data.guilds.length > 0 && (
-                      <span className="ml-2 px-1.5 py-0.5 text-[10px] rounded-full bg-neutral-700 text-neutral-300">
-                        {data.guilds.length}
-                      </span>
-                    )}
-                    {key === 'staff' && data.staff.length > 0 && (
-                      <span className="ml-2 px-1.5 py-0.5 text-[10px] rounded-full bg-neutral-700 text-neutral-300">
-                        {data.staff.length}
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </div>
+                    { id: 'general', label: t.tabGeneral },
+                    {
+                      id: 'discord',
+                      label: (
+                        <>
+                          {t.tabDiscord}
+                          {data.guilds.length > 0 && (
+                            <span className="ml-2 px-1.5 py-0.5 text-[10px] rounded-full bg-neutral-700 text-neutral-300">
+                              {data.guilds.length}
+                            </span>
+                          )}
+                        </>
+                      ),
+                    },
+                    {
+                      id: 'staff',
+                      label: (
+                        <>
+                          {t.tabStaff}
+                          {data.staff.length > 0 && (
+                            <span className="ml-2 px-1.5 py-0.5 text-[10px] rounded-full bg-neutral-700 text-neutral-300">
+                              {data.staff.length}
+                            </span>
+                          )}
+                        </>
+                      ),
+                    },
+                  ] satisfies TabItem[]
+                }
+                active={tab}
+                onChange={(id) => setTab(id as Tab)}
+                ariaLabel={t.tablistLabel}
+                idBase={TABS_ID_BASE}
+                className="mb-6"
+              />
 
               {tab === 'general' && (
-                <div className="space-y-6">
+                <div
+                  role="tabpanel"
+                  id={tabPanelId(TABS_ID_BASE, 'general')}
+                  aria-labelledby={tabButtonId(TABS_ID_BASE, 'general')}
+                  className="space-y-6"
+                >
                   <form
                     onSubmit={handleSaveGeneral}
                     className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 sm:p-8 space-y-6"
@@ -678,7 +695,12 @@ function AdminTenantDetailPage({ tenantId }: Props) {
               )}
 
               {tab === 'discord' && (
-                <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden">
+                <section
+                  role="tabpanel"
+                  id={tabPanelId(TABS_ID_BASE, 'discord')}
+                  aria-labelledby={tabButtonId(TABS_ID_BASE, 'discord')}
+                  className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden"
+                >
                   {data.guilds.length === 0 ? (
                     <EmptyState
                       title={t.discordEmptyTitle}
@@ -744,7 +766,12 @@ function AdminTenantDetailPage({ tenantId }: Props) {
               )}
 
               {tab === 'staff' && (
-                <div className="space-y-4">
+                <div
+                  role="tabpanel"
+                  id={tabPanelId(TABS_ID_BASE, 'staff')}
+                  aria-labelledby={tabButtonId(TABS_ID_BASE, 'staff')}
+                  className="space-y-4"
+                >
                   <form
                     onSubmit={handleAddStaff}
                     className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-4 flex flex-wrap gap-3 items-end"

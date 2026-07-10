@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import Button from '@/components/Buttons/button';
 import { useToast } from '@/components/Toast';
 import Breadcrumb from '@/components/admin/Breadcrumb';
@@ -58,6 +59,7 @@ function AdminAnnouncementEditPage({ staff }: Props) {
   const t = useAdminT('adminAnnouncementEdit');
   const router = useRouter();
   const { addToast } = useToast();
+  const { confirm, dialog } = useConfirmDialog();
   const { adminFetch } = useAdminFetch();
   const { id } = router.query;
 
@@ -172,7 +174,8 @@ function AdminAnnouncementEditPage({ staff }: Props) {
   }
 
   async function handleDelete() {
-    if (!confirm(t.deleteConfirm)) {
+    const ok = await confirm({ title: t.deleteConfirm, variant: 'danger' });
+    if (!ok) {
       return;
     }
 
@@ -247,6 +250,7 @@ function AdminAnnouncementEditPage({ staff }: Props) {
 
   return (
     <>
+      {dialog}
       <Head>
         <title>{t.pageTitle}</title>
       </Head>

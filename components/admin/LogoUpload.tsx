@@ -212,6 +212,9 @@ export default function LogoUpload({
             <img
               src={value}
               alt={t.previewAlt}
+              width={48}
+              height={48}
+              loading="lazy"
               className="w-12 h-12 rounded-lg object-cover border border-neutral-600"
               onError={() => setImgError(true)}
             />
