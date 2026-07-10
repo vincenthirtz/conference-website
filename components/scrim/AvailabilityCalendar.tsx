@@ -11,7 +11,7 @@
 // Axe horaire continu à gauche, colonnes = jours (fenêtre de 7 jours paginée
 // dans l'horizon). Idiome dark aligné sur AvailabilityGrid.
 
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   horizonDates,
   slotMinutesOfDay,
@@ -55,6 +55,8 @@ export type AvailabilityCalendarProps = {
    * référence. La géométrie reste ancrée au fuseau session (aucun désalignement).
    */
   secondaryTz?: string | null;
+  /** Si fourni, pagine la fenêtre pour afficher la semaine contenant ce jour. */
+  focusDate?: string | null;
 };
 
 const HOUR_PX = 48; // hauteur d'une heure pleine
@@ -128,6 +130,7 @@ export default function AvailabilityCalendar({
   disabled = false,
   requireStaff = false,
   secondaryTz = null,
+  focusDate = null,
 }: AvailabilityCalendarProps) {
   const allDays = useMemo(() => horizonDates(config), [config]);
   const rows = useMemo(() => slotMinutesOfDay(config), [config]);
@@ -142,6 +145,14 @@ export default function AvailabilityCalendar({
       allDays.slice(page * DAYS_PER_PAGE, page * DAYS_PER_PAGE + DAYS_PER_PAGE),
     [allDays, page]
   );
+
+  // Navigation externe : saute sur la page contenant `focusDate` (ex. depuis la
+  // vue mois « overview »).
+  useEffect(() => {
+    if (!focusDate) return;
+    const idx = allDays.indexOf(focusDate);
+    if (idx >= 0) setPage(Math.floor(idx / DAYS_PER_PAGE));
+  }, [focusDate, allDays]);
 
   // Clé ISO par (jour, index de ligne).
   const keyAt = useCallback(

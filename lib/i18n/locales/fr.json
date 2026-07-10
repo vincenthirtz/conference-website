@@ -3772,6 +3772,11 @@
     "autoSaved": "Enregistré · auto",
     "deadlineToday": "Les créneaux commencent aujourd'hui — indique vite tes dispos.",
     "deadlineDays_one": "Plus qu'{count} jour pour indiquer tes dispos.",
-    "deadlineDays_other": "Plus que {count} jours pour indiquer tes dispos."
+    "deadlineDays_other": "Plus que {count} jours pour indiquer tes dispos.",
+    "viewMonth": "Mois",
+    "monthPrev": "Mois précédent",
+    "monthNext": "Mois suivant",
+    "monthLegendMine": "mes dispos",
+    "monthLegendValidatable": "planifiable"
   }
 }

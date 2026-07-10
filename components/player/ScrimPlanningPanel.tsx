@@ -19,6 +19,9 @@ import AvailabilityGrid, {
 import AvailabilityCalendar, {
   type AvailabilityCalendarLabels,
 } from '@/components/scrim/AvailabilityCalendar';
+import PlanningMonthOverview, {
+  type PlanningMonthLabels,
+} from '@/components/scrim/PlanningMonthOverview';
 import { useToast } from '@/components/Toast';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
@@ -79,7 +82,9 @@ export default function ScrimPlanningPanel({
   const [saving, setSaving] = useState(false);
   const [loadingSuggest, setLoadingSuggest] = useState(false);
   const [mode, setMode] = useState<'paint' | 'heatmap'>('paint');
-  const [view, setView] = useState<'grid' | 'calendar'>('calendar');
+  const [view, setView] = useState<'grid' | 'calendar' | 'month'>('calendar');
+  // Jour ciblé par la vue mois « overview » → repagine le calendrier dessus.
+  const [focusDate, setFocusDate] = useState<string | null>(null);
   // Fuseau du visiteur (client-only pour éviter un mismatch SSR).
   const [viewerTz, setViewerTz] = useState<string | null>(null);
   useEffect(() => {
@@ -210,6 +215,16 @@ export default function ScrimPlanningPanel({
       todayLabel: t.calToday,
     }),
     [gridLabels, t]
+  );
+
+  const monthLabels = useMemo<PlanningMonthLabels>(
+    () => ({
+      monthPrev: t.monthPrev,
+      monthNext: t.monthNext,
+      legendMine: t.monthLegendMine,
+      legendValidatable: t.monthLegendValidatable,
+    }),
+    [t]
   );
 
   // Remplissage rapide (P3-9).
@@ -524,9 +539,20 @@ export default function ScrimPlanningPanel({
           >
             {t.viewGrid}
           </button>
+          <button
+            type="button"
+            onClick={() => setView('month')}
+            className={`rounded-lg px-3 py-1.5 font-medium transition ${
+              view === 'month'
+                ? 'bg-white/15 text-white'
+                : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            {t.viewMonth}
+          </button>
         </div>
 
-        {hasHeatmap && !readOnly && (
+        {hasHeatmap && !readOnly && view !== 'month' && (
           <div className="inline-flex rounded-xl border border-white/10 bg-white/5 p-1 text-xs">
             <button
               type="button"
@@ -555,7 +581,7 @@ export default function ScrimPlanningPanel({
       </div>
 
       {/* Remplissage rapide (P3-9) */}
-      {!readOnly && effectiveMode === 'paint' && (
+      {!readOnly && effectiveMode === 'paint' && view !== 'month' && (
         <div className="mb-3 flex flex-wrap gap-2">
           <button
             type="button"
@@ -639,7 +665,19 @@ export default function ScrimPlanningPanel({
         </div>
       )}
 
-      {view === 'calendar' ? (
+      {view === 'month' ? (
+        <PlanningMonthOverview
+          config={config}
+          value={slots}
+          heatmap={gridHeatmap}
+          requireStaff={planning.staff_required}
+          labels={monthLabels}
+          onSelectDay={(day) => {
+            setFocusDate(day);
+            setView('calendar');
+          }}
+        />
+      ) : view === 'calendar' ? (
         <AvailabilityCalendar
           config={config}
           mode={effectiveMode}
@@ -650,6 +688,7 @@ export default function ScrimPlanningPanel({
           heatmap={gridHeatmap}
           requireStaff={planning.staff_required}
           secondaryTz={viewerTz}
+          focusDate={focusDate}
           disabled={readOnly && effectiveMode === 'paint'}
         />
       ) : (
@@ -668,7 +707,7 @@ export default function ScrimPlanningPanel({
       )}
 
       {/* Pied : compteur + sauvegarde */}
-      {!readOnly && effectiveMode === 'paint' && (
+      {!readOnly && effectiveMode === 'paint' && view !== 'month' && (
         <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
           <span className="flex flex-wrap items-center gap-2 text-xs text-gray-400">
             {format(slotsCount === 1 ? t.slotsPainted_one : t.slotsPainted_other, {

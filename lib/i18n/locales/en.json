@@ -3772,6 +3772,11 @@
     "autoSaved": "Saved · auto",
     "deadlineToday": "Slots start today — set your availability now.",
     "deadlineDays_one": "{count} day left to set your availability.",
-    "deadlineDays_other": "{count} days left to set your availability."
+    "deadlineDays_other": "{count} days left to set your availability.",
+    "viewMonth": "Month",
+    "monthPrev": "Previous month",
+    "monthNext": "Next month",
+    "monthLegendMine": "my availability",
+    "monthLegendValidatable": "schedulable"
   }
 }
