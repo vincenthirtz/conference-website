@@ -316,25 +316,25 @@ function ProfileModal({ open, onClose }: ProfileModalProps) {
             {!loading && (
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <div className="bg-neutral-900/50 rounded-xl p-4">
-                  <div className="text-xs text-neutral-500 uppercase tracking-wider mb-1">
+                  <div className="text-xs text-neutral-400 uppercase tracking-wider mb-1">
                     {t.emailLabel}
                   </div>
                   <div className="font-medium text-sm truncate">{email}</div>
                 </div>
                 <div className="bg-neutral-900/50 rounded-xl p-4">
-                  <div className="text-xs text-neutral-500 uppercase tracking-wider mb-1">
+                  <div className="text-xs text-neutral-400 uppercase tracking-wider mb-1">
                     {t.roleLabel}
                   </div>
                   <div className="font-medium">{roleLabel}</div>
                 </div>
                 <div className="bg-neutral-900/50 rounded-xl p-4">
-                  <div className="text-xs text-neutral-500 uppercase tracking-wider mb-1">
+                  <div className="text-xs text-neutral-400 uppercase tracking-wider mb-1">
                     {t.createdAtLabel}
                   </div>
                   <div className="font-medium text-sm">{createdAt}</div>
                 </div>
                 <div className="bg-neutral-900/50 rounded-xl p-4 col-span-2 md:col-span-3">
-                  <div className="text-xs text-neutral-500 uppercase tracking-wider mb-1">
+                  <div className="text-xs text-neutral-400 uppercase tracking-wider mb-1">
                     {t.staffIdLabel}
                   </div>
                   <div className="font-mono text-xs text-neutral-300 break-all">
@@ -385,7 +385,7 @@ function ProfileModal({ open, onClose }: ProfileModalProps) {
                   onChange={(e) => updateField('avatarUrl', e.target.value)}
                   placeholder="https://…"
                 />
-                <p className="text-xs text-neutral-500 mt-1">{t.avatarHelp}</p>
+                <p className="text-xs text-neutral-400 mt-1">{t.avatarHelp}</p>
               </div>
               <button
                 type="submit"
@@ -471,7 +471,7 @@ function ProfileModal({ open, onClose }: ProfileModalProps) {
                 )}
               </button>
             </form>
-            <p className="text-xs text-neutral-500 mt-3">
+            <p className="text-xs text-neutral-400 mt-3">
               {t.emailConfirmNote}
             </p>
           </section>
@@ -556,7 +556,7 @@ function ProfileModal({ open, onClose }: ProfileModalProps) {
                 )}
               </button>
             </form>
-            <p className="text-xs text-neutral-500 mt-3">{t.passwordHelp}</p>
+            <p className="text-xs text-neutral-400 mt-3">{t.passwordHelp}</p>
           </section>
 
           {/* Mes données — export & suppression */}
@@ -609,7 +609,7 @@ function ProfileModal({ open, onClose }: ProfileModalProps) {
                 t.exportBtn
               )}
             </button>
-            <p className="text-xs text-neutral-500 mb-5">{t.exportHelp}</p>
+            <p className="text-xs text-neutral-400 mb-5">{t.exportHelp}</p>
 
             <button
               onClick={() => {
@@ -620,7 +620,7 @@ function ProfileModal({ open, onClose }: ProfileModalProps) {
             >
               {t.deleteBtn}
             </button>
-            <p className="text-xs text-neutral-500 mt-3">{t.deleteHelp}</p>
+            <p className="text-xs text-neutral-400 mt-3">{t.deleteHelp}</p>
           </section>
 
           {/* System Info */}
@@ -630,7 +630,7 @@ function ProfileModal({ open, onClose }: ProfileModalProps) {
             </h2>
             <div className="space-y-3 text-sm">
               <div>
-                <div className="text-xs text-neutral-500 mb-1">
+                <div className="text-xs text-neutral-400 mb-1">
                   {t.userIdLabel}
                 </div>
                 <div className="font-mono text-xs bg-neutral-900 px-3 py-2 rounded-lg border border-neutral-700 break-all">
