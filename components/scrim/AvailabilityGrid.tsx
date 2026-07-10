@@ -58,6 +58,11 @@ export type AvailabilityGridProps = {
   disabled?: boolean;
   /** Session `staff_required` : un créneau n'est planifiable qu'avec le staff. */
   requireStaff?: boolean;
+  /**
+   * Fuseau du visiteur : si différent du fuseau session, la gouttière d'heures
+   * affiche une 2e étiquette (heure locale du visiteur). Géométrie inchangée.
+   */
+  secondaryTz?: string | null;
 };
 
 const ACCENT_RING: Record<string, string> = {
@@ -112,9 +117,28 @@ export default function AvailabilityGrid({
   selectedSlot,
   disabled = false,
   requireStaff = false,
+  secondaryTz = null,
 }: AvailabilityGridProps) {
   const days = useMemo(() => horizonDates(config), [config]);
   const rows = useMemo(() => slotMinutesOfDay(config), [config]);
+
+  // Heure locale du visiteur par ligne (si `secondaryTz` diffère du fuseau
+  // session), calculée sur le 1er jour de l'horizon comme référence.
+  const secByRow = useMemo(() => {
+    const out: Record<number, string> = {};
+    const secTz =
+      secondaryTz && secondaryTz !== config.timezone ? secondaryTz : null;
+    const refDay = days[0];
+    if (!secTz || !refDay) return out;
+    const fmt = new Intl.DateTimeFormat('en-GB', {
+      timeZone: secTz,
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    });
+    for (const m of rows) out[m] = fmt.format(new Date(slotKey(config, refDay, m)));
+    return out;
+  }, [config, days, rows, secondaryTz]);
 
   // Cache clé ISO par (jour, minute) pour ne pas recalculer à chaque render.
   const keyGrid = useMemo(() => {
@@ -241,8 +265,11 @@ export default function AvailabilityGrid({
           {/* Lignes horaires */}
           {rows.map((m) => (
             <FragmentRow key={`r-${m}`}>
-              <div className="sticky left-0 z-10 -mt-px flex items-start justify-end bg-black/60 pr-2 pt-0.5 text-[10px] tabular-nums text-gray-500 backdrop-blur">
-                {fmtHour(m)}
+              <div className="sticky left-0 z-10 -mt-px flex flex-col items-end bg-black/60 pr-2 pt-0.5 text-right tabular-nums leading-tight backdrop-blur">
+                <span className="text-[10px] text-gray-500">{fmtHour(m)}</span>
+                {secByRow[m] && (
+                  <span className="text-[9px] text-sky-400/70">{secByRow[m]}</span>
+                )}
               </div>
               {days.map((day) => {
                 const key = keyGrid[`${day}|${m}`];

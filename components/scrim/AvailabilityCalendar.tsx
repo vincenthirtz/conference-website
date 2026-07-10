@@ -49,6 +49,12 @@ export type AvailabilityCalendarProps = {
   disabled?: boolean;
   /** Session `staff_required` : planifiable seulement avec le staff. */
   requireStaff?: boolean;
+  /**
+   * Fuseau du visiteur : si fourni et différent du fuseau de la session, l'axe
+   * horaire affiche une 2e étiquette (heure locale du visiteur) sous l'heure de
+   * référence. La géométrie reste ancrée au fuseau session (aucun désalignement).
+   */
+  secondaryTz?: string | null;
 };
 
 const HOUR_PX = 48; // hauteur d'une heure pleine
@@ -121,6 +127,7 @@ export default function AvailabilityCalendar({
   selectedSlot,
   disabled = false,
   requireStaff = false,
+  secondaryTz = null,
 }: AvailabilityCalendarProps) {
   const allDays = useMemo(() => horizonDates(config), [config]);
   const rows = useMemo(() => slotMinutesOfDay(config), [config]);
@@ -130,7 +137,11 @@ export default function AvailabilityCalendar({
 
   const pageCount = Math.max(1, Math.ceil(allDays.length / DAYS_PER_PAGE));
   const [page, setPage] = useState(0);
-  const days = allDays.slice(page * DAYS_PER_PAGE, page * DAYS_PER_PAGE + DAYS_PER_PAGE);
+  const days = useMemo(
+    () =>
+      allDays.slice(page * DAYS_PER_PAGE, page * DAYS_PER_PAGE + DAYS_PER_PAGE),
+    [allDays, page]
+  );
 
   // Clé ISO par (jour, index de ligne).
   const keyAt = useCallback(
@@ -140,18 +151,34 @@ export default function AvailabilityCalendar({
 
   const selected = useMemo(() => new Set(value ?? []), [value]);
 
-  // Repères d'heures pleines (lignes + libellés) sur l'axe.
+  // Repères d'heures pleines (lignes + libellés) sur l'axe. Si `secondaryTz`
+  // diffère du fuseau session, on ajoute l'heure locale du visiteur, calculée
+  // sur un jour de référence de la page (l'écart peut varier au fil de l'horizon
+  // en cas de bascule DST décalée entre les deux fuseaux — annotation indicative).
   const hourMarks = useMemo(() => {
-    const marks: { top: number; label: string }[] = [];
+    const refDay = days[0] ?? allDays[0];
+    const secTz =
+      secondaryTz && secondaryTz !== config.timezone ? secondaryTz : null;
+    const secFmt = secTz
+      ? new Intl.DateTimeFormat('en-GB', {
+          timeZone: secTz,
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false,
+        })
+      : null;
+    const marks: { top: number; label: string; secondary: string | null }[] = [];
     const startH = Math.ceil(config.dayStartMin / 60);
     for (let h = startH * 60; h <= config.dayEndMin; h += 60) {
       marks.push({
         top: (h - config.dayStartMin) * pxPerMin,
         label: fmtHour(h),
+        secondary:
+          secFmt && refDay ? secFmt.format(new Date(slotKey(config, refDay, h))) : null,
       });
     }
     return marks;
-  }, [config.dayStartMin, config.dayEndMin, pxPerMin]);
+  }, [config, pxPerMin, secondaryTz, days, allDays]);
 
   // --- Peinture par glissement (une colonne-jour à la fois) ---
   const drag = useRef<null | {
@@ -282,15 +309,22 @@ export default function AvailabilityCalendar({
       <div className="overflow-x-auto rounded-2xl border border-white/10 bg-black/40 p-2">
         <div className="flex min-w-[560px]">
           {/* Gouttière d'heures */}
-          <div className="w-12 flex-shrink-0 pt-8">
+          <div className="w-14 flex-shrink-0 pt-8">
             <div className="relative" style={{ height: colHeight }}>
               {hourMarks.map((m) => (
                 <div
                   key={m.label}
-                  className="absolute right-1 -translate-y-1/2 text-[10px] tabular-nums text-gray-500"
+                  className="absolute right-1 -translate-y-1/2 text-right tabular-nums leading-tight"
                   style={{ top: m.top }}
                 >
-                  {m.label}
+                  <span className="block text-[10px] text-gray-500">
+                    {m.label}
+                  </span>
+                  {m.secondary && (
+                    <span className="block text-[9px] text-sky-400/70">
+                      {m.secondary}
+                    </span>
+                  )}
                 </div>
               ))}
             </div>

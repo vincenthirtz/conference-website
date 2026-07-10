@@ -519,6 +519,7 @@ export default function ScrimPlanningPanel({
           onChange={setSlots}
           heatmap={gridHeatmap}
           requireStaff={planning.staff_required}
+          secondaryTz={viewerTz}
           disabled={readOnly && effectiveMode === 'paint'}
         />
       ) : (
@@ -531,6 +532,7 @@ export default function ScrimPlanningPanel({
           onChange={setSlots}
           heatmap={gridHeatmap}
           requireStaff={planning.staff_required}
+          secondaryTz={viewerTz}
           disabled={readOnly && effectiveMode === 'paint'}
         />
       )}
