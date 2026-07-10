@@ -9,7 +9,7 @@
 // `/api/teams/scrim-plannings/[planningId]/availability` (optimiste : la
 // peinture est instantanée, la sauvegarde persiste et notifie via toast).
 //
-// Idiome dark aligné sur components/player/ScrimSlotPicker.tsx : rounded-xl,
+// Idiome dark aligné sur les composants scrim joueur : rounded-xl,
 // border-white/15, bg-black/60.
 
 import { useCallback, useEffect, useMemo, useState } from 'react';

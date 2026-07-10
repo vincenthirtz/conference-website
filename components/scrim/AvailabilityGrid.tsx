@@ -5,7 +5,8 @@
 //   - 'heatmap' : lecture de l'overlap (intensité = nb de parties dispo), avec
 //                 survol « qui est dispo » et clic pour valider (admin).
 //
-// Idiome dark Tailwind aligné sur components/player/ScrimSlotPicker.tsx.
+// Idiome dark Tailwind aligné sur les composants scrim joueur (rounded-xl,
+// border-white/15, bg-black/60).
 // Toutes les chaînes visibles sont injectées via `labels` (i18n côté appelant).
 
 import { useCallback, useMemo, useRef, useState } from 'react';

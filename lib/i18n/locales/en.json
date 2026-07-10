@@ -74,7 +74,12 @@
     "addSlot": "Add a slot",
     "removeSlot": "Remove this slot",
     "maxSlotsHint": "Propose up to 5 slots.",
-    "scrimTzNote": "Slots in your timezone: {tz}"
+    "scrimTzNote": "Slots in your timezone: {tz}",
+    "slotPrevWeek": "Previous week",
+    "slotNextWeek": "Next week",
+    "slotWeekOf": "Week of {date}",
+    "slotMaxReached": "{max} slots maximum.",
+    "slotEmpty": "No slot selected — click in the calendar."
   },
   "supportAssoCard": {
     "title": "Lend the association a hand?",
@@ -635,6 +640,11 @@
     "removeSlot": "Remove this slot",
     "maxSlotsHint": "Propose up to 5 slots. Your opponent will pick one or counter with others.",
     "scrimTzNote": "Slots in your timezone: {tz}",
+    "slotPrevWeek": "Previous week",
+    "slotNextWeek": "Next week",
+    "slotWeekOf": "Week of {date}",
+    "slotMaxReached": "{max} slots maximum.",
+    "slotEmpty": "No slot selected — click in the calendar.",
     "atLeastOneSlot": "Propose at least one slot."
   },
   "requestCaptain": {

@@ -9,7 +9,7 @@ import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useManagedTeam } from '@/hooks/useManagedTeam';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
-import ScrimSlotPicker from '@/components/player/ScrimSlotPicker';
+import ScrimSlotCalendarPicker from '@/components/player/ScrimSlotCalendarPicker';
 import { useT, format } from '@/lib/i18n/useT';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 
@@ -731,17 +731,20 @@ export default function PlayerRequestsPage() {
                       />
                     </div>
 
-                    <ScrimSlotPicker
+                    <ScrimSlotCalendarPicker
                       slots={scrimSlots}
                       onChange={setScrimSlots}
                       accent="blue"
-                      idPrefix="scrim-slot"
                       labels={{
                         slotsLabel: tr.slotsLabel,
-                        addSlot: tr.addSlot,
                         removeSlot: tr.removeSlot,
                         maxSlotsHint: tr.maxSlotsHint,
                         timezoneNote: tr.scrimTzNote,
+                        prevWeek: tr.slotPrevWeek,
+                        nextWeek: tr.slotNextWeek,
+                        weekOf: tr.slotWeekOf,
+                        maxReached: tr.slotMaxReached,
+                        empty: tr.slotEmpty,
                       }}
                     />
 

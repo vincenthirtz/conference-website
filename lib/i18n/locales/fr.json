@@ -74,7 +74,12 @@
     "addSlot": "Ajouter un créneau",
     "removeSlot": "Retirer ce créneau",
     "maxSlotsHint": "Proposez jusqu'à 5 créneaux.",
-    "scrimTzNote": "Créneaux dans ton fuseau : {tz}"
+    "scrimTzNote": "Créneaux dans ton fuseau : {tz}",
+    "slotPrevWeek": "Semaine précédente",
+    "slotNextWeek": "Semaine suivante",
+    "slotWeekOf": "Semaine du {date}",
+    "slotMaxReached": "{max} créneaux maximum.",
+    "slotEmpty": "Aucun créneau sélectionné — clique dans le calendrier."
   },
   "supportAssoCard": {
     "title": "Un coup de main à l'asso ?",
@@ -635,6 +640,11 @@
     "removeSlot": "Retirer ce créneau",
     "maxSlotsHint": "Proposez jusqu'à 5 créneaux. L'adversaire en choisira un ou vous en reproposera d'autres.",
     "scrimTzNote": "Créneaux dans ton fuseau : {tz}",
+    "slotPrevWeek": "Semaine précédente",
+    "slotNextWeek": "Semaine suivante",
+    "slotWeekOf": "Semaine du {date}",
+    "slotMaxReached": "{max} créneaux maximum.",
+    "slotEmpty": "Aucun créneau sélectionné — clique dans le calendrier.",
     "atLeastOneSlot": "Proposez au moins un créneau."
   },
   "requestCaptain": {

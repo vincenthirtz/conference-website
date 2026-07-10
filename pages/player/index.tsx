@@ -14,7 +14,7 @@ import QuickAction, {
 } from '@/components/player/QuickAction';
 import NextMatchCard from '@/components/player/NextMatchCard';
 import { PlayerDashboardSkeleton } from '@/components/player/Skeletons';
-import ScrimSlotPicker from '@/components/player/ScrimSlotPicker';
+import ScrimSlotCalendarPicker from '@/components/player/ScrimSlotCalendarPicker';
 import ScrimPlanningsDashboardCard from '@/components/player/ScrimPlanningsDashboardCard';
 import SupportAssoCard from '@/components/player/SupportAssoCard';
 import PushOptIn from '@/components/shared/PushOptIn';
@@ -767,7 +767,7 @@ function PlayerDashboard() {
                       {/* Inline counter-proposal picker */}
                       {counterIsOpen && (
                         <div className="rounded-lg border border-white/10 bg-black/40 p-3">
-                          <ScrimSlotPicker
+                          <ScrimSlotCalendarPicker
                             slots={currentCounterSlots}
                             onChange={(next) =>
                               setCounterSlots((prev) => ({
@@ -776,13 +776,16 @@ function PlayerDashboard() {
                               }))
                             }
                             accent="blue"
-                            idPrefix={`counter-${scrim.id}`}
                             labels={{
                               slotsLabel: tr.slotsLabel,
-                              addSlot: tr.addSlot,
                               removeSlot: tr.removeSlot,
                               maxSlotsHint: tr.maxSlotsHint,
                               timezoneNote: tr.scrimTzNote,
+                              prevWeek: tr.slotPrevWeek,
+                              nextWeek: tr.slotNextWeek,
+                              weekOf: tr.slotWeekOf,
+                              maxReached: tr.slotMaxReached,
+                              empty: tr.slotEmpty,
                             }}
                           />
                           <button
