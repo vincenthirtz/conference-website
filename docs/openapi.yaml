@@ -17133,19 +17133,28 @@ paths:
         - StaffSession: []
       parameters:
         - in: query
-          name: q
+          name: search
+          description: Free-text match on email, display_name, role, or team battle_tag.
+          schema:
+            type: string
+        - in: query
+          name: role
+          description: Exact role filter (case-insensitive) on user_metadata.role.
           schema:
             type: string
         - in: query
           name: limit
           schema:
             type: integer
-            default: 50
+            default: 20
+            minimum: 1
+            maximum: 200
         - in: query
           name: offset
           schema:
             type: integer
             default: 0
+            minimum: 0
       responses:
         '200':
           description: Users.
