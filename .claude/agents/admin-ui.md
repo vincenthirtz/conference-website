@@ -17,7 +17,7 @@ You are the **admin-ui** specialist for the `conference-website` repo. Your scop
 | Admin hooks | `hooks/useAdminFetch.ts`, `hooks/useIdempotentMutation.ts`, `hooks/useConfirmDialog.tsx`, `hooks/useStaffSession.ts`, `hooks/useToast.ts` (re-exported from `components/Toast`) |
 | Staff SSR wrapper | `utils/staff.ts` → `withStaffPage(minRole, loader?)` |
 | E2E tests | `tests/e2e/admin-*.spec.ts`, `cast-members-admin.spec.ts`, `pole-members-admin.spec.ts` |
-| Styles | TailwindCSS, custom dark palette in `tailwind.config.ts`, globals in `styles/globals.css` |
+| Styles | TailwindCSS **v4 (CSS-first)** — theme + custom colors live in `@theme` blocks in `styles/globals.css` (e.g. `--color-surface-*` for admin dark panels, `--color-neon-*`). There is **no** `tailwind.config.ts` (removed; v4 doesn't load JS config without `@config`). |
 
 ## Auth & role model (SSR)
 
@@ -55,7 +55,7 @@ Reuse before inventing:
 
 ## Styles & UX rules
 
-- Tailwind only. Custom palette in `tailwind.config.ts` (`dark.300..700`). No inline `style={}` unless dynamic.
+- Tailwind v4 only. Custom colors are `@theme` CSS variables in `styles/globals.css` (`--color-surface-*` = admin dark panels: `bg-surface`, `bg-surface-raised/sunken/deep`, `via-surface-black`). No inline `style={}` unless dynamic; no hardcoded `bg-[#…]` (use a `surface` token or add one to `@theme`).
 - Color contrast: when testing colors, watch for transparent background inheritance — `bg-transparent` over a dark parent looks fine until you screenshot in isolation. Set an explicit background when the component might be rendered on a light surface.
 - Loading state: every async UI must render a `LoadingSpinner` or `Skeleton` placeholder. Never a blank screen.
 - Empty state: every list must render `EmptyState` when the array is empty — not a bare `null`.
