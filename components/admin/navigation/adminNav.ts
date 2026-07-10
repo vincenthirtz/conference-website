@@ -521,38 +521,32 @@ export const ADMIN_NAV: AdminNavNode[] = [
         ],
       },
       {
-        id: 'tenants',
-        topBarLabel: 'Tenants',
-        href: '',
+        // Hub « Onboarding » (lot C) : fusion des ex-pages File d'onboarding
+        // (onboarding-queue), Demandes self-service (tenant-requests) et
+        // Serveurs Discord en attente (pending-guild-links) en une page à
+        // onglets (/admin/onboarding?tab=…). Une SEULE entrée top-bar pointe
+        // vers le hub ; les onglets se découvrent sur la page. Le host est
+        // manager-gated (rôle le plus permissif des 3) ; l'onglet « Demandes de
+        // tenant » reste owner-only (re-gaté côté page, données owner-only en API).
+        id: 'onboarding',
+        topBarLabel: 'Onboarding',
+        href: '/admin/onboarding',
         minRole: 'manager',
-        children: [
-          {
-            // Hub « Onboarding » (lot C) : fusion des ex-pages File d'onboarding
-            // (onboarding-queue), Demandes self-service (tenant-requests) et
-            // Serveurs Discord en attente (pending-guild-links) en une page à
-            // onglets (/admin/onboarding?tab=…). Comme pour les fusions Stats /
-            // Logs / Modération, une SEULE entrée top-bar pointe vers le hub ;
-            // les onglets se découvrent sur la page. Le host est manager-gated
-            // (rôle le plus permissif des 3) ; l'onglet « Demandes de tenant »
-            // reste owner-only (re-gaté côté page, données owner-only en API).
-            id: 'onboarding',
-            topBarLabel: 'Onboarding',
-            href: '/admin/onboarding',
-            minRole: 'manager',
-          },
-          {
-            id: 'tenants-list',
-            topBarLabel: 'Liste des tenants',
-            href: '/admin/tenants',
-            minRole: 'manager',
-          },
-          {
-            id: 'tenants-new',
-            topBarLabel: 'Créer un tenant',
-            href: '/admin/tenants?new=1',
-            minRole: 'manager',
-          },
-        ],
+      },
+      // Gestion des tenants : déplacée de la top-bar Configuration vers une
+      // CARTE du dashboard (dashboard-only, plus d'entrée top-bar). La création
+      // reste accessible via le bouton « Créer un tenant » de la liste (?new=1).
+      {
+        id: 'tenants-list',
+        href: '/admin/tenants',
+        minRole: 'manager',
+        card: {
+          order: 19,
+          titleKey: 'navTenantsTitle',
+          descKey: 'navTenantsDesc',
+          icon: 'shield',
+          accent: 'border-sky-500/30 from-sky-500/10 text-sky-300',
+        },
       },
       // Dashboard-only (pas d'entrée top-bar historiquement).
       {

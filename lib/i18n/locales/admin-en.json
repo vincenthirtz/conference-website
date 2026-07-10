@@ -190,6 +190,8 @@
     "navApiTokensDesc": "Tokens d'accès scopés à l'API publique.",
     "navRecycleBinTitle": "Recycle bin",
     "navRecycleBinDesc": "Restore deleted items (stages, teams, matches…).",
+    "navTenantsTitle": "Tenants",
+    "navTenantsDesc": "Manage tenants: list, creation, plan and secrets.",
     "navAideTournoiTitle": "Tournament help",
     "navAideTournoiDesc": "Staff guide: organisation commands and procedures.",
     "alertDisputesTitle_one": "{count} pending dispute",

@@ -190,6 +190,8 @@
     "navApiTokensDesc": "Tokens d'accès scopés à l'API publique.",
     "navRecycleBinTitle": "Corbeille",
     "navRecycleBinDesc": "Restaurer les éléments supprimés (stages, équipes, matchs…).",
+    "navTenantsTitle": "Tenants",
+    "navTenantsDesc": "Gérer les tenants : liste, création, plan et secrets.",
     "navAideTournoiTitle": "Aide tournoi",
     "navAideTournoiDesc": "Guide staff : commandes et procédures d'organisation.",
     "alertDisputesTitle_one": "{count} litige en attente",
