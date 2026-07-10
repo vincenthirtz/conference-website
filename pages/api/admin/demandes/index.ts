@@ -322,36 +322,47 @@ async function handleGet(
     type UserMini = NonNullable<DemandeWithRelations['user']>;
     const userMap = new Map<string, UserMini>();
 
-    await Promise.all(
-      uniqueUserIds.map(async (uid) => {
-        try {
-          const { data: userData } =
-            await supabaseAdmin!.auth.admin.getUserById(uid);
-          if (userData?.user) {
-            const meta = (userData.user.user_metadata ?? {}) as Record<
-              string,
-              unknown
-            >;
-            const email = userData.user.email ?? null;
-            userMap.set(uid, {
-              id: uid,
-              email,
-              display_name:
-                (meta.display_name as string) ||
-                (meta.full_name as string) ||
-                email ||
-                null,
-              avatar_url: (meta.avatar_url as string) || null,
-              battle_tag: (meta.battle_tag as string) || null,
-              discord: (meta.discord as string) || null,
-              username: (meta.display_name as string) || email || null,
-            });
-          }
-        } catch {
-          // Skip users that can't be fetched
+    // Perf P6: a single batch RPC instead of N GoTrue round-trips
+    // (`auth.admin.getUserById` in Promise.all). `admin_get_user_profiles`
+    // reads auth.users (email + selected user_metadata) and returns one row
+    // per resolved id. On RPC error we log and leave `userMap` empty — the same
+    // degraded behavior as the previous per-user try/catch that skipped
+    // unresolvable users.
+    if (uniqueUserIds.length > 0) {
+      type ProfileRow = {
+        id: string;
+        email: string | null;
+        display_name: string | null;
+        full_name: string | null;
+        avatar_url: string | null;
+        battle_tag: string | null;
+        discord: string | null;
+      };
+      const { data: profileRows, error: profilesError } =
+        await supabaseAdmin!.rpc('admin_get_user_profiles', {
+          p_ids: uniqueUserIds,
+        });
+      if (profilesError) {
+        logger.error(
+          'admin GET demandes user-profiles RPC error:',
+          profilesError
+        );
+      } else {
+        for (const row of (profileRows ?? []) as ProfileRow[]) {
+          const email = row.email ?? null;
+          userMap.set(row.id, {
+            id: row.id,
+            email,
+            display_name:
+              row.display_name || row.full_name || email || null,
+            avatar_url: row.avatar_url || null,
+            battle_tag: row.battle_tag || null,
+            discord: row.discord || null,
+            username: row.display_name || email || null,
+          });
         }
-      })
-    );
+      }
+    }
 
     for (const demande of safeDemandes) {
       if (demande.user_id && userMap.has(demande.user_id)) {

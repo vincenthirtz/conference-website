@@ -21,6 +21,9 @@ import {
   resetSupabaseMock,
   setAuthUser,
   setAdminUser,
+  setAuthListUsers,
+  setRpcResult,
+  rpcCalls,
   supabaseAdmin,
 } from './__helpers__/supabaseMock';
 
@@ -943,14 +946,20 @@ describe('/api/admin/demandes', () => {
         created_at: '2026',
       },
     ] as any;
-    setAdminUser('u-x', 'someone@example.com', {
-      user_metadata: {
-        display_name: 'Someone',
-        avatar_url: 'https://cdn.example.com/a.png',
-        battle_tag: 'Someone#1234',
-        discord: 'someone#0001',
-      },
-    });
+    // Perf P6: enrichment now flows through the `admin_get_user_profiles`
+    // batch RPC (emulated against `_authListUsers`) instead of N getUserById.
+    setAuthListUsers([
+      {
+        id: 'u-x',
+        email: 'someone@example.com',
+        user_metadata: {
+          display_name: 'Someone',
+          avatar_url: 'https://cdn.example.com/a.png',
+          battle_tag: 'Someone#1234',
+          discord: 'someone#0001',
+        },
+      } as any,
+    ]);
     const res = makeRes();
     await adminDemandesHandler(
       makeReq({ method: 'GET', query: { includeUser: '1' } }),
@@ -982,7 +991,7 @@ describe('/api/admin/demandes', () => {
         created_at: '2026',
       },
     ] as any;
-    setAdminUser('u-y', 'bare@example.com');
+    setAuthListUsers([{ id: 'u-y', email: 'bare@example.com' } as any]);
     const res = makeRes();
     await adminDemandesHandler(
       makeReq({ method: 'GET', query: { includeUser: '1' } }),
@@ -992,6 +1001,116 @@ describe('/api/admin/demandes', () => {
     expect(user.display_name).toBe('bare@example.com');
     expect(user.avatar_url).toBeNull();
     expect(user.battle_tag).toBeNull();
+  });
+
+  it('GET includeUser enriches multiple demandes in one batch RPC and skips unknown ids', async () => {
+    store.demandes = [
+      {
+        id: 'd1',
+        type: 'join',
+        status: 'pending',
+        user_id: 'u-a',
+        created_at: '2026',
+      },
+      {
+        id: 'd2',
+        type: 'join',
+        status: 'pending',
+        user_id: 'u-b',
+        created_at: '2026',
+      },
+      {
+        id: 'd3',
+        type: 'join',
+        status: 'pending',
+        user_id: 'u-ghost',
+        created_at: '2026',
+      },
+    ] as any;
+    setAuthListUsers([
+      {
+        id: 'u-a',
+        email: 'alice@example.com',
+        user_metadata: {
+          display_name: 'Alice',
+          avatar_url: 'https://cdn.example.com/alice.png',
+          battle_tag: 'Alice#1111',
+          discord: 'alice#0001',
+        },
+      } as any,
+      {
+        id: 'u-b',
+        email: 'bob@example.com',
+        user_metadata: { full_name: 'Bob Builder' },
+      } as any,
+      // u-ghost intentionally absent from auth.users → must be skipped.
+    ]);
+
+    const res = makeRes();
+    await adminDemandesHandler(
+      makeReq({ method: 'GET', query: { includeUser: '1' } }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+
+    // Exactly one batch RPC call, carrying the de-duplicated id list.
+    const profileCalls = rpcCalls.filter(
+      (c) => c.fn === 'admin_get_user_profiles'
+    );
+    expect(profileCalls).toHaveLength(1);
+    expect((profileCalls[0].params as any).p_ids).toEqual([
+      'u-a',
+      'u-b',
+      'u-ghost',
+    ]);
+
+    const [d1, d2, d3] = (res.body as any).demandes;
+    expect(d1.user).toMatchObject({
+      id: 'u-a',
+      email: 'alice@example.com',
+      display_name: 'Alice',
+      avatar_url: 'https://cdn.example.com/alice.png',
+      battle_tag: 'Alice#1111',
+      discord: 'alice#0001',
+      username: 'Alice',
+    });
+    // display_name falls back to full_name when display_name is absent.
+    expect(d2.user).toMatchObject({
+      id: 'u-b',
+      email: 'bob@example.com',
+      display_name: 'Bob Builder',
+      avatar_url: null,
+      battle_tag: null,
+      discord: null,
+      // username has no full_name fallback → email.
+      username: 'bob@example.com',
+    });
+    // Unknown id: no enrichment attached.
+    expect(d3.user).toBeUndefined();
+  });
+
+  it('GET includeUser degrades gracefully (empty user map) when the RPC errors', async () => {
+    store.demandes = [
+      {
+        id: 'd1',
+        type: 'join',
+        status: 'pending',
+        user_id: 'u-a',
+        created_at: '2026',
+      },
+    ] as any;
+    setAuthListUsers([{ id: 'u-a', email: 'alice@example.com' } as any]);
+    setRpcResult('admin_get_user_profiles', {
+      error: { message: 'boom' },
+    });
+    const res = makeRes();
+    await adminDemandesHandler(
+      makeReq({ method: 'GET', query: { includeUser: '1' } }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    // RPC failure → userMap stays empty, demande.user left untouched.
+    expect((res.body as any).demandes[0].user).toBeUndefined();
   });
 
   it('GET populates processed_by with the staff handler (display_name)', async () => {

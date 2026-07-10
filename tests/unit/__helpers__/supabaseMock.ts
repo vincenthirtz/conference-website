@@ -646,6 +646,39 @@ export const supabaseAdmin = {
         : undefined;
       return Promise.resolve({ data: found?.id ?? null, error: null as any });
     }
+    // Émulation de la RPC batch `admin_get_user_profiles` (audit perf P6) :
+    // remplace les N `auth.admin.getUserById` du chemin d'enrichissement des
+    // demandes par un seul appel. Résout `p_ids` contre `_authListUsers` (même
+    // source d'auth.users que le mock getUserById) et projette les 7 colonnes du
+    // contrat : id, email + user_metadata.{display_name, full_name, avatar_url,
+    // battle_tag, discord}. Une ligne par id trouvé ; les ids introuvables sont
+    // simplement omis (skip). Un `setRpcResult('admin_get_user_profiles', …)`
+    // explicite reste prioritaire (forcer un cas d'erreur).
+    if (fn === 'admin_get_user_profiles') {
+      const ids = Array.isArray((params as any)?.p_ids)
+        ? ((params as any).p_ids as unknown[]).map((v) => String(v))
+        : [];
+      const rows = ids
+        .map((id) => _authListUsers.find((u) => u.id === id))
+        .filter((u): u is (typeof _authListUsers)[number] => Boolean(u))
+        .map((u) => {
+          const meta = ((u as any).user_metadata ?? {}) as Record<
+            string,
+            unknown
+          >;
+          const str = (v: unknown) => (typeof v === 'string' ? v : null);
+          return {
+            id: u.id,
+            email: u.email ?? null,
+            display_name: str(meta.display_name),
+            full_name: str(meta.full_name),
+            avatar_url: str(meta.avatar_url),
+            battle_tag: str(meta.battle_tag),
+            discord: str(meta.discord),
+          };
+        });
+      return Promise.resolve({ data: rows as any, error: null as any });
+    }
     // Émulation de la RPC ciblée `admin_list_users` (audit perf P1) : reproduit
     // la pagination/recherche/filtre SQL contre `_authListUsers` (même source
     // que l'ancien scan listUsers) + `store.team_members` (pour la recherche
