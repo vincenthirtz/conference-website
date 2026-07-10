@@ -701,7 +701,16 @@ function AdminScrimPlanningDetailPage(_props: StaffProps) {
 
             <div className="flex flex-wrap items-center justify-between gap-3">
               {canValidate ? (
-                <p className="text-xs text-neutral-400">{t.validateHint}</p>
+                // Callout de validation toujours visible : le swatch reproduit
+                // exactement le rendu d'une cellule planifiable (fond vert +
+                // soulignement) pour ancrer visuellement l'affordance de clic.
+                <div className="flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-xs text-emerald-100">
+                  <span
+                    className="relative inline-block h-4 w-5 flex-shrink-0 rounded border border-emerald-300/40 bg-emerald-500/30 after:absolute after:inset-x-1 after:bottom-0.5 after:h-0.5 after:rounded-full after:bg-emerald-200/80 after:content-['']"
+                    aria-hidden="true"
+                  />
+                  <span>{t.validateHint}</span>
+                </div>
               ) : (
                 <p className="text-xs text-neutral-500">{t.readOnlyHint}</p>
               )}
