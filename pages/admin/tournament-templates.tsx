@@ -1,7 +1,7 @@
 // pages/admin/tournament-templates.tsx
 // UI pour creer et gerer des templates de tournoi personnalises.
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
@@ -78,7 +78,7 @@ function AdminTournamentTemplatesPage({ staff }: StaffProps) {
   const [creating, setCreating] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  async function fetchCustomTemplates() {
+  const fetchCustomTemplates = useCallback(async () => {
     setLoading(true);
     setErrorMsg(null);
     try {
@@ -91,11 +91,11 @@ function AdminTournamentTemplatesPage({ staff }: StaffProps) {
     } finally {
       setLoading(false);
     }
-  }
+  }, [adminFetchJson, t]);
 
   useEffect(() => {
     fetchCustomTemplates();
-  }, []);
+  }, [fetchCustomTemplates]);
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();

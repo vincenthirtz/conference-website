@@ -66,6 +66,7 @@ function PatchNotesSection(): JSX.Element {
     return () => {
       isMounted = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- chargement au montage uniquement (garde isMounted) ; t.errLoad n'est lu qu'au moment de l'erreur, pas réactif
   }, []);
 
   const renderLoading = () => (

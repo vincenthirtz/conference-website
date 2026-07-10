@@ -181,6 +181,25 @@ export default function VetoPanel() {
     }
   }, [tournamentId, adminFetch, t]);
 
+  const fetchVetoState = useCallback(
+    async (matchId: string) => {
+      try {
+        const res = await adminFetch(`/api/admin/matches/${matchId}/veto`);
+        if (!res.ok) {
+          const json = await res.json().catch(() => ({}));
+          throw new Error(json.error || t.errorLoadVeto);
+        }
+        const state = await res.json();
+        setVetoState(state as MatchVetoState);
+        setErrorMsg(null);
+      } catch (err: unknown) {
+        setErrorMsg((err as Error)?.message || t.error);
+        setVetoState(null);
+      }
+    },
+    [adminFetch, t]
+  );
+
   useEffect(() => {
     if (!tournamentId) return;
     fetchData();
@@ -192,23 +211,7 @@ export default function VetoPanel() {
     } else {
       setVetoState(null);
     }
-  }, [selectedMatchId]);
-
-  async function fetchVetoState(matchId: string) {
-    try {
-      const res = await adminFetch(`/api/admin/matches/${matchId}/veto`);
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || t.errorLoadVeto);
-      }
-      const state = await res.json();
-      setVetoState(state as MatchVetoState);
-      setErrorMsg(null);
-    } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message || t.error);
-      setVetoState(null);
-    }
-  }
+  }, [selectedMatchId, fetchVetoState]);
 
   const handleSelectMap = useCallback(
     async (mapName: string, mapType: string | null) => {
@@ -280,7 +283,7 @@ export default function VetoPanel() {
         setSubmitting(false);
       }
     },
-    [vetoState, selectedMatchId, addToast, adminFetch, t]
+    [vetoState, selectedMatchId, addToast, adminFetch, t, fetchVetoState]
   );
 
   const handleReset = useCallback(async () => {
@@ -322,7 +325,7 @@ export default function VetoPanel() {
     } finally {
       setSubmitting(false);
     }
-  }, [selectedMatchId, addToast, confirm, adminFetch, t]);
+  }, [selectedMatchId, addToast, confirm, adminFetch, t, fetchVetoState]);
 
   const handleUnlock = useCallback(async () => {
     if (!selectedMatchId || !canUnlockVeto) return;
@@ -358,7 +361,15 @@ export default function VetoPanel() {
     } finally {
       setSubmitting(false);
     }
-  }, [selectedMatchId, addToast, confirm, canUnlockVeto, adminFetch, t]);
+  }, [
+    selectedMatchId,
+    addToast,
+    confirm,
+    canUnlockVeto,
+    adminFetch,
+    t,
+    fetchVetoState,
+  ]);
 
   // Compute used maps in current veto
   const usedMapNames = new Set((vetoState?.steps || []).map((s) => s.map_name));

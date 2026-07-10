@@ -1,6 +1,6 @@
 // pages/admin/stages/create.tsx
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
@@ -164,11 +164,7 @@ function AdminStageCreatePage({ staff }: StaffProps) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
-  useEffect(() => {
-    fetchTournaments();
-  }, []);
-
-  async function fetchTournaments() {
+  const fetchTournaments = useCallback(async () => {
     setLoadingTournaments(true);
     setErrorMsg(null);
     try {
@@ -181,7 +177,11 @@ function AdminStageCreatePage({ staff }: StaffProps) {
     } finally {
       setLoadingTournaments(false);
     }
-  }
+  }, [adminFetchJson, t]);
+
+  useEffect(() => {
+    fetchTournaments();
+  }, [fetchTournaments]);
 
   function parseSettings(): any | null {
     const raw = form.settingsRaw.trim();

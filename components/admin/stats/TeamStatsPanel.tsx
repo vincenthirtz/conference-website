@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
@@ -98,16 +98,7 @@ export default function TeamStatsPanel() {
   const [limit] = useState(100);
   const [offset, setOffset] = useState(0);
 
-  useEffect(() => {
-    fetchTournaments();
-  }, []);
-
-  useEffect(() => {
-    fetchStats();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- refetch piloté par les seuls filtres/offset listés ; `search` (réactif) est volontairement exclu (appliqué via handleFilterSubmit). adminFetch* est désormais stable mais fetchStats reste hors deps pour ne pas déclencher sur `search`.
-  }, [offset, tournamentId, sortBy, sortDir, minMatches]);
-
-  async function fetchTournaments() {
+  const fetchTournaments = useCallback(async () => {
     try {
       setLoadingTournaments(true);
       const res = await adminFetch('/api/admin/tournaments?limit=200');
@@ -119,7 +110,16 @@ export default function TeamStatsPanel() {
     } finally {
       setLoadingTournaments(false);
     }
-  }
+  }, [adminFetch]);
+
+  useEffect(() => {
+    fetchTournaments();
+  }, [fetchTournaments]);
+
+  useEffect(() => {
+    fetchStats();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- refetch piloté par les seuls filtres/offset listés ; `search` (réactif) est volontairement exclu (appliqué via handleFilterSubmit). adminFetch* est désormais stable mais fetchStats reste hors deps pour ne pas déclencher sur `search`.
+  }, [offset, tournamentId, sortBy, sortDir, minMatches]);
 
   async function fetchStats() {
     setLoading(true);

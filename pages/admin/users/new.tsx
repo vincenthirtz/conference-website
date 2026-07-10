@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -113,13 +113,7 @@ function AdminCreateUserPage({ staff, teamRoles }: StaffProps) {
     teamAssignment?: AddMemberResponse;
   } | null>(null);
 
-  useEffect(() => {
-    if (assignToTeam && teams.length === 0) {
-      loadTeams();
-    }
-  }, [assignToTeam, teams.length]);
-
-  async function loadTeams() {
+  const loadTeams = useCallback(async () => {
     setLoadingTeams(true);
     try {
       const res = await adminFetch('/api/admin/teams?limit=200&includeTotal=0');
@@ -131,7 +125,13 @@ function AdminCreateUserPage({ staff, teamRoles }: StaffProps) {
     } finally {
       setLoadingTeams(false);
     }
-  }
+  }, [adminFetch]);
+
+  useEffect(() => {
+    if (assignToTeam && teams.length === 0) {
+      loadTeams();
+    }
+  }, [assignToTeam, teams.length, loadTeams]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
