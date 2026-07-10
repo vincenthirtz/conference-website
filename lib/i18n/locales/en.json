@@ -73,7 +73,8 @@
     "slotsLabel": "New slots",
     "addSlot": "Add a slot",
     "removeSlot": "Remove this slot",
-    "maxSlotsHint": "Propose up to 5 slots."
+    "maxSlotsHint": "Propose up to 5 slots.",
+    "scrimTzNote": "Slots in your timezone: {tz}"
   },
   "supportAssoCard": {
     "title": "Lend the association a hand?",
@@ -633,6 +634,7 @@
     "addSlot": "Add a slot",
     "removeSlot": "Remove this slot",
     "maxSlotsHint": "Propose up to 5 slots. Your opponent will pick one or counter with others.",
+    "scrimTzNote": "Slots in your timezone: {tz}",
     "atLeastOneSlot": "Propose at least one slot."
   },
   "requestCaptain": {

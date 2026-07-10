@@ -73,7 +73,8 @@
     "slotsLabel": "Nouveaux créneaux",
     "addSlot": "Ajouter un créneau",
     "removeSlot": "Retirer ce créneau",
-    "maxSlotsHint": "Proposez jusqu'à 5 créneaux."
+    "maxSlotsHint": "Proposez jusqu'à 5 créneaux.",
+    "scrimTzNote": "Créneaux dans ton fuseau : {tz}"
   },
   "supportAssoCard": {
     "title": "Un coup de main à l'asso ?",
@@ -633,6 +634,7 @@
     "addSlot": "Ajouter un créneau",
     "removeSlot": "Retirer ce créneau",
     "maxSlotsHint": "Proposez jusqu'à 5 créneaux. L'adversaire en choisira un ou vous en reproposera d'autres.",
+    "scrimTzNote": "Créneaux dans ton fuseau : {tz}",
     "atLeastOneSlot": "Proposez au moins un créneau."
   },
   "requestCaptain": {

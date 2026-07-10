@@ -782,6 +782,7 @@ function PlayerDashboard() {
                               addSlot: tr.addSlot,
                               removeSlot: tr.removeSlot,
                               maxSlotsHint: tr.maxSlotsHint,
+                              timezoneNote: tr.scrimTzNote,
                             }}
                           />
                           <button
