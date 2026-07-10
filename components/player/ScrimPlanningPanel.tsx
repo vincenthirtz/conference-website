@@ -31,6 +31,7 @@ import {
   rankValidatableSlots,
 } from '@/utils/teams/scrimPlanningOverlap';
 import { buildScrimIcs, downloadIcs } from '@/utils/teams/scrimIcs';
+import { formatInstant } from '@/utils/teams/scrimTime';
 import type { ScrimPlanning, ScrimPlanningParty } from '@/types/admin';
 import type {
   PlanningConfig,
@@ -346,14 +347,7 @@ export default function ScrimPlanningPanel({
   }, [dirty, readOnly, saving, handleSave]);
 
   const formatSlot = (iso: string) =>
-    new Date(iso).toLocaleString(locale, {
-      weekday: 'short',
-      day: 'numeric',
-      month: 'short',
-      hour: '2-digit',
-      minute: '2-digit',
-      timeZone: planning.timezone,
-    });
+    formatInstant(iso, { locale, timeZone: planning.timezone });
 
   const slotsCount = slots.length;
 

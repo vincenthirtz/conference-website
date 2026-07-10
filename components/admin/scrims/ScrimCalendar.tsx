@@ -19,6 +19,7 @@ import {
   todayYmdInTz,
   assignLanes,
 } from '@/utils/teams/scrimCalendar';
+import { fmtHourOfDay as fmtHour } from '@/utils/teams/scrimTime';
 
 export type CalendarScrim = {
   id: string;
@@ -70,8 +71,6 @@ const STATUS_BLOCK: Record<string, string> = {
   cancelled: 'bg-red-700/70 border-red-400/50 text-red-100 line-through',
 };
 
-const pad2 = (n: number) => String(n).padStart(2, '0');
-const fmtHour = (m: number) => `${pad2(Math.floor(m / 60))}:${pad2(m % 60)}`;
 /** Label de graduation : au-delà de minuit, affiche l'heure J+1 avec un « +1 ». */
 const fmtMark = (m: number) =>
   m >= 24 * 60 ? `${fmtHour(m - 24 * 60)}⁺¹` : fmtHour(m);

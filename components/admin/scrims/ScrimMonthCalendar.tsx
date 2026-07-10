@@ -15,6 +15,7 @@ import {
   dateAndMinuteInTz,
   todayYmdInTz,
 } from '@/utils/teams/scrimCalendar';
+import { fmtHourOfDay as fmtHour } from '@/utils/teams/scrimTime';
 import type {
   CalendarScrim,
   CalendarMatch,
@@ -30,7 +31,6 @@ export type ScrimMonthLabels = {
 
 const MAX_CHIPS = 3;
 const pad2 = (n: number) => String(n).padStart(2, '0');
-const fmtHour = (m: number) => `${pad2(Math.floor(m / 60))}:${pad2(m % 60)}`;
 
 const STATUS_CHIP: Record<string, string> = {
   draft: 'bg-neutral-600/80 text-neutral-100',

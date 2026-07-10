@@ -22,6 +22,7 @@ import {
   type Heatmap,
   type HeatmapCell,
 } from '@/utils/teams/scrimPlanningOverlap';
+import { fmtHourOfDay as fmtHour } from '@/utils/teams/scrimTime';
 import type { AvailabilityGridLabels } from '@/components/scrim/AvailabilityGrid';
 
 export type AvailabilityCalendarLabels = AvailabilityGridLabels & {
@@ -74,12 +75,6 @@ const HEAT_RAMP = [
   'bg-emerald-600/60',
   'bg-emerald-400/80',
 ];
-
-const pad2 = (n: number) => String(n).padStart(2, '0');
-
-function fmtHour(minuteOfDay: number): string {
-  return `${pad2(Math.floor(minuteOfDay / 60))}:${pad2(minuteOfDay % 60)}`;
-}
 
 function fmtDayHeader(
   dateStr: string,

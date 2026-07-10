@@ -11,6 +11,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocale } from '@/lib/i18n/useLocale';
 import { addDaysYmd } from '@/utils/teams/scrimCalendar';
+import { fmtHourOfDay as fmtHour, formatInstant } from '@/utils/teams/scrimTime';
 
 const MAX_SLOTS = 5;
 const DAYS_AHEAD = 28; // horizon de sélection
@@ -38,7 +39,6 @@ export type ScrimSlotCalendarLabels = {
 };
 
 const pad2 = (n: number) => String(n).padStart(2, '0');
-const fmtHour = (m: number) => `${pad2(Math.floor(m / 60))}:${pad2(m % 60)}`;
 
 /** Date calendaire locale du jour ('YYYY-MM-DD'). */
 function localTodayYmd(): string {
@@ -111,17 +111,7 @@ export default function ScrimSlotCalendarPicker({
     };
   };
 
-  const echo = (value: string): string | null => {
-    const d = new Date(value);
-    if (Number.isNaN(d.getTime())) return null;
-    return d.toLocaleString(locale, {
-      weekday: 'short',
-      day: 'numeric',
-      month: 'short',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
+  const echo = (value: string) => formatInstant(value, { locale });
 
   const toggle = (value: string) => {
     if (selected.has(value)) {

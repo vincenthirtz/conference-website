@@ -20,6 +20,7 @@ import {
   type Heatmap,
   type HeatmapCell,
 } from '@/utils/teams/scrimPlanningOverlap';
+import { fmtHourOfDay as fmtHour } from '@/utils/teams/scrimTime';
 
 export type AvailabilityGridLabels = {
   /** Titre de la légende (ex. « Disponibilités »). */
@@ -99,11 +100,6 @@ function fmtWeekday(dateStr: string, timezone: string): { dow: string; day: stri
   return { dow, day };
 }
 
-function fmtHour(minuteOfDay: number): string {
-  const hh = String(Math.floor(minuteOfDay / 60)).padStart(2, '0');
-  const mm = String(minuteOfDay % 60).padStart(2, '0');
-  return `${hh}:${mm}`;
-}
 
 export default function AvailabilityGrid({
   config,
