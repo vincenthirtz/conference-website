@@ -271,7 +271,7 @@ function OnboardRequestPage() {
         }
 
         addToast(t.toastSuccess, 'success');
-        router.push(`/onboard/check-email?id=${data.requestId}`);
+        router.push(`/onboard/invite-bot/${data.requestId}`);
       } catch (err) {
         logger.warn('[onboard/request] submit error', err);
         try {

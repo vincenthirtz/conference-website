@@ -4,7 +4,8 @@
 //   - 401 if no Supabase session
 //   - 400 if invalid slug / reserved slug / bad email / missing turnstile
 //   - 400 if Turnstile verification fails
-//   - 200 happy path + tenant_requests row created + verify email called
+//   - 200 happy path + tenant_requests row created at pending_bot_invite
+//     (email pre-verified, no verify email sent)
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
@@ -150,29 +151,28 @@ describe('POST /api/onboard/tenant-request', () => {
     expect((res.body as any).code).toBe('INVALID_CAPTCHA');
   });
 
-  it('happy path → insère tenant_request + envoie email', async () => {
+  it('happy path → insère tenant_request à pending_bot_invite (sans email)', async () => {
     signIn();
     const res = makeRes();
     await handler(makeReq(validBody()), res);
 
     expect(res.statusCode).toBe(200);
     expect((res.body as any).ok).toBe(true);
-    expect((res.body as any).status).toBe('pending_email_verification');
+    expect((res.body as any).status).toBe('pending_bot_invite');
 
     const rows = store.tenant_requests ?? [];
     expect(rows).toHaveLength(1);
     expect(rows[0].requested_slug).toBe('my-org');
     expect(rows[0].requester_discord_user_id).toBe(DISCORD_ID);
     expect(rows[0].requester_auth_user_id).toBe(USER_ID);
-    expect(rows[0].status).toBe('pending_email_verification');
-    expect(typeof rows[0].email_verification_token).toBe('string');
-    expect((rows[0].email_verification_token as string).length).toBe(64);
+    // Straight to pending_bot_invite, email pre-verified — the requester is
+    // already Discord-authenticated, so no verification round-trip.
+    expect(rows[0].status).toBe('pending_bot_invite');
+    expect(typeof rows[0].email_verified_at).toBe('string');
+    expect(rows[0].email_verification_token ?? null).toBeNull();
 
-    expect(sendVerifyMock).toHaveBeenCalledTimes(1);
-    const call = sendVerifyMock.mock.calls[0][0];
-    expect(call.to).toBe('op@example.com');
-    expect(call.requestedSlug).toBe('my-org');
-    expect(call.verifyUrl).toContain('/api/onboard/verify-email?token=');
+    // No verification email is sent anymore.
+    expect(sendVerifyMock).not.toHaveBeenCalled();
   });
 
   it('409 si slug existe déjà côté tenants', async () => {

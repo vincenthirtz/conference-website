@@ -7,13 +7,11 @@
 //
 // Displays the Discord OAuth invite URL the operator must follow to invite
 // the bot onto their guild. Polls /api/onboard/status/[id] every 5s while
-// the page is open ; when status flips to 'completed' we either redirect to
-// the secrets reveal page (if we got the token, currently NOT exposed by the
-// status endpoint — UX falls back to "check your email") or show the
-// "completed" success card.
+// the page is open ; when status flips to 'completed' the status endpoint
+// hands back a single-use secrets-reveal URL (owner-only) which we surface as
+// a prominent CTA on the success card — no email round-trip needed.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/router';
 import Link from 'next/link';
 import type { GetServerSideProps } from 'next';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
@@ -31,6 +29,7 @@ type StatusFromApi = {
   createdTenantId: string | null;
   createdGuildId: string | null;
   botInviteUrl: string | null;
+  secretsRevealUrl: string | null;
 };
 
 type ServerProps = {
@@ -133,20 +132,12 @@ function OnboardInviteBotPage({
   botInviteUrl,
 }: ServerProps) {
   const t = useT('onboardInviteBot');
-  const router = useRouter();
   const [status, setStatus] = useState(initialStatus);
   const [createdTenantId, setCreatedTenantId] = useState<string | null>(null);
+  const [secretsRevealUrl, setSecretsRevealUrl] = useState<string | null>(null);
   const stoppedRef = useRef(false);
 
   useEffect(() => {
-    if (status === 'completed') {
-      // Best-effort redirect — the status endpoint does NOT expose the
-      // single-use reveal token (security), so the user is expected to use
-      // the email link to land on /onboard/secrets/<token>.
-      // We keep them on this page with a "success" card pointing to the
-      // email.
-      return;
-    }
     stoppedRef.current = false;
 
     const tick = async () => {
@@ -159,18 +150,24 @@ function OnboardInviteBotPage({
         const data = (await res.json()) as StatusFromApi;
         setStatus(data.status);
         setCreatedTenantId(data.createdTenantId);
+        setSecretsRevealUrl(data.secretsRevealUrl ?? null);
       } catch {
         /* swallow */
       }
     };
 
+    // Always fetch once — covers landing directly on an already-completed
+    // request so we can surface the single-use reveal link. Keep polling only
+    // until provisioning is done.
     tick();
+    if (status === 'completed') return;
+
     const handle = window.setInterval(tick, POLL_INTERVAL_MS);
     return () => {
       stoppedRef.current = true;
       window.clearInterval(handle);
     };
-  }, [id, status, router]);
+  }, [id, status]);
 
   const isCompleted = status === 'completed';
   const isBlocked = status !== 'pending_bot_invite' && !isCompleted;
@@ -256,6 +253,17 @@ function OnboardInviteBotPage({
                   </p>
                 </div>
               </div>
+              {secretsRevealUrl ? (
+                <a
+                  href={secretsRevealUrl}
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 px-6 py-4 text-base font-semibold text-black transition shadow-lg shadow-emerald-500/20"
+                  data-test="onboard-reveal-secrets"
+                >
+                  🔑 {t.revealButton}
+                </a>
+              ) : (
+                <p className="text-xs text-emerald-100/80">{t.revealedAlready}</p>
+              )}
               <p className="text-xs text-emerald-100/80">
                 {t.completedContact}{' '}
                 <a
@@ -369,8 +377,8 @@ const onboardInviteBotSeo: SeoProps = {
     en: 'Invite the bot to your Discord server',
   },
   description: {
-    fr: "Étape 3 de l'onboarding : ouvrez Discord et autorisez le bot Conférence sur votre serveur. Vos secrets vous seront ensuite envoyés par email.",
-    en: 'Onboarding step 3: open Discord and authorise the Conférence bot on your server. Your secrets will then be emailed to you.',
+    fr: "Étape 3 de l'onboarding : ouvrez Discord et autorisez le bot Conférence sur votre serveur. Vos clés s'affichent ensuite directement ici.",
+    en: 'Onboarding step 3: open Discord and authorise the Conférence bot on your server. Your keys then appear right here.',
   },
   noindex: true,
 };

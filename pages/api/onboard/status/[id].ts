@@ -8,14 +8,18 @@
 // users who linked Discord without logging into Supabase Auth, the
 // `requester_discord_user_id` matches the identity's snowflake.
 //
-// Never exposes secrets. Returns the bot invite OAuth URL so the UI can
-// (re)render the "Invite the bot" CTA without needing extra env vars.
+// Returns the bot invite OAuth URL so the UI can (re)render the "Invite the
+// bot" CTA without needing extra env vars. Once the request is `completed`,
+// also returns the single-use secrets-reveal URL — but ONLY to the verified
+// owner (ownership is enforced below) and ONLY while the secrets have not yet
+// been consumed. It never returns the raw secrets themselves; the reveal URL
+// is a one-shot link consumed by /api/onboard/secrets/[token].
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 
 import { getServerClient, supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
-import { buildBotInviteUrl } from '@/utils/onboard';
+import { buildBotInviteUrl, getSiteUrl } from '@/utils/onboard';
 import { logger } from '@/utils/logger';
 
 const UUID_RE =
@@ -79,7 +83,7 @@ export default async function handler(
   const { data: row, error: selErr } = await supabaseAdmin
     .from('tenant_requests')
     .select(
-      'id, status, requester_auth_user_id, requester_discord_user_id, requested_slug, requested_name, created_at, email_verified_at, created_tenant_id, created_guild_id'
+      'id, status, requester_auth_user_id, requester_discord_user_id, requested_slug, requested_name, created_at, email_verified_at, created_tenant_id, created_guild_id, secrets_reveal_token, secrets_revealed_at'
     )
     .eq('id', id)
     .maybeSingle();
@@ -140,5 +144,14 @@ export default async function handler(
     createdTenantId: row.created_tenant_id ?? null,
     createdGuildId: row.created_guild_id ?? null,
     botInviteUrl: buildBotInviteUrl(),
+    // Single-use reveal link, surfaced only to the verified owner once the
+    // tenant is provisioned and while the secrets are still unconsumed.
+    // Opening it consumes the secrets (see /api/onboard/secrets/[token]).
+    secretsRevealUrl:
+      row.status === 'completed' &&
+      row.secrets_reveal_token &&
+      !row.secrets_revealed_at
+        ? `${getSiteUrl()}/onboard/secrets/${row.secrets_reveal_token}`
+        : null,
   });
 }

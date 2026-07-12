@@ -4,20 +4,18 @@
 // Supabase Auth (Discord OAuth), pass a valid Cloudflare Turnstile token,
 // and not already have a pending request.
 //
-// On success → row in `tenant_requests` with `status='pending_email_verification'`
-// + Brevo email containing a one-time verification link.
+// On success → row in `tenant_requests` with `status='pending_bot_invite'`
+// (email marked verified: the requester is already authenticated via Discord
+// OAuth, so there is no email round-trip — this mirrors the Discord
+// slash-command flow). The next step is inviting the bot, which triggers
+// auto-provisioning.
 
-import crypto from 'crypto';
 import type { NextApiRequest, NextApiResponse } from 'next';
 
 import { getServerClient, supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit, getClientIp } from '@/utils/rateLimit';
 import { verifyTurnstileToken } from '@/utils/turnstile';
-import { sendOnboardVerifyEmail } from '@/utils/emailOnboard';
-import {
-  onboardTenantRequestSchema,
-  getSiteUrl,
-} from '@/utils/onboard';
+import { onboardTenantRequestSchema } from '@/utils/onboard';
 import { logger } from '@/utils/logger';
 
 const DISCORD_ID_RE = /^[0-9]{15,25}$/;
@@ -146,9 +144,13 @@ export default async function handler(
   }
 
   // ---------------------------------------------------------------------
-  // 4) Generate the one-time email verification token + persist the row.
+  // 4) Persist the request straight at `pending_bot_invite`. The requester
+  //    signed in via Discord OAuth (identity already verified) and passed
+  //    Turnstile + the per-IP / per-Discord-user rate limits, so we skip the
+  //    email round-trip entirely and stamp `email_verified_at` now — the
+  //    auto-claim step (link-guild) gates on it being non-null. This is
+  //    exactly what the Discord slash-command onboarding flow already does.
   // ---------------------------------------------------------------------
-  const emailVerificationToken = crypto.randomBytes(32).toString('hex');
   const userAgent = (req.headers['user-agent'] ?? '').toString().slice(0, 500);
 
   const { data: inserted, error: insertErr } = await supabaseAdmin
@@ -161,8 +163,8 @@ export default async function handler(
       requested_slug,
       requested_name,
       description: description && description.length > 0 ? description : null,
-      status: 'pending_email_verification',
-      email_verification_token: emailVerificationToken,
+      status: 'pending_bot_invite',
+      email_verified_at: new Date().toISOString(),
       ip_address: ip !== 'unknown' ? ip : null,
       user_agent: userAgent || null,
     })
@@ -190,7 +192,7 @@ export default async function handler(
       if (message.includes('uq_tenant_requests_active_per_user')) {
         return res.status(409).json({
           error:
-            'Vous avez déjà une demande en cours. Vérifiez vos mails ou contactez le staff.',
+            'Vous avez déjà une demande en cours. Terminez-la (invitez le bot) ou contactez le staff.',
           code: 'REQUEST_ALREADY_PENDING',
         });
       }
@@ -226,32 +228,14 @@ export default async function handler(
   }
 
   // ---------------------------------------------------------------------
-  // 5) Send the verification email. We don't fail the request if email
-  //    delivery hiccups — the row exists and a /api/onboard/resend (TODO,
-  //    not in V1 scope) could resend later.
+  // 5) Done. No email at this stage — the requester goes straight to
+  //    inviting the bot. The success email (with the single-use secrets
+  //    reveal link) is sent later by the auto-claim step once the bot joins,
+  //    and the same link is also surfaced on the invite-bot page.
   // ---------------------------------------------------------------------
-  const verifyUrl = `${getSiteUrl()}/api/onboard/verify-email?token=${encodeURIComponent(
-    emailVerificationToken
-  )}`;
-  const emailResult = await sendOnboardVerifyEmail({
-    to: requested_email,
-    displayName: discordDisplayName,
-    verifyUrl,
-    requestedSlug: requested_slug,
-    requestedName: requested_name,
-  });
-  if (!emailResult.success) {
-    logger.warn('[onboard/tenant-request] email send failed', {
-      requestId: inserted.id,
-      error: emailResult.error,
-    });
-    // TODO(V2): expose a /api/onboard/resend endpoint so the user can retry.
-  }
-
   return res.status(200).json({
     ok: true,
     requestId: inserted.id,
-    status: 'pending_email_verification',
-    emailSent: emailResult.success,
+    status: 'pending_bot_invite',
   });
 }
