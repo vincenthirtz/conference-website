@@ -38,6 +38,9 @@ type ApiTokenRow = {
   created_at: string;
   last_used_at: string | null;
   revoked_at: string | null;
+  expires_at?: string | null;
+  created_by?: string | null;
+  created_by_name?: string | null;
   comp?: boolean | null;
   comp_note?: string | null;
 };
@@ -51,10 +54,22 @@ type CreateResponse = {
     token_prefix: string;
     scopes: string[];
     created_at: string;
+    expires_at?: string | null;
     comp?: boolean | null;
     comp_note?: string | null;
   };
 };
+
+/** Options d'expiration (jours). `0` = pas d'expiration. */
+const TTL_OPTIONS = [0, 30, 90, 365] as const;
+
+function isExpired(token: ApiTokenRow): boolean {
+  return (
+    !token.revoked_at &&
+    Boolean(token.expires_at) &&
+    new Date(token.expires_at as string).getTime() <= Date.now()
+  );
+}
 
 /** Détecte un refus 403 FORBIDDEN_COMP (activation d'exemption sans owner). */
 function isForbiddenComp(err: unknown): boolean {
@@ -110,6 +125,7 @@ function AdminApiTokensPage({ staff }: Props) {
 
   const [name, setName] = useState('');
   const [selectedScopes, setSelectedScopes] = useState<Set<string>>(new Set());
+  const [ttlDays, setTtlDays] = useState<number>(0);
   const [comp, setComp] = useState(false);
   const [compNote, setCompNote] = useState('');
   const [creating, setCreating] = useState(false);
@@ -175,11 +191,13 @@ function AdminApiTokensPage({ staff }: Props) {
             scopes: [...selectedScopes],
             comp: wantsComp,
             ...(wantsComp && trimmedNote ? { comp_note: trimmedNote } : {}),
+            ...(ttlDays > 0 ? { expires_in_days: ttlDays } : {}),
           }),
         });
         addToast(t.toastCreated, 'success');
         setName('');
         setSelectedScopes(new Set());
+        setTtlDays(0);
         setComp(false);
         setCompNote('');
         setRevealedToken(res.token);
@@ -199,6 +217,7 @@ function AdminApiTokensPage({ staff }: Props) {
       creating,
       name,
       selectedScopes,
+      ttlDays,
       comp,
       compNote,
       isOwner,
@@ -406,6 +425,30 @@ function AdminApiTokensPage({ staff }: Props) {
                 </div>
               </div>
 
+              {/* ===== Expiration ===== */}
+              <div>
+                <label
+                  htmlFor="api-token-ttl"
+                  className="block text-sm text-neutral-400 mb-1"
+                >
+                  {t.expiryLabel}
+                </label>
+                <select
+                  id="api-token-ttl"
+                  value={ttlDays}
+                  onChange={(e) => setTtlDays(Number(e.target.value))}
+                  className="w-full sm:w-auto px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                  data-testid="api-token-ttl-select"
+                >
+                  {TTL_OPTIONS.map((d) => (
+                    <option key={d} value={d}>
+                      {d === 0 ? t.expiryNever : t.expiryInDays.replace('{d}', String(d))}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-neutral-500 mt-1.5">{t.expiryHint}</p>
+              </div>
+
               {/* ===== Exemption partenaire (owner uniquement) ===== */}
               <div
                 className="rounded-lg border border-amber-500/25 bg-amber-500/5 p-3"
@@ -507,6 +550,7 @@ function AdminApiTokensPage({ staff }: Props) {
                       <th scope="col" className="px-6 py-3 font-medium">{t.colPrefix}</th>
                       <th scope="col" className="px-6 py-3 font-medium">{t.colScopes}</th>
                       <th scope="col" className="px-6 py-3 font-medium">{t.colCreated}</th>
+                      <th scope="col" className="px-6 py-3 font-medium">{t.colExpires}</th>
                       <th scope="col" className="px-6 py-3 font-medium">{t.colLastUsed}</th>
                       <th scope="col" className="px-6 py-3 font-medium">{t.colStatus}</th>
                       <th scope="col" className="px-6 py-3 font-medium text-right">
@@ -517,6 +561,7 @@ function AdminApiTokensPage({ staff }: Props) {
                   <tbody className="divide-y divide-neutral-700/50">
                     {tokens.map((token) => {
                       const revoked = Boolean(token.revoked_at);
+                      const expired = isExpired(token);
                       return (
                         <tr
                           key={token.id}
@@ -557,7 +602,23 @@ function AdminApiTokensPage({ staff }: Props) {
                             </div>
                           </td>
                           <td className="px-6 py-4 text-neutral-400 whitespace-nowrap">
-                            {formatDate(token.created_at, '—')}
+                            <div>{formatDate(token.created_at, '—')}</div>
+                            {token.created_by_name && (
+                              <div className="text-xs text-neutral-500">
+                                {t.byCreator.replace('{name}', token.created_by_name)}
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {token.expires_at ? (
+                              <span
+                                className={expired ? 'text-amber-300' : 'text-neutral-400'}
+                              >
+                                {formatDate(token.expires_at, '—')}
+                              </span>
+                            ) : (
+                              <span className="text-neutral-500">{t.expiryNever}</span>
+                            )}
                           </td>
                           <td className="px-6 py-4 text-neutral-400 whitespace-nowrap">
                             {formatDate(token.last_used_at, t.neverUsed)}
@@ -566,6 +627,13 @@ function AdminApiTokensPage({ staff }: Props) {
                             {revoked ? (
                               <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-neutral-600/40 text-neutral-300 border border-neutral-500/40">
                                 {t.statusRevoked}
+                              </span>
+                            ) : expired ? (
+                              <span
+                                className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-600/20 text-amber-300 border border-amber-500/30"
+                                data-testid={`api-token-expired-badge-${token.id}`}
+                              >
+                                {t.statusExpired}
                               </span>
                             ) : (
                               <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-600/20 text-emerald-300 border border-emerald-500/30">

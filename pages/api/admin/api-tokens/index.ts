@@ -52,6 +52,12 @@ const createBodySchema = z.object({
   comp: z.boolean().optional().default(false),
   /** Note libre traçant le partenaire / la raison de l'exemption. */
   comp_note: z.string().trim().max(500).optional(),
+  /**
+   * Durée de vie optionnelle, en jours. null / absent => pas d'expiration.
+   * On accepte des jours (pas un timestamp arbitraire) pour que l'échéance soit
+   * toujours calculée serveur, jamais dictée par le client.
+   */
+  expires_in_days: z.number().int().positive().max(3650).nullable().optional(),
 });
 
 async function handler(
@@ -81,7 +87,7 @@ async function handleList(
   const { data, error } = await supabaseAdmin
     .from('tenant_api_tokens')
     .select(
-      'id, name, token_prefix, scopes, created_at, last_used_at, revoked_at, comp, comp_note'
+      'id, name, token_prefix, scopes, created_at, last_used_at, revoked_at, expires_at, created_by, comp, comp_note'
     )
     .eq('tenant_id', ctx.tenantId)
     .order('created_at', { ascending: false });
@@ -93,7 +99,32 @@ async function handleList(
     return res.status(500).json({ error: 'Server error.' });
   }
 
-  return res.status(200).json({ tokens: data ?? [] });
+  const rows = data ?? [];
+
+  // Résout le nom du créateur (audit) via une requête staff séparée — pas
+  // d'embed PostgREST (created_by est une colonne d'audit sans FK).
+  const creatorIds = [
+    ...new Set(
+      rows.map((r) => r.created_by).filter((v): v is string => Boolean(v))
+    ),
+  ];
+  const nameById = new Map<string, string>();
+  if (creatorIds.length > 0) {
+    const { data: staffRows } = await supabaseAdmin
+      .from('staff')
+      .select('id, display_name')
+      .in('id', creatorIds);
+    for (const s of staffRows ?? []) {
+      if (s.display_name) nameById.set(s.id as string, s.display_name as string);
+    }
+  }
+
+  const tokens = rows.map((r) => ({
+    ...r,
+    created_by_name: r.created_by ? nameById.get(r.created_by) ?? null : null,
+  }));
+
+  return res.status(200).json({ tokens });
 }
 
 async function handleCreate(
@@ -129,6 +160,13 @@ async function handleCreate(
 
   const { plain, hash, prefix } = generateToken();
 
+  const expiresAt =
+    parsed.data.expires_in_days != null
+      ? new Date(
+          Date.now() + parsed.data.expires_in_days * 24 * 60 * 60 * 1000
+        ).toISOString()
+      : null;
+
   const { data, error } = await supabaseAdmin
     .from('tenant_api_tokens')
     .insert({
@@ -139,8 +177,12 @@ async function handleCreate(
       scopes: scopeResult.scopes,
       comp,
       comp_note: comp ? (parsed.data.comp_note ?? null) : null,
+      expires_at: expiresAt,
+      created_by: ctx.staff.id,
     })
-    .select('id, name, token_prefix, scopes, created_at, comp, comp_note')
+    .select(
+      'id, name, token_prefix, scopes, created_at, expires_at, comp, comp_note'
+    )
     .single();
 
   if (error || !data) {
@@ -163,6 +205,7 @@ async function handleCreate(
       scopes: scopeResult.scopes,
       prefix,
       comp,
+      expires_at: expiresAt,
     },
   });
 

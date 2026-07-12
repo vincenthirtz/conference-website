@@ -67,6 +67,7 @@ function seedToken(
     tenant_id: string;
     scopes: string[];
     revoked_at: string | null;
+    expires_at: string | null;
     plain: string;
     plan: PlanOver;
     seedTenant: boolean;
@@ -83,6 +84,7 @@ function seedToken(
     name: 'test token',
     scopes: over.scopes ?? ['matches:write'],
     revoked_at: over.revoked_at ?? null,
+    expires_at: over.expires_at ?? null,
     comp: over.comp ?? false,
   });
   if (over.seedTenant !== false) seedTenantPlan(tenantId, over.plan ?? {});
@@ -174,6 +176,19 @@ describe('resolveApiTokenFromHeader', () => {
     const plain = seedToken({ revoked_at: '2026-01-01T00:00:00.000Z' });
     const result = await resolveApiTokenFromHeader(`Bearer ${plain}`);
     expect(result.ok).toBe(false);
+  });
+
+  it('rejects an expired token (expires_at in the past)', async () => {
+    const plain = seedToken({ expires_at: '2000-01-01T00:00:00.000Z' });
+    const result = await resolveApiTokenFromHeader(`Bearer ${plain}`);
+    expect(result.ok).toBe(false);
+  });
+
+  it('accepts a token whose expiry is in the future', async () => {
+    const future = new Date(Date.now() + 60_000).toISOString();
+    const plain = seedToken({ expires_at: future });
+    const result = await resolveApiTokenFromHeader(`Bearer ${plain}`);
+    expect(result.ok).toBe(true);
   });
 
   it('verifyPublicApiToken reads the header off a NextApiRequest', async () => {

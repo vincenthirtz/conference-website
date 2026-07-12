@@ -150,7 +150,7 @@ export async function resolveApiTokenFromHeader(
   const hash = sha256Hex(plain);
   const { data, error } = await supabaseAdmin
     .from('tenant_api_tokens')
-    .select('id, tenant_id, scopes, revoked_at, comp')
+    .select('id, tenant_id, scopes, revoked_at, comp, expires_at')
     .eq('token_hash', hash)
     .maybeSingle();
 
@@ -159,6 +159,11 @@ export async function resolveApiTokenFromHeader(
     return { ok: false };
   }
   if (!data || data.revoked_at) return { ok: false };
+
+  // Expiration : une échéance passée rejette le token, comme une révocation.
+  if (data.expires_at && new Date(data.expires_at as string).getTime() <= Date.now()) {
+    return { ok: false };
+  }
 
   // Bump last_used_at — fire-and-forget, on ne bloque pas la requête.
   void supabaseAdmin
