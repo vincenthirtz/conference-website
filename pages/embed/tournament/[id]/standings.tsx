@@ -13,7 +13,7 @@
 import type { GetServerSideProps } from 'next';
 import Head from 'next/head';
 import { supabaseAdmin } from '@/utils/supabase';
-import { DEFAULT_TENANT_ID } from '@/utils/tenant';
+import { resolveEmbedChrome } from '@/utils/embed';
 import { findTournamentByIdOrSlug } from '@/utils/tournamentLookup';
 import {
   readPublicTournamentStandings,
@@ -36,6 +36,7 @@ type Props = {
   tournamentName: string;
   standings: PublicStanding[];
   theme: EmbedTheme;
+  accent: string | null;
   publicUrl: string | null;
 };
 
@@ -45,13 +46,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
     return { notFound: true };
   }
 
-  const themeParam = ctx.query.theme;
-  const theme: EmbedTheme =
-    (Array.isArray(themeParam) ? themeParam[0] : themeParam) === 'light'
-      ? 'light'
-      : 'dark';
-
-  const tenantId = DEFAULT_TENANT_ID;
+  const { tenantId, theme, accent } = await resolveEmbedChrome(ctx.query);
 
   // 1) Tournament (UUID or slug) — same lookup as the public views.
   const tournament = await findTournamentByIdOrSlug<TournamentLite>(
@@ -83,6 +78,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
       tournamentName: tournament.name,
       standings,
       theme,
+      accent,
       publicUrl,
     },
   };
@@ -92,6 +88,7 @@ export default function EmbedTournamentStandingsPage({
   tournamentName,
   standings,
   theme,
+  accent,
   publicUrl,
 }: Props) {
   return (
@@ -108,6 +105,7 @@ export default function EmbedTournamentStandingsPage({
         tournamentName={tournamentName}
         standings={standings}
         theme={theme}
+        accent={accent}
         publicUrl={publicUrl}
       />
     </>

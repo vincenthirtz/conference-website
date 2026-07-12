@@ -2877,6 +2877,8 @@
     "themeLabel": "Thème",
     "themeLight": "Clair",
     "themeDark": "Sombre",
+    "accentToggle": "Couleur d'accent",
+    "accentPickerLabel": "Choisir la couleur d'accent",
     "bracketName": "Arbre",
     "standingsName": "Classement",
     "scheduleName": "Planning",

@@ -72,6 +72,8 @@ export default function ShareEmbedPanel({
   const { addToast } = useToast();
   const [open, setOpen] = useState(false);
   const [theme, setTheme] = useState<EmbedTheme>('dark');
+  const [accentOn, setAccentOn] = useState(false);
+  const [accent, setAccent] = useState('#8b5cf6');
   const [copiedWidget, setCopiedWidget] = useState<WidgetKey | null>(null);
   const dialogRef = useFocusTrap<HTMLDivElement>();
 
@@ -341,28 +343,62 @@ export default function ShareEmbedPanel({
                   <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-400">
                     {t.embedTitle}
                   </h3>
-                  <div className="inline-flex rounded-lg border border-white/10 bg-black/40 p-0.5">
-                    {(['dark', 'light'] as const).map((th) => (
-                      <button
-                        key={th}
-                        type="button"
-                        onClick={() => setTheme(th)}
-                        className={`rounded-md px-3 py-1 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 ${
-                          theme === th
-                            ? 'bg-white/15 text-white'
-                            : 'text-neutral-400 hover:text-white'
-                        }`}
-                      >
-                        {th === 'dark' ? t.themeDark : t.themeLight}
-                      </button>
-                    ))}
+                  <div className="flex items-center gap-2">
+                    <div className="inline-flex rounded-lg border border-white/10 bg-black/40 p-0.5">
+                      {(['dark', 'light'] as const).map((th) => (
+                        <button
+                          key={th}
+                          type="button"
+                          onClick={() => setTheme(th)}
+                          className={`rounded-md px-3 py-1 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 ${
+                            theme === th
+                              ? 'bg-white/15 text-white'
+                              : 'text-neutral-400 hover:text-white'
+                          }`}
+                        >
+                          {th === 'dark' ? t.themeDark : t.themeLight}
+                        </button>
+                      ))}
+                    </div>
+                    <label
+                      className={`inline-flex items-center gap-1.5 rounded-lg border px-2 py-1 text-xs transition-colors ${
+                        accentOn
+                          ? 'border-purple-400/50 bg-purple-500/10 text-white'
+                          : 'border-white/10 bg-black/40 text-neutral-400'
+                      }`}
+                      title={t.accentToggle}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={accentOn}
+                        onChange={(e) => setAccentOn(e.target.checked)}
+                        className="h-3.5 w-3.5 rounded border-neutral-600 bg-neutral-900 text-purple-500 focus:ring-purple-500/50"
+                      />
+                      {t.accentToggle}
+                      <input
+                        type="color"
+                        value={accent}
+                        disabled={!accentOn}
+                        onChange={(e) => {
+                          setAccent(e.target.value);
+                          setAccentOn(true);
+                        }}
+                        aria-label={t.accentPickerLabel}
+                        className="h-5 w-6 cursor-pointer rounded border-0 bg-transparent p-0 disabled:opacity-40"
+                      />
+                    </label>
                   </div>
                 </div>
                 <p className="text-xs text-gray-500">{t.embedDescription}</p>
 
                 <div className="space-y-3">
                   {widgets.map((w) => {
-                    const embedPath = `/embed/tournament/${slugOrId}/${w.key}?theme=${theme}`;
+                    // `#` is a URL fragment delimiter — send the bare hex; the
+                    // embed parser re-adds it and sanitizes to strict hex.
+                    const accentQuery = accentOn
+                      ? `&accent=${accent.replace('#', '')}`
+                      : '';
+                    const embedPath = `/embed/tournament/${slugOrId}/${w.key}?theme=${theme}${accentQuery}`;
                     // Snippet = URL canonique (env) à intégrer sur un site tiers.
                     const snippet = `<iframe src="${base}${embedPath}" width="100%" height="${w.height}" style="border:0;border-radius:12px" loading="lazy" title="${w.name}"></iframe>`;
                     // Lien d'aperçu = origine courante (fonctionne sur n'importe quel port).

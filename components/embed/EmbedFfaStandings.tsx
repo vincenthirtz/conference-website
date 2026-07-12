@@ -14,6 +14,8 @@ type EmbedFfaStandingsProps = {
   stageName: string | null;
   standings: PublicFfaStandingRow[];
   theme: EmbedTheme;
+  /** Sanitized hex accent (brand bar). Null → no accent bar. */
+  accent?: string | null;
   /** Optional canonical public URL for a discreet "view on site" link. */
   publicUrl?: string | null;
   siteLabel?: string;
@@ -24,11 +26,13 @@ export default function EmbedFfaStandings({
   stageName,
   standings,
   theme,
+  accent,
   publicUrl,
   siteLabel = 'le site',
 }: EmbedFfaStandingsProps) {
   const t = useT('ffaStandings');
   const isLight = theme === 'light';
+  const accentStyle = accent ? { borderTop: `3px solid ${accent}` } : undefined;
 
   const title = stageName
     ? `${tournamentName} · ${stageName}`
@@ -36,6 +40,7 @@ export default function EmbedFfaStandings({
 
   return (
     <div
+      style={accentStyle}
       className={
         isLight
           ? 'min-h-screen w-full bg-neutral-100 text-neutral-900'

@@ -453,7 +453,7 @@ const tenantBrandingCache = new Map<string, TenantBrandingCacheEntry>();
 const HEX_COLOR_RE =
   /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
 
-function sanitizeHexColor(value: unknown): string | null {
+export function sanitizeHexColor(value: unknown): string | null {
   if (typeof value !== 'string') return null;
   const trimmed = value.trim();
   return HEX_COLOR_RE.test(trimmed) ? trimmed : null;

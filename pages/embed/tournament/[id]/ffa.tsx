@@ -11,7 +11,7 @@
 
 import type { GetServerSideProps } from 'next';
 import Head from 'next/head';
-import { DEFAULT_TENANT_ID } from '@/utils/tenant';
+import { resolveEmbedChrome } from '@/utils/embed';
 import { findTournamentByIdOrSlug } from '@/utils/tournamentLookup';
 import {
   readPublicFfaStandings,
@@ -34,6 +34,7 @@ type Props = {
   stageName: string | null;
   standings: PublicFfaStandingRow[];
   theme: EmbedTheme;
+  accent: string | null;
   publicUrl: string | null;
 };
 
@@ -43,13 +44,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
     return { notFound: true };
   }
 
-  const themeParam = ctx.query.theme;
-  const theme: EmbedTheme =
-    (Array.isArray(themeParam) ? themeParam[0] : themeParam) === 'light'
-      ? 'light'
-      : 'dark';
-
-  const tenantId = DEFAULT_TENANT_ID;
+  const { tenantId, theme, accent } = await resolveEmbedChrome(ctx.query);
 
   const tournament = await findTournamentByIdOrSlug<TournamentLite>(
     id,
@@ -85,6 +80,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
       stageName,
       standings,
       theme,
+      accent,
       publicUrl,
     },
   };
@@ -95,6 +91,7 @@ export default function EmbedTournamentFfaPage({
   stageName,
   standings,
   theme,
+  accent,
   publicUrl,
 }: Props) {
   return (
@@ -112,6 +109,7 @@ export default function EmbedTournamentFfaPage({
         stageName={stageName}
         standings={standings}
         theme={theme}
+        accent={accent}
         publicUrl={publicUrl}
       />
     </>

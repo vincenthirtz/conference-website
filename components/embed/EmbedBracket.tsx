@@ -17,6 +17,8 @@ type EmbedBracketProps = {
   loserRounds: BracketRound[];
   isDoubleElim: boolean;
   theme: EmbedTheme;
+  /** Sanitized hex accent (brand bar). Null → no accent bar. */
+  accent?: string | null;
   /** Optional canonical public URL for a discreet "Voir sur le site" link. */
   publicUrl?: string | null;
   siteLabel?: string;
@@ -28,11 +30,15 @@ export default function EmbedBracket({
   loserRounds,
   isDoubleElim,
   theme,
+  accent,
   publicUrl,
   siteLabel = 'le site',
 }: EmbedBracketProps) {
   const t = useT('embedBracket');
   const isLight = theme === 'light';
+  // `accent` is already sanitized to strict hex upstream (utils/embed) — safe
+  // to interpolate into an inline style. CSP allows inline styles.
+  const accentStyle = accent ? { borderTop: `3px solid ${accent}` } : undefined;
 
   // The underlying BracketTreeView is styled for a dark surface (white text,
   // translucent borders). In light mode we keep the same component but place it
@@ -42,6 +48,7 @@ export default function EmbedBracket({
   // cards carry their own dark card backgrounds (#12121a) regardless of theme.
   return (
     <div
+      style={accentStyle}
       className={
         isLight
           ? 'min-h-screen w-full bg-neutral-100 text-neutral-900'

@@ -2877,6 +2877,8 @@
     "themeLabel": "Theme",
     "themeLight": "Light",
     "themeDark": "Dark",
+    "accentToggle": "Accent colour",
+    "accentPickerLabel": "Pick the accent colour",
     "bracketName": "Bracket",
     "standingsName": "Standings",
     "scheduleName": "Schedule",

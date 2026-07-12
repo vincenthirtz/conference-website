@@ -16,6 +16,8 @@ type EmbedScheduleProps = {
   tournamentName: string;
   matches: PublicMatch[];
   theme: EmbedTheme;
+  /** Sanitized hex accent (brand bar). Null → no accent bar. */
+  accent?: string | null;
   /** Optional canonical public URL for a discreet "view on site" link. */
   publicUrl?: string | null;
   siteLabel?: string;
@@ -124,11 +126,13 @@ export default function EmbedSchedule({
   tournamentName,
   matches,
   theme,
+  accent,
   publicUrl,
   siteLabel = 'le site',
 }: EmbedScheduleProps) {
   const t = useT('embedSchedule');
   const isLight = theme === 'light';
+  const accentStyle = accent ? { borderTop: `3px solid ${accent}` } : undefined;
 
   const statusLabel: Record<MatchStatusKind, string> = {
     upcoming: t.statusUpcoming,
@@ -156,6 +160,7 @@ export default function EmbedSchedule({
 
   return (
     <div
+      style={accentStyle}
       className={
         isLight
           ? 'min-h-screen w-full bg-neutral-100 text-neutral-900'
