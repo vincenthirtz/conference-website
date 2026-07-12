@@ -756,6 +756,8 @@
     "rosterLockHelp": "After this date, registered teams can no longer change their roster (add, remove, swap). Empty = no lock.",
     "timezoneLabel": "Timezone",
     "timezoneHelp": "Times will be displayed in this timezone.",
+    "formatLabel": "Format (short label)",
+    "formatHelp": "Short text shown on the \"Format\" card of the public page (e.g. \"BO3\", \"Swiss + playoffs\").",
     "formatTypeLabel": "Global format",
     "formatTypeNone": "(Don't change / to be defined)",
     "formatSingleElim": "Single Elim",

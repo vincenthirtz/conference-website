@@ -48,6 +48,9 @@ export type Tournament = {
   end_date: string | null;
   roster_locked_at: string | null;
   timezone: string | null;
+  // Libellé court de format (texte libre) affiché sur la carte FORMAT publique.
+  // Distinct de `format_type` (structure enum) et `format_details` (texte long).
+  format: string | null;
   format_type: FormatType | string | null;
   max_teams: number | null;
   min_players: number | null;
@@ -175,11 +178,7 @@ export type ScrimSummary = {
  * Scrim planning (grille de disponibilités partagée)
  * ---------------------------------------------------------*/
 
-export type ScrimPlanningStatus =
-  | 'open'
-  | 'validated'
-  | 'cancelled'
-  | 'closed';
+export type ScrimPlanningStatus = 'open' | 'validated' | 'cancelled' | 'closed';
 
 /** Une partie qui peint la grille : les deux équipes ou le staff. */
 export type ScrimPlanningParty = 'team1' | 'team2' | 'staff';

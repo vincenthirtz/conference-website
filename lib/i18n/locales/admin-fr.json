@@ -756,6 +756,8 @@
     "rosterLockHelp": "Au-delà de cette date, les équipes inscrites ne peuvent plus modifier leur roster (ajout, suppression, swap). Vide = pas de verrou.",
     "timezoneLabel": "Fuseau horaire",
     "timezoneHelp": "Les horaires seront affichés dans ce fuseau.",
+    "formatLabel": "Format (libellé court)",
+    "formatHelp": "Texte court affiché sur la carte « Format » de la page publique (ex. « BO3 », « Suisse + playoffs »).",
     "formatTypeLabel": "Format global",
     "formatTypeNone": "(Ne pas modifier / à définir)",
     "formatSingleElim": "Single Elim",

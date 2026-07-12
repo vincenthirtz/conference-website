@@ -94,6 +94,8 @@ async function handleGet(
         start_date,
         end_date,
         timezone,
+        format,
+        format_type,
         max_teams,
         logo_url,
         banner_url,
@@ -145,6 +147,7 @@ async function handlePatch(
       end_date,
       roster_locked_at,
       timezone,
+      format,
       format_type,
       max_teams,
       min_players,
@@ -338,6 +341,9 @@ async function handlePatch(
     if (roster_locked_at !== undefined)
       updatePayload.roster_locked_at = roster_locked_at;
     if (timezone !== undefined) updatePayload.timezone = timezone;
+    // `format` : libellé court (texte libre) affiché sur la carte FORMAT de la
+    // page publique. Distinct de `format_type` (structure) et `format_details`.
+    if (format !== undefined) updatePayload.format = format;
     if (format_type !== undefined) updatePayload.format_type = format_type;
     if (max_teams !== undefined) updatePayload.max_teams = max_teams;
     if (min_players !== undefined) updatePayload.min_players = min_players;
@@ -381,6 +387,8 @@ async function handlePatch(
         start_date,
         end_date,
         timezone,
+        format,
+        format_type,
         max_teams,
         logo_url,
         banner_url,

@@ -76,6 +76,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
     end_date: string;
     roster_locked_at: string;
     timezone: string;
+    format: string;
     format_type: string;
     max_teams: string;
     min_players: string;
@@ -98,6 +99,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
     end_date: '',
     roster_locked_at: '',
     timezone: 'Europe/Paris',
+    format: '',
     format_type: '',
     max_teams: '',
     min_players: '',
@@ -203,6 +205,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
           ? toLocalInputValue(tour.roster_locked_at)
           : '',
         timezone: tour.timezone || 'Europe/Paris',
+        format: tour.format || '',
         format_type: tour.format_type || '',
         max_teams: tour.max_teams ? String(tour.max_teams) : '',
         min_players: tour.min_players ? String(tour.min_players) : '',
@@ -275,6 +278,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
         ? new Date(form.roster_locked_at).toISOString()
         : null,
       timezone: form.timezone || null,
+      format: form.format.trim() || null,
       format_type: form.format_type || null,
       max_teams: form.max_teams ? Number(form.max_teams) : null,
       min_players: form.min_players ? Number(form.min_players) : null,
@@ -556,6 +560,24 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
                           </select>
                           <p className="text-xs text-neutral-500 mt-1">
                             {t.timezoneHelp}
+                          </p>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm mb-1 text-neutral-300">
+                            {t.formatLabel}
+                          </label>
+                          <input
+                            type="text"
+                            className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            value={form.format}
+                            onChange={(e) =>
+                              updateField('format', e.target.value)
+                            }
+                            placeholder="BO3"
+                          />
+                          <p className="text-xs text-neutral-500 mt-1">
+                            {t.formatHelp}
                           </p>
                         </div>
 
