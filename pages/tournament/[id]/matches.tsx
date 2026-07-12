@@ -16,8 +16,19 @@ import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import { useLang } from '@/lib/i18n/LanguageProvider';
 import { formatDateRange } from '@/utils/tournamentDates';
+import {
+  mondayOf,
+  addDaysYmd,
+  dateAndMinuteInTz,
+  todayYmdInTz,
+} from '@/utils/teams/scrimCalendar';
 
 import { logger } from '../../../utils/logger';
+
+// Fuseau de référence pour placer les matchs dans la grille mensuelle.
+const MATCHES_TZ = 'Europe/Paris';
+
+type ViewMode = 'list' | 'agenda' | 'month';
 type MatchStatus = BaseMatchStatus | 'completed';
 type MatchesDict = ReturnType<typeof useT<'tournamentMatches'>>;
 
@@ -198,19 +209,35 @@ export default function TournamentMatchesPage({
     });
   }, [filteredMatches]);
 
-  const [viewMode, setViewMode] = useState<'list' | 'agenda'>('agenda');
+  const [viewMode, setViewMode] = useState<ViewMode>('agenda');
 
   // Restore persisted preference (SSR-safe: read after mount only).
   useEffect(() => {
     try {
       const saved = window.localStorage.getItem('tournamentMatchesView');
-      if (saved === 'list' || saved === 'agenda') setViewMode(saved);
+      if (saved === 'list' || saved === 'agenda' || saved === 'month')
+        setViewMode(saved);
     } catch {
       /* localStorage unavailable — keep default */
     }
   }, []);
 
-  const changeViewMode = (mode: 'list' | 'agenda') => {
+  // Month shown by default in month view: the month of the first scheduled
+  // match, else the tournament start date, else the current month. Deterministic
+  // from props so it stays stable across renders.
+  const monthInitialAnchor = useMemo(() => {
+    const seed =
+      matches.find((m) => m.scheduled_at)?.scheduled_at ||
+      tournament.start_date ||
+      null;
+    if (seed) {
+      const pos = dateAndMinuteInTz(seed, MATCHES_TZ);
+      if (pos) return `${pos.ymd.slice(0, 7)}-01`;
+    }
+    return `${todayYmdInTz(MATCHES_TZ).slice(0, 7)}-01`;
+  }, [matches, tournament.start_date]);
+
+  const changeViewMode = (mode: ViewMode) => {
     setViewMode(mode);
     try {
       window.localStorage.setItem('tournamentMatchesView', mode);
@@ -406,6 +433,32 @@ export default function TournamentMatchesPage({
                   </button>
                   <button
                     type="button"
+                    aria-pressed={viewMode === 'month'}
+                    onClick={() => changeViewMode('month')}
+                    className={`flex items-center gap-1 px-3 py-1.5 text-[11px] transition-colors border-l border-white/15 ${
+                      viewMode === 'month'
+                        ? 'bg-[var(--color-violet)] text-black font-semibold'
+                        : 'bg-transparent text-gray-300 hover:text-white'
+                    }`}
+                  >
+                    <svg
+                      className="w-3.5 h-3.5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 5h16v16H4V5zm0 4h16M9 3v4m6-4v4M8 13h.01M12 13h.01M16 13h.01M8 17h.01M12 17h.01"
+                      />
+                    </svg>
+                    {t.viewMonth}
+                  </button>
+                  <button
+                    type="button"
                     aria-pressed={viewMode === 'list'}
                     onClick={() => changeViewMode('list')}
                     className={`flex items-center gap-1 px-3 py-1.5 text-[11px] transition-colors ${
@@ -480,6 +533,15 @@ export default function TournamentMatchesPage({
                   </div>
                 ))}
               </div>
+            )}
+
+            {filteredMatches.length > 0 && viewMode === 'month' && (
+              <MatchMonthCalendar
+                matches={filteredMatches}
+                initialAnchor={monthInitialAnchor}
+                locale={locale}
+                t={t}
+              />
             )}
 
             {filteredMatches.length > 0 && viewMode === 'list' && (
@@ -590,6 +652,256 @@ function MatchRow({
         </div>
       </div>
     </Link>
+  );
+}
+
+/* ─────────────────────────────────────────────
+ * Month view (grille 6×7, lundi en tête)
+ * ────────────────────────────────────────────*/
+
+const MONTH_MAX_CHIPS = 3;
+const pad2 = (n: number) => String(n).padStart(2, '0');
+
+const MONTH_CHIP: Record<string, string> = {
+  pending: 'bg-yellow-500/25 text-yellow-100 hover:bg-yellow-500/35',
+  ongoing: 'bg-emerald-500/30 text-emerald-100 hover:bg-emerald-500/40',
+  finished: 'bg-gray-500/25 text-gray-200 hover:bg-gray-500/35',
+  completed: 'bg-gray-500/25 text-gray-200 hover:bg-gray-500/35',
+  cancelled: 'bg-red-500/25 text-red-100 line-through hover:bg-red-500/35',
+};
+
+type MonthEvent = {
+  id: string;
+  minute: number;
+  time: string;
+  label: string;
+  status: MatchStatus;
+};
+
+// En-têtes de jours localisés (2024-01-01 est un lundi).
+function monthWeekdayHeads(locale: string): string[] {
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(`2024-01-0${i + 1}T12:00:00Z`);
+    return d.toLocaleDateString(locale, {
+      weekday: 'short',
+      timeZone: MATCHES_TZ,
+    });
+  });
+}
+
+// Décale un 'YYYY-MM-01' de n mois, renvoie le 1er du mois cible.
+function shiftMonthAnchor(firstOfMonth: string, n: number): string {
+  const [y, m] = firstOfMonth.split('-').map((v) => parseInt(v, 10));
+  const total = y * 12 + (m - 1) + n;
+  const ny = Math.floor(total / 12);
+  const nm = (total % 12) + 1;
+  return `${ny}-${pad2(nm)}-01`;
+}
+
+function MatchMonthCalendar({
+  matches,
+  initialAnchor,
+  locale,
+  t,
+}: {
+  matches: SimpleMatch[];
+  initialAnchor: string;
+  locale: string;
+  t: MatchesDict;
+}) {
+  const [monthAnchor, setMonthAnchor] = useState(initialAnchor);
+  const [expandedDay, setExpandedDay] = useState<string | null>(null);
+
+  const anchorMonth = monthAnchor.slice(0, 7); // 'YYYY-MM'
+  const todayYmd = useMemo(() => todayYmdInTz(MATCHES_TZ), []);
+  const heads = useMemo(() => monthWeekdayHeads(locale), [locale]);
+
+  const gridDays = useMemo(() => {
+    const start = mondayOf(monthAnchor);
+    return Array.from({ length: 42 }, (_, i) => addDaysYmd(start, i));
+  }, [monthAnchor]);
+
+  const eventsByDay = useMemo(() => {
+    const map: Record<string, MonthEvent[]> = {};
+    for (const m of matches) {
+      if (!m.scheduled_at) continue;
+      const pos = dateAndMinuteInTz(m.scheduled_at, MATCHES_TZ);
+      if (!pos) continue;
+      const t1 = m.team1?.short_name || m.team1?.name || t.teamPlaceholder1;
+      const t2 =
+        m.team2?.short_name ||
+        m.team2?.name ||
+        (m.is_bye ? t.byeLabel : t.teamPlaceholder2);
+      const label = m.is_bye
+        ? `${t1} ${t.byeLabel}`
+        : `${t1} ${t.vsLabel} ${t2}`;
+      (map[pos.ymd] ??= []).push({
+        id: m.id,
+        minute: pos.minute,
+        time: `${pad2(Math.floor(pos.minute / 60))}:${pad2(pos.minute % 60)}`,
+        label,
+        status: m.status,
+      });
+    }
+    for (const key of Object.keys(map)) {
+      map[key].sort((a, b) => a.minute - b.minute);
+    }
+    return map;
+  }, [matches, t]);
+
+  const unscheduledCount = useMemo(
+    () => matches.filter((m) => !m.scheduled_at).length,
+    [matches]
+  );
+
+  const monthLabel = new Date(`${monthAnchor}T12:00:00Z`).toLocaleDateString(
+    locale,
+    { month: 'long', year: 'numeric', timeZone: MATCHES_TZ }
+  );
+
+  const goPrev = () => {
+    setExpandedDay(null);
+    setMonthAnchor((a) => shiftMonthAnchor(a, -1));
+  };
+  const goNext = () => {
+    setExpandedDay(null);
+    setMonthAnchor((a) => shiftMonthAnchor(a, 1));
+  };
+  const goToday = () => {
+    setExpandedDay(null);
+    setMonthAnchor(`${todayYmd.slice(0, 7)}-01`);
+  };
+
+  return (
+    <div className="select-none">
+      {/* Month navigation */}
+      <div className="mb-3 flex items-center gap-2 text-sm">
+        <button
+          type="button"
+          aria-label={t.monthPrev}
+          onClick={goPrev}
+          className="rounded-lg border border-white/15 bg-white/5 px-2.5 py-1 text-gray-200 hover:border-[var(--color-violet)] hover:text-white transition"
+        >
+          ‹
+        </button>
+        <button
+          type="button"
+          aria-label={t.monthNext}
+          onClick={goNext}
+          className="rounded-lg border border-white/15 bg-white/5 px-2.5 py-1 text-gray-200 hover:border-[var(--color-violet)] hover:text-white transition"
+        >
+          ›
+        </button>
+        <span className="ml-1 text-gray-100 capitalize font-semibold">
+          {monthLabel}
+        </span>
+        <button
+          type="button"
+          onClick={goToday}
+          className="ml-auto rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[11px] text-gray-200 hover:border-[var(--color-green)] hover:text-white transition"
+        >
+          {t.monthToday}
+        </button>
+      </div>
+
+      <div className="overflow-x-auto rounded-2xl border border-white/10 bg-black/40 p-2">
+        <div className="min-w-[680px]">
+          {/* Weekday headers */}
+          <div className="grid grid-cols-7 gap-1 pb-1">
+            {heads.map((h) => (
+              <div
+                key={h}
+                className="text-center text-[10px] font-semibold uppercase tracking-wide text-gray-500"
+              >
+                {h}
+              </div>
+            ))}
+          </div>
+
+          {/* 6×7 grid */}
+          <div className="grid grid-cols-7 gap-1">
+            {gridDays.map((day) => {
+              const inMonth = day.slice(0, 7) === anchorMonth;
+              const isToday = day === todayYmd;
+              const events = eventsByDay[day] ?? [];
+              const isExpanded = expandedDay === day;
+              const shown = isExpanded
+                ? events
+                : events.slice(0, MONTH_MAX_CHIPS);
+              const overflow = events.length - shown.length;
+              const dayNum = parseInt(day.slice(8, 10), 10);
+              return (
+                <div
+                  key={day}
+                  className={`flex min-h-[92px] flex-col rounded-lg border p-1 ${
+                    inMonth
+                      ? 'border-white/10 bg-white/3'
+                      : 'border-white/5 bg-white/[0.015] opacity-50'
+                  }`}
+                >
+                  <span
+                    className={`mb-1 text-[11px] font-semibold tabular-nums ${
+                      isToday
+                        ? 'inline-flex h-5 w-5 items-center justify-center self-start rounded-full bg-[var(--color-green)] text-black'
+                        : inMonth
+                          ? 'text-gray-300'
+                          : 'text-gray-600'
+                    }`}
+                  >
+                    {dayNum}
+                  </span>
+
+                  <span className="flex flex-col gap-0.5">
+                    {shown.map((ev) => (
+                      <Link
+                        key={ev.id}
+                        href={`/match/${ev.id}`}
+                        title={`${ev.time} — ${ev.label}`}
+                        className={`block cursor-pointer truncate rounded px-1 py-0.5 text-[9px] leading-tight transition ${
+                          MONTH_CHIP[ev.status] ?? MONTH_CHIP.pending
+                        }`}
+                      >
+                        <span className="tabular-nums">{ev.time}</span>{' '}
+                        {ev.label}
+                      </Link>
+                    ))}
+                    {overflow > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setExpandedDay(day)}
+                        className="cursor-pointer rounded px-1 text-left text-[9px] text-gray-400 hover:text-gray-200"
+                      >
+                        {format(t.moreEvents, { count: overflow })}
+                      </button>
+                    )}
+                    {isExpanded && events.length > MONTH_MAX_CHIPS && (
+                      <button
+                        type="button"
+                        onClick={() => setExpandedDay(null)}
+                        className="cursor-pointer rounded px-1 text-left text-[9px] text-gray-400 hover:text-gray-200"
+                      >
+                        {t.monthCollapse}
+                      </button>
+                    )}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {unscheduledCount > 0 && (
+        <p className="mt-2 text-[11px] text-gray-500">
+          {format(
+            unscheduledCount > 1
+              ? t.monthUnscheduled_other
+              : t.monthUnscheduled_one,
+            { count: unscheduledCount }
+          )}
+        </p>
+      )}
+    </div>
   );
 }
 
