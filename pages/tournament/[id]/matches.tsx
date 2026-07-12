@@ -492,6 +492,26 @@ export default function TournamentMatchesPage({
         {/* Matches list */}
         <section>
           <div className="bg-black/60 border border-white/5 rounded-2xl p-4">
+            {filteredMatches.length > 0 && (
+              <p className="mb-3 flex items-center gap-1 text-[10px] text-gray-500">
+                <svg
+                  className="w-3 h-3"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                {t.timezoneNote}
+              </p>
+            )}
+
             {filteredMatches.length === 0 && (
               <Paragraph typeStyle="body-sm" textColor="text-gray-300">
                 {t.noMatchesFilter}
@@ -920,13 +940,18 @@ function groupMatchesByDay(
   >();
 
   for (const m of matches) {
-    const d = m.scheduled_at ? new Date(m.scheduled_at) : null;
-    const key = d ? d.toISOString().slice(0, 10) : 'unscheduled';
-    const label = d
-      ? d.toLocaleDateString(locale, {
+    // Group by the *Paris* calendar day so the day header matches the Paris
+    // times shown on each row (and the month view).
+    const pos = m.scheduled_at
+      ? dateAndMinuteInTz(m.scheduled_at, MATCHES_TZ)
+      : null;
+    const key = pos ? pos.ymd : 'unscheduled';
+    const label = pos
+      ? new Date(`${pos.ymd}T12:00:00Z`).toLocaleDateString(locale, {
           weekday: 'short',
           day: '2-digit',
           month: '2-digit',
+          timeZone: 'UTC',
         })
       : dateTbdLabel;
 
@@ -955,6 +980,7 @@ function formatMatchDate(iso: string | null, locale: string): string | null {
     month: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
+    timeZone: MATCHES_TZ,
   });
 }
 
@@ -965,6 +991,7 @@ function formatMatchTime(iso: string | null, locale: string): string | null {
   return d.toLocaleTimeString(locale, {
     hour: '2-digit',
     minute: '2-digit',
+    timeZone: MATCHES_TZ,
   });
 }
 

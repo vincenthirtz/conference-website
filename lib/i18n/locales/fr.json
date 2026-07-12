@@ -2729,6 +2729,7 @@
     "monthCollapse": "Réduire",
     "monthUnscheduled_one": "{count} match sans date définie (non affiché sur la grille).",
     "monthUnscheduled_other": "{count} matchs sans date définie (non affichés sur la grille).",
+    "timezoneNote": "Horaires affichés en heure de Paris (CET/CEST).",
     "noMatchesFilter": "Aucun match ne correspond aux filtres actuels.",
     "matchesCount_one": "{count} match",
     "matchesCount_other": "{count} matchs",

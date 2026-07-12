@@ -2729,6 +2729,7 @@
     "monthCollapse": "Collapse",
     "monthUnscheduled_one": "{count} match without a set date (not shown on the grid).",
     "monthUnscheduled_other": "{count} matches without a set date (not shown on the grid).",
+    "timezoneNote": "Times shown in Paris time (CET/CEST).",
     "noMatchesFilter": "No match matches the current filters.",
     "matchesCount_one": "{count} match",
     "matchesCount_other": "{count} matches",
