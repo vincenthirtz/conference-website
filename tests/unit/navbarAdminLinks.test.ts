@@ -180,12 +180,14 @@ describe('filterAdminLinks – manager role', () => {
     expect(titles).not.toContain('Tickets de support');
   });
 
-  it('keeps "Configuration" with Logs & stats + Tenants (manager)', () => {
+  it('keeps "Configuration" with Logs & stats + Onboarding (manager)', () => {
     // Lot D : Notifications (+ Campagnes) déplacées vers "Communication".
+    // Lot C : hub "Onboarding" ajouté ; "Tenants" déplacé de la top-bar vers
+    // une carte dashboard (plus d'entrée top-bar).
     const config = findByTitle(links, 'Configuration');
     expect(config).toBeDefined();
     const titles = config?.children?.map((c) => c.title) ?? [];
-    expect(titles).toEqual(['Logs & stats', 'Tenants']);
+    expect(titles).toEqual(['Logs & stats', 'Onboarding']);
   });
 
   it('keeps "Communication" with only the caster-level "Communications" hub child', () => {

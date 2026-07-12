@@ -12697,6 +12697,52 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           description: Planning not open.
+  /api/admin/scrim-plannings/{planningId}/conflicts:
+    parameters:
+      - name: planningId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      summary: Preview slot conflicts for candidate slots before validation.
+      operationId: adminPreviewScrimPlanningConflicts
+      tags:
+        - admin/scrims
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - slots
+              properties:
+                slots:
+                  type: array
+                  maxItems: 16
+                  items:
+                    type: string
+                    format: date-time
+      responses:
+        '200':
+          description: Overlapping scrims/matches per candidate slot.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/admin/site-settings:
     get:
       summary: List site settings entries.
