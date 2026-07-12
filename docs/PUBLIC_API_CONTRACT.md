@@ -184,12 +184,29 @@ curl -X POST https://<host>/api/graphql \
   -d '{"query":"mutation($m:ID!){reportMatchResult(matchId:$m,team1Score:2,team2Score:1){status winnerTeamId}}","variables":{"m":"…"}}'
 ```
 
-## 5. À maintenir en sync (anti-dérive)
+## 5. Portail développeur & spec machine-readable
+
+- **Spec publique JSON/YAML** : `GET /api/public/openapi` (anonyme, CORS `*`,
+  `?format=yaml`). Dérivée de `docs/openapi.yaml` filtrée aux paths
+  `/api/public/*` + composants transitivement référencés (aucune fuite
+  bot/admin). Générateur pur : `utils/openapi/publicSpec.ts`
+  (`filterPublicSpec` / `buildPublicSpec`), couvert par
+  `tests/unit/openapiPublicSpec.test.ts`.
+- **Référence rendue** : `/developpeurs/reference` — SSR pur généré depuis la
+  même spec (pas de swagger-ui/redoc : incompatible CSP à nonce + React 19).
+  Toujours en phase avec les endpoints réels, donc anti-dérive.
+- **Clés API self-service** : créées par un admin d'orga depuis
+  `/admin/api-tokens` (affichées une seule fois). Le guide public
+  `/developpeurs` pointe vers cette page.
+
+## 6. À maintenir en sync (anti-dérive)
 
 Toute évolution de cette surface DOIT mettre à jour, ensemble :
 
 - les handlers (`pages/api/public/v1/*` write, `pages/api/graphql.ts`, schéma) ;
 - ce document ;
+- `docs/openapi.yaml` (le contract-drift `tests/unit/openapiContractDrift.test.ts`
+  échoue sinon) — la spec publique en dérive automatiquement ;
 - le picker de scopes admin (dérivé de `utils/apiScopes.ts` — automatique) ;
 - (à ajouter) un test de non-régression du SDL GraphQL (snapshot) et de la liste
   des scopes, sur le modèle du contract-drift OpenAPI du bot.

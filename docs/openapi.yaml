@@ -23300,6 +23300,42 @@ paths:
   # public/v1 — API publique read-only versionnée (overlays, widgets, embeds)
   # GET uniquement, anonyme, CORS *, enveloppe { data } / { data, pagination }.
   # ===========================================================================
+  /api/public/openapi:
+    get:
+      tags:
+        - public/v1
+      summary: Spécification OpenAPI publique (machine-readable).
+      description: >
+        Spec OpenAPI 3.1 filtrée à la surface publique (`/api/public/*`),
+        dérivée de la spec canonique `docs/openapi.yaml`. Anonyme, CORS `*`,
+        rate-limitée (120 req/min/IP). `?format=yaml` pour la variante YAML.
+        À importer dans Postman / un générateur de code.
+      operationId: publicGetOpenApiSpec
+      security: []
+      parameters:
+        - name: format
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - json
+              - yaml
+            default: json
+      responses:
+        '200':
+          description: Document OpenAPI (JSON par défaut, YAML si demandé).
+          content:
+            application/json:
+              schema:
+                type: object
+            text/yaml:
+              schema:
+                type: string
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
   /api/public/v1/tournaments:
     get:
       tags:

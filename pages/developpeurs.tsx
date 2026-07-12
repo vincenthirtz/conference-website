@@ -614,9 +614,17 @@ function DevelopersPage() {
 
         {/* Référence des endpoints */}
         <section aria-labelledby="reference-heading" className="space-y-6">
-          <h2 id="reference-heading" className="text-2xl font-bold text-white">
-            {t.referenceTitle}
-          </h2>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 id="reference-heading" className="text-2xl font-bold text-white">
+              {t.referenceTitle}
+            </h2>
+            <Link
+              href="/developpeurs/reference"
+              className="inline-flex items-center gap-2 rounded-lg border border-purple-400/40 bg-purple-500/10 px-3 py-2 text-sm font-semibold text-purple-100 transition hover:bg-purple-500/20"
+            >
+              {t.referenceGeneratedCta}
+            </Link>
+          </div>
 
           {/* Sommaire */}
           <nav aria-label={t.tocLabel}>
@@ -753,7 +761,7 @@ function DevelopersPage() {
               {t.writeAccessBody}
             </p>
             <Link
-              href="/contact"
+              href="/admin/api-tokens"
               className="mt-4 inline-flex items-center gap-2 rounded-lg bg-purple-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-purple-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-300"
             >
               {t.writeAccessCta}
