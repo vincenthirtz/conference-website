@@ -12,6 +12,7 @@ export type TournamentTabKey =
   | 'hub'
   | 'teams'
   | 'matches'
+  | 'bracket'
   | 'maps'
   | 'stats'
   | 'mvp'
@@ -21,6 +22,7 @@ export type TournamentTabKey =
 export default function TournamentTabs({
   tournamentPath,
   active,
+  showBracket = true,
   showPodium = true,
   showFfa = false,
   className = '',
@@ -28,6 +30,8 @@ export default function TournamentTabs({
   /** Base path du tournoi, ex. `/tournament/${slug || id}`. */
   tournamentPath: string;
   active: TournamentTabKey;
+  /** Afficher l'onglet Bracket (par défaut oui ; la page gère l'état vide). */
+  showBracket?: boolean;
   /** Afficher l'onglet Podium (par défaut oui). */
   showPodium?: boolean;
   /** Afficher l'onglet FFA (uniquement si le tournoi a une phase FFA). */
@@ -40,6 +44,15 @@ export default function TournamentTabs({
     { key: 'hub', label: t.hub, href: tournamentPath },
     { key: 'teams', label: t.teams, href: `${tournamentPath}/teams` },
     { key: 'matches', label: t.matches, href: `${tournamentPath}/matches` },
+    ...(showBracket
+      ? [
+          {
+            key: 'bracket' as TournamentTabKey,
+            label: t.bracket,
+            href: `${tournamentPath}/bracket`,
+          },
+        ]
+      : []),
     { key: 'maps', label: t.maps, href: `${tournamentPath}/maps` },
     { key: 'stats', label: t.stats, href: `${tournamentPath}/stats` },
     { key: 'mvp', label: t.mvp, href: `${tournamentPath}/mvp` },

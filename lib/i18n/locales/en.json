@@ -2590,6 +2590,7 @@
     "hub": "Overview",
     "teams": "Teams",
     "matches": "Matches",
+    "bracket": "Bracket",
     "maps": "Maps",
     "stats": "Stats",
     "mvp": "MVP",
@@ -2678,9 +2679,16 @@
     "loading": "Loading arbitration data…"
   },
   "tournamentBracket": {
-    "headTitle": "Bracket | OW Women's Cup",
-    "heading": "Bracket in preparation",
-    "body": "The public bracket is not available here yet. We're redirecting you to the \"Matches\" view to follow the tournament.",
+    "headTitle": "Bracket – {name} | OW Women's Cup",
+    "heading": "Bracket – {name}",
+    "description": "The tournament tree: follow every team's run, round by round, all the way to the final.",
+    "statusUpcoming": "Upcoming",
+    "statusOngoing": "Ongoing",
+    "statusFinished": "Finished",
+    "winnersBracket": "Winners Bracket",
+    "losersBracket": "Losers Bracket",
+    "emptyTitle": "Bracket coming soon",
+    "emptyBody": "The tournament tree isn't published yet. In the meantime, check the match list.",
     "viewMatches": "View matches"
   },
   "shareEmbed": {

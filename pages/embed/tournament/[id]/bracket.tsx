@@ -99,16 +99,19 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
       stage_id,
       round_number,
       round_name,
-      position_in_round,
       status,
       match_format,
-      best_of,
       scheduled_at,
       team1_id,
       team2_id,
+      team1_score,
+      team2_score,
+      is_bye,
       winner_team_id,
       notes,
       bracket_side,
+      next_match_win_id,
+      next_match_win_slot,
       team1:team1_id ( id, name, short_name, logo_url ),
       team2:team2_id ( id, name, short_name, logo_url )
     `
@@ -116,8 +119,10 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
     .eq('tenant_id', tenantId)
     .eq('tournament_id', tournament.id)
     .neq('status', 'cancelled')
+    // `position_in_round` n'est PAS une colonne DB (cf. generateBracket.ts) :
+    // l'ordre d'insertion (created_at) reflète la position dans le round.
     .order('round_number', { ascending: true })
-    .order('position_in_round', { ascending: true });
+    .order('created_at', { ascending: true });
 
   if (mErr) {
     logger.error('embed bracket matches error:', mErr);
@@ -125,16 +130,19 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
 
   const matches = (matchesData || []) as unknown as ScheduleMatch[];
 
-  const isDoubleElim = matches.some((m) => m.bracket_side === 'lb');
-
-  const mainMatches = isDoubleElim
-    ? matches.filter(
-        (m) => m.bracket_side === 'wb' || m.bracket_side === 'final'
-      )
-    : matches;
-  const lbMatches = isDoubleElim
-    ? matches.filter((m) => m.bracket_side === 'lb')
-    : [];
+  // Bracket = matchs d'élimination uniquement (wb/lb/final). Les matchs hors
+  // bracket (saison régulière / swiss, bracket_side 'none') sont exclus.
+  const bracketMatches = matches.filter(
+    (m) =>
+      m.bracket_side === 'wb' ||
+      m.bracket_side === 'lb' ||
+      m.bracket_side === 'final'
+  );
+  const isDoubleElim = bracketMatches.some((m) => m.bracket_side === 'lb');
+  const mainMatches = bracketMatches.filter(
+    (m) => m.bracket_side === 'wb' || m.bracket_side === 'final'
+  );
+  const lbMatches = bracketMatches.filter((m) => m.bracket_side === 'lb');
 
   const rounds = buildRounds(mainMatches);
   const loserRounds = buildRounds(lbMatches);
