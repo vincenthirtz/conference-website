@@ -18,7 +18,11 @@ vi.mock('@/utils/supabase', async () => {
   return { supabaseAdmin: m.supabaseAdmin, getServerClient: m.getServerClient };
 });
 
-import { store, resetSupabaseMock } from './__helpers__/supabaseMock';
+import {
+  store,
+  resetSupabaseMock,
+  setRpcResult,
+} from './__helpers__/supabaseMock';
 import {
   withPublicWrite,
   verifyPublicApiToken,
@@ -322,12 +326,18 @@ const READ_OPTS = {
 };
 
 /** Run a write (POST) request for a tenant on `plan`, return the res. */
-async function runWrite(plan: PlanOver, plainOver?: string, comp = false) {
+async function runWrite(
+  plan: PlanOver,
+  plainOver?: string,
+  comp = false,
+  idOver?: string
+) {
   const plain = seedToken({
     scopes: ['matches:read', 'matches:write'],
     plan,
     plain: plainOver,
     comp,
+    id: idOver,
   });
   const handler = vi.fn(async (_req: any, res: any) =>
     res.status(200).json({ data: { ok: true } })
@@ -567,5 +577,53 @@ describe('withPublicWrite idempotency', () => {
     expect(calls).toBe(2);
     expect((res2.body as any).data).toEqual({ n: 2 });
     expect(res2.headers['Idempotency-Replay']).toBeUndefined();
+  });
+});
+
+/* ------------------------------------------------------------------ *
+ * withPublicWrite — durable quota + rate-limit (per plan)
+ *
+ * Metered paid tiers (regie/circuit) increment a durable Postgres counter
+ * (consume_api_usage RPC) and are blocked 429 over the plan's limits. comp
+ * keys are exempt; unlimited plans (foundation) never hit the counter.
+ * ------------------------------------------------------------------ */
+describe('withPublicWrite quota gate', () => {
+  it('circuit over the monthly quota → 429 QUOTA_EXCEEDED', async () => {
+    setRpcResult('consume_api_usage', {
+      data: [{ minute_count: 1, month_count: 500_001 }],
+    });
+    const w = await runWrite({ plan: 'circuit' }, 'pk_live_q_month', false, 'tok-qm');
+    expect(w.res.statusCode).toBe(429);
+    expect((w.res.body as any).code).toBe('QUOTA_EXCEEDED');
+    expect(w.res.headers['Retry-After']).toBeDefined();
+    expect(w.handler).not.toHaveBeenCalled();
+  });
+
+  it('circuit over the per-minute rate → 429 RATE_LIMITED', async () => {
+    setRpcResult('consume_api_usage', {
+      data: [{ minute_count: 121, month_count: 10 }],
+    });
+    const w = await runWrite({ plan: 'circuit' }, 'pk_live_q_min', false, 'tok-qr');
+    expect(w.res.statusCode).toBe(429);
+    expect((w.res.body as any).code).toBe('RATE_LIMITED');
+    expect(w.handler).not.toHaveBeenCalled();
+  });
+
+  it('comp key is exempt from the quota even when the counter is over', async () => {
+    setRpcResult('consume_api_usage', {
+      data: [{ minute_count: 999_999, month_count: 999_999 }],
+    });
+    const w = await runWrite({ plan: 'circuit' }, 'pk_live_q_comp', true, 'tok-qc');
+    expect(w.res.statusCode).toBe(200);
+    expect(w.handler).toHaveBeenCalledTimes(1);
+  });
+
+  it('foundation never touches the counter (unlimited)', async () => {
+    setRpcResult('consume_api_usage', {
+      data: [{ minute_count: 999_999, month_count: 999_999 }],
+    });
+    const w = await runWrite({ plan: 'foundation' }, 'pk_live_q_found', false, 'tok-qf');
+    expect(w.res.statusCode).toBe(200);
+    expect(w.handler).toHaveBeenCalledTimes(1);
   });
 });

@@ -59,6 +59,15 @@ export type PlanFeatures = {
   maxLeagues: number;
   /** File d'arbitrage prioritaire. */
   priorityArbitration: boolean;
+  /**
+   * Débit max de requêtes API AUTHENTIFIÉES (token) par minute et par tenant.
+   * `Infinity` = illimité (le compteur durable Postgres est alors court-circuité,
+   * pas d'écriture DB). Ne s'applique PAS aux lectures anonymes /api/public/v1/*
+   * (limitées par IP en mémoire).
+   */
+  apiRateLimitPerMin: number;
+  /** Quota mensuel de requêtes API authentifiées par tenant (Infinity = illimité). */
+  apiMonthlyQuota: number;
 };
 
 const FEATURES: Record<TenantPlan, PlanFeatures> = {
@@ -73,6 +82,9 @@ const FEATURES: Record<TenantPlan, PlanFeatures> = {
     ratings: true,
     maxLeagues: Infinity,
     priorityArbitration: true,
+    // Flagship (Coupe féminine) : illimité → compteur durable court-circuité.
+    apiRateLimitPerMin: Infinity,
+    apiMonthlyQuota: Infinity,
   },
   discovery: {
     whiteLabel: false,
@@ -85,6 +97,9 @@ const FEATURES: Record<TenantPlan, PlanFeatures> = {
     ratings: false,
     maxLeagues: 0,
     priorityArbitration: false,
+    // Pas d'API (bloqué par le gate plan avant même le quota).
+    apiRateLimitPerMin: 0,
+    apiMonthlyQuota: 0,
   },
   regie: {
     whiteLabel: true,
@@ -97,6 +112,8 @@ const FEATURES: Record<TenantPlan, PlanFeatures> = {
     ratings: true,
     maxLeagues: 1,
     priorityArbitration: false,
+    apiRateLimitPerMin: 60,
+    apiMonthlyQuota: 100_000,
   },
   circuit: {
     whiteLabel: true,
@@ -109,6 +126,8 @@ const FEATURES: Record<TenantPlan, PlanFeatures> = {
     ratings: true,
     maxLeagues: Infinity,
     priorityArbitration: true,
+    apiRateLimitPerMin: 120,
+    apiMonthlyQuota: 500_000,
   },
   editor: {
     whiteLabel: true,
@@ -121,6 +140,9 @@ const FEATURES: Record<TenantPlan, PlanFeatures> = {
     ratings: true,
     maxLeagues: Infinity,
     priorityArbitration: true,
+    // Sur-devis / haut de gamme : illimité.
+    apiRateLimitPerMin: Infinity,
+    apiMonthlyQuota: Infinity,
   },
 };
 

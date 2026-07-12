@@ -29,6 +29,7 @@ import { readPublicTeam } from '@/utils/public/readTeam';
 import { applyMatchScore } from '@/utils/matches/applyScore';
 import { supabaseAdmin } from '@/utils/supabase';
 import { hasScope } from '@/utils/apiScopes';
+import { consumeApiQuota } from '@/utils/billing/apiQuota';
 import { checkApiTokenAccess } from '@/utils/billing/apiPlanGate';
 import { logger } from '@/utils/logger';
 import type { GraphQLContext } from './context';
@@ -260,6 +261,26 @@ const resolvers = {
     ) => {
       requireScope(ctx, 'matches:write');
       const tenantId = ctx.token!.tenantId;
+
+      // Quota + rate-limit durable (par plan, partagé). Une clé `comp`
+      // (partenaire) n'est pas comptée. Fail-open si le compteur est indispo.
+      if (!ctx.token!.comp) {
+        const quota = await consumeApiQuota(tenantId, ctx.token!.plan);
+        if (!quota.ok) {
+          throw new GraphQLError(
+            quota.scope === 'month'
+              ? 'Monthly API quota exceeded for this plan.'
+              : 'API rate limit exceeded.',
+            {
+              extensions: {
+                code: quota.scope === 'month' ? 'QUOTA_EXCEEDED' : 'RATE_LIMITED',
+                retryAfterSec: quota.retryAfterSec,
+                limit: quota.limit,
+              },
+            }
+          );
+        }
+      }
 
       if (
         !Number.isInteger(args.team1Score) ||

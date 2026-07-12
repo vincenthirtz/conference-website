@@ -73,6 +73,30 @@ dépend du **plan effectif** du tenant propriétaire du token (cf.
   (`/api/bot/v1/*`, `BOT_API_KEY` + `x-tenant-id`), les endpoints publics
   anonymes et l'admin staff ne sont PAS touchés.
 
+### Quota & rate-limit durables (par plan)
+
+Sur la surface **authentifiée** (écritures REST + mutations GraphQL), un
+compteur **durable partagé** (Postgres, pas d'in-memory) applique par tenant :
+
+| Plan                   | Rate-limit / min | Quota mensuel |
+| ---------------------- | ---------------- | ------------- |
+| `foundation`, `editor` | illimité         | illimité      |
+| `circuit`              | 120              | 500 000       |
+| `regie`                | 60               | 100 000       |
+| `discovery`            | — (bloqué au gate plan) | —      |
+
+- Dépassement minute → `429 RATE_LIMITED` ; dépassement mois → `429
+  QUOTA_EXCEEDED`. Headers : `Retry-After`, `X-RateLimit-Scope`,
+  `X-RateLimit-Limit` (+ `X-RateLimit-Remaining` sur succès).
+- Implémentation : table `api_usage_counters` + RPC `consume_api_usage`
+  (migration `add_api_usage_counters.sql`), consommée par
+  `utils/billing/apiQuota.ts`. Plans illimités = **aucune écriture DB**.
+- **Fail-open** : si le compteur est indisponible (DB KO), on ne bloque pas.
+- **`comp`** (exemption partenaire) : non compté.
+- Les limites numériques vivent dans `utils/billing/planFeatures.ts`
+  (`apiRateLimitPerMin`, `apiMonthlyQuota`). Les **lectures anonymes**
+  `/api/public/v1/*` gardent le limiteur in-memory par IP (~120/min).
+
 ## 2. Enveloppe & codes d'erreur (REST)
 
 Succès : `{ "data": … }`. Erreur : `{ "error": "message", "code": "CODE" }`.
@@ -83,7 +107,8 @@ Succès : `{ "data": … }`. Erreur : `{ "error": "message", "code": "CODE" }`.
 | 403  | `INSUFFICIENT_SCOPE`                             | token valide, scope manquant                                                   |
 | 403  | `plan_required`                                  | plan du tenant insuffisant (voir Gate PLAN) ; corps porte `requiredCapability` |
 | 405  | `METHOD_NOT_ALLOWED`                             | méthode non autorisée (+ header `Allow`)                                       |
-| 429  | `RATE_LIMITED` / `ACTOR_RATE_LIMIT`              | quota IP ou quota par token                                                    |
+| 429  | `RATE_LIMITED` / `ACTOR_RATE_LIMIT`              | rate-limit IP / par token (in-memory) ou rate-limit/min durable par plan       |
+| 429  | `QUOTA_EXCEEDED`                                 | quota mensuel du plan dépassé (compteur durable) ; header `Retry-After`        |
 | 503  | `MAINTENANCE_MODE`                               | écritures gelées (maintenance)                                                 |
 | 400  | `INVALID_BODY` / `INVALID_QUERY` / `BAD_REQUEST` | validation                                                                     |
 | 404  | `NOT_FOUND`                                      | ressource inconnue dans le tenant                                              |

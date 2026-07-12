@@ -35,6 +35,7 @@ import { isBotMaintenanceMode } from './maintenance';
 import { logger } from './logger';
 import { formatZodError } from './validation';
 import { hasScope, type ApiScope } from './apiScopes';
+import { consumeApiQuota } from './billing/apiQuota';
 import {
   apiActionForMethod,
   checkApiTokenAccess,
@@ -52,6 +53,7 @@ export type PublicWriteErrorCode =
   | 'INSUFFICIENT_SCOPE'
   | 'METHOD_NOT_ALLOWED'
   | 'RATE_LIMITED'
+  | 'QUOTA_EXCEEDED'
   | 'MAINTENANCE_MODE'
   | 'INVALID_BODY'
   | 'INVALID_QUERY'
@@ -433,6 +435,31 @@ export function withPublicWrite<B = unknown, Q = unknown>(
         `Token lacks required scope '${opts.scope}'.`,
         'INSUFFICIENT_SCOPE'
       );
+    }
+
+    // Quota + rate-limit DURABLE (par plan, partagé entre instances). Une clé
+    // `comp` (partenaire, accès gratuit total) n'est pas comptée. Fail-open si
+    // le compteur est indispo. Les plans illimités (foundation/editor) ne
+    // touchent pas la DB (cf. consumeApiQuota).
+    if (!token.comp) {
+      const quota = await consumeApiQuota(token.tenantId, token.plan);
+      if (!quota.ok) {
+        res.setHeader('Retry-After', String(quota.retryAfterSec));
+        res.setHeader('X-RateLimit-Scope', quota.scope);
+        res.setHeader('X-RateLimit-Limit', String(quota.limit));
+        return sendError(
+          res,
+          429,
+          quota.scope === 'month'
+            ? 'Monthly API quota exceeded for this plan.'
+            : 'API rate limit exceeded.',
+          quota.scope === 'month' ? 'QUOTA_EXCEEDED' : 'RATE_LIMITED'
+        );
+      }
+      if (Number.isFinite(quota.minuteLimit)) {
+        res.setHeader('X-RateLimit-Limit', String(quota.minuteLimit));
+        res.setHeader('X-RateLimit-Remaining', String(quota.minuteRemaining));
+      }
     }
 
     // Maintenance gate sur les writes.
