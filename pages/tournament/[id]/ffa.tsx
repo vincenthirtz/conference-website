@@ -5,7 +5,7 @@
 // Si le tournoi n'a aucun stage FFA, on rend une page « pas de classement FFA »
 // plutôt qu'un 404 (le lien peut exister depuis la fiche tournoi).
 
-import type { GetServerSideProps } from 'next';
+import type { GetStaticPaths, GetStaticProps } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
 import Heading from '@/components/Typography/heading';
@@ -33,10 +33,14 @@ type Props = {
   standings: PublicFfaStandingRow[];
 };
 
-export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
+export const getStaticPaths: GetStaticPaths = async () => {
+  return { paths: [], fallback: 'blocking' };
+};
+
+export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
   const id = ctx.params?.id;
   if (!id || Array.isArray(id)) {
-    return { notFound: true };
+    return { notFound: true, revalidate: 60 };
   }
 
   const tenantId = DEFAULT_TENANT_ID;
@@ -47,10 +51,10 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
     tenantId
   );
   if (!tournament) {
-    return { notFound: true };
+    return { notFound: true, revalidate: 60 };
   }
   if (tournament.visibility && tournament.visibility !== 'public') {
-    return { notFound: true };
+    return { notFound: true, revalidate: 60 };
   }
 
   let stageName: string | null = null;
@@ -72,6 +76,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
       stageName,
       standings,
     },
+    revalidate: 60,
   };
 };
 

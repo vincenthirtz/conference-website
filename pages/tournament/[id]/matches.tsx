@@ -137,8 +137,8 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       match_format,
       team1_score,
       team2_score,
-      team1:team1_id ( id, name, short_name, logo_url ),
-      team2:team2_id ( id, name, short_name, logo_url ),
+      team1:team1_id ( id, name, short_name ),
+      team2:team2_id ( id, name, short_name ),
       stage:tournament_stages ( id, name, stage_type )
     `
     )
@@ -197,7 +197,10 @@ export default function TournamentMatchesPage({
     });
   }, [matches, statusFilter, stageFilter]);
 
-  const grouped = groupMatchesByDay(filteredMatches, t.dateTbd, locale);
+  const grouped = useMemo(
+    () => groupMatchesByDay(filteredMatches, t.dateTbd, locale),
+    [filteredMatches, t.dateTbd, locale]
+  );
 
   // Flat chronological order for list mode (unscheduled last).
   const sortedMatches = useMemo(() => {

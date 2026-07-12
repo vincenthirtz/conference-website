@@ -106,7 +106,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
   // 1) Tournoi (UUID ou slug)
   const tournament = await findTournamentByIdOrSlug<Tournament>(
     id,
-    '*',
+    'id, slug, name, game, status, format, start_date, end_date, visibility',
     tenantId
   );
   if (!tournament) {

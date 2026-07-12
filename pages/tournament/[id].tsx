@@ -2,7 +2,6 @@
 
 import { GetStaticPaths, GetStaticProps } from 'next';
 import Link from 'next/link';
-import { useMemo } from 'react';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import Button from '@/components/Buttons/button';
@@ -88,7 +87,11 @@ type TournamentPageProps = {
   tournament: Tournament;
   stages: Stage[];
   teams: SimpleTeam[];
-  matches: SimpleMatch[];
+  // Matchs déjà bornés côté serveur (plus de fetch « tous les matchs »).
+  upcomingMatches: SimpleMatch[];
+  recentMatches: SimpleMatch[];
+  totalMatches: number;
+  finishedMatchesCount: number;
   leagues: LeagueRef[];
   seo: SeoProps;
 };
@@ -171,24 +174,8 @@ export const getStaticProps: GetStaticProps<TournamentPageProps> = async (
 
   const tournamentId = tournament.id;
 
-  // Run all independent queries in parallel
-  const [stagesResult, matchesResult, teamsResult, leaguesResult] =
-    await Promise.all([
-      // 2) Stages
-      supabaseAdmin
-        .from('tournament_stages')
-        .select(
-          'id, tournament_id, name, stage_type, default_match_format, swiss_rounds, bracket_format, visible'
-        )
-        .eq('tenant_id', tenantId)
-        .eq('tournament_id', tournamentId)
-        .order('created_at', { ascending: true }),
-
-      // 3) Matches (limités)
-      supabaseAdmin
-        .from('matches')
-        .select(
-          `
+  // Select partagé pour les lignes de match affichées (upcoming + recent).
+  const matchSelect = `
         id,
         scheduled_at,
         completed_at,
@@ -202,39 +189,109 @@ export const getStaticProps: GetStaticProps<TournamentPageProps> = async (
         team1:team1_id ( id, name, short_name, logo_url ),
         team2:team2_id ( id, name, short_name, logo_url ),
         stage:tournament_stages ( id, name, stage_type )
-      `
-        )
-        .eq('tenant_id', tenantId)
-        .eq('tournament_id', tournamentId)
-        .neq('status', 'cancelled')
-        .order('scheduled_at', { ascending: true }),
+      `;
 
-      // 4) Teams (via tournament_teams — simpler join, no stage dependency)
-      supabaseAdmin
-        .from('tournament_teams')
-        .select('team:teams ( id, slug, name, short_name, logo_url )')
-        .eq('tenant_id', tenantId)
-        .eq('tournament_id', tournamentId),
+  // « Maintenant » figé au build/revalidate (ISR revalidate: 60), pour ne
+  // remonter que les matchs à venir. Écarte aussi les scheduled_at null.
+  const nowIso = new Date().toISOString();
 
-      // 5) Ligues auxquelles appartient ce tournoi (maillage interne).
-      supabaseAdmin
-        .from('league_tournaments')
-        .select('league:leagues ( slug, name, is_public, status )')
-        .eq('tenant_id', tenantId)
-        .eq('tournament_id', tournamentId),
-    ]);
+  // Run all independent queries in parallel
+  const [
+    stagesResult,
+    upcomingResult,
+    recentResult,
+    totalCountResult,
+    finishedCountResult,
+    teamsResult,
+    leaguesResult,
+  ] = await Promise.all([
+    // 2) Stages
+    supabaseAdmin
+      .from('tournament_stages')
+      .select(
+        'id, tournament_id, name, stage_type, default_match_format, swiss_rounds, bracket_format, visible'
+      )
+      .eq('tenant_id', tenantId)
+      .eq('tournament_id', tournamentId)
+      .order('created_at', { ascending: true }),
+
+    // 3a) Prochains matchs (pending/ongoing à venir), bornés à 6.
+    supabaseAdmin
+      .from('matches')
+      .select(matchSelect)
+      .eq('tenant_id', tenantId)
+      .eq('tournament_id', tournamentId)
+      .in('status', ['pending', 'ongoing'])
+      .gte('scheduled_at', nowIso)
+      .order('scheduled_at', { ascending: true })
+      .limit(6),
+
+    // 3b) Matchs récents terminés, bornés à 6. Tri par date de fin (fallback
+    // date planifiée) décroissante — fidèle à l'ancien tri client.
+    supabaseAdmin
+      .from('matches')
+      .select(matchSelect)
+      .eq('tenant_id', tenantId)
+      .eq('tournament_id', tournamentId)
+      .eq('status', 'finished')
+      .order('completed_at', { ascending: false, nullsFirst: false })
+      .order('scheduled_at', { ascending: false, nullsFirst: false })
+      .limit(6),
+
+    // 3c) Total des matchs (hors annulés) — compteur seul.
+    supabaseAdmin
+      .from('matches')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
+      .eq('tournament_id', tournamentId)
+      .neq('status', 'cancelled'),
+
+    // 3d) Total des matchs terminés — compteur seul.
+    supabaseAdmin
+      .from('matches')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
+      .eq('tournament_id', tournamentId)
+      .eq('status', 'finished'),
+
+    // 4) Teams (via tournament_teams — simpler join, no stage dependency)
+    supabaseAdmin
+      .from('tournament_teams')
+      .select('team:teams ( id, slug, name, short_name, logo_url )')
+      .eq('tenant_id', tenantId)
+      .eq('tournament_id', tournamentId),
+
+    // 5) Ligues auxquelles appartient ce tournoi (maillage interne).
+    supabaseAdmin
+      .from('league_tournaments')
+      .select('league:leagues ( slug, name, is_public, status )')
+      .eq('tenant_id', tenantId)
+      .eq('tournament_id', tournamentId),
+  ]);
 
   if (stagesResult.error)
     logger.error('tournament stages error:', stagesResult.error);
-  if (matchesResult.error)
-    logger.error('tournament matches error:', matchesResult.error);
+  if (upcomingResult.error)
+    logger.error('tournament upcoming matches error:', upcomingResult.error);
+  if (recentResult.error)
+    logger.error('tournament recent matches error:', recentResult.error);
+  if (totalCountResult.error)
+    logger.error('tournament matches count error:', totalCountResult.error);
+  if (finishedCountResult.error)
+    logger.error(
+      'tournament finished matches count error:',
+      finishedCountResult.error
+    );
   if (teamsResult.error)
     logger.error('tournament teams error:', teamsResult.error);
   if (leaguesResult.error)
     logger.error('tournament leagues error:', leaguesResult.error);
 
   const stages = (stagesResult.data || []) as any;
-  const matches = (matchesResult.data || []) as any as SimpleMatch[];
+  const upcomingMatches = (upcomingResult.data || []) as any as SimpleMatch[];
+  const recentMatches = (recentResult.data || []) as any as SimpleMatch[];
+  const totalMatches = totalCountResult.count ?? 0;
+  const finishedMatchesCount = finishedCountResult.count ?? 0;
 
   const teamMap = new Map<string, SimpleTeam>();
   (teamsResult.data || []).forEach((row: any) => {
@@ -263,7 +320,10 @@ export const getStaticProps: GetStaticProps<TournamentPageProps> = async (
       tournament,
       stages,
       teams,
-      matches,
+      upcomingMatches,
+      recentMatches,
+      totalMatches,
+      finishedMatchesCount,
       leagues,
       seo: buildTournamentSeo(tournament),
     },
@@ -275,49 +335,16 @@ export default function TournamentPage({
   tournament,
   stages,
   teams,
-  matches,
+  upcomingMatches,
+  recentMatches,
+  totalMatches,
+  finishedMatchesCount,
   leagues,
 }: Omit<TournamentPageProps, 'seo'>) {
   const t = useT('tournamentDetail');
   const { lang } = useLang();
   const totalTeams = teams.length;
-  const now = useMemo(() => new Date(), []);
-  const finishedMatches = matches.filter((m) => m.status === 'finished');
-  const totalMatches = matches.length;
   const tournamentPath = `/tournament/${tournament.slug || tournament.id}`;
-
-  const upcomingMatches = useMemo(
-    () =>
-      matches
-        .filter(
-          (m) =>
-            (m.status === 'pending' || m.status === 'ongoing') &&
-            m.scheduled_at &&
-            new Date(m.scheduled_at) >= now
-        )
-        .slice(0, 6),
-    [matches, now]
-  );
-
-  const recentMatches = useMemo(
-    () =>
-      finishedMatches
-        .sort((a, b) => {
-          const da = a.completed_at
-            ? new Date(a.completed_at)
-            : a.scheduled_at
-              ? new Date(a.scheduled_at)
-              : new Date(0);
-          const db = b.completed_at
-            ? new Date(b.completed_at)
-            : b.scheduled_at
-              ? new Date(b.scheduled_at)
-              : new Date(0);
-          return db.getTime() - da.getTime();
-        })
-        .slice(0, 6),
-    [finishedMatches]
-  );
 
   const mainStage = stages[0];
 
@@ -549,7 +576,7 @@ export default function TournamentPage({
                 accent="emerald"
                 hint={
                   totalMatches > 0
-                    ? format(t.hintFinished, { count: finishedMatches.length })
+                    ? format(t.hintFinished, { count: finishedMatchesCount })
                     : undefined
                 }
               />
