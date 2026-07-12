@@ -7,6 +7,7 @@ import Paragraph from '@/components/Typography/paragraph';
 import Button from '@/components/Buttons/button';
 import ShareEmbedPanel from '@/components/tournament/ShareEmbedPanel';
 import ArbitrationPanel from '@/components/tournament/ArbitrationPanel';
+import TournamentTabs from '@/components/tournament/TournamentTabs';
 import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import type { MatchStatus } from '@/types/admin';
@@ -356,6 +357,9 @@ export default function TournamentPage({
 
   const statusLabel = getStatusLabelT(tournament.status, t);
   const statusColor = getStatusChipColor(tournament.status);
+  const isCompleted =
+    tournament.status === 'finished' || tournament.status === 'completed';
+  const hasFfaStage = stages.some((s) => s.stage_type === 'ffa');
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#0a0a1a] via-[#0d0520] to-[#0a0a1a] text-white">
@@ -595,6 +599,13 @@ export default function TournamentPage({
             </div>
           </div>
         </section>
+
+        <TournamentTabs
+          tournamentPath={tournamentPath}
+          active="hub"
+          showPodium={isCompleted}
+          showFfa={hasFfaStage}
+        />
 
         {/* INFOS TOURNOI */}
         {(tournament.description_info ||

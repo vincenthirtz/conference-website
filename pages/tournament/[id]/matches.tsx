@@ -16,6 +16,7 @@ import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import { useLang } from '@/lib/i18n/LanguageProvider';
 import { formatDateRange } from '@/utils/tournamentDates';
+import TournamentTabs from '@/components/tournament/TournamentTabs';
 import {
   mondayOf,
   addDaysYmd,
@@ -186,6 +187,9 @@ export default function TournamentMatchesPage({
   );
   const statusLabel = getStatusLabel(tournament.status, t);
   const statusColor = getStatusChipColor(tournament.status);
+  const isCompleted =
+    tournament.status === 'finished' || tournament.status === 'completed';
+  const hasFfaStage = stages.some((s) => s.stage_type === 'ffa');
 
   const filteredMatches = useMemo(() => {
     return matches.filter((m) => {
@@ -316,35 +320,15 @@ export default function TournamentMatchesPage({
                 {t.description}
               </Paragraph>
             </div>
-
-            <div className="flex flex-wrap gap-2 justify-end">
-              <Link href={tournamentPath}>
-                <Button
-                  type="button"
-                  className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-[var(--color-violet)]"
-                >
-                  {t.backToTournament}
-                </Button>
-              </Link>
-              <Link href={`${tournamentPath}/bracket`}>
-                <Button
-                  type="button"
-                  className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-[var(--color-green)]"
-                >
-                  {t.viewBracket}
-                </Button>
-              </Link>
-              <Link href={`${tournamentPath}/maps`}>
-                <Button
-                  type="button"
-                  className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-[var(--color-yellow)]"
-                >
-                  {t.topMaps}
-                </Button>
-              </Link>
-            </div>
           </div>
         </section>
+
+        <TournamentTabs
+          tournamentPath={tournamentPath}
+          active="matches"
+          showPodium={isCompleted}
+          showFfa={hasFfaStage}
+        />
 
         {/* Filters */}
         <section className="mb-4">

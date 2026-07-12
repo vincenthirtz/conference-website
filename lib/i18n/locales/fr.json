@@ -2583,6 +2583,17 @@
     "copied": "Copié !",
     "copyBlock": "Copier le bloc"
   },
+  "tournamentTabs": {
+    "navLabel": "Navigation du tournoi",
+    "hub": "Aperçu",
+    "teams": "Équipes",
+    "matches": "Matchs",
+    "maps": "Maps",
+    "stats": "Stats",
+    "mvp": "MVP",
+    "podium": "Podium",
+    "ffa": "FFA"
+  },
   "tournamentDetail": {
     "statusUpcoming": "À venir",
     "statusOngoing": "En cours",

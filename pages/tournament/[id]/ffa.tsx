@@ -7,7 +7,6 @@
 
 import type { GetStaticPaths, GetStaticProps } from 'next';
 import Head from 'next/head';
-import Link from 'next/link';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
@@ -18,11 +17,13 @@ import {
 } from '@/utils/public/readFfaStandings';
 import { useT, format } from '@/lib/i18n/useT';
 import { logger } from '@/utils/logger';
+import TournamentTabs from '@/components/tournament/TournamentTabs';
 
 type TournamentLite = {
   id: string;
   slug: string | null;
   name: string;
+  status: string;
   visibility: string | null;
 };
 
@@ -31,6 +32,7 @@ type Props = {
   tournamentPath: string;
   stageName: string | null;
   standings: PublicFfaStandingRow[];
+  isCompleted: boolean;
 };
 
 export const getStaticPaths: GetStaticPaths = async () => {
@@ -47,7 +49,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
 
   const tournament = await findTournamentByIdOrSlug<TournamentLite>(
     id,
-    'id, slug, name, visibility',
+    'id, slug, name, status, visibility',
     tenantId
   );
   if (!tournament) {
@@ -75,6 +77,8 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       tournamentPath: `/tournament/${tournament.slug || tournament.id}`,
       stageName,
       standings,
+      isCompleted:
+        tournament.status === 'finished' || tournament.status === 'completed',
     },
     revalidate: 60,
   };
@@ -89,6 +93,7 @@ export default function TournamentFfaPage({
   tournamentPath,
   stageName,
   standings,
+  isCompleted,
 }: Props) {
   const t = useT('ffaStandings');
 
@@ -107,13 +112,6 @@ export default function TournamentFfaPage({
       </Head>
 
       <main className="container mx-auto max-w-5xl px-4 pt-24 pb-16">
-        <Link
-          href={tournamentPath}
-          className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white mb-6"
-        >
-          {t.backToTournament}
-        </Link>
-
         <header className="mb-8">
           <p className="text-[10px] uppercase tracking-widest text-[var(--color-green-light)] mb-2">
             {t.eyebrow}
@@ -135,6 +133,13 @@ export default function TournamentFfaPage({
           </Paragraph>
         </header>
 
+        <TournamentTabs
+          tournamentPath={tournamentPath}
+          active="ffa"
+          showPodium={isCompleted}
+          showFfa={true}
+        />
+
         {standings.length === 0 ? (
           <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-6 py-12 text-center">
             <Paragraph typeStyle="body-sm" textColor="text-gray-400">
@@ -146,10 +151,15 @@ export default function TournamentFfaPage({
             <table className="w-full min-w-[560px] border-collapse text-sm">
               <thead>
                 <tr className="border-b border-white/10 text-[11px] uppercase tracking-wider text-gray-400">
-                  <th scope="col" className="w-14 px-4 py-3 text-right tabular-nums">
+                  <th
+                    scope="col"
+                    className="w-14 px-4 py-3 text-right tabular-nums"
+                  >
                     {t.colRank}
                   </th>
-                  <th scope="col" className="px-4 py-3 text-left">{t.colTeam}</th>
+                  <th scope="col" className="px-4 py-3 text-left">
+                    {t.colTeam}
+                  </th>
                   <th scope="col" className="px-4 py-3 text-right tabular-nums">
                     {t.colPoints}
                   </th>

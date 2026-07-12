@@ -15,12 +15,14 @@ import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { findTournamentByIdOrSlug } from '@/utils/tournamentLookup';
 import { logger } from '@/utils/logger';
 import { useT, format } from '@/lib/i18n/useT';
+import TournamentTabs from '@/components/tournament/TournamentTabs';
 
 type Tournament = {
   id: string;
   slug: string | null;
   name: string;
   game: string | null;
+  status: string;
   start_date: string | null;
   end_date: string | null;
   visibility?: string | null;
@@ -37,6 +39,7 @@ type Team = {
 type Props = {
   tournament: Tournament;
   teams: Team[];
+  hasFfaStage: boolean;
 };
 
 export const getStaticPaths: GetStaticPaths = async () => {
@@ -54,7 +57,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
   // Tournoi (UUID ou slug). Même garde de visibilité que la fiche d'équipe.
   const tournament = await findTournamentByIdOrSlug<Tournament>(
     id,
-    'id, name, slug, game, start_date, end_date, visibility',
+    'id, name, slug, game, status, start_date, end_date, visibility',
     tenantId
   );
   if (
@@ -63,15 +66,26 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
   )
     return { notFound: true, revalidate: 60 };
 
-  // Équipes inscrites (via tournament_teams), même jointure que la page tournoi.
-  const teamsRes = await supabaseAdmin
-    .from('tournament_teams')
-    .select('team:teams ( id, slug, name, short_name, logo_url )')
-    .eq('tenant_id', tenantId)
-    .eq('tournament_id', tournament.id);
+  // Équipes inscrites (via tournament_teams) + phases (pour l'onglet FFA).
+  const [teamsRes, stagesRes] = await Promise.all([
+    supabaseAdmin
+      .from('tournament_teams')
+      .select('team:teams ( id, slug, name, short_name, logo_url )')
+      .eq('tenant_id', tenantId)
+      .eq('tournament_id', tournament.id),
+    supabaseAdmin
+      .from('tournament_stages')
+      .select('stage_type')
+      .eq('tenant_id', tenantId)
+      .eq('tournament_id', tournament.id),
+  ]);
 
   if (teamsRes.error)
     logger.error('tournament teams list error:', teamsRes.error);
+
+  const hasFfaStage = (stagesRes.data || []).some(
+    (s: any) => s.stage_type === 'ffa'
+  );
 
   // La jointure `team:teams(...)` est typée en tableau par Supabase mais renvoie
   // un objet unique à l'exécution (relation 1-1 via la FK) — même traitement que
@@ -84,12 +98,18 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
     a.name.localeCompare(b.name, 'fr')
   );
 
-  return { props: { tournament, teams }, revalidate: 60 };
+  return { props: { tournament, teams, hasFfaStage }, revalidate: 60 };
 };
 
-export default function TournamentTeamsPage({ tournament, teams }: Props) {
+export default function TournamentTeamsPage({
+  tournament,
+  teams,
+  hasFfaStage,
+}: Props) {
   const t = useT('tournamentTeams');
   const tournamentPath = `/tournament/${tournament.slug || tournament.id}`;
+  const isCompleted =
+    tournament.status === 'finished' || tournament.status === 'completed';
 
   return (
     <>
@@ -128,6 +148,13 @@ export default function TournamentTeamsPage({ tournament, teams }: Props) {
               )}
             </p>
           </section>
+
+          <TournamentTabs
+            tournamentPath={tournamentPath}
+            active="teams"
+            showPodium={isCompleted}
+            showFfa={hasFfaStage}
+          />
 
           {teams.length === 0 ? (
             <div className="rounded-xl border border-white/10 bg-white/[0.03] p-8 text-center">

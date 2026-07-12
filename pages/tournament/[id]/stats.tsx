@@ -2,17 +2,16 @@
 
 import { GetStaticPaths, GetStaticProps } from 'next';
 import Head from 'next/head';
-import Link from 'next/link';
 import Image from 'next/image';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
-import Button from '@/components/Buttons/button';
 import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { findTournamentByIdOrSlug } from '@/utils/tournamentLookup';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLang } from '@/lib/i18n/LanguageProvider';
 import { formatDateRange } from '@/utils/tournamentDates';
+import TournamentTabs from '@/components/tournament/TournamentTabs';
 
 import { logger } from '../../../utils/logger';
 type StatsDict = ReturnType<typeof useT<'tournamentStats'>>;
@@ -68,6 +67,7 @@ type TeamStat = {
 type Props = {
   tournament: Tournament;
   teamStats: TeamStat[];
+  hasFfaStage: boolean;
 };
 
 export const getStaticPaths: GetStaticPaths = async () => {
@@ -101,7 +101,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
   const [stagesRes, matchesRes] = await Promise.all([
     supabaseAdmin
       .from('tournament_stages')
-      .select('id')
+      .select('id, stage_type')
       .eq('tenant_id', tenantId)
       .eq('tournament_id', tournamentId),
     supabaseAdmin
@@ -116,6 +116,9 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
     logger.error('stats page matches error:', matchesRes.error);
   }
 
+  const hasFfaStage = (stagesRes.data || []).some(
+    (s: any) => s.stage_type === 'ffa'
+  );
   const stageIds = (stagesRes.data || []).map((s: any) => s.id);
   const matches = ((matchesRes.data || []) as MatchRow[]).filter(
     (m) => !m.is_bye
@@ -168,6 +171,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       props: {
         tournament: tournament as Tournament,
         teamStats: [],
+        hasFfaStage,
       },
       revalidate: 60,
     };
@@ -180,14 +184,21 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
     props: {
       tournament: tournament as Tournament,
       teamStats,
+      hasFfaStage,
     },
     revalidate: 60,
   };
 };
 
-export default function TournamentStatsPage({ tournament, teamStats }: Props) {
+export default function TournamentStatsPage({
+  tournament,
+  teamStats,
+  hasFfaStage,
+}: Props) {
   const t = useT('tournamentStats');
   const { lang } = useLang();
+  const isCompleted =
+    tournament.status === 'finished' || tournament.status === 'completed';
   const dateRangeLabel = formatDateRange(
     tournament.start_date,
     tournament.end_date,
@@ -260,51 +271,15 @@ export default function TournamentStatsPage({ tournament, teamStats }: Props) {
                 {t.description}
               </Paragraph>
             </div>
-
-            <div className="flex flex-wrap gap-2 justify-end">
-              <Link href={tournamentPath}>
-                <Button
-                  type="button"
-                  className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-[var(--color-violet)]"
-                >
-                  {t.backToTournament}
-                </Button>
-              </Link>
-              <Link href={`${tournamentPath}/matches`}>
-                <Button
-                  type="button"
-                  className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-[var(--color-yellow)]"
-                >
-                  {t.allMatches}
-                </Button>
-              </Link>
-              <Link href={`${tournamentPath}/maps`}>
-                <Button
-                  type="button"
-                  className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-[var(--color-green)]"
-                >
-                  {t.topMaps}
-                </Button>
-              </Link>
-              <Link href={`${tournamentPath}/mvp`}>
-                <Button
-                  type="button"
-                  className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-yellow-400"
-                >
-                  {t.mvp}
-                </Button>
-              </Link>
-              <Link href={`${tournamentPath}/bracket`}>
-                <Button
-                  type="button"
-                  className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-[var(--color-violet)]"
-                >
-                  {t.bracket}
-                </Button>
-              </Link>
-            </div>
           </div>
         </section>
+
+        <TournamentTabs
+          tournamentPath={tournamentPath}
+          active="stats"
+          showPodium={isCompleted}
+          showFfa={hasFfaStage}
+        />
 
         {/* Stats globales */}
         <section className="mb-6">
@@ -384,13 +359,27 @@ export default function TournamentStatsPage({ tournament, teamStats }: Props) {
                 <table className="min-w-full text-[11px]">
                   <thead>
                     <tr className="text-gray-400 border-b border-white/10">
-                      <th scope="col" className="text-left py-1.5 pr-3">#</th>
-                      <th scope="col" className="text-left py-1.5 pr-3">{t.colTeam}</th>
-                      <th scope="col" className="text-right py-1.5 px-3">{t.colMatches}</th>
-                      <th scope="col" className="text-right py-1.5 px-3">{t.colWins}</th>
-                      <th scope="col" className="text-right py-1.5 px-3">{t.colLosses}</th>
-                      <th scope="col" className="text-right py-1.5 px-3">{t.colWinrate}</th>
-                      <th scope="col" className="text-right py-1.5 px-3">{t.colMaps}</th>
+                      <th scope="col" className="text-left py-1.5 pr-3">
+                        #
+                      </th>
+                      <th scope="col" className="text-left py-1.5 pr-3">
+                        {t.colTeam}
+                      </th>
+                      <th scope="col" className="text-right py-1.5 px-3">
+                        {t.colMatches}
+                      </th>
+                      <th scope="col" className="text-right py-1.5 px-3">
+                        {t.colWins}
+                      </th>
+                      <th scope="col" className="text-right py-1.5 px-3">
+                        {t.colLosses}
+                      </th>
+                      <th scope="col" className="text-right py-1.5 px-3">
+                        {t.colWinrate}
+                      </th>
+                      <th scope="col" className="text-right py-1.5 px-3">
+                        {t.colMaps}
+                      </th>
                     </tr>
                   </thead>
                   <tbody>

@@ -15,6 +15,7 @@ import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { findTournamentByIdOrSlug } from '@/utils/tournamentLookup';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
+import TournamentTabs from '@/components/tournament/TournamentTabs';
 import { logger } from '../../../utils/logger';
 
 type PodiumDict = ReturnType<typeof useT<'tournamentPodium'>>;
@@ -45,6 +46,7 @@ type RankingRow = {
 type Props = {
   tournament: Tournament;
   rankings: RankingRow[];
+  hasFfaStage: boolean;
 };
 
 export const getStaticPaths: GetStaticPaths = async () => {
@@ -79,10 +81,11 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
     return { notFound: true, revalidate: 60 };
   }
 
-  const { data: rankRows, error } = await supabaseAdmin
-    .from('final_rankings')
-    .select(
-      `
+  const [{ data: rankRows, error }, stagesRes] = await Promise.all([
+    supabaseAdmin
+      .from('final_rankings')
+      .select(
+        `
       team_id,
       rank,
       prize,
@@ -95,13 +98,23 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
         slug
       )
     `
-    )
-    .eq('tournament_id', tournament.id)
-    .order('rank', { ascending: true });
+      )
+      .eq('tournament_id', tournament.id)
+      .order('rank', { ascending: true }),
+    supabaseAdmin
+      .from('tournament_stages')
+      .select('stage_type')
+      .eq('tenant_id', tenantId)
+      .eq('tournament_id', tournament.id),
+  ]);
 
   if (error) {
     logger.error('public podium page query error:', error);
   }
+
+  const hasFfaStage = (stagesRes.data || []).some(
+    (s: any) => s.stage_type === 'ffa'
+  );
 
   if (!rankRows || rankRows.length === 0) {
     return { notFound: true, revalidate: 60 };
@@ -120,7 +133,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
   }));
 
   return {
-    props: { tournament, rankings },
+    props: { tournament, rankings, hasFfaStage },
     revalidate: 60,
   };
 };
@@ -145,9 +158,16 @@ const getMedal = (
   },
 });
 
-export default function TournamentPodiumPage({ tournament, rankings }: Props) {
+export default function TournamentPodiumPage({
+  tournament,
+  rankings,
+  hasFfaStage,
+}: Props) {
   const t = useT('tournamentPodium');
   const locale = useLocale();
+  const tournamentPath = `/tournament/${tournament.slug ?? tournament.id}`;
+  const isCompleted =
+    tournament.status === 'finished' || tournament.status === 'completed';
   const MEDAL = getMedal(t);
   const top3 = rankings.filter((r) => r.rank <= 3);
   const rest = rankings.filter((r) => r.rank > 3);
@@ -177,13 +197,6 @@ export default function TournamentPodiumPage({ tournament, rankings }: Props) {
 
       <main className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-black text-white">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16">
-          <Link
-            href={`/tournament/${tournament.slug ?? tournament.id}`}
-            className="inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white mb-6"
-          >
-            {t.backToTournament}
-          </Link>
-
           <div className="flex flex-col items-center text-center mb-10">
             <p className="text-xs uppercase tracking-widest text-[var(--color-yellow)] mb-2">
               {t.eyebrow}
@@ -198,6 +211,13 @@ export default function TournamentPodiumPage({ tournament, rankings }: Props) {
               </Paragraph>
             )}
           </div>
+
+          <TournamentTabs
+            tournamentPath={tournamentPath}
+            active="podium"
+            showPodium={isCompleted}
+            showFfa={hasFfaStage}
+          />
 
           {top3.length > 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
@@ -268,10 +288,18 @@ export default function TournamentPodiumPage({ tournament, rankings }: Props) {
               <table className="w-full text-sm">
                 <thead className="bg-neutral-900/80 text-xs uppercase text-neutral-400">
                   <tr>
-                    <th scope="col" className="px-4 py-3 text-left w-16">{t.colRank}</th>
-                    <th scope="col" className="px-4 py-3 text-left">{t.colTeam}</th>
-                    <th scope="col" className="px-4 py-3 text-left">{t.colPrize}</th>
-                    <th scope="col" className="px-4 py-3 text-left">{t.colNotes}</th>
+                    <th scope="col" className="px-4 py-3 text-left w-16">
+                      {t.colRank}
+                    </th>
+                    <th scope="col" className="px-4 py-3 text-left">
+                      {t.colTeam}
+                    </th>
+                    <th scope="col" className="px-4 py-3 text-left">
+                      {t.colPrize}
+                    </th>
+                    <th scope="col" className="px-4 py-3 text-left">
+                      {t.colNotes}
+                    </th>
                   </tr>
                 </thead>
                 <tbody>

@@ -2583,6 +2583,17 @@
     "copied": "Copied!",
     "copyBlock": "Copy the block"
   },
+  "tournamentTabs": {
+    "navLabel": "Tournament navigation",
+    "hub": "Overview",
+    "teams": "Teams",
+    "matches": "Matches",
+    "maps": "Maps",
+    "stats": "Stats",
+    "mvp": "MVP",
+    "podium": "Podium",
+    "ffa": "FFA"
+  },
   "tournamentDetail": {
     "statusUpcoming": "Upcoming",
     "statusOngoing": "Ongoing",

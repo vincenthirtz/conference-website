@@ -6,13 +6,13 @@ import Head from 'next/head';
 import Link from 'next/link';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
-import Button from '@/components/Buttons/button';
 import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { findTournamentByIdOrSlug } from '@/utils/tournamentLookup';
 import { maskBattleTag } from '@/utils/battleTag';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
+import TournamentTabs from '@/components/tournament/TournamentTabs';
 
 type LeaderboardEntry = {
   memberId: string | null;
@@ -37,6 +37,7 @@ type Tournament = {
   id: string;
   slug?: string | null;
   name: string;
+  status: string;
   visibility?: string | null;
 };
 
@@ -46,6 +47,7 @@ type Props = {
   totalFinishedMatches: number;
   leaderboard: LeaderboardEntry[];
   perMatch: PerMatchEntry[];
+  hasFfaStage: boolean;
 };
 
 export const getStaticPaths: GetStaticPaths = async () => {
@@ -63,7 +65,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
   // Phase A : tournoi (UUID ou slug)
   const tournament = await findTournamentByIdOrSlug<Tournament>(
     id,
-    'id, name, slug, visibility',
+    'id, name, slug, status, visibility',
     tenantId
   );
   if (
@@ -72,6 +74,15 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
   )
     return { notFound: true, revalidate: 60 };
   const tournamentId = tournament.id;
+
+  const stagesRes = await supabaseAdmin
+    .from('tournament_stages')
+    .select('stage_type')
+    .eq('tenant_id', tenantId)
+    .eq('tournament_id', tournamentId);
+  const hasFfaStage = (stagesRes.data || []).some(
+    (s: any) => s.stage_type === 'ffa'
+  );
 
   const matchesRes = await supabaseAdmin
     .from('matches')
@@ -197,11 +208,13 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
         id: tournament.id,
         slug: tournament.slug ?? null,
         name: tournament.name,
+        status: tournament.status,
       },
       totalMvpAwards: leaderboard.reduce((sum, l) => sum + l.mvpCount, 0),
       totalFinishedMatches: finishedMatches.length,
       leaderboard,
       perMatch,
+      hasFfaStage,
     },
     revalidate: 60,
   };
@@ -235,11 +248,14 @@ export default function TournamentMvpPage({
   totalFinishedMatches,
   leaderboard,
   perMatch,
+  hasFfaStage,
 }: Props) {
   const t = useT('tournamentMvp');
   const locale = useLocale();
   const matchesWithMvp = perMatch.filter((m) => m.battleTag || m.memberId);
   const tournamentPath = `/tournament/${tournament.slug || tournament.id}`;
+  const isCompleted =
+    tournament.status === 'finished' || tournament.status === 'completed';
 
   return (
     <>
@@ -279,35 +295,15 @@ export default function TournamentMvpPage({
                   })}
                 </Paragraph>
               </div>
-
-              <div className="flex flex-wrap gap-2 justify-end">
-                <Link href={tournamentPath}>
-                  <Button
-                    type="button"
-                    className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-[var(--color-violet)]"
-                  >
-                    {t.backToTournament}
-                  </Button>
-                </Link>
-                <Link href={`${tournamentPath}/stats`}>
-                  <Button
-                    type="button"
-                    className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-[var(--color-green)]"
-                  >
-                    {t.teamStats}
-                  </Button>
-                </Link>
-                <Link href={`${tournamentPath}/matches`}>
-                  <Button
-                    type="button"
-                    className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-[var(--color-yellow)]"
-                  >
-                    {t.allMatches}
-                  </Button>
-                </Link>
-              </div>
             </div>
           </section>
+
+          <TournamentTabs
+            tournamentPath={tournamentPath}
+            active="mvp"
+            showPodium={isCompleted}
+            showFfa={hasFfaStage}
+          />
 
           {leaderboard.length === 0 ? (
             <section className="bg-black/60 border border-white/5 rounded-2xl p-8 text-center">

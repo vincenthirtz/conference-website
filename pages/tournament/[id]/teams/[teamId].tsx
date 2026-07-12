@@ -16,6 +16,7 @@ import { findTournamentByIdOrSlug } from '@/utils/tournamentLookup';
 import { maskBattleTag } from '@/utils/battleTag';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
+import TournamentTabs from '@/components/tournament/TournamentTabs';
 
 type TeamDetailDict = ReturnType<typeof useT<'tournamentTeamDetail'>>;
 
@@ -24,6 +25,7 @@ type Tournament = {
   slug?: string | null;
   name: string;
   game: string | null;
+  status: string;
   start_date: string | null;
   end_date: string | null;
   visibility?: string | null;
@@ -80,6 +82,7 @@ type Props = {
   matches: TournamentMatch[];
   stats: { played: number; wins: number; losses: number; draws: number };
   totalMvpAwards: number;
+  hasFfaStage: boolean;
 };
 
 export const getStaticPaths: GetStaticPaths = async () => {
@@ -100,7 +103,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
   // Phase A : tournoi (UUID ou slug)
   const tournament = await findTournamentByIdOrSlug<Tournament>(
     id,
-    'id, name, slug, game, start_date, end_date, visibility',
+    'id, name, slug, game, status, start_date, end_date, visibility',
     tenantId
   );
   if (
@@ -110,45 +113,55 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
     return { notFound: true, revalidate: 60 };
   const tournamentId = tournament.id;
 
-  // Phase B : team + registration + members + matches en parallèle
-  const [teamRes, registrationRes, membersRes, matchesRes] = await Promise.all([
-    supabaseAdmin
-      .from('teams')
-      .select(
-        'id, slug, name, short_name, logo_url, banner_url, country, description, twitter, discord, website, captain_id, is_active'
-      )
-      .eq('tenant_id', tenantId)
-      .eq('id', teamId)
-      .maybeSingle(),
-    supabaseAdmin
-      .from('tournament_teams')
-      .select('team_id')
-      .eq('tenant_id', tenantId)
-      .eq('tournament_id', tournamentId)
-      .eq('team_id', teamId)
-      .maybeSingle(),
-    supabaseAdmin
-      .from('team_members')
-      .select('id, battle_tag, role, is_substitute, user_id, created_at')
-      .eq('tenant_id', tenantId)
-      .eq('team_id', teamId)
-      .order('is_substitute', { ascending: true })
-      .order('created_at', { ascending: true }),
-    supabaseAdmin
-      .from('matches')
-      .select(
-        `
+  // Phase B : team + registration + members + matches + phases en parallèle
+  const [teamRes, registrationRes, membersRes, matchesRes, stagesRes] =
+    await Promise.all([
+      supabaseAdmin
+        .from('teams')
+        .select(
+          'id, slug, name, short_name, logo_url, banner_url, country, description, twitter, discord, website, captain_id, is_active'
+        )
+        .eq('tenant_id', tenantId)
+        .eq('id', teamId)
+        .maybeSingle(),
+      supabaseAdmin
+        .from('tournament_teams')
+        .select('team_id')
+        .eq('tenant_id', tenantId)
+        .eq('tournament_id', tournamentId)
+        .eq('team_id', teamId)
+        .maybeSingle(),
+      supabaseAdmin
+        .from('team_members')
+        .select('id, battle_tag, role, is_substitute, user_id, created_at')
+        .eq('tenant_id', tenantId)
+        .eq('team_id', teamId)
+        .order('is_substitute', { ascending: true })
+        .order('created_at', { ascending: true }),
+      supabaseAdmin
+        .from('matches')
+        .select(
+          `
       id, status, round_name, scheduled_at, completed_at,
       team1_id, team2_id, team1_score, team2_score, winner_team_id,
       mvp:match_mvp_polls(winner_member_id)
       `
-      )
-      .eq('tenant_id', tenantId)
-      .eq('tournament_id', tournamentId)
-      .or(`team1_id.eq.${teamId},team2_id.eq.${teamId}`)
-      .neq('status', 'cancelled')
-      .order('scheduled_at', { ascending: true, nullsFirst: false }),
-  ]);
+        )
+        .eq('tenant_id', tenantId)
+        .eq('tournament_id', tournamentId)
+        .or(`team1_id.eq.${teamId},team2_id.eq.${teamId}`)
+        .neq('status', 'cancelled')
+        .order('scheduled_at', { ascending: true, nullsFirst: false }),
+      supabaseAdmin
+        .from('tournament_stages')
+        .select('stage_type')
+        .eq('tenant_id', tenantId)
+        .eq('tournament_id', tournamentId),
+    ]);
+
+  const hasFfaStage = (stagesRes.data || []).some(
+    (s: any) => s.stage_type === 'ffa'
+  );
 
   const team = teamRes.data;
   if (!team || team.is_active === false)
@@ -254,6 +267,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
         slug: tournament.slug ?? null,
         name: tournament.name,
         game: tournament.game ?? null,
+        status: tournament.status,
         start_date: tournament.start_date ?? null,
         end_date: tournament.end_date ?? null,
       },
@@ -275,6 +289,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       matches: tournamentMatches,
       stats: { played, wins, losses, draws },
       totalMvpAwards,
+      hasFfaStage,
     },
     revalidate: 60,
   };
@@ -314,6 +329,7 @@ export default function TournamentTeamPage({
   matches,
   stats,
   totalMvpAwards,
+  hasFfaStage,
 }: Props) {
   const t = useT('tournamentTeamDetail');
   const locale = useLocale();
@@ -321,6 +337,8 @@ export default function TournamentTeamPage({
   const remplacants = roster.filter((m) => m.is_substitute);
   const winrate = stats.played > 0 ? (stats.wins / stats.played) * 100 : 0;
   const tournamentPath = `/tournament/${tournament.slug || tournament.id}`;
+  const isCompleted =
+    tournament.status === 'finished' || tournament.status === 'completed';
 
   return (
     <>
@@ -396,17 +414,16 @@ export default function TournamentTeamPage({
                     {t.globalProfile}
                   </Button>
                 </Link>
-                <Link href={tournamentPath}>
-                  <Button
-                    type="button"
-                    className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-[var(--color-green)]"
-                  >
-                    {t.backToTournament}
-                  </Button>
-                </Link>
               </div>
             </div>
           </section>
+
+          <TournamentTabs
+            tournamentPath={tournamentPath}
+            active="teams"
+            showPodium={isCompleted}
+            showFfa={hasFfaStage}
+          />
 
           {/* Stats du tournoi */}
           <section className="mb-6">

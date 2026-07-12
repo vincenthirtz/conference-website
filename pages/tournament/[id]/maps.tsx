@@ -2,16 +2,15 @@
 
 import { GetStaticPaths, GetStaticProps } from 'next';
 import Head from 'next/head';
-import Link from 'next/link';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
-import Button from '@/components/Buttons/button';
 import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { findTournamentByIdOrSlug } from '@/utils/tournamentLookup';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLang } from '@/lib/i18n/LanguageProvider';
 import { formatDateRange } from '@/utils/tournamentDates';
+import TournamentTabs from '@/components/tournament/TournamentTabs';
 
 import { logger } from '../../../utils/logger';
 type MapsDict = ReturnType<typeof useT<'tournamentMaps'>>;
@@ -88,6 +87,7 @@ type Props = {
   tournament: Tournament;
   maps: MapStat[];
   hasVetoData: boolean;
+  hasFfaStage: boolean;
 };
 
 export const getStaticPaths: GetStaticPaths = async () => {
@@ -117,17 +117,28 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
   }
   const tournamentId = tournament.id;
 
-  // 2) Matches du tournoi
-  const matchesRes = await supabaseAdmin
-    .from('matches')
-    .select('id, status, is_bye, team1_id, team2_id')
-    .eq('tenant_id', tenantId)
-    .eq('tournament_id', tournamentId)
-    .neq('status', 'cancelled');
+  // 2) Matches du tournoi + phases (pour l'onglet FFA)
+  const [matchesRes, stagesRes] = await Promise.all([
+    supabaseAdmin
+      .from('matches')
+      .select('id, status, is_bye, team1_id, team2_id')
+      .eq('tenant_id', tenantId)
+      .eq('tournament_id', tournamentId)
+      .neq('status', 'cancelled'),
+    supabaseAdmin
+      .from('tournament_stages')
+      .select('stage_type')
+      .eq('tenant_id', tenantId)
+      .eq('tournament_id', tournamentId),
+  ]);
 
   if (matchesRes.error) {
     logger.error('maps page matches error:', matchesRes.error);
   }
+
+  const hasFfaStage = (stagesRes.data || []).some(
+    (s: any) => s.stage_type === 'ffa'
+  );
 
   const allMatches = (matchesRes.data || []) as MatchRow[];
   const matches = allMatches.filter((m) => !m.is_bye);
@@ -191,6 +202,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       tournament: tournament as Tournament,
       maps,
       hasVetoData,
+      hasFfaStage,
     },
     revalidate: 60,
   };
@@ -200,10 +212,13 @@ export default function TournamentMapsPage({
   tournament,
   maps,
   hasVetoData,
+  hasFfaStage,
 }: Props) {
   const t = useT('tournamentMaps');
   const { lang } = useLang();
   const tournamentPath = `/tournament/${tournament.slug || tournament.id}`;
+  const isCompleted =
+    tournament.status === 'finished' || tournament.status === 'completed';
   const dateRangeLabel = formatDateRange(
     tournament.start_date,
     tournament.end_date,
@@ -265,35 +280,15 @@ export default function TournamentMapsPage({
                 {t.description}
               </Paragraph>
             </div>
-
-            <div className="flex flex-wrap gap-2 justify-end">
-              <Link href={tournamentPath}>
-                <Button
-                  type="button"
-                  className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-[var(--color-violet)]"
-                >
-                  {t.backToTournament}
-                </Button>
-              </Link>
-              <Link href={`${tournamentPath}/matches`}>
-                <Button
-                  type="button"
-                  className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-[var(--color-yellow)]"
-                >
-                  {t.allMatches}
-                </Button>
-              </Link>
-              <Link href={`${tournamentPath}/bracket`}>
-                <Button
-                  type="button"
-                  className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-[var(--color-green)]"
-                >
-                  {t.viewBracket}
-                </Button>
-              </Link>
-            </div>
           </div>
         </section>
+
+        <TournamentTabs
+          tournamentPath={tournamentPath}
+          active="maps"
+          showPodium={isCompleted}
+          showFfa={hasFfaStage}
+        />
 
         {/* Stats globales */}
         <section className="mb-6">
@@ -376,8 +371,12 @@ export default function TournamentMapsPage({
                 <table className="min-w-full text-[11px]">
                   <thead>
                     <tr className="text-gray-400 border-b border-white/10">
-                      <th scope="col" className="text-left py-1.5 pr-3">{t.colMap}</th>
-                      <th scope="col" className="text-right py-1.5 px-3">{t.colGames}</th>
+                      <th scope="col" className="text-left py-1.5 pr-3">
+                        {t.colMap}
+                      </th>
+                      <th scope="col" className="text-right py-1.5 px-3">
+                        {t.colGames}
+                      </th>
                       <th scope="col" className="text-right py-1.5 px-3">
                         {t.colAvgRounds}
                       </th>
