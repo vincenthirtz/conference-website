@@ -14,7 +14,9 @@ export interface IButton {
   children: ReactNode;
   overlay?: boolean;
   onClick?: MouseEventHandler;
-  type: ButtonType;
+  // Optionnel : ignoré quand `as="link"` (rendu <a>, l'attribut type n'a pas
+  // de sens). ButtonType inclut déjà `undefined`.
+  type?: ButtonType;
   disabled?: boolean;
   test?: string;
   size?: 'default' | 'compact';

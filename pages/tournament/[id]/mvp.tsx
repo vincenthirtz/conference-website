@@ -2,10 +2,10 @@
 // Page publique : leaderboard MVP du tournoi (agregation des winners de match_mvp_polls).
 
 import { GetStaticPaths, GetStaticProps } from 'next';
-import Head from 'next/head';
 import Link from 'next/link';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
+import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { findTournamentByIdOrSlug } from '@/utils/tournamentLookup';
@@ -48,7 +48,20 @@ type Props = {
   leaderboard: LeaderboardEntry[];
   perMatch: PerMatchEntry[];
   hasFfaStage: boolean;
+  seo: SeoProps;
 };
+
+// SEO par-entité : leaderboard MVP du tournoi. description bilingue.
+function buildMvpSeo(name: string): SeoProps {
+  return {
+    title: { fr: `MVP – ${name}`, en: `MVP – ${name}` },
+    description: {
+      fr: `Classement des MVP du tournoi ${name} — OW Women's Cup : joueuses les plus élues MVP par match.`,
+      en: `MVP leaderboard for the ${name} tournament — OW Women's Cup: players most voted MVP across matches.`,
+    },
+    type: 'website',
+  };
+}
 
 export const getStaticPaths: GetStaticPaths = async () => {
   return { paths: [], fallback: 'blocking' };
@@ -215,6 +228,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       leaderboard,
       perMatch,
       hasFfaStage,
+      seo: buildMvpSeo(tournament.name),
     },
     revalidate: 60,
   };
@@ -259,14 +273,6 @@ export default function TournamentMvpPage({
 
   return (
     <>
-      <Head>
-        <title>{format(t.headTitle, { name: tournament.name })}</title>
-        <meta
-          name="description"
-          content={`Classement des MVP du tournoi ${tournament.name}`}
-        />
-      </Head>
-
       <main className="bg-neutral-950 text-white min-h-screen pt-24 pb-16">
         <div className="max-w-5xl mx-auto px-4">
           <section className="mb-6">

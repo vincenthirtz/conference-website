@@ -1,11 +1,11 @@
 // pages/match/[id]/games.tsx
 
 import { GetStaticPaths, GetStaticProps } from 'next';
-import Head from 'next/head';
 import Link from 'next/link';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import Button from '@/components/Buttons/button';
+import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import type { MatchStatus } from '@/types/admin';
@@ -69,7 +69,24 @@ type Match = {
 
 type Props = {
   match: Match | null;
+  seo?: SeoProps;
 };
+
+// SEO par-entité : détail des manches d'un match. description bilingue.
+function buildGamesSeo(match: Match): SeoProps {
+  const tName = match.tournament?.name ?? "OW Women's Cup";
+  return {
+    title: {
+      fr: `Détail des manches – ${tName}`,
+      en: `Games breakdown – ${tName}`,
+    },
+    description: {
+      fr: `Détail manche par manche : maps, scores, tiebreakers et overtimes du match — tournoi ${tName}, OW Women's Cup.`,
+      en: `Round-by-round breakdown: maps, scores, tiebreakers and overtimes for the match — ${tName} tournament, OW Women's Cup.`,
+    },
+    type: 'article',
+  };
+}
 
 export const getStaticPaths: GetStaticPaths = async () => {
   return { paths: [], fallback: 'blocking' };
@@ -127,6 +144,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
   return {
     props: {
       match,
+      seo: buildGamesSeo(match),
     },
     revalidate: 30,
   };
@@ -159,16 +177,6 @@ export default function MatchGamesPage({ match }: Props) {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
-      <Head>
-        <title>
-          {format(t.docTitle, {
-            team1: t1Name,
-            team2: t2Name,
-            tournament: match.tournament.name,
-          })}
-        </title>
-      </Head>
-
       <main className="container mx-auto px-4 pt-24 pb-16 max-w-5xl">
         {/* Header */}
         <section className="mb-6">
@@ -233,30 +241,27 @@ export default function MatchGamesPage({ match }: Props) {
             </div>
 
             <div className="flex flex-wrap gap-2 justify-end">
-              <Link href={`/match/${match.id}`}>
-                <Button
-                  type="button"
-                  className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-[var(--color-violet)] focus-visible:ring-2 focus-visible:ring-[var(--color-violet)] focus-visible:outline-none"
-                >
-                  {t.backToSummary}
-                </Button>
-              </Link>
-              <Link href={tournamentPath}>
-                <Button
-                  type="button"
-                  className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-[var(--color-green)] focus-visible:ring-2 focus-visible:ring-[var(--color-green)] focus-visible:outline-none"
-                >
-                  {t.tournament}
-                </Button>
-              </Link>
-              <Link href={`${tournamentPath}/maps`}>
-                <Button
-                  type="button"
-                  className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-[var(--color-yellow)] focus-visible:ring-2 focus-visible:ring-[var(--color-yellow)] focus-visible:outline-none"
-                >
-                  {t.topMaps}
-                </Button>
-              </Link>
+              <Button
+                as="link"
+                href={`/match/${match.id}`}
+                className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-[var(--color-violet)] focus-visible:ring-2 focus-visible:ring-[var(--color-violet)] focus-visible:outline-none"
+              >
+                {t.backToSummary}
+              </Button>
+              <Button
+                as="link"
+                href={tournamentPath}
+                className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-[var(--color-green)] focus-visible:ring-2 focus-visible:ring-[var(--color-green)] focus-visible:outline-none"
+              >
+                {t.tournament}
+              </Button>
+              <Button
+                as="link"
+                href={`${tournamentPath}/maps`}
+                className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-[var(--color-yellow)] focus-visible:ring-2 focus-visible:ring-[var(--color-yellow)] focus-visible:outline-none"
+              >
+                {t.topMaps}
+              </Button>
             </div>
           </div>
         </section>

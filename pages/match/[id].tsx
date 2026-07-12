@@ -1,12 +1,12 @@
 // pages/match/[id].tsx
 
 import { GetStaticPaths, GetStaticProps } from 'next';
-import Head from 'next/head';
 import Link from 'next/link';
 import Image from 'next/image';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import Button from '@/components/Buttons/button';
+import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import type { MatchStatus, BracketSide } from '@/types/admin';
@@ -76,7 +76,62 @@ type Match = {
 
 type Props = {
   match: Match | null;
+  seo: SeoProps;
 };
+
+const SEO_BASE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ||
+  'https://owwomenscup.fr';
+
+// SEO par-entité pour un match : titre lisible « T1 vs T2 – Tournoi » (les noms
+// d'équipe ne se traduisent pas, d'où un `string` simple), description bilingue
+// et un JSON-LD `SportsEvent` (un match = un évènement sportif daté), inspiré du
+// modèle de la page tournoi. Retourné via `props.seo`.
+function buildMatchSeo(match: Match): SeoProps {
+  const t1 = match.team1?.short_name || match.team1?.name || 'TBD';
+  const t2 =
+    match.team2?.short_name ||
+    match.team2?.name ||
+    (match.is_bye ? 'BYE' : 'TBD');
+  const versus = `${t1} vs ${t2}`;
+  const tournamentName = match.tournament.name;
+  const game = match.tournament.game || 'Overwatch';
+  const matchUrl = `${SEO_BASE_URL}/match/${match.id}`;
+
+  const jsonLd: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': 'SportsEvent',
+    name: versus,
+    url: matchUrl,
+    ...(match.scheduled_at ? { startDate: match.scheduled_at } : {}),
+    eventStatus:
+      match.status === 'cancelled'
+        ? 'https://schema.org/EventCancelled'
+        : 'https://schema.org/EventScheduled',
+    eventAttendanceMode: 'https://schema.org/OnlineEventAttendanceMode',
+    location: {
+      '@type': 'VirtualLocation',
+      url: matchUrl,
+    },
+    organizer: {
+      '@type': 'Organization',
+      name: "OW Women's Cup",
+      url: SEO_BASE_URL,
+    },
+    sport: game,
+    inLanguage: 'fr-FR',
+  };
+
+  return {
+    title: `${versus} – ${tournamentName}`,
+    description: {
+      fr: `Suivez ${versus} au tournoi ${tournamentName} — OW Women's Cup : score global, détail des maps et informations du match.`,
+      en: `Follow ${versus} at the ${tournamentName} tournament — OW Women's Cup: overall score, map breakdown and match details.`,
+    },
+    type: 'website',
+    jsonLd,
+  };
+}
 
 export const getStaticPaths: GetStaticPaths = async () => {
   return { paths: [], fallback: 'blocking' };
@@ -140,6 +195,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
   return {
     props: {
       match,
+      seo: buildMatchSeo(match),
     },
     revalidate: 30,
   };
@@ -181,10 +237,6 @@ export default function MatchPage({ match }: Props) {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
-      <Head>
-        <title>{`${t1Name} vs ${t2Name} – ${match.tournament.name} | OW Women's Cup`}</title>
-      </Head>
-
       <main className="container mx-auto px-4 pt-24 pb-16 max-w-5xl">
         {/* Header / meta */}
         <section className="mb-6">
@@ -206,7 +258,8 @@ export default function MatchPage({ match }: Props) {
               </div>
 
               <Heading typeStyle="heading-md" className="mb-1 text-gradient">
-                {t1Name} {!isBye && <span className="text-gray-400">vs</span>}{' '}
+                {t1Name}{' '}
+                {!isBye && <span className="text-gray-400">{t.vs}</span>}{' '}
                 {t2Name}
               </Heading>
 
@@ -245,30 +298,27 @@ export default function MatchPage({ match }: Props) {
             </div>
 
             <div className="flex flex-wrap gap-2 justify-end">
-              <Link href={tournamentPath}>
-                <Button
-                  type="button"
-                  className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-blue-400"
-                >
-                  {t.btnTournament}
-                </Button>
-              </Link>
-              <Link href={`${tournamentPath}/matches`}>
-                <Button
-                  type="button"
-                  className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-emerald-400"
-                >
-                  {t.btnAllMatches}
-                </Button>
-              </Link>
-              <Link href={`${tournamentPath}/bracket`}>
-                <Button
-                  type="button"
-                  className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-purple-400"
-                >
-                  {t.btnBracket}
-                </Button>
-              </Link>
+              <Button
+                as="link"
+                href={tournamentPath}
+                className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-blue-400"
+              >
+                {t.btnTournament}
+              </Button>
+              <Button
+                as="link"
+                href={`${tournamentPath}/matches`}
+                className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-emerald-400"
+              >
+                {t.btnAllMatches}
+              </Button>
+              <Button
+                as="link"
+                href={`${tournamentPath}/bracket`}
+                className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-purple-400"
+              >
+                {t.btnBracket}
+              </Button>
             </div>
           </div>
         </section>
@@ -575,12 +625,12 @@ function MapRow({
         <div className="flex flex-wrap gap-1">
           {isTiebreaker && (
             <span className="px-1.5 py-[1px] rounded-full bg-fuchsia-500/20 border border-fuchsia-400/70 text-[9px] text-fuchsia-100">
-              Tiebreaker
+              {t.tagTiebreaker}
             </span>
           )}
           {isOT && (
             <span className="px-1.5 py-[1px] rounded-full bg-amber-500/20 border border-amber-400/70 text-[9px] text-amber-100">
-              Overtime
+              {t.tagOvertime}
             </span>
           )}
         </div>

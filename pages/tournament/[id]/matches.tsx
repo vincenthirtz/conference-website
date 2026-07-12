@@ -1,13 +1,13 @@
 // pages/tournament/[id]/matches.tsx
 
 import { GetStaticPaths, GetStaticProps } from 'next';
-import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useEffect, useMemo, useState } from 'react';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import Button from '@/components/Buttons/button';
+import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { findTournamentByIdOrSlug } from '@/utils/tournamentLookup';
@@ -83,7 +83,23 @@ type Props = {
   tournament: Tournament;
   stages: Stage[];
   matches: SimpleMatch[];
+  seo: SeoProps;
 };
+
+// SEO par-entité : titre + description bilingues dédiés au calendrier/résultats
+// du tournoi. Retourné via `props.seo` (privilégié par `_app.tsx` sur la
+// propriété statique `Component.seo`).
+function buildMatchesSeo(tournament: Tournament): SeoProps {
+  const name = tournament.name;
+  return {
+    title: { fr: `Matchs – ${name}`, en: `Matches – ${name}` },
+    description: {
+      fr: `Calendrier et résultats des matchs du tournoi ${name} — OW Women's Cup : horaires, scores en direct, agenda et vue mensuelle.`,
+      en: `Match schedule and results for the ${name} tournament — OW Women's Cup: kickoff times, live scores, agenda and month view.`,
+    },
+    type: 'website',
+  };
+}
 
 export const getStaticPaths: GetStaticPaths = async () => {
   return { paths: [], fallback: 'blocking' };
@@ -160,6 +176,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       tournament: tournament as Tournament,
       stages: (stages || []) as Stage[],
       matches,
+      seo: buildMatchesSeo(tournament as Tournament),
     },
     revalidate: 60,
   };
@@ -273,10 +290,6 @@ export default function TournamentMatchesPage({
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
-      <Head>
-        <title>{format(t.headTitle, { name: tournament.name })}</title>
-      </Head>
-
       <main className="container mx-auto px-4 pt-24 pb-16 max-w-6xl">
         {/* Header */}
         <section className="mb-6">
@@ -376,14 +389,13 @@ export default function TournamentMatchesPage({
 
               <div className="flex flex-wrap gap-2 items-center justify-end">
                 {hasFilters && (
-                  <Link href={`${tournamentPath}/matches`} shallow>
-                    <Button
-                      type="button"
-                      className="text-xs px-3 py-1.5 bg-transparent border border-white/25 hover:border-red-400 rounded-full"
-                    >
-                      {t.resetFilters}
-                    </Button>
-                  </Link>
+                  <Button
+                    as="link"
+                    href={`${tournamentPath}/matches`}
+                    className="text-xs px-3 py-1.5 bg-transparent border border-white/25 hover:border-red-400 rounded-full"
+                  >
+                    {t.resetFilters}
+                  </Button>
                 )}
 
                 {/* View mode toggle */}

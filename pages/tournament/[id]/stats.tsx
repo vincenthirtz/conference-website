@@ -1,10 +1,10 @@
 // pages/tournament/[id]/stats.tsx
 
 import { GetStaticPaths, GetStaticProps } from 'next';
-import Head from 'next/head';
 import Image from 'next/image';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
+import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { findTournamentByIdOrSlug } from '@/utils/tournamentLookup';
@@ -68,7 +68,22 @@ type Props = {
   tournament: Tournament;
   teamStats: TeamStat[];
   hasFfaStage: boolean;
+  seo: SeoProps;
 };
+
+// SEO par-entité : titre + description bilingues dédiés aux statistiques du
+// tournoi. Retourné via `props.seo` (privilégié par `_app.tsx`).
+function buildStatsSeo(tournament: Tournament): SeoProps {
+  const name = tournament.name;
+  return {
+    title: { fr: `Statistiques – ${name}`, en: `Statistics – ${name}` },
+    description: {
+      fr: `Statistiques du tournoi ${name} — OW Women's Cup : classement des équipes, winrates, différentiel de maps et bilans victoires/défaites.`,
+      en: `${name} tournament statistics — OW Women's Cup: team rankings, win rates, map differentials and win/loss records.`,
+    },
+    type: 'website',
+  };
+}
 
 export const getStaticPaths: GetStaticPaths = async () => {
   return { paths: [], fallback: 'blocking' };
@@ -172,6 +187,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
         tournament: tournament as Tournament,
         teamStats: [],
         hasFfaStage,
+        seo: buildStatsSeo(tournament as Tournament),
       },
       revalidate: 60,
     };
@@ -185,6 +201,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       tournament: tournament as Tournament,
       teamStats,
       hasFfaStage,
+      seo: buildStatsSeo(tournament as Tournament),
     },
     revalidate: 60,
   };
@@ -224,10 +241,6 @@ export default function TournamentStatsPage({
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
-      <Head>
-        <title>{format(t.headTitle, { name: tournament.name })}</title>
-      </Head>
-
       <main className="container mx-auto px-4 pt-24 pb-16 max-w-6xl">
         {/* Header */}
         <section className="mb-6">

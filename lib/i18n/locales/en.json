@@ -1550,6 +1550,8 @@
     "staffNotes": "Staff notes",
     "mapLabel": "Map {n}",
     "vs": "vs",
+    "tagTiebreaker": "Tiebreaker",
+    "tagOvertime": "Overtime",
     "statusPending": "Upcoming",
     "statusOngoing": "Live",
     "statusFinished": "Finished",

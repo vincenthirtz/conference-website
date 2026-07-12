@@ -404,16 +404,13 @@ export default function TournamentTeamPage({
                 )}
               </div>
               <div className="flex flex-wrap gap-2">
-                <Link
+                <Button
+                  as="link"
                   href={`/team/${encodeURIComponent(team.slug || team.id)}`}
+                  className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-[var(--color-violet)]"
                 >
-                  <Button
-                    type="button"
-                    className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-[var(--color-violet)]"
-                  >
-                    {t.globalProfile}
-                  </Button>
-                </Link>
+                  {t.globalProfile}
+                </Button>
               </div>
             </div>
           </section>

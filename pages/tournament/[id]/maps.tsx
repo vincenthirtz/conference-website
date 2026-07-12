@@ -1,9 +1,9 @@
 // pages/tournament/[id]/maps.tsx
 
 import { GetStaticPaths, GetStaticProps } from 'next';
-import Head from 'next/head';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
+import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { findTournamentByIdOrSlug } from '@/utils/tournamentLookup';
@@ -88,7 +88,22 @@ type Props = {
   maps: MapStat[];
   hasVetoData: boolean;
   hasFfaStage: boolean;
+  seo: SeoProps;
 };
+
+// SEO par-entité : titre + description bilingues dédiés aux maps du tournoi.
+// Retourné via `props.seo` (privilégié par `_app.tsx`).
+function buildMapsSeo(tournament: Tournament): SeoProps {
+  const name = tournament.name;
+  return {
+    title: { fr: `Maps – ${name}`, en: `Maps – ${name}` },
+    description: {
+      fr: `Top maps du tournoi ${name} — OW Women's Cup : maps les plus jouées, bans, picks, prolongations et winrates par équipe.`,
+      en: `Top maps of the ${name} tournament — OW Women's Cup: most played maps, bans, picks, overtimes and per-team win rates.`,
+    },
+    type: 'website',
+  };
+}
 
 export const getStaticPaths: GetStaticPaths = async () => {
   return { paths: [], fallback: 'blocking' };
@@ -203,6 +218,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       maps,
       hasVetoData,
       hasFfaStage,
+      seo: buildMapsSeo(tournament as Tournament),
     },
     revalidate: 60,
   };
@@ -233,10 +249,6 @@ export default function TournamentMapsPage({
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
-      <Head>
-        <title>{format(t.headTitle, { name: tournament.name })}</title>
-      </Head>
-
       <main className="container mx-auto px-4 pt-24 pb-16 max-w-6xl">
         {/* Header */}
         <section className="mb-6">
