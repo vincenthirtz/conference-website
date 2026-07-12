@@ -4,7 +4,7 @@ import { GetStaticPaths, GetStaticProps } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import Button from '@/components/Buttons/button';
@@ -188,6 +188,37 @@ export default function TournamentMatchesPage({
 
   const grouped = groupMatchesByDay(filteredMatches, t.dateTbd, locale);
 
+  // Flat chronological order for list mode (unscheduled last).
+  const sortedMatches = useMemo(() => {
+    return [...filteredMatches].sort((a, b) => {
+      if (!a.scheduled_at && !b.scheduled_at) return 0;
+      if (!a.scheduled_at) return 1;
+      if (!b.scheduled_at) return -1;
+      return a.scheduled_at.localeCompare(b.scheduled_at);
+    });
+  }, [filteredMatches]);
+
+  const [viewMode, setViewMode] = useState<'list' | 'agenda'>('agenda');
+
+  // Restore persisted preference (SSR-safe: read after mount only).
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem('tournamentMatchesView');
+      if (saved === 'list' || saved === 'agenda') setViewMode(saved);
+    } catch {
+      /* localStorage unavailable — keep default */
+    }
+  }, []);
+
+  const changeViewMode = (mode: 'list' | 'agenda') => {
+    setViewMode(mode);
+    try {
+      window.localStorage.setItem('tournamentMatchesView', mode);
+    } catch {
+      /* ignore persistence failure */
+    }
+  };
+
   const hasFilters = statusFilter !== 'all' || stageFilter !== 'all';
 
   const updateFilter = (key: 'status' | 'stageId', value: string) => {
@@ -329,8 +360,8 @@ export default function TournamentMatchesPage({
                 </label>
               </div>
 
-              {hasFilters && (
-                <div className="flex flex-wrap gap-2 justify-end">
+              <div className="flex flex-wrap gap-2 items-center justify-end">
+                {hasFilters && (
                   <Link href={`${tournamentPath}/matches`} shallow>
                     <Button
                       type="button"
@@ -339,8 +370,68 @@ export default function TournamentMatchesPage({
                       {t.resetFilters}
                     </Button>
                   </Link>
+                )}
+
+                {/* View mode toggle */}
+                <div
+                  role="group"
+                  aria-label={t.viewToggleLabel}
+                  className="inline-flex rounded-full overflow-hidden border border-white/15"
+                >
+                  <button
+                    type="button"
+                    aria-pressed={viewMode === 'agenda'}
+                    onClick={() => changeViewMode('agenda')}
+                    className={`flex items-center gap-1 px-3 py-1.5 text-[11px] transition-colors ${
+                      viewMode === 'agenda'
+                        ? 'bg-[var(--color-violet)] text-black font-semibold'
+                        : 'bg-transparent text-gray-300 hover:text-white'
+                    }`}
+                  >
+                    <svg
+                      className="w-3.5 h-3.5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                      />
+                    </svg>
+                    {t.viewAgenda}
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={viewMode === 'list'}
+                    onClick={() => changeViewMode('list')}
+                    className={`flex items-center gap-1 px-3 py-1.5 text-[11px] transition-colors ${
+                      viewMode === 'list'
+                        ? 'bg-[var(--color-violet)] text-black font-semibold'
+                        : 'bg-transparent text-gray-300 hover:text-white'
+                    }`}
+                  >
+                    <svg
+                      className="w-3.5 h-3.5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 6h16M4 10h16M4 14h16M4 18h16"
+                      />
+                    </svg>
+                    {t.viewList}
+                  </button>
                 </div>
-              )}
+              </div>
             </div>
           </div>
         </section>
@@ -354,12 +445,15 @@ export default function TournamentMatchesPage({
               </Paragraph>
             )}
 
-            {filteredMatches.length > 0 && (
-              <div className="space-y-4">
+            {filteredMatches.length > 0 && viewMode === 'agenda' && (
+              <div className="space-y-3">
                 {grouped.map((day) => (
-                  <div key={day.key}>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <p className="text-[11px] font-semibold text-gray-100">
+                  <div
+                    key={day.key}
+                    className="rounded-2xl bg-white/3 border border-white/10 p-3"
+                  >
+                    <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-white/10">
+                      <p className="text-[11px] font-semibold text-gray-100 uppercase tracking-wide">
                         {day.label}
                       </p>
                       <p className="text-[10px] text-gray-500">
@@ -373,10 +467,25 @@ export default function TournamentMatchesPage({
                     </div>
                     <div className="space-y-1.5">
                       {day.matches.map((m) => (
-                        <MatchRow key={m.id} match={m} />
+                        <div key={m.id} className="flex items-stretch gap-2">
+                          <div className="flex-shrink-0 w-12 flex items-center justify-center rounded-xl bg-black/40 border border-white/10 text-[11px] font-semibold text-gray-200 tabular-nums">
+                            {formatMatchTime(m.scheduled_at, locale) || '—'}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <MatchRow match={m} showDate={false} />
+                          </div>
+                        </div>
                       ))}
                     </div>
                   </div>
+                ))}
+              </div>
+            )}
+
+            {filteredMatches.length > 0 && viewMode === 'list' && (
+              <div className="space-y-1.5">
+                {sortedMatches.map((m) => (
+                  <MatchRow key={m.id} match={m} />
                 ))}
               </div>
             )}
@@ -391,7 +500,13 @@ export default function TournamentMatchesPage({
  * Components & utils
  * ────────────────────────────────────────────*/
 
-function MatchRow({ match }: { match: SimpleMatch }) {
+function MatchRow({
+  match,
+  showDate = true,
+}: {
+  match: SimpleMatch;
+  showDate?: boolean;
+}) {
   const t = useT('tournamentMatches');
   const locale = useLocale();
   const t1 = match.team1?.short_name || match.team1?.name || t.teamPlaceholder1;
@@ -418,7 +533,13 @@ function MatchRow({ match }: { match: SimpleMatch }) {
 
   return (
     <Link href={`/match/${match.id}`}>
-      <div className="group grid grid-cols-[minmax(0,2.2fr)_minmax(0,1.5fr)_minmax(0,0.7fr)] gap-2 items-center px-2 py-1.5 rounded-xl bg-white/3 border border-white/10 hover:border-emerald-400/70 hover:bg-emerald-500/5 cursor-pointer transition-colors text-[11px]">
+      <div
+        className={`group grid gap-2 items-center px-2 py-1.5 rounded-xl bg-white/3 border border-white/10 hover:border-emerald-400/70 hover:bg-emerald-500/5 cursor-pointer transition-colors text-[11px] ${
+          showDate
+            ? 'grid-cols-[minmax(0,2.2fr)_minmax(0,1.5fr)_minmax(0,0.7fr)]'
+            : 'grid-cols-[minmax(0,1fr)_minmax(0,0.7fr)]'
+        }`}
+      >
         {/* Teams */}
         <div className="flex flex-col">
           <p className="text-gray-100 truncate">
@@ -449,12 +570,14 @@ function MatchRow({ match }: { match: SimpleMatch }) {
           </div>
         </div>
 
-        {/* Time */}
-        <div className="flex flex-col items-start">
-          <span className="text-[10px] text-gray-300">
-            {dateLabel || t.timeTbd}
-          </span>
-        </div>
+        {/* Time (list mode only — agenda has a dedicated left time column) */}
+        {showDate && (
+          <div className="flex flex-col items-start">
+            <span className="text-[10px] text-gray-300">
+              {dateLabel || t.timeTbd}
+            </span>
+          </div>
+        )}
 
         {/* Status / score */}
         <div className="flex flex-col items-end justify-center gap-[2px]">
@@ -518,6 +641,16 @@ function formatMatchDate(iso: string | null, locale: string): string | null {
   return d.toLocaleString(locale, {
     day: '2-digit',
     month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function formatMatchTime(iso: string | null, locale: string): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return null;
+  return d.toLocaleTimeString(locale, {
     hour: '2-digit',
     minute: '2-digit',
   });
