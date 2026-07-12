@@ -192,6 +192,14 @@ export default function TournamentMatchesPage({
   const locale = useLocale();
   const { lang } = useLang();
   const tournamentPath = `/tournament/${tournament.slug || tournament.id}`;
+  // Flux iCalendar de l'agenda (tout le tournoi, indépendant des filtres).
+  const hasScheduled = matches.some((m) => m.scheduled_at);
+  const icsHref = `/api/tournament/${tournament.slug || tournament.id}/calendar.ics`;
+  const webcalHref = `webcal://${(
+    process.env.NEXT_PUBLIC_SITE_URL || 'https://owwomenscup.fr'
+  )
+    .replace(/^https?:\/\//, '')
+    .replace(/\/$/, '')}${icsHref}`;
   const statusFilter =
     typeof router.query.status === 'string' ? router.query.status : 'all';
   const stageFilter =
@@ -492,23 +500,74 @@ export default function TournamentMatchesPage({
         <section>
           <div className="bg-black/60 border border-white/5 rounded-2xl p-4">
             {filteredMatches.length > 0 && (
-              <p className="mb-3 flex items-center gap-1 text-[10px] text-gray-500">
-                <svg
-                  className="w-3 h-3"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                {t.timezoneNote}
-              </p>
+              <div className="mb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <p className="flex items-center gap-1 text-[10px] text-gray-500">
+                  <svg
+                    className="w-3 h-3"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  {t.timezoneNote}
+                </p>
+
+                {hasScheduled && (
+                  <div
+                    className="flex items-center gap-1.5"
+                    aria-label={t.calendarLabel}
+                  >
+                    <a
+                      href={icsHref}
+                      download
+                      className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[11px] text-gray-200 hover:border-[var(--color-violet)] hover:text-white transition"
+                    >
+                      <svg
+                        className="w-3 h-3"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 4v12m0 0l-4-4m4 4l4-4M4 20h16"
+                        />
+                      </svg>
+                      {t.calendarDownload}
+                    </a>
+                    <a
+                      href={webcalHref}
+                      className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[11px] text-gray-200 hover:border-[var(--color-green)] hover:text-white transition"
+                    >
+                      <svg
+                        className="w-3 h-3"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                        />
+                      </svg>
+                      {t.calendarSubscribe}
+                    </a>
+                  </div>
+                )}
+              </div>
             )}
 
             {filteredMatches.length === 0 && (

@@ -20170,6 +20170,36 @@ paths:
                       $ref: '#/components/schemas/MvpPerMatchEntry'
         '400':
           $ref: '#/components/responses/BadRequest'
+  /api/tournament/{id}/calendar.ics:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: UUID ou slug du tournoi.
+        schema:
+          type: string
+    get:
+      tags:
+        - public/tournaments
+      summary: >-
+        Flux iCalendar (.ics) public de l'agenda des matchs d'un tournoi
+        (téléchargement direct ou abonnement webcal://). Tournois publics
+        uniquement, un VEVENT par match programmé.
+      operationId: getTournamentCalendarIcs
+      security: []
+      responses:
+        '200':
+          description: Calendrier iCalendar (RFC 5545).
+          content:
+            text/calendar:
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '405':
+          description: Method not allowed.
   /api/tournament/{id}/maps:
     parameters:
       - name: id
