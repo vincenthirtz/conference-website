@@ -73,13 +73,17 @@ function MyApp({ Component, pageProps, router, branding }: AppPropsWithSeo) {
   // Embeddable surfaces (iframe) render bare: no Navbar/Footer/Toast/cookie
   // banner/socials. They are read-only and meant to be framed by third parties.
   const isEmbed = router.pathname.startsWith('/embed');
+  // OBS browser-source overlays (`/overlay/*`, broadcast renderer) render
+  // chrome-less too: no Navbar/Footer/Toast/cookie banner. They may run for
+  // hours in OBS and must composite cleanly over the video canvas.
+  const isOverlay = router.pathname.startsWith('/overlay');
   // Routes "applicatives" (admin + cockpit caster + espace joueur) : pas
   // d'index. L'espace joueur est gate cote client et n'a pas de contenu
   // public a referencer — on force noindex pour eviter d'indexer des coquilles
   // vides / pages d'auth. La navbar/footer marketing restent (sauf caster qui
   // gere sa propre chrome legere — cf. /caster/login, /caster/cockpit).
   const effectiveSeo: SeoProps =
-    isAdmin || isCaster || isPlayer || isEmbed
+    isAdmin || isCaster || isPlayer || isEmbed || isOverlay
       ? { ...seo, noindex: true }
       : { ...seo };
 
@@ -101,8 +105,9 @@ function MyApp({ Component, pageProps, router, branding }: AppPropsWithSeo) {
     });
   }, []);
 
-  // Bare iframe-embeddable pages: render only the page, no global chrome.
-  if (isEmbed) {
+  // Bare pages (iframe embeds + OBS overlays): render only the page, no
+  // global chrome (Navbar/Footer/Toast/cookie banner/socials).
+  if (isEmbed || isOverlay) {
     return (
       <ErrorBoundary>
         <TenantBrandingProvider branding={branding}>

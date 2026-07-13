@@ -13,11 +13,36 @@ import { useToast } from '@/components/Toast';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { StaffProps } from '@/types/admin';
 
+type Scene = 'starting' | 'match' | 'pause' | 'results' | 'end' | 'custom';
+
+const SCENES: Scene[] = [
+  'starting',
+  'match',
+  'pause',
+  'results',
+  'end',
+  'custom',
+];
+
 type BroadcastStateV1 = {
   v: 1;
   on_air: boolean;
   lower_third: string | null;
   pip: { enabled: boolean };
+  scene: Scene;
+  auto_director: boolean;
+};
+
+type NextMatchResponse = {
+  segment: {
+    id: string;
+    ord: number;
+    type: string;
+    title: string;
+    match_id: string | null;
+  };
+  alreadyStarted: boolean;
+  runId: string;
 };
 
 type LiveResponse = {
@@ -72,8 +97,16 @@ function BroadcastLivePage({ staff }: StaffProps) {
   const [error, setError] = useState<string | null>(null);
   const [lowerDraft, setLowerDraft] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [advancing, setAdvancing] = useState(false);
+  const [origin, setOrigin] = useState('');
 
   const canEdit = staff.role !== 'caster';
+
+  // window.location.origin est indisponible côté SSR ; on le récupère après
+  // hydratation pour éviter tout mismatch React.
+  useEffect(() => {
+    setOrigin(window.location.origin);
+  }, []);
 
   const fetchState = useCallback(async () => {
     setError(null);
@@ -83,9 +116,7 @@ function BroadcastLivePage({ staff }: StaffProps) {
       );
       setData(json);
       setLowerDraft((prev) =>
-        prev === '' && json.state?.lower_third
-          ? json.state.lower_third
-          : prev
+        prev === '' && json.state?.lower_third ? json.state.lower_third : prev
       );
     } catch (err) {
       const e = err as AdminFetchError;
@@ -105,10 +136,13 @@ function BroadcastLivePage({ staff }: StaffProps) {
     if (!canEdit) return;
     setSubmitting(true);
     try {
-      const json = await mutateJson<LiveResponse>('/api/admin/broadcast/state', {
-        method: 'POST',
-        body: JSON.stringify(patch),
-      });
+      const json = await mutateJson<LiveResponse>(
+        '/api/admin/broadcast/state',
+        {
+          method: 'POST',
+          body: JSON.stringify(patch),
+        }
+      );
       setData(json);
       addToast(t.stateUpdated, 'success');
     } catch (err) {
@@ -123,7 +157,63 @@ function BroadcastLivePage({ staff }: StaffProps) {
     }
   }
 
+  async function goNextMatch() {
+    if (!canEdit) return;
+    setAdvancing(true);
+    try {
+      const json = await mutateJson<NextMatchResponse>(
+        '/api/admin/broadcast/next-match',
+        { method: 'POST' }
+      );
+      addToast(
+        json.alreadyStarted
+          ? format(t.nextMatchAlready, { title: json.segment.title })
+          : format(t.nextMatchSuccess, { title: json.segment.title }),
+        'success'
+      );
+      await fetchState();
+    } catch (err) {
+      const e = err as AdminFetchError;
+      const code =
+        typeof e.payload === 'object' && e.payload && 'code' in e.payload
+          ? String((e.payload as { code: string }).code)
+          : null;
+      const codeMap: Record<string, string> = {
+        NO_LIVE_RUN: t.nextMatchNoLiveRun,
+        NO_CURRENT_SEGMENT: t.nextMatchNoCurrentSegment,
+        NO_NEXT_MATCH: t.nextMatchNoNextMatch,
+        SEGMENT_NOT_UPCOMING: t.nextMatchSegmentNotUpcoming,
+      };
+      addToast((code && codeMap[code]) || e.message || t.failure, 'error');
+    } finally {
+      setAdvancing(false);
+    }
+  }
+
+  async function copyOverlayUrl() {
+    if (!overlayUrl) return;
+    try {
+      await navigator.clipboard.writeText(overlayUrl);
+      addToast(t.overlayCopied, 'success');
+    } catch {
+      addToast(t.overlayCopyFailed, 'error');
+    }
+  }
+
   const state = data?.state;
+  const currentScene: Scene = state?.scene ?? 'starting';
+  const autoDirector = state?.auto_director ?? true;
+  const overlayUrl =
+    data?.run && origin ? `${origin}/overlay/${data.run.id}` : '';
+
+  const sceneLabels: Record<Scene, string> = {
+    starting: t.sceneStarting,
+    match: t.sceneMatch,
+    pause: t.scenePause,
+    results: t.sceneResults,
+    end: t.sceneEnd,
+    custom: t.sceneCustom,
+  };
 
   return (
     <>
@@ -288,6 +378,127 @@ function BroadcastLivePage({ staff }: StaffProps) {
                     ))}
                   </ul>
                 )}
+              </div>
+
+              {/* Automatisation : régie auto + scènes + prochain match */}
+              <div className="rounded-2xl border border-neutral-800 bg-neutral-900/40 px-4 py-4 mb-6">
+                <div className="text-xs uppercase tracking-widest text-neutral-400 mb-3">
+                  {t.autoHeading}
+                </div>
+
+                {/* Auto-director switch */}
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                  <div>
+                    <div className="text-sm font-semibold">
+                      {t.autoDirectorLabel}
+                    </div>
+                    <div className="text-xs text-neutral-400 mt-0.5 max-w-xl">
+                      {autoDirector
+                        ? t.autoDirectorOnHint
+                        : t.autoDirectorOffHint}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={autoDirector}
+                    aria-label={t.autoDirectorLabel}
+                    disabled={submitting || !canEdit}
+                    onClick={() => applyPatch({ auto_director: !autoDirector })}
+                    className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                      autoDirector ? 'bg-emerald-600' : 'bg-neutral-700'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
+                        autoDirector ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {/* Scene selector */}
+                <div className="mb-4">
+                  <div
+                    className="text-xs text-neutral-400 mb-2"
+                    id="scene-selector-label"
+                  >
+                    {t.sceneLabel}
+                  </div>
+                  <div
+                    role="group"
+                    aria-labelledby="scene-selector-label"
+                    className="flex flex-wrap gap-2"
+                  >
+                    {SCENES.map((s) => {
+                      const active = currentScene === s;
+                      return (
+                        <button
+                          key={s}
+                          type="button"
+                          aria-pressed={active}
+                          disabled={submitting || !canEdit}
+                          onClick={() => applyPatch({ scene: s })}
+                          className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                            active
+                              ? 'bg-purple-600 border-purple-500 text-white'
+                              : 'bg-neutral-800 border-neutral-700 hover:bg-neutral-700 text-neutral-200'
+                          }`}
+                        >
+                          {sceneLabels[s]}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="text-xs text-neutral-500 mt-2">
+                    {t.sceneHint}
+                  </div>
+                </div>
+
+                {/* Prochain match */}
+                <div className="flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    disabled={advancing || submitting || !canEdit}
+                    onClick={goNextMatch}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    {advancing && (
+                      <span className="inline-block h-4 w-4 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+                    )}
+                    {advancing ? t.nextMatchLoading : t.nextMatch}
+                  </button>
+                  <span className="text-xs text-neutral-500">
+                    {t.nextMatchHint}
+                  </span>
+                </div>
+              </div>
+
+              {/* Overlay OBS : URL source navigateur */}
+              <div className="rounded-2xl border border-neutral-800 bg-neutral-900/40 px-4 py-4 mb-6">
+                <div className="text-xs uppercase tracking-widest text-neutral-400 mb-3">
+                  {t.overlayUrlHeading}
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    type="text"
+                    readOnly
+                    value={overlayUrl}
+                    aria-label={t.overlayUrlHeading}
+                    className="flex-1 min-w-0 rounded-md bg-neutral-950 border border-neutral-700 px-2 py-2 text-sm font-mono text-neutral-200"
+                  />
+                  <button
+                    type="button"
+                    disabled={!overlayUrl}
+                    onClick={copyOverlayUrl}
+                    className="px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    {t.overlayCopy}
+                  </button>
+                </div>
+                <div className="text-xs text-neutral-500 mt-2">
+                  {t.overlayUrlHint}
+                </div>
               </div>
 
               {/* Controls */}

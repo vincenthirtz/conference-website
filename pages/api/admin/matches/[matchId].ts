@@ -14,6 +14,7 @@ import { isValidUUID } from '@/utils/apiHelpers';
 import { notifyMatchStarting } from '@/utils/discord';
 import { emitBotEvent } from '@/utils/botEvents';
 import { enrichMatchEvent } from '@/utils/matches/botEventEnrich';
+import { reactToMatchStatus } from '@/utils/broadcast/autoDirector';
 
 import { logger } from '../../../../utils/logger';
 // Idempotency-Key (optionnel) : l'UI admin (ScoreEntryModal via
@@ -26,7 +27,11 @@ export default withStaffRoute(
   'manager'
 ); // rôle min : manager
 
-async function handler(req: NextApiRequest, res: NextApiResponse, ctx: AuthenticatedStaffContext) {
+async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  ctx: AuthenticatedStaffContext
+) {
   const { matchId } = req.query;
 
   if (!matchId || Array.isArray(matchId) || !isValidUUID(matchId)) {
@@ -474,8 +479,7 @@ async function handlePut(
     before.status !== 'cancelled'
   ) {
     return res.status(409).json({
-      error:
-        `Impossible de modifier le format d'un match dont le statut est "${before.status}". Repassez le match en pending (ou annulez-le) d'abord.`,
+      error: `Impossible de modifier le format d'un match dont le statut est "${before.status}". Repassez le match en pending (ou annulez-le) d'abord.`,
       code: 'MATCH_FORMAT_LOCKED',
       currentStatus: before.status,
     });
@@ -558,6 +562,17 @@ async function handlePut(
     })().catch((e) =>
       logger.error('[botEvents] match.starting emit error:', e)
     );
+
+    // Auto-director (Feature: Production broadcast automatisée) : bascule la
+    // scene overlay vers 'match' si ce match est celui du segment live.
+    // Best-effort, non-bloquant.
+    void reactToMatchStatus({
+      tenantId: ctx.tenantId,
+      matchId,
+      newStatus: 'ongoing',
+    }).catch((e) =>
+      logger.error('[broadcast/autoDirector] match ongoing reactor error:', e)
+    );
   }
 
   // Scheduled event Discord natif : on emit match.scheduled/unscheduled quand
@@ -584,8 +599,8 @@ async function handlePut(
           logger.error('[botEvents] match.scheduled emit error:', e)
         );
       } else {
-        void emitBotEvent('match.unscheduled', { matchId }, ctx.tenantId).catch((e) =>
-          logger.error('[botEvents] match.unscheduled emit error:', e)
+        void emitBotEvent('match.unscheduled', { matchId }, ctx.tenantId).catch(
+          (e) => logger.error('[botEvents] match.unscheduled emit error:', e)
         );
       }
     }

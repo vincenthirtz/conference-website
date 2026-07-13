@@ -18,6 +18,7 @@ import { applyMatchScore } from '@/utils/matches/applyScore';
 import { emitBotEvent } from '@/utils/botEvents';
 import { enrichMatchEvent } from '@/utils/matches/botEventEnrich';
 import { findDownstreamImpact } from '@/utils/bracket/disputeImpact';
+import { reactToMatchStatus } from '@/utils/broadcast/autoDirector';
 import type { MatchStatus } from '@/types/admin';
 
 import { logger } from '../../../../../utils/logger';
@@ -190,6 +191,17 @@ async function openDispute(
     );
   })().catch((e) =>
     logger.error('[botEvents] match.disputed emit error:', e)
+  );
+
+  // Auto-director (Feature: Production broadcast automatisée) : bascule la
+  // scene overlay vers 'pause' si ce match est celui du segment live.
+  // Best-effort, non-bloquant.
+  void reactToMatchStatus({
+    tenantId: ctx.tenantId,
+    matchId,
+    newStatus: 'disputed',
+  }).catch((e) =>
+    logger.error('[autoDirector] disputed react error:', e)
   );
 
   return res.status(200).json({ match: updated });

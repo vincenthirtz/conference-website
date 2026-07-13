@@ -20,7 +20,7 @@ import { applyRateLimit } from '@/utils/rateLimit';
 import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { logger } from '@/utils/logger';
-import { emitSegmentTransitioned } from '@/utils/eventSegmentEvents';
+import { transitionToSegment } from '@/utils/broadcast/segmentTransition';
 
 async function handler(
   req: NextApiRequest,
@@ -57,95 +57,32 @@ async function handler(
     return res.status(400).json({ error: 'Invalid segId.' });
   }
 
-  const { data: segment, error: segErr } = await admin
-    .from('event_segments')
-    .select(
-      'id, ord, type, match_id, title, duration_min, status, started_at, ended_at, broadcast_message, tenant_id'
-    )
-    .eq('id', segId)
-    .eq('event_run_id', runId)
-    .eq('tenant_id', ctx.tenantId)
-    .maybeSingle();
+  const result = await transitionToSegment(admin, {
+    runId,
+    tenantId: ctx.tenantId,
+    segId,
+  });
 
-  if (segErr) {
-    logger.error('[admin/events/seg/start] lookup error', segErr);
-    return res.status(500).json({ error: 'Failed to load segment.' });
-  }
-  if (!segment) {
-    return res.status(404).json({ error: 'Segment not found.' });
-  }
-
-  if (segment.status === 'live') {
-    return res.status(200).json({ segment, alreadyStarted: true });
-  }
-  if (segment.status !== 'upcoming') {
-    return res.status(409).json({
-      error: `Le segment est en status '${segment.status}', impossible de le demarrer.`,
-      code: 'SEGMENT_NOT_UPCOMING',
-      status: segment.status,
-    });
-  }
-
-  const now = new Date().toISOString();
-
-  // Cloturer les segments live autres dans le meme run (invariant 1-seul-live).
-  await admin
-    .from('event_segments')
-    .update({ status: 'done', ended_at: now })
-    .eq('event_run_id', runId)
-    .eq('tenant_id', ctx.tenantId)
-    .eq('status', 'live')
-    .neq('id', segId);
-
-  // Promotion du segment cible. Optimistic guard sur status='upcoming'.
-  const { data: updated, error: updErr } = await admin
-    .from('event_segments')
-    .update({ status: 'live', started_at: now })
-    .eq('id', segId)
-    .eq('event_run_id', runId)
-    .eq('tenant_id', ctx.tenantId)
-    .eq('status', 'upcoming')
-    .select(
-      'id, ord, type, match_id, title, duration_min, status, started_at, ended_at, broadcast_message, caster_checklist, created_at, updated_at'
-    )
-    .maybeSingle();
-
-  if (updErr) {
-    logger.error('[admin/events/seg/start] update error', updErr);
+  if (!result.ok) {
+    if (result.reason === 'not_found') {
+      return res.status(404).json({ error: 'Segment not found.' });
+    }
+    if (result.reason === 'not_upcoming') {
+      return res.status(409).json({
+        error: `Le segment est en status '${result.status}', impossible de le demarrer.`,
+        code: 'SEGMENT_NOT_UPCOMING',
+        status: result.status,
+      });
+    }
+    logger.error('[admin/events/seg/start] transition error', result.error);
     return res.status(500).json({ error: 'Failed to start segment.' });
   }
-  if (!updated) {
-    // Race : un autre client a deja transitionne le status.
-    const { data: refreshed } = await admin
-      .from('event_segments')
-      .select(
-        'id, ord, type, match_id, title, duration_min, status, started_at, ended_at, broadcast_message, caster_checklist, created_at, updated_at'
-      )
-      .eq('id', segId)
-      .eq('tenant_id', ctx.tenantId)
-      .maybeSingle();
-    return res.status(200).json({ segment: refreshed, alreadyStarted: true });
-  }
 
-  // Emet l'event outbox pour fan-out bot. Best-effort : on log mais on
-  // n'echoue pas la requete si l'outbox plante.
-  void emitSegmentTransitioned({
-    runId: runId as string,
-    segmentId: segId as string,
-    fromStatus: 'upcoming',
-    toStatus: 'live',
-    tenantId: ctx.tenantId,
-    broadcastMessage: segment.broadcast_message ?? null,
-    segment: {
-      ord: segment.ord as number,
-      type: segment.type as string,
-      title: segment.title as string,
-      durationMin: (segment.duration_min as number | null) ?? null,
-      matchId: (segment.match_id as string | null) ?? null,
-    },
-  }).catch((e) =>
-    logger.error('[admin/events/seg/start] outbox emit error', e)
-  );
+  if (result.alreadyStarted) {
+    return res
+      .status(200)
+      .json({ segment: result.segment, alreadyStarted: true });
+  }
 
   if (ctx.staff?.id) {
     await logStaffAction({
@@ -154,11 +91,17 @@ async function handler(
       entity_type: 'event_segment',
       entity_id: segId,
       tenant_id: ctx.tenantId,
-      payload: { action: 'start_event_segment', runId, ord: segment.ord },
+      payload: {
+        action: 'start_event_segment',
+        runId,
+        ord: (result.segment as { ord?: number }).ord ?? null,
+      },
     });
   }
 
-  return res.status(200).json({ segment: updated, alreadyStarted: false });
+  return res
+    .status(200)
+    .json({ segment: result.segment, alreadyStarted: false });
 }
 
 export default withStaffRoute(

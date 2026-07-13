@@ -240,7 +240,7 @@ catalog can grow without forcing a bot deploy.
 | `dispute.sla_breached` (Lot 4)    | Cron `/api/cron/dispute-sla-check`                                                            | `{ matchId, tournamentId, disputeReason, disputeOpenedAt, ageMinutes, slaMinutes }`                                                            |
 | `checkin.nudge` (Lot 5)           | Admin `POST /api/admin/matches/[matchId]/checkin-nudge`                                       | `{ matchId, tournamentId, teamSide: 1 \| 2, scheduledAt, nudgedByStaffId, enriched }`                                                          |
 | `tournament.finalized` (Lot 1)    | Admin `POST /api/admin/tournament/[id]/finalize`                                              | `{ tournament_id, tournament_name, rankings: [{ team_id, team_name, rank, prize }, ...] }`                                                     |
-| `broadcast.state_changed` (Lot 7) | Admin `POST /api/admin/broadcast/state`                                                       | `{ runId, runSlug, state: { v: 1, on_air, lower_third, pip }, currentSegmentId, matchId }`                                                     |
+| `broadcast.state_changed` (Lot 7) | Admin `POST /api/admin/broadcast/state`                                                       | `{ runId, runSlug, state: { v: 1, on_air, lower_third, pip, scene, auto_director, scene_updated_at }, currentSegmentId, matchId }`             |
 | `news.published`                  | Admin / bot ingest                                                                            | `{ newsId, slug, title, tag, excerpt, imageUrl, publishedAt }`                                                                                 |
 | `registration.blacklisted`        | `utils/moderation/blacklist.ts` (`alertIfBlacklisted`) at register / team create / add-member | `{ context, matchedOn, strength, reason, matchCount, matches[], battleTag?, displayName?, discordUserId? }`                                    |
 | `team.*` / `scrim.*` / `cast.*`   | various admin / bot routes                                                                    | see emitter call sites                                                                                                                         |
@@ -1465,6 +1465,100 @@ outbox event.
 
 **Errors** : `400` (missing tenant context), `401` (auth), `500` (DB).
 **Rate limit** : 60/min global. **Idempotency** : non (GET).
+
+#### Broadcast console & auto-director (Lot 7 — Production broadcast automatisée)
+
+The broadcast console operates on the SINGLE live `event_run` of the tenant
+(`status='live'`). Overlay state lives in the freeform `event_runs.broadcast_state`
+JSONB (no dedicated columns) and is normalised on read. Shape (v1):
+
+```json
+{
+  "v": 1,
+  "on_air": false,
+  "lower_third": null,
+  "pip": { "enabled": false },
+  "scene": "starting",
+  "auto_director": true,
+  "scene_updated_at": null
+}
+```
+
+`scene` ∈ `starting | match | pause | results | end | custom`. Absent fields are
+backfilled on read (`scene`→`starting`, `auto_director`→`true`, `on_air`→`false`,
+`pip.enabled`→`false`). `scene` and `auto_director` were added by Lot 7 and only
+extend the JSONB — no migration.
+
+**Auto-director reactor.** When `auto_director` is `true` (default), the reactor
+auto-switches `scene` on match status changes: `ongoing`→`match`,
+`finished`/`walkover`→`results`, `disputed`→`pause` (where wired). Setting
+`auto_director=false` freezes the scene for a manual operator override; the
+reactor becomes a no-op.
+
+**Overlay renderer.** `GET /api/overlay/{runId}` (below) is the chrome-less OBS
+browser-source feed. The overlay page subscribes to `event_runs.broadcast_state`
+via Supabase Realtime, so scene/lower-third/PiP changes render live without
+polling; the JSON endpoint is the cacheable fallback.
+
+##### `GET /api/admin/broadcast/state` (staff, `caster`+)
+
+Aggregate live state: `{ run, currentSegment, match, casters, state, generatedAt }`
+where `state` is the v1 broadcast_state above. Read-only for `caster`.
+**Errors** : `401`, `403`. **Rate limit** : staff. **Idempotency** : non (GET).
+
+##### `POST /api/admin/broadcast/state` (staff, `manager`+)
+
+Partial patch of `broadcast_state` on the live run. Body (all optional, ≥1
+required): `on_air: boolean`, `lower_third: string|null` (≤500), `pip: { enabled }`,
+`scene: <scene enum>`, `auto_director: boolean`. `caster` is `403` (read-only).
+Returns the refreshed aggregate state and emits `broadcast.state_changed`.
+**Errors** : `400` (validation / empty patch), `401`, `403` (caster),
+`409 { code: 'NO_LIVE_RUN' }`. **Idempotency** : oui (`Idempotency-Key`).
+
+##### `POST /api/admin/broadcast/next-match` (staff, `manager`+)
+
+One-click advance to the next match. No request body. Resolves the live run + its
+current live segment, finds the next `type='match'` `upcoming` segment by `ord`
+(skipping breaks/intros/outros), and performs the atomic single-live-segment swap
+(same code path as `segments/{segId}/start`). Resets the overlay scene to
+`starting` (best-effort) so the auto-director flips it to `match` when the new
+match goes ongoing. Emits `event_segment.transitioned`.
+
+**Response 200** : `{ segment: { …event_segment… }, alreadyStarted: boolean, runId }`.
+**Errors** : `401`, `403`, `404` (target segment vanished), `405`,
+`409 { code }` where `code` ∈ `NO_LIVE_RUN | NO_CURRENT_SEGMENT | NO_NEXT_MATCH | SEGMENT_NOT_UPCOMING`.
+**Rate limit** : `admin-broadcast-next-match` (30/min). **Idempotency** : oui.
+
+##### `GET /api/overlay/{runId}` (PUBLIC — no auth)
+
+OBS browser-source overlay feed for a run. `Cache-Control: s-maxage=5,
+stale-while-revalidate`, CORS-friendly, no auth. Never exposes staff-only fields
+(`auto_director`, casters, stream URLs, checklists, broadcast messages).
+
+**Response 200**
+
+```json
+{
+  "scene": "match",
+  "onAir": true,
+  "lowerThird": null,
+  "pip": { "enabled": false },
+  "match": {
+    "team1": { "name": "Chaos Theory", "logoUrl": "https://…", "score": 1 },
+    "team2": { "name": "Phoenix Rising", "logoUrl": "https://…", "score": 0 },
+    "format": "bo3",
+    "status": "ongoing"
+  },
+  "sponsors": [
+    { "name": "Acme", "logoUrl": "https://…", "websiteUrl": "https://…" }
+  ]
+}
+```
+
+When the run is unknown or not live, a safe empty-ish shape is returned with a
+`200` (`scene: "starting"`, `match: null`, `onAir: false`, sponsors still
+included) so the browser source never errors mid-broadcast. A malformed `runId`
+→ `400`. **Rate limit** : `overlay` (120/min). **Idempotency** : non (GET).
 
 #### `GET /api/bot/v1/tournament-help/inventory`
 

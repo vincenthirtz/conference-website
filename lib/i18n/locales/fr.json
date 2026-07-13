@@ -4033,5 +4033,29 @@
     "monthNext": "Mois suivant",
     "monthLegendMine": "mes dispos",
     "monthLegendValidatable": "planifiable"
+  },
+  "overlay": {
+    "docTitle": "Overlay de diffusion",
+    "invalidRunId": "Identifiant de run invalide.",
+    "connecting": "Connexion à la régie…",
+    "live": "Live",
+    "camera": "Caméra",
+    "sponsors": "Partenaires",
+    "vs": "VS",
+    "winner": "Vainqueur",
+    "logoAlt": "Logo {name}",
+    "brandFallback": "La compétition",
+    "startingEyebrow": "Bientôt en direct",
+    "startingTitle": "Le stream va commencer",
+    "startingSubtitle": "Installez-vous, ça arrive.",
+    "pauseEyebrow": "Intermission",
+    "pauseTitle": "Pause",
+    "pauseSubtitle": "On revient dans un instant.",
+    "endEyebrow": "C'est terminé",
+    "endTitle": "Merci d'avoir suivi",
+    "customEyebrow": "En direct",
+    "resultTitle": "Résultat",
+    "resultWithFormat": "Résultat · {format}",
+    "resultNoMatchTitle": "Fin du match"
   }
 }

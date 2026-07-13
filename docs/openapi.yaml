@@ -1683,18 +1683,184 @@ components:
           items:
             $ref: '#/components/schemas/CastAssignment'
         state:
+          allOf:
+            - $ref: '#/components/schemas/BroadcastStateV1'
+          description: >-
+            The persisted `event_runs.broadcast_state` JSONB, normalised on
+            read (missing fields backfilled with defaults).
+    BroadcastStateV1:
+      type: object
+      description: |
+        Versioned overlay state stored in `event_runs.broadcast_state` (JSONB,
+        freeform — no dedicated columns). Always normalised on read: absent
+        fields are backfilled with defaults (`scene` → `'starting'`,
+        `auto_director` → `true`, `on_air` → `false`, `pip.enabled` → `false`).
+      required:
+        - v
+        - on_air
+        - lower_third
+        - pip
+        - scene
+        - auto_director
+        - scene_updated_at
+      properties:
+        v:
+          type: integer
+          enum:
+            - 1
+          description: Schema version (always 1).
+        on_air:
+          type: boolean
+          description: Whether the program feed is live to air.
+        lower_third:
+          type: string
+          nullable: true
+          description: Free lower-third caption, or null when hidden.
+        pip:
           type: object
+          required:
+            - enabled
           properties:
-            on_air:
+            enabled:
               type: boolean
-            lower_third:
-              type: string
-              nullable: true
-            pip:
-              type: object
-              properties:
-                enabled:
-                  type: boolean
+        scene:
+          $ref: '#/components/schemas/BroadcastScene'
+        auto_director:
+          type: boolean
+          description: >-
+            When true (default), the auto-director reactor switches `scene` on
+            match status changes. When false, scene changes are operator-driven
+            only.
+        scene_updated_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: ISO timestamp of the last `scene` change, or null.
+    BroadcastScene:
+      type: string
+      description: The overlay scene the OBS browser-source renders.
+      enum:
+        - starting
+        - match
+        - pause
+        - results
+        - end
+        - custom
+    NextMatchResult:
+      type: object
+      description: Result of the one-click "next match" broadcast transition.
+      required:
+        - segment
+        - alreadyStarted
+        - runId
+      properties:
+        segment:
+          allOf:
+            - $ref: '#/components/schemas/EventSegment'
+          description: The segment now promoted to `status='live'`.
+        alreadyStarted:
+          type: boolean
+          description: >-
+            True when the target segment was already live (idempotent no-op
+            swap), false when it was promoted from `upcoming`.
+        runId:
+          type: string
+          format: uuid
+          description: The live run the transition happened on.
+    OverlayState:
+      type: object
+      description: |
+        Chrome-less overlay payload for a run's OBS browser source. PUBLIC and
+        cacheable (`Cache-Control: s-maxage=5, stale-while-revalidate`); never
+        exposes staff-only fields (`auto_director`, casters, stream URLs,
+        checklists, broadcast messages…). When the run is unknown or not live,
+        a safe empty-ish shape is returned (scene `'starting'`, `match` null,
+        `onAir` false) with a 200 so the browser source never errors mid-show.
+      required:
+        - scene
+        - onAir
+        - lowerThird
+        - pip
+        - match
+        - sponsors
+      properties:
+        scene:
+          $ref: '#/components/schemas/BroadcastScene'
+        onAir:
+          type: boolean
+        lowerThird:
+          type: string
+          nullable: true
+        pip:
+          type: object
+          required:
+            - enabled
+          properties:
+            enabled:
+              type: boolean
+        match:
+          allOf:
+            - $ref: '#/components/schemas/OverlayMatch'
+          nullable: true
+        sponsors:
+          type: array
+          items:
+            $ref: '#/components/schemas/OverlaySponsor'
+    OverlayMatch:
+      type: object
+      description: The current match block rendered by the overlay.
+      required:
+        - team1
+        - team2
+        - format
+        - status
+      properties:
+        team1:
+          allOf:
+            - $ref: '#/components/schemas/OverlayTeam'
+          nullable: true
+        team2:
+          allOf:
+            - $ref: '#/components/schemas/OverlayTeam'
+          nullable: true
+        format:
+          type: string
+          nullable: true
+          description: Match format (e.g. `bo1`, `bo3`), or null.
+        status:
+          type: string
+          nullable: true
+          description: Match status (e.g. `ongoing`, `finished`), or null.
+    OverlayTeam:
+      type: object
+      required:
+        - name
+        - logoUrl
+        - score
+      properties:
+        name:
+          type: string
+        logoUrl:
+          type: string
+          nullable: true
+        score:
+          type: integer
+          nullable: true
+    OverlaySponsor:
+      type: object
+      required:
+        - name
+        - logoUrl
+        - websiteUrl
+      properties:
+        name:
+          type: string
+        logoUrl:
+          type: string
+          nullable: true
+        websiteUrl:
+          type: string
+          nullable: true
     CreateEventSegmentInput:
       type: object
       required:
@@ -8736,11 +8902,15 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
     post:
-      summary: Patch overlay state (on_air, lower_third, pip).
+      summary: Patch overlay state (on_air, lower_third, pip, scene, auto_director).
       description: |
         Partial update of `broadcast_state` on the currently-live run. Requires
         at least `manager` role (caster is read-only). Returns 409 if no
-        `event_run` is live.
+        `event_run` is live. At least one field must be supplied.
+
+        `scene` selects the overlay scene manually; `auto_director` toggles the
+        auto-director reactor (when true, the reactor switches `scene` on match
+        status changes — set it false to hold a manual scene).
       operationId: adminUpdateBroadcastState
       tags:
         - admin/broadcast
@@ -8769,6 +8939,15 @@ paths:
                   properties:
                     enabled:
                       type: boolean
+                scene:
+                  allOf:
+                    - $ref: '#/components/schemas/BroadcastScene'
+                  description: Manually select the overlay scene.
+                auto_director:
+                  type: boolean
+                  description: >-
+                    Toggle the auto-director reactor (defaults to true on the
+                    stored state).
       responses:
         '200':
           description: Refreshed live state.
@@ -8784,6 +8963,57 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '409':
           $ref: '#/components/responses/Conflict'
+  /api/admin/broadcast/next-match:
+    post:
+      summary: One-click advance to the next match segment.
+      description: |
+        Resolves the tenant's live run and its current live segment, finds the
+        next `type='match'` segment by `ord` (skipping breaks/intros/outros and
+        anything not `upcoming`), and performs the atomic single-live-segment
+        swap — same implementation as `POST /segments/{segId}/start`. Resets the
+        overlay scene to `'starting'` (best-effort) so the auto-director flips
+        it to `'match'` cleanly when the new match goes ongoing. Emits
+        `event_segment.transitioned`. No request body. Requires `manager` role.
+      operationId: adminBroadcastNextMatch
+      tags:
+        - admin/broadcast
+      security:
+        - StaffSession: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Transition performed (or idempotent no-op).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NextMatchResult'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: |
+            Business-state conflict. The `code` field is one of:
+            `NO_LIVE_RUN` (no live run), `NO_CURRENT_SEGMENT` (live run has no
+            live segment), `NO_NEXT_MATCH` (no upcoming match segment after the
+            current one), `SEGMENT_NOT_UPCOMING` (target already transitioned by
+            another client).
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Error'
+                properties:
+                  code:
+                    type: string
+                    enum:
+                      - NO_LIVE_RUN
+                      - NO_CURRENT_SEGMENT
+                      - NO_NEXT_MATCH
+                      - SEGMENT_NOT_UPCOMING
   /api/admin/broadcast/{campaignId}:
     parameters:
       - in: path
@@ -18301,6 +18531,44 @@ paths:
             text/html:
               schema:
                 type: string
+        '405':
+          description: Méthode non autorisée (seul GET est accepté).
+  /api/overlay/{runId}:
+    get:
+      summary: OBS browser-source overlay state for a run.
+      description: |
+        PUBLIC (no auth), cacheable renderer feed for a run's OBS browser
+        source: scene + overlay flags from `broadcast_state`, the current match
+        (teams/scores/format/status) and the active sponsors. Driven live by
+        `event_runs.broadcast_state` via Supabase Realtime on the overlay page.
+
+        Never exposes staff-only fields (`auto_director`, casters, stream URLs,
+        checklists, broadcast messages…). When the run is unknown or not live, a
+        safe empty-ish shape (scene `'starting'`, `match` null, `onAir` false)
+        is returned with `200` so the browser source never errors mid-broadcast.
+        A malformed `runId` returns `400`. `Cache-Control: s-maxage=5,
+        stale-while-revalidate`.
+      operationId: getOverlayState
+      tags:
+        - public/misc
+      security: []
+      parameters:
+        - name: runId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The `event_runs.id` to render.
+      responses:
+        '200':
+          description: Overlay state (empty-ish shape when the run is not live).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OverlayState'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '405':
           description: Méthode non autorisée (seul GET est accepté).
   /api/cron/broadcast-process:

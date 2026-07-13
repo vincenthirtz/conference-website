@@ -16,6 +16,7 @@ import { emitBotEvent } from '@/utils/botEvents';
 import {
   fetchLiveBroadcastState,
   updateBroadcastState,
+  BROADCAST_SCENES,
 } from '@/utils/broadcast/liveState';
 import { logger } from '../../../../utils/logger';
 
@@ -40,15 +41,15 @@ async function handler(
         on_air?: unknown;
         lower_third?: unknown;
         pip?: unknown;
+        scene?: unknown;
+        auto_director?: unknown;
       };
 
       // Validate the patch up-front so we fail fast before touching the DB.
       const patch: Record<string, unknown> = {};
       if (body.on_air !== undefined) {
         if (typeof body.on_air !== 'boolean') {
-          return res
-            .status(400)
-            .json({ error: 'on_air must be a boolean' });
+          return res.status(400).json({ error: 'on_air must be a boolean' });
         }
         patch.on_air = body.on_air;
       }
@@ -79,6 +80,25 @@ async function handler(
             .json({ error: 'pip must be { enabled: boolean }' });
         }
         patch.pip = { enabled: (body.pip as any).enabled };
+      }
+      if (body.scene !== undefined) {
+        if (
+          typeof body.scene !== 'string' ||
+          !(BROADCAST_SCENES as readonly string[]).includes(body.scene)
+        ) {
+          return res.status(400).json({
+            error: `scene must be one of: ${BROADCAST_SCENES.join(', ')}`,
+          });
+        }
+        patch.scene = body.scene;
+      }
+      if (body.auto_director !== undefined) {
+        if (typeof body.auto_director !== 'boolean') {
+          return res
+            .status(400)
+            .json({ error: 'auto_director must be a boolean' });
+        }
+        patch.auto_director = body.auto_director;
       }
       if (Object.keys(patch).length === 0) {
         return res.status(400).json({ error: 'No fields to update' });

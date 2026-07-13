@@ -8,12 +8,44 @@
 import { supabaseAdmin } from '../supabase';
 import { logger } from '../logger';
 
+/**
+ * Production "scene" the overlay renderer switches to. Drives the automated
+ * director (Feature: Production broadcast automatisée). `custom` is an escape
+ * hatch operators can select manually; the auto-director never sets it.
+ */
+export type BroadcastScene =
+  | 'starting'
+  | 'match'
+  | 'pause'
+  | 'results'
+  | 'end'
+  | 'custom';
+
+export const BROADCAST_SCENES: readonly BroadcastScene[] = [
+  'starting',
+  'match',
+  'pause',
+  'results',
+  'end',
+  'custom',
+];
+
 export type BroadcastStateV1 = {
   v: 1;
   on_air: boolean;
   lower_third: string | null;
   pip: { enabled: boolean };
+  // Feature: Production broadcast automatisée — extend the freeform JSONB in
+  // code (no migration). Both fields are backfilled on read by normalizeState.
+  scene: BroadcastScene;
+  /** When false, the auto-director reactor is a no-op (operator override). */
+  auto_director: boolean;
+  /** ISO timestamp of the last scene change (set by setBroadcastScene). */
+  scene_updated_at: string | null;
 };
+
+/** Supabase service-role client type (non-null flavor of `supabaseAdmin`). */
+type SupabaseAdminClient = NonNullable<typeof supabaseAdmin>;
 
 export type LiveSegmentLite = {
   id: string;
@@ -68,10 +100,21 @@ export const DEFAULT_BROADCAST_STATE: BroadcastStateV1 = {
   on_air: false,
   lower_third: null,
   pip: { enabled: false },
+  scene: 'starting',
+  auto_director: true,
+  scene_updated_at: null,
 };
 
+/** Coerce an unknown value to a valid scene, defaulting to 'starting'. */
+function normalizeScene(raw: unknown): BroadcastScene {
+  return typeof raw === 'string' &&
+    (BROADCAST_SCENES as readonly string[]).includes(raw)
+    ? (raw as BroadcastScene)
+    : 'starting';
+}
+
 export function normalizeState(raw: unknown): BroadcastStateV1 {
-  if (!raw || typeof raw !== 'object') return DEFAULT_BROADCAST_STATE;
+  if (!raw || typeof raw !== 'object') return { ...DEFAULT_BROADCAST_STATE };
   const r = raw as Record<string, unknown>;
   const pip = r.pip && typeof r.pip === 'object' ? (r.pip as any) : {};
   return {
@@ -82,6 +125,11 @@ export function normalizeState(raw: unknown): BroadcastStateV1 {
         ? r.lower_third
         : null,
     pip: { enabled: pip.enabled === true },
+    scene: normalizeScene(r.scene),
+    // Headline feature is ON by default: only an explicit `false` disables it.
+    auto_director: r.auto_director !== false,
+    scene_updated_at:
+      typeof r.scene_updated_at === 'string' ? r.scene_updated_at : null,
   };
 }
 
@@ -107,9 +155,7 @@ export async function fetchLiveBroadcastState(
 
   const { data: run } = await supabaseAdmin
     .from('event_runs')
-    .select(
-      'id, name, slug, status, started_at, scheduled_at, broadcast_state'
-    )
+    .select('id, name, slug, status, started_at, scheduled_at, broadcast_state')
     .eq('tenant_id', tenantId)
     .eq('status', 'live')
     .order('started_at', { ascending: false, nullsFirst: false })
@@ -151,9 +197,7 @@ export async function fetchLiveBroadcastState(
     const matchId = currentSegment.match_id;
     const { data: m } = await supabaseAdmin
       .from('matches')
-      .select(
-        'id, team1_id, team2_id, team1_score, team2_score, stream_url'
-      )
+      .select('id, team1_id, team2_id, team1_score, team2_score, stream_url')
       .eq('id', matchId)
       .eq('tenant_id', tenantId)
       .maybeSingle();
@@ -281,6 +325,17 @@ export async function updateBroadcastState(
           ? patch.pip.enabled
           : current.pip.enabled,
     },
+    scene:
+      patch.scene !== undefined ? normalizeScene(patch.scene) : current.scene,
+    auto_director:
+      typeof patch.auto_director === 'boolean'
+        ? patch.auto_director
+        : current.auto_director,
+    // Bump the scene timestamp whenever the scene is part of this patch.
+    scene_updated_at:
+      patch.scene !== undefined
+        ? new Date().toISOString()
+        : current.scene_updated_at,
   };
 
   const { error } = await supabaseAdmin
@@ -291,6 +346,47 @@ export async function updateBroadcastState(
 
   if (error) {
     logger.error('[broadcast/liveState] updateBroadcastState error', error);
+    return null;
+  }
+  return next;
+}
+
+/**
+ * Merge-patch ONLY the `scene` field (+ `scene_updated_at`) on a run's
+ * broadcast_state, leaving every sibling field (on_air, lower_third, pip,
+ * auto_director) untouched. Used by the auto-director reactor.
+ *
+ * Takes the admin client explicitly so callers that already hold a non-null
+ * reference (e.g. the reactor) don't fight the module-level nullable export.
+ * Scoped by runId only — the caller is expected to have already resolved the
+ * run within its tenant (via fetchLiveBroadcastState).
+ */
+export async function setBroadcastScene(
+  admin: SupabaseAdminClient,
+  runId: string,
+  scene: BroadcastScene
+): Promise<BroadcastStateV1 | null> {
+  const { data: row } = await admin
+    .from('event_runs')
+    .select('broadcast_state')
+    .eq('id', runId)
+    .maybeSingle();
+  if (!row) return null;
+
+  const current = normalizeState((row as any).broadcast_state);
+  const next: BroadcastStateV1 = {
+    ...current,
+    scene: normalizeScene(scene),
+    scene_updated_at: new Date().toISOString(),
+  };
+
+  const { error } = await admin
+    .from('event_runs')
+    .update({ broadcast_state: next, updated_at: new Date().toISOString() })
+    .eq('id', runId);
+
+  if (error) {
+    logger.error('[broadcast/liveState] setBroadcastScene error', error);
     return null;
   }
   return next;
