@@ -16,6 +16,7 @@ import { logStaffAction } from '@/utils/staffLogs';
 import {
   computeAudienceRecipients,
   getCampaign,
+  buildBroadcastUnsubscribeUrl,
   type BroadcastCampaign,
 } from '@/utils/broadcasts';
 import { campaignInputSchema } from '@/utils/campaignSchema';
@@ -116,7 +117,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: Authentic
 
   for (const r of windowed) {
     try {
-      const result = await campaign.send(r.email, r.label);
+      const unsubscribeUrl = buildBroadcastUnsubscribeUrl(r.user_id);
+      const result = await campaign.send(r.email, r.label, unsubscribeUrl);
       if (result.success) {
         sent++;
       } else {

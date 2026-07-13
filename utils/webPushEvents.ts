@@ -141,6 +141,20 @@ export function isEmailEventType(value: string): value is EmailEventType {
   return (EMAIL_EVENT_TYPES as readonly string[]).includes(value);
 }
 
+/**
+ * event_type sentinelle pour l'opt-out RGPD des emails BROADCAST (annonces &
+ * campagnes), distinct des EMAIL_EVENT_TYPES (notifications d'événements).
+ *
+ * Une row notification_prefs(user_id, 'broadcast', channel='email',
+ * enabled=false) signifie « ne plus recevoir les campagnes broadcast » SANS
+ * toucher aux rappels de match / check-in / scrim. La table n'a pas de CHECK
+ * sur event_type (cf. add_channel_to_notification_prefs.sql) : cette valeur
+ * hors-catalogue est donc valide sans migration.
+ *
+ * À utiliser partout — jamais le littéral 'broadcast' en dur.
+ */
+export const BROADCAST_OPT_OUT_EVENT_TYPE = 'broadcast';
+
 export const PLAYER_PUSH_EVENT_TYPES = [
   'match.starting',
   'match.finished',

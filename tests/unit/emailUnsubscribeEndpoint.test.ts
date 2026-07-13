@@ -13,7 +13,10 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 
 import { store, resetSupabaseMock } from './__helpers__/supabaseMock';
 import { generateUnsubscribeToken } from '@/utils/emailUnsubscribe';
-import { EMAIL_EVENT_TYPES } from '@/utils/webPushEvents';
+import {
+  EMAIL_EVENT_TYPES,
+  BROADCAST_OPT_OUT_EVENT_TYPE,
+} from '@/utils/webPushEvents';
 import handler from '@/pages/api/email/unsubscribe';
 
 const USER_ID = '11111111-1111-1111-1111-111111111111';
@@ -120,10 +123,117 @@ describe('GET /api/email/unsubscribe', () => {
     expect(res.statusCode).toBe(400);
   });
 
-  it('405s on a non-GET method', async () => {
+  it('405s on an unsupported method (PUT), advertising GET + POST', async () => {
     const res = makeRes();
-    await handler(makeReq({ method: 'POST' }), res);
+    await handler(makeReq({ method: 'PUT' }), res);
     expect(res.statusCode).toBe(405);
-    expect(res.headers['Allow']).toBe('GET');
+    expect(res.headers['Allow']).toBe('GET, POST');
+  });
+});
+
+/* -----------------------------------------------------------
+ * scope=broadcast — opt-out ciblé des annonces/campagnes
+ * ---------------------------------------------------------*/
+
+describe('GET /api/email/unsubscribe?scope=broadcast', () => {
+  const prev = process.env.UNSUBSCRIBE_SECRET;
+
+  beforeEach(() => {
+    resetSupabaseMock();
+    process.env.UNSUBSCRIBE_SECRET = 'fixed-endpoint-secret';
+    store.notification_prefs = [];
+  });
+
+  afterEach(() => {
+    if (prev === undefined) delete process.env.UNSUBSCRIBE_SECRET;
+    else process.env.UNSUBSCRIBE_SECRET = prev;
+  });
+
+  it('poses exactly ONE broadcast/email/false row and no others', async () => {
+    const token = generateUnsubscribeToken(USER_ID);
+    const res = makeRes();
+    await handler(makeReq({ query: { token, scope: 'broadcast' } }), res);
+
+    expect(res.statusCode).toBe(200);
+    expect(String(res.body)).toContain('annonces');
+
+    const rows = (store.notification_prefs ?? []).filter(
+      (r) => r.user_id === USER_ID && r.channel === 'email'
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0].event_type).toBe(BROADCAST_OPT_OUT_EVENT_TYPE);
+    expect(rows[0].enabled).toBe(false);
+  });
+
+  it('does NOT touch existing event-notification prefs', async () => {
+    store.notification_prefs = [
+      {
+        user_id: USER_ID,
+        event_type: 'match.starting',
+        channel: 'email',
+        enabled: true,
+      },
+    ];
+    const token = generateUnsubscribeToken(USER_ID);
+    await handler(makeReq({ query: { token, scope: 'broadcast' } }), makeRes());
+
+    // La row match.starting reste intacte (toujours enabled=true).
+    const match = (store.notification_prefs ?? []).filter(
+      (r) => r.event_type === 'match.starting'
+    );
+    expect(match).toHaveLength(1);
+    expect(match[0].enabled).toBe(true);
+
+    // Et la row broadcast a bien été posée.
+    const broadcast = (store.notification_prefs ?? []).filter(
+      (r) => r.event_type === BROADCAST_OPT_OUT_EVENT_TYPE
+    );
+    expect(broadcast).toHaveLength(1);
+    expect(broadcast[0].enabled).toBe(false);
+  });
+
+  it('is idempotent (one broadcast row after two calls)', async () => {
+    const token = generateUnsubscribeToken(USER_ID);
+    await handler(makeReq({ query: { token, scope: 'broadcast' } }), makeRes());
+    await handler(makeReq({ query: { token, scope: 'broadcast' } }), makeRes());
+
+    const rows = (store.notification_prefs ?? []).filter(
+      (r) =>
+        r.user_id === USER_ID &&
+        r.channel === 'email' &&
+        r.event_type === BROADCAST_OPT_OUT_EVENT_TYPE
+    );
+    expect(rows).toHaveLength(1);
+  });
+
+  it('honors the broadcast scope over POST (one-click)', async () => {
+    const token = generateUnsubscribeToken(USER_ID);
+    const res = makeRes();
+    await handler(
+      makeReq({ method: 'POST', query: { token, scope: 'broadcast' } }),
+      res
+    );
+
+    expect(res.statusCode).toBe(200);
+    const rows = (store.notification_prefs ?? []).filter(
+      (r) => r.user_id === USER_ID && r.channel === 'email'
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0].event_type).toBe(BROADCAST_OPT_OUT_EVENT_TYPE);
+  });
+
+  it('scope=notifications behaves like the global opt-out', async () => {
+    const token = generateUnsubscribeToken(USER_ID);
+    await handler(
+      makeReq({ query: { token, scope: 'notifications' } }),
+      makeRes()
+    );
+
+    const rows = (store.notification_prefs ?? []).filter(
+      (r) => r.user_id === USER_ID && r.channel === 'email'
+    );
+    expect(rows.map((r) => r.event_type).sort()).toEqual(
+      [...EMAIL_EVENT_TYPES].sort()
+    );
   });
 });

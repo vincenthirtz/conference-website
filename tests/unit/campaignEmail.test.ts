@@ -192,6 +192,28 @@ describe('buildCampaignEmailHtml', () => {
     expect(html).not.toContain('<i>note</i>');
     expect(html).toContain('&lt;i&gt;note&lt;/i&gt;');
   });
+
+  // ── Unsubscribe link (RGPD broadcast) ─────────────────────
+
+  it('renders the unsubscribe link when unsubscribeUrl is provided', () => {
+    const url =
+      'https://owwomenscup.fr/api/email/unsubscribe?token=abc.def&scope=broadcast';
+    const html = buildCampaignEmailHtml(baseBody(), null, url);
+    expect(html).toContain('Se désinscrire des annonces');
+    expect(html).toContain(
+      'https://owwomenscup.fr/api/email/unsubscribe?token=abc.def&amp;scope=broadcast'
+    );
+  });
+
+  it('omits the unsubscribe link when unsubscribeUrl is absent (transactional intact)', () => {
+    const html = buildCampaignEmailHtml(baseBody(), null);
+    expect(html).not.toContain('Se désinscrire des annonces');
+  });
+
+  it('omits the unsubscribe link when unsubscribeUrl is blank', () => {
+    const html = buildCampaignEmailHtml(baseBody(), null, '   ');
+    expect(html).not.toContain('Se désinscrire des annonces');
+  });
 });
 
 /* -----------------------------------------------------------

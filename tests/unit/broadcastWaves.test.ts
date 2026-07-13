@@ -146,6 +146,55 @@ describe('computeAudienceRecipients', () => {
     ]);
   });
 
+  it('excludes users opted out of broadcast, keeps the others', async () => {
+    setAuthListUsers([
+      {
+        id: 'u1',
+        email: 'a@x.com',
+        email_confirmed_at: '2026-01-01',
+        user_metadata: { display_name: 'Alpha' },
+      } as any,
+      {
+        id: 'u2',
+        email: 'b@x.com',
+        email_confirmed_at: '2026-01-01',
+        user_metadata: { display_name: 'Bee' },
+      } as any,
+      {
+        id: 'u3',
+        email: 'c@x.com',
+        email_confirmed_at: '2026-01-01',
+        user_metadata: { display_name: 'Cee' },
+      } as any,
+    ]);
+    store.notification_prefs = [
+      // u2 opted out of broadcast → excluded
+      {
+        user_id: 'u2',
+        event_type: 'broadcast',
+        channel: 'email',
+        enabled: false,
+      },
+      // u3 opted out of a MATCH notification (not broadcast) → still included
+      {
+        user_id: 'u3',
+        event_type: 'match.starting',
+        channel: 'email',
+        enabled: false,
+      },
+      // u1 explicitly re-enabled broadcast → included
+      {
+        user_id: 'u1',
+        event_type: 'broadcast',
+        channel: 'email',
+        enabled: true,
+      },
+    ] as any;
+
+    const recipients = await computeAudienceRecipients('all-confirmed-users');
+    expect(recipients.map((r) => r.user_id).sort()).toEqual(['u1', 'u3']);
+  });
+
   it('throws on unsupported audience', async () => {
     await expect(
       computeAudienceRecipients('unknown' as any)

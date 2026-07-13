@@ -14,8 +14,30 @@ import {
   sendCampaignEmail,
 } from './email';
 import type { SendEmailResult, CampaignBody } from './email';
+import { generateUnsubscribeToken } from './emailUnsubscribe';
+import { BROADCAST_OPT_OUT_EVENT_TYPE } from './webPushEvents';
 
 import { logger } from './logger';
+
+// Origine du site pour construire les liens absolus (même précédence que
+// utils/emailDispatcher.ts / utils/checkin.ts).
+const SITE_URL =
+  process.env.SITE_URL ||
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  'https://owwomenscup.fr';
+
+/**
+ * Construit l'URL de désinscription RGPD (scope broadcast) pour un user donné.
+ * Le token HMAC est propre au user ; l'URL est donc unique par destinataire.
+ * Consommée par les 2 chemins d'envoi (POST direct + processCampaignWave) pour
+ * alimenter le footer HTML ET le header List-Unsubscribe one-click.
+ */
+export function buildBroadcastUnsubscribeUrl(userId: string): string {
+  return `${SITE_URL.replace(/\/$/, '')}/api/email/unsubscribe?token=${generateUnsubscribeToken(
+    userId
+  )}&scope=broadcast`;
+}
+
 export type CampaignAudience = 'all-confirmed-users';
 export type CampaignStatus = 'active' | 'draft' | 'archived';
 
@@ -30,8 +52,16 @@ export type BroadcastCampaign = {
   source: 'builtin' | 'db';
   /** Corps structuré — présent uniquement pour les campagnes 'db' (prefill du formulaire) */
   body?: CampaignBody;
-  /** Envoi réel via Brevo */
-  send: (to: string, label: string | null) => Promise<SendEmailResult>;
+  /**
+   * Envoi réel via Brevo. `unsubscribeUrl` (par-destinataire) alimente le lien
+   * de désinscription broadcast dans le footer + le header List-Unsubscribe.
+   * Optionnel : les previews (test) l'omettent (pas de user associé).
+   */
+  send: (
+    to: string,
+    label: string | null,
+    unsubscribeUrl?: string
+  ) => Promise<SendEmailResult>;
   /** Génère le HTML rendu (utilisé pour le live preview admin) */
   buildHtml: (label: string | null) => string;
 };
@@ -94,13 +124,14 @@ export function rowToCampaign(row: EmailCampaignRow): BroadcastCampaign {
     status: row.status,
     source: 'db',
     body,
-    send: (to, label) =>
+    send: (to, label, unsubscribeUrl) =>
       sendCampaignEmail({
         to,
         subject: row.subject,
         body,
         displayLabel: label,
         tags: [row.id],
+        unsubscribeUrl,
       }),
     buildHtml: (label) => buildCampaignEmailHtml(body, label),
   };
@@ -172,7 +203,7 @@ export async function computeAudienceRecipients(
     throw new Error(`Unsupported audience: ${audience}`);
   }
 
-  const allUsers: { id: string; email: string; display_name: string | null }[] =
+  let allUsers: { id: string; email: string; display_name: string | null }[] =
     [];
   let page = 1;
   const perPage = 1000;
@@ -195,6 +226,24 @@ export async function computeAudienceRecipients(
     }
     if (batch.length < perPage) break;
     page += 1;
+  }
+
+  // Opt-out RGPD broadcast : on exclut les users ayant une row
+  // notification_prefs(channel='email', event_type='broadcast',
+  // enabled=false). UNE requête (pas de N+1). Les opt-outs d'événements
+  // (EMAIL_EVENT_TYPES) n'affectent PAS les broadcasts — scope dédié.
+  const { data: optOutRows, error: optOutError } = await supabaseAdmin
+    .from('notification_prefs')
+    .select('user_id')
+    .eq('channel', 'email')
+    .eq('event_type', BROADCAST_OPT_OUT_EVENT_TYPE)
+    .eq('enabled', false);
+  if (optOutError) throw optOutError;
+  const optedOut = new Set(
+    (optOutRows ?? []).map((r) => (r as { user_id: string }).user_id)
+  );
+  if (optedOut.size > 0) {
+    allUsers = allUsers.filter((u) => !optedOut.has(u.id));
   }
 
   const userIds = allUsers.map((u) => u.id);
@@ -298,9 +347,11 @@ export async function processCampaignWave(
     let success = false;
     let errorMsg: string | null = null;
     try {
+      const unsubscribeUrl = buildBroadcastUnsubscribeUrl(r.user_id as string);
       const result = await campaign.send(
         r.email as string,
-        (r.label as string | null) ?? null
+        (r.label as string | null) ?? null,
+        unsubscribeUrl
       );
       success = result.success;
       if (!success) errorMsg = result.error ?? 'unknown error';

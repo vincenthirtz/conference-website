@@ -15,6 +15,13 @@ type SendEmailOptions = {
   subject: string;
   html: string;
   tags?: string[];
+  /**
+   * URL de désinscription one-click (RFC 8058). Quand fournie, on ajoute les
+   * headers `List-Unsubscribe` + `List-Unsubscribe-Post` au payload Brevo, ce
+   * qui affiche le bouton natif « Se désabonner » dans Gmail/Outlook et permet
+   * le POST one-click. Sans effet quand absente (emails transactionnels).
+   */
+  listUnsubscribeUrl?: string;
 };
 
 export type SendEmailResult = {
@@ -40,6 +47,16 @@ export async function sendEmail(
     return { success: false, error: 'BREVO_API_KEY not configured' };
   }
 
+  // Brevo transporte les en-têtes SMTP custom via le champ `headers` du payload
+  // JSON. Pour le one-click RFC 8058, il faut List-Unsubscribe (l'URL entre
+  // chevrons) ET List-Unsubscribe-Post=One-Click.
+  const customHeaders = opts.listUnsubscribeUrl
+    ? {
+        'List-Unsubscribe': `<${opts.listUnsubscribeUrl}>`,
+        'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+      }
+    : undefined;
+
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5_000);
@@ -57,6 +74,7 @@ export async function sendEmail(
         subject: opts.subject,
         htmlContent: opts.html,
         ...(opts.tags?.length ? { tags: opts.tags } : {}),
+        ...(customHeaders ? { headers: customHeaders } : {}),
       }),
       signal: controller.signal,
     });
@@ -351,7 +369,8 @@ export type CampaignBody = {
 
 export function buildCampaignEmailHtml(
   body: CampaignBody,
-  displayLabel: string | null
+  displayLabel: string | null,
+  unsubscribeUrl?: string
 ): string {
   const greeting =
     body.greetingEnabled !== false && displayLabel
@@ -379,6 +398,16 @@ export function buildCampaignEmailHtml(
       ? `<p style="margin:24px 0 0;font-size:13px;color:#9081B0;line-height:1.5;text-align:center;">${escapeHtml(body.footerNote.trim())}</p>`
       : '';
 
+  // Lien de désinscription RGPD (broadcasts uniquement). Discret, centré, sous
+  // le footer. L'URL est déjà signée + porte &scope=broadcast (contexte
+  // attribut → escapeHtml). Absent pour les emails transactionnels.
+  const unsubscribe =
+    unsubscribeUrl && unsubscribeUrl.trim()
+      ? `<p style="margin:20px 0 0;font-size:11px;color:#675788;line-height:1.4;text-align:center;">
+          <a href="${escapeHtml(unsubscribeUrl.trim())}" style="color:#9081B0;text-decoration:underline;">Se désinscrire des annonces</a>
+        </p>`
+      : '';
+
   return emailLayout(`
     ${gradientBar()}
     <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;">${escapeHtml(body.heading)}</h1>
@@ -386,6 +415,7 @@ export function buildCampaignEmailHtml(
     ${paragraphs}
     ${cta}
     ${footer}
+    ${unsubscribe}
   `);
 }
 
@@ -395,12 +425,15 @@ export function sendCampaignEmail(opts: {
   body: CampaignBody;
   displayLabel: string | null;
   tags?: string[];
+  /** Lien de désinscription broadcast (footer + header List-Unsubscribe). */
+  unsubscribeUrl?: string;
 }): Promise<SendEmailResult> {
   return sendEmail({
     to: opts.to,
     subject: opts.subject,
     tags: opts.tags ?? ['campaign'],
-    html: buildCampaignEmailHtml(opts.body, opts.displayLabel),
+    html: buildCampaignEmailHtml(opts.body, opts.displayLabel, opts.unsubscribeUrl),
+    listUnsubscribeUrl: opts.unsubscribeUrl,
   });
 }
 

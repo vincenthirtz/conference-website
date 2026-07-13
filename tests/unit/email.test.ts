@@ -89,6 +89,41 @@ describe('sendEmail', () => {
     expect(result.error).toBe('Network down');
   });
 
+  it('adds List-Unsubscribe headers when listUnsubscribeUrl is provided', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ messageId: 'u1' }),
+    });
+    vi.stubGlobal('fetch', mockFetch);
+
+    const url = 'https://owwomenscup.fr/api/email/unsubscribe?token=t&scope=broadcast';
+    await sendEmail({
+      to: 'a@b.com',
+      subject: 'Hi',
+      html: '<p>hi</p>',
+      listUnsubscribeUrl: url,
+    });
+
+    const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+    expect(body.headers).toEqual({
+      'List-Unsubscribe': `<${url}>`,
+      'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+    });
+  });
+
+  it('omits List-Unsubscribe headers when listUnsubscribeUrl is absent', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ messageId: 'u2' }),
+    });
+    vi.stubGlobal('fetch', mockFetch);
+
+    await sendEmail({ to: 'a@b.com', subject: 'Hi', html: '<p>hi</p>' });
+
+    const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+    expect(body.headers).toBeUndefined();
+  });
+
   it('handles non-ok response with unparseable JSON', async () => {
     vi.stubGlobal(
       'fetch',

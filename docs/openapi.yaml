@@ -18529,13 +18529,20 @@ paths:
       summary: One-click email unsubscribe (RGPD, clicked from an email).
       operationId: emailUnsubscribe
       description: |
-        Lien de désabonnement présent en bas de chaque digest email. PAS d'auth
-        session : l'identité est portée par un token HMAC-SHA256 auto-portant
-        (`?token=...`, cf. `utils/emailUnsubscribe.ts`).
+        Lien de désabonnement présent en bas de chaque digest email ET de chaque
+        campagne broadcast. PAS d'auth session : l'identité est portée par un
+        token HMAC-SHA256 auto-portant (`?token=...`, cf.
+        `utils/emailUnsubscribe.ts`).
 
-        Effet : opt-out GLOBAL du canal email — pose une row
-        `notification_prefs(channel='email', enabled=false)` pour chaque
-        `EMAIL_EVENT_TYPES` de l'utilisateur résolu depuis le token. Idempotent.
+        Deux portées via `?scope=` (token identique) :
+          - absent | `notifications` : opt-out GLOBAL du canal email — pose une
+            row `notification_prefs(channel='email', enabled=false)` pour chaque
+            `EMAIL_EVENT_TYPES` de l'utilisateur.
+          - `broadcast` : opt-out CIBLÉ des annonces & campagnes — UNE row
+            `notification_prefs(event_type='broadcast', channel='email',
+            enabled=false)`. Les rappels de match / check-in / scrim restent
+            actifs.
+        Idempotent.
 
         Réponse : une page HTML brandée (confirmation sur succès, message
         d'erreur amical sur token invalide/altéré → `400`). Pas de CSRF (GET
@@ -18548,6 +18555,15 @@ paths:
           schema:
             type: string
           description: Token de désabonnement signé (HMAC-SHA256).
+        - name: scope
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [broadcast, notifications]
+          description: |
+            `broadcast` = opt-out des annonces/campagnes uniquement. Absent ou
+            `notifications` = opt-out global des notifications email.
       responses:
         '200':
           description: Désabonnement confirmé (page HTML).
@@ -18562,7 +18578,50 @@ paths:
               schema:
                 type: string
         '405':
-          description: Méthode non autorisée (seul GET est accepté).
+          description: Méthode non autorisée (seuls GET et POST sont acceptés).
+    post:
+      tags:
+        - public
+      summary: One-click unsubscribe POST (RFC 8058 List-Unsubscribe-Post).
+      operationId: emailUnsubscribePost
+      description: |
+        Variante POST du désabonnement one-click. Les clients mail (Gmail,
+        Outlook…) envoient un `POST` avec le corps `List-Unsubscribe=One-Click`
+        quand l'email porte les headers `List-Unsubscribe` + `List-Unsubscribe-Post`
+        (cf. campagnes broadcast). Même effet idempotent que le GET ; le `scope`
+        reste lu dans la query string (l'URL est conservée). Pas de CSRF.
+      security: []
+      parameters:
+        - name: token
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Token de désabonnement signé (HMAC-SHA256).
+        - name: scope
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [broadcast, notifications]
+          description: |
+            `broadcast` = opt-out des annonces/campagnes uniquement. Absent ou
+            `notifications` = opt-out global des notifications email.
+      responses:
+        '200':
+          description: Désabonnement confirmé (page HTML).
+          content:
+            text/html:
+              schema:
+                type: string
+        '400':
+          description: Token invalide ou altéré (page HTML d'erreur).
+          content:
+            text/html:
+              schema:
+                type: string
+        '405':
+          description: Méthode non autorisée (seuls GET et POST sont acceptés).
   /api/overlay/{runId}:
     get:
       summary: OBS browser-source overlay state for a run.
