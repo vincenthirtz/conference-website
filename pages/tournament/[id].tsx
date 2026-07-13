@@ -23,6 +23,7 @@ import FormatInfographic from '@/components/tournament/landing/FormatInfographic
 import ScheduleTimeline from '@/components/tournament/landing/ScheduleTimeline';
 import BracketPreview from '@/components/tournament/landing/BracketPreview';
 import PrizeTeaser from '@/components/tournament/landing/PrizeTeaser';
+import PrizePoolCard from '@/components/tournament/landing/PrizePoolCard';
 import StreamingSection from '@/components/tournament/landing/StreamingSection';
 import SponsorsStrip from '@/components/tournament/landing/SponsorsStrip';
 import CommunitySection from '@/components/tournament/landing/CommunitySection';
@@ -187,19 +188,28 @@ export const getStaticProps: GetStaticProps<TournamentPageProps> = async (
     // Casting — table globale.
     supabaseAdmin
       .from('cast_members')
-      .select('id, name, title, image_url, twitch_url, city, is_active, is_promo, sort_order')
+      .select(
+        'id, name, title, image_url, twitch_url, city, is_active, is_promo, sort_order'
+      )
       .eq('is_active', true)
       .eq('is_promo', false)
       .order('sort_order', { ascending: true }),
   ]);
 
-  if (stagesResult.error) logger.error('tournament stages error:', stagesResult.error);
-  if (totalCountResult.error) logger.error('tournament matches count error:', totalCountResult.error);
-  if (finishedCountResult.error) logger.error('tournament finished count error:', finishedCountResult.error);
-  if (teamsResult.error) logger.error('tournament teams error:', teamsResult.error);
-  if (leaguesResult.error) logger.error('tournament leagues error:', leaguesResult.error);
-  if (partnersResult.error) logger.error('tournament partners error:', partnersResult.error);
-  if (castersResult.error) logger.error('tournament casters error:', castersResult.error);
+  if (stagesResult.error)
+    logger.error('tournament stages error:', stagesResult.error);
+  if (totalCountResult.error)
+    logger.error('tournament matches count error:', totalCountResult.error);
+  if (finishedCountResult.error)
+    logger.error('tournament finished count error:', finishedCountResult.error);
+  if (teamsResult.error)
+    logger.error('tournament teams error:', teamsResult.error);
+  if (leaguesResult.error)
+    logger.error('tournament leagues error:', leaguesResult.error);
+  if (partnersResult.error)
+    logger.error('tournament partners error:', partnersResult.error);
+  if (castersResult.error)
+    logger.error('tournament casters error:', castersResult.error);
 
   const rawStages = (stagesResult.data || []) as unknown as (LandingStage & {
     visible?: boolean | null;
@@ -240,7 +250,13 @@ export const getStaticProps: GetStaticProps<TournamentPageProps> = async (
   const leagueMap = new Map<string, LandingLeague>();
   leagueRows.forEach((row) => {
     const l = row.league;
-    if (l && l.slug && l.is_public === true && l.status !== 'draft' && !leagueMap.has(l.slug)) {
+    if (
+      l &&
+      l.slug &&
+      l.is_public === true &&
+      l.status !== 'draft' &&
+      !leagueMap.has(l.slug)
+    ) {
       leagueMap.set(l.slug, { slug: l.slug, name: l.name });
     }
   });
@@ -255,7 +271,10 @@ export const getStaticProps: GetStaticProps<TournamentPageProps> = async (
   }[];
   const partners: LandingPartner[] = partnerRows
     .filter(
-      (r) => r.category === 'super' || r.category === 'major' || r.category === 'cultural'
+      (r) =>
+        r.category === 'super' ||
+        r.category === 'major' ||
+        r.category === 'cultural'
     )
     .map((r) => ({
       id: r.id,
@@ -376,6 +395,8 @@ export default function TournamentPage({
 
       <PrizeTeaser />
 
+      <PrizePoolCard tournamentId={tournament.id} />
+
       <StreamingSection casters={casters} phase={phase} />
 
       <SponsorsStrip partners={partners} />
@@ -388,7 +409,10 @@ export default function TournamentPage({
         <ArbitrationPanel slugOrId={tournament.slug || tournament.id} />
       </div>
 
-      <FinalCta registrationOpen={registrationOpen} registerHref={registerHref} />
+      <FinalCta
+        registrationOpen={registrationOpen}
+        registerHref={registerHref}
+      />
 
       <StickyRegisterBar
         registrationOpen={registrationOpen}
@@ -405,9 +429,14 @@ export default function TournamentPage({
  * ═══════════════════════════════════════════════════════════*/
 
 const SEO_BASE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') || 'https://owwomenscup.fr';
+  process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ||
+  'https://owwomenscup.fr';
 
-const OPEN_REGISTRATION_STATUSES = new Set(['upcoming', 'registration', 'draft']);
+const OPEN_REGISTRATION_STATUSES = new Set([
+  'upcoming',
+  'registration',
+  'draft',
+]);
 
 function getStatusLabel(status: string): string {
   switch (status) {
@@ -442,8 +471,16 @@ function buildTournamentSeo(
   tournament: TournamentPageProps['tournament']
 ): SeoProps {
   const game = tournament.game || 'Overwatch';
-  const dateLabelFr = formatDateRange(tournament.start_date, tournament.end_date, 'fr');
-  const dateLabelEn = formatDateRange(tournament.start_date, tournament.end_date, 'en');
+  const dateLabelFr = formatDateRange(
+    tournament.start_date,
+    tournament.end_date,
+    'fr'
+  );
+  const dateLabelEn = formatDateRange(
+    tournament.start_date,
+    tournament.end_date,
+    'en'
+  );
   const statusLabelFr = getStatusLabel(tournament.status);
   const statusLabelEn = getStatusLabelEn(tournament.status);
 
@@ -483,7 +520,11 @@ function buildTournamentSeo(
       : 'https://schema.org/EventScheduled',
     eventAttendanceMode: 'https://schema.org/OnlineEventAttendanceMode',
     location: { '@type': 'VirtualLocation', url: canonicalUrl },
-    organizer: { '@type': 'Organization', name: "OW Women's Cup", url: SEO_BASE_URL },
+    organizer: {
+      '@type': 'Organization',
+      name: "OW Women's Cup",
+      url: SEO_BASE_URL,
+    },
     sport: game,
     inLanguage: 'fr-FR',
     ...(registrationOpen
@@ -504,8 +545,18 @@ function buildTournamentSeo(
     '@type': 'BreadcrumbList',
     itemListElement: [
       { '@type': 'ListItem', position: 1, name: 'Accueil', item: SEO_BASE_URL },
-      { '@type': 'ListItem', position: 2, name: 'Tournois', item: `${SEO_BASE_URL}/tournaments` },
-      { '@type': 'ListItem', position: 3, name: tournament.name, item: canonicalUrl },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: 'Tournois',
+        item: `${SEO_BASE_URL}/tournaments`,
+      },
+      {
+        '@type': 'ListItem',
+        position: 3,
+        name: tournament.name,
+        item: canonicalUrl,
+      },
     ],
   };
 

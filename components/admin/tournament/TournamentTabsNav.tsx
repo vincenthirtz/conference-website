@@ -16,6 +16,7 @@ export type TournamentTabId =
   | 'stats'
   | 'maps'
   | 'discord'
+  | 'prize-pool'
   | 'history'
   | 'edit'
   | 'tools';
@@ -30,6 +31,7 @@ const TAB_ROUTE: Record<TournamentTabId, string> = {
   stats: 'stats',
   maps: 'maps',
   discord: 'discord',
+  'prize-pool': 'prize-pool',
   history: 'history',
   edit: 'edit',
   tools: 'bulk-ops',
@@ -45,6 +47,7 @@ const TAB_ORDER: { id: TournamentTabId; labelKey: string }[] = [
   { id: 'stats', labelKey: 'tabStats' },
   { id: 'maps', labelKey: 'tabMaps' },
   { id: 'discord', labelKey: 'tabDiscord' },
+  { id: 'prize-pool', labelKey: 'tabPrizePool' },
   { id: 'history', labelKey: 'tabHistory' },
   { id: 'edit', labelKey: 'tabEdit' },
   { id: 'tools', labelKey: 'tabTools' },

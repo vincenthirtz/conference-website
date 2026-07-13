@@ -177,11 +177,11 @@ these routes also require a specific capability (currently subsumed by the
 baseline since every bot-enabled plan is Régie+ with full ops, but declared for
 future finer tiers). The baseline denial fires first for a tenant with no bot.
 
-| Capability             | Routes                                                                                                                                                                                         | Plan   |
-| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
-| `discordBot` (baseline) | **toutes les routes tenant-scopées**                                                                                                                                                          | Régie+ / foundation |
-| `discordEventOps:full` | `runs/current`, `broadcast/on-air`, `cast/assignments`, `cast/[assignmentId]/ack`, `matches/[matchId]/cast`, `matches/[matchId]/discord`, `matches/[matchId]/drafts`, `matches/[matchId]/veto` | Régie+ |
-| `arbitration`          | `disputes`, `disputes/escalations`, `matches/[matchId]/dispute`, `matches/[matchId]/resolve-dispute`, `moderation/blacklist-alert`                                                             | Régie+ |
+| Capability              | Routes                                                                                                                                                                                         | Plan                |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
+| `discordBot` (baseline) | **toutes les routes tenant-scopées**                                                                                                                                                           | Régie+ / foundation |
+| `discordEventOps:full`  | `runs/current`, `broadcast/on-air`, `cast/assignments`, `cast/[assignmentId]/ack`, `matches/[matchId]/cast`, `matches/[matchId]/discord`, `matches/[matchId]/drafts`, `matches/[matchId]/veto` | Régie+              |
+| `arbitration`           | `disputes`, `disputes/escalations`, `matches/[matchId]/dispute`, `matches/[matchId]/resolve-dispute`, `moderation/blacklist-alert`                                                             | Régie+              |
 
 **Bot client (docker-box `services/discord-bot/api-client.js`) — à gérer** : traiter
 un **403 `plan_required`** comme un refus de capacité (ne pas retenter, désactiver
@@ -229,25 +229,25 @@ CHECK constraint). The list below documents the names emitted by the website
 today. The bot must tolerate unknown names (treat them as no-ops) so the
 catalog can grow without forcing a bot deploy.
 
-| Event name                        | Emitted by                                                                                    | Payload `data` shape (high-level)                                                                                             |
-| --------------------------------- | --------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `match.starting`                  | `pages/api/admin/matches/[matchId].ts` (status → ongoing)                                     | `{ matchId, tournamentId?, scrimId?, team1Id, team2Id, scheduledAt, ..., enriched }`                                          |
-| `match.scheduled`                 | Admin match meta update (`scheduled_at` set)                                                  | `{ matchId, scheduledAt, ..., enriched }`                                                                                     |
-| `match.unscheduled`               | Admin match meta update (`scheduled_at` cleared)                                              | `{ matchId }`                                                                                                                 |
-| `match.finished`                  | Score apply / admin                                                                           | `{ matchId, team1Score, team2Score, winnerTeamId }`                                                                           |
-| `match.disputed`                  | Admin `POST .../dispute`                                                                      | `{ matchId, reason, openedBy }`                                                                                               |
-| `match.dispute.resolved`          | Admin `POST .../resolve-dispute`                                                              | `{ matchId, resolution, resolvedBy }`                                                                                         |
-| `dispute.sla_breached` (Lot 4)    | Cron `/api/cron/dispute-sla-check`                                                            | `{ matchId, tournamentId, disputeReason, disputeOpenedAt, ageMinutes, slaMinutes }`                                           |
-| `checkin.nudge` (Lot 5)           | Admin `POST /api/admin/matches/[matchId]/checkin-nudge`                                       | `{ matchId, tournamentId, teamSide: 1 \| 2, scheduledAt, nudgedByStaffId, enriched }`                                         |
-| `tournament.finalized` (Lot 1)    | Admin `POST /api/admin/tournament/[id]/finalize`                                              | `{ tournament_id, tournament_name, rankings: [{ team_id, team_name, rank, prize }, ...] }`                                    |
-| `broadcast.state_changed` (Lot 7) | Admin `POST /api/admin/broadcast/state`                                                       | `{ runId, runSlug, state: { v: 1, on_air, lower_third, pip }, currentSegmentId, matchId }`                                    |
-| `news.published`                  | Admin / bot ingest                                                                            | `{ newsId, slug, title, tag, excerpt, imageUrl, publishedAt }`                                                                |
-| `registration.blacklisted`        | `utils/moderation/blacklist.ts` (`alertIfBlacklisted`) at register / team create / add-member | `{ context, matchedOn, strength, reason, matchCount, matches[], battleTag?, displayName?, discordUserId? }`                   |
-| `team.*` / `scrim.*` / `cast.*`   | various admin / bot routes                                                                    | see emitter call sites                                                                                                        |
-| `scrim.planning.opened`           | `pages/api/admin/scrim-plannings/index.ts` (POST) — grille de dispos ouverte entre 2 équipes  | `{ planningId, title, game, status, team1, team2, horizonStart, horizonDays }`                                               |
-| `scrim.planning.validated`        | `pages/api/admin/scrim-plannings/[planningId]/validate.ts` — créneau validé → scrim créé      | `{ planningId, validatedSlot, scrimId, team1, team2 }` (le `scrim.scheduled` du scrim créé est émis en parallèle)            |
-| `scrim.planning.reminder`         | `emitScrimPlanningEvent('scrim.planning.reminder', ...)` — relance : dispos encore manquantes  | `{ planningId, title, game, status, team1, team2, horizonStart, horizonDays }` (fanout push/email : staff + capitaines/managers des 2 équipes) |
-| `event_segment.transitioned`      | Admin `/api/admin/events/.../segments/.../{start,skip,end}.ts` (Lot 2 run-of-show)            | `{ runId, segmentId, fromStatus, toStatus, tenantId, broadcastMessage, segment: { ord, type, title, durationMin, matchId } }` |
+| Event name                        | Emitted by                                                                                    | Payload `data` shape (high-level)                                                                                                              |
+| --------------------------------- | --------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `match.starting`                  | `pages/api/admin/matches/[matchId].ts` (status → ongoing)                                     | `{ matchId, tournamentId?, scrimId?, team1Id, team2Id, scheduledAt, ..., enriched }`                                                           |
+| `match.scheduled`                 | Admin match meta update (`scheduled_at` set)                                                  | `{ matchId, scheduledAt, ..., enriched }`                                                                                                      |
+| `match.unscheduled`               | Admin match meta update (`scheduled_at` cleared)                                              | `{ matchId }`                                                                                                                                  |
+| `match.finished`                  | Score apply / admin                                                                           | `{ matchId, team1Score, team2Score, winnerTeamId }`                                                                                            |
+| `match.disputed`                  | Admin `POST .../dispute`                                                                      | `{ matchId, reason, openedBy }`                                                                                                                |
+| `match.dispute.resolved`          | Admin `POST .../resolve-dispute`                                                              | `{ matchId, resolution, resolvedBy }`                                                                                                          |
+| `dispute.sla_breached` (Lot 4)    | Cron `/api/cron/dispute-sla-check`                                                            | `{ matchId, tournamentId, disputeReason, disputeOpenedAt, ageMinutes, slaMinutes }`                                                            |
+| `checkin.nudge` (Lot 5)           | Admin `POST /api/admin/matches/[matchId]/checkin-nudge`                                       | `{ matchId, tournamentId, teamSide: 1 \| 2, scheduledAt, nudgedByStaffId, enriched }`                                                          |
+| `tournament.finalized` (Lot 1)    | Admin `POST /api/admin/tournament/[id]/finalize`                                              | `{ tournament_id, tournament_name, rankings: [{ team_id, team_name, rank, prize }, ...] }`                                                     |
+| `broadcast.state_changed` (Lot 7) | Admin `POST /api/admin/broadcast/state`                                                       | `{ runId, runSlug, state: { v: 1, on_air, lower_third, pip }, currentSegmentId, matchId }`                                                     |
+| `news.published`                  | Admin / bot ingest                                                                            | `{ newsId, slug, title, tag, excerpt, imageUrl, publishedAt }`                                                                                 |
+| `registration.blacklisted`        | `utils/moderation/blacklist.ts` (`alertIfBlacklisted`) at register / team create / add-member | `{ context, matchedOn, strength, reason, matchCount, matches[], battleTag?, displayName?, discordUserId? }`                                    |
+| `team.*` / `scrim.*` / `cast.*`   | various admin / bot routes                                                                    | see emitter call sites                                                                                                                         |
+| `scrim.planning.opened`           | `pages/api/admin/scrim-plannings/index.ts` (POST) — grille de dispos ouverte entre 2 équipes  | `{ planningId, title, game, status, team1, team2, horizonStart, horizonDays }`                                                                 |
+| `scrim.planning.validated`        | `pages/api/admin/scrim-plannings/[planningId]/validate.ts` — créneau validé → scrim créé      | `{ planningId, validatedSlot, scrimId, team1, team2 }` (le `scrim.scheduled` du scrim créé est émis en parallèle)                              |
+| `scrim.planning.reminder`         | `emitScrimPlanningEvent('scrim.planning.reminder', ...)` — relance : dispos encore manquantes | `{ planningId, title, game, status, team1, team2, horizonStart, horizonDays }` (fanout push/email : staff + capitaines/managers des 2 équipes) |
+| `event_segment.transitioned`      | Admin `/api/admin/events/.../segments/.../{start,skip,end}.ts` (Lot 2 run-of-show)            | `{ runId, segmentId, fromStatus, toStatus, tenantId, broadcastMessage, segment: { ord, type, title, durationMin, matchId } }`                  |
 
 #### `event_segment.transitioned` (Lot 2 run-of-show)
 
@@ -1152,11 +1152,11 @@ convention que `/report`). Pas de gate Régie+.
 **Body** — union discriminée sur `kind` ; `discordUserId` toujours requis.
 Limite de corps **15 Mo** (`bodyParser.sizeLimit`).
 
-| `kind`        | Champs                                     |
-| ------------- | ------------------------------------------ |
+| `kind`        | Champs                                              |
+| ------------- | --------------------------------------------------- |
 | `screenshot`  | `discordUserId`, `file_base64`, `filename`, `note?` |
 | `replay_file` | `discordUserId`, `file_base64`, `filename`, `note?` |
-| `replay_url`  | `discordUserId`, `external_url`, `note?`   |
+| `replay_url`  | `discordUserId`, `external_url`, `note?`            |
 
 `file_base64` = contenu binaire encodé base64. `note` = string 1–1000.
 
@@ -1260,11 +1260,11 @@ l'action staff `attach_match_evidence` (dans `staff_logs`).
 **Body** — même union discriminée que le POST bot **sans** `discordUserId`.
 Limite de corps **15 Mo**.
 
-| `kind`        | Champs                              |
-| ------------- | ----------------------------------- |
-| `screenshot`  | `file_base64`, `filename`, `note?`  |
-| `replay_file` | `file_base64`, `filename`, `note?`  |
-| `replay_url`  | `external_url`, `note?`             |
+| `kind`        | Champs                             |
+| ------------- | ---------------------------------- |
+| `screenshot`  | `file_base64`, `filename`, `note?` |
+| `replay_file` | `file_base64`, `filename`, `note?` |
+| `replay_url`  | `external_url`, `note?`            |
 
 **Response 201**
 
@@ -2295,6 +2295,37 @@ Couleurs side (gradient sur chaque colonne d'équipe) :
 - `dire` → orange Valve (`from-orange-600/40`)
 
 Realtime : la page consomme le même `useDraftState` que la captain UI, mais avec un fetcher injecté (`fetch` natif sans Bearer) + endpoint public. L'abonnement Supabase Realtime fonctionne anonymement parce que les RLS sur `match_drafts` + `match_draft_steps` autorisent `SELECT` cross-user (`USING (true)`).
+
+---
+
+## Prize pool — cash-prize crowdfundé
+
+« Profondeur de la monétisation ». La dotation d'un tournoi (`tournament_prize_pools`)
+combine une **dotation de base** fixée par l'orga (`base_amount_cents`) et des
+**contributions publiques** crowdfundées via HelloAsso
+(`prize_pool_contributions`, agrégées dans `raised_amount_cents`). **Pas des
+endpoints bot** : HTTP standard côté public (gauge + checkout) et admin
+(`withStaffRoute`). Migration : [`create_prize_pool_tables.sql`](../database/migrations/create_prize_pool_tables.sql).
+Helpers : [`utils/billing/prizePoolFunding.ts`](../utils/billing/prizePoolFunding.ts).
+
+Tables RLS **service-role-only** → lues via `supabaseAdmin`, mais toujours
+scopées strict par `tenant_id` (+ `tournament_id`). Unité monétaire : **centimes**
+partout (body, HelloAsso, DB) — pas d'arrondi flottant euros→centimes.
+
+| Route                                                                                                 | Methods        | Auth                           | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| ----------------------------------------------------------------------------------------------------- | -------------- | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`pages/api/helloasso/prize-checkout.ts`](../pages/api/helloasso/prize-checkout.ts)                   | POST           | public                         | Contribuer à une cagnotte. Body `{ tournamentId? \| prizePoolId?, amountCents (100..10 000 000), contributorName?, email?, message?, isAnonymous? }` — au moins un de `tournamentId`/`prizePoolId` (si les deux, `prizePoolId` gagne). `200 { redirectUrl }`. `400 { error, code: INVALID_BODY \| POOL_NOT_FOUND \| POOL_CLOSED }`. `502` si HelloAsso amont échoue. Rate-limit **10 / IP / heure** (`helloasso-prize-checkout`). Persiste `prize_pool_checkouts` (pending) + attache `metadata:{ kind:'prize_pool', prize_pool_id, tenant_id }`.                                  |
+| [`pages/api/tournaments/[id]/prize-pool.ts`](../pages/api/tournaments/[id]/prize-pool.ts)             | GET            | public                         | Jauge publique. `200 { exists, isOpen, currency, baseAmountCents, raisedAmountCents, totalCents, goalAmountCents\|null, contributorCount, recentContributors:[{ name\|null, amountCents, message\|null, createdAt }] }`. Aucune cagnotte → même forme, `exists:false`, zéros, `[]`. Jamais d'email ; contributeur anonyme → `name:null`. `Cache-Control: s-maxage=60`. Rate-limit 60 / IP / min (`prize-pool-public`).                                                                                                                                                             |
+| [`pages/api/admin/tournaments/[id]/prize-pool.ts`](../pages/api/admin/tournaments/[id]/prize-pool.ts) | GET, PUT, POST | `withStaffRoute(_, 'manager')` | GET → `{ pool: {id, tournament_id, tenant_id, title, currency, goal_amount_cents, base_amount_cents, raised_amount_cents, is_open, total_cents, created_at, updated_at} \| null, contributions:[{id, amount_cents, contributor_name, is_anonymous, message, helloasso_payment_id, checkout_intent_id, created_at}], contributorCount }`. PUT/POST body `{ title?, goal_amount_cents?:int\|null, base_amount_cents?:int, is_open?:bool }` → `201` (create) / `200` (update) `{ pool }`. `raised_amount_cents` jamais modifiable ici. `Cache-Control: no-store`. `staff_logs` écrit. |
+
+**Webhook — branche prize pool.** `POST /api/helloasso/webhook` (déjà documenté
+dans [`openapi.yaml`](openapi.yaml), non-bot) gère MAINTENANT aussi les
+contributions de cagnotte : lorsqu'un `Payment/Authorized` corrèle une cagnotte
+(metadata `kind='prize_pool'` du checkout-intent, ou fallback via une row
+`prize_pool_checkouts` matchée), il persiste une `prize_pool_contributions`
+(idempotente sur `helloasso_payment_id`) et incrémente `raised_amount_cents` du
+pool. Un don générique ou un don plan-tenant ne matche pas (comportement
+inchangé). L'erreur applicative n'empêche jamais l'ACK 200.
 
 ---
 

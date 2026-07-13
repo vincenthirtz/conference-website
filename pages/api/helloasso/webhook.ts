@@ -8,6 +8,10 @@ import {
   resolvePlanCorrelation,
   applyTenantPlanPayment,
 } from '@/utils/billing/tenantPlanBilling';
+import {
+  resolvePrizeCorrelation,
+  applyPrizeContribution,
+} from '@/utils/billing/prizePoolFunding';
 
 import { logger } from '../../../utils/logger';
 /**
@@ -154,6 +158,27 @@ export default async function handler(
       // Ne casse jamais l'ACK webhook : on log et on répond 200 (HelloAsso ne
       // doit pas retenter en boucle sur une erreur applicative).
       logger.error('[helloasso/webhook] tenant plan apply error', err);
+    }
+
+    // ── AJOUT « cash-prize crowdfundé » : contribution ciblée cagnotte ─────
+    // Corrélation via la metadata du checkout-intent (kind:'prize_pool') ou le
+    // mapping prize_pool_checkouts (fallback). Un don GÉNÉRIQUE ou un don plan
+    // ne matche pas → comportement inchangé. Idempotent sur helloasso_payment_id
+    // (colonne TEXT), d'où le String(...).
+    try {
+      const prize = await resolvePrizeCorrelation(event);
+      if (prize) {
+        const result = await applyPrizeContribution(
+          prize,
+          String(event.data.id),
+          event.data.amount
+        );
+        logger.info(
+          `[helloasso/webhook] prize contribution ${event.data.id}: ${result.status} pool=${prize.prizePoolId} via=${prize.source}`
+        );
+      }
+    } catch (err) {
+      logger.error('[helloasso/webhook] prize contribution apply error', err);
     }
   }
 

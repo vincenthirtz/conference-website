@@ -52,6 +52,13 @@ export const KNOWN_TABLES: readonly string[] = [
   // custom registration fields feature
   'tournament_teams',
   'demandes',
+  // billing — tenant plan (« Régie solidaire »)
+  'tenant_plan_checkouts',
+  'tenant_plan_payments',
+  // prize-pool crowdfunding (« Profondeur de la monétisation »)
+  'tournament_prize_pools',
+  'prize_pool_checkouts',
+  'prize_pool_contributions',
 ];
 
 /**
