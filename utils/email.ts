@@ -432,7 +432,11 @@ export function sendCampaignEmail(opts: {
     to: opts.to,
     subject: opts.subject,
     tags: opts.tags ?? ['campaign'],
-    html: buildCampaignEmailHtml(opts.body, opts.displayLabel, opts.unsubscribeUrl),
+    html: buildCampaignEmailHtml(
+      opts.body,
+      opts.displayLabel,
+      opts.unsubscribeUrl
+    ),
     listUnsubscribeUrl: opts.unsubscribeUrl,
   });
 }
@@ -757,6 +761,77 @@ export function sendSupportConfirmationEmail(opts: {
       <p style="margin:0;font-size:13px;color:#675788;line-height:1.5;">
         Vous serez recontact&eacute;(e) par mail si l&apos;&eacute;quipe a besoin d&apos;informations compl&eacute;mentaires.
         Pour toute urgence, contactez la mod&eacute;ration directement sur Discord.
+      </p>
+    `),
+  });
+}
+
+/**
+ * Renewal reminder sent to a tenant's owner(s) ~14 days before their paid plan
+ * (« Régie solidaire ») expires. Sent by the `plan-renewal` cron, once per
+ * billing cycle (guarded by tenants.plan_last_reminder_at). Transactional /
+ * account-lifecycle — no opt-out consulted (an ignored renewal = downgrade).
+ */
+export function sendPlanRenewalReminderEmail(opts: {
+  to: string;
+  planLabel: string;
+  expiresAt: string;
+  priceEur: number;
+  billingUrl: string;
+}): Promise<SendEmailResult> {
+  const dateStr = (() => {
+    try {
+      return new Date(opts.expiresAt).toLocaleDateString('fr-FR', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      });
+    } catch {
+      return opts.expiresAt;
+    }
+  })();
+
+  return sendEmail({
+    to: opts.to,
+    subject: `Renouvellement de votre abonnement ${opts.planLabel} — OW Women's Cup`,
+    tags: ['plan-renewal-reminder'],
+    html: emailLayout(`
+      ${gradientBar()}
+      <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;">Votre abonnement arrive à échéance</h1>
+      <p style="margin:0 0 24px;font-size:15px;color:#C6BED9;line-height:1.6;">
+        Votre plan <strong style="color:#ffffff;">${escapeHtml(opts.planLabel)}</strong>
+        expire le <strong style="color:#7bc96a;">${escapeHtml(dateStr)}</strong>.
+        Pour conserver vos fonctionnalités sans interruption, pensez à le renouveler
+        avant cette date.
+      </p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:rgba(255,255,255,0.05);border-radius:10px;border:1px solid rgba(255,255,255,0.08);margin:0 0 24px;">
+        <tr>
+          <td style="padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.06);">
+            <span style="font-size:12px;color:#9081B0;text-transform:uppercase;letter-spacing:0.1em;">Plan</span><br/>
+            <span style="font-size:15px;color:#ffffff;font-weight:500;">${escapeHtml(opts.planLabel)}</span>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.06);">
+            <span style="font-size:12px;color:#9081B0;text-transform:uppercase;letter-spacing:0.1em;">Échéance</span><br/>
+            <span style="font-size:15px;color:#7bc96a;font-weight:500;">${escapeHtml(dateStr)}</span>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:14px 20px;">
+            <span style="font-size:12px;color:#9081B0;text-transform:uppercase;letter-spacing:0.1em;">Tarif annuel</span><br/>
+            <span style="font-size:15px;color:#ffffff;font-weight:500;">${escapeHtml(String(opts.priceEur))} € / an</span>
+          </td>
+        </tr>
+      </table>
+      <p style="margin:0 0 8px;font-size:13px;color:#f59e0b;line-height:1.5;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.15);border-radius:8px;padding:10px 14px;">
+        Sans renouvellement, votre tenant repassera automatiquement sur le palier
+        gratuit (Découverte) à l&apos;expiration.
+      </p>
+      ${ctaButton(opts.billingUrl, 'Renouveler mon abonnement')}
+      <p style="margin:24px 0 0;font-size:12px;color:#675788;line-height:1.5;text-align:center;">
+        Lien direct&nbsp;: <a href="${opts.billingUrl}" style="color:#9081B0;word-break:break-all;">${escapeHtml(opts.billingUrl)}</a>
       </p>
     `),
   });

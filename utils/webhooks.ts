@@ -34,6 +34,29 @@ export const WEBHOOK_EVENT_TYPES = [
 
 export type WebhookEventType = (typeof WEBHOOK_EVENT_TYPES)[number];
 
+/**
+ * Short, front-neutral descriptions for each PUBLIC webhook event. Consumed by
+ * the developer portal catalog endpoint (`/api/public/webhook-events`) so the
+ * docs page + dashboard can render "what events you can subscribe to" without
+ * duplicating copy. Keys MUST stay in sync with `WEBHOOK_EVENT_TYPES` — the
+ * `Record<WebhookEventType, string>` type makes a missing/extra key a compile
+ * error. Descriptions are intentionally short and language-neutral (usable in
+ * FR + EN docs).
+ */
+export const WEBHOOK_EVENT_DESCRIPTIONS: Record<WebhookEventType, string> = {
+  'match.scheduled': 'A match has been scheduled (date/time set).',
+  'match.starting': 'A match is about to start.',
+  'match.finished': 'A match has finished and a result has been recorded.',
+  'match.disputed': 'A match result has been disputed by a participant.',
+  'match.dispute.resolved': 'A disputed match has been resolved by staff.',
+  'match.forfeit': 'A match has been won by forfeit (walkover).',
+  'tournament.finalized':
+    'A tournament is over and its final standings are set.',
+  'registration.new': 'A new team registration has been submitted.',
+  'news.published': 'A news article has been published.',
+  'checkin.opened': 'Check-in has opened for a tournament or match.',
+};
+
 const WEBHOOK_EVENT_SET: ReadonlySet<string> = new Set(WEBHOOK_EVENT_TYPES);
 
 /** L'event outbox est-il exposable via webhook ? */
@@ -48,13 +71,12 @@ export function isWebhookableEvent(eventName: string): boolean {
  */
 export function parseWebhookEventTypes(
   input: unknown
-):
-  | { ok: true; types: string[] }
-  | { ok: false; invalid: string[] } {
+): { ok: true; types: string[] } | { ok: false; invalid: string[] } {
   if (!Array.isArray(input)) return { ok: false, invalid: ['(not an array)'] };
   const values = input.filter((v): v is string => typeof v === 'string');
   const deduped = [...new Set(values)];
-  if (deduped.length === 1 && deduped[0] === '*') return { ok: true, types: ['*'] };
+  if (deduped.length === 1 && deduped[0] === '*')
+    return { ok: true, types: ['*'] };
   const invalid = deduped.filter((v) => v !== '*' && !WEBHOOK_EVENT_SET.has(v));
   if (invalid.length > 0) return { ok: false, invalid };
   if (deduped.length === 0) return { ok: false, invalid: ['(empty)'] };

@@ -226,6 +226,11 @@ export async function applyTenantPlanPayment(opts: {
   const planExpiresAt = addOneYearIso(baseMs);
   const planStartedAt = t.plan_started_at ?? nowIso;
 
+  // Paiement frais (non-rejeu : l'idempotence a déjà court-circuité les rejeux
+  // plus haut) → on (ré)active le plan ET on remet `plan_last_reminder_at` à
+  // NULL pour ré-armer la relance de renouvellement sur le nouveau cycle
+  // (cf. cron plan-renewal). On ne double-clear jamais sur un rejeu : ce chemin
+  // n'est atteint que pour un paiement non encore appliqué.
   const { error: updErr } = await supabaseAdmin
     .from('tenants')
     .update({
@@ -233,6 +238,7 @@ export async function applyTenantPlanPayment(opts: {
       plan_status: 'active',
       plan_started_at: planStartedAt,
       plan_expires_at: planExpiresAt,
+      plan_last_reminder_at: null,
     })
     .eq('id', tenantId);
   if (updErr) {

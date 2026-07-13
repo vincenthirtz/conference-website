@@ -97,6 +97,14 @@
 [functions."scrim-planning-reminders-cron"]
   schedule = "0 9,18 * * *"
 
+# Scheduled function: paid-plan lifecycle (« Régie solidaire », axe 06 — revenu
+# récurrent). Une fois par jour à 08:00 UTC. Sur les tenants regie/circuit :
+# bascule en 'past_due' les plans actifs expirés, et envoie aux owners une
+# relance de renouvellement ~14j avant échéance (une seule / cycle, garde
+# tenants.plan_last_reminder_at). Requiert CRON_SECRET + BREVO_API_KEY + EMAIL_FROM.
+[functions."plan-renewal-cron"]
+  schedule = "0 8 * * *"
+
 [[headers]]
   for = "/*"
   [headers.values]

@@ -548,6 +548,23 @@ export const ADMIN_NAV: AdminNavNode[] = [
           accent: 'border-sky-500/30 from-sky-500/10 text-sky-300',
         },
       },
+      // Facturation / Abonnement (axe 06, revenus récurrents) : page self-serve
+      // du plan du TENANT ACTIF. Lecture admin ; l'achat (lien HelloAsso) reste
+      // owner-only, re-gaté dans la page. Exposée en top-bar Configuration ET en
+      // carte dashboard (order 20, à la suite des tenants).
+      {
+        id: 'billing',
+        topBarLabel: 'Facturation',
+        href: '/admin/billing',
+        minRole: 'admin',
+        card: {
+          order: 20,
+          titleKey: 'navBillingTitle',
+          descKey: 'navBillingDesc',
+          icon: 'ticket',
+          accent: 'border-emerald-500/30 from-emerald-500/10 text-emerald-300',
+        },
+      },
       // Dashboard-only (pas d'entrée top-bar historiquement).
       {
         id: 'api-tokens',
@@ -575,6 +592,23 @@ export const ADMIN_NAV: AdminNavNode[] = [
           titleKey: 'navWebhooksTitle',
           descKey: 'navWebhooksDesc',
           icon: 'signal',
+          accent: 'border-teal-500/30 from-teal-500/10 text-teal-300',
+        },
+      },
+      // Tableau de bord développeur (self-serve, axe 03) : point d'entrée
+      // authentifié unique vers l'écosystème API (entitlement/usage + clés +
+      // webhooks + catalogue d'events + upgrade). Vit sous /developpeurs/* mais
+      // gaté staff comme les pages admin. order 14.7 pour rester dans la famille
+      // « écosystème développeur » (tokens 14 / webhooks 14.5).
+      {
+        id: 'developer-hub',
+        href: '/developpeurs/dashboard',
+        minRole: 'admin',
+        card: {
+          order: 14.7,
+          titleKey: 'navDeveloperHubTitle',
+          descKey: 'navDeveloperHubDesc',
+          icon: 'bolt',
           accent: 'border-teal-500/30 from-teal-500/10 text-teal-300',
         },
       },

@@ -5,6 +5,7 @@
 import Link from 'next/link';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { useT, format } from '@/lib/i18n/useT';
+import { useStaffSession } from '@/hooks/useStaffSession';
 import { API_RESOURCES, API_ACTIONS } from '@/utils/apiScopes';
 
 type DevDict = ReturnType<typeof useT<'developpeursPage'>>;
@@ -454,6 +455,9 @@ const graphqlMutationExample = `curl -X POST "${BASE_URL}/api/graphql" \\
 
 function DevelopersPage() {
   const t = useT('developpeursPage');
+  // Staff-only shortcut into the authenticated self-serve hub. UX only — the hub
+  // itself is SSR-gated (withStaffPage). Non-staff visitors never see this CTA.
+  const { isStaff } = useStaffSession();
   const groups = getGroups(t);
   const errorCodes = getErrorCodes(t);
   const writeErrorCodes = getWriteErrorCodes(t);
@@ -476,6 +480,21 @@ function DevelopersPage() {
           <p className="mx-auto mt-4 max-w-3xl text-lg text-gray-200">
             {t.heroSubtitle}
           </p>
+
+          {isStaff && (
+            <div className="mx-auto mt-6 max-w-2xl rounded-2xl border border-purple-400/30 bg-purple-500/[0.1] p-5 text-left">
+              <h2 className="text-base font-semibold text-white">
+                {t.hubCtaTitle}
+              </h2>
+              <p className="mt-1 text-sm text-gray-200">{t.hubCtaBody}</p>
+              <Link
+                href="/developpeurs/dashboard"
+                className="mt-4 inline-flex items-center gap-2 rounded-lg bg-purple-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-purple-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-300"
+              >
+                {t.hubCtaLink}
+              </Link>
+            </div>
+          )}
         </div>
       </div>
 
@@ -615,7 +634,10 @@ function DevelopersPage() {
         {/* Référence des endpoints */}
         <section aria-labelledby="reference-heading" className="space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 id="reference-heading" className="text-2xl font-bold text-white">
+            <h2
+              id="reference-heading"
+              className="text-2xl font-bold text-white"
+            >
               {t.referenceTitle}
             </h2>
             <Link
