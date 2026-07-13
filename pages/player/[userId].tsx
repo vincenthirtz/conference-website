@@ -12,11 +12,13 @@
 // routes statiques (profile.tsx, matches.tsx, …) AVANT [userId], donc l'espace
 // joueur authentifié n'est jamais masqué par cette page.
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useIsrRefresh } from '@/hooks/useIsrRefresh';
+import { useSession } from '@/hooks/useSession';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 import type {
   GetStaticPaths,
   GetStaticProps,
@@ -146,7 +148,178 @@ function Profile({ data }: { data: PlayerProfileResponse }) {
         <RecentMatches matches={recentMatches} />
         <HeadToHead rows={h2h} />
       </div>
+
+      <CrossNetworkH2H opponentId={player.userId} />
     </>
+  );
+}
+
+// --- Confrontations cross-réseau (vs la viewer connectée) -------------------
+// Widget ADDITIONNEL au head-to-head par-organisation ci-dessus. Il interroge
+// /api/player/discovery/head-to-head?opponentId=<profil>. Le résultat est
+// « équipe contre équipe » (l'équipe où était la viewer a battu l'équipe où
+// était l'adversaire — pas des duels individuels) : d'où le libellé
+// « Confrontations » et la note explicative. On ne rend RIEN si la viewer est
+// anonyme, consulte son propre profil, ou si l'API répond 404 NOT_DISCOVERABLE.
+type CrossH2HResponse = {
+  a: { userId: string };
+  b: { userId: string };
+  totals: { played: number; aWins: number; bWins: number; draws: number };
+  recent: {
+    matchId: string;
+    tenantId: string;
+    tournamentId: string;
+    date: string;
+    winner: 'a' | 'b' | 'draw';
+  }[];
+};
+
+function CrossNetworkH2H({ opponentId }: { opponentId: string }) {
+  const t = useT('playerDiscovery');
+  const locale = useLocale();
+  const { user, loading: sessionLoading } = useSession();
+  const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
+
+  const [data, setData] = useState<CrossH2HResponse | null>(null);
+  const [ready, setReady] = useState(false);
+
+  const viewerId = user?.id ?? null;
+  const enabled = !sessionLoading && !!viewerId && viewerId !== opponentId;
+
+  useEffect(() => {
+    if (!enabled) {
+      setReady(false);
+      setData(null);
+      return;
+    }
+    let cancelled = false;
+    setReady(false);
+    adminFetchJson<CrossH2HResponse>(
+      `/api/player/discovery/head-to-head?opponentId=${encodeURIComponent(
+        opponentId
+      )}`,
+      { skipAuthRedirect: true }
+    )
+      .then((res) => {
+        if (cancelled) return;
+        setData(res);
+        setReady(true);
+      })
+      .catch(() => {
+        // 404 NOT_DISCOVERABLE ou erreur réseau : on masque silencieusement.
+        if (!cancelled) {
+          setData(null);
+          setReady(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [enabled, opponentId, adminFetchJson]);
+
+  if (!ready || !data) return null;
+  const { totals, recent } = data;
+
+  return (
+    <section className="mt-8">
+      <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="text-sm font-semibold uppercase tracking-widest text-brand-gradient">
+          {t.h2hTitle}
+        </h2>
+        <span className="text-xs text-neutral-500">
+          {format(t.h2hPlayed, { count: totals.played })}
+        </span>
+      </div>
+      <div className="rounded-2xl border border-neutral-800 bg-neutral-900/40 p-5">
+        {totals.played === 0 ? (
+          <p className="text-sm text-neutral-400">{t.h2hEmpty}</p>
+        ) : (
+          <>
+            <div className="grid grid-cols-3 gap-3 text-center">
+              <div>
+                <div className="text-2xl font-bold text-emerald-400">
+                  {totals.aWins}
+                </div>
+                <div className="text-xs uppercase tracking-wide text-neutral-500">
+                  {t.h2hYourWins}
+                </div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-neutral-300">
+                  {totals.draws}
+                </div>
+                <div className="text-xs uppercase tracking-wide text-neutral-500">
+                  {t.h2hDraws}
+                </div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-rose-400">
+                  {totals.bWins}
+                </div>
+                <div className="text-xs uppercase tracking-wide text-neutral-500">
+                  {t.h2hTheirWins}
+                </div>
+              </div>
+            </div>
+
+            {recent.length > 0 && (
+              <ul className="mt-5 divide-y divide-neutral-800/60 border-t border-neutral-800/60">
+                {recent.map((r) => (
+                  <li
+                    key={r.matchId}
+                    className="flex items-center justify-between gap-3 py-2.5 text-sm"
+                  >
+                    <H2HResultBadge winner={r.winner} />
+                    <span className="flex-1 truncate text-neutral-400">
+                      {r.winner === 'a'
+                        ? t.h2hResultWin
+                        : r.winner === 'b'
+                          ? t.h2hResultLoss
+                          : t.h2hResultDraw}
+                    </span>
+                    <span className="shrink-0 text-xs text-neutral-500">
+                      {formatDate(r.date, locale)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
+        )}
+        <p className="mt-4 text-xs text-neutral-500">{t.h2hCaveat}</p>
+      </div>
+    </section>
+  );
+}
+
+function H2HResultBadge({ winner }: { winner: 'a' | 'b' | 'draw' }) {
+  const t = useT('playerDiscovery');
+  const map = {
+    a: {
+      short: t.h2hResultWinShort,
+      aria: t.h2hResultWin,
+      cls: 'bg-emerald-500/15 text-emerald-400',
+    },
+    b: {
+      short: t.h2hResultLossShort,
+      aria: t.h2hResultLoss,
+      cls: 'bg-rose-500/15 text-rose-400',
+    },
+    draw: {
+      short: t.h2hResultDrawShort,
+      aria: t.h2hResultDraw,
+      cls: 'bg-neutral-500/15 text-neutral-300',
+    },
+  } as const;
+  const m = map[winner];
+  return (
+    <span
+      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${m.cls}`}
+      role="img"
+      aria-label={m.aria}
+    >
+      <span aria-hidden>{m.short}</span>
+    </span>
   );
 }
 
@@ -319,9 +492,15 @@ function SeasonsSection({ seasons }: { seasons: ProfileSeason[] }) {
         <table className="w-full text-sm">
           <thead className="bg-neutral-900/80 text-xs uppercase text-neutral-400">
             <tr>
-              <th scope="col" className="px-4 py-3 text-left">{t.thLeague}</th>
-              <th scope="col" className="px-4 py-3 text-right">{t.thRank}</th>
-              <th scope="col" className="px-4 py-3 text-right">{t.thPoints}</th>
+              <th scope="col" className="px-4 py-3 text-left">
+                {t.thLeague}
+              </th>
+              <th scope="col" className="px-4 py-3 text-right">
+                {t.thRank}
+              </th>
+              <th scope="col" className="px-4 py-3 text-right">
+                {t.thPoints}
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -413,7 +592,10 @@ function ShareButtons({
     const url = buildProfileUrl(player.userId);
     // navigator.share : feuille de partage native (mobile). On ignore
     // l'AbortError (l'utilisatrice a fermé la feuille) sans afficher d'erreur.
-    if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+    if (
+      typeof navigator !== 'undefined' &&
+      typeof navigator.share === 'function'
+    ) {
       try {
         await navigator.share({ title: shareTitle, url });
         return;
@@ -424,7 +606,14 @@ function ShareButtons({
     }
     const ok = await copyLink(url);
     addToast(ok ? t.linkCopied : t.shareError, ok ? 'success' : 'error');
-  }, [player.userId, shareTitle, copyLink, addToast, t.linkCopied, t.shareError]);
+  }, [
+    player.userId,
+    shareTitle,
+    copyLink,
+    addToast,
+    t.linkCopied,
+    t.shareError,
+  ]);
 
   const url = buildProfileUrl(player.userId);
   const encodedUrl = encodeURIComponent(url);
@@ -682,8 +871,16 @@ function RatingChart({ history }: { history: PlayerProfileHistoryPoint[] }) {
       >
         <defs>
           <linearGradient id="ratingFill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--color-violet)" stopOpacity="0.35" />
-            <stop offset="100%" stopColor="var(--color-violet)" stopOpacity="0" />
+            <stop
+              offset="0%"
+              stopColor="var(--color-violet)"
+              stopOpacity="0.35"
+            />
+            <stop
+              offset="100%"
+              stopColor="var(--color-violet)"
+              stopOpacity="0"
+            />
           </linearGradient>
         </defs>
         <path d={areaPath} fill="url(#ratingFill)" />
@@ -798,9 +995,15 @@ function HeadToHead({ rows }: { rows: PlayerProfileH2H[] }) {
           <table className="w-full text-sm">
             <thead className="bg-neutral-900/80 text-xs uppercase text-neutral-400">
               <tr>
-                <th scope="col" className="px-4 py-3 text-left">{t.thOpponent}</th>
-                <th scope="col" className="px-4 py-3 text-right">{t.thWinLoss}</th>
-                <th scope="col" className="px-4 py-3 text-right">{t.thMatches}</th>
+                <th scope="col" className="px-4 py-3 text-left">
+                  {t.thOpponent}
+                </th>
+                <th scope="col" className="px-4 py-3 text-right">
+                  {t.thWinLoss}
+                </th>
+                <th scope="col" className="px-4 py-3 text-right">
+                  {t.thMatches}
+                </th>
               </tr>
             </thead>
             <tbody>

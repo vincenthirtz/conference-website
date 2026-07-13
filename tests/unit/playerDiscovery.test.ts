@@ -77,6 +77,9 @@ type SearchBody = {
     tagline: string | null;
     discordUsername: string | null;
     stats?: { games: number; peakRating: number; tenants: number };
+    teams?: Array<{ name: string; slug: string | null }>;
+    isFollowing: boolean;
+    followerCount: number;
   }>;
   total: number;
   limit: number;
@@ -405,6 +408,122 @@ describe('GET /api/player/discovery/search (directory)', () => {
     expect(body.players.find((x) => x.authUserId === B)?.displayName).toBe(
       'Joueur'
     );
+  });
+
+  it('carries isFollowing and followerCount per player', async () => {
+    store.player_discovery_profiles = [
+      {
+        auth_user_id: A,
+        discoverable: true,
+        display_name: 'Alpha',
+        show_ratings: true,
+        updated_at: '2026-07-13T10:00:00.000Z',
+      },
+      {
+        auth_user_id: B,
+        discoverable: true,
+        display_name: 'Bravo',
+        show_ratings: true,
+        updated_at: '2026-07-13T09:00:00.000Z',
+      },
+    ];
+    store.player_follows = [
+      { follower_id: USER_ID, followee_id: A }, // caller follows A
+      { follower_id: B, followee_id: A }, // B follows A too → count 2
+    ];
+
+    const req = makeReq({ method: 'GET' });
+    const res = makeRes();
+    await searchHandler(req, res);
+
+    const body = res.body as SearchBody;
+    const a = body.players.find((x) => x.authUserId === A)!;
+    const b = body.players.find((x) => x.authUserId === B)!;
+    expect(a.isFollowing).toBe(true);
+    expect(a.followerCount).toBe(2);
+    expect(b.isFollowing).toBe(false);
+    expect(b.followerCount).toBe(0);
+  });
+
+  it('never lists the caller as a followable card', async () => {
+    store.player_discovery_profiles = [
+      {
+        auth_user_id: USER_ID,
+        discoverable: true,
+        display_name: 'Me',
+        show_ratings: true,
+        updated_at: '2026-07-13T11:00:00.000Z',
+      },
+      {
+        auth_user_id: A,
+        discoverable: true,
+        display_name: 'Alpha',
+        show_ratings: true,
+        updated_at: '2026-07-13T10:00:00.000Z',
+      },
+    ];
+
+    const req = makeReq({ method: 'GET' });
+    const res = makeRes();
+    await searchHandler(req, res);
+
+    const body = res.body as SearchBody;
+    expect(body.total).toBe(1);
+    expect(body.players.map((p) => p.authUserId)).toEqual([A]);
+  });
+
+  it('includes teams when show_teams=true and omits them when false', async () => {
+    store.player_discovery_profiles = [
+      {
+        auth_user_id: A,
+        discoverable: true,
+        display_name: 'Alpha',
+        show_ratings: true,
+        show_teams: true,
+        updated_at: '2026-07-13T10:00:00.000Z',
+      },
+      {
+        auth_user_id: B,
+        discoverable: true,
+        display_name: 'Bravo',
+        show_ratings: true,
+        show_teams: false,
+        updated_at: '2026-07-13T09:00:00.000Z',
+      },
+    ];
+    // PostgREST embed teams(name, slug) → each team_members row carries a nested
+    // `teams` object. The in-memory mock returns seeded rows verbatim.
+    store.team_members = [
+      {
+        user_id: A,
+        team_id: 't1',
+        teams: { name: 'Alpha Squad', slug: 'alpha-squad' },
+      },
+      {
+        user_id: A,
+        team_id: 't2',
+        teams: { name: 'Second Team', slug: null },
+      },
+      {
+        user_id: B,
+        team_id: 't3',
+        teams: { name: 'Bravo Squad', slug: 'bravo-squad' },
+      },
+    ];
+
+    const req = makeReq({ method: 'GET' });
+    const res = makeRes();
+    await searchHandler(req, res);
+
+    const body = res.body as SearchBody;
+    const a = body.players.find((x) => x.authUserId === A)!;
+    const b = body.players.find((x) => x.authUserId === B)!;
+    expect(a.teams).toEqual([
+      { name: 'Alpha Squad', slug: 'alpha-squad' },
+      { name: 'Second Team', slug: null },
+    ]);
+    // show_teams=false → teams omitted entirely.
+    expect(b.teams).toBeUndefined();
   });
 
   it('is BEHIND LOGIN: 401 without a Bearer token', async () => {

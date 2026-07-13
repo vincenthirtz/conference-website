@@ -8,10 +8,10 @@
 // 2026-07-13). La table player_discovery_profiles est RLS service-role only :
 // tout passe par supabaseAdmin, filtré manuellement sur discoverable=true.
 //
-// Enrichissement SANS N+1 : on collecte les auth_user_id de la page, puis UN
-// seul `player_ratings.in('user_id', ids)` (agrégé cross-tenant en JS) et UN
-// seul getDiscordLinksForUsers(ids). Le flag show_ratings de chaque ligne est
-// respecté : stats omises quand false.
+// Le caller ne s'auto-liste jamais (.neq auth_user_id) : on ne se suit pas
+// soi-même. L'enrichissement SANS N+1 (stats show_ratings, équipes show_teams,
+// discord, isFollowing/followerCount) est mutualisé avec les listes de suivi
+// dans utils/playerDiscoveryEnrich.buildDirectoryPlayers.
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import type { User } from '@supabase/supabase-js';
@@ -21,33 +21,10 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
 import { logger } from '@/utils/logger';
-import { getDiscordLinksForUsers } from '@/utils/discordLinks';
-
-type DirectoryRow = {
-  auth_user_id: string;
-  display_name?: string | null;
-  avatar_url?: string | null;
-  tagline?: string | null;
-  show_ratings?: boolean | null;
-};
-
-type RatingRow = {
-  user_id: string;
-  tenant_id: string;
-  games_played?: number | null;
-  peak_rating?: number | null;
-};
-
-type PlayerStats = { games: number; peakRating: number; tenants: number };
-
-type DirectoryPlayer = {
-  authUserId: string;
-  displayName: string;
-  avatarUrl: string | null;
-  tagline: string | null;
-  discordUsername: string | null;
-  stats?: PlayerStats;
-};
+import {
+  buildDirectoryPlayers,
+  type DiscoveryProfileRow,
+} from '@/utils/playerDiscoveryEnrich';
 
 const searchQuerySchema = z.object({
   q: z.string().trim().max(80).optional(),
@@ -55,41 +32,10 @@ const searchQuerySchema = z.object({
   offset: z.coerce.number().int().min(0).default(0),
 });
 
-/**
- * Agrège les lignes player_ratings (une par tenant) par user_id :
- *   games = somme(games_played), peakRating = max(peak_rating),
- *   tenants = nb de tenant_id distincts.
- */
-function aggregateRatings(rows: RatingRow[]): Map<string, PlayerStats> {
-  const acc = new Map<
-    string,
-    { games: number; peakRating: number; tenants: Set<string> }
-  >();
-  for (const r of rows) {
-    let entry = acc.get(r.user_id);
-    if (!entry) {
-      entry = { games: 0, peakRating: 0, tenants: new Set<string>() };
-      acc.set(r.user_id, entry);
-    }
-    entry.games += Number(r.games_played ?? 0);
-    entry.peakRating = Math.max(entry.peakRating, Number(r.peak_rating ?? 0));
-    if (r.tenant_id) entry.tenants.add(r.tenant_id);
-  }
-  const out = new Map<string, PlayerStats>();
-  for (const [userId, e] of acc) {
-    out.set(userId, {
-      games: e.games,
-      peakRating: e.peakRating,
-      tenants: e.tenants.size,
-    });
-  }
-  return out;
-}
-
 async function handler(
   req: NextApiRequest,
   res: NextApiResponse,
-  _ctx: { user: User }
+  ctx: { user: User }
 ) {
   if (
     applyRateLimit(
@@ -122,12 +68,15 @@ async function handler(
     parsed.data.q && parsed.data.q.length > 0 ? parsed.data.q : undefined;
 
   // Page de l'annuaire + total exact (count sur l'ensemble filtré, pré-range).
+  // On exclut le caller lui-même : on ne se suit pas soi-même.
   let query = supabaseAdmin!
     .from('player_discovery_profiles')
-    .select('auth_user_id, display_name, avatar_url, tagline, show_ratings', {
-      count: 'exact',
-    })
-    .eq('discoverable', true);
+    .select(
+      'auth_user_id, display_name, avatar_url, tagline, show_ratings, show_teams',
+      { count: 'exact' }
+    )
+    .eq('discoverable', true)
+    .neq('auth_user_id', ctx.user.id);
 
   if (q) query = query.ilike('display_name', `%${q}%`);
 
@@ -142,46 +91,15 @@ async function handler(
     return res.status(500).json({ error: 'Erreur serveur.' });
   }
 
-  const rows = (data as DirectoryRow[] | null) ?? [];
-  const ids = rows.map((r) => r.auth_user_id);
+  const rows = (data as DiscoveryProfileRow[] | null) ?? [];
 
-  // Enrichissement bulk (aucun N+1) : un seul appel ratings + un seul discord.
-  let statsByUser = new Map<string, PlayerStats>();
-  let discordByUser = new Map<string, { discordUsername: string | null }>();
-
-  if (ids.length > 0) {
-    const { data: ratingRows, error: ratingError } = await supabaseAdmin!
-      .from('player_ratings')
-      .select('user_id, tenant_id, games_played, peak_rating')
-      .in('user_id', ids);
-
-    if (ratingError) {
-      logger.error('[player/discovery/search] ratings error', ratingError);
-      return res.status(500).json({ error: 'Erreur serveur.' });
-    }
-    statsByUser = aggregateRatings((ratingRows as RatingRow[] | null) ?? []);
-    discordByUser = await getDiscordLinksForUsers(ids);
+  let players;
+  try {
+    players = await buildDirectoryPlayers(rows, ctx.user.id);
+  } catch (e) {
+    logger.error('[player/discovery/search] enrich error', e);
+    return res.status(500).json({ error: 'Erreur serveur.' });
   }
-
-  const players: DirectoryPlayer[] = rows.map((row) => {
-    const discordUsername =
-      discordByUser.get(row.auth_user_id)?.discordUsername ?? null;
-    const player: DirectoryPlayer = {
-      authUserId: row.auth_user_id,
-      displayName: row.display_name ?? discordUsername ?? 'Joueur',
-      avatarUrl: row.avatar_url ?? null,
-      tagline: row.tagline ?? null,
-      discordUsername,
-    };
-    // Respect du flag par ligne : stats omises si show_ratings=false.
-    if (row.show_ratings !== false) {
-      const stats = statsByUser.get(row.auth_user_id);
-      if (stats) player.stats = stats;
-    }
-    // TODO show_teams : enrichissement des équipes/participations (cross-tenant)
-    // laissé pour une slice ultérieure — pas de jointure team_members ici.
-    return player;
-  });
 
   return res.status(200).json({
     players,

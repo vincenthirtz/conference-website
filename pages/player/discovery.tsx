@@ -3,11 +3,12 @@
 //
 // Annuaire opt-in GLOBAL, INVISIBLE par défaut, DERRIÈRE LOGIN. On ne liste
 // que les joueuses qui ont activé leur visibilité (cf. la section Découverte
-// de /player/profile). Recherche débouncée sur /api/player/discovery/search,
-// résultats en grille de fiches liant vers le profil public /player/[userId].
-//
-// Un bandeau invite la caller à s'activer si elle-même n'est pas encore
-// découvrable (GET /api/player/discovery au montage).
+// de /player/profile). Trois onglets :
+//   - « Découvrir » : recherche débouncée sur /api/player/discovery/search ;
+//   - « Je suis »   : GET /api/player/follows?type=following ;
+//   - « Mes abonnés »: GET /api/player/follows?type=followers.
+// Les trois rendent la même fiche (DirectoryPlayerCard) : avatar, accroche,
+// badges d'équipes, compteur d'abonnés, bouton Suivre.
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -17,36 +18,22 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { useT, format } from '@/lib/i18n/useT';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import type { DiscoveryCardData } from '@/components/player/DiscoveryCard';
+import DirectoryPlayerCard, {
+  type DirectoryPlayer,
+} from '@/components/player/DirectoryPlayerCard';
 
 import { logger } from '../../utils/logger';
 
 const PAGE_SIZE = 24;
 
-type DiscoveryPlayer = {
-  authUserId: string;
-  displayName: string;
-  avatarUrl: string | null;
-  tagline: string | null;
-  discordUsername: string | null;
-  stats?: {
-    games: number;
-    peakRating: number;
-    tenants: number;
-  };
-};
+type DirectoryTab = 'discover' | 'following' | 'followers';
 
-type SearchResponse = {
-  players: DiscoveryPlayer[];
+type DirectoryResponse = {
+  players: DirectoryPlayer[];
   total: number;
   limit: number;
   offset: number;
 };
-
-function initialsOf(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean).slice(0, 2);
-  const letters = parts.map((p) => p.charAt(0).toUpperCase()).join('');
-  return letters || 'J';
-}
 
 function PlayerDiscovery() {
   const {
@@ -59,10 +46,12 @@ function PlayerDiscovery() {
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
   const t = useT('playerDiscovery');
 
+  const [tab, setTab] = useState<DirectoryTab>('discover');
+
   const [query, setQuery] = useState('');
   const debouncedQuery = useDebounce(query, 300);
 
-  const [players, setPlayers] = useState<DiscoveryPlayer[]>([]);
+  const [players, setPlayers] = useState<DirectoryPlayer[]>([]);
   const [total, setTotal] = useState(0);
   const [offset, setOffset] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -73,15 +62,23 @@ function PlayerDiscovery() {
     null
   );
 
-  const runSearch = useCallback(
-    (q: string, off: number) => {
+  // Un seul point d'entrée data pour les trois onglets — même forme de réponse.
+  const fetchPage = useCallback(
+    (which: DirectoryTab, q: string, off: number) => {
       const params = new URLSearchParams({
-        q,
         limit: String(PAGE_SIZE),
         offset: String(off),
       });
-      return adminFetchJson<SearchResponse>(
-        `/api/player/discovery/search?${params.toString()}`,
+      if (which === 'discover') {
+        params.set('q', q);
+        return adminFetchJson<DirectoryResponse>(
+          `/api/player/discovery/search?${params.toString()}`,
+          { skipAuthRedirect: true }
+        );
+      }
+      params.set('type', which);
+      return adminFetchJson<DirectoryResponse>(
+        `/api/player/follows?${params.toString()}`,
         { skipAuthRedirect: true }
       );
     },
@@ -106,12 +103,12 @@ function PlayerDiscovery() {
     };
   }, [ready, adminFetchJson]);
 
-  // Recherche (première page) à chaque changement de requête débouncée.
+  // Première page à chaque changement d'onglet ou de requête débouncée.
   useEffect(() => {
     if (!ready) return;
     let cancelled = false;
     setLoading(true);
-    runSearch(debouncedQuery, 0)
+    fetchPage(tab, debouncedQuery, 0)
       .then((res) => {
         if (cancelled) return;
         setPlayers(res.players);
@@ -120,7 +117,7 @@ function PlayerDiscovery() {
       })
       .catch((err) => {
         if (cancelled) return;
-        logger.error('[player/discovery] search error:', err);
+        logger.error('[player/discovery] load error:', err);
         setPlayers([]);
         setTotal(0);
         setOffset(0);
@@ -131,12 +128,12 @@ function PlayerDiscovery() {
     return () => {
       cancelled = true;
     };
-  }, [ready, debouncedQuery, runSearch]);
+  }, [ready, tab, debouncedQuery, fetchPage]);
 
   const handleLoadMore = async () => {
     setLoadingMore(true);
     try {
-      const res = await runSearch(debouncedQuery, offset);
+      const res = await fetchPage(tab, debouncedQuery, offset);
       setPlayers((prev) => [...prev, ...res.players]);
       setTotal(res.total);
       setOffset((prev) => prev + res.players.length);
@@ -144,6 +141,31 @@ function PlayerDiscovery() {
       logger.error('[player/discovery] load more error:', err);
     } finally {
       setLoadingMore(false);
+    }
+  };
+
+  // Maj optimiste du compteur d'abonnés local quand on suit/ne suit plus.
+  // Sur l'onglet « Je suis », se désabonner retire la fiche de la liste.
+  const handleFollowChange = (authUserId: string, following: boolean) => {
+    setPlayers((prev) => {
+      if (tab === 'following' && !following) {
+        return prev.filter((p) => p.authUserId !== authUserId);
+      }
+      return prev.map((p) =>
+        p.authUserId === authUserId
+          ? {
+              ...p,
+              isFollowing: following,
+              followerCount: Math.max(
+                0,
+                p.followerCount + (following ? 1 : -1)
+              ),
+            }
+          : p
+      );
+    });
+    if (tab === 'following' && !following) {
+      setTotal((prev) => Math.max(0, prev - 1));
     }
   };
 
@@ -165,6 +187,24 @@ function PlayerDiscovery() {
   }
 
   const canLoadMore = players.length < total;
+
+  const tabs: { key: DirectoryTab; label: string }[] = [
+    { key: 'discover', label: t.tabDiscover },
+    { key: 'following', label: t.tabFollowing },
+    { key: 'followers', label: t.tabFollowers },
+  ];
+
+  const emptyCopy: Record<DirectoryTab, { title: string; hint: string }> = {
+    discover: { title: t.emptyTitle, hint: t.emptyHint },
+    following: {
+      title: t.followingEmptyTitle,
+      hint: t.followingEmptyHint,
+    },
+    followers: {
+      title: t.followersEmptyTitle,
+      hint: t.followersEmptyHint,
+    },
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
@@ -196,121 +236,122 @@ function PlayerDiscovery() {
           </div>
         )}
 
-        {/* Recherche */}
-        <div className="mb-6">
-          <label htmlFor="discovery-search" className="sr-only">
-            {t.searchLabel}
-          </label>
-          <div className="relative">
-            <span
-              aria-hidden="true"
-              className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-500"
-            >
-              🔍
-            </span>
-            <input
-              id="discovery-search"
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={t.searchPlaceholder}
-              aria-label={t.searchLabel}
-              className="w-full rounded-xl bg-white/5 border border-white/10 pl-11 pr-4 py-3 text-sm placeholder:text-gray-500 focus:border-purple-500/50 focus:outline-none"
-            />
-          </div>
+        {/* Onglets (segmented control) */}
+        <div
+          role="tablist"
+          aria-label={t.tabsAria}
+          className="mb-6 inline-flex rounded-xl border border-white/10 bg-white/[0.03] p-1"
+        >
+          {tabs.map(({ key, label }) => {
+            const active = tab === key;
+            return (
+              <button
+                key={key}
+                type="button"
+                role="tab"
+                id={`discovery-tab-${key}`}
+                aria-selected={active}
+                aria-controls="discovery-tabpanel"
+                onClick={() => setTab(key)}
+                className={`rounded-lg px-4 py-1.5 text-xs font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/60 ${
+                  active
+                    ? 'bg-gradient-to-r from-pink-500 to-purple-500 text-white shadow-lg shadow-purple-500/20'
+                    : 'text-gray-300 hover:bg-white/[0.06] hover:text-white'
+                }`}
+              >
+                {label}
+              </button>
+            );
+          })}
         </div>
 
-        {/* Résultats */}
-        {loading ? (
-          <ul
-            className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
-            aria-busy="true"
-          >
-            {Array.from({ length: 6 }).map((_, i) => (
-              <li
-                key={i}
-                className="h-32 rounded-2xl border border-white/10 bg-white/[0.03] animate-pulse"
-              />
-            ))}
-          </ul>
-        ) : players.length === 0 ? (
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-10 text-center">
-            <p className="text-sm font-medium text-white">{t.emptyTitle}</p>
-            <p className="mt-1 text-xs text-gray-400 max-w-prose mx-auto">
-              {t.emptyHint}
-            </p>
-          </div>
-        ) : (
-          <>
-            <p className="mb-4 text-xs text-gray-500">
-              {format(t.resultsCount, { count: total })}
-            </p>
-            <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {players.map((p) => (
-                <li key={p.authUserId}>
-                  <Link
-                    href={`/player/${p.authUserId}`}
-                    className="group flex h-full flex-col rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-5 transition hover:border-purple-500/50 hover:bg-white/[0.05] focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/60"
-                  >
-                    <div className="flex items-center gap-3">
-                      {p.avatarUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={p.avatarUrl}
-                          alt=""
-                          className="w-12 h-12 rounded-xl border border-purple-500/40 object-cover"
-                        />
-                      ) : (
-                        <span className="flex w-12 h-12 items-center justify-center rounded-xl border border-purple-500/40 bg-purple-600/20 text-base font-bold text-purple-100">
-                          {initialsOf(p.displayName)}
-                        </span>
-                      )}
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-white group-hover:text-purple-200 transition">
-                          {p.displayName}
-                        </p>
-                        {p.discordUsername && (
-                          <p className="truncate text-xs text-gray-500">
-                            @{p.discordUsername}
-                          </p>
-                        )}
-                      </div>
-                    </div>
+        <div
+          role="tabpanel"
+          id="discovery-tabpanel"
+          aria-labelledby={`discovery-tab-${tab}`}
+        >
+          {/* Recherche — uniquement sur l'onglet Découvrir */}
+          {tab === 'discover' && (
+            <div className="mb-6">
+              <label htmlFor="discovery-search" className="sr-only">
+                {t.searchLabel}
+              </label>
+              <div className="relative">
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-500"
+                >
+                  🔍
+                </span>
+                <input
+                  id="discovery-search"
+                  type="search"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder={t.searchPlaceholder}
+                  aria-label={t.searchLabel}
+                  className="w-full rounded-xl bg-white/5 border border-white/10 pl-11 pr-4 py-3 text-sm placeholder:text-gray-500 focus:border-purple-500/50 focus:outline-none"
+                />
+              </div>
+            </div>
+          )}
 
-                    {p.tagline && (
-                      <p className="mt-3 line-clamp-2 text-xs text-gray-400">
-                        {p.tagline}
-                      </p>
-                    )}
-
-                    {p.stats && (
-                      <p className="mt-auto pt-3 text-xs text-gray-500 tabular-nums">
-                        {format(t.statsLine, {
-                          games: p.stats.games,
-                          peak: p.stats.peakRating,
-                          tenants: p.stats.tenants,
-                        })}
-                      </p>
-                    )}
-                  </Link>
-                </li>
+          {/* Résultats */}
+          {loading ? (
+            <ul
+              className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+              aria-busy="true"
+            >
+              {Array.from({ length: 6 }).map((_, i) => (
+                <li
+                  key={i}
+                  className="h-32 rounded-2xl border border-white/10 bg-white/[0.03] animate-pulse"
+                />
               ))}
             </ul>
+          ) : players.length === 0 ? (
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-10 text-center">
+              <p className="text-sm font-medium text-white">
+                {emptyCopy[tab].title}
+              </p>
+              <p className="mt-1 text-xs text-gray-400 max-w-prose mx-auto">
+                {emptyCopy[tab].hint}
+              </p>
+            </div>
+          ) : (
+            <>
+              {tab === 'discover' && (
+                <p className="mb-4 text-xs text-gray-500">
+                  {format(t.resultsCount, { count: total })}
+                </p>
+              )}
+              <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {players.map((p) => (
+                  <li key={p.authUserId}>
+                    <DirectoryPlayerCard
+                      player={p}
+                      currentUserId={user.id}
+                      onFollowChange={handleFollowChange}
+                    />
+                  </li>
+                ))}
+              </ul>
 
-            {canLoadMore && (
-              <div className="mt-8 flex justify-center">
-                <button
-                  type="button"
-                  onClick={handleLoadMore}
-                  disabled={loadingMore}
-                  className="px-6 py-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition"
-                >
-                  {loadingMore ? t.loading : t.loadMore}
-                </button>
-              </div>
-            )}
-          </>
-        )}
+              {canLoadMore && (
+                <div className="mt-8 flex justify-center">
+                  <button
+                    type="button"
+                    onClick={handleLoadMore}
+                    disabled={loadingMore}
+                    className="px-6 py-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition"
+                  >
+                    {loadingMore ? t.loading : t.loadMore}
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </main>
     </div>
   );

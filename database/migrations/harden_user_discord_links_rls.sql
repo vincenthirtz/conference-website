@@ -1,0 +1,58 @@
+-- Migration: durcissement RLS de user_discord_links
+--            (régularisation de la lacune RLS documentée)
+--
+-- WHY:
+--   user_discord_links (cf. add_user_discord_links.sql, 2026-05-12) est une table
+--   d'IDENTITÉ sensible : elle mappe auth.users <-> Discord snowflake pour permettre
+--   au bot d'envoyer des DM. Sa migration d'origine a créé la table SANS statement
+--   ENABLE ROW LEVEL SECURITY et sans aucune policy. Résultat : contrairement aux
+--   tables d'identité plus récentes (user_battlenet_links, player_discovery_profiles),
+--   elle n'est PAS fermée par défaut au sens RLS.
+--
+--   Cette lacune est explicitement signalée dans l'en-tête de
+--   create_user_battlenet_links.sql (« Si user_discord_links a effectivement RLS
+--   activée en prod, c'est un ajout hors-migration à régulariser séparément — hors
+--   scope de cette migration »). La présente migration EST cette régularisation :
+--   elle aligne user_discord_links sur le patron RLS baseline du repo
+--   (deny-by-default anon/authenticated, service_role only), sans rien changer au
+--   comportement applicatif.
+--
+-- POURQUOI C'EST UN NO-OP POUR L'APPLI :
+--   Audit exhaustif des accès à user_discord_links (pages/**, utils/**, lib/**) :
+--   100 % des lectures/écritures passent par supabaseAdmin (client service_role, qui
+--   BYPASSE la RLS par conception). Aucun client anon/authenticated ne touche la
+--   table :
+--     - Routes bot (/api/bot/v1/**), routes /api/auth/discord-link, teams/**,
+--       et utilitaires (utils/discordLinks.ts, utils/botActor.ts, utils/castEvents.ts,
+--       utils/botRoleSync.ts, utils/matches/botEventEnrich.ts, utils/broadcast/*) :
+--       tous préfixent .from('user_discord_links') par supabaseAdmin.
+--     - La seule référence côté client (pages/onboard/request.tsx) passe par
+--       fetch('/api/auth/discord-link') — jamais par un client Supabase browser.
+--     - pages/api/auth/link-discord.ts n'utilise getServerClient que pour
+--       auth.getUser() ; toute I/O sur la table reste en service_role.
+--   Activer la RLS ne peut donc RIEN casser : le service_role ignore la RLS. Ce que
+--   ça ferme, c'est la porte deny-by-default pour tout futur accès anon/auth (ou toute
+--   exposition PostgREST accidentelle), au même standard que les autres tables
+--   d'identité.
+--
+-- SCHEMA:
+--   Aucune modification de structure. On active UNIQUEMENT la RLS. Aucune policy
+--   ajoutée = service-role only (identique à user_battlenet_links /
+--   player_discovery_profiles / player_follows).
+--
+-- DEPLOY NOTES:
+--   - Idempotent : ENABLE ROW LEVEL SECURITY est ré-affirmable sans erreur ni effet
+--     de bord (no-op si déjà activée). Re-jouable depuis un état propre.
+--   - Aucune FK ni colonne touchée : la visibilité du schéma PostgREST est INCHANGÉE.
+--     Le NOTIFY pgrst en fin de fichier est conservé par cohérence avec les autres
+--     migrations — inoffensif ici.
+--   - Rollback (déconseillé, rouvrirait la lacune) :
+--       ALTER TABLE public.user_discord_links DISABLE ROW LEVEL SECURITY;
+
+-- RLS : service-role only, aucune policy (deny-by-default anon/authenticated).
+-- Ferme la lacune héritée de add_user_discord_links.sql. No-op applicatif : 100 %
+-- des accès sont en service_role (qui bypasse la RLS).
+ALTER TABLE public.user_discord_links ENABLE ROW LEVEL SECURITY;
+
+-- Schéma inchangé (ni FK ni colonne) — NOTIFY conservé par cohérence, inoffensif.
+NOTIFY pgrst, 'reload schema';
