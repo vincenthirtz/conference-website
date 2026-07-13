@@ -1,6 +1,19 @@
 import React from 'react';
-import { useAdminT } from '@/lib/i18n/useAdminT';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { TeamMemberRow } from '@/types/admin';
+
+function formatVerifiedDate(d: string | null | undefined): string {
+  if (!d) return '';
+  try {
+    return new Date(d).toLocaleDateString('fr-FR', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+  } catch {
+    return d;
+  }
+}
 
 type MemberRowProps = {
   member: TeamMemberRow;
@@ -42,6 +55,40 @@ function MemberRowComponent({
   onDelete,
 }: MemberRowProps) {
   const t = useAdminT('adminTeamsMemberRow');
+
+  // Badges d'identité BattleTag (anti-smurf) — affichés seulement si un
+  // battle_tag est renseigné. Pill accessible (texte + couleur), date de vérif
+  // en tooltip, + flag de mismatch « compte vérifié ≠ tag roster ».
+  const verifiedBadges = member.battle_tag ? (
+    <>
+      {member.battle_tag_verified_at ? (
+        <span
+          title={format(t.battleTagVerifiedTitle, {
+            date: formatVerifiedDate(member.battle_tag_verified_at),
+          })}
+          className="px-1.5 py-0.5 rounded text-xs font-medium bg-emerald-600/25 text-emerald-200 border border-emerald-400/40"
+        >
+          {t.battleTagVerified}
+        </span>
+      ) : (
+        <span
+          title={t.battleTagUnverifiedTitle}
+          className="px-1.5 py-0.5 rounded text-xs bg-neutral-700/60 text-neutral-300 border border-neutral-600"
+        >
+          {t.battleTagUnverified}
+        </span>
+      )}
+      {member.battle_tag_mismatch && (
+        <span
+          title={t.battleTagMismatchTitle}
+          className="px-1.5 py-0.5 rounded text-xs font-medium bg-amber-600/20 text-amber-300 border border-amber-500/40"
+        >
+          {t.battleTagMismatch}
+        </span>
+      )}
+    </>
+  ) : null;
+
   const containerClassName =
     variant === 'roster'
       ? `flex items-center justify-between gap-3 rounded-xl px-4 py-3 group ${
@@ -120,20 +167,22 @@ function MemberRowComponent({
         )}
         <div className="min-w-0">
           {variant === 'roster' ? (
-            <div className="font-medium text-sm truncate flex items-center gap-2">
+            <div className="font-medium text-sm truncate flex items-center gap-2 flex-wrap">
               {member.battle_tag || t.memberFallback}
               {isCaptain && (
                 <span className="px-1.5 py-0.5 rounded text-xs bg-amber-500/20 text-amber-300 border border-amber-500/30 font-semibold">
                   {t.captain}
                 </span>
               )}
+              {verifiedBadges}
             </div>
           ) : (
-            <div className="font-medium text-sm truncate flex items-center gap-2 text-neutral-300">
+            <div className="font-medium text-sm truncate flex items-center gap-2 flex-wrap text-neutral-300">
               {member.battle_tag || t.memberFallback}
               <span className="px-1.5 py-0.5 rounded text-xs bg-neutral-700 text-neutral-400 border border-neutral-600">
                 {t.substitute}
               </span>
+              {verifiedBadges}
             </div>
           )}
           <div className="flex items-center gap-2 mt-0.5">

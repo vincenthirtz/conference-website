@@ -335,4 +335,8 @@ export type TeamMemberRow = {
   battle_tag?: string | null;
   is_substitute: boolean;
   created_at: string;
+  /** Horodatage de vérif OAuth Battle.net (NULL = non vérifié → source du badge). */
+  battle_tag_verified_at?: string | null;
+  /** Flag anti-smurf : compte Blizzard vérifié ≠ tag roster (à investiguer). */
+  battle_tag_mismatch?: boolean;
 };

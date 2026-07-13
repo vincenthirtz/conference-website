@@ -1990,6 +1990,12 @@
     "lastSignIn": "Dernière connexion {date}",
     "neverConnected": "Jamais connecté",
     "battleTagPrompt": "BattleTag ?",
+    "battleTagVerified": "✓ vérifié",
+    "battleTagUnverified": "non vérifié",
+    "battleTagVerifiedTitle": "BattleTag vérifié via Battle.net le {date}",
+    "battleTagUnverifiedTitle": "BattleTag non vérifié par OAuth Battle.net",
+    "battleTagMismatch": "⚠ compte vérifié ≠ tag roster",
+    "battleTagMismatchTitle": "Le compte Blizzard vérifié de la joueuse ne correspond pas au BattleTag du roster (usurpation potentielle ou faute de frappe à investiguer).",
     "playerViewTitle": "Vue player (lecture seule)",
     "lockedTitle": "Seul un owner peut modifier un compte owner ou admin.",
     "resendTitle": "Renvoyer identifiants",
@@ -2178,7 +2184,14 @@
     "loadingMembers": "Chargement des membres…",
     "noMembers": "Aucun membre pour le moment.",
     "captain": "Capitaine",
-    "manager": "Manager"
+    "manager": "Manager",
+    "battleTagVerified": "✓ vérifié",
+    "battleTagUnverified": "non vérifié",
+    "battleTagVerifiedTitle": "BattleTag vérifié via Battle.net le {date}",
+    "battleTagUnverifiedTitle": "BattleTag non vérifié par OAuth Battle.net",
+    "battleTagMismatch": "⚠ compte vérifié ≠ tag roster",
+    "battleTagMismatchTitle": "Le compte Blizzard vérifié de la joueuse ne correspond pas au BattleTag du roster (usurpation potentielle ou faute de frappe à investiguer).",
+    "unverifiedCount": "{count} non vérifié(s)"
   },
   "adminTeamsList": {
     "headTitle": "Admin – Équipes",
@@ -6229,7 +6242,13 @@
     "setCaptainTitle": "Définir comme capitaine",
     "editTitle": "Modifier",
     "deleteTitle": "Supprimer",
-    "clickToSwap": "Cliquer pour échanger"
+    "clickToSwap": "Cliquer pour échanger",
+    "battleTagVerified": "✓ vérifié",
+    "battleTagUnverified": "non vérifié",
+    "battleTagVerifiedTitle": "BattleTag vérifié via Battle.net le {date}",
+    "battleTagUnverifiedTitle": "BattleTag non vérifié par OAuth Battle.net",
+    "battleTagMismatch": "⚠ compte vérifié ≠ tag roster",
+    "battleTagMismatchTitle": "Le compte Blizzard vérifié de la joueuse ne correspond pas au BattleTag du roster (usurpation potentielle ou faute de frappe à investiguer)."
   },
   "adminTeamsMembersSection": {
     "membersTitle": "Membres ({count})",

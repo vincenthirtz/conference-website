@@ -2,26 +2,87 @@
 // Espace joueur — page dediee "Mon profil" (resume + edition + RGPD).
 // La logique metier est reprise telle quelle de l'ancien ProfileCard.
 
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { supabaseClient } from '@/utils/supabase';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
-import { useT } from '@/lib/i18n/useT';
+import { useToast } from '@/components/Toast';
+import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 
 import { logger } from '../../utils/logger';
 
+type BattlenetStatus = {
+  configured: boolean;
+  linked: boolean;
+  battleTag: string | null;
+  verifiedAt: string | null;
+};
+
 function PlayerProfile() {
   const router = useRouter();
   const t = useT('playerProfile');
   const locale = useLocale();
+  const { addToast } = useToast();
   const { user, loading: authLoading } = usePlayerSession({
     redirectTo: '/login?next=/player/profile',
   });
   const { adminFetch, adminFetchJson } = useAdminFetch({ loginPath: '/login' });
+
+  // Vérification Battle.net (anti-smurf, badge opt-in).
+  const [bnStatus, setBnStatus] = useState<BattlenetStatus | null>(null);
+
+  const loadBnStatus = useCallback(async () => {
+    try {
+      const status = await adminFetchJson<BattlenetStatus>(
+        '/api/player/battlenet-status'
+      );
+      setBnStatus(status);
+    } catch {
+      // Feature dormante ou erreur réseau : on masque simplement la section.
+      setBnStatus(null);
+    }
+  }, [adminFetchJson]);
+
+  useEffect(() => {
+    if (!user) return;
+    void loadBnStatus();
+  }, [user, loadBnStatus]);
+
+  // Retour du flux OAuth Battle.net : ?battlenet=verified|linked_no_match|
+  // already_linked|error → toast, puis on strippe le param (comme PrizePoolCard).
+  useEffect(() => {
+    if (!router.isReady) return;
+    const bn = router.query.battlenet;
+    if (typeof bn !== 'string') return;
+
+    const feedback: Record<
+      string,
+      { msg: string; variant: 'success' | 'warning' | 'error' }
+    > = {
+      verified: { msg: t.battlenetToastVerified, variant: 'success' },
+      linked_no_match: { msg: t.battlenetToastNoMatch, variant: 'warning' },
+      already_linked: {
+        msg: t.battlenetToastAlreadyLinked,
+        variant: 'error',
+      },
+      error: { msg: t.battlenetToastError, variant: 'error' },
+    };
+    const entry = feedback[bn];
+    if (entry) {
+      addToast(entry.msg, entry.variant);
+      // Rafraîchit l'état de vérification après un retour connu.
+      if (user) void loadBnStatus();
+    }
+
+    const { battlenet: _omit, ...rest } = router.query;
+    void router.replace({ pathname: router.pathname, query: rest }, undefined, {
+      shallow: true,
+    });
+  }, [router, addToast, user, loadBnStatus, t]);
 
   const displayName =
     user?.user_metadata?.display_name ||
@@ -438,6 +499,48 @@ function PlayerProfile() {
             </form>
           </section>
 
+          {/* Vérifier mon BattleTag (Battle.net OAuth) — masquée si feature dormante */}
+          {bnStatus?.configured && (
+            <section className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6">
+              <h2 className="text-lg font-semibold mb-2">{t.battlenetTitle}</h2>
+              <p className="text-sm text-gray-400 mb-4">{t.battlenetWhy}</p>
+
+              {bnStatus.linked ? (
+                <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-4">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-emerald-200">
+                    <span aria-hidden="true">✓</span>
+                    <span>{t.battlenetVerifiedTitle}</span>
+                  </div>
+                  <div className="mt-2 font-mono text-sm text-white break-all">
+                    {bnStatus.battleTag || '—'}
+                  </div>
+                  {bnStatus.verifiedAt && (
+                    <div className="mt-1 text-xs text-gray-400">
+                      {format(t.battlenetVerifiedOn, {
+                        date: new Date(bnStatus.verifiedAt).toLocaleDateString(
+                          locale
+                        ),
+                      })}
+                    </div>
+                  )}
+                  <p className="mt-3 text-xs text-gray-400">
+                    {t.battlenetVerifiedProof}
+                  </p>
+                </div>
+              ) : (
+                <a
+                  href={`/api/auth/battlenet/start?returnTo=${encodeURIComponent(
+                    router.asPath.split('?')[0]
+                  )}`}
+                  className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#148eff] hover:bg-[#1a9bff] text-sm font-medium text-white transition"
+                >
+                  <span aria-hidden="true">🛡️</span>
+                  {t.battlenetVerifyBtn}
+                </a>
+              )}
+            </section>
+          )}
+
           {/* Changer mon email */}
           <section className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6">
             <h2 className="text-lg font-semibold mb-4">{t.changeEmail}</h2>
@@ -691,8 +794,7 @@ function PlayerProfile() {
             ) : (
               <div className="rounded-xl border border-red-500/40 bg-red-900/30 p-4 space-y-3">
                 <p className="text-sm text-red-200">
-                  {t.deleteWarningStart}{' '}
-                  <strong>{t.deleteWarningBold}</strong>
+                  {t.deleteWarningStart} <strong>{t.deleteWarningBold}</strong>
                   {t.deleteWarningEnd}
                 </p>
                 <div className="flex gap-2">

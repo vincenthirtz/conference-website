@@ -385,7 +385,17 @@
     "wrongCurrentPassword": "Current password is incorrect.",
     "currentPasswordRequired": "Enter your current password to confirm.",
     "reauthHelp": "For your security, confirm your current password before changing your account.",
-    "signedOutAfterPasswordChange": "Password changed. For your security, all your sessions have been signed out. Sign back in with your new password."
+    "signedOutAfterPasswordChange": "Password changed. For your security, all your sessions have been signed out. Sign back in with your new password.",
+    "battlenetTitle": "Verify my BattleTag",
+    "battlenetWhy": "Link your Battle.net account to prove this BattleTag is really yours. Your team earns a trust badge on the roster, and it protects the competition against smurfs.",
+    "battlenetVerifyBtn": "Verify my Battle.net account",
+    "battlenetVerifiedTitle": "Battle.net account verified",
+    "battlenetVerifiedProof": "This BattleTag genuinely belongs to you: anti-impersonation and anti-smurf proof.",
+    "battlenetVerifiedOn": "Verified on {date}",
+    "battlenetToastVerified": "Your BattleTag is verified ✅",
+    "battlenetToastNoMatch": "Battle.net account linked, but it doesn't match any BattleTag on your rosters. Make sure the tag entered in your team matches this account.",
+    "battlenetToastAlreadyLinked": "This Battle.net account is already linked to another player.",
+    "battlenetToastError": "Verification failed, please try again."
   },
   "casterApplication": {
     "motivationTooLong": "Motivation cannot exceed {max} characters.",
@@ -505,7 +515,11 @@
     "scrimOpenLabel": "Open for scrims",
     "scrimOpenHelp": "Your team is shown publicly on /scrim and can receive scrim proposals.",
     "scrimOpenOn": "Your team is now visible on the public scrims page",
-    "scrimOpenOff": "Your team is now hidden from the public scrims page"
+    "scrimOpenOff": "Your team is now hidden from the public scrims page",
+    "verifiedBadge": "verified",
+    "unverifiedBadge": "unverified",
+    "verifiedBadgeTitle": "BattleTag verified via Battle.net",
+    "unverifiedBadgeTitle": "BattleTag unverified — the player must link their Battle.net account"
   },
   "freePlayers": {
     "title": "Players looking for a team",

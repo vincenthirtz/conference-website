@@ -13,6 +13,7 @@ import {
   isTeamRosterLocked,
   rosterLockErrorMessage,
 } from '@/utils/teams/rosterLock';
+import { computeBattleTagMismatch } from '@/utils/auth/battleTagMismatch';
 
 type TeamMemberRow = {
   id: string;
@@ -22,10 +23,14 @@ type TeamMemberRow = {
   battle_tag?: string | null;
   is_substitute: boolean;
   created_at: string;
+  /** Horodatage de vérif OAuth Battle.net (NULL = non vérifié → source du badge). */
+  battle_tag_verified_at?: string | null;
+  /** Flag anti-smurf : compte Blizzard vérifié ≠ tag roster (calculé au GET). */
+  battle_tag_mismatch?: boolean;
 };
 
 const MEMBER_SELECT =
-  'id, team_id, user_id, role, battle_tag, is_substitute, created_at';
+  'id, team_id, user_id, role, battle_tag, is_substitute, created_at, battle_tag_verified_at, verified_battle_net_id';
 
 type MembersResponse =
   | {
@@ -80,8 +85,45 @@ async function handler(
       return res.status(500).json({ error: 'Failed to fetch team members' });
     }
 
+    const rawMembers = (data || []) as (TeamMemberRow & {
+      verified_battle_net_id?: string | null;
+    })[];
+
+    // Lien identité Battle.net vérifié des membres (service-role) pour détecter
+    // un mismatch « compte vérifié ≠ tag roster ». Best-effort : en cas d'erreur
+    // on renvoie les membres sans le flag plutôt que d'échouer la liste.
+    const memberUserIds = Array.from(
+      new Set(rawMembers.map((m) => m.user_id).filter(Boolean))
+    );
+    const linkedTagByUser = new Map<string, string>();
+    if (memberUserIds.length) {
+      const { data: bnetLinks } = await supabaseAdmin
+        .from('user_battlenet_links')
+        .select('auth_user_id, battle_tag')
+        .in('auth_user_id', memberUserIds);
+      (bnetLinks ?? []).forEach((row: any) => {
+        if (row?.auth_user_id && row?.battle_tag) {
+          linkedTagByUser.set(row.auth_user_id, String(row.battle_tag));
+        }
+      });
+    }
+
+    const members: TeamMemberRow[] = rawMembers.map((m) => {
+      const { verified_battle_net_id, ...rest } = m;
+      return {
+        ...rest,
+        battle_tag_verified_at: m.battle_tag_verified_at ?? null,
+        battle_tag_mismatch: computeBattleTagMismatch({
+          battleTag: m.battle_tag ?? null,
+          verifiedAt: m.battle_tag_verified_at ?? null,
+          verifiedBattleNetId: verified_battle_net_id ?? null,
+          linkedTag: linkedTagByUser.get(m.user_id) ?? null,
+        }),
+      };
+    });
+
     return res.status(200).json({
-      members: (data || []) as TeamMemberRow[],
+      members,
       total: typeof count === 'number' ? count : null,
     });
   }

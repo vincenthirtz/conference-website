@@ -2423,6 +2423,31 @@ inchangé). L'erreur applicative n'empêche jamais l'ACK 200.
 
 ---
 
+## Vérification identité Battle.net
+
+**Anti-smurf Tier 1.** Flux OAuth **maison** (pas de dépendance externe) : le
+joueur autorise notre app sur `oauth.battle.net`, on échange le `code`, on lit
+son **BattleTag** et on l'écrit sur son profil. La colonne `battle_net_id` est
+**`UNIQUE`** : un même compte Blizzard ne peut être rattaché qu'à un seul joueur,
+ce qui bloque les smurfs (un second compte site qui tenterait de lier le même
+BattleTag est refusé → redirection `?battlenet=linked_no_match`). **Pas des
+endpoints bot** : routes web/joueur, HTTP standard, documentées ici pour garder
+l'inventaire complet. La feature est **dormante** tant que les creds Blizzard
+(client id/secret) sont absents : `start`/`callback` répondent alors `503
+{ code: 'BATTLENET_NOT_CONFIGURED' }` et `battlenet-status` renvoie
+`configured:false`.
+
+Le cookie httpOnly `bn_oauth_state` (posé par `start`, recroisé au `callback`)
+protège le flux contre le CSRF/replay.
+
+| Route                                                                          | Methods | Auth                          | Notes                                                                                                                                                                                                                                                                                                                                                                                                          |
+| ------------------------------------------------------------------------------ | ------- | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`pages/api/auth/battlenet/start.ts`](../pages/api/auth/battlenet/start.ts)     | GET     | session cookie Supabase joueur | Query optionnelle `returnTo` (chemin interne sanitizé — doit commencer par `/`, ni `//` ni scheme ; défaut `/player/profile`). `302` → URL authorize Blizzard + pose le cookie httpOnly `bn_oauth_state`. `401 { error }` si non connecté. `503 { error, code: 'BATTLENET_NOT_CONFIGURED' }` si dormant. Rate-limit **20 / min**.                                                                              |
+| [`pages/api/auth/battlenet/callback.ts`](../pages/api/auth/battlenet/callback.ts) | GET     | session cookie Supabase joueur | Query `code`, `state` (+ cookie `bn_oauth_state`). `302` vers `returnTo` avec `?battlenet=` : `verified` (BattleTag lié), `linked_no_match` (BattleTag déjà rattaché à un autre compte — conflit d'unicité), `already_linked` (identité déjà présente), `error` (state invalide, échange KO…). `302 /login` si la session Supabase est perdue. `503` si dormant. Endpoint de redirection : pas de JSON body. Rate-limit **20 / min**. |
+| [`pages/api/player/battlenet-status.ts`](../pages/api/player/battlenet-status.ts) | GET     | Bearer joueur (`withAuthRoute`) | `200 { configured:boolean, linked:boolean, battleTag:string\|null, verifiedAt:string\|null }`. `401` si Bearer absent/invalide. Rate-limit **30 / min**.                                                                                                                                                                                                                                                       |
+
+---
+
 ## Where it lives
 
 - **Middleware** — [`utils/botAuth.ts`](../utils/botAuth.ts) (`withBotRoute`,

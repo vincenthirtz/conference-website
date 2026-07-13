@@ -26,6 +26,8 @@ type TeamMembership = {
   team_name: string;
   role: string;
   battle_tag: string | null;
+  battle_tag_verified_at?: string | null;
+  battle_tag_mismatch?: boolean;
 };
 
 type UserLite = {
@@ -94,6 +96,40 @@ function formatDate(d: string | null) {
   } catch {
     return d;
   }
+}
+
+/**
+ * Pill accessible « ✓ BattleTag vérifié » / « non vérifié » (texte + couleur,
+ * jamais la couleur seule). Basé sur team_members.battle_tag_verified_at. La
+ * date de vérif est exposée en tooltip quand disponible.
+ */
+function BattleTagVerifiedPill({
+  t,
+  verifiedAt,
+}: {
+  t: Dict;
+  verifiedAt: string | null | undefined;
+}) {
+  if (verifiedAt) {
+    return (
+      <span
+        title={format(t.battleTagVerifiedTitle, {
+          date: formatDate(verifiedAt),
+        })}
+        className="px-1.5 py-0.5 rounded bg-emerald-600/25 text-emerald-200 border border-emerald-400/40 text-xs font-medium"
+      >
+        {t.battleTagVerified}
+      </span>
+    );
+  }
+  return (
+    <span
+      title={t.battleTagUnverifiedTitle}
+      className="px-1.5 py-0.5 rounded bg-neutral-700/60 text-neutral-300 border border-neutral-600 text-xs"
+    >
+      {t.battleTagUnverified}
+    </span>
+  );
 }
 
 /**
@@ -624,19 +660,33 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
                                 {tm.team_name}
                               </Link>
                               {tm.battle_tag ? (
-                                <button
-                                  onClick={() =>
-                                    openBattleTagEdit(
-                                      u.id,
-                                      tm.team_id,
-                                      tm.team_name,
-                                      tm.battle_tag
-                                    )
-                                  }
-                                  className="px-1.5 py-0.5 rounded bg-emerald-600/20 text-emerald-300 border border-emerald-500/30 text-xs hover:bg-emerald-600/30 transition-colors"
-                                >
-                                  {tm.battle_tag}
-                                </button>
+                                <>
+                                  <button
+                                    onClick={() =>
+                                      openBattleTagEdit(
+                                        u.id,
+                                        tm.team_id,
+                                        tm.team_name,
+                                        tm.battle_tag
+                                      )
+                                    }
+                                    className="px-1.5 py-0.5 rounded bg-emerald-600/20 text-emerald-300 border border-emerald-500/30 text-xs hover:bg-emerald-600/30 transition-colors"
+                                  >
+                                    {tm.battle_tag}
+                                  </button>
+                                  <BattleTagVerifiedPill
+                                    t={t}
+                                    verifiedAt={tm.battle_tag_verified_at}
+                                  />
+                                  {tm.battle_tag_mismatch && (
+                                    <span
+                                      title={t.battleTagMismatchTitle}
+                                      className="px-1.5 py-0.5 rounded bg-amber-600/20 text-amber-300 border border-amber-500/40 text-xs font-medium"
+                                    >
+                                      {t.battleTagMismatch}
+                                    </span>
+                                  )}
+                                </>
                               ) : (
                                 <button
                                   onClick={() =>

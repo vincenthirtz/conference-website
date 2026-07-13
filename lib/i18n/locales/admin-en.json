@@ -1990,6 +1990,12 @@
     "lastSignIn": "Last sign-in {date}",
     "neverConnected": "Never connected",
     "battleTagPrompt": "BattleTag?",
+    "battleTagVerified": "✓ verified",
+    "battleTagUnverified": "unverified",
+    "battleTagVerifiedTitle": "BattleTag verified via Battle.net on {date}",
+    "battleTagUnverifiedTitle": "BattleTag not verified through Battle.net OAuth",
+    "battleTagMismatch": "⚠ verified account ≠ roster tag",
+    "battleTagMismatchTitle": "The player's verified Blizzard account does not match the roster BattleTag (potential impersonation or typo to investigate).",
     "playerViewTitle": "Player view (read-only)",
     "lockedTitle": "Only an owner can edit an owner or admin account.",
     "resendTitle": "Resend credentials",
@@ -2178,7 +2184,14 @@
     "loadingMembers": "Loading members…",
     "noMembers": "No members yet.",
     "captain": "Captain",
-    "manager": "Manager"
+    "manager": "Manager",
+    "battleTagVerified": "✓ verified",
+    "battleTagUnverified": "unverified",
+    "battleTagVerifiedTitle": "BattleTag verified via Battle.net on {date}",
+    "battleTagUnverifiedTitle": "BattleTag not verified through Battle.net OAuth",
+    "battleTagMismatch": "⚠ verified account ≠ roster tag",
+    "battleTagMismatchTitle": "The player's verified Blizzard account does not match the roster BattleTag (potential impersonation or typo to investigate).",
+    "unverifiedCount": "{count} unverified"
   },
   "adminTeamsList": {
     "headTitle": "Admin – Teams",
@@ -6229,7 +6242,13 @@
     "setCaptainTitle": "Set as captain",
     "editTitle": "Edit",
     "deleteTitle": "Delete",
-    "clickToSwap": "Click to swap"
+    "clickToSwap": "Click to swap",
+    "battleTagVerified": "✓ verified",
+    "battleTagUnverified": "unverified",
+    "battleTagVerifiedTitle": "BattleTag verified via Battle.net on {date}",
+    "battleTagUnverifiedTitle": "BattleTag not verified through Battle.net OAuth",
+    "battleTagMismatch": "⚠ verified account ≠ roster tag",
+    "battleTagMismatchTitle": "The player's verified Blizzard account does not match the roster BattleTag (potential impersonation or typo to investigate)."
   },
   "adminTeamsMembersSection": {
     "membersTitle": "Members ({count})",

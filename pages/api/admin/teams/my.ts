@@ -18,6 +18,7 @@ type MemberRow = {
   user_id: string | null;
   role: string | null;
   battle_tag: string | null;
+  battle_tag_verified_at: string | null;
   specialty: string | null;
   is_substitute: boolean;
   captain?: boolean | null;
@@ -108,7 +109,9 @@ export default withAuthRoute(async function handler(
 
     const { data: membersRaw, error: membersErr } = await supabaseAdmin
       .from('team_members')
-      .select('id, user_id, role, battle_tag, specialty, is_substitute')
+      .select(
+        'id, user_id, role, battle_tag, battle_tag_verified_at, specialty, is_substitute'
+      )
       .eq('team_id', teamId)
       .order('created_at', { ascending: true });
 

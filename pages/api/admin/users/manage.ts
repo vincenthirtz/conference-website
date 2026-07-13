@@ -6,15 +6,13 @@ import {
   STAFF_ROLE_RANK,
   STAFF_ROLES,
 } from '@/utils/staff';
-import type {
-  AuthenticatedStaffContext,
-  StaffRole,
-} from '@/utils/staff';
+import type { AuthenticatedStaffContext, StaffRole } from '@/utils/staff';
 import { sendAccountDeletedEmail, sendWelcomeEmail } from '@/utils/email';
 import crypto from 'crypto';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { emitRoleSyncEvent } from '@/utils/botRoleSync';
 import { logStaffAction } from '@/utils/staffLogs';
+import { computeBattleTagMismatch } from '@/utils/auth/battleTagMismatch';
 
 import { logger } from '../../../../utils/logger';
 type TeamMembership = {
@@ -22,6 +20,14 @@ type TeamMembership = {
   team_name: string;
   role: string;
   battle_tag: string | null;
+  /** Horodatage de vérif OAuth Battle.net (NULL = non vérifié → source du badge). */
+  battle_tag_verified_at: string | null;
+  /**
+   * Flag d'alerte anti-smurf : le compte Blizzard vérifié de la joueuse ne
+   * correspond pas au battle_tag du roster (usurpation / faute de frappe à
+   * investiguer). Calculé côté serveur (cf. GET).
+   */
+  battle_tag_mismatch: boolean;
 };
 
 type UserLite = {
@@ -67,12 +73,7 @@ async function handler(
   }
 
   if (req.method === 'GET') {
-    const {
-      search,
-      role: roleFilter,
-      limit = '20',
-      offset = '0',
-    } = req.query;
+    const { search, role: roleFilter, limit = '20', offset = '0' } = req.query;
     const lim = Math.max(1, Math.min(200, Number(limit) || 20));
     const off = Math.max(0, Number(offset) || 0);
 
@@ -128,6 +129,21 @@ async function handler(
     const teamMembershipsMap = new Map<string, TeamMembership[]>();
 
     if (pageUserIds.length) {
+      // Lien identité Battle.net vérifié des joueuses de la page (service-role).
+      // Sert à détecter un mismatch « compte vérifié ≠ tag roster » sans
+      // rejoindre la table à chaque rendu. Best-effort : en cas d'erreur on
+      // n'échoue pas la liste, on n'affiche simplement pas le flag de mismatch.
+      const linkedTagByUser = new Map<string, string>();
+      const { data: bnetLinks } = await supabaseAdmin
+        .from('user_battlenet_links')
+        .select('auth_user_id, battle_tag')
+        .in('auth_user_id', pageUserIds);
+      (bnetLinks ?? []).forEach((row: any) => {
+        if (row?.auth_user_id && row?.battle_tag) {
+          linkedTagByUser.set(row.auth_user_id, String(row.battle_tag));
+        }
+      });
+
       const { data: teamMembers, error: tmErr } = await supabaseAdmin
         .from('team_members')
         .select(
@@ -136,6 +152,8 @@ async function handler(
           team_id,
           role,
           battle_tag,
+          battle_tag_verified_at,
+          verified_battle_net_id,
           team:teams ( id, name )
         `
         )
@@ -149,6 +167,13 @@ async function handler(
               team_name: row.team.name,
               role: row.role,
               battle_tag: row.battle_tag || null,
+              battle_tag_verified_at: row.battle_tag_verified_at || null,
+              battle_tag_mismatch: computeBattleTagMismatch({
+                battleTag: row.battle_tag || null,
+                verifiedAt: row.battle_tag_verified_at || null,
+                verifiedBattleNetId: row.verified_battle_net_id || null,
+                linkedTag: linkedTagByUser.get(row.user_id) ?? null,
+              }),
             };
             const existing = teamMembershipsMap.get(row.user_id) || [];
             existing.push(membership);
@@ -365,13 +390,8 @@ async function handler(
         .select('id', { count: 'exact', head: true })
         .eq('role', 'owner');
       if (ownerCountErr) {
-        logger.error(
-          '[admin/users/manage] owner count error:',
-          ownerCountErr
-        );
-        return res
-          .status(500)
-          .json({ error: 'Failed to verify owner count.' });
+        logger.error('[admin/users/manage] owner count error:', ownerCountErr);
+        return res.status(500).json({ error: 'Failed to verify owner count.' });
       }
       if ((ownerCount ?? 0) <= 1) {
         return res.status(409).json({
@@ -526,13 +546,8 @@ async function handler(
         .select('id', { count: 'exact', head: true })
         .eq('role', 'owner');
       if (ownerCountErr) {
-        logger.error(
-          '[admin/users/manage] owner count error:',
-          ownerCountErr
-        );
-        return res
-          .status(500)
-          .json({ error: 'Failed to verify owner count.' });
+        logger.error('[admin/users/manage] owner count error:', ownerCountErr);
+        return res.status(500).json({ error: 'Failed to verify owner count.' });
       }
       if ((ownerCount ?? 0) <= 1) {
         return res.status(409).json({

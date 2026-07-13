@@ -24,6 +24,10 @@ type Member = {
   is_substitute: boolean;
   is_captain?: boolean;
   specialty?: Specialty;
+  // Exposé par l'API manage-team seulement une fois que la vérification
+  // Battle.net est câblée côté back (cf. TODO API). Tant que la clé est
+  // absente, le badge ne s'affiche pas ; `null` = non vérifié, string = vérifié.
+  battle_tag_verified_at?: string | null;
 };
 
 type TeamInfo = {
@@ -248,10 +252,7 @@ export default function ManageTeamPage() {
     }
   };
 
-  const handleUpdateSpecialty = async (
-    memberId: string,
-    value: string
-  ) => {
+  const handleUpdateSpecialty = async (memberId: string, value: string) => {
     const specialty: Specialty = value
       ? (value as Exclude<Specialty, null>)
       : null;
@@ -419,10 +420,9 @@ export default function ManageTeamPage() {
           {/* Roster */}
           <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6 mb-6">
             <h2 className="text-lg font-semibold mb-4">
-              {format(
-                members.length > 1 ? t.roster_other : t.roster_one,
-                { count: members.length }
-              )}
+              {format(members.length > 1 ? t.roster_other : t.roster_one, {
+                count: members.length,
+              })}
             </h2>
             {members.filter((m) => !m.is_captain).length === 0 ? (
               <div className="rounded-xl border border-purple-500/30 bg-purple-500/10 px-4 py-5 text-center">
@@ -479,6 +479,26 @@ export default function ManageTeamPage() {
                             className="h-5 w-5 shrink-0"
                           />
                         )}
+                        {/* Badge de vérification Battle.net. Rendu uniquement
+                            quand l'API expose battle_tag_verified_at par membre
+                            (TODO API : l'ajouter au SELECT de /api/admin/teams/my). */}
+                        {'battle_tag_verified_at' in m &&
+                          (m.battle_tag_verified_at ? (
+                            <span
+                              title={t.verifiedBadgeTitle}
+                              className="shrink-0 inline-flex items-center gap-0.5 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-300"
+                            >
+                              <span aria-hidden="true">✓</span>
+                              {t.verifiedBadge}
+                            </span>
+                          ) : (
+                            <span
+                              title={t.unverifiedBadgeTitle}
+                              className="shrink-0 inline-flex items-center rounded-full border border-white/15 bg-white/5 px-1.5 py-0.5 text-[10px] font-semibold text-gray-400"
+                            >
+                              {t.unverifiedBadge}
+                            </span>
+                          ))}
                       </div>
                       <div className="text-xs text-gray-500">
                         {m.is_captain ? (

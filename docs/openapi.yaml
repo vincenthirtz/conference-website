@@ -296,6 +296,36 @@ components:
     Timestamp:
       type: string
       format: date-time
+    BattlenetStatus:
+      type: object
+      description: >-
+        Etat de la verification d'identite Battle.net pour le joueur connecte
+        (`GET /api/player/battlenet-status`). `configured` reflete la presence
+        des creds Blizzard cote serveur (feature dormante si `false`) ;
+        `linked` / `battleTag` / `verifiedAt` decrivent le lien du joueur.
+      required:
+        - configured
+        - linked
+        - battleTag
+        - verifiedAt
+      properties:
+        configured:
+          type: boolean
+          description: >-
+            True si les creds Blizzard sont presents cote serveur (feature
+            active) ; false = feature dormante.
+        linked:
+          type: boolean
+          description: True si le joueur a un BattleTag verifie lie a son profil.
+        battleTag:
+          type: string
+          nullable: true
+          description: BattleTag verifie (ex. `Player#1234`), ou `null` si non lie.
+        verifiedAt:
+          allOf:
+            - $ref: '#/components/schemas/Timestamp'
+          nullable: true
+          description: Horodatage de la verification, ou `null` si non lie.
     PrizeCheckoutRequest:
       type: object
       description: >-
@@ -20181,6 +20211,113 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /api/auth/battlenet/start:
+    get:
+      tags:
+        - public/auth
+      summary: Demarre le flux OAuth Battle.net (verification BattleTag, anti-smurf).
+      operationId: battlenetOauthStart
+      description: |
+        Auth via session cookie Supabase (joueur connecte, `getServerClient`) —
+        navigation pleine page, pas de Bearer. Redirige (302) vers l'URL
+        authorize de Blizzard et pose un cookie httpOnly `bn_oauth_state`
+        (anti-CSRF, recroise au callback). Feature dormante si les creds
+        Blizzard sont absents (503 `BATTLENET_NOT_CONFIGURED`). Rate-limit
+        20 req/min par IP.
+      security: []
+      parameters:
+        - name: returnTo
+          in: query
+          required: false
+          schema:
+            type: string
+            default: /player/profile
+          description: |
+            Chemin interne de retour apres le callback (sanitize : doit
+            commencer par `/`, ni `//` ni scheme externe). Defaut
+            `/player/profile`.
+      responses:
+        '302':
+          description: |
+            Redirection vers l'URL authorize Battle.net ; pose le cookie
+            httpOnly `bn_oauth_state`.
+          headers:
+            Location:
+              schema:
+                type: string
+              description: URL authorize Battle.net (`oauth.battle.net/authorize`).
+            Set-Cookie:
+              schema:
+                type: string
+              description: Cookie httpOnly `bn_oauth_state` (state anti-CSRF).
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          description: |
+            Feature dormante : creds Blizzard (client id/secret) absents.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: Battle.net verification is not configured.
+                code: BATTLENET_NOT_CONFIGURED
+  /api/auth/battlenet/callback:
+    get:
+      tags:
+        - public/auth
+      summary: Callback OAuth Battle.net — lie le BattleTag verifie au joueur.
+      operationId: battlenetOauthCallback
+      description: |
+        Auth via session cookie Supabase (`getServerClient`). Recoit `code` +
+        `state` de Blizzard, recroise `state` avec le cookie `bn_oauth_state`,
+        echange le code, recupere le BattleTag et l'ecrit dans le profil du
+        joueur (`battle_net_id UNIQUE` → anti-smurf). Endpoint de redirection :
+        ne renvoie jamais de JSON en cas de succes, uniquement des 302.
+        Rate-limit 20 req/min par IP.
+      security: []
+      parameters:
+        - name: code
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Code d'autorisation renvoye par Blizzard.
+        - name: state
+          in: query
+          required: false
+          schema:
+            type: string
+          description: State OAuth, recroise avec le cookie `bn_oauth_state`.
+      responses:
+        '302':
+          description: |
+            Redirection vers `returnTo` avec un parametre `?battlenet=` :
+            `verified` (BattleTag lie avec succes), `linked_no_match` (BattleTag
+            deja rattache a un autre compte — conflit d'unicite anti-smurf),
+            `already_linked` (le joueur avait deja une identite verifiee),
+            `error` (state invalide, echange OAuth KO, etc.). Si la session
+            Supabase est perdue → redirection `302 /login`.
+          headers:
+            Location:
+              schema:
+                type: string
+              description: >-
+                `returnTo?battlenet=verified|linked_no_match|already_linked|error`
+                ou `/login` si la session est perdue.
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          description: 'Feature dormante : creds Blizzard absents.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: Battle.net verification is not configured.
+                code: BATTLENET_NOT_CONFIGURED
   /api/teams:
     get:
       tags:
@@ -22864,6 +23001,30 @@ paths:
                 additionalProperties: true
         '401':
           $ref: '#/components/responses/Unauthorized'
+  /api/player/battlenet-status:
+    get:
+      tags:
+        - public/auth
+      summary: Etat de verification Battle.net du joueur connecte.
+      operationId: getPlayerBattlenetStatus
+      description: |
+        Auth Bearer joueur (`withAuthRoute`). Indique si la feature est
+        configuree cote serveur (`configured`) et si le joueur a deja lie un
+        BattleTag verifie (`linked` / `battleTag` / `verifiedAt`). Rate-limit
+        30 req/min.
+      security:
+        - PlayerBearer: []
+      responses:
+        '200':
+          description: Etat de verification Battle.net.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BattlenetStatus'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
   /api/player/delete-account:
     delete:
       tags:

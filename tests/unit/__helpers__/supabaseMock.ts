@@ -52,6 +52,8 @@ export const KNOWN_TABLES: readonly string[] = [
   // custom registration fields feature
   'tournament_teams',
   'demandes',
+  // Battle.net identity verification (anti-smurf)
+  'user_battlenet_links',
   // billing — tenant plan (« Régie solidaire »)
   'tenant_plan_checkouts',
   'tenant_plan_payments',

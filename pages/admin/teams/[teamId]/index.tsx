@@ -40,7 +40,22 @@ type TeamMemberRow = {
   role: string;
   battle_tag?: string | null;
   created_at: string;
+  battle_tag_verified_at?: string | null;
+  battle_tag_mismatch?: boolean;
 };
+
+function formatVerifiedDate(d: string | null | undefined): string {
+  if (!d) return '';
+  try {
+    return new Date(d).toLocaleDateString('fr-FR', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+  } catch {
+    return d;
+  }
+}
 
 export const getServerSideProps = withStaffPage('manager');
 
@@ -213,7 +228,20 @@ function AdminTeamDetailPage({ staff }: StaffProps) {
 
           <section className="bg-neutral-800 border border-neutral-700 rounded-xl p-6 space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">{t.members}</h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-semibold">{t.members}</h2>
+                {(() => {
+                  const unverified = members.filter(
+                    (m) => m.battle_tag && !m.battle_tag_verified_at
+                  ).length;
+                  if (unverified === 0) return null;
+                  return (
+                    <span className="px-2 py-0.5 rounded-full text-xs bg-neutral-700/60 text-neutral-300 border border-neutral-600">
+                      {format(t.unverifiedCount, { count: unverified })}
+                    </span>
+                  );
+                })()}
+              </div>
               <Link
                 href={`/admin/teams/${teamId}/edit?add-member=1`}
                 className="text-sm underline"
@@ -296,6 +324,34 @@ function AdminTeamDetailPage({ staff }: StaffProps) {
                             {isManager && (
                               <span className="px-1.5 py-0.5 rounded text-[10px] bg-sky-500/20 text-sky-300 border border-sky-500/30 font-semibold">
                                 {t.manager}
+                              </span>
+                            )}
+                            {m.battle_tag &&
+                              (m.battle_tag_verified_at ? (
+                                <span
+                                  title={format(t.battleTagVerifiedTitle, {
+                                    date: formatVerifiedDate(
+                                      m.battle_tag_verified_at
+                                    ),
+                                  })}
+                                  className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-600/25 text-emerald-200 border border-emerald-400/40 font-medium"
+                                >
+                                  {t.battleTagVerified}
+                                </span>
+                              ) : (
+                                <span
+                                  title={t.battleTagUnverifiedTitle}
+                                  className="px-1.5 py-0.5 rounded text-[10px] bg-neutral-700/60 text-neutral-300 border border-neutral-600"
+                                >
+                                  {t.battleTagUnverified}
+                                </span>
+                              ))}
+                            {m.battle_tag_mismatch && (
+                              <span
+                                title={t.battleTagMismatchTitle}
+                                className="px-1.5 py-0.5 rounded text-[10px] bg-amber-600/20 text-amber-300 border border-amber-500/40 font-medium"
+                              >
+                                {t.battleTagMismatch}
                               </span>
                             )}
                           </div>
