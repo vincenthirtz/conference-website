@@ -9220,6 +9220,52 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /api/admin/broadcast/{campaignId}/duplicate:
+    parameters:
+      - in: path
+        name: campaignId
+        required: true
+        schema:
+          type: string
+    post:
+      summary: Duplicate an existing email campaign.
+      description: |
+        Copies the source campaign's structured content into a NEW
+        `email_campaigns` row. The copy is ALWAYS created with `status: draft`
+        (never active/sendable by accident), its name is suffixed `(copie)`,
+        and it receives a fresh unique slug id derived from that name (same
+        `-2`/`-3` collision rule as campaign creation). No email is sent.
+        Honors the optional `Idempotency-Key` header.
+      operationId: adminDuplicateBroadcastCampaign
+      tags:
+        - admin/broadcast
+      security:
+        - StaffSession: []
+      responses:
+        '201':
+          description: Copy created.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - campaign
+                properties:
+                  campaign:
+                    type: object
+                    required:
+                      - id
+                    properties:
+                      id:
+                        type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/admin/broadcast/{campaignId}/schedule:
     parameters:
       - in: path

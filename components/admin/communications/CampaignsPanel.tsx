@@ -186,6 +186,28 @@ export default function CampaignsPanel() {
     [confirm, mutateJson, addToast, fetchCampaigns, t]
   );
 
+  const duplicateCampaign = useCallback(
+    async (campaign: CampaignSummary) => {
+      const ok = await confirm({
+        title: t.confirmDuplicateTitle,
+        subtitle: format(t.confirmDuplicateSubtitle, { name: campaign.name }),
+        confirmLabel: t.confirmDuplicateLabel,
+        cancelLabel: t.cancel,
+      });
+      if (!ok) return;
+      try {
+        await mutateJson(`/api/admin/broadcast/${campaign.id}/duplicate`, {
+          method: 'POST',
+        });
+        addToast(t.campaignDuplicated, 'success');
+        await fetchCampaigns();
+      } catch (err: unknown) {
+        addToast((err as Error)?.message || t.duplicateFailed, 'error');
+      }
+    },
+    [confirm, mutateJson, addToast, fetchCampaigns, t]
+  );
+
   return (
     <>
       {/* Header */}
@@ -286,6 +308,7 @@ export default function CampaignsPanel() {
               onOpen={() => setActiveId(c.id)}
               onEdit={() => setFormTarget(c)}
               onDelete={() => deleteCampaign(c)}
+              onDuplicate={() => duplicateCampaign(c)}
             />
           ))}
         </div>
@@ -378,13 +401,27 @@ function CampaignCard({
   onOpen,
   onEdit,
   onDelete,
+  onDuplicate,
 }: {
   campaign: CampaignSummary;
   onOpen: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  onDuplicate: () => void | Promise<void>;
 }) {
   const t = useAdminT('adminCampaigns');
+  const [duplicating, setDuplicating] = useState(false);
+
+  async function handleDuplicate() {
+    if (duplicating) return;
+    setDuplicating(true);
+    try {
+      await onDuplicate();
+    } finally {
+      setDuplicating(false);
+    }
+  }
+
   const status = getStatusStyles(t)[campaign.status] ?? {
     label: campaign.status,
     className: 'bg-neutral-600/20 text-neutral-300 border-neutral-500/30',
@@ -454,6 +491,32 @@ function CampaignCard({
               </button>
             </>
           )}
+          <button
+            type="button"
+            onClick={handleDuplicate}
+            disabled={duplicating}
+            aria-label={format(t.duplicateAria, { name: campaign.name })}
+            className="px-3 py-2 rounded-xl bg-neutral-700 hover:bg-neutral-600 border border-neutral-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors flex items-center gap-2"
+          >
+            {duplicating ? (
+              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            ) : (
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                />
+              </svg>
+            )}
+            {t.duplicate}
+          </button>
           <button
             type="button"
             onClick={onOpen}

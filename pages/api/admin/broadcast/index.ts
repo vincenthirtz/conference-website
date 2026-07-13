@@ -19,12 +19,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
-import { listCampaigns } from '@/utils/broadcasts';
+import { listCampaigns, generateUniqueCampaignId } from '@/utils/broadcasts';
 import type { CampaignBody } from '@/utils/email';
-import {
-  campaignInputSchema,
-  slugifyCampaignName,
-} from '@/utils/campaignSchema';
+import { campaignInputSchema } from '@/utils/campaignSchema';
 import { logStaffAction } from '@/utils/staffLogs';
 import { parsePagination } from '@/utils/apiHelpers';
 
@@ -268,21 +265,14 @@ async function handleCreate(
   }
   const input = parsed.data;
 
-  // Génère un id unique à partir du slug du nom.
-  const base = slugifyCampaignName(input.name);
-  let id = base;
-  for (let i = 2; i < 100; i++) {
-    const { data: clash, error: clashErr } = await supabaseAdmin!
-      .from('email_campaigns')
-      .select('id')
-      .eq('id', id)
-      .maybeSingle();
-    if (clashErr) {
-      logger.error('[broadcast/create] slug check error:', clashErr);
-      return res.status(500).json({ error: 'Echec de la création.' });
-    }
-    if (!clash) break;
-    id = `${base}-${i}`;
+  // Génère un id unique à partir du slug du nom (helper partagé avec la
+  // duplication — même règle de suffixe -2/-3 sur collision).
+  let id: string;
+  try {
+    id = await generateUniqueCampaignId(input.name);
+  } catch (slugErr) {
+    logger.error('[broadcast/create] slug check error:', slugErr);
+    return res.status(500).json({ error: 'Echec de la création.' });
   }
 
   const { error: insErr } = await supabaseAdmin!.from('email_campaigns').insert({

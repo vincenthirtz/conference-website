@@ -16,6 +16,7 @@ import {
 import type { SendEmailResult, CampaignBody } from './email';
 import { generateUnsubscribeToken } from './emailUnsubscribe';
 import { BROADCAST_OPT_OUT_EVENT_TYPE } from './webPushEvents';
+import { slugifyCampaignName } from './campaignSchema';
 
 import { logger } from './logger';
 
@@ -135,6 +136,35 @@ export function rowToCampaign(row: EmailCampaignRow): BroadcastCampaign {
       }),
     buildHtml: (label) => buildCampaignEmailHtml(body, label),
   };
+}
+
+/**
+ * Génère un id de campagne unique dérivé du slug du nom : `base`, puis
+ * `base-2`, `base-3`… jusqu'à trouver un id libre dans email_campaigns.
+ * Partagé par la création (POST /api/admin/broadcast) et la duplication
+ * (POST /api/admin/broadcast/[id]/duplicate) pour garantir la même règle.
+ * Rejette si supabaseAdmin est indisponible ou si aucun id libre n'est
+ * trouvé dans la fenêtre (collision extrême) — l'appelant renvoie alors 500.
+ */
+export async function generateUniqueCampaignId(name: string): Promise<string> {
+  if (!supabaseAdmin) {
+    throw new Error('Supabase admin not configured');
+  }
+  const base = slugifyCampaignName(name);
+  let id = base;
+  for (let i = 2; i < 100; i++) {
+    const { data: clash, error } = await supabaseAdmin
+      .from('email_campaigns')
+      .select('id')
+      .eq('id', id)
+      .maybeSingle();
+    if (error) {
+      throw error;
+    }
+    if (!clash) return id;
+    id = `${base}-${i}`;
+  }
+  throw new Error(`Could not derive a unique campaign id from "${name}"`);
 }
 
 /**
