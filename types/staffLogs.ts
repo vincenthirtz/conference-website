@@ -37,6 +37,7 @@ export type StaffLogAction =
   | 'open_match_dispute'
   | 'resolve_match_dispute'
   | 'cancel_match_dispute'
+  | 'attach_match_evidence'
   | 'auto_advance_stage'
   | 'generate_group_matches'
   | 'create_cast_assignment'

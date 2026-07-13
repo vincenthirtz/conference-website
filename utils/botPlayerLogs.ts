@@ -24,6 +24,7 @@ export type PlayerAction =
   | 'register_team'
   | 'checkin'
   | 'report_score'
+  | 'attach_evidence'
   | 'update_profile';
 
 export type LogPlayerActionInput = {

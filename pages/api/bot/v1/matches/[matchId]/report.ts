@@ -25,8 +25,14 @@ import { z } from 'zod';
 import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
-import { discordIdSchema, scoreSchema, uuidSchema } from '@/utils/botValidation';
+import {
+  discordIdSchema,
+  scoreSchema,
+  uuidSchema,
+} from '@/utils/botValidation';
 import { applyMatchScore } from '@/utils/matches/applyScore';
+import { reconcileMatchResult } from '@/utils/matches/reconcile';
+import { getSlaMinutes } from '@/utils/disputes/slaBreaches';
 import { notifyScoreReportDispute } from '@/utils/discord';
 import { emitBotEvent } from '@/utils/botEvents';
 import { enrichMatchEvent } from '@/utils/matches/botEventEnrich';
@@ -47,13 +53,6 @@ const SITE_URL =
   'https://owwomenscup.fr';
 
 const TERMINAL_STATUSES = new Set(['finished', 'walkover', 'cancelled']);
-
-function reportsAgree(
-  a: { team1_score: number; team2_score: number },
-  b: { team1_score: number; team2_score: number }
-): boolean {
-  return a.team1_score === b.team1_score && a.team2_score === b.team2_score;
-}
 
 async function handler(req: BotTenantRequest, res: NextApiResponse) {
   // matchId (path) et body validés par withBotRoute (query/bodySchema).
@@ -205,8 +204,50 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const opponent =
     bothReports?.find((r) => r.team_side === opponentSide) ?? null;
 
-  // Case A: waiting for opponent
-  if (!opponent) {
+  // 5) Reconciliation — logique PURE deportee dans utils/matches/reconcile.ts.
+  //    On charge les preuves attachees au match + le SLA du tenant (delai de
+  //    silence adverse au-dela duquel un report unilatéral + preuve peut
+  //    l'emporter), puis on delegue la decision (attente / accord /
+  //    auto-resolution sur silence+preuve / arbitrage). L'API reste
+  //    responsable des I/O : finaliser, ouvrir la dispute, ou repondre 200.
+  const { data: evidenceRows, error: evErr } = await supabaseAdmin
+    .from('match_evidence')
+    .select('id, team_side, kind')
+    .eq('tenant_id', req.botContext.tenantId)
+    .eq('match_id', matchId);
+  if (evErr) {
+    logger.error('[bot/matches/report] evidence lookup error', evErr);
+    return res.status(500).json({ error: 'Erreur de lecture des preuves' });
+  }
+
+  const slaMinutes = await getSlaMinutes(req.botContext.tenantId);
+  const nowIsoRec = new Date().toISOString();
+
+  const outcome = reconcileMatchResult({
+    reports: (bothReports ?? []).map((r) => ({
+      teamSide: r.team_side as 1 | 2,
+      team1Score: r.team1_score,
+      team2Score: r.team2_score,
+      reportedAt:
+        (r.reported_at as string | null) ??
+        (r.updated_at as string | null) ??
+        nowIsoRec,
+    })),
+    evidence: (evidenceRows ?? []).map((e) => ({
+      teamSide: (e.team_side as 1 | 2 | null) ?? null,
+      kind: e.kind as 'screenshot' | 'replay_file' | 'replay_url',
+      id: e.id as string,
+    })),
+    now: nowIsoRec,
+    config: { opponentSilenceDeadlineMinutes: slaMinutes },
+  });
+
+  // Case A: still waiting (no opponent yet, or lone report inside the SLA
+  // window). No-op on `matches`.
+  if (
+    outcome.outcome === 'awaiting_reports' ||
+    outcome.outcome === 'awaiting_opponent'
+  ) {
     return res.status(200).json({
       status: 'awaiting_opponent',
       matchId,
@@ -216,8 +257,9 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
     });
   }
 
-  // Case B: both reports agree → finalize (close dispute first if needed)
-  if (mine && reportsAgree(mine, opponent)) {
+  // Case B: reports agree OR one side auto-wins on opponent silence + evidence
+  //         → finalize (close any open dispute first).
+  if (outcome.outcome === 'agreed' || outcome.outcome === 'auto_resolved') {
     // If the match is currently 'disputed', we must clear the status before
     // applyMatchScore (which refuses disputed matches).
     if (match.status === 'disputed') {
@@ -227,7 +269,9 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
         .update({
           status: 'pending',
           dispute_resolution:
-            'Resolu automatiquement : les deux capitaines ont accorde leur report.',
+            outcome.outcome === 'auto_resolved'
+              ? `Resolu automatiquement : ${outcome.reason}.`
+              : 'Resolu automatiquement : les deux capitaines ont accorde leur report.',
           dispute_resolved_at: nowIso,
           updated_at: nowIso,
         })
@@ -247,22 +291,48 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
       // de notifications Discord interne a applyMatchScore est elle aussi
       // tournament-aware (tryAutoAdvanceFromMatch est gate sur stage_id,
       // sendMatchResultDiscord ne fait rien si tournament_id manque).
+      //
+      // ORIENTATION CANONIQUE : outcome.team1Score/team2Score sont deja dans
+      // le repere du MATCH (team1/team2), jamais du reporter — on les passe
+      // tels quels a applyMatchScore.
       const isScrim = !!match.scrim_id;
       const result = await applyMatchScore({
         tenantId: req.botContext.tenantId,
         matchId,
-        team1Score: mine.team1_score,
-        team2Score: mine.team2_score,
+        team1Score: outcome.team1Score,
+        team2Score: outcome.team2Score,
         markFinished: true,
         staffId: null,
         propagateBracket: !isScrim,
       });
+
+      // Auto-award auditable : la finalisation sur silence+preuve n'a pas de
+      // contexte staff, on trace la raison dans le journal des actions
+      // joueuses (bot_player_actions) pour garder l'audit trail complet.
+      if (outcome.outcome === 'auto_resolved') {
+        void logPlayerAction({
+          actorAuthUserId: reportingAuthId,
+          actorDiscordUserId: discordUserId,
+          action: 'report_score',
+          entityType: 'match',
+          entityId: matchId,
+          payload: {
+            auto_resolved: true,
+            reason: outcome.reason,
+            team1_score: outcome.team1Score,
+            team2_score: outcome.team2Score,
+          },
+        });
+      }
+
       return res.status(200).json({
         status: 'finalized',
+        resolution: outcome.outcome,
+        reason: outcome.outcome === 'auto_resolved' ? outcome.reason : null,
         matchId,
         scrimId: match.scrim_id ?? null,
-        team1Score: mine.team1_score,
-        team2Score: mine.team2_score,
+        team1Score: outcome.team1Score,
+        team2Score: outcome.team2Score,
         winnerTeamId: result.winnerTeamId,
       });
     } catch (e) {
@@ -275,19 +345,35 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
     }
   }
 
-  // Case C: both reports exist and disagree → open (or keep) dispute
+  // Case C: needs_arbitration → open (or keep) dispute. Le motif FR depend du
+  // type de conflit (desaccord des deux capitaines vs report unilateral non
+  // confirmé sans preuve). L'evidenceBundle est deja rattache au match (table
+  // match_evidence) : le staff le tire via GET evidence.
+  const conflict = outcome.conflict;
+  let reasonParts: string;
+  if (conflict.kind === 'captain_disagreement') {
+    reasonParts = [
+      `Desaccord capitaines (via bot Discord) :`,
+      `- ${team1.name} : ${conflict.side1?.team1Score ?? '?'}-${
+        conflict.side1?.team2Score ?? '?'
+      }`,
+      `- ${team2.name} : ${conflict.side2?.team1Score ?? '?'}-${
+        conflict.side2?.team2Score ?? '?'
+      }`,
+    ].join('\n');
+  } else {
+    const reportedTeamName =
+      conflict.reportedSide === 1 ? team1.name : team2.name;
+    reasonParts = [
+      `Report unilateral non confirme (via bot Discord) :`,
+      `- ${reportedTeamName} a reporte ${conflict.reported.team1Score}-${conflict.reported.team2Score}`,
+      `- Adversaire silencieux au-dela du delai SLA (${slaMinutes} min) sans preuve fournie.`,
+    ].join('\n');
+  }
+
   const wasAlreadyDisputed = match.status === 'disputed';
   if (!wasAlreadyDisputed) {
     const nowIso = new Date().toISOString();
-    const reasonParts = [
-      `Desaccord capitaines (via bot Discord) :`,
-      `- ${team1.name} : ${
-        bothReports?.find((r) => r.team_side === 1)?.team1_score
-      }-${bothReports?.find((r) => r.team_side === 1)?.team2_score}`,
-      `- ${team2.name} : ${
-        bothReports?.find((r) => r.team_side === 2)?.team1_score
-      }-${bothReports?.find((r) => r.team_side === 2)?.team2_score}`,
-    ].join('\n');
 
     const { error: disputeErr } = await supabaseAdmin
       .from('matches')
@@ -327,9 +413,7 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
         },
         req.botContext.tenantId
       );
-    })().catch((e) =>
-      logger.error('[botEvents] match.disputed emit error', e)
-    );
+    })().catch((e) => logger.error('[botEvents] match.disputed emit error', e));
   }
 
   // Fire-and-forget Discord notification — uniquement pour les matchs de

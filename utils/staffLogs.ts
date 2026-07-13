@@ -192,6 +192,7 @@ export function formatStaffLog(log: StaffLog) {
     open_match_dispute: 'Ouverture dispute match',
     resolve_match_dispute: 'Résolution dispute match',
     cancel_match_dispute: 'Annulation dispute match',
+    attach_match_evidence: 'Preuve de match ajoutée',
     auto_advance_stage: 'Avancement automatique phase',
     generate_group_matches: 'Génération matchs de poule',
     create_cast_assignment: 'Assignment caster créé',

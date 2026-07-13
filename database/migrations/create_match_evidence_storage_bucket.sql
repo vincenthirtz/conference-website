@@ -1,0 +1,43 @@
+-- Migration: bucket Storage PRIVÉ `match-evidence` (Feature « Intégrité des résultats » — Slice 1)
+--
+-- WHY:
+--   La table match_evidence (create_match_evidence_table.sql) stocke des
+--   `storage_path` pointant vers ce bucket pour les preuves binaires
+--   (screenshot, replay_file). Contrairement au bucket public `teams-images`
+--   (logos/bannières/règlements), les preuves ne doivent JAMAIS être servies
+--   publiquement :
+--     - les capitaines ne touchent pas le bucket directement ;
+--     - l'API écrit avec le service_role (supabaseAdmin) et remet aux staff des
+--       URLs SIGNÉES à durée limitée pour consulter une preuve.
+--   D'où `public = false`.
+--
+-- MÉCANISME (aligné sur teams-images):
+--   Le bucket `teams-images` a été créé via le Dashboard Supabase (Storage), pas
+--   par une migration versionnée — aucun fichier du repo ne l'insère dans
+--   storage.buckets. Cette migration versionne au contraire la création du bucket
+--   pour éviter tout drift repo/prod sur une slice sensible (preuve/anti-triche),
+--   tout en restant équivalente à une création Dashboard « bucket privé ».
+--
+--   ⇒ ALTERNATIVE DASHBOARD (si l'opérateur préfère ne pas exécuter de DDL sur
+--     le schéma storage) : Storage → New bucket → Name = `match-evidence`,
+--     « Public bucket » DÉCOCHÉ. C'est strictement équivalent à l'INSERT ci-dessous.
+--
+-- ACCÈS / RLS:
+--   Aucune policy storage.objects ajoutée ici volontairement. Le service_role
+--   bypass les policies : l'API (supabaseAdmin) upload et génère les URLs signées
+--   sans policy. Un bucket privé sans policy = fermé pour anon/authenticated, ce
+--   qui est exactement l'intention (mêmes garanties que le pattern « service-role
+--   only » des tables du domaine).
+--
+-- DEPLOY NOTES:
+--   - Idempotent : ON CONFLICT (id) DO NOTHING — ré-exécutable sans erreur, ne
+--     réécrit pas un bucket déjà présent (ne le repasse pas en public).
+--   - Requiert un rôle privilégié sur le schéma storage (postgres / service via
+--     apply_migration). En cas de refus de permission, basculer sur l'alternative
+--     Dashboard ci-dessus.
+--   - Aucune FK / colonne applicative touchée -> pas de reload schema cache
+--     PostgREST pour cette migration.
+
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('match-evidence', 'match-evidence', false)
+ON CONFLICT (id) DO NOTHING;

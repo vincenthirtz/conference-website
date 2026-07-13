@@ -337,6 +337,104 @@ components:
       type: string
       pattern: ^[0-9]{17,20}$
       description: Snowflake Discord (user, guild, channel, role).
+    MatchEvidenceItem:
+      type: object
+      description: |
+        Une preuve rattachée à un match (capture d'écran, fichier replay, ou
+        lien externe). Pour les preuves binaires (`screenshot`, `replay_file`),
+        `signedUrl` est une URL signée courte-durée (~10 min) vers l'objet dans
+        le bucket privé `match-evidence` — jamais le chemin de stockage brut.
+        Pour `replay_url`, `signedUrl` est null et `externalUrl` porte le lien.
+      required:
+        - id
+        - teamSide
+        - kind
+        - externalUrl
+        - signedUrl
+        - mimeType
+        - sizeBytes
+        - sha256
+        - note
+        - createdAt
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        teamSide:
+          type: integer
+          enum:
+            - 1
+            - 2
+          nullable: true
+          description: |
+            Camp du capitaine ayant soumis la preuve (1 ou 2). `null` pour une
+            preuve neutre attachée par le staff.
+        kind:
+          type: string
+          enum:
+            - screenshot
+            - replay_file
+            - replay_url
+        externalUrl:
+          type: string
+          format: uri
+          nullable: true
+          description: Lien externe (VOD/replay hébergé) pour `kind=replay_url`, sinon null.
+        signedUrl:
+          type: string
+          format: uri
+          nullable: true
+          description: URL signée ~10 min vers le binaire privé ; null pour `replay_url`.
+        mimeType:
+          type: string
+          nullable: true
+        sizeBytes:
+          type: integer
+          nullable: true
+        sha256:
+          type: string
+          nullable: true
+          description: SHA-256 hex du binaire ; null pour `replay_url`.
+        note:
+          type: string
+          nullable: true
+        createdAt:
+          allOf:
+            - $ref: '#/components/schemas/Timestamp'
+          nullable: true
+    AdminMatchEvidenceItem:
+      description: |
+        Item de preuve enrichi pour la vue staff : ajoute l'identité du
+        soumetteur (capitaine Discord ou compte auth).
+      allOf:
+        - $ref: '#/components/schemas/MatchEvidenceItem'
+        - type: object
+          required:
+            - submittedByDiscordUserId
+            - submittedByAuthUserId
+          properties:
+            submittedByDiscordUserId:
+              type: string
+              nullable: true
+              description: Discord user id du capitaine soumetteur ; null si preuve staff.
+            submittedByAuthUserId:
+              allOf:
+                - $ref: '#/components/schemas/Uuid'
+              nullable: true
+              description: Compte auth du soumetteur (capitaine ou membre staff) ; null possible.
+    MatchEvidenceCreateResult:
+      type: object
+      required:
+        - id
+        - kind
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        kind:
+          type: string
+          enum:
+            - screenshot
+            - replay_file
+            - replay_url
     Tenant:
       type: object
       required:
@@ -4567,6 +4665,148 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+  /api/bot/v1/matches/{matchId}/evidence:
+    parameters:
+      - $ref: '#/components/parameters/MatchId'
+    get:
+      tags:
+        - bot/matches
+      summary: Vue capitaine — liste les preuves attachées à un de ses matches.
+      operationId: botListMatchEvidence
+      parameters:
+        - name: actorDiscordUserId
+          in: query
+          required: true
+          schema:
+            $ref: '#/components/schemas/DiscordId'
+      responses:
+        '200':
+          description: Liste des preuves (URLs signées courte-durée pour les binaires).
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - matchId
+                  - evidence
+                properties:
+                  matchId:
+                    $ref: '#/components/schemas/Uuid'
+                  evidence:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MatchEvidenceItem'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags:
+        - bot/matches
+      summary: Capitaine attache une preuve à un match (capture, replay, ou lien).
+      description: |
+        Union discriminée sur `kind`. `screenshot` / `replay_file` portent un
+        binaire base64 (validé : magic bytes + extension allowlistée), hashé
+        (sha256) et uploadé dans le bucket privé `match-evidence` ; `replay_url`
+        porte un lien externe. Le camp (`team_side`) est déduit du capitaine
+        appelant. Limite de corps 15 Mo. Rate limit : 40/min par IP + 10/min
+        par acteur (`discordUserId`). `Idempotency-Key` honoré (réponses 2xx).
+      operationId: botAttachMatchEvidence
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  required:
+                    - kind
+                    - discordUserId
+                    - file_base64
+                    - filename
+                  properties:
+                    kind:
+                      type: string
+                      enum:
+                        - screenshot
+                    discordUserId:
+                      $ref: '#/components/schemas/DiscordId'
+                    file_base64:
+                      type: string
+                      minLength: 1
+                      description: Contenu binaire encodé base64.
+                    filename:
+                      type: string
+                      minLength: 1
+                      maxLength: 255
+                    note:
+                      type: string
+                      minLength: 1
+                      maxLength: 1000
+                - type: object
+                  required:
+                    - kind
+                    - discordUserId
+                    - file_base64
+                    - filename
+                  properties:
+                    kind:
+                      type: string
+                      enum:
+                        - replay_file
+                    discordUserId:
+                      $ref: '#/components/schemas/DiscordId'
+                    file_base64:
+                      type: string
+                      minLength: 1
+                    filename:
+                      type: string
+                      minLength: 1
+                      maxLength: 255
+                    note:
+                      type: string
+                      minLength: 1
+                      maxLength: 1000
+                - type: object
+                  required:
+                    - kind
+                    - discordUserId
+                    - external_url
+                  properties:
+                    kind:
+                      type: string
+                      enum:
+                        - replay_url
+                    discordUserId:
+                      $ref: '#/components/schemas/DiscordId'
+                    external_url:
+                      type: string
+                      format: uri
+                    note:
+                      type: string
+                      minLength: 1
+                      maxLength: 1000
+      responses:
+        '201':
+          description: Preuve enregistrée.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MatchEvidenceCreateResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
   /api/bot/v1/matches/{matchId}/forfeit:
     parameters:
       - $ref: '#/components/parameters/MatchId'
@@ -4660,8 +4900,13 @@ paths:
           description: |
             Report enregistre. Trois etats possibles :
             - `awaiting_opponent` : un seul report, on attend l'autre cote.
-            - `finalized` : les deux reports concordent, match finalise.
-            - `disputed` : reports divergents, statut passe en disputed.
+            - `finalized` : match finalise. `resolution` precise la voie —
+              `agreed` (les deux reports concordent) ou `auto_resolved`
+              (report unilateral emporté sur silence adverse + preuve, avec
+              `reason` renseigné).
+            - `disputed` : conflit — desaccord des deux capitaines OU report
+              unilateral non confirme au-dela du delai SLA (silence adverse
+              sans preuve). Le motif est stocké et exposé au staff.
           content:
             application/json:
               schema:
@@ -4676,6 +4921,22 @@ paths:
                       - awaiting_opponent
                       - finalized
                       - disputed
+                  resolution:
+                    type: string
+                    enum:
+                      - agreed
+                      - auto_resolved
+                    nullable: true
+                    description: |
+                      Présent (non null) uniquement quand `status=finalized` :
+                      `agreed` si les deux reports concordent, `auto_resolved`
+                      si un report unilateral a été appliqué sur silence adverse.
+                  reason:
+                    type: string
+                    nullable: true
+                    description: |
+                      Motif de l'auto-resolution, renseigné uniquement quand
+                      `resolution=auto_resolved` ; null sinon.
                   matchId:
                     $ref: '#/components/schemas/Uuid'
                   scrimId:
@@ -10570,6 +10831,140 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /api/admin/matches/{matchId}/evidence:
+    parameters:
+      - $ref: '#/components/parameters/MatchId'
+    get:
+      summary: Liste les preuves d'un match (vue arbitrage staff).
+      description: |
+        Requires `manager` role. Retourne chaque preuve avec une URL signée
+        courte-durée (~10 min) pour les binaires, plus l'identité du soumetteur
+        (`submittedByDiscordUserId` du capitaine, `submittedByAuthUserId`).
+      operationId: adminListMatchEvidence
+      tags:
+        - admin/matches
+      security:
+        - StaffSession: []
+      responses:
+        '200':
+          description: Liste des preuves.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - matchId
+                  - evidence
+                properties:
+                  matchId:
+                    $ref: '#/components/schemas/Uuid'
+                  evidence:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AdminMatchEvidenceItem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      summary: Le staff attache une preuve neutre (team_side null) à un match.
+      description: |
+        Requires `manager` role. Même union discriminée que le POST bot mais
+        SANS `discordUserId` : la preuve est neutre (`teamSide=null`). Binaires
+        validés (magic bytes + extension) + hachés + uploadés dans le bucket
+        privé `match-evidence`. Limite de corps 15 Mo. Journalise l'action
+        staff `attach_match_evidence`.
+      operationId: adminAttachMatchEvidence
+      tags:
+        - admin/matches
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  required:
+                    - kind
+                    - file_base64
+                    - filename
+                  properties:
+                    kind:
+                      type: string
+                      enum:
+                        - screenshot
+                    file_base64:
+                      type: string
+                      minLength: 1
+                      description: Contenu binaire encodé base64.
+                    filename:
+                      type: string
+                      minLength: 1
+                      maxLength: 255
+                    note:
+                      type: string
+                      minLength: 1
+                      maxLength: 1000
+                - type: object
+                  required:
+                    - kind
+                    - file_base64
+                    - filename
+                  properties:
+                    kind:
+                      type: string
+                      enum:
+                        - replay_file
+                    file_base64:
+                      type: string
+                      minLength: 1
+                    filename:
+                      type: string
+                      minLength: 1
+                      maxLength: 255
+                    note:
+                      type: string
+                      minLength: 1
+                      maxLength: 1000
+                - type: object
+                  required:
+                    - kind
+                    - external_url
+                  properties:
+                    kind:
+                      type: string
+                      enum:
+                        - replay_url
+                    external_url:
+                      type: string
+                      format: uri
+                    note:
+                      type: string
+                      minLength: 1
+                      maxLength: 1000
+      responses:
+        '201':
+          description: Preuve enregistrée.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MatchEvidenceCreateResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
   /api/admin/matches/{matchId}/history:
     parameters:
       - $ref: '#/components/parameters/MatchId'

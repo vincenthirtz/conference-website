@@ -513,6 +513,7 @@ doesn't break during a deploy. The mode is toggled via
   | `matches/:matchId/cast` (POST/DELETE) | 5           | `actorDiscordUserId` | staff      |
   | `matches/:matchId/report`             | 5           | `discordUserId`      | captain    |
   | `matches/:matchId/checkin`            | 10          | `discordUserId`      | captain    |
+  | `matches/:matchId/evidence` (POST)    | 10          | `discordUserId`      | captain    |
 
 Default window is 60 s. The bot should respect `Retry-After` when it appears.
 
@@ -558,13 +559,25 @@ Content-Type: application/json
 }
 ```
 
-Response paths (see handler for full logic):
+Response paths (see handler for full logic). All are `200`; branch on
+`status`:
 
-- Single report stored, waiting on opponent → `200 { status: "waiting" }`
-- Both reports agree → `applyMatchScore` runs → `200 { status: "finished", … }`
-- Reports diverge → match → `disputed` → `200 { status: "disputed", … }`
+- Single report stored, waiting on opponent (or lone report still inside the
+  SLA silence window) → `{ "status": "awaiting_opponent", … }`
+- Both reports agree → `applyMatchScore` runs →
+  `{ "status": "finalized", "resolution": "agreed", "reason": null, … }`
+- One side auto-wins on opponent silence past the SLA **+** attached evidence →
+  `{ "status": "finalized", "resolution": "auto_resolved", "reason": "<why>", … }`
+- Reports diverge, OR a unilateral report stays unconfirmed past the SLA with
+  no evidence → match → `disputed` →
+  `{ "status": "disputed", … }` (with a silence/disagreement reason stored)
 - Captain re-reports and now agrees → dispute closes →
-  `200 { status: "finished", … }`
+  `{ "status": "finalized", "resolution": "agreed", … }`
+
+`resolution` (`agreed` | `auto_resolved`) and `reason` (string, only when
+`auto_resolved`) are present on the `finalized` branch; both are absent/null on
+the other branches. The auto-resolution path (silence + evidence) leans on the
+`/matches/:matchId/evidence` endpoint above and the tenant dispute SLA.
 
 ## Canonical read example — `GET /api/bot/v1/autocomplete/teams`
 
@@ -1045,6 +1058,7 @@ Le caster clique le bouton "Je confirme" du DM T-30. Marque
 | [`matches/[matchId]/checkin.ts`](../pages/api/bot/v1/matches/[matchId]/checkin.ts)                 | POST              | yes   | `bot-match-checkin`         |
 | [`matches/[matchId]/discord.ts`](../pages/api/bot/v1/matches/[matchId]/discord.ts)                 | PATCH             | yes   | `bot-match-discord`         |
 | [`matches/[matchId]/dispute.ts`](../pages/api/bot/v1/matches/[matchId]/dispute.ts)                 | GET               | —     | `bot-match-dispute`         |
+| [`matches/[matchId]/evidence.ts`](../pages/api/bot/v1/matches/[matchId]/evidence.ts)               | GET, POST         | yes   | `bot-match-evidence`        |
 | [`matches/[matchId]/forfeit.ts`](../pages/api/bot/v1/matches/[matchId]/forfeit.ts)                 | POST              | yes   | `bot-match-forfeit`         |
 | [`matches/[matchId]/report.ts`](../pages/api/bot/v1/matches/[matchId]/report.ts)                   | POST              | yes   | `bot-match-report`          |
 | [`matches/[matchId]/reset.ts`](../pages/api/bot/v1/matches/[matchId]/reset.ts)                     | POST              | yes   | `bot-match-reset`           |
@@ -1121,6 +1135,145 @@ decidedScoreB }` et `staffNote` peut contenir la note finale.
 **Errors** : `400` (matchId/actorDiscordUserId invalide), `401`,
 `403` (non capitaine), `404` (match introuvable ou pas de dispute).
 **Rate limit** : 60/min global. **Idempotency** : non (GET).
+
+#### `POST /api/bot/v1/matches/:matchId/evidence`
+
+Feature « Intégrité des résultats & anti-triche » (slice 1). Un capitaine
+attache une preuve à un de ses matches depuis Discord : capture d'écran,
+fichier replay, ou lien externe (VOD / replay hébergé). Le binaire est validé
+(taille + magic bytes + extension allowlistée), haché (sha256), uploadé dans le
+bucket **privé** `match-evidence` via le service role ; puis une row
+`match_evidence` est insérée avec `team_side` = camp du capitaine appelant.
+
+**Auth** : `x-api-key` + `discordUserId` (body) doit être capitaine d'une des
+deux équipes (résolu via `user_discord_links` → `teams.captain_id`, même
+convention que `/report`). Pas de gate Régie+.
+
+**Body** — union discriminée sur `kind` ; `discordUserId` toujours requis.
+Limite de corps **15 Mo** (`bodyParser.sizeLimit`).
+
+| `kind`        | Champs                                     |
+| ------------- | ------------------------------------------ |
+| `screenshot`  | `discordUserId`, `file_base64`, `filename`, `note?` |
+| `replay_file` | `discordUserId`, `file_base64`, `filename`, `note?` |
+| `replay_url`  | `discordUserId`, `external_url`, `note?`   |
+
+`file_base64` = contenu binaire encodé base64. `note` = string 1–1000.
+
+**Response 201**
+
+```json
+{ "id": "uuid", "kind": "screenshot" }
+```
+
+**Errors** : `400` (`INVALID_BODY`, base64 invalide, magic bytes / extension
+non allowlistés, match incomplet), `401`, `403` (non capitaine), `404` (match
+introuvable), `429`, `500` (échec upload / insert).
+**Rate limit** : global `bot-match-evidence` 40/min par IP + **10/min par
+acteur** (`discordUserId`). **Idempotency** : oui (`Idempotency-Key`, 2xx
+cachés).
+
+#### `GET /api/bot/v1/matches/:matchId/evidence`
+
+Vue _capitaine_ des preuves attachées à un match. Chaque preuve binaire est
+accompagnée d'une **URL signée courte-durée (~10 min)** — jamais le chemin de
+stockage brut ; les liens externes exposent `externalUrl`.
+
+**Auth** : `x-api-key` + `actorDiscordUserId` (query) capitaine.
+
+**Query** : `actorDiscordUserId` (requis).
+
+**Response 200**
+
+```json
+{
+  "matchId": "uuid",
+  "evidence": [
+    {
+      "id": "uuid",
+      "teamSide": 1,
+      "kind": "screenshot",
+      "externalUrl": null,
+      "signedUrl": "https://…/object/sign/…?token=…",
+      "mimeType": "image/png",
+      "sizeBytes": 184213,
+      "sha256": "a1b2…",
+      "note": "map 2 scoreboard",
+      "createdAt": "2026-07-13T20:00:00.000Z"
+    }
+  ]
+}
+```
+
+`teamSide` est `1 | 2 | null` (null = preuve neutre staff). `signedUrl` est
+null pour `replay_url` (voir `externalUrl`), et `externalUrl` est null pour les
+binaires.
+
+**Errors** : `400` (`actorDiscordUserId` manquant), `403` (non capitaine),
+`404` (match introuvable). **Rate limit** : `bot-match-evidence` 40/min global.
+**Idempotency** : non (GET).
+
+#### `GET /api/admin/matches/:matchId/evidence` (staff)
+
+Vue arbitrage staff de toutes les preuves d'un match, avec URLs signées
+courte-durée (~10 min) pour les binaires **et** l'identité du soumetteur.
+C'est ce que consomme l'UI d'arbitrage admin.
+
+**Auth** : session staff Supabase, rôle **`manager`** minimum
+(`withStaffRoute(handler, 'manager')`).
+
+**Response 200** — même item que le GET bot, plus deux champs :
+
+```json
+{
+  "matchId": "uuid",
+  "evidence": [
+    {
+      "id": "uuid",
+      "teamSide": null,
+      "kind": "replay_url",
+      "externalUrl": "https://vod.example/…",
+      "signedUrl": null,
+      "mimeType": null,
+      "sizeBytes": null,
+      "sha256": null,
+      "note": null,
+      "submittedByDiscordUserId": null,
+      "submittedByAuthUserId": "uuid",
+      "createdAt": "2026-07-13T20:05:00.000Z"
+    }
+  ]
+}
+```
+
+**Errors** : `400` (matchId invalide), `401`, `403` (rôle insuffisant),
+`404` (match introuvable), `500`.
+
+#### `POST /api/admin/matches/:matchId/evidence` (staff)
+
+Le staff attache une preuve **neutre** (`team_side = null`) pendant
+l'arbitrage. Mêmes mécaniques d'upload / validation que le POST bot. Journalise
+l'action staff `attach_match_evidence` (dans `staff_logs`).
+
+**Auth** : session staff Supabase, rôle **`manager`** minimum.
+
+**Body** — même union discriminée que le POST bot **sans** `discordUserId`.
+Limite de corps **15 Mo**.
+
+| `kind`        | Champs                              |
+| ------------- | ----------------------------------- |
+| `screenshot`  | `file_base64`, `filename`, `note?`  |
+| `replay_file` | `file_base64`, `filename`, `note?`  |
+| `replay_url`  | `external_url`, `note?`             |
+
+**Response 201**
+
+```json
+{ "id": "uuid", "kind": "replay_url" }
+```
+
+**Errors** : `400` (body invalide, base64 / magic bytes / extension),
+`401`, `403` (rôle insuffisant), `404` (match introuvable), `500`.
 
 ### Players (by Discord ID lookups)
 

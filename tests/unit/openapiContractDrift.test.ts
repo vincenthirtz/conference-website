@@ -106,8 +106,8 @@ type SpecOp = {
 function loadSpec(): { paths: Record<string, any>; defaultSecurity: string[] } {
   const raw = fs.readFileSync(SPEC_PATH, 'utf8');
   const spec = parseYaml(raw);
-  const defaultSecurity = (spec.security ?? []).flatMap((s: Record<string, unknown>) =>
-    Object.keys(s),
+  const defaultSecurity = (spec.security ?? []).flatMap(
+    (s: Record<string, unknown>) => Object.keys(s)
   ) as string[];
   return { paths: spec.paths ?? {}, defaultSecurity };
 }
@@ -198,7 +198,8 @@ function detectAuth(src: string): AuthKind {
   }
   if (/\bwithAuthRoute\s*\(/.test(src)) return 'player';
   if (/\bwithPublicWrite\s*(?:<[^>]*>)?\s*\(/.test(src)) return 'public-token';
-  if (/CRON_SECRET|requireCronAuth|isCronAuthorized|x-cron-secret/i.test(src)) return 'cron';
+  if (/CRON_SECRET|requireCronAuth|isCronAuthorized|x-cron-secret/i.test(src))
+    return 'cron';
   return 'public';
 }
 
@@ -209,7 +210,9 @@ function detectMethods(src: string): string[] {
   // 1. withBotRoute(_, { methods: ['GET', 'POST'] })
   const botMethods = src.match(/methods\s*:\s*\[([^\]]+)\]/);
   if (botMethods) {
-    for (const m of botMethods[1].matchAll(/['"](GET|POST|PUT|PATCH|DELETE)['"]/g)) {
+    for (const m of botMethods[1].matchAll(
+      /['"](GET|POST|PUT|PATCH|DELETE)['"]/g
+    )) {
       found.add(m[1]);
     }
   }
@@ -234,7 +237,9 @@ function detectMethods(src: string): string[] {
 
   // 5. setHeader('Allow', 'GET, POST')
   if (found.size === 0) {
-    const allow = src.match(/setHeader\(\s*['"]Allow['"]\s*,\s*['"]([^'"]+)['"]/i);
+    const allow = src.match(
+      /setHeader\(\s*['"]Allow['"]\s*,\s*['"]([^'"]+)['"]/i
+    );
     if (allow) {
       for (const v of allow[1].split(',').map((s) => s.trim().toUpperCase())) {
         if (verbs.has(v)) found.add(v);
@@ -261,14 +266,17 @@ function listHandlers(): HandlerInfo[] {
 // Bot client → call inventory
 // ---------------------------------------------------------------------------
 
-type BotCall = { file: string; method: string; rawUrl: string; normalized: string };
+type BotCall = {
+  file: string;
+  method: string;
+  rawUrl: string;
+  normalized: string;
+};
 
 function resolveTemplate(src: string, expr: string): string {
   // Resolve module-level `const NAME = \`...\`` substitutions.
   let out = expr;
-  for (const m of src.matchAll(
-    /const\s+([A-Z_][A-Z0-9_]*)\s*=\s*`([^`]+)`/g,
-  )) {
+  for (const m of src.matchAll(/const\s+([A-Z_][A-Z0-9_]*)\s*=\s*`([^`]+)`/g)) {
     out = out.replace(new RegExp(`\\$\\{${m[1]}\\}`, 'g'), m[2]);
   }
   // Replace any remaining `${...}` with `{param}` so paths match openapi.
@@ -283,7 +291,10 @@ function normalizeBotPath(p: string): string {
   // Replace UUIDs and numeric ids with {param}; keeps semantic match against
   // openapi {paramName}.
   return p
-    .replace(/\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '/{param}')
+    .replace(
+      /\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi,
+      '/{param}'
+    )
     .replace(/\/\d{10,}/g, '/{param}'); // Discord snowflakes
 }
 
@@ -305,7 +316,8 @@ function listBotCalls(): BotCall[] {
   };
   walk(BOT_CLIENT_ROOT);
 
-  const callRe = /(getBotApi|postBotApi|patchBotApi|deleteBotApi)\s*\(\s*(`[^`]+`|'[^']+'|"[^"]+")/g;
+  const callRe =
+    /(getBotApi|postBotApi|patchBotApi|deleteBotApi)\s*\(\s*(`[^`]+`|'[^']+'|"[^"]+")/g;
   const methodOf: Record<string, string> = {
     getBotApi: 'GET',
     postBotApi: 'POST',
@@ -319,7 +331,8 @@ function listBotCalls(): BotCall[] {
       const fn = m[1];
       const raw = m[2].slice(1, -1); // strip quotes/backticks
       const resolved = resolveTemplate(src, raw);
-      if (!resolved.includes('/api/bot/v1/') && !resolved.startsWith('/')) continue;
+      if (!resolved.includes('/api/bot/v1/') && !resolved.startsWith('/'))
+        continue;
       const idx = resolved.indexOf('/api/bot/v1/');
       const apiPath = idx >= 0 ? resolved.slice(idx) : resolved;
       out.push({
@@ -366,11 +379,16 @@ function pathTemplateEquivalent(a: string, b: string): boolean {
   return normalize(a) === normalize(b);
 }
 
-function findSpecMatch(specOps: SpecOp[], apiPath: string, method?: string): SpecOp | null {
+function findSpecMatch(
+  specOps: SpecOp[],
+  apiPath: string,
+  method?: string
+): SpecOp | null {
   return (
     specOps.find(
       (s) =>
-        pathTemplateEquivalent(s.apiPath, apiPath) && (!method || s.method === method),
+        pathTemplateEquivalent(s.apiPath, apiPath) &&
+        (!method || s.method === method)
     ) ?? null
   );
 }
@@ -390,12 +408,14 @@ describe('OpenAPI ↔ handlers', () => {
     for (const h of HANDLERS) {
       if (ALLOWLIST_HANDLER_WITHOUT_SPEC.has(h.apiPath)) continue;
       if (h.methods.length === 0) continue; // not a route handler (helper file)
-      const hit = [...specPaths].some((p) => pathTemplateEquivalent(p, h.apiPath));
+      const hit = [...specPaths].some((p) =>
+        pathTemplateEquivalent(p, h.apiPath)
+      );
       if (!hit) missing.push(h.apiPath);
     }
     expect(
       missing,
-      `${missing.length} handler(s) missing from openapi.yaml:\n  ${missing.join('\n  ')}`,
+      `${missing.length} handler(s) missing from openapi.yaml:\n  ${missing.join('\n  ')}`
     ).toEqual([]);
   });
 
@@ -404,13 +424,15 @@ describe('OpenAPI ↔ handlers', () => {
     const phantom: string[] = [];
     for (const op of SPEC_OPS) {
       if (ALLOWLIST_SPEC_WITHOUT_HANDLER.has(op.apiPath)) continue;
-      const hit = [...handlerPaths].some((p) => pathTemplateEquivalent(p, op.apiPath));
+      const hit = [...handlerPaths].some((p) =>
+        pathTemplateEquivalent(p, op.apiPath)
+      );
       if (!hit) phantom.push(op.apiPath);
     }
     const unique = [...new Set(phantom)].sort();
     expect(
       unique,
-      `${unique.length} phantom path(s) in openapi.yaml (no handler file):\n  ${unique.join('\n  ')}`,
+      `${unique.length} phantom path(s) in openapi.yaml (no handler file):\n  ${unique.join('\n  ')}`
     ).toEqual([]);
   });
 
@@ -418,7 +440,9 @@ describe('OpenAPI ↔ handlers', () => {
     const drifts: string[] = [];
     for (const h of HANDLERS) {
       if (h.methods.length === 0) continue;
-      const specForPath = SPEC_OPS.filter((o) => pathTemplateEquivalent(o.apiPath, h.apiPath));
+      const specForPath = SPEC_OPS.filter((o) =>
+        pathTemplateEquivalent(o.apiPath, h.apiPath)
+      );
       if (specForPath.length === 0) continue; // covered by other test
       const specMethods = new Set(specForPath.map((o) => o.method));
       const handlerMethods = new Set(h.methods);
@@ -428,7 +452,9 @@ describe('OpenAPI ↔ handlers', () => {
         if (!handlerMethods.has(m)) {
           const key = `${m} ${h.apiPath}`;
           if (!ALLOWLIST_METHOD_MISMATCH.has(key)) {
-            drifts.push(`spec says ${m} but handler doesn't accept it: ${h.apiPath}`);
+            drifts.push(
+              `spec says ${m} but handler doesn't accept it: ${h.apiPath}`
+            );
           }
         }
       }
@@ -437,19 +463,26 @@ describe('OpenAPI ↔ handlers', () => {
         if (!specMethods.has(m)) {
           const key = `${m} ${h.apiPath}`;
           if (!ALLOWLIST_METHOD_MISMATCH.has(key)) {
-            drifts.push(`handler accepts ${m} but spec doesn't document it: ${h.apiPath}`);
+            drifts.push(
+              `handler accepts ${m} but spec doesn't document it: ${h.apiPath}`
+            );
           }
         }
       }
     }
-    expect(drifts, `${drifts.length} method drift(s):\n  ${drifts.join('\n  ')}`).toEqual([]);
+    expect(
+      drifts,
+      `${drifts.length} method drift(s):\n  ${drifts.join('\n  ')}`
+    ).toEqual([]);
   });
 
   it('handler auth wrapper matches openapi security scheme', () => {
     const drifts: string[] = [];
     for (const h of HANDLERS) {
       if (h.methods.length === 0) continue;
-      const specForPath = SPEC_OPS.filter((o) => pathTemplateEquivalent(o.apiPath, h.apiPath));
+      const specForPath = SPEC_OPS.filter((o) =>
+        pathTemplateEquivalent(o.apiPath, h.apiPath)
+      );
       if (specForPath.length === 0) continue;
       const expected = authToSecurity(h.auth);
       for (const op of specForPath) {
@@ -459,7 +492,9 @@ describe('OpenAPI ↔ handlers', () => {
 
         if (expected.size === 0) {
           if (specSchemes.size > 0) {
-            drifts.push(`${key}: handler is public but spec requires ${[...specSchemes].join(',')}`);
+            drifts.push(
+              `${key}: handler is public but spec requires ${[...specSchemes].join(',')}`
+            );
           }
           continue;
         }
@@ -467,12 +502,15 @@ describe('OpenAPI ↔ handlers', () => {
         const overlap = [...expected].some((s) => specSchemes.has(s));
         if (!overlap) {
           drifts.push(
-            `${key}: handler auth=${h.auth} (expected ${[...expected].join('|')}) but spec security=${[...specSchemes].join(',') || '(none)'}`,
+            `${key}: handler auth=${h.auth} (expected ${[...expected].join('|')}) but spec security=${[...specSchemes].join(',') || '(none)'}`
           );
         }
       }
     }
-    expect(drifts, `${drifts.length} auth drift(s):\n  ${drifts.join('\n  ')}`).toEqual([]);
+    expect(
+      drifts,
+      `${drifts.length} auth drift(s):\n  ${drifts.join('\n  ')}`
+    ).toEqual([]);
   });
 });
 
@@ -481,7 +519,7 @@ describe('OpenAPI ↔ bot client (cross-repo)', () => {
     expect(
       fs.existsSync(BOT_CLIENT_ROOT),
       `BOT_CLIENT_ROOT not found: ${BOT_CLIENT_ROOT}\n` +
-        `Set BOT_CLIENT_ROOT env var to override, or check the sibling repo path.`,
+        `Set BOT_CLIENT_ROOT env var to override, or check the sibling repo path.`
     ).toBe(true);
   });
 
@@ -497,7 +535,7 @@ describe('OpenAPI ↔ bot client (cross-repo)', () => {
     const unique = [...new Set(missing)].sort();
     expect(
       unique,
-      `${unique.length} bot call(s) not documented in openapi.yaml:\n  ${unique.join('\n  ')}`,
+      `${unique.length} bot call(s) not documented in openapi.yaml:\n  ${unique.join('\n  ')}`
     ).toEqual([]);
   });
 });

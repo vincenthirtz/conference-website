@@ -291,6 +291,11 @@ export function resetSupabaseMock() {
   };
   signUpCalls.length = 0;
   _storageUploadResult = { error: null };
+  _storageSignedUrlResult = {
+    data: { signedUrl: 'https://storage.example.test/signed/fake' },
+    error: null,
+  };
+  storageUploads.length = 0;
   _rpcResults.clear();
   rpcCalls.length = 0;
 }
@@ -594,6 +599,28 @@ export function setStorageUploadResult(result: typeof _storageUploadResult) {
 }
 
 /**
+ * State for `supabaseAdmin.storage.from(bucket).createSignedUrl()`. Defaults to
+ * a deterministic fake signed URL; tests can force an error to exercise the
+ * "missing/expired object" branch.
+ */
+let _storageSignedUrlResult: {
+  data: { signedUrl: string } | null;
+  error: { message: string } | null;
+} = {
+  data: { signedUrl: 'https://storage.example.test/signed/fake' },
+  error: null,
+};
+
+export function setStorageSignedUrlResult(
+  result: typeof _storageSignedUrlResult
+) {
+  _storageSignedUrlResult = result;
+}
+
+/** Captures every `storage.from(bucket).upload(path, ...)` call for assertions. */
+export const storageUploads: Array<{ bucket: string; path: string }> = [];
+
+/**
  * Responses returned by `supabaseAdmin.rpc(fn, params)`, keyed by function name.
  * Tests seed a per-function `{ data, error }` via `setRpcResult`; unseeded
  * functions resolve to `{ data: null, error: null }`. Also captures every call
@@ -616,13 +643,17 @@ export function setRpcResult(fn: string, result: RpcResultInput) {
 export const supabaseAdmin = {
   storage: {
     from: (bucket: string) => ({
-      upload: (_path: string, _data: any, _opts?: any) =>
-        Promise.resolve(_storageUploadResult),
+      upload: (path: string, _data: any, _opts?: any) => {
+        storageUploads.push({ bucket, path });
+        return Promise.resolve(_storageUploadResult);
+      },
       getPublicUrl: (path: string) => ({
         data: {
           publicUrl: `https://storage.example.test/${bucket}/${path}`,
         },
       }),
+      createSignedUrl: (_path: string, _ttl?: number) =>
+        Promise.resolve(_storageSignedUrlResult),
     }),
   },
   from: (table: string) => {
