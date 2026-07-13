@@ -187,24 +187,19 @@ export type ComputedRecipient = {
   label: string | null;
 };
 
+/** Un compte confirmé, projeté sur les seules colonnes utiles ici. */
+type ConfirmedUser = { id: string; email: string; display_name: string | null };
+
 /**
- * Calcule la liste des destinataires éligibles pour une audience donnée.
- * - Itère auth.users (paginé), filtre les comptes confirmés
- * - Récupère profiles.battle_tag pour le greeting (split sur "#")
- * - Fallback sur user_metadata.display_name puis null
+ * Pagine `auth.users` et ne garde que les comptes confirmés avec un email.
+ * Source de vérité partagée entre computeAudienceRecipients (destinataires)
+ * et computeSubscriptionStats (compteurs abonnés/désabonnés).
  */
-export async function computeAudienceRecipients(
-  audience: CampaignAudience
-): Promise<ComputedRecipient[]> {
+async function listConfirmedUsers(): Promise<ConfirmedUser[]> {
   if (!supabaseAdmin) {
     throw new Error('Supabase admin not configured');
   }
-  if (audience !== 'all-confirmed-users') {
-    throw new Error(`Unsupported audience: ${audience}`);
-  }
-
-  let allUsers: { id: string; email: string; display_name: string | null }[] =
-    [];
+  const users: ConfirmedUser[] = [];
   let page = 1;
   const perPage = 1000;
   while (true) {
@@ -217,7 +212,7 @@ export async function computeAudienceRecipients(
     for (const u of batch) {
       if (!u.email) continue;
       if (!u.email_confirmed_at && !u.confirmed_at) continue;
-      allUsers.push({
+      users.push({
         id: u.id,
         email: u.email,
         display_name:
@@ -227,26 +222,45 @@ export async function computeAudienceRecipients(
     if (batch.length < perPage) break;
     page += 1;
   }
+  return users;
+}
 
-  // Opt-out RGPD broadcast : on exclut les users ayant une row
-  // notification_prefs(channel='email', event_type='broadcast',
-  // enabled=false). UNE requête (pas de N+1). Les opt-outs d'événements
-  // (EMAIL_EVENT_TYPES) n'affectent PAS les broadcasts — scope dédié.
-  const { data: optOutRows, error: optOutError } = await supabaseAdmin
+/**
+ * Charge en UNE requête l'ensemble des opt-out RGPD broadcast :
+ * notification_prefs(channel='email', event_type='broadcast', enabled=false).
+ * Renvoie une map user_id -> updated_at (= date de désinscription, ou null).
+ * Les opt-outs d'événements (EMAIL_EVENT_TYPES) n'affectent PAS les
+ * broadcasts — scope dédié via BROADCAST_OPT_OUT_EVENT_TYPE.
+ */
+async function fetchBroadcastOptOuts(): Promise<Map<string, string | null>> {
+  if (!supabaseAdmin) {
+    throw new Error('Supabase admin not configured');
+  }
+  const { data, error } = await supabaseAdmin
     .from('notification_prefs')
-    .select('user_id')
+    .select('user_id, updated_at')
     .eq('channel', 'email')
     .eq('event_type', BROADCAST_OPT_OUT_EVENT_TYPE)
     .eq('enabled', false);
-  if (optOutError) throw optOutError;
-  const optedOut = new Set(
-    (optOutRows ?? []).map((r) => (r as { user_id: string }).user_id)
-  );
-  if (optedOut.size > 0) {
-    allUsers = allUsers.filter((u) => !optedOut.has(u.id));
+  if (error) throw error;
+  const map = new Map<string, string | null>();
+  for (const r of data ?? []) {
+    const row = r as { user_id: string; updated_at?: string | null };
+    if (row.user_id) map.set(row.user_id, row.updated_at ?? null);
   }
+  return map;
+}
 
-  const userIds = allUsers.map((u) => u.id);
+/**
+ * Résout profiles.battle_tag pour un lot d'user ids (chunké à 500).
+ * Renvoie une map user_id -> battle_tag brut.
+ */
+async function fetchBattleTags(
+  userIds: string[]
+): Promise<Map<string, string>> {
+  if (!supabaseAdmin) {
+    throw new Error('Supabase admin not configured');
+  }
   const battleTagById = new Map<string, string>();
   const CHUNK = 500;
   for (let i = 0; i < userIds.length; i += CHUNK) {
@@ -263,17 +277,122 @@ export async function computeAudienceRecipients(
       }
     }
   }
+  return battleTagById;
+}
 
-  return allUsers.map((u) => {
-    const battleTag = battleTagById.get(u.id);
-    let label: string | null = null;
-    if (battleTag) {
-      label = battleTag.split('#')[0]?.trim() || battleTag;
-    } else if (u.display_name) {
-      label = u.display_name.trim() || null;
+/**
+ * Résout le label de greeting : prénom depuis battle_tag (avant "#"),
+ * fallback display_name, puis null.
+ */
+function resolveLabel(
+  battleTag: string | undefined,
+  displayName: string | null
+): string | null {
+  if (battleTag) {
+    return battleTag.split('#')[0]?.trim() || battleTag;
+  }
+  if (displayName) {
+    return displayName.trim() || null;
+  }
+  return null;
+}
+
+/**
+ * Calcule la liste des destinataires éligibles pour une audience donnée.
+ * - Itère auth.users (paginé), filtre les comptes confirmés
+ * - Récupère profiles.battle_tag pour le greeting (split sur "#")
+ * - Fallback sur user_metadata.display_name puis null
+ * - Exclut les opt-out RGPD broadcast (UNE requête, pas de N+1)
+ */
+export async function computeAudienceRecipients(
+  audience: CampaignAudience
+): Promise<ComputedRecipient[]> {
+  if (!supabaseAdmin) {
+    throw new Error('Supabase admin not configured');
+  }
+  if (audience !== 'all-confirmed-users') {
+    throw new Error(`Unsupported audience: ${audience}`);
+  }
+
+  const confirmed = await listConfirmedUsers();
+  const optedOut = await fetchBroadcastOptOuts();
+  const eligible =
+    optedOut.size > 0
+      ? confirmed.filter((u) => !optedOut.has(u.id))
+      : confirmed;
+
+  const battleTagById = await fetchBattleTags(eligible.map((u) => u.id));
+
+  return eligible.map((u) => ({
+    user_id: u.id,
+    email: u.email,
+    label: resolveLabel(battleTagById.get(u.id), u.display_name),
+  }));
+}
+
+export type UnsubscribedUser = {
+  email: string;
+  label: string | null;
+  unsubscribedAt: string | null;
+};
+
+export type SubscriptionStats = {
+  totalConfirmed: number;
+  subscribed: number;
+  unsubscribed: number;
+  unsubscribedUsers: UnsubscribedUser[];
+};
+
+/**
+ * Statistiques d'abonnement broadcast pour le dashboard staff.
+ * - Compteurs calculés UNIQUEMENT sur les comptes confirmés (cohérent avec
+ *   l'audience réelle) : un opt-out d'un compte non-confirmé/supprimé est
+ *   ignoré des compteurs.
+ * - `unsubscribedUsers` trié par date de désinscription décroissante
+ *   (les plus récents d'abord ; null en dernier).
+ */
+export async function computeSubscriptionStats(): Promise<SubscriptionStats> {
+  if (!supabaseAdmin) {
+    throw new Error('Supabase admin not configured');
+  }
+
+  const optedOut = await fetchBroadcastOptOuts();
+  const confirmed = await listConfirmedUsers();
+
+  // On ne résout les battle_tags que pour les désabonnés confirmés (le seul
+  // sous-ensemble dont on expose le label).
+  const unsubConfirmed = confirmed.filter((u) => optedOut.has(u.id));
+  const battleTagById = await fetchBattleTags(unsubConfirmed.map((u) => u.id));
+
+  let subscribed = 0;
+  const unsubscribedUsers: UnsubscribedUser[] = [];
+  for (const u of confirmed) {
+    if (optedOut.has(u.id)) {
+      unsubscribedUsers.push({
+        email: u.email,
+        label: resolveLabel(battleTagById.get(u.id), u.display_name),
+        unsubscribedAt: optedOut.get(u.id) ?? null,
+      });
+    } else {
+      subscribed += 1;
     }
-    return { user_id: u.id, email: u.email, label };
+  }
+
+  // Tri par date décroissante ; null en dernier.
+  unsubscribedUsers.sort((a, b) => {
+    if (a.unsubscribedAt === b.unsubscribedAt) return 0;
+    if (a.unsubscribedAt === null) return 1;
+    if (b.unsubscribedAt === null) return -1;
+    return a.unsubscribedAt < b.unsubscribedAt ? 1 : -1;
   });
+
+  const unsubscribed = unsubscribedUsers.length;
+  return {
+    totalConfirmed: subscribed + unsubscribed,
+    subscribed,
+    unsubscribed,
+    unsubscribedUsers,
+  };
 }
 
 export type WaveResult = {

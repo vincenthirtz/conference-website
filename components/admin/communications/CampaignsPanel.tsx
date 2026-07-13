@@ -71,6 +71,19 @@ type SendResult = {
   errors?: string[];
 };
 
+type UnsubscribedUser = {
+  email: string;
+  label: string | null;
+  unsubscribedAt: string | null;
+};
+
+type SubscriptionsSummary = {
+  totalConfirmed: number;
+  subscribed: number;
+  unsubscribed: number;
+  unsubscribedUsers: UnsubscribedUser[];
+};
+
 function getStatusStyles(
   t: Dict
 ): Record<string, { label: string; className: string }> {
@@ -219,6 +232,9 @@ export default function CampaignsPanel() {
           </div>
         </div>
       </div>
+
+      {/* Synthèse des abonnements (opt-out global) */}
+      <SubscriptionsCard />
 
       {/* Error */}
       {errorMsg && (
@@ -525,6 +541,164 @@ function Stat({ label, value }: { label: string; value: string }) {
       </div>
       <div className="text-sm font-medium text-white truncate">{value}</div>
     </div>
+  );
+}
+
+/**
+ * Carte de synthèse « Abonnements » : compteurs abonné·es / désabonné·es /
+ * total confirmés (opt-out GLOBAL, pas par campagne) + disclosure listant les
+ * désabonné·es. Alimentée par GET /api/admin/broadcast/subscriptions. Dégrade
+ * proprement tant que l'endpoint n'est pas déployé (état erreur + réessai).
+ */
+function SubscriptionsCard() {
+  const t = useAdminT('adminCampaigns');
+  const { adminFetchJson } = useAdminFetch();
+
+  const [data, setData] = useState<SubscriptionsSummary | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState(false);
+  const listId = useId();
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const json = await adminFetchJson<SubscriptionsSummary>(
+        '/api/admin/broadcast/subscriptions'
+      );
+      setData(json);
+    } catch (err: unknown) {
+      setError((err as Error)?.message || t.subsError);
+    } finally {
+      setLoading(false);
+    }
+  }, [adminFetchJson, t]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const users = data?.unsubscribedUsers ?? [];
+  const unsubCount = data?.unsubscribed ?? users.length;
+
+  return (
+    <section className="mb-6 bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+        <div>
+          <h2 className="text-lg font-semibold">{t.subsHeading}</h2>
+          <p className="text-xs text-neutral-500 mt-0.5">{t.subsIntro}</p>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="flex items-center justify-center py-8">
+          <div className="w-6 h-6 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
+        </div>
+      ) : error ? (
+        <div className="rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm flex items-center gap-2">
+          <span className="flex-1">{error}</span>
+          <button
+            type="button"
+            onClick={() => load()}
+            className="flex-shrink-0 px-3 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-xs font-medium transition-colors"
+          >
+            {t.retry}
+          </button>
+        </div>
+      ) : data ? (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <Stat
+              label={t.subsStatSubscribed}
+              value={String(data.subscribed)}
+            />
+            <Stat
+              label={t.subsStatUnsubscribed}
+              value={String(data.unsubscribed)}
+            />
+            <Stat label={t.subsStatTotal} value={String(data.totalConfirmed)} />
+          </div>
+
+          <div className="mt-4">
+            <button
+              type="button"
+              onClick={() => setExpanded((v) => !v)}
+              aria-expanded={expanded}
+              aria-controls={listId}
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-neutral-700 hover:bg-neutral-600 border border-neutral-600 text-sm font-medium transition-colors"
+            >
+              <svg
+                className={`w-4 h-4 transition-transform ${
+                  expanded ? 'rotate-90' : ''
+                }`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
+              {format(t.subsViewUnsubscribed, { count: unsubCount })}
+            </button>
+
+            {expanded && (
+              <div id={listId} className="mt-3">
+                {users.length === 0 ? (
+                  <div className="rounded-xl bg-neutral-900/50 border border-neutral-700/40 px-4 py-6 text-center text-sm text-neutral-400">
+                    {t.subsUnsubEmpty}
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto rounded-xl border border-neutral-700/40">
+                    <table className="w-full text-sm">
+                      <caption className="sr-only">
+                        {t.subsUnsubCaption}
+                      </caption>
+                      <thead>
+                        <tr className="bg-neutral-900/60 text-left text-[10px] text-neutral-500 uppercase tracking-wider">
+                          <th scope="col" className="px-4 py-2 font-medium">
+                            {t.subsUnsubColEmail}
+                          </th>
+                          <th scope="col" className="px-4 py-2 font-medium">
+                            {t.subsUnsubColLabel}
+                          </th>
+                          <th scope="col" className="px-4 py-2 font-medium">
+                            {t.subsUnsubColDate}
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {users.map((u) => (
+                          <tr
+                            key={u.email}
+                            className="border-t border-neutral-800"
+                          >
+                            <td className="px-4 py-2 text-neutral-200 break-all">
+                              {u.email}
+                            </td>
+                            <td className="px-4 py-2 text-neutral-300">
+                              {u.label || '—'}
+                            </td>
+                            <td className="px-4 py-2 text-neutral-400 whitespace-nowrap">
+                              {formatDateTime(u.unsubscribedAt)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </>
+      ) : null}
+    </section>
   );
 }
 
@@ -1289,7 +1463,9 @@ function CampaignDrawer({
           zIndexClassName="z-[210]"
           backdropClassName="bg-black/70"
           panelChromeClassName="rounded-2xl bg-neutral-900 border border-neutral-700"
-          title={<h3 className="text-lg font-semibold">{t.confirmSendTitle}</h3>}
+          title={
+            <h3 className="text-lg font-semibold">{t.confirmSendTitle}</h3>
+          }
           footer={
             <>
               <button

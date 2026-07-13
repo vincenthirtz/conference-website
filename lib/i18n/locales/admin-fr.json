@@ -5161,7 +5161,19 @@
     "footerLabel": "Note de bas de page (optionnel)",
     "footerPlaceholder": "Tu reçois cet email car tu as un compte confirmé.",
     "save": "Enregistrer",
-    "createCampaignBtn": "Créer la campagne"
+    "createCampaignBtn": "Créer la campagne",
+    "subsHeading": "Abonnements",
+    "subsIntro": "Ces chiffres concernent les emails d'annonces/campagnes (opt-out global).",
+    "subsStatSubscribed": "Abonné·es",
+    "subsStatUnsubscribed": "Désabonné·es",
+    "subsStatTotal": "Total confirmés",
+    "subsError": "Impossible de charger les abonnements.",
+    "subsViewUnsubscribed": "Voir les désabonné·es ({count})",
+    "subsUnsubEmpty": "Personne n'est désabonné pour le moment 🎉",
+    "subsUnsubCaption": "Liste des comptes désabonnés des emails de campagnes, du plus récent au plus ancien.",
+    "subsUnsubColEmail": "Email",
+    "subsUnsubColLabel": "Prénom",
+    "subsUnsubColDate": "Désinscrit·e le"
   },
   "adminSiteSettings": {
     "pageTitle": "Admin – Paramètres du site",

@@ -5161,7 +5161,19 @@
     "footerLabel": "Footer note (optional)",
     "footerPlaceholder": "You're receiving this email because you have a confirmed account.",
     "save": "Save",
-    "createCampaignBtn": "Create the campaign"
+    "createCampaignBtn": "Create the campaign",
+    "subsHeading": "Subscriptions",
+    "subsIntro": "These figures cover announcement/campaign emails (global opt-out).",
+    "subsStatSubscribed": "Subscribed",
+    "subsStatUnsubscribed": "Unsubscribed",
+    "subsStatTotal": "Confirmed total",
+    "subsError": "Unable to load subscriptions.",
+    "subsViewUnsubscribed": "View unsubscribed ({count})",
+    "subsUnsubEmpty": "Nobody is unsubscribed for now 🎉",
+    "subsUnsubCaption": "List of accounts unsubscribed from campaign emails, most recent first.",
+    "subsUnsubColEmail": "Email",
+    "subsUnsubColLabel": "First name",
+    "subsUnsubColDate": "Unsubscribed on"
   },
   "adminSiteSettings": {
     "pageTitle": "Admin – Site settings",

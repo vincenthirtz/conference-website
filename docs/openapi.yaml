@@ -8908,6 +8908,65 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /api/admin/broadcast/subscriptions:
+    get:
+      summary: Broadcast email subscription stats (subscribed / unsubscribed).
+      description: |
+        Aggregates who is subscribed vs opted out of broadcast email campaigns.
+        The opt-out is GLOBAL per user (a single
+        `notification_prefs(event_type='broadcast', channel='email',
+        enabled=false)` row), not per campaign. Counters are computed over
+        CONFIRMED accounts only (consistent with the real audience); an opt-out
+        belonging to an unconfirmed/deleted account is ignored. The
+        `unsubscribedUsers` list is sorted by unsubscribe date descending (most
+        recent first; null last).
+      operationId: adminGetBroadcastSubscriptions
+      tags:
+        - admin/broadcast
+      security:
+        - StaffSession: []
+      responses:
+        '200':
+          description: Subscription stats.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - totalConfirmed
+                  - subscribed
+                  - unsubscribed
+                  - unsubscribedUsers
+                properties:
+                  totalConfirmed:
+                    type: integer
+                    description: subscribed + unsubscribed (confirmed accounts).
+                  subscribed:
+                    type: integer
+                  unsubscribed:
+                    type: integer
+                  unsubscribedUsers:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                        - email
+                        - label
+                        - unsubscribedAt
+                      properties:
+                        email:
+                          type: string
+                        label:
+                          type: string
+                          nullable: true
+                        unsubscribedAt:
+                          type: string
+                          format: date-time
+                          nullable: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /api/admin/broadcast/state:
     get:
       summary: Aggregate live state of the broadcast console.
