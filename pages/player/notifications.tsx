@@ -12,7 +12,9 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
 import { useT } from '@/lib/i18n/useT';
 import PushOptIn from '@/components/shared/PushOptIn';
-import NotificationPrefsGrid from '@/components/player/NotificationPrefsGrid';
+import NotificationPrefsGrid, {
+  ChannelToggle,
+} from '@/components/player/NotificationPrefsGrid';
 import QuickAction, {
   type QuickActionProps,
 } from '@/components/player/QuickAction';
@@ -27,10 +29,13 @@ import { logger } from '../../utils/logger';
 // `push` = opt-OUT (clé absente => activé). `email` = opt-IN (clé absente =>
 // désactivé). Les deux maps peuvent couvrir des ensembles d'event_types
 // DIFFÉRENTS — on rend les clés propres à chaque map.
+// `broadcastEmail` = abonnement aux emails d'annonces/campagnes (opt-OUT,
+// défaut `true`) ; champ top-level distinct des deux maps par-event_type.
 type NotificationChannel = 'push' | 'email';
 type PrefsResponse = {
   push: Record<string, boolean>;
   email: Record<string, boolean>;
+  broadcastEmail: boolean;
 };
 
 const SVG_PATHS = {
@@ -81,6 +86,7 @@ function PlayerNotifications() {
       setPrefs({
         push: prefsData.push ?? {},
         email: prefsData.email ?? {},
+        broadcastEmail: prefsData.broadcastEmail ?? true,
       });
     }
     if (!countersData && !prefsData) {
@@ -101,16 +107,20 @@ function PlayerNotifications() {
   ) => {
     const saveKey = `${channel}:${eventType}`;
     setSavingKey(saveKey);
-    // Optimistic update + snapshot pour rollback.
+    // Optimistic update + snapshot pour rollback. Le toggle « Annonces »
+    // (broadcast/email) est un champ top-level, pas une entrée des maps.
+    const isBroadcast = channel === 'email' && eventType === 'broadcast';
     const previous = prefs;
-    setPrefs((current) =>
-      current
-        ? {
-            ...current,
-            [channel]: { ...current[channel], [eventType]: nextEnabled },
-          }
-        : current
-    );
+    setPrefs((current) => {
+      if (!current) return current;
+      if (isBroadcast) {
+        return { ...current, broadcastEmail: nextEnabled };
+      }
+      return {
+        ...current,
+        [channel]: { ...current[channel], [eventType]: nextEnabled },
+      };
+    });
     try {
       await adminFetchJson('/api/player/push/prefs', {
         method: 'PUT',
@@ -254,6 +264,31 @@ function PlayerNotifications() {
               savingKey={savingKey}
               onToggle={handleToggle}
             />
+
+            {/* Toggle dédié « Annonces & campagnes » — opt-OUT (abonné par
+                défaut), sémantique inverse de la grille email ci-dessus. */}
+            <div className="mt-4 flex items-center gap-4 rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-4 backdrop-blur-xl">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-white">
+                  {t.broadcastTitle}
+                </p>
+                <p className="mt-0.5 text-xs text-gray-500">
+                  {t.broadcastDesc}
+                </p>
+              </div>
+              <ChannelToggle
+                checked={prefs?.broadcastEmail ?? true}
+                disabled={savingKey === 'email:broadcast'}
+                onChange={() =>
+                  handleToggle(
+                    'broadcast',
+                    'email',
+                    !(prefs?.broadcastEmail ?? true)
+                  )
+                }
+                label={t.broadcastAriaLabel}
+              />
+            </div>
 
             <p className="text-xs text-gray-500 mt-3">{t.prefsFootnote}</p>
           </section>

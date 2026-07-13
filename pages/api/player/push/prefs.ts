@@ -16,6 +16,14 @@
 //   - push : on persiste seulement les opt-out (enabled=false).
 //   - email : on persiste seulement les opt-in (enabled=true).
 // Tout retour au défaut = suppression de la row.
+//
+// Cas spécial BROADCAST (annonces/campagnes) : le combo
+// (event_type='broadcast', channel='email') vit sur le canal email mais suit un
+// modèle OPT-OUT (abonné par défaut = true), posé par la désinscription RGPD et
+// relu par utils/broadcasts::computeAudienceRecipients. Il est exposé à part via
+// le champ top-level `broadcastEmail` du corps GET/PUT, sans toucher les maps
+// push/email. Réabonnement (enabled=true) = suppression de la row ; désinscription
+// (enabled=false) = insertion de la row.
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import type { User } from '@supabase/supabase-js';
@@ -28,6 +36,7 @@ import { logger } from '@/utils/logger';
 import {
   PLAYER_PUSH_EVENT_TYPES,
   EMAIL_EVENT_TYPES,
+  BROADCAST_OPT_OUT_EVENT_TYPE,
 } from '@/utils/webPushEvents';
 
 type Channel = 'push' | 'email';
@@ -42,6 +51,37 @@ const CHANNEL_DEFAULT: Record<Channel, boolean> = {
   push: true,
   email: false,
 };
+
+/**
+ * Le combo BROADCAST est un cas à part : bien que sur le canal 'email', son
+ * modèle est OPT-OUT (absent = abonné = true), à l'inverse des EMAIL_EVENT_TYPES
+ * qui sont opt-IN. Cette valeur sentinelle hors-catalogue est posée par la
+ * désinscription RGPD et relue par computeAudienceRecipients (utils/broadcasts).
+ */
+function isBroadcastCombo(channel: Channel, eventType: string): boolean {
+  return channel === 'email' && eventType === BROADCAST_OPT_OUT_EVENT_TYPE;
+}
+
+/**
+ * Défaut applicable à un (channel, eventType) donné. Pour le combo broadcast le
+ * défaut est OPT-OUT = true (abonné) ; sinon on retombe sur le défaut du canal.
+ */
+function defaultFor(channel: Channel, eventType: string): boolean {
+  if (eventType === BROADCAST_OPT_OUT_EVENT_TYPE) return true;
+  return CHANNEL_DEFAULT[channel];
+}
+
+/**
+ * Un event_type est-il valide pour ce canal ? On accepte la whitelist du canal
+ * OU le combo broadcast (email uniquement). Tout autre event_type inconnu reste
+ * rejeté (INVALID_EVENT_TYPE).
+ */
+function isValidCombo(channel: Channel, eventType: string): boolean {
+  return (
+    CHANNEL_TYPES[channel].includes(eventType) ||
+    isBroadcastCombo(channel, eventType)
+  );
+}
 
 const prefsPutSchema = z.object({
   eventType: z.string().min(1),
@@ -86,10 +126,26 @@ function mergeChannel(
   return out;
 }
 
+/**
+ * Abonnement aux emails BROADCAST (annonces / campagnes). Modèle OPT-OUT :
+ * abonné par défaut (true), désinscrit uniquement si une row
+ * (event_type='broadcast', channel='email', enabled=false) existe.
+ */
+function computeBroadcastEmail(rows: PrefRow[]): boolean {
+  const optedOut = rows.some(
+    (r) =>
+      r.channel === 'email' &&
+      r.event_type === BROADCAST_OPT_OUT_EVENT_TYPE &&
+      r.enabled === false
+  );
+  return !optedOut;
+}
+
 function buildResponse(rows: PrefRow[]) {
   return {
     push: mergeChannel(rows, 'push'),
     email: mergeChannel(rows, 'email'),
+    broadcastEmail: computeBroadcastEmail(rows),
   };
 }
 
@@ -128,8 +184,9 @@ async function handler(
 
     const { eventType, channel, enabled } = parsed.data;
 
-    // Validation : l'event_type doit appartenir à la whitelist du canal visé.
-    if (!CHANNEL_TYPES[channel].includes(eventType)) {
+    // Validation : l'event_type doit appartenir à la whitelist du canal visé,
+    // ou être le combo broadcast (email opt-out RGPD).
+    if (!isValidCombo(channel, eventType)) {
       return res.status(400).json({
         error: `event_type "${eventType}" non autorisé pour le canal "${channel}".`,
         code: 'INVALID_EVENT_TYPE',
@@ -138,7 +195,8 @@ async function handler(
 
     // Une row n'existe que pour un état NON-DÉFAUT. On supprime d'abord la row
     // ciblée (user, event_type, channel), puis on ré-insère uniquement si
-    // `enabled` diffère du défaut du canal.
+    // `enabled` diffère du défaut. Le défaut dépend de l'event_type (le combo
+    // broadcast est opt-OUT = true) et pas seulement du canal.
     const { error: deleteError } = await supabaseAdmin!
       .from('notification_prefs')
       .delete()
@@ -150,7 +208,7 @@ async function handler(
       return res.status(500).json({ error: 'Erreur serveur.' });
     }
 
-    if (enabled !== CHANNEL_DEFAULT[channel]) {
+    if (enabled !== defaultFor(channel, eventType)) {
       const { error: insertError } = await supabaseAdmin!
         .from('notification_prefs')
         .insert({

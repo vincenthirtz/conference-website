@@ -22,6 +22,7 @@ import {
 import {
   PLAYER_PUSH_EVENT_TYPES,
   EMAIL_EVENT_TYPES,
+  BROADCAST_OPT_OUT_EVENT_TYPE,
 } from '@/utils/webPushEvents';
 
 import handler from '@/pages/api/player/push/prefs';
@@ -63,6 +64,7 @@ function makeRes() {
 type PrefsBody = {
   push: Record<string, boolean>;
   email: Record<string, boolean>;
+  broadcastEmail: boolean;
 };
 
 describe('GET /api/player/push/prefs (channel-aware)', () => {
@@ -348,6 +350,192 @@ describe('PUT /api/player/push/prefs (channel-aware)', () => {
       )
     ).toBe(false);
     expect((res.body as PrefsBody).email['news.published']).toBe(false);
+  });
+});
+
+describe('broadcastEmail (opt-out RGPD, top-level field)', () => {
+  beforeEach(() => {
+    resetSupabaseMock();
+    setAuthUser({ id: USER_ID });
+  });
+
+  it('GET defaults broadcastEmail to true when no opt-out row exists', async () => {
+    const req = makeReq({ method: 'GET' });
+    const res = makeRes();
+    await handler(req, res);
+
+    expect(res.statusCode).toBe(200);
+    expect((res.body as PrefsBody).broadcastEmail).toBe(true);
+  });
+
+  it('GET returns broadcastEmail=false when the opt-out row exists', async () => {
+    store.notification_prefs = [
+      {
+        user_id: USER_ID,
+        event_type: BROADCAST_OPT_OUT_EVENT_TYPE,
+        channel: 'email',
+        enabled: false,
+      },
+    ];
+
+    const req = makeReq({ method: 'GET' });
+    const res = makeRes();
+    await handler(req, res);
+
+    const body = res.body as PrefsBody;
+    expect(body.broadcastEmail).toBe(false);
+    // The broadcast sentinel must NOT leak into the email event-type map.
+    expect(
+      Object.prototype.hasOwnProperty.call(
+        body.email,
+        BROADCAST_OPT_OUT_EVENT_TYPE
+      )
+    ).toBe(false);
+    // Existing email opt-in defaults stay untouched.
+    expect(Object.values(body.email).every((v) => v === false)).toBe(true);
+  });
+
+  it('ignores a broadcast opt-out row belonging to another user', async () => {
+    store.notification_prefs = [
+      {
+        user_id: 'other-user',
+        event_type: BROADCAST_OPT_OUT_EVENT_TYPE,
+        channel: 'email',
+        enabled: false,
+      },
+    ];
+
+    const req = makeReq({ method: 'GET' });
+    const res = makeRes();
+    await handler(req, res);
+
+    expect((res.body as PrefsBody).broadcastEmail).toBe(true);
+  });
+
+  it('PUT {broadcast, email, false} inserts the opt-out row and flips broadcastEmail to false', async () => {
+    const putReq = makeReq({
+      method: 'PUT',
+      body: {
+        eventType: BROADCAST_OPT_OUT_EVENT_TYPE,
+        channel: 'email',
+        enabled: false,
+      },
+    });
+    const putRes = makeRes();
+    await handler(putReq, putRes);
+
+    expect(putRes.statusCode).toBe(200);
+    expect((putRes.body as PrefsBody).broadcastEmail).toBe(false);
+
+    // The opt-out row (broadcast, email, false) must be persisted — this is the
+    // exact row read by utils/broadcasts::computeAudienceRecipients.
+    expect(
+      (store.notification_prefs ?? []).some(
+        (r) =>
+          r.user_id === USER_ID &&
+          r.event_type === BROADCAST_OPT_OUT_EVENT_TYPE &&
+          r.channel === 'email' &&
+          r.enabled === false
+      )
+    ).toBe(true);
+
+    const getReq = makeReq({ method: 'GET' });
+    const getRes = makeRes();
+    await handler(getReq, getRes);
+    expect((getRes.body as PrefsBody).broadcastEmail).toBe(false);
+  });
+
+  it('PUT {broadcast, email, true} deletes the opt-out row and restores broadcastEmail to true', async () => {
+    store.notification_prefs = [
+      {
+        user_id: USER_ID,
+        event_type: BROADCAST_OPT_OUT_EVENT_TYPE,
+        channel: 'email',
+        enabled: false,
+      },
+    ];
+
+    const req = makeReq({
+      method: 'PUT',
+      body: {
+        eventType: BROADCAST_OPT_OUT_EVENT_TYPE,
+        channel: 'email',
+        enabled: true,
+      },
+    });
+    const res = makeRes();
+    await handler(req, res);
+
+    expect(res.statusCode).toBe(200);
+    expect((res.body as PrefsBody).broadcastEmail).toBe(true);
+    // Re-subscribing = default = no row persisted (never an enabled=true row).
+    expect(
+      (store.notification_prefs ?? []).some(
+        (r) =>
+          r.user_id === USER_ID &&
+          r.event_type === BROADCAST_OPT_OUT_EVENT_TYPE &&
+          r.channel === 'email'
+      )
+    ).toBe(false);
+  });
+
+  it('broadcast opt-out does not touch push/email event-type prefs', async () => {
+    store.notification_prefs = [
+      {
+        user_id: USER_ID,
+        event_type: 'news.published',
+        channel: 'email',
+        enabled: true,
+      },
+      {
+        user_id: USER_ID,
+        event_type: 'team.forfeit',
+        channel: 'push',
+        enabled: false,
+      },
+    ];
+
+    const putReq = makeReq({
+      method: 'PUT',
+      body: {
+        eventType: BROADCAST_OPT_OUT_EVENT_TYPE,
+        channel: 'email',
+        enabled: false,
+      },
+    });
+    const putRes = makeRes();
+    await handler(putReq, putRes);
+
+    const body = putRes.body as PrefsBody;
+    expect(body.broadcastEmail).toBe(false);
+    // Pre-existing per-event prefs are preserved through the broadcast mutation.
+    expect(body.email['news.published']).toBe(true);
+    expect(body.push['team.forfeit']).toBe(false);
+    expect(
+      (store.notification_prefs ?? []).some(
+        (r) =>
+          r.user_id === USER_ID &&
+          r.event_type === 'news.published' &&
+          r.channel === 'email' &&
+          r.enabled === true
+      )
+    ).toBe(true);
+  });
+
+  it('rejects the broadcast sentinel on the push channel (INVALID_EVENT_TYPE)', async () => {
+    const req = makeReq({
+      method: 'PUT',
+      body: {
+        eventType: BROADCAST_OPT_OUT_EVENT_TYPE,
+        channel: 'push',
+        enabled: false,
+      },
+    });
+    const res = makeRes();
+    await handler(req, res);
+
+    expect(res.statusCode).toBe(400);
+    expect((res.body as { code?: string }).code).toBe('INVALID_EVENT_TYPE');
   });
 });
 

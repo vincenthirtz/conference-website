@@ -35,7 +35,7 @@ type Props = {
   ) => void;
 };
 
-function ChannelToggle({
+export function ChannelToggle({
   checked,
   disabled,
   onChange,
