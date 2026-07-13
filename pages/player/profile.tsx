@@ -11,6 +11,7 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
+import DiscoveryCard from '@/components/player/DiscoveryCard';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 
 import { logger } from '../../utils/logger';
@@ -498,6 +499,9 @@ function PlayerProfile() {
               </button>
             </form>
           </section>
+
+          {/* Découverte / Réseau joueurs — opt-in global, invisible par défaut */}
+          <DiscoveryCard />
 
           {/* Vérifier mon BattleTag (Battle.net OAuth) — masquée si feature dormante */}
           {bnStatus?.configured && (
