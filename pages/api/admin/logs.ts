@@ -123,7 +123,40 @@ async function handler(
     }
 
     const rawLogs = ((data as unknown) || []) as StaffLog[];
-    const formatted = rawLogs.map((log) => formatStaffLog(log));
+
+    // Résolution de l'acteur : staff_id -> display_name (fallback email).
+    // Pas de relation FK exploitable côté PostgREST (cf. select simple), donc
+    // lookup des noms en UNE requête sur la table staff pour les ids de la page.
+    const staffIds = Array.from(
+      new Set(
+        rawLogs.map((l) => l.staff_id).filter((id): id is string => !!id)
+      )
+    );
+    const staffNameById = new Map<string, string>();
+    if (staffIds.length > 0) {
+      const { data: staffRows, error: staffErr } = await supabaseAdmin
+        .from('staff')
+        .select('id, display_name, email')
+        .in('id', staffIds);
+      if (staffErr) {
+        logger.error('admin logs staff lookup error:', staffErr);
+      }
+      for (const s of (staffRows ?? []) as {
+        id: string;
+        display_name: string | null;
+        email: string | null;
+      }[]) {
+        const name = s.display_name?.trim() || s.email?.trim() || null;
+        if (name) staffNameById.set(s.id, name);
+      }
+    }
+
+    const formatted = rawLogs.map((log) => ({
+      ...formatStaffLog(log),
+      staff_display_name: log.staff_id
+        ? (staffNameById.get(log.staff_id) ?? null)
+        : null,
+    }));
 
     return res.status(200).json({
       logs: formatted,
