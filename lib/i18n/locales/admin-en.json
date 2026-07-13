@@ -188,6 +188,8 @@
     "navSiteSettingsDesc": "General site configuration.",
     "navApiTokensTitle": "Tokens API",
     "navApiTokensDesc": "Tokens d'accès scopés à l'API publique.",
+    "navWebhooksTitle": "Webhooks (API)",
+    "navWebhooksDesc": "Subscribe a URL to receive our events as HMAC-signed POSTs.",
     "navRecycleBinTitle": "Recycle bin",
     "navRecycleBinDesc": "Restore deleted items (stages, teams, matches…).",
     "navTenantsTitle": "Tenants",

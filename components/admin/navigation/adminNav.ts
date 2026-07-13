@@ -561,6 +561,23 @@ export const ADMIN_NAV: AdminNavNode[] = [
           accent: 'border-teal-500/30 from-teal-500/10 text-teal-300',
         },
       },
+      // Webhooks sortants (API dev) : dashboard-only, groupé juste après les
+      // tokens API (même famille « écosystème développeur », secret révélé une
+      // fois). À NE PAS confondre avec l'entrée top-bar « Webhooks Discord (par
+      // tournoi) » (notifications Discord par tournoi, → /admin/tournaments).
+      // order 14.5 pour s'insérer entre api-tokens (14) et recycle-bin (15).
+      {
+        id: 'webhooks',
+        href: '/admin/webhooks',
+        minRole: 'admin',
+        card: {
+          order: 14.5,
+          titleKey: 'navWebhooksTitle',
+          descKey: 'navWebhooksDesc',
+          icon: 'signal',
+          accent: 'border-teal-500/30 from-teal-500/10 text-teal-300',
+        },
+      },
       // Corbeille : UI de restauration soft-delete (stages/équipes/matchs/…).
       // Outil de récupération occasionnel → dashboard-only (pas de top-bar),
       // comme les autres utilitaires ci-dessus, pour ne pas surcharger le menu.
