@@ -224,7 +224,38 @@ curl -X POST https://<host>/api/graphql \
   `/admin/api-tokens` (affichées une seule fois). Le guide public
   `/developpeurs` pointe vers cette page.
 
-## 6. À maintenir en sync (anti-dérive)
+## 6. Webhooks sortants (outbound)
+
+Un tenant abonne une URL et reçoit nos events en **POST signé** — le pendant
+« push » de l'API (qui, elle, est « pull »).
+
+- **Gestion** : `/admin/webhooks` (staff `admin`+). API : `GET`/`POST
+  /api/admin/webhooks`, `PATCH`/`DELETE /api/admin/webhooks/{id}`, `GET
+  /api/admin/webhooks/{id}/deliveries`. Le **secret de signature** est renvoyé
+  **une seule fois** à la création (stocké en clair, service_role only, car le
+  dispatcher doit signer).
+- **Events exposables** (liste blanche `WEBHOOK_EVENT_TYPES`, `utils/webhooks.ts`)
+  — sous-ensemble PUBLIC : `match.scheduled/starting/finished/disputed/
+  dispute.resolved/forfeit`, `tournament.finalized`, `registration.new`,
+  `news.published`, `checkin.opened`. Les events Discord internes ne sont
+  **jamais** exposés (même via `'*'`).
+- **Livraison** : le cron `webhook-dispatcher-cron` (chaque minute) lit
+  `bot_event_outbox` en **read-only** (3ᵉ sink après web-push / email — ne touche
+  pas `.status`, propriété du bot), fan-out vers les abonnements actifs, tracking
+  + idempotence dans `webhook_deliveries` (`UNIQUE(subscription_id,
+  outbox_event_id)`). Handler : `pages/api/cron/webhook-dispatch.ts`.
+- **Signature** : en-tête `X-Webhook-Signature: sha256=<hmac hex>` = HMAC-SHA256
+  du corps brut avec le secret d'abonnement. Autres en-têtes : `X-Webhook-Event`,
+  `X-Webhook-Id`, `X-Tenant-Id`. Le corps EST l'enveloppe outbox
+  `{ id, event, tenantId, timestamp, data }`.
+- **Retry** : chaque (event, abonnement) est re-tentée à chaque tick jusqu'à
+  `WEBHOOK_MAX_ATTEMPTS` (5). Un endpoint qui échoue
+  `WEBHOOK_MAX_CONSECUTIVE_FAILURES` (15) fois d'affilée est **auto-désactivé** ;
+  un succès remet le compteur à 0.
+- Tables : `webhook_subscriptions` / `webhook_deliveries` (migration
+  `create_webhook_subscriptions_and_deliveries.sql`), RLS service_role only.
+
+## 7. À maintenir en sync (anti-dérive)
 
 Toute évolution de cette surface DOIT mettre à jour, ensemble :
 

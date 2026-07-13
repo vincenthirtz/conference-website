@@ -14876,6 +14876,127 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /api/admin/webhooks:
+    get:
+      tags:
+        - admin/misc
+      summary: Liste les abonnements webhook sortants du tenant courant.
+      operationId: adminListWebhooks
+      security:
+        - StaffSession: []
+      responses:
+        '200':
+          description: Abonnements + liste blanche d'events (jamais le secret).
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      tags:
+        - admin/misc
+      summary: Crée un abonnement webhook (secret de signature renvoyé une fois).
+      operationId: adminCreateWebhook
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - url
+                - event_types
+              properties:
+                url:
+                  type: string
+                  format: uri
+                event_types:
+                  type: array
+                  items:
+                    type: string
+                description:
+                  type: string
+      responses:
+        '201':
+          description: Abonnement créé + secret HMAC (affiché une seule fois).
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/admin/webhooks/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    patch:
+      tags:
+        - admin/misc
+      summary: Active/désactive un abonnement webhook.
+      operationId: adminPatchWebhook
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - enabled
+              properties:
+                enabled:
+                  type: boolean
+      responses:
+        '200':
+          description: Abonnement mis à jour.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags:
+        - admin/misc
+      summary: Supprime un abonnement webhook (CASCADE ses livraisons).
+      operationId: adminDeleteWebhook
+      security:
+        - StaffSession: []
+      responses:
+        '200':
+          description: Supprimé.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/admin/webhooks/{id}/deliveries:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags:
+        - admin/misc
+      summary: Dernières livraisons d'un abonnement webhook (debug).
+      operationId: adminListWebhookDeliveries
+      security:
+        - StaffSession: []
+      responses:
+        '200':
+          description: Jusqu'à 50 livraisons récentes (event, statut, HTTP, erreur).
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/admin/api-tokens:
     get:
       summary: List the active tenant's public API tokens (metadata only).
@@ -17718,6 +17839,42 @@ paths:
               schema:
                 type: object
                 additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/cron/webhook-dispatch:
+    get:
+      tags:
+        - cron
+      summary: Dispatcher des webhooks sortants (lit bot_event_outbox, POST signés).
+      operationId: cronWebhookDispatchGet
+      description: |
+        Schedule: chaque minute (`* * * * *`) via Netlify scheduled function
+        `webhook-dispatcher-cron`. Lit `bot_event_outbox` en read-only, fan-out
+        vers les `webhook_subscriptions` actives de chaque tenant (POST signé
+        HMAC-SHA256), tracking + retry dans `webhook_deliveries`.
+
+        Auth: `Authorization: Bearer <CRON_SECRET>` ou `?secret=<CRON_SECRET>`.
+      security:
+        - CronSecret: []
+      responses:
+        '200':
+          description: Résumé du tick (delivered / failed / skipped / disabled).
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      tags:
+        - cron
+      summary: Dispatcher des webhooks sortants (variante POST).
+      operationId: cronWebhookDispatchPost
+      security:
+        - CronSecret: []
+      responses:
+        '200':
+          description: Résumé du tick.
         '401':
           $ref: '#/components/responses/Unauthorized'
         '500':
