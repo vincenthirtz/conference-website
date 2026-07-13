@@ -239,6 +239,11 @@ Un tenant abonne une URL et reçoit nos events en **POST signé** — le pendant
   dispute.resolved/forfeit`, `tournament.finalized`, `registration.new`,
   `news.published`, `checkin.opened`. Les events Discord internes ne sont
   **jamais** exposés (même via `'*'`).
+- **Catalogue public** : `GET /api/public/webhook-events` (anonyme, CORS `*`,
+  edge-caché `s-maxage=3600`) renvoie
+  `{ data: { events: [{ type, description }], signature: { header, algo, format } } }`
+  — dérivé de la même liste blanche `WEBHOOK_EVENT_TYPES`, sans dupliquer la copie
+  côté client. Handler : `pages/api/public/webhook-events.ts`.
 - **Livraison** : le cron `webhook-dispatcher-cron` (chaque minute) lit
   `bot_event_outbox` en **read-only** (3ᵉ sink après web-push / email — ne touche
   pas `.status`, propriété du bot), fan-out vers les abonnements actifs, tracking

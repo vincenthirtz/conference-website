@@ -296,6 +296,104 @@ components:
     Timestamp:
       type: string
       format: date-time
+    DiscoveryCard:
+      type: object
+      description: >-
+        Carte de découverte GLOBALE (cross-tenant) du joueur courant. Opt-in
+        explicite, invisible par défaut. « Absent = défaut » : `discoverable`
+        false, `showRatings`/`showTeams` true. `optedInAt` est posé au premier
+        passage `discoverable=true` (audit RGPD, jamais effacé ensuite).
+      required:
+        - discoverable
+        - displayName
+        - avatarUrl
+        - tagline
+        - showRatings
+        - showTeams
+        - optedInAt
+      properties:
+        discoverable:
+          type: boolean
+        displayName:
+          type: string
+          nullable: true
+        avatarUrl:
+          type: string
+          nullable: true
+        tagline:
+          type: string
+          nullable: true
+        showRatings:
+          type: boolean
+        showTeams:
+          type: boolean
+        optedInAt:
+          allOf:
+            - $ref: '#/components/schemas/Timestamp'
+          nullable: true
+    DirectoryPlayer:
+      type: object
+      description: >-
+        Carte enrichie d'un joueur découvrable de l'annuaire cross-tenant
+        (recherche + listes de suivi). `stats` omises si `showRatings=false`,
+        `teams` omises si `showTeams=false`.
+      required:
+        - authUserId
+        - displayName
+        - avatarUrl
+        - tagline
+        - discordUsername
+        - isFollowing
+        - followerCount
+      properties:
+        authUserId:
+          $ref: '#/components/schemas/Uuid'
+        displayName:
+          type: string
+        avatarUrl:
+          type: string
+          nullable: true
+        tagline:
+          type: string
+          nullable: true
+        discordUsername:
+          type: string
+          nullable: true
+        stats:
+          type: object
+          required:
+            - games
+            - peakRating
+            - tenants
+          properties:
+            games:
+              type: integer
+              description: Somme des parties jouées, tous tenants.
+            peakRating:
+              type: number
+              description: Meilleur rating (max cross-tenant).
+            tenants:
+              type: integer
+              description: Nombre de tenants distincts où le joueur a un rating.
+        teams:
+          type: array
+          items:
+            type: object
+            required:
+              - name
+              - slug
+            properties:
+              name:
+                type: string
+              slug:
+                type: string
+                nullable: true
+        isFollowing:
+          type: boolean
+          description: True si le caller suit ce joueur.
+        followerCount:
+          type: integer
+          description: Nombre total de followers du joueur.
     BattlenetStatus:
       type: object
       description: >-
@@ -2915,6 +3013,36 @@ components:
             Number of distinct drafts whose current step deadline_at was
             in the past at the start of the tick.
         autoPicked:
+          type: integer
+          minimum: 0
+        errors:
+          type: integer
+          minimum: 0
+    CronPlanRenewalResult:
+      type: object
+      description: |
+        Résumé du tick de `/api/cron/plan-renewal`. `checked` = tenants aux plans
+        payants examinés ; `markedPastDue` = bascules expiration → past_due ;
+        `remindersSent` = relances de renouvellement envoyées ; `errors` =
+        échecs par-tenant non fatals.
+      required:
+        - success
+        - checked
+        - markedPastDue
+        - remindersSent
+        - errors
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        checked:
+          type: integer
+          minimum: 0
+        markedPastDue:
+          type: integer
+          minimum: 0
+        remindersSent:
           type: integer
           minimum: 0
         errors:
@@ -8734,6 +8862,79 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /api/admin/api-usage:
+    get:
+      summary: API usage / quota panel for the self-serve developer portal.
+      description: |
+        Read-only. Requires `admin` role, scoped to the caller's active tenant.
+        Reports the tenant's billed + effective plan, its API entitlements
+        (`apiRead` / `apiWrite`), and how much of the authenticated-API quota it
+        has consumed for the current minute + month windows. `limit: null` means
+        unlimited. No counter is created here (a missing row simply means
+        `used: 0`).
+      operationId: adminGetApiUsage
+      tags:
+        - admin/misc
+      security:
+        - StaffSession: []
+      responses:
+        '200':
+          description: Current plan entitlements + usage windows.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - plan
+                  - effectivePlan
+                  - apiRead
+                  - apiWrite
+                  - minute
+                  - month
+                  - tokensHint
+                properties:
+                  plan:
+                    type: string
+                  effectivePlan:
+                    type: string
+                  apiRead:
+                    type: boolean
+                  apiWrite:
+                    type: boolean
+                  minute:
+                    type: object
+                    required:
+                      - used
+                      - limit
+                    properties:
+                      used:
+                        type: integer
+                      limit:
+                        type: integer
+                        nullable: true
+                        description: Per-minute rate limit; `null` = unlimited.
+                  month:
+                    type: object
+                    required:
+                      - used
+                      - limit
+                      - key
+                    properties:
+                      used:
+                        type: integer
+                      limit:
+                        type: integer
+                        nullable: true
+                        description: Monthly quota; `null` = unlimited.
+                      key:
+                        type: string
+                        description: Fixed-window key for the current month.
+                  tokensHint:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /api/admin/announcements:
     get:
       summary: List announcements.
@@ -12038,6 +12239,53 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CronDraftAutoPickResult'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/cron/plan-renewal:
+    get:
+      tags:
+        - cron
+      summary: Cycle de vie des abonnements org self-serve (« Régie solidaire »).
+      operationId: cronPlanRenewalGet
+      description: |
+        Schedule : une fois par jour via la Netlify scheduled function
+        `plan-renewal-cron`. Sur les tenants `regie` / `circuit` : bascule les
+        plans expirés `active` → `past_due`, et relance par email les owners
+        dont le plan expire sous 14 jours (une relance par cycle annuel).
+        Résilient (try/catch par tenant), idempotent côté serveur.
+
+        Auth : `Authorization: Bearer <CRON_SECRET>` OU `?secret=<CRON_SECRET>`.
+        GET et POST acceptés.
+      security:
+        - CronSecret: []
+      responses:
+        '200':
+          description: Résumé du tick.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CronPlanRenewalResult'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      tags:
+        - cron
+      summary: Cycle de vie des abonnements org self-serve (« Régie solidaire »).
+      operationId: cronPlanRenewalPost
+      description: Identique à `GET /api/cron/plan-renewal`.
+      security:
+        - CronSecret: []
+      responses:
+        '200':
+          description: Résumé du tick.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CronPlanRenewalResult'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '500':
@@ -16716,6 +16964,114 @@ paths:
                 properties:
                   error:
                     type: string
+  /api/admin/tenants/{id}/billing:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Read a tenant's billing / subscription state (« Régie solidaire »).
+      description: |
+        Read-only. Requires `admin` role. Returns the billed plan + status, the
+        EFFECTIVE plan (a paid plan that is expired / past_due falls back to
+        `discovery`), the resulting capabilities, the self-serve catalog, and the
+        recent payment history. Scoped to the staff's active tenant unless the
+        caller is a cross-tenant pole-admin (else 403).
+      operationId: adminGetTenantBilling
+      tags:
+        - admin/tenants
+      security:
+        - StaffSession: []
+      responses:
+        '200':
+          description: Tenant billing state.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - plan
+                  - planLabel
+                  - planStatus
+                  - planStartedAt
+                  - planExpiresAt
+                  - daysRemaining
+                  - effectivePlan
+                  - capabilities
+                  - catalog
+                  - payments
+                properties:
+                  plan:
+                    type: string
+                  planLabel:
+                    type: string
+                  planStatus:
+                    type: string
+                  planStartedAt:
+                    allOf:
+                      - $ref: '#/components/schemas/Timestamp'
+                    nullable: true
+                  planExpiresAt:
+                    allOf:
+                      - $ref: '#/components/schemas/Timestamp'
+                    nullable: true
+                  daysRemaining:
+                    type: integer
+                    nullable: true
+                  effectivePlan:
+                    type: string
+                  capabilities:
+                    type: object
+                    additionalProperties: true
+                  catalog:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                        - plan
+                        - label
+                        - priceEur
+                      properties:
+                        plan:
+                          type: string
+                        label:
+                          type: string
+                        priceEur:
+                          type: integer
+                  payments:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                        - id
+                        - plan
+                        - amountCents
+                        - paidAt
+                        - helloassoPaymentId
+                      properties:
+                        id:
+                          type: string
+                        plan:
+                          type: string
+                        amountCents:
+                          type: integer
+                        paidAt:
+                          type: string
+                        helloassoPaymentId:
+                          type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
   /api/admin/tenants/{id}/staff:
     parameters:
       - in: path
@@ -24389,6 +24745,425 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/ServerError'
+  /api/player/discovery:
+    get:
+      summary: Carte de découverte cross-tenant du joueur courant.
+      description: |
+        Renvoie la carte de découverte GLOBALE (opt-in, invisible par défaut,
+        derrière le login). Convention « absent = défaut » : un joueur sans row
+        est non découvrable (`discoverable=false`) mais expose les défauts de
+        visibilité (`showRatings=true`, `showTeams=true`). `withAuthRoute`.
+      operationId: playerGetDiscovery
+      tags:
+        - public/auth
+      security:
+        - PlayerBearer: []
+      responses:
+        '200':
+          description: Carte de découverte du joueur.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DiscoveryCard'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    put:
+      summary: Mettre à jour la carte de découverte du joueur courant.
+      description: |
+        Patch partiel de la carte de découverte. `opted_in_at` (audit RGPD) est
+        posé au PREMIER passage `discoverable=true` et n'est jamais effacé. Le
+        kill-switch (`discoverable=false`) conserve la row et l'horodatage de
+        consentement. `withAuthRoute`.
+      operationId: playerPutDiscovery
+      tags:
+        - public/auth
+      security:
+        - PlayerBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                discoverable:
+                  type: boolean
+                displayName:
+                  type: string
+                  nullable: true
+                  maxLength: 80
+                avatarUrl:
+                  type: string
+                  format: uri
+                  nullable: true
+                  maxLength: 500
+                tagline:
+                  type: string
+                  nullable: true
+                  maxLength: 160
+                showRatings:
+                  type: boolean
+                showTeams:
+                  type: boolean
+      responses:
+        '200':
+          description: Carte de découverte mise à jour.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DiscoveryCard'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/player/discovery/search:
+    get:
+      summary: Annuaire des joueurs découvrables du réseau (cross-tenant).
+      description: |
+        Recherche paginée dans l'annuaire des joueurs `discoverable=true`. Le
+        caller ne s'auto-liste jamais. Aucune variante publique / indexable SEO :
+        la route est derrière le login. `withAuthRoute`.
+      operationId: playerDiscoverySearch
+      tags:
+        - public/auth
+      security:
+        - PlayerBearer: []
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 80
+          description: Filtre (ILIKE) sur le nom affiché.
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: Page de l'annuaire + total exact.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - players
+                  - total
+                  - limit
+                  - offset
+                properties:
+                  players:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DirectoryPlayer'
+                  total:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/player/discovery/head-to-head:
+    get:
+      summary: Head-to-head cross-tenant contre un joueur découvrable.
+      description: |
+        Agrège les confrontations entre l'appelant (`side a`) et un opponent
+        (`side b`) sur TOUS les tenants où ils se sont rencontrés. L'opponent
+        DOIT être `discoverable=true` (sinon 404). Résultat approximé au niveau
+        ÉQUIPE (aucun résultat individuel joueur-vs-joueur dans le modèle).
+        `withAuthRoute`.
+      operationId: playerDiscoveryHeadToHead
+      tags:
+        - public/auth
+      security:
+        - PlayerBearer: []
+      parameters:
+        - name: opponentId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Totaux + confrontations récentes.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - a
+                  - b
+                  - totals
+                  - recent
+                properties:
+                  a:
+                    type: object
+                    required:
+                      - userId
+                    properties:
+                      userId:
+                        $ref: '#/components/schemas/Uuid'
+                  b:
+                    type: object
+                    required:
+                      - userId
+                    properties:
+                      userId:
+                        $ref: '#/components/schemas/Uuid'
+                  totals:
+                    type: object
+                    required:
+                      - played
+                      - aWins
+                      - bWins
+                      - draws
+                    properties:
+                      played:
+                        type: integer
+                      aWins:
+                        type: integer
+                      bWins:
+                        type: integer
+                      draws:
+                        type: integer
+                  recent:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                        - matchId
+                        - tenantId
+                        - tournamentId
+                        - date
+                        - winner
+                      properties:
+                        matchId:
+                          type: string
+                          format: uuid
+                        tenantId:
+                          type: string
+                          format: uuid
+                          nullable: true
+                        tournamentId:
+                          type: string
+                          format: uuid
+                          nullable: true
+                        date:
+                          allOf:
+                            - $ref: '#/components/schemas/Timestamp'
+                          nullable: true
+                        winner:
+                          type: string
+                          enum:
+                            - a
+                            - b
+                            - draw
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/player/follows:
+    get:
+      summary: Liste les joueurs suivis / les followers du joueur courant.
+      description: |
+        Liste `following` (joueurs suivis) ou `followers` (qui me suivent),
+        enrichie comme l'annuaire. Ne renvoie QUE les joueurs actuellement
+        `discoverable=true` (un opt-out disparaît sans supprimer l'arête).
+        `withAuthRoute`.
+      operationId: playerListFollows
+      tags:
+        - public/auth
+      security:
+        - PlayerBearer: []
+      parameters:
+        - name: type
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - following
+              - followers
+            default: following
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: Page de joueurs suivis / followers + total.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - players
+                  - total
+                  - limit
+                  - offset
+                  - type
+                properties:
+                  players:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DirectoryPlayer'
+                  total:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+                  type:
+                    type: string
+                    enum:
+                      - following
+                      - followers
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      summary: Suivre un joueur découvrable (idempotent).
+      description: |
+        Suit un joueur `discoverable=true`. Rejette l'auto-suivi
+        (`CANNOT_FOLLOW_SELF`) ; cible inconnue ou non découvrable → 404
+        (anti-énumération). Idempotent sur `(follower_id, followee_id)`.
+        `withAuthRoute`.
+      operationId: playerFollow
+      tags:
+        - public/auth
+      security:
+        - PlayerBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - followeeId
+              properties:
+                followeeId:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Le joueur est suivi.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - following
+                properties:
+                  following:
+                    type: boolean
+                    enum:
+                      - true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    delete:
+      summary: Ne plus suivre un joueur (idempotent).
+      description: |
+        Supprime l'arête de suivi `follower_id = current user`. Idempotent :
+        ré-appeler sur une arête inexistante renvoie quand même `following:false`.
+        `withAuthRoute`.
+      operationId: playerUnfollow
+      tags:
+        - public/auth
+      security:
+        - PlayerBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - followeeId
+              properties:
+                followeeId:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Le joueur n'est plus suivi.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - following
+                properties:
+                  following:
+                    type: boolean
+                    enum:
+                      - false
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
   /api/twitch/exchange:
     post:
       summary: Échange OAuth Twitch `authorization_code` (côté serveur).
@@ -24910,6 +25685,63 @@ paths:
             text/yaml:
               schema:
                 type: string
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/public/webhook-events:
+    get:
+      tags:
+        - public/v1
+      summary: Catalogue public des types d'événements webhook souscriptibles.
+      description: >
+        Catalogue anonyme des event types qu'un tenant peut recevoir en webhook
+        sortant, + la convention de signature. Dérivé du sous-ensemble PUBLIC des
+        noms d'événements outbox (les événements Discord internes n'y figurent
+        jamais). Anonyme, CORS `*`, edge-caché (`s-maxage=3600`).
+      operationId: publicGetWebhookEvents
+      security: []
+      responses:
+        '200':
+          description: Catalogue d'événements + convention de signature.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: object
+                    required:
+                      - events
+                      - signature
+                    properties:
+                      events:
+                        type: array
+                        items:
+                          type: object
+                          required:
+                            - type
+                            - description
+                          properties:
+                            type:
+                              type: string
+                            description:
+                              type: string
+                      signature:
+                        type: object
+                        required:
+                          - header
+                          - algo
+                          - format
+                        properties:
+                          header:
+                            type: string
+                          algo:
+                            type: string
+                          format:
+                            type: string
         '429':
           $ref: '#/components/responses/RateLimited'
         '500':
