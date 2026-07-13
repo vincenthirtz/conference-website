@@ -1,10 +1,35 @@
 import { describe, it, expect } from 'vitest';
 import {
   formatDateTimeTz,
+  formatDateTz,
   formatTimeTz,
   localInputToUTC,
   TOURNAMENT_TIMEZONES,
 } from '../../utils/timezone';
+
+describe('formatDateTz', () => {
+  it('returns dash for null/undefined input', () => {
+    expect(formatDateTz(null)).toBe('—');
+    expect(formatDateTz(undefined)).toBe('—');
+  });
+
+  it('returns the raw string for an invalid date', () => {
+    expect(formatDateTz('not-a-date')).toBe('not-a-date');
+  });
+
+  it('formats a date as FR numeric JJ/MM/AAAA without a timezone suffix', () => {
+    expect(formatDateTz('2026-09-18T12:00:00Z', 'Europe/Paris')).toBe(
+      '18/09/2026'
+    );
+  });
+
+  it('respects the timezone for the calendar day (near-midnight UTC)', () => {
+    // 2026-09-18T23:30Z est déjà le 19/09 à Paris (UTC+2 en été).
+    expect(formatDateTz('2026-09-18T23:30:00Z', 'Europe/Paris')).toBe(
+      '19/09/2026'
+    );
+  });
+});
 
 describe('TOURNAMENT_TIMEZONES', () => {
   it('contains at least 10 timezones', () => {
@@ -137,7 +162,7 @@ describe('localInputToUTC', () => {
     expect(paris).not.toBe(tokyo);
   });
 
-  it('gère la bascule DST (nuit du passage à l\'heure d\'été à Paris)', () => {
+  it("gère la bascule DST (nuit du passage à l'heure d'été à Paris)", () => {
     // 2026 : le passage été a lieu le 29 mars à 02:00 → 03:00. Un créneau à 03:30
     // ce jour-là est déjà en UTC+2 ⇒ 01:30Z.
     expect(localInputToUTC('2026-03-29T03:30', 'Europe/Paris')).toBe(
@@ -145,7 +170,7 @@ describe('localInputToUTC', () => {
     );
   });
 
-  it('handles UTC timezone à l\'identique', () => {
+  it("handles UTC timezone à l'identique", () => {
     expect(localInputToUTC('2026-03-15T14:00', 'UTC')).toBe(
       '2026-03-15T14:00:00.000Z'
     );

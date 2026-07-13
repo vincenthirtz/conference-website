@@ -11,7 +11,7 @@ import { useRouter } from 'next/router';
 import { withStaffPage, hasAtLeastRole } from '@/utils/staff';
 import type { StaffProps, StaffRole } from '@/types/admin';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
-import { formatDateTimeTz } from '@/utils/timezone';
+import { formatDateTimeTz, formatDateTz } from '@/utils/timezone';
 import { useRealtimeChannel } from '@/hooks/useRealtimeChannel';
 import StatCard from '@/components/admin/dashboard/StatCard';
 import ActionableAlert from '@/components/admin/dashboard/ActionableAlert';
@@ -600,15 +600,11 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
                 <StatCard
                   label={tx.kpiStart}
                   value={
-                    t.start_date
-                      ? formatDateTimeTz(t.start_date, t.timezone, {
-                          dateStyle: 'medium',
-                        })
-                      : '—'
+                    t.start_date ? formatDateTz(t.start_date, t.timezone) : '—'
                   }
                   hint={
                     t.end_date
-                      ? `→ ${formatDateTimeTz(t.end_date, t.timezone, { dateStyle: 'medium' })}`
+                      ? `→ ${formatDateTz(t.end_date, t.timezone)}`
                       : undefined
                   }
                   accent="amber"

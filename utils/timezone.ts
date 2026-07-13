@@ -76,6 +76,32 @@ export function formatDateTimeTz(
 }
 
 /**
+ * Formate une DATE SEULE au format FR numérique JJ/MM/AAAA (ex. 18/09/2026).
+ * Tz-aware pour calculer le bon jour calendaire (un timestamp UTC près de
+ * minuit peut tomber sur un autre jour à Paris), mais SANS suffixe de fuseau
+ * (contrairement à formatDateTimeTz). Utilisé pour les KPI date-seule.
+ */
+export function formatDateTz(
+  iso: string | null | undefined,
+  timezone?: string | null
+): string {
+  if (!iso) return '—';
+  try {
+    const date = new Date(iso);
+    if (isNaN(date.getTime())) return iso;
+
+    return date.toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      ...(timezone ? { timeZone: timezone } : {}),
+    });
+  } catch {
+    return iso;
+  }
+}
+
+/**
  * Formate juste l'heure dans le fuseau donné.
  */
 export function formatTimeTz(
