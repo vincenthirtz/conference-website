@@ -343,6 +343,56 @@ function StatTile({
   );
 }
 
+/** Colour a role chip: staff (owner/admin) purple, mid-staff sky, player emerald. */
+function roleBadgeClass(role: string | null): string {
+  const r = role?.toLowerCase();
+  if (r === 'owner' || r === 'admin')
+    return 'bg-purple-600/20 text-purple-200 border border-purple-500/30';
+  if (r === 'manager' || r === 'caster')
+    return 'bg-sky-600/20 text-sky-200 border border-sky-500/30';
+  return 'bg-emerald-600/20 text-emerald-200 border border-emerald-500/30';
+}
+
+function RoleBadge({ t, role }: { t: Dict; role: string | null }) {
+  return (
+    <span
+      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${roleBadgeClass(
+        role
+      )}`}
+    >
+      {roleLabel(t, role)}
+    </span>
+  );
+}
+
+/** Compact, clickable KPI used in the identity summary strip. */
+function StatPill({
+  label,
+  value,
+  onClick,
+}: {
+  label: string;
+  value: number;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-left transition-colors ${
+        value > 0
+          ? 'border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/20'
+          : 'border-neutral-700/60 bg-neutral-800/60 hover:bg-neutral-700/60'
+      }`}
+    >
+      <span className="text-lg font-bold text-white tabular-nums leading-none">
+        {value}
+      </span>
+      <span className="text-xs text-neutral-300 leading-tight">{label}</span>
+    </button>
+  );
+}
+
 /* ----------------------------------------------------------------------- */
 /* Page                                                                      */
 /* ----------------------------------------------------------------------- */
@@ -689,6 +739,11 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
     };
   }, [data]);
 
+  const pendingDemandesCount = useMemo(
+    () => (data?.demandes ?? []).filter((d) => d.status === 'pending').length,
+    [data]
+  );
+
   return (
     <>
       {confirmDialog}
@@ -771,6 +826,87 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
             </div>
           ) : data ? (
             <>
+              {/* Identity summary — quick glance, visible on every tab */}
+              <div
+                aria-label={t.identitySummaryLabel}
+                className="mb-6 rounded-2xl border border-neutral-700/60 bg-neutral-800/40 p-4 sm:p-5"
+              >
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  {/* Who */}
+                  <div className="flex items-center gap-3 min-w-0">
+                    {data.user.avatarUrl ? (
+                      <Image
+                        src={data.user.avatarUrl}
+                        alt=""
+                        width={48}
+                        height={48}
+                        className="w-12 h-12 rounded-xl object-cover border border-neutral-700 flex-shrink-0"
+                        unoptimized
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-xl bg-emerald-600/20 border border-emerald-500/30 flex items-center justify-center text-base font-bold text-emerald-200 flex-shrink-0">
+                        {initials(data.user.displayName, data.user.email)}
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-bold text-white truncate">
+                          {data.user.displayName || t.noName}
+                        </span>
+                        <RoleBadge t={t} role={data.user.role} />
+                      </div>
+                      {data.team && (
+                        <div className="mt-1.5 flex items-center gap-2 flex-wrap">
+                          {data.team.logoUrl ? (
+                            <Image
+                              src={data.team.logoUrl}
+                              alt=""
+                              width={20}
+                              height={20}
+                              className="w-5 h-5 rounded object-cover border border-neutral-700"
+                              unoptimized
+                            />
+                          ) : (
+                            <span className="w-5 h-5 rounded bg-neutral-700/60 border border-neutral-600 flex items-center justify-center text-[9px] font-bold text-neutral-300">
+                              {initials(data.team.name, null)}
+                            </span>
+                          )}
+                          <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-600/20 text-emerald-200 border border-emerald-500/30">
+                            {data.team.role === 'captain'
+                              ? t.teamRoleCaptain
+                              : t.teamRoleMember}
+                          </span>
+                          {data.team.isSubstitute && (
+                            <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-600/20 text-amber-200 border border-amber-500/30">
+                              {t.substitute}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Quick KPIs — click to jump to the matching tab */}
+                  <div className="flex flex-wrap gap-2">
+                    <StatPill
+                      label={t.pillUpcomingMatches}
+                      value={upcoming.length}
+                      onClick={() => setTab('matchs')}
+                    />
+                    <StatPill
+                      label={t.pillPendingRequests}
+                      value={pendingDemandesCount}
+                      onClick={() => setTab('demandes')}
+                    />
+                    <StatPill
+                      label={t.pillNotifications}
+                      value={data.notifications.total}
+                      onClick={() => setTab('notifications')}
+                    />
+                  </div>
+                </div>
+              </div>
+
               {/* Tabs */}
               <div
                 role="tablist"
@@ -779,10 +915,20 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
               >
                 {getTabs(t).map((tab_) => {
                   const active = tab === tab_.key;
-                  const badge =
-                    tab_.key === 'notifications' && data.notifications.total > 0
-                      ? data.notifications.total
-                      : null;
+                  let badge: number | null = null;
+                  if (
+                    tab_.key === 'notifications' &&
+                    data.notifications.total > 0
+                  ) {
+                    badge = data.notifications.total;
+                  } else if (tab_.key === 'matchs' && upcoming.length > 0) {
+                    badge = upcoming.length;
+                  } else if (
+                    tab_.key === 'demandes' &&
+                    pendingDemandesCount > 0
+                  ) {
+                    badge = pendingDemandesCount;
+                  }
                   return (
                     <button
                       key={tab_.key}
@@ -853,8 +999,8 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
                       <dt className="text-xs uppercase tracking-wide text-neutral-500">
                         {t.fieldRole}
                       </dt>
-                      <dd className="text-sm text-white">
-                        {data.user.role || '—'}
+                      <dd className="mt-1">
+                        <RoleBadge t={t} role={data.user.role} />
                       </dd>
                     </div>
                     <div>
@@ -1018,13 +1164,22 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
                             <table className="w-full text-sm">
                               <thead>
                                 <tr className="text-left text-xs uppercase tracking-wide text-neutral-500 border-b border-neutral-700/50">
-                                  <th scope="col" className="px-4 py-2 font-medium">
+                                  <th
+                                    scope="col"
+                                    className="px-4 py-2 font-medium"
+                                  >
                                     {t.memberColName}
                                   </th>
-                                  <th scope="col" className="px-4 py-2 font-medium">
+                                  <th
+                                    scope="col"
+                                    className="px-4 py-2 font-medium"
+                                  >
                                     {t.memberColBattleTag}
                                   </th>
-                                  <th scope="col" className="px-4 py-2 font-medium">
+                                  <th
+                                    scope="col"
+                                    className="px-4 py-2 font-medium"
+                                  >
                                     {t.memberColRole}
                                   </th>
                                 </tr>
@@ -1153,34 +1308,52 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
 
               {/* Notifications */}
               {tab === 'notifications' && (
-                <section
-                  role="tabpanel"
-                  className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
-                >
-                  <StatTile
-                    label={t.statUnreadMessages}
-                    value={data.notifications.unreadMessages}
-                    highlight
-                  />
-                  <StatTile
-                    label={t.statPendingScrims}
-                    value={data.notifications.pendingScrims}
-                    highlight
-                  />
-                  <StatTile
-                    label={t.statJoinRequests}
-                    value={data.notifications.pendingJoinRequests}
-                    highlight
-                  />
-                  <StatTile
-                    label={t.statCheckinPending}
-                    value={data.notifications.checkinPending}
-                    highlight
-                  />
-                  <StatTile
-                    label={t.statTotal}
-                    value={data.notifications.total}
-                  />
+                <section role="tabpanel" className="space-y-4">
+                  {data.notifications.total === 0 && (
+                    <div className="flex items-center gap-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-5 py-4 text-sm text-emerald-100">
+                      <svg
+                        className="w-5 h-5 flex-shrink-0 text-emerald-300"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M5 13l4 4L19 7"
+                        />
+                      </svg>
+                      {t.notificationsAllClear}
+                    </div>
+                  )}
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <StatTile
+                      label={t.statUnreadMessages}
+                      value={data.notifications.unreadMessages}
+                      highlight
+                    />
+                    <StatTile
+                      label={t.statPendingScrims}
+                      value={data.notifications.pendingScrims}
+                      highlight
+                    />
+                    <StatTile
+                      label={t.statJoinRequests}
+                      value={data.notifications.pendingJoinRequests}
+                      highlight
+                    />
+                    <StatTile
+                      label={t.statCheckinPending}
+                      value={data.notifications.checkinPending}
+                      highlight
+                    />
+                    <StatTile
+                      label={t.statTotal}
+                      value={data.notifications.total}
+                    />
+                  </div>
                 </section>
               )}
 

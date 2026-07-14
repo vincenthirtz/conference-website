@@ -1970,7 +1970,12 @@
     "confirmDemandeTitle": "{verb} cette demande ?",
     "toastDemandeApproved": "Demande approuvée",
     "toastDemandeRejected": "Demande refusée",
-    "errDemandeProcess": "Erreur lors du traitement."
+    "errDemandeProcess": "Erreur lors du traitement.",
+    "identitySummaryLabel": "Résumé du compte joueur",
+    "pillUpcomingMatches": "Matchs à venir",
+    "pillPendingRequests": "Demandes en attente",
+    "pillNotifications": "Notifications",
+    "notificationsAllClear": "Rien en attente — tout est à jour pour cette joueuse."
   },
   "adminUsersManage": {
     "roleOwner": "Owner",

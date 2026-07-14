@@ -1970,7 +1970,12 @@
     "confirmDemandeTitle": "{verb} this request?",
     "toastDemandeApproved": "Request approved",
     "toastDemandeRejected": "Request rejected",
-    "errDemandeProcess": "Error while processing."
+    "errDemandeProcess": "Error while processing.",
+    "identitySummaryLabel": "Player account summary",
+    "pillUpcomingMatches": "Upcoming matches",
+    "pillPendingRequests": "Pending requests",
+    "pillNotifications": "Notifications",
+    "notificationsAllClear": "Nothing pending — all caught up for this player."
   },
   "adminUsersManage": {
     "roleOwner": "Owner",
