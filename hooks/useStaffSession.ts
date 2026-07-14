@@ -2,14 +2,19 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabaseClient } from '@/utils/supabase';
 import { useSession } from '@/hooks/useSession';
 import type { StaffRole } from '@/utils/staff';
+import type { TenantKind } from '@/utils/tenantKind';
 
 export const STAFF_CACHE_TTL = 2 * 60 * 1000;
-export const STAFF_CACHE_KEY = 'staff_cache';
+// Bump v2 : ajout du champ `activeTenantKind`. Le suffixe invalide les vieux
+// caches sessionStorage écrits sans ce champ (sinon un cache frais sans
+// `activeTenantKind` masquerait la console développeur au 1er render).
+export const STAFF_CACHE_KEY = 'staff_cache_v2';
 
 export type StaffCache = {
   isStaff: boolean;
   staffName: string | null;
   staffRole: StaffRole | null;
+  activeTenantKind: TenantKind | null;
   ts: number;
 };
 
@@ -54,6 +59,7 @@ export type StaffSession = {
   isStaff: boolean;
   staffName: string | null;
   staffRole: StaffRole | null;
+  activeTenantKind: TenantKind | null;
   loading: boolean;
   clear: () => void;
 };
@@ -67,6 +73,9 @@ export function useStaffSession(): StaffSession {
   const [staffRole, setStaffRole] = useState<StaffRole | null>(
     () => readCache()?.staffRole ?? null
   );
+  const [activeTenantKind, setActiveTenantKind] = useState<TenantKind | null>(
+    () => readCache()?.activeTenantKind ?? null
+  );
 
   const inflight = useRef<Promise<void> | null>(null);
 
@@ -74,6 +83,7 @@ export function useStaffSession(): StaffSession {
     setIsStaff(false);
     setStaffName(null);
     setStaffRole(null);
+    setActiveTenantKind(null);
     writeCache(null);
   }, []);
 
@@ -85,6 +95,7 @@ export function useStaffSession(): StaffSession {
           setIsStaff(cached!.isStaff === true);
           setStaffName(cached!.staffName ?? null);
           setStaffRole(cached!.staffRole ?? null);
+          setActiveTenantKind(cached!.activeTenantKind ?? null);
           setLoading(false);
           return;
         }
@@ -123,13 +134,19 @@ export function useStaffSession(): StaffSession {
 
           const name = me.display_name || me.email || 'Staff';
           const role = me.role as StaffRole;
+          // Fallback 'organizer' si le champ est absent (API pas encore
+          // déployée) mais qu'on a bien un staff → comportement inchangé.
+          const kind: TenantKind =
+            me.active_tenant_kind === 'developer' ? 'developer' : 'organizer';
           setIsStaff(true);
           setStaffName(name);
           setStaffRole(role);
+          setActiveTenantKind(kind);
           writeCache({
             isStaff: true,
             staffName: name,
             staffRole: role,
+            activeTenantKind: kind,
             ts: Date.now(),
           });
         } catch (e) {
@@ -167,6 +184,7 @@ export function useStaffSession(): StaffSession {
     isStaff,
     staffName,
     staffRole,
+    activeTenantKind,
     loading,
     clear: reset,
   };

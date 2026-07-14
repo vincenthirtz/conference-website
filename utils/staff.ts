@@ -14,6 +14,7 @@ import type {
   StaffContext,
   AuthenticatedStaffContext,
 } from '@/types/staff';
+import type { TenantKind } from './tenantKind';
 
 import { logger } from './logger';
 export type { StaffRole } from '@/types/admin';
@@ -571,12 +572,24 @@ export function withStaffPage<
         minRole
       );
 
+      // Nature du tenant actif (organizer/developer) : sert à filtrer la nav
+      // admin et les cartes du dashboard côté SSR. Fail-safe 'organizer' en cas
+      // d'échec (jamais durcir accidentellement l'accès des tenants existants).
+      const { getTenantKind } = await import('./tenantKind');
+      let activeTenantKind: TenantKind = 'organizer';
+      try {
+        activeTenantKind = await getTenantKind(staffCtx.tenantId);
+      } catch (e) {
+        logger.error('withStaffPage getTenantKind error:', e);
+      }
+
       const baseProps = {
         staff: {
           id: staffCtx.staff.id,
           role: staffCtx.role,
           display_name: staffCtx.staff.display_name,
         },
+        activeTenantKind,
       };
 
       if (!loader) {

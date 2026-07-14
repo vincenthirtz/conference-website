@@ -43,6 +43,11 @@ export type AdminLink = {
   title: string;
   ref: string;
   minRole?: StaffRole;
+  /**
+   * Marque le lien comme faisant partie de la « console développeur » (tenant
+   * `kind='developer'`). Un tenant développeur ne voit que ces liens.
+   */
+  devConsole?: boolean;
   children?: AdminLink[];
 };
 

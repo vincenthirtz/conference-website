@@ -192,6 +192,8 @@
     "navWebhooksDesc": "Subscribe a URL to receive our events as HMAC-signed POSTs.",
     "navDeveloperHubTitle": "Developers (API)",
     "navDeveloperHubDesc": "Access, quota, keys, webhooks and events — the self-serve API hub.",
+    "navDocsTitle": "API documentation",
+    "navDocsDesc": "Public API reference and guides.",
     "navRecycleBinTitle": "Recycle bin",
     "navRecycleBinDesc": "Restore deleted items (stages, teams, matches…).",
     "navTenantsTitle": "Tenants",

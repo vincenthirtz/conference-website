@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { withStaffPage, hasAtLeastRole, getRoleLabel } from '@/utils/staff';
 import type { StaffRole } from '@/utils/staff';
+import type { TenantKind } from '@/utils/tenantKind';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import StatCard, {
@@ -32,6 +33,7 @@ type StaffShape = {
 
 type Props = {
   staff: StaffShape;
+  activeTenantKind: TenantKind;
 };
 
 export const getServerSideProps = withStaffPage('caster');
@@ -63,6 +65,7 @@ type NavCard = {
   minRole: StaffRole;
   icon: ReactNode;
   accent: string;
+  devConsole?: boolean;
 };
 
 const ICON: Record<AdminNavIcon, ReactNode> = {
@@ -218,6 +221,7 @@ const getNavCards = (t: Dict): NavCard[] =>
     minRole: c.minRole,
     icon: ICON[c.card.icon],
     accent: c.card.accent,
+    devConsole: c.devConsole,
   }));
 
 function buildAlerts(summary: AlertsSummary | null, t: Dict) {
@@ -318,7 +322,7 @@ function buildAlerts(summary: AlertsSummary | null, t: Dict) {
   return out;
 }
 
-function AdminDashboardPage({ staff }: Props) {
+function AdminDashboardPage({ staff, activeTenantKind }: Props) {
   const { adminFetchJson } = useAdminFetch();
   const t = useAdminT('adminDashboard');
 
@@ -378,8 +382,12 @@ function AdminDashboardPage({ staff }: Props) {
   }, [load]);
 
   const alerts = buildAlerts(alertsSummary, t);
-  const navCards = getNavCards(t).filter((c) =>
-    hasAtLeastRole(staff.role, c.minRole)
+  const navCards = getNavCards(t).filter(
+    (c) =>
+      hasAtLeastRole(staff.role, c.minRole) &&
+      // Tenant développeur : ne garder que les cartes de la console dev (en
+      // plus du filtre de rôle). Tenant organizer : inchangé.
+      (activeTenantKind !== 'developer' || c.devConsole === true)
   );
   const greetName = staff.display_name || t.defaultGreetName;
 

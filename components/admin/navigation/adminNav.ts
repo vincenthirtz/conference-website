@@ -72,6 +72,13 @@ export type AdminNavNode = {
   minRole?: StaffRole;
   /** Métadonnées de carte dashboard. Absent => pas de carte. */
   card?: AdminNavCardMeta;
+  /**
+   * Marque un nœud comme faisant partie de la « console développeur » (tenant
+   * `kind='developer'`) : facturation, clés API, webhooks, hub dev, docs.
+   * Un tenant développeur ne voit QUE les nœuds `devConsole:true` (le reste de
+   * la nav admin est masqué). Absent/false pour tout le reste (cas organizer).
+   */
+  devConsole?: boolean;
   children?: AdminNavNode[];
 };
 
@@ -85,6 +92,7 @@ export const ADMIN_NAV: AdminNavNode[] = [
     topBarLabel: 'Dashboard',
     href: '/admin',
     minRole: 'caster',
+    devConsole: true,
   },
   {
     // Regroupement top-bar « Compétition » : rassemble Tournoi en cours,
@@ -557,6 +565,7 @@ export const ADMIN_NAV: AdminNavNode[] = [
         topBarLabel: 'Facturation',
         href: '/admin/billing',
         minRole: 'admin',
+        devConsole: true,
         card: {
           order: 20,
           titleKey: 'navBillingTitle',
@@ -570,6 +579,7 @@ export const ADMIN_NAV: AdminNavNode[] = [
         id: 'api-tokens',
         href: '/admin/api-tokens',
         minRole: 'admin',
+        devConsole: true,
         card: {
           order: 14,
           titleKey: 'navApiTokensTitle',
@@ -587,6 +597,7 @@ export const ADMIN_NAV: AdminNavNode[] = [
         id: 'webhooks',
         href: '/admin/webhooks',
         minRole: 'admin',
+        devConsole: true,
         card: {
           order: 14.5,
           titleKey: 'navWebhooksTitle',
@@ -604,11 +615,29 @@ export const ADMIN_NAV: AdminNavNode[] = [
         id: 'developer-hub',
         href: '/developpeurs/dashboard',
         minRole: 'admin',
+        devConsole: true,
         card: {
           order: 14.7,
           titleKey: 'navDeveloperHubTitle',
           descKey: 'navDeveloperHubDesc',
           icon: 'bolt',
+          accent: 'border-teal-500/30 from-teal-500/10 text-teal-300',
+        },
+      },
+      // Documentation API (dashboard-only, comme api-tokens) : référence de
+      // l'API publique + guides. Fait partie de la « console développeur »
+      // (devConsole), juste après le hub dev. order 14.8 pour rester dans la
+      // famille « écosystème développeur » (hub 14.7 / webhooks 14.5).
+      {
+        id: 'docs',
+        href: '/developpeurs/reference',
+        minRole: 'admin',
+        devConsole: true,
+        card: {
+          order: 14.8,
+          titleKey: 'navDocsTitle',
+          descKey: 'navDocsDesc',
+          icon: 'help',
           accent: 'border-teal-500/30 from-teal-500/10 text-teal-300',
         },
       },
@@ -648,6 +677,7 @@ export function buildAdminLinks(
       title: node.topBarLabel,
       ref: node.href ?? '',
       minRole: node.minRole,
+      devConsole: node.devConsole,
     };
     if (children.length > 0) link.children = children;
     out.push(link);
@@ -661,6 +691,8 @@ export type AdminNavCard = {
   href: string;
   minRole: StaffRole;
   card: AdminNavCardMeta;
+  /** Copié du nœud : la carte fait partie de la « console développeur ». */
+  devConsole?: boolean;
 };
 
 /**
@@ -680,6 +712,7 @@ export function collectAdminNavCards(
           href: node.href,
           minRole: node.minRole ?? 'admin',
           card: node.card,
+          devConsole: node.devConsole,
         });
       }
       if (node.children) walk(node.children);
