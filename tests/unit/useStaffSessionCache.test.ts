@@ -29,7 +29,9 @@ describe('STAFF_CACHE_TTL', () => {
 
 describe('STAFF_CACHE_KEY', () => {
   it('uses a stable sessionStorage key', () => {
-    expect(STAFF_CACHE_KEY).toBe('staff_cache');
+    // Bumpé de 'staff_cache' → 'staff_cache_v2' lors de l'ajout d'activeTenantKind
+    // au cache : invalide les anciens caches dépourvus du champ.
+    expect(STAFF_CACHE_KEY).toBe('staff_cache_v2');
   });
 });
 
@@ -59,6 +61,7 @@ describe('parseStaffCache', () => {
       isStaff: true,
       staffName: 'Vincent',
       staffRole: 'admin',
+      activeTenantKind: 'organizer',
       ts: 1_700_000_000_000,
     };
     expect(parseStaffCache(JSON.stringify(value))).toEqual(value);
