@@ -44,8 +44,12 @@ const SITE_NAME = "OW Women's Cup";
 const DEFAULT_TITLE = `${SITE_NAME} – Tournoi Overwatch féminin & esport 100% féminin`;
 const DEFAULT_DESCRIPTION =
   "Tournoi Overwatch et communauté 100% féminine : staff inclusif, matchs commentés et actions pour rendre l'esport plus accessible.";
-const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') || '';
-const CANONICAL_URL = BASE_URL || 'https://owwomenscup.fr';
+// URL canonique de repli quand `NEXT_PUBLIC_SITE_URL` n'est pas défini (build
+// local, preview…). Sans ce fallback, BASE_URL restait vide et TOUS les
+// canonical / og:url / hreflang / BreadcrumbList étaient silencieusement omis.
+const CANONICAL_URL = 'https://owwomenscup.fr';
+const BASE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') || CANONICAL_URL;
 // `summary_large_image` (Twitter) / og:image expect a landscape ~1.91:1 image.
 // The square 2025-logo (300×300) renders badly when used as the large card
 // preview. `fourplayers.jpg` (1280×853) is the widest landscape asset shipped

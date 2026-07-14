@@ -4,12 +4,12 @@
 // et les MVPs eventuels gagnes par les joueuses de l'equipe.
 
 import { GetStaticPaths, GetStaticProps } from 'next';
-import Head from 'next/head';
 import Link from 'next/link';
 import Image from 'next/image';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import Button from '@/components/Buttons/button';
+import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { findTournamentByIdOrSlug } from '@/utils/tournamentLookup';
@@ -83,7 +83,27 @@ type Props = {
   stats: { played: number; wins: number; losses: number; draws: number };
   totalMvpAwards: number;
   hasFfaStage: boolean;
+  seo: SeoProps;
 };
+
+function buildTeamDetailSeo(
+  tournamentName: string,
+  teamName: string,
+  bannerUrl: string | null
+): SeoProps {
+  return {
+    title: {
+      fr: `${teamName} – ${tournamentName}`,
+      en: `${teamName} – ${tournamentName}`,
+    },
+    description: {
+      fr: `${teamName} au tournoi ${tournamentName} — OW Women's Cup : roster, statistiques, matchs et MVPs de l'équipe sur la coupe féminine Overwatch.`,
+      en: `${teamName} at the ${tournamentName} tournament — OW Women's Cup: roster, stats, matches and MVPs of the team in the women's Overwatch cup.`,
+    },
+    type: 'website',
+    ...(bannerUrl ? { image: bannerUrl } : {}),
+  };
+}
 
 export const getStaticPaths: GetStaticPaths = async () => {
   return { paths: [], fallback: 'blocking' };
@@ -290,6 +310,11 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       stats: { played, wins, losses, draws },
       totalMvpAwards,
       hasFfaStage,
+      seo: buildTeamDetailSeo(
+        tournament.name,
+        team.name,
+        team.banner_url ?? null
+      ),
     },
     revalidate: 60,
   };
@@ -341,215 +366,194 @@ export default function TournamentTeamPage({
     tournament.status === 'finished' || tournament.status === 'completed';
 
   return (
-    <>
-      <Head>
-        <title>
-          {format(t.headTitle, {
-            team: team.name,
-            tournament: tournament.name,
-          })}
-        </title>
-        <meta
-          name="description"
-          content={format(t.metaDescription, {
-            team: team.name,
-            tournament: tournament.name,
-          })}
-        />
-      </Head>
-
-      <main className="bg-neutral-950 text-white min-h-screen pt-24 pb-16">
-        <div className="max-w-5xl mx-auto px-4">
-          {/* Header */}
-          <section className="mb-6">
-            <div className="flex flex-col md:flex-row md:items-center gap-4">
-              {team.logo_url && (
-                <Image
-                  src={team.logo_url}
-                  alt={team.name}
-                  width={80}
-                  height={80}
-                  className="rounded-xl object-cover bg-neutral-900 border border-white/10"
-                />
-              )}
-              <div className="flex-1">
-                <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-green-light)]/90">
-                  {t.eyebrow}
-                </p>
-                <Heading
-                  level="h1"
-                  typeStyle="heading-md"
-                  className="text-brand-gradient mb-1"
-                >
-                  {team.name}
-                </Heading>
-                <span className="brand-rule mb-2" aria-hidden />
-                <p className="text-sm text-gray-300">
-                  <Link
-                    href={tournamentPath}
-                    className="text-[var(--color-green-light)] hover:text-white underline"
-                  >
-                    {tournament.name}
-                  </Link>
-                  {team.country ? ` · ${team.country}` : ''}
-                </p>
-                {team.description && (
-                  <Paragraph
-                    typeStyle="body-sm"
-                    textColor="text-gray-200"
-                    className="max-w-xl mt-2"
-                  >
-                    {team.description}
-                  </Paragraph>
-                )}
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  as="link"
-                  href={`/team/${encodeURIComponent(team.slug || team.id)}`}
-                  className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-[var(--color-violet)]"
-                >
-                  {t.globalProfile}
-                </Button>
-              </div>
-            </div>
-          </section>
-
-          <TournamentTabs
-            tournamentPath={tournamentPath}
-            active="teams"
-            showPodium={isCompleted}
-            showFfa={hasFfaStage}
-          />
-
-          {/* Stats du tournoi */}
-          <section className="mb-6">
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-              <StatCard label={t.statPlayed} value={stats.played} />
-              <StatCard
-                label={t.statWins}
-                value={stats.wins}
-                accent="text-emerald-300"
+    <main className="bg-neutral-950 text-white min-h-screen pt-24 pb-16">
+      <div className="max-w-5xl mx-auto px-4">
+        {/* Header */}
+        <section className="mb-6">
+          <div className="flex flex-col md:flex-row md:items-center gap-4">
+            {team.logo_url && (
+              <Image
+                src={team.logo_url}
+                alt={team.name}
+                width={80}
+                height={80}
+                className="rounded-xl object-cover bg-neutral-900 border border-white/10"
               />
-              <StatCard
-                label={t.statLosses}
-                value={stats.losses}
-                accent="text-red-300"
-              />
-              <StatCard
-                label={t.statWinrate}
-                value={`${winrate.toFixed(0)}%`}
-              />
-              <StatCard
-                label={t.statMvp}
-                value={totalMvpAwards}
-                accent="text-yellow-300"
-              />
-            </div>
-          </section>
-
-          {/* Roster */}
-          <section className="mb-8">
-            <div className="bg-black/60 border border-white/5 rounded-2xl p-4">
-              <h2 className="text-xs uppercase tracking-[0.16em] text-gray-400 mb-3">
-                {format(t.rosterHeading, { count: roster.length })}
-              </h2>
-
-              {titulaires.length === 0 && remplacants.length === 0 && (
-                <p className="text-sm text-neutral-500">{t.rosterEmpty}</p>
-              )}
-
-              {titulaires.length > 0 && (
-                <>
-                  <p className="text-[10px] uppercase tracking-widest text-neutral-500 mb-2">
-                    {t.starters}
-                  </p>
-                  <ul className="space-y-1 mb-4">
-                    {titulaires.map((m) => (
-                      <RosterRow key={m.id} member={m} />
-                    ))}
-                  </ul>
-                </>
-              )}
-
-              {remplacants.length > 0 && (
-                <>
-                  <p className="text-[10px] uppercase tracking-widest text-neutral-500 mb-2">
-                    {t.substitutes}
-                  </p>
-                  <ul className="space-y-1">
-                    {remplacants.map((m) => (
-                      <RosterRow key={m.id} member={m} />
-                    ))}
-                  </ul>
-                </>
-              )}
-            </div>
-          </section>
-
-          {/* Matches */}
-          <section>
-            <Heading level="h2" typeStyle="heading-md" className="mb-3">
-              {t.matchesHeading}
-            </Heading>
-
-            {matches.length === 0 ? (
-              <div className="bg-black/60 border border-white/5 rounded-2xl p-6 text-center">
-                <Paragraph typeStyle="body-sm" textColor="text-gray-300">
-                  {t.matchesEmpty}
-                </Paragraph>
-              </div>
-            ) : (
-              <div className="bg-black/60 border border-white/5 rounded-2xl overflow-hidden">
-                {matches.map((m) => {
-                  const outcome = matchOutcome(m, team.id, t);
-                  const ourScore = m.isTeam1 ? m.team1_score : m.team2_score;
-                  const theirScore = m.isTeam1 ? m.team2_score : m.team1_score;
-                  return (
-                    <Link
-                      key={m.id}
-                      href={`/match/${m.id}`}
-                      className="grid grid-cols-12 gap-2 px-4 py-3 items-center border-b border-white/5 last:border-b-0 hover:bg-white/5"
-                    >
-                      <div className="col-span-3 text-xs text-gray-400">
-                        {formatDate(m.scheduled_at || m.completed_at, locale)}
-                      </div>
-                      <div className="col-span-3 text-xs text-gray-300 truncate">
-                        {m.round_name || '—'}
-                      </div>
-                      <div className="col-span-3 flex items-center gap-2 truncate">
-                        {m.opponent?.logo_url && (
-                          <Image
-                            src={m.opponent.logo_url}
-                            alt=""
-                            width={20}
-                            height={20}
-                            className="rounded object-cover"
-                          />
-                        )}
-                        <span className="text-sm truncate">
-                          {m.opponent?.name || '—'}
-                        </span>
-                      </div>
-                      <div className="col-span-2 font-mono text-sm text-right">
-                        {ourScore !== null && theirScore !== null
-                          ? `${ourScore} - ${theirScore}`
-                          : '—'}
-                      </div>
-                      <div
-                        className={`col-span-1 text-xs text-right ${outcome.color}`}
-                      >
-                        {outcome.label}
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
             )}
-          </section>
-        </div>
-      </main>
-    </>
+            <div className="flex-1">
+              <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-green-light)]/90">
+                {t.eyebrow}
+              </p>
+              <Heading
+                level="h1"
+                typeStyle="heading-md"
+                className="text-brand-gradient mb-1"
+              >
+                {team.name}
+              </Heading>
+              <span className="brand-rule mb-2" aria-hidden />
+              <p className="text-sm text-gray-300">
+                <Link
+                  href={tournamentPath}
+                  className="text-[var(--color-green-light)] hover:text-white underline"
+                >
+                  {tournament.name}
+                </Link>
+                {team.country ? ` · ${team.country}` : ''}
+              </p>
+              {team.description && (
+                <Paragraph
+                  typeStyle="body-sm"
+                  textColor="text-gray-200"
+                  className="max-w-xl mt-2"
+                >
+                  {team.description}
+                </Paragraph>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                as="link"
+                href={`/team/${encodeURIComponent(team.slug || team.id)}`}
+                className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-[var(--color-violet)]"
+              >
+                {t.globalProfile}
+              </Button>
+            </div>
+          </div>
+        </section>
+
+        <TournamentTabs
+          tournamentPath={tournamentPath}
+          active="teams"
+          showPodium={isCompleted}
+          showFfa={hasFfaStage}
+        />
+
+        {/* Stats du tournoi */}
+        <section className="mb-6">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+            <StatCard label={t.statPlayed} value={stats.played} />
+            <StatCard
+              label={t.statWins}
+              value={stats.wins}
+              accent="text-emerald-300"
+            />
+            <StatCard
+              label={t.statLosses}
+              value={stats.losses}
+              accent="text-red-300"
+            />
+            <StatCard label={t.statWinrate} value={`${winrate.toFixed(0)}%`} />
+            <StatCard
+              label={t.statMvp}
+              value={totalMvpAwards}
+              accent="text-yellow-300"
+            />
+          </div>
+        </section>
+
+        {/* Roster */}
+        <section className="mb-8">
+          <div className="bg-black/60 border border-white/5 rounded-2xl p-4">
+            <h2 className="text-xs uppercase tracking-[0.16em] text-gray-400 mb-3">
+              {format(t.rosterHeading, { count: roster.length })}
+            </h2>
+
+            {titulaires.length === 0 && remplacants.length === 0 && (
+              <p className="text-sm text-neutral-500">{t.rosterEmpty}</p>
+            )}
+
+            {titulaires.length > 0 && (
+              <>
+                <p className="text-[10px] uppercase tracking-widest text-neutral-500 mb-2">
+                  {t.starters}
+                </p>
+                <ul className="space-y-1 mb-4">
+                  {titulaires.map((m) => (
+                    <RosterRow key={m.id} member={m} />
+                  ))}
+                </ul>
+              </>
+            )}
+
+            {remplacants.length > 0 && (
+              <>
+                <p className="text-[10px] uppercase tracking-widest text-neutral-500 mb-2">
+                  {t.substitutes}
+                </p>
+                <ul className="space-y-1">
+                  {remplacants.map((m) => (
+                    <RosterRow key={m.id} member={m} />
+                  ))}
+                </ul>
+              </>
+            )}
+          </div>
+        </section>
+
+        {/* Matches */}
+        <section>
+          <Heading level="h2" typeStyle="heading-md" className="mb-3">
+            {t.matchesHeading}
+          </Heading>
+
+          {matches.length === 0 ? (
+            <div className="bg-black/60 border border-white/5 rounded-2xl p-6 text-center">
+              <Paragraph typeStyle="body-sm" textColor="text-gray-300">
+                {t.matchesEmpty}
+              </Paragraph>
+            </div>
+          ) : (
+            <div className="bg-black/60 border border-white/5 rounded-2xl overflow-hidden">
+              {matches.map((m) => {
+                const outcome = matchOutcome(m, team.id, t);
+                const ourScore = m.isTeam1 ? m.team1_score : m.team2_score;
+                const theirScore = m.isTeam1 ? m.team2_score : m.team1_score;
+                return (
+                  <Link
+                    key={m.id}
+                    href={`/match/${m.id}`}
+                    className="grid grid-cols-12 gap-2 px-4 py-3 items-center border-b border-white/5 last:border-b-0 hover:bg-white/5"
+                  >
+                    <div className="col-span-3 text-xs text-gray-400">
+                      {formatDate(m.scheduled_at || m.completed_at, locale)}
+                    </div>
+                    <div className="col-span-3 text-xs text-gray-300 truncate">
+                      {m.round_name || '—'}
+                    </div>
+                    <div className="col-span-3 flex items-center gap-2 truncate">
+                      {m.opponent?.logo_url && (
+                        <Image
+                          src={m.opponent.logo_url}
+                          alt=""
+                          width={20}
+                          height={20}
+                          className="rounded object-cover"
+                        />
+                      )}
+                      <span className="text-sm truncate">
+                        {m.opponent?.name || '—'}
+                      </span>
+                    </div>
+                    <div className="col-span-2 font-mono text-sm text-right">
+                      {ourScore !== null && theirScore !== null
+                        ? `${ourScore} - ${theirScore}`
+                        : '—'}
+                    </div>
+                    <div
+                      className={`col-span-1 text-xs text-right ${outcome.color}`}
+                    >
+                      {outcome.label}
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </section>
+      </div>
+    </main>
   );
 }
 

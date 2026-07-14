@@ -6,16 +6,16 @@
 // plutôt qu'un 404 (le lien peut exister depuis la fiche tournoi).
 
 import type { GetStaticPaths, GetStaticProps } from 'next';
-import Head from 'next/head';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
+import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { findTournamentByIdOrSlug } from '@/utils/tournamentLookup';
 import {
   readPublicFfaStandings,
   type PublicFfaStandingRow,
 } from '@/utils/public/readFfaStandings';
-import { useT, format } from '@/lib/i18n/useT';
+import { useT } from '@/lib/i18n/useT';
 import { logger } from '@/utils/logger';
 import TournamentTabs from '@/components/tournament/TournamentTabs';
 
@@ -33,7 +33,20 @@ type Props = {
   stageName: string | null;
   standings: PublicFfaStandingRow[];
   isCompleted: boolean;
+  seo: SeoProps;
 };
+
+function buildFfaSeo(name: string, stageName: string | null): SeoProps {
+  const suffix = stageName ? ` · ${stageName}` : '';
+  return {
+    title: { fr: `Classement FFA – ${name}`, en: `FFA standings – ${name}` },
+    description: {
+      fr: `Classement FFA du tournoi ${name}${suffix} — OW Women's Cup : points, lobbies joués et meilleurs placements de la coupe féminine Overwatch.`,
+      en: `FFA standings for the ${name}${suffix} tournament — OW Women's Cup: points, lobbies played and best placements of the women's Overwatch cup.`,
+    },
+    type: 'website',
+  };
+}
 
 export const getStaticPaths: GetStaticPaths = async () => {
   return { paths: [], fallback: 'blocking' };
@@ -79,6 +92,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       standings,
       isCompleted:
         tournament.status === 'finished' || tournament.status === 'completed',
+      seo: buildFfaSeo(tournament.name, stageName),
     },
     revalidate: 60,
   };
@@ -99,18 +113,6 @@ export default function TournamentFfaPage({
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
-      <Head>
-        <title>{format(t.headTitle, { name: tournamentName })}</title>
-        <meta
-          name="description"
-          content={format(t.metaDescription, { name: tournamentName })}
-        />
-        <meta
-          property="og:title"
-          content={format(t.headTitle, { name: tournamentName })}
-        />
-      </Head>
-
       <main className="container mx-auto max-w-5xl px-4 pt-24 pb-16">
         <header className="mb-8">
           <p className="text-[10px] uppercase tracking-widest text-[var(--color-green-light)] mb-2">

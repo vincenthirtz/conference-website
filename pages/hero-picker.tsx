@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import Head from 'next/head';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
+import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { useT, format } from '@/lib/i18n/useT';
 
 type Hero = {
@@ -178,14 +178,6 @@ export default function HeroPickerPage() {
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white pb-16">
-      <Head>
-        <title>Hero Picker test | OW Women&apos;s Cup</title>
-        <meta
-          name="description"
-          content="Espace de test pour le picker de héros Overwatch."
-        />
-      </Head>
-
       <div className="container max-w-4xl mx-auto px-4 pt-24 space-y-6">
         <div className="flex flex-wrap items-center gap-3">
           <Heading typeStyle="heading-md" className="text-gradient">
@@ -431,3 +423,16 @@ export default function HeroPickerPage() {
     </div>
   );
 }
+
+const heroPickerSeo: SeoProps = {
+  title: {
+    fr: 'Hero Picker Overwatch — favori & ban',
+    en: 'Overwatch hero picker — favourite & ban',
+  },
+  description: {
+    fr: "Teste le hero picker Overwatch de l'OW Women's Cup : choisis ton héros favori, bannis un personnage et vote pour ton équipe. Outil ludique de la coupe féminine.",
+    en: "Try the OW Women's Cup Overwatch hero picker: choose your favourite hero, ban a character and vote for your team. A playful tool from the women's cup.",
+  },
+};
+
+HeroPickerPage.seo = heroPickerSeo;

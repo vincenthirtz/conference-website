@@ -267,7 +267,11 @@ export default function NewsSlugPage({
                   </span>
                 )}
               </div>
-              <Heading typeStyle="heading-md" className="text-brand-gradient">
+              <Heading
+                level="h1"
+                typeStyle="heading-md"
+                className="text-brand-gradient"
+              >
                 {title}
               </Heading>
               <span className="brand-rule mt-1" aria-hidden />

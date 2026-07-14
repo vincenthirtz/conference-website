@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import type { GetStaticProps } from 'next';
-import Head from 'next/head';
 import Link from 'next/link';
 import Image from 'next/image';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import Button from '@/components/Buttons/button';
+import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { supabaseAdmin } from '@/utils/supabase';
 import { useT, format } from '@/lib/i18n/useT';
 
@@ -211,88 +211,94 @@ export default function LorePage({ media }: LorePageProps) {
   ];
 
   return (
-    <>
-      <Head>
-        <title>{t.headTitle}</title>
-        <meta name="description" content={t.headDesc} />
-      </Head>
-
-      <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950">
-        <div className="container mx-auto px-4 pt-28 pb-16">
-          {/* Header */}
-          <div className="text-center mb-12">
-            <div className="inline-block text-lg text-white font-semibold border-b-2 border-purple-400 mb-4">
-              {t.eyebrow}
-            </div>
-            <Heading typeStyle="heading-lg" className="text-brand-gradient">
-              {t.title}
-            </Heading>
-            <span className="brand-rule mx-auto mt-4" aria-hidden />
-            <div className="max-w-2xl mx-auto mt-4">
-              <Paragraph typeStyle="body-lg" textColor="text-neutral-300">
-                {t.intro}
-              </Paragraph>
-            </div>
+    <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950">
+      <div className="container mx-auto px-4 pt-28 pb-16">
+        {/* Header */}
+        <div className="text-center mb-12">
+          <div className="inline-block text-lg text-white font-semibold border-b-2 border-purple-400 mb-4">
+            {t.eyebrow}
           </div>
-
-          {/* Tabs */}
-          <div className="flex flex-wrap justify-center gap-2 mb-10">
-            {tabs.map((tab) => {
-              const count =
-                tab.key === 'all' ? media.length : counts[tab.key] || 0;
-              const config = tab.key !== 'all' ? typeConfig[tab.key] : null;
-
-              return (
-                <button
-                  key={tab.key}
-                  onClick={() => setActiveTab(tab.key)}
-                  className={`px-5 py-2.5 rounded-xl text-sm font-medium transition ${
-                    activeTab === tab.key
-                      ? 'border border-[var(--color-violet)]/60 bg-[var(--color-violet)]/15 text-white'
-                      : 'text-neutral-400 hover:text-white hover:bg-white/5'
-                  }`}
-                >
-                  {tab.label}
-                  {!loading && count > 0 && (
-                    <span
-                      className={`ml-2 text-xs ${config ? config.color : 'text-neutral-500'}`}
-                    >
-                      ({count})
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Content */}
-          {loading ? (
-            renderSkeleton(6)
-          ) : filteredItems.length === 0 ? (
-            <div className="text-center py-20">
-              <Paragraph textColor="text-neutral-400" className="text-lg">
-                {t.empty}
-              </Paragraph>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredItems.map((item) => renderMediaCard(item))}
-            </div>
-          )}
-
-          {/* Link to Blizzard */}
-          <div className="mt-16 flex justify-center">
-            <Link href={MEDIA_SOURCE} target="_blank" rel="noreferrer">
-              <Button
-                type="button"
-                className="px-6 py-3 bg-[var(--color-violet)] hover:bg-[var(--color-violet-deep)]"
-              >
-                {t.viewAllBlizzard}
-              </Button>
-            </Link>
+          <Heading typeStyle="heading-lg" className="text-brand-gradient">
+            {t.title}
+          </Heading>
+          <span className="brand-rule mx-auto mt-4" aria-hidden />
+          <div className="max-w-2xl mx-auto mt-4">
+            <Paragraph typeStyle="body-lg" textColor="text-neutral-300">
+              {t.intro}
+            </Paragraph>
           </div>
         </div>
+
+        {/* Tabs */}
+        <div className="flex flex-wrap justify-center gap-2 mb-10">
+          {tabs.map((tab) => {
+            const count =
+              tab.key === 'all' ? media.length : counts[tab.key] || 0;
+            const config = tab.key !== 'all' ? typeConfig[tab.key] : null;
+
+            return (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={`px-5 py-2.5 rounded-xl text-sm font-medium transition ${
+                  activeTab === tab.key
+                    ? 'border border-[var(--color-violet)]/60 bg-[var(--color-violet)]/15 text-white'
+                    : 'text-neutral-400 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                {tab.label}
+                {!loading && count > 0 && (
+                  <span
+                    className={`ml-2 text-xs ${config ? config.color : 'text-neutral-500'}`}
+                  >
+                    ({count})
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Content */}
+        {loading ? (
+          renderSkeleton(6)
+        ) : filteredItems.length === 0 ? (
+          <div className="text-center py-20">
+            <Paragraph textColor="text-neutral-400" className="text-lg">
+              {t.empty}
+            </Paragraph>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredItems.map((item) => renderMediaCard(item))}
+          </div>
+        )}
+
+        {/* Link to Blizzard */}
+        <div className="mt-16 flex justify-center">
+          <Link href={MEDIA_SOURCE} target="_blank" rel="noreferrer">
+            <Button
+              type="button"
+              className="px-6 py-3 bg-[var(--color-violet)] hover:bg-[var(--color-violet-deep)]"
+            >
+              {t.viewAllBlizzard}
+            </Button>
+          </Link>
+        </div>
       </div>
-    </>
+    </div>
   );
 }
+
+const loreSeo: SeoProps = {
+  title: {
+    fr: 'Lore Overwatch — comics, récits & médias officiels',
+    en: 'Overwatch lore — official comics, stories & media',
+  },
+  description: {
+    fr: "Plonge dans le lore Overwatch avec l'OW Women's Cup, la coupe féminine : comics, nouvelles, cinématiques et musiques officielles Blizzard réunis en un seul endroit.",
+    en: "Dive into Overwatch lore with OW Women's Cup, the women's cup: official Blizzard comics, short stories, cinematics and music gathered in one place.",
+  },
+};
+
+LorePage.seo = loreSeo;

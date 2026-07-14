@@ -1,9 +1,9 @@
 import type { GetStaticProps } from 'next';
-import Head from 'next/head';
 import Link from 'next/link';
 import Button from '@/components/Buttons/button';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
+import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 
@@ -147,10 +147,6 @@ export default function BuildsPage({ builds, error }: BuildsPageProps) {
   const locale = useLocale();
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#0b0b14] to-black text-white">
-      <Head>
-        <title>{t.headTitle}</title>
-      </Head>
-
       <main className="container mx-auto max-w-5xl px-4 pt-24 pb-16">
         <header className="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
@@ -282,3 +278,16 @@ function formatDate(iso: string, locale: string) {
     minute: '2-digit',
   });
 }
+
+const buildsSeo: SeoProps = {
+  title: {
+    fr: 'Journal des déploiements & builds',
+    en: 'Deployment & builds log',
+  },
+  description: {
+    fr: "Suis l'historique des déploiements et builds du site de l'OW Women's Cup, la coupe féminine Overwatch : statut, durée et détails de chaque mise en ligne.",
+    en: "Follow the deployment and builds history of the OW Women's Cup site, the women's Overwatch cup: status, duration and details of every release.",
+  },
+};
+
+BuildsPage.seo = buildsSeo;

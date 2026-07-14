@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { useMemo } from 'react';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
+import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { useT } from '@/lib/i18n/useT';
@@ -238,5 +239,18 @@ function TeamPill({ team }: { team: ScrimTeam | null }) {
     </span>
   );
 }
+
+const scrimsSeo: SeoProps = {
+  title: {
+    fr: 'Scrims publics — matchs amicaux Overwatch',
+    en: 'Public scrims — Overwatch practice matches',
+  },
+  description: {
+    fr: "Consulte les scrims publics de l'OW Women's Cup : matchs amicaux Overwatch entre équipes féminines, calendrier, statut en direct et streams des rencontres.",
+    en: "Browse the OW Women's Cup public scrims: friendly Overwatch practice matches between women's teams, schedule, live status and rencontre streams.",
+  },
+};
+
+ScrimsPage.seo = scrimsSeo;
 
 export default ScrimsPage;

@@ -4,12 +4,12 @@
 // bracket / matches / maps / podium de la page tournoi.
 
 import { GetStaticPaths, GetStaticProps } from 'next';
-import Head from 'next/head';
 import Link from 'next/link';
 import Image from 'next/image';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import Button from '@/components/Buttons/button';
+import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { findTournamentByIdOrSlug } from '@/utils/tournamentLookup';
@@ -40,7 +40,23 @@ type Props = {
   tournament: Tournament;
   teams: Team[];
   hasFfaStage: boolean;
+  seo: SeoProps;
 };
+
+function buildTeamsListSeo(
+  tournament: Tournament,
+  teamCount: number
+): SeoProps {
+  const name = tournament.name;
+  return {
+    title: { fr: `Équipes – ${name}`, en: `Teams – ${name}` },
+    description: {
+      fr: `Les ${teamCount} équipes inscrites au tournoi ${name} — OW Women's Cup : rosters, logos et fiches des équipes de la coupe féminine Overwatch.`,
+      en: `The ${teamCount} teams registered for the ${name} tournament — OW Women's Cup: rosters, logos and team pages of the women's Overwatch cup.`,
+    },
+    type: 'website',
+  };
+}
 
 export const getStaticPaths: GetStaticPaths = async () => {
   return { paths: [], fallback: 'blocking' };
@@ -98,7 +114,15 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
     a.name.localeCompare(b.name, 'fr')
   );
 
-  return { props: { tournament, teams, hasFfaStage }, revalidate: 60 };
+  return {
+    props: {
+      tournament,
+      teams,
+      hasFfaStage,
+      seo: buildTeamsListSeo(tournament, teams.length),
+    },
+    revalidate: 60,
+  };
 };
 
 export default function TournamentTeamsPage({
@@ -112,101 +136,90 @@ export default function TournamentTeamsPage({
     tournament.status === 'finished' || tournament.status === 'completed';
 
   return (
-    <>
-      <Head>
-        <title>{format(t.headTitle, { name: tournament.name })}</title>
-        <meta
-          name="description"
-          content={format(t.metaDescription, { name: tournament.name })}
-        />
-      </Head>
-
-      <main className="bg-neutral-950 text-white min-h-screen pt-24 pb-16">
-        <div className="max-w-5xl mx-auto px-4">
-          <section className="mb-8">
-            <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-green-light)]/90">
-              {t.eyebrow}
-            </p>
-            <Heading
-              level="h1"
-              typeStyle="heading-md"
-              className="text-brand-gradient mb-1"
+    <main className="bg-neutral-950 text-white min-h-screen pt-24 pb-16">
+      <div className="max-w-5xl mx-auto px-4">
+        <section className="mb-8">
+          <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-green-light)]/90">
+            {t.eyebrow}
+          </p>
+          <Heading
+            level="h1"
+            typeStyle="heading-md"
+            className="text-brand-gradient mb-1"
+          >
+            {t.heading}
+          </Heading>
+          <span className="brand-rule mb-2" aria-hidden />
+          <p className="text-sm text-gray-300">
+            <Link
+              href={tournamentPath}
+              className="text-[var(--color-green-light)] hover:text-white underline"
             >
-              {t.heading}
-            </Heading>
-            <span className="brand-rule mb-2" aria-hidden />
-            <p className="text-sm text-gray-300">
-              <Link
-                href={tournamentPath}
-                className="text-[var(--color-green-light)] hover:text-white underline"
-              >
-                {tournament.name}
-              </Link>{' '}
-              {format(
-                teams.length > 1 ? t.teamsCount_other : t.teamsCount_one,
-                { count: teams.length }
-              )}
-            </p>
-          </section>
+              {tournament.name}
+            </Link>{' '}
+            {format(teams.length > 1 ? t.teamsCount_other : t.teamsCount_one, {
+              count: teams.length,
+            })}
+          </p>
+        </section>
 
-          <TournamentTabs
-            tournamentPath={tournamentPath}
-            active="teams"
-            showPodium={isCompleted}
-            showFfa={hasFfaStage}
-          />
+        <TournamentTabs
+          tournamentPath={tournamentPath}
+          active="teams"
+          showPodium={isCompleted}
+          showFfa={hasFfaStage}
+        />
 
-          {teams.length === 0 ? (
-            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-8 text-center">
-              <Paragraph typeStyle="body-md" textColor="text-gray-300">
-                {t.empty}
-              </Paragraph>
-              <Button
-                as="link"
-                href={tournamentPath}
-                className="mt-4 inline-flex px-6 py-2.5 text-xs font-semibold rounded-full bg-white/5 border border-white/20 hover:border-[var(--color-green)]/60 hover:bg-[var(--color-green)]/10 transition-all"
-              >
-                {t.backToTournament}
-              </Button>
-            </div>
-          ) : (
-            <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {teams.map((team) => (
-                <li key={team.id}>
-                  <Link
-                    href={`${tournamentPath}/teams/${team.id}`}
-                    className="group card-brand flex items-center gap-4 rounded-xl border border-white/10 bg-white/[0.03] p-4 transition-all hover:bg-[var(--color-green)]/[0.07]"
-                  >
-                    {team.logo_url ? (
-                      <Image
-                        src={team.logo_url}
-                        alt={team.name}
-                        width={56}
-                        height={56}
-                        className="h-14 w-14 rounded-lg object-cover bg-neutral-900 border border-white/10"
-                      />
-                    ) : (
-                      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-neutral-900 border border-white/10 text-lg font-bold text-[var(--color-green-light)]">
-                        {(team.short_name || team.name).charAt(0).toUpperCase()}
-                      </div>
-                    )}
-                    <div className="min-w-0">
-                      <p className="truncate font-semibold text-white group-hover:text-[var(--color-green-light)]">
-                        {team.name}
-                      </p>
-                      {team.short_name && (
-                        <p className="truncate text-xs uppercase tracking-wide text-gray-400">
-                          {team.short_name}
-                        </p>
-                      )}
+        {teams.length === 0 ? (
+          <div className="rounded-xl border border-white/10 bg-white/[0.03] p-8 text-center">
+            <Paragraph typeStyle="body-md" textColor="text-gray-300">
+              {t.empty}
+            </Paragraph>
+            <Button
+              as="link"
+              href={tournamentPath}
+              className="mt-4 inline-flex px-6 py-2.5 text-xs font-semibold rounded-full bg-white/5 border border-white/20 hover:border-[var(--color-green)]/60 hover:bg-[var(--color-green)]/10 transition-all"
+            >
+              {t.backToTournament}
+            </Button>
+          </div>
+        ) : (
+          <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {teams.map((team) => (
+              <li key={team.id}>
+                <Link
+                  href={`${tournamentPath}/teams/${team.id}`}
+                  className="group card-brand flex items-center gap-4 rounded-xl border border-white/10 bg-white/[0.03] p-4 transition-all hover:bg-[var(--color-green)]/[0.07]"
+                >
+                  {team.logo_url ? (
+                    <Image
+                      src={team.logo_url}
+                      alt={team.name}
+                      width={56}
+                      height={56}
+                      className="h-14 w-14 rounded-lg object-cover bg-neutral-900 border border-white/10"
+                    />
+                  ) : (
+                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-neutral-900 border border-white/10 text-lg font-bold text-[var(--color-green-light)]">
+                      {(team.short_name || team.name).charAt(0).toUpperCase()}
                     </div>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </main>
-    </>
+                  )}
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold text-white group-hover:text-[var(--color-green-light)]">
+                      {team.name}
+                    </p>
+                    {team.short_name && (
+                      <p className="truncate text-xs uppercase tracking-wide text-gray-400">
+                        {team.short_name}
+                      </p>
+                    )}
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </main>
   );
 }

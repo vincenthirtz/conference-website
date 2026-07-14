@@ -5,11 +5,11 @@
 // de rankings (cas où completed a été set manuellement sans finalize).
 
 import { GetStaticPaths, GetStaticProps } from 'next';
-import Head from 'next/head';
 import Image from 'next/image';
 import Link from 'next/link';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
+import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { findTournamentByIdOrSlug } from '@/utils/tournamentLookup';
@@ -47,7 +47,20 @@ type Props = {
   tournament: Tournament;
   rankings: RankingRow[];
   hasFfaStage: boolean;
+  seo: SeoProps;
 };
+
+function buildPodiumSeo(tournament: Tournament): SeoProps {
+  const name = tournament.name;
+  return {
+    title: { fr: `Podium – ${name}`, en: `Podium – ${name}` },
+    description: {
+      fr: `Podium officiel du tournoi ${name} — OW Women's Cup : classement final, équipes gagnantes et récompenses de la coupe féminine Overwatch.`,
+      en: `Official podium of the ${name} tournament — OW Women's Cup: final standings, winning teams and prizes of the women's Overwatch cup.`,
+    },
+    type: 'website',
+  };
+}
 
 export const getStaticPaths: GetStaticPaths = async () => {
   return { paths: [], fallback: 'blocking' };
@@ -133,7 +146,12 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
   }));
 
   return {
-    props: { tournament, rankings, hasFfaStage },
+    props: {
+      tournament,
+      rankings,
+      hasFfaStage,
+      seo: buildPodiumSeo(tournament),
+    },
     revalidate: 60,
   };
 };
@@ -182,170 +200,154 @@ export default function TournamentPodiumPage({
     : null;
 
   return (
-    <>
-      <Head>
-        <title>{format(t.headTitle, { name: tournament.name })}</title>
-        <meta
-          name="description"
-          content={format(t.metaDescription, { name: tournament.name })}
-        />
-        <meta
-          property="og:title"
-          content={format(t.headTitle, { name: tournament.name })}
-        />
-      </Head>
-
-      <main className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-black text-white">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16">
-          <div className="flex flex-col items-center text-center mb-10">
-            <p className="text-xs uppercase tracking-widest text-[var(--color-yellow)] mb-2">
-              {t.eyebrow}
-            </p>
-            <Heading level="h1" className="text-brand-gradient">
-              {tournament.name}
-            </Heading>
-            <span className="brand-rule mt-3" aria-hidden />
-            {frozenAtLabel && (
-              <Paragraph className="text-neutral-400 mt-2">
-                {format(t.closedOn, { date: frozenAtLabel })}
-              </Paragraph>
-            )}
-          </div>
-
-          <TournamentTabs
-            tournamentPath={tournamentPath}
-            active="podium"
-            showPodium={isCompleted}
-            showFfa={hasFfaStage}
-          />
-
-          {top3.length > 0 && (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
-              {[2, 1, 3]
-                .map((rank) => top3.find((r) => r.rank === rank))
-                .filter((r): r is RankingRow => Boolean(r))
-                .map((r) => {
-                  const medal = MEDAL[r.rank];
-                  const isFirst = r.rank === 1;
-                  return (
-                    <div
-                      key={r.team_id}
-                      className={`relative rounded-2xl border border-neutral-800 bg-gradient-to-b ${medal?.color ?? 'from-neutral-800 to-neutral-900'} p-1 ${
-                        isFirst ? 'sm:-mt-4 sm:scale-105' : ''
-                      }`}
-                    >
-                      <div className="rounded-xl bg-neutral-950/85 px-4 py-6 h-full flex flex-col items-center text-center">
-                        <div className="text-4xl mb-2">{medal?.emoji}</div>
-                        <div className="text-xs uppercase tracking-wide text-neutral-400 mb-3">
-                          {medal?.label}
-                        </div>
-                        {r.team_logo_url ? (
-                          <div className="relative w-16 h-16 mb-3">
-                            <Image
-                              src={r.team_logo_url}
-                              alt={r.team_name}
-                              fill
-                              sizes="64px"
-                              className="object-contain"
-                            />
-                          </div>
-                        ) : (
-                          <div className="w-16 h-16 mb-3 rounded-full bg-neutral-800 flex items-center justify-center text-xl font-bold">
-                            {r.team_short_name?.[0] ?? r.team_name[0]}
-                          </div>
-                        )}
-                        {r.team_slug ? (
-                          <Link
-                            href={`/team/${r.team_slug}`}
-                            className="font-bold text-lg hover:text-[var(--color-yellow)]"
-                          >
-                            {r.team_name}
-                          </Link>
-                        ) : (
-                          <span className="font-bold text-lg">
-                            {r.team_name}
-                          </span>
-                        )}
-                        {r.prize && (
-                          <div className="mt-2 text-sm text-[var(--color-yellow-light)]">
-                            {r.prize}
-                          </div>
-                        )}
-                        {r.notes && (
-                          <div className="mt-1 text-xs text-neutral-500">
-                            {r.notes}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-            </div>
+    <main className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-black text-white">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16">
+        <div className="flex flex-col items-center text-center mb-10">
+          <p className="text-xs uppercase tracking-widest text-[var(--color-yellow)] mb-2">
+            {t.eyebrow}
+          </p>
+          <Heading level="h1" className="text-brand-gradient">
+            {tournament.name}
+          </Heading>
+          <span className="brand-rule mt-3" aria-hidden />
+          {frozenAtLabel && (
+            <Paragraph className="text-neutral-400 mt-2">
+              {format(t.closedOn, { date: frozenAtLabel })}
+            </Paragraph>
           )}
+        </div>
 
-          {rest.length > 0 && (
-            <div className="rounded-2xl border border-neutral-800 bg-neutral-900/40 overflow-hidden">
-              <table className="w-full text-sm">
-                <thead className="bg-neutral-900/80 text-xs uppercase text-neutral-400">
-                  <tr>
-                    <th scope="col" className="px-4 py-3 text-left w-16">
-                      {t.colRank}
-                    </th>
-                    <th scope="col" className="px-4 py-3 text-left">
-                      {t.colTeam}
-                    </th>
-                    <th scope="col" className="px-4 py-3 text-left">
-                      {t.colPrize}
-                    </th>
-                    <th scope="col" className="px-4 py-3 text-left">
-                      {t.colNotes}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rest.map((r) => (
-                    <tr
-                      key={r.team_id}
-                      className="border-t border-neutral-800/60"
-                    >
-                      <td className="px-4 py-2 font-mono text-neutral-300">
-                        #{r.rank}
-                      </td>
-                      <td className="px-4 py-2 flex items-center gap-3">
-                        {r.team_logo_url ? (
+        <TournamentTabs
+          tournamentPath={tournamentPath}
+          active="podium"
+          showPodium={isCompleted}
+          showFfa={hasFfaStage}
+        />
+
+        {top3.length > 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
+            {[2, 1, 3]
+              .map((rank) => top3.find((r) => r.rank === rank))
+              .filter((r): r is RankingRow => Boolean(r))
+              .map((r) => {
+                const medal = MEDAL[r.rank];
+                const isFirst = r.rank === 1;
+                return (
+                  <div
+                    key={r.team_id}
+                    className={`relative rounded-2xl border border-neutral-800 bg-gradient-to-b ${medal?.color ?? 'from-neutral-800 to-neutral-900'} p-1 ${
+                      isFirst ? 'sm:-mt-4 sm:scale-105' : ''
+                    }`}
+                  >
+                    <div className="rounded-xl bg-neutral-950/85 px-4 py-6 h-full flex flex-col items-center text-center">
+                      <div className="text-4xl mb-2">{medal?.emoji}</div>
+                      <div className="text-xs uppercase tracking-wide text-neutral-400 mb-3">
+                        {medal?.label}
+                      </div>
+                      {r.team_logo_url ? (
+                        <div className="relative w-16 h-16 mb-3">
                           <Image
                             src={r.team_logo_url}
                             alt={r.team_name}
-                            width={24}
-                            height={24}
+                            fill
+                            sizes="64px"
                             className="object-contain"
                           />
-                        ) : null}
-                        {r.team_slug ? (
-                          <Link
-                            href={`/team/${r.team_slug}`}
-                            className="hover:text-[var(--color-yellow)]"
-                          >
-                            {r.team_name}
-                          </Link>
-                        ) : (
-                          <span>{r.team_name}</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-2 text-neutral-300">
-                        {r.prize ?? '—'}
-                      </td>
-                      <td className="px-4 py-2 text-neutral-500">
-                        {r.notes ?? '—'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      </main>
-    </>
+                        </div>
+                      ) : (
+                        <div className="w-16 h-16 mb-3 rounded-full bg-neutral-800 flex items-center justify-center text-xl font-bold">
+                          {r.team_short_name?.[0] ?? r.team_name[0]}
+                        </div>
+                      )}
+                      {r.team_slug ? (
+                        <Link
+                          href={`/team/${r.team_slug}`}
+                          className="font-bold text-lg hover:text-[var(--color-yellow)]"
+                        >
+                          {r.team_name}
+                        </Link>
+                      ) : (
+                        <span className="font-bold text-lg">{r.team_name}</span>
+                      )}
+                      {r.prize && (
+                        <div className="mt-2 text-sm text-[var(--color-yellow-light)]">
+                          {r.prize}
+                        </div>
+                      )}
+                      {r.notes && (
+                        <div className="mt-1 text-xs text-neutral-500">
+                          {r.notes}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+        )}
+
+        {rest.length > 0 && (
+          <div className="rounded-2xl border border-neutral-800 bg-neutral-900/40 overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-neutral-900/80 text-xs uppercase text-neutral-400">
+                <tr>
+                  <th scope="col" className="px-4 py-3 text-left w-16">
+                    {t.colRank}
+                  </th>
+                  <th scope="col" className="px-4 py-3 text-left">
+                    {t.colTeam}
+                  </th>
+                  <th scope="col" className="px-4 py-3 text-left">
+                    {t.colPrize}
+                  </th>
+                  <th scope="col" className="px-4 py-3 text-left">
+                    {t.colNotes}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {rest.map((r) => (
+                  <tr
+                    key={r.team_id}
+                    className="border-t border-neutral-800/60"
+                  >
+                    <td className="px-4 py-2 font-mono text-neutral-300">
+                      #{r.rank}
+                    </td>
+                    <td className="px-4 py-2 flex items-center gap-3">
+                      {r.team_logo_url ? (
+                        <Image
+                          src={r.team_logo_url}
+                          alt={r.team_name}
+                          width={24}
+                          height={24}
+                          className="object-contain"
+                        />
+                      ) : null}
+                      {r.team_slug ? (
+                        <Link
+                          href={`/team/${r.team_slug}`}
+                          className="hover:text-[var(--color-yellow)]"
+                        >
+                          {r.team_name}
+                        </Link>
+                      ) : (
+                        <span>{r.team_name}</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2 text-neutral-300">
+                      {r.prize ?? '—'}
+                    </td>
+                    <td className="px-4 py-2 text-neutral-500">
+                      {r.notes ?? '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </main>
   );
 }
