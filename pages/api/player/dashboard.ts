@@ -169,14 +169,26 @@ async function loadTeamAndMembers(
 
     const teamId = (membership as Record<string, unknown>).team_id as string;
 
-    const { data: teamRowRaw, error: teamErr } = await supabaseAdmin
-      .from('teams')
-      .select(
-        'id, slug, name, short_name, logo_url, country, description, is_joinable, open_for_scrim'
-      )
-      .eq('id', teamId)
-      .eq('tenant_id', tenantId)
-      .maybeSingle();
+    // `team` (detail) and `members` (roster) both depend only on teamId, so
+    // fetch them concurrently instead of waterfalling team → members.
+    const [teamRes, membersRes] = await Promise.all([
+      supabaseAdmin
+        .from('teams')
+        .select(
+          'id, slug, name, short_name, logo_url, country, description, is_joinable, open_for_scrim'
+        )
+        .eq('id', teamId)
+        .eq('tenant_id', tenantId)
+        .maybeSingle(),
+      supabaseAdmin
+        .from('team_members')
+        .select('id, user_id, role, battle_tag, specialty, is_substitute')
+        .eq('team_id', teamId)
+        .eq('tenant_id', tenantId)
+        .order('created_at', { ascending: true }),
+    ]);
+
+    const { data: teamRowRaw, error: teamErr } = teamRes;
 
     if (teamErr || !teamRowRaw) {
       if (teamErr) logger.error('[player/dashboard] team error:', teamErr);
@@ -196,12 +208,7 @@ async function loadTeamAndMembers(
       is_joinable: (teamRaw.is_joinable as boolean | undefined) ?? false,
     };
 
-    const { data: membersRaw, error: membersErr } = await supabaseAdmin
-      .from('team_members')
-      .select('id, user_id, role, battle_tag, specialty, is_substitute')
-      .eq('team_id', teamId)
-      .eq('tenant_id', tenantId)
-      .order('created_at', { ascending: true });
+    const { data: membersRaw, error: membersErr } = membersRes;
 
     if (membersErr) {
       logger.error('[player/dashboard] members error:', membersErr);

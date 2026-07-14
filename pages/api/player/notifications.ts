@@ -47,95 +47,85 @@ export type PlayerNotificationsPayload = {
 };
 
 async function countMembership(userId: string, tenantId: string) {
-  const { data } = await supabaseAdmin!
-    .from('team_members')
-    .select('team_id')
-    .eq('user_id', userId)
-    .eq('tenant_id', tenantId)
-    .maybeSingle();
-  return data?.team_id ?? null;
+  try {
+    const { data } = await supabaseAdmin!
+      .from('team_members')
+      .select('team_id')
+      .eq('user_id', userId)
+      .eq('tenant_id', tenantId)
+      .maybeSingle();
+    return data?.team_id ?? null;
+  } catch {
+    return null;
+  }
 }
 
-export default withAuthRoute(async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse<PlayerNotificationsPayload | { error: string }>,
-  { user }
-) {
-  if (
-    applyRateLimit(req, res, { max: 120, windowMs: 60_000 }, 'player-notifs')
-  ) {
-    return;
-  }
-
-  if (req.method !== 'GET') {
-    res.setHeader('Allow', 'GET');
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  const tenantId = resolveTenantIdForUserRequest(req, { authUserId: user.id });
-  const access = await getManagedTeam(user.id, tenantId);
-  const managedTeamId = access?.teamId ?? null;
-  const memberTeamId =
-    managedTeamId ?? (await countMembership(user.id, tenantId));
-  const hasTeam = !!memberTeamId;
-  const isCaptain = !!access?.isCaptain;
-  const isManager = !!access?.isManager;
-  const canManageInbox = !!access; // captain ou manager
-
-  let unreadMessages = 0;
-  let pendingScrims = 0;
-  let pendingJoinRequests = 0;
-  let checkinPending: 0 | 1 = 0;
-
-  // Invitee-side counter: invitations addressed TO this user that are still
-  // pending. Un-scoped to a managed team — every authenticated user can be an
-  // invitee regardless of captain/manager status.
-  const { count: invites } = await supabaseAdmin!
-    .from('demandes')
-    .select('id', { count: 'exact', head: true })
-    .eq('user_id', user.id)
-    .eq('tenant_id', tenantId)
-    .eq('type', 'invite')
-    .eq('status', 'pending');
-  const pendingInvites = invites ?? 0;
-
-  if (canManageInbox && managedTeamId) {
-    // All inbound demandes targeting this team. Messages, scrims and joins
-    // share the `demandes` table; we discriminate on `type`.
-    //
-    //   captain_message + status=pending → unread inbox item
-    //   scrim           + status=pending → scrim invite to answer
-    //   join            + status=pending → roster candidate to validate
-    const { count: unread } = await supabaseAdmin!
+/** Invitee-side counter: pending invitations addressed TO this user. */
+async function countPendingInvites(
+  userId: string,
+  tenantId: string
+): Promise<number> {
+  try {
+    const { count } = await supabaseAdmin!
       .from('demandes')
       .select('id', { count: 'exact', head: true })
-      .eq('team_id', managedTeamId)
+      .eq('user_id', userId)
       .eq('tenant_id', tenantId)
-      .eq('type', 'captain_message')
+      .eq('type', 'invite')
       .eq('status', 'pending');
-    unreadMessages = unread ?? 0;
-
-    const { count: scrims } = await supabaseAdmin!
-      .from('demandes')
-      .select('id', { count: 'exact', head: true })
-      .eq('team_id', managedTeamId)
-      .eq('tenant_id', tenantId)
-      .eq('type', 'scrim')
-      .eq('status', 'pending');
-    pendingScrims = scrims ?? 0;
-
-    const { count: joins } = await supabaseAdmin!
-      .from('demandes')
-      .select('id', { count: 'exact', head: true })
-      .eq('team_id', managedTeamId)
-      .eq('tenant_id', tenantId)
-      .eq('type', 'join')
-      .eq('status', 'pending');
-    pendingJoinRequests = joins ?? 0;
+    return count ?? 0;
+  } catch {
+    return 0;
   }
+}
 
-  // Check-in pending = next match within CHECKIN_OPEN_MINUTES + not redeemed.
-  if (hasTeam && memberTeamId) {
+/**
+ * Captain inbox counters. Messages, scrims and joins all live in the `demandes`
+ * table with the same team/tenant/status filter and differ only on `type`, so a
+ * single round-trip fetches the three pending types and we bucket by type in JS
+ * (was 3 separate `count` queries).
+ *
+ *   captain_message + status=pending → unread inbox item
+ *   scrim           + status=pending → scrim invite to answer
+ *   join            + status=pending → roster candidate to validate
+ */
+async function countInboxByType(
+  teamId: string,
+  tenantId: string
+): Promise<{
+  unreadMessages: number;
+  pendingScrims: number;
+  pendingJoinRequests: number;
+}> {
+  const zero = { unreadMessages: 0, pendingScrims: 0, pendingJoinRequests: 0 };
+  try {
+    const { data } = await supabaseAdmin!
+      .from('demandes')
+      .select('type')
+      .eq('team_id', teamId)
+      .eq('tenant_id', tenantId)
+      .in('type', ['captain_message', 'scrim', 'join'])
+      .eq('status', 'pending');
+    let unreadMessages = 0;
+    let pendingScrims = 0;
+    let pendingJoinRequests = 0;
+    for (const row of (data ?? []) as Array<{ type?: string }>) {
+      if (row.type === 'captain_message') unreadMessages += 1;
+      else if (row.type === 'scrim') pendingScrims += 1;
+      else if (row.type === 'join') pendingJoinRequests += 1;
+    }
+    return { unreadMessages, pendingScrims, pendingJoinRequests };
+  } catch {
+    return zero;
+  }
+}
+
+/** Check-in pending = next match within CHECKIN_OPEN_MINUTES + not redeemed. */
+async function computeCheckinPending(
+  memberTeamId: string,
+  tenantId: string
+): Promise<0 | 1> {
+  try {
     const now = Date.now();
     const cutoffISO = new Date(
       now - CHECKIN_OPEN_MINUTES * 60_000
@@ -163,17 +153,28 @@ export default withAuthRoute(async function handler(
       const checkedInAt = isTeam1
         ? nextMatch.team1_checked_in_at
         : nextMatch.team2_checked_in_at;
-      if (isOpen && !checkedInAt) checkinPending = 1;
+      if (isOpen && !checkedInAt) return 1;
     }
+    return 0;
+  } catch {
+    return 0;
   }
+}
 
-  // Open scrim-planning grids awaiting my availability : je suis participant
-  // (capitaine/manager d'une des 2 équipes OU staff) et je n'ai pas encore
-  // peint de créneau. Le staff peut peindre sur n'importe quelle grille ouverte
-  // du tenant ; un capitaine/manager uniquement sur celles de son équipe.
-  let pendingPlannings = 0;
-  const staffRole = await getStaffRole(user.id);
-  if (managedTeamId || staffRole) {
+/**
+ * Open scrim-planning grids awaiting my availability : je suis participant
+ * (capitaine/manager d'une des 2 équipes OU staff) et je n'ai pas encore peint
+ * de créneau. Le staff peut peindre sur n'importe quelle grille ouverte du
+ * tenant ; un capitaine/manager uniquement sur celles de son équipe.
+ */
+async function countPendingPlannings(
+  userId: string,
+  tenantId: string,
+  managedTeamId: string | null,
+  staffRole: unknown
+): Promise<number> {
+  try {
+    if (!managedTeamId && !staffRole) return 0;
     let query = supabaseAdmin!
       .from('scrim_plannings')
       .select('id')
@@ -188,22 +189,80 @@ export default withAuthRoute(async function handler(
     }
     const { data: openPlannings } = await query;
     const ids = (openPlannings ?? []).map((p) => p.id as string);
-    if (ids.length > 0) {
-      const { data: mine } = await supabaseAdmin!
-        .from('scrim_planning_availabilities')
-        .select('planning_id, slots')
-        .eq('user_id', user.id)
-        .in('planning_id', ids);
-      const painted = new Set(
-        (mine ?? [])
-          .filter(
-            (r) => Array.isArray(r.slots) && (r.slots as unknown[]).length > 0
-          )
-          .map((r) => r.planning_id as string)
-      );
-      pendingPlannings = ids.filter((id) => !painted.has(id)).length;
-    }
+    if (ids.length === 0) return 0;
+    const { data: mine } = await supabaseAdmin!
+      .from('scrim_planning_availabilities')
+      .select('planning_id, slots')
+      .eq('user_id', userId)
+      .in('planning_id', ids);
+    const painted = new Set(
+      (mine ?? [])
+        .filter(
+          (r) => Array.isArray(r.slots) && (r.slots as unknown[]).length > 0
+        )
+        .map((r) => r.planning_id as string)
+    );
+    return ids.filter((id) => !painted.has(id)).length;
+  } catch {
+    return 0;
   }
+}
+
+export default withAuthRoute(async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse<PlayerNotificationsPayload | { error: string }>,
+  { user }
+) {
+  if (
+    applyRateLimit(req, res, { max: 120, windowMs: 60_000 }, 'player-notifs')
+  ) {
+    return;
+  }
+
+  if (req.method !== 'GET') {
+    res.setHeader('Allow', 'GET');
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const tenantId = resolveTenantIdForUserRequest(req, { authUserId: user.id });
+
+  // Phase 1 — resolve everything the downstream blocks need to know WHICH team
+  // / privileges apply. These three are mutually independent (all keyed on the
+  // user) so they run in parallel; membership always runs and is only consulted
+  // when the user manages no team.
+  const [access, staffRole, membershipTeamId] = await Promise.all([
+    getManagedTeam(user.id, tenantId),
+    getStaffRole(user.id),
+    countMembership(user.id, tenantId),
+  ]);
+
+  const managedTeamId = access?.teamId ?? null;
+  const memberTeamId = managedTeamId ?? membershipTeamId;
+  const hasTeam = !!memberTeamId;
+  const isCaptain = !!access?.isCaptain;
+  const isManager = !!access?.isManager;
+  const canManageInbox = !!access; // captain ou manager
+
+  // Phase 2 — every counter block is now independent and runs in parallel.
+  // Each helper degrades to its zero value on failure so one failing block
+  // never takes the whole response down.
+  const [pendingInvites, inbox, checkinPending, pendingPlannings] =
+    await Promise.all([
+      countPendingInvites(user.id, tenantId),
+      canManageInbox && managedTeamId
+        ? countInboxByType(managedTeamId, tenantId)
+        : Promise.resolve({
+            unreadMessages: 0,
+            pendingScrims: 0,
+            pendingJoinRequests: 0,
+          }),
+      hasTeam && memberTeamId
+        ? computeCheckinPending(memberTeamId, tenantId)
+        : Promise.resolve(0 as 0 | 1),
+      countPendingPlannings(user.id, tenantId, managedTeamId, staffRole),
+    ]);
+
+  const { unreadMessages, pendingScrims, pendingJoinRequests } = inbox;
 
   const total =
     unreadMessages +
