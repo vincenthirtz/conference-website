@@ -457,7 +457,7 @@ function DevelopersPage() {
   const t = useT('developpeursPage');
   // Staff-only shortcut into the authenticated self-serve hub. UX only — the hub
   // itself is SSR-gated (withStaffPage). Non-staff visitors never see this CTA.
-  const { isStaff } = useStaffSession();
+  const { isStaff, loading: staffLoading } = useStaffSession();
   const groups = getGroups(t);
   const errorCodes = getErrorCodes(t);
   const writeErrorCodes = getWriteErrorCodes(t);
@@ -481,7 +481,7 @@ function DevelopersPage() {
             {t.heroSubtitle}
           </p>
 
-          {isStaff && (
+          {isStaff ? (
             <div className="mx-auto mt-6 max-w-2xl rounded-2xl border border-purple-400/30 bg-purple-500/[0.1] p-5 text-left">
               <h2 className="text-base font-semibold text-white">
                 {t.hubCtaTitle}
@@ -494,6 +494,25 @@ function DevelopersPage() {
                 {t.hubCtaLink}
               </Link>
             </div>
+          ) : (
+            // Visiteur anonyme (non staff, session résolue) → parcours
+            // d'inscription self-service. On attend la fin du chargement de la
+            // session staff pour ne pas afficher ce CTA à un staff par erreur.
+            !staffLoading && (
+              <div className="mx-auto mt-6 max-w-2xl rounded-2xl border border-purple-400/30 bg-purple-500/[0.1] p-5 text-left">
+                <h2 className="text-base font-semibold text-white">
+                  {t.anonCtaTitle}
+                </h2>
+                <p className="mt-1 text-sm text-gray-200">{t.anonCtaBody}</p>
+                <Link
+                  href="/developpeurs/inscription"
+                  className="mt-4 inline-flex items-center gap-2 rounded-lg bg-purple-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-purple-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-300"
+                  data-test="dev-register-cta"
+                >
+                  {t.anonCtaLink}
+                </Link>
+              </div>
+            )
           )}
         </div>
       </div>
