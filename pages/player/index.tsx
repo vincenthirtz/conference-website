@@ -14,11 +14,16 @@ import QuickAction, {
 } from '@/components/player/QuickAction';
 import NextMatchCard from '@/components/player/NextMatchCard';
 import { PlayerDashboardSkeleton } from '@/components/player/Skeletons';
-import ScrimSlotCalendarPicker from '@/components/player/ScrimSlotCalendarPicker';
+import ScrimNegotiationCard, {
+  type PendingScrim,
+  type ScrimAction,
+  type ScrimActionPayload,
+} from '@/components/player/ScrimNegotiationCard';
 import ScrimPlanningsDashboardCard from '@/components/player/ScrimPlanningsDashboardCard';
 import SupportAssoCard from '@/components/player/SupportAssoCard';
 import PushOptIn from '@/components/shared/PushOptIn';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 
@@ -50,37 +55,6 @@ type Demande = {
     id: string;
     name: string;
   } | null;
-};
-
-type ScrimNego = {
-  slots: string[];
-  proposedBy: string;
-  rounds: number;
-  agreedSlot: string | null;
-};
-
-type PendingScrim = {
-  id: string;
-  comment: string | null;
-  created_at: string;
-  source?: string | null;
-  payload: {
-    from_team_name?: string;
-    preferred_date?: string;
-    format?: string | null;
-    requester_email?: string | null;
-    requester_discord?: string | null;
-  };
-  user: {
-    display_name: string | null;
-    email?: string | null;
-    discord?: string | null;
-  } | null;
-  // Multi-slot negotiation context (scrims awaiting MY action; I am always the
-  // non-proposer of the current slots).
-  scrimNego?: ScrimNego;
-  iAmRequester?: boolean;
-  myTeamId?: string;
 };
 
 // Mirror of the next-match slice the aggregated /api/player/dashboard returns
@@ -212,10 +186,6 @@ function MatchReadinessCard({
 }) {
   if (!nextMatch?.match || !nextMatch.team) return null;
 
-  // New keys live in the i18n fragment (merged separately); bridge them here so
-  // this stays decoupled from the typed locale until the fragment lands.
-  const tr = t as unknown as Record<string, string>;
-
   const readiness = nextMatch.readiness;
   const shortfall = readiness?.shortfall ?? 0;
   const hasWarning = shortfall > 0;
@@ -224,9 +194,9 @@ function MatchReadinessCard({
   const matchHref = `/match/${nextMatch.match.id}`;
 
   let checkinStatus: string;
-  if (checkin?.alreadyCheckedIn) checkinStatus = tr.readinessCheckinDone;
-  else if (checkin?.isPassed) checkinStatus = tr.readinessCheckinClosed;
-  else checkinStatus = tr.readinessCheckinTodo;
+  if (checkin?.alreadyCheckedIn) checkinStatus = t.readinessCheckinDone;
+  else if (checkin?.isPassed) checkinStatus = t.readinessCheckinClosed;
+  else checkinStatus = t.readinessCheckinTodo;
 
   const needsCheckin =
     !!checkin && !checkin.alreadyCheckedIn && !checkin.isPassed;
@@ -239,18 +209,18 @@ function MatchReadinessCard({
           : 'border-white/10 bg-white/[0.03]'
       }`}
     >
-      <h2 className="text-lg font-semibold mb-3">{tr.readinessTitle}</h2>
+      <h2 className="text-lg font-semibold mb-3">{t.readinessTitle}</h2>
 
       {hasWarning ? (
         <div className="mb-4 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
-          {format(tr.readinessRosterWarning, { n: shortfall })}
+          {format(t.readinessRosterWarning, { n: shortfall })}
         </div>
       ) : (
-        <p className="mb-4 text-sm text-gray-300">{tr.readinessRosterOk}</p>
+        <p className="mb-4 text-sm text-gray-300">{t.readinessRosterOk}</p>
       )}
 
       <div className="flex flex-wrap items-center gap-3 text-sm">
-        <span className="text-gray-400">{tr.readinessCheckinLabel}</span>
+        <span className="text-gray-400">{t.readinessCheckinLabel}</span>
         <span
           className={
             checkin?.alreadyCheckedIn
@@ -268,7 +238,7 @@ function MatchReadinessCard({
             href="/player/checkin"
             className="ml-auto inline-flex items-center gap-1 rounded-full bg-white px-4 py-1.5 text-xs font-semibold text-neutral-900 transition hover:-translate-y-0.5"
           >
-            {tr.readinessCheckinAction}
+            {t.readinessCheckinAction}
             <span aria-hidden>→</span>
           </Link>
         ) : (
@@ -276,7 +246,7 @@ function MatchReadinessCard({
             href={matchHref}
             className="ml-auto inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/5 px-4 py-1.5 text-xs font-medium text-white transition hover:bg-white/10"
           >
-            {tr.readinessViewMatch}
+            {t.readinessViewMatch}
             <span aria-hidden>→</span>
           </Link>
         )}
@@ -287,12 +257,10 @@ function MatchReadinessCard({
 
 function PlayerDashboard() {
   const t = useT('playerIndex');
-  // Bridge for keys that live in the i18n fragment (merged separately) and are
-  // not yet present in the typed locale.
-  const tr = t as unknown as Record<string, string>;
   const locale = useLocale();
   const { user, token, loading: authLoading, ready } = usePlayerSession();
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
+  const { confirm, dialog } = useConfirmDialog();
   const [loading, setLoading] = useState(true);
   const [team, setTeam] = useState<TeamInfo>(null);
   const [members, setMembers] = useState<TeamMemberLite[]>([]);
@@ -302,16 +270,6 @@ function PlayerDashboard() {
   const [pendingScrims, setPendingScrims] = useState<PendingScrim[]>([]);
   const [scrimActionId, setScrimActionId] = useState<string | null>(null);
   const [scrimError, setScrimError] = useState<string | null>(null);
-  // Selected slot (for "accept") keyed by scrim id.
-  const [selectedScrimSlot, setSelectedScrimSlot] = useState<
-    Record<string, string>
-  >({});
-  // Id of the scrim whose inline counter-proposal picker is open.
-  const [counterOpenId, setCounterOpenId] = useState<string | null>(null);
-  // Counter-proposal slots (datetime-local rows) keyed by scrim id.
-  const [counterSlots, setCounterSlots] = useState<Record<string, string[]>>(
-    {}
-  );
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [nextMatch, setNextMatch] = useState<NextMatchData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -386,53 +344,71 @@ function PlayerDashboard() {
   // Multi-slot negotiation actions:
   //  - 'accept'  + { slot }  → agree on one of the proposed slots
   //  - 'counter' + { slots } → propose new times back to the opponent
-  //  - 'reject'
+  //  - 'reject'  (confirmation required — destructive)
   // Each removes the row optimistically once the server confirms.
-  const handleScrimAction = async (
-    demandeId: string,
-    action: 'accept' | 'counter' | 'reject'
-  ) => {
-    setScrimError(null);
+  //
+  // Stable (useCallback) so the memoized ScrimNegotiationCard rows don't re-render
+  // on every dashboard state change. The per-card input state lives inside each
+  // card; the payload is passed up here on submission only.
+  const handleScrimAction = useCallback(
+    async (
+      demandeId: string,
+      action: ScrimAction,
+      payload?: ScrimActionPayload
+    ) => {
+      setScrimError(null);
 
-    let body: Record<string, unknown> = { demandeId, action };
+      let body: Record<string, unknown> = { demandeId, action };
 
-    if (action === 'accept') {
-      const slot = selectedScrimSlot[demandeId];
-      if (!slot) {
-        setScrimError(tr.selectSlotFirst);
-        return;
+      if (action === 'accept') {
+        const slot = payload?.slot;
+        if (!slot) {
+          setScrimError(t.selectSlotFirst);
+          return;
+        }
+        body = { ...body, slot };
       }
-      body = { ...body, slot };
-    }
 
-    if (action === 'counter') {
-      const slots = (counterSlots[demandeId] || [])
-        .map((s) => s.trim())
-        .filter(Boolean)
-        .map((s) => new Date(s).toISOString());
-      if (slots.length === 0) {
-        setScrimError(tr.atLeastOneSlot);
-        return;
+      if (action === 'counter') {
+        const slots = (payload?.slots || [])
+          .map((s) => s.trim())
+          .filter(Boolean)
+          .map((s) => new Date(s).toISOString());
+        if (slots.length === 0) {
+          setScrimError(t.atLeastOneSlot);
+          return;
+        }
+        body = { ...body, slots };
       }
-      body = { ...body, slots };
-    }
 
-    setScrimActionId(demandeId);
-    try {
-      await adminFetchJson('/api/teams/scrim-requests', {
-        method: 'POST',
-        body: JSON.stringify(body),
-      });
-      // Awaiting MY action either way: agreeing, rejecting, or sending the ball
-      // back to the opponent all remove the card from my actionable list.
-      setPendingScrims((prev) => prev.filter((s) => s.id !== demandeId));
-      setCounterOpenId((id) => (id === demandeId ? null : id));
-    } catch (err) {
-      setScrimError((err as Error).message);
-    } finally {
-      setScrimActionId(null);
-    }
-  };
+      if (action === 'reject') {
+        const ok = await confirm({
+          title: t.rejectConfirmTitle,
+          subtitle: t.rejectConfirmBody,
+          variant: 'warning',
+          confirmLabel: t.rejectConfirmCta,
+          cancelLabel: t.rejectConfirmCancel,
+        });
+        if (!ok) return;
+      }
+
+      setScrimActionId(demandeId);
+      try {
+        await adminFetchJson('/api/teams/scrim-requests', {
+          method: 'POST',
+          body: JSON.stringify(body),
+        });
+        // Awaiting MY action either way: agreeing, rejecting, or sending the
+        // ball back to the opponent all remove the card from my actionable list.
+        setPendingScrims((prev) => prev.filter((s) => s.id !== demandeId));
+      } catch (err) {
+        setScrimError((err as Error).message);
+      } finally {
+        setScrimActionId(null);
+      }
+    },
+    [adminFetchJson, confirm, t]
+  );
 
   const handleLeaveTeam = async () => {
     setError(null);
@@ -446,15 +422,6 @@ function PlayerDashboard() {
       setError(t.leaveError);
     }
   };
-
-  const formatSlot = (iso: string) =>
-    new Date(iso).toLocaleString(locale, {
-      weekday: 'short',
-      day: 'numeric',
-      month: 'short',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
 
   const pendingCaptainRequest = demandes.find(
     (d) => d.type === 'captain_request' && d.status === 'pending'
@@ -497,6 +464,7 @@ function PlayerDashboard() {
 
   return (
     <>
+      {dialog}
       <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
         <main className="max-w-4xl mx-auto px-4 py-10 pt-24">
           {/* Header */}
@@ -510,7 +478,11 @@ function PlayerDashboard() {
           </div>
 
           {error && (
-            <div className="mb-6 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-100">
+            <div
+              className="mb-6 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-100"
+              role="alert"
+              aria-live="assertive"
+            >
               {error}
             </div>
           )}
@@ -596,253 +568,16 @@ function PlayerDashboard() {
                 </div>
               )}
               <div className="space-y-3">
-                {pendingScrims.map((scrim) => {
-                  const isExternal = scrim.source === 'public';
-                  const contactEmail =
-                    scrim.user?.email || scrim.payload?.requester_email || null;
-                  const contactDiscord =
-                    scrim.user?.discord ||
-                    scrim.payload?.requester_discord ||
-                    null;
-                  const busy = scrimActionId === scrim.id;
-                  const nego = scrim.scrimNego;
-                  const negoSlots = nego?.slots ?? [];
-                  const round = nego?.rounds ?? 1;
-                  const agreedSlot = nego?.agreedSlot ?? null;
-                  const counterIsOpen = counterOpenId === scrim.id;
-                  const currentCounterSlots = counterSlots[scrim.id] ?? [''];
-                  // The proposer of the *current* slots is the opponent when I
-                  // am the requester (they countered), and "me" otherwise.
-                  const proposedByOpponent = !!scrim.iAmRequester;
-                  return (
-                    <div
-                      key={scrim.id}
-                      className="p-4 rounded-xl border border-white/10 bg-black/30 space-y-3"
-                    >
-                      <div className="flex items-start justify-between gap-3 flex-wrap">
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-sm font-medium text-white">
-                              {scrim.payload?.from_team_name || t.unknownTeam}
-                            </span>
-                            {isExternal && (
-                              <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-200 border border-amber-500/40 text-[10px] uppercase tracking-wide">
-                                {t.external}
-                              </span>
-                            )}
-                          </div>
-                          {scrim.user?.display_name && !isExternal && (
-                            <p className="text-xs text-gray-400 mt-0.5">
-                              {format(t.captainLabel, {
-                                name: scrim.user.display_name,
-                              })}
-                            </p>
-                          )}
-                          {isExternal && scrim.user?.display_name && (
-                            <p className="text-xs text-gray-400 mt-0.5">
-                              {format(t.contactLabel, {
-                                name: scrim.user.display_name,
-                              })}
-                            </p>
-                          )}
-                          {scrim.comment && (
-                            <p className="text-xs text-gray-300 mt-2 whitespace-pre-line">
-                              {scrim.comment}
-                            </p>
-                          )}
-                          <div className="flex items-center gap-3 flex-wrap text-xs text-gray-500 mt-2">
-                            {scrim.payload?.preferred_date && (
-                              <span>
-                                {t.dateLabel}{' '}
-                                {new Date(
-                                  scrim.payload.preferred_date
-                                ).toLocaleDateString(locale, {
-                                  day: 'numeric',
-                                  month: 'short',
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                })}
-                              </span>
-                            )}
-                            {scrim.payload?.format && (
-                              <span>
-                                {format(t.formatLabel, {
-                                  format: scrim.payload.format,
-                                })}
-                              </span>
-                            )}
-                            <span>
-                              {format(t.receivedOn, {
-                                date: new Date(
-                                  scrim.created_at
-                                ).toLocaleDateString(locale),
-                              })}
-                            </span>
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-[10px] uppercase tracking-wide text-gray-300">
-                              {format(tr.round, { n: round })}
-                            </span>
-                            <span className="text-gray-400">
-                              {proposedByOpponent
-                                ? tr.proposedByOpponent
-                                : tr.proposedByYou}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Agreed slot (negotiation already concluded) */}
-                      {agreedSlot && (
-                        <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-100">
-                          {format(tr.agreedOn, { date: formatSlot(agreedSlot) })}
-                        </div>
-                      )}
-
-                      {/* Proposed slots — selectable (accept one) */}
-                      {!agreedSlot && negoSlots.length > 0 && (
-                        <fieldset className="space-y-1.5">
-                          <legend className="text-[10px] uppercase tracking-wide text-gray-400 mb-1">
-                            {tr.proposedSlotsLabel}
-                          </legend>
-                          {negoSlots.map((slot) => {
-                            const checked =
-                              selectedScrimSlot[scrim.id] === slot;
-                            return (
-                              <label
-                                key={slot}
-                                className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer text-xs transition ${
-                                  checked
-                                    ? 'bg-blue-600/30 border-blue-400/50 text-white'
-                                    : 'bg-white/5 border-white/10 text-gray-200 hover:bg-white/10'
-                                }`}
-                              >
-                                <input
-                                  type="radio"
-                                  name={`scrim-slot-${scrim.id}`}
-                                  value={slot}
-                                  checked={checked}
-                                  onChange={() =>
-                                    setSelectedScrimSlot((prev) => ({
-                                      ...prev,
-                                      [scrim.id]: slot,
-                                    }))
-                                  }
-                                  className="accent-blue-500"
-                                />
-                                <span>{formatSlot(slot)}</span>
-                              </label>
-                            );
-                          })}
-                        </fieldset>
-                      )}
-
-                      {isExternal && (contactEmail || contactDiscord) && (
-                        <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-xs text-amber-100 space-y-0.5">
-                          <p className="uppercase tracking-wide text-[10px] text-amber-300/80">
-                            {t.contactToReply}
-                          </p>
-                          {contactEmail && (
-                            <p>
-                              <span className="text-gray-400">
-                                {t.emailLabel}
-                              </span>{' '}
-                              <a
-                                href={`mailto:${contactEmail}`}
-                                className="underline hover:text-white"
-                              >
-                                {contactEmail}
-                              </a>
-                            </p>
-                          )}
-                          {contactDiscord && (
-                            <p>
-                              <span className="text-gray-400">
-                                {t.discordLabel}
-                              </span>{' '}
-                              {contactDiscord}
-                            </p>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Inline counter-proposal picker */}
-                      {counterIsOpen && (
-                        <div className="rounded-lg border border-white/10 bg-black/40 p-3">
-                          <ScrimSlotCalendarPicker
-                            slots={currentCounterSlots}
-                            onChange={(next) =>
-                              setCounterSlots((prev) => ({
-                                ...prev,
-                                [scrim.id]: next,
-                              }))
-                            }
-                            accent="blue"
-                            labels={{
-                              slotsLabel: tr.slotsLabel,
-                              removeSlot: tr.removeSlot,
-                              maxSlotsHint: tr.maxSlotsHint,
-                              timezoneNote: tr.scrimTzNote,
-                              prevWeek: tr.slotPrevWeek,
-                              nextWeek: tr.slotNextWeek,
-                              weekOf: tr.slotWeekOf,
-                              maxReached: tr.slotMaxReached,
-                              empty: tr.slotEmpty,
-                            }}
-                          />
-                          <button
-                            type="button"
-                            disabled={busy}
-                            onClick={() =>
-                              handleScrimAction(scrim.id, 'counter')
-                            }
-                            className="mt-3 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-xs font-medium text-white"
-                          >
-                            {tr.counterSubmit}
-                          </button>
-                        </div>
-                      )}
-
-                      <div className="flex flex-wrap gap-2">
-                        {!agreedSlot && (
-                          <button
-                            type="button"
-                            disabled={busy || !selectedScrimSlot[scrim.id]}
-                            onClick={() => handleScrimAction(scrim.id, 'accept')}
-                            className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-medium text-white"
-                          >
-                            {tr.acceptSlot}
-                          </button>
-                        )}
-                        {!agreedSlot && (
-                          <button
-                            type="button"
-                            disabled={busy}
-                            onClick={() => {
-                              setCounterOpenId((id) =>
-                                id === scrim.id ? null : scrim.id
-                              );
-                              setCounterSlots((prev) =>
-                                prev[scrim.id]
-                                  ? prev
-                                  : { ...prev, [scrim.id]: [''] }
-                              );
-                            }}
-                            className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-50 text-xs"
-                          >
-                            {tr.counterCta}
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          disabled={busy}
-                          onClick={() => handleScrimAction(scrim.id, 'reject')}
-                          className="px-3 py-1.5 rounded-lg border border-red-500/30 text-red-200 hover:bg-red-500/10 disabled:opacity-50 text-xs ml-auto"
-                        >
-                          {tr.rejectScrim}
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
+                {pendingScrims.map((scrim) => (
+                  <ScrimNegotiationCard
+                    key={scrim.id}
+                    scrim={scrim}
+                    busy={scrimActionId === scrim.id}
+                    locale={locale}
+                    t={t}
+                    onAction={handleScrimAction}
+                  />
+                ))}
               </div>
             </div>
           )}

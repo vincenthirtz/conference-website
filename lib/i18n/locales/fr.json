@@ -63,6 +63,10 @@
     "counterCta": "Proposer d'autres créneaux",
     "counterSubmit": "Envoyer la contre-proposition",
     "rejectScrim": "Refuser",
+    "rejectConfirmTitle": "Refuser cette demande de scrim ?",
+    "rejectConfirmBody": "Cette action est définitive : l'équipe adverse sera notifiée du refus et la demande disparaîtra de ta liste.",
+    "rejectConfirmCta": "Refuser le scrim",
+    "rejectConfirmCancel": "Annuler",
     "round": "Tour {n}",
     "proposedByOpponent": "Proposé par l'adversaire",
     "proposedByYou": "Proposé par vous",
@@ -299,7 +303,8 @@
     "errNotCaptain": "Seul le capitaine d'une des équipes peut rapporter le score.",
     "errFinalized": "Ce match est déjà clôturé. Contacte le staff pour le modifier.",
     "errRateLimited": "Trop de tentatives. Réessaie dans un instant.",
-    "errGeneric": "Échec de l'envoi du score. Réessaie."
+    "errGeneric": "Échec de l'envoi du score. Réessaie.",
+    "retry": "Réessayer"
   },
   "nextMatchCard": {
     "nextMatch": "Prochain match",
@@ -317,7 +322,10 @@
     "lessThanMin": "moins d'1 min",
     "days": "{n}j",
     "hours": "{n}h",
-    "mins": "{n}min"
+    "mins": "{n}min",
+    "emptyTitle": "Pas de prochain match",
+    "emptyBody": "Ton prochain match programmé apparaîtra ici avec le check-in.",
+    "loadErrorShort": "Impossible de charger ton prochain match pour le moment."
   },
   "playerProfile": {
     "defaultName": "Joueuse",
@@ -395,7 +403,10 @@
     "battlenetToastVerified": "Ton BattleTag est vérifié ✅",
     "battlenetToastNoMatch": "Compte Battle.net lié, mais il ne correspond à aucun BattleTag de tes rosters. Vérifie que le tag saisi dans ton équipe correspond bien à ce compte.",
     "battlenetToastAlreadyLinked": "Ce compte Battle.net est déjà lié à une autre joueuse.",
-    "battlenetToastError": "La vérification a échoué, réessaie."
+    "battlenetToastError": "La vérification a échoué, réessaie.",
+    "roleManager": "Manager",
+    "roleCoach": "Coach",
+    "roleSubstitute": "Remplaçante"
   },
   "casterApplication": {
     "motivationTooLong": "La motivation ne peut pas dépasser {max} caractères.",
@@ -424,7 +435,9 @@
     "approvedTitle": "Bienvenue dans le cast ! 🎉",
     "approvedText": "Ta candidature a été acceptée. Tu fais désormais partie de l'équipe casting des OW Women's Cup.",
     "rejectedTitle": "Demande non retenue",
-    "rejectedText": "Ta précédente candidature n'a pas été retenue. Tu peux re-soumettre une demande quand tu le souhaites."
+    "rejectedText": "Ta précédente candidature n'a pas été retenue. Tu peux re-soumettre une demande quand tu le souhaites.",
+    "loadError": "Impossible de charger ta candidature. Réessaie.",
+    "retry": "Réessayer"
   },
   "joinTeam": {
     "connectionError": "Erreur de connexion.",
@@ -459,7 +472,9 @@
     "becomeCaptain": "Devenir capitaine",
     "alreadyInTeamTitle": "Tu fais deja partie d'une equipe",
     "alreadyInTeamBody": "Tu es deja membre de \"{teamName}\". Pour changer d'equipe, passe par Demandes › Transfert.",
-    "alreadyInTeamCta": "Aller a mes demandes de transfert →"
+    "alreadyInTeamCta": "Aller a mes demandes de transfert →",
+    "teamsLoadError": "Impossible de charger les équipes. Réessaie.",
+    "retry": "Réessayer"
   },
   "manageTeam": {
     "loadError": "Erreur de chargement.",
@@ -519,7 +534,14 @@
     "verifiedBadge": "vérifié",
     "unverifiedBadge": "non vérifié",
     "verifiedBadgeTitle": "BattleTag vérifié via Battle.net",
-    "unverifiedBadgeTitle": "BattleTag non vérifié — la joueuse doit lier son compte Battle.net"
+    "unverifiedBadgeTitle": "BattleTag non vérifié — la joueuse doit lier son compte Battle.net",
+    "roleManager": "Manager",
+    "specialtyUpdated": "Rôle en jeu mis à jour",
+    "roleSelectLabel": "Rôle dans l'équipe",
+    "errorTitle": "Impossible de charger l'équipe",
+    "errorBody": "Une erreur réseau est survenue. Vérifie ta connexion puis réessaie.",
+    "retry": "Réessayer",
+    "promoteDialogSubtitle": "Le transfert du capitanat est irréversible : tu perdras tes droits de capitaine."
   },
   "freePlayers": {
     "title": "Joueurs cherchant une équipe",
@@ -557,7 +579,10 @@
     "specialtyTank": "Tank",
     "specialtyDps": "DPS",
     "specialtySupport": "Support",
-    "specialtyFlex": "Flex"
+    "specialtyFlex": "Flex",
+    "emailAriaLabel": "Email de la joueuse {n}",
+    "battleTagAriaLabel": "BattleTag de la joueuse {n}",
+    "nicknameAriaLabel": "Pseudo de la joueuse {n}"
   },
   "existingTeamSelector": {
     "searchLabel": "Rechercher une equipe",
@@ -659,7 +684,10 @@
     "slotWeekOf": "Semaine du {date}",
     "slotMaxReached": "{max} créneaux maximum.",
     "slotEmpty": "Aucun créneau sélectionné — clique dans le calendrier.",
-    "atLeastOneSlot": "Proposez au moins un créneau."
+    "atLeastOneSlot": "Proposez au moins un créneau.",
+    "tabsAria": "Type de demande",
+    "transferModeAria": "Mode de transfert",
+    "roleGroupAria": "Rôle souhaité"
   },
   "requestCaptain": {
     "connectionError": "Erreur de connexion.",
@@ -685,7 +713,12 @@
     "messagePlaceholder": "Informations complementaires pour les admins...",
     "submitting": "Envoi en cours...",
     "submit": "Envoyer ma demande",
-    "footerNote": "En devenant capitaine, tu pourras gerer les membres de ton equipe et l'inscrire aux tournois."
+    "footerNote": "En devenant capitaine, tu pourras gerer les membres de ton equipe et l'inscrire aux tournois.",
+    "teamsLoadError": "Impossible de charger les équipes. Réessaie.",
+    "retry": "Réessayer",
+    "searchLabel": "Rechercher une équipe",
+    "searchPlaceholder": "Rechercher par nom...",
+    "noTeams": "Aucune équipe trouvée"
   },
   "demandesHistory": {
     "title": "Historique des demandes",
@@ -704,7 +737,11 @@
       "approved": "Approuvee",
       "rejected": "Refusee",
       "cancelled": "Annulee"
-    }
+    },
+    "cancelConfirmTitle": "Annuler cette demande ?",
+    "cancelConfirmSubtitle": "La demande sera définitivement retirée. Tu pourras en refaire une plus tard.",
+    "cancelConfirmYes": "Oui, annuler",
+    "cancelConfirmNo": "Garder"
   },
   "playerMessages": {
     "pageTitle": "Messages",
@@ -728,7 +765,18 @@
     "noMessages": "Aucun message dans cette conversation.",
     "replyPlaceholder": "Ecrire un message...",
     "sendingShort": "...",
-    "yesterday": "Hier"
+    "yesterday": "Hier",
+    "loadError": "Impossible de charger les conversations. Réessaie plus tard.",
+    "composeLabel": "Ton message",
+    "replyLabel": "Écrire une réponse",
+    "conversationLabel": "Fil de la conversation"
+  },
+  "teamPicker": {
+    "searchPlaceholder": "Rechercher une équipe...",
+    "loading": "Chargement...",
+    "countryLabel": "Filtrer par pays",
+    "countryAll": "Tous les pays",
+    "membersCount": "{count}/5 membres"
   },
   "playerNotifications": {
     "eventLabels": {
@@ -790,6 +838,14 @@
     "inviteNotFound": "Invitation introuvable.",
     "inviteForbidden": "Cette invitation ne t'est pas destinée.",
     "inviteError": "Une erreur est survenue. Réessaie plus tard.",
+    "inviteRolePlayer": "Joueuse",
+    "inviteRoleSubstitute": "Remplaçante",
+    "inviteRoleCoach": "Coach",
+    "inviteRoleManager": "Manager",
+    "inviteConfirmTitle": "Rejoindre {team} ?",
+    "inviteConfirmSubtitle": "Tu rejoindras cette équipe. Si tu es déjà dans une équipe, tu la quitteras.",
+    "inviteConfirmYes": "Rejoindre",
+    "inviteConfirmNo": "Annuler",
     "prefsChannelEvent": "Type d'événement",
     "prefsChannelPush": "Push",
     "prefsChannelEmail": "E-mail",
@@ -882,7 +938,10 @@
     "h2hResultDraw": "Nul",
     "h2hResultWinShort": "V",
     "h2hResultLossShort": "D",
-    "h2hResultDrawShort": "N"
+    "h2hResultDrawShort": "N",
+    "listError": "Impossible de charger les joueuses. Réessaie.",
+    "loadMoreError": "Impossible de charger plus de joueuses. Réessaie.",
+    "retry": "Réessayer"
   },
   "playerTopBar": {
     "site": "Site",

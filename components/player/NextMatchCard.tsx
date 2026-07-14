@@ -83,6 +83,7 @@ export default function NextMatchCard({
   // When parent supplies data, we already have something to render: don't show
   // the loading (hidden) state on mount.
   const [loading, setLoading] = useState(initialData === undefined);
+  const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState<number>(() => Date.now());
 
   const load = useCallback(async () => {
@@ -91,12 +92,17 @@ export default function NextMatchCard({
         skipAuthRedirect: true,
       });
       setData(json);
+      setError(null);
     } catch (err) {
+      // Surface a discreet inline message instead of silently vanishing; a
+      // previously-rendered match stays visible (we only fall back to the error
+      // card when there is nothing valid to show).
       logger.error('[NextMatchCard] load error:', err);
+      setError(t.loadErrorShort);
     } finally {
       setLoading(false);
     }
-  }, [adminFetchJson]);
+  }, [adminFetchJson, t]);
 
   // Keep in sync if the parent re-supplies a payload (e.g. after loadData).
   useEffect(() => {
@@ -108,17 +114,23 @@ export default function NextMatchCard({
 
   useEffect(() => {
     // Skip the initial fetch when the parent already provided data; the
-    // interval below still refreshes on a timer.
+    // timers below still refresh afterwards.
     if (initialData === undefined) load();
 
-    // Single 60s interval: refetches the payload and ticks the relative clock
-    // (minute granularity). Both are skipped while the tab is backgrounded to
-    // avoid useless network + work in hidden tabs.
-    const id = setInterval(() => {
+    // Clock tick — LOCAL ONLY, no network. Minute granularity keeps the
+    // relative time fresh; skipped while the tab is backgrounded.
+    const clockId = setInterval(() => {
       if (document.visibilityState !== 'visible') return;
       setNow(Date.now());
-      load();
     }, 60_000);
+
+    // Network refresh — deliberately RARE (5 min). Match schedule and check-in
+    // window change slowly; the visibilitychange handler below covers the
+    // "user just came back" case promptly without hammering the endpoint.
+    const refetchId = setInterval(() => {
+      if (document.visibilityState !== 'visible') return;
+      load();
+    }, 5 * 60_000);
 
     // Refresh immediately when the user returns to the tab so stale data and a
     // stale clock are corrected without waiting for the next tick.
@@ -130,7 +142,8 @@ export default function NextMatchCard({
     document.addEventListener('visibilitychange', onVisible);
 
     return () => {
-      clearInterval(id);
+      clearInterval(clockId);
+      clearInterval(refetchId);
       document.removeEventListener('visibilitychange', onVisible);
     };
   }, [load, initialData]);
@@ -140,6 +153,35 @@ export default function NextMatchCard({
     // is meaningful on its own.
     return null;
   }
+
+  const hasMatch = !!data?.match && !!data.team && !!data.opponent;
+
+  // No valid match to show. Rather than vanish (which reads as a bug), render a
+  // sober placeholder — or a discreet error note when the fetch failed.
+  if (!hasMatch) {
+    return (
+      <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6">
+        <div className="flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.16em] text-blue-200/80">
+          <span className="inline-flex items-center rounded-full border border-blue-300/40 bg-blue-500/15 px-2.5 py-1 text-[10px] font-semibold text-blue-50">
+            {t.nextMatch}
+          </span>
+        </div>
+        {error ? (
+          <p className="mt-3 text-sm text-amber-200/90" role="status">
+            {error}
+          </p>
+        ) : (
+          <>
+            <p className="mt-3 text-base font-semibold text-white">
+              {t.emptyTitle}
+            </p>
+            <p className="mt-1 text-sm text-gray-400">{t.emptyBody}</p>
+          </>
+        )}
+      </div>
+    );
+  }
+  // From here `data.match`/`team`/`opponent` are guaranteed present.
   if (!data?.match || !data.team || !data.opponent) return null;
 
   const scheduled = data.match.scheduledAt;

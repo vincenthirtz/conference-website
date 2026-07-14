@@ -63,6 +63,10 @@
     "counterCta": "Propose other slots",
     "counterSubmit": "Send counter-proposal",
     "rejectScrim": "Decline",
+    "rejectConfirmTitle": "Decline this scrim request?",
+    "rejectConfirmBody": "This is final: the other team will be notified of the decline and the request will disappear from your list.",
+    "rejectConfirmCta": "Decline scrim",
+    "rejectConfirmCancel": "Cancel",
     "round": "Round {n}",
     "proposedByOpponent": "Proposed by the opponent",
     "proposedByYou": "Proposed by you",
@@ -299,7 +303,8 @@
     "errNotCaptain": "Only a team captain can report the score.",
     "errFinalized": "This match is already finalized. Contact staff to change it.",
     "errRateLimited": "Too many attempts. Try again in a moment.",
-    "errGeneric": "Failed to send the score. Please try again."
+    "errGeneric": "Failed to send the score. Please try again.",
+    "retry": "Retry"
   },
   "nextMatchCard": {
     "nextMatch": "Next match",
@@ -317,7 +322,10 @@
     "lessThanMin": "less than 1 min",
     "days": "{n}d",
     "hours": "{n}h",
-    "mins": "{n}min"
+    "mins": "{n}min",
+    "emptyTitle": "No upcoming match",
+    "emptyBody": "Your next scheduled match will show up here along with check-in.",
+    "loadErrorShort": "Couldn't load your next match right now."
   },
   "playerProfile": {
     "defaultName": "Player",
@@ -395,7 +403,10 @@
     "battlenetToastVerified": "Your BattleTag is verified ✅",
     "battlenetToastNoMatch": "Battle.net account linked, but it doesn't match any BattleTag on your rosters. Make sure the tag entered in your team matches this account.",
     "battlenetToastAlreadyLinked": "This Battle.net account is already linked to another player.",
-    "battlenetToastError": "Verification failed, please try again."
+    "battlenetToastError": "Verification failed, please try again.",
+    "roleManager": "Manager",
+    "roleCoach": "Coach",
+    "roleSubstitute": "Substitute"
   },
   "casterApplication": {
     "motivationTooLong": "Motivation cannot exceed {max} characters.",
@@ -424,7 +435,9 @@
     "approvedTitle": "Welcome to the cast! 🎉",
     "approvedText": "Your application has been accepted. You are now part of the OW Women's Cup casting team.",
     "rejectedTitle": "Application not selected",
-    "rejectedText": "Your previous application was not selected. You can resubmit an application whenever you like."
+    "rejectedText": "Your previous application was not selected. You can resubmit an application whenever you like.",
+    "loadError": "Unable to load your application. Please try again.",
+    "retry": "Retry"
   },
   "joinTeam": {
     "connectionError": "Connection error.",
@@ -459,7 +472,9 @@
     "becomeCaptain": "Become a captain",
     "alreadyInTeamTitle": "You are already on a team",
     "alreadyInTeamBody": "You are already a member of \"{teamName}\". To switch teams, use Requests › Transfer.",
-    "alreadyInTeamCta": "Go to my transfer requests →"
+    "alreadyInTeamCta": "Go to my transfer requests →",
+    "teamsLoadError": "Unable to load teams. Please try again.",
+    "retry": "Retry"
   },
   "manageTeam": {
     "loadError": "Failed to load.",
@@ -519,7 +534,14 @@
     "verifiedBadge": "verified",
     "unverifiedBadge": "unverified",
     "verifiedBadgeTitle": "BattleTag verified via Battle.net",
-    "unverifiedBadgeTitle": "BattleTag unverified — the player must link their Battle.net account"
+    "unverifiedBadgeTitle": "BattleTag unverified — the player must link their Battle.net account",
+    "roleManager": "Manager",
+    "specialtyUpdated": "In-game role updated",
+    "roleSelectLabel": "Role in the team",
+    "errorTitle": "Couldn't load the team",
+    "errorBody": "A network error occurred. Check your connection and try again.",
+    "retry": "Retry",
+    "promoteDialogSubtitle": "Transferring captaincy is irreversible: you will lose your captain rights."
   },
   "freePlayers": {
     "title": "Players looking for a team",
@@ -557,7 +579,10 @@
     "specialtyTank": "Tank",
     "specialtyDps": "DPS",
     "specialtySupport": "Support",
-    "specialtyFlex": "Flex"
+    "specialtyFlex": "Flex",
+    "emailAriaLabel": "Player {n} email",
+    "battleTagAriaLabel": "Player {n} BattleTag",
+    "nicknameAriaLabel": "Player {n} nickname"
   },
   "existingTeamSelector": {
     "searchLabel": "Search for a team",
@@ -659,7 +684,10 @@
     "slotWeekOf": "Week of {date}",
     "slotMaxReached": "{max} slots maximum.",
     "slotEmpty": "No slot selected — click in the calendar.",
-    "atLeastOneSlot": "Propose at least one slot."
+    "atLeastOneSlot": "Propose at least one slot.",
+    "tabsAria": "Request type",
+    "transferModeAria": "Transfer mode",
+    "roleGroupAria": "Desired role"
   },
   "requestCaptain": {
     "connectionError": "Connection error.",
@@ -685,7 +713,12 @@
     "messagePlaceholder": "Additional information for the admins...",
     "submitting": "Sending...",
     "submit": "Send my request",
-    "footerNote": "As a captain, you will be able to manage your team members and register for tournaments."
+    "footerNote": "As a captain, you will be able to manage your team members and register for tournaments.",
+    "teamsLoadError": "Unable to load teams. Please try again.",
+    "retry": "Retry",
+    "searchLabel": "Search for a team",
+    "searchPlaceholder": "Search by name...",
+    "noTeams": "No team found"
   },
   "demandesHistory": {
     "title": "Request history",
@@ -704,7 +737,11 @@
       "approved": "Approved",
       "rejected": "Declined",
       "cancelled": "Cancelled"
-    }
+    },
+    "cancelConfirmTitle": "Cancel this request?",
+    "cancelConfirmSubtitle": "The request will be permanently removed. You can create a new one later.",
+    "cancelConfirmYes": "Yes, cancel",
+    "cancelConfirmNo": "Keep"
   },
   "playerMessages": {
     "pageTitle": "Messages",
@@ -728,7 +765,18 @@
     "noMessages": "No messages in this conversation.",
     "replyPlaceholder": "Write a message...",
     "sendingShort": "...",
-    "yesterday": "Yesterday"
+    "yesterday": "Yesterday",
+    "loadError": "Couldn't load conversations. Please try again later.",
+    "composeLabel": "Your message",
+    "replyLabel": "Write a reply",
+    "conversationLabel": "Conversation thread"
+  },
+  "teamPicker": {
+    "searchPlaceholder": "Search for a team...",
+    "loading": "Loading...",
+    "countryLabel": "Filter by country",
+    "countryAll": "All countries",
+    "membersCount": "{count}/5 members"
   },
   "playerNotifications": {
     "eventLabels": {
@@ -790,6 +838,14 @@
     "inviteNotFound": "Invitation not found.",
     "inviteForbidden": "This invitation is not addressed to you.",
     "inviteError": "Something went wrong. Please try again later.",
+    "inviteRolePlayer": "Player",
+    "inviteRoleSubstitute": "Substitute",
+    "inviteRoleCoach": "Coach",
+    "inviteRoleManager": "Manager",
+    "inviteConfirmTitle": "Join {team}?",
+    "inviteConfirmSubtitle": "You will join this team. If you are already in a team, you will leave it.",
+    "inviteConfirmYes": "Join",
+    "inviteConfirmNo": "Cancel",
     "prefsChannelEvent": "Event type",
     "prefsChannelPush": "Push",
     "prefsChannelEmail": "Email",
@@ -882,7 +938,10 @@
     "h2hResultDraw": "Draw",
     "h2hResultWinShort": "W",
     "h2hResultLossShort": "L",
-    "h2hResultDrawShort": "D"
+    "h2hResultDrawShort": "D",
+    "listError": "Unable to load players. Please try again.",
+    "loadMoreError": "Unable to load more players. Please try again.",
+    "retry": "Retry"
   },
   "playerTopBar": {
     "site": "Site",

@@ -75,7 +75,6 @@ function PlayerCheckin() {
   // confirmed card can play an explicit "just confirmed" state instead of
   // silently re-rendering. Reset is not needed: the action is one-way.
   const [justConfirmed, setJustConfirmed] = useState(false);
-  const [now, setNow] = useState<number>(() => Date.now());
 
   const load = useCallback(async () => {
     try {
@@ -96,12 +95,6 @@ function PlayerCheckin() {
     if (!ready) return;
     load();
   }, [ready, load]);
-
-  // Tick once a second so the countdown stays live.
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(id);
-  }, []);
 
   const handleSubmit = async () => {
     const token = data?.checkin?.token;
@@ -177,16 +170,17 @@ function PlayerCheckin() {
         </div>
 
         {loadError && (
-          <div className="mb-6 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-100">
+          <div
+            className="mb-6 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-100"
+            role="alert"
+          >
             {loadError}
           </div>
         )}
 
         {!hasMatch && !loadError ? (
           <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-8 text-center">
-            <p className="text-lg font-semibold text-white">
-              {t.noMatchTitle}
-            </p>
+            <p className="text-lg font-semibold text-white">{t.noMatchTitle}</p>
             <p className="mt-2 text-sm text-gray-400">{t.noMatchBody}</p>
             <Link
               href="/player/matches"
@@ -217,10 +211,11 @@ function PlayerCheckin() {
               </p>
             </section>
 
-            {/* Machine a etats du check-in */}
+            {/* Machine a etats du check-in — possède son propre `now` (tick 1s)
+                pour que le compte a rebours ne re-rende que ce sous-arbre, pas
+                toute la page. */}
             <CheckinState
               checkin={checkin}
-              now={now}
               submitting={submitting}
               submitError={submitError}
               justConfirmed={justConfirmed}
@@ -237,7 +232,6 @@ function PlayerCheckin() {
 
 function CheckinState({
   checkin,
-  now,
   submitting,
   submitError,
   justConfirmed,
@@ -246,7 +240,6 @@ function CheckinState({
   t,
 }: {
   checkin: NextMatchPayload['checkin'];
-  now: number;
   submitting: boolean;
   submitError: string | null;
   justConfirmed: boolean;
@@ -254,6 +247,14 @@ function CheckinState({
   lang: Lang;
   t: T;
 }) {
+  // Compte a rebours vivant : ce `now` est LOCAL a la machine a etats. Le tick
+  // 1s ne re-rend que ce composant (et non la page complete de ~460 lignes).
+  const [now, setNow] = useState<number>(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
   if (!checkin) {
     return (
       <section className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6 text-center text-sm text-gray-400">
@@ -421,9 +422,7 @@ function CheckinState({
   if (checkin.isPassed) {
     return (
       <section className="rounded-2xl border border-amber-400/30 bg-amber-500/10 backdrop-blur-xl p-6">
-        <h3 className="text-lg font-semibold text-amber-50">
-          {t.passedTitle}
-        </h3>
+        <h3 className="text-lg font-semibold text-amber-50">{t.passedTitle}</h3>
         <p className="mt-2 text-sm text-amber-200/90">{t.passedBody}</p>
         <Link
           href="/support"
