@@ -2030,24 +2030,6 @@
     "makeRequest": "Make a request",
     "discoverAsso": "Discover the association"
   },
-  "buildsPage": {
-    "headTitle": "Netlify build status | OW Women's Cup",
-    "heading": "Netlify builds",
-    "subtitle": "Track the site's deployments in real time.",
-    "backHome": "← Back to home",
-    "loadError": "Error while loading: {error}",
-    "noBuilds": "No recent builds found.",
-    "buildFallback": "Build",
-    "startedAt": "Started: {date}",
-    "duration": "· Duration: {seconds}s",
-    "viewCommit": "View commit",
-    "errorLabel": "Error: {error}",
-    "badgeSuccess": "Success",
-    "badgeFailed": "Failed",
-    "stateSuccess": "Success",
-    "stateOngoing": "In progress",
-    "stateError": "Error"
-  },
   "lorePage": {
     "headTitle": "Overwatch Lore & Media | OW World Cup",
     "headDesc": "Explore the world of Overwatch: comics, short stories, music and official artwork from Blizzard.",
@@ -3884,7 +3866,6 @@
     "section4Desc": "Key documents and references for the tournament.",
     "linkRules": "Rules",
     "linkLegal": "Legal notice",
-    "linkBuilds": "Deployments",
     "section5Title": "Map & resources",
     "section5Desc": "Site map and links for search engines.",
     "linkSitemap": "Site map",

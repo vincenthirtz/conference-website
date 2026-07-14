@@ -39,7 +39,6 @@ import castMembersHandler from '../../pages/api/cast-members';
 import partnersHandler from '../../pages/api/partners';
 import announcementsHandler from '../../pages/api/announcements';
 import siteSettingsHandler from '../../pages/api/site-settings';
-import netlifyBuildsHandler from '../../pages/api/netlify-builds';
 import teamTournamentsHandler from '../../pages/api/admin/teams/[teamId]/tournaments';
 
 /* -----------------------------------------------------------
@@ -613,18 +612,6 @@ describe('/api/site-settings', () => {
   it('405 on POST', async () => {
     const res = makeRes();
     await siteSettingsHandler(makeReq({ method: 'POST' }, false), res);
-    expect(res.statusCode).toBe(405);
-  });
-});
-
-/* -----------------------------------------------------------
- * /api/netlify-builds
- * ---------------------------------------------------------*/
-
-describe('/api/netlify-builds', () => {
-  it('405 on POST', async () => {
-    const res = makeRes();
-    await netlifyBuildsHandler(makeReq({ method: 'POST' }, false), res);
     expect(res.statusCode).toBe(405);
   });
 });

@@ -10,7 +10,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { resetSupabaseMock } from './__helpers__/supabaseMock';
 
-import netlifyBuildsHandler from '../../pages/api/netlify-builds';
 import patchNotesHandler from '../../pages/api/patch-notes';
 import { STATUS_CONFIG } from '../../utils/statusConfig';
 
@@ -40,57 +39,6 @@ function makeRes() {
 
 beforeEach(() => {
   resetSupabaseMock();
-});
-
-/* -----------------------------------------------------------
- * /api/netlify-builds
- * ---------------------------------------------------------*/
-
-describe('/api/netlify-builds', () => {
-  let fetchSpy: any;
-  const ORIG_SITE = process.env.NETLIFY_SITE_ID;
-  const ORIG_TOKEN = process.env.NETLIFY_API_TOKEN;
-
-  beforeEach(() => {
-    fetchSpy = vi.spyOn(globalThis, 'fetch' as any);
-  });
-
-  afterEach(() => {
-    fetchSpy?.mockRestore?.();
-    process.env.NETLIFY_SITE_ID = ORIG_SITE;
-    process.env.NETLIFY_API_TOKEN = ORIG_TOKEN;
-  });
-
-  it('405 on POST', async () => {
-    const res = makeRes();
-    await netlifyBuildsHandler(makeReq({ method: 'POST' }), res);
-    expect(res.statusCode).toBe(405);
-  });
-
-  // The handler reads NETLIFY_SITE_ID / NETLIFY_API_TOKEN at module load time
-  // (not per-request), so we can only meaningfully test the path the env was
-  // in when the module was first imported. We assert behavior matching the
-  // current env state rather than mutating it.
-  it('GET responds (503 if env missing, 200/502 otherwise depending on fetch)', async () => {
-    const res = makeRes();
-    fetchSpy.mockResolvedValueOnce({
-      ok: true,
-      json: async () => [
-        {
-          id: 'b1',
-          state: 'ready',
-          deploy_time: 12,
-          commit_ref: 'abc',
-        },
-      ],
-    } as any);
-    await netlifyBuildsHandler(makeReq({ method: 'GET' }), res);
-    // Either 503 (no env), 200 (env present + fetch ok), or 502 (env present + fetch fail)
-    expect([200, 502, 503]).toContain(res.statusCode);
-    if (res.statusCode === 200) {
-      expect(Array.isArray(res.body)).toBe(true);
-    }
-  });
 });
 
 /* -----------------------------------------------------------

@@ -32,7 +32,6 @@ const publicRoutes = [
   { path: '/developpeurs', priority: '0.4', changefreq: 'monthly' },
   { path: '/leaderboard', priority: '0.7', changefreq: 'daily' },
   { path: '/leagues', priority: '0.7', changefreq: 'weekly' },
-  { path: '/builds', priority: '0.3', changefreq: 'weekly' },
   { path: '/mentions-legales', priority: '0.3', changefreq: 'yearly' },
   { path: '/plan-du-site', priority: '0.3', changefreq: 'monthly' },
 ];
