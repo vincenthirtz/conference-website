@@ -17,6 +17,7 @@ import {
 import { withAdminIdempotency } from '@/utils/adminIdempotency';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { logger } from '@/utils/logger';
+import { assertOrganizerTenant } from '@/utils/tenantKind';
 
 const SLUG_RE = /^[a-z0-9-]+$/;
 const SLUG_MIN = 2;
@@ -109,6 +110,17 @@ async function handler(
   if (req.method === 'POST') {
     // Owner-only : creation d'un tenant est une operation strategique.
     if (!requireOwner(ctx, res)) return;
+
+    // Garde anti-cross-tenant : un compte « développeur » (tenant actif
+    // kind='developer') est un owner confine a SON tenant — il ne doit pas
+    // pouvoir creer des tenants organisateurs.
+    if (!(await assertOrganizerTenant(ctx.tenantId))) {
+      return res.status(403).json({
+        error: 'Les comptes développeur ne peuvent pas créer de tenant.',
+        code: 'DEVELOPER_TENANT_FORBIDDEN',
+      });
+    }
+
     const body = (req.body ?? {}) as Record<string, unknown>;
     const slug =
       typeof body.slug === 'string' ? body.slug.trim().toLowerCase() : '';

@@ -4,6 +4,11 @@ import { z } from 'zod';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
+import {
+  resolveActiveTenant,
+  readActiveTenantCookie,
+} from '@/utils/adminTenants';
+import { getTenantKind, type TenantKind } from '@/utils/tenantKind';
 
 const patchProfileSchema = z.object({
   displayName: z.string().trim().max(80).optional(),
@@ -20,6 +25,7 @@ type MeResponse =
       avatar_url: string | null;
       role: string;
       created_at: string;
+      active_tenant_kind: TenantKind;
     }
   | { error: string };
 
@@ -158,6 +164,7 @@ export default withAuthRoute(async function handler(
         avatar_url: null,
         role: 'captain',
         created_at: user.created_at,
+        active_tenant_kind: 'organizer',
       } as unknown as MeResponse);
     }
 
@@ -168,6 +175,29 @@ export default withAuthRoute(async function handler(
     (staff as any).avatar_url = null;
   }
 
+  // Résolution du tenant actif → nature (organizer/developer) pour permettre
+  // au front de masquer/adapter l'UI d'un compte développeur. Fail-safe :
+  // toute erreur retombe sur 'organizer' (ne casse jamais /me).
+  const staffRow = staff as unknown as {
+    id: string;
+    is_pole_admin?: boolean;
+  } & Record<string, unknown>;
+
+  let active_tenant_kind: TenantKind = 'organizer';
+  try {
+    const cookieTenantId = readActiveTenantCookie(req.cookies);
+    const { tenantId } = await resolveActiveTenant(
+      staffRow.id,
+      cookieTenantId,
+      { isPoleAdmin: staffRow.is_pole_admin === true }
+    );
+    active_tenant_kind = await getTenantKind(tenantId);
+  } catch (e) {
+    logger.error('[/api/admin/me] active_tenant_kind resolution error:', e);
+  }
+
   // OK : renvoyer les infos staff (c'est ce que tu consommeras côté front)
-  return res.status(200).json(staff as unknown as MeResponse);
+  return res
+    .status(200)
+    .json({ ...staffRow, active_tenant_kind } as unknown as MeResponse);
 });
