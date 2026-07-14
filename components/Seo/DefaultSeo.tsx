@@ -93,7 +93,8 @@ const organizationSchema = {
   },
 };
 
-// JSON-LD WebSite Schema with SearchAction
+// JSON-LD WebSite Schema (pas de SearchAction : aucune page de recherche
+// interne indexable côté site public).
 const websiteSchema = {
   '@context': 'https://schema.org',
   '@type': 'WebSite',
