@@ -92,7 +92,7 @@ async function handler(
   // Le tenant doit exister (FK tenant_plan_checkouts + cohérence webhook).
   const { data: tenant, error: tenantErr } = await supabaseAdmin
     .from('tenants')
-    .select('id, slug, name')
+    .select('id, slug, name, plan')
     .eq('id', id)
     .maybeSingle();
   if (tenantErr) {
@@ -106,6 +106,15 @@ async function handler(
     return res
       .status(404)
       .json({ error: 'Tenant not found.', code: 'UNKNOWN_TENANT' });
+  }
+  // Le tenant flagship de l'association (`foundation`, gratuit à vie) n'est PAS
+  // soumis à la facturation : générer un lien de paiement le ferait basculer sur
+  // un plan payant. On refuse — invariant « l'association n'est jamais facturée ».
+  if (tenant.plan === 'foundation') {
+    return res.status(400).json({
+      error: "Ce compte (Association) n'est pas soumis à la facturation.",
+      code: 'NOT_BILLABLE',
+    });
   }
 
   const proto = req.headers['x-forwarded-proto'] || 'https';

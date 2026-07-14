@@ -185,6 +185,14 @@ function AdminBillingPage({ staff }: Props) {
 
   const isDowngraded = data ? data.effectivePlan !== data.plan : false;
 
+  // `foundation` = système de l'association (flagship, gratuit à vie) → hors
+  // facturation : ni catalogue, ni historique commercial. `editor` = sur-devis
+  // (pas de barème catalogue). Le self-serve (souscrire/renouveler) ne concerne
+  // que discovery/regie/circuit.
+  const isAssociationPlan = data ? data.plan === 'foundation' : false;
+  const isCustomPlan = data ? data.plan === 'editor' : false;
+  const canSelfServeBill = !!data && !isAssociationPlan && !isCustomPlan;
+
   const statusMeta = (status: PlanStatus) => {
     switch (status) {
       case 'active':
@@ -390,131 +398,158 @@ function AdminBillingPage({ staff }: Props) {
                 </div>
               </section>
 
-              {/* Catalog / upgrade */}
-              <section data-testid="billing-catalog">
-                <h2 className="text-lg font-semibold mb-4">
-                  {t.catalogHeading}
-                </h2>
-                {!isOwner && (
-                  <p className="mb-4 text-sm text-neutral-400">
-                    {t.ownerOnlyNote}
+              {/* Plans non self-serve : encart dédié au lieu du catalogue.
+                  foundation = association (hors facturation) ; editor = sur-devis. */}
+              {!canSelfServeBill && (
+                <section
+                  className="rounded-2xl border border-sky-500/40 bg-sky-500/10 p-6"
+                  data-testid="billing-not-billable"
+                >
+                  <h2 className="text-lg font-semibold text-sky-100">
+                    {isAssociationPlan
+                      ? t.associationNoticeTitle
+                      : t.customNoticeTitle}
+                  </h2>
+                  <p className="mt-1 text-sm text-sky-100/80">
+                    {isAssociationPlan
+                      ? t.associationNoticeMsg
+                      : t.customNoticeMsg}
                   </p>
-                )}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  {data.catalog.map((item) => {
-                    const isCurrent = data.plan === item.plan;
-                    const features = getPlanFeatures(item.plan);
-                    const busy = checkoutPlan === item.plan;
-                    return (
-                      <div
-                        key={item.plan}
-                        className={`rounded-2xl border p-6 flex flex-col ${
-                          isCurrent
-                            ? 'border-emerald-500/40 bg-emerald-500/5'
-                            : 'border-neutral-700/50 bg-neutral-800/50'
-                        }`}
-                        data-testid={`billing-plan-${item.plan}`}
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <h3 className="text-xl font-bold">{item.label}</h3>
-                            <p className="mt-1">
-                              <span className="text-2xl font-bold">
-                                {item.priceEur} €
-                              </span>
-                              <span className="text-sm text-neutral-400">
-                                {' '}
-                                {t.perYear}
-                              </span>
-                            </p>
-                          </div>
-                          {isCurrent && (
-                            <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-600/20 text-emerald-300 border border-emerald-500/30">
-                              {t.currentBadge}
-                            </span>
-                          )}
-                        </div>
+                </section>
+              )}
 
-                        <div className="mt-5 flex-1">
-                          {renderCapabilities(features, `cat-${item.plan}`)}
-                        </div>
-
-                        <div className="mt-6">
-                          <button
-                            type="button"
-                            onClick={() => handleCheckout(item.plan)}
-                            disabled={!isOwner || busy}
-                            title={!isOwner ? t.ownerOnlyNote : undefined}
-                            className="w-full px-5 py-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-sm font-semibold text-white transition disabled:opacity-40 disabled:cursor-not-allowed"
-                            data-testid={`billing-checkout-${item.plan}`}
-                          >
-                            {busy ? t.redirecting : ctaLabel(item.plan)}
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </section>
-
-              {/* Payment history */}
-              <section data-testid="billing-payments">
-                <h2 className="text-lg font-semibold mb-4">
-                  {t.paymentsHeading}
-                </h2>
-                <div className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden">
-                  {data.payments.length === 0 ? (
-                    <EmptyState
-                      title={t.paymentsEmptyTitle}
-                      description={t.paymentsEmptyDesc}
-                    />
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead className="bg-neutral-900/50 text-neutral-400 text-xs uppercase tracking-wider">
-                          <tr>
-                            <th scope="col" className="px-4 py-3 text-left">
-                              {t.colDate}
-                            </th>
-                            <th scope="col" className="px-4 py-3 text-left">
-                              {t.colPlan}
-                            </th>
-                            <th scope="col" className="px-4 py-3 text-right">
-                              {t.colAmount}
-                            </th>
-                            <th scope="col" className="px-4 py-3 text-left">
-                              {t.colHelloasso}
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-neutral-700/50">
-                          {data.payments.map((p) => (
-                            <tr
-                              key={String(p.id)}
-                              className="hover:bg-neutral-700/30 transition-colors"
-                            >
-                              <td className="px-4 py-3 text-neutral-300">
-                                {formatDate(p.paidAt)}
-                              </td>
-                              <td className="px-4 py-3">
-                                <span className="px-2 py-0.5 rounded-full text-[11px] uppercase tracking-wider bg-white/5 border border-white/10 text-neutral-300">
-                                  {p.plan}
-                                </span>
-                              </td>
-                              <td className="px-4 py-3 text-right font-medium text-white">
-                                {formatAmount(p.amountCents)}
-                              </td>
-                              <td className="px-4 py-3 font-mono text-xs text-purple-300">
-                                {String(p.helloassoPaymentId)}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+              {/* Catalog / upgrade */}
+              {canSelfServeBill && (
+                <section data-testid="billing-catalog">
+                  <h2 className="text-lg font-semibold mb-4">
+                    {t.catalogHeading}
+                  </h2>
+                  {!isOwner && (
+                    <p className="mb-4 text-sm text-neutral-400">
+                      {t.ownerOnlyNote}
+                    </p>
                   )}
-                </div>
-              </section>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    {data.catalog.map((item) => {
+                      const isCurrent = data.plan === item.plan;
+                      const features = getPlanFeatures(item.plan);
+                      const busy = checkoutPlan === item.plan;
+                      return (
+                        <div
+                          key={item.plan}
+                          className={`rounded-2xl border p-6 flex flex-col ${
+                            isCurrent
+                              ? 'border-emerald-500/40 bg-emerald-500/5'
+                              : 'border-neutral-700/50 bg-neutral-800/50'
+                          }`}
+                          data-testid={`billing-plan-${item.plan}`}
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <h3 className="text-xl font-bold">
+                                {item.label}
+                              </h3>
+                              <p className="mt-1">
+                                <span className="text-2xl font-bold">
+                                  {item.priceEur} €
+                                </span>
+                                <span className="text-sm text-neutral-400">
+                                  {' '}
+                                  {t.perYear}
+                                </span>
+                              </p>
+                            </div>
+                            {isCurrent && (
+                              <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-600/20 text-emerald-300 border border-emerald-500/30">
+                                {t.currentBadge}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="mt-5 flex-1">
+                            {renderCapabilities(features, `cat-${item.plan}`)}
+                          </div>
+
+                          <div className="mt-6">
+                            <button
+                              type="button"
+                              onClick={() => handleCheckout(item.plan)}
+                              disabled={!isOwner || busy}
+                              title={!isOwner ? t.ownerOnlyNote : undefined}
+                              className="w-full px-5 py-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-sm font-semibold text-white transition disabled:opacity-40 disabled:cursor-not-allowed"
+                              data-testid={`billing-checkout-${item.plan}`}
+                            >
+                              {busy ? t.redirecting : ctaLabel(item.plan)}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
+              )}
+
+              {/* Payment history — l'association (foundation) est hors
+                  facturation : pas d'historique commercial. */}
+              {!isAssociationPlan && (
+                <section data-testid="billing-payments">
+                  <h2 className="text-lg font-semibold mb-4">
+                    {t.paymentsHeading}
+                  </h2>
+                  <div className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden">
+                    {data.payments.length === 0 ? (
+                      <EmptyState
+                        title={t.paymentsEmptyTitle}
+                        description={t.paymentsEmptyDesc}
+                      />
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead className="bg-neutral-900/50 text-neutral-400 text-xs uppercase tracking-wider">
+                            <tr>
+                              <th scope="col" className="px-4 py-3 text-left">
+                                {t.colDate}
+                              </th>
+                              <th scope="col" className="px-4 py-3 text-left">
+                                {t.colPlan}
+                              </th>
+                              <th scope="col" className="px-4 py-3 text-right">
+                                {t.colAmount}
+                              </th>
+                              <th scope="col" className="px-4 py-3 text-left">
+                                {t.colHelloasso}
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-neutral-700/50">
+                            {data.payments.map((p) => (
+                              <tr
+                                key={String(p.id)}
+                                className="hover:bg-neutral-700/30 transition-colors"
+                              >
+                                <td className="px-4 py-3 text-neutral-300">
+                                  {formatDate(p.paidAt)}
+                                </td>
+                                <td className="px-4 py-3">
+                                  <span className="px-2 py-0.5 rounded-full text-[11px] uppercase tracking-wider bg-white/5 border border-white/10 text-neutral-300">
+                                    {p.plan}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 text-right font-medium text-white">
+                                  {formatAmount(p.amountCents)}
+                                </td>
+                                <td className="px-4 py-3 font-mono text-xs text-purple-300">
+                                  {String(p.helloassoPaymentId)}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </section>
+              )}
             </div>
           )}
         </div>
