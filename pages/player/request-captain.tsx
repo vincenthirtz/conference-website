@@ -6,10 +6,11 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useDebounce } from '@/hooks/useDebounce';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
-import ExistingTeamSelector from '@/components/player/ExistingTeamSelector';
-import NewTeamForm from '@/components/player/NewTeamForm';
+import TeamPicker from '@/components/player/TeamPicker';
+import NewTeamForm, { EMAIL_RE } from '@/components/player/NewTeamForm';
 import { useT, format } from '@/lib/i18n/useT';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 
@@ -23,15 +24,25 @@ type Team = {
 };
 
 type TeamMember = {
+  /** Identifiant local stable (clé React), généré à l'ajout. */
+  id: string;
   email: string;
   battleTag: string;
   displayName: string;
   specialty: string;
 };
 
+// Compteur monotone pour générer des ids locaux stables de membres (clé React).
+let memberIdSeq = 0;
+function nextMemberId(): string {
+  memberIdSeq += 1;
+  return `member-${memberIdSeq}`;
+}
+
 export default function RequestCaptainPage() {
   const router = useRouter();
   const { user, token, loading: authLoading, ready } = usePlayerSession();
+  const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
   const t = useT('requestCaptain');
   const [loading, setLoading] = useState(true);
 
@@ -61,59 +72,64 @@ export default function RequestCaptainPage() {
 
   const debouncedSearch = useDebounce(teamSearch, 300);
 
+  const [teamsError, setTeamsError] = useState<string | null>(null);
+
   const loadTeams = useCallback(
     async (search?: string) => {
       setTeamsLoading(true);
+      setTeamsError(null);
       try {
         const params = new URLSearchParams();
         if (search?.trim()) {
           params.set('search', search.trim());
         }
         const res = await fetch(`/api/teams?${params.toString()}`);
-        if (res.ok) {
-          const data = await res.json();
-          setTeams(data.teams || []);
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
         }
+        const data = await res.json();
+        setTeams(data.teams || []);
       } catch (err) {
         logger.error('[request-captain] load teams error:', err);
+        setTeams([]);
+        setTeamsError(t.teamsLoadError);
       } finally {
         setTeamsLoading(false);
       }
     },
-    []
+    [t]
   );
 
   useEffect(() => {
     if (!ready || !token) return;
     let cancelled = false;
+    // Garde le skeleton pendant une redirection éventuelle (évite le flash du
+    // formulaire avant le changement de route).
+    let redirecting = false;
     setLoading(true);
     (async () => {
       try {
-        const res = await fetch('/api/demandes/captain', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (res.ok) {
-          const data = await res.json();
-          const pending = data.demandes?.find(
-            (d: any) => d.status === 'pending'
-          );
-          if (pending && !cancelled) {
-            router.replace('/player');
-            return;
-          }
+        const data = await adminFetchJson<{
+          demandes?: { status: string }[];
+        }>('/api/demandes/captain', { skipAuthRedirect: true });
+        const pending = data.demandes?.find((d) => d.status === 'pending');
+        if (pending && !cancelled) {
+          redirecting = true;
+          router.replace('/player');
+          return;
         }
       } catch (err) {
         logger.error('[request-captain] auth error:', err);
         if (!cancelled) setError(t.connectionError);
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled && !redirecting) setLoading(false);
       }
     })();
     return () => {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, token, router]);
+  }, [ready, token, router, adminFetchJson]);
 
   // Recharge la liste d'equipes quand la recherche (debouncee) change.
   useEffect(() => {
@@ -125,7 +141,13 @@ export default function RequestCaptainPage() {
     if (members.length >= 5) return;
     setMembers([
       ...members,
-      { email: '', battleTag: '', displayName: '', specialty: '' },
+      {
+        id: nextMemberId(),
+        email: '',
+        battleTag: '',
+        displayName: '',
+        specialty: '',
+      },
     ]);
   };
 
@@ -134,9 +156,11 @@ export default function RequestCaptainPage() {
     field: keyof TeamMember,
     value: string
   ) => {
-    const updated = [...members];
-    updated[index][field] = value;
-    setMembers(updated);
+    // Copie l'OBJET membre modifié (pas seulement le tableau) : muter en place
+    // l'objet partagerait la référence et pourrait corrompre l'état précédent.
+    setMembers((prev) =>
+      prev.map((m, i) => (i === index ? { ...m, [field]: value } : m))
+    );
   };
 
   const removeMember = (index: number) => {
@@ -173,9 +197,8 @@ export default function RequestCaptainPage() {
     }
 
     const validMembers = members.filter((m) => m.email.trim());
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     for (const m of validMembers) {
-      if (!emailRegex.test(m.email.trim())) {
+      if (!EMAIL_RE.test(m.email.trim())) {
         setError(format(t.errInvalidEmail, { email: m.email }));
         return;
       }
@@ -202,20 +225,10 @@ export default function RequestCaptainPage() {
         }
       }
 
-      const res = await fetch('/api/demandes/captain', {
+      await adminFetchJson('/api/demandes/captain', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify(body),
       });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || t.errCreateRequest);
-      }
 
       if (mode === 'existing') {
         const team = teams.find((tm) => tm.id === selectedTeamId);
@@ -248,13 +261,14 @@ export default function RequestCaptainPage() {
         </Head>
 
         <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white flex items-center justify-center px-4">
-          <div className="max-w-md text-center">
+          <div className="max-w-md text-center" role="status">
             <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-emerald-500/20 flex items-center justify-center">
               <svg
                 className="w-8 h-8 text-emerald-400"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
+                aria-hidden="true"
               >
                 <path
                   strokeLinecap="round"
@@ -327,14 +341,30 @@ export default function RequestCaptainPage() {
 
             <form onSubmit={handleSubmit} className="space-y-6">
               {mode === 'existing' && (
-                <ExistingTeamSelector
-                  teams={teams}
-                  teamsLoading={teamsLoading}
-                  selectedTeamId={selectedTeamId}
-                  teamSearch={teamSearch}
-                  onTeamSearchChange={setTeamSearch}
-                  onSelectTeam={setSelectedTeamId}
-                />
+                <div>
+                  <TeamPicker
+                    teams={teams}
+                    value={selectedTeamId}
+                    onChange={setSelectedTeamId}
+                    loading={teamsLoading}
+                    error={teamsError}
+                    accentColor="purple"
+                    label={t.searchLabel}
+                    emptyLabel={t.noTeams}
+                    search={teamSearch}
+                    onSearchChange={setTeamSearch}
+                    searchPlaceholder={t.searchPlaceholder}
+                  />
+                  {teamsError && (
+                    <button
+                      type="button"
+                      onClick={() => loadTeams(debouncedSearch)}
+                      className="mt-3 text-sm text-purple-400 hover:text-purple-300"
+                    >
+                      {t.retry}
+                    </button>
+                  )}
+                </div>
               )}
 
               {mode === 'new' && (
@@ -369,7 +399,10 @@ export default function RequestCaptainPage() {
               </div>
 
               {error && (
-                <div className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-100">
+                <div
+                  role="alert"
+                  className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-100"
+                >
                   {error}
                 </div>
               )}

@@ -80,13 +80,13 @@ test.describe('Player requests inbox', () => {
     ).toBeVisible();
 
     // Switch to the Scrim tab → its own (scrim-flavoured) empty-state banner.
-    await page.getByRole('button', { name: 'Scrim' }).click();
+    await page.getByRole('tab', { name: 'Scrim' }).click();
     await expect(
       page.getByText('pour proposer un scrim.', { exact: false })
     ).toBeVisible();
 
     // Switch back to the Transfert tab.
-    await page.getByRole('button', { name: 'Transfert' }).click();
+    await page.getByRole('tab', { name: 'Transfert' }).click();
     await expect(
       page.getByText('pour demander un transfert.', { exact: false })
     ).toBeVisible();
@@ -107,8 +107,8 @@ test.describe('Player requests inbox', () => {
 
     await loginPlayer(page, PLAYER_EMAIL, '/player/requests');
 
-    const transferTab = page.getByRole('button', { name: 'Transfert' });
-    const scrimTab = page.getByRole('button', { name: 'Scrim' });
+    const transferTab = page.getByRole('tab', { name: 'Transfert' });
+    const scrimTab = page.getByRole('tab', { name: 'Scrim' });
     await expect(transferTab).toBeVisible({ timeout: 10000 });
 
     // Default tab is Transfert: its banner is the transfer one.
@@ -163,7 +163,7 @@ test.describe('Player requests inbox', () => {
     ).toBeVisible({ timeout: 10000 });
 
     // Mode toggle is visible for captains; pick "Mon transfert".
-    const selfModeButton = page.getByRole('button', { name: 'Mon transfert' });
+    const selfModeButton = page.getByRole('tab', { name: 'Mon transfert' });
     await expect(selfModeButton).toBeVisible();
     await selfModeButton.click();
 

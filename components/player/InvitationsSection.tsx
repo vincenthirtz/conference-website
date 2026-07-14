@@ -12,6 +12,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import { logger } from '../../utils/logger';
@@ -32,11 +33,29 @@ type InvitationsResponse = { invitations: PlayerInvitation[] };
 export default function InvitationsSection() {
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
   const { addToast } = useToast();
+  const { confirm, dialog } = useConfirmDialog();
   const t = useT('playerNotifications');
   const locale = useLocale();
 
   const [invites, setInvites] = useState<PlayerInvitation[]>([]);
   const [pendingId, setPendingId] = useState<string | null>(null);
+
+  // Map a raw invite role to a localized label.
+  const roleLabelFor = useCallback(
+    (role: string): string => {
+      switch (role) {
+        case 'substitute':
+          return t.inviteRoleSubstitute;
+        case 'coach':
+          return t.inviteRoleCoach;
+        case 'manager':
+          return t.inviteRoleManager;
+        default:
+          return t.inviteRolePlayer;
+      }
+    },
+    [t]
+  );
 
   const load = useCallback(async () => {
     try {
@@ -80,6 +99,17 @@ export default function InvitationsSection() {
   const handleAction = useCallback(
     async (invite: PlayerInvitation, action: 'accept' | 'reject') => {
       if (pendingId) return;
+      // Accepting joins the team (and leaves any current one) — confirm first.
+      if (action === 'accept') {
+        const ok = await confirm({
+          title: format(t.inviteConfirmTitle, { team: invite.teamName }),
+          subtitle: t.inviteConfirmSubtitle,
+          variant: 'warning',
+          confirmLabel: t.inviteConfirmYes,
+          cancelLabel: t.inviteConfirmNo,
+        });
+        if (!ok) return;
+      }
       setPendingId(invite.id);
       try {
         await adminFetchJson(`/api/player/invitations/${invite.id}`, {
@@ -110,7 +140,7 @@ export default function InvitationsSection() {
         setPendingId(null);
       }
     },
-    [pendingId, adminFetchJson, addToast, t, mapError]
+    [pendingId, adminFetchJson, addToast, confirm, t, mapError]
   );
 
   // Empty state : on ne rend rien quand il n'y a pas d'invitation.
@@ -118,6 +148,7 @@ export default function InvitationsSection() {
 
   return (
     <section>
+      {dialog}
       <h2 className="text-lg font-semibold mb-1 text-white">
         {t.invitesTitle}
       </h2>
@@ -128,10 +159,10 @@ export default function InvitationsSection() {
           const busy = pendingId === invite.id;
           const roleLabel = invite.specialty
             ? format(t.inviteRoleWithSpecialty, {
-                role: invite.role,
+                role: roleLabelFor(invite.role),
                 specialty: invite.specialty,
               })
-            : format(t.inviteRole, { role: invite.role });
+            : format(t.inviteRole, { role: roleLabelFor(invite.role) });
           const expiryLabel = invite.expiresAt
             ? format(t.inviteExpires, {
                 date: new Date(invite.expiresAt).toLocaleDateString(locale, {

@@ -56,6 +56,12 @@ function PlayerDiscovery() {
   const [offset, setOffset] = useState(0);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  // Erreur de chargement (première page) vs erreur de « charger plus » : on ne
+  // veut pas confondre un échec réseau avec une liste réellement vide.
+  const [error, setError] = useState<string | null>(null);
+  const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
+  // Incrémenté par le bouton « réessayer » pour relancer l'effet de chargement.
+  const [reloadKey, setReloadKey] = useState(0);
 
   // Visibilité de la caller elle-même (pour le bandeau d'incitation).
   const [selfDiscoverable, setSelfDiscoverable] = useState<boolean | null>(
@@ -108,6 +114,8 @@ function PlayerDiscovery() {
     if (!ready) return;
     let cancelled = false;
     setLoading(true);
+    setError(null);
+    setLoadMoreError(null);
     fetchPage(tab, debouncedQuery, 0)
       .then((res) => {
         if (cancelled) return;
@@ -117,10 +125,13 @@ function PlayerDiscovery() {
       })
       .catch((err) => {
         if (cancelled) return;
+        // Un échec ne doit pas se déguiser en « aucun résultat » : on bascule
+        // sur une bannière d'erreur avec retry plutôt qu'un état vide.
         logger.error('[player/discovery] load error:', err);
         setPlayers([]);
         setTotal(0);
         setOffset(0);
+        setError(t.listError);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -128,10 +139,11 @@ function PlayerDiscovery() {
     return () => {
       cancelled = true;
     };
-  }, [ready, tab, debouncedQuery, fetchPage]);
+  }, [ready, tab, debouncedQuery, fetchPage, reloadKey, t]);
 
   const handleLoadMore = async () => {
     setLoadingMore(true);
+    setLoadMoreError(null);
     try {
       const res = await fetchPage(tab, debouncedQuery, offset);
       setPlayers((prev) => [...prev, ...res.players]);
@@ -139,6 +151,7 @@ function PlayerDiscovery() {
       setOffset((prev) => prev + res.players.length);
     } catch (err) {
       logger.error('[player/discovery] load more error:', err);
+      setLoadMoreError(t.loadMoreError);
     } finally {
       setLoadingMore(false);
     }
@@ -309,6 +322,21 @@ function PlayerDiscovery() {
                 />
               ))}
             </ul>
+          ) : error ? (
+            <div
+              role="alert"
+              aria-live="assertive"
+              className="rounded-2xl border border-red-500/40 bg-red-500/10 p-8 text-center"
+            >
+              <p className="text-sm font-medium text-red-100">{error}</p>
+              <button
+                type="button"
+                onClick={() => setReloadKey((k) => k + 1)}
+                className="mt-4 inline-flex items-center justify-center rounded-full border border-red-300/40 px-5 py-2 text-xs font-semibold text-red-100 transition hover:bg-red-500/20"
+              >
+                {t.retry}
+              </button>
+            </div>
           ) : players.length === 0 ? (
             <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-10 text-center">
               <p className="text-sm font-medium text-white">
@@ -337,6 +365,16 @@ function PlayerDiscovery() {
                 ))}
               </ul>
 
+              {loadMoreError && (
+                <div
+                  role="alert"
+                  aria-live="assertive"
+                  className="mt-6 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-center text-sm text-red-100"
+                >
+                  {loadMoreError}
+                </div>
+              )}
+
               {canLoadMore && (
                 <div className="mt-8 flex justify-center">
                   <button
@@ -345,7 +383,11 @@ function PlayerDiscovery() {
                     disabled={loadingMore}
                     className="px-6 py-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition"
                   >
-                    {loadingMore ? t.loading : t.loadMore}
+                    {loadingMore
+                      ? t.loading
+                      : loadMoreError
+                        ? t.retry
+                        : t.loadMore}
                   </button>
                 </div>
               )}

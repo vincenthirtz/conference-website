@@ -275,6 +275,7 @@ function PlayerMatches() {
   const [activeMatch, setActiveMatch] = useState<PlayerMatch | null>(null);
 
   const load = useCallback(async () => {
+    setError(null);
     try {
       const json = await adminFetchJson<PlayerMatchesPayload>(
         '/api/player/matches',
@@ -359,8 +360,22 @@ function PlayerMatches() {
         </div>
 
         {error && (
-          <div className="mb-6 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-100">
-            {error}
+          <div
+            role="alert"
+            aria-live="assertive"
+            className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-100"
+          >
+            <span>{error}</span>
+            <button
+              type="button"
+              onClick={() => {
+                setLoading(true);
+                load();
+              }}
+              className="rounded-full border border-red-300/40 px-3 py-1 text-xs font-semibold text-red-100 transition hover:bg-red-500/20"
+            >
+              {t.retry}
+            </button>
           </div>
         )}
 

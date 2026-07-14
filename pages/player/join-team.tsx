@@ -6,9 +6,11 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useManagedTeam } from '@/hooks/useManagedTeam';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
+import TeamPicker from '@/components/player/TeamPicker';
 import { MAX_TEAM_PLAYERS } from '@/utils/constants';
 import { useT, format } from '@/lib/i18n/useT';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
@@ -29,6 +31,7 @@ export default function JoinTeamPage() {
   const t = useT('joinTeam');
   const router = useRouter();
   const { user, token, loading: authLoading, ready } = usePlayerSession();
+  const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
   const { data: managedTeam, loading: teamLoading } = useManagedTeam();
   const [loading, setLoading] = useState(true);
 
@@ -43,12 +46,10 @@ export default function JoinTeamPage() {
   const [teamsLoading, setTeamsLoading] = useState(false);
   // Distingue « pas encore chargé » de « chargé mais vide » pour l'état vide.
   const [teamsLoaded, setTeamsLoaded] = useState(false);
+  // Distingue un échec réseau (bannière + retry) d'une liste réellement vide.
+  const [teamsError, setTeamsError] = useState<string | null>(null);
   const [selectedTeamId, setSelectedTeamId] = useState('');
   const [teamSearch, setTeamSearch] = useState('');
-
-  // Filtres
-  const [filterCountry, setFilterCountry] = useState('');
-  const [availableCountries, setAvailableCountries] = useState<string[]>([]);
 
   // Role souhaite
   const [desiredRole, setDesiredRole] = useState<'player' | 'substitute'>(
@@ -64,18 +65,21 @@ export default function JoinTeamPage() {
 
   const debouncedSearch = useDebounce(teamSearch, 300);
 
-  const loadTeams = useCallback(async (search?: string, country?: string) => {
-    setTeamsLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (search?.trim()) {
-        params.set('search', search.trim());
-      }
-      params.set('limit', '50');
-      params.set('joinable', '1');
-      if (country) params.set('country', country);
-      const res = await fetch(`/api/teams?${params.toString()}`);
-      if (res.ok) {
+  const loadTeams = useCallback(
+    async (search?: string) => {
+      setTeamsLoading(true);
+      setTeamsError(null);
+      try {
+        const params = new URLSearchParams();
+        if (search?.trim()) {
+          params.set('search', search.trim());
+        }
+        params.set('limit', '50');
+        params.set('joinable', '1');
+        const res = await fetch(`/api/teams?${params.toString()}`);
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
         const data = await res.json();
         let result: Team[] = data.teams || [];
         // Garde-fou défensif : l'API exclut déjà les équipes pleines en
@@ -86,59 +90,57 @@ export default function JoinTeamPage() {
             typeof tm.member_count !== 'number' ||
             tm.member_count < MAX_TEAM_PLAYERS
         );
-        // Collecter les pays disponibles
-        const countries = new Set<string>();
-        for (const tm of data.teams || []) {
-          if (tm.country) countries.add(tm.country);
-        }
-        setAvailableCountries(Array.from(countries).sort());
         setTeams(result);
+      } catch (err) {
+        // Un échec ne doit pas se déguiser en « aucune équipe » : on remonte
+        // une bannière d'erreur distincte (avec retry) plutôt qu'un état vide.
+        logger.error('[join-team] load teams error:', err);
+        setTeams([]);
+        setTeamsError(t.teamsLoadError);
+      } finally {
+        setTeamsLoading(false);
+        setTeamsLoaded(true);
       }
-    } catch (err) {
-      logger.error('[join-team] load teams error:', err);
-    } finally {
-      setTeamsLoading(false);
-      setTeamsLoaded(true);
-    }
-  }, []);
+    },
+    [t]
+  );
 
   useEffect(() => {
     if (!ready || !token) return;
     let cancelled = false;
+    // Garde le skeleton affiché pendant une éventuelle redirection pour éviter
+    // que le formulaire ne clignote avant le changement de route.
+    let redirecting = false;
     setLoading(true);
     (async () => {
       try {
-        const res = await fetch('/api/demandes/join', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (res.ok) {
-          const data = await res.json();
-          const pending = data.demandes?.find(
-            (d: any) => d.status === 'pending'
-          );
-          if (pending && !cancelled) {
-            router.replace('/player');
-            return;
-          }
+        const data = await adminFetchJson<{
+          demandes?: { status: string }[];
+        }>('/api/demandes/join', { skipAuthRedirect: true });
+        const pending = data.demandes?.find((d) => d.status === 'pending');
+        if (pending && !cancelled) {
+          redirecting = true;
+          router.replace('/player');
+          return;
         }
       } catch (err) {
         logger.error('[join-team] auth error:', err);
         if (!cancelled) setError(t.connectionError);
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled && !redirecting) setLoading(false);
       }
     })();
     return () => {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, token, router]);
+  }, [ready, token, router, adminFetchJson]);
 
-  // Recharge la liste quand la recherche (debouncee) ou le pays change.
+  // Recharge la liste quand la recherche (debouncee) change.
   useEffect(() => {
     if (!ready) return;
-    loadTeams(debouncedSearch, filterCountry);
-  }, [debouncedSearch, filterCountry, ready, loadTeams]);
+    loadTeams(debouncedSearch);
+  }, [debouncedSearch, ready, loadTeams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -155,24 +157,14 @@ export default function JoinTeamPage() {
     setSubmitting(true);
 
     try {
-      const res = await fetch('/api/demandes/join', {
+      await adminFetchJson('/api/demandes/join', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify({
           teamId: selectedTeamId,
           message: message.trim() || undefined,
           desiredRole,
         }),
       });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || t.createRequestError);
-      }
 
       const team = teams.find((tm) => tm.id === selectedTeamId);
       setSuccessTeamName(team?.name || t.selectedTeamFallback);
@@ -200,13 +192,14 @@ export default function JoinTeamPage() {
         </Head>
 
         <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white flex items-center justify-center px-4">
-          <div className="max-w-md text-center">
+          <div className="max-w-md text-center" role="status">
             <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-emerald-500/20 flex items-center justify-center">
               <svg
                 className="w-8 h-8 text-emerald-400"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
+                aria-hidden="true"
               >
                 <path
                   strokeLinecap="round"
@@ -268,197 +261,132 @@ export default function JoinTeamPage() {
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Recherche d'equipe */}
-              <div>
-                <label className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2">
-                  {t.searchLabel}
-                </label>
-                <input
-                  type="text"
-                  value={teamSearch}
-                  onChange={(e) => setTeamSearch(e.target.value)}
-                  className="w-full rounded-xl border border-white/15 bg-black/60 px-4 py-3 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/80 mb-3"
-                  placeholder={t.searchPlaceholder}
-                />
+                {/* Recherche + selection d'equipe (composant partage) */}
+                <div>
+                  <TeamPicker
+                    teams={teams}
+                    value={selectedTeamId}
+                    onChange={setSelectedTeamId}
+                    loading={teamsLoading}
+                    error={teamsError}
+                    accentColor="purple"
+                    countryFilter
+                    label={t.searchLabel}
+                    emptyLabel={t.emptyTitle}
+                    search={teamSearch}
+                    onSearchChange={setTeamSearch}
+                    searchPlaceholder={t.searchPlaceholder}
+                  />
 
-                {availableCountries.length > 0 && (
-                  <div className="flex flex-wrap items-center gap-3 mb-3">
-                    <select
-                      value={filterCountry}
-                      onChange={(e) => setFilterCountry(e.target.value)}
-                      className="rounded-lg bg-black/60 border border-white/10 px-3 py-1.5 text-xs text-gray-300 focus:outline-none focus:ring-1 focus:ring-purple-400"
+                  {teamsError && (
+                    <button
+                      type="button"
+                      onClick={() => loadTeams(debouncedSearch)}
+                      className="mt-3 text-sm text-purple-400 hover:text-purple-300"
                     >
-                      <option value="">{t.allCountries}</option>
-                      {availableCountries.map((c) => (
-                        <option key={c} value={c}>
-                          {c}
-                        </option>
-                      ))}
-                    </select>
+                      {t.retry}
+                    </button>
+                  )}
+
+                  {/* Incitation à créer sa propre équipe quand aucune ne recrute. */}
+                  {!teamsLoading &&
+                    !teamsError &&
+                    teamsLoaded &&
+                    teams.length === 0 && (
+                      <p className="mt-3 text-center text-xs text-gray-500">
+                        {t.emptySubtitle}{' '}
+                        <Link
+                          href="/player/request-captain"
+                          className="text-purple-400 hover:text-purple-300"
+                        >
+                          {t.createMyTeam}
+                        </Link>
+                      </p>
+                    )}
+                </div>
+
+                {/* Role souhaite */}
+                <div>
+                  <span
+                    id="desired-role-label"
+                    className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2"
+                  >
+                    {t.desiredRoleLabel}
+                  </span>
+                  <div
+                    role="radiogroup"
+                    aria-labelledby="desired-role-label"
+                    className="flex gap-3"
+                  >
+                    <button
+                      type="button"
+                      role="radio"
+                      aria-checked={desiredRole === 'player'}
+                      onClick={() => setDesiredRole('player')}
+                      className={`flex-1 px-4 py-3 rounded-xl text-sm font-medium transition border focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/80 ${
+                        desiredRole === 'player'
+                          ? 'bg-purple-600/30 border-purple-400/50 text-white'
+                          : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'
+                      }`}
+                    >
+                      {t.rolePlayer}
+                    </button>
+                    <button
+                      type="button"
+                      role="radio"
+                      aria-checked={desiredRole === 'substitute'}
+                      onClick={() => setDesiredRole('substitute')}
+                      className={`flex-1 px-4 py-3 rounded-xl text-sm font-medium transition border focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/80 ${
+                        desiredRole === 'substitute'
+                          ? 'bg-purple-600/30 border-purple-400/50 text-white'
+                          : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'
+                      }`}
+                    >
+                      {t.roleSub}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Message optionnel */}
+                <div>
+                  <label
+                    htmlFor="message"
+                    className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2"
+                  >
+                    {t.messageLabel}
+                  </label>
+                  <textarea
+                    id="message"
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    rows={3}
+                    className="w-full rounded-xl border border-white/15 bg-black/60 px-4 py-3 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/80 transition resize-none"
+                    placeholder={t.messagePlaceholder}
+                    maxLength={500}
+                  />
+                </div>
+
+                {error && (
+                  <div
+                    role="alert"
+                    className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-100"
+                  >
+                    {error}
                   </div>
                 )}
 
-                <div className="max-h-72 overflow-y-auto space-y-2 rounded-xl border border-white/10 bg-black/40 p-2">
-                  {teamsLoading && (
-                    <div className="text-sm text-gray-500 text-center py-4">
-                      {t.loading}
-                    </div>
-                  )}
-
-                  {!teamsLoading && teamsLoaded && teams.length === 0 && (
-                    <div className="text-center py-6 px-4">
-                      <p className="text-sm text-gray-400">{t.emptyTitle}</p>
-                      <p className="mt-1 text-xs text-gray-500">
-                        {t.emptySubtitle}
-                      </p>
-                      <Link
-                        href="/player/request-captain"
-                        className="mt-3 inline-block text-sm text-purple-400 hover:text-purple-300"
-                      >
-                        {t.createMyTeam}
-                      </Link>
-                    </div>
-                  )}
-
-                  {!teamsLoading &&
-                    teams.map((team) => (
-                      <button
-                        key={team.id}
-                        type="button"
-                        onClick={() => setSelectedTeamId(team.id)}
-                        className={`w-full flex items-center gap-3 p-3 rounded-xl text-left transition ${
-                          selectedTeamId === team.id
-                            ? 'bg-purple-600/30 border border-purple-400/50'
-                            : 'bg-white/5 border border-transparent hover:bg-white/10'
-                        }`}
-                      >
-                        <div className="w-10 h-10 rounded-full bg-black/60 border border-white/10 flex items-center justify-center overflow-hidden flex-shrink-0">
-                          {team.logo_url ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={team.logo_url}
-                              alt=""
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <span className="text-xs text-gray-500">
-                              {(team.short_name || team.name)
-                                .slice(0, 2)
-                                .toUpperCase()}
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium text-white truncate">
-                            {team.name}
-                          </div>
-                          <div className="flex items-center gap-2 text-xs text-gray-400">
-                            {team.short_name && <span>{team.short_name}</span>}
-                            {team.country && (
-                              <>
-                                {team.short_name && <span>·</span>}
-                                <span>{team.country}</span>
-                              </>
-                            )}
-                            {typeof team.member_count === 'number' && (
-                              <>
-                                {(team.short_name || team.country) && (
-                                  <span>·</span>
-                                )}
-                                <span>
-                                  {team.member_count}/{MAX_TEAM_PLAYERS}{' '}
-                                  {t.membersSuffix}
-                                </span>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                        {selectedTeamId === team.id && (
-                          <svg
-                            className="w-5 h-5 text-purple-400 flex-shrink-0"
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                          >
-                            <path
-                              fillRule="evenodd"
-                              d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                              clipRule="evenodd"
-                            />
-                          </svg>
-                        )}
-                      </button>
-                    ))}
-                </div>
-              </div>
-
-              {/* Role souhaite */}
-              <div>
-                <label className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2">
-                  {t.desiredRoleLabel}
-                </label>
-                <div className="flex gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setDesiredRole('player')}
-                    className={`flex-1 px-4 py-3 rounded-xl text-sm font-medium transition border ${
-                      desiredRole === 'player'
-                        ? 'bg-purple-600/30 border-purple-400/50 text-white'
-                        : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'
-                    }`}
-                  >
-                    {t.rolePlayer}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDesiredRole('substitute')}
-                    className={`flex-1 px-4 py-3 rounded-xl text-sm font-medium transition border ${
-                      desiredRole === 'substitute'
-                        ? 'bg-purple-600/30 border-purple-400/50 text-white'
-                        : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'
-                    }`}
-                  >
-                    {t.roleSub}
-                  </button>
-                </div>
-              </div>
-
-              {/* Message optionnel */}
-              <div>
-                <label
-                  htmlFor="message"
-                  className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2"
+                <button
+                  type="submit"
+                  disabled={submitting || !selectedTeamId}
+                  className={`w-full px-4 py-3 rounded-xl font-semibold transition ${
+                    submitting || !selectedTeamId
+                      ? 'bg-gray-600 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400'
+                  }`}
                 >
-                  {t.messageLabel}
-                </label>
-                <textarea
-                  id="message"
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  rows={3}
-                  className="w-full rounded-xl border border-white/15 bg-black/60 px-4 py-3 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/80 transition resize-none"
-                  placeholder={t.messagePlaceholder}
-                  maxLength={500}
-                />
-              </div>
-
-              {error && (
-                <div className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-100">
-                  {error}
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={submitting || !selectedTeamId}
-                className={`w-full px-4 py-3 rounded-xl font-semibold transition ${
-                  submitting || !selectedTeamId
-                    ? 'bg-gray-600 cursor-not-allowed'
-                    : 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400'
-                }`}
-              >
-                {submitting ? t.submitting : t.submit}
-              </button>
-            </form>
+                  {submitting ? t.submitting : t.submit}
+                </button>
+              </form>
             )}
           </div>
 

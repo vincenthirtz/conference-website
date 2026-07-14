@@ -159,14 +159,8 @@ test.describe('Manage-team roster console', () => {
       page.getByText('Ton equipe est fermee au recrutement.')
     ).toBeVisible({ timeout: 10000 });
 
-    // The recruitment card carries the closed-state description and a single
-    // toggle button; scope to the innermost div holding both.
-    const recruitmentSection = page
-      .locator('div')
-      .filter({ hasText: 'Ton equipe est fermee au recrutement.' })
-      .filter({ has: page.getByRole('button') })
-      .last();
-    await recruitmentSection.getByRole('button').last().click();
+    // The recruitment toggle is an accessible switch labelled "Recrutement".
+    await page.getByRole('switch', { name: 'Recrutement' }).click();
 
     // Success banner confirms the new state and the request body carried it.
     await expect(page.getByText('Recrutement ouvert')).toBeVisible();
@@ -224,9 +218,7 @@ test.describe('Manage-team roster console', () => {
     ).toBeVisible();
   });
 
-  test('promote-captain shows a two-step confirm affordance', async ({
-    page,
-  }) => {
+  test('promote-captain opens a confirmation dialog', async ({ page }) => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
     await mockAsCaptain(page);
     await loginPlayer(page, PLAYER_EMAIL, '/player/manage-team');
@@ -243,26 +235,21 @@ test.describe('Manage-team roster console', () => {
 
     await subRow.getByRole('button', { name: 'Nommer capitaine' }).click();
 
+    // The transfer-of-ownership confirmation dialog opens (warning variant).
+    // Scope by its accessible name (the cookie banner is also a role=dialog).
+    const dialog = page.getByRole('dialog', {
+      name: `Nommer ${SUB_MEMBER.battle_tag} capitaine ?`,
+    });
+    await expect(dialog).toBeVisible();
     await expect(
-      page.getByText(`Nommer ${SUB_MEMBER.battle_tag} capitaine ?`)
+      dialog.getByRole('button', { name: 'Confirmer' })
     ).toBeVisible();
-    // Confirm + Cancel both present; we stop here without committing.
-    const confirmRow = page
-      .locator('div')
-      .filter({ hasText: SUB_MEMBER.battle_tag })
-      .filter({ has: page.getByRole('button', { name: 'Confirmer' }) })
-      .last();
+
+    // Cancel — the ownership transfer is not committed.
+    await dialog.getByRole('button', { name: 'Annuler' }).click();
+    await expect(dialog).toHaveCount(0);
     await expect(
-      confirmRow.getByRole('button', { name: 'Confirmer' })
-    ).toBeVisible();
-    await confirmRow.getByRole('button', { name: 'Annuler' }).click();
-    await expect(
-      page
-        .locator('div')
-        .filter({ hasText: SUB_MEMBER.battle_tag })
-        .filter({ has: page.getByRole('button', { name: 'Nommer capitaine' }) })
-        .last()
-        .getByRole('button', { name: 'Nommer capitaine' })
+      subRow.getByRole('button', { name: 'Nommer capitaine' })
     ).toBeVisible();
   });
 

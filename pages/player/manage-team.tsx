@@ -10,6 +10,7 @@ import { useManagedTeam } from '@/hooks/useManagedTeam';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
 import CopyButton from '@/components/player/CopyButton';
 import FreePlayersSection from '@/components/player/FreePlayersSection';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
@@ -69,9 +70,29 @@ export default function ManageTeamPage() {
   const {
     data: managedTeam,
     loading: teamLoading,
+    error: teamError,
     reload: reloadTeam,
   } = useManagedTeam();
+  const { confirm, dialog } = useConfirmDialog();
   const [requestsLoading, setRequestsLoading] = useState(true);
+  const [requestsError, setRequestsError] = useState(false);
+
+  // Map a raw member/desired role to a localized label.
+  const roleLabel = useCallback(
+    (role: string | null | undefined): string => {
+      switch (role) {
+        case 'substitute':
+          return t.optionSubstitute;
+        case 'coach':
+          return t.optionCoach;
+        case 'manager':
+          return t.roleManager;
+        default:
+          return t.optionPlayer;
+      }
+    },
+    [t]
+  );
 
   // Team / roster / role flags are sourced from the shared useManagedTeam
   // cache. We mirror them into local state so the existing optimistic updates
@@ -86,7 +107,6 @@ export default function ManageTeamPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [pendingRemoval, setPendingRemoval] = useState<string | null>(null);
-  const [pendingPromotion, setPendingPromotion] = useState<string | null>(null);
   const successTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const loading = authLoading || teamLoading || requestsLoading;
@@ -101,21 +121,22 @@ export default function ManageTeamPage() {
   }, [managedTeam]);
 
   const loadJoinRequests = useCallback(async () => {
+    // Let failures propagate so the effect can surface a real error state
+    // (distinct from the "no pending requests" empty state).
     const requestsData = await adminFetchJson<{ demandes?: JoinRequest[] }>(
       '/api/teams/join-requests'
-    ).catch(() => null);
-    if (requestsData) {
-      setJoinRequests(requestsData.demandes || []);
-    }
+    );
+    setJoinRequests(requestsData.demandes || []);
   }, [adminFetchJson]);
 
   useEffect(() => {
     if (!ready) return;
     let cancelled = false;
     setRequestsLoading(true);
+    setRequestsError(false);
     loadJoinRequests()
       .catch(() => {
-        if (!cancelled) setError(t.loadError);
+        if (!cancelled) setRequestsError(true);
       })
       .finally(() => {
         if (!cancelled) setRequestsLoading(false);
@@ -123,7 +144,7 @@ export default function ManageTeamPage() {
     return () => {
       cancelled = true;
     };
-  }, [ready, loadJoinRequests, t]);
+  }, [ready, loadJoinRequests]);
 
   const showSuccess = (msg: string) => {
     setSuccessMsg(msg);
@@ -240,7 +261,6 @@ export default function ManageTeamPage() {
         method: 'PATCH',
         body: JSON.stringify({ newCaptainUserId: member.user_id }),
       });
-      setPendingPromotion(null);
       await reloadTeam();
       showSuccess(
         format(t.promoteSuccess, { name: member.battle_tag || t.unknown })
@@ -250,6 +270,21 @@ export default function ManageTeamPage() {
     } finally {
       setActionLoading(null);
     }
+  };
+
+  const confirmPromote = async (member: Member) => {
+    if (!member.user_id) return;
+    const ok = await confirm({
+      title: format(t.promoteConfirm, {
+        name: member.battle_tag || t.unknown,
+      }),
+      subtitle: t.promoteDialogSubtitle,
+      variant: 'warning',
+      confirmLabel: t.promoteConfirmYes,
+      cancelLabel: t.promoteCancel,
+    });
+    if (!ok) return;
+    await handlePromoteCaptain(member);
   };
 
   const handleUpdateSpecialty = async (memberId: string, value: string) => {
@@ -264,6 +299,7 @@ export default function ManageTeamPage() {
         body: JSON.stringify({ memberId, specialty }),
       });
       await reloadTeam();
+      showSuccess(t.specialtyUpdated);
     } catch (err: unknown) {
       setError((err as Error).message || t.specialtyError);
     } finally {
@@ -298,6 +334,33 @@ export default function ManageTeamPage() {
     return <PlayerPageSkeleton rows={4} />;
   }
 
+  // A network failure (team fetch OR join-requests fetch) must NOT masquerade
+  // as "access denied" — offer a retry instead of ejecting the captain.
+  if ((teamError && !team) || requestsError) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white flex items-center justify-center px-4">
+        <div className="text-center max-w-md">
+          <h1 className="text-xl font-bold mb-4">{t.errorTitle}</h1>
+          <p className="text-gray-400 mb-6">{t.errorBody}</p>
+          <button
+            type="button"
+            onClick={() => {
+              setRequestsError(false);
+              setRequestsLoading(true);
+              void reloadTeam();
+              loadJoinRequests()
+                .catch(() => setRequestsError(true))
+                .finally(() => setRequestsLoading(false));
+            }}
+            className="inline-block px-6 py-3 rounded-xl bg-purple-600 hover:bg-purple-500 font-semibold transition"
+          >
+            {t.retry}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (!team || (!isCaptain && !isManager)) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white flex items-center justify-center px-4">
@@ -317,6 +380,7 @@ export default function ManageTeamPage() {
 
   return (
     <>
+      {dialog}
       <Head>
         <title>{format(t.tabTitle, { name: team.name })}</title>
       </Head>
@@ -355,13 +419,21 @@ export default function ManageTeamPage() {
           </div>
 
           {successMsg && (
-            <div className="mb-6 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+            <div
+              role="status"
+              aria-live="polite"
+              className="mb-6 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200"
+            >
               {successMsg}
             </div>
           )}
 
           {error && (
-            <div className="mb-6 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-100">
+            <div
+              role="alert"
+              aria-live="assertive"
+              className="mb-6 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-100"
+            >
               {error}
             </div>
           )}
@@ -380,7 +452,10 @@ export default function ManageTeamPage() {
               <button
                 onClick={handleToggleJoinable}
                 disabled={actionLoading === 'joinable'}
-                className={`relative w-12 h-7 rounded-full transition-colors ${
+                role="switch"
+                aria-checked={!!team.is_joinable}
+                aria-label={t.recruitment}
+                className={`relative w-12 h-7 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60 ${
                   team.is_joinable ? 'bg-emerald-500' : 'bg-gray-600'
                 } ${actionLoading === 'joinable' ? 'opacity-50' : ''}`}
               >
@@ -403,8 +478,10 @@ export default function ManageTeamPage() {
               <button
                 onClick={handleToggleScrimOpen}
                 disabled={actionLoading === 'scrim-open'}
+                role="switch"
+                aria-checked={!!team.open_for_scrim}
                 aria-label={t.scrimOpenLabel}
-                className={`relative w-12 h-7 rounded-full transition-colors flex-shrink-0 ${
+                className={`relative w-12 h-7 rounded-full transition-colors flex-shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60 ${
                   team.open_for_scrim ? 'bg-emerald-500' : 'bg-gray-600'
                 } ${actionLoading === 'scrim-open' ? 'opacity-50' : ''}`}
               >
@@ -504,7 +581,7 @@ export default function ManageTeamPage() {
                         {m.is_captain ? (
                           <span className="text-purple-300">{t.captain}</span>
                         ) : (
-                          m.role || 'player'
+                          roleLabel(m.role)
                         )}
                       </div>
                     </div>
@@ -513,8 +590,8 @@ export default function ManageTeamPage() {
                   {!m.is_captain && (
                     <div className="flex items-center gap-2 flex-shrink-0">
                       {pendingRemoval === m.id ? (
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-red-200 max-w-[10rem] sm:max-w-none">
+                        <div className="flex flex-wrap items-center justify-end gap-2">
+                          <span className="text-xs text-red-200 basis-full sm:basis-auto">
                             {format(t.removeConfirm, {
                               name: m.battle_tag || t.unknown,
                             })}
@@ -535,28 +612,6 @@ export default function ManageTeamPage() {
                             className="px-2 py-1 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-xs transition disabled:opacity-50"
                           >
                             {t.cancelRemove}
-                          </button>
-                        </div>
-                      ) : pendingPromotion === m.id ? (
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-purple-200 max-w-[10rem] sm:max-w-none">
-                            {format(t.promoteConfirm, {
-                              name: m.battle_tag || t.unknown,
-                            })}
-                          </span>
-                          <button
-                            onClick={() => handlePromoteCaptain(m)}
-                            disabled={actionLoading === `promote-${m.id}`}
-                            className="px-2 py-1 rounded-lg bg-purple-600 hover:bg-purple-500 text-xs font-semibold transition disabled:opacity-50"
-                          >
-                            {t.promoteConfirmYes}
-                          </button>
-                          <button
-                            onClick={() => setPendingPromotion(null)}
-                            disabled={actionLoading === `promote-${m.id}`}
-                            className="px-2 py-1 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-xs transition disabled:opacity-50"
-                          >
-                            {t.promoteCancel}
                           </button>
                         </div>
                       ) : (
@@ -585,6 +640,8 @@ export default function ManageTeamPage() {
                               handleUpdateRole(m.id, e.target.value)
                             }
                             disabled={!!actionLoading}
+                            aria-label={t.roleSelectLabel}
+                            title={t.roleSelectLabel}
                             className="bg-black/60 border border-white/10 rounded-lg px-2 py-1 text-xs text-gray-300 focus:outline-none focus:ring-1 focus:ring-purple-400"
                           >
                             <option value="player">{t.optionPlayer}</option>
@@ -594,7 +651,7 @@ export default function ManageTeamPage() {
                             <option value="coach">{t.optionCoach}</option>
                           </select>
                           <button
-                            onClick={() => setPendingPromotion(m.id)}
+                            onClick={() => confirmPromote(m)}
                             disabled={!!actionLoading || !m.user_id}
                             className="px-2 py-1 rounded-lg border border-purple-500/30 bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 text-xs font-semibold transition disabled:opacity-50"
                             title={t.promote}
@@ -655,7 +712,7 @@ export default function ManageTeamPage() {
                     t.defaultPlayerName;
                   const btag =
                     req.user?.battle_tag || req.payload?.user_battle_tag;
-                  const role = req.payload?.desired_role || 'player';
+                  const role = roleLabel(req.payload?.desired_role);
 
                   return (
                     <div

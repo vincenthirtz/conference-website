@@ -10,7 +10,11 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useManagedTeam } from '@/hooks/useManagedTeam';
 import { useRealtimeChannel } from '@/hooks/useRealtimeChannel';
 import { useDebounce } from '@/hooks/useDebounce';
-import { PlayerPageSkeleton } from '@/components/player/Skeletons';
+import {
+  PlayerPageSkeleton,
+  SkeletonLine,
+} from '@/components/player/Skeletons';
+import TeamPicker from '@/components/player/TeamPicker';
 import { useT } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
@@ -73,6 +77,7 @@ export default function MessagesPage() {
   // Inbox
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [convLoading, setConvLoading] = useState(false);
+  const [convError, setConvError] = useState<string | null>(null);
 
   // Active conversation
   const [activeConvId, setActiveConvId] = useState<string | null>(null);
@@ -80,6 +85,16 @@ export default function MessagesPage() {
   const [otherTeam, setOtherTeam] = useState<OtherTeam | null>(null);
   const [myTeamId, setMyTeamId] = useState<string | null>(null);
   const [msgLoading, setMsgLoading] = useState(false);
+
+  // The captain's OWN team id, sourced straight from the shared payload. Used
+  // as the STABLE realtime subscription filter — kept separate from `myTeamId`
+  // (which openConversation overwrites with the per-conversation value used for
+  // message-bubble alignment) so the Supabase channel filter never drifts.
+  const captainTeamId = managedTeam?.team?.id ?? null;
+
+  const replyInputRef = useRef<HTMLInputElement>(null);
+  const newConvRef = useRef<HTMLDivElement>(null);
+  const newButtonRef = useRef<HTMLButtonElement>(null);
 
   // New conversation
   const [showNewConv, setShowNewConv] = useState(false);
@@ -106,9 +121,11 @@ export default function MessagesPage() {
 
   const loading = authLoading || teamLoading;
 
-  // Seed myTeamId from the shared team payload. openConversation later
-  // overwrites it with the per-conversation value from the API, so we only
-  // set it from the cache when we don't already have one.
+  // Seed myTeamId (used only for message-bubble alignment) from the shared
+  // team payload. openConversation later overwrites it with the per-conversation
+  // value from the API, so we only set it from the cache when we don't already
+  // have one. The realtime subscription no longer depends on this value — it
+  // uses the stable `captainTeamId` derived above.
   useEffect(() => {
     const teamId = managedTeam?.team?.id ?? null;
     if (teamId) setMyTeamId((prev) => prev ?? teamId);
@@ -116,6 +133,7 @@ export default function MessagesPage() {
 
   const loadConversations = useCallback(async () => {
     setConvLoading(true);
+    setConvError(null);
     try {
       const data = await adminFetchJson<{ conversations?: Conversation[] }>(
         '/api/player/messages'
@@ -123,10 +141,11 @@ export default function MessagesPage() {
       setConversations(data.conversations || []);
     } catch (err) {
       logger.error('[messages] load conversations error:', err);
+      setConvError(t.loadError);
     } finally {
       setConvLoading(false);
     }
-  }, [adminFetchJson]);
+  }, [adminFetchJson, t]);
 
   const canManage = isCaptain || isManager;
 
@@ -144,6 +163,19 @@ export default function MessagesPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router.query.conv, ready, canManage]);
+
+  // Focus management on view transitions (keyboard / screen-reader users).
+  // New-conversation picker → focus the team search field (owned by TeamPicker).
+  useEffect(() => {
+    if (showNewConv) {
+      newConvRef.current?.querySelector<HTMLInputElement>('input')?.focus();
+    }
+  }, [showNewConv]);
+
+  // Conversation opened & messages loaded → focus the reply field.
+  useEffect(() => {
+    if (activeConvId && !msgLoading) replyInputRef.current?.focus();
+  }, [activeConvId, msgLoading]);
 
   const openConversation = async (convId: string) => {
     // Mark this as the latest requested conversation. Any in-flight open() for
@@ -239,10 +271,10 @@ export default function MessagesPage() {
   );
 
   useRealtimeChannel({
-    enabled: !!activeConvId && !!myTeamId && canManage,
+    enabled: !!activeConvId && !!captainTeamId && canManage,
     channel: activeConvId ? `messages-${activeConvId}` : 'messages-inactive',
     table: 'demandes',
-    filter: myTeamId ? `team_id=eq.${myTeamId}` : undefined,
+    filter: captainTeamId ? `team_id=eq.${captainTeamId}` : undefined,
     onChange: handleMessagesChange,
   });
 
@@ -355,6 +387,8 @@ export default function MessagesPage() {
     setOtherTeam(null);
     setError(null);
     router.replace('/player/messages', undefined, { shallow: true });
+    // Return focus to the primary inbox action once it re-renders.
+    setTimeout(() => newButtonRef.current?.focus(), 0);
   };
 
   if (authLoading || loading) {
@@ -464,6 +498,7 @@ export default function MessagesPage() {
 
               {!activeConvId && !showNewConv && (
                 <button
+                  ref={newButtonRef}
                   onClick={handleNewConversation}
                   className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-sm font-semibold transition"
                 >
@@ -489,12 +524,30 @@ export default function MessagesPage() {
             {!activeConvId && !showNewConv && (
               <div className="divide-y divide-white/5">
                 {convLoading && (
-                  <div className="px-6 py-12 text-center text-sm text-gray-500">
-                    {t.loading}
+                  <div className="px-6 py-6 space-y-3" aria-busy="true">
+                    {Array.from({ length: 3 }).map((_, i) => (
+                      <div key={i} className="flex items-center gap-4">
+                        <div className="h-10 w-10 rounded-full bg-white/[0.06] animate-pulse flex-shrink-0" />
+                        <div className="flex-1 space-y-2">
+                          <SkeletonLine width="w-1/3" height="h-3" />
+                          <SkeletonLine width="w-2/3" height="h-3" />
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
 
-                {!convLoading && conversations.length === 0 && (
+                {!convLoading && convError && (
+                  <div
+                    role="alert"
+                    aria-live="assertive"
+                    className="m-4 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-100"
+                  >
+                    {convError}
+                  </div>
+                )}
+
+                {!convLoading && !convError && conversations.length === 0 && (
                   <div className="px-6 py-12 text-center">
                     <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-white/5 flex items-center justify-center">
                       <svg
@@ -521,6 +574,7 @@ export default function MessagesPage() {
                 )}
 
                 {!convLoading &&
+                  !convError &&
                   conversations.map((conv) => (
                     <button
                       key={conv.conversationId}
@@ -561,91 +615,21 @@ export default function MessagesPage() {
 
             {/* New conversation - team picker */}
             {showNewConv && (
-              <div className="p-6">
-                <label
-                  htmlFor="msg-team-search"
-                  className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2"
-                >
-                  {t.sendTo}
-                </label>
-                <input
-                  id="msg-team-search"
-                  type="text"
-                  value={teamSearch}
-                  onChange={(e) => setTeamSearch(e.target.value)}
-                  className="w-full rounded-xl border border-white/15 bg-black/60 px-4 py-3 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-400/80 mb-3"
-                  placeholder={t.searchTeam}
+              <div className="p-6" ref={newConvRef}>
+                <TeamPicker
+                  teams={teams}
+                  value={selectedTeamId}
+                  onChange={setSelectedTeamId}
+                  loading={teamsLoading}
+                  accentColor="emerald"
+                  label={t.sendTo}
+                  emptyLabel={t.noTeamFound}
+                  search={teamSearch}
+                  onSearchChange={setTeamSearch}
+                  searchPlaceholder={t.searchTeam}
                 />
 
-                <div className="max-h-48 overflow-y-auto space-y-1 rounded-xl border border-white/10 bg-black/40 p-2 mb-4">
-                  {teamsLoading && (
-                    <div className="text-sm text-gray-500 text-center py-4">
-                      {t.loading}
-                    </div>
-                  )}
-                  {!teamsLoading && teams.length === 0 && (
-                    <div className="text-sm text-gray-500 text-center py-4">
-                      {t.noTeamFound}
-                    </div>
-                  )}
-                  {!teamsLoading &&
-                    teams.map((t) => (
-                      <button
-                        key={t.id}
-                        type="button"
-                        onClick={() => setSelectedTeamId(t.id)}
-                        className={`w-full flex items-center gap-3 p-3 rounded-xl text-left transition ${
-                          selectedTeamId === t.id
-                            ? 'bg-emerald-600/30 border border-emerald-400/50'
-                            : 'bg-white/5 border border-transparent hover:bg-white/10'
-                        }`}
-                      >
-                        <div className="w-8 h-8 rounded-full bg-black/60 border border-white/10 flex items-center justify-center overflow-hidden flex-shrink-0">
-                          {t.logo_url ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={t.logo_url}
-                              alt=""
-                              width={32}
-                              height={32}
-                              loading="lazy"
-                              decoding="async"
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <span className="text-[10px] text-gray-500">
-                              {(t.short_name || t.name)
-                                .slice(0, 2)
-                                .toUpperCase()}
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium text-white text-sm truncate">
-                            {t.name}
-                          </div>
-                          {t.short_name && (
-                            <div className="text-xs text-gray-400">
-                              {t.short_name}
-                            </div>
-                          )}
-                        </div>
-                        {selectedTeamId === t.id && (
-                          <svg
-                            className="w-5 h-5 text-emerald-400 flex-shrink-0"
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                          >
-                            <path
-                              fillRule="evenodd"
-                              d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                              clipRule="evenodd"
-                            />
-                          </svg>
-                        )}
-                      </button>
-                    ))}
-                </div>
+                <div className="mt-4" />
 
                 {/* Compose area */}
                 <form onSubmit={handleSendMessage} className="space-y-3">
@@ -653,6 +637,7 @@ export default function MessagesPage() {
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
                     rows={3}
+                    aria-label={t.composeLabel}
                     className="w-full rounded-xl border border-white/15 bg-black/60 px-4 py-3 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-400/80 transition resize-none"
                     placeholder={t.composePlaceholder}
                     maxLength={2000}
@@ -685,18 +670,34 @@ export default function MessagesPage() {
 
             {/* Conversation view */}
             {activeConvId && (
-              <div className="flex flex-col" style={{ minHeight: '400px' }}>
+              <div className="flex flex-col min-h-[60vh] sm:min-h-[400px]">
                 {msgLoading && (
-                  <div className="flex-1 flex items-center justify-center py-12">
-                    <div className="text-sm text-gray-500">{t.loading}</div>
+                  <div className="flex-1 px-6 py-4 space-y-3" aria-busy="true">
+                    {Array.from({ length: 4 }).map((_, i) => (
+                      <div
+                        key={i}
+                        className={
+                          i % 2 === 0
+                            ? 'flex justify-start'
+                            : 'flex justify-end'
+                        }
+                      >
+                        <SkeletonLine
+                          width={i % 2 === 0 ? 'w-1/2' : 'w-2/5'}
+                          height="h-10"
+                        />
+                      </div>
+                    ))}
                   </div>
                 )}
 
                 {!msgLoading && (
                   <>
                     <div
-                      className="flex-1 overflow-y-auto px-6 py-4 space-y-3"
-                      style={{ maxHeight: '400px' }}
+                      role="log"
+                      aria-live="polite"
+                      aria-label={t.conversationLabel}
+                      className="flex-1 overflow-y-auto px-6 py-4 space-y-3 max-h-[60vh] sm:max-h-[400px]"
                     >
                       {messages.length === 0 && (
                         <div className="text-center text-sm text-gray-500 py-8">
@@ -744,9 +745,11 @@ export default function MessagesPage() {
                       className="border-t border-white/10 px-4 py-3 flex gap-3"
                     >
                       <input
+                        ref={replyInputRef}
                         type="text"
                         value={newMessage}
                         onChange={(e) => setNewMessage(e.target.value)}
+                        aria-label={t.replyLabel}
                         className="flex-1 rounded-xl border border-white/15 bg-black/60 px-4 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-400/80 transition"
                         placeholder={t.replyPlaceholder}
                         maxLength={2000}

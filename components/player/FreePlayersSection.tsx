@@ -91,7 +91,11 @@ export default function FreePlayersSection({ teamId }: Props) {
       <p className="text-sm text-gray-400 mb-4">{t.description}</p>
 
       {actionError && (
-        <div className="mb-4 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+        <div
+          role="alert"
+          aria-live="assertive"
+          className="mb-4 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-200"
+        >
           {actionError}
         </div>
       )}
@@ -116,9 +120,7 @@ export default function FreePlayersSection({ teamId }: Props) {
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="w-8 h-8 rounded-full bg-black/60 border border-white/10 flex items-center justify-center flex-shrink-0">
                     <span className="text-xs text-gray-500">
-                      {(displayNameFor(p) || '??')
-                        .slice(0, 2)
-                        .toUpperCase()}
+                      {(displayNameFor(p) || '??').slice(0, 2).toUpperCase()}
                     </span>
                   </div>
                   <div className="min-w-0">

@@ -122,13 +122,17 @@ function PlayerProfile() {
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [dataError, setDataError] = useState<string | null>(null);
 
-  // Lazily seed the edit fields once the session resolves.
-  if (user && !editingInitialized) {
-    setEditDisplayName(displayName);
-    setEditBattleTag((user.user_metadata?.battle_tag as string) || '');
-    setEditAvatarUrl((user.user_metadata?.avatar_url as string) || '');
-    setEditingInitialized(true);
-  }
+  // Seed the edit fields once the session resolves. Kept in an effect (rather
+  // than a setState-during-render guarded by a flag) so React never re-renders
+  // mid-commit; the `editingInitialized` flag still ensures it runs only once.
+  useEffect(() => {
+    if (user && !editingInitialized) {
+      setEditDisplayName(displayName);
+      setEditBattleTag((user.user_metadata?.battle_tag as string) || '');
+      setEditAvatarUrl((user.user_metadata?.avatar_url as string) || '');
+      setEditingInitialized(true);
+    }
+  }, [user, editingInitialized, displayName]);
 
   const handleProfileSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -331,7 +335,16 @@ function PlayerProfile() {
   }
 
   const role = (user.user_metadata?.role as string | undefined) || 'player';
-  const roleLabel = role === 'captain' ? t.roleCaptain : t.rolePlayer;
+  // Mapping complet des rôles : un manager/coach/remplaçant ne doit pas retomber
+  // silencieusement sur « Joueuse ».
+  const roleLabels: Record<string, string> = {
+    captain: t.roleCaptain,
+    player: t.rolePlayer,
+    manager: t.roleManager,
+    coach: t.roleCoach,
+    substitute: t.roleSubstitute,
+  };
+  const roleLabel = roleLabels[role] ?? t.rolePlayer;
   const battleTag = (user.user_metadata?.battle_tag as string) || '—';
   const avatarUrl = (user.user_metadata?.avatar_url as string) || '';
   const initials = displayName

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 
 type Demande = {
   id: string;
@@ -43,6 +44,7 @@ function isRecent(dateStr?: string | null): boolean {
 export default function DemandesHistory({ demandes, onCancel }: Props) {
   const t = useT('demandesHistory');
   const dateLocale = useLocale();
+  const { confirm, dialog } = useConfirmDialog();
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [cancelError, setCancelError] = useState<string | null>(null);
 
@@ -50,6 +52,14 @@ export default function DemandesHistory({ demandes, onCancel }: Props) {
 
   const handleCancel = async (id: string) => {
     if (!onCancel) return;
+    const ok = await confirm({
+      title: t.cancelConfirmTitle,
+      subtitle: t.cancelConfirmSubtitle,
+      variant: 'warning',
+      confirmLabel: t.cancelConfirmYes,
+      cancelLabel: t.cancelConfirmNo,
+    });
+    if (!ok) return;
     setCancellingId(id);
     setCancelError(null);
     try {
@@ -63,10 +73,15 @@ export default function DemandesHistory({ demandes, onCancel }: Props) {
 
   return (
     <div className="mt-8 rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6">
+      {dialog}
       <h2 className="text-lg font-semibold mb-4">{t.title}</h2>
 
       {cancelError && (
-        <div className="mb-3 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-200">
+        <div
+          role="alert"
+          aria-live="assertive"
+          className="mb-3 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-200"
+        >
           {cancelError}
         </div>
       )}
@@ -90,9 +105,7 @@ export default function DemandesHistory({ demandes, onCancel }: Props) {
             >
               <div className="flex items-center justify-between text-sm">
                 <div className="min-w-0">
-                  <span className="font-medium">
-                    {t.typeLabels[d.type]}
-                  </span>
+                  <span className="font-medium">{t.typeLabels[d.type]}</span>
                   {teamName && (
                     <span className="text-gray-400 ml-2">({teamName})</span>
                   )}

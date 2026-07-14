@@ -216,7 +216,11 @@ function PlayerNotifications() {
         </div>
 
         {error && (
-          <div className="mb-6 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-100">
+          <div
+            role="alert"
+            aria-live="assertive"
+            className="mb-6 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-100"
+          >
             {error}
           </div>
         )}

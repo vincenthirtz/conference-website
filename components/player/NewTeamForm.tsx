@@ -5,6 +5,8 @@ import { BATTLE_TAG_REGEX } from '@/utils/teams/addMember';
 type Tr = ReturnType<typeof useT<'newTeamForm'>>;
 
 type TeamMember = {
+  /** Identifiant local stable (clé React), généré à l'ajout côté parent. */
+  id: string;
   email: string;
   battleTag: string;
   displayName: string;
@@ -29,7 +31,10 @@ type Props = {
   onValidityChange?: (isValid: boolean) => void;
 };
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Source unique de la regex email pour le flux « devenir capitaine » :
+// exportée pour être réutilisée par pages/player/request-captain.tsx (évite la
+// duplication du motif).
+export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // Regex canonique partagée avec pages/team/create.tsx et utils/teams/addMember.ts.
 const BATTLETAG_RE = BATTLE_TAG_REGEX;
 
@@ -146,7 +151,7 @@ export default function NewTeamForm({
             const errors = memberErrors[index];
             return (
               <div
-                key={index}
+                key={member.id}
                 className="rounded-xl border border-white/10 bg-black/40 p-3"
               >
                 <div className="flex items-center justify-between mb-2">
@@ -166,6 +171,7 @@ export default function NewTeamForm({
                   <div>
                     <input
                       type="email"
+                      aria-label={format(t.emailAriaLabel, { n: index + 1 })}
                       placeholder={t.emailPlaceholder}
                       value={member.email}
                       onChange={(e) =>
@@ -187,6 +193,9 @@ export default function NewTeamForm({
                   <div>
                     <input
                       type="text"
+                      aria-label={format(t.battleTagAriaLabel, {
+                        n: index + 1,
+                      })}
                       placeholder={t.battleTagPlaceholder}
                       value={member.battleTag}
                       onChange={(e) =>
@@ -211,6 +220,7 @@ export default function NewTeamForm({
                   </div>
                   <input
                     type="text"
+                    aria-label={format(t.nicknameAriaLabel, { n: index + 1 })}
                     placeholder={t.nicknamePlaceholder}
                     value={member.displayName}
                     onChange={(e) =>

@@ -1,7 +1,7 @@
 // pages/player/caster-application.tsx
 // Page pour candidater au cast (devenir casteuse) depuis l'espace joueuse.
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
@@ -31,40 +31,51 @@ export default function CasterApplicationPage() {
   const t = useT('casterApplication');
 
   const [loading, setLoading] = useState(true);
-  const [application, setApplication] = useState<CasterApplication | null>(null);
+  const [application, setApplication] = useState<CasterApplication | null>(
+    null
+  );
+  // Erreur de CHARGEMENT du statut (distincte de l'erreur de soumission) : si le
+  // GET échoue, on ne doit pas afficher un formulaire vierge trompeur (l'utilisateur
+  // pourrait avoir déjà une candidature en cours qu'on n'a pas pu lire).
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const [motivation, setMotivation] = useState('');
   const [portfolioUrl, setPortfolioUrl] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Charge la candidature existante au montage.
+  // Charge la candidature existante.
+  const loadApplication = useCallback(async () => {
+    if (!token) return;
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const res = await fetch('/api/demandes/caster-application', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+      const data = await res.json();
+      setApplication(data.application ?? null);
+    } catch (err) {
+      logger.error('[caster-application] load error:', err);
+      setLoadError(t.loadError);
+    } finally {
+      setLoading(false);
+    }
+  }, [token, t]);
+
   useEffect(() => {
     if (!ready || !token) return;
-    let cancelled = false;
-    setLoading(true);
-    (async () => {
-      try {
-        const res = await fetch('/api/demandes/caster-application', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (!cancelled) setApplication(data.application ?? null);
-        }
-      } catch (err) {
-        logger.error('[caster-application] load error:', err);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [ready, token]);
+    void loadApplication();
+  }, [ready, token, loadApplication]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Garde anti double-submit : le disabled ne protège pas d'un double-Enter
+    // envoyé avant le re-render.
+    if (submitting) return;
     setError(null);
 
     const trimmedMotivation = motivation.trim();
@@ -138,7 +149,10 @@ export default function CasterApplicationPage() {
     return null;
   }
 
-  const showForm = !application || application.status === 'rejected';
+  // Sur échec de chargement du statut, on masque le formulaire (il serait
+  // trompeur) et on affiche une bannière d'erreur avec retry à la place.
+  const showForm =
+    !loadError && (!application || application.status === 'rejected');
 
   return (
     <>
@@ -157,18 +171,35 @@ export default function CasterApplicationPage() {
 
           <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6">
             <div className="flex items-center gap-3 mb-2">
-              <span
-                className="text-2xl leading-none"
-                aria-hidden="true"
-              >
+              <span className="text-2xl leading-none" aria-hidden="true">
                 🎙️
               </span>
               <h1 className="text-2xl font-bold">{t.pageTitle}</h1>
             </div>
             <p className="text-gray-400 text-sm mb-6">{t.intro}</p>
 
+            {/* Erreur de chargement du statut : ne pas montrer un formulaire vierge. */}
+            {loadError && (
+              <div
+                role="alert"
+                aria-live="assertive"
+                className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-100"
+              >
+                <span>{loadError}</span>
+                <button
+                  type="button"
+                  onClick={() => void loadApplication()}
+                  className="rounded-full border border-red-300/40 px-3 py-1 text-xs font-semibold text-red-100 transition hover:bg-red-500/20"
+                >
+                  {t.retry}
+                </button>
+              </div>
+            )}
+
             {/* Statut de la candidature existante */}
-            {application && <StatusBanner application={application} />}
+            {!loadError && application && (
+              <StatusBanner application={application} />
+            )}
 
             {showForm && (
               <form onSubmit={handleSubmit} className="space-y-6">
@@ -258,21 +289,14 @@ export default function CasterApplicationPage() {
 /*  Bannière de statut                                                 */
 /* ------------------------------------------------------------------ */
 
-function StatusBanner({
-  application,
-}: {
-  application: CasterApplication;
-}) {
+function StatusBanner({ application }: { application: CasterApplication }) {
   const t = useT('casterApplication');
   const locale = useLocale();
-  const created = new Date(application.created_at).toLocaleDateString(
-    locale,
-    {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    }
-  );
+  const created = new Date(application.created_at).toLocaleDateString(locale, {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
 
   if (application.status === 'pending') {
     return (
