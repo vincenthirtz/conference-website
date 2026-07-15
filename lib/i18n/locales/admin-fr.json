@@ -5122,6 +5122,7 @@
     "segmentDeleted": "Segment supprimé.",
     "deleteFailed": "Suppression échouée.",
     "reorderFailed": "Reorder échoué, restauration.",
+    "reorderConflict": "L'ordre a été modifié par un autre régisseur — affichage réaligné.",
     "errorRunNotFound": "Run introuvable.",
     "segmentAdded": "Segment ajouté.",
     "errorNoSegment": "Aucun segment sélectionné.",
@@ -6265,6 +6266,7 @@
   },
   "adminDirectorSegmentCard": {
     "dragHandleAria": "Glisser pour reordonner",
+    "lockedAria": "Segment verrouillé (en cours ou terminé) — non déplaçable",
     "anchorTitle": "Horaire ancre",
     "computedTitle": "Horaire calcule",
     "overrunTitle": "Depassement de {value}",

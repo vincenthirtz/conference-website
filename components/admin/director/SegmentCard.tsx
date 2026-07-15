@@ -24,6 +24,12 @@ type Props = {
   isDragging: boolean;
   dragOver: boolean;
   busy: boolean;
+  /**
+   * Verrouille le drag : un segment `live`/`done` ne se reordonne pas (metier)
+   * et n'est pas une cible de drop. On retire la poignee et on desactive
+   * draggable. Le parent (TimelineBuilder) refuse aussi le drop dessus.
+   */
+  locked?: boolean;
   /** ISO planifie (Lot 6). Si null, on n'affiche pas d'horaire. */
   plannedStartAt?: string | null;
   /** True si planned_start_at vient d'un override Director. */
@@ -68,6 +74,7 @@ export default function SegmentCard({
   isDragging,
   dragOver,
   busy,
+  locked = false,
   plannedStartAt,
   isAnchored,
   overrunSec,
@@ -102,11 +109,11 @@ export default function SegmentCard({
 
   return (
     <div
-      draggable
-      onDragStart={onDragStart}
+      draggable={!locked}
+      onDragStart={locked ? undefined : onDragStart}
       onDragOver={onDragOver}
       onDrop={onDrop}
-      onDragEnd={onDragEnd}
+      onDragEnd={locked ? undefined : onDragEnd}
       onDragLeave={onDragLeave}
       className={`${baseClasses} ${borderClasses} ${opacity} ${dragOverIndicator} ${overrunRing}`}
       onClick={onSelect}
@@ -116,6 +123,7 @@ export default function SegmentCard({
       data-segment-type={segment.type}
       data-segment-status={segment.status}
       data-segment-ord={segment.ord}
+      data-segment-locked={locked ? 'true' : 'false'}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
@@ -124,27 +132,48 @@ export default function SegmentCard({
       }}
     >
       <div className="flex items-stretch gap-3 px-3 py-3">
-        {/* Drag handle */}
-        <div
-          className="flex items-center text-neutral-500 hover:text-neutral-300 cursor-grab active:cursor-grabbing select-none"
-          aria-label={t.dragHandleAria}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <svg
-            width="12"
-            height="20"
-            viewBox="0 0 12 20"
-            fill="currentColor"
-            aria-hidden="true"
+        {/* Drag handle — remplace par un cadenas quand le segment est verrouille
+            (live/done) : pas de reordonnancement possible. */}
+        {locked ? (
+          <div
+            className="flex items-center text-neutral-600 cursor-not-allowed select-none"
+            aria-label={t.lockedAria}
+            title={t.lockedAria}
+            data-testid={`segment-lock-${segment.id}`}
+            onClick={(e) => e.stopPropagation()}
           >
-            <circle cx="3" cy="4" r="1.5" />
-            <circle cx="3" cy="10" r="1.5" />
-            <circle cx="3" cy="16" r="1.5" />
-            <circle cx="9" cy="4" r="1.5" />
-            <circle cx="9" cy="10" r="1.5" />
-            <circle cx="9" cy="16" r="1.5" />
-          </svg>
-        </div>
+            <svg
+              width="12"
+              height="20"
+              viewBox="0 0 14 20"
+              fill="currentColor"
+              aria-hidden="true"
+            >
+              <path d="M4 8V6a3 3 0 0 1 6 0v2h.5A1.5 1.5 0 0 1 12 9.5v6A1.5 1.5 0 0 1 10.5 17h-7A1.5 1.5 0 0 1 2 15.5v-6A1.5 1.5 0 0 1 3.5 8H4zm1.5 0h3V6a1.5 1.5 0 0 0-3 0v2z" />
+            </svg>
+          </div>
+        ) : (
+          <div
+            className="flex items-center text-neutral-500 hover:text-neutral-300 cursor-grab active:cursor-grabbing select-none"
+            aria-label={t.dragHandleAria}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <svg
+              width="12"
+              height="20"
+              viewBox="0 0 12 20"
+              fill="currentColor"
+              aria-hidden="true"
+            >
+              <circle cx="3" cy="4" r="1.5" />
+              <circle cx="3" cy="10" r="1.5" />
+              <circle cx="3" cy="16" r="1.5" />
+              <circle cx="9" cy="4" r="1.5" />
+              <circle cx="9" cy="10" r="1.5" />
+              <circle cx="9" cy="16" r="1.5" />
+            </svg>
+          </div>
+        )}
 
         {/* Position */}
         <div className="flex flex-col items-center justify-center px-2 min-w-[2rem] text-xs text-neutral-500 font-mono">

@@ -63,6 +63,10 @@ export const getServerSideProps = withStaffPage('manager');
 
 const POLL_INTERVAL_MS = 30_000;
 
+// Fenetre pendant laquelle un changement d'ordre realtime divergent est
+// interprete comme un reorder concurrent d'un autre regisseur (Finding #14).
+const REORDER_CONFLICT_WINDOW_MS = 10_000;
+
 /* -----------------------------------------------------------
  * PERF — la page tick `nowMs` toutes les 1s (drift/timing) et se re-rend en
  * entier. Seuls RunStatusHeader + TimelineBuilder consomment `schedule`/`nowMs`
@@ -113,6 +117,29 @@ function DirectorPage(_props: StaffProps) {
   >([]);
 
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // --- Detection de reorder concurrent (Finding #14) --------------------------
+  // Quand on reordonne en optimistic, on memorise l'ordre attendu (id -> index)
+  // et l'instant. Si, dans la fenetre qui suit, un changement realtime d'ordre
+  // arrive d'un AUTRE regisseur et diverge de cet ordre attendu, on previent
+  // l'utilisateur (toast) et on laisse le merge realtime realigner sur le
+  // serveur, plutot que d'ecraser silencieusement. L'echo realtime de NOTRE
+  // propre reorder porte les memes `ord` que l'ordre attendu -> aucun faux
+  // positif. On passe par des refs pour ne PAS reabonner les canaux realtime
+  // (handleSegmentChange doit garder des deps vides).
+  const lastLocalReorderRef = useRef<{
+    expected: Map<string, number>;
+    at: number;
+    conflictShown: boolean;
+  } | null>(null);
+  const addToastRef = useRef(addToast);
+  const reorderConflictMsgRef = useRef('');
+  useEffect(() => {
+    addToastRef.current = addToast;
+  }, [addToast]);
+  useEffect(() => {
+    reorderConflictMsgRef.current = t.reorderConflict;
+  }, [t.reorderConflict]);
 
   const fetchData = useCallback(async () => {
     if (!runId) return;
@@ -170,6 +197,25 @@ function DirectorPage(_props: StaffProps) {
         setSegments((prev) => prev.filter((s) => s.id !== partial.id));
         setSelectedId((prev) => (prev === partial.id ? null : prev));
         return;
+      }
+      // Detection de reorder concurrent : un UPDATE d'ordre qui diverge de
+      // notre dernier reorder optimistic signifie qu'un autre regisseur a
+      // reordonne en meme temps. On previent une seule fois ; le merge ci-dessous
+      // realigne l'UI sur l'ordre serveur.
+      if (eventType === 'UPDATE' && typeof partial.ord === 'number') {
+        const rec = lastLocalReorderRef.current;
+        if (
+          rec &&
+          !rec.conflictShown &&
+          partial.id &&
+          Date.now() - rec.at < REORDER_CONFLICT_WINDOW_MS
+        ) {
+          const expected = rec.expected.get(partial.id);
+          if (expected !== undefined && expected !== partial.ord) {
+            rec.conflictShown = true;
+            addToastRef.current(reorderConflictMsgRef.current, 'warning');
+          }
+        }
       }
       // Pour INSERT/UPDATE, on remplace ou ajoute la row. On ne refetch pas
       // tout : on garde la stabilite UI.
@@ -647,6 +693,13 @@ function DirectorPage(_props: StaffProps) {
     // Optimistic UI : on a deja decale localement dans TimelineBuilder. Ici on
     // committe et rollback en cas d'erreur.
     const prevOrder = segments.map((s) => s.id);
+    // Memorise l'ordre attendu (id -> index) pour detecter un reorder
+    // concurrent d'un autre regisseur via le realtime (cf. handleSegmentChange).
+    lastLocalReorderRef.current = {
+      expected: new Map(orderedIds.map((id, idx) => [id, idx])),
+      at: Date.now(),
+      conflictShown: false,
+    };
     // Update local state to match the new order (preserve ord values).
     setSegments((prev) => {
       const byId = new Map(prev.map((s) => [s.id, s]));
@@ -668,8 +721,17 @@ function DirectorPage(_props: StaffProps) {
           body: JSON.stringify({ orderedIds }),
         }
       );
-      // L'API renvoie l'etat canonique — on l'applique.
-      if (json.segments) setSegments(json.segments);
+      // L'API renvoie l'etat canonique — on l'applique. On realigne aussi
+      // l'ordre attendu sur ce canonique : les echos realtime de NOTRE reorder
+      // porteront ces `ord` et ne declencheront donc pas de faux conflit.
+      if (json.segments) {
+        setSegments(json.segments);
+        const rec = lastLocalReorderRef.current;
+        if (rec) {
+          rec.expected = new Map(json.segments.map((s) => [s.id, s.ord]));
+          rec.at = Date.now();
+        }
+      }
     } catch (err) {
       addToast((err as Error)?.message ?? t.reorderFailed, 'error');
       // Rollback : remet les segments dans l'ordre precedent.
@@ -858,9 +920,12 @@ function DirectorPage(_props: StaffProps) {
       setBusy(true);
       regenerate();
       try {
-        const res = await mutate(`/api/admin/events/${runId}/waves/${wave.id}`, {
-          method: 'DELETE',
-        });
+        const res = await mutate(
+          `/api/admin/events/${runId}/waves/${wave.id}`,
+          {
+            method: 'DELETE',
+          }
+        );
         if (!res.ok) {
           const payload = await res.json().catch(() => null);
           throw new Error(

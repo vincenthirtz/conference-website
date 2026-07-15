@@ -5122,6 +5122,7 @@
     "segmentDeleted": "Segment deleted.",
     "deleteFailed": "Delete failed.",
     "reorderFailed": "Reorder failed, restoring.",
+    "reorderConflict": "The order was changed by another director — display realigned.",
     "errorRunNotFound": "Run not found.",
     "segmentAdded": "Segment added.",
     "errorNoSegment": "No segment selected.",
@@ -6265,6 +6266,7 @@
   },
   "adminDirectorSegmentCard": {
     "dragHandleAria": "Drag to reorder",
+    "lockedAria": "Locked segment (live or done) — cannot be moved",
     "anchorTitle": "Anchored schedule",
     "computedTitle": "Computed schedule",
     "overrunTitle": "Overrun of {value}",

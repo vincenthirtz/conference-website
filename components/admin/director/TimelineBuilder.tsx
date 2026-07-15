@@ -18,6 +18,16 @@ import EmptyState from '@/components/admin/EmptyState';
 import type { ComputedRunSchedule } from '@/utils/eventSchedule';
 import type { EventSegment } from '@/types/events';
 
+/**
+ * Un segment `live` ou `done` est verrouille : il ne peut ni etre saisi (drag)
+ * ni servir de cible de drop. Deplacer le segment en cours au milieu des
+ * upcoming n'a aucun sens metier. Seuls `upcoming` et `skipped` restent
+ * reordonnables.
+ */
+function isSegmentLocked(status: EventSegment['status']): boolean {
+  return status === 'live' || status === 'done';
+}
+
 type Props = {
   segments: EventSegment[];
   selectedId: string | null;
@@ -58,6 +68,10 @@ export default function TimelineBuilder({
   }, [segments]);
 
   function handleDragStart(e: React.DragEvent<HTMLDivElement>, id: string) {
+    // Garde-fou : un segment verrouille ne se saisit pas (draggable=false le
+    // bloque deja au niveau DOM, ceci couvre les cas limites).
+    const seg = localSegments.find((s) => s.id === id);
+    if (seg && isSegmentLocked(seg.status)) return;
     draggingIdRef.current = id;
     setDraggingId(id);
     e.dataTransfer.effectAllowed = 'move';
@@ -66,6 +80,14 @@ export default function TimelineBuilder({
   }
 
   function handleDragOver(e: React.DragEvent<HTMLDivElement>, overId: string) {
+    // Une cible verrouillee (live/done) n'accepte pas de drop : on n'affiche pas
+    // l'indicateur et on signale au navigateur qu'aucun drop n'est possible.
+    const overSeg = localSegments.find((s) => s.id === overId);
+    if (overSeg && isSegmentLocked(overSeg.status)) {
+      e.dataTransfer.dropEffect = 'none';
+      setDragOverId(null);
+      return;
+    }
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
     setDragOverId(overId);
@@ -82,6 +104,13 @@ export default function TimelineBuilder({
     const fromIndex = localSegments.findIndex((s) => s.id === draggedId);
     const toIndex = localSegments.findIndex((s) => s.id === dropOnId);
     if (fromIndex === -1 || toIndex === -1) return;
+    // Ni la source ni la cible ne doivent etre verrouillees.
+    if (
+      isSegmentLocked(localSegments[fromIndex].status) ||
+      isSegmentLocked(localSegments[toIndex].status)
+    ) {
+      return;
+    }
 
     const next = [...localSegments];
     const [moved] = next.splice(fromIndex, 1);
@@ -154,6 +183,7 @@ export default function TimelineBuilder({
                   isDragging={seg.id === draggingId}
                   dragOver={seg.id === dragOverId && seg.id !== draggingId}
                   busy={busy}
+                  locked={isSegmentLocked(seg.status)}
                   plannedStartAt={timing?.plannedStartAt ?? null}
                   isAnchored={timing?.isAnchored ?? false}
                   overrunSec={overrunSec}
