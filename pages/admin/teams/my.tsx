@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import Head from 'next/head';
 import Image from 'next/image';
 import { useRouter } from 'next/router';
@@ -9,6 +9,9 @@ import Modal from '@/components/admin/Modal';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { BATTLE_TAG_REGEX } from '@/utils/teams/addMember';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import { MemberRosterRow } from '@/components/admin/teams/my/MemberRosterRow';
+import { PlayerSearchResults } from '@/components/admin/teams/my/PlayerSearchResults';
+import type { Member, SearchResult } from '@/components/admin/teams/my/types';
 
 import { logger } from '../../../utils/logger';
 type StaffShape = {
@@ -38,31 +41,12 @@ type TeamOption = {
   logo_url: string | null;
 };
 
-type Member = {
-  id: string;
-  user_id: string | null;
-  display_name: string | null;
-  role: string | null;
-  battle_tag?: string | null;
-  is_substitute?: boolean | null;
-  captain?: boolean | null;
-  is_captain?: boolean | null;
-};
-
 type ApiResponse = {
   team: TeamLite | null;
   members: Member[];
   isCaptain: boolean;
   isManager?: boolean;
   error?: string;
-};
-
-type SearchResult = {
-  id: string;
-  email: string | null;
-  display_name: string | null;
-  battle_tag: string | null;
-  has_team: boolean;
 };
 
 export const getServerSideProps = withStaffPage('caster');
@@ -444,195 +428,250 @@ function MyTeamPage({ staff }: StaffProps) {
   }, [isStaffAdmin, selectedTeamId, load]);
 
   // --- Member: inline BattleTag edit --------------------------------------
-  const startEditBattleTag = (m: Member) => {
+  // Handlers mémoïsés : identité stable → les lignes <MemberRosterRow> restent
+  // mémoïsées et ne se re-rendent pas quand on tape dans la recherche joueur
+  // (et inversement). Le brouillon du BattleTag est passé en PARAMÈTRE à
+  // `saveBattleTag` (au lieu d'être lu dans la closure) pour éviter que la
+  // frappe inline ne change l'identité du handler et ne casse la mémoïsation
+  // des autres lignes.
+  const startEditBattleTag = useCallback((m: Member) => {
     setEditingBattleTagId(m.id);
     setBattleTagDraft(m.battle_tag || '');
-  };
+  }, []);
 
-  const cancelEditBattleTag = () => {
+  const cancelEditBattleTag = useCallback(() => {
     setEditingBattleTagId(null);
     setBattleTagDraft('');
-  };
+  }, []);
 
-  const saveBattleTag = async (m: Member) => {
-    const trimmed = battleTagDraft.trim();
-    if (!BATTLE_TAG_REGEX.test(trimmed)) {
-      addToast(t.errBattleTagInvalid, 'error');
-      return;
+  const startSwap = useCallback((m: Member) => {
+    setSwapSourceId(m.id);
+  }, []);
+
+  const cancelSwap = useCallback(() => {
+    setSwapSourceId(null);
+  }, []);
+
+  const handleSelectPlayer = useCallback((player: SearchResult) => {
+    setSelectedPlayer(player);
+    if (player.battle_tag) {
+      setNewMemberBattleTag(player.battle_tag);
     }
-    if (trimmed === (m.battle_tag || '')) {
-      cancelEditBattleTag();
-      return;
-    }
-    setMemberActionId(m.id);
-    try {
-      // Admins editing an arbitrary team go through the admin members endpoint;
-      // captains/managers use the captain-scoped /api/teams route.
-      const url =
-        isStaffAdmin && selectedTeamId
-          ? `/api/admin/teams/${selectedTeamId}/members`
-          : '/api/teams/update-member';
-      const res = await adminFetch(url, {
-        method: 'PATCH',
-        body: JSON.stringify({ memberId: m.id, battle_tag: trimmed }),
-      });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        addToast(json?.error || t.errUpdate, 'error');
+  }, []);
+
+  const saveBattleTag = useCallback(
+    async (m: Member, draft: string) => {
+      const trimmed = draft.trim();
+      if (!BATTLE_TAG_REGEX.test(trimmed)) {
+        addToast(t.errBattleTagInvalid, 'error');
         return;
       }
-      addToast(t.battleTagUpdated, 'success');
-      cancelEditBattleTag();
-      await reloadTeam();
-    } catch (err) {
-      logger.error('saveBattleTag error', err);
-      addToast(t.errUpdate, 'error');
-    } finally {
-      setMemberActionId(null);
-    }
-  };
+      if (trimmed === (m.battle_tag || '')) {
+        cancelEditBattleTag();
+        return;
+      }
+      setMemberActionId(m.id);
+      try {
+        // Admins editing an arbitrary team go through the admin members endpoint;
+        // captains/managers use the captain-scoped /api/teams route.
+        const url =
+          isStaffAdmin && selectedTeamId
+            ? `/api/admin/teams/${selectedTeamId}/members`
+            : '/api/teams/update-member';
+        const res = await adminFetch(url, {
+          method: 'PATCH',
+          body: JSON.stringify({ memberId: m.id, battle_tag: trimmed }),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          addToast(json?.error || t.errUpdate, 'error');
+          return;
+        }
+        addToast(t.battleTagUpdated, 'success');
+        cancelEditBattleTag();
+        await reloadTeam();
+      } catch (err) {
+        logger.error('saveBattleTag error', err);
+        addToast(t.errUpdate, 'error');
+      } finally {
+        setMemberActionId(null);
+      }
+    },
+    [
+      isStaffAdmin,
+      selectedTeamId,
+      adminFetch,
+      addToast,
+      t,
+      reloadTeam,
+      cancelEditBattleTag,
+    ]
+  );
 
   // --- Member: substitute toggle ------------------------------------------
-  const toggleSubstitute = async (m: Member) => {
-    const next = !(m.is_substitute ?? false);
-    setMemberActionId(m.id);
-    try {
-      const url =
-        isStaffAdmin && selectedTeamId
-          ? `/api/admin/teams/${selectedTeamId}/members`
-          : '/api/teams/update-member';
-      const res = await adminFetch(url, {
-        method: 'PATCH',
-        body: JSON.stringify({ memberId: m.id, is_substitute: next }),
-      });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        addToast(json?.error || t.errUpdate, 'error');
-        return;
+  const toggleSubstitute = useCallback(
+    async (m: Member) => {
+      const next = !(m.is_substitute ?? false);
+      setMemberActionId(m.id);
+      try {
+        const url =
+          isStaffAdmin && selectedTeamId
+            ? `/api/admin/teams/${selectedTeamId}/members`
+            : '/api/teams/update-member';
+        const res = await adminFetch(url, {
+          method: 'PATCH',
+          body: JSON.stringify({ memberId: m.id, is_substitute: next }),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          addToast(json?.error || t.errUpdate, 'error');
+          return;
+        }
+        addToast(next ? t.markedSubstitute : t.markedStarter, 'success');
+        await reloadTeam();
+      } catch (err) {
+        logger.error('toggleSubstitute error', err);
+        addToast(t.errUpdate, 'error');
+      } finally {
+        setMemberActionId(null);
       }
-      addToast(next ? t.markedSubstitute : t.markedStarter, 'success');
-      await reloadTeam();
-    } catch (err) {
-      logger.error('toggleSubstitute error', err);
-      addToast(t.errUpdate, 'error');
-    } finally {
-      setMemberActionId(null);
-    }
-  };
+    },
+    [isStaffAdmin, selectedTeamId, adminFetch, addToast, t, reloadTeam]
+  );
 
   // --- Member: swap starter <-> substitute --------------------------------
-  const handleSwapWith = async (target: Member) => {
-    if (!swapSourceId) return;
-    const source = data?.members?.find((m) => m.id === swapSourceId);
-    if (!source) {
-      setSwapSourceId(null);
-      return;
-    }
-    setMemberActionId(target.id);
-    try {
-      if (isStaffAdmin && selectedTeamId) {
-        // Admin path: dedicated swap endpoint (atomic) owned by the api agent.
-        const res = await adminFetch(
-          `/api/admin/teams/${selectedTeamId}/members`,
-          {
-            method: 'PATCH',
-            body: JSON.stringify({
-              memberId: source.id,
-              swapWithMemberId: target.id,
-            }),
-          }
-        );
-        const json = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          addToast(json?.error || t.errSwap, 'error');
-          return;
-        }
-      } else {
-        // Captain path: flip both members' is_substitute via update-member.
-        const r1 = await adminFetch('/api/teams/update-member', {
-          method: 'PATCH',
-          body: JSON.stringify({
-            memberId: source.id,
-            is_substitute: !(source.is_substitute ?? false),
-          }),
-        });
-        if (!r1.ok) {
-          const j = await r1.json().catch(() => ({}));
-          addToast(j?.error || t.errSwap, 'error');
-          return;
-        }
-        const r2 = await adminFetch('/api/teams/update-member', {
-          method: 'PATCH',
-          body: JSON.stringify({
-            memberId: target.id,
-            is_substitute: !(target.is_substitute ?? false),
-          }),
-        });
-        if (!r2.ok) {
-          const j = await r2.json().catch(() => ({}));
-          addToast(j?.error || t.swapPartial, 'error');
-          return;
-        }
+  const handleSwapWith = useCallback(
+    async (target: Member) => {
+      if (!swapSourceId) return;
+      const source = data?.members?.find((m) => m.id === swapSourceId);
+      if (!source) {
+        setSwapSourceId(null);
+        return;
       }
-      addToast(t.swapDone, 'success');
-      setSwapSourceId(null);
-      await reloadTeam();
-    } catch (err) {
-      logger.error('handleSwapWith error', err);
-      addToast(t.errSwap, 'error');
-    } finally {
-      setMemberActionId(null);
-    }
-  };
+      setMemberActionId(target.id);
+      try {
+        if (isStaffAdmin && selectedTeamId) {
+          // Admin path: dedicated swap endpoint (atomic) owned by the api agent.
+          const res = await adminFetch(
+            `/api/admin/teams/${selectedTeamId}/members`,
+            {
+              method: 'PATCH',
+              body: JSON.stringify({
+                memberId: source.id,
+                swapWithMemberId: target.id,
+              }),
+            }
+          );
+          const json = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            addToast(json?.error || t.errSwap, 'error');
+            return;
+          }
+        } else {
+          // Captain path: flip both members' is_substitute via update-member.
+          // Les deux PATCH sont indépendants → lancés en parallèle (latence
+          // divisée par 2, P3-10). L'ordre de vérification des erreurs est
+          // conservé : échec du premier → errSwap, échec du second → swapPartial.
+          const [r1, r2] = await Promise.all([
+            adminFetch('/api/teams/update-member', {
+              method: 'PATCH',
+              body: JSON.stringify({
+                memberId: source.id,
+                is_substitute: !(source.is_substitute ?? false),
+              }),
+            }),
+            adminFetch('/api/teams/update-member', {
+              method: 'PATCH',
+              body: JSON.stringify({
+                memberId: target.id,
+                is_substitute: !(target.is_substitute ?? false),
+              }),
+            }),
+          ]);
+          if (!r1.ok) {
+            const j = await r1.json().catch(() => ({}));
+            addToast(j?.error || t.errSwap, 'error');
+            return;
+          }
+          if (!r2.ok) {
+            const j = await r2.json().catch(() => ({}));
+            addToast(j?.error || t.swapPartial, 'error');
+            return;
+          }
+        }
+        addToast(t.swapDone, 'success');
+        setSwapSourceId(null);
+        await reloadTeam();
+      } catch (err) {
+        logger.error('handleSwapWith error', err);
+        addToast(t.errSwap, 'error');
+      } finally {
+        setMemberActionId(null);
+      }
+    },
+    [
+      swapSourceId,
+      data?.members,
+      isStaffAdmin,
+      selectedTeamId,
+      adminFetch,
+      addToast,
+      t,
+      reloadTeam,
+    ]
+  );
 
   // --- Member: transfer captaincy -----------------------------------------
-  const handleTransferCaptain = async (m: Member) => {
-    if (!m.user_id) {
-      addToast(t.errCannotBeCaptain, 'error');
-      return;
-    }
-    const ok = await confirm({
-      title: t.confirmTransferTitle,
-      subtitle: format(t.confirmTransferSubtitle, {
-        name: m.display_name || t.thisPlayer,
-      }),
-      variant: 'warning',
-      confirmLabel: t.confirmTransferBtn,
-    });
-    if (!ok) return;
-    setMemberActionId(m.id);
-    try {
-      if (isStaffAdmin && selectedTeamId) {
-        // Admin path: set captain_id directly on the team (api agent endpoint).
-        const res = await adminFetch(`/api/admin/teams/${selectedTeamId}`, {
-          method: 'PATCH',
-          body: JSON.stringify({ captain_id: m.user_id }),
-        });
-        const json = await res.json().catch(() => ({}));
-        if (!res.ok || json.error) {
-          addToast(json?.error || t.errTransfer, 'error');
-          return;
-        }
-      } else {
-        const res = await adminFetch('/api/teams/transfer-captain', {
-          method: 'PATCH',
-          body: JSON.stringify({ newCaptainUserId: m.user_id }),
-        });
-        const json = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          addToast(json?.error || t.errTransfer, 'error');
-          return;
-        }
+  const handleTransferCaptain = useCallback(
+    async (m: Member) => {
+      if (!m.user_id) {
+        addToast(t.errCannotBeCaptain, 'error');
+        return;
       }
-      addToast(t.captainAssigned, 'success');
-      await reloadTeam();
-    } catch (err) {
-      logger.error('handleTransferCaptain error', err);
-      addToast(t.errTransfer, 'error');
-    } finally {
-      setMemberActionId(null);
-    }
-  };
+      const ok = await confirm({
+        title: t.confirmTransferTitle,
+        subtitle: format(t.confirmTransferSubtitle, {
+          name: m.display_name || t.thisPlayer,
+        }),
+        variant: 'warning',
+        confirmLabel: t.confirmTransferBtn,
+      });
+      if (!ok) return;
+      setMemberActionId(m.id);
+      try {
+        if (isStaffAdmin && selectedTeamId) {
+          // Admin path: set captain_id directly on the team (api agent endpoint).
+          const res = await adminFetch(`/api/admin/teams/${selectedTeamId}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ captain_id: m.user_id }),
+          });
+          const json = await res.json().catch(() => ({}));
+          if (!res.ok || json.error) {
+            addToast(json?.error || t.errTransfer, 'error');
+            return;
+          }
+        } else {
+          const res = await adminFetch('/api/teams/transfer-captain', {
+            method: 'PATCH',
+            body: JSON.stringify({ newCaptainUserId: m.user_id }),
+          });
+          const json = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            addToast(json?.error || t.errTransfer, 'error');
+            return;
+          }
+        }
+        addToast(t.captainAssigned, 'success');
+        await reloadTeam();
+      } catch (err) {
+        logger.error('handleTransferCaptain error', err);
+        addToast(t.errTransfer, 'error');
+      } finally {
+        setMemberActionId(null);
+      }
+    },
+    [isStaffAdmin, selectedTeamId, adminFetch, addToast, t, reloadTeam, confirm]
+  );
 
   // Load join requests when team data changes
   const teamId = data?.team?.id;
@@ -653,9 +692,18 @@ function MyTeamPage({ staff }: StaffProps) {
 
   const canEdit = isStaffAdmin || data?.isCaptain || data?.isManager;
 
+  // Valeurs dérivées mémoïsées : évitent de recalculer la liste et le décompte
+  // de remplaçants à chaque frappe/tick (recherche joueur, formulaire, etc.).
+  const members = useMemo(() => data?.members ?? [], [data?.members]);
+  const membersCount = members.length;
+  const subsCount = useMemo(
+    () => members.filter((m) => m.is_substitute).length,
+    [members]
+  );
+
   const renderMembers = () => {
     if (!data?.team) return null;
-    if (!data.members?.length) {
+    if (!members.length) {
       return (
         <div className="text-center py-8 text-neutral-400">
           <svg
@@ -676,266 +724,32 @@ function MyTeamPage({ staff }: StaffProps) {
       );
     }
 
+    const swapMode = swapSourceId !== null;
+
     return (
       <div className="space-y-2">
-        {data.members.map((m) => {
-          const isCaptain = m.captain || m.is_captain;
-          const isManager = !isCaptain && m.role === 'manager';
-          const containerClass = isCaptain
-            ? 'bg-amber-900/20 border border-amber-500/30'
-            : isManager
-              ? 'bg-sky-900/20 border border-sky-500/30'
-              : 'bg-neutral-900/50 border border-neutral-700/50 hover:bg-neutral-800/50';
-          const iconBgClass = isCaptain
-            ? 'bg-amber-500/20'
-            : isManager
-              ? 'bg-sky-500/20'
-              : 'bg-neutral-700/50';
-          const isSubstitute = !!m.is_substitute;
-          const isEditingTag = editingBattleTagId === m.id;
-          const busy = memberActionId === m.id;
-          const swapMode = swapSourceId !== null;
-          const isSwapSource = swapSourceId === m.id;
-          return (
-            <div
-              key={m.id}
-              data-testid={`member-row-${m.id}`}
-              className={`p-3 rounded-xl transition-colors ${containerClass} ${
-                isSwapSource ? 'ring-2 ring-emerald-500/60' : ''
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <div
-                  className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${iconBgClass}`}
-                >
-                  {isCaptain ? (
-                    <svg
-                      className="w-5 h-5 text-amber-400"
-                      fill="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z" />
-                    </svg>
-                  ) : isManager ? (
-                    <svg
-                      className="w-5 h-5 text-sky-400"
-                      fill="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path d="M12 2l3.5 7.5L23 11l-5.5 5 1.3 7.5L12 19.5 5.2 23.5 6.5 16 1 11l7.5-1.5L12 2z" />
-                    </svg>
-                  ) : (
-                    <svg
-                      className="w-5 h-5 text-neutral-400"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                      />
-                    </svg>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-white font-semibold truncate">
-                      {m.display_name || m.user_id || m.id}
-                    </span>
-                    {isCaptain && (
-                      <span className="text-[10px] uppercase tracking-wide bg-amber-500/20 text-amber-300 rounded-lg px-2 py-0.5 border border-amber-500/30 font-semibold">
-                        {t.captain}
-                      </span>
-                    )}
-                    {isManager && (
-                      <span className="text-[10px] uppercase tracking-wide bg-sky-500/20 text-sky-300 rounded-lg px-2 py-0.5 border border-sky-500/30 font-semibold">
-                        {t.manager}
-                      </span>
-                    )}
-                    {isSubstitute && (
-                      <span
-                        data-testid="substitute-badge"
-                        className="text-[10px] uppercase tracking-wide bg-purple-500/20 text-purple-300 rounded-lg px-2 py-0.5 border border-purple-500/30 font-semibold"
-                      >
-                        {t.substitute}
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-xs text-neutral-400 truncate">
-                    {m.role || t.defaultRole}
-                    {m.battle_tag && !isEditingTag && (
-                      <span className="text-blue-400 ml-2">{m.battle_tag}</span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Per-member actions */}
-                {canEdit && !isEditingTag && (
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                    {swapMode ? (
-                      isSwapSource ? (
-                        <button
-                          type="button"
-                          onClick={() => setSwapSourceId(null)}
-                          className="px-2 py-1 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-[11px] transition-colors"
-                        >
-                          {t.cancel}
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          data-testid={`swap-target-${m.id}`}
-                          disabled={busy}
-                          onClick={() => handleSwapWith(m)}
-                          className="px-2 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-[11px] transition-colors disabled:opacity-50"
-                        >
-                          {t.swapHere}
-                        </button>
-                      )
-                    ) : (
-                      <>
-                        <button
-                          type="button"
-                          title={t.editBattleTagTitle}
-                          data-testid={`edit-battletag-${m.id}`}
-                          onClick={() => startEditBattleTag(m)}
-                          className="p-1.5 rounded-lg hover:bg-neutral-700 text-neutral-400 hover:text-white transition-colors"
-                        >
-                          <svg
-                            className="w-4 h-4"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                            />
-                          </svg>
-                        </button>
-                        <button
-                          type="button"
-                          title={
-                            isSubstitute
-                              ? t.markStarterTitle
-                              : t.markSubstituteTitle
-                          }
-                          data-testid={`toggle-substitute-${m.id}`}
-                          disabled={busy}
-                          onClick={() => toggleSubstitute(m)}
-                          className={`p-1.5 rounded-lg transition-colors disabled:opacity-50 ${
-                            isSubstitute
-                              ? 'text-purple-300 hover:bg-purple-500/20'
-                              : 'text-neutral-400 hover:text-white hover:bg-neutral-700'
-                          }`}
-                        >
-                          <svg
-                            className="w-4 h-4"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
-                            />
-                          </svg>
-                        </button>
-                        {!isCaptain &&
-                          data?.members &&
-                          data.members.length > 1 && (
-                            <button
-                              type="button"
-                              title={t.startSwapTitle}
-                              data-testid={`start-swap-${m.id}`}
-                              onClick={() => setSwapSourceId(m.id)}
-                              className="p-1.5 rounded-lg hover:bg-neutral-700 text-neutral-400 hover:text-white transition-colors"
-                            >
-                              <svg
-                                className="w-4 h-4"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
-                                />
-                              </svg>
-                            </button>
-                          )}
-                        {!isCaptain && m.user_id && (
-                          <button
-                            type="button"
-                            title={t.makeCaptainTitle}
-                            data-testid={`make-captain-${m.id}`}
-                            disabled={busy}
-                            onClick={() => handleTransferCaptain(m)}
-                            className="p-1.5 rounded-lg hover:bg-amber-500/20 text-neutral-400 hover:text-amber-300 transition-colors disabled:opacity-50"
-                          >
-                            <svg
-                              className="w-4 h-4"
-                              fill="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z" />
-                            </svg>
-                          </button>
-                        )}
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Inline BattleTag editor */}
-              {canEdit && isEditingTag && (
-                <div className="mt-3 flex flex-col sm:flex-row gap-2">
-                  <input
-                    type="text"
-                    value={battleTagDraft}
-                    onChange={(e) => setBattleTagDraft(e.target.value)}
-                    placeholder={t.battleTagPlaceholder}
-                    autoFocus
-                    data-testid={`battletag-input-${m.id}`}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') saveBattleTag(m);
-                      if (e.key === 'Escape') cancelEditBattleTag();
-                    }}
-                    className="flex-1 px-3 py-2 rounded-xl bg-neutral-900/70 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                  />
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      data-testid={`save-battletag-${m.id}`}
-                      disabled={busy}
-                      onClick={() => saveBattleTag(m)}
-                      className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors disabled:opacity-50"
-                    >
-                      {busy ? '...' : t.saveShort}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={cancelEditBattleTag}
-                      className="px-3 py-2 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm transition-colors"
-                    >
-                      {t.cancel}
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        })}
+        {members.map((m) => (
+          <MemberRosterRow
+            key={m.id}
+            member={m}
+            canEdit={!!canEdit}
+            membersCount={membersCount}
+            isEditingTag={editingBattleTagId === m.id}
+            battleTagDraft={editingBattleTagId === m.id ? battleTagDraft : ''}
+            busy={memberActionId === m.id}
+            swapMode={swapMode}
+            isSwapSource={swapSourceId === m.id}
+            onStartEditBattleTag={startEditBattleTag}
+            onBattleTagDraftChange={setBattleTagDraft}
+            onSaveBattleTag={saveBattleTag}
+            onCancelEditBattleTag={cancelEditBattleTag}
+            onToggleSubstitute={toggleSubstitute}
+            onStartSwap={startSwap}
+            onCancelSwap={cancelSwap}
+            onSwapWith={handleSwapWith}
+            onTransferCaptain={handleTransferCaptain}
+          />
+        ))}
       </div>
     );
   };
@@ -1314,24 +1128,19 @@ function MyTeamPage({ staff }: StaffProps) {
                     <h2 className="text-xl font-semibold">{t.members}</h2>
                     <p className="text-xs text-neutral-500">
                       {format(
-                        (data.members?.length || 0) > 1
+                        membersCount > 1
                           ? t.memberCount_other
                           : t.memberCount_one,
-                        { count: data.members?.length || 0 }
+                        { count: membersCount }
                       )}
-                      {(() => {
-                        const subs = (data.members || []).filter(
-                          (m) => m.is_substitute
-                        ).length;
-                        return subs > 0 ? (
-                          <span data-testid="substitute-count">
-                            {format(
-                              subs > 1 ? t.subCount_other : t.subCount_one,
-                              { count: subs }
-                            )}
-                          </span>
-                        ) : null;
-                      })()}
+                      {subsCount > 0 ? (
+                        <span data-testid="substitute-count">
+                          {format(
+                            subsCount > 1 ? t.subCount_other : t.subCount_one,
+                            { count: subsCount }
+                          )}
+                        </span>
+                      ) : null}
                     </p>
                   </div>
                   {canEdit && (
@@ -1608,63 +1417,12 @@ function MyTeamPage({ staff }: StaffProps) {
               </div>
 
               {/* Search results */}
-              <div className="space-y-2">
-                {searchLoading && (
-                  <div className="flex items-center gap-2 text-neutral-400 text-sm py-4">
-                    <div className="w-4 h-4 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
-                    {t.searching}
-                  </div>
-                )}
-                {!searchLoading &&
-                  searchQuery.length >= 2 &&
-                  searchResults.length === 0 && (
-                    <div className="text-neutral-400 text-sm py-4 text-center">
-                      {t.noResult}
-                    </div>
-                  )}
-                {searchResults.map((player) => (
-                  <button
-                    key={player.id}
-                    onClick={() => {
-                      setSelectedPlayer(player);
-                      if (player.battle_tag) {
-                        setNewMemberBattleTag(player.battle_tag);
-                      }
-                    }}
-                    disabled={player.has_team}
-                    className={`w-full text-left p-3 rounded-xl border transition-colors ${
-                      player.has_team
-                        ? 'bg-neutral-900/30 border-neutral-700 opacity-50 cursor-not-allowed'
-                        : 'bg-neutral-900/50 border-neutral-700/50 hover:border-blue-500/50 hover:bg-neutral-800/50'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="font-medium text-white">
-                          {player.display_name ||
-                            player.email ||
-                            t.userFallback}
-                        </div>
-                        {player.email && player.display_name && (
-                          <div className="text-xs text-neutral-400">
-                            {player.email}
-                          </div>
-                        )}
-                        {player.battle_tag && (
-                          <div className="text-xs text-blue-400">
-                            {player.battle_tag}
-                          </div>
-                        )}
-                      </div>
-                      {player.has_team && (
-                        <span className="text-xs bg-red-500/20 text-red-300 px-2 py-0.5 rounded-lg border border-red-500/30">
-                          {t.alreadyInTeam}
-                        </span>
-                      )}
-                    </div>
-                  </button>
-                ))}
-              </div>
+              <PlayerSearchResults
+                results={searchResults}
+                searchLoading={searchLoading}
+                searchQuery={searchQuery}
+                onSelect={handleSelectPlayer}
+              />
             </>
           ) : (
             <>
