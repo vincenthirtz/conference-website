@@ -24,6 +24,8 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { useToast } from '@/components/Toast';
 import LoadingSpinner from '@/components/admin/LoadingSpinner';
 import { playChime } from '@/utils/playChime';
 import { logger } from '@/utils/logger';
@@ -123,9 +125,18 @@ const CueRelativeTime = memo(function CueRelativeTime({
 function CueFeed({ runId, casters, optimisticCue }: Props) {
   const t = useAdminT('adminDirectorCueFeed');
   const { adminFetchJson } = useAdminFetch();
+  const { confirm, dialog } = useConfirmDialog();
+  const { addToast } = useToast();
   const [data, setData] = useState<ApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Cues rétractés en optimistic (id -> retracted_at ISO) : on marque le cue
+  // annulé immédiatement au succès, en attendant que le poll GET confirme.
+  const [retractedOptimistic, setRetractedOptimistic] = useState<
+    Record<string, string>
+  >({});
+  // Cue dont la rétractation est en cours (désactive le bouton).
+  const [retractingId, setRetractingId] = useState<string | null>(null);
 
   // Refs pour tracker les cues deja vus (chime uniquement sur nouveaux).
   const seenIdsRef = useRef<Set<string>>(new Set());
@@ -148,6 +159,38 @@ function CueFeed({ runId, casters, optimisticCue }: Props) {
       setLoading(false);
     }
   }, [adminFetchJson, runId, t]);
+
+  const handleRetract = useCallback(
+    async (cueId: string) => {
+      const ok = await confirm({
+        title: t.retractConfirm,
+        variant: 'danger',
+        confirmLabel: t.retractAction,
+      });
+      if (!ok) return;
+      setRetractingId(cueId);
+      try {
+        await adminFetchJson<{ cue: EventCue; alreadyRetracted?: boolean }>(
+          `/api/admin/events/${runId}/cues/${cueId}`,
+          { method: 'DELETE' }
+        );
+        // Optimistic : marque le cue annulé tout de suite.
+        setRetractedOptimistic((prev) => ({
+          ...prev,
+          [cueId]: new Date().toISOString(),
+        }));
+        addToast(t.retractSuccess, 'success');
+        // Refetch immédiat pour la réactivité (le poll 5s confirmerait sinon).
+        await fetchData();
+      } catch (err) {
+        logger.error('[director-comms] cue retract error', err);
+        addToast((err as Error)?.message ?? t.retractFailed, 'error');
+      } finally {
+        setRetractingId(null);
+      }
+    },
+    [adminFetchJson, addToast, confirm, fetchData, runId, t]
+  );
 
   useEffect(() => {
     setLoading(true);
@@ -194,23 +237,33 @@ function CueFeed({ runId, casters, optimisticCue }: Props) {
   // present (cas du polling pas encore revenu).
   const cues = useMemo<CueEnriched[]>(() => {
     const remote = data?.cues ?? [];
-    if (!optimisticCue) return remote;
-    if (remote.some((c) => c.id === optimisticCue.id)) return remote;
-    const optimisticEnriched: CueEnriched = {
+    // Overlay optimistic de rétractation : si le serveur n'a pas encore
+    // renvoyé retracted_at, on l'applique localement pour l'affichage.
+    const applyRetracted = (c: CueEnriched): CueEnriched => {
+      if (c.retracted_at != null) return c;
+      const local = retractedOptimistic[c.id];
+      return local ? { ...c, retracted_at: local } : c;
+    };
+    const remoteMerged = remote.map(applyRetracted);
+    if (!optimisticCue) return remoteMerged;
+    if (remoteMerged.some((c) => c.id === optimisticCue.id)) return remoteMerged;
+    const optimisticEnriched: CueEnriched = applyRetracted({
       ...optimisticCue,
       ack_count: 0,
       ack_required: optimisticCue.severity === 'urgent',
-    };
-    return [optimisticEnriched, ...remote];
-  }, [data, optimisticCue]);
+    });
+    return [optimisticEnriched, ...remoteMerged];
+  }, [data, optimisticCue, retractedOptimistic]);
 
   return (
-    <div
-      className="rounded-2xl border border-neutral-700/50 bg-neutral-800/30 p-5 flex flex-col"
-      role="status"
-      aria-live="polite"
-      aria-label={t.listAria}
-    >
+    <>
+      {dialog}
+      <div
+        className="rounded-2xl border border-neutral-700/50 bg-neutral-800/30 p-5 flex flex-col"
+        role="status"
+        aria-live="polite"
+        aria-label={t.listAria}
+      >
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-semibold text-neutral-200">Cue feed</h3>
         <button
@@ -243,25 +296,60 @@ function CueFeed({ runId, casters, optimisticCue }: Props) {
               (c) => !ackedIds.has(c.cast_member_id)
             );
             const total = casters.length;
+            const isRetracted = cue.retracted_at != null;
             return (
               <li
                 key={cue.id}
                 data-testid={`cue-feed-item-${cue.id}`}
-                className="rounded-lg bg-neutral-900/40 border border-neutral-700/60 p-3"
+                className={`rounded-lg border p-3 ${
+                  isRetracted
+                    ? 'bg-neutral-900/20 border-neutral-700/40'
+                    : 'bg-neutral-900/40 border-neutral-700/60'
+                }`}
               >
                 <div className="flex items-center justify-between gap-2 mb-1.5">
-                  <span
-                    className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border uppercase tracking-wide ${SEVERITY_BADGE[cue.severity]}`}
-                  >
-                    {cue.severity}
+                  <span className="flex items-center gap-1.5">
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border uppercase tracking-wide ${SEVERITY_BADGE[cue.severity]}`}
+                    >
+                      {cue.severity}
+                    </span>
+                    {isRetracted && (
+                      <span
+                        data-testid={`cue-feed-retracted-badge-${cue.id}`}
+                        className="px-2 py-0.5 rounded-full text-[10px] font-semibold border uppercase tracking-wide bg-neutral-700/40 border-neutral-500/50 text-neutral-300"
+                      >
+                        {t.retractedBadge}
+                      </span>
+                    )}
                   </span>
                   <CueRelativeTime iso={cue.created_at} t={t} />
                 </div>
-                <p className="text-sm text-neutral-100 whitespace-pre-wrap break-words">
+                <p
+                  className={`text-sm whitespace-pre-wrap break-words ${
+                    isRetracted
+                      ? 'line-through text-neutral-500'
+                      : 'text-neutral-100'
+                  }`}
+                >
                   {cue.body}
                 </p>
 
-                {cue.ack_required && (
+                {!isRetracted && (
+                  <div className="mt-2 flex justify-end">
+                    <button
+                      type="button"
+                      data-testid={`cue-feed-retract-${cue.id}`}
+                      onClick={() => handleRetract(cue.id)}
+                      disabled={retractingId === cue.id}
+                      className="text-[11px] font-medium text-neutral-400 hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {t.retractAction}
+                    </button>
+                  </div>
+                )}
+
+                {!isRetracted && cue.ack_required && (
                   <div className="mt-2 pt-2 border-t border-neutral-700/60">
                     <div className="flex items-center justify-between text-[11px] mb-1.5">
                       <span className="font-semibold text-neutral-300">
@@ -321,7 +409,8 @@ function CueFeed({ runId, casters, optimisticCue }: Props) {
           })}
         </ul>
       )}
-    </div>
+      </div>
+    </>
   );
 }
 

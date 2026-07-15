@@ -50,6 +50,7 @@ export default function CueBanner({ cues, seenLocally }: Props) {
   }, []);
 
   const unseen = cues.filter((c) => {
+    if (c.retracted_at) return false;
     const ts = Date.parse(c.created_at);
     if (!Number.isFinite(ts)) return false;
     if (now - ts > RECENT_WINDOW_MS) return false;

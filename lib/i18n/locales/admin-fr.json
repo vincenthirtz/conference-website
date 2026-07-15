@@ -6222,7 +6222,12 @@
     "listAria": "Liste des cues envoyes",
     "noCues": "Aucun cue envoye pour ce run.",
     "ackLabel": "Ack",
-    "noCasterAssigned": "Pas de caster assigne au run."
+    "noCasterAssigned": "Pas de caster assigne au run.",
+    "retractAction": "Retracter",
+    "retractConfirm": "Retracter ce cue ? Les casters le verront annule.",
+    "retractedBadge": "Annule",
+    "retractSuccess": "Cue retracte.",
+    "retractFailed": "Impossible de retracter le cue."
   },
   "adminDirectorMatchPicker": {
     "notPlanned": "non planifie",

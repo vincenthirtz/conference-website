@@ -6222,7 +6222,12 @@
     "listAria": "List of sent cues",
     "noCues": "No cue sent for this run.",
     "ackLabel": "Ack",
-    "noCasterAssigned": "No caster assigned to the run."
+    "noCasterAssigned": "No caster assigned to the run.",
+    "retractAction": "Retract",
+    "retractConfirm": "Retract this cue? Casters will see it cancelled.",
+    "retractedBadge": "Cancelled",
+    "retractSuccess": "Cue retracted.",
+    "retractFailed": "Could not retract the cue."
   },
   "adminDirectorMatchPicker": {
     "notPlanned": "not scheduled",

@@ -3399,7 +3399,8 @@
     "emptyBody": "No cue for now.",
     "seen": "Seen",
     "sending": "Sending…",
-    "markSeen": "Mark as seen"
+    "markSeen": "Mark as seen",
+    "retractedBadge": "Cancelled"
   },
   "upcomingAssignments": {
     "title": "Your next assignments",

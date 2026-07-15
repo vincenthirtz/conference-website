@@ -3399,7 +3399,8 @@
     "emptyBody": "Pas de consigne pour l'instant.",
     "seen": "Vu",
     "sending": "Envoi…",
-    "markSeen": "Marquer comme vu"
+    "markSeen": "Marquer comme vu",
+    "retractedBadge": "Annulé"
   },
   "upcomingAssignments": {
     "title": "Tes prochaines assignations",

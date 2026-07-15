@@ -121,6 +121,7 @@ export default function CueFeed({
       </div>
       <ul role="log" aria-live="polite" className="space-y-2">
         {sorted.map((c) => {
+          const isRetracted = c.retracted_at != null;
           const isUrgent = c.severity === 'urgent';
           const seen =
             isUrgent ? c.acked_by_me : seenLocally.has(c.id);
@@ -129,7 +130,7 @@ export default function CueFeed({
             <li
               key={c.id}
               className={`rounded-xl border px-3 py-2.5 ${SEV_CARD_CLS[c.severity]} ${
-                seen ? 'opacity-70' : ''
+                isRetracted ? 'opacity-50' : seen ? 'opacity-70' : ''
               }`}
               data-testid={`cue-card-${c.id}`}
             >
@@ -139,14 +140,26 @@ export default function CueFeed({
                 >
                   {SEV_LABEL[c.severity]}
                 </span>
+                {isRetracted && (
+                  <span
+                    className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full font-semibold bg-gray-500/80 text-white"
+                    data-testid={`cue-retracted-${c.id}`}
+                  >
+                    {t.retractedBadge}
+                  </span>
+                )}
                 <span className="text-[11px] text-gray-400">
                   {relativeFromNow(c.created_at, now, t)}
                 </span>
               </div>
-              <p className="text-sm text-white leading-snug whitespace-pre-wrap break-words">
+              <p
+                className={`text-sm text-white leading-snug whitespace-pre-wrap break-words ${
+                  isRetracted ? 'line-through' : ''
+                }`}
+              >
                 {c.body}
               </p>
-              {isUrgent && (
+              {!isRetracted && isUrgent && (
                 <div className="mt-2">
                   {c.acked_by_me ? (
                     <span className="inline-flex items-center gap-1 text-[11px] text-emerald-200">
@@ -170,7 +183,7 @@ export default function CueFeed({
                   )}
                 </div>
               )}
-              {!isUrgent && !seen && (
+              {!isRetracted && !isUrgent && !seen && (
                 <div className="mt-2">
                   <button
                     type="button"
