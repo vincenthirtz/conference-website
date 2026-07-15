@@ -753,26 +753,49 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
         <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-12">
-          {/* Back link */}
-          <Link
-            href="/admin/users/manage"
-            className="inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white transition-colors mb-4"
-          >
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+          {/* Back link + cross-link to the captain view */}
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <Link
+              href="/admin/users/manage"
+              className="inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white transition-colors"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 19l-7-7 7-7"
-              />
-            </svg>
-            {t.backLink}
-          </Link>
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 19l-7-7 7-7"
+                />
+              </svg>
+              {t.backLink}
+            </Link>
+            {userId && (
+              <Link
+                href={`/admin/users/${encodeURIComponent(userId)}/captain-view`}
+                className="inline-flex items-center gap-2 rounded-xl border border-neutral-700/60 bg-neutral-800/60 px-3 py-1.5 text-sm text-neutral-300 hover:bg-neutral-700/60 hover:text-white transition-colors"
+              >
+                {t.viewCaptainLink}
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
+              </Link>
+            )}
+          </div>
 
           {/* Admin command-center banner */}
           <div

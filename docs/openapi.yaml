@@ -18898,6 +18898,72 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+  /api/admin/users/{userId}/captain-view:
+    parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Read-only snapshot of the team a user captains.
+      description: |
+        Inspection (not impersonation) of the team the target user CAPTAINS:
+        team + members, pending join requests, pending scrim negotiations, next
+        match and the team's demandes history. Scoped to the staff's active
+        tenant. When the target captains no team, `team` is null and
+        `isCaptain` is false.
+      operationId: adminUserCaptainView
+      tags:
+        - admin/users
+      security:
+        - StaffSession: []
+      responses:
+        '200':
+          description: Captain-area snapshot.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    type: object
+                    additionalProperties: true
+                  team:
+                    type: object
+                    nullable: true
+                    additionalProperties: true
+                  isCaptain:
+                    type: boolean
+                  isManager:
+                    type: boolean
+                  joinRequests:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+                  pendingScrims:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+                  nextMatch:
+                    type: object
+                    additionalProperties: true
+                  demandes:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/admin/users/{userId}/player-view:
     parameters:
       - name: userId

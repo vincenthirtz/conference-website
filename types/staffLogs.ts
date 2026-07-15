@@ -52,6 +52,7 @@ export type StaffLogAction =
   | 'blacklist_update'
   | 'blacklist_remove'
   | 'view_player_data'
+  | 'view_captain_data'
   | 'update_player_battle_tag'
   | 'transfer_player_team'
   | 'assign_team_captain'

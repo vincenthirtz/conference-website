@@ -207,6 +207,7 @@ export function formatStaffLog(log: StaffLog) {
     blacklist_update: 'Modification blacklist joueur',
     blacklist_remove: 'Suppression blacklist joueur',
     view_player_data: "a consulté l'espace joueur d'un utilisateur",
+    view_captain_data: "a consulté l'espace capitaine d'un utilisateur",
     update_player_battle_tag: 'BattleTag joueur modifié',
     transfer_player_team: "Transfert d'équipe d'un joueur",
     assign_team_captain: 'Capitaine désigné',

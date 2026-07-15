@@ -55,7 +55,7 @@ type MemberRow = {
 
 type Demande = Record<string, unknown>;
 
-type PendingScrim = {
+export type PendingScrim = {
   id: string;
   user_id: string | null;
   source: string | null;
@@ -81,7 +81,7 @@ type PendingScrim = {
   myTeamId: string;
 };
 
-type NextMatchSection = {
+export type NextMatchSection = {
   match: {
     id: string;
     scheduledAt: string | null;
@@ -126,7 +126,7 @@ export type PlayerDashboardPayload = {
   nextMatch: NextMatchSection;
 };
 
-const EMPTY_NEXT_MATCH: NextMatchSection = {
+export const EMPTY_NEXT_MATCH: NextMatchSection = {
   match: null,
   team: null,
   opponent: null,
@@ -175,7 +175,7 @@ async function loadDemandes(
   }
 }
 
-async function loadPendingScrims(
+export async function loadPendingScrims(
   teamId: string,
   tenantId: string
 ): Promise<PendingScrim[]> {
@@ -330,7 +330,7 @@ async function loadUnreadMessages(
   }
 }
 
-async function loadNextMatch(
+export async function loadNextMatch(
   teamId: string,
   tenantId: string,
   rosterSize: number
