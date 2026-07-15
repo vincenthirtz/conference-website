@@ -27,7 +27,9 @@ const CSP_STATIC_MID =
     `connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.twitch.tv https://id.twitch.tv https://challenges.cloudflare.com`,
     `media-src 'self' https://*.supabase.co`,
     "font-src 'self'",
-    "frame-src 'self' https://player.twitch.tv https://www.youtube.com https://challenges.cloudflare.com",
+    // player.twitch.tv = lecteur vidéo (site public + régie) ; www.twitch.tv =
+    // embed du chat Twitch (console régie broadcast live). Hosts distincts.
+    "frame-src 'self' https://player.twitch.tv https://www.twitch.tv https://www.youtube.com https://challenges.cloudflare.com",
     // PWA /admin: allow Service Worker (/sw.js) and Web App Manifest from same origin.
     "worker-src 'self'",
     "manifest-src 'self'",

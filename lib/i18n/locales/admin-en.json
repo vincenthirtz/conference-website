@@ -4648,7 +4648,18 @@
     "confirmNextLabel": "Switch match",
     "realtimeConnected": "Real-time",
     "realtimeDegraded": "Reconnecting… (degraded mode)",
-    "failure": "Failed"
+    "failure": "Failed",
+    "twitchHeading": "Twitch status",
+    "twitchLoading": "Loading Twitch status…",
+    "twitchLive": "🔴 LIVE",
+    "twitchOffline": "Offline",
+    "twitchViewers": "{count} viewers",
+    "twitchNotConfigured": "Twitch not configured.",
+    "twitchCollapse": "Collapse",
+    "twitchExpand": "Expand",
+    "twitchPreviewTitle": "Twitch preview of {channel}",
+    "twitchChatTitle": "Twitch chat of {channel}",
+    "twitchOfflinePlayer": "Offline — no preview available."
   },
   "adminEventsList": {
     "pageTitle": "Admin – Run of show",

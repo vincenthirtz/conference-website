@@ -13,6 +13,7 @@ import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useEventRunRealtime } from '@/hooks/useEventRunRealtime';
 import { useToast } from '@/components/Toast';
 import RealtimeStatusBadge from '@/components/admin/RealtimeStatusBadge';
+import TwitchStatusPanel from '@/components/admin/broadcast/TwitchStatusPanel';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { StaffProps } from '@/types/admin';
 import type { EventRun, EventSegment } from '@/types/events';
@@ -454,6 +455,10 @@ function BroadcastLivePage({ staff }: StaffProps) {
             </div>
           )}
 
+          {/* Statut Twitch (lecture seule) : indépendant du run, toujours visible
+              pour que le régisseur surveille le live sans quitter la console. */}
+          <TwitchStatusPanel />
+
           {loading && !data && (
             <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 px-4 py-10 text-center text-neutral-400">
               {t.loading}
@@ -731,7 +736,10 @@ function BroadcastLivePage({ staff }: StaffProps) {
                       checked={!!state?.pip.enabled}
                       disabled={isPending('pip') || !canEdit}
                       onChange={(e) =>
-                        applyPatch({ pip: { enabled: e.target.checked } }, 'pip')
+                        applyPatch(
+                          { pip: { enabled: e.target.checked } },
+                          'pip'
+                        )
                       }
                     />
                     {t.pipEnabled}

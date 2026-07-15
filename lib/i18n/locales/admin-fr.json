@@ -4648,7 +4648,18 @@
     "confirmNextLabel": "Passer au match",
     "realtimeConnected": "Temps réel",
     "realtimeDegraded": "Reconnexion… (mode dégradé)",
-    "failure": "Échec"
+    "failure": "Échec",
+    "twitchHeading": "Statut Twitch",
+    "twitchLoading": "Chargement du statut Twitch…",
+    "twitchLive": "🔴 LIVE",
+    "twitchOffline": "Hors ligne",
+    "twitchViewers": "{count} spectateurs",
+    "twitchNotConfigured": "Twitch non configuré.",
+    "twitchCollapse": "Replier",
+    "twitchExpand": "Déplier",
+    "twitchPreviewTitle": "Aperçu Twitch de {channel}",
+    "twitchChatTitle": "Chat Twitch de {channel}",
+    "twitchOfflinePlayer": "Hors ligne — aucun aperçu disponible."
   },
   "adminEventsList": {
     "pageTitle": "Admin – Run of show",
