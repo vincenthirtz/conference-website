@@ -4641,6 +4641,11 @@
     "overlayCopy": "Copier",
     "overlayCopied": "URL overlay copiée.",
     "overlayCopyFailed": "Impossible de copier l'URL.",
+    "confirmNextTitle": "Terminer {current} et passer à {next} ?",
+    "confirmNextTitleNoTarget": "Terminer {current} et clore le run ?",
+    "confirmNextSubtitle": "Le segment en direct sera clôturé (irréversible) et le prochain match passera à l'antenne.",
+    "confirmNextSubtitleNoTarget": "Le segment en direct sera clôturé (irréversible). Aucun match suivant n'est identifié dans la timeline.",
+    "confirmNextLabel": "Passer au match",
     "failure": "Échec"
   },
   "adminEventsList": {

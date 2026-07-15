@@ -4641,6 +4641,11 @@
     "overlayCopy": "Copy",
     "overlayCopied": "Overlay URL copied.",
     "overlayCopyFailed": "Could not copy the URL.",
+    "confirmNextTitle": "End {current} and switch to {next}?",
+    "confirmNextTitleNoTarget": "End {current} and close the run?",
+    "confirmNextSubtitle": "The live segment will be closed (irreversible) and the next match will go on air.",
+    "confirmNextSubtitleNoTarget": "The live segment will be closed (irreversible). No next match was identified in the timeline.",
+    "confirmNextLabel": "Switch match",
     "failure": "Failed"
   },
   "adminEventsList": {

@@ -9,9 +9,12 @@ import Link from 'next/link';
 import { withStaffPage } from '@/utils/staff';
 import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { useEventRunRealtime } from '@/hooks/useEventRunRealtime';
 import { useToast } from '@/components/Toast';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { StaffProps } from '@/types/admin';
+import type { EventRun, EventSegment } from '@/types/events';
 
 type Scene = 'starting' | 'match' | 'pause' | 'results' | 'end' | 'custom';
 
@@ -90,9 +93,15 @@ function BroadcastLivePage({ staff }: StaffProps) {
   const { mutateJson } = useIdempotentMutation({
     autoRegenerateOnSuccess: true,
   });
+  const { confirm, dialog } = useConfirmDialog();
   const { addToast } = useToast();
 
   const [data, setData] = useState<LiveResponse | null>(null);
+  // Timeline complète du run live — sert UNIQUEMENT à résoudre la cible du
+  // « prochain match » (finding #4) et à rester synchro via realtime
+  // (finding #7). Chargée en best-effort pour les managers (l'endpoint events
+  // est manager+ ; les casters ne peuvent de toute façon pas avancer).
+  const [segments, setSegments] = useState<EventSegment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lowerDraft, setLowerDraft] = useState('');
@@ -101,6 +110,7 @@ function BroadcastLivePage({ staff }: StaffProps) {
   const [origin, setOrigin] = useState('');
 
   const canEdit = staff.role !== 'caster';
+  const runId = data?.run?.id ?? null;
 
   // window.location.origin est indisponible côté SSR ; on le récupère après
   // hydratation pour éviter tout mismatch React.
@@ -126,11 +136,115 @@ function BroadcastLivePage({ staff }: StaffProps) {
     }
   }, [adminFetchJson, t.errorLoad]);
 
+  // Poll de secours (15 s) — filet si le realtime décroche. On le VISIBILITY-GATE
+  // (pas de fetch onglet caché) et on refetch au retour visible, comme le
+  // Director/cockpit. Le realtime reste la source primaire de fraîcheur.
   useEffect(() => {
     fetchState();
-    const handle = setInterval(fetchState, POLL_MS);
-    return () => clearInterval(handle);
+    function tick() {
+      if (
+        typeof document !== 'undefined' &&
+        document.visibilityState !== 'visible'
+      )
+        return;
+      fetchState();
+    }
+    const handle = setInterval(tick, POLL_MS);
+    function onVisible() {
+      if (document.visibilityState === 'visible') fetchState();
+    }
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearInterval(handle);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, [fetchState]);
+
+  // Timeline complète du run : nécessaire pour nommer la cible du « prochain
+  // match » dans la confirmation. Réservé aux managers (endpoint events =
+  // manager+). Best-effort : en cas d'échec, la confirmation dégrade son
+  // libellé (« … clore le run ? »).
+  useEffect(() => {
+    if (!runId || !canEdit) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const json = await adminFetchJson<{ segments: EventSegment[] }>(
+          `/api/admin/events/${runId}`
+        );
+        if (!cancelled) setSegments(json.segments ?? []);
+      } catch {
+        // On ignore : la cible sera juste « inconnue » dans la confirmation.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [runId, canEdit, adminFetchJson]);
+
+  // Realtime (finding #7) : deux opérateurs doivent converger instantanément.
+  //   - event_runs.broadcast_state (on_air/scène/lower_third/pip) → merge direct
+  //     dans data.state, sans round-trip réseau.
+  //   - event_segments → merge dans la timeline locale ET refetch léger de
+  //     l'état agrégé (currentSegment + match/score) qu'on ne peut pas dériver
+  //     côté client. Les callbacks sont mémoïsés (deps vides / stables) pour ne
+  //     pas re-souscrire en boucle.
+  const handleRunChange = useCallback(
+    (partial: Partial<EventRun> & { id?: string }) => {
+      const raw = partial as Record<string, unknown>;
+      const nextState = raw.broadcast_state as BroadcastStateV1 | undefined;
+      const nextStatus = raw.status as EventRun['status'] | undefined;
+      setData((prev) => {
+        if (!prev || !prev.run) return prev;
+        return {
+          ...prev,
+          run: nextStatus ? { ...prev.run, status: nextStatus } : prev.run,
+          state: nextState && nextState.v === 1 ? nextState : prev.state,
+        };
+      });
+      if (nextState?.lower_third != null) {
+        setLowerDraft((cur) =>
+          cur === '' ? (nextState.lower_third ?? '') : cur
+        );
+      }
+    },
+    []
+  );
+
+  const handleSegmentChange = useCallback(
+    (
+      eventType: 'INSERT' | 'UPDATE' | 'DELETE',
+      partial: Partial<EventSegment> & { id?: string }
+    ) => {
+      setSegments((prev) => {
+        if (eventType === 'DELETE') {
+          return prev.filter((s) => s.id !== partial.id);
+        }
+        const idx = prev.findIndex((s) => s.id === partial.id);
+        if (idx === -1) {
+          const next = [...prev, partial as EventSegment];
+          next.sort((a, b) => a.ord - b.ord);
+          return next;
+        }
+        const merged = { ...prev[idx], ...partial } as EventSegment;
+        const next = [...prev];
+        next[idx] = merged;
+        next.sort((a, b) => a.ord - b.ord);
+        return next;
+      });
+      // Le HUD (currentSegment + match/score) n'est pas dérivable localement :
+      // on rafraîchit l'agrégat quand un segment bouge (transitions rares).
+      fetchState();
+    },
+    [fetchState]
+  );
+
+  useEventRunRealtime({
+    enabled: !!runId,
+    runId,
+    onRunChange: handleRunChange,
+    onSegmentChange: handleSegmentChange,
+  });
 
   async function applyPatch(patch: Partial<BroadcastStateV1>) {
     if (!canEdit) return;
@@ -159,6 +273,40 @@ function BroadcastLivePage({ staff }: StaffProps) {
 
   async function goNextMatch() {
     if (!canEdit) return;
+
+    // Résolution client de la transition avant confirmation. La cible réplique
+    // la logique serveur : prochain segment type='match' en status 'upcoming'
+    // strictement après l'ord courant. Si la timeline n'est pas chargée (fetch
+    // échoué / caster), la cible reste inconnue → libellé dégradé.
+    const current = data?.currentSegment ?? null;
+    const currentLabel = current
+      ? `#${current.ord} · ${current.title}`
+      : t.segmentNone;
+    const target =
+      current != null
+        ? (segments
+            .filter(
+              (s) =>
+                s.type === 'match' &&
+                s.status === 'upcoming' &&
+                s.ord > current.ord
+            )
+            .sort((a, b) => a.ord - b.ord)[0] ?? null)
+        : null;
+
+    const ok = await confirm({
+      title: target
+        ? format(t.confirmNextTitle, {
+            current: currentLabel,
+            next: `#${target.ord} · ${target.title}`,
+          })
+        : format(t.confirmNextTitleNoTarget, { current: currentLabel }),
+      subtitle: target ? t.confirmNextSubtitle : t.confirmNextSubtitleNoTarget,
+      variant: 'danger',
+      confirmLabel: t.confirmNextLabel,
+    });
+    if (!ok) return;
+
     setAdvancing(true);
     try {
       const json = await mutateJson<NextMatchResponse>(
@@ -588,6 +736,7 @@ function BroadcastLivePage({ staff }: StaffProps) {
           )}
         </div>
       </div>
+      {dialog}
     </>
   );
 }
