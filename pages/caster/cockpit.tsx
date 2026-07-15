@@ -137,11 +137,19 @@ function CockpitPage() {
     };
   }, [fetchRun]);
 
-  // 4. Realtime : merge des changements segments + run.
-  useEventRunRealtime({
-    enabled: !!run?.id,
-    runId: run?.id ?? null,
-    onSegmentChange: (eventType, partial) => {
+  // 4. Realtime : merge des changements segments + run. Les callbacks sont
+  // memoises ([] deps, corps = setters stables) : sans ca, ils changeaient
+  // d'identite a chaque render, ce qui faisait desabonner/reabonner les
+  // canaux Supabase (event_segments + event_runs) a chaque render — et le
+  // tick countdown re-rendait la page ~1x/s. Cette re-souscription en boucle
+  // ouvrait une fenetre ou un postgres_changes (ex. passage d'un segment en
+  // live) pouvait etre perdu, laissant le caster sur le mauvais segment
+  // jusqu'au poll de secours (30s). cf. Director, deja memoise.
+  const handleSegmentChange = useCallback(
+    (
+      eventType: 'INSERT' | 'UPDATE' | 'DELETE',
+      partial: Partial<EventSegment> & { id?: string }
+    ) => {
       if (!partial.id) return;
       if (eventType === 'DELETE') {
         setSegments((prev) => prev.filter((s) => s.id !== partial.id));
@@ -161,12 +169,24 @@ function CockpitPage() {
         return next;
       });
     },
-    onRunChange: (partial) => {
+    []
+  );
+
+  const handleRunChange = useCallback(
+    (partial: Partial<EventRun> & { id?: string }) => {
       setRun((prev) => {
         if (!prev) return (partial as EventRun) ?? null;
         return { ...prev, ...(partial as EventRun) };
       });
     },
+    []
+  );
+
+  useEventRunRealtime({
+    enabled: !!run?.id,
+    runId: run?.id ?? null,
+    onSegmentChange: handleSegmentChange,
+    onRunChange: handleRunChange,
   });
 
   // 5. Derived state.
@@ -182,46 +202,17 @@ function CockpitPage() {
     );
   }, [segments]);
 
-  // Tick 1s pour les valeurs derivees du temps (countdown). Visibility-gated
-  // pour epargner la batterie mobile : on n'avance pas quand l'onglet est
-  // cache, on re-snap a Date.now() au retour visible.
-  const [nowMs, setNowMs] = useState(() => Date.now());
-  useEffect(() => {
-    if (typeof document === 'undefined') return;
-    let timer: ReturnType<typeof setInterval> | null = null;
-
-    const start = () => {
-      if (timer) return;
-      setNowMs(Date.now());
-      timer = setInterval(() => setNowMs(Date.now()), 1000);
-    };
-    const stop = () => {
-      if (!timer) return;
-      clearInterval(timer);
-      timer = null;
-    };
-    const onVisibility = () => {
-      if (document.visibilityState === 'visible') start();
-      else stop();
-    };
-
-    if (document.visibilityState === 'visible') start();
-    document.addEventListener('visibilitychange', onVisibility);
-
-    return () => {
-      stop();
-      document.removeEventListener('visibilitychange', onVisibility);
-    };
-  }, []);
-
-  // Planning calcule (meme source de verite que le Director). Recalcul a
-  // chaque tick 1s pour que liveOverrunSec et les plannedStartAt restent
-  // frais cote countdown. Le cout est negligeable (pure function sur N
-  // segments, N petit).
+  // Planning calcule (meme source de verite que le Director). Pas de tick 1s
+  // au niveau page : le seul champ consomme par LiveSegmentBlock est
+  // `plannedStartAt`, qui ne depend PAS de l'horloge (seuls driftSec /
+  // liveOverrunSec en dependent, et le cockpit ne les lit pas). Le countdown
+  // affiche est pilote par le tick 1s *interne* de LiveSegmentBlock, ce qui
+  // evite de re-rendre toute la page chaque seconde. On fige donc nowMs a 0 :
+  // le memo ne recalcule que sur changement de run/segments.
   const schedule = useMemo(() => {
     if (!run) return null;
-    return computeRunSchedule(run, segments, nowMs);
-  }, [run, segments, nowMs]);
+    return computeRunSchedule(run, segments, 0);
+  }, [run, segments]);
 
   // Run live attache (utilise pour cues + heartbeat). Si le run passe done,
   // on coupe le stream cue mais on continue le heartbeat avec runId=null
