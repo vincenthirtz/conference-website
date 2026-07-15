@@ -1,7 +1,9 @@
-// TODO(S5c): cette route est cote utilisateur (capitaine ou manager) via
-// withAuthRoute, pas une route staff. La couverture multi-tenant doit etre
-// resolue depuis le tenant de l'equipe geree (cf. utils/teams/managementAccess).
-// Non scope en S5b car la session ne porte pas encore de tenant_id user-level.
+// Route cote utilisateur (capitaine ou manager) via withAuthRoute, pas une
+// route staff. Le GET délègue à `loadManagedTeamSlice` (helper serveur partagé
+// avec /api/player/dashboard) : source de vérité UNIQUE pour « mon équipe /
+// suis-je capitaine ». La route est désormais scopée tenant (via
+// resolveTenantIdForUserRequest), ce qui corrige l'ancien bug S5c où
+// getManagedTeam était appelé sans tenantId et les queries non scopées.
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
@@ -11,6 +13,8 @@ import {
   getManagedTeam,
   TEAM_MANAGEMENT_FORBIDDEN,
 } from '@/utils/teams/managementAccess';
+import { loadManagedTeamSlice } from '@/utils/teams/managedTeamSlice';
+import { resolveTenantIdForUserRequest } from '@/utils/tenant';
 
 import { logger } from '../../../../utils/logger';
 type MemberRow = {
@@ -64,76 +68,18 @@ export default withAuthRoute(async function handler(
   const userId = user.id;
 
   if (req.method === 'GET') {
-    // Chercher l'équipe où l'utilisateur est membre
-    const { data: membership, error: membershipErr } = await supabaseAdmin
-      .from('team_members')
-      .select(
-        'team_id, teams!inner(id, slug, name, short_name, logo_url, country, description, captain_id, is_joinable)'
-      )
-      .eq('user_id', userId)
-      .limit(1)
-      .maybeSingle();
+    const tenantId = resolveTenantIdForUserRequest(req, { authUserId: userId });
+    const slice = await loadManagedTeamSlice(userId, tenantId);
 
-    if (membershipErr) {
-      logger.error('[teams/my] membership error:', membershipErr);
-      return res.status(500).json({ error: 'Failed to load your team.' });
-    }
-
-    if (!membership) {
-      return res.status(200).json({
-        team: null,
-        members: [],
-        isCaptain: false,
-        isManager: false,
-      });
-    }
-
-    const teamId = (membership as any).team_id as string;
-    const teamRaw = (membership as any).teams as any;
-    const captainId = teamRaw.captain_id as string | null;
-    const isCaptain = captainId === userId;
-    const access = await getManagedTeam(userId);
-    const isManager = !!(
-      access?.isManager && access?.teamId === teamId
-    );
-    const team: TeamRow & { is_joinable?: boolean } = {
-      id: teamRaw.id,
-      slug: teamRaw.slug ?? null,
-      name: teamRaw.name,
-      short_name: teamRaw.short_name,
-      logo_url: teamRaw.logo_url,
-      country: teamRaw.country,
-      description: teamRaw.description,
-      is_joinable: teamRaw.is_joinable ?? false,
-    };
-
-    const { data: membersRaw, error: membersErr } = await supabaseAdmin
-      .from('team_members')
-      .select(
-        'id, user_id, role, battle_tag, battle_tag_verified_at, specialty, is_substitute'
-      )
-      .eq('team_id', teamId)
-      .order('created_at', { ascending: true });
-
-    if (membersErr) {
-      logger.error('[teams/my] members error:', membersErr);
-      return res
-        .status(500)
-        .json({ error: 'Failed to load your team members.' });
-    }
-
-    // Dériver le statut capitaine depuis teams.captain_id
-    const members = (membersRaw || []).map((m: any) => ({
-      ...m,
-      captain: captainId === m.user_id,
-      is_captain: captainId === m.user_id,
-    }));
-
+    // Payload public inchangé en forme : { team, members, isCaptain, isManager }.
+    // La tranche renvoyée par le helper est un surensemble (team.captain_id /
+    // open_for_scrim, member.battle_tag_verified_at / captain / is_captain) —
+    // ajouts additifs, non cassants pour les consommateurs existants.
     return res.status(200).json({
-      team,
-      members,
-      isCaptain,
-      isManager,
+      team: slice.team,
+      members: slice.members,
+      isCaptain: slice.isCaptain,
+      isManager: slice.isManager,
     });
   }
 

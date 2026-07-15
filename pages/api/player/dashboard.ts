@@ -21,7 +21,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
-import { getManagedTeam } from '@/utils/teams/managementAccess';
+import { loadManagedTeamSlice } from '@/utils/teams/managedTeamSlice';
 import { resolveTenantIdForUserRequest } from '@/utils/tenant';
 import { CHECKIN_OPEN_MINUTES } from '@/utils/checkin';
 import { readScrimNego } from '@/utils/teams/scrimNegotiation';
@@ -46,6 +46,7 @@ type MemberRow = {
   user_id: string | null;
   role: string | null;
   battle_tag: string | null;
+  battle_tag_verified_at?: string | null;
   specialty: string | null;
   is_substitute: boolean;
   captain?: boolean | null;
@@ -144,83 +145,6 @@ function conversationId(teamA: string, teamB: string): string {
  * failing section degrades gracefully instead of taking the whole dashboard
  * down (matches the per-section .catch() behavior the client used to have).
  * ---------------------------------------------------------*/
-
-async function loadTeamAndMembers(
-  userId: string,
-  tenantId: string
-): Promise<{
-  team: TeamRow | null;
-  members: MemberRow[];
-  teamId: string | null;
-}> {
-  try {
-    const { data: membership, error } = await supabaseAdmin
-      .from('team_members')
-      .select('team_id')
-      .eq('user_id', userId)
-      .eq('tenant_id', tenantId)
-      .limit(1)
-      .maybeSingle();
-
-    if (error || !membership) {
-      if (error) logger.error('[player/dashboard] membership error:', error);
-      return { team: null, members: [], teamId: null };
-    }
-
-    const teamId = (membership as Record<string, unknown>).team_id as string;
-
-    // `team` (detail) and `members` (roster) both depend only on teamId, so
-    // fetch them concurrently instead of waterfalling team → members.
-    const [teamRes, membersRes] = await Promise.all([
-      supabaseAdmin
-        .from('teams')
-        .select(
-          'id, slug, name, short_name, logo_url, country, description, is_joinable, open_for_scrim'
-        )
-        .eq('id', teamId)
-        .eq('tenant_id', tenantId)
-        .maybeSingle(),
-      supabaseAdmin
-        .from('team_members')
-        .select('id, user_id, role, battle_tag, specialty, is_substitute')
-        .eq('team_id', teamId)
-        .eq('tenant_id', tenantId)
-        .order('created_at', { ascending: true }),
-    ]);
-
-    const { data: teamRowRaw, error: teamErr } = teamRes;
-
-    if (teamErr || !teamRowRaw) {
-      if (teamErr) logger.error('[player/dashboard] team error:', teamErr);
-      return { team: null, members: [], teamId };
-    }
-
-    const teamRaw = teamRowRaw as Record<string, unknown>;
-
-    const team: TeamRow = {
-      id: teamRaw.id as string,
-      slug: (teamRaw.slug as string | null) ?? null,
-      name: teamRaw.name as string,
-      short_name: (teamRaw.short_name as string | null) ?? null,
-      logo_url: (teamRaw.logo_url as string | null) ?? null,
-      country: (teamRaw.country as string | null) ?? null,
-      description: (teamRaw.description as string | null) ?? null,
-      is_joinable: (teamRaw.is_joinable as boolean | undefined) ?? false,
-    };
-
-    const { data: membersRaw, error: membersErr } = membersRes;
-
-    if (membersErr) {
-      logger.error('[player/dashboard] members error:', membersErr);
-      return { team, members: [], teamId };
-    }
-
-    return { team, members: (membersRaw || []) as MemberRow[], teamId };
-  } catch (err) {
-    logger.error('[player/dashboard] loadTeamAndMembers error:', err);
-    return { team: null, members: [], teamId: null };
-  }
-}
 
 async function loadDemandes(
   userId: string,
@@ -548,15 +472,13 @@ export default withAuthRoute(async function handler(
   const userId = user.id;
   const tenantId = resolveTenantIdForUserRequest(req, { authUserId: userId });
 
-  // Resolve the managed team (captain or privileged member) once. This drives
-  // both the captain-only gating and the team-id for next-match/scrims.
-  const [teamSlice, access] = await Promise.all([
-    loadTeamAndMembers(userId, tenantId),
-    getManagedTeam(userId, tenantId),
-  ]);
+  // Resolve the managed team slice once via the shared server helper. It
+  // returns team + members + the canonical isCaptain/isManager flags (derived
+  // through getManagedTeam, tenant-scoped) — the SAME source of truth as
+  // /api/admin/teams/my, so the two endpoints can no longer diverge.
+  const teamSlice = await loadManagedTeamSlice(userId, tenantId);
 
-  const isCaptain = !!(access?.isCaptain && access.teamId === teamSlice.teamId);
-  const isManager = !!(access?.isManager && access.teamId === teamSlice.teamId);
+  const { isCaptain, isManager } = teamSlice;
   const canManage = isCaptain || isManager;
   const rosterSize = teamSlice.members.length;
 

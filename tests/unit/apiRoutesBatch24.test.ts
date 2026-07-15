@@ -548,6 +548,22 @@ describe('/api/admin/teams/my', () => {
 
   it('GET 200 returns team + members + isCaptain', async () => {
     setAuthUser({ id: 'user-1' });
+    // The GET now delegates to loadManagedTeamSlice, which resolves the team via
+    // a separate `teams` query (tenant-scoped) instead of a nested join, so the
+    // team detail must be seeded on store.teams.
+    store.teams = [
+      {
+        id: 'team-1',
+        name: 'Alpha',
+        short_name: 'A',
+        logo_url: null,
+        country: 'FR',
+        description: null,
+        captain_id: 'user-1',
+        is_joinable: true,
+        open_for_scrim: false,
+      },
+    ] as any;
     store.team_members = [
       {
         id: 'm1',
@@ -556,17 +572,6 @@ describe('/api/admin/teams/my', () => {
         role: 'player',
         battle_tag: 'Me#1',
         is_substitute: false,
-        // Joined team data (Supabase nested-select shape)
-        teams: {
-          id: 'team-1',
-          name: 'Alpha',
-          short_name: 'A',
-          logo_url: null,
-          country: 'FR',
-          description: null,
-          captain_id: 'user-1',
-          is_joinable: true,
-        },
       },
       {
         id: 'm2',
