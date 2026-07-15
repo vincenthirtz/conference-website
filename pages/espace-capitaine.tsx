@@ -7,6 +7,7 @@ import LanguageToggle from '@/components/Navbar/LanguageToggle';
 
 const DISCORD_INVITE = 'https://discord.gg/gERSsjC3Vd';
 const REGISTER_TEAM_HREF = `/team/create?tournament=${ACTIVE_WOMEN_TOURNAMENT_ID}`;
+const GUIDE_HREF = '/guide/gerer-mon-equipe';
 
 type IconName =
   | 'roster'
@@ -132,6 +133,12 @@ function EspaceCapitainePage() {
               {t.heroCtaSpace}
             </Link>
             <Link
+              href={GUIDE_HREF}
+              className="rounded-full border border-[var(--color-green)]/50 bg-[var(--color-green)]/10 px-6 py-3 text-sm font-bold text-[var(--color-green-light)] shadow-lg shadow-[var(--color-green)]/20 transition hover:border-[var(--color-green)] hover:bg-[var(--color-green)]/20 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-green)]"
+            >
+              {t.heroCtaGuide}
+            </Link>
+            <Link
               href={REGISTER_TEAM_HREF}
               className="rounded-full border border-white/15 px-6 py-3 text-sm font-semibold text-white transition hover:border-white/40 hover:bg-white/10"
             >
@@ -219,49 +226,28 @@ function EspaceCapitainePage() {
           </div>
         </section>
 
-        {/* Steps */}
-        <section id="etapes" className="scroll-mt-24">
-          <div className="mb-6">
-            <p className="text-xs uppercase tracking-[0.24em] text-[var(--color-green)]">
-              {t.stepsKicker}
-            </p>
-            <h2 className="text-brand-gradient mt-2 text-3xl font-extrabold tracking-tight">
-              {t.stepsTitle}
-            </h2>
-            <span className="brand-rule mt-3 block" aria-hidden />
+        {/* Guide cross-link — the step-by-step "how to" lives in the guide */}
+        <section className="section-brand-bg scroll-mt-24">
+          <div className="card-brand flex flex-col gap-4 rounded-3xl bg-white/[0.05] p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8">
+            <div>
+              <p className="text-xs uppercase tracking-[0.24em] text-[var(--color-green)]">
+                {t.guideKicker}
+              </p>
+              <h2 className="mt-2 text-2xl font-bold text-white sm:text-3xl">
+                {t.guideTitle}
+              </h2>
+              <p className="mt-2 max-w-2xl text-sm text-gray-200">
+                {t.guideDescription}
+              </p>
+            </div>
+            <Link
+              href={GUIDE_HREF}
+              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[var(--color-violet)] to-[var(--color-green)] px-6 py-3 text-sm font-bold text-white shadow-lg shadow-[var(--color-green)]/25 transition hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-green)]"
+            >
+              {t.guideCta}
+              <span aria-hidden>→</span>
+            </Link>
           </div>
-          <ol className="space-y-4">
-            {t.steps.map((step) => (
-              <li
-                key={step.number}
-                className="card-brand flex flex-col gap-4 rounded-2xl bg-white/[0.05] p-5 sm:flex-row sm:items-start"
-              >
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--color-violet)] to-[var(--color-green)] font-mono text-lg font-bold text-white ring-1 ring-white/15">
-                  {step.number}
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-white">
-                    {step.title}
-                  </h3>
-                  <p className="mt-2 text-sm text-gray-200">
-                    {step.description}
-                  </p>
-                  {step.ctaLabel && step.ctaHref && (
-                    <Link
-                      href={
-                        step.ctaHref === 'REGISTER_TEAM_HREF'
-                          ? REGISTER_TEAM_HREF
-                          : step.ctaHref
-                      }
-                      className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-[var(--color-violet-light)] underline decoration-[var(--color-violet)]/60 underline-offset-4 transition hover:text-white"
-                    >
-                      {step.ctaLabel} ↗
-                    </Link>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ol>
         </section>
 
         {/* Final CTA */}

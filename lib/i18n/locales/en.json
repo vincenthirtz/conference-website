@@ -104,6 +104,7 @@
     "heroTitle": "Run your team from a single dashboard",
     "heroDescription": "Roster, recruitment, scrims, messaging, transfers: everything you need to lead your team without juggling Discord, spreadsheets and DMs.",
     "heroCtaSpace": "Go to my hub ↗",
+    "heroCtaGuide": "Follow the step-by-step guide ↗",
     "heroCtaRegister": "Register my team",
     "heroCtaFeatures": "See the features",
     "heroCtaFaq": "FAQ",
@@ -156,31 +157,10 @@
         "description": "Enjoy a showcase page for your team (logo, roster, track record) to share on social media and with sponsors."
       }
     ],
-    "stepsKicker": "Get started",
-    "stepsTitle": "3 steps to become a captain",
-    "steps": [
-      {
-        "number": "01",
-        "title": "Create your account",
-        "description": "Sign up with your email or via Discord. Add your BattleTag to save time when creating a team.",
-        "ctaLabel": "Create my account",
-        "ctaHref": "/register"
-      },
-      {
-        "number": "02",
-        "title": "Create your team (or join one)",
-        "description": "If you create the team, you automatically become its captain. If you join an existing team, you can request the captain role later.",
-        "ctaLabel": "Register my team",
-        "ctaHref": "REGISTER_TEAM_HREF"
-      },
-      {
-        "number": "03",
-        "title": "Manage from your hub",
-        "description": "Once you are captain, open /player to access the dashboard, roster management, messaging and scrims.",
-        "ctaLabel": "Go to my hub",
-        "ctaHref": "/player"
-      }
-    ],
+    "guideKicker": "How does it work?",
+    "guideTitle": "The step-by-step guide, screen by screen",
+    "guideDescription": "Want to see exactly how it works? The guide walks through every step (registration, applications, roster, messaging, scrims, check-in) with real previews of the captain dashboard.",
+    "guideCta": "Follow the step-by-step guide",
     "ctaKicker": "Ready to take the lead?",
     "ctaTitle": "Open your captain dashboard",
     "ctaDescription": "If you already have a team, the hub is available right after you log in.",

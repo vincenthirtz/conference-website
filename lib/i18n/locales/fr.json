@@ -104,6 +104,7 @@
     "heroTitle": "Pilote ton équipe depuis un seul tableau de bord",
     "heroDescription": "Roster, recrutement, scrims, messagerie, transferts : tout ce qu'il te faut pour mener ton équipe sans courir entre Discord, Excel et les DM.",
     "heroCtaSpace": "Accéder à mon espace ↗",
+    "heroCtaGuide": "Suivre le guide pas-à-pas ↗",
     "heroCtaRegister": "Inscrire mon équipe",
     "heroCtaFeatures": "Voir les fonctionnalités",
     "heroCtaFaq": "FAQ",
@@ -156,31 +157,10 @@
         "description": "Profite d’une page vitrine pour ton équipe (logo, roster, palmarès) à partager sur les réseaux et avec les sponsors."
       }
     ],
-    "stepsKicker": "Démarrer",
-    "stepsTitle": "3 étapes pour devenir capitaine",
-    "steps": [
-      {
-        "number": "01",
-        "title": "Crée ton compte",
-        "description": "Inscris-toi avec ton email ou via Discord. Renseigne ton BattleTag pour gagner du temps lors de la création d’équipe.",
-        "ctaLabel": "Créer mon compte",
-        "ctaHref": "/register"
-      },
-      {
-        "number": "02",
-        "title": "Crée ton équipe (ou rejoins-en une)",
-        "description": "Si tu crées l’équipe, tu en deviens automatiquement la capitaine. Si tu rejoins une équipe existante, tu pourras demander le rôle de capitaine ensuite.",
-        "ctaLabel": "Inscrire mon équipe",
-        "ctaHref": "REGISTER_TEAM_HREF"
-      },
-      {
-        "number": "03",
-        "title": "Pilote depuis ton espace",
-        "description": "Une fois capitaine, ouvre /player pour accéder au dashboard, à la gestion du roster, à la messagerie et aux scrims.",
-        "ctaLabel": "Aller à mon espace",
-        "ctaHref": "/player"
-      }
-    ],
+    "guideKicker": "Comment faire ?",
+    "guideTitle": "Le guide pas-à-pas, écran par écran",
+    "guideDescription": "Envie de voir concrètement comment ça marche ? Le guide déroule chaque étape (inscription, candidatures, roster, messagerie, scrims, check-in) avec des aperçus réels du dashboard capitaine.",
+    "guideCta": "Suivre le guide pas-à-pas",
     "ctaKicker": "Prête à prendre les commandes ?",
     "ctaTitle": "Ouvre ton dashboard capitaine",
     "ctaDescription": "Si tu as déjà une équipe, l'espace est accessible immédiatement après connexion.",
@@ -2607,7 +2587,7 @@
     "step6Bullet3": "Une fois accepté, ajoute-le à ton agenda",
     "feature1Title": "Cloche de notifications",
     "feature1Desc": "Un badge rose en navbar agrège messages non lus, scrims en attente, candidatures et check-in à valider.",
-    "feature2Title": "Page publique d'équipe",
+    "feature2Title": "Page publique d’équipe",
     "feature2Desc": "Profite d'une vitrine partageable (logo, roster, palmarès) à diffuser sur les réseaux et auprès des sponsors.",
     "feature3Title": "Historique des demandes",
     "feature3Desc": "Toutes tes demandes (capitanat, transferts, scrims) sont tracées avec leur statut et la date de traitement staff.",
