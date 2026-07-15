@@ -37,6 +37,9 @@ const BOT_CLIENT_ROOT =
 /** Path entries that exist in openapi.yaml but have no matching handler. */
 const ALLOWLIST_SPEC_WITHOUT_HANDLER = new Set<string>([
   // Add `'/api/foo/bar'` entries here as needed.
+  // Servi par une fonction Netlify (netlify/functions/builds.ts), pas un
+  // handler Next — documenté dans openapi.yaml mais sans fichier pages/api.
+  '/api/netlify-builds',
 ]);
 
 /** Handler files whose path is intentionally missing from openapi.yaml. */

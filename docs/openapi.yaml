@@ -24148,6 +24148,67 @@ paths:
           $ref: '#/components/responses/RateLimited'
         '500':
           $ref: '#/components/responses/ServerError'
+  /api/developers/register:
+    post:
+      summary: Inscription développeur self-service (crée un tenant developer + compte).
+      description: |
+        Crée un compte Supabase auto-confirmé et provisionne un tenant
+        `kind='developer'` + son staff owner. Réponse neutre anti-énumération :
+        si l'email existe déjà, `200 { status: "ok", alreadyExists: true }` sans
+        provisioning. Protégé par Turnstile + rate-limit (5/h/IP). Endpoint public.
+      operationId: developersRegister
+      tags:
+        - public
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+                - orgName
+                - turnstileToken
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  minLength: 8
+                  maxLength: 72
+                orgName:
+                  type: string
+                  minLength: 2
+                  maxLength: 80
+                turnstileToken:
+                  type: string
+                  description: Jeton Cloudflare Turnstile.
+      responses:
+        '200':
+          description: Inscription acceptée (compte créé ou déjà existant).
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - status
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - ok
+                  alreadyExists:
+                    type: boolean
+                    description: true si un compte existait déjà pour cet email.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
   /api/caster/tournaments:
     get:
       summary: "[DEPRECATED] Liste publique des tournois pour l'app caster."
