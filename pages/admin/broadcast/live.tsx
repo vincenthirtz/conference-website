@@ -12,6 +12,7 @@ import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useEventRunRealtime } from '@/hooks/useEventRunRealtime';
 import { useToast } from '@/components/Toast';
+import RealtimeStatusBadge from '@/components/admin/RealtimeStatusBadge';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { StaffProps } from '@/types/admin';
 import type { EventRun, EventSegment } from '@/types/events';
@@ -105,8 +106,19 @@ function BroadcastLivePage({ staff }: StaffProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lowerDraft, setLowerDraft] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+  // Finding #11 : busy CIBLÉ par contrôle. Un seul `submitting` global gelait
+  // tout le pupitre (auto-director + 6 scènes + on/off air + PiP + lower-third)
+  // pendant chaque appel réseau. On piste ici les ids des seuls contrôles en
+  // cours d'envoi ; chaque bouton ne se désactive que pour SA propre mutation.
+  const [pendingControls, setPendingControls] = useState<Set<string>>(
+    () => new Set()
+  );
   const [advancing, setAdvancing] = useState(false);
+
+  const isPending = useCallback(
+    (id: string) => pendingControls.has(id),
+    [pendingControls]
+  );
   const [origin, setOrigin] = useState('');
 
   const canEdit = staff.role !== 'caster';
@@ -239,37 +251,67 @@ function BroadcastLivePage({ staff }: StaffProps) {
     [fetchState]
   );
 
-  useEventRunRealtime({
+  const { connected: realtimeConnected } = useEventRunRealtime({
     enabled: !!runId,
     runId,
     onRunChange: handleRunChange,
     onSegmentChange: handleSegmentChange,
   });
 
-  async function applyPatch(patch: Partial<BroadcastStateV1>) {
-    if (!canEdit) return;
-    setSubmitting(true);
-    try {
-      const json = await mutateJson<LiveResponse>(
-        '/api/admin/broadcast/state',
-        {
-          method: 'POST',
-          body: JSON.stringify(patch),
-        }
+  // applyPatch(patch, controlId) — mutation d'un champ de broadcast_state.
+  //   - busy CIBLÉ : seul `controlId` est marqué en cours (anti double-submit
+  //     sur CE contrôle uniquement, le reste du pupitre reste cliquable).
+  //   - optimistic : on reflète la valeur voulue tout de suite dans data.state
+  //     (merge shallow ; pip/lower_third/scene sont remplacés en entier), puis
+  //     on réconcilie avec la réponse serveur (source canonique). Le realtime
+  //     converge de son côté. En cas d'échec, on refetch l'état canonique.
+  const applyPatch = useCallback(
+    async (patch: Partial<BroadcastStateV1>, controlId: string) => {
+      if (!canEdit) return;
+      // Anti double-submit ciblé : ignore un second clic sur le même contrôle
+      // tant que sa mutation est en vol.
+      if (pendingControls.has(controlId)) return;
+      setPendingControls((prev) => {
+        const next = new Set(prev);
+        next.add(controlId);
+        return next;
+      });
+      // Optimistic : refléter immédiatement la valeur voulue.
+      setData((prev) =>
+        prev && prev.state
+          ? { ...prev, state: { ...prev.state, ...patch } }
+          : prev
       );
-      setData(json);
-      addToast(t.stateUpdated, 'success');
-    } catch (err) {
-      const e = err as AdminFetchError;
-      const payloadError =
-        typeof e.payload === 'object' && e.payload && 'error' in e.payload
-          ? String((e.payload as { error: string }).error)
-          : null;
-      addToast(payloadError || e.message || t.failure, 'error');
-    } finally {
-      setSubmitting(false);
-    }
-  }
+      try {
+        const json = await mutateJson<LiveResponse>(
+          '/api/admin/broadcast/state',
+          {
+            method: 'POST',
+            body: JSON.stringify(patch),
+          }
+        );
+        setData(json);
+        addToast(t.stateUpdated, 'success');
+      } catch (err) {
+        const e = err as AdminFetchError;
+        const payloadError =
+          typeof e.payload === 'object' && e.payload && 'error' in e.payload
+            ? String((e.payload as { error: string }).error)
+            : null;
+        addToast(payloadError || e.message || t.failure, 'error');
+        // Rollback : on récupère l'état canonique (l'optimistic était peut-être
+        // faux). Le poll/realtime re-convergent également.
+        await fetchState();
+      } finally {
+        setPendingControls((prev) => {
+          const next = new Set(prev);
+          next.delete(controlId);
+          return next;
+        });
+      }
+    },
+    [canEdit, pendingControls, mutateJson, addToast, t, fetchState]
+  );
 
   async function goNextMatch() {
     if (!canEdit) return;
@@ -373,9 +415,16 @@ function BroadcastLivePage({ staff }: StaffProps) {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-8">
           <div className="flex flex-wrap items-end justify-between gap-3 mb-6">
             <div>
-              <h1 className="text-3xl font-extrabold tracking-tight">
-                {t.heading}
-              </h1>
+              <div className="flex items-center gap-3">
+                <h1 className="text-3xl font-extrabold tracking-tight">
+                  {t.heading}
+                </h1>
+                <RealtimeStatusBadge
+                  connected={realtimeConnected}
+                  connectedLabel={t.realtimeConnected}
+                  degradedLabel={t.realtimeDegraded}
+                />
+              </div>
               <p className="text-sm text-neutral-400 mt-1">
                 {format(t.subtitle, { seconds: POLL_MS / 1000 })}
               </p>
@@ -551,8 +600,13 @@ function BroadcastLivePage({ staff }: StaffProps) {
                     role="switch"
                     aria-checked={autoDirector}
                     aria-label={t.autoDirectorLabel}
-                    disabled={submitting || !canEdit}
-                    onClick={() => applyPatch({ auto_director: !autoDirector })}
+                    disabled={isPending('auto_director') || !canEdit}
+                    onClick={() =>
+                      applyPatch(
+                        { auto_director: !autoDirector },
+                        'auto_director'
+                      )
+                    }
                     className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
                       autoDirector ? 'bg-emerald-600' : 'bg-neutral-700'
                     }`}
@@ -585,8 +639,8 @@ function BroadcastLivePage({ staff }: StaffProps) {
                           key={s}
                           type="button"
                           aria-pressed={active}
-                          disabled={submitting || !canEdit}
-                          onClick={() => applyPatch({ scene: s })}
+                          disabled={isPending(`scene:${s}`) || !canEdit}
+                          onClick={() => applyPatch({ scene: s }, `scene:${s}`)}
                           className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
                             active
                               ? 'bg-purple-600 border-purple-500 text-white'
@@ -607,7 +661,7 @@ function BroadcastLivePage({ staff }: StaffProps) {
                 <div className="flex flex-wrap items-center gap-3">
                   <button
                     type="button"
-                    disabled={advancing || submitting || !canEdit}
+                    disabled={advancing || !canEdit}
                     onClick={goNextMatch}
                     className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed"
                   >
@@ -658,8 +712,10 @@ function BroadcastLivePage({ staff }: StaffProps) {
                 <div className="flex flex-wrap items-center gap-3 mb-4">
                   <button
                     type="button"
-                    disabled={submitting || !canEdit}
-                    onClick={() => applyPatch({ on_air: !state?.on_air })}
+                    disabled={isPending('on_air') || !canEdit}
+                    onClick={() =>
+                      applyPatch({ on_air: !state?.on_air }, 'on_air')
+                    }
                     className={`px-4 py-2 rounded-lg text-sm font-bold ${
                       state?.on_air
                         ? 'bg-red-600 hover:bg-red-500'
@@ -673,9 +729,9 @@ function BroadcastLivePage({ staff }: StaffProps) {
                     <input
                       type="checkbox"
                       checked={!!state?.pip.enabled}
-                      disabled={submitting || !canEdit}
+                      disabled={isPending('pip') || !canEdit}
                       onChange={(e) =>
-                        applyPatch({ pip: { enabled: e.target.checked } })
+                        applyPatch({ pip: { enabled: e.target.checked } }, 'pip')
                       }
                     />
                     {t.pipEnabled}
@@ -698,11 +754,14 @@ function BroadcastLivePage({ staff }: StaffProps) {
                     />
                     <button
                       type="button"
-                      disabled={submitting || !canEdit}
+                      disabled={isPending('lower_third') || !canEdit}
                       onClick={() =>
-                        applyPatch({
-                          lower_third: lowerDraft.trim() || null,
-                        })
+                        applyPatch(
+                          {
+                            lower_third: lowerDraft.trim() || null,
+                          },
+                          'lower_third'
+                        )
                       }
                       className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-sm font-medium disabled:opacity-40"
                     >
@@ -710,10 +769,10 @@ function BroadcastLivePage({ staff }: StaffProps) {
                     </button>
                     <button
                       type="button"
-                      disabled={submitting || !canEdit}
+                      disabled={isPending('lower_third') || !canEdit}
                       onClick={() => {
                         setLowerDraft('');
-                        applyPatch({ lower_third: null });
+                        applyPatch({ lower_third: null }, 'lower_third');
                       }}
                       className="px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium disabled:opacity-40"
                     >

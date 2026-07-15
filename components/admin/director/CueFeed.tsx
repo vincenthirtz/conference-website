@@ -27,7 +27,7 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useToast } from '@/components/Toast';
 import LoadingSpinner from '@/components/admin/LoadingSpinner';
-import { playChime } from '@/utils/playChime';
+import { playChime, isAudioBlocked, unlockAudio } from '@/utils/playChime';
 import { logger } from '@/utils/logger';
 import type { EventCue, EventCueSeverity } from '@/types/events';
 
@@ -142,6 +142,13 @@ function CueFeed({ runId, casters, optimisticCue }: Props) {
   >({});
   // Cue dont la rétractation est en cours (désactive le bouton).
   const [retractingId, setRetractingId] = useState<string | null>(null);
+  // Finding #12 : l'AudioContext est suspendu tant qu'aucun geste utilisateur
+  // n'a eu lieu (autoplay policy). Un cue urgent entrant appelle playChime()
+  // SANS interaction → aucun son, et le Director ne le sait pas. On surveille
+  // l'état et on affiche un bandeau PERSISTANT « Activer le son » tant que c'est
+  // bloqué. On re-vérifie périodiquement (le déblocage peut venir d'ailleurs :
+  // clic sur un autre contrôle de la page qui appelle unlockAudio).
+  const [audioBlocked, setAudioBlocked] = useState(false);
 
   // Refs pour tracker les cues deja vus (chime uniquement sur nouveaux).
   const seenIdsRef = useRef<Set<string>>(new Set());
@@ -216,6 +223,23 @@ function CueFeed({ runId, casters, optimisticCue }: Props) {
     return () => clearInterval(id);
   }, [fetchData]);
 
+  // Surveillance de l'état audio : re-vérifie l'AudioContext toutes les 3s (le
+  // déblocage peut provenir d'une interaction ailleurs sur la page). Cheap.
+  useEffect(() => {
+    const check = () => setAudioBlocked(isAudioBlocked());
+    check();
+    const id = setInterval(check, 3_000);
+    return () => clearInterval(id);
+  }, []);
+
+  const handleUnlockAudio = useCallback(() => {
+    unlockAudio();
+    // resume() est asynchrone : on re-vérifie peu après pour masquer le bandeau
+    // dès que le contexte repasse 'running' (l'intervalle 3s le confirmerait
+    // sinon).
+    window.setTimeout(() => setAudioBlocked(isAudioBlocked()), 200);
+  }, []);
+
   // Chime detection : on compare les ids du payload courant aux ids deja vus.
   // Le premier rendu remplit le set sans chimer (pour ne pas spammer les beeps
   // a l'arrivee sur la page).
@@ -269,6 +293,22 @@ function CueFeed({ runId, casters, optimisticCue }: Props) {
         aria-live="polite"
         aria-label={t.listAria}
       >
+      {audioBlocked && (
+        <div className="mb-3 flex items-center justify-between gap-2 rounded-lg border border-amber-500/50 bg-amber-500/15 px-3 py-2">
+          <span className="text-[11px] text-amber-200">
+            {t.audioBlockedHint}
+          </span>
+          <button
+            type="button"
+            onClick={handleUnlockAudio}
+            className="shrink-0 inline-flex items-center gap-1.5 rounded-md border border-amber-400/60 bg-amber-500/25 px-2.5 py-1 text-[11px] font-semibold text-amber-100 hover:bg-amber-500/40"
+          >
+            <span aria-hidden="true">🔈</span>
+            {t.audioBlocked}
+          </button>
+        </div>
+      )}
+
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-semibold text-neutral-200">Cue feed</h3>
         <button

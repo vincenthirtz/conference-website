@@ -30,6 +30,7 @@ import StationBoard, {
   type StationFormPatch,
 } from '@/components/admin/director/StationBoard';
 import ScheduleConflictsBanner from '@/components/admin/director/ScheduleConflictsBanner';
+import RealtimeStatusBadge from '@/components/admin/RealtimeStatusBadge';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
@@ -251,7 +252,7 @@ function DirectorPage(_props: StaffProps) {
     []
   );
 
-  useEventRunRealtime({
+  const { connected: realtimeConnected } = useEventRunRealtime({
     enabled: !!runId,
     runId,
     onSegmentChange: handleSegmentChange,
@@ -1064,6 +1065,13 @@ function DirectorPage(_props: StaffProps) {
             />
           ) : (
             <div className="space-y-6">
+              <div className="flex justify-end">
+                <RealtimeStatusBadge
+                  connected={realtimeConnected}
+                  connectedLabel={t.realtimeConnected}
+                  degradedLabel={t.realtimeDegraded}
+                />
+              </div>
               <RunStatusHeader
                 run={run}
                 segments={segments}

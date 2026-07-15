@@ -4646,6 +4646,8 @@
     "confirmNextSubtitle": "Le segment en direct sera clôturé (irréversible) et le prochain match passera à l'antenne.",
     "confirmNextSubtitleNoTarget": "Le segment en direct sera clôturé (irréversible). Aucun match suivant n'est identifié dans la timeline.",
     "confirmNextLabel": "Passer au match",
+    "realtimeConnected": "Temps réel",
+    "realtimeDegraded": "Reconnexion… (mode dégradé)",
     "failure": "Échec"
   },
   "adminEventsList": {
@@ -5159,7 +5161,9 @@
     "conflictsSubtitle": "Une équipe est programmée sur des matchs qui se chevauchent. Vérifiez le planning avant le direct.",
     "conflictLine": ": « {matchA} » chevauche « {matchB} »",
     "conflictOverlap": "chevauchement {start} – {end}",
-    "conflictUnknownTeam": "Équipe inconnue"
+    "conflictUnknownTeam": "Équipe inconnue",
+    "realtimeConnected": "Temps réel",
+    "realtimeDegraded": "Reconnexion… (mode dégradé)"
   },
   "adminCampaigns": {
     "statusActive": "Active",
@@ -6232,7 +6236,9 @@
     "retractConfirm": "Retracter ce cue ? Les casters le verront annule.",
     "retractedBadge": "Annule",
     "retractSuccess": "Cue retracte.",
-    "retractFailed": "Impossible de retracter le cue."
+    "retractFailed": "Impossible de retracter le cue.",
+    "audioBlocked": "Activer le son",
+    "audioBlockedHint": "Son bloqué : les cues urgents ne joueront aucune alerte sonore."
   },
   "adminDirectorMatchPicker": {
     "notPlanned": "non planifie",

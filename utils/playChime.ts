@@ -87,6 +87,20 @@ export function unlockAudio(): void {
   }
 }
 
+// Indique si l'audio est actuellement bloqué par l'autoplay policy — i.e. le
+// singleton AudioContext existe et est 'suspended'. Sert à l'UI (CueFeed) pour
+// afficher un bandeau « Activer le son » PERSISTANT : sans interaction, un
+// playChime() déclenché par un cue urgent entrant reste muet et le Director
+// n'entend jamais l'alerte. Best-effort : si Web Audio n'est pas supporté, on
+// renvoie false (rien à débloquer, pas de bandeau). getContext() crée le
+// contexte au besoin — un contexte frais est 'suspended' tant qu'aucun geste
+// utilisateur n'a eu lieu, ce qui est justement l'état qu'on veut signaler.
+export function isAudioBlocked(): boolean {
+  const ctx = getContext();
+  if (!ctx) return false;
+  return ctx.state === 'suspended';
+}
+
 export function playChime(variant: ChimeVariant): void {
   const ctx = getContext();
   if (!ctx) return;

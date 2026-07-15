@@ -4646,6 +4646,8 @@
     "confirmNextSubtitle": "The live segment will be closed (irreversible) and the next match will go on air.",
     "confirmNextSubtitleNoTarget": "The live segment will be closed (irreversible). No next match was identified in the timeline.",
     "confirmNextLabel": "Switch match",
+    "realtimeConnected": "Real-time",
+    "realtimeDegraded": "Reconnecting… (degraded mode)",
     "failure": "Failed"
   },
   "adminEventsList": {
@@ -5159,7 +5161,9 @@
     "conflictsSubtitle": "A team is scheduled on overlapping matches. Review the schedule before going live.",
     "conflictLine": ": \"{matchA}\" overlaps \"{matchB}\"",
     "conflictOverlap": "overlap {start} – {end}",
-    "conflictUnknownTeam": "Unknown team"
+    "conflictUnknownTeam": "Unknown team",
+    "realtimeConnected": "Real-time",
+    "realtimeDegraded": "Reconnecting… (degraded mode)"
   },
   "adminCampaigns": {
     "statusActive": "Active",
@@ -6232,7 +6236,9 @@
     "retractConfirm": "Retract this cue? Casters will see it cancelled.",
     "retractedBadge": "Cancelled",
     "retractSuccess": "Cue retracted.",
-    "retractFailed": "Could not retract the cue."
+    "retractFailed": "Could not retract the cue.",
+    "audioBlocked": "Enable sound",
+    "audioBlockedHint": "Sound blocked: urgent cues won't play an audio alert."
   },
   "adminDirectorMatchPicker": {
     "notPlanned": "not scheduled",
