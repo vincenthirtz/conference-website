@@ -5,7 +5,7 @@
 // Extracted from the former /admin/tournament/[id]/checkin/live page; now the
 // `live` sub-tab of the merged check-in route.
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
@@ -64,6 +64,11 @@ export default function CheckinLivePanel() {
         `/api/admin/tournament/${tournamentId}/checkin`
       );
       setRows(json.matches ?? []);
+      // `now` sert au fenetrage (windowedRows) et aux comptes a rebours
+      // (minutes) : on le rafraichit au rythme du poll — la donnee elle-meme
+      // n'est fraiche qu'a ce rythme. L'horloge des SECONDES de l'entete vit
+      // dans la feuille <LiveClock> pour ne pas re-rendre tout le tableau.
+      setNow(Date.now());
       setError(null);
       lastFetchRef.current = Date.now();
     } catch (err) {
@@ -74,15 +79,14 @@ export default function CheckinLivePanel() {
     }
   }, [adminFetchJson, tournamentId, t]);
 
-  // Tick clock + auto-poll (séparés pour ne pas re-render la totalité du
-  // tableau à chaque seconde).
+  // Auto-poll. Le tick horloge 1s n'est plus ici : il est confine a la feuille
+  // <LiveClock> (entete), pour ne pas re-rendre metriques + tableau chaque
+  // seconde.
   useEffect(() => {
     fetchData();
     const poll = setInterval(fetchData, POLL_MS);
-    const tick = setInterval(() => setNow(Date.now()), 1_000);
     return () => {
       clearInterval(poll);
-      clearInterval(tick);
     };
   }, [fetchData]);
 
@@ -186,7 +190,7 @@ export default function CheckinLivePanel() {
           </p>
         </div>
         <div className="text-right text-xs text-neutral-400">
-          <div>{format(t.nowLabel, { time: formatClock(now) })}</div>
+          <LiveClock template={t.nowLabel} />
           {lastNudgeAt && (
             <div>
               {format(t.lastNudgeLabel, {
@@ -438,6 +442,19 @@ function formatClock(ms: number): string {
     timeZone: 'Europe/Paris',
   });
 }
+
+// Feuille isolant le tick horloge 1s de l'entete. Seul ce petit noeud se
+// re-rend chaque seconde pour afficher l'heure courante (HH:MM:SS) ; le reste
+// du panneau (metriques + tableau) ne reconcilie qu'au rythme du poll. DOM et
+// format de sortie strictement identiques a l'ancien inline.
+const LiveClock = memo(function LiveClock({ template }: { template: string }) {
+  const [now, setNow] = useState<number>(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1_000);
+    return () => clearInterval(id);
+  }, []);
+  return <div>{format(template, { time: formatClock(now) })}</div>;
+});
 
 function formatRelative(t: Dict, iso: string | null): string {
   if (!iso) return '';

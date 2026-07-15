@@ -10,7 +10,7 @@
 // Realtime : segments + run abonnes via useEventRunRealtime, fallback refetch
 // au focus / interval pour resilience (si le canal saute).
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Breadcrumb from '@/components/admin/Breadcrumb';
@@ -61,6 +61,20 @@ import type {
 export const getServerSideProps = withStaffPage('manager');
 
 const POLL_INTERVAL_MS = 30_000;
+
+/* -----------------------------------------------------------
+ * PERF — la page tick `nowMs` toutes les 1s (drift/timing) et se re-rend en
+ * entier. Seuls RunStatusHeader + TimelineBuilder consomment `schedule`/`nowMs`
+ * et DOIVENT se rafraichir chaque seconde. Les panels ci-dessous n'en dependent
+ * pas : on les memoise pour couper leur reconciliation par seconde. Leurs
+ * handlers sont stabilises via useCallback dans le composant (props stables ->
+ * memo effectif). CasterStatusPanel est deja memoise a la source.
+ * (Les fichiers WaveBoard/StationBoard/SegmentEditor sont hors perimetre ; on
+ * memoise donc au niveau du consumer.)
+ * ---------------------------------------------------------*/
+const WaveBoardMemo = memo(WaveBoard);
+const StationBoardMemo = memo(StationBoard);
+const SegmentEditorMemo = memo(SegmentEditor);
 
 function DirectorPage(_props: StaffProps) {
   const t = useAdminT('adminEventDirector');
@@ -693,46 +707,49 @@ function DirectorPage(_props: StaffProps) {
     addToast(t.segmentAdded, 'success');
   }
 
-  async function handleSaveSegment(patch: {
-    title?: string;
-    duration_min?: number | null;
-    planned_start_at?: string | null;
-    broadcast_message?: EventBroadcastMessage | null;
-    caster_checklist?: EventCasterChecklistItem[];
-  }) {
-    if (!runId || !selectedSegment) throw new Error(t.errorNoSegment);
-    regenerate();
-    const json = await mutateJson<EventSegment>(
-      `/api/admin/events/${runId}/segments/${selectedSegment.id}`,
-      {
-        method: 'PATCH',
-        body: JSON.stringify(patch),
-      }
-    );
-    setSegments((prev) => prev.map((s) => (s.id === json.id ? json : s)));
-    addToast(t.segmentSaved, 'success');
-  }
+  const handleSaveSegment = useCallback(
+    async (patch: {
+      title?: string;
+      duration_min?: number | null;
+      planned_start_at?: string | null;
+      broadcast_message?: EventBroadcastMessage | null;
+      caster_checklist?: EventCasterChecklistItem[];
+    }) => {
+      if (!runId || !selectedSegment) throw new Error(t.errorNoSegment);
+      regenerate();
+      const json = await mutateJson<EventSegment>(
+        `/api/admin/events/${runId}/segments/${selectedSegment.id}`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify(patch),
+        }
+      );
+      setSegments((prev) => prev.map((s) => (s.id === json.id ? json : s)));
+      addToast(t.segmentSaved, 'success');
+    },
+    [runId, selectedSegment, regenerate, mutateJson, addToast, t]
+  );
 
   /* -----------------------------------------------------------
    * Assignation wave/station d'un segment (PATCH immediat).
    * ---------------------------------------------------------*/
 
-  async function handleAssignSegment(patch: {
-    wave_id?: string | null;
-    station_id?: string | null;
-  }) {
-    if (!runId || !selectedSegment) throw new Error(t.errorNoSegment);
-    regenerate();
-    const json = await mutateJson<EventSegment>(
-      `/api/admin/events/${runId}/segments/${selectedSegment.id}`,
-      {
-        method: 'PATCH',
-        body: JSON.stringify(patch),
-      }
-    );
-    setSegments((prev) => prev.map((s) => (s.id === json.id ? json : s)));
-    addToast(t.assignmentUpdated, 'success');
-  }
+  const handleAssignSegment = useCallback(
+    async (patch: { wave_id?: string | null; station_id?: string | null }) => {
+      if (!runId || !selectedSegment) throw new Error(t.errorNoSegment);
+      regenerate();
+      const json = await mutateJson<EventSegment>(
+        `/api/admin/events/${runId}/segments/${selectedSegment.id}`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify(patch),
+        }
+      );
+      setSegments((prev) => prev.map((s) => (s.id === json.id ? json : s)));
+      addToast(t.assignmentUpdated, 'success');
+    },
+    [runId, selectedSegment, regenerate, mutateJson, addToast, t]
+  );
 
   /* -----------------------------------------------------------
    * Waves — CRUD + statut + reorder. Toutes les mutations regenerent la clef
@@ -740,256 +757,276 @@ function DirectorPage(_props: StaffProps) {
    * reponse canonique de l'API.
    * ---------------------------------------------------------*/
 
-  async function handleCreateWave(patch: WaveFormPatch) {
-    if (!runId) return;
-    setBusy(true);
-    regenerate();
-    try {
-      const json = await mutateJson<{ wave: EventWave }>(
-        `/api/admin/events/${runId}/waves`,
-        {
-          method: 'POST',
-          body: JSON.stringify({
-            title: patch.title,
-            planned_start_at: patch.planned_start_at,
-            duration_min: patch.duration_min,
-          }),
-        }
-      );
-      setWaves((prev) => [...prev, json.wave].sort((a, b) => a.ord - b.ord));
-      addToast(t.waveCreated, 'success');
-    } catch (err) {
-      addToast((err as Error)?.message ?? t.createFailed, 'error');
-    } finally {
-      setBusy(false);
-    }
-  }
+  const handleCreateWave = useCallback(
+    async (patch: WaveFormPatch) => {
+      if (!runId) return;
+      setBusy(true);
+      regenerate();
+      try {
+        const json = await mutateJson<{ wave: EventWave }>(
+          `/api/admin/events/${runId}/waves`,
+          {
+            method: 'POST',
+            body: JSON.stringify({
+              title: patch.title,
+              planned_start_at: patch.planned_start_at,
+              duration_min: patch.duration_min,
+            }),
+          }
+        );
+        setWaves((prev) => [...prev, json.wave].sort((a, b) => a.ord - b.ord));
+        addToast(t.waveCreated, 'success');
+      } catch (err) {
+        addToast((err as Error)?.message ?? t.createFailed, 'error');
+      } finally {
+        setBusy(false);
+      }
+    },
+    [runId, regenerate, mutateJson, addToast, t]
+  );
 
-  async function handleUpdateWave(
-    waveId: string,
-    patch: Partial<WaveFormPatch>
-  ) {
-    if (!runId) return;
-    setBusy(true);
-    regenerate();
-    try {
-      const json = await mutateJson<{ wave: EventWave }>(
-        `/api/admin/events/${runId}/waves/${waveId}`,
-        { method: 'PATCH', body: JSON.stringify(patch) }
-      );
-      setWaves((prev) =>
-        prev
-          .map((w) => (w.id === json.wave.id ? json.wave : w))
-          .sort((a, b) => a.ord - b.ord)
-      );
-      addToast(t.waveUpdated, 'success');
-    } catch (err) {
-      addToast((err as Error)?.message ?? t.updateFailed, 'error');
-    } finally {
-      setBusy(false);
-    }
-  }
+  const handleUpdateWave = useCallback(
+    async (waveId: string, patch: Partial<WaveFormPatch>) => {
+      if (!runId) return;
+      setBusy(true);
+      regenerate();
+      try {
+        const json = await mutateJson<{ wave: EventWave }>(
+          `/api/admin/events/${runId}/waves/${waveId}`,
+          { method: 'PATCH', body: JSON.stringify(patch) }
+        );
+        setWaves((prev) =>
+          prev
+            .map((w) => (w.id === json.wave.id ? json.wave : w))
+            .sort((a, b) => a.ord - b.ord)
+        );
+        addToast(t.waveUpdated, 'success');
+      } catch (err) {
+        addToast((err as Error)?.message ?? t.updateFailed, 'error');
+      } finally {
+        setBusy(false);
+      }
+    },
+    [runId, regenerate, mutateJson, addToast, t]
+  );
 
-  async function handleSetWaveStatus(wave: EventWave, status: EventWaveStatus) {
-    if (!runId) return;
-    if (status === 'skipped') {
+  const handleSetWaveStatus = useCallback(
+    async (wave: EventWave, status: EventWaveStatus) => {
+      if (!runId) return;
+      if (status === 'skipped') {
+        const ok = await confirm({
+          title: format(t.confirmSkipWaveTitle, { title: wave.title }),
+          subtitle: t.confirmSkipWaveSubtitle,
+          variant: 'warning',
+          confirmLabel: t.skipWaveLabel,
+        });
+        if (!ok) return;
+      }
+      setBusy(true);
+      regenerate();
+      try {
+        const json = await mutateJson<{ wave: EventWave }>(
+          `/api/admin/events/${runId}/waves/${wave.id}`,
+          { method: 'PATCH', body: JSON.stringify({ status }) }
+        );
+        setWaves((prev) =>
+          prev.map((w) => (w.id === json.wave.id ? json.wave : w))
+        );
+        addToast(t.waveStatusUpdated, 'success');
+      } catch (err) {
+        addToast((err as Error)?.message ?? t.statusChangeFailed, 'error');
+      } finally {
+        setBusy(false);
+      }
+    },
+    [runId, confirm, regenerate, mutateJson, addToast, t]
+  );
+
+  const handleDeleteWave = useCallback(
+    async (wave: EventWave) => {
+      if (!runId) return;
       const ok = await confirm({
-        title: format(t.confirmSkipWaveTitle, { title: wave.title }),
-        subtitle: t.confirmSkipWaveSubtitle,
-        variant: 'warning',
-        confirmLabel: t.skipWaveLabel,
+        title: format(t.confirmDeleteWaveTitle, { title: wave.title }),
+        subtitle: t.confirmDeleteWaveSubtitle,
+        variant: 'danger',
+        confirmLabel: t.confirmDeleteLabel,
       });
       if (!ok) return;
-    }
-    setBusy(true);
-    regenerate();
-    try {
-      const json = await mutateJson<{ wave: EventWave }>(
-        `/api/admin/events/${runId}/waves/${wave.id}`,
-        { method: 'PATCH', body: JSON.stringify({ status }) }
-      );
-      setWaves((prev) =>
-        prev.map((w) => (w.id === json.wave.id ? json.wave : w))
-      );
-      addToast(t.waveStatusUpdated, 'success');
-    } catch (err) {
-      addToast((err as Error)?.message ?? t.statusChangeFailed, 'error');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function handleDeleteWave(wave: EventWave) {
-    if (!runId) return;
-    const ok = await confirm({
-      title: format(t.confirmDeleteWaveTitle, { title: wave.title }),
-      subtitle: t.confirmDeleteWaveSubtitle,
-      variant: 'danger',
-      confirmLabel: t.confirmDeleteLabel,
-    });
-    if (!ok) return;
-    setBusy(true);
-    regenerate();
-    try {
-      const res = await mutate(`/api/admin/events/${runId}/waves/${wave.id}`, {
-        method: 'DELETE',
-      });
-      if (!res.ok) {
-        const payload = await res.json().catch(() => null);
-        throw new Error(
-          payload?.error ?? format(t.deleteFailedStatus, { status: res.status })
-        );
-      }
-      setWaves((prev) => prev.filter((w) => w.id !== wave.id));
-      // Les segments rattaches ont wave_id remis a NULL cote DB (FK SET NULL).
-      setSegments((prev) =>
-        prev.map((s) => (s.wave_id === wave.id ? { ...s, wave_id: null } : s))
-      );
-      addToast(t.waveDeleted, 'success');
-    } catch (err) {
-      addToast((err as Error)?.message ?? t.deleteFailed, 'error');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function handleReorderWaves(orderedIds: string[]) {
-    if (!runId) return;
-    const prev = waves;
-    // Optimistic : reassigne ord selon la nouvelle position.
-    setWaves(() =>
-      orderedIds
-        .map((id, idx) => {
-          const w = prev.find((x) => x.id === id);
-          return w ? { ...w, ord: idx } : null;
-        })
-        .filter((w): w is EventWave => w !== null)
-    );
-    setBusy(true);
-    regenerate();
-    try {
-      const json = await mutateJson<{ waves: EventWave[] }>(
-        `/api/admin/events/${runId}/waves/reorder`,
-        {
-          method: 'POST',
-          body: JSON.stringify({
-            order: orderedIds.map((id, idx) => ({ id, ord: idx })),
-          }),
+      setBusy(true);
+      regenerate();
+      try {
+        const res = await mutate(`/api/admin/events/${runId}/waves/${wave.id}`, {
+          method: 'DELETE',
+        });
+        if (!res.ok) {
+          const payload = await res.json().catch(() => null);
+          throw new Error(
+            payload?.error ??
+              format(t.deleteFailedStatus, { status: res.status })
+          );
         }
+        setWaves((prev) => prev.filter((w) => w.id !== wave.id));
+        // Les segments rattaches ont wave_id remis a NULL cote DB (FK SET NULL).
+        setSegments((prev) =>
+          prev.map((s) => (s.wave_id === wave.id ? { ...s, wave_id: null } : s))
+        );
+        addToast(t.waveDeleted, 'success');
+      } catch (err) {
+        addToast((err as Error)?.message ?? t.deleteFailed, 'error');
+      } finally {
+        setBusy(false);
+      }
+    },
+    [runId, confirm, regenerate, mutate, addToast, t]
+  );
+
+  const handleReorderWaves = useCallback(
+    async (orderedIds: string[]) => {
+      if (!runId) return;
+      const prev = waves;
+      // Optimistic : reassigne ord selon la nouvelle position.
+      setWaves(() =>
+        orderedIds
+          .map((id, idx) => {
+            const w = prev.find((x) => x.id === id);
+            return w ? { ...w, ord: idx } : null;
+          })
+          .filter((w): w is EventWave => w !== null)
       );
-      if (json.waves) setWaves(json.waves);
-    } catch (err) {
-      addToast((err as Error)?.message ?? t.reorderFailed, 'error');
-      setWaves(prev);
-    } finally {
-      setBusy(false);
-    }
-  }
+      setBusy(true);
+      regenerate();
+      try {
+        const json = await mutateJson<{ waves: EventWave[] }>(
+          `/api/admin/events/${runId}/waves/reorder`,
+          {
+            method: 'POST',
+            body: JSON.stringify({
+              order: orderedIds.map((id, idx) => ({ id, ord: idx })),
+            }),
+          }
+        );
+        if (json.waves) setWaves(json.waves);
+      } catch (err) {
+        addToast((err as Error)?.message ?? t.reorderFailed, 'error');
+        setWaves(prev);
+      } finally {
+        setBusy(false);
+      }
+    },
+    [runId, waves, regenerate, mutateJson, addToast, t]
+  );
 
   /* -----------------------------------------------------------
    * Stations — CRUD + statut.
    * ---------------------------------------------------------*/
 
-  async function handleCreateStation(patch: StationFormPatch) {
-    if (!runId) return;
-    setBusy(true);
-    regenerate();
-    try {
-      const json = await mutateJson<{ station: EventStation }>(
-        `/api/admin/events/${runId}/stations`,
-        { method: 'POST', body: JSON.stringify(patch) }
-      );
-      setStations((prev) =>
-        [...prev, json.station].sort((a, b) => a.ord - b.ord)
-      );
-      addToast(t.stationCreated, 'success');
-    } catch (err) {
-      addToast((err as Error)?.message ?? t.createFailed, 'error');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function handleUpdateStation(
-    stationId: string,
-    patch: Partial<StationFormPatch>
-  ) {
-    if (!runId) return;
-    setBusy(true);
-    regenerate();
-    try {
-      const json = await mutateJson<{ station: EventStation }>(
-        `/api/admin/events/${runId}/stations/${stationId}`,
-        { method: 'PATCH', body: JSON.stringify(patch) }
-      );
-      setStations((prev) =>
-        prev.map((s) => (s.id === json.station.id ? json.station : s))
-      );
-      addToast(t.stationUpdated, 'success');
-    } catch (err) {
-      addToast((err as Error)?.message ?? t.updateFailed, 'error');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function handleSetStationStatus(
-    station: EventStation,
-    status: EventStationStatus
-  ) {
-    if (!runId) return;
-    setBusy(true);
-    regenerate();
-    try {
-      const json = await mutateJson<{ station: EventStation }>(
-        `/api/admin/events/${runId}/stations/${station.id}`,
-        { method: 'PATCH', body: JSON.stringify({ status }) }
-      );
-      setStations((prev) =>
-        prev.map((s) => (s.id === json.station.id ? json.station : s))
-      );
-    } catch (err) {
-      addToast((err as Error)?.message ?? t.statusChangeFailed, 'error');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function handleDeleteStation(station: EventStation) {
-    if (!runId) return;
-    const ok = await confirm({
-      title: format(t.confirmDeleteStationTitle, { name: station.name }),
-      subtitle: t.confirmDeleteStationSubtitle,
-      variant: 'danger',
-      confirmLabel: t.confirmDeleteLabel,
-    });
-    if (!ok) return;
-    setBusy(true);
-    regenerate();
-    try {
-      const res = await mutate(
-        `/api/admin/events/${runId}/stations/${station.id}`,
-        { method: 'DELETE' }
-      );
-      if (!res.ok) {
-        const payload = await res.json().catch(() => null);
-        throw new Error(
-          payload?.error ?? format(t.deleteFailedStatus, { status: res.status })
+  const handleCreateStation = useCallback(
+    async (patch: StationFormPatch) => {
+      if (!runId) return;
+      setBusy(true);
+      regenerate();
+      try {
+        const json = await mutateJson<{ station: EventStation }>(
+          `/api/admin/events/${runId}/stations`,
+          { method: 'POST', body: JSON.stringify(patch) }
         );
+        setStations((prev) =>
+          [...prev, json.station].sort((a, b) => a.ord - b.ord)
+        );
+        addToast(t.stationCreated, 'success');
+      } catch (err) {
+        addToast((err as Error)?.message ?? t.createFailed, 'error');
+      } finally {
+        setBusy(false);
       }
-      setStations((prev) => prev.filter((s) => s.id !== station.id));
-      setSegments((prev) =>
-        prev.map((s) =>
-          s.station_id === station.id ? { ...s, station_id: null } : s
-        )
-      );
-      addToast(t.stationDeleted, 'success');
-    } catch (err) {
-      addToast((err as Error)?.message ?? t.deleteFailed, 'error');
-    } finally {
-      setBusy(false);
-    }
-  }
+    },
+    [runId, regenerate, mutateJson, addToast, t]
+  );
+
+  const handleUpdateStation = useCallback(
+    async (stationId: string, patch: Partial<StationFormPatch>) => {
+      if (!runId) return;
+      setBusy(true);
+      regenerate();
+      try {
+        const json = await mutateJson<{ station: EventStation }>(
+          `/api/admin/events/${runId}/stations/${stationId}`,
+          { method: 'PATCH', body: JSON.stringify(patch) }
+        );
+        setStations((prev) =>
+          prev.map((s) => (s.id === json.station.id ? json.station : s))
+        );
+        addToast(t.stationUpdated, 'success');
+      } catch (err) {
+        addToast((err as Error)?.message ?? t.updateFailed, 'error');
+      } finally {
+        setBusy(false);
+      }
+    },
+    [runId, regenerate, mutateJson, addToast, t]
+  );
+
+  const handleSetStationStatus = useCallback(
+    async (station: EventStation, status: EventStationStatus) => {
+      if (!runId) return;
+      setBusy(true);
+      regenerate();
+      try {
+        const json = await mutateJson<{ station: EventStation }>(
+          `/api/admin/events/${runId}/stations/${station.id}`,
+          { method: 'PATCH', body: JSON.stringify({ status }) }
+        );
+        setStations((prev) =>
+          prev.map((s) => (s.id === json.station.id ? json.station : s))
+        );
+      } catch (err) {
+        addToast((err as Error)?.message ?? t.statusChangeFailed, 'error');
+      } finally {
+        setBusy(false);
+      }
+    },
+    [runId, regenerate, mutateJson, addToast, t]
+  );
+
+  const handleDeleteStation = useCallback(
+    async (station: EventStation) => {
+      if (!runId) return;
+      const ok = await confirm({
+        title: format(t.confirmDeleteStationTitle, { name: station.name }),
+        subtitle: t.confirmDeleteStationSubtitle,
+        variant: 'danger',
+        confirmLabel: t.confirmDeleteLabel,
+      });
+      if (!ok) return;
+      setBusy(true);
+      regenerate();
+      try {
+        const res = await mutate(
+          `/api/admin/events/${runId}/stations/${station.id}`,
+          { method: 'DELETE' }
+        );
+        if (!res.ok) {
+          const payload = await res.json().catch(() => null);
+          throw new Error(
+            payload?.error ??
+              format(t.deleteFailedStatus, { status: res.status })
+          );
+        }
+        setStations((prev) => prev.filter((s) => s.id !== station.id));
+        setSegments((prev) =>
+          prev.map((s) =>
+            s.station_id === station.id ? { ...s, station_id: null } : s
+          )
+        );
+        addToast(t.stationDeleted, 'success');
+      } catch (err) {
+        addToast((err as Error)?.message ?? t.deleteFailed, 'error');
+      } finally {
+        setBusy(false);
+      }
+    },
+    [runId, confirm, regenerate, mutate, addToast, t]
+  );
 
   /* -----------------------------------------------------------
    * Render
@@ -1084,7 +1121,7 @@ function DirectorPage(_props: StaffProps) {
                     <h2 className="mb-3 text-sm font-semibold text-neutral-300 uppercase tracking-wide">
                       {t.editionHeading}
                     </h2>
-                    <SegmentEditor
+                    <SegmentEditorMemo
                       segment={selectedSegment}
                       run={run}
                       busy={busy}
@@ -1134,7 +1171,7 @@ function DirectorPage(_props: StaffProps) {
                   {t.wavesStationsHeading}
                 </h2>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <WaveBoard
+                  <WaveBoardMemo
                     waves={waves}
                     segments={segments}
                     busy={busy}
@@ -1144,7 +1181,7 @@ function DirectorPage(_props: StaffProps) {
                     onDelete={handleDeleteWave}
                     onReorder={handleReorderWaves}
                   />
-                  <StationBoard
+                  <StationBoardMemo
                     stations={stations}
                     segments={segments}
                     busy={busy}

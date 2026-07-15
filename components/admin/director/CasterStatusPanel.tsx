@@ -11,7 +11,7 @@
 // Polling assignments : on-mount + on match_ids change (rare). Pas de poll
 // continu : un ack est rare et le Director peut cliquer ↻ pour forcer.
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import LoadingSpinner from '@/components/admin/LoadingSpinner';
@@ -126,11 +126,14 @@ function presenceTooltip(p: PresenceItem | undefined, tx: Dict): string {
   return format(tx.tooltipOffline, { ago });
 }
 
-export default function CasterStatusPanel({
-  segments,
-  runId,
-  onPresenceChange,
-}: Props) {
+// Memoise : la page Director tick `nowMs` toutes les 1s (drift/timing) et
+// re-rend son arbre. Ce panneau ne consomme PAS nowMs — ses props (segments
+// = ref d'etat stable, runId primitif, onPresenceChange = setter stable) ne
+// changent pas a chaque seconde. memo coupe donc la reconciliation par seconde
+// poussee par le parent. Il n'y a aucun tick horloge 1s a extraire ici : le
+// seul interval du panneau est le polling presence (15s). Comportement
+// inchange (les temps relatifs restent rafraichis au rythme du poll).
+function CasterStatusPanel({ segments, runId, onPresenceChange }: Props) {
   const t = useAdminT('adminDirectorCasterStatusPanel');
   const statusStyles = getStatusStyles(t);
   const { adminFetchJson } = useAdminFetch();
@@ -372,3 +375,5 @@ export default function CasterStatusPanel({
     </div>
   );
 }
+
+export default memo(CasterStatusPanel);

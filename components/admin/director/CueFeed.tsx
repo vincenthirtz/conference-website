@@ -88,6 +88,33 @@ function formatTime(iso: string): string {
   }
 }
 
+// Feuille isolant le tick horloge 1s. Le libelle relatif ("il y a 2min") doit
+// se rafraichir chaque seconde ; en le confinant dans cette petite feuille
+// memoisee, seul ce noeud se re-rend chaque seconde — la liste des cues (map
+// complet) ne reconcilie que sur changement de data/casters/optimistic. DOM et
+// format de sortie strictement identiques a l'ancien inline.
+const CueRelativeTime = memo(function CueRelativeTime({
+  iso,
+  t,
+}: {
+  iso: string;
+  t: Dict;
+}) {
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick((n) => n + 1), 1000);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <span
+      className="text-[11px] text-neutral-500"
+      title={new Date(iso).toLocaleString('fr-FR')}
+    >
+      {formatRelative(iso, t)}
+    </span>
+  );
+});
+
 // Memoise : la page Director tick `nowMs` toutes les 1s (timing/drift) et
 // re-render le parent. Les props du feed (runId primitif, casters/optimisticCue
 // = refs d'etat stables) ne dependent pas de ce tick. Le feed gere son PROPRE
@@ -103,8 +130,9 @@ function CueFeed({ runId, casters, optimisticCue }: Props) {
   // Refs pour tracker les cues deja vus (chime uniquement sur nouveaux).
   const seenIdsRef = useRef<Set<string>>(new Set());
   const firstRenderRef = useRef(true);
-  // Tick pour forcer un re-render periodique des "il y a Xs" (1Hz suffit).
-  const [, setTick] = useState(0);
+  // Le tick horloge 1s (rafraichissement des "il y a Xs") vit desormais dans la
+  // feuille <CueRelativeTime>, pour ne pas re-rendre toute la liste chaque
+  // seconde.
 
   const fetchData = useCallback(async () => {
     try {
@@ -139,12 +167,6 @@ function CueFeed({ runId, casters, optimisticCue }: Props) {
     }, POLL_INTERVAL_MS);
     return () => clearInterval(id);
   }, [fetchData]);
-
-  // Refresh relative timestamps every second.
-  useEffect(() => {
-    const id = setInterval(() => setTick((n) => n + 1), 1000);
-    return () => clearInterval(id);
-  }, []);
 
   // Chime detection : on compare les ids du payload courant aux ids deja vus.
   // Le premier rendu remplit le set sans chimer (pour ne pas spammer les beeps
@@ -233,12 +255,7 @@ function CueFeed({ runId, casters, optimisticCue }: Props) {
                   >
                     {cue.severity}
                   </span>
-                  <span
-                    className="text-[11px] text-neutral-500"
-                    title={new Date(cue.created_at).toLocaleString('fr-FR')}
-                  >
-                    {formatRelative(cue.created_at, t)}
-                  </span>
+                  <CueRelativeTime iso={cue.created_at} t={t} />
                 </div>
                 <p className="text-sm text-neutral-100 whitespace-pre-wrap break-words">
                   {cue.body}
