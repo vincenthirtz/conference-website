@@ -44,9 +44,14 @@ export default function AnnouncementsTicker({
         logger.error('announcements load error', e);
       }
     };
-    if (!hasInitialItems) {
-      load();
+    if (hasInitialItems) {
+      // La home hydrate déjà via ISR (revalidate: 900s) : pas besoin d'armer
+      // le poll côté client, l'ISR rafraîchit le contenu.
+      return () => {
+        mounted = false;
+      };
     }
+    load();
     const refreshTimer = setInterval(load, REFRESH_MS);
     return () => {
       mounted = false;

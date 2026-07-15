@@ -1,6 +1,42 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
+// The CSP template is static except for the per-request nonce (script-src) and
+// frame-ancestors (embed vs strict). We precompute the static portions once at
+// module load so each request only concatenates the two variable parts, instead
+// of rebuilding the directive array + join on every call.
+//
+// Cloudflare Turnstile (anti-bot widget, /onboard pages) injects:
+//   - script depuis https://challenges.cloudflare.com/turnstile/v0/api.js
+//   - styles inline dans le widget (impossible de leur passer notre nonce)
+//   - iframe vers https://challenges.cloudflare.com/cdn-cgi/challenge-platform/...
+//   - connect vers challenges.cloudflare.com pour le challenge
+//
+// Pour style-src on doit retirer le nonce et passer en 'unsafe-inline' car
+// par spec CSP3, quand nonce est présent unsafe-inline est ignoré (donc on
+// ne peut pas avoir les deux). Trade-off acceptable : inline styles peuvent
+// pas exécuter de code, le risque XSS reste très limité. Le nonce sur
+// script-src (l'attaque principale) reste intact.
+const CSP_STATIC_HEAD = "default-src 'self'; script-src 'self' 'nonce-";
+// Everything between the nonce and the (variable) frame-ancestors directive.
+const CSP_STATIC_MID =
+  "' https://challenges.cloudflare.com; " +
+  [
+    `style-src 'self' 'unsafe-inline'`,
+    `img-src 'self' data: blob: https:`,
+    `connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.twitch.tv https://id.twitch.tv https://challenges.cloudflare.com`,
+    `media-src 'self' https://*.supabase.co`,
+    "font-src 'self'",
+    "frame-src 'self' https://player.twitch.tv https://www.youtube.com https://challenges.cloudflare.com",
+    // PWA /admin: allow Service Worker (/sw.js) and Web App Manifest from same origin.
+    "worker-src 'self'",
+    "manifest-src 'self'",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+  ].join('; ') +
+  '; ';
+
 export function proxy(request: NextRequest) {
   // Generate a random nonce for each request
   const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
@@ -16,35 +52,15 @@ export function proxy(request: NextRequest) {
     ? 'frame-ancestors *'
     : "frame-ancestors 'none'";
 
-  // Cloudflare Turnstile (anti-bot widget, /onboard pages) injects:
-  //   - script depuis https://challenges.cloudflare.com/turnstile/v0/api.js
-  //   - styles inline dans le widget (impossible de leur passer notre nonce)
-  //   - iframe vers https://challenges.cloudflare.com/cdn-cgi/challenge-platform/...
-  //   - connect vers challenges.cloudflare.com pour le challenge
-  //
-  // Pour style-src on doit retirer le nonce et passer en 'unsafe-inline' car
-  // par spec CSP3, quand nonce est présent unsafe-inline est ignoré (donc on
-  // ne peut pas avoir les deux). Trade-off acceptable : inline styles peuvent
-  // pas exécuter de code, le risque XSS reste très limité. Le nonce sur
-  // script-src (l'attaque principale) reste intact.
-  const csp = [
-    "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' https://challenges.cloudflare.com`,
-    `style-src 'self' 'unsafe-inline'`,
-    `img-src 'self' data: blob: https:`,
-    `connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.twitch.tv https://id.twitch.tv https://challenges.cloudflare.com`,
-    `media-src 'self' https://*.supabase.co`,
-    "font-src 'self'",
-    "frame-src 'self' https://player.twitch.tv https://www.youtube.com https://challenges.cloudflare.com",
-    // PWA /admin: allow Service Worker (/sw.js) and Web App Manifest from same origin.
-    "worker-src 'self'",
-    "manifest-src 'self'",
-    "object-src 'none'",
-    "base-uri 'self'",
-    "form-action 'self'",
-    frameAncestors,
-    'upgrade-insecure-requests',
-  ].join('; ');
+  // Only the nonce and frame-ancestors vary per request; the rest is hoisted
+  // to module-level constants above. Output is byte-identical to the previous
+  // array-join build (see CSP_STATIC_HEAD / CSP_STATIC_MID).
+  const csp =
+    CSP_STATIC_HEAD +
+    nonce +
+    CSP_STATIC_MID +
+    frameAncestors +
+    '; upgrade-insecure-requests';
 
   // Forward the nonce to _document via a request header
   const requestHeaders = new Headers(request.headers);

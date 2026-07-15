@@ -1,4 +1,5 @@
 import Head from 'next/head';
+import Image from 'next/image';
 import { GetStaticPaths, GetStaticProps } from 'next';
 import Heading from '@/components/Typography/heading';
 import Button from '@/components/Buttons/button';
@@ -276,13 +277,13 @@ export default function NewsSlugPage({
               </Heading>
               <span className="brand-rule mt-1" aria-hidden />
               {imageUrl && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
+                <Image
                   src={imageUrl}
                   alt=""
                   width={1200}
                   height={630}
-                  loading="eager"
+                  priority
+                  sizes="(max-width:768px) 100vw, 800px"
                   className="mt-4 w-full rounded-2xl border border-white/10 object-cover aspect-[1200/630]"
                 />
               )}

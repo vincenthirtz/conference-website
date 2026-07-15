@@ -4,6 +4,9 @@ const nextConfig = {
   trailingSlash: false,
   images: {
     formats: ['image/avif', 'image/webp'],
+    // Remote CDN images (Blizzard/Twitch/Discord/Supabase Storage) are
+    // near-static; the 60s default causes needless re-fetch/re-encode.
+    minimumCacheTTL: 86400,
     remotePatterns: [
       {
         protocol: 'https',
