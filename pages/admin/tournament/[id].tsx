@@ -1,6 +1,6 @@
 // pages/admin/tournament/[id].tsx
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -20,16 +20,22 @@ import Modal from '@/components/admin/Modal';
 import Breadcrumb from '@/components/admin/Breadcrumb';
 import { useToast } from '@/components/Toast';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
-import type { MatchStatus } from '@/types/admin';
+import type { RegistrationField } from '@/utils/registrationFields';
+import TeamRow from '@/components/admin/tournament/overview/TeamRow';
+import StageRow from '@/components/admin/tournament/overview/StageRow';
+import RecentMatchRow from '@/components/admin/tournament/overview/RecentMatchRow';
+import ConflictRow from '@/components/admin/tournament/overview/ConflictRow';
+import AddTeamModal from '@/components/admin/tournament/overview/AddTeamModal';
+import BulkAddTeamsModal from '@/components/admin/tournament/overview/BulkAddTeamsModal';
+import NewStageModal from '@/components/admin/tournament/overview/NewStageModal';
 import type {
-  RegistrationField,
-  RegistrationAnswers as RegistrationAnswerValues,
-} from '@/utils/registrationFields';
-import RegistrationAnswers, {
-  hasRenderableAnswers,
-} from '@/components/admin/RegistrationAnswers';
-
-type Dict = ReturnType<typeof useAdminT<'adminTournamentOverview'>>;
+  Dict,
+  Team,
+  TournamentTeam,
+  Stage,
+  RecentMatch,
+  Conflict,
+} from '@/components/admin/tournament/overview/types';
 
 import { logger } from '../../../utils/logger';
 type StaffShape = {
@@ -60,46 +66,6 @@ type Tournament = {
   registration_fields: RegistrationField[] | null;
   created_at: string;
   updated_at: string | null;
-};
-
-type Stage = {
-  id: string;
-  name: string;
-  stage_type: string | null;
-  order_index: number | null;
-  is_active: boolean;
-  is_public: boolean;
-  start_date: string | null;
-  end_date: string | null;
-};
-
-type Team = {
-  id: string;
-  name: string;
-  logo_url?: string | null;
-  is_active?: boolean;
-};
-
-type TournamentTeam = {
-  id: string;
-  team_id: string;
-  seed?: number | null;
-  status?: string | null;
-  field_values?: RegistrationAnswerValues | null;
-  team: Team;
-};
-
-type RecentMatch = {
-  id: string;
-  stage_id: string | null;
-  round_number: number | null;
-  status: MatchStatus;
-  scheduled_at: string | null;
-  team1?: { id: string; name: string; logo_url?: string | null } | null;
-  team2?: { id: string; name: string; logo_url?: string | null } | null;
-  team1_score: number | null;
-  team2_score: number | null;
-  winner_team_id: string | null;
 };
 
 type ApiResponse = {
@@ -382,40 +348,6 @@ function formatLabel(tx: Dict, formatType: string | null) {
   }
 }
 
-function stageTypeLabel(tx: Dict, type: string | null) {
-  switch (type) {
-    case 'group':
-      return tx.stageTypeGroup;
-    case 'bracket':
-      return tx.stageTypeBracket;
-    case 'swiss':
-      return tx.stageTypeSwiss;
-    case 'round_robin':
-      return tx.stageTypeRoundRobin;
-    case 'showmatch':
-      return tx.stageTypeShowmatch;
-    default:
-      return tx.stageTypeOther;
-  }
-}
-
-function stageTypeColor(t: string | null) {
-  switch (t) {
-    case 'bracket':
-      return 'bg-purple-500/20 text-purple-300 border-purple-500/30';
-    case 'swiss':
-      return 'bg-amber-500/20 text-amber-300 border-amber-500/30';
-    case 'group':
-      return 'bg-blue-500/20 text-blue-300 border-blue-500/30';
-    case 'round_robin':
-      return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30';
-    case 'showmatch':
-      return 'bg-pink-500/20 text-pink-300 border-pink-500/30';
-    default:
-      return 'bg-neutral-500/20 text-neutral-300 border-neutral-500/30';
-  }
-}
-
 function getStatusOptions(tx: Dict) {
   return [
     {
@@ -470,36 +402,6 @@ function getStageTypeOptions(tx: Dict) {
   ];
 }
 
-function matchStatusLabel(tx: Dict, status: MatchStatus) {
-  switch (status) {
-    case 'pending':
-      return tx.matchStatusPending;
-    case 'ongoing':
-      return tx.matchStatusOngoing;
-    case 'finished':
-      return tx.matchStatusFinished;
-    case 'cancelled':
-      return tx.matchStatusCancelled;
-    default:
-      return status;
-  }
-}
-
-function matchStatusColor(status: MatchStatus) {
-  switch (status) {
-    case 'pending':
-      return 'bg-neutral-600 text-neutral-100';
-    case 'ongoing':
-      return 'bg-amber-600 text-white';
-    case 'finished':
-      return 'bg-emerald-600 text-white';
-    case 'cancelled':
-      return 'bg-red-600 text-white';
-    default:
-      return 'bg-neutral-600 text-neutral-100';
-  }
-}
-
 type InitialData = {
   tournament: Tournament;
   stages: Stage[];
@@ -548,9 +450,6 @@ function AdminTournamentPage({
   const [loadingTeams, setLoadingTeams] = useState(false);
   const [allTeams, setAllTeams] = useState<Team[]>([]);
   const [showAddTeamModal, setShowAddTeamModal] = useState(false);
-  const [selectedTeamId, setSelectedTeamId] = useState<string>('');
-  const [teamSeed, setTeamSeed] = useState<string>('');
-  const [addingTeam, setAddingTeam] = useState(false);
 
   // Status regression confirmation
   const [showStatusConfirm, setShowStatusConfirm] = useState(false);
@@ -566,18 +465,9 @@ function AdminTournamentPage({
 
   // Bulk team add
   const [showBulkAddModal, setShowBulkAddModal] = useState(false);
-  const [bulkSelectedTeamIds, setBulkSelectedTeamIds] = useState<Set<string>>(
-    new Set()
-  );
-  const [bulkAdding, setBulkAdding] = useState(false);
-  const [bulkProgress, setBulkProgress] = useState({ done: 0, total: 0 });
-  const [bulkSearchFilter, setBulkSearchFilter] = useState('');
 
   // New stage modal
   const [showNewStageModal, setShowNewStageModal] = useState(false);
-  const [newStageName, setNewStageName] = useState('');
-  const [newStageType, setNewStageType] = useState('bracket');
-  const [creatingStage, setCreatingStage] = useState(false);
 
   // Match stats
   const [matchStats, setMatchStats] = useState<{
@@ -605,26 +495,6 @@ function AdminTournamentPage({
   );
 
   // Conflict detection
-  type Conflict = {
-    type: string;
-    team_id: string;
-    team_name: string;
-    match_a: {
-      id: string;
-      scheduled_at: string;
-      estimated_end: string;
-      stage_name: string | null;
-      round_number: number | null;
-    };
-    match_b: {
-      id: string;
-      scheduled_at: string;
-      estimated_end: string;
-      stage_name: string | null;
-      round_number: number | null;
-    };
-    overlap_minutes: number;
-  };
   const [conflicts, setConflicts] = useState<Conflict[] | null>(null);
   const [loadingConflicts, setLoadingConflicts] = useState(false);
   const [showConflicts, setShowConflicts] = useState(false);
@@ -919,41 +789,40 @@ function AdminTournamentPage({
     }
   }
 
-  async function handleAddTeam() {
-    if (!selectedTeamId || !id) return;
-    setAddingTeam(true);
-    setErrorMsg(null);
+  // Persist a single team. The AddTeamModal owns its input/adding state and
+  // closes itself on a `true` result; a `false` keeps it open while the parent
+  // surfaces the error banner. Same network call / toast as before.
+  const handleAddTeamSubmit = useCallback(
+    async (teamId: string, seed: number | null): Promise<boolean> => {
+      if (!id) return false;
+      setErrorMsg(null);
 
-    try {
-      const res = await addTeamMutate(`/api/admin/tournament/${id}/teams`, {
-        method: 'POST',
-        body: JSON.stringify({
-          team_id: selectedTeamId,
-          seed: teamSeed ? parseInt(teamSeed, 10) : null,
-        }),
-      });
+      try {
+        const res = await addTeamMutate(`/api/admin/tournament/${id}/teams`, {
+          method: 'POST',
+          body: JSON.stringify({ team_id: teamId, seed }),
+        });
 
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || tx.errorAddTeam);
+        if (!res.ok) {
+          const json = await res.json().catch(() => ({}));
+          throw new Error(json.error || tx.errorAddTeam);
+        }
+
+        addToast(tx.toastTeamAdded, 'success');
+        fetchTournamentTeams();
+        return true;
+      } catch (err: unknown) {
+        setErrorMsg((err as Error)?.message ?? tx.errorUnexpected);
+        return false;
       }
+    },
+    [id, addTeamMutate, tx, addToast, fetchTournamentTeams]
+  );
 
-      setShowAddTeamModal(false);
-      setSelectedTeamId('');
-      setTeamSeed('');
-      addToast(tx.toastTeamAdded, 'success');
-      fetchTournamentTeams();
-    } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? tx.errorUnexpected);
-    } finally {
-      setAddingTeam(false);
-    }
-  }
-
-  function handleRemoveTeam(tournamentTeamId: string) {
+  const handleRemoveTeam = useCallback((tournamentTeamId: string) => {
     setPendingRemoveTeamId(tournamentTeamId);
     setShowRemoveConfirm(true);
-  }
+  }, []);
 
   async function performRemoveTeam() {
     if (!pendingRemoveTeamId) return;
@@ -976,95 +845,106 @@ function AdminTournamentPage({
     }
   }
 
-  async function handleBulkAddTeams() {
-    if (bulkSelectedTeamIds.size === 0 || !id) return;
-    setBulkAdding(true);
-    setErrorMsg(null);
+  // The BulkAddTeamsModal owns selection/search/progress state locally and
+  // drives progress via the `onProgress` callback; the parent keeps the
+  // sequential mutation loop, toasts and refetch identical to before.
+  const handleBulkAddSubmit = useCallback(
+    async (
+      teamIds: string[],
+      onProgress: (done: number, total: number) => void
+    ): Promise<void> => {
+      if (teamIds.length === 0 || !id) return;
+      setErrorMsg(null);
 
-    const teamIds = Array.from(bulkSelectedTeamIds);
-    setBulkProgress({ done: 0, total: teamIds.length });
+      let failCount = 0;
+      for (let i = 0; i < teamIds.length; i++) {
+        try {
+          const res = await addTeamMutate(`/api/admin/tournament/${id}/teams`, {
+            method: 'POST',
+            body: JSON.stringify({ team_id: teamIds[i] }),
+          });
 
-    let failCount = 0;
-    for (let i = 0; i < teamIds.length; i++) {
-      try {
-        const res = await addTeamMutate(`/api/admin/tournament/${id}/teams`, {
-          method: 'POST',
-          body: JSON.stringify({ team_id: teamIds[i] }),
-        });
-
-        if (!res.ok) {
+          if (!res.ok) {
+            failCount++;
+          }
+        } catch {
           failCount++;
         }
-      } catch {
-        failCount++;
+        onProgress(i + 1, teamIds.length);
       }
-      setBulkProgress({ done: i + 1, total: teamIds.length });
-    }
 
-    setBulkAdding(false);
-    setShowBulkAddModal(false);
-    setBulkSelectedTeamIds(new Set());
-    setBulkSearchFilter('');
-
-    if (failCount === 0) {
-      addToast(
-        format(tx.toastBulkTeamsAdded, { count: teamIds.length }),
-        'success'
-      );
-    } else {
-      addToast(
-        format(tx.toastBulkTeamsPartial, {
-          added: teamIds.length - failCount,
-          total: teamIds.length,
-          errors: failCount,
-        }),
-        'success'
-      );
-    }
-    fetchTournamentTeams();
-  }
-
-  async function handleCreateStage() {
-    if (!newStageName.trim() || !id) return;
-    setCreatingStage(true);
-    setErrorMsg(null);
-
-    try {
-      const res = await createStageMutate(
-        `/api/admin/tournament/${id}/stages`,
-        {
-          method: 'POST',
-          body: JSON.stringify({
-            name: newStageName.trim(),
-            stage_type: newStageType,
-            order_index: stages.length,
+      if (failCount === 0) {
+        addToast(
+          format(tx.toastBulkTeamsAdded, { count: teamIds.length }),
+          'success'
+        );
+      } else {
+        addToast(
+          format(tx.toastBulkTeamsPartial, {
+            added: teamIds.length - failCount,
+            total: teamIds.length,
+            errors: failCount,
           }),
-        }
-      );
-
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || tx.errorCreateStage);
+          'success'
+        );
       }
+      fetchTournamentTeams();
+    },
+    [id, addTeamMutate, tx, addToast, fetchTournamentTeams]
+  );
 
-      setShowNewStageModal(false);
-      setNewStageName('');
-      setNewStageType('bracket');
-      addToast(tx.toastStageCreated, 'success');
-      fetchStages();
-    } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? tx.errorUnexpected);
-    } finally {
-      setCreatingStage(false);
-    }
-  }
+  // The NewStageModal owns its name/type/creating state; parent keeps the
+  // create call (order_index derived from the current stage count) + refetch.
+  const handleCreateStageSubmit = useCallback(
+    async (name: string, stageType: string): Promise<boolean> => {
+      if (!id) return false;
+      setErrorMsg(null);
+
+      try {
+        const res = await createStageMutate(
+          `/api/admin/tournament/${id}/stages`,
+          {
+            method: 'POST',
+            body: JSON.stringify({
+              name,
+              stage_type: stageType,
+              order_index: stages.length,
+            }),
+          }
+        );
+
+        if (!res.ok) {
+          const json = await res.json().catch(() => ({}));
+          throw new Error(json.error || tx.errorCreateStage);
+        }
+
+        addToast(tx.toastStageCreated, 'success');
+        fetchStages();
+        return true;
+      } catch (err: unknown) {
+        setErrorMsg((err as Error)?.message ?? tx.errorUnexpected);
+        return false;
+      }
+    },
+    [id, createStageMutate, stages.length, tx, addToast, fetchStages]
+  );
 
   const publicUrl = tournament?.slug
     ? `/tournament/${tournament.slug}`
     : `/tournament/${tournament?.id}`;
 
-  const availableTeamsToAdd = allTeams.filter(
-    (t) => !tournamentTeams.some((tt) => tt.team_id === t.id)
+  const availableTeamsToAdd = useMemo(
+    () =>
+      allTeams.filter(
+        (t) => !tournamentTeams.some((tt) => tt.team_id === t.id)
+      ),
+    [allTeams, tournamentTeams]
+  );
+
+  // Stable reference so memoized team rows aren't invalidated every render.
+  const registrationFields = useMemo(
+    () => tournament?.registration_fields ?? [],
+    [tournament?.registration_fields]
   );
 
   return (
@@ -1773,8 +1653,6 @@ function AdminTournamentPage({
                         <button
                           onClick={() => {
                             setShowBulkAddModal(true);
-                            setBulkSelectedTeamIds(new Set());
-                            setBulkSearchFilter('');
                             fetchAllTeams();
                           }}
                           className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors flex items-center gap-1.5"
@@ -1809,72 +1687,15 @@ function AdminTournamentPage({
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-64 overflow-y-auto pr-1">
                         {tournamentTeams
                           .sort((a, b) => (a.seed ?? 999) - (b.seed ?? 999))
-                          .map((tt) => {
-                            const registrationFields =
-                              tournament?.registration_fields ?? [];
-                            const showAnswers =
-                              registrationFields.length > 0 &&
-                              hasRenderableAnswers(
-                                tt.field_values,
-                                registrationFields
-                              );
-                            return (
-                              <div
-                                key={tt.id}
-                                className="bg-neutral-900/50 rounded-lg px-3 py-2 group"
-                              >
-                                <div className="flex items-center justify-between gap-2">
-                                  <div className="flex items-center gap-2 min-w-0">
-                                    {tt.seed && (
-                                      <span className="text-xs text-neutral-500 font-mono w-6">
-                                        #{tt.seed}
-                                      </span>
-                                    )}
-                                    {tt.team?.logo_url && (
-                                      <Image
-                                        src={tt.team.logo_url}
-                                        alt=""
-                                        width={24}
-                                        height={24}
-                                        className="w-6 h-6 rounded object-cover"
-                                      />
-                                    )}
-                                    <span className="truncate text-sm font-medium">
-                                      {tt.team?.name || tx.unknownTeam}
-                                    </span>
-                                  </div>
-                                  <button
-                                    onClick={() => handleRemoveTeam(tt.id)}
-                                    className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-900/50 text-red-400 transition-all"
-                                    title={tx.removeFromTournament}
-                                  >
-                                    <svg
-                                      className="w-4 h-4"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      viewBox="0 0 24 24"
-                                    >
-                                      <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M6 18L18 6M6 6l12 12"
-                                      />
-                                    </svg>
-                                  </button>
-                                </div>
-                                {showAnswers && (
-                                  <RegistrationAnswers
-                                    fieldValues={
-                                      tt.field_values as Record<string, unknown>
-                                    }
-                                    fields={registrationFields}
-                                    compact
-                                  />
-                                )}
-                              </div>
-                            );
-                          })}
+                          .map((tt) => (
+                            <TeamRow
+                              key={tt.id}
+                              tt={tt}
+                              registrationFields={registrationFields}
+                              onRemove={handleRemoveTeam}
+                              tx={tx}
+                            />
+                          ))}
                       </div>
                     )}
                   </section>
@@ -1945,54 +1766,7 @@ function AdminTournamentPage({
                               (a.order_index ?? 0) - (b.order_index ?? 0)
                           )
                           .map((stage) => (
-                            <Link
-                              key={stage.id}
-                              href={`/admin/stages/${stage.id}`}
-                              className="flex items-center justify-between gap-3 bg-neutral-900/50 hover:bg-neutral-900 rounded-xl px-4 py-3 transition-colors group"
-                            >
-                              <div className="flex items-center gap-3">
-                                <span className="text-xs font-mono text-neutral-500 w-6">
-                                  {(stage.order_index ?? 0) + 1}.
-                                </span>
-                                <div>
-                                  <div className="font-medium text-sm group-hover:text-white transition-colors">
-                                    {stage.name}
-                                  </div>
-                                  <div className="flex items-center gap-2 mt-1">
-                                    <span
-                                      className={`px-2 py-0.5 rounded-full text-xs border ${stageTypeColor(
-                                        stage.stage_type
-                                      )}`}
-                                    >
-                                      {stageTypeLabel(tx, stage.stage_type)}
-                                    </span>
-                                    {stage.is_active && (
-                                      <span className="px-2 py-0.5 rounded-full text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                                        {tx.stageActive}
-                                      </span>
-                                    )}
-                                    {stage.is_public && (
-                                      <span className="px-2 py-0.5 rounded-full text-xs bg-blue-500/20 text-blue-300 border border-blue-500/30">
-                                        {tx.stagePublic}
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                              <svg
-                                className="w-5 h-5 text-neutral-500 group-hover:text-white transition-colors"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M9 5l7 7-7 7"
-                                />
-                              </svg>
-                            </Link>
+                            <StageRow key={stage.id} stage={stage} tx={tx} />
                           ))}
                       </div>
                     )}
@@ -2223,93 +1997,11 @@ function AdminTournamentPage({
                     ) : (
                       <div className="space-y-2">
                         {recentMatches.map((match) => (
-                          <Link
+                          <RecentMatchRow
                             key={match.id}
-                            href={`/admin/matches/${match.id}`}
-                            className="block bg-neutral-900/50 hover:bg-neutral-900 rounded-xl p-3 transition-colors group"
-                          >
-                            <div className="flex items-center justify-between gap-2 mb-2">
-                              <span
-                                className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${matchStatusColor(
-                                  match.status
-                                )}`}
-                              >
-                                {matchStatusLabel(tx, match.status)}
-                              </span>
-                              {match.round_number && (
-                                <span className="text-[10px] text-neutral-500">
-                                  {format(tx.roundLabel, {
-                                    round: match.round_number,
-                                  })}
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex items-center justify-between gap-2">
-                              {/* Team 1 */}
-                              <div className="flex items-center gap-2 flex-1 min-w-0">
-                                {match.team1?.logo_url ? (
-                                  <Image
-                                    src={match.team1.logo_url}
-                                    alt=""
-                                    width={24}
-                                    height={24}
-                                    className="w-6 h-6 rounded object-cover"
-                                  />
-                                ) : (
-                                  <div className="w-6 h-6 rounded bg-neutral-700 flex items-center justify-center text-[10px] font-semibold">
-                                    {(match.team1?.name || 'TBD')
-                                      .slice(0, 2)
-                                      .toUpperCase()}
-                                  </div>
-                                )}
-                                <span
-                                  className={`text-xs font-medium truncate ${
-                                    match.winner_team_id === match.team1?.id
-                                      ? 'text-emerald-400'
-                                      : 'text-neutral-300'
-                                  }`}
-                                >
-                                  {match.team1?.name || 'TBD'}
-                                </span>
-                              </div>
-
-                              {/* Score */}
-                              <div className="text-sm font-bold px-2 py-0.5 bg-neutral-800 rounded">
-                                {typeof match.team1_score === 'number' ||
-                                typeof match.team2_score === 'number'
-                                  ? `${match.team1_score ?? 0} - ${match.team2_score ?? 0}`
-                                  : 'vs'}
-                              </div>
-
-                              {/* Team 2 */}
-                              <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
-                                <span
-                                  className={`text-xs font-medium truncate ${
-                                    match.winner_team_id === match.team2?.id
-                                      ? 'text-emerald-400'
-                                      : 'text-neutral-300'
-                                  }`}
-                                >
-                                  {match.team2?.name || 'TBD'}
-                                </span>
-                                {match.team2?.logo_url ? (
-                                  <Image
-                                    src={match.team2.logo_url}
-                                    alt=""
-                                    width={24}
-                                    height={24}
-                                    className="w-6 h-6 rounded object-cover"
-                                  />
-                                ) : (
-                                  <div className="w-6 h-6 rounded bg-neutral-700 flex items-center justify-center text-[10px] font-semibold">
-                                    {(match.team2?.name || 'TBD')
-                                      .slice(0, 2)
-                                      .toUpperCase()}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </Link>
+                            match={match}
+                            tx={tx}
+                          />
                         ))}
                       </div>
                     )}
@@ -2517,70 +2209,13 @@ function AdminTournamentPage({
       </div>
 
       {/* Add Team Modal */}
-      <Modal
+      <AddTeamModal
         open={showAddTeamModal}
-        onClose={() => {
-          setShowAddTeamModal(false);
-          setSelectedTeamId('');
-          setTeamSeed('');
-        }}
-        title={tx.addTeamTitle}
-        footer={
-          <>
-            <button
-              onClick={() => {
-                setShowAddTeamModal(false);
-                setSelectedTeamId('');
-                setTeamSeed('');
-              }}
-              className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
-            >
-              {tx.cancel}
-            </button>
-            <button
-              onClick={handleAddTeam}
-              disabled={!selectedTeamId || addingTeam}
-              className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {addingTeam ? tx.adding : tx.add}
-            </button>
-          </>
-        }
-      >
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm text-neutral-400 mb-1">
-              {tx.teamLabel}
-            </label>
-            <select
-              value={selectedTeamId}
-              onChange={(e) => setSelectedTeamId(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">{tx.selectTeam}</option>
-              {availableTeamsToAdd.map((team) => (
-                <option key={team.id} value={team.id}>
-                  {team.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm text-neutral-400 mb-1">
-              {tx.seedLabel}
-            </label>
-            <input
-              type="number"
-              value={teamSeed}
-              onChange={(e) => setTeamSeed(e.target.value)}
-              placeholder="1, 2, 3..."
-              min={1}
-              className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-        </div>
-      </Modal>
+        availableTeams={availableTeamsToAdd}
+        onClose={() => setShowAddTeamModal(false)}
+        onSubmit={handleAddTeamSubmit}
+        tx={tx}
+      />
 
       {/* Status Regression Confirm Dialog */}
       {showStatusConfirm && pendingStatusValue && (
@@ -2623,227 +2258,22 @@ function AdminTournamentPage({
       )}
 
       {/* Bulk Add Teams Modal */}
-      <Modal
+      <BulkAddTeamsModal
         open={showBulkAddModal}
-        onClose={() => {
-          if (bulkAdding) return;
-          setShowBulkAddModal(false);
-          setBulkSelectedTeamIds(new Set());
-          setBulkSearchFilter('');
-        }}
-        title={tx.bulkAddTitle}
-        size="lg"
-        disableBackdropClose={bulkAdding}
-        disableEscapeClose={bulkAdding}
-        footer={
-          <>
-            <button
-              onClick={() => {
-                setShowBulkAddModal(false);
-                setBulkSelectedTeamIds(new Set());
-                setBulkSearchFilter('');
-              }}
-              disabled={bulkAdding}
-              className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors disabled:opacity-50"
-            >
-              {tx.cancel}
-            </button>
-            <button
-              onClick={handleBulkAddTeams}
-              disabled={bulkSelectedTeamIds.size === 0 || bulkAdding}
-              className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {bulkAdding
-                ? format(tx.bulkAddingProgress, {
-                    done: bulkProgress.done,
-                    total: bulkProgress.total,
-                  })
-                : format(tx.bulkAddButton, {
-                    count:
-                      bulkSelectedTeamIds.size > 0
-                        ? `(${bulkSelectedTeamIds.size})`
-                        : '',
-                  })}
-            </button>
-          </>
-        }
-      >
-        <>
-          {/* Search filter */}
-          <input
-            type="text"
-            value={bulkSearchFilter}
-            onChange={(e) => setBulkSearchFilter(e.target.value)}
-            placeholder={tx.searchTeamPlaceholder}
-            className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3 text-sm"
-          />
-
-          {/* Select all / deselect all */}
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs text-neutral-400">
-              {format(tx.selectedTeamsCount, {
-                count: bulkSelectedTeamIds.size,
-              })}
-            </span>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  const filtered = availableTeamsToAdd
-                    .filter((t) =>
-                      t.name
-                        .toLowerCase()
-                        .includes(bulkSearchFilter.toLowerCase())
-                    )
-                    .map((t) => t.id);
-                  setBulkSelectedTeamIds(new Set(filtered));
-                }}
-                className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
-              >
-                {tx.selectAll}
-              </button>
-              <button
-                type="button"
-                onClick={() => setBulkSelectedTeamIds(new Set())}
-                className="text-xs text-neutral-400 hover:text-neutral-300 transition-colors"
-              >
-                {tx.deselectAll}
-              </button>
-            </div>
-          </div>
-
-          {/* Team checkbox list */}
-          <div className="max-h-64 overflow-y-auto space-y-1 mb-4 border border-neutral-700 rounded-lg p-2">
-            {availableTeamsToAdd
-              .filter((t) =>
-                t.name.toLowerCase().includes(bulkSearchFilter.toLowerCase())
-              )
-              .map((team) => (
-                <label
-                  key={team.id}
-                  className="flex items-center gap-3 px-2 py-1.5 rounded-lg hover:bg-neutral-700/50 cursor-pointer transition-colors"
-                >
-                  <input
-                    type="checkbox"
-                    checked={bulkSelectedTeamIds.has(team.id)}
-                    onChange={(e) => {
-                      const next = new Set(bulkSelectedTeamIds);
-                      if (e.target.checked) {
-                        next.add(team.id);
-                      } else {
-                        next.delete(team.id);
-                      }
-                      setBulkSelectedTeamIds(next);
-                    }}
-                    className="rounded border-neutral-600 bg-neutral-700 text-blue-500 focus:ring-blue-500 focus:ring-offset-0"
-                  />
-                  {team.logo_url && (
-                    <Image
-                      src={team.logo_url}
-                      alt=""
-                      width={20}
-                      height={20}
-                      className="w-5 h-5 rounded object-cover"
-                    />
-                  )}
-                  <span className="text-sm">{team.name}</span>
-                </label>
-              ))}
-            {availableTeamsToAdd.filter((t) =>
-              t.name.toLowerCase().includes(bulkSearchFilter.toLowerCase())
-            ).length === 0 && (
-              <div className="text-neutral-500 text-sm text-center py-4">
-                {tx.noAvailableTeam}
-              </div>
-            )}
-          </div>
-
-          {/* Progress indicator */}
-          {bulkAdding && (
-            <div className="mb-4">
-              <div className="flex items-center gap-2 text-xs text-neutral-400 mb-1">
-                <div className="w-3 h-3 border border-neutral-500 border-t-white rounded-full animate-spin" />
-                {format(tx.bulkAddingInProgress, {
-                  done: bulkProgress.done,
-                  total: bulkProgress.total,
-                })}
-              </div>
-              <div className="w-full bg-neutral-700 rounded-full h-1.5">
-                <div
-                  className="bg-blue-500 h-1.5 rounded-full transition-all"
-                  style={{
-                    width: `${bulkProgress.total > 0 ? (bulkProgress.done / bulkProgress.total) * 100 : 0}%`,
-                  }}
-                />
-              </div>
-            </div>
-          )}
-        </>
-      </Modal>
+        availableTeams={availableTeamsToAdd}
+        onClose={() => setShowBulkAddModal(false)}
+        onSubmit={handleBulkAddSubmit}
+        tx={tx}
+      />
 
       {/* New Stage Modal */}
-      <Modal
+      <NewStageModal
         open={showNewStageModal}
-        onClose={() => {
-          setShowNewStageModal(false);
-          setNewStageName('');
-          setNewStageType('bracket');
-        }}
-        title={tx.createStageTitle}
-        footer={
-          <>
-            <button
-              onClick={() => {
-                setShowNewStageModal(false);
-                setNewStageName('');
-                setNewStageType('bracket');
-              }}
-              className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
-            >
-              {tx.cancel}
-            </button>
-            <button
-              onClick={handleCreateStage}
-              disabled={!newStageName.trim() || creatingStage}
-              className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {creatingStage ? tx.creating : tx.create}
-            </button>
-          </>
-        }
-      >
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm text-neutral-400 mb-1">
-              {tx.stageNameLabel}
-            </label>
-            <input
-              type="text"
-              value={newStageName}
-              onChange={(e) => setNewStageName(e.target.value)}
-              placeholder={tx.stageNamePlaceholder}
-              className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm text-neutral-400 mb-1">
-              {tx.stageTypeLabel}
-            </label>
-            <select
-              value={newStageType}
-              onChange={(e) => setNewStageType(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500"
-            >
-              {STAGE_TYPE_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </Modal>
+        stageTypeOptions={STAGE_TYPE_OPTIONS}
+        onClose={() => setShowNewStageModal(false)}
+        onSubmit={handleCreateStageSubmit}
+        tx={tx}
+      />
 
       {/* Clone Confirm Dialog */}
       {showCloneConfirm && (
@@ -2946,71 +2376,7 @@ function AdminTournamentPage({
               )}
             </div>
             {conflicts.map((c, i) => (
-              <div
-                key={i}
-                className="bg-neutral-900/70 border border-red-500/20 rounded-xl p-4 space-y-2"
-              >
-                <div className="flex items-center gap-2 text-sm">
-                  <span className="px-2 py-0.5 rounded-full text-xs bg-red-500/20 text-red-300 border border-red-500/30">
-                    {format(tx.overlapLabel, { minutes: c.overlap_minutes })}
-                  </span>
-                  <span className="font-medium text-white">{c.team_name}</span>
-                </div>
-                <div className="grid grid-cols-2 gap-3 text-xs">
-                  <div className="bg-neutral-800/50 rounded-lg p-2.5">
-                    <div className="text-neutral-500 mb-1">{tx.matchA}</div>
-                    <div className="text-neutral-300">
-                      {c.match_a.stage_name && (
-                        <span>{c.match_a.stage_name} · </span>
-                      )}
-                      {c.match_a.round_number && (
-                        <span>
-                          {format(tx.roundLabel, {
-                            round: c.match_a.round_number,
-                          })}
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-neutral-400 mt-1">
-                      {new Date(c.match_a.scheduled_at).toLocaleString(
-                        'fr-FR',
-                        { dateStyle: 'short', timeStyle: 'short' }
-                      )}
-                      {' → '}
-                      {new Date(c.match_a.estimated_end).toLocaleTimeString(
-                        'fr-FR',
-                        { hour: '2-digit', minute: '2-digit' }
-                      )}
-                    </div>
-                  </div>
-                  <div className="bg-neutral-800/50 rounded-lg p-2.5">
-                    <div className="text-neutral-500 mb-1">{tx.matchB}</div>
-                    <div className="text-neutral-300">
-                      {c.match_b.stage_name && (
-                        <span>{c.match_b.stage_name} · </span>
-                      )}
-                      {c.match_b.round_number && (
-                        <span>
-                          {format(tx.roundLabel, {
-                            round: c.match_b.round_number,
-                          })}
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-neutral-400 mt-1">
-                      {new Date(c.match_b.scheduled_at).toLocaleString(
-                        'fr-FR',
-                        { dateStyle: 'short', timeStyle: 'short' }
-                      )}
-                      {' → '}
-                      {new Date(c.match_b.estimated_end).toLocaleTimeString(
-                        'fr-FR',
-                        { hour: '2-digit', minute: '2-digit' }
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <ConflictRow key={i} conflict={c} tx={tx} />
             ))}
           </div>
         )}
