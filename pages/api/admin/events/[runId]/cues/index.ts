@@ -27,6 +27,7 @@ import { applyRateLimit } from '@/utils/rateLimit';
 import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { logger } from '@/utils/logger';
+import type { EventCue } from '@/types/events';
 
 const CreateCueSchema = z.object({
   severity: z.enum(['info', 'warn', 'urgent']),
@@ -119,7 +120,7 @@ async function postHandler(
     .from('event_cues')
     .insert(insertPayload)
     .select(
-      'id, event_run_id, severity, body, created_by_user_id, created_at, expires_at, dedup_key'
+      'id, event_run_id, severity, body, created_by_user_id, created_at, expires_at, dedup_key, retracted_at, retracted_by_user_id'
     )
     .single();
 
@@ -137,7 +138,7 @@ async function postHandler(
       const { data: existing, error: fetchErr } = await admin
         .from('event_cues')
         .select(
-          'id, event_run_id, severity, body, created_by_user_id, created_at, expires_at, dedup_key'
+          'id, event_run_id, severity, body, created_by_user_id, created_at, expires_at, dedup_key, retracted_at, retracted_by_user_id'
         )
         .eq('tenant_id', ctx.tenantId)
         .eq('dedup_key', dedupKey)
@@ -219,7 +220,7 @@ async function getHandler(
   const { data: cues, error: cuesErr } = await admin
     .from('event_cues')
     .select(
-      'id, event_run_id, severity, body, created_by_user_id, created_at, expires_at, dedup_key'
+      'id, event_run_id, severity, body, created_by_user_id, created_at, expires_at, dedup_key, retracted_at, retracted_by_user_id'
     )
     .eq('event_run_id', runId)
     .eq('tenant_id', ctx.tenantId)
@@ -231,17 +232,10 @@ async function getHandler(
     return res.status(500).json({ error: 'Failed to load cues.' });
   }
 
-  type CueRow = {
-    id: string;
-    event_run_id: string;
-    severity: 'info' | 'warn' | 'urgent';
-    body: string;
-    created_by_user_id: string | null;
-    created_at: string;
-    expires_at: string | null;
-    dedup_key: string | null;
-  };
-  const rows: CueRow[] = (cues as CueRow[] | null) ?? [];
+  // Type = EventCue canonique (types/events.ts), pas de re-declaration locale :
+  // le SELECT ci-dessus reprend exactement ses colonnes. Une colonne ajoutee au
+  // type + au select suffit, plus de CueRow a maintenir en parallele.
+  const rows: EventCue[] = (cues as EventCue[] | null) ?? [];
 
   // Fetch acks pour les cues retournes en une seule requete (N+1 evite).
   type AckRow = {

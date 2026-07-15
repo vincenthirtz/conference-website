@@ -151,6 +151,14 @@ export type EventCue = {
    * NULL pour les cues manuels du Director (hors partial unique).
    */
   dedup_key: string | null;
+  /**
+   * Rétractation (soft-delete). NULL = cue actif ; non-NULL = annulé par le
+   * Director. Un cue rétracté est exclu de pendingUrgent (la modal urgente se
+   * ferme) et affiché barré « Annulé » dans les feeds Director + caster.
+   */
+  retracted_at: string | null;
+  /** Auteur de la rétractation (Director). NULL tant que le cue est actif. */
+  retracted_by_user_id: string | null;
 };
 
 /**

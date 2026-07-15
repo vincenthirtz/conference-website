@@ -337,9 +337,11 @@ export function useCueStream({
 
   const pendingUrgent = useMemo<CueWithAck | null>(() => {
     if (cues.length === 0) return null;
-    // FIFO sur urgents non-acked : on prend le plus ancien.
+    // FIFO sur urgents non-acked et NON rétractés : on prend le plus ancien.
+    // Un cue rétracté par le Director (retracted_at set, recu via realtime
+    // UPDATE) sort d'ici → la UrgentCueModal se ferme automatiquement.
     const urgents = cues.filter(
-      (c) => c.severity === 'urgent' && !c.acked_by_me
+      (c) => c.severity === 'urgent' && !c.acked_by_me && !c.retracted_at
     );
     if (urgents.length === 0) return null;
     return urgents.reduce((oldest, c) =>

@@ -28,6 +28,7 @@ import {
 } from '@/utils/casterAuth';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { logger } from '@/utils/logger';
+import type { EventCue } from '@/types/events';
 
 async function handler(
   req: NextApiRequest,
@@ -103,7 +104,7 @@ async function handler(
   let cuesQuery = admin
     .from('event_cues')
     .select(
-      'id, event_run_id, severity, body, created_by_user_id, created_at, expires_at'
+      'id, event_run_id, severity, body, created_by_user_id, created_at, expires_at, dedup_key, retracted_at, retracted_by_user_id'
     )
     .eq('event_run_id', runId)
     .eq('tenant_id', ctx.tenantId)
@@ -120,16 +121,10 @@ async function handler(
     return res.status(500).json({ error: 'Failed to load cues.' });
   }
 
-  type CueRow = {
-    id: string;
-    event_run_id: string;
-    severity: 'info' | 'warn' | 'urgent';
-    body: string;
-    created_by_user_id: string | null;
-    created_at: string;
-    expires_at: string | null;
-  };
-  const rows: CueRow[] = (cues as CueRow[] | null) ?? [];
+  // Type = EventCue canonique (types/events.ts), pas de re-declaration locale.
+  // Le SELECT ci-dessus reprend exactement ses colonnes → enriched = CueWithAck
+  // (EventCue & { acked_by_me }) cote client, sans divergence a maintenir.
+  const rows: EventCue[] = (cues as EventCue[] | null) ?? [];
 
   // acked_by_me : fetch acks pour les cues retournes, filtres sur ctx.caster.id.
   let myAckSet = new Set<string>();
