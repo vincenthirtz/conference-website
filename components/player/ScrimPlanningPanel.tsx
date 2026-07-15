@@ -22,6 +22,13 @@ import AvailabilityCalendar, {
 import PlanningMonthOverview, {
   type PlanningMonthLabels,
 } from '@/components/scrim/PlanningMonthOverview';
+import PlanningParticipation from '@/components/player/scrim-planning/PlanningParticipation';
+import PlanningDeadline from '@/components/player/scrim-planning/PlanningDeadline';
+import PlanningValidatedSlot from '@/components/player/scrim-planning/PlanningValidatedSlot';
+import PlanningToolbar from '@/components/player/scrim-planning/PlanningToolbar';
+import PlanningQuickFill from '@/components/player/scrim-planning/PlanningQuickFill';
+import PlanningBestSlots from '@/components/player/scrim-planning/PlanningBestSlots';
+import PlanningFooter from '@/components/player/scrim-planning/PlanningFooter';
 import { useToast } from '@/components/Toast';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
@@ -147,7 +154,10 @@ export default function ScrimPlanningPanel({
   // jusqu'ici seul l'admin voyait ce classement.
   const topSlots = useMemo(() => {
     if (!gridHeatmap) return [];
-    return rankValidatableSlots(gridHeatmap, planning.staff_required).slice(0, 3);
+    return rankValidatableSlots(gridHeatmap, planning.staff_required).slice(
+      0,
+      3
+    );
   }, [gridHeatmap, planning.staff_required]);
 
   // Qui a répondu ? Parties présentes dans ≥1 cellule de la heatmap anonymisée
@@ -297,7 +307,11 @@ export default function ScrimPlanningPanel({
   // La grille peut afficher la heatmap dès qu'elle est fournie ; en lecture
   // seule on force le mode heatmap si disponible.
   const effectiveMode: 'paint' | 'heatmap' =
-    readOnly && hasHeatmap ? 'heatmap' : mode === 'heatmap' && hasHeatmap ? 'heatmap' : 'paint';
+    readOnly && hasHeatmap
+      ? 'heatmap'
+      : mode === 'heatmap' && hasHeatmap
+        ? 'heatmap'
+        : 'paint';
 
   const handleSave = useCallback(
     async (opts?: { silent?: boolean }) => {
@@ -371,9 +385,7 @@ export default function ScrimPlanningPanel({
 
       {/* Staff requis pour ce scrim (P4-12) */}
       {planning.staff_required && (
-        <p className="mb-3 text-xs text-purple-200/80">
-          {t.staffRequiredNote}
-        </p>
+        <p className="mb-3 text-xs text-purple-200/80">{t.staffRequiredNote}</p>
       )}
 
       {/* Fuseau de référence (P3-11) */}
@@ -386,119 +398,28 @@ export default function ScrimPlanningPanel({
 
       {/* Qui a répondu ? (participation) */}
       {!readOnly && (
-        <div className="mb-4 flex flex-wrap items-center gap-2">
-          <span className="text-xs font-medium text-gray-400">
-            {t.participationTitle}
-          </span>
-          {participationRows.map((r) => {
-            const done = paintedParties.has(r.key);
-            const isMe = r.key === myParty;
-            return (
-              <span
-                key={r.key}
-                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs ${
-                  done
-                    ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-100'
-                    : 'border-white/15 bg-white/5 text-gray-400'
-                }`}
-              >
-                <span
-                  className={`h-1.5 w-1.5 rounded-full ${
-                    done ? 'bg-emerald-400' : 'bg-gray-500'
-                  }`}
-                  aria-hidden="true"
-                />
-                {r.label}
-                {isMe ? ` (${t.participationYou})` : ''}
-                <span
-                  className={done ? 'text-emerald-300/80' : 'text-amber-300/70'}
-                >
-                  · {done ? t.participationPainted : t.participationWaiting}
-                </span>
-              </span>
-            );
-          })}
-        </div>
+        <PlanningParticipation
+          participationRows={participationRows}
+          paintedParties={paintedParties}
+          myParty={myParty}
+        />
       )}
 
       {/* Échéance : compte à rebours avant le 1er jour de créneaux */}
       {!readOnly && daysUntilStart != null && daysUntilStart >= 0 && (
-        <div
-          className={`mb-4 flex items-center gap-2 rounded-xl border px-4 py-2.5 text-xs ${
-            daysUntilStart <= 2
-              ? 'border-amber-500/40 bg-amber-500/10 text-amber-100'
-              : 'border-white/10 bg-white/5 text-gray-300'
-          }`}
-        >
-          <svg
-            className="h-4 w-4 flex-shrink-0"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            strokeWidth={2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <circle cx="12" cy="12" r="9" />
-            <path d="M12 7v5l3 2" />
-          </svg>
-          <span>
-            {daysUntilStart === 0
-              ? t.deadlineToday
-              : format(
-                  daysUntilStart === 1 ? t.deadlineDays_one : t.deadlineDays_other,
-                  { count: daysUntilStart }
-                )}
-          </span>
-        </div>
+        <PlanningDeadline daysUntilStart={daysUntilStart} />
       )}
 
       {/* Créneau validé */}
       {planning.validated_slot && (
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
-          <span>
-            {format(t.validatedNotice, {
-              date: formatSlot(planning.validated_slot),
-            })}
-            {viewerTz && viewerTz !== planning.timezone && (
-              <span className="ml-1 text-emerald-200/70">
-                (
-                {new Date(planning.validated_slot).toLocaleString(locale, {
-                  weekday: 'short',
-                  day: 'numeric',
-                  month: 'short',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  timeZone: viewerTz,
-                })}{' '}
-                {viewerTz})
-              </span>
-            )}
-          </span>
-          <button
-            type="button"
-            onClick={addToCalendar}
-            className="inline-flex flex-shrink-0 items-center gap-1.5 rounded-lg border border-emerald-400/40 bg-emerald-500/15 px-3 py-1.5 text-xs font-medium text-emerald-100 hover:bg-emerald-500/25 transition"
-          >
-            <svg
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              strokeWidth={2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <rect x="3" y="4" width="18" height="18" rx="2" />
-              <line x1="16" y1="2" x2="16" y2="6" />
-              <line x1="8" y1="2" x2="8" y2="6" />
-              <line x1="3" y1="10" x2="21" y2="10" />
-            </svg>
-            {t.addToCalendar}
-          </button>
-        </div>
+        <PlanningValidatedSlot
+          validatedSlot={planning.validated_slot}
+          viewerTz={viewerTz}
+          timezone={planning.timezone}
+          locale={locale}
+          formatSlot={formatSlot}
+          onAddToCalendar={addToCalendar}
+        />
       )}
 
       {/* Lecture seule */}
@@ -509,154 +430,33 @@ export default function ScrimPlanningPanel({
       )}
 
       {/* Bascules : vue (agenda/grille) + mode (paint/heatmap) */}
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        <div className="inline-flex rounded-xl border border-white/10 bg-white/5 p-1 text-xs">
-          <button
-            type="button"
-            onClick={() => setView('calendar')}
-            className={`rounded-lg px-3 py-1.5 font-medium transition ${
-              view === 'calendar'
-                ? 'bg-white/15 text-white'
-                : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            {t.viewCalendar}
-          </button>
-          <button
-            type="button"
-            onClick={() => setView('grid')}
-            className={`rounded-lg px-3 py-1.5 font-medium transition ${
-              view === 'grid'
-                ? 'bg-white/15 text-white'
-                : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            {t.viewGrid}
-          </button>
-          <button
-            type="button"
-            onClick={() => setView('month')}
-            className={`rounded-lg px-3 py-1.5 font-medium transition ${
-              view === 'month'
-                ? 'bg-white/15 text-white'
-                : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            {t.viewMonth}
-          </button>
-        </div>
-
-        {hasHeatmap && !readOnly && view !== 'month' && (
-          <div className="inline-flex rounded-xl border border-white/10 bg-white/5 p-1 text-xs">
-            <button
-              type="button"
-              onClick={() => setMode('paint')}
-              className={`rounded-lg px-3 py-1.5 font-medium transition ${
-                effectiveMode === 'paint'
-                  ? 'bg-white/15 text-white'
-                  : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              {t.modePaint}
-            </button>
-            <button
-              type="button"
-              onClick={() => setMode('heatmap')}
-              className={`rounded-lg px-3 py-1.5 font-medium transition ${
-                effectiveMode === 'heatmap'
-                  ? 'bg-white/15 text-white'
-                  : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              {t.modeHeatmap}
-            </button>
-          </div>
-        )}
-      </div>
+      <PlanningToolbar
+        view={view}
+        onViewChange={setView}
+        showModeToggle={hasHeatmap && !readOnly && view !== 'month'}
+        effectiveMode={effectiveMode}
+        onModeChange={setMode}
+      />
 
       {/* Remplissage rapide (P3-9) */}
       {!readOnly && effectiveMode === 'paint' && view !== 'month' && (
-        <div className="mb-3 flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={fillAll}
-            className="rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-medium text-gray-200 hover:bg-white/10 transition"
-          >
-            {t.quickFillAll}
-          </button>
-          <button
-            type="button"
-            onClick={copyFirstDay}
-            disabled={slots.length === 0}
-            className="rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-medium text-gray-200 hover:bg-white/10 disabled:opacity-40 transition"
-          >
-            {t.quickCopyDay}
-          </button>
-          <button
-            type="button"
-            onClick={reuseUsual}
-            disabled={loadingSuggest}
-            className="rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-medium text-gray-200 hover:bg-white/10 disabled:opacity-40 transition"
-          >
-            {t.quickReuse}
-          </button>
-          <button
-            type="button"
-            onClick={clearAll}
-            disabled={slots.length === 0}
-            className="rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-medium text-gray-300 hover:bg-red-500/15 hover:text-red-200 hover:border-red-500/40 disabled:opacity-40 transition"
-          >
-            {t.quickClear}
-          </button>
-        </div>
+        <PlanningQuickFill
+          onFillAll={fillAll}
+          onCopyFirstDay={copyFirstDay}
+          onReuse={reuseUsual}
+          onClear={clearAll}
+          hasSlots={slots.length > 0}
+          loadingSuggest={loadingSuggest}
+        />
       )}
 
       {/* Meilleur créneau commun (les deux équipes convergent) */}
       {topSlots.length > 0 && (
-        <div className="mb-4 rounded-xl border border-emerald-500/25 bg-emerald-500/5 px-4 py-3">
-          <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-emerald-200">
-            <svg
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              strokeWidth={2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M12 2l2.4 7.4H22l-6 4.6 2.3 7-6.3-4.6L5.7 21 8 14 2 9.4h7.6z" />
-            </svg>
-            {t.bestSlotTitle}
-          </p>
-          <ul className="flex flex-col gap-1.5">
-            {topSlots.map((r) => {
-              const mine = slots.includes(r.slot);
-              return (
-                <li
-                  key={r.slot}
-                  className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-emerald-50"
-                >
-                  <span className="font-medium">{formatSlot(r.slot)}</span>
-                  {r.full && (
-                    <span className="rounded-full border border-emerald-400/40 bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium text-emerald-100">
-                      {t.gridFullOverlap}
-                    </span>
-                  )}
-                  <span
-                    className={
-                      mine
-                        ? 'text-emerald-300'
-                        : 'text-amber-300'
-                    }
-                  >
-                    {mine ? t.bestSlotMeAvailable : t.bestSlotMeMissing}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
+        <PlanningBestSlots
+          topSlots={topSlots}
+          slots={slots}
+          formatSlot={formatSlot}
+        />
       )}
 
       {view === 'month' ? (
@@ -702,43 +502,13 @@ export default function ScrimPlanningPanel({
 
       {/* Pied : compteur + sauvegarde */}
       {!readOnly && effectiveMode === 'paint' && view !== 'month' && (
-        <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-          <span className="flex flex-wrap items-center gap-2 text-xs text-gray-400">
-            {format(slotsCount === 1 ? t.slotsPainted_one : t.slotsPainted_other, {
-              count: slotsCount,
-            })}
-            {saving ? (
-              <span className="inline-flex items-center gap-1 text-gray-400">
-                <span className="h-1.5 w-1.5 rounded-full bg-gray-400 animate-pulse" aria-hidden="true" />
-                {t.saving}
-              </span>
-            ) : dirty ? (
-              <span className="inline-flex items-center gap-1 rounded-full border border-amber-400/40 bg-amber-500/10 px-2 py-0.5 font-medium text-amber-200">
-                <span className="h-1.5 w-1.5 rounded-full bg-amber-400" aria-hidden="true" />
-                {t.unsavedChanges}
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1 text-emerald-300/80">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" aria-hidden="true" />
-                {t.autoSaved}
-              </span>
-            )}
-          </span>
-          <button
-            type="button"
-            onClick={() => handleSave()}
-            disabled={saving}
-            className={`px-5 py-2.5 rounded-xl font-semibold text-sm transition ${
-              saving
-                ? 'bg-gray-600 cursor-not-allowed text-gray-300'
-                : accent === 'purple'
-                  ? 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 text-white'
-                  : 'bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-400 hover:to-cyan-400 text-white'
-            }`}
-          >
-            {saving ? t.saving : t.save}
-          </button>
-        </div>
+        <PlanningFooter
+          slotsCount={slotsCount}
+          saving={saving}
+          dirty={dirty}
+          accent={accent}
+          onSave={() => handleSave()}
+        />
       )}
     </div>
   );

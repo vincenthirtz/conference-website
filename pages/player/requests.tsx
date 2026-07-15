@@ -9,8 +9,10 @@ import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useManagedTeam } from '@/hooks/useManagedTeam';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
-import ScrimSlotCalendarPicker from '@/components/player/ScrimSlotCalendarPicker';
-import TeamPicker from '@/components/player/TeamPicker';
+import RequestTabs from '@/components/player/requests/RequestTabs';
+import TransferRequestForm from '@/components/player/requests/TransferRequestForm';
+import ScrimRequestForm from '@/components/player/requests/ScrimRequestForm';
+import type { Team } from '@/components/player/requests/types';
 import { useToast } from '@/components/Toast';
 import { useT, format } from '@/lib/i18n/useT';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
@@ -18,16 +20,6 @@ import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { logger } from '../../utils/logger';
 
 type Tab = 'transfer' | 'scrim';
-
-type Team = {
-  id: string;
-  name: string;
-  short_name: string | null;
-  logo_url: string | null;
-  country: string | null;
-  member_count?: number;
-  is_joinable?: boolean;
-};
 
 export default function PlayerRequestsPage() {
   const router = useRouter();
@@ -354,68 +346,7 @@ export default function PlayerRequestsPage() {
             )}
 
             {/* Onglets */}
-            <div
-              role="tablist"
-              aria-label={t.tabsAria}
-              className="flex gap-2 mb-6"
-            >
-              <button
-                type="button"
-                role="tab"
-                id="requests-tab-transfer"
-                aria-selected={tab === 'transfer'}
-                aria-controls="requests-tabpanel"
-                onClick={() => handleTabChange('transfer')}
-                className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold transition border ${
-                  tab === 'transfer'
-                    ? 'bg-purple-600/30 border-purple-400/50 text-white'
-                    : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'
-                }`}
-              >
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  strokeWidth={2}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M16 3h5v5" />
-                  <line x1="21" y1="3" x2="14" y2="10" />
-                  <path d="M8 21H3v-5" />
-                  <line x1="3" y1="21" x2="10" y2="14" />
-                </svg>
-                {t.tabTransfer}
-              </button>
-              <button
-                type="button"
-                role="tab"
-                id="requests-tab-scrim"
-                aria-selected={tab === 'scrim'}
-                aria-controls="requests-tabpanel"
-                onClick={() => handleTabChange('scrim')}
-                className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold transition border ${
-                  tab === 'scrim'
-                    ? 'bg-blue-600/30 border-blue-400/50 text-white'
-                    : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'
-                }`}
-              >
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  strokeWidth={2}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <circle cx="12" cy="12" r="10" />
-                  <polygon points="10 8 16 12 10 16 10 8" />
-                </svg>
-                {t.tabScrim}
-              </button>
-            </div>
+            <RequestTabs tab={tab} onTabChange={handleTabChange} />
 
             <div
               role="tabpanel"
@@ -424,504 +355,61 @@ export default function PlayerRequestsPage() {
             >
               {/* Contenu transfert */}
               {tab === 'transfer' && (
-                <>
-                  {!hasTeam ? (
-                    <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-4 text-sm text-amber-200">
-                      <p className="font-semibold mb-1">{t.noTeamTitle}</p>
-                      <p>
-                        {t.noTeamTransfer}{' '}
-                        <Link
-                          href="/player/join-team"
-                          className="text-purple-300 hover:text-purple-200 underline"
-                        >
-                          {t.joinTeam}
-                        </Link>
-                      </p>
-                    </div>
-                  ) : (
-                    <>
-                      {/* Mode toggle pour les capitaines/managers */}
-                      {(isCaptain || isManager) && (
-                        <div
-                          role="tablist"
-                          aria-label={t.transferModeAria}
-                          className="flex gap-2 mb-6"
-                        >
-                          <button
-                            type="button"
-                            role="tab"
-                            id="transfer-mode-tab-propose"
-                            aria-selected={transferMode === 'propose'}
-                            aria-controls="transfer-mode-panel"
-                            onClick={() => {
-                              setTransferMode('propose');
-                              setSelectedTeamId('');
-                              setSelectedPlayerId('');
-                              setError(null);
-                              setErrorField(null);
-                            }}
-                            className={`flex-1 px-4 py-3 rounded-xl text-sm font-semibold transition border ${
-                              transferMode === 'propose'
-                                ? 'bg-purple-600/30 border-purple-400/50 text-white'
-                                : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'
-                            }`}
-                          >
-                            {t.proposeTransferMode}
-                          </button>
-                          <button
-                            type="button"
-                            role="tab"
-                            id="transfer-mode-tab-self"
-                            aria-selected={transferMode === 'self'}
-                            aria-controls="transfer-mode-panel"
-                            onClick={() => {
-                              setTransferMode('self');
-                              setSelectedTeamId('');
-                              setSelectedPlayerId('');
-                              setError(null);
-                              setErrorField(null);
-                            }}
-                            className={`flex-1 px-4 py-3 rounded-xl text-sm font-semibold transition border ${
-                              transferMode === 'self'
-                                ? 'bg-purple-600/30 border-purple-400/50 text-white'
-                                : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'
-                            }`}
-                          >
-                            {t.selfTransferMode}
-                          </button>
-                        </div>
-                      )}
-
-                      <div
-                        role="tabpanel"
-                        id="transfer-mode-panel"
-                        aria-labelledby={`transfer-mode-tab-${transferMode}`}
-                      >
-                        {/* Capitaine : mode "mon transfert" bloque */}
-                        {isCaptain && transferMode === 'self' && (
-                          <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-4 text-sm text-amber-200">
-                            <p className="font-semibold mb-1">
-                              {t.captainTitle}
-                            </p>
-                            <p>{t.captainBlocked}</p>
-                          </div>
-                        )}
-
-                        {/* Mode "proposer un transfert" (capitaine ou manager) */}
-                        {(isCaptain || isManager) &&
-                          transferMode === 'propose' && (
-                            <form
-                              onSubmit={handleSubmitTransfer}
-                              className="space-y-6"
-                            >
-                              <div>
-                                <label className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2">
-                                  {t.playerToTransfer}
-                                </label>
-                                <div className="max-h-48 overflow-y-auto space-y-2 rounded-xl border border-white/10 bg-black/40 p-2">
-                                  {teamMembers.length === 0 && (
-                                    <div className="text-sm text-gray-500 text-center py-4">
-                                      {t.noPlayersInTeam}
-                                    </div>
-                                  )}
-                                  {teamMembers.map((m) => (
-                                    <button
-                                      key={m.user_id}
-                                      type="button"
-                                      onClick={() =>
-                                        setSelectedPlayerId(m.user_id)
-                                      }
-                                      className={`w-full flex items-center gap-3 p-3 rounded-xl text-left transition ${
-                                        selectedPlayerId === m.user_id
-                                          ? 'bg-purple-600/30 border border-purple-400/50'
-                                          : 'bg-white/5 border border-transparent hover:bg-white/10'
-                                      }`}
-                                    >
-                                      <div className="w-8 h-8 rounded-full bg-black/60 border border-white/10 flex items-center justify-center flex-shrink-0">
-                                        <span className="text-xs text-gray-400">
-                                          {(
-                                            m.display_name ||
-                                            m.battle_tag ||
-                                            '?'
-                                          )
-                                            .slice(0, 2)
-                                            .toUpperCase()}
-                                        </span>
-                                      </div>
-                                      <div className="flex-1 min-w-0">
-                                        <div className="font-medium text-white text-sm truncate">
-                                          {m.display_name ||
-                                            m.battle_tag ||
-                                            t.fallbackPlayerName}
-                                        </div>
-                                        <div className="text-xs text-gray-400">
-                                          {m.role === 'substitute'
-                                            ? t.roleSubstitute
-                                            : m.role === 'coach'
-                                              ? t.roleCoach
-                                              : t.rolePlayer}
-                                          {m.battle_tag &&
-                                            ` \u00b7 ${m.battle_tag}`}
-                                        </div>
-                                      </div>
-                                      {selectedPlayerId === m.user_id && (
-                                        <svg
-                                          className="w-5 h-5 text-purple-400 flex-shrink-0"
-                                          fill="currentColor"
-                                          viewBox="0 0 20 20"
-                                        >
-                                          <path
-                                            fillRule="evenodd"
-                                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                            clipRule="evenodd"
-                                          />
-                                        </svg>
-                                      )}
-                                    </button>
-                                  ))}
-                                </div>
-                              </div>
-
-                              <div>
-                                <label className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2">
-                                  {t.targetTeam}
-                                </label>
-                                <input
-                                  type="search"
-                                  value={teamSearch}
-                                  onChange={(e) =>
-                                    setTeamSearch(e.target.value)
-                                  }
-                                  aria-invalid={errorField === 'team'}
-                                  aria-describedby={
-                                    errorField === 'team'
-                                      ? 'requests-error'
-                                      : undefined
-                                  }
-                                  className="w-full rounded-xl border border-white/15 bg-black/60 px-4 py-3 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/80 mb-3"
-                                  placeholder={t.searchTeam}
-                                />
-                                <TeamPicker
-                                  teams={displayTeams}
-                                  value={selectedTeamId}
-                                  onChange={setSelectedTeamId}
-                                  loading={teamsLoading}
-                                  accentColor="purple"
-                                  label={t.targetTeam}
-                                  emptyLabel={t.emptyJoinable}
-                                />
-                              </div>
-
-                              <div>
-                                <label className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2">
-                                  {t.desiredRole}
-                                </label>
-                                <div
-                                  role="radiogroup"
-                                  aria-label={t.roleGroupAria}
-                                  className="flex gap-3"
-                                >
-                                  {(
-                                    ['player', 'substitute', 'coach'] as const
-                                  ).map((role) => (
-                                    <button
-                                      key={role}
-                                      type="button"
-                                      role="radio"
-                                      aria-checked={desiredRole === role}
-                                      onClick={() => setDesiredRole(role)}
-                                      className={`flex-1 px-4 py-3 rounded-xl text-sm font-medium transition border focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/60 ${
-                                        desiredRole === role
-                                          ? 'bg-purple-600/30 border-purple-400/50 text-white'
-                                          : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'
-                                      }`}
-                                    >
-                                      {role === 'player'
-                                        ? t.rolePlayer
-                                        : role === 'substitute'
-                                          ? t.roleSubstitute
-                                          : t.roleCoach}
-                                    </button>
-                                  ))}
-                                </div>
-                              </div>
-
-                              <MessageField
-                                value={message}
-                                onChange={setMessage}
-                                label={t.msgToTargetCaptain}
-                              />
-
-                              {error && <ErrorBanner message={error} />}
-
-                              <SubmitButton
-                                disabled={
-                                  submitting ||
-                                  !selectedTeamId ||
-                                  !selectedPlayerId
-                                }
-                                loading={submitting}
-                                label={t.submitProposeTransfer}
-                              />
-                            </form>
-                          )}
-
-                        {/* Mode "mon transfert" (joueur non-capitaine ou manager en self) */}
-                        {!isCaptain && transferMode === 'self' && (
-                          <form
-                            onSubmit={handleSubmitTransfer}
-                            className="space-y-6"
-                          >
-                            <div>
-                              <label className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2">
-                                {t.targetTeam}
-                              </label>
-                              <input
-                                type="search"
-                                value={teamSearch}
-                                onChange={(e) => setTeamSearch(e.target.value)}
-                                aria-invalid={errorField === 'team'}
-                                aria-describedby={
-                                  errorField === 'team'
-                                    ? 'requests-error'
-                                    : undefined
-                                }
-                                className="w-full rounded-xl border border-white/15 bg-black/60 px-4 py-3 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/80 mb-3"
-                                placeholder={t.searchTeam}
-                              />
-                              <TeamPicker
-                                teams={displayTeams}
-                                value={selectedTeamId}
-                                onChange={setSelectedTeamId}
-                                loading={teamsLoading}
-                                accentColor="purple"
-                                label={t.targetTeam}
-                                emptyLabel={t.emptyJoinable}
-                              />
-                            </div>
-
-                            <div>
-                              <label className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2">
-                                {t.desiredRole}
-                              </label>
-                              <div
-                                role="radiogroup"
-                                aria-label={t.roleGroupAria}
-                                className="flex gap-3"
-                              >
-                                {(
-                                  ['player', 'substitute', 'coach'] as const
-                                ).map((role) => (
-                                  <button
-                                    key={role}
-                                    type="button"
-                                    role="radio"
-                                    aria-checked={desiredRole === role}
-                                    onClick={() => setDesiredRole(role)}
-                                    className={`flex-1 px-4 py-3 rounded-xl text-sm font-medium transition border focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/60 ${
-                                      desiredRole === role
-                                        ? 'bg-purple-600/30 border-purple-400/50 text-white'
-                                        : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'
-                                    }`}
-                                  >
-                                    {role === 'player'
-                                      ? t.rolePlayer
-                                      : role === 'substitute'
-                                        ? t.roleSubstitute
-                                        : t.roleCoach}
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-
-                            <MessageField
-                              value={message}
-                              onChange={setMessage}
-                              label={t.msgToCaptain}
-                            />
-
-                            {error && <ErrorBanner message={error} />}
-
-                            <SubmitButton
-                              disabled={submitting || !selectedTeamId}
-                              loading={submitting}
-                              label={t.submitSelfTransfer}
-                            />
-                          </form>
-                        )}
-                      </div>
-                    </>
-                  )}
-                </>
+                <TransferRequestForm
+                  hasTeam={hasTeam}
+                  isCaptain={isCaptain}
+                  isManager={isManager}
+                  transferMode={transferMode}
+                  setTransferMode={setTransferMode}
+                  teamMembers={teamMembers}
+                  selectedPlayerId={selectedPlayerId}
+                  setSelectedPlayerId={setSelectedPlayerId}
+                  teamSearch={teamSearch}
+                  setTeamSearch={setTeamSearch}
+                  errorField={errorField}
+                  displayTeams={displayTeams}
+                  selectedTeamId={selectedTeamId}
+                  setSelectedTeamId={setSelectedTeamId}
+                  teamsLoading={teamsLoading}
+                  desiredRole={desiredRole}
+                  setDesiredRole={setDesiredRole}
+                  message={message}
+                  setMessage={setMessage}
+                  error={error}
+                  submitting={submitting}
+                  onSubmit={handleSubmitTransfer}
+                  setError={setError}
+                  setErrorField={setErrorField}
+                />
               )}
 
               {/* Contenu scrim */}
               {tab === 'scrim' && (
-                <>
-                  {!hasTeam ? (
-                    <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-4 text-sm text-amber-200">
-                      <p className="font-semibold mb-1">{t.noTeamTitle}</p>
-                      <p>
-                        {t.noTeamScrim}{' '}
-                        <Link
-                          href="/player/join-team"
-                          className="text-purple-300 hover:text-purple-200 underline"
-                        >
-                          {t.joinTeam}
-                        </Link>
-                      </p>
-                    </div>
-                  ) : !isCaptain && !isManager ? (
-                    <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-4 text-sm text-amber-200">
-                      <p className="font-semibold mb-1">
-                        {t.captainOrManagerTitle}
-                      </p>
-                      <p>{t.captainOrManagerBody}</p>
-                    </div>
-                  ) : (
-                    <form onSubmit={handleSubmitScrim} className="space-y-6">
-                      <div>
-                        <label className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2">
-                          {t.opponentTeam}
-                        </label>
-                        <input
-                          type="search"
-                          value={teamSearch}
-                          onChange={(e) => setTeamSearch(e.target.value)}
-                          aria-invalid={errorField === 'team'}
-                          aria-describedby={
-                            errorField === 'team' ? 'requests-error' : undefined
-                          }
-                          className="w-full rounded-xl border border-white/15 bg-black/60 px-4 py-3 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-400/80 mb-3"
-                          placeholder={t.searchTeam}
-                        />
-                        <TeamPicker
-                          teams={displayTeams}
-                          value={selectedTeamId}
-                          onChange={setSelectedTeamId}
-                          loading={teamsLoading}
-                          accentColor="blue"
-                          label={t.opponentTeam}
-                          emptyLabel={t.emptyTeams}
-                        />
-                      </div>
-
-                      <ScrimSlotCalendarPicker
-                        slots={scrimSlots}
-                        onChange={setScrimSlots}
-                        accent="blue"
-                        labels={{
-                          slotsLabel: t.slotsLabel,
-                          removeSlot: t.removeSlot,
-                          maxSlotsHint: t.maxSlotsHint,
-                          timezoneNote: t.scrimTzNote,
-                          prevWeek: t.slotPrevWeek,
-                          nextWeek: t.slotNextWeek,
-                          weekOf: t.slotWeekOf,
-                          maxReached: t.slotMaxReached,
-                          empty: t.slotEmpty,
-                        }}
-                      />
-
-                      <MessageField
-                        value={message}
-                        onChange={setMessage}
-                        label={t.msgToOpponent}
-                        placeholder={t.msgScrimPlaceholder}
-                      />
-
-                      {error && <ErrorBanner message={error} />}
-
-                      <SubmitButton
-                        disabled={submitting || !selectedTeamId}
-                        loading={submitting}
-                        label={t.submitScrim}
-                        color="blue"
-                      />
-                    </form>
-                  )}
-                </>
+                <ScrimRequestForm
+                  hasTeam={hasTeam}
+                  isCaptain={isCaptain}
+                  isManager={isManager}
+                  teamSearch={teamSearch}
+                  setTeamSearch={setTeamSearch}
+                  errorField={errorField}
+                  displayTeams={displayTeams}
+                  selectedTeamId={selectedTeamId}
+                  setSelectedTeamId={setSelectedTeamId}
+                  teamsLoading={teamsLoading}
+                  scrimSlots={scrimSlots}
+                  setScrimSlots={setScrimSlots}
+                  message={message}
+                  setMessage={setMessage}
+                  error={error}
+                  submitting={submitting}
+                  onSubmit={handleSubmitScrim}
+                />
               )}
             </div>
           </div>
         </main>
       </div>
     </>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/*  Sous-composants                                                    */
-/* ------------------------------------------------------------------ */
-
-function MessageField({
-  value,
-  onChange,
-  label,
-  placeholder,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  label: string;
-  placeholder?: string;
-}) {
-  const t = useT('playerRequests');
-  return (
-    <div>
-      <label className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2">
-        {label}
-      </label>
-      <textarea
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        rows={3}
-        className="w-full rounded-xl border border-white/15 bg-black/60 px-4 py-3 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/80 transition resize-none"
-        placeholder={placeholder || t.defaultMsgPlaceholder}
-        maxLength={1000}
-      />
-    </div>
-  );
-}
-
-function ErrorBanner({ message }: { message: string }) {
-  return (
-    <div
-      id="requests-error"
-      role="alert"
-      className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-100"
-    >
-      {message}
-    </div>
-  );
-}
-
-function SubmitButton({
-  disabled,
-  loading,
-  label,
-  color = 'purple',
-}: {
-  disabled: boolean;
-  loading: boolean;
-  label: string;
-  color?: 'purple' | 'blue';
-}) {
-  const t = useT('playerRequests');
-  const gradient =
-    color === 'blue'
-      ? 'bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-400 hover:to-cyan-400'
-      : 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400';
-
-  return (
-    <button
-      type="submit"
-      disabled={disabled}
-      className={`w-full px-4 py-3 rounded-xl font-semibold transition ${
-        disabled ? 'bg-gray-600 cursor-not-allowed' : gradient
-      }`}
-    >
-      {loading ? t.sending : label}
-    </button>
   );
 }
 
