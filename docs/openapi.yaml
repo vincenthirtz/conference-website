@@ -22678,49 +22678,6 @@ paths:
                     type: string
         '400':
           $ref: '#/components/responses/BadRequest'
-  /api/caster/auth/magic-link:
-    post:
-      tags:
-        - public/caster
-      summary: Declenche un magic-link Supabase pour login caster.
-      operationId: casterRequestMagicLink
-      description: |
-        Reponse generique (toujours 200) pour empecher l'enumeration d'emails
-        casters. Si l'email n'existe pas en auth.users, aucun mail n'est
-        envoye (shouldCreateUser=false).
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - email
-              properties:
-                email:
-                  type: string
-                  format: email
-                  maxLength: 254
-      responses:
-        '200':
-          description: Reponse generique anti-enumeration.
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                  - ok
-                  - message
-                properties:
-                  ok:
-                    type: boolean
-                    enum:
-                      - true
-                  message:
-                    type: string
-        '429':
-          $ref: '#/components/responses/RateLimited'
   /api/caster/me:
     get:
       tags:

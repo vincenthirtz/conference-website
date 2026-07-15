@@ -13,7 +13,7 @@
  * Strategie d'auth : on cree un staff manager + un staff caster via
  * Supabase service role (cf. createTestStaff). Login via /login pour
  * les deux (le caster a un staff row + cast_members lie, ce qui debloque
- * le cockpit sans passer par le magic-link).
+ * le cockpit via la session staff standard).
  *
  * Setup pattern mimique caster-cockpit.spec.ts.
  */

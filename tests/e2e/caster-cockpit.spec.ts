@@ -3,15 +3,15 @@
  *
  * Couvre le flow caster :
  *  - Pre-conditions : auth user + cast_members lie + segment live + assignation
- *  - Login flow : magic-link generic 200 + redirect quand session valide
  *  - Cockpit : header caster, upcoming assignments, checklist toggle, hotkeys
- *  - Edge cases : caster sans event live, ownership cross-tenant (403)
+ *  - Edge cases : acces API sans session (401/403), segment introuvable (404)
  *
- * Strategie d'authentification : on cree un staff role='caster' via Supabase
- * service role (createTestStaff). Le caster a un compte email/password reel,
- * donc on se logue via /login (qui partage le meme client supabaseClient
- * et donc les cookies sb-*). Une fois loge, on navigue vers /caster/cockpit.
- * Cela contourne le magic-link sans le casser cote tests.
+ * Strategie d'authentification : le cockpit reutilise la session staff
+ * standard (withCasterRoute = withStaffRoute(_, 'caster')). On cree un staff
+ * role='caster' via Supabase service role (createTestStaff). Le caster a un
+ * compte email/password reel, donc on se logue via /login (qui partage le
+ * meme client supabaseClient et donc les cookies sb-*). Une fois loge, on
+ * navigue vers /caster/cockpit.
  */
 import { test, expect } from '@playwright/test';
 import {
@@ -458,30 +458,6 @@ test.describe.serial('Caster cockpit — golden path', () => {
 
 test.describe('Caster cockpit — edge cases', () => {
   test.skip(!HAS_SUPABASE, 'Supabase service role manquant');
-
-  test('Login avec email inconnu renvoie un succes generique (anti-enumeration)', async ({
-    request,
-  }) => {
-    const res = await request.post('/api/caster/auth/magic-link', {
-      data: { email: `noexist-${TS}@nowhere.invalid` },
-    });
-    expect(res.status()).toBe(200);
-    const body = await res.json();
-    expect(body.ok).toBe(true);
-    expect(body.message).toMatch(/Si tu es caster/);
-  });
-
-  test('Magic-link sans email valide renvoie un succes generique', async ({
-    request,
-  }) => {
-    const res = await request.post('/api/caster/auth/magic-link', {
-      data: { email: 'not-an-email' },
-    });
-    // Schema fails → still returns 200 (anti-error-oracle).
-    expect(res.status()).toBe(200);
-    const body = await res.json();
-    expect(body.ok).toBe(true);
-  });
 
   test('GET /api/caster/me sans session renvoie 401/403', async ({
     request,

@@ -74,7 +74,7 @@ function CockpitPage() {
   useEffect(() => {
     if (session.loading) return;
     if (session.error === 'unauthenticated') {
-      router.replace('/caster/login');
+      router.replace('/admin/login?next=/caster/cockpit');
     }
   }, [router, session.error, session.loading]);
 
@@ -335,7 +335,7 @@ function CockpitPage() {
   const handleSignOut = async () => {
     await session.signOut();
     addToast(t.signedOut, 'info');
-    router.replace('/caster/login');
+    router.replace('/admin/login');
   };
 
   return (
@@ -417,7 +417,7 @@ function CockpitPage() {
         <UpcomingAssignments assignments={session.upcomingAssignments} />
 
         {/* PushOptIn (audience caster) — carte autonome */}
-        <PushOptIn audience="caster" variant="card" loginPath="/caster/login" />
+        <PushOptIn audience="caster" variant="card" loginPath="/admin/login" />
       </div>
 
       {/* Modal bloquante pour cue urgent non ack. FIFO si plusieurs. */}

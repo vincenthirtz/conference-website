@@ -3300,33 +3300,6 @@
     "errorWithStatus": "Error {status}",
     "signedOut": "You are signed out."
   },
-  "casterLogin": {
-    "errNotCaster": "Your account is not linked to any active caster profile. Contact an admin.",
-    "errNoSession": "Link expired or invalid. Request a new link below.",
-    "errCallback": "Error during sign-in. Try again in a moment.",
-    "errEmptyEmail": "Enter your caster email.",
-    "errNetwork": "Network error. Try again in a moment.",
-    "infoSent": "If you are a caster, a sign-in link has just arrived in your inbox. Check your spam folder too.",
-    "docTitle": "Caster sign-in | OW Women's Cup",
-    "title": "Caster sign-in",
-    "subtitle": "Access to the Caster Cockpit — segments, checklist, hotkeys and briefing.",
-    "checkingSession": "Checking session...",
-    "emailLabel": "Caster email",
-    "emailPlaceholder": "firstname.lastname@example.tld",
-    "sending": "Sending the link...",
-    "sent": "Link sent",
-    "sendLink": "Get the link",
-    "resendLink": "Resend a link",
-    "backToSite": "← Back to the public site"
-  },
-  "casterLoginCallback": {
-    "statusValidating": "Validating the link...",
-    "statusExchanging": "Exchanging the code...",
-    "statusVerifying": "Verifying the caster profile...",
-    "statusRedirecting": "Redirecting to the cockpit...",
-    "docTitle": "Signing in...",
-    "pleaseWait": "Please wait while we finalize the sign-in."
-  },
   "cockpitHeader": {
     "roleFallback": "Caster",
     "install": "Install",

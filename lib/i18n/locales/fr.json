@@ -3300,33 +3300,6 @@
     "errorWithStatus": "Erreur {status}",
     "signedOut": "Tu es déconnecté."
   },
-  "casterLogin": {
-    "errNotCaster": "Ton compte n'est lié à aucune fiche caster active. Contacte un admin.",
-    "errNoSession": "Lien expiré ou invalide. Demande un nouveau lien ci-dessous.",
-    "errCallback": "Erreur durant la connexion. Réessaie dans un instant.",
-    "errEmptyEmail": "Entre ton email caster.",
-    "errNetwork": "Erreur réseau. Réessaie dans un instant.",
-    "infoSent": "Si tu es caster, un lien de connexion vient d'arriver dans ta boîte mail. Vérifie aussi les spams.",
-    "docTitle": "Connexion caster | OW Women's Cup",
-    "title": "Connexion caster",
-    "subtitle": "Accès au Cockpit du caster — segments, checklist, hotkeys et briefing.",
-    "checkingSession": "Vérification de la session...",
-    "emailLabel": "Email caster",
-    "emailPlaceholder": "prenom.nom@exemple.tld",
-    "sending": "Envoi du lien...",
-    "sent": "Lien envoyé",
-    "sendLink": "Recevoir le lien",
-    "resendLink": "Renvoyer un lien",
-    "backToSite": "← Retour au site public"
-  },
-  "casterLoginCallback": {
-    "statusValidating": "Validation du lien...",
-    "statusExchanging": "Échange du code...",
-    "statusVerifying": "Vérification du profil caster...",
-    "statusRedirecting": "Redirection vers le cockpit...",
-    "docTitle": "Connexion en cours...",
-    "pleaseWait": "Merci de patienter pendant la finalisation de la connexion."
-  },
   "cockpitHeader": {
     "roleFallback": "Caster",
     "install": "Installer",

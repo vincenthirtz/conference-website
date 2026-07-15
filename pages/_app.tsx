@@ -81,7 +81,7 @@ function MyApp({ Component, pageProps, router, branding }: AppPropsWithSeo) {
   // d'index. L'espace joueur est gate cote client et n'a pas de contenu
   // public a referencer — on force noindex pour eviter d'indexer des coquilles
   // vides / pages d'auth. La navbar/footer marketing restent (sauf caster qui
-  // gere sa propre chrome legere — cf. /caster/login, /caster/cockpit).
+  // gere sa propre chrome legere — cf. /caster/cockpit).
   const effectiveSeo: SeoProps =
     isAdmin || isCaster || isPlayer || isEmbed || isOverlay
       ? { ...seo, noindex: true }

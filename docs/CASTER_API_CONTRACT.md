@@ -466,7 +466,6 @@ The following `/api/caster/*` routes belong to a **separate web feature**
 called by the womenscup-caster Electron app and are **NOT** versioned here.
 Listed only so this inventory stays unambiguous:
 
-- `/api/caster/auth/*` (magic-link)
 - `/api/caster/briefing/[matchId]`
 - `/api/caster/cues/[cueId]/ack`
 - `/api/caster/heartbeat`

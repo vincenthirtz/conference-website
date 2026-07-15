@@ -21,9 +21,9 @@
 // Limitations connues (V1) :
 //   - cast_members.auth_user_id est populé manuellement par les admins via
 //     /admin/cast-members. Tant qu'il n'est pas rempli, le caster ne peut
-//     pas se connecter au cockpit. La creation de session caster
-//     (magic-link) est prevue au Lot 4 — d'ici la, les admins doivent
-//     populer la colonne a la main.
+//     pas se connecter au cockpit. Le caster se connecte via le login staff
+//     standard (/admin/login) : le cockpit reutilise la session staff
+//     Supabase, il n'y a pas de flow d'auth caster dedie.
 //   - On reste sur le tenant resolu par withStaffRoute (cookie / fallback).
 //     On force aussi le cast_members.tenant_id a matcher, pour eviter qu'un
 //     caster du tenant X bascule sur le tenant Y via cookie tampere.

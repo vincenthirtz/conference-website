@@ -13,7 +13,7 @@
 //   - caster!=null : session valide ET caster lie
 //
 // Le hook NE redirige PAS automatiquement. C est au composant page de decider
-// (afficher un message, rediriger vers /caster/login, etc.).
+// (afficher un message, rediriger vers /admin/login, etc.).
 
 import { useCallback, useEffect, useState } from 'react';
 import { supabaseClient } from '@/utils/supabase';
