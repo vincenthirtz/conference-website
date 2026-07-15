@@ -18,7 +18,7 @@
 // controle de la source de verite (utile si on veut aussi refetch en filet de
 // securite).
 
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { useRealtimeChannel } from './useRealtimeChannel';
 import type {
   EventRun,
@@ -63,8 +63,17 @@ export function useEventRunRealtime({
   onRunChange,
   onWaveChange,
   onStationChange,
-}: Options) {
+}: Options): { connected: boolean } {
   const isEnabled = enabled && !!runId;
+
+  // Statut des deux canaux principaux (segments + run) pour exposer un
+  // indicateur temps-reel / mode degrade a l'UI. connected = les deux
+  // SUBSCRIBED. Les canaux waves/stations (optionnels) ne comptent pas : ils
+  // ne sont pas toujours actifs.
+  const [segStatus, setSegStatus] = useState<string | null>(null);
+  const [runStatus, setRunStatus] = useState<string | null>(null);
+  const handleSegStatus = useCallback((s: string) => setSegStatus(s), []);
+  const handleRunStatus = useCallback((s: string) => setRunStatus(s), []);
 
   const handleSegments = useCallback(
     (payload: {
@@ -142,6 +151,7 @@ export function useEventRunRealtime({
     table: 'event_segments',
     filter: runId ? `event_run_id=eq.${runId}` : undefined,
     onChange: handleSegments,
+    onStatus: handleSegStatus,
   });
 
   useRealtimeChannel({
@@ -150,6 +160,7 @@ export function useEventRunRealtime({
     table: 'event_runs',
     filter: runId ? `id=eq.${runId}` : undefined,
     onChange: handleRun,
+    onStatus: handleRunStatus,
   });
 
   useRealtimeChannel({
@@ -167,4 +178,11 @@ export function useEventRunRealtime({
     filter: runId ? `event_run_id=eq.${runId}` : undefined,
     onChange: handleStations,
   });
+
+  // connected = les deux canaux principaux SUBSCRIBED. Guarde par isEnabled
+  // pour ne pas rester "connecte" sur un statut perime quand le hook est off.
+  const connected =
+    isEnabled && segStatus === 'SUBSCRIBED' && runStatus === 'SUBSCRIBED';
+
+  return { connected };
 }

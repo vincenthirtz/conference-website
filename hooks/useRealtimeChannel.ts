@@ -37,6 +37,13 @@ type Options = {
   onChange: (
     payload: RealtimePostgresChangesPayload<Record<string, unknown>>
   ) => void;
+  /**
+   * Optionnel — statut de la souscription ('SUBSCRIBED' | 'CHANNEL_ERROR' |
+   * 'TIMED_OUT' | 'CLOSED'). Permet a l'appelant d'afficher un indicateur
+   * temps-reel / mode degrade. DOIT etre stable (useCallback) sinon la
+   * souscription se recree a chaque render.
+   */
+  onStatus?: (status: string) => void;
 };
 
 export function useRealtimeChannel({
@@ -47,6 +54,7 @@ export function useRealtimeChannel({
   filter,
   event = '*',
   onChange,
+  onStatus,
 }: Options) {
   useEffect(() => {
     if (!enabled) return undefined;
@@ -63,11 +71,16 @@ export function useRealtimeChannel({
     const sub = supabaseClient
       .channel(channel)
       .on('postgres_changes' as never, config, onChange)
-      .subscribe();
+      .subscribe((status) => {
+        onStatus?.(status);
+      });
 
     return () => {
+      // removeChannel n'emet pas toujours un 'CLOSED' via le callback : on le
+      // signale explicitement pour que l'appelant repasse en "deconnecte".
+      onStatus?.('CLOSED');
       supabaseClient.removeChannel(sub);
     };
     // We intentionally re-subscribe when any of the inputs change.
-  }, [enabled, channel, table, schema, filter, event, onChange]);
+  }, [enabled, channel, table, schema, filter, event, onChange, onStatus]);
 }
