@@ -30,6 +30,7 @@ import poleAdminToggle from '../../pages/api/admin/staff/[staffId]/pole-admin';
 import {
   canAccessTenant,
   listAccessibleTenants,
+  invalidateTenantAccessCache,
 } from '../../utils/adminTenants';
 
 const TENANT_A = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
@@ -88,6 +89,7 @@ function makeRes(): any {
 beforeEach(() => {
   resetSupabaseMock();
   invalidateStaffCache();
+  invalidateTenantAccessCache();
   setAuthUser({ id: 'user-1' });
   store.staff = [
     makeStaffRow('owner'),

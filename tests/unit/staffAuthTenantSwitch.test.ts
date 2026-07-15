@@ -20,6 +20,7 @@ import {
   invalidateStaffCache,
   requireStaffRoleFromRequest,
 } from '../../utils/staff';
+import { invalidateTenantAccessCache } from '../../utils/adminTenants';
 
 const TENANT_A = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 const TENANT_B = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
@@ -70,6 +71,7 @@ function makeRes(): any {
 beforeEach(() => {
   resetSupabaseMock();
   invalidateStaffCache();
+  invalidateTenantAccessCache();
   setAuthUser({ id: 'user-1' });
   store.staff = [makeStaffRow()] as any;
   vi.spyOn(console, 'warn').mockImplementation(() => {});

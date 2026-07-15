@@ -1502,22 +1502,27 @@ export default async function handler(
   const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
 
   try {
-    // 1. Essayer de scraper les médias depuis Blizzard
-    let scrapedItems: BlizzardMediaItem[] = [];
-    try {
-      scrapedItems = await scrapeBlizzardMedia();
-      // Sauvegarder en BDD (en arrière-plan)
-      if (scrapedItems.length > 0) {
-        saveMediaToDb(scrapedItems).catch((err) => {
-          logger.error('[/api/blizzard-media] background save error:', err);
-        });
-      }
-    } catch (scrapeError) {
-      logger.error('[/api/blizzard-media] scrape failed:', scrapeError);
-    }
-
-    // 2. Récupérer depuis la BDD
+    // 1. Récupérer d'abord depuis la BDD (rapide). Le scrape (coûteux) n'est
+    //    déclenché qu'en cas de données insuffisantes — inutile de scraper
+    //    puis jeter le résultat quand la BDD suffit déjà.
     const dbItems = await getMediaFromDb(type, limit);
+
+    // 2. Scrape conditionnel : uniquement si la BDD n'a pas assez de données.
+    let scrapedItems: BlizzardMediaItem[] = [];
+    if (dbItems.length < 10) {
+      try {
+        scrapedItems = await scrapeBlizzardMedia();
+        // Sauvegarder en BDD (en arrière-plan) — seulement quand on a
+        // réellement scrapé de nouvelles données.
+        if (scrapedItems.length > 0) {
+          saveMediaToDb(scrapedItems).catch((err) => {
+            logger.error('[/api/blizzard-media] background save error:', err);
+          });
+        }
+      } catch (scrapeError) {
+        logger.error('[/api/blizzard-media] scrape failed:', scrapeError);
+      }
+    }
 
     // 3. Déterminer la source de données à utiliser
     let items: BlizzardMediaItem[];

@@ -4,6 +4,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
+import {
+  consumeDurableRateLimit,
+  clientKeyFromReq,
+} from '@/utils/durableRateLimit';
 import { escapePostgrestValue } from '@/utils/apiHelpers';
 import { withAuthRoute } from '@/utils/staff';
 import {
@@ -33,11 +37,25 @@ export default withAuthRoute(async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // Rate limiting: 30 searches per minute
+  // Rate limiting: 30 searches per minute (L1 mémoire, fail-fast per-process).
   if (
     applyRateLimit(req, res, { max: 30, windowMs: 60 * 1000 }, 'search-players')
   )
     return;
+
+  // L2 — limiteur durable cross-instance (le Map L1 est per-process). FAIL-OPEN
+  // si le RPC erre/absent : ne casse jamais la recherche.
+  const durableAllowed = await consumeDurableRateLimit(
+    `searchplayers:${clientKeyFromReq(req)}`,
+    60,
+    30
+  );
+  if (!durableAllowed) {
+    res.setHeader('Retry-After', '60');
+    return res
+      .status(429)
+      .json({ error: 'Trop de requêtes. Réessayez plus tard.' });
+  }
 
   const tenantId = await resolveTenantIdForUserRequestAsync(req, {
     authUserId: user.id,

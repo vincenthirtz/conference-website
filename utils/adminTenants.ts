@@ -33,6 +33,63 @@ export function isValidTenantUuid(value: unknown): value is string {
   return typeof value === 'string' && UUID_RE.test(value);
 }
 
+/* -----------------------------------------------------------
+ * Cache mémoire court (TTL 60 s) pour `canAccessTenant`.
+ *
+ * `resolveActiveTenant` (chemin nominal cookie) fait un SELECT `tenant_staff`
+ * par navigation admin. L'appartenance staff→tenant est stable à l'échelle
+ * d'une session : on mémoïse le booléen d'accès par `(staffId, tenantId)`
+ * sur une courte fenêtre. Invalidation par simple expiration (TTL).
+ *
+ * On ne cache QUE les décisions issues d'une lecture réussie ; une erreur DB
+ * (fail-closed → false) n'est jamais mémoïsée. Le fast-path `isPoleAdmin`
+ * hint=true ne touche pas le cache (aucune requête à éviter).
+ * ---------------------------------------------------------*/
+
+const ACCESS_CACHE_TTL = 60 * 1_000; // 60 secondes
+const ACCESS_CACHE_MAX_ENTRIES = 5_000;
+const accessCache = new Map<string, { allowed: boolean; expiresAt: number }>();
+
+function accessCacheKey(staffId: string, tenantId: string): string {
+  return `${staffId}:${tenantId}`;
+}
+
+function setAccessCache(key: string, allowed: boolean, now: number): void {
+  // Purge des entrées expirées au passage + cap de taille (éviction des plus
+  // anciennes selon l'ordre d'insertion de la Map).
+  for (const [k, v] of accessCache) {
+    if (v.expiresAt <= now) accessCache.delete(k);
+  }
+  accessCache.delete(key);
+  while (accessCache.size >= ACCESS_CACHE_MAX_ENTRIES) {
+    const oldest = accessCache.keys().next().value;
+    if (oldest === undefined) break;
+    accessCache.delete(oldest);
+  }
+  accessCache.set(key, { allowed, expiresAt: now + ACCESS_CACHE_TTL });
+}
+
+/**
+ * Invalide le cache d'accès de `canAccessTenant`. Sans argument : purge
+ * totale. Utile après une modification de `tenant_staff` ou du flag
+ * `is_pole_admin`. Optionnel — le TTL 60 s rattrape toute divergence.
+ */
+export function invalidateTenantAccessCache(
+  staffId?: string,
+  tenantId?: string
+): void {
+  if (staffId && tenantId) {
+    accessCache.delete(accessCacheKey(staffId, tenantId));
+  } else if (staffId) {
+    const prefix = `${staffId}:`;
+    for (const k of accessCache.keys()) {
+      if (k.startsWith(prefix)) accessCache.delete(k);
+    }
+  } else {
+    accessCache.clear();
+  }
+}
+
 /**
  * Resultat de la resolution du tenant actif. `source` indique d'ou vient
  * la decision (utile pour debug + UI).
@@ -61,8 +118,16 @@ export async function canAccessTenant(
 ): Promise<boolean> {
   if (!isValidTenantUuid(tenantId)) return false;
 
-  // Fast-path : hint deja fourni par l'appelant.
+  // Fast-path : hint deja fourni par l'appelant. Aucune requete a eviter,
+  // donc pas de cache.
   if (opts?.isPoleAdmin === true) return true;
+
+  const cacheKey = accessCacheKey(staffId, tenantId);
+  const now = Date.now();
+  const cached = accessCache.get(cacheKey);
+  if (cached && cached.expiresAt > now) {
+    return cached.allowed;
+  }
 
   // Si pas de hint, on lit le flag (cheap : staff est cache 5 min dans
   // `getStaffByUserId` mais ici on contourne le cache car on a juste
@@ -74,8 +139,14 @@ export async function canAccessTenant(
       .eq('id', staffId)
       .maybeSingle();
     if (staffErr) {
-      logger.error('[adminTenants] canAccessTenant staff lookup error', staffErr);
-    } else if ((staffRow as { is_pole_admin?: boolean } | null)?.is_pole_admin) {
+      logger.error(
+        '[adminTenants] canAccessTenant staff lookup error',
+        staffErr
+      );
+    } else if (
+      (staffRow as { is_pole_admin?: boolean } | null)?.is_pole_admin
+    ) {
+      setAccessCache(cacheKey, true, now);
       return true;
     }
   }
@@ -88,9 +159,12 @@ export async function canAccessTenant(
     .maybeSingle();
   if (error) {
     logger.error('[adminTenants] canAccessTenant error', error);
+    // On ne cache pas les erreurs (fail-closed non fige).
     return false;
   }
-  return !!data;
+  const allowed = !!data;
+  setAccessCache(cacheKey, allowed, now);
+  return allowed;
 }
 
 /**
@@ -131,7 +205,9 @@ export async function listAccessibleTenants(
         '[adminTenants] listAccessibleTenants staff lookup error',
         staffErr
       );
-    } else if ((staffRow as { is_pole_admin?: boolean } | null)?.is_pole_admin) {
+    } else if (
+      (staffRow as { is_pole_admin?: boolean } | null)?.is_pole_admin
+    ) {
       isPoleAdmin = true;
     }
   }

@@ -256,6 +256,37 @@ async function listConfirmedUsers(): Promise<ConfirmedUser[]> {
 }
 
 /**
+ * Résout un sous-ensemble ciblé de comptes confirmés par leurs ids, via des
+ * appels `auth.admin.getUserById` (pas de scan complet de auth.users). Utilisé
+ * pour n'enrichir que les désabonnés broadcast dans `computeSubscriptionStats`.
+ * Filtre les comptes non confirmés / sans email (même critère que
+ * `listConfirmedUsers`).
+ */
+async function fetchConfirmedUsersByIds(
+  ids: string[]
+): Promise<ConfirmedUser[]> {
+  if (!supabaseAdmin) {
+    throw new Error('Supabase admin not configured');
+  }
+  if (ids.length === 0) return [];
+  const out: ConfirmedUser[] = [];
+  for (const id of ids) {
+    const { data, error } = await supabaseAdmin.auth.admin.getUserById(id);
+    if (error || !data?.user) continue;
+    const u = data.user;
+    if (!u.email) continue;
+    if (!u.email_confirmed_at && !u.confirmed_at) continue;
+    out.push({
+      id: u.id,
+      email: u.email,
+      display_name:
+        (u.user_metadata?.display_name as string | undefined) ?? null,
+    });
+  }
+  return out;
+}
+
+/**
  * Charge en UNE requête l'ensemble des opt-out RGPD broadcast :
  * notification_prefs(channel='email', event_type='broadcast', enabled=false).
  * Renvoie une map user_id -> updated_at (= date de désinscription, ou null).
@@ -387,6 +418,65 @@ export async function computeSubscriptionStats(): Promise<SubscriptionStats> {
   }
 
   const optedOut = await fetchBroadcastOptOuts();
+
+  // Total des comptes confirmés via un RPC de comptage SQL, au lieu d'énumérer
+  // toute la table auth.users (paginée 1000/page) juste pour un compteur.
+  // Fail-safe : si le RPC n'est pas encore déployé (ou échoue), on retombe sur
+  // l'ancien comportement (énumération complète), qui produit exactement la
+  // même sortie.
+  let totalConfirmed: number | null = null;
+  try {
+    const { data, error } = await supabaseAdmin.rpc(
+      'count_confirmed_auth_users'
+    );
+    if (error) {
+      logger.error('[broadcasts] count_confirmed_auth_users RPC error:', error);
+    } else if (data != null) {
+      const n = Number(data);
+      if (Number.isFinite(n)) totalConfirmed = n;
+    }
+  } catch (err) {
+    logger.error('[broadcasts] count_confirmed_auth_users RPC threw:', err);
+  }
+
+  if (totalConfirmed === null) {
+    return computeSubscriptionStatsByEnumeration(optedOut);
+  }
+
+  // Chemin optimisé : le total vient du RPC. On ne résout email + label que
+  // pour le sous-ensemble désabonné confirmé (petit), sans énumérer l'intégralité
+  // de auth.users.
+  const unsubConfirmed = await fetchConfirmedUsersByIds(
+    Array.from(optedOut.keys())
+  );
+  const battleTagById = await fetchBattleTags(unsubConfirmed.map((u) => u.id));
+
+  const unsubscribedUsers: UnsubscribedUser[] = unsubConfirmed.map((u) => ({
+    email: u.email,
+    label: resolveLabel(battleTagById.get(u.id), u.display_name),
+    unsubscribedAt: optedOut.get(u.id) ?? null,
+  }));
+
+  sortUnsubscribedUsers(unsubscribedUsers);
+
+  const unsubscribed = unsubscribedUsers.length;
+  const subscribed = Math.max(0, totalConfirmed - unsubscribed);
+  return {
+    totalConfirmed,
+    subscribed,
+    unsubscribed,
+    unsubscribedUsers,
+  };
+}
+
+/**
+ * Ancien chemin : énumère l'intégralité des comptes confirmés pour dériver les
+ * compteurs. Conservé comme fallback quand le RPC `count_confirmed_auth_users`
+ * n'est pas disponible. Produit une sortie strictement identique à l'historique.
+ */
+async function computeSubscriptionStatsByEnumeration(
+  optedOut: Map<string, string | null>
+): Promise<SubscriptionStats> {
   const confirmed = await listConfirmedUsers();
 
   // On ne résout les battle_tags que pour les désabonnés confirmés (le seul
@@ -408,13 +498,7 @@ export async function computeSubscriptionStats(): Promise<SubscriptionStats> {
     }
   }
 
-  // Tri par date décroissante ; null en dernier.
-  unsubscribedUsers.sort((a, b) => {
-    if (a.unsubscribedAt === b.unsubscribedAt) return 0;
-    if (a.unsubscribedAt === null) return 1;
-    if (b.unsubscribedAt === null) return -1;
-    return a.unsubscribedAt < b.unsubscribedAt ? 1 : -1;
-  });
+  sortUnsubscribedUsers(unsubscribedUsers);
 
   const unsubscribed = unsubscribedUsers.length;
   return {
@@ -423,6 +507,16 @@ export async function computeSubscriptionStats(): Promise<SubscriptionStats> {
     unsubscribed,
     unsubscribedUsers,
   };
+}
+
+/** Tri par date de désinscription décroissante ; null en dernier. */
+function sortUnsubscribedUsers(users: UnsubscribedUser[]): void {
+  users.sort((a, b) => {
+    if (a.unsubscribedAt === b.unsubscribedAt) return 0;
+    if (a.unsubscribedAt === null) return 1;
+    if (b.unsubscribedAt === null) return -1;
+    return a.unsubscribedAt < b.unsubscribedAt ? 1 : -1;
+  });
 }
 
 export type WaveResult = {

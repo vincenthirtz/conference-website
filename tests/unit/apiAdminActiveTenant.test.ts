@@ -16,6 +16,7 @@ import {
   setAuthUser,
 } from './__helpers__/supabaseMock';
 import { invalidateStaffCache } from '../../utils/staff';
+import { invalidateTenantAccessCache } from '../../utils/adminTenants';
 
 import activeTenantHandler from '../../pages/api/admin/active-tenant';
 
@@ -67,6 +68,7 @@ function makeRes(): any {
 beforeEach(() => {
   resetSupabaseMock();
   invalidateStaffCache();
+  invalidateTenantAccessCache();
   setAuthUser({ id: 'user-1' });
   store.staff = [makeStaffRow()] as any;
   store.tenants = [

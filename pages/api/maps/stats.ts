@@ -157,14 +157,51 @@ export default async function handler(
       return res.status(200).json(empty);
     }
 
-    // 2) Récupérer toutes les games pour ces matches
-    const { data: gamesData, error: gErr } = await supabaseAdmin
-      .from('games')
-      .select(
-        'match_id, map_name, team1_score, team2_score, winner_team_id, duration_minutes, is_tiebreaker, went_overtime'
-      )
-      .eq('tenant_id', tenantId)
-      .in('match_id', matchIds);
+    // 2-4) Lectures indépendantes en parallèle. games / match_map_vetos /
+    // teams / tournament_maps ne dépendent que de matchIds / teamIdSet /
+    // tournamentId, tous déjà connus : aucune raison de les séquentialiser.
+    const teamIdSet = new Set<string>();
+    for (const m of matches) {
+      if (m.team1_id) teamIdSet.add(m.team1_id);
+      if (m.team2_id) teamIdSet.add(m.team2_id);
+    }
+    const teamIds = Array.from(teamIdSet);
+
+    const [
+      { data: gamesData, error: gErr },
+      { data: vetoData, error: vErr },
+      { data: teamsData },
+      { data: poolData },
+    ] = await Promise.all([
+      supabaseAdmin
+        .from('games')
+        .select(
+          'match_id, map_name, team1_score, team2_score, winner_team_id, duration_minutes, is_tiebreaker, went_overtime'
+        )
+        .eq('tenant_id', tenantId)
+        .in('match_id', matchIds),
+      supabaseAdmin
+        .from('match_map_vetos')
+        .select('match_id, action, team_id, map_name')
+        .eq('tenant_id', tenantId)
+        .in('match_id', matchIds),
+      teamIds.length > 0
+        ? supabaseAdmin
+            .from('teams')
+            .select('id, name')
+            .eq('tenant_id', tenantId)
+            .in('id', teamIds)
+        : Promise.resolve({
+            data: [] as Array<{ id: string; name: string }>,
+            error: null,
+          }),
+      supabaseAdmin
+        .from('tournament_maps')
+        .select('map_name')
+        .eq('tournament_id', tournamentId)
+        .eq('tenant_id', tenantId)
+        .eq('enabled', true),
+    ]);
 
     if (gErr) {
       logger.error('/api/maps/stats games error:', gErr);
@@ -175,14 +212,8 @@ export default async function handler(
 
     const games = (gamesData || []) as GameRow[];
 
-    // 3) Récupérer les vetos pour ces matches
+    // Vetos (erreur non bloquante — comportement historique)
     let vetos: VetoRow[] = [];
-    const { data: vetoData, error: vErr } = await supabaseAdmin
-      .from('match_map_vetos')
-      .select('match_id, action, team_id, map_name')
-      .eq('tenant_id', tenantId)
-      .in('match_id', matchIds);
-
     if (!vErr && vetoData) {
       vetos = vetoData as VetoRow[];
     }
@@ -191,22 +222,10 @@ export default async function handler(
     const vetoMatchIds = new Set(vetos.map((v) => v.match_id));
     const totalVetoMatches = vetoMatchIds.size;
 
-    // 4) Fetch team names for winrate display
-    const teamIdSet = new Set<string>();
-    for (const m of matches) {
-      if (m.team1_id) teamIdSet.add(m.team1_id);
-      if (m.team2_id) teamIdSet.add(m.team2_id);
-    }
+    // Team names for winrate display
     const teamNames = new Map<string, string>();
-    if (teamIdSet.size > 0) {
-      const { data: teamsData } = await supabaseAdmin
-        .from('teams')
-        .select('id, name')
-        .eq('tenant_id', tenantId)
-        .in('id', Array.from(teamIdSet));
-      for (const t of teamsData || []) {
-        teamNames.set(t.id, t.name);
-      }
+    for (const t of teamsData || []) {
+      teamNames.set(t.id, t.name);
     }
 
     // 5) Build match lookup
@@ -251,20 +270,11 @@ export default async function handler(
       stats.filter((s) => s.gamesPlayed > 0).map((s) => s.mapName)
     );
     let neverPlayed: string[] = [];
-    {
-      const { data: poolData } = await supabaseAdmin
-        .from('tournament_maps')
-        .select('map_name')
-        .eq('tournament_id', tournamentId)
-        .eq('tenant_id', tenantId)
-        .eq('enabled', true);
-
-      if (poolData) {
-        neverPlayed = poolData
-          .map((m: any) => m.map_name as string)
-          .filter((name: string) => !playedMapNames.has(name))
-          .sort();
-      }
+    if (poolData) {
+      neverPlayed = poolData
+        .map((m: any) => m.map_name as string)
+        .filter((name: string) => !playedMapNames.has(name))
+        .sort();
     }
 
     // 9) Team tendencies: per-team ban/pick patterns from vetos

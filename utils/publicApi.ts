@@ -30,6 +30,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { applyRateLimit } from './rateLimit';
+import { consumeDurableRateLimit, clientKeyFromReq } from './durableRateLimit';
 import { logger } from './logger';
 
 /** Standard error codes surfaced by the public API. */
@@ -200,8 +201,8 @@ export function withPublicApi<T>(
       return;
     }
 
-    // Per-endpoint IP rate limit. `applyRateLimit` emits its own 429 body +
-    // Retry-After header when blocked; we just stop here.
+    // L1 — rate-limit en mémoire par endpoint (fail-fast, sans DB).
+    // `applyRateLimit` émet son propre body 429 + Retry-After ; on stoppe ici.
     if (
       applyRateLimit(
         req,
@@ -210,6 +211,28 @@ export function withPublicApi<T>(
         opts.rateLimitBucket
       )
     ) {
+      return;
+    }
+
+    // L2 — rate-limit DURABLE (cross-instance) adossé à Postgres. Le Map L1 est
+    // per-process : en multi-instance Netlify il laisse passer N×maxPerMin. Ce
+    // second passage partage le compteur entre toutes les instances. FAIL-OPEN :
+    // si le RPC erre/absent, `consumeDurableRateLimit` autorise (ne casse jamais
+    // le chemin public). Acceptable en perf car ces endpoints sont cachés à
+    // l'edge (s-maxage) → l'origine est rarement touchée.
+    const durableBucket = `publicv1:${opts.rateLimitBucket}:${clientKeyFromReq(req)}`;
+    const durableAllowed = await consumeDurableRateLimit(
+      durableBucket,
+      60,
+      maxPerMin
+    );
+    if (!durableAllowed) {
+      res.setHeader('Retry-After', '60');
+      const body: PublicApiErrorEnvelope = {
+        error: 'Trop de requêtes. Réessayez plus tard.',
+        code: 'RATE_LIMITED',
+      };
+      res.status(429).json(body);
       return;
     }
 
