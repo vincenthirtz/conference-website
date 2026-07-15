@@ -3298,7 +3298,8 @@
     "loadingRun": "Chargement de la run en cours...",
     "loadError": "Erreur de chargement.",
     "errorWithStatus": "Erreur {status}",
-    "signedOut": "Tu es déconnecté."
+    "signedOut": "Tu es déconnecté.",
+    "sessionExpired": "Session expirée — reconnexion…"
   },
   "cockpitHeader": {
     "roleFallback": "Caster",

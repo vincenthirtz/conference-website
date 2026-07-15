@@ -3298,7 +3298,8 @@
     "loadingRun": "Loading the current run...",
     "loadError": "Loading error.",
     "errorWithStatus": "Error {status}",
-    "signedOut": "You are signed out."
+    "signedOut": "You are signed out.",
+    "sessionExpired": "Session expired — reconnecting…"
   },
   "cockpitHeader": {
     "roleFallback": "Caster",

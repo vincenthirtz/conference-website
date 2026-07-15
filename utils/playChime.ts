@@ -73,6 +73,20 @@ function beep(
   osc.stop(end + 0.02);
 }
 
+// Débloque l'AudioContext suite à un geste utilisateur (autoplay policy des
+// navigateurs mobiles). À appeler une fois sur la première interaction
+// (pointerdown / keydown) : sans ça, le contexte reste 'suspended' et un
+// playChime() ultérieur — déclenché par un cue urgent entrant, donc SANS
+// interaction — n'émet aucun son. Idempotent (getContext réutilise le
+// singleton), best-effort, no-op si Web Audio n'est pas supporté.
+export function unlockAudio(): void {
+  const ctx = getContext();
+  if (!ctx) return;
+  if (ctx.state === 'suspended') {
+    ctx.resume().catch(() => undefined);
+  }
+}
+
 export function playChime(variant: ChimeVariant): void {
   const ctx = getContext();
   if (!ctx) return;

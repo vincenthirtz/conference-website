@@ -23,6 +23,7 @@ import { useCockpitHeartbeat } from '@/hooks/useCockpitHeartbeat';
 import { useCueStream } from '@/hooks/useCueStream';
 import { useWakeLock } from '@/hooks/useWakeLock';
 import { logger } from '@/utils/logger';
+import { unlockAudio } from '@/utils/playChime';
 import type { EventRun, EventSegment } from '@/types/events';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { computeRunSchedule } from '@/utils/eventSchedule';
@@ -67,8 +68,35 @@ function CockpitPage() {
   const [segments, setSegments] = useState<EventSegment[]>([]);
   const [loadingRun, setLoadingRun] = useState(true);
   const [errorRun, setErrorRun] = useState<string | null>(null);
+  // Session perdue en plein live : le fetch renvoie 401/403 mais on garde les
+  // dernieres donnees a l ecran (pas de plein ecran d erreur) + un bandeau
+  // "reconnexion" pendant qu on tente un refresh. Se l 4ve des qu un fetch
+  // repasse.
+  const [sessionLost, setSessionLost] = useState(false);
 
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Debloque le contexte audio Web Audio des la premiere interaction. Les
+  // navigateurs mobiles bloquent l autoplay audio tant que l utilisateur n a
+  // pas interagi : sans ca, un cue urgent (playChime dans UrgentCueModal /
+  // CueFeed) peut arriver SANS aucun son. Best-effort, idempotent, no-op si
+  // non supporte. On se desabonne apres le premier geste.
+  useEffect(() => {
+    let done = false;
+    const unlock = () => {
+      if (done) return;
+      done = true;
+      unlockAudio();
+      window.removeEventListener('pointerdown', unlock);
+      window.removeEventListener('keydown', unlock);
+    };
+    window.addEventListener('pointerdown', unlock, { once: true });
+    window.addEventListener('keydown', unlock, { once: true });
+    return () => {
+      window.removeEventListener('pointerdown', unlock);
+      window.removeEventListener('keydown', unlock);
+    };
+  }, []);
 
   // 1. Redirection si pas de session caster (apres premier check).
   useEffect(() => {
@@ -78,20 +106,29 @@ function CockpitPage() {
     }
   }, [router, session.error, session.loading]);
 
-  // 2. Fetch run courant.
+  // 2. Fetch run courant. On extrait accessToken / refresh pour des deps
+  // stables (eviter de re-creer fetchRun a chaque changement de l objet
+  // session).
+  const { accessToken: sessionToken, refresh: refreshSession } = session;
   const fetchRun = useCallback(async () => {
-    if (!session.accessToken) {
+    if (!sessionToken) {
       setLoadingRun(false);
       return;
     }
     try {
       const res = await fetch('/api/caster/runs/current', {
-        headers: { Authorization: `Bearer ${session.accessToken}` },
+        headers: { Authorization: `Bearer ${sessionToken}` },
       });
       if (res.status === 401 || res.status === 403) {
-        // session a saute — useCasterSession va trigger un re-check via
-        // onAuthStateChange.
+        // Session a saute en plein live. onAuthStateChange ne se declenche PAS
+        // si le refresh token echoue silencieusement (reseau / token revoque),
+        // laissant le cockpit fige sur des donnees perimees sans indicateur.
+        // On affiche donc un bandeau NON bloquant et on tente activement un
+        // refresh. On garde les dernieres donnees affichees (pas d erreur
+        // plein ecran) et on n ecrase pas errorRun.
+        setSessionLost(true);
         setErrorRun(null);
+        void refreshSession();
         return;
       }
       if (!res.ok) {
@@ -106,13 +143,15 @@ function CockpitPage() {
       setRun(json.run);
       setSegments(json.segments ?? []);
       setErrorRun(null);
+      // Le fetch repasse : la session est repartie, on retire le bandeau.
+      setSessionLost(false);
     } catch (err) {
       logger.error('[cockpit] fetchRun error', err);
       setErrorRun((err as Error)?.message || t.loadError);
     } finally {
       setLoadingRun(false);
     }
-  }, [session.accessToken, t]);
+  }, [sessionToken, refreshSession, t]);
 
   useEffect(() => {
     if (session.loading) return;
@@ -337,6 +376,22 @@ function CockpitPage() {
       <CockpitHeader caster={caster} onSignOut={handleSignOut} />
 
       <div className="px-4 pt-4 pb-12 max-w-2xl mx-auto space-y-4">
+        {/* Bandeau non bloquant : session perdue, reconnexion en cours. On
+            garde les donnees a l ecran dessous. */}
+        {sessionLost && (
+          <div
+            role="status"
+            aria-live="polite"
+            className="rounded-2xl border border-amber-500/30 bg-amber-900/15 p-3 text-xs text-amber-100 flex items-center gap-2"
+          >
+            <span
+              aria-hidden="true"
+              className="w-3.5 h-3.5 border-2 border-amber-300/40 border-t-amber-200 rounded-full animate-spin shrink-0"
+            />
+            {t.sessionExpired}
+          </div>
+        )}
+
         {loadingRun ? (
           <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 text-center text-xs text-gray-400">
             {t.loadingRun}
