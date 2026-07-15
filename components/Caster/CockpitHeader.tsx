@@ -142,7 +142,7 @@ export default function CockpitHeader({
             <div className="text-sm font-semibold text-white truncate">
               {caster.name}
             </div>
-            <div className="text-[11px] text-gray-400 truncate">
+            <div className="text-[11px] text-gray-300 truncate">
               {caster.title ?? t.roleFallback}
               {caster.city ? ` • ${caster.city}` : ''}
             </div>
@@ -160,7 +160,7 @@ export default function CockpitHeader({
               aria-hidden
               className={`w-2 h-2 rounded-full shrink-0 ${connectionDot}`}
             />
-            <span className="text-[10px] font-medium whitespace-nowrap">
+            <span className="text-[11px] font-medium whitespace-nowrap">
               {connectionLabel}
             </span>
           </div>

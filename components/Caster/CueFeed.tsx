@@ -76,13 +76,10 @@ export default function CueFeed({
 
   // Cues tries DESC (plus recent en premier).
   const sorted = useMemo(() => {
-    return [...cues].sort((a, b) =>
-      a.created_at < b.created_at ? 1 : -1
-    );
+    return [...cues].sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
   }, [cues]);
 
-  const containerCls =
-    'rounded-2xl border border-white/10 bg-white/[0.03] p-4';
+  const containerCls = 'rounded-2xl border border-white/10 bg-white/[0.03] p-4';
 
   if (sorted.length === 0) {
     return (
@@ -90,7 +87,7 @@ export default function CueFeed({
         <div className="text-sm font-semibold text-white mb-1">
           {t.directorCues}
         </div>
-        <p className="text-xs text-gray-400">{t.emptyBody}</p>
+        <p className="text-xs text-gray-300">{t.emptyBody}</p>
       </div>
     );
   }
@@ -112,19 +109,22 @@ export default function CueFeed({
   };
 
   return (
-    <section className={containerCls} id="cue-feed" aria-labelledby="cue-feed-title">
+    <section
+      className={containerCls}
+      id="cue-feed"
+      aria-labelledby="cue-feed-title"
+    >
       <div className="flex items-center justify-between mb-3">
         <div id="cue-feed-title" className="text-sm font-semibold text-white">
           {t.directorCues}
         </div>
-        <div className="text-[11px] text-gray-400">{sorted.length}</div>
+        <div className="text-[11px] text-gray-300">{sorted.length}</div>
       </div>
       <ul role="log" aria-live="polite" className="space-y-2">
         {sorted.map((c) => {
           const isRetracted = c.retracted_at != null;
           const isUrgent = c.severity === 'urgent';
-          const seen =
-            isUrgent ? c.acked_by_me : seenLocally.has(c.id);
+          const seen = isUrgent ? c.acked_by_me : seenLocally.has(c.id);
           const pending = !!ackPending[c.id];
           return (
             <li
@@ -148,7 +148,7 @@ export default function CueFeed({
                     {t.retractedBadge}
                   </span>
                 )}
-                <span className="text-[11px] text-gray-400">
+                <span className="text-[11px] text-gray-200">
                   {relativeFromNow(c.created_at, now, t)}
                 </span>
               </div>

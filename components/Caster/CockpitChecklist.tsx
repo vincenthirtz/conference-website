@@ -64,10 +64,7 @@ export default function CockpitChecklist({
         const json = (await res.json()) as { segment: EventSegment };
         onUpdated(json.segment);
       } catch (err) {
-        addToast(
-          (err as Error)?.message || t.updateChecklistFailed,
-          'error'
-        );
+        addToast((err as Error)?.message || t.updateChecklistFailed, 'error');
       } finally {
         setPending((p) => {
           const next = { ...p };
@@ -82,10 +79,8 @@ export default function CockpitChecklist({
   if (items.length === 0) {
     return (
       <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-        <div className="text-sm font-semibold text-white mb-1">
-          {t.title}
-        </div>
-        <p className="text-xs text-gray-400">{t.emptyBody}</p>
+        <div className="text-sm font-semibold text-white mb-1">{t.title}</div>
+        <p className="text-xs text-gray-300">{t.emptyBody}</p>
       </div>
     );
   }
@@ -97,7 +92,7 @@ export default function CockpitChecklist({
       <div className="flex items-center justify-between mb-3">
         <div>
           <div className="text-sm font-semibold text-white">{t.title}</div>
-          <div className="text-[11px] text-gray-400">
+          <div className="text-[11px] text-gray-300">
             {format(t.validatedProgress, {
               checked: checkedCount,
               total: items.length,
@@ -154,12 +149,13 @@ export default function CockpitChecklist({
                       {t.validated}
                       {item.checked_at
                         ? format(t.validatedAtSuffix, {
-                            time: new Date(
-                              item.checked_at
-                            ).toLocaleTimeString(locale, {
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            }),
+                            time: new Date(item.checked_at).toLocaleTimeString(
+                              locale,
+                              {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              }
+                            ),
                           })
                         : ''}
                     </span>

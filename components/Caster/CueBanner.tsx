@@ -104,7 +104,7 @@ export default function CueBanner({ cues, seenLocally }: Props) {
           ? format(t.newCues, { count: unseen.length })
           : headline.body}
       </span>
-      <span className="flex-shrink-0 text-[11px] text-gray-400">{t.see}</span>
+      <span className="flex-shrink-0 text-[11px] text-gray-300">{t.see}</span>
     </button>
   );
 }

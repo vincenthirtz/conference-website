@@ -115,7 +115,7 @@ export default function BriefingPanel({ matchId, accessToken }: Props) {
         <div className="text-sm font-semibold text-white mb-2">
           {t.briefingLabel}
         </div>
-        <div className="flex items-center gap-2 text-xs text-gray-400">
+        <div className="flex items-center gap-2 text-xs text-gray-300">
           <div className="w-4 h-4 border-2 border-neutral-600 border-t-purple-400 rounded-full animate-spin" />
           {t.loadingBriefing}
         </div>
@@ -176,7 +176,7 @@ export default function BriefingPanel({ matchId, accessToken }: Props) {
                     {team.name}
                   </div>
                   {team.country && (
-                    <div className="text-[10px] text-gray-400">
+                    <div className="text-[11px] text-gray-300">
                       {team.country}
                     </div>
                   )}
@@ -184,7 +184,7 @@ export default function BriefingPanel({ matchId, accessToken }: Props) {
               </div>
               <ul className="space-y-1">
                 {team.members.length === 0 ? (
-                  <li className="text-[11px] text-gray-500 italic">
+                  <li className="text-[11px] text-gray-300 italic">
                     {t.noRoster}
                   </li>
                 ) : (
@@ -196,16 +196,16 @@ export default function BriefingPanel({ matchId, accessToken }: Props) {
                       <span className="font-mono truncate flex-1">
                         {maskBattleTag(m.battle_tag) || '—'}
                       </span>
-                      <span className="text-[10px] text-gray-500">
+                      <span className="text-[11px] text-gray-300">
                         {m.role}
                       </span>
                       {m.is_captain && (
-                        <span className="text-[9px] uppercase font-bold text-amber-300 px-1 py-0.5 bg-amber-500/15 rounded">
+                        <span className="text-[10px] uppercase font-bold text-amber-300 px-1 py-0.5 bg-amber-500/15 rounded">
                           C
                         </span>
                       )}
                       {m.is_substitute && (
-                        <span className="text-[9px] uppercase font-bold text-gray-300 px-1 py-0.5 bg-white/10 rounded">
+                        <span className="text-[10px] uppercase font-bold text-gray-300 px-1 py-0.5 bg-white/10 rounded">
                           S
                         </span>
                       )}
@@ -217,7 +217,7 @@ export default function BriefingPanel({ matchId, accessToken }: Props) {
           ) : (
             <div
               key={`empty-${idx}`}
-              className="rounded-xl border border-white/5 bg-black/20 p-3 text-[11px] text-gray-500 italic"
+              className="rounded-xl border border-white/5 bg-black/20 p-3 text-[11px] text-gray-300 italic"
             >
               {t.teamUnavailable}
             </div>
@@ -226,7 +226,7 @@ export default function BriefingPanel({ matchId, accessToken }: Props) {
       </div>
 
       <div className="rounded-xl border border-white/10 bg-black/30 p-3 mb-4">
-        <div className="text-[10px] uppercase tracking-wider text-gray-400 mb-1">
+        <div className="text-[10px] uppercase tracking-wider text-gray-300 mb-1">
           {t.h2hLabel}
         </div>
         {h2h.totalMeetings === 0 ? (
@@ -234,7 +234,7 @@ export default function BriefingPanel({ matchId, accessToken }: Props) {
         ) : (
           <div className="flex items-center justify-between text-sm">
             <span className="font-mono text-white">{h2h.aWins}</span>
-            <span className="text-[10px] text-gray-400">
+            <span className="text-[11px] text-gray-300">
               {format(
                 h2h.totalMeetings > 1 ? t.meetings_other : t.meetings_one,
                 { count: h2h.totalMeetings }
@@ -248,7 +248,7 @@ export default function BriefingPanel({ matchId, accessToken }: Props) {
 
       {briefing.recentNews.length > 0 && (
         <div>
-          <div className="text-[10px] uppercase tracking-wider text-gray-400 mb-1.5">
+          <div className="text-[10px] uppercase tracking-wider text-gray-300 mb-1.5">
             {t.recentNews}
           </div>
           <ul className="space-y-1.5">
@@ -262,7 +262,7 @@ export default function BriefingPanel({ matchId, accessToken }: Props) {
                 >
                   <span className="font-semibold leading-tight">{n.title}</span>
                   {n.excerpt && (
-                    <span className="block text-[11px] text-gray-400 mt-0.5 leading-snug line-clamp-2">
+                    <span className="block text-[11px] text-gray-300 mt-0.5 leading-snug line-clamp-2">
                       {n.excerpt}
                     </span>
                   )}

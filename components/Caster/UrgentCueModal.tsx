@@ -108,7 +108,7 @@ export default function UrgentCueModal({ cue, onAck }: Props) {
           >
             {t.urgent}
           </span>
-          <span className="text-[11px] text-red-200/80">{t.directorCue}</span>
+          <span className="text-[11px] text-red-200">{t.directorCue}</span>
         </div>
 
         <p

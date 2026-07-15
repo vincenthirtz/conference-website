@@ -140,7 +140,7 @@ export default function LiveSegmentBlock({
         <div className="text-sm font-semibold text-white mb-1">
           {t.noEventTitle}
         </div>
-        <p className="text-xs text-gray-400">{t.noEventBody}</p>
+        <p className="text-xs text-gray-300">{t.noEventBody}</p>
       </div>
     );
   }
@@ -158,9 +158,7 @@ export default function LiveSegmentBlock({
     if (!Number.isFinite(startMs)) return null;
     const diffSec = Math.floor((startMs - now) / 1000);
     if (diffSec <= 0) {
-      return (
-        <span className="text-amber-300 font-medium">{t.startsNow}</span>
-      );
+      return <span className="text-amber-300 font-medium">{t.startsNow}</span>;
     }
     return (
       <span className="text-gray-200">
@@ -229,9 +227,7 @@ export default function LiveSegmentBlock({
   // si on ne peut pas mesurer. Calcule en local pour rester aligne avec le
   // tick 1s local, mais le schedule du parent expose la meme info.
   const overrunSec =
-    remainingSeconds !== null && remainingSeconds < 0
-      ? -remainingSeconds
-      : 0;
+    remainingSeconds !== null && remainingSeconds < 0 ? -remainingSeconds : 0;
 
   // Couleur du timer principal : vert > 2min restants, amber 30s-2min ou
   // overrun < 2min, rouge overrun >= 2min. Si pas de duree → gris.
@@ -240,14 +236,13 @@ export default function LiveSegmentBlock({
   let timerValue = '—';
 
   if (remainingSeconds === null) {
-    timerColorCls = 'text-gray-400';
+    timerColorCls = 'text-gray-300';
     timerLabel = t.timerNoDuration;
     timerValue = '—';
   } else if (overrunSec > 0) {
     timerLabel = t.timerOverrun;
     timerValue = formatDuration(overrunSec);
-    timerColorCls =
-      overrunSec >= 120 ? 'text-red-400' : 'text-amber-300';
+    timerColorCls = overrunSec >= 120 ? 'text-red-400' : 'text-amber-300';
   } else {
     timerLabel = t.timerRemaining;
     timerValue = formatDuration(remainingSeconds);
@@ -276,7 +271,7 @@ export default function LiveSegmentBlock({
         <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-white/10 text-gray-200">
           {typeLabel}
         </span>
-        <span className="text-xs text-gray-400 truncate">{run.name}</span>
+        <span className="text-xs text-gray-300 truncate">{run.name}</span>
       </div>
       <h2 className="text-lg font-bold text-white mb-3 leading-tight">
         {currentSegment.title || typeLabel}
@@ -284,7 +279,7 @@ export default function LiveSegmentBlock({
 
       {/* Bloc countdown principal — grand format, role="timer" pour a11y. */}
       <div className="rounded-xl bg-black/50 border border-white/5 px-4 py-3 mb-3">
-        <div className="text-[10px] uppercase tracking-wider text-gray-400 mb-1">
+        <div className="text-[11px] uppercase tracking-wider text-gray-200 mb-1">
           {timerLabel}
         </div>
         <div
@@ -299,7 +294,7 @@ export default function LiveSegmentBlock({
 
       {/* Bloc ecoule (secondaire, contexte) */}
       <div className="rounded-lg bg-black/40 px-3 py-2 mb-3">
-        <div className="text-[10px] uppercase tracking-wider text-gray-400">
+        <div className="text-[11px] uppercase tracking-wider text-gray-300">
           {t.elapsed}
         </div>
         <div className="text-sm font-mono font-semibold text-white tabular-nums">
@@ -330,7 +325,7 @@ export default function LiveSegmentBlock({
       {nextSegment && (
         <div className="rounded-lg bg-black/30 px-3 py-2 text-xs text-gray-300 flex items-center justify-between gap-3 flex-wrap">
           <div className="min-w-0 truncate">
-            <span className="text-gray-500">{t.nextShort} </span>
+            <span className="text-gray-300">{t.nextShort} </span>
             <span className="text-white">
               {nextSegment.title ||
                 TYPE_LABEL[nextSegment.type] ||

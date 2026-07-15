@@ -236,7 +236,7 @@ export default function CockpitHotkeys({
         </form>
       )}
       {disabled && (
-        <p className="text-[11px] text-gray-500 mt-2">{t.disabledHint}</p>
+        <p className="text-[11px] text-gray-300 mt-2">{t.disabledHint}</p>
       )}
     </div>
   );

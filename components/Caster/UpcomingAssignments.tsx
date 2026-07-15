@@ -42,7 +42,7 @@ export default function UpcomingAssignments({ assignments }: Props) {
     return (
       <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
         <div className="text-sm font-semibold text-white mb-1">{t.title}</div>
-        <p className="text-xs text-gray-400">{t.emptyBody}</p>
+        <p className="text-xs text-gray-300">{t.emptyBody}</p>
       </div>
     );
   }
@@ -66,7 +66,9 @@ export default function UpcomingAssignments({ assignments }: Props) {
           const team2Name = isScrim
             ? (s?.team2?.name ?? 'TBD')
             : (m?.team2?.name ?? 'TBD');
-          const streamUrl = isScrim ? (s?.streamUrl ?? null) : (m?.streamUrl ?? null);
+          const streamUrl = isScrim
+            ? (s?.streamUrl ?? null)
+            : (m?.streamUrl ?? null);
           const contextLine = isScrim
             ? `${t.scrim}${s?.slug ? ` — ${s.slug}` : ''}`
             : m?.tournament
@@ -100,17 +102,17 @@ export default function UpcomingAssignments({ assignments }: Props) {
                     {a.role || t.roleFallback}
                   </span>
                 </div>
-                <span className="text-[11px] text-gray-400">
+                <span className="text-[11px] text-gray-200">
                   {when} • {relativeTime(scheduledAt, t)}
                 </span>
               </div>
               <div className="flex items-center gap-2 text-sm text-white">
                 <span className="truncate flex-1 text-right">{team1Name}</span>
-                <span className="text-gray-500 text-xs">{t.vs}</span>
+                <span className="text-gray-300 text-xs">{t.vs}</span>
                 <span className="truncate flex-1">{team2Name}</span>
               </div>
               {contextLine && (
-                <div className="text-[11px] text-gray-500 mt-1 truncate">
+                <div className="text-[11px] text-gray-300 mt-1 truncate">
                   {contextLine}
                 </div>
               )}
