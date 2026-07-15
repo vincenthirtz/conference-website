@@ -52,10 +52,17 @@ type Props = {
   segments: EventSegment[];
   runId: string;
   /**
-   * Permet au parent de recevoir la liste reduite "id + name" pour
-   * alimenter CueFeed (calcul "qui n'a PAS ack"). Optionnel.
+   * Remonte au parent la liste reduite "id + name" des casters ASSIGNES au
+   * run (source d'autorite : cast_assignments). Consommee par CueFeed pour
+   * calculer "qui doit ack / qui n'a PAS ack" sur un cue urgent.
+   *
+   * IMPORTANT : cette liste derive des ASSIGNATIONS, pas de la presence. La
+   * presence (online/idle/offline) peut echouer ou renvoyer vide sans que les
+   * assignations disparaissent ; la deriver de la presence rendait le tableau
+   * d'ack trompeur (total=0 => "aucun caster assigne" a tort). La presence ne
+   * sert plus qu'aux badges de statut de connexion. Optionnel.
    */
-  onPresenceChange?: (
+  onAssignedCastersChange?: (
     casters: Array<{ cast_member_id: string; name: string }>
   ) => void;
 };
@@ -128,12 +135,16 @@ function presenceTooltip(p: PresenceItem | undefined, tx: Dict): string {
 
 // Memoise : la page Director tick `nowMs` toutes les 1s (drift/timing) et
 // re-rend son arbre. Ce panneau ne consomme PAS nowMs — ses props (segments
-// = ref d'etat stable, runId primitif, onPresenceChange = setter stable) ne
+// = ref d'etat stable, runId primitif, onAssignedCastersChange = setter stable) ne
 // changent pas a chaque seconde. memo coupe donc la reconciliation par seconde
 // poussee par le parent. Il n'y a aucun tick horloge 1s a extraire ici : le
 // seul interval du panneau est le polling presence (15s). Comportement
 // inchange (les temps relatifs restent rafraichis au rythme du poll).
-function CasterStatusPanel({ segments, runId, onPresenceChange }: Props) {
+function CasterStatusPanel({
+  segments,
+  runId,
+  onAssignedCastersChange,
+}: Props) {
   const t = useAdminT('adminDirectorCasterStatusPanel');
   const statusStyles = getStatusStyles(t);
   const { adminFetchJson } = useAdminFetch();
@@ -223,17 +234,33 @@ function CasterStatusPanel({ segments, runId, onPresenceChange }: Props) {
     return m;
   }, [presence]);
 
-  // Remonte au parent la liste des casters distincts (utilisee par CueFeed
-  // pour calculer "qui n'a PAS ack"). On prefere la source presence (basee
-  // sur les assignments cote serveur) qui inclut nom + cast_member_id.
+  // Remonte au parent la liste des casters ASSIGNES (distincts) au run. C'est
+  // la SOURCE D'AUTORITE pour "qui doit confirmer un cue" : elle derive des
+  // cast_assignments, PAS de la presence. Deriver de la presence rendait le
+  // tableau d'ack trompeur — si /presence echoue ou renvoie vide, total tombait
+  // a 0 et CueFeed affichait "aucun caster assigne" sur un cue urgent alors que
+  // des casters sont bel et bien assignes. La presence reste cantonnee aux
+  // badges online/idle/offline (cf. presenceById plus bas).
   useEffect(() => {
-    if (!onPresenceChange) return;
-    const list = presence.map((p) => ({
-      cast_member_id: p.cast_member_id,
-      name: p.name,
+    if (!onAssignedCastersChange) return;
+    // Dedup par cast_member_id : un meme caster peut etre assigne a plusieurs
+    // matchs du run. On prefere le premier nom non vide rencontre.
+    const byId = new Map<string, string>();
+    for (const a of assignments) {
+      const id = a.cast_member_id;
+      if (!id) continue;
+      const name = a.cast_member?.name ?? '';
+      const existing = byId.get(id);
+      if (existing === undefined || (existing === '' && name !== '')) {
+        byId.set(id, name);
+      }
+    }
+    const list = Array.from(byId, ([cast_member_id, name]) => ({
+      cast_member_id,
+      name,
     }));
-    onPresenceChange(list);
-  }, [presence, onPresenceChange]);
+    onAssignedCastersChange(list);
+  }, [assignments, onAssignedCastersChange]);
 
   const onlineCount = presence.filter((p) => p.status === 'online').length;
   const totalCount = presence.length;

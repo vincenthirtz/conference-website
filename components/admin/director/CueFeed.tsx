@@ -53,7 +53,12 @@ type ApiResponse = {
 
 type Props = {
   runId: string;
-  /** Casters connus pour ce run (ids + noms). Utilise pour calculer "qui n'a PAS ack". */
+  /**
+   * Casters ASSIGNES au run (ids + noms), source d'autorite remontee par
+   * CasterStatusPanel depuis les cast_assignments (jamais depuis la presence).
+   * Utilise pour calculer le total attendu et "qui n'a PAS ack" sur un cue
+   * urgent. `total === 0` signifie donc reellement "aucun caster assigne".
+   */
   casters: Array<{ cast_member_id: string; name: string }>;
   /** Cue venant d'etre cree (optimistic), permet de l'afficher avant le poll. */
   optimisticCue?: EventCue | null;

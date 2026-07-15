@@ -102,9 +102,11 @@ function DirectorPage(_props: StaffProps) {
 
   // Comms : cue tout juste cree (optimistic, on l'affiche dans le feed avant le poll).
   const [optimisticCue, setOptimisticCue] = useState<EventCue | null>(null);
-  // Liste reduite "id + name" des casters connus pour ce run, remontee par
-  // CasterStatusPanel (qui appelle /presence) et consommee par CueFeed
-  // (pour calculer "qui n'a PAS ack" sur les cues urgent).
+  // Liste reduite "id + name" des casters ASSIGNES a ce run, remontee par
+  // CasterStatusPanel (derivee des cast_assignments, source d'autorite — PAS
+  // de la presence) et consommee par CueFeed pour calculer "qui doit ack / qui
+  // n'a PAS ack" sur les cues urgent. La presence ne sert qu'aux badges de
+  // connexion dans le panel, jamais a etablir ce total attendu.
   const [casters, setCasters] = useState<
     Array<{ cast_member_id: string; name: string }>
   >([]);
@@ -1138,7 +1140,7 @@ function DirectorPage(_props: StaffProps) {
                     <CasterStatusPanel
                       segments={segments}
                       runId={runId ?? ''}
-                      onPresenceChange={setCasters}
+                      onAssignedCastersChange={setCasters}
                     />
                   </div>
                 </div>
