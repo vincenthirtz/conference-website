@@ -61,8 +61,27 @@ function CockpitPage() {
   // Empêche l'écran de s'éteindre tant que le caster est sur le cockpit
   // (un BO3 peut durer 40 min sans frappe clavier — la mise en veille
   // automatique masquait l'overlay broadcast côté studio). Best-effort :
-  // no-op sur Firefox / Safari < 16.4 / HTTP, ne casse rien.
-  useWakeLock(true);
+  // no-op sur Firefox / Safari < 16.4 / HTTP, ne casse rien. `supported` sert a
+  // afficher un rappel discret quand le navigateur ne peut PAS tenir l'ecran
+  // eveille (l'operateur risque une mise en veille en plein live).
+  const { supported: wakeLockSupported } = useWakeLock(true);
+
+  // Connectivite : navigator online/offline. Combine plus bas avec l'etat du
+  // canal realtime (useEventRunRealtime) et du heartbeat (useCockpitHeartbeat)
+  // pour la pastille de statut du header.
+  const [online, setOnline] = useState(true);
+  useEffect(() => {
+    if (typeof navigator === 'undefined') return undefined;
+    setOnline(navigator.onLine);
+    const goOnline = () => setOnline(true);
+    const goOffline = () => setOnline(false);
+    window.addEventListener('online', goOnline);
+    window.addEventListener('offline', goOffline);
+    return () => {
+      window.removeEventListener('online', goOnline);
+      window.removeEventListener('offline', goOffline);
+    };
+  }, []);
 
   const [run, setRun] = useState<EventRun | null>(null);
   const [segments, setSegments] = useState<EventSegment[]>([]);
@@ -221,7 +240,7 @@ function CockpitPage() {
     []
   );
 
-  useEventRunRealtime({
+  const { connected: realtimeConnected } = useEventRunRealtime({
     enabled: !!run?.id,
     runId: run?.id ?? null,
     onSegmentChange: handleSegmentChange,
@@ -258,11 +277,25 @@ function CockpitPage() {
   // (presence "online sans run").
   const liveRunId = run?.status === 'live' ? run.id : null;
 
-  // Heartbeat 20s (visibility-gated, body { event_run_id }).
-  useCockpitHeartbeat({
+  // Heartbeat 20s (visibility-gated, body { event_run_id }). `healthy` = le
+  // dernier ping a-t-il abouti (« vu par la regie »).
+  const { healthy } = useCockpitHeartbeat({
     runId: liveRunId,
     accessToken: session.accessToken,
   });
+
+  // Statut de connexion agrege pour la pastille du header.
+  //   - Le canal realtime n'existe QUE s'il y a un run attache : sans run, on
+  //     ne le considere pas comme « tombe » (pas de mode degrade a signaler).
+  //   - healthy === false = heartbeat en echec reseau -> reconnexion.
+  const connection = useMemo(() => {
+    if (!online) return { level: 'offline' as const, seen: false };
+    const realtimeOk = !run?.id || realtimeConnected;
+    if (!realtimeOk || healthy === false) {
+      return { level: 'reconnecting' as const, seen: false };
+    }
+    return { level: 'online' as const, seen: healthy === true };
+  }, [online, run?.id, realtimeConnected, healthy]);
 
   // Stream cues (polling 3s, visibility-gated). Pas de polling si pas de
   // run live (l API repond 409 si run!=live, useCueStream s arrete de seed).
@@ -373,9 +406,33 @@ function CockpitPage() {
       <Head>
         <title>{t.docTitle}</title>
       </Head>
-      <CockpitHeader caster={caster} onSignOut={handleSignOut} />
+      <CockpitHeader
+        caster={caster}
+        onSignOut={handleSignOut}
+        connection={connection}
+      />
 
       <div className="px-4 pt-4 pb-12 max-w-2xl mx-auto space-y-4">
+        {/* Rappel discret : le navigateur ne peut pas garder l'ecran eveille. */}
+        {!wakeLockSupported && (
+          <p className="flex items-center gap-1.5 text-[11px] text-gray-500 px-1">
+            <svg
+              className="w-3.5 h-3.5 shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+              />
+            </svg>
+            {t.wakeLockUnsupported}
+          </p>
+        )}
         {/* Bandeau non bloquant : session perdue, reconnexion en cours. On
             garde les donnees a l ecran dessous. */}
         {sessionLost && (
@@ -468,10 +525,7 @@ function CockpitPage() {
 
       {/* Modal bloquante pour cue urgent non ack. FIFO si plusieurs. */}
       {cueStream.pendingUrgent && (
-        <UrgentCueModal
-          cue={cueStream.pendingUrgent}
-          onAck={cueStream.ack}
-        />
+        <UrgentCueModal cue={cueStream.pendingUrgent} onAck={cueStream.ack} />
       )}
     </div>
   );

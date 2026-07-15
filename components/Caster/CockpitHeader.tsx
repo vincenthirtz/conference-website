@@ -17,12 +17,29 @@ type BeforeInstallPromptEvent = Event & {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 };
 
+export type ConnectionStatus = {
+  /**
+   * online   : online + realtime OK + heartbeat pas en echec.
+   * reconnecting : online mais canal realtime tombe (mode degrade poll 30s)
+   *                ou heartbeat en echec.
+   * offline  : navigator hors ligne.
+   */
+  level: 'online' | 'reconnecting' | 'offline';
+  /** true si le dernier heartbeat a abouti (« vu par la regie »). */
+  seen: boolean;
+};
+
 type Props = {
   caster: CasterProfile;
   onSignOut: () => void;
+  connection: ConnectionStatus;
 };
 
-export default function CockpitHeader({ caster, onSignOut }: Props) {
+export default function CockpitHeader({
+  caster,
+  onSignOut,
+  connection,
+}: Props) {
   const t = useT('cockpitHeader');
   const [installEvent, setInstallEvent] =
     useState<BeforeInstallPromptEvent | null>(null);
@@ -78,6 +95,29 @@ export default function CockpitHeader({ caster, onSignOut }: Props) {
     .map((s) => s.charAt(0).toUpperCase())
     .join('');
 
+  // Pastille de connectivite : discrete, coherente avec le header. La couleur
+  // porte l'info ; le label court + aria-live la rendent accessibles.
+  const connectionDot =
+    connection.level === 'online'
+      ? 'bg-emerald-400'
+      : connection.level === 'reconnecting'
+        ? 'bg-amber-400 animate-pulse'
+        : 'bg-red-500';
+  const connectionText =
+    connection.level === 'online'
+      ? 'text-emerald-200'
+      : connection.level === 'reconnecting'
+        ? 'text-amber-200'
+        : 'text-red-200';
+  const connectionLabel =
+    connection.level === 'offline'
+      ? t.statusOffline
+      : connection.level === 'reconnecting'
+        ? t.statusReconnecting
+        : connection.seen
+          ? t.statusSeen
+          : t.statusOnline;
+
   return (
     <header className="sticky top-0 z-30 bg-black/70 backdrop-blur border-b border-white/10">
       <div className="px-4 py-3 flex items-center gap-3">
@@ -110,6 +150,20 @@ export default function CockpitHeader({ caster, onSignOut }: Props) {
         </div>
 
         <div className="flex items-center gap-2 flex-shrink-0">
+          <div
+            role="status"
+            aria-live="polite"
+            className={`flex items-center gap-1.5 ${connectionText}`}
+            data-testid="cockpit-connection"
+          >
+            <span
+              aria-hidden
+              className={`w-2 h-2 rounded-full shrink-0 ${connectionDot}`}
+            />
+            <span className="text-[10px] font-medium whitespace-nowrap">
+              {connectionLabel}
+            </span>
+          </div>
           {!installed && installEvent && (
             <button
               type="button"

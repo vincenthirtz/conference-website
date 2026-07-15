@@ -14,7 +14,7 @@
 // downstream) de dedoublonner si le client retry. Pas de useIdempotentMutation
 // ici car ce hook redirige sur /admin/login qui n est pas le bon flow caster.
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useToast } from '@/components/Toast';
 import { logger } from '@/utils/logger';
 import { useT, format } from '@/lib/i18n/useT';
@@ -47,6 +47,12 @@ export default function CockpitHotkeys({
   const { addToast } = useToast();
   const t = useT('cockpitHotkeys');
   const [busy, setBusy] = useState<HotkeyKind | null>(null);
+  // Saisie de score inline (remplace window.prompt : bloquant, inaccessible et
+  // no-op possible en PWA standalone). Champ maison, focus auto, Entree valide,
+  // Echap annule.
+  const [scoreOpen, setScoreOpen] = useState(false);
+  const [scoreValue, setScoreValue] = useState('');
+  const scoreInputRef = useRef<HTMLInputElement | null>(null);
 
   const trigger = useCallback(
     async (kind: HotkeyKind, payload?: Record<string, unknown>) => {
@@ -90,15 +96,51 @@ export default function CockpitHotkeys({
     [accessToken, addToast, busy, disabled, segmentId, t]
   );
 
-  const onScore = useCallback(() => {
+  // Ferme la saisie de score si les hotkeys sont desactivees (segment plus en
+  // cours) pour ne pas laisser un champ orphelin.
+  useEffect(() => {
+    if (disabled) {
+      setScoreOpen(false);
+      setScoreValue('');
+    }
+  }, [disabled]);
+
+  // Focus auto a l'ouverture du champ.
+  useEffect(() => {
+    if (scoreOpen) scoreInputRef.current?.focus();
+  }, [scoreOpen]);
+
+  const openScore = useCallback(() => {
     if (busy || disabled) return;
-    if (typeof window === 'undefined') return;
-    const v = window.prompt(t.scorePrompt, '');
-    if (v === null) return;
-    const trimmed = v.trim();
-    if (!trimmed) return;
+    setScoreValue('');
+    setScoreOpen(true);
+  }, [busy, disabled]);
+
+  const cancelScore = useCallback(() => {
+    setScoreOpen(false);
+    setScoreValue('');
+  }, []);
+
+  const submitScore = useCallback(() => {
+    const trimmed = scoreValue.trim();
+    if (!trimmed) {
+      cancelScore();
+      return;
+    }
+    setScoreOpen(false);
+    setScoreValue('');
     trigger('score', { text: trimmed.slice(0, 120) });
-  }, [busy, disabled, trigger, t]);
+  }, [scoreValue, trigger, cancelScore]);
+
+  const handleScoreKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        cancelScore();
+      }
+    },
+    [cancelScore]
+  );
 
   return (
     <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
@@ -129,9 +171,14 @@ export default function CockpitHotkeys({
         </button>
         <button
           type="button"
-          onClick={onScore}
+          onClick={openScore}
           disabled={disabled || !!busy}
-          className="px-3 py-3 rounded-xl border border-emerald-400/40 bg-emerald-500/15 text-emerald-50 text-sm font-semibold transition hover:bg-emerald-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
+          aria-expanded={scoreOpen}
+          className={`px-3 py-3 rounded-xl border text-emerald-50 text-sm font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed ${
+            scoreOpen
+              ? 'border-emerald-300/70 bg-emerald-500/30'
+              : 'border-emerald-400/40 bg-emerald-500/15 hover:bg-emerald-500/25'
+          }`}
           data-testid="hotkey-score"
         >
           {busy === 'score' ? t.sending : t.announceScore}
@@ -146,6 +193,48 @@ export default function CockpitHotkeys({
           {busy === 'pause' ? t.sending : t.pause}
         </button>
       </div>
+      {scoreOpen && (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            submitScore();
+          }}
+          className="mt-3 flex items-center gap-2"
+          data-testid="hotkey-score-form"
+        >
+          <label htmlFor="cockpit-score-input" className="sr-only">
+            {t.scoreLabel}
+          </label>
+          <input
+            id="cockpit-score-input"
+            ref={scoreInputRef}
+            type="text"
+            value={scoreValue}
+            onChange={(e) => setScoreValue(e.target.value)}
+            onKeyDown={handleScoreKeyDown}
+            maxLength={120}
+            placeholder={t.scorePlaceholder}
+            autoComplete="off"
+            className="flex-1 min-w-0 px-3 py-2 rounded-lg bg-black/40 border border-white/15 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-400/50"
+            data-testid="hotkey-score-input"
+          />
+          <button
+            type="submit"
+            className="px-3 py-2 rounded-lg bg-emerald-500/80 hover:bg-emerald-500 text-white text-sm font-semibold transition"
+            data-testid="hotkey-score-submit"
+          >
+            {t.validate}
+          </button>
+          <button
+            type="button"
+            onClick={cancelScore}
+            className="px-3 py-2 rounded-lg border border-white/15 text-gray-200 text-sm hover:bg-white/10 transition"
+            data-testid="hotkey-score-cancel"
+          >
+            {t.cancel}
+          </button>
+        </form>
+      )}
       {disabled && (
         <p className="text-[11px] text-gray-500 mt-2">{t.disabledHint}</p>
       )}

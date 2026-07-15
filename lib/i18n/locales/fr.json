@@ -3299,12 +3299,17 @@
     "loadError": "Erreur de chargement.",
     "errorWithStatus": "Erreur {status}",
     "signedOut": "Tu es déconnecté.",
-    "sessionExpired": "Session expirée — reconnexion…"
+    "sessionExpired": "Session expirée — reconnexion…",
+    "wakeLockUnsupported": "Ton navigateur peut laisser l'écran s'éteindre — installe la PWA ou garde l'app active."
   },
   "cockpitHeader": {
     "roleFallback": "Caster",
     "install": "Installer",
-    "quit": "Quitter"
+    "quit": "Quitter",
+    "statusOnline": "En ligne",
+    "statusSeen": "Vu par la régie",
+    "statusReconnecting": "Reconnexion…",
+    "statusOffline": "Hors ligne"
   },
   "briefingPanel": {
     "matchNotFound": "Match introuvable pour ton tenant.",
@@ -3372,7 +3377,10 @@
     "toastScore": "Score annoncé",
     "toastPause": "Signal pause envoyé",
     "triggerFailed": "Impossible de déclencher la hotkey.",
-    "scorePrompt": "Score à annoncer (ex : \"2-1 fin Game 3\")",
+    "scoreLabel": "Score à annoncer",
+    "scorePlaceholder": "ex : 2-1 fin Game 3",
+    "validate": "Valider",
+    "cancel": "Annuler",
     "title": "Hotkeys",
     "sending": "Envoi...",
     "markHighlight": "Marquer un highlight",

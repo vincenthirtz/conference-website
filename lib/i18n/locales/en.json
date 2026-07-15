@@ -3299,12 +3299,17 @@
     "loadError": "Loading error.",
     "errorWithStatus": "Error {status}",
     "signedOut": "You are signed out.",
-    "sessionExpired": "Session expired — reconnecting…"
+    "sessionExpired": "Session expired — reconnecting…",
+    "wakeLockUnsupported": "Your browser may let the screen turn off — install the PWA or keep the app active."
   },
   "cockpitHeader": {
     "roleFallback": "Caster",
     "install": "Install",
-    "quit": "Quit"
+    "quit": "Quit",
+    "statusOnline": "Online",
+    "statusSeen": "Seen by control room",
+    "statusReconnecting": "Reconnecting…",
+    "statusOffline": "Offline"
   },
   "briefingPanel": {
     "matchNotFound": "Match not found for your tenant.",
@@ -3372,7 +3377,10 @@
     "toastScore": "Score announced",
     "toastPause": "Pause signal sent",
     "triggerFailed": "Unable to trigger the hotkey.",
-    "scorePrompt": "Score to announce (e.g. \"2-1 end Game 3\")",
+    "scoreLabel": "Score to announce",
+    "scorePlaceholder": "e.g. 2-1 end Game 3",
+    "validate": "Submit",
+    "cancel": "Cancel",
     "title": "Hotkeys",
     "sending": "Sending...",
     "markHighlight": "Mark a highlight",
