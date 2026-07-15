@@ -26,6 +26,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { logger } from '@/utils/logger';
 import { useRealtimeChannel } from './useRealtimeChannel';
 import type { EventCue } from '@/types/events';
+import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
 // Poll lent : safety-net si le canal realtime saute. Le realtime est la source
 // principale, donc on peut se permettre 30s sans degrader l UX.
@@ -207,11 +208,67 @@ export function useCueStream({
     };
   }, [accessToken, runId]);
 
-  // Realtime : sur tout INSERT/UPDATE de event_cues filtre event_run_id, on
-  // declenche un tick immediat qui ira chercher la row avec acked_by_me hydrate.
+  // Realtime event_cues : on traite le payload DIRECTEMENT selon l'evenement.
   // La policy SELECT (add_caster_realtime_select_policies) autorise le caster
   // authentifie a recevoir les rows de son tenant.
-  const onRealtimeChange = useCallback(() => {
+  //   - INSERT : la nouvelle row a created_at > curseur → un tick REST la
+  //     recupere avec acked_by_me correctement hydrate (false a la creation).
+  //   - UPDATE / DELETE : le refetch REST est AVEUGLE ici — l'API filtre en
+  //     created_at > since (strict), donc une row deja vue (editee ou
+  //     supprimee) n'est jamais reramenee. On applique donc le payload en
+  //     local. Sans ca : une correction de texte reste invisible, et un cue
+  //     urgent supprime par le Director laisse la UrgentCueModal bloquee sur
+  //     un cue fantome que le caster est force d'acker.
+  const applyCueRow = useCallback(
+    (row: Partial<EventCue> & { id?: string }) => {
+      if (!row.id) return;
+      const idx = cuesRef.current.findIndex((c) => c.id === row.id);
+      // Inconnu en local (jamais seed) → on laisse le tick INSERT l'hydrater.
+      if (idx === -1) return;
+      const next = [...cuesRef.current];
+      next[idx] = {
+        ...next[idx],
+        ...(row as EventCue),
+        // acked_by_me est un etat par-caster absent du payload realtime : on
+        // preserve la valeur locale plutot que de l'ecraser a undefined.
+        acked_by_me: next[idx].acked_by_me,
+      };
+      cuesRef.current = next;
+      setCues(next);
+    },
+    []
+  );
+
+  const removeCue = useCallback((id: string) => {
+    if (!cuesRef.current.some((c) => c.id === id)) return;
+    const next = cuesRef.current.filter((c) => c.id !== id);
+    cuesRef.current = next;
+    setCues(next);
+  }, []);
+
+  const onCueRealtimeChange = useCallback(
+    (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
+      if (payload.eventType === 'DELETE') {
+        // payload.old ne porte que la PK (replica identity default) — l'id
+        // suffit pour retirer le cue.
+        const old = payload.old as { id?: string };
+        if (old?.id) removeCue(old.id);
+        return;
+      }
+      if (payload.eventType === 'UPDATE') {
+        const row = payload.new as Partial<EventCue> & { id?: string };
+        if (row?.id) applyCueRow(row);
+        return;
+      }
+      // INSERT (ou fallback) : refetch REST pour hydrater acked_by_me.
+      tickRef.current();
+    },
+    [applyCueRow, removeCue]
+  );
+
+  // event_cue_acks : ack depuis un autre device/onglet → refetch REST pour
+  // rafraichir acked_by_me (limite a la fenetre du curseur `since`).
+  const onAckRealtimeChange = useCallback(() => {
     tickRef.current();
   }, []);
 
@@ -220,7 +277,7 @@ export function useCueStream({
     channel: `cockpit-cues-${runId ?? 'none'}`,
     table: 'event_cues',
     filter: runId ? `event_run_id=eq.${runId}` : undefined,
-    onChange: onRealtimeChange,
+    onChange: onCueRealtimeChange,
   });
 
   // Subscription complementaire sur event_cue_acks : si le caster ack depuis
@@ -229,7 +286,7 @@ export function useCueStream({
     enabled: !!runId && !!accessToken,
     channel: `cockpit-cue-acks-${runId ?? 'none'}`,
     table: 'event_cue_acks',
-    onChange: onRealtimeChange,
+    onChange: onAckRealtimeChange,
   });
 
   const ack = useCallback(
