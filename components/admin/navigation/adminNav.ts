@@ -168,6 +168,21 @@ export const ADMIN_NAV: AdminNavNode[] = [
               accent: 'border-pink-500/30 from-pink-500/10 text-pink-300',
             },
           },
+          // Cockpit Régie (caster) : ouvert aux admin/owner via une fiche
+          // cast_members interne auto-provisionnée (cf. utils/casterAuth.ts).
+          // Dashboard-only, admin-gated.
+          {
+            id: 'caster-cockpit',
+            href: '/caster/cockpit',
+            minRole: 'admin',
+            card: {
+              order: 8.5,
+              titleKey: 'navCasterCockpitTitle',
+              descKey: 'navCasterCockpitDesc',
+              icon: 'signal',
+              accent: 'border-rose-500/30 from-rose-500/10 text-rose-300',
+            },
+          },
           // Dashboard-only (pas d'entrée top-bar historiquement).
           {
             id: 'quick-bracket',

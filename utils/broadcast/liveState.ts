@@ -245,6 +245,9 @@ export async function fetchLiveBroadcastState(
         const { data: members } = await supabaseAdmin
           .from('cast_members')
           .select('id, display_name, auth_user_id')
+          // Les fiches internes (auto-provision admin/owner) ne s'affichent pas
+          // sur l'overlay de diffusion public.
+          .eq('is_internal', false)
           .in('id', memberIds);
 
         // Resolve Discord user IDs from auth_user_id.

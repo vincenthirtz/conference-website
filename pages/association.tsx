@@ -820,6 +820,7 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
       .select('id, name, title, image_url, twitch_url, city, is_promo')
       .eq('tenant_id', DEFAULT_TENANT_ID)
       .eq('is_active', true)
+      .eq('is_internal', false)
       .order('sort_order', { ascending: true }),
     supabaseAdmin
       .from('association_pole_members')

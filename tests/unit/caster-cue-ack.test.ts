@@ -258,6 +258,58 @@ describe('POST /api/caster/cues/[cueId]/ack', () => {
     expect((store.event_cue_acks as any[]).length).toBe(0);
   });
 
+  it('auto-provisions an internal cast_members fiche for an admin without a link', async () => {
+    // Admin/owner sans fiche → auto-provision d'une fiche interne, puis le
+    // cockpit fonctionne (l'ack passe et référence la fiche créée).
+    store.cast_members = [] as any;
+    store.staff = [makeStaffRow('admin')] as any;
+    invalidateStaffCache();
+
+    const res = makeRes();
+    await ackHandler(makeAuthedReq({ query: { cueId: CUE_LIVE } }), res);
+
+    expect(res.statusCode).toBe(200);
+    // Une seule fiche interne a été créée.
+    const members = store.cast_members as any[];
+    expect(members.length).toBe(1);
+    expect(members[0].is_internal).toBe(true);
+    expect(members[0].is_active).toBe(true);
+    expect(members[0].auth_user_id).toBe('user-caster-x');
+    expect(members[0].tenant_id).toBe(TENANT_X);
+    // L'ack référence la fiche auto-provisionnée.
+    const ack = (store.event_cue_acks as any[])[0];
+    expect(ack.cast_member_id).toBe(members[0].id);
+  });
+
+  it('reuses (reactivates) an existing internal fiche instead of duplicating it', async () => {
+    // Fiche interne pré-existante mais désactivée → réactivée et réutilisée.
+    store.staff = [makeStaffRow('owner')] as any;
+    invalidateStaffCache();
+    store.cast_members = [
+      {
+        id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+        auth_user_id: 'user-caster-x',
+        tenant_id: TENANT_X,
+        is_active: false,
+        is_internal: true,
+        name: 'Régie',
+        title: 'Régie',
+      },
+    ] as any;
+
+    const res = makeRes();
+    await ackHandler(makeAuthedReq({ query: { cueId: CUE_LIVE } }), res);
+
+    expect(res.statusCode).toBe(200);
+    const members = store.cast_members as any[];
+    // Pas de doublon : la fiche existante est réutilisée + réactivée.
+    expect(members.length).toBe(1);
+    expect(members[0].id).toBe('cccccccc-cccc-4ccc-8ccc-cccccccccccc');
+    expect(members[0].is_active).toBe(true);
+    const ack = (store.event_cue_acks as any[])[0];
+    expect(ack.cast_member_id).toBe('cccccccc-cccc-4ccc-8ccc-cccccccccccc');
+  });
+
   it('400 on invalid cueId (not a UUID)', async () => {
     const res = makeRes();
     await ackHandler(makeAuthedReq({ query: { cueId: 'not-a-uuid' } }), res);

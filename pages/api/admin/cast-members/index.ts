@@ -93,7 +93,11 @@ async function handler(
       .select(CAST_MEMBER_COLUMNS, {
         count: includeTotal ? 'exact' : undefined,
       })
-      .eq('tenant_id', ctx.tenantId);
+      .eq('tenant_id', ctx.tenantId)
+      // Les fiches internes (auto-provision admin/owner) ne sont pas des
+      // casteurs publics : on les masque de l'UI de gestion des casteurs.
+      // Les opérations CRUD par id (/[id]) ne sont pas affectées.
+      .eq('is_internal', false);
 
     // Statut : 'active'/'inactive' prime, sinon compat includeInactive.
     if (statusParam === 'active') {

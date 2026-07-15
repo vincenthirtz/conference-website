@@ -75,6 +75,10 @@ export const KNOWN_TABLES: readonly string[] = [
 function tableColumnDefaults(table: string): Row {
   if (table === 'tournaments') return { registration_fields: [] };
   if (table === 'tournament_teams') return { field_values: {} };
+  // cast_members.is_internal — NOT NULL DEFAULT false en prod. Les fixtures
+  // legacy ne le seedent pas ; on l'expose à false en lecture pour refléter le
+  // schéma (l'auto-provision admin/owner écrit explicitement is_internal=true).
+  if (table === 'cast_members') return { is_internal: false };
   return {};
 }
 
@@ -381,6 +385,13 @@ class Builder {
       this.filters.push(
         (row) => row[col] === undefined || row[col] === null || row[col] === val
       );
+      return this;
+    }
+    // cast_members.is_internal — NOT NULL DEFAULT false en prod : une row qui ne
+    // seede pas la colonne se comporte comme is_internal=false. On matche donc
+    // undefined/null contre false, tout en gardant le filtrage strict sur true.
+    if (col === 'is_internal') {
+      this.filters.push((row) => (row[col] ?? false) === val);
       return this;
     }
     this.filters.push((row) => row[col] === val);

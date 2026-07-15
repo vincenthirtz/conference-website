@@ -257,6 +257,9 @@ export async function loadCasterUserIdsForMatch(
   const { data: members, error: memErr } = await supabaseAdmin
     .from('cast_members')
     .select('id, auth_user_id, is_active')
+    // Une fiche interne (auto-provision admin/owner) ne doit pas recevoir les
+    // notifications destinées aux casteurs.
+    .eq('is_internal', false)
     .in('id', memberIds);
   if (memErr) {
     logger.error('[notificationAudience] cast_members load error', memErr);

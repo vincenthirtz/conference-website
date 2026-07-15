@@ -63,6 +63,9 @@ async function handler(
       .from('cast_members')
       .select('id, auth_user_id')
       .eq('tenant_id', ctx.tenantId)
+      // Les fiches internes (auto-provision admin/owner) ne sont pas
+      // assignables à un match : on les exclut de la liste des casteurs liés.
+      .eq('is_internal', false)
       .in('auth_user_id', userIds);
 
     if (linksErr) {

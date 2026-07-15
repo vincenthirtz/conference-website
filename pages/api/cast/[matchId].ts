@@ -221,6 +221,9 @@ async function handler(
       .eq('auth_user_id', ctx.user.id)
       .eq('tenant_id', tenantId)
       .eq('is_active', true)
+      // Une fiche interne (auto-provision admin/owner) n'a pas de profil public :
+      // on ne surface pas de carte "castProfile" dans le viewer public.
+      .eq('is_internal', false)
       .maybeSingle();
 
     if (linked) {

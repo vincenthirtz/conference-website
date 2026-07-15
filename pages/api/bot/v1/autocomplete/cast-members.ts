@@ -38,6 +38,9 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
     .from('cast_members')
     .select('id, name')
     .eq('tenant_id', req.botContext.tenantId)
+    // Exclut les fiches internes (auto-provision admin/owner) : elles ne sont
+    // pas assignables via /assigner-cast.
+    .eq('is_internal', false)
     .order('name', { ascending: true })
     .limit(limit);
 

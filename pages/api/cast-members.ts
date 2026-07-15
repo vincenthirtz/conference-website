@@ -27,6 +27,7 @@ export default async function handler(
       'id, name, title, description, image_url, twitch_url, city, is_promo, sort_order'
     )
     .eq('is_active', true)
+    .eq('is_internal', false)
     .eq('tenant_id', tenantId)
     .order('sort_order', { ascending: true });
 

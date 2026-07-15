@@ -193,6 +193,7 @@ export const getStaticProps: GetStaticProps<TournamentPageProps> = async (
       )
       .eq('is_active', true)
       .eq('is_promo', false)
+      .eq('is_internal', false)
       .order('sort_order', { ascending: true }),
   ]);
 
