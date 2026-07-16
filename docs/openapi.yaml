@@ -19205,6 +19205,187 @@ paths:
               schema:
                 type: object
                 additionalProperties: true
+    post:
+      summary: Create a channel-point reward.
+      description: |
+        Requires `manager` role and the `channel:manage:redemptions` scope.
+        Creates a custom reward via `POST helix/channel_points/custom_rewards`.
+        Only rewards created by our client_id are later editable/deletable.
+        Returns `{ reward }`. `409 NOT_CONNECTED` / `403 MISSING_SCOPE`.
+      operationId: adminTwitchCreateReward
+      tags:
+        - admin/twitch
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+                - cost
+              properties:
+                title:
+                  type: string
+                  minLength: 1
+                  maxLength: 45
+                cost:
+                  type: integer
+                  minimum: 1
+                prompt:
+                  type: string
+                  maxLength: 200
+                is_enabled:
+                  type: boolean
+                  default: true
+                is_user_input_required:
+                  type: boolean
+                background_color:
+                  type: string
+                  pattern: '^#[0-9A-Fa-f]{6}$'
+                should_redemptions_skip_request_queue:
+                  type: boolean
+      responses:
+        '200':
+          description: Reward created.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: 'Missing scope (code MISSING_SCOPE) or forbidden role.'
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '409':
+          description: 'No broadcaster channel connected (code NOT_CONNECTED).'
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+  /api/admin/twitch/channel-points/rewards/{id}:
+    patch:
+      summary: Update a channel-point reward.
+      description: |
+        Requires `manager` role and the `channel:manage:redemptions` scope.
+        At least one field is required. `PATCH
+        helix/channel_points/custom_rewards?broadcaster_id=&id=`. Only rewards
+        created by our client_id are editable (Helix may return 400/403 otherwise).
+        `409 NOT_CONNECTED` / `403 MISSING_SCOPE`.
+      operationId: adminTwitchUpdateReward
+      tags:
+        - admin/twitch
+      security:
+        - StaffSession: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              minProperties: 1
+              properties:
+                is_enabled:
+                  type: boolean
+                is_paused:
+                  type: boolean
+                title:
+                  type: string
+                  minLength: 1
+                  maxLength: 45
+                cost:
+                  type: integer
+                  minimum: 1
+                prompt:
+                  type: string
+                  maxLength: 200
+      responses:
+        '200':
+          description: Reward updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: 'Missing scope (code MISSING_SCOPE) or forbidden role.'
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '409':
+          description: 'No broadcaster channel connected (code NOT_CONNECTED).'
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+    delete:
+      summary: Delete a channel-point reward.
+      description: |
+        Requires `manager` role and the `channel:manage:redemptions` scope.
+        `DELETE helix/channel_points/custom_rewards?broadcaster_id=&id=`. Only
+        rewards created by our client_id are deletable (Helix may return 400/403
+        otherwise). Returns `{ ok: true }`. `409 NOT_CONNECTED` /
+        `403 MISSING_SCOPE`.
+      operationId: adminTwitchDeleteReward
+      tags:
+        - admin/twitch
+      security:
+        - StaffSession: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Reward deleted.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: 'Missing scope (code MISSING_SCOPE) or forbidden role.'
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '409':
+          description: 'No broadcaster channel connected (code NOT_CONNECTED).'
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
   /api/admin/twitch/channel-points/redemptions:
     get:
       summary: List channel-point redemptions for a reward.
@@ -19356,6 +19537,58 @@ paths:
                 additionalProperties: true
         '409':
           description: 'No broadcaster channel connected (code NOT_CONNECTED).'
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+  /api/admin/twitch/marker:
+    post:
+      summary: Add a stream marker on the live broadcast.
+      description: |
+        Requires `manager` role and the `channel:manage:broadcast` scope. Posts
+        a stream marker (`POST helix/streams/markers`) to flag a highlight for
+        the VOD. Returns `{ marker }`. If the channel is not live, Helix returns
+        404 which is mapped to `409 { code: 'NOT_LIVE' }`.
+        `409 NOT_CONNECTED` / `403 MISSING_SCOPE`.
+      operationId: adminTwitchCreateMarker
+      tags:
+        - admin/twitch
+      security:
+        - StaffSession: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                description:
+                  type: string
+                  maxLength: 140
+      responses:
+        '200':
+          description: Marker created.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: 'Missing scope (code MISSING_SCOPE) or forbidden role.'
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '409':
+          description: |
+            No broadcaster channel connected (code NOT_CONNECTED) or channel not
+            live (code NOT_LIVE).
           content:
             application/json:
               schema:

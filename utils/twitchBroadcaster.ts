@@ -45,6 +45,9 @@ export const BROADCASTER_SCOPES: readonly string[] = [
   'moderator:manage:banned_users',
   'moderator:manage:chat_messages',
   'moderator:manage:chat_settings',
+  // Stream markers (POST /helix/streams/markers) — repérer les temps forts sur
+  // le VOD pour le montage.
+  'channel:manage:broadcast',
 ];
 
 /* -----------------------------------------------------------

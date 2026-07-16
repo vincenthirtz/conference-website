@@ -17,15 +17,22 @@
 //  - POST  /api/admin/twitch/moderation/ban  body { login, duration?, reason? }
 //  - POST  /api/admin/twitch/moderation/clear
 //  - PATCH /api/admin/twitch/moderation/chat-settings body { emote_mode?, subscriber_mode?, follower_mode?, follower_mode_duration?, slow_mode?, slow_mode_wait_time? }
-//  - GET   /api/admin/twitch/channel-points/rewards → { data: [{ id, title, ... }] }
-//  - GET   /api/admin/twitch/channel-points/redemptions?reward_id=&status=UNFULFILLED → { data: [{ id, user_name, user_input, ... }] }
-//  - PATCH /api/admin/twitch/channel-points/redemptions body { reward_id, redemption_ids, status }
+//  - GET    /api/admin/twitch/channel-points/rewards → { data: [{ id, title, cost?, is_enabled?, ... }] }
+//  - POST   /api/admin/twitch/channel-points/rewards body { title, cost, prompt?, is_enabled?, is_user_input_required?, background_color?, should_redemptions_skip_request_queue? } → { reward }
+//  - PATCH  /api/admin/twitch/channel-points/rewards/{id} body { is_enabled?, is_paused?, title?, cost?, prompt? } → { reward }
+//  - DELETE /api/admin/twitch/channel-points/rewards/{id} → 200
+//  - GET    /api/admin/twitch/channel-points/redemptions?reward_id=&status=UNFULFILLED → { data: [{ id, user_name, user_input, ... }] }
+//  - PATCH  /api/admin/twitch/channel-points/redemptions body { reward_id, redemption_ids, status }
+//  - POST   /api/admin/twitch/marker body { description? } → { marker } (409 NOT_LIVE si la chaîne n'est pas en live)
 //
 // Toutes ces routes : withStaffRoute('manager'), erreurs { error, code? } avec
 // code NOT_CONNECTED (409) → on masque le panneau (la chaîne s'est déconnectée
-// entre deux actions), MISSING_SCOPE (403) → toast « reconnecte la chaîne ».
+// entre deux actions), MISSING_SCOPE (403) → toast « reconnecte la chaîne »,
+// NOT_LIVE (409, marker uniquement) → toast « la chaîne doit être en live ».
+// Rappel Helix : seuls les rewards CRÉÉS par cette app sont éditables/supprimables ;
+// une action sur un reward externe renvoie une erreur Helix → toast clair.
 // Busy CIBLÉ par action, confirmations sur actions destructrices (vider le chat,
-// ban permanent, refuser une demande), toasts succès/erreur, aria.
+// ban permanent, refuser une demande, supprimer un reward), toasts succès/erreur, aria.
 
 import {
   useCallback,
@@ -49,7 +56,14 @@ type TwitchConnection = {
 
 type ClipResponse = { id: string; edit_url: string };
 
-type Reward = { id: string; title: string };
+type Reward = {
+  id: string;
+  title: string;
+  cost?: number;
+  is_enabled?: boolean;
+  is_paused?: boolean;
+  prompt?: string;
+};
 type Redemption = { id: string; user_name: string; user_input?: string };
 
 type ChatSettings = {
@@ -71,6 +85,10 @@ const DEFAULT_SETTINGS: ChatSettings = {
 };
 
 const MAX_CHAT = 500;
+// Limites Twitch : titre de reward ≤ 45, prompt ≤ 200 ; description de marker ≤ 140.
+const MAX_REWARD_TITLE = 45;
+const MAX_REWARD_PROMPT = 200;
+const MAX_MARKER_DESC = 140;
 // Durées de ban proposées ('' = ban permanent, sinon durée en secondes).
 const BAN_DURATIONS = ['', '60', '300', '600', '1800', '3600'] as const;
 
@@ -416,6 +434,139 @@ export default function TwitchCommandsPanel() {
     });
   }
 
+  // --- 4b. Créer / gérer les rewards ---------------------------------------
+
+  const [newTitle, setNewTitle] = useState('');
+  const [newCost, setNewCost] = useState('');
+  const [newPrompt, setNewPrompt] = useState('');
+  const [newUserInput, setNewUserInput] = useState(false);
+  const [newSkipQueue, setNewSkipQueue] = useState(false);
+  const [newColor, setNewColor] = useState('');
+
+  async function handleCreateReward() {
+    const title = newTitle.trim();
+    if (!title) {
+      addToast(t.rewardTitleRequired, 'error');
+      return;
+    }
+    const cost = Number(newCost);
+    if (!Number.isInteger(cost) || cost < 1) {
+      addToast(t.rewardCostInvalid, 'error');
+      return;
+    }
+    const body: {
+      title: string;
+      cost: number;
+      prompt?: string;
+      is_user_input_required?: boolean;
+      should_redemptions_skip_request_queue?: boolean;
+      background_color?: string;
+    } = { title, cost };
+    const prompt = newPrompt.trim();
+    if (prompt) body.prompt = prompt;
+    if (newUserInput) body.is_user_input_required = true;
+    if (newSkipQueue) body.should_redemptions_skip_request_queue = true;
+    const color = newColor.trim();
+    if (color) body.background_color = color;
+
+    await withBusy('reward-create', async () => {
+      try {
+        await mutateJson('/api/admin/twitch/channel-points/rewards', {
+          method: 'POST',
+          body: JSON.stringify(body),
+        });
+        addToast(t.rewardCreateSuccess, 'success');
+        setNewTitle('');
+        setNewCost('');
+        setNewPrompt('');
+        setNewUserInput(false);
+        setNewSkipQueue(false);
+        setNewColor('');
+        await loadRewards();
+      } catch (err) {
+        reportError(err);
+      }
+    });
+  }
+
+  async function toggleReward(reward: Reward) {
+    const next = !(reward.is_enabled ?? false);
+    await withBusy(`reward-toggle:${reward.id}`, async () => {
+      try {
+        await mutateJson(
+          `/api/admin/twitch/channel-points/rewards/${encodeURIComponent(
+            reward.id
+          )}`,
+          {
+            method: 'PATCH',
+            body: JSON.stringify({ is_enabled: next }),
+          }
+        );
+        addToast(
+          next ? t.rewardEnabledSuccess : t.rewardDisabledSuccess,
+          'success'
+        );
+        await loadRewards();
+      } catch (err) {
+        reportError(err);
+      }
+    });
+  }
+
+  async function deleteReward(reward: Reward) {
+    const ok = await confirm({
+      title: format(t.rewardDeleteConfirmTitle, { title: reward.title }),
+      subtitle: t.rewardDeleteConfirmSubtitle,
+      variant: 'danger',
+      confirmLabel: t.rewardDeleteConfirmLabel,
+    });
+    if (!ok) return;
+    await withBusy(`reward-delete:${reward.id}`, async () => {
+      try {
+        await mutateJson(
+          `/api/admin/twitch/channel-points/rewards/${encodeURIComponent(
+            reward.id
+          )}`,
+          { method: 'DELETE' }
+        );
+        addToast(t.rewardDeleteSuccess, 'success');
+        // Si le reward supprimé était sélectionné pour les demandes, on nettoie.
+        if (selectedReward === reward.id) {
+          setSelectedReward('');
+          setRedemptions(undefined);
+        }
+        await loadRewards();
+      } catch (err) {
+        reportError(err);
+      }
+    });
+  }
+
+  // --- 5. Marker ------------------------------------------------------------
+
+  const [markerDescription, setMarkerDescription] = useState('');
+
+  async function handleMarker() {
+    const description = markerDescription.trim();
+    await withBusy('marker', async () => {
+      try {
+        await mutateJson('/api/admin/twitch/marker', {
+          method: 'POST',
+          body: JSON.stringify(description ? { description } : {}),
+        });
+        addToast(t.markerSuccess, 'success');
+        setMarkerDescription('');
+      } catch (err) {
+        // 409 NOT_LIVE : la chaîne n'est pas en direct → message dédié.
+        if (errorCode(err) === 'NOT_LIVE') {
+          addToast(t.markerNotLive, 'error');
+          return;
+        }
+        reportError(err);
+      }
+    });
+  }
+
   // --- Rendu ----------------------------------------------------------------
 
   // Tant que non connecté (ou en cours de vérification), on ne rend RIEN : le
@@ -657,95 +808,319 @@ export default function TwitchCommandsPanel() {
       </Section>
 
       {/* 4. POINTS DE CHAÎNE */}
-      <Section title={t.pointsHeading} last>
-        <label
-          className="mb-1 block text-xs text-neutral-400"
-          htmlFor="twc-reward"
-        >
-          {t.rewardSelectLabel}
-        </label>
-        {rewards === undefined ? (
-          <div className="flex items-center gap-2 text-sm text-neutral-500">
-            <Spinner />
-            {t.rewardsLoading}
+      <Section title={t.pointsHeading}>
+        {/* 4a. Créer une récompense */}
+        <div className="rounded-lg border border-neutral-800 bg-neutral-950/40 p-3">
+          <div className="mb-2 text-sm font-semibold text-neutral-200">
+            {t.rewardCreateHeading}
           </div>
-        ) : (
-          <select
-            id="twc-reward"
-            value={selectedReward}
-            onChange={(e) => handleSelectReward(e.target.value)}
-            className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-2 text-sm"
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleCreateReward();
+            }}
+            className="space-y-2"
           >
-            <option value="">{t.rewardSelectPlaceholder}</option>
-            {rewards.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.title}
-              </option>
-            ))}
-          </select>
-        )}
-        <p className="mt-2 text-[11px] text-neutral-500">{t.rewardsCaveat}</p>
+            <div className="flex flex-wrap items-end gap-2">
+              <div className="min-w-[12rem] flex-1">
+                <label
+                  className="mb-1 block text-xs text-neutral-400"
+                  htmlFor="twc-reward-title"
+                >
+                  {t.rewardTitleLabel}
+                </label>
+                <input
+                  id="twc-reward-title"
+                  type="text"
+                  value={newTitle}
+                  onChange={(e) => setNewTitle(e.target.value)}
+                  maxLength={MAX_REWARD_TITLE}
+                  placeholder={t.rewardTitlePlaceholder}
+                  className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-2 text-sm"
+                />
+                <div className="mt-1 text-right text-[11px] text-neutral-500">
+                  {format(t.rewardTitleCounter, { count: newTitle.length })}
+                </div>
+              </div>
+              <div className="w-28">
+                <label
+                  className="mb-1 block text-xs text-neutral-400"
+                  htmlFor="twc-reward-cost"
+                >
+                  {t.rewardCostLabel}
+                </label>
+                <input
+                  id="twc-reward-cost"
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={newCost}
+                  onChange={(e) => setNewCost(e.target.value)}
+                  placeholder={t.rewardCostPlaceholder}
+                  className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label
+                  className="mb-1 block text-xs text-neutral-400"
+                  htmlFor="twc-reward-color"
+                >
+                  {t.rewardColorLabel}
+                </label>
+                <input
+                  id="twc-reward-color"
+                  type="color"
+                  value={newColor || '#9146ff'}
+                  onChange={(e) => setNewColor(e.target.value)}
+                  aria-label={t.rewardColorLabel}
+                  className="h-10 w-14 cursor-pointer rounded-md border border-neutral-700 bg-neutral-950 p-1"
+                />
+              </div>
+            </div>
+            <div>
+              <label
+                className="mb-1 block text-xs text-neutral-400"
+                htmlFor="twc-reward-prompt"
+              >
+                {t.rewardPromptLabel}
+              </label>
+              <input
+                id="twc-reward-prompt"
+                type="text"
+                value={newPrompt}
+                onChange={(e) => setNewPrompt(e.target.value)}
+                maxLength={MAX_REWARD_PROMPT}
+                placeholder={t.rewardPromptPlaceholder}
+                className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-2 text-sm"
+              />
+            </div>
+            <div className="flex flex-wrap gap-4">
+              <Toggle
+                label={t.rewardUserInput}
+                checked={newUserInput}
+                onChange={setNewUserInput}
+              />
+              <Toggle
+                label={t.rewardSkipQueue}
+                checked={newSkipQueue}
+                onChange={setNewSkipQueue}
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={isBusy('reward-create')}
+              className="inline-flex items-center gap-2 rounded-lg bg-[#9146FF] px-4 py-2 text-sm font-bold hover:bg-[#7b32e0] disabled:opacity-40"
+            >
+              {isBusy('reward-create') && <Spinner />}
+              {isBusy('reward-create')
+                ? t.rewardCreating
+                : t.rewardCreateButton}
+            </button>
+          </form>
+        </div>
 
-        {selectedReward && (
-          <div
-            className="mt-3"
-            aria-live="polite"
-            aria-label={t.redemptionsAria}
-          >
-            {redemptions === undefined ? (
-              <div className="flex items-center gap-2 text-sm text-neutral-500">
-                <Spinner />
-                {t.redemptionsLoading}
-              </div>
-            ) : redemptions.length === 0 ? (
-              <div className="rounded-lg border border-neutral-800 bg-neutral-950/40 px-3 py-4 text-center text-sm text-neutral-500">
-                {t.redemptionsEmpty}
-              </div>
-            ) : (
-              <ul className="space-y-2">
-                {redemptions.map((r) => {
-                  const approving = isBusy(`redeem:${r.id}:FULFILLED`);
-                  const rejecting = isBusy(`redeem:${r.id}:CANCELED`);
-                  return (
-                    <li
-                      key={r.id}
-                      className="flex flex-wrap items-center gap-3 rounded-lg border border-neutral-800 bg-neutral-950/60 px-3 py-2"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate text-sm font-semibold">
-                          {r.user_name}
-                        </div>
-                        <div className="truncate text-xs text-neutral-400">
-                          {r.user_input?.trim()
-                            ? r.user_input
-                            : t.redemptionNoInput}
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => resolveRedemption(r, 'FULFILLED')}
-                        disabled={approving || rejecting}
-                        className="shrink-0 rounded-md bg-emerald-600 px-2.5 py-1 text-xs font-bold hover:bg-emerald-500 disabled:opacity-40"
-                      >
-                        {approving
-                          ? t.redemptionApproving
-                          : t.redemptionApprove}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => resolveRedemption(r, 'CANCELED')}
-                        disabled={approving || rejecting}
-                        className="shrink-0 rounded-md border border-neutral-700 bg-neutral-800 px-2.5 py-1 text-xs font-medium text-neutral-200 hover:bg-neutral-700 disabled:opacity-40"
-                      >
-                        {rejecting ? t.redemptionRejecting : t.redemptionReject}
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
+        {/* 4b. Gérer les récompenses existantes */}
+        <div className="mt-4">
+          <div className="mb-2 text-sm font-semibold text-neutral-200">
+            {t.rewardManageHeading}
           </div>
-        )}
+          {rewards === undefined ? (
+            <div className="flex items-center gap-2 text-sm text-neutral-500">
+              <Spinner />
+              {t.rewardsLoading}
+            </div>
+          ) : rewards.length === 0 ? (
+            <div className="rounded-lg border border-neutral-800 bg-neutral-950/40 px-3 py-4 text-center text-sm text-neutral-500">
+              {t.rewardsEmpty}
+            </div>
+          ) : (
+            <ul className="space-y-2">
+              {rewards.map((r) => {
+                const enabled = r.is_enabled ?? false;
+                const toggling = isBusy(`reward-toggle:${r.id}`);
+                const deleting = isBusy(`reward-delete:${r.id}`);
+                return (
+                  <li
+                    key={r.id}
+                    className="flex flex-wrap items-center gap-3 rounded-lg border border-neutral-800 bg-neutral-950/60 px-3 py-2"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-semibold">
+                        {r.title}
+                      </div>
+                      {typeof r.cost === 'number' && (
+                        <div className="text-xs text-neutral-400">
+                          {format(t.rewardCostBadge, { cost: r.cost })}
+                        </div>
+                      )}
+                    </div>
+                    <span
+                      className={`shrink-0 rounded px-1.5 py-0.5 text-[11px] font-semibold ${
+                        enabled
+                          ? 'bg-emerald-900/50 text-emerald-300'
+                          : 'bg-neutral-800 text-neutral-400'
+                      }`}
+                    >
+                      {enabled ? t.rewardStateEnabled : t.rewardStateDisabled}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => toggleReward(r)}
+                      disabled={toggling || deleting}
+                      className="shrink-0 rounded-md border border-neutral-700 bg-neutral-800 px-2.5 py-1 text-xs font-medium text-neutral-200 hover:bg-neutral-700 disabled:opacity-40"
+                    >
+                      {toggling
+                        ? t.rewardToggling
+                        : enabled
+                          ? t.rewardDisable
+                          : t.rewardEnable}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => deleteReward(r)}
+                      disabled={toggling || deleting}
+                      className="shrink-0 rounded-md border border-red-500/50 bg-red-950/40 px-2.5 py-1 text-xs font-medium text-red-200 hover:bg-red-900/40 disabled:opacity-40"
+                    >
+                      {deleting ? t.rewardDeleting : t.rewardDelete}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          <p className="mt-2 text-[11px] text-neutral-500">{t.rewardsCaveat}</p>
+        </div>
+
+        {/* 4c. Demandes en attente */}
+        <div className="mt-4">
+          <label
+            className="mb-1 block text-xs text-neutral-400"
+            htmlFor="twc-reward"
+          >
+            {t.rewardSelectLabel}
+          </label>
+          {rewards === undefined ? (
+            <div className="flex items-center gap-2 text-sm text-neutral-500">
+              <Spinner />
+              {t.rewardsLoading}
+            </div>
+          ) : (
+            <select
+              id="twc-reward"
+              value={selectedReward}
+              onChange={(e) => handleSelectReward(e.target.value)}
+              className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-2 text-sm"
+            >
+              <option value="">{t.rewardSelectPlaceholder}</option>
+              {rewards.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.title}
+                </option>
+              ))}
+            </select>
+          )}
+
+          {selectedReward && (
+            <div
+              className="mt-3"
+              aria-live="polite"
+              aria-label={t.redemptionsAria}
+            >
+              {redemptions === undefined ? (
+                <div className="flex items-center gap-2 text-sm text-neutral-500">
+                  <Spinner />
+                  {t.redemptionsLoading}
+                </div>
+              ) : redemptions.length === 0 ? (
+                <div className="rounded-lg border border-neutral-800 bg-neutral-950/40 px-3 py-4 text-center text-sm text-neutral-500">
+                  {t.redemptionsEmpty}
+                </div>
+              ) : (
+                <ul className="space-y-2">
+                  {redemptions.map((r) => {
+                    const approving = isBusy(`redeem:${r.id}:FULFILLED`);
+                    const rejecting = isBusy(`redeem:${r.id}:CANCELED`);
+                    return (
+                      <li
+                        key={r.id}
+                        className="flex flex-wrap items-center gap-3 rounded-lg border border-neutral-800 bg-neutral-950/60 px-3 py-2"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-sm font-semibold">
+                            {r.user_name}
+                          </div>
+                          <div className="truncate text-xs text-neutral-400">
+                            {r.user_input?.trim()
+                              ? r.user_input
+                              : t.redemptionNoInput}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => resolveRedemption(r, 'FULFILLED')}
+                          disabled={approving || rejecting}
+                          className="shrink-0 rounded-md bg-emerald-600 px-2.5 py-1 text-xs font-bold hover:bg-emerald-500 disabled:opacity-40"
+                        >
+                          {approving
+                            ? t.redemptionApproving
+                            : t.redemptionApprove}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => resolveRedemption(r, 'CANCELED')}
+                          disabled={approving || rejecting}
+                          className="shrink-0 rounded-md border border-neutral-700 bg-neutral-800 px-2.5 py-1 text-xs font-medium text-neutral-200 hover:bg-neutral-700 disabled:opacity-40"
+                        >
+                          {rejecting
+                            ? t.redemptionRejecting
+                            : t.redemptionReject}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          )}
+        </div>
+      </Section>
+
+      {/* 5. MARKER */}
+      <Section title={t.markerHeading} last>
+        <p className="mb-2 text-xs text-neutral-500">{t.markerHint}</p>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleMarker();
+          }}
+          className="flex flex-wrap items-start gap-2"
+        >
+          <div className="min-w-0 flex-1">
+            <label className="sr-only" htmlFor="twc-marker">
+              {t.markerDescriptionLabel}
+            </label>
+            <input
+              id="twc-marker"
+              type="text"
+              value={markerDescription}
+              onChange={(e) => setMarkerDescription(e.target.value)}
+              maxLength={MAX_MARKER_DESC}
+              placeholder={t.markerPlaceholder}
+              className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-2 text-sm"
+            />
+            <div className="mt-1 text-right text-[11px] text-neutral-500">
+              {format(t.markerCounter, { count: markerDescription.length })}
+            </div>
+          </div>
+          <button
+            type="submit"
+            disabled={isBusy('marker')}
+            className="inline-flex items-center gap-2 rounded-lg bg-[#9146FF] px-4 py-2 text-sm font-bold hover:bg-[#7b32e0] disabled:opacity-40"
+          >
+            {isBusy('marker') && <Spinner />}
+            {isBusy('marker') ? t.markerCreating : t.markerButton}
+          </button>
+        </form>
       </Section>
 
       {dialog}
@@ -788,9 +1163,7 @@ function Section({
   return (
     <div
       className={
-        last
-          ? 'pt-4'
-          : 'border-b border-neutral-800/60 pb-4 pt-4 first:pt-0'
+        last ? 'pt-4' : 'border-b border-neutral-800/60 pb-4 pt-4 first:pt-0'
       }
     >
       <div className="mb-2 text-sm font-semibold text-neutral-100">{title}</div>

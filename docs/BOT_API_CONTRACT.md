@@ -1677,11 +1677,44 @@ Scope requis : **`channel:read:redemptions`**. **Response 200** :
 `409 { code: 'NOT_CONNECTED' }`, `502`.
 
 > ⚠️ **Caveat points de chaîne** : l'API Helix ne permet de gérer (lister
-> demandes, FULFILLED/CANCELED) que les redemptions des rewards **créés par
+> demandes, FULFILLED/CANCELED, éditer, supprimer) que les rewards **créés par
 > NOTRE `client_id`** (`only_manageable_rewards`). Les rewards créés par le
 > streamer lui-même ou d'autres apps ne sont ni listables ni gérables via ces
-> endpoints. V1 = gestion des demandes en attente uniquement (pas de
-> création/édition de reward).
+> endpoints (Helix renvoie alors `400`/`403`, remonté proprement).
+
+##### `POST /api/admin/twitch/channel-points/rewards` (staff, `manager`+)
+
+Crée un reward de points de chaîne. Body zod : `title` (`string` 1..45),
+`cost` (`int` ≥ 1), `prompt?` (`string` 0..200), `is_enabled?` (`bool`, défaut
+`true`), `is_user_input_required?` (`bool`), `background_color?` (hex
+`#RRGGBB`), `should_redemptions_skip_request_queue?` (`bool`). `POST
+helix/channel_points/custom_rewards?broadcaster_id=`. Scope requis :
+**`channel:manage:redemptions`**. **Response 200** : `{ reward }`. **Errors** :
+`400 { code: 'INVALID_PAYLOAD' | 'TWITCH_HELIX_BAD_REQUEST' }`, `401`,
+`403 { code: 'MISSING_SCOPE' }`, `409 { code: 'NOT_CONNECTED' }`, `502`.
+
+##### `PATCH /api/admin/twitch/channel-points/rewards/{id}` (staff, `manager`+)
+
+Met à jour un reward (≥1 champ). Body zod : `is_enabled?`, `is_paused?`,
+`title?` (1..45), `cost?` (`int` ≥ 1), `prompt?` (0..200). `PATCH
+helix/channel_points/custom_rewards?broadcaster_id=&id=`. Scope requis :
+**`channel:manage:redemptions`**. `400` si l'id manque. **Response 200** :
+`{ reward }`. **Errors** : `400 { code: 'INVALID_PAYLOAD' |
+'TWITCH_HELIX_BAD_REQUEST' }`, `401`, `403 { code: 'MISSING_SCOPE' |
+'TWITCH_HELIX_FORBIDDEN' }`, `409 { code: 'NOT_CONNECTED' }`, `502`.
+
+##### `DELETE /api/admin/twitch/channel-points/rewards/{id}` (staff, `manager`+)
+
+Supprime un reward. `DELETE
+helix/channel_points/custom_rewards?broadcaster_id=&id=`. Scope requis :
+**`channel:manage:redemptions`**. `400` si l'id manque. **Response 200** :
+`{ ok: true }`. **Errors** : `400 { code: 'INVALID_PAYLOAD' |
+'TWITCH_HELIX_BAD_REQUEST' }`, `401`, `403 { code: 'MISSING_SCOPE' |
+'TWITCH_HELIX_FORBIDDEN' }`, `409 { code: 'NOT_CONNECTED' }`, `502`.
+
+> Seuls les rewards créés par notre `client_id` sont éditables/supprimables ;
+> Helix renvoie `400`/`403` sinon, remonté tel quel
+> (`TWITCH_HELIX_BAD_REQUEST` / `TWITCH_HELIX_FORBIDDEN`).
 
 ##### `GET /api/admin/twitch/channel-points/redemptions` (staff, `manager`+)
 
@@ -1708,6 +1741,17 @@ Capture un clip (~30 dernières secondes). Pas de body. `POST
 helix/clips?broadcaster_id=<broadcasterId>`. Scope requis : **`clips:edit`**.
 **Response 200** : `{ id, edit_url }`. **Errors** : `401`,
 `403 { code: 'MISSING_SCOPE' }`, `409 { code: 'NOT_CONNECTED' }`, `502`.
+
+##### `POST /api/admin/twitch/marker` (staff, `manager`+)
+
+Pose un stream marker sur le live en cours (repère un temps fort pour le montage
+du VOD). Body zod : `description?` (`string` 0..140). `POST
+helix/streams/markers` avec `{ user_id: broadcasterId, description? }`. Scope
+requis : **`channel:manage:broadcast`**. **Response 200** : `{ marker }`.
+Helix renvoie `404` si la chaîne n'est **pas en live** → mappé en
+`409 { code: 'NOT_LIVE' }`. **Errors** : `400 { code: 'INVALID_PAYLOAD' }`,
+`401`, `403 { code: 'MISSING_SCOPE' }`, `409 { code: 'NOT_CONNECTED' | 'NOT_LIVE' }`,
+`502`.
 
 #### `GET /api/bot/v1/tournament-help/inventory`
 

@@ -44,8 +44,10 @@ import banHandler from '../../pages/api/admin/twitch/moderation/ban';
 import clearHandler from '../../pages/api/admin/twitch/moderation/clear';
 import chatSettingsHandler from '../../pages/api/admin/twitch/moderation/chat-settings';
 import rewardsHandler from '../../pages/api/admin/twitch/channel-points/rewards';
+import rewardByIdHandler from '../../pages/api/admin/twitch/channel-points/rewards/[id]';
 import redemptionsHandler from '../../pages/api/admin/twitch/channel-points/redemptions';
 import clipHandler from '../../pages/api/admin/twitch/clip';
+import markerHandler from '../../pages/api/admin/twitch/marker';
 
 const TENANT_X = 'ce69a726-773e-4d12-b5eb-d2503aa752b4'; // DEFAULT_TENANT_ID
 
@@ -56,6 +58,7 @@ const CHAT_SETTINGS_SCOPE = 'moderator:manage:chat_settings';
 const REDEMPTIONS_READ_SCOPE = 'channel:read:redemptions';
 const REDEMPTIONS_MANAGE_SCOPE = 'channel:manage:redemptions';
 const CLIP_SCOPE = 'clips:edit';
+const BROADCAST_SCOPE = 'channel:manage:broadcast';
 
 /* -----------------------------------------------------------
  * Helpers
@@ -601,6 +604,299 @@ describe('POST /api/admin/twitch/clip', () => {
     seedConnection([CLIP_SCOPE]);
     const res = makeRes();
     await clipHandler(makeAuthedReq({ method: 'GET' }), res);
+    expect(res.statusCode).toBe(405);
+  });
+});
+
+/* ===========================================================
+ * POST /api/admin/twitch/channel-points/rewards (création)
+ * =========================================================*/
+
+describe('POST /api/admin/twitch/channel-points/rewards', () => {
+  it('200 creates a reward and returns { reward }', async () => {
+    seedConnection();
+    const fetchMock = mockFetchOk({
+      data: [{ id: 'rw-new', title: 'Skip intro', cost: 500 }],
+    });
+    const res = makeRes();
+    await rewardsHandler(
+      makeAuthedReq({
+        method: 'POST',
+        body: {
+          title: 'Skip intro',
+          cost: 500,
+          prompt: 'On saute',
+          background_color: '#00FF7F',
+          should_redemptions_skip_request_queue: true,
+        },
+      }),
+      res
+    );
+
+    expect(res.statusCode).toBe(200);
+    const body = res.body as { reward: { id: string } };
+    expect(body.reward.id).toBe('rw-new');
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [
+      string,
+      RequestInit,
+    ];
+    expect(url).toContain('/helix/channel_points/custom_rewards');
+    expect(url).toContain('broadcaster_id=bc-123');
+    expect(init.method).toBe('POST');
+    const sent = JSON.parse(init.body as string);
+    expect(sent.title).toBe('Skip intro');
+    expect(sent.cost).toBe(500);
+    expect(sent.is_enabled).toBe(true); // défaut
+    expect(sent.background_color).toBe('#00FF7F');
+    expect(sent.should_redemptions_skip_request_queue).toBe(true);
+    expect(logStaffActionMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('400 on invalid payload (title too long)', async () => {
+    seedConnection([REDEMPTIONS_MANAGE_SCOPE]);
+    const res = makeRes();
+    await rewardsHandler(
+      makeAuthedReq({
+        method: 'POST',
+        body: { title: 'x'.repeat(46), cost: 100 },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+    expect((res.body as { code?: string }).code).toBe('INVALID_PAYLOAD');
+  });
+
+  it('400 on invalid payload (cost < 1)', async () => {
+    seedConnection([REDEMPTIONS_MANAGE_SCOPE]);
+    const res = makeRes();
+    await rewardsHandler(
+      makeAuthedReq({ method: 'POST', body: { title: 'ok', cost: 0 } }),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+    expect((res.body as { code?: string }).code).toBe('INVALID_PAYLOAD');
+  });
+
+  it('403 MISSING_SCOPE without channel:manage:redemptions', async () => {
+    seedConnection([REDEMPTIONS_READ_SCOPE]); // read only
+    const res = makeRes();
+    await rewardsHandler(
+      makeAuthedReq({ method: 'POST', body: { title: 'ok', cost: 10 } }),
+      res
+    );
+    expect(res.statusCode).toBe(403);
+    expect((res.body as { code?: string }).code).toBe('MISSING_SCOPE');
+  });
+
+  it('409 NOT_CONNECTED when no connection', async () => {
+    store.twitch_broadcaster_connections = [] as any;
+    const res = makeRes();
+    await rewardsHandler(
+      makeAuthedReq({ method: 'POST', body: { title: 'ok', cost: 10 } }),
+      res
+    );
+    expect(res.statusCode).toBe(409);
+    expect((res.body as { code?: string }).code).toBe('NOT_CONNECTED');
+  });
+});
+
+/* ===========================================================
+ * PATCH/DELETE /api/admin/twitch/channel-points/rewards/[id]
+ * =========================================================*/
+
+describe('PATCH /api/admin/twitch/channel-points/rewards/[id]', () => {
+  it('200 updates a reward (is_paused)', async () => {
+    seedConnection();
+    const fetchMock = mockFetchOk({
+      data: [{ id: 'rw-1', is_paused: true }],
+    });
+    const res = makeRes();
+    await rewardByIdHandler(
+      makeAuthedReq({
+        method: 'PATCH',
+        query: { id: 'rw-1' },
+        body: { is_paused: true, cost: 750 },
+      }),
+      res
+    );
+
+    expect(res.statusCode).toBe(200);
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [
+      string,
+      RequestInit,
+    ];
+    expect(url).toContain('/helix/channel_points/custom_rewards');
+    expect(url).toContain('id=rw-1');
+    expect(init.method).toBe('PATCH');
+    const sent = JSON.parse(init.body as string);
+    expect(sent.is_paused).toBe(true);
+    expect(sent.cost).toBe(750);
+    expect(logStaffActionMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('400 when no field is provided (empty body)', async () => {
+    seedConnection([REDEMPTIONS_MANAGE_SCOPE]);
+    const res = makeRes();
+    await rewardByIdHandler(
+      makeAuthedReq({ method: 'PATCH', query: { id: 'rw-1' }, body: {} }),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+    expect((res.body as { code?: string }).code).toBe('INVALID_PAYLOAD');
+  });
+
+  it('400 when reward id is missing', async () => {
+    seedConnection([REDEMPTIONS_MANAGE_SCOPE]);
+    const res = makeRes();
+    await rewardByIdHandler(
+      makeAuthedReq({
+        method: 'PATCH',
+        query: {},
+        body: { is_enabled: false },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+    expect((res.body as { code?: string }).code).toBe('INVALID_PAYLOAD');
+  });
+
+  it('403 MISSING_SCOPE without channel:manage:redemptions', async () => {
+    seedConnection([REDEMPTIONS_READ_SCOPE]);
+    const res = makeRes();
+    await rewardByIdHandler(
+      makeAuthedReq({
+        method: 'PATCH',
+        query: { id: 'rw-1' },
+        body: { is_enabled: false },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(403);
+    expect((res.body as { code?: string }).code).toBe('MISSING_SCOPE');
+  });
+});
+
+describe('DELETE /api/admin/twitch/channel-points/rewards/[id]', () => {
+  it('200 deletes a reward', async () => {
+    seedConnection();
+    const fetchMock = vi.fn(async () => ({ ok: true, status: 204 }));
+    vi.stubGlobal('fetch', fetchMock);
+    const res = makeRes();
+    await rewardByIdHandler(
+      makeAuthedReq({ method: 'DELETE', query: { id: 'rw-1' } }),
+      res
+    );
+
+    expect(res.statusCode).toBe(200);
+    expect((res.body as { ok: boolean }).ok).toBe(true);
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [
+      string,
+      RequestInit,
+    ];
+    expect(url).toContain('id=rw-1');
+    expect(init.method).toBe('DELETE');
+    expect(logStaffActionMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('409 NOT_CONNECTED when no connection', async () => {
+    store.twitch_broadcaster_connections = [] as any;
+    const res = makeRes();
+    await rewardByIdHandler(
+      makeAuthedReq({ method: 'DELETE', query: { id: 'rw-1' } }),
+      res
+    );
+    expect(res.statusCode).toBe(409);
+    expect((res.body as { code?: string }).code).toBe('NOT_CONNECTED');
+  });
+
+  it('405 on wrong method', async () => {
+    seedConnection([REDEMPTIONS_MANAGE_SCOPE]);
+    const res = makeRes();
+    await rewardByIdHandler(
+      makeAuthedReq({ method: 'GET', query: { id: 'rw-1' } }),
+      res
+    );
+    expect(res.statusCode).toBe(405);
+  });
+});
+
+/* ===========================================================
+ * POST /api/admin/twitch/marker
+ * =========================================================*/
+
+describe('POST /api/admin/twitch/marker', () => {
+  it('200 creates a stream marker and returns { marker }', async () => {
+    seedConnection();
+    const fetchMock = mockFetchOk({
+      data: [{ id: 'mk-1', position_seconds: 1234 }],
+    });
+    const res = makeRes();
+    await markerHandler(
+      makeAuthedReq({ method: 'POST', body: { description: 'Ace clutch' } }),
+      res
+    );
+
+    expect(res.statusCode).toBe(200);
+    const body = res.body as { marker: { id: string } };
+    expect(body.marker.id).toBe('mk-1');
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [
+      string,
+      RequestInit,
+    ];
+    expect(url).toContain('/helix/streams/markers');
+    expect(init.method).toBe('POST');
+    const sent = JSON.parse(init.body as string);
+    expect(sent.user_id).toBe('bc-123');
+    expect(sent.description).toBe('Ace clutch');
+    expect(logStaffActionMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('409 NOT_LIVE when Helix returns 404 (channel offline)', async () => {
+    seedConnection();
+    const fetchMock = vi.fn(async () => ({
+      ok: false,
+      status: 404,
+      json: async () => ({ error: 'Not Found', status: 404 }),
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+    const res = makeRes();
+    await markerHandler(makeAuthedReq({ method: 'POST', body: {} }), res);
+
+    expect(res.statusCode).toBe(409);
+    expect((res.body as { code?: string }).code).toBe('NOT_LIVE');
+  });
+
+  it('409 NOT_CONNECTED when no connection', async () => {
+    store.twitch_broadcaster_connections = [] as any;
+    const res = makeRes();
+    await markerHandler(makeAuthedReq({ method: 'POST', body: {} }), res);
+    expect(res.statusCode).toBe(409);
+    expect((res.body as { code?: string }).code).toBe('NOT_CONNECTED');
+  });
+
+  it('403 MISSING_SCOPE without channel:manage:broadcast', async () => {
+    seedConnection([CLIP_SCOPE]);
+    const res = makeRes();
+    await markerHandler(makeAuthedReq({ method: 'POST', body: {} }), res);
+    expect(res.statusCode).toBe(403);
+    expect((res.body as { code?: string }).code).toBe('MISSING_SCOPE');
+  });
+
+  it('400 on invalid payload (description too long)', async () => {
+    seedConnection([BROADCAST_SCOPE]);
+    const res = makeRes();
+    await markerHandler(
+      makeAuthedReq({ method: 'POST', body: { description: 'x'.repeat(141) } }),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+    expect((res.body as { code?: string }).code).toBe('INVALID_PAYLOAD');
+  });
+
+  it('405 on wrong method', async () => {
+    seedConnection([BROADCAST_SCOPE]);
+    const res = makeRes();
+    await markerHandler(makeAuthedReq({ method: 'GET' }), res);
     expect(res.statusCode).toBe(405);
   });
 });
