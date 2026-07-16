@@ -259,6 +259,34 @@ export default function TeamRolesPanel() {
           </div>
 
           <div className="space-y-3">
+            {/* Capitaine — rôle implicite (teams.captain_id), toujours toutes
+                les permissions, non éditable / non supprimable. Affiché en
+                tête pour rendre la hiérarchie explicite. */}
+            <div className="bg-emerald-500/5 border border-emerald-500/30 rounded-xl p-4">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <svg
+                    className="w-5 h-5 text-emerald-400 flex-shrink-0"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                    aria-hidden="true"
+                  >
+                    <path d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" />
+                  </svg>
+                  <span className="text-sm font-semibold text-white">
+                    {t.captainLabel}
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    {t.captainBadge}
+                  </span>
+                </div>
+                <span className="text-xs font-medium text-emerald-300">
+                  {t.captainAllPermissions}
+                </span>
+              </div>
+              <p className="text-xs text-neutral-400 mt-2">{t.captainHint}</p>
+            </div>
+
             {drafts.length === 0 && (
               <p className="text-sm text-neutral-500 italic py-6 text-center">
                 {t.emptyRoles}
