@@ -1,26 +1,35 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminResource } from '@/hooks/useAdminResource';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import { useLang } from '@/lib/i18n/LanguageProvider';
+import {
+  STAFF_LOG_ACTION_LABELS,
+  STAFF_LOG_ACTION_OPTIONS,
+} from '@/utils/staffLogs';
+import type { StaffLogAction } from '@/types/staffLogs';
 
 import { logger } from '../../../utils/logger';
 
+/**
+ * Shape of a row returned by GET /api/admin/logs. The API selects only these
+ * columns (+ resolved `staff_display_name` and the `formatStaffLog` extras).
+ * The historical `stage_id` / `match_id` / `team_id` / `message` / `staff_role`
+ * fields are NOT columns of `staff_logs` and are no longer returned — they used
+ * to render as perpetually-empty tags and have been dropped.
+ */
 type StaffLog = {
   id: string;
   created_at: string;
   staff_id: string | null;
-  staff_role: string | null;
   staff_display_name: string | null;
   action: string;
   entity_type: string | null;
   entity_id: string | null;
   tournament_id: string | null;
-  stage_id: string | null;
-  match_id: string | null;
-  team_id: string | null;
-  payload: any | null;
-  message: string | null;
+  tenant_id: string | null;
+  payload: unknown;
 };
 
 type LogsApiResponse = {
@@ -39,9 +48,16 @@ type TournamentsApiResponse = {
   total: number | null;
 };
 
-function formatDateTime(iso: string) {
+// BCP-47 locale for the active app language (dates render in the user's own
+// timezone automatically — `Intl` defaults to the runtime zone).
+const DATE_LOCALE: Record<'fr' | 'en', string> = {
+  fr: 'fr-FR',
+  en: 'en-GB',
+};
+
+function formatDateTime(iso: string, locale: string) {
   try {
-    return new Date(iso).toLocaleString('fr-FR', {
+    return new Date(iso).toLocaleString(locale, {
       day: 'numeric',
       month: 'short',
       year: 'numeric',
@@ -52,6 +68,21 @@ function formatDateTime(iso: string) {
     return iso;
   }
 }
+
+// Readable FR label for an action slug, with a graceful fallback to the raw slug.
+function actionLabel(action: string): string {
+  return STAFF_LOG_ACTION_LABELS[action as StaffLogAction] ?? action;
+}
+
+// Known admin routes an `entity_type` maps to, so we can deep-link from a log
+// row using entity_type + entity_id (the real columns) instead of the dropped
+// dedicated *_id fields.
+const ENTITY_ROUTES: Record<string, (id: string) => string> = {
+  match: (id) => `/admin/matches/${id}`,
+  stage: (id) => `/admin/stages/${id}`,
+  team: (id) => `/admin/teams/${id}`,
+  tournament: (id) => `/admin/tournament/${id}`,
+};
 
 function shortId(id: string | null | undefined) {
   if (!id) return '';
@@ -66,9 +97,13 @@ function shortId(id: string | null | undefined) {
 export default function StaffLogsPanel() {
   const { adminFetch } = useAdminFetch();
   const t = useAdminT('adminLogs');
+  const { lang } = useLang();
+  const dateLocale = DATE_LOCALE[lang];
 
   const [tournaments, setTournaments] = useState<TournamentMini[]>([]);
   const [loadingTournaments, setLoadingTournaments] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   // Filtres réactifs : refetch immédiat sur changement, SANS reset d'offset
   // (comportement d'origine).
@@ -149,6 +184,72 @@ export default function StaffLogsPanel() {
     resetOffset();
   }
 
+  // Currently-applied filter set, shared by the read hook and the CSV export so
+  // the export mirrors exactly what the list shows.
+  const currentFilters = useMemo<Record<string, string>>(() => {
+    const f: Record<string, string> = {
+      entityType: entityType.trim(),
+      action: action.trim(),
+      staffId: staffId.trim(),
+      tournamentId: tournamentId.trim(),
+      stageId: stageId.trim(),
+      matchId: matchId.trim(),
+      teamId: teamId.trim(),
+      search: appliedSearch.trim(),
+      from: appliedFrom,
+      to: appliedTo,
+    };
+    return f;
+  }, [
+    entityType,
+    action,
+    staffId,
+    tournamentId,
+    stageId,
+    matchId,
+    teamId,
+    appliedSearch,
+    appliedFrom,
+    appliedTo,
+  ]);
+
+  // CSV export. Reuses `adminFetch` so the request carries the Supabase Bearer
+  // token (the endpoint is admin-gated via withStaffRoute) — a bare
+  // window.open() would drop the auth header and 401. fetch → blob → anchor.
+  async function handleExportCsv() {
+    if (exporting) return;
+    setExportError(null);
+    setExporting(true);
+
+    const params = new URLSearchParams();
+    params.set('format', 'csv');
+    for (const [key, value] of Object.entries(currentFilters)) {
+      if (value) params.set(key, value);
+    }
+
+    const url = `/api/admin/logs?${params.toString()}`;
+    try {
+      const res = await adminFetch(url);
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = objectUrl;
+      a.download = `staff-logs-${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(objectUrl);
+    } catch (e) {
+      logger.error('Staff logs CSV export failed', e);
+      setExportError(t.exportError);
+    } finally {
+      setExporting(false);
+    }
+  }
+
   return (
     <>
       {/* Header */}
@@ -168,14 +269,42 @@ export default function StaffLogsPanel() {
             </p>
           </div>
 
-          <div className="text-xs text-neutral-500 bg-neutral-800/50 px-3 py-2 rounded-xl border border-neutral-700/50">
-            {t.sortedByDate}
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={handleExportCsv}
+              disabled={exporting}
+              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {exporting ? (
+                <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+              ) : (
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                  />
+                </svg>
+              )}
+              {exporting ? t.exporting : t.exportCsv}
+            </button>
+
+            <div className="text-xs text-neutral-500 bg-neutral-800/50 px-3 py-2 rounded-xl border border-neutral-700/50">
+              {t.sortedByDate}
+            </div>
           </div>
         </div>
       </div>
 
       {/* Error Message */}
-      {errorMsg && (
+      {(errorMsg || exportError) && (
         <div className="mb-6 rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm flex items-center gap-2">
           <svg
             className="w-5 h-5 text-red-400 flex-shrink-0"
@@ -188,7 +317,7 @@ export default function StaffLogsPanel() {
               clipRule="evenodd"
             />
           </svg>
-          {errorMsg}
+          {errorMsg || exportError}
         </div>
       )}
 
@@ -215,13 +344,18 @@ export default function StaffLogsPanel() {
             <label className="block text-sm text-neutral-400 mb-1">
               {t.labelAction}
             </label>
-            <input
-              type="text"
-              placeholder={t.placeholderAction}
+            <select
               className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
               value={action}
               onChange={(e) => setAction(e.target.value)}
-            />
+            >
+              <option value="">{t.allActions}</option>
+              {STAFF_LOG_ACTION_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div>
@@ -410,9 +544,16 @@ export default function StaffLogsPanel() {
                 <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-xs font-mono text-neutral-500 bg-neutral-900/50 px-2 py-1 rounded-lg">
-                      {formatDateTime(log.created_at)}
+                      {formatDateTime(log.created_at, dateLocale)}
                     </span>
-                    <span className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-600/20 text-blue-300 border border-blue-500/30">
+                    <span
+                      className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-600/20 text-blue-300 border border-blue-500/30"
+                      title={log.action}
+                    >
+                      {actionLabel(log.action)}
+                    </span>
+                    {/* Raw slug kept visible & subtle for debugging. */}
+                    <span className="text-[10px] font-mono text-neutral-600">
                       {log.action}
                     </span>
                     {log.entity_type && (
@@ -429,61 +570,65 @@ export default function StaffLogsPanel() {
                       <span className="font-medium text-neutral-200">
                         {log.staff_display_name || shortId(log.staff_id)}
                       </span>
-                      {log.staff_role && (
-                        <span className="px-2 py-0.5 rounded-lg bg-neutral-700/50 border border-neutral-600/50 text-[10px] uppercase tracking-wide text-neutral-400">
-                          {log.staff_role}
-                        </span>
-                      )}
                     </div>
                   )}
                 </div>
 
-                {/* Tags row */}
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {log.tournament_id && (
+                {/* Tags row — only fields that actually exist on staff_logs. */}
+                {log.tournament_id && (
+                  <div className="flex flex-wrap gap-2 mb-2">
                     <span className="px-2 py-0.5 rounded-lg text-[10px] bg-amber-900/30 border border-amber-700/30 text-amber-300">
                       {format(t.tagTournament, {
                         id: shortId(log.tournament_id),
                       })}
                     </span>
-                  )}
-                  {log.stage_id && (
-                    <span className="px-2 py-0.5 rounded-lg text-[10px] bg-purple-900/30 border border-purple-700/30 text-purple-300">
-                      {format(t.tagStage, { id: shortId(log.stage_id) })}
-                    </span>
-                  )}
-                  {log.match_id && (
-                    <span className="px-2 py-0.5 rounded-lg text-[10px] bg-emerald-900/30 border border-emerald-700/30 text-emerald-300">
-                      {format(t.tagMatch, { id: shortId(log.match_id) })}
-                    </span>
-                  )}
-                  {log.team_id && (
-                    <span className="px-2 py-0.5 rounded-lg text-[10px] bg-cyan-900/30 border border-cyan-700/30 text-cyan-300">
-                      {format(t.tagTeam, { id: shortId(log.team_id) })}
-                    </span>
-                  )}
-                </div>
-
-                {/* Message */}
-                {log.message && (
-                  <p className="text-sm text-neutral-200 mb-2">{log.message}</p>
+                  </div>
                 )}
 
                 {/* Payload + Links */}
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  {log.payload && (
-                    <details className="text-xs text-neutral-400">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  {log.payload != null &&
+                  !(
+                    typeof log.payload === 'object' &&
+                    Object.keys(log.payload as object).length === 0
+                  ) ? (
+                    <details className="text-xs text-neutral-400 min-w-0 flex-1">
                       <summary className="cursor-pointer select-none hover:text-neutral-200 transition-colors">
                         {t.detailsPayload}
                       </summary>
-                      <pre className="mt-2 bg-neutral-900/70 border border-neutral-700/50 rounded-xl p-3 text-[11px] overflow-x-auto max-h-48">
+                      <pre className="mt-2 bg-neutral-900/70 border border-neutral-700/50 rounded-xl p-3 text-[11px] leading-relaxed overflow-auto max-h-64 whitespace-pre-wrap break-words">
                         {JSON.stringify(log.payload, null, 2)}
                       </pre>
                     </details>
+                  ) : (
+                    <span />
                   )}
 
-                  <div className="flex flex-wrap gap-3 text-xs">
-                    {log.tournament_id && (
+                  <div className="flex flex-wrap gap-3 text-xs shrink-0">
+                    {log.entity_type &&
+                      log.entity_id &&
+                      ENTITY_ROUTES[log.entity_type] && (
+                        <Link
+                          href={ENTITY_ROUTES[log.entity_type](log.entity_id)}
+                          className="text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1"
+                        >
+                          <svg
+                            className="w-3 h-3"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                            />
+                          </svg>
+                          {t.linkEntity}
+                        </Link>
+                      )}
+                    {log.tournament_id && log.entity_type !== 'tournament' && (
                       <Link
                         href={`/admin/tournament/${log.tournament_id}`}
                         className="text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1"
@@ -502,69 +647,6 @@ export default function StaffLogsPanel() {
                           />
                         </svg>
                         {t.linkTournament}
-                      </Link>
-                    )}
-                    {log.stage_id && (
-                      <Link
-                        href={`/admin/stages/${log.stage_id}`}
-                        className="text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1"
-                      >
-                        <svg
-                          className="w-3 h-3"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                          />
-                        </svg>
-                        {t.linkStage}
-                      </Link>
-                    )}
-                    {log.match_id && (
-                      <Link
-                        href={`/admin/matches/${log.match_id}`}
-                        className="text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1"
-                      >
-                        <svg
-                          className="w-3 h-3"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                          />
-                        </svg>
-                        {t.linkMatch}
-                      </Link>
-                    )}
-                    {log.team_id && (
-                      <Link
-                        href={`/admin/teams/${log.team_id}`}
-                        className="text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1"
-                      >
-                        <svg
-                          className="w-3 h-3"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                          />
-                        </svg>
-                        {t.linkTeam}
                       </Link>
                     )}
                   </div>
