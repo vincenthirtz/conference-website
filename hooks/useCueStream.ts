@@ -398,32 +398,31 @@ export function useCueStream({
         return;
       }
 
-      // Optimistic update.
-      const previous = cuesRef.current;
-      const optimistic = previous.map((c) =>
-        c.id === cueId ? { ...c, acked_by_me: true } : c
-      );
-      cuesRef.current = optimistic;
-      setCues(optimistic);
-
+      // PAS d optimistic update ici. Poser acked_by_me=true puis rollback en
+      // cas d echec faisait sortir/rentrer le cue de pendingUrgent → la
+      // UrgentCueModal se demontait/remontait a CHAQUE echec reseau : son
+      // compteur d echecs consecutifs repartait a 0 (la porte de sortie
+      // hors-ligne « Vu (hors ligne) » devenait donc INATTEIGNABLE) et le chime
+      // urgent resonnait a chaque retry. On ne modifie l etat qu au SUCCES : la
+      // modal reste stable pendant les retries et son failCount s accumule.
       const result = await postAck(cueId, token);
       if (result.ok) {
-        // Ack confirme cote serveur : purge une eventuelle intention differee
-        // pour ce cue (cas ou l utilisateur retente manuellement apres coup).
+        // Ack confirme cote serveur : on pose acked_by_me=true (→ le cue sort
+        // de pendingUrgent, la modal se ferme) et on purge une eventuelle
+        // intention differee pour ce cue.
+        markAckedLocally(cueId);
         clearDeferredAck(cueId);
         setError(null);
         return;
       }
-      // Echec (reseau ou serveur) : rollback de l optimistic + throw pour que
-      // l appelant (UrgentCueModal / CueFeed) affiche l erreur et compte les
-      // echecs consecutifs.
+      // Echec (reseau ou serveur) : rien a rollback (pas d optimistic). On
+      // throw pour que l appelant (UrgentCueModal / CueFeed) affiche l erreur
+      // et compte les echecs consecutifs.
       logger.error('[cockpit-cues] ack error', result.message);
-      cuesRef.current = previous;
-      setCues(previous);
       setError(result.message);
       throw new Error(result.message);
     },
-    [postAck, clearDeferredAck]
+    [postAck, clearDeferredAck, markAckedLocally]
   );
 
   // Ack differe (« Vu hors ligne ») : enregistre l intention sans poser de
