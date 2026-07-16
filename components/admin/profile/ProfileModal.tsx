@@ -63,7 +63,7 @@ function SectionCard({
   return (
     <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
       <h3 className="text-base font-semibold mb-4 flex items-center gap-2">
-        <span className="text-neutral-400">{icon}</span>
+        <span className="text-neutral-300">{icon}</span>
         {title}
       </h3>
       {children}
@@ -359,7 +359,7 @@ function ProfileModal({ open, onClose }: ProfileModalProps) {
                   <span className="inline-block px-3 py-1 rounded-full text-sm font-semibold bg-emerald-600/20 text-emerald-300 border border-emerald-500/30">
                     {roleLabel}
                   </span>
-                  <span className="text-sm text-neutral-400 truncate">{email}</span>
+                  <span className="text-sm text-neutral-300 truncate">{email}</span>
                 </div>
               </div>
             </div>
@@ -393,7 +393,7 @@ function ProfileModal({ open, onClose }: ProfileModalProps) {
                 className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
                   selected
                     ? 'bg-neutral-700 text-white shadow'
-                    : 'text-neutral-400 hover:text-white hover:bg-neutral-800/60'
+                    : 'text-neutral-300 hover:text-white hover:bg-neutral-800/60'
                 }`}
               >
                 {tab.icon}
@@ -422,7 +422,7 @@ function ProfileModal({ open, onClose }: ProfileModalProps) {
             >
               <form onSubmit={handleUpdateProfile} className="space-y-4">
                 <div>
-                  <label className="block text-sm text-neutral-400 mb-1">
+                  <label className="block text-sm text-neutral-300 mb-1">
                     {t.displayNameLabel}
                   </label>
                   <input
@@ -433,7 +433,7 @@ function ProfileModal({ open, onClose }: ProfileModalProps) {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-neutral-400 mb-1">
+                  <label className="block text-sm text-neutral-300 mb-1">
                     {t.avatarUrlLabel}
                   </label>
                   <input
@@ -442,7 +442,7 @@ function ProfileModal({ open, onClose }: ProfileModalProps) {
                     onChange={(e) => updateField('avatarUrl', e.target.value)}
                     placeholder="https://…"
                   />
-                  <p className="text-xs text-neutral-400 mt-1">{t.avatarHelp}</p>
+                  <p className="text-xs text-neutral-300 mt-1">{t.avatarHelp}</p>
                 </div>
                 <button type="submit" disabled={saving} className={primaryBtnClass}>
                   {saving ? (
@@ -467,25 +467,25 @@ function ProfileModal({ open, onClose }: ProfileModalProps) {
             >
               <dl className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <div className="bg-neutral-900/50 rounded-xl p-4">
-                  <dt className="text-xs text-neutral-400 uppercase tracking-wider mb-1">
+                  <dt className="text-xs text-neutral-300 uppercase tracking-wider mb-1">
                     {t.emailLabel}
                   </dt>
                   <dd className="font-medium text-sm truncate">{email}</dd>
                 </div>
                 <div className="bg-neutral-900/50 rounded-xl p-4">
-                  <dt className="text-xs text-neutral-400 uppercase tracking-wider mb-1">
+                  <dt className="text-xs text-neutral-300 uppercase tracking-wider mb-1">
                     {t.roleLabel}
                   </dt>
                   <dd className="font-medium">{roleLabel}</dd>
                 </div>
                 <div className="bg-neutral-900/50 rounded-xl p-4">
-                  <dt className="text-xs text-neutral-400 uppercase tracking-wider mb-1">
+                  <dt className="text-xs text-neutral-300 uppercase tracking-wider mb-1">
                     {t.createdAtLabel}
                   </dt>
                   <dd className="font-medium text-sm">{createdAt}</dd>
                 </div>
                 <div className="bg-neutral-900/50 rounded-xl p-4 col-span-2 md:col-span-3">
-                  <dt className="text-xs text-neutral-400 uppercase tracking-wider mb-1">
+                  <dt className="text-xs text-neutral-300 uppercase tracking-wider mb-1">
                     {t.staffIdLabel}
                   </dt>
                   <dd className="font-mono text-xs text-neutral-300 break-all">
@@ -511,7 +511,7 @@ function ProfileModal({ open, onClose }: ProfileModalProps) {
               {emailErrorMsg && <ErrorBanner message={emailErrorMsg} />}
               <form onSubmit={handleEmailChange} className="space-y-4">
                 <div>
-                  <label className="block text-sm text-neutral-400 mb-1">
+                  <label className="block text-sm text-neutral-300 mb-1">
                     {t.newEmailLabel}
                   </label>
                   <input
@@ -538,7 +538,7 @@ function ProfileModal({ open, onClose }: ProfileModalProps) {
                   )}
                 </button>
               </form>
-              <p className="text-xs text-neutral-400 mt-3">{t.emailConfirmNote}</p>
+              <p className="text-xs text-neutral-300 mt-3">{t.emailConfirmNote}</p>
             </SectionCard>
 
             <SectionCard
@@ -552,7 +552,7 @@ function ProfileModal({ open, onClose }: ProfileModalProps) {
               {passwordErrorMsg && <ErrorBanner message={passwordErrorMsg} />}
               <form onSubmit={handlePasswordChange} className="space-y-4">
                 <div>
-                  <label className="block text-sm text-neutral-400 mb-1">
+                  <label className="block text-sm text-neutral-300 mb-1">
                     {t.newPasswordLabel}
                   </label>
                   <input
@@ -566,7 +566,7 @@ function ProfileModal({ open, onClose }: ProfileModalProps) {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-neutral-400 mb-1">
+                  <label className="block text-sm text-neutral-300 mb-1">
                     {t.confirmPasswordLabel}
                   </label>
                   <input
@@ -594,7 +594,7 @@ function ProfileModal({ open, onClose }: ProfileModalProps) {
                   )}
                 </button>
               </form>
-              <p className="text-xs text-neutral-400 mt-3">{t.passwordHelp}</p>
+              <p className="text-xs text-neutral-300 mt-3">{t.passwordHelp}</p>
             </SectionCard>
           </div>
         )}
@@ -626,7 +626,7 @@ function ProfileModal({ open, onClose }: ProfileModalProps) {
                   t.exportBtn
                 )}
               </button>
-              <p className="text-xs text-neutral-400 mb-6">{t.exportHelp}</p>
+              <p className="text-xs text-neutral-300 mb-6">{t.exportHelp}</p>
 
               <div className="border-t border-neutral-700/60 pt-5">
                 <button
@@ -638,7 +638,7 @@ function ProfileModal({ open, onClose }: ProfileModalProps) {
                 >
                   {t.deleteBtn}
                 </button>
-                <p className="text-xs text-neutral-400 mt-3">{t.deleteHelp}</p>
+                <p className="text-xs text-neutral-300 mt-3">{t.deleteHelp}</p>
               </div>
             </SectionCard>
 
@@ -650,7 +650,7 @@ function ProfileModal({ open, onClose }: ProfileModalProps) {
                 </svg>
               }
             >
-              <div className="text-xs text-neutral-400 mb-1">{t.userIdLabel}</div>
+              <div className="text-xs text-neutral-300 mb-1">{t.userIdLabel}</div>
               <div className="font-mono text-xs bg-neutral-900 px-3 py-2 rounded-lg border border-neutral-700 break-all">
                 {authUserId}
               </div>
