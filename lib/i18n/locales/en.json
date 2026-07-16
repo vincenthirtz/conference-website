@@ -311,7 +311,7 @@
     "defaultName": "Player",
     "profileUpdated": "Profile updated.",
     "genericError": "Error",
-    "emailConfirmSent": "A confirmation email has been sent to your new address. Click the link to confirm the change.",
+    "emailConfirmSent": "Two confirmation emails were sent: one to your OLD address and one to your NEW one. Click the link in both to complete the change — until both are confirmed, your email won't change.",
     "emailChangeError": "Error while changing email.",
     "passwordTooShort": "Password must contain at least 8 characters.",
     "passwordMismatch": "Passwords do not match.",
