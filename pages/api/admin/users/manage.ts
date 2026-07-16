@@ -73,9 +73,29 @@ async function handler(
   }
 
   if (req.method === 'GET') {
-    const { search, role: roleFilter, limit = '20', offset = '0' } = req.query;
+    const {
+      search,
+      role: roleFilter,
+      limit = '20',
+      offset = '0',
+      sort,
+      dir,
+    } = req.query;
     const lim = Math.max(1, Math.min(200, Number(limit) || 20));
     const off = Math.max(0, Number(offset) || 0);
+
+    // Tri whitelisté côté handler (la RPC re-valide via CASE, mais on évite
+    // d'envoyer n'importe quoi). Défaut = created_at DESC (comportement legacy).
+    const SORT_FIELDS = new Set([
+      'created_at',
+      'display_name',
+      'email',
+      'role',
+      'last_sign_in_at',
+    ]);
+    const sortField =
+      typeof sort === 'string' && SORT_FIELDS.has(sort) ? sort : 'created_at';
+    const sortDir = dir === 'asc' ? 'asc' : 'desc';
 
     // Perf P1 : pagination / recherche / filtre côté SQL via la RPC
     // `admin_list_users`. Elle applique déjà le filtre rôle (égalité
@@ -94,6 +114,8 @@ async function handler(
       p_role: normParam(roleFilter),
       p_limit: lim,
       p_offset: off,
+      p_sort: sortField,
+      p_dir: sortDir,
     });
 
     if (error) {
