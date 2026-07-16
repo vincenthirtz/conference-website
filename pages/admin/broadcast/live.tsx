@@ -15,6 +15,7 @@ import { useToast } from '@/components/Toast';
 import RealtimeStatusBadge from '@/components/admin/RealtimeStatusBadge';
 import TwitchStatusPanel from '@/components/admin/broadcast/TwitchStatusPanel';
 import TwitchPredictionsPanel from '@/components/admin/broadcast/TwitchPredictionsPanel';
+import TwitchCommandsPanel from '@/components/admin/broadcast/TwitchCommandsPanel';
 import { useRouter } from 'next/router';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { StaffProps } from '@/types/admin';
@@ -484,6 +485,11 @@ function BroadcastLivePage({ staff }: StaffProps) {
           {/* Twitch Predictions (écriture) : connexion de la chaîne + pilotage des
               predictions. Indépendant du run, comme le statut ci-dessus. */}
           <TwitchPredictionsPanel />
+
+          {/* Commandes Twitch (écriture) : Clip, message chat, modération et
+              points de chaîne. Ne s'affiche que si la chaîne est connectée ;
+              sinon l'invite à connecter est gérée par le panneau ci-dessus. */}
+          <TwitchCommandsPanel />
 
           {loading && !data && (
             <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 px-4 py-10 text-center text-neutral-400">
