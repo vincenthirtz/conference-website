@@ -50,7 +50,7 @@ type ApiResponse =
 
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'stage-manual-seed' }),
-  'manager'
+  'admin'
 );
 
 async function handler(

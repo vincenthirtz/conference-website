@@ -38,7 +38,7 @@ const bodySchema = z.object({
 
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'stage-rating-seed' }),
-  'manager'
+  'admin'
 );
 
 async function handler(

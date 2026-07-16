@@ -74,7 +74,7 @@ async function handler(
   // Acces : manager+ requis pour LIRE la config Discord (channels/roles).
   // Les casters n'y ont pas acces meme s'ils sont rattaches au tenant via
   // tenant_staff. Les pole admins beneficient d'un bypass cross-tenant.
-  if (!hasAtLeastRole(ctx.role, 'manager')) {
+  if (!hasAtLeastRole(ctx.role, 'admin')) {
     return res.status(403).json({ error: 'Forbidden.' });
   }
   const isPoleAdmin =
@@ -130,4 +130,4 @@ async function handler(
   return res.status(200).json({ configs: merged });
 }
 
-export default withStaffRoute(handler, 'manager');
+export default withStaffRoute(handler, 'admin');

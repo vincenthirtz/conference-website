@@ -155,52 +155,6 @@ describe('filterAdminLinks – admin role', () => {
   });
 });
 
-describe('filterAdminLinks – manager role', () => {
-  const links = filterAdminLinks('manager');
-
-  it('hides admin-only direct children inside "Tournois"', () => {
-    const tournois = findByTitle(links, 'Tournois');
-    const titles = tournois?.children?.map((c) => c.title) ?? [];
-    expect(titles).not.toContain('Webhooks Discord (par tournoi)');
-    expect(titles).toContain('Tournois – liste');
-  });
-
-  it('hides admin-only sub-sections of "Contenu" but keeps manager-level ones', () => {
-    const contenu = findByTitle(links, 'Contenu');
-    const titles = contenu?.children?.map((c) => c.title) ?? [];
-    expect(titles).not.toContain('Annonces');
-    expect(titles).not.toContain('Actualités');
-    expect(titles).not.toContain('Chaînes Twitch');
-    expect(titles).not.toContain('Casteuses');
-    expect(titles).not.toContain('Partenaires');
-    // Lot B : le hub "Modération" (manager) remplace les entrées éparses
-    // Commentaires / Support / Blacklist.
-    expect(titles).toContain('Modération');
-    expect(titles).not.toContain('Commentaires');
-    expect(titles).not.toContain('Tickets de support');
-  });
-
-  it('keeps "Configuration" with Logs & stats + Onboarding (manager)', () => {
-    // Lot D : Notifications (+ Campagnes) déplacées vers "Communication".
-    // Lot C : hub "Onboarding" ajouté ; "Tenants" déplacé de la top-bar vers
-    // une carte dashboard (plus d'entrée top-bar).
-    const config = findByTitle(links, 'Configuration');
-    expect(config).toBeDefined();
-    const titles = config?.children?.map((c) => c.title) ?? [];
-    expect(titles).toEqual(['Logs & stats', 'Onboarding']);
-  });
-
-  it('keeps "Communication" with only the caster-level "Communications" hub child', () => {
-    // Le hub « Communications » est caster-gated (contient l'onglet
-    // Notifications) ; les éditeurs « Créer … » sont admin → masqués pour un
-    // manager.
-    const comm = findByTitle(links, 'Communication');
-    expect(comm).toBeDefined();
-    const titles = comm?.children?.map((c) => c.title) ?? [];
-    expect(titles).toEqual(['Communications']);
-  });
-});
-
 describe('filterAdminLinks – caster role', () => {
   const links = filterAdminLinks('caster');
 
@@ -243,7 +197,7 @@ describe('filterAdminLinks – child minRole inheritance', () => {
       {
         title: 'Parent (manager)',
         ref: '',
-        minRole: 'manager',
+        minRole: 'admin',
         children: [
           // child has no minRole → should inherit 'manager'
           { title: 'Inherited child', ref: '/x' },
@@ -254,7 +208,7 @@ describe('filterAdminLinks – child minRole inheritance', () => {
       []
     );
     expect(
-      filterAdminLinks('manager', customLinks).map((l) => l.title)
+      filterAdminLinks('admin', customLinks).map((l) => l.title)
     ).toEqual(['Parent (manager)']);
   });
 
@@ -263,11 +217,11 @@ describe('filterAdminLinks – child minRole inheritance', () => {
       {
         title: 'Self only',
         ref: '/self',
-        minRole: 'manager',
-        children: [{ title: 'Hidden', ref: '/hidden', minRole: 'admin' }],
+        minRole: 'admin',
+        children: [{ title: 'Hidden', ref: '/hidden', minRole: 'owner' }],
       },
     ];
-    const result = filterAdminLinks('manager', customLinks);
+    const result = filterAdminLinks('admin', customLinks);
     expect(result).toHaveLength(1);
     expect(result[0].title).toBe('Self only');
     expect(result[0].children).toEqual([]);
@@ -278,30 +232,29 @@ describe('filterAdminLinks – child minRole inheritance', () => {
       {
         title: 'Empty container',
         ref: '',
-        minRole: 'admin',
+        minRole: 'caster',
         children: [{ title: 'Hidden', ref: '/hidden', minRole: 'admin' }],
       },
     ];
-    expect(filterAdminLinks('manager', customLinks)).toEqual([]);
+    expect(filterAdminLinks('caster', customLinks)).toEqual([]);
   });
 
   it('default minRole "admin" applies when a top-level item has no minRole', () => {
     const customLinks: AdminLink[] = [{ title: 'No role', ref: '/x' }];
-    expect(filterAdminLinks('manager', customLinks)).toEqual([]);
+    expect(filterAdminLinks('caster', customLinks)).toEqual([]);
     expect(filterAdminLinks('admin', customLinks)).toHaveLength(1);
   });
 });
 
 describe('filterAdminLinks – role hierarchy contract', () => {
-  const roles: StaffRole[] = ['owner', 'admin', 'manager', 'caster'];
+  const roles: StaffRole[] = ['owner', 'admin', 'caster'];
 
   it('produces a non-decreasing top-level count from caster up to owner', () => {
     const counts = roles.map((r) => filterAdminLinks(r).length);
-    // counts is in [owner, admin, manager, caster] order
+    // counts is in [owner, admin, caster] order
     // higher rank should always have >= entries than lower rank
     expect(counts[0]).toBeGreaterThanOrEqual(counts[1]);
     expect(counts[1]).toBeGreaterThanOrEqual(counts[2]);
-    expect(counts[2]).toBeGreaterThanOrEqual(counts[3]);
   });
 
   it('every role gets at least the Dashboard link', () => {

@@ -16,7 +16,7 @@ import { logger } from '@/utils/logger';
 
 const MAX_RANGE_MS = 92 * 24 * 3600 * 1000;
 
-export default withStaffRoute(handler, 'manager');
+export default withStaffRoute(handler, 'admin');
 
 async function handler(
   req: NextApiRequest,

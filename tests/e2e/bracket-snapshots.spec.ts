@@ -52,7 +52,7 @@ test.describe.serial('Bracket snapshots (P2-C)', () => {
     await deleteTestStaff(MGR_EMAIL);
     await deleteTestStaff(ADMIN_EMAIL);
 
-    await createTestStaff(MGR_EMAIL, PASSWORD, 'manager');
+    await createTestStaff(MGR_EMAIL, PASSWORD, 'admin');
     await createTestStaff(ADMIN_EMAIL, PASSWORD, 'admin');
     mgrToken = await getToken(MGR_EMAIL);
     adminToken = await getToken(ADMIN_EMAIL);

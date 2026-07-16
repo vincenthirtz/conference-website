@@ -3,7 +3,7 @@
 // POST → crée une prediction Twitch sur la chaîne du broadcaster connecté.
 // GET  → renvoie la prediction la plus récente (ou null).
 //
-// withStaffRoute(..., 'manager') (write régie). Passe par
+// withStaffRoute(..., 'admin') (write régie). Passe par
 // getValidBroadcasterToken (refresh proactif + déchiffrement) puis helixFetch.
 //
 // Codes métier :
@@ -219,4 +219,4 @@ async function handler(
   return res.status(405).json({ error: 'Method not allowed' });
 }
 
-export default withStaffRoute(handler, 'manager');
+export default withStaffRoute(handler, 'admin');

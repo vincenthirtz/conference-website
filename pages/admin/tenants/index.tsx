@@ -409,6 +409,6 @@ function AdminTenantsListPage({ staff }: Props) {
   );
 }
 
-export const getServerSideProps = withStaffPage('manager');
+export const getServerSideProps = withStaffPage('admin');
 
 export default AdminTenantsListPage;

@@ -21,7 +21,7 @@ import supportTicketsHandler from '../../pages/api/admin/support/tickets';
  * ---------------------------------------------------------*/
 
 function makeStaffRow(
-  role: 'owner' | 'admin' | 'manager' | 'caster' = 'admin'
+  role: 'owner' | 'admin' | 'caster' = 'admin'
 ): StaffMember {
   return {
     id: 'staff-1',
@@ -402,7 +402,7 @@ describe('GET /api/admin/partnership-requests', () => {
 describe('GET /api/admin/support/tickets', () => {
   beforeEach(() => {
     setAuthUser({ id: 'user-1' });
-    store.staff = [makeStaffRow('manager')] as any;
+    store.staff = [makeStaffRow('admin')] as any;
   });
 
   it('405 on non-GET', async () => {

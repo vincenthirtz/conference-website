@@ -8,7 +8,10 @@ import type { RegistrationField } from '@/utils/registrationFields';
  * Staff
  * ---------------------------------------------------------*/
 
-export type StaffRole = 'owner' | 'admin' | 'manager' | 'caster';
+// NB: 'manager' a été retiré des rôles staff (tier inutilisé). NE PAS confondre
+// avec le rôle de TEAM 'manager' (utils/teamRoles.ts / team_members.role), qui
+// reste valide et n'a rien à voir avec l'accès back-office.
+export type StaffRole = 'owner' | 'admin' | 'caster';
 
 export type StaffShape = {
   id: string;

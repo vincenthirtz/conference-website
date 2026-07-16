@@ -89,11 +89,11 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
     const staffCtx = await requireStaffRoleFromRequest(
       req as any,
       res as any,
-      'manager'
+      'admin'
     );
     staff = {
       id: staffCtx.staff?.id ?? null,
-      role: staffCtx.role ?? 'manager',
+      role: staffCtx.role ?? 'admin',
       display_name: staffCtx.staff?.display_name ?? null,
     };
     tenantId = staffCtx.tenantId;

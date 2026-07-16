@@ -459,4 +459,4 @@ async function handleDelete(
   }
 }
 
-export default withStaffRoute(handler, 'manager');
+export default withStaffRoute(handler, 'admin');

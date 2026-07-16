@@ -71,7 +71,7 @@ const TM_CAP = '11111111-1111-1111-1111-111111111111';
 const TM_A = '22222222-2222-2222-2222-222222222222';
 const TM_B = '33333333-3333-3333-3333-333333333333';
 
-function makeStaffRow(role: 'admin' | 'manager' | 'caster'): StaffMember {
+function makeStaffRow(role: 'admin' | 'caster'): StaffMember {
   return {
     id: 'staff-1',
     auth_user_id: 'staff-user-1',
@@ -118,7 +118,7 @@ function seed() {
       is_substitute: false,
     },
   ] as any;
-  store.staff = [makeStaffRow('manager')] as any;
+  store.staff = [makeStaffRow('admin')] as any;
   store.staff_logs = [] as any;
 }
 

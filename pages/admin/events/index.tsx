@@ -34,7 +34,7 @@ import {
 import type { StaffProps } from '@/types/admin';
 import type { EventRun, EventRunStatus } from '@/types/events';
 
-export const getServerSideProps = withStaffPage('manager');
+export const getServerSideProps = withStaffPage('admin');
 
 type ListResponse = {
   items: EventRun[];

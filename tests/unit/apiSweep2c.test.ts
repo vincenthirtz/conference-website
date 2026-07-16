@@ -31,7 +31,7 @@ import transferHandler from '../../pages/api/demandes/transfer';
  * ---------------------------------------------------------*/
 
 function makeStaffRow(
-  role: 'owner' | 'admin' | 'manager' | 'caster' = 'manager'
+  role: 'owner' | 'admin' | 'caster' = 'admin'
 ): StaffMember {
   return {
     id: 'staff-1',
@@ -89,7 +89,7 @@ beforeEach(() => {
 describe('/api/matches/[matchId]/games', () => {
   function setupStaff() {
     setAuthUser({ id: 'user-1' });
-    store.staff = [makeStaffRow('manager')] as any;
+    store.staff = [makeStaffRow('admin')] as any;
   }
 
   it('400 when matchId missing', async () => {

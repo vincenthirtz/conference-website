@@ -72,8 +72,8 @@ type QuickLink = {
   href: (id: string) => string;
   icon: string;
   description: string;
-  /** Rôle minimum requis par la page cible (défaut : manager, comme le dashboard). */
-  role?: 'manager' | 'admin';
+  /** Rôle minimum requis par la page cible (défaut : admin, comme le dashboard). */
+  role?: 'admin';
 };
 
 function getQuickLinks(tx: Dict): QuickLink[] {
@@ -174,14 +174,14 @@ function getQuickLinks(tx: Dict): QuickLink[] {
       icon: '🧬',
       href: () => `/admin/tournament-templates`,
       description: tx.quickTemplatesDesc,
-      role: 'manager',
+      role: 'admin',
     },
     {
       label: tx.quickSimulatorLabel,
       icon: '🧪',
       href: () => `/admin/tournament-simulator`,
       description: tx.quickSimulatorDesc,
-      role: 'manager',
+      role: 'admin',
     },
   ];
 }
@@ -215,7 +215,7 @@ type SsrProps = {
 };
 
 export const getServerSideProps = withStaffPage<SsrProps>(
-  'manager',
+  'admin',
   async (ctx) => {
     const rawId = ctx.params?.id ?? ctx.query.id;
     const id = Array.isArray(rawId) ? rawId[0] : rawId;
@@ -1324,7 +1324,7 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
                   {QUICK_LINKS.filter((link) =>
                     hasAtLeastRole(
                       staff.role as StaffRole,
-                      link.role ?? 'manager'
+                      link.role ?? 'admin'
                     )
                   ).map((link) => (
                     <Link

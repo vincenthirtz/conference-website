@@ -17,7 +17,7 @@ import calendarHandler from '../../pages/api/admin/scrims/calendar';
 const TEAM_A = '550e8400-e29b-41d4-a716-4466554400b1';
 const TEAM_B = '550e8400-e29b-41d4-a716-4466554400b2';
 
-function makeStaffRow(role: 'manager' = 'manager'): StaffMember {
+function makeStaffRow(role: 'admin' = 'admin'): StaffMember {
   return {
     id: 'staff-1',
     auth_user_id: 'user-1',

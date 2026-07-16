@@ -129,7 +129,7 @@ test.describe.serial('/admin/teams/[teamId]/edit bulk roster UI', () => {
   test.beforeAll(async () => {
     if (skipIfNoServiceRole()) return;
     await deleteTestStaff(STAFF_EMAIL);
-    await createTestStaff(STAFF_EMAIL, TEST_PASSWORD, 'manager');
+    await createTestStaff(STAFF_EMAIL, TEST_PASSWORD, 'admin');
   });
 
   test.afterAll(async () => {

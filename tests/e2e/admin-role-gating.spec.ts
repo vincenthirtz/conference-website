@@ -31,7 +31,6 @@ import { createTestStaff, deleteTestStaff } from '../utils/supabaseTestClient';
 const TEST_PASSWORD = 'TestPassw0rd!';
 
 const CASTER_EMAIL = 'hirtzvincent+e2e-rolegate-caster@gmail.com';
-const MANAGER_EMAIL = 'hirtzvincent+e2e-rolegate-manager@gmail.com';
 const ADMIN_EMAIL = 'hirtzvincent+e2e-rolegate-admin@gmail.com';
 
 const skipIfNoServiceRole = () =>
@@ -39,13 +38,17 @@ const skipIfNoServiceRole = () =>
   !process.env.SUPABASE_SERVICE_ROLE_KEY &&
   !process.env.NEXT_SUPABASE_SERVICE_ROLE_KEY;
 
-type Gate = { path: string; requiredRole: 'owner' | 'admin' | 'manager' };
+// Le rôle staff 'manager' a été retiré : hiérarchie caster < admin < owner.
+// Les pages autrefois gatées 'manager' (onboarding, tenants) le sont désormais
+// 'admin' comme les autres. On ne teste donc que deux niveaux effectifs ici :
+// caster (bloqué partout) vs admin (autorisé partout).
+type Gate = { path: string; requiredRole: 'owner' | 'admin' };
 
 const GATES: Gate[] = [
-  { path: '/admin/onboarding', requiredRole: 'manager' },
+  { path: '/admin/onboarding', requiredRole: 'admin' },
   { path: '/admin/users/manage', requiredRole: 'admin' },
   { path: '/admin/site-settings', requiredRole: 'admin' },
-  { path: '/admin/tenants', requiredRole: 'manager' },
+  { path: '/admin/tenants', requiredRole: 'admin' },
 ];
 
 async function login(page: Page, email: string) {
@@ -86,17 +89,14 @@ test.describe.serial('Admin role-gating (withStaffPage)', () => {
   test.beforeAll(async () => {
     if (skipIfNoServiceRole()) return;
     await deleteTestStaff(CASTER_EMAIL);
-    await deleteTestStaff(MANAGER_EMAIL);
     await deleteTestStaff(ADMIN_EMAIL);
     await createTestStaff(CASTER_EMAIL, TEST_PASSWORD, 'caster');
-    await createTestStaff(MANAGER_EMAIL, TEST_PASSWORD, 'manager');
     await createTestStaff(ADMIN_EMAIL, TEST_PASSWORD, 'admin');
   });
 
   test.afterAll(async () => {
     if (skipIfNoServiceRole()) return;
     await deleteTestStaff(CASTER_EMAIL);
-    await deleteTestStaff(MANAGER_EMAIL);
     await deleteTestStaff(ADMIN_EMAIL);
   });
 
@@ -107,30 +107,13 @@ test.describe.serial('Admin role-gating (withStaffPage)', () => {
 
     await login(page, CASTER_EMAIL);
 
-    // caster is below every gate under test (manager/admin/owner).
+    // caster est sous tous les gates (admin/owner).
     for (const gate of GATES) {
       await expectBlocked(page, gate.path);
     }
   });
 
-  test('manager (rank 1) reaches manager pages but is blocked from admin/owner pages', async ({
-    page,
-  }) => {
-    test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
-
-    await login(page, MANAGER_EMAIL);
-
-    for (const gate of GATES) {
-      if (gate.requiredRole === 'manager') {
-        await expectAllowed(page, gate.path);
-      } else {
-        // admin + owner gates are above manager.
-        await expectBlocked(page, gate.path);
-      }
-    }
-  });
-
-  test('admin (rank 2) reaches admin/manager pages but is blocked from owner-only page', async ({
+  test('admin reaches every admin gate (et bloqué sur owner-only le cas échéant)', async ({
     page,
   }) => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
@@ -141,7 +124,6 @@ test.describe.serial('Admin role-gating (withStaffPage)', () => {
       if (gate.requiredRole === 'owner') {
         await expectBlocked(page, gate.path);
       } else {
-        // manager + admin gates are at-or-below admin.
         await expectAllowed(page, gate.path);
       }
     }

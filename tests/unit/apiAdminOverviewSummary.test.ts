@@ -17,7 +17,7 @@ import overviewSummaryHandler from '../../pages/api/admin/overview-summary';
  * ---------------------------------------------------------*/
 
 function makeStaffRow(
-  role: 'owner' | 'admin' | 'manager' | 'caster' = 'manager'
+  role: 'owner' | 'admin' | 'caster' = 'admin'
 ): StaffMember {
   return {
     id: 'staff-1',
@@ -88,7 +88,7 @@ describe('GET /api/admin/overview-summary', () => {
 
   it('405 on non-GET', async () => {
     setAuthUser({ id: 'user-1' });
-    store.staff = [makeStaffRow('manager')] as any;
+    store.staff = [makeStaffRow('admin')] as any;
     const res = makeRes();
     await overviewSummaryHandler(makeReq({ method: 'POST' }, true), res);
     expect(res.statusCode).toBe(405);
@@ -97,7 +97,7 @@ describe('GET /api/admin/overview-summary', () => {
 
   it('200 returns the 6 numeric KPI keys with the expected counts', async () => {
     setAuthUser({ id: 'user-1' });
-    store.staff = [makeStaffRow('manager')] as any;
+    store.staff = [makeStaffRow('admin')] as any;
 
     const t = CONFERENCE_TENANT_ID;
 
@@ -168,7 +168,7 @@ describe('GET /api/admin/overview-summary', () => {
 
   it('200 with zeros when every table is empty', async () => {
     setAuthUser({ id: 'user-1' });
-    store.staff = [makeStaffRow('manager')] as any;
+    store.staff = [makeStaffRow('admin')] as any;
 
     const res = makeRes();
     await overviewSummaryHandler(makeReq({ method: 'GET' }, true), res);

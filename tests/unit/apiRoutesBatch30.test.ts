@@ -23,7 +23,7 @@ import recycleBinHandler from '../../pages/api/admin/recycle-bin';
  * ---------------------------------------------------------*/
 
 function makeStaffRow(
-  role: 'owner' | 'admin' | 'manager' | 'caster' = 'manager'
+  role: 'owner' | 'admin' | 'caster' = 'admin'
 ): StaffMember {
   return {
     id: 'staff-1',

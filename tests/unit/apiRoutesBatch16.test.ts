@@ -29,7 +29,7 @@ import discordTeamsHandler from '../../pages/api/discord/teams';
  * ---------------------------------------------------------*/
 
 function makeStaffRow(
-  role: 'owner' | 'admin' | 'manager' | 'caster' = 'manager'
+  role: 'owner' | 'admin' | 'caster' = 'admin'
 ): StaffMember {
   return {
     id: 'staff-1',
@@ -89,7 +89,7 @@ const TID = '550e8400-e29b-41d4-a716-446655440000';
 describe('POST /api/admin/tournament/[id]/apply-template', () => {
   beforeEach(() => {
     setAuthUser({ id: 'user-1' });
-    store.staff = [makeStaffRow('manager')] as any;
+    store.staff = [makeStaffRow('admin')] as any;
   });
 
   it('400 on invalid id', async () => {
@@ -293,7 +293,7 @@ describe('POST /api/admin/tournament/[id]/apply-template', () => {
 describe('POST /api/admin/tournament/[id]/clone', () => {
   beforeEach(() => {
     setAuthUser({ id: 'user-1' });
-    store.staff = [makeStaffRow('manager')] as any;
+    store.staff = [makeStaffRow('admin')] as any;
   });
 
   function seedSource() {

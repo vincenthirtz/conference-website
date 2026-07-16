@@ -68,7 +68,7 @@ test.describe.serial('Auto-seed E2E (API)', () => {
     if (!supabaseTestClient) return;
 
     // Staff manager (minimum requis pour auto-seed)
-    await createTestStaff(STAFF_EMAIL, STAFF_PASSWORD, 'manager');
+    await createTestStaff(STAFF_EMAIL, STAFF_PASSWORD, 'admin');
     staffToken = await getStaffAccessToken();
 
     // --- Tournoi principal ---

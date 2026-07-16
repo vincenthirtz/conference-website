@@ -89,5 +89,5 @@ async function handler(
 
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'match-draft-auto-pick' }),
-  'manager'
+  'admin'
 );

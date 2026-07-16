@@ -13,7 +13,7 @@ import type { StaffProps } from '@/types/admin';
 
 const ID_BASE = 'admin-journals';
 
-export const getServerSideProps = withStaffPage('manager');
+export const getServerSideProps = withStaffPage('admin');
 
 /**
  * Merged logs page ("Journaux"). Hosts the former /admin/logs (staff audit) and

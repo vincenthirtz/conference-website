@@ -49,7 +49,7 @@ const DISCORD_ID = '123456789012345678';
 const CONFERENCE_TENANT_ID = 'ce69a726-773e-4d12-b5eb-d2503aa752b4';
 
 function makeStaffRow(
-  role: 'owner' | 'admin' | 'manager' | 'caster' = 'admin'
+  role: 'owner' | 'admin' | 'caster' = 'admin'
 ): StaffMember {
   return {
     id: 'staff-1',
@@ -616,7 +616,7 @@ describe('/api/bot/scrims', () => {
   });
 
   it('POST 403 when actor is not admin/owner', async () => {
-    store.staff = [makeStaffRow('manager')] as any;
+    store.staff = [makeStaffRow('caster')] as any;
     const res = makeRes();
     await botScrimsHandler(
       makeBotReq({
@@ -736,7 +736,7 @@ describe('/api/bot/scrims/[scrimId]', () => {
   });
 
   it('PATCH 403 when actor not admin/owner', async () => {
-    store.staff = [makeStaffRow('manager')] as any;
+    store.staff = [makeStaffRow('caster')] as any;
     const res = makeRes();
     await botScrimIdHandler(
       makeBotReq({

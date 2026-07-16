@@ -340,7 +340,7 @@ function AdminDashboardPage({ staff, activeTenantKind }: Props) {
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const canManage = hasAtLeastRole(staff.role, 'manager');
+  const canManage = hasAtLeastRole(staff.role, 'admin');
 
   const load = useCallback(async () => {
     setLoading(true);

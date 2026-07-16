@@ -14,7 +14,7 @@ import { isValidUUID } from '@/utils/apiHelpers';
 import { logger } from '../../../../../utils/logger';
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'stage-bulk-matches' }),
-  'manager'
+  'admin'
 );
 
 async function handler(req: NextApiRequest, res: NextApiResponse, ctx: AuthenticatedStaffContext) {

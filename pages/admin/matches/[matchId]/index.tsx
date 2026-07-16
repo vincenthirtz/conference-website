@@ -79,7 +79,7 @@ type MatchRow = {
   games?: GameRow[];
 };
 
-export const getServerSideProps = withStaffPage('manager');
+export const getServerSideProps = withStaffPage('admin');
 
 function statusColor(status: MatchStatus) {
   switch (status) {

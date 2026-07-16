@@ -122,7 +122,7 @@ type GenerateSwissRoundResponse = {
 // Rôle minimum : manager
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'stage-generate-swiss-round' }),
-  'manager'
+  'admin'
 );
 
 async function handler(

@@ -29,7 +29,7 @@ import teamsLeaveHandler from '../../pages/api/teams/leave';
  * ---------------------------------------------------------*/
 
 function makeStaff(
-  role: 'owner' | 'admin' | 'manager' | 'caster' = 'admin'
+  role: 'owner' | 'admin' | 'caster' = 'admin'
 ): StaffMember {
   return {
     id: 'staff-1',

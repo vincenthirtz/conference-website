@@ -30,7 +30,7 @@ test.describe('Email change feature', () => {
 
   test.describe('Staff email change', () => {
     test.beforeAll(async () => {
-      await createTestStaff(STAFF_EMAIL, password, 'manager');
+      await createTestStaff(STAFF_EMAIL, password, 'admin');
     });
 
     test('displays email change form on /admin page', async ({ page }) => {

@@ -48,7 +48,7 @@ type ApiResponse = OverviewSummary | { error: string };
 
 // Rôle minimum : manager (mêmes droits que les endpoints sources tournaments /
 // teams / demandes / support / disputes côté hub).
-export default withStaffRoute(handler, 'manager');
+export default withStaffRoute(handler, 'admin');
 
 /**
  * Résout une PromiseSettledResult de count-only en `number | null` :

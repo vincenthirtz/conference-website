@@ -44,7 +44,7 @@ type StaffShape = {
   display_name: string | null;
 };
 
-export const getServerSideProps = withStaffPage('manager');
+export const getServerSideProps = withStaffPage('admin');
 
 /* ----------------------------------------------------------------------- */
 /* Role helpers — mirror manage.tsx so the UI never offers a forbidden      */
@@ -55,7 +55,6 @@ const ROLE_OPTIONS = [
   'member',
   'player',
   'caster',
-  'manager',
   'admin',
   'owner',
 ];

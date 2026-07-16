@@ -58,7 +58,7 @@ import dashboardHandler from '../../pages/api/admin/tournament/[id]/dashboard';
  * ---------------------------------------------------------*/
 
 function makeStaffRow(
-  role: 'owner' | 'admin' | 'manager' | 'caster' = 'admin'
+  role: 'owner' | 'admin' | 'caster' = 'admin'
 ): StaffMember {
   return {
     id: 'staff-1',
@@ -212,7 +212,7 @@ describe('/api/admin/site-settings', () => {
   });
 
   it('403 when role below admin', async () => {
-    store.staff = [makeStaffRow('manager')] as any;
+    store.staff = [makeStaffRow('caster')] as any;
     const res = makeRes();
     await siteSettingsHandler(makeAuthedReq({ method: 'GET' }), res);
     expect(res.statusCode).toBe(403);

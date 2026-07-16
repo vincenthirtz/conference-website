@@ -50,5 +50,5 @@ async function handler(
 
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'ratings-rebuild' }),
-  'manager'
+  'admin'
 );

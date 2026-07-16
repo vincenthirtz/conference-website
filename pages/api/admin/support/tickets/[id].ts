@@ -11,7 +11,7 @@ import { isValidUUID } from '@/utils/apiHelpers';
 import { logger } from '../../../../../utils/logger';
 const VALID_STATUSES = ['open', 'in_progress', 'resolved', 'closed'] as const;
 
-export default withStaffRoute(handler, 'manager');
+export default withStaffRoute(handler, 'admin');
 
 async function handler(req: NextApiRequest, res: NextApiResponse, ctx: AuthenticatedStaffContext) {
   const { id } = req.query;

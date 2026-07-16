@@ -50,7 +50,7 @@ type TournamentApiResponse = {
   tournament: Tournament;
 };
 
-export const getServerSideProps = withStaffPage('manager');
+export const getServerSideProps = withStaffPage('admin');
 
 function AdminStagePage({ staff }: StaffProps) {
   const t = useAdminT('adminStageDetail');

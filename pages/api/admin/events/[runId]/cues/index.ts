@@ -15,7 +15,7 @@
 //   - acks_by_cue : map cueId -> liste { cast_member_id, name, acked_at }.
 //
 // Conventions :
-//   - withStaffRoute(handler, 'manager') (meme seuil que start/end run).
+//   - withStaffRoute(handler, 'admin') (meme seuil que start/end run).
 //   - supabaseAdmin (bypass RLS strict default-deny des 3 tables).
 
 import type { NextApiRequest, NextApiResponse } from 'next';
@@ -311,5 +311,5 @@ async function handler(
 
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'admin-events-cues' }),
-  'manager'
+  'admin'
 );

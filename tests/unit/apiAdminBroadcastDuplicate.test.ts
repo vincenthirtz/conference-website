@@ -25,7 +25,7 @@ import duplicateHandler from '../../pages/api/admin/broadcast/[campaignId]/dupli
 const BUILTIN_ID = 'idahobit-live-2026';
 
 function makeStaffRow(
-  role: 'owner' | 'admin' | 'manager' | 'caster' = 'admin'
+  role: 'owner' | 'admin' | 'caster' = 'admin'
 ): StaffMember {
   return {
     id: 'staff-1',

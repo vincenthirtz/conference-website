@@ -91,7 +91,7 @@ function basePlanning(over: Record<string, unknown> = {}) {
 }
 
 function makeStaffRow(
-  role: 'owner' | 'admin' | 'manager' | 'caster' = 'manager',
+  role: 'owner' | 'admin' | 'caster' = 'admin',
   authUserId = 'user-1'
 ): StaffMember {
   return {
@@ -140,7 +140,7 @@ beforeEach(() => {
   invalidateStaffCache();
   logStaffActionMock.mockClear();
   setAuthUser({ id: 'user-1' });
-  store.staff = [makeStaffRow('manager')] as any;
+  store.staff = [makeStaffRow('admin')] as any;
   store.teams = [
     { id: TEAM_A, name: 'Phoenix', short_name: 'PHX' },
     { id: TEAM_B, name: 'Dragons', short_name: 'DRG' },

@@ -16,7 +16,7 @@ function makeStaffRow(): StaffMember {
     id: 'staff-1',
     auth_user_id: 'user-1',
     email: 'a@a.com',
-    role: 'manager',
+    role: 'admin',
     display_name: null,
     avatar_url: null,
     created_at: '2026-01-01T00:00:00.000Z',

@@ -45,7 +45,7 @@ import cronHandler from '../../pages/api/cron/broadcast-process';
 const CAMPAIGN_ID = 'idahobit-live-2026';
 
 function makeStaffRow(
-  role: 'owner' | 'admin' | 'manager' | 'caster' = 'admin'
+  role: 'owner' | 'admin' | 'caster' = 'admin'
 ): StaffMember {
   return {
     id: 'staff-1',
@@ -351,7 +351,7 @@ describe('schedule endpoint', () => {
   });
 
   it('returns 403 when role is below admin', async () => {
-    store.staff = [makeStaffRow('manager')] as any;
+    store.staff = [makeStaffRow('caster')] as any;
     const res = makeRes();
     await scheduleHandler(
       makeAuthedReq({ method: 'POST', body: { waveSize: 10 } }),

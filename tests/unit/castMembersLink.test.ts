@@ -28,7 +28,7 @@ import castMatchHandler from '../../pages/api/cast/[matchId]';
  * ---------------------------------------------------------*/
 
 function makeStaffRow(
-  role: 'owner' | 'admin' | 'manager' | 'caster' = 'admin',
+  role: 'owner' | 'admin' | 'caster' = 'admin',
   over: Partial<StaffMember> = {}
 ): StaffMember {
   return {
@@ -114,7 +114,7 @@ describe('/api/admin/cast-members/available-casters', () => {
         email: 'caster2@example.com',
         display_name: null,
       }),
-      makeStaffRow('manager', {
+      makeStaffRow('admin', {
         id: 'staff-mgr',
         auth_user_id: 'user-mgr',
         email: 'mgr@example.com',

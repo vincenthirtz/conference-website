@@ -34,7 +34,7 @@ type StaffShape = {
   display_name: string | null;
 };
 
-export const getServerSideProps = withStaffPage('manager');
+export const getServerSideProps = withStaffPage('admin');
 
 type TabKey = 'team' | 'joinRequests' | 'scrims' | 'history';
 

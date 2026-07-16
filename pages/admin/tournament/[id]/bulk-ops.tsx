@@ -17,7 +17,7 @@ import type { StaffProps, StageSummary, TournamentMini } from '@/types/admin';
 
 type Dict = ReturnType<typeof useAdminT<'adminTournamentBulkOps'>>;
 
-export const getServerSideProps = withStaffPage('manager');
+export const getServerSideProps = withStaffPage('admin');
 
 type RoundOption = { stageId: string; roundNumber: number; matchCount: number };
 

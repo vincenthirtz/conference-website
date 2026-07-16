@@ -38,7 +38,7 @@ const REQ_REJECTED = '44444444-4444-4444-4444-444444444444';
 const REQ_UNKNOWN = '99999999-9999-9999-9999-000000000000';
 
 function makeStaffRow(
-  role: 'owner' | 'admin' | 'manager' | 'caster' = 'owner'
+  role: 'owner' | 'admin' | 'caster' = 'owner'
 ): StaffMember {
   return {
     id: STAFF_OWNER,
@@ -260,7 +260,7 @@ describe('GET /api/admin/tenant-requests', () => {
   });
 
   it('403 si manager', async () => {
-    store.staff = [makeStaffRow('manager')] as any;
+    store.staff = [makeStaffRow('admin')] as any;
     invalidateStaffCache();
     const res = makeRes();
     await listHandler(makeReq(), res);

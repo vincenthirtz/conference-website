@@ -81,7 +81,7 @@ test.describe.serial('Veto locked flow (P0 matches)', () => {
     await deleteTestStaff(MANAGER_EMAIL);
 
     await createTestStaff(ADMIN_EMAIL, PASSWORD, 'admin');
-    await createTestStaff(MANAGER_EMAIL, PASSWORD, 'manager');
+    await createTestStaff(MANAGER_EMAIL, PASSWORD, 'admin');
 
     adminToken = await getTokenFor(ADMIN_EMAIL);
     managerToken = await getTokenFor(MANAGER_EMAIL);

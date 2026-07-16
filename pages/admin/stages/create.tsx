@@ -72,7 +72,7 @@ type CreateStageResponse = {
   };
 };
 
-export const getServerSideProps = withStaffPage('manager');
+export const getServerSideProps = withStaffPage('admin');
 
 function AdminStageCreatePage({ staff }: StaffProps) {
   const t = useAdminT('adminStagesCreate');

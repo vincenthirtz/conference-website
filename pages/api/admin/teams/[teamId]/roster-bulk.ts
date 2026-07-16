@@ -57,7 +57,7 @@ type MemberRow = {
   is_substitute: boolean;
 };
 
-export default withStaffRoute(handler, 'manager');
+export default withStaffRoute(handler, 'admin');
 
 async function handler(
   req: NextApiRequest,

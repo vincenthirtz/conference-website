@@ -23,7 +23,7 @@ import { getGame } from '../../config/games';
  * ---------------------------------------------------------*/
 
 function makeStaffRow(
-  role: 'owner' | 'admin' | 'manager' | 'caster' = 'manager'
+  role: 'owner' | 'admin' | 'caster' = 'admin'
 ): StaffMember {
   return {
     id: 'staff-1',
@@ -73,7 +73,7 @@ beforeEach(() => {
   invalidateStaffCache();
   logStaffActionMock.mockClear();
   setAuthUser({ id: 'user-1' });
-  store.staff = [makeStaffRow('manager')] as any;
+  store.staff = [makeStaffRow('admin')] as any;
 });
 
 const TID = '550e8400-e29b-41d4-a716-446655440000';

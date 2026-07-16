@@ -47,7 +47,7 @@ type ApiResponse = {
 
 export const getServerSideProps = withStaffPage('admin');
 
-const ROLES = ['member', 'player', 'caster', 'manager', 'admin', 'owner'];
+const ROLES = ['member', 'player', 'caster', 'admin', 'owner'];
 
 function roleLabel(t: Dict, role: string | null) {
   switch (role?.toLowerCase()) {

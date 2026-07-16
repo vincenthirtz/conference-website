@@ -56,7 +56,7 @@ type ApiResponse = {
   team2: TeamMini | null;
 };
 
-export const getServerSideProps = withStaffPage('manager');
+export const getServerSideProps = withStaffPage('admin');
 
 function formatToInputDateTime(iso: string | null): string {
   if (!iso) return '';

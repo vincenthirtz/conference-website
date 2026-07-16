@@ -122,13 +122,13 @@ export const ADMIN_NAV: AdminNavNode[] = [
         id: 'tournois',
         topBarLabel: 'Tournois',
         href: '',
-        minRole: 'manager',
+        minRole: 'admin',
         children: [
           {
             id: 'tournaments-list',
             topBarLabel: 'Tournois – liste',
             href: '/admin/tournaments',
-            minRole: 'manager',
+            minRole: 'admin',
             card: {
               order: 1,
               titleKey: 'navTournoisTitle',
@@ -141,7 +141,7 @@ export const ADMIN_NAV: AdminNavNode[] = [
             id: 'tournaments-create',
             topBarLabel: 'Créer un tournoi',
             href: '/admin/tournaments/create',
-            minRole: 'manager',
+            minRole: 'admin',
           },
           {
             id: 'tournaments-webhooks',
@@ -153,13 +153,13 @@ export const ADMIN_NAV: AdminNavNode[] = [
             id: 'tournaments-checkin',
             topBarLabel: 'Check-in matchs (par tournoi)',
             href: '/admin/tournaments',
-            minRole: 'manager',
+            minRole: 'admin',
           },
           {
             id: 'broadcast-live',
             topBarLabel: 'Broadcast live (cockpit)',
             href: '/admin/broadcast/live',
-            minRole: 'manager',
+            minRole: 'admin',
             card: {
               order: 8,
               titleKey: 'navRunOfShowTitle',
@@ -189,7 +189,7 @@ export const ADMIN_NAV: AdminNavNode[] = [
           {
             id: 'quick-bracket',
             href: '/admin/quick-bracket',
-            minRole: 'manager',
+            minRole: 'admin',
             card: {
               order: 2,
               titleKey: 'navQuickBracketTitle',
@@ -204,7 +204,7 @@ export const ADMIN_NAV: AdminNavNode[] = [
           {
             id: 'tournament-simulator',
             href: '/admin/tournament-simulator',
-            minRole: 'manager',
+            minRole: 'admin',
             card: {
               order: 17,
               titleKey: 'navSimulatorTitle',
@@ -219,7 +219,7 @@ export const ADMIN_NAV: AdminNavNode[] = [
           {
             id: 'map-pool',
             href: '/admin/map-pool',
-            minRole: 'manager',
+            minRole: 'admin',
             card: {
               order: 18,
               titleKey: 'navMapPoolTitle',
@@ -231,7 +231,7 @@ export const ADMIN_NAV: AdminNavNode[] = [
           {
             id: 'leagues',
             href: '/admin/leagues',
-            minRole: 'manager',
+            minRole: 'admin',
             card: {
               order: 11,
               titleKey: 'navLeaguesTitle',
@@ -243,7 +243,7 @@ export const ADMIN_NAV: AdminNavNode[] = [
           {
             id: 'ratings',
             href: '/admin/ratings',
-            minRole: 'manager',
+            minRole: 'admin',
             card: {
               order: 12,
               titleKey: 'navRatingsTitle',
@@ -274,25 +274,25 @@ export const ADMIN_NAV: AdminNavNode[] = [
         id: 'scrims',
         topBarLabel: 'Scrims',
         href: '',
-        minRole: 'manager',
+        minRole: 'admin',
         children: [
           {
             id: 'scrims-list',
             topBarLabel: 'Scrims – liste',
             href: '/admin/scrims',
-            minRole: 'manager',
+            minRole: 'admin',
           },
           {
             id: 'scrims-create',
             topBarLabel: 'Créer un scrim',
             href: '/admin/scrims?new=1',
-            minRole: 'manager',
+            minRole: 'admin',
           },
           {
             id: 'scrims-demandes',
             topBarLabel: 'Demandes de scrim',
             href: '/admin/demandes?type=scrim',
-            minRole: 'manager',
+            minRole: 'admin',
           },
         ],
       },
@@ -300,13 +300,13 @@ export const ADMIN_NAV: AdminNavNode[] = [
         id: 'equipes',
         topBarLabel: 'Équipes',
         href: '',
-        minRole: 'manager',
+        minRole: 'admin',
         children: [
           {
             id: 'teams-list',
             topBarLabel: 'Équipes – liste',
             href: '/admin/teams',
-            minRole: 'manager',
+            minRole: 'admin',
             card: {
               order: 3,
               titleKey: 'navTeamsTitle',
@@ -319,7 +319,7 @@ export const ADMIN_NAV: AdminNavNode[] = [
             id: 'teams-create',
             topBarLabel: 'Créer une équipe',
             href: '/admin/teams/new',
-            minRole: 'manager',
+            minRole: 'admin',
           },
           {
             id: 'teams-my',
@@ -331,7 +331,7 @@ export const ADMIN_NAV: AdminNavNode[] = [
             id: 'demandes',
             topBarLabel: 'Demandes joueurs / équipes',
             href: '/admin/demandes',
-            minRole: 'manager',
+            minRole: 'admin',
             card: {
               order: 4,
               titleKey: 'navDemandesTitle',
@@ -349,7 +349,7 @@ export const ADMIN_NAV: AdminNavNode[] = [
     id: 'contenu',
     topBarLabel: 'Contenu',
     href: '',
-    minRole: 'manager',
+    minRole: 'admin',
     children: [
       {
         id: 'twitch-channels',
@@ -381,7 +381,7 @@ export const ADMIN_NAV: AdminNavNode[] = [
         id: 'moderation',
         topBarLabel: 'Modération',
         href: '/admin/moderation',
-        minRole: 'manager',
+        minRole: 'admin',
         card: {
           order: 6,
           titleKey: 'navModerationTitle',
@@ -395,7 +395,7 @@ export const ADMIN_NAV: AdminNavNode[] = [
       {
         id: 'moderation-support-card',
         href: '/admin/moderation?tab=support',
-        minRole: 'manager',
+        minRole: 'admin',
         card: {
           order: 5,
           titleKey: 'navSupportTitle',
@@ -503,7 +503,7 @@ export const ADMIN_NAV: AdminNavNode[] = [
     id: 'configuration',
     topBarLabel: 'Configuration',
     href: '',
-    minRole: 'manager',
+    minRole: 'admin',
     children: [
       {
         id: 'site-settings',
@@ -522,19 +522,19 @@ export const ADMIN_NAV: AdminNavNode[] = [
         id: 'logs-stats',
         topBarLabel: 'Logs & stats',
         href: '',
-        minRole: 'manager',
+        minRole: 'admin',
         children: [
           {
             id: 'logs',
             topBarLabel: 'Journaux',
             href: '/admin/logs',
-            minRole: 'manager',
+            minRole: 'admin',
           },
           {
             id: 'stats',
             topBarLabel: 'Statistiques',
             href: '/admin/stats',
-            minRole: 'manager',
+            minRole: 'admin',
             card: {
               order: 10,
               titleKey: 'navStatsTitle',
@@ -556,7 +556,7 @@ export const ADMIN_NAV: AdminNavNode[] = [
         id: 'onboarding',
         topBarLabel: 'Onboarding',
         href: '/admin/onboarding',
-        minRole: 'manager',
+        minRole: 'admin',
       },
       // Gestion des tenants : déplacée de la top-bar Configuration vers une
       // CARTE du dashboard (dashboard-only, plus d'entrée top-bar). La création
@@ -564,7 +564,7 @@ export const ADMIN_NAV: AdminNavNode[] = [
       {
         id: 'tenants-list',
         href: '/admin/tenants',
-        minRole: 'manager',
+        minRole: 'admin',
         card: {
           order: 19,
           titleKey: 'navTenantsTitle',

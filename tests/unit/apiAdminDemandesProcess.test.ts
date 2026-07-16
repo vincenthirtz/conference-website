@@ -41,7 +41,7 @@ const DEMANDE_OTHER = '11111111-1111-4111-8111-111111111114';
 const EXISTING_TEAM = '22222222-2222-4222-8222-22222222aaaa';
 
 function makeStaffRow(
-  role: 'owner' | 'admin' | 'manager' | 'caster' = 'manager'
+  role: 'owner' | 'admin' | 'caster' = 'admin'
 ): StaffMember {
   return {
     id: 'staff-mgr-1',
@@ -86,7 +86,7 @@ function makeRes() {
 }
 
 function seedBase() {
-  store.staff = [makeStaffRow('manager')] as any;
+  store.staff = [makeStaffRow('admin')] as any;
   store.teams = [
     {
       id: EXISTING_TEAM,

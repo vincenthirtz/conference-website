@@ -25,8 +25,8 @@ import {
 } from '../../utils/staff';
 
 describe('STAFF_ROLES', () => {
-  it('contains all 4 roles in hierarchy order', () => {
-    expect(STAFF_ROLES).toEqual(['owner', 'admin', 'manager', 'caster']);
+  it('contains all 3 roles in hierarchy order', () => {
+    expect(STAFF_ROLES).toEqual(['owner', 'admin', 'caster']);
   });
 });
 
@@ -34,7 +34,6 @@ describe('formatStaffRoleLabel', () => {
   it('returns label for each role', () => {
     expect(formatStaffRoleLabel('owner')).toBe('Owner');
     expect(formatStaffRoleLabel('admin')).toBe('Admin');
-    expect(formatStaffRoleLabel('manager')).toBe('Manager');
     expect(formatStaffRoleLabel('caster')).toBe('Caster');
   });
 });
@@ -93,22 +92,20 @@ describe('getRoleOptions', () => {
 describe('hasAtLeastRole', () => {
   it('owner has at least any role', () => {
     expect(hasAtLeastRole('owner', 'caster')).toBe(true);
-    expect(hasAtLeastRole('owner', 'manager')).toBe(true);
     expect(hasAtLeastRole('owner', 'admin')).toBe(true);
     expect(hasAtLeastRole('owner', 'owner')).toBe(true);
   });
 
   it('caster only has at least caster', () => {
     expect(hasAtLeastRole('caster', 'caster')).toBe(true);
-    expect(hasAtLeastRole('caster', 'manager')).toBe(false);
     expect(hasAtLeastRole('caster', 'admin')).toBe(false);
     expect(hasAtLeastRole('caster', 'owner')).toBe(false);
   });
 
-  it('manager has at least manager and caster', () => {
-    expect(hasAtLeastRole('manager', 'caster')).toBe(true);
-    expect(hasAtLeastRole('manager', 'manager')).toBe(true);
-    expect(hasAtLeastRole('manager', 'admin')).toBe(false);
+  it('admin has at least admin and caster but not owner', () => {
+    expect(hasAtLeastRole('admin', 'caster')).toBe(true);
+    expect(hasAtLeastRole('admin', 'admin')).toBe(true);
+    expect(hasAtLeastRole('admin', 'owner')).toBe(false);
   });
 
   it('returns false for null role', () => {
@@ -138,8 +135,7 @@ describe('isAdmin', () => {
     expect(isAdmin('owner')).toBe(true);
   });
 
-  it('returns false for manager and below', () => {
-    expect(isAdmin('manager')).toBe(false);
+  it('returns false for caster', () => {
     expect(isAdmin('caster')).toBe(false);
   });
 
@@ -149,8 +145,7 @@ describe('isAdmin', () => {
 });
 
 describe('isManagerOrAbove', () => {
-  it('returns true for manager and above', () => {
-    expect(isManagerOrAbove('manager')).toBe(true);
+  it('returns true for admin and above', () => {
     expect(isManagerOrAbove('admin')).toBe(true);
     expect(isManagerOrAbove('owner')).toBe(true);
   });

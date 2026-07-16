@@ -26,7 +26,7 @@ import adminTournamentsHandler from '../../pages/api/admin/tournaments/index';
  * ---------------------------------------------------------*/
 
 function makeStaffRow(
-  role: 'owner' | 'admin' | 'manager' | 'caster' = 'manager'
+  role: 'owner' | 'admin' | 'caster' = 'admin'
 ): StaffMember {
   return {
     id: 'staff-1',
@@ -87,7 +87,7 @@ const UUID_2 = '550e8400-e29b-41d4-a716-446655440001';
 describe('POST /api/admin/teams/add-member', () => {
   beforeEach(() => {
     setAuthUser({ id: 'user-1' });
-    store.staff = [makeStaffRow('manager')] as any;
+    store.staff = [makeStaffRow('admin')] as any;
   });
 
   it('405 on non-POST', async () => {
@@ -595,7 +595,7 @@ describe('/api/demandes/register-team', () => {
 describe('/api/admin/tournaments', () => {
   beforeEach(() => {
     setAuthUser({ id: 'user-1' });
-    store.staff = [makeStaffRow('manager')] as any;
+    store.staff = [makeStaffRow('admin')] as any;
   });
 
   it('GET 200 lists tournaments', async () => {

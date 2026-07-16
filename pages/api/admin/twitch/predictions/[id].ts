@@ -3,7 +3,7 @@
 // Verrouille (LOCKED), résout (RESOLVED, winning_outcome_id requis) ou annule
 // (CANCELED) une prediction Twitch existante.
 //
-// withStaffRoute(..., 'manager'). getValidBroadcasterToken + helixFetch.
+// withStaffRoute(..., 'admin'). getValidBroadcasterToken + helixFetch.
 //   409 { code:'NOT_CONNECTED' } / 403 { code:'MISSING_SCOPE' }.
 
 import type { NextApiRequest, NextApiResponse } from 'next';
@@ -147,4 +147,4 @@ async function handler(
   }
 }
 
-export default withStaffRoute(handler, 'manager');
+export default withStaffRoute(handler, 'admin');

@@ -17,7 +17,7 @@
 // this file does NOT duplicate that logic.
 //
 // All actions are scoped to the staff's active tenant (ctx.tenantId) and the
-// TARGET userId, gated at minRole 'manager' (mirrors add-member / teams gates),
+// TARGET userId, gated at minRole 'admin' (mirrors add-member / teams gates),
 // and audited via logStaffAction with the pre-declared action strings.
 
 import type { NextApiRequest, NextApiResponse } from 'next';
@@ -39,7 +39,7 @@ type ActionResponse =
   | { success: true; info?: string; teamId?: string }
   | { error: string };
 
-export default withStaffRoute(handler, 'manager');
+export default withStaffRoute(handler, 'admin');
 
 async function handler(
   req: NextApiRequest,

@@ -11,7 +11,7 @@ import { isValidUUID } from '@/utils/apiHelpers';
 import { sendTournamentNotificationEmail } from '@/utils/email';
 
 import { logger } from '../../../../utils/logger';
-export default withStaffRoute(handler, 'manager');
+export default withStaffRoute(handler, 'admin');
 
 async function handler(req: NextApiRequest, res: NextApiResponse, ctx: AuthenticatedStaffContext) {
   if (req.method !== 'POST') {

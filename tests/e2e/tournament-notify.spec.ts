@@ -34,7 +34,7 @@ test.describe('Tournament notify captains API', () => {
     }
 
     // Create staff user (manager)
-    await createTestStaff(STAFF_EMAIL, PASSWORD, 'manager');
+    await createTestStaff(STAFF_EMAIL, PASSWORD, 'admin');
     const { data: staffAuth } =
       await supabaseTestClient!.auth.signInWithPassword({
         email: STAFF_EMAIL,

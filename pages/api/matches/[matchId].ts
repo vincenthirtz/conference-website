@@ -11,7 +11,7 @@ import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
 
 import { logger } from '../../../utils/logger';
-export default withStaffRoute(handler, 'manager');
+export default withStaffRoute(handler, 'admin');
 
 /* -----------------------------------------------------------
  * API HANDLER PRINCIPAL

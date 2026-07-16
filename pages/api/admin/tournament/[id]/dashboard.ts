@@ -12,7 +12,7 @@ import type { DashboardData } from '@/utils/dashboard/buildTournamentDashboard';
 
 type ApiResponse = DashboardData | { error: string };
 
-export default withStaffRoute(handler, 'manager');
+export default withStaffRoute(handler, 'admin');
 
 async function handler(
   req: NextApiRequest,

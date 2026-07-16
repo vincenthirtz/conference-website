@@ -27,7 +27,7 @@ const STATUS_LABELS: Record<string, string> = {
   archived: 'Archivé',
 };
 
-export default withStaffRoute(handler, 'manager');
+export default withStaffRoute(handler, 'admin');
 
 async function handler(
   req: NextApiRequest,

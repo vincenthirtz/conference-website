@@ -29,7 +29,7 @@ type MatchesApiResponse = {
   stages: StageSummary[];
 };
 
-export const getServerSideProps = withStaffPage('manager');
+export const getServerSideProps = withStaffPage('admin');
 
 type Dict = ReturnType<typeof useAdminT<'adminTournamentStagesList'>>;
 

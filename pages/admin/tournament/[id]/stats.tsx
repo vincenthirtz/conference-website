@@ -21,7 +21,7 @@ import type { StaffProps } from '@/types/admin';
 
 const ID_BASE = 'admin-tournament-stats';
 
-export const getServerSideProps = withStaffPage('manager');
+export const getServerSideProps = withStaffPage('admin');
 
 export default function AdminTournamentStatsPage(_: StaffProps) {
   const router = useRouter();

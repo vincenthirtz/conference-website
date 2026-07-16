@@ -67,7 +67,7 @@ import {
 } from '@/components/admin/simulator/EliminationView';
 import { SummaryCard } from '@/components/admin/simulator/SummaryCard';
 
-export const getServerSideProps = withStaffPage('manager');
+export const getServerSideProps = withStaffPage('admin');
 
 /* ------------------------------------------------------------------ */
 /*  Simulation history                                                  */

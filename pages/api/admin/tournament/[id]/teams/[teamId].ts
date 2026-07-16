@@ -13,7 +13,7 @@ import { isValidUUID } from '@/utils/apiHelpers';
 import { logger } from '../../../../../../utils/logger';
 type ApiResponse = { success: boolean } | { team: any } | { error: string };
 
-export default withStaffRoute(handler, 'manager');
+export default withStaffRoute(handler, 'admin');
 
 async function handler(
   req: NextApiRequest,

@@ -52,7 +52,7 @@ const TOUR_A = '550e8400-e29b-41d4-a716-446655440030';
 const TOUR_B = '550e8400-e29b-41d4-a716-446655440040';
 
 function makeStaffRow(
-  role: 'owner' | 'admin' | 'manager' | 'caster' = 'manager'
+  role: 'owner' | 'admin' | 'caster' = 'admin'
 ): StaffMember {
   return {
     id: 'staff-1',
@@ -101,7 +101,7 @@ beforeEach(() => {
   logStaffActionMock.mockClear();
   applyMatchScoreMock.mockClear();
   setAuthUser({ id: 'user-1' });
-  store.staff = [makeStaffRow('manager')] as any;
+  store.staff = [makeStaffRow('admin')] as any;
   // Le staff appartient au tenant A → ctx.tenantId = TENANT_A (fallback_first).
   store.tenants = [
     { id: TENANT_A, slug: 'alpha', name: 'Alpha', is_active: true },

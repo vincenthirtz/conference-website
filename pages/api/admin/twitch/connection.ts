@@ -64,7 +64,7 @@ async function deleteHandler(
   res: NextApiResponse,
   ctx: AuthenticatedStaffContext
 ) {
-  if (!hasAtLeastRole(ctx.role, 'manager')) {
+  if (!hasAtLeastRole(ctx.role, 'admin')) {
     return res.status(403).json({ error: 'Forbidden.' });
   }
 

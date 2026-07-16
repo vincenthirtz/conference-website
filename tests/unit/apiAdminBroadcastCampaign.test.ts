@@ -31,7 +31,7 @@ import campaignHandler from '../../pages/api/admin/broadcast/[campaignId]/index'
 const BUILTIN_ID = 'idahobit-live-2026';
 
 function makeStaffRow(
-  role: 'owner' | 'admin' | 'manager' | 'caster' = 'admin'
+  role: 'owner' | 'admin' | 'caster' = 'admin'
 ): StaffMember {
   return {
     id: 'staff-1',

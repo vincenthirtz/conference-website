@@ -19,7 +19,7 @@ import type { StaffProps } from '@/types/admin';
 
 const ID_BASE = 'admin-tournament-checkin';
 
-export const getServerSideProps = withStaffPage('manager');
+export const getServerSideProps = withStaffPage('admin');
 
 export default function AdminTournamentCheckinPage(_: StaffProps) {
   const router = useRouter();

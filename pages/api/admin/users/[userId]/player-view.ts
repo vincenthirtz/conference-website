@@ -1,7 +1,7 @@
 // pages/api/admin/users/[userId]/player-view.ts
 //
 // GET only — read-only snapshot of a target user's PLAYER area, for the admin
-// "mode vue player" feature. Staff-gated (minRole 'manager'), scoped to the
+// "mode vue player" feature. Staff-gated (minRole 'admin'), scoped to the
 // STAFF's active tenant (ctx.tenantId) and the TARGET userId.
 //
 // This is INSPECTION, not impersonation: every player-side query is re-run with
@@ -515,4 +515,4 @@ export default withStaffRoute(async function handler(req, res, ctx) {
 
   res.setHeader('Cache-Control', 'private, no-store');
   return res.status(200).json(payload);
-}, 'manager');
+}, 'admin');

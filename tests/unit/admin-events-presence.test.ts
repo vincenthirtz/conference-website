@@ -54,7 +54,7 @@ const CASTER_UNKNOWN_MISMATCH = '33333333-3333-4333-8333-333333330005';
  * ---------------------------------------------------------*/
 
 function makeStaffRow(
-  role: 'owner' | 'admin' | 'manager' | 'caster' = 'manager'
+  role: 'owner' | 'admin' | 'caster' = 'admin'
 ): StaffMember {
   return {
     id: 'staff-mgr-1',
@@ -250,7 +250,7 @@ beforeEach(() => {
   resetSupabaseMock();
   invalidateStaffCache();
   setAuthUser({ id: 'user-1' });
-  store.staff = [makeStaffRow('manager')] as any;
+  store.staff = [makeStaffRow('admin')] as any;
 });
 
 /* ===========================================================

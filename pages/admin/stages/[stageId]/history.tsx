@@ -41,7 +41,7 @@ type ApiResponse = {
   logs: FormattedStaffLog[];
 };
 
-export const getServerSideProps = withStaffPage('manager');
+export const getServerSideProps = withStaffPage('admin');
 
 function formatDateTime(iso: string) {
   try {

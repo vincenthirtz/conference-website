@@ -514,6 +514,6 @@ function AdminTournamentPrizePoolPage(_: StaffProps) {
   );
 }
 
-export const getServerSideProps = withStaffPage('manager');
+export const getServerSideProps = withStaffPage('admin');
 
 export default AdminTournamentPrizePoolPage;

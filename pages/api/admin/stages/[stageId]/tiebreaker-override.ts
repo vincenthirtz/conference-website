@@ -20,7 +20,7 @@ import { logger } from '../../../../../utils/logger';
 
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'stage-tiebreaker-override' }),
-  'manager'
+  'admin'
 );
 
 async function handler(

@@ -30,7 +30,7 @@ type GroupsApiResponse = {
   unassigned: TeamInfo[];
 };
 
-export const getServerSideProps = withStaffPage('manager');
+export const getServerSideProps = withStaffPage('admin');
 
 function GroupLabel({ groupKey }: { groupKey: string }) {
   const t = useAdminT('adminStageGroups');

@@ -27,7 +27,7 @@ import exportResultsHandler from '../../pages/api/admin/tournament/[id]/export-r
  * ---------------------------------------------------------*/
 
 function makeStaffRow(
-  role: 'owner' | 'admin' | 'manager' | 'caster' = 'manager'
+  role: 'owner' | 'admin' | 'caster' = 'admin'
 ): StaffMember {
   return {
     id: 'staff-1',
@@ -285,7 +285,7 @@ describe('/api/teams/scrim-requests', () => {
 describe('/api/admin/tournament/[id]/teams', () => {
   beforeEach(() => {
     setAuthUser({ id: 'user-1' });
-    store.staff = [makeStaffRow('manager')] as any;
+    store.staff = [makeStaffRow('admin')] as any;
   });
 
   it('400 when id missing', async () => {
@@ -573,7 +573,7 @@ describe('GET /api/tournaments/[id]/mvp-leaderboard', () => {
 describe('GET /api/admin/tournament/[id]/export-results', () => {
   beforeEach(() => {
     setAuthUser({ id: 'user-1' });
-    store.staff = [makeStaffRow('manager')] as any;
+    store.staff = [makeStaffRow('admin')] as any;
   });
 
   function seedExport() {

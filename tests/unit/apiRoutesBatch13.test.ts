@@ -26,7 +26,7 @@ import bulkTeamsHandler from '../../pages/api/admin/teams/bulk';
  * ---------------------------------------------------------*/
 
 function makeStaffRow(
-  role: 'owner' | 'admin' | 'manager' | 'caster' = 'manager'
+  role: 'owner' | 'admin' | 'caster' = 'admin'
 ): StaffMember {
   return {
     id: 'staff-1',
@@ -275,7 +275,7 @@ describe('/api/demandes/captain', () => {
 describe('/api/admin/support/tickets/[id]', () => {
   beforeEach(() => {
     setAuthUser({ id: 'user-1' });
-    store.staff = [makeStaffRow('manager')] as any;
+    store.staff = [makeStaffRow('admin')] as any;
   });
 
   it('400 on invalid id', async () => {
@@ -413,7 +413,7 @@ describe('/api/admin/support/tickets/[id]', () => {
 describe('POST /api/admin/teams/bulk', () => {
   beforeEach(() => {
     setAuthUser({ id: 'user-1' });
-    store.staff = [makeStaffRow('manager')] as any;
+    store.staff = [makeStaffRow('admin')] as any;
   });
 
   it('405 on non-POST', async () => {

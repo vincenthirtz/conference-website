@@ -64,7 +64,7 @@ const CASTER_ID_2 = '33333333-3333-4333-8333-33333333bbbb';
  * ---------------------------------------------------------*/
 
 function makeStaffRow(
-  role: 'owner' | 'admin' | 'manager' | 'caster' = 'manager'
+  role: 'owner' | 'admin' | 'caster' = 'admin'
 ): StaffMember {
   return {
     id: 'staff-mgr-1',
@@ -150,7 +150,7 @@ beforeEach(async () => {
   invalidateStaffCache();
   await __resetAdminIdempotencyCache();
   setAuthUser({ id: 'user-1' });
-  store.staff = [makeStaffRow('manager')] as any;
+  store.staff = [makeStaffRow('admin')] as any;
   logStaffActionMock.mockClear();
 });
 

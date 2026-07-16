@@ -106,5 +106,5 @@ async function handler(
 
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'admin-events-seg-start' }),
-  'manager'
+  'admin'
 );

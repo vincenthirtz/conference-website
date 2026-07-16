@@ -37,7 +37,7 @@ const MAP_ID = '11111111-1111-4111-8111-111111111111';
 const OTHER_MAP_ID = '22222222-2222-4222-8222-222222222222';
 
 function makeStaffRow(
-  role: 'owner' | 'admin' | 'manager' | 'caster' = 'manager'
+  role: 'owner' | 'admin' | 'caster' = 'admin'
 ): StaffMember {
   return {
     id: 'staff-1',
@@ -88,7 +88,7 @@ beforeEach(() => {
   invalidateStaffCache();
   logStaffActionMock.mockClear();
   setAuthUser({ id: 'user-1' });
-  store.staff = [makeStaffRow('manager')] as any;
+  store.staff = [makeStaffRow('admin')] as any;
   vi.spyOn(console, 'warn').mockImplementation(() => {});
   vi.spyOn(console, 'error').mockImplementation(() => {});
 });

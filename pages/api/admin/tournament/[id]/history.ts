@@ -17,7 +17,7 @@ type TournamentHistoryResponse = {
 };
 
 // Rôle minimum : manager (vision globale du tournoi)
-export default withStaffRoute(handler, 'manager');
+export default withStaffRoute(handler, 'admin');
 
 async function handler(
   req: NextApiRequest,

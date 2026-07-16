@@ -3,7 +3,7 @@
 // Pose un stream marker sur le live en cours du broadcaster connecté (repère les
 // temps forts pour le montage du VOD). Renvoie { marker }.
 //
-// withStaffRoute(..., 'manager'). getValidBroadcasterToken + helixFetch.
+// withStaffRoute(..., 'admin'). getValidBroadcasterToken + helixFetch.
 //   409 { code:'NOT_CONNECTED' } / 403 { code:'MISSING_SCOPE' }.
 //   Scope requis : channel:manage:broadcast.
 //
@@ -137,4 +137,4 @@ async function handler(
   }
 }
 
-export default withStaffRoute(handler, 'manager');
+export default withStaffRoute(handler, 'admin');

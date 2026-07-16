@@ -36,7 +36,7 @@ export type TournamentCreateInput = {
 };
 
 // Rôle minimum : manager (gestion tournois)
-export default withStaffRoute(handler, 'manager');
+export default withStaffRoute(handler, 'admin');
 
 async function handler(req: NextApiRequest, res: NextApiResponse, ctx: AuthenticatedStaffContext) {
   try {

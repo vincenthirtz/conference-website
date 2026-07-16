@@ -50,7 +50,7 @@ type TournamentRegistration = TournamentRow & {
 const BATTLE_TAG_RE = /^[A-Za-z0-9]{2,}#[0-9]{3,6}$/;
 
 export const getServerSideProps = withStaffPage<{ teamRoles: TeamRole[] }>(
-  'manager',
+  'admin',
   async () => {
     const teamRoles = supabaseAdmin
       ? await loadTeamRolesFromSupabase(supabaseAdmin)

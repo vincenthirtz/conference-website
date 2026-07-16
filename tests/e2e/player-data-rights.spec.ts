@@ -194,7 +194,7 @@ test.describe('Player data rights (GDPR)', () => {
   test.describe('Staff self-deletion', () => {
     test.beforeAll(async () => {
       await deleteTestStaff(STAFF_DELETE_EMAIL);
-      await createTestStaff(STAFF_DELETE_EMAIL, PASSWORD, 'manager');
+      await createTestStaff(STAFF_DELETE_EMAIL, PASSWORD, 'admin');
     });
 
     test.afterAll(async () => {

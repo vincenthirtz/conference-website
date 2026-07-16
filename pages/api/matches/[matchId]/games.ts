@@ -7,7 +7,7 @@ import { applyMatchScore } from '@/utils/matches/applyScore';
 import { logStaffAction } from '@/utils/staffLogs';
 
 import { logger } from '../../../../utils/logger';
-export default withStaffRoute(handler, 'manager');
+export default withStaffRoute(handler, 'admin');
 
 /* -----------------------------------------------------------
  * Types

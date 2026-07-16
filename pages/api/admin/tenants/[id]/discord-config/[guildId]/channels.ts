@@ -57,7 +57,7 @@ async function handler(
 
   // Accès : manager+ (aligné sur la lecture de la config Discord). Casters
   // exclus ; pôle admins bénéficient du bypass cross-tenant.
-  if (!hasAtLeastRole(ctx.role, 'manager')) {
+  if (!hasAtLeastRole(ctx.role, 'admin')) {
     return res.status(403).json({ error: 'Forbidden.' });
   }
   const isPoleAdmin =
@@ -147,4 +147,4 @@ async function handler(
   }
 }
 
-export default withStaffRoute(handler, 'manager');
+export default withStaffRoute(handler, 'admin');

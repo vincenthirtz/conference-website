@@ -20,7 +20,7 @@ import type { StaffProps } from '@/types/admin';
 
 const ID_BASE = 'admin-scrims';
 
-export const getServerSideProps = withStaffPage('manager');
+export const getServerSideProps = withStaffPage('admin');
 
 function AdminScrimsPage(_props: StaffProps) {
   const t = useAdminT('adminScrimsList');

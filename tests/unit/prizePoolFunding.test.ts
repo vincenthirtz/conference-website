@@ -633,7 +633,7 @@ describe('GET /api/tournaments/[id]/prize-pool', () => {
  * Admin /api/admin/tournaments/[id]/prize-pool
  * =========================================================================*/
 
-function makeStaff(role: 'manager' | 'caster') {
+function makeStaff(role: 'admin' | 'caster') {
   store.staff = [
     {
       id: STAFF_1,
@@ -667,7 +667,7 @@ describe('admin /api/admin/tournaments/[id]/prize-pool', () => {
   });
 
   it('manager PUT crée une cagnotte puis la met à jour', async () => {
-    makeStaff('manager');
+    makeStaff('admin');
     invalidateStaffCache();
     // Create
     let res = makeRes();
@@ -701,7 +701,7 @@ describe('admin /api/admin/tournaments/[id]/prize-pool', () => {
   });
 
   it('manager GET renvoie config + contributions + compteur', async () => {
-    makeStaff('manager');
+    makeStaff('admin');
     invalidateStaffCache();
     seedPool({ raised_amount_cents: 2500 });
     store.prize_pool_contributions = [
@@ -734,7 +734,7 @@ describe('admin /api/admin/tournaments/[id]/prize-pool', () => {
   });
 
   it('tournoi inconnu → 404', async () => {
-    makeStaff('manager');
+    makeStaff('admin');
     invalidateStaffCache();
     store.tournaments = [] as any;
     const res = makeRes();

@@ -296,7 +296,7 @@ export async function requireManagerRoleAcrossAnyTenant(
   staffId: string,
   staffRole: StaffRole | null | undefined
 ): Promise<boolean> {
-  if (!hasAtLeastRole(staffRole, 'manager')) return false;
+  if (!hasAtLeastRole(staffRole, 'admin')) return false;
   const { data, error } = await supabaseAdmin
     .from('tenant_staff')
     .select('tenant_id')

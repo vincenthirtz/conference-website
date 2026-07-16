@@ -44,26 +44,23 @@ export class StaffUnauthenticatedError extends Error {
   }
 }
 
-export const STAFF_ROLES: StaffRole[] = ['owner', 'admin', 'manager', 'caster'];
+export const STAFF_ROLES: StaffRole[] = ['owner', 'admin', 'caster'];
 
 export const STAFF_ROLE_LABEL: Record<StaffRole, string> = {
   owner: 'Owner',
   admin: 'Admin',
-  manager: 'Manager',
   caster: 'Caster',
 };
 
 export const STAFF_ROLE_DESCRIPTION: Record<StaffRole, string> = {
   owner: 'Accès complet, gestion du staff, gestion des permissions',
   admin: 'Accès complet au back-office, gestion tournois & résultats',
-  manager: 'Gestion opérationnelle : équipes, demandes, matches',
   caster: 'Accès lecture + meta info match (pour préparation cast)',
 };
 
 export const STAFF_ROLE_RANK: Record<StaffRole, number> = {
-  owner: 3,
-  admin: 2,
-  manager: 1,
+  owner: 2,
+  admin: 1,
   caster: 0,
 };
 
@@ -548,7 +545,7 @@ export function isAdmin(role: StaffRole | null | undefined) {
 }
 
 export function isManagerOrAbove(role: StaffRole | null | undefined) {
-  return hasAtLeastRole(role, 'manager');
+  return hasAtLeastRole(role, 'admin');
 }
 
 type StaffPageLoader<P> = (

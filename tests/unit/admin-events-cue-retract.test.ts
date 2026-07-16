@@ -56,7 +56,7 @@ const CUE_OTHER_TENANT = '22222222-2222-4222-8222-22222222cccc';
  * ---------------------------------------------------------*/
 
 function makeStaffRow(
-  role: 'owner' | 'admin' | 'manager' | 'caster' = 'manager'
+  role: 'owner' | 'admin' | 'caster' = 'admin'
 ): StaffMember {
   return {
     id: 'staff-mgr-1',
@@ -161,7 +161,7 @@ beforeEach(() => {
   resetSupabaseMock();
   invalidateStaffCache();
   setAuthUser({ id: 'user-1' });
-  store.staff = [makeStaffRow('manager')] as any;
+  store.staff = [makeStaffRow('admin')] as any;
   logStaffActionMock.mockClear();
 });
 

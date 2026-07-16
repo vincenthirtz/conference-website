@@ -20,7 +20,7 @@ import adminCommentsHandler from '../../pages/api/admin/comments/index';
  * ---------------------------------------------------------*/
 
 function makeStaffRow(
-  role: 'owner' | 'admin' | 'manager' | 'caster' = 'caster'
+  role: 'owner' | 'admin' | 'caster' = 'caster'
 ): StaffMember {
   return {
     id: 'staff-1',
@@ -400,7 +400,7 @@ describe('GET /api/admin/stages/[stageId]/completion-status', () => {
 describe('/api/admin/comments', () => {
   beforeEach(() => {
     setAuthUser({ id: 'user-1' });
-    store.staff = [makeStaffRow('manager')] as any;
+    store.staff = [makeStaffRow('admin')] as any;
   });
 
   it('GET 200 lists comments', async () => {

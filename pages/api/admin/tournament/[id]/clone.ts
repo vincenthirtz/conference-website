@@ -18,7 +18,7 @@ type ApiResponse =
 
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'tournament-clone' }),
-  'manager'
+  'admin'
 );
 
 async function handler(

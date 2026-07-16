@@ -54,7 +54,7 @@ test.describe.serial('Admin idempotency middleware', () => {
   test.beforeAll(async () => {
     if (!supabaseTestClient) return;
     await deleteTestStaff(STAFF_EMAIL);
-    await createTestStaff(STAFF_EMAIL, PASSWORD, 'manager');
+    await createTestStaff(STAFF_EMAIL, PASSWORD, 'admin');
     staffToken = await getStaffToken();
     expect(staffToken, 'staff token must be obtained').toBeTruthy();
   });

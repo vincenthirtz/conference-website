@@ -27,7 +27,7 @@ const PENDING_GUILD = '9999999999999999999';
 const NEW_GUILD = '8888888888888888888';
 
 function makeStaffRow(
-  role: 'owner' | 'admin' | 'manager' | 'caster' = 'owner'
+  role: 'owner' | 'admin' | 'caster' = 'owner'
 ): StaffMember {
   return {
     id: STAFF_1,
@@ -125,7 +125,7 @@ describe('GET /api/admin/pending-guild-links', () => {
   });
 
   it('403 si manager (owner requis)', async () => {
-    store.staff = [makeStaffRow('manager')] as any;
+    store.staff = [makeStaffRow('admin')] as any;
     invalidateStaffCache();
     const res = makeRes();
     await listHandler(makeReq(), res);

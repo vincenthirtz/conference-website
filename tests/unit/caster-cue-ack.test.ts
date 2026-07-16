@@ -43,7 +43,7 @@ const CUE_DONE = '22222222-2222-4222-8222-22222222cccc';
 const CUE_Y = '22222222-2222-4222-8222-22222222dddd';
 
 function makeStaffRow(
-  role: 'owner' | 'admin' | 'manager' | 'caster' = 'caster'
+  role: 'owner' | 'admin' | 'caster' = 'caster'
 ): StaffMember {
   return {
     id: 'staff-caster-x',

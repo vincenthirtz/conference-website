@@ -51,7 +51,7 @@ function stageTypeBadge(type: string) {
   }
 }
 
-export const getServerSideProps = withStaffPage('manager');
+export const getServerSideProps = withStaffPage('admin');
 
 function AdminTournamentTemplatesPage({ staff }: StaffProps) {
   const t = useAdminT('adminTournamentTemplates');

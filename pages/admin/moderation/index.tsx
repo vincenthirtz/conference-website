@@ -34,7 +34,7 @@ export const getServerSideProps = withStaffPage('caster');
  */
 export default function AdminModerationPage({ staff }: StaffProps) {
   const t = useAdminT('adminModeration');
-  const isManager = hasAtLeastRole(staff.role as StaffRole, 'manager');
+  const isManager = hasAtLeastRole(staff.role as StaffRole, 'admin');
 
   const tabs = [
     ...(isManager ? [{ id: 'comments', label: t.tabComments }] : []),

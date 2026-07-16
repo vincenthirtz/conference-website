@@ -61,7 +61,7 @@ function validateMagicBytes(buffer: Buffer, mimeType: string): boolean {
   return true;
 }
 
-export default withStaffRoute(handler, 'manager');
+export default withStaffRoute(handler, 'admin');
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {

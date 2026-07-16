@@ -315,7 +315,7 @@ function AdminDraftPageContent() {
 // clean "Draft indisponible" page instead of letting the operator click
 // "Initialise draft" and eat a 400 GAME_NOT_DRAFTABLE toast.
 export const getServerSideProps = withStaffPage<PageProps>(
-  'manager',
+  'admin',
   async (ctx, staffCtx) => {
     const rawMatchId = ctx.params?.matchId;
     const matchId = typeof rawMatchId === 'string' ? rawMatchId : '';

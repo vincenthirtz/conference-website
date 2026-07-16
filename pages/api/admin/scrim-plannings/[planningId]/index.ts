@@ -36,7 +36,7 @@ const PATCHABLE_FIELDS = [
   'reminder_pinged_at',
 ] as const;
 
-export default withStaffRoute(handler, 'manager');
+export default withStaffRoute(handler, 'admin');
 
 async function handler(
   req: NextApiRequest,

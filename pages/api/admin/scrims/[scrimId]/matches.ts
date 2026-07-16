@@ -86,7 +86,7 @@ function normalizeMatch(
 
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'scrim-matches-batch' }),
-  'manager'
+  'admin'
 );
 
 async function handler(

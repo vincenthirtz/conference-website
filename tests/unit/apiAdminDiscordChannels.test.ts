@@ -19,7 +19,7 @@ const GUILD_ID = '1234567890123456789';
 const OTHER_GUILD = '9876543210987654321';
 
 function makeStaffRow(
-  role: 'owner' | 'admin' | 'manager' | 'caster' = 'owner'
+  role: 'owner' | 'admin' | 'caster' = 'owner'
 ): StaffMember {
   return {
     id: STAFF_1,

@@ -70,7 +70,7 @@ test.describe('Staff access control', () => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
 
     // Create staff user with manager role
-    await createTestStaff(STAFF_EMAIL, TEST_PASSWORD, 'manager');
+    await createTestStaff(STAFF_EMAIL, TEST_PASSWORD, 'admin');
 
     // Login via admin login page
     await page.goto('/login');
@@ -107,7 +107,7 @@ test.describe('Navbar visibility', () => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
 
     await cleanupUsers();
-    await createTestStaff(STAFF_EMAIL, TEST_PASSWORD, 'manager');
+    await createTestStaff(STAFF_EMAIL, TEST_PASSWORD, 'admin');
 
     // Login via admin login page
     await page.goto('/login');

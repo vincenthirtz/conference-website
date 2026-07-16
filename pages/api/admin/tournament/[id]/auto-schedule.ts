@@ -108,7 +108,7 @@ type AutoScheduleResponse = {
 
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'tournament-auto-schedule' }),
-  'manager'
+  'admin'
 );
 
 async function handler(

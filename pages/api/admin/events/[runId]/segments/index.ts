@@ -201,4 +201,4 @@ async function handler(
   return res.status(201).json(inserted);
 }
 
-export default withStaffRoute(handler, 'manager');
+export default withStaffRoute(handler, 'admin');

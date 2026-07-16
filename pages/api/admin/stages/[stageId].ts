@@ -39,7 +39,7 @@ export type StageRow = {
 };
 
 // rôle minimum : manager (gestion de la structure du tournoi)
-export default withStaffRoute(handler, 'manager');
+export default withStaffRoute(handler, 'admin');
 
 async function handler(req: NextApiRequest, res: NextApiResponse, ctx: AuthenticatedStaffContext) {
   const { stageId } = req.query;

@@ -22,7 +22,7 @@ import { invalidateAllStandingsCache } from '../../utils/stages/standingsCache';
  * ---------------------------------------------------------*/
 
 function makeStaffRow(
-  role: 'owner' | 'admin' | 'manager' | 'caster' = 'manager'
+  role: 'owner' | 'admin' | 'caster' = 'admin'
 ): StaffMember {
   return {
     id: 'staff-1',
@@ -83,7 +83,7 @@ beforeEach(() => {
 describe('GET /api/admin/logs', () => {
   beforeEach(() => {
     setAuthUser({ id: 'user-1' });
-    store.staff = [makeStaffRow('manager')] as any;
+    store.staff = [makeStaffRow('admin')] as any;
   });
 
   it('returns 405 on non-GET', async () => {
@@ -222,7 +222,7 @@ describe('GET /api/admin/stages/[stageId]/standings', () => {
 
   beforeEach(() => {
     setAuthUser({ id: 'user-1' });
-    store.staff = [makeStaffRow('manager')] as any;
+    store.staff = [makeStaffRow('admin')] as any;
   });
 
   function seedStandingsData() {
@@ -343,7 +343,7 @@ describe('GET /api/admin/stages/[stageId]/history', () => {
 
   beforeEach(() => {
     setAuthUser({ id: 'user-1' });
-    store.staff = [makeStaffRow('manager')] as any;
+    store.staff = [makeStaffRow('admin')] as any;
   });
 
   it('returns 400 when stageId is invalid', async () => {
@@ -415,7 +415,7 @@ describe('GET /api/admin/teams/[teamId]/history', () => {
 
   beforeEach(() => {
     setAuthUser({ id: 'user-1' });
-    store.staff = [makeStaffRow('manager')] as any;
+    store.staff = [makeStaffRow('admin')] as any;
   });
 
   it('returns 400 when teamId is invalid', async () => {

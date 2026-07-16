@@ -154,5 +154,5 @@ async function handler(
 
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'leagues-recompute' }),
-  'manager'
+  'admin'
 );

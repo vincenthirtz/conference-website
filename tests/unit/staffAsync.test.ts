@@ -119,8 +119,8 @@ describe('getStaffByUserId', () => {
 
 describe('getStaffRole', () => {
   it('returns the role when staff exists', async () => {
-    seedStaff([makeStaff({ auth_user_id: 'user-1', role: 'manager' })]);
-    expect(await getStaffRole('user-1')).toBe('manager');
+    seedStaff([makeStaff({ auth_user_id: 'user-1', role: 'admin' })]);
+    expect(await getStaffRole('user-1')).toBe('admin');
   });
 
   it('returns null when no staff exists', async () => {

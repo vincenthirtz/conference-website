@@ -40,7 +40,7 @@ const VALID_RESUME_STATUSES: MatchStatus[] = [
 // pages/api/admin/matches/[matchId].ts : staff auth externe, idempotency interne.
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'admin-match-dispute' }),
-  'manager'
+  'admin'
 );
 
 async function handler(req: NextApiRequest, res: NextApiResponse, ctx: AuthenticatedStaffContext) {

@@ -57,7 +57,7 @@ function formatVerifiedDate(d: string | null | undefined): string {
   }
 }
 
-export const getServerSideProps = withStaffPage('manager');
+export const getServerSideProps = withStaffPage('admin');
 
 function AdminTeamDetailPage({ staff }: StaffProps) {
   const t = useAdminT('adminTeamDetail');

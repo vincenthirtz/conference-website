@@ -46,7 +46,7 @@ test.describe.serial('Stage / match format lock (P0-A)', () => {
     if (!supabaseTestClient) return;
 
     await deleteTestStaff(STAFF_EMAIL);
-    await createTestStaff(STAFF_EMAIL, PASSWORD, 'manager');
+    await createTestStaff(STAFF_EMAIL, PASSWORD, 'admin');
     token = await getToken();
     expect(token).toBeTruthy();
 

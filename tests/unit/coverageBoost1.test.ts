@@ -87,7 +87,7 @@ import teamTournamentsHandler from '../../pages/api/admin/teams/[teamId]/tournam
  * ---------------------------------------------------------*/
 
 function makeStaffRow(
-  role: 'owner' | 'admin' | 'manager' | 'caster' = 'manager'
+  role: 'owner' | 'admin' | 'caster' = 'admin'
 ): StaffMember {
   return {
     id: 'staff-1',

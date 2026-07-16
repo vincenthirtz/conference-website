@@ -29,7 +29,7 @@ test.describe('Password change feature', () => {
 
   test.describe('Staff password change', () => {
     test.beforeAll(async () => {
-      await createTestStaff(STAFF_EMAIL, password, 'manager');
+      await createTestStaff(STAFF_EMAIL, password, 'admin');
     });
 
     test('displays password change form on /admin page', async ({ page }) => {

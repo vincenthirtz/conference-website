@@ -64,7 +64,7 @@ const DEMANDE_NEW_ID = '99999999-9999-4999-8999-999999999992';
  * ---------------------------------------------------------*/
 
 function makeStaffRow(
-  role: 'owner' | 'admin' | 'manager' | 'caster' = 'manager'
+  role: 'owner' | 'admin' | 'caster' = 'admin'
 ): StaffMember {
   return {
     id: STAFF_ID,
@@ -116,13 +116,13 @@ function makeRes(): any {
  * Seeding
  * ---------------------------------------------------------*/
 
-function seedStaff(role: 'owner' | 'admin' | 'manager' | 'caster' = 'manager') {
+function seedStaff(role: 'owner' | 'admin' | 'caster' = 'admin') {
   store.staff = [makeStaffRow(role)] as any;
   store.tenants = [
     { id: TENANT_A, slug: 'alpha', name: 'Alpha', is_active: true },
   ] as any;
   store.tenant_staff = [
-    { tenant_id: TENANT_A, staff_id: STAFF_ID, role: 'manager' },
+    { tenant_id: TENANT_A, staff_id: STAFF_ID, role: 'admin' },
   ] as any;
 }
 
@@ -256,7 +256,7 @@ beforeEach(() => {
   invalidateStaffCache();
   logStaffActionMock.mockClear();
   setAuthUser({ id: STAFF_AUTH_USER_ID });
-  seedStaff('manager');
+  seedStaff('admin');
   seedTargetUser();
   vi.spyOn(console, 'warn').mockImplementation(() => {});
   vi.spyOn(console, 'error').mockImplementation(() => {});

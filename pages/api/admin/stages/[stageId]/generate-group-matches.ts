@@ -41,7 +41,7 @@ type ApiResponse =
 
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'stage-generate-group-matches' }),
-  'manager'
+  'admin'
 );
 
 async function handler(

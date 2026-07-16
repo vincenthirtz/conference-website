@@ -29,7 +29,7 @@ import tournamentMatchesHandler from '../../pages/api/admin/tournament/[id]/matc
  * ---------------------------------------------------------*/
 
 function makeStaffRow(
-  role: 'owner' | 'admin' | 'manager' | 'caster' = 'manager'
+  role: 'owner' | 'admin' | 'caster' = 'admin'
 ): StaffMember {
   return {
     id: 'staff-1',
@@ -219,7 +219,7 @@ describe('POST /api/discord/teams/add-member', () => {
 describe('/api/admin/tournament/[id]/matches', () => {
   beforeEach(() => {
     setAuthUser({ id: 'user-1' });
-    store.staff = [makeStaffRow('manager')] as any;
+    store.staff = [makeStaffRow('admin')] as any;
   });
 
   it('400 on invalid tournament id', async () => {

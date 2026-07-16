@@ -39,7 +39,7 @@ export type AdminLogsResponse = {
 };
 
 // Rôle minimum : manager (vision globale du journal d'audit)
-export default withStaffRoute(handler, 'manager');
+export default withStaffRoute(handler, 'admin');
 
 async function handler(
   req: NextApiRequest,

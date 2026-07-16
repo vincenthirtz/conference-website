@@ -35,7 +35,7 @@ import adminMatchHandler from '../../pages/api/admin/matches/[matchId]';
  * ---------------------------------------------------------*/
 
 function makeStaffRow(
-  role: 'owner' | 'admin' | 'manager' | 'caster' = 'manager'
+  role: 'owner' | 'admin' | 'caster' = 'admin'
 ): StaffMember {
   return {
     id: 'staff-1',
@@ -86,7 +86,7 @@ beforeEach(() => {
   logStaffActionMock.mockClear();
   applyMatchScoreMock.mockClear();
   setAuthUser({ id: 'user-1' });
-  store.staff = [makeStaffRow('manager')] as any;
+  store.staff = [makeStaffRow('admin')] as any;
 });
 
 const TEAM_ID = '550e8400-e29b-41d4-a716-446655440000';

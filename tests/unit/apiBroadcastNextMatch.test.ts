@@ -28,7 +28,7 @@ const SEG_BREAK = '22222222-2222-4222-8222-2222222222b0'; // ord 2, break, upcom
 const SEG_NEXT = '22222222-2222-4222-8222-2222222222c0'; // ord 3, match, upcoming
 
 function makeStaffRow(
-  role: 'owner' | 'admin' | 'manager' | 'caster' = 'manager'
+  role: 'owner' | 'admin' | 'caster' = 'admin'
 ): StaffMember {
   return {
     id: 'staff-1',
@@ -151,7 +151,7 @@ beforeEach(() => {
   resetSupabaseMock();
   invalidateStaffCache();
   setAuthUser({ id: 'user-1' });
-  store.staff = [makeStaffRow('manager')] as any;
+  store.staff = [makeStaffRow('admin')] as any;
 });
 
 describe('POST /api/admin/broadcast/next-match', () => {

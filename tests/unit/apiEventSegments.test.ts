@@ -33,7 +33,7 @@ import segReorderHandler from '../../pages/api/admin/events/[runId]/segments/reo
  * Helpers
  * ---------------------------------------------------------*/
 
-function makeStaffRow(role: 'admin' | 'manager' = 'admin'): StaffMember {
+function makeStaffRow(role: 'admin' = 'admin'): StaffMember {
   return {
     id: 'staff-1',
     auth_user_id: 'user-1',

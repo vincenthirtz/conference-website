@@ -59,7 +59,7 @@ import type {
   EventWaveStatus,
 } from '@/types/events';
 
-export const getServerSideProps = withStaffPage('manager');
+export const getServerSideProps = withStaffPage('admin');
 
 const POLL_INTERVAL_MS = 30_000;
 

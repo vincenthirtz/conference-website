@@ -35,7 +35,7 @@ type ScrimMatch = {
   team2?: { id: string; name: string; logo_url: string | null } | null;
 };
 
-export const getServerSideProps = withStaffPage('manager');
+export const getServerSideProps = withStaffPage('admin');
 
 function toLocalInput(iso: string | null): string {
   if (!iso) return '';

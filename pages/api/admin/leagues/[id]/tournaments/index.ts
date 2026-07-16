@@ -114,4 +114,4 @@ async function handler(
   );
 }
 
-export default withStaffRoute(handler, 'manager');
+export default withStaffRoute(handler, 'admin');

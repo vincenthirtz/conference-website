@@ -144,4 +144,4 @@ async function handler(
   return res.status(405).json({ error: 'Method not allowed' });
 }
 
-export default withStaffRoute(handler, 'manager');
+export default withStaffRoute(handler, 'admin');

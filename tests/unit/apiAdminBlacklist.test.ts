@@ -64,7 +64,7 @@ const ENTRY_OTHER = '22222222-2222-4222-8222-2222222222cc';
  * ---------------------------------------------------------*/
 
 function makeStaffRow(
-  role: 'owner' | 'admin' | 'manager' | 'caster' = 'manager'
+  role: 'owner' | 'admin' | 'caster' = 'admin'
 ): StaffMember {
   return {
     id: STAFF_ID,
@@ -112,14 +112,14 @@ function makeRes(): any {
   };
 }
 
-function seedStaff(role: 'owner' | 'admin' | 'manager' | 'caster' = 'manager') {
+function seedStaff(role: 'owner' | 'admin' | 'caster' = 'admin') {
   store.staff = [makeStaffRow(role)] as any;
   store.tenants = [
     { id: TENANT_A, slug: 'alpha', name: 'Alpha', is_active: true },
     { id: TENANT_B, slug: 'beta', name: 'Beta', is_active: true },
   ] as any;
   store.tenant_staff = [
-    { tenant_id: TENANT_A, staff_id: STAFF_ID, role: 'manager' },
+    { tenant_id: TENANT_A, staff_id: STAFF_ID, role: 'admin' },
   ] as any;
 }
 
@@ -128,7 +128,7 @@ beforeEach(() => {
   invalidateStaffCache();
   logStaffActionMock.mockClear();
   setAuthUser({ id: AUTH_USER_ID });
-  seedStaff('manager');
+  seedStaff('admin');
   vi.spyOn(console, 'warn').mockImplementation(() => {});
   vi.spyOn(console, 'error').mockImplementation(() => {});
 });

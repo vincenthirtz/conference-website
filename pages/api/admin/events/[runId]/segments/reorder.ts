@@ -197,5 +197,5 @@ async function handler(
 
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'admin-events-reorder' }),
-  'manager'
+  'admin'
 );

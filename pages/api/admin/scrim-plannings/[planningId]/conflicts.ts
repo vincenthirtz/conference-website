@@ -25,7 +25,7 @@ const bodySchema = z.object({
   slots: z.array(z.string().trim().min(1)).max(MAX_SLOTS),
 });
 
-export default withStaffRoute(handler, 'manager');
+export default withStaffRoute(handler, 'admin');
 
 async function handler(
   req: NextApiRequest,

@@ -79,5 +79,5 @@ async function handler(
 
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'match-draft-commit' }),
-  'manager'
+  'admin'
 );

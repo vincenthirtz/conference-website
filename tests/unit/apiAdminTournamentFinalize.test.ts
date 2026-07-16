@@ -12,7 +12,7 @@ import previewHandler from '../../pages/api/admin/tournament/[id]/podium-preview
 import finalizeHandler from '../../pages/api/admin/tournament/[id]/finalize';
 
 function makeStaffRow(
-  role: 'owner' | 'admin' | 'manager' | 'caster' = 'manager'
+  role: 'owner' | 'admin' | 'caster' = 'admin'
 ): StaffMember {
   return {
     id: 'staff-1',
@@ -69,7 +69,7 @@ beforeEach(() => {
   resetSupabaseMock();
   invalidateStaffCache();
   setAuthUser({ id: 'user-1' });
-  store.staff = [makeStaffRow('manager')] as any;
+  store.staff = [makeStaffRow('admin')] as any;
   // baseline : 4 teams registered, running tournament
   store.tournaments = [
     { id: TID, name: 'Cup 2026', status: 'running',  },

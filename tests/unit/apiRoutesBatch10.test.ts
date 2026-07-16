@@ -55,7 +55,7 @@ import { setRpcResult } from './__helpers__/supabaseMock';
  * ---------------------------------------------------------*/
 
 function makeStaffRow(
-  role: 'owner' | 'admin' | 'manager' | 'caster' = 'manager'
+  role: 'owner' | 'admin' | 'caster' = 'admin'
 ): StaffMember {
   return {
     id: 'staff-1',
@@ -209,7 +209,7 @@ describe('GET /api/news', () => {
 describe('GET /api/admin/stats/maps', () => {
   beforeEach(() => {
     setAuthUser({ id: 'user-1' });
-    store.staff = [makeStaffRow('manager')] as any;
+    store.staff = [makeStaffRow('admin')] as any;
   });
 
   function seedMaps() {
@@ -294,7 +294,7 @@ describe('GET /api/admin/stats/maps', () => {
 describe('POST /api/admin/tournaments/notify-captains', () => {
   beforeEach(() => {
     setAuthUser({ id: 'user-1' });
-    store.staff = [makeStaffRow('manager')] as any;
+    store.staff = [makeStaffRow('admin')] as any;
   });
 
   it('405 on non-POST', async () => {

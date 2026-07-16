@@ -142,4 +142,4 @@ async function handler(
   return res.status(200).json({ alerts, nextCursor });
 }
 
-export default withStaffRoute(handler, 'manager');
+export default withStaffRoute(handler, 'admin');

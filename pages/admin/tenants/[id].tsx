@@ -806,7 +806,6 @@ function AdminTenantDetailPage({ tenantId }: Props) {
                         className="px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
                       >
                         <option value="caster">caster</option>
-                        <option value="manager">manager</option>
                         <option value="admin">admin</option>
                         <option value="owner">owner</option>
                       </select>
@@ -903,7 +902,7 @@ function AdminTenantDetailPage({ tenantId }: Props) {
 }
 
 export const getServerSideProps = withStaffPage<{ tenantId: string }>(
-  'manager',
+  'admin',
   async (ctx: GetServerSidePropsContext) => {
     const id = ctx.params?.id;
     if (typeof id !== 'string') {

@@ -66,7 +66,7 @@ test.describe.serial('Director cues -> cockpit ack flow', () => {
       const mgr = await createTestStaff(
         MANAGER_EMAIL,
         MANAGER_PASSWORD,
-        'manager'
+        'admin'
       );
       managerAuthId = mgr!.id;
     } catch (err) {

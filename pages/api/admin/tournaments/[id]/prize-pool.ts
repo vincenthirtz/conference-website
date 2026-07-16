@@ -223,4 +223,4 @@ async function handleUpsert(
   return res.status(201).json({ pool: created });
 }
 
-export default withStaffRoute(handler, 'manager');
+export default withStaffRoute(handler, 'admin');

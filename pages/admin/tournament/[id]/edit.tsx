@@ -41,7 +41,7 @@ function toLocalInputValue(iso: string): string {
   }
 }
 
-export const getServerSideProps = withStaffPage('manager');
+export const getServerSideProps = withStaffPage('admin');
 
 function AdminTournamentEditPage({ staff }: StaffProps) {
   const router = useRouter();

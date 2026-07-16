@@ -46,7 +46,7 @@ test.describe.serial('Auth flow', () => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
 
     // Create staff with proper role
-    await createTestStaff(STAFF_LOGIN_EMAIL, password, 'manager');
+    await createTestStaff(STAFF_LOGIN_EMAIL, password, 'admin');
 
     await page.goto('/login');
     await page.fill('input#email', STAFF_LOGIN_EMAIL);

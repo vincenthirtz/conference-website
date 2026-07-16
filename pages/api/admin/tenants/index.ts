@@ -196,5 +196,5 @@ async function handler(
 
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'admin-tenants-create' }),
-  'manager'
+  'admin'
 );

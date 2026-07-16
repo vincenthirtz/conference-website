@@ -12,7 +12,7 @@ import type { StaffProps } from '@/types/admin';
 
 const ID_BASE = 'admin-stats';
 
-export const getServerSideProps = withStaffPage('manager');
+export const getServerSideProps = withStaffPage('admin');
 
 /**
  * Merged statistics page. Hosts the former /admin/stats/teams and

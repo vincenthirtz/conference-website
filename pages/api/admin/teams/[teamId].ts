@@ -34,7 +34,7 @@ export type TeamRow = {
 };
 
 // rôle minimum : manager (gestion des équipes)
-export default withStaffRoute(handler, 'manager');
+export default withStaffRoute(handler, 'admin');
 
 async function handler(req: NextApiRequest, res: NextApiResponse, ctx: AuthenticatedStaffContext) {
   const { teamId } = req.query;

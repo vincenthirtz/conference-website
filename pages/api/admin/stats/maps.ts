@@ -210,4 +210,4 @@ async function handler(
   return res.status(200).json({ stats, total: count ?? null });
 }
 
-export default withStaffRoute(handler, 'manager');
+export default withStaffRoute(handler, 'admin');

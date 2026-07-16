@@ -7,7 +7,7 @@ import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { isValidUUID } from '@/utils/apiHelpers';
 
 import { logger } from '../../../../../utils/logger';
-export default withStaffRoute(handler, 'manager');
+export default withStaffRoute(handler, 'admin');
 
 async function handler(
   req: NextApiRequest,

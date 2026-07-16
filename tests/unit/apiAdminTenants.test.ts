@@ -41,7 +41,7 @@ const OTHER_STAFF = '99999999-9999-9999-9999-999999999999';
 const GUILD_ID = '1234567890123456789';
 
 function makeStaffRow(
-  role: 'owner' | 'admin' | 'manager' | 'caster' = 'owner',
+  role: 'owner' | 'admin' | 'caster' = 'owner',
   opts: { is_pole_admin?: boolean } = {}
 ): StaffMember {
   return {
@@ -637,13 +637,13 @@ describe('/api/admin/tenants/[id]/staff', () => {
     expect(row?.role).toBe('admin');
   });
 
-  it('POST 200 avec un role valide de la nomenclature (manager)', async () => {
+  it('POST 200 avec un role valide de la nomenclature (caster)', async () => {
     const res = makeRes();
     await staffList(
       makeReq({
         method: 'POST',
         query: { id: TENANT_B },
-        body: { staff_id: OTHER_STAFF, role: 'manager' },
+        body: { staff_id: OTHER_STAFF, role: 'caster' },
       }),
       res
     );
@@ -651,7 +651,7 @@ describe('/api/admin/tenants/[id]/staff', () => {
     const row = (store.tenant_staff as any[]).find(
       (r) => r.tenant_id === TENANT_B && r.staff_id === OTHER_STAFF
     );
-    expect(row?.role).toBe('manager');
+    expect(row?.role).toBe('caster');
   });
 
   it('DELETE 409 si dernier admin', async () => {

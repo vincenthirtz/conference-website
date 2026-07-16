@@ -56,7 +56,7 @@ async function handler(
   // ---------- GET ----------
   if (req.method === 'GET') {
     // Acces : manager+ globalement OU staff de ce tenant precis OU pole admin.
-    const isManager = hasAtLeastRole(ctx.role, 'manager');
+    const isManager = hasAtLeastRole(ctx.role, 'admin');
     if (!isManager) {
       const isPoleAdmin =
         (ctx.staff as { is_pole_admin?: boolean }).is_pole_admin === true;

@@ -50,7 +50,7 @@ async function handler(
   }
 
   if (req.method === 'GET') {
-    if (!hasAtLeastRole(ctx.role, 'manager')) {
+    if (!hasAtLeastRole(ctx.role, 'admin')) {
       const isPoleAdmin =
         (ctx.staff as { is_pole_admin?: boolean }).is_pole_admin === true;
       const allowed = await canAccessTenant(ctx.staff.id, id, { isPoleAdmin });

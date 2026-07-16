@@ -71,7 +71,7 @@ type TournamentTeamsApiResponse = {
   teams: TournamentTeam[];
 };
 
-export const getServerSideProps = withStaffPage('manager');
+export const getServerSideProps = withStaffPage('admin');
 
 function AdminStageTeamsPage({ staff }: StaffProps) {
   const t = useAdminT('adminStageTeams');

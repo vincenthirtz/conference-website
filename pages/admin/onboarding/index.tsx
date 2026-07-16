@@ -109,7 +109,7 @@ export default function AdminOnboardingPage({
 // only role that sees that tab), best-effort, never failing the page.
 export const getServerSideProps = withStaffPage<{
   currentStaffDiscordId: string | null;
-}>('manager', async (_ctx, staffCtx) => {
+}>('admin', async (_ctx, staffCtx) => {
   let discordId: string | null = null;
   if (staffCtx.role === 'owner') {
     try {

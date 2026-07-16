@@ -21,7 +21,7 @@ import {
 } from '@/utils/analytics/tournamentAnalytics';
 import { logger } from '../../../../../utils/logger';
 
-export default withStaffRoute(handler, 'manager');
+export default withStaffRoute(handler, 'admin');
 
 type DraftRow = { id: string; match_id: string; game_index: number };
 type DraftStepRow = {

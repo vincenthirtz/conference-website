@@ -42,7 +42,7 @@ export type ScrimCreateInput = {
 
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'admin-scrims' }),
-  'manager'
+  'admin'
 );
 
 async function handler(

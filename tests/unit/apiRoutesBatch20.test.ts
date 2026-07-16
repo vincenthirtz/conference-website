@@ -46,7 +46,7 @@ import autoByesHandler from '../../pages/api/admin/stages/[stageId]/auto-byes';
  * ---------------------------------------------------------*/
 
 function makeStaffRow(
-  role: 'owner' | 'admin' | 'manager' | 'caster' = 'caster'
+  role: 'owner' | 'admin' | 'caster' = 'caster'
 ): StaffMember {
   return {
     id: 'staff-1',
@@ -499,7 +499,7 @@ describe('/api/admin/matches/[matchId]/mvp', () => {
 
 describe('POST /api/admin/stages/[stageId]/auto-byes', () => {
   beforeEach(() => {
-    store.staff = [makeStaffRow('manager')] as any;
+    store.staff = [makeStaffRow('admin')] as any;
   });
 
   it('405 on non-POST', async () => {

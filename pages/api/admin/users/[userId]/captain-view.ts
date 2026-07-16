@@ -1,7 +1,7 @@
 // pages/api/admin/users/[userId]/captain-view.ts
 //
 // GET only — read-only snapshot of the team a target user CAPTAINS, for the
-// admin "mode vue capitaine" feature. Staff-gated (minRole 'manager'), scoped
+// admin "mode vue capitaine" feature. Staff-gated (minRole 'admin'), scoped
 // to the STAFF's active tenant (ctx.tenantId) and the TARGET userId.
 //
 // This is INSPECTION, not impersonation: every captain-side query is re-run
@@ -368,7 +368,7 @@ export default withStaffRoute(async function handler(req, res, ctx) {
 
   res.setHeader('Cache-Control', 'private, no-store');
   return res.status(200).json(payload);
-}, 'manager');
+}, 'admin');
 
 /** Audit once per request; never block the response on a logging failure. */
 async function audit(

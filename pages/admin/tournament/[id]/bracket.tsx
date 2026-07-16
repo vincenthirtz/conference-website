@@ -47,7 +47,7 @@ const VetoPanel = dynamic(
 
 const ID_BASE = 'admin-tournament-bracket';
 
-export const getServerSideProps = withStaffPage('manager');
+export const getServerSideProps = withStaffPage('admin');
 
 export default function AdminTournamentBracketPage(_: StaffProps) {
   const router = useRouter();

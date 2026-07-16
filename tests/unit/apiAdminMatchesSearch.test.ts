@@ -33,7 +33,7 @@ import searchHandler from '../../pages/api/admin/matches/search';
  * Helpers
  * ---------------------------------------------------------*/
 
-function makeStaffRow(role: 'admin' | 'manager' = 'manager'): StaffMember {
+function makeStaffRow(role: 'admin' = 'admin'): StaffMember {
   return {
     id: 'staff-1',
     auth_user_id: 'user-1',
@@ -179,7 +179,7 @@ beforeEach(() => {
   resetSupabaseMock();
   invalidateStaffCache();
   setAuthUser({ id: 'user-1' });
-  store.staff = [makeStaffRow('manager')] as any;
+  store.staff = [makeStaffRow('admin')] as any;
 });
 
 /* -----------------------------------------------------------

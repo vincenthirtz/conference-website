@@ -1004,7 +1004,7 @@ function RegiePage({ staff }: StaffProps) {
 
         {/* Barre d'actions segment (admin/owner uniquement) : piloter les
             transitions depuis la régie sans passer par le Director. Les
-            endpoints segments sont en rôle 'manager' → accessibles à
+            endpoints segments exigent le rôle 'admin' → accessibles à
             admin/owner (jamais à un caster). */}
         {liveRunId && canStartRun && (currentSegment || nextSegment) && (
           <div
@@ -1137,16 +1137,14 @@ export const getServerSideProps: GetServerSideProps = async (
 ) => {
   const { req, res } = ctx;
   try {
+    // Gate = tout staff (caster/admin/owner). Le rôle 'manager' a été retiré des
+    // rôles staff : plus besoin de l'exclure explicitement, l'ensemble « tout
+    // staff » vaut désormais exactement caster/admin/owner.
     const staffCtx = await requireStaffRoleFromRequest(
       req as never,
       res as never,
       'caster'
     );
-
-    // manager : autorisé staff mais hors périmètre régie → renvoi au dashboard.
-    if (staffCtx.role === 'manager') {
-      return { redirect: { destination: '/admin', permanent: false } };
-    }
 
     // Nature du tenant actif (organizer/developer) — comme withStaffPage.
     // Fail-safe 'organizer' pour ne jamais durcir accidentellement l'accès.

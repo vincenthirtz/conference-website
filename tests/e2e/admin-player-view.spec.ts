@@ -161,7 +161,7 @@ test.describe('Admin "Vue player" (command center)', () => {
   test.beforeAll(async () => {
     await deleteTestStaff(STAFF_EMAIL);
     if (!skipIfNoServiceRole()) {
-      await createTestStaff(STAFF_EMAIL, STAFF_PASSWORD, 'manager');
+      await createTestStaff(STAFF_EMAIL, STAFF_PASSWORD, 'admin');
     }
   });
 

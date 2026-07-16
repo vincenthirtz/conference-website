@@ -16,7 +16,7 @@ import type { LeaderboardPlayer, LeaderboardResponse } from '@/types/rating';
 
 import { logger } from '../../utils/logger';
 
-export const getServerSideProps = withStaffPage('manager');
+export const getServerSideProps = withStaffPage('admin');
 
 type RebuildResult = { players: number; matches: number };
 

@@ -17,7 +17,7 @@ import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import Breadcrumb from '@/components/admin/Breadcrumb';
 import type { StaffProps } from '@/types/admin';
 
-export const getServerSideProps = withStaffPage('manager');
+export const getServerSideProps = withStaffPage('admin');
 
 type BracketFormat = 'single_elim' | 'double_elim';
 type BestOf = 1 | 3 | 5;

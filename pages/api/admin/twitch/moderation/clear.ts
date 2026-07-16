@@ -2,7 +2,7 @@
 //
 // Vide le chat de la chaîne du broadcaster connecté (DELETE helix/moderation/chat).
 //
-// withStaffRoute(..., 'manager'). getValidBroadcasterToken + helixFetch.
+// withStaffRoute(..., 'admin'). getValidBroadcasterToken + helixFetch.
 //   409 { code:'NOT_CONNECTED' } / 403 { code:'MISSING_SCOPE' }.
 //   Scope requis : moderator:manage:chat_messages.
 
@@ -105,4 +105,4 @@ async function handler(
   }
 }
 
-export default withStaffRoute(handler, 'manager');
+export default withStaffRoute(handler, 'admin');

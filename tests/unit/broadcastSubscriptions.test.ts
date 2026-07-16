@@ -26,7 +26,7 @@ import subscriptionsHandler from '../../pages/api/admin/broadcast/subscriptions'
  * ---------------------------------------------------------*/
 
 function makeStaffRow(
-  role: 'owner' | 'admin' | 'manager' | 'caster' = 'admin'
+  role: 'owner' | 'admin' | 'caster' = 'admin'
 ): StaffMember {
   return {
     id: 'staff-1',
@@ -306,7 +306,7 @@ describe('broadcast subscriptions endpoint', () => {
   });
 
   it('returns 403 when role is below admin', async () => {
-    store.staff = [makeStaffRow('manager')] as any;
+    store.staff = [makeStaffRow('caster')] as any;
     const res = makeRes();
     await subscriptionsHandler(makeReq({ method: 'GET' }), res);
     expect(res.statusCode).toBe(403);

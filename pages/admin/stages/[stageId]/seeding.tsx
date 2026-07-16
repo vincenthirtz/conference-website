@@ -107,7 +107,7 @@ type RatingSeedResponse = {
   pattern: Pattern;
 };
 
-export const getServerSideProps = withStaffPage('manager');
+export const getServerSideProps = withStaffPage('admin');
 
 function SeedingComparatorPage(_: StaffProps) {
   const t = useAdminT('adminStageSeeding');

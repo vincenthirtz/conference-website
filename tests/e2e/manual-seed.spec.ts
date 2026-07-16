@@ -41,7 +41,7 @@ test.describe.serial('Manual seed (P1-B)', () => {
   test.beforeAll(async () => {
     if (!supabaseTestClient) return;
     await deleteTestStaff(STAFF_EMAIL);
-    await createTestStaff(STAFF_EMAIL, PASSWORD, 'manager');
+    await createTestStaff(STAFF_EMAIL, PASSWORD, 'admin');
     token = await getToken();
 
     const { data: t } = await supabaseTestClient
