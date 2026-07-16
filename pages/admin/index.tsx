@@ -16,7 +16,8 @@ import ActionableAlert, {
 import { Skeleton } from '@/components/admin/Skeleton';
 import EmptyState from '@/components/admin/EmptyState';
 import {
-  collectAdminNavCards,
+  collectAdminNavCardGroups,
+  type AdminNavCard,
   type AdminNavIcon,
 } from '@/components/admin/navigation/adminNav';
 import type { AlertsSummary } from '@/utils/dashboard/buildTournamentDashboard';
@@ -207,22 +208,27 @@ const ICON: Record<AdminNavIcon, ReactNode> = {
   ),
 };
 
+/** Groupe de cartes affichable : libellé i18n résolu + cartes prêtes au rendu. */
+type NavCardGroup = {
+  categoryId: string;
+  label: string;
+  cards: NavCard[];
+};
+
 /**
- * Cartes de navigation dérivées de la source unique `ADMIN_NAV`
- * (`components/admin/navigation/adminNav.ts`), partagée avec le menu top-bar.
- * Les libellés/descriptions restent i18n (via `t`), les icônes SVG (map ICON)
- * et l'ordre (card.order) restent pilotés côté source.
+ * Résout une carte issue de `ADMIN_NAV` vers sa forme affichable (libellé /
+ * description i18n + icône SVG). Les métadonnées (ordre, accent, rôle) restent
+ * pilotées côté source unique `adminNav.ts`.
  */
-const getNavCards = (t: Dict): NavCard[] =>
-  collectAdminNavCards().map((c) => ({
-    title: t[c.card.titleKey as keyof Dict] as string,
-    description: t[c.card.descKey as keyof Dict] as string,
-    href: c.href,
-    minRole: c.minRole,
-    icon: ICON[c.card.icon],
-    accent: c.card.accent,
-    devConsole: c.devConsole,
-  }));
+const toDisplayCard = (c: AdminNavCard, t: Dict): NavCard => ({
+  title: t[c.card.titleKey as keyof Dict] as string,
+  description: t[c.card.descKey as keyof Dict] as string,
+  href: c.href,
+  minRole: c.minRole,
+  icon: ICON[c.card.icon],
+  accent: c.card.accent,
+  devConsole: c.devConsole,
+});
 
 function buildAlerts(summary: AlertsSummary | null, t: Dict) {
   if (!summary || summary.total === 0) return [];
@@ -382,13 +388,16 @@ function AdminDashboardPage({ staff, activeTenantKind }: Props) {
   }, [load]);
 
   const alerts = buildAlerts(alertsSummary, t);
-  const navCards = getNavCards(t).filter(
-    (c) =>
-      hasAtLeastRole(staff.role, c.minRole) &&
-      // Tenant développeur : ne garder que les cartes de la console dev (en
-      // plus du filtre de rôle). Tenant organizer : inchangé.
-      (activeTenantKind !== 'developer' || c.devConsole === true)
-  );
+  // Cartes groupées par catégorie top-level. Le gating par rôle et le filtre
+  // « console développeur » sont appliqués dans la source unique (adminNav.ts) ;
+  // les groupes vides sont déjà omis.
+  const navGroups: NavCardGroup[] = collectAdminNavCardGroups(staff.role, {
+    tenantKind: activeTenantKind,
+  }).map((g) => ({
+    categoryId: g.categoryId,
+    label: t[g.labelKey as keyof Dict] as string,
+    cards: g.cards.map((c) => toDisplayCard(c, t)),
+  }));
   const greetName = staff.display_name || t.defaultGreetName;
 
   const fmt = (v: number | null) => (v === null ? '—' : v.toLocaleString());
@@ -582,7 +591,7 @@ function AdminDashboardPage({ staff, activeTenantKind }: Props) {
             >
               {t.sectionsHeading}
             </h2>
-            {navCards.length === 0 ? (
+            {navGroups.length === 0 ? (
               <EmptyState
                 title={t.emptySectionsTitle}
                 description={t.emptySectionsDesc}
@@ -596,33 +605,48 @@ function AdminDashboardPage({ staff, activeTenantKind }: Props) {
                 }
               />
             ) : (
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {navCards.map((card) => (
-                  <Link
-                    key={card.href + card.title}
-                    href={card.href}
-                    className={`group rounded-2xl border bg-gradient-to-br to-transparent p-5 transition-all hover:-translate-y-0.5 hover:bg-white/[0.02] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 ${card.accent}`}
+              <div className="space-y-8">
+                {navGroups.map((group) => (
+                  <section
+                    key={group.categoryId}
+                    aria-labelledby={`nav-cat-${group.categoryId}`}
                   >
-                    <div className="mb-3 flex items-center gap-3">
-                      <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5">
-                        <svg
-                          className="h-5 w-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                          aria-hidden="true"
+                    <h3
+                      id={`nav-cat-${group.categoryId}`}
+                      className="mb-3 text-[11px] font-medium uppercase tracking-widest text-gray-500"
+                    >
+                      {group.label}
+                    </h3>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                      {group.cards.map((card) => (
+                        <Link
+                          key={card.href + card.title}
+                          href={card.href}
+                          className={`group rounded-2xl border bg-gradient-to-br to-transparent p-5 transition-all hover:-translate-y-0.5 hover:bg-white/[0.02] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 ${card.accent}`}
                         >
-                          {card.icon}
-                        </svg>
-                      </span>
-                      <h3 className="text-base font-semibold text-white">
-                        {card.title}
-                      </h3>
+                          <div className="mb-3 flex items-center gap-3">
+                            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5">
+                              <svg
+                                className="h-5 w-5"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                                aria-hidden="true"
+                              >
+                                {card.icon}
+                              </svg>
+                            </span>
+                            <h4 className="text-base font-semibold text-white">
+                              {card.title}
+                            </h4>
+                          </div>
+                          <p className="text-sm text-neutral-400">
+                            {card.description}
+                          </p>
+                        </Link>
+                      ))}
                     </div>
-                    <p className="text-sm text-neutral-400">
-                      {card.description}
-                    </p>
-                  </Link>
+                  </section>
                 ))}
               </div>
             )}
