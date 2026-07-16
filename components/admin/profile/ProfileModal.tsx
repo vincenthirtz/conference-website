@@ -8,6 +8,7 @@ import { useStaffSession } from '@/hooks/useStaffSession';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import Modal from '@/components/admin/Modal';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
+import Tabs, { tabButtonId, tabPanelId } from '@/components/admin/Tabs';
 
 import { logger } from '@/utils/logger';
 
@@ -27,16 +28,46 @@ type ProfileModalProps = {
 };
 
 type TabId = 'profile' | 'security' | 'privacy';
+type Accent = 'purple' | 'blue' | 'amber' | 'emerald' | 'red' | 'gray';
 
-// Petite bannière d'erreur réutilisable (mutualise l'icône + le style rouge
-// qui étaient dupliqués dans chaque section).
+const TAB_ID_BASE = 'admin-profile';
+
+// Accents alignés sur StatCard / le dashboard admin (anneau + dégradé).
+const ACCENT_RING: Record<Accent, string> = {
+  purple: 'ring-purple-500/30 from-purple-500/10',
+  blue: 'ring-blue-500/30 from-blue-500/10',
+  amber: 'ring-amber-500/30 from-amber-500/10',
+  emerald: 'ring-emerald-500/30 from-emerald-500/10',
+  red: 'ring-red-500/30 from-red-500/10',
+  gray: 'ring-white/10 from-white/[0.06]',
+};
+const ACCENT_TEXT: Record<Accent, string> = {
+  purple: 'text-purple-300',
+  blue: 'text-blue-300',
+  amber: 'text-amber-300',
+  emerald: 'text-emerald-300',
+  red: 'text-red-300',
+  gray: 'text-neutral-300',
+};
+
+const inputClass =
+  'w-full px-3 py-2.5 rounded-xl bg-neutral-950/50 border border-white/10 focus:outline-none focus:ring-2 focus:ring-purple-500/70 text-sm text-white placeholder:text-neutral-500 transition-shadow';
+const labelClass = 'block text-sm font-medium text-neutral-200 mb-1.5';
+const helpClass = 'text-xs text-neutral-400';
+const primaryBtnClass =
+  'px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-semibold flex items-center justify-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/60';
+const spinnerClass =
+  'w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin';
+
+// Bannière d'erreur réutilisable (mutualise l'icône + le style rouge).
 function ErrorBanner({ message }: { message: string }) {
   return (
-    <div className="mb-4 rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm flex items-center gap-2">
+    <div className="mb-4 flex items-center gap-2 rounded-xl border border-red-500/50 bg-red-900/40 px-4 py-3 text-sm text-red-100">
       <svg
         className="w-5 h-5 text-red-400 flex-shrink-0"
         fill="currentColor"
         viewBox="0 0 20 20"
+        aria-hidden="true"
       >
         <path
           fillRule="evenodd"
@@ -49,21 +80,28 @@ function ErrorBanner({ message }: { message: string }) {
   );
 }
 
-// Carte de section avec titre + icône, style homogène pour tout le contenu
-// des onglets.
+// Carte de section — reprend le motif dashboard (anneau + dégradé d'accent).
 function SectionCard({
   title,
   icon,
+  accent = 'gray',
   children,
 }: {
   title: string;
   icon: ReactNode;
+  accent?: Accent;
   children: ReactNode;
 }) {
   return (
-    <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
-      <h3 className="text-base font-semibold mb-4 flex items-center gap-2">
-        <span className="text-neutral-300">{icon}</span>
+    <section
+      className={`rounded-2xl bg-neutral-900/40 bg-gradient-to-br to-transparent ring-1 p-6 ${ACCENT_RING[accent]}`}
+    >
+      <h3 className="mb-4 flex items-center gap-2.5 text-base font-semibold text-white">
+        <span
+          className={`flex h-8 w-8 items-center justify-center rounded-lg bg-white/[0.06] ring-1 ring-white/10 ${ACCENT_TEXT[accent]}`}
+        >
+          {icon}
+        </span>
         {title}
       </h3>
       {children}
@@ -71,12 +109,37 @@ function SectionCard({
   );
 }
 
-const inputClass =
-  'w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm';
-const primaryBtnClass =
-  'px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center justify-center gap-2';
-const spinnerClass =
-  'w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin';
+// Tuile clé/valeur façon StatCard.
+function InfoTile({
+  label,
+  children,
+  className = '',
+  mono = false,
+}: {
+  label: string;
+  children: ReactNode;
+  className?: string;
+  mono?: boolean;
+}) {
+  return (
+    <div
+      className={`rounded-xl bg-neutral-900/50 ring-1 ring-white/10 p-4 ${className}`}
+    >
+      <div className="mb-1 text-[10px] font-medium uppercase tracking-widest text-neutral-400">
+        {label}
+      </div>
+      <div
+        className={
+          mono
+            ? 'font-mono text-xs text-neutral-300 break-all'
+            : 'text-sm font-medium text-white'
+        }
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
 
 function ProfileModal({ open, onClose }: ProfileModalProps) {
   const [profile, setProfile] = useState<StaffProfile | null>(null);
@@ -294,32 +357,38 @@ function ProfileModal({ open, onClose }: ProfileModalProps) {
     ? new Date(profile.created_at).toLocaleString()
     : '—';
 
-  const tabs: { id: TabId; label: string; icon: ReactNode }[] = [
+  const tabItems = [
     {
       id: 'profile',
-      label: t.tabProfile,
-      icon: (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-        </svg>
+      label: (
+        <span className="inline-flex items-center gap-2">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          </svg>
+          {t.tabProfile}
+        </span>
       ),
     },
     {
       id: 'security',
-      label: t.tabSecurity,
-      icon: (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-        </svg>
+      label: (
+        <span className="inline-flex items-center gap-2">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+          </svg>
+          {t.tabSecurity}
+        </span>
       ),
     },
     {
       id: 'privacy',
-      label: t.tabPrivacy,
-      icon: (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-        </svg>
+      label: (
+        <span className="inline-flex items-center gap-2">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+          </svg>
+          {t.tabPrivacy}
+        </span>
       ),
     },
   ];
@@ -331,100 +400,94 @@ function ProfileModal({ open, onClose }: ProfileModalProps) {
       size="2xl"
       title={t.heading}
       subtitle={t.subtitle}
+      panelChromeClassName="bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 border border-white/10 rounded-2xl shadow-2xl"
     >
       <div className="space-y-6">
         {errorMsg && <ErrorBanner message={errorMsg} />}
 
-        {/* Identity header — always visible above the tabs */}
-        <section className="bg-gradient-to-br from-neutral-800/70 to-neutral-800/40 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
-          <div className="flex items-center justify-between gap-4 flex-wrap">
+        {/* Hero identité — carte d'accent violet, toujours visible */}
+        <section className="relative overflow-hidden rounded-2xl border border-purple-500/20 bg-gradient-to-br from-purple-500/15 via-neutral-900/30 to-neutral-900/30 p-6">
+          <div
+            className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-purple-500/20 blur-3xl"
+            aria-hidden="true"
+          />
+          <div className="relative flex items-center justify-between gap-4 flex-wrap">
             <div className="flex items-center gap-4 min-w-0">
               {profile?.avatar_url ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={profile.avatar_url}
                   alt={t.avatarAlt}
-                  className="w-16 h-16 rounded-xl border-2 border-neutral-700 shadow-lg object-cover flex-shrink-0"
+                  className="w-16 h-16 rounded-2xl border border-white/10 shadow-lg object-cover flex-shrink-0"
                 />
               ) : (
-                <div className="w-16 h-16 rounded-xl border-2 border-neutral-700 bg-neutral-700/50 shadow-lg flex items-center justify-center flex-shrink-0">
-                  <span className="text-2xl font-bold text-neutral-300">
+                <div className="w-16 h-16 rounded-2xl border border-white/10 bg-gradient-to-br from-purple-500/40 to-purple-700/40 shadow-lg flex items-center justify-center flex-shrink-0">
+                  <span className="text-2xl font-bold text-white">
                     {displayName.charAt(0).toUpperCase()}
                   </span>
                 </div>
               )}
               <div className="min-w-0">
-                <h2 className="text-2xl font-bold truncate">{displayName}</h2>
+                <h2 className="text-2xl font-bold text-white truncate">
+                  {displayName}
+                </h2>
                 <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                  <span className="inline-block px-3 py-1 rounded-full text-sm font-semibold bg-emerald-600/20 text-emerald-300 border border-emerald-500/30">
+                  <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide bg-purple-500/20 text-purple-200 border border-purple-400/30">
                     {roleLabel}
                   </span>
-                  <span className="text-sm text-neutral-300 truncate">{email}</span>
+                  <span className="text-sm text-neutral-300 truncate">
+                    {email}
+                  </span>
                 </div>
               </div>
             </div>
             <Link
               href="/admin/logout"
-              className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-sm font-medium transition-colors flex items-center gap-2"
+              className="inline-flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-200 transition-colors hover:bg-red-500/20"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
               </svg>
               {t.logout}
             </Link>
           </div>
         </section>
 
-        {/* Tab bar (segmented control) */}
-        <div
-          role="tablist"
-          aria-label={t.heading}
-          className="flex gap-1 p-1 rounded-xl bg-neutral-900/60 border border-neutral-700/50"
-        >
-          {tabs.map((tab) => {
-            const selected = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                role="tab"
-                aria-selected={selected}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
-                  selected
-                    ? 'bg-neutral-700 text-white shadow'
-                    : 'text-neutral-300 hover:text-white hover:bg-neutral-800/60'
-                }`}
-              >
-                {tab.icon}
-                <span>{tab.label}</span>
-              </button>
-            );
-          })}
-        </div>
+        {/* Onglets — composant partagé (soulignement violet dashboard) */}
+        <Tabs
+          tabs={tabItems}
+          active={activeTab}
+          onChange={(id) => setActiveTab(id as TabId)}
+          ariaLabel={t.heading}
+          idBase={TAB_ID_BASE}
+        />
 
         {loading && (
           <div className="flex items-center justify-center py-10">
-            <div className="w-8 h-8 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
+            <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
           </div>
         )}
 
         {/* ─── Profil ─── */}
         {!loading && activeTab === 'profile' && (
-          <div role="tabpanel" className="space-y-6">
+          <div
+            role="tabpanel"
+            id={tabPanelId(TAB_ID_BASE, 'profile')}
+            aria-labelledby={tabButtonId(TAB_ID_BASE, 'profile')}
+            className="space-y-6"
+          >
             <SectionCard
+              accent="purple"
               title={t.editHeading}
               icon={
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
               }
             >
               <form onSubmit={handleUpdateProfile} className="space-y-4">
                 <div>
-                  <label className="block text-sm text-neutral-300 mb-1">
-                    {t.displayNameLabel}
-                  </label>
+                  <label className={labelClass}>{t.displayNameLabel}</label>
                   <input
                     className={inputClass}
                     value={form.displayName}
@@ -433,16 +496,14 @@ function ProfileModal({ open, onClose }: ProfileModalProps) {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-neutral-300 mb-1">
-                    {t.avatarUrlLabel}
-                  </label>
+                  <label className={labelClass}>{t.avatarUrlLabel}</label>
                   <input
                     className={inputClass}
                     value={form.avatarUrl}
                     onChange={(e) => updateField('avatarUrl', e.target.value)}
                     placeholder="https://…"
                   />
-                  <p className="text-xs text-neutral-300 mt-1">{t.avatarHelp}</p>
+                  <p className={`${helpClass} mt-1.5`}>{t.avatarHelp}</p>
                 </div>
                 <button type="submit" disabled={saving} className={primaryBtnClass}>
                   {saving ? (
@@ -458,40 +519,27 @@ function ProfileModal({ open, onClose }: ProfileModalProps) {
             </SectionCard>
 
             <SectionCard
+              accent="gray"
               title={t.roleLabel}
               icon={
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               }
             >
-              <dl className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <div className="bg-neutral-900/50 rounded-xl p-4">
-                  <dt className="text-xs text-neutral-300 uppercase tracking-wider mb-1">
-                    {t.emailLabel}
-                  </dt>
-                  <dd className="font-medium text-sm truncate">{email}</dd>
-                </div>
-                <div className="bg-neutral-900/50 rounded-xl p-4">
-                  <dt className="text-xs text-neutral-300 uppercase tracking-wider mb-1">
-                    {t.roleLabel}
-                  </dt>
-                  <dd className="font-medium">{roleLabel}</dd>
-                </div>
-                <div className="bg-neutral-900/50 rounded-xl p-4">
-                  <dt className="text-xs text-neutral-300 uppercase tracking-wider mb-1">
-                    {t.createdAtLabel}
-                  </dt>
-                  <dd className="font-medium text-sm">{createdAt}</dd>
-                </div>
-                <div className="bg-neutral-900/50 rounded-xl p-4 col-span-2 md:col-span-3">
-                  <dt className="text-xs text-neutral-300 uppercase tracking-wider mb-1">
-                    {t.staffIdLabel}
-                  </dt>
-                  <dd className="font-mono text-xs text-neutral-300 break-all">
-                    {staffId}
-                  </dd>
-                </div>
+              <dl className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <InfoTile label={t.emailLabel}>
+                  <span className="block truncate">{email}</span>
+                </InfoTile>
+                <InfoTile label={t.roleLabel}>{roleLabel}</InfoTile>
+                <InfoTile label={t.createdAtLabel}>{createdAt}</InfoTile>
+                <InfoTile
+                  label={t.staffIdLabel}
+                  mono
+                  className="col-span-2 md:col-span-3"
+                >
+                  {staffId}
+                </InfoTile>
               </dl>
             </SectionCard>
           </div>
@@ -499,21 +547,25 @@ function ProfileModal({ open, onClose }: ProfileModalProps) {
 
         {/* ─── Sécurité ─── */}
         {!loading && activeTab === 'security' && (
-          <div role="tabpanel" className="space-y-6">
+          <div
+            role="tabpanel"
+            id={tabPanelId(TAB_ID_BASE, 'security')}
+            aria-labelledby={tabButtonId(TAB_ID_BASE, 'security')}
+            className="space-y-6"
+          >
             <SectionCard
+              accent="blue"
               title={t.emailHeading}
               icon={
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
               }
             >
               {emailErrorMsg && <ErrorBanner message={emailErrorMsg} />}
               <form onSubmit={handleEmailChange} className="space-y-4">
                 <div>
-                  <label className="block text-sm text-neutral-300 mb-1">
-                    {t.newEmailLabel}
-                  </label>
+                  <label className={labelClass}>{t.newEmailLabel}</label>
                   <input
                     type="email"
                     className={inputClass}
@@ -538,23 +590,22 @@ function ProfileModal({ open, onClose }: ProfileModalProps) {
                   )}
                 </button>
               </form>
-              <p className="text-xs text-neutral-300 mt-3">{t.emailConfirmNote}</p>
+              <p className={`${helpClass} mt-3`}>{t.emailConfirmNote}</p>
             </SectionCard>
 
             <SectionCard
+              accent="amber"
               title={t.passwordHeading}
               icon={
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
               }
             >
               {passwordErrorMsg && <ErrorBanner message={passwordErrorMsg} />}
               <form onSubmit={handlePasswordChange} className="space-y-4">
                 <div>
-                  <label className="block text-sm text-neutral-300 mb-1">
-                    {t.newPasswordLabel}
-                  </label>
+                  <label className={labelClass}>{t.newPasswordLabel}</label>
                   <input
                     type="password"
                     className={inputClass}
@@ -566,9 +617,7 @@ function ProfileModal({ open, onClose }: ProfileModalProps) {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-neutral-300 mb-1">
-                    {t.confirmPasswordLabel}
-                  </label>
+                  <label className={labelClass}>{t.confirmPasswordLabel}</label>
                   <input
                     type="password"
                     className={inputClass}
@@ -594,19 +643,25 @@ function ProfileModal({ open, onClose }: ProfileModalProps) {
                   )}
                 </button>
               </form>
-              <p className="text-xs text-neutral-300 mt-3">{t.passwordHelp}</p>
+              <p className={`${helpClass} mt-3`}>{t.passwordHelp}</p>
             </SectionCard>
           </div>
         )}
 
         {/* ─── Confidentialité ─── */}
         {!loading && activeTab === 'privacy' && (
-          <div role="tabpanel" className="space-y-6">
+          <div
+            role="tabpanel"
+            id={tabPanelId(TAB_ID_BASE, 'privacy')}
+            aria-labelledby={tabButtonId(TAB_ID_BASE, 'privacy')}
+            className="space-y-6"
+          >
             <SectionCard
+              accent="emerald"
               title={t.dataHeading}
               icon={
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                 </svg>
               }
             >
@@ -615,7 +670,7 @@ function ProfileModal({ open, onClose }: ProfileModalProps) {
               <button
                 onClick={handleExportData}
                 disabled={exporting}
-                className="w-full px-4 py-2.5 rounded-xl bg-neutral-700 border border-neutral-600 hover:bg-neutral-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors flex items-center justify-center gap-2 mb-2"
+                className="w-full px-4 py-2.5 rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium text-neutral-100 transition-colors flex items-center justify-center gap-2 mb-2"
               >
                 {exporting ? (
                   <>
@@ -626,34 +681,34 @@ function ProfileModal({ open, onClose }: ProfileModalProps) {
                   t.exportBtn
                 )}
               </button>
-              <p className="text-xs text-neutral-300 mb-6">{t.exportHelp}</p>
+              <p className={`${helpClass} mb-6`}>{t.exportHelp}</p>
 
-              <div className="border-t border-neutral-700/60 pt-5">
+              <div className="border-t border-white/10 pt-5">
                 <button
                   onClick={() => {
                     setDataError(null);
                     setDeleteConfirm(true);
                   }}
-                  className="w-full px-4 py-2.5 rounded-xl border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-300 text-sm font-medium transition-colors"
+                  className="w-full px-4 py-2.5 rounded-xl border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-200 text-sm font-medium transition-colors"
                 >
                   {t.deleteBtn}
                 </button>
-                <p className="text-xs text-neutral-300 mt-3">{t.deleteHelp}</p>
+                <p className={`${helpClass} mt-3`}>{t.deleteHelp}</p>
               </div>
             </SectionCard>
 
             <SectionCard
+              accent="gray"
               title={t.systemHeading}
               icon={
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
               }
             >
-              <div className="text-xs text-neutral-300 mb-1">{t.userIdLabel}</div>
-              <div className="font-mono text-xs bg-neutral-900 px-3 py-2 rounded-lg border border-neutral-700 break-all">
+              <InfoTile label={t.userIdLabel} mono>
                 {authUserId}
-              </div>
+              </InfoTile>
             </SectionCard>
           </div>
         )}
