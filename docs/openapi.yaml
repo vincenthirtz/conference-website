@@ -10815,6 +10815,71 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /api/admin/events/{runId}/segments/from-tournament:
+    parameters:
+      - $ref: '#/components/parameters/RunId'
+    post:
+      summary: Pre-fill match segments from a tournament.
+      description: |
+        Requires `manager` role. Creates one `type='match'` segment for every
+        match of the given tournament, in a sensible broadcast order (stage
+        `order_index` → `round_number` → `scheduled_at` → `created_at`).
+        Segments are appended to the queue of the run (MAX(ord)+1, +2, …).
+
+        Anti-duplication: a match already bound to a segment of this run is
+        skipped. `Idempotency-Key` is honored (5 min cache) in addition.
+
+        Returns `409 RUN_DONE` when the run is finished, `404 TOURNAMENT_NOT_FOUND`
+        when the tournament is missing or belongs to another tenant.
+      operationId: adminPrefillEventSegmentsFromTournament
+      tags:
+        - admin/events
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - tournament_id
+              properties:
+                tournament_id:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Segments created (with per-match skip accounting).
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - segments
+                  - created
+                  - skipped
+                properties:
+                  segments:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/EventSegment'
+                  created:
+                    type: integer
+                    minimum: 0
+                  skipped:
+                    type: integer
+                    minimum: 0
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
   /api/admin/events/{runId}/segments/{segId}:
     parameters:
       - $ref: '#/components/parameters/RunId'

@@ -262,6 +262,19 @@ Idempotent endpoints — if the transition is a no-op (segment already in the
 target state) the event is **not** re-emitted, so the bot can safely treat
 the event as "first time we see this transition for this segmentId".
 
+**Timeline pre-fill** — `POST /api/admin/events/:runId/segments/from-tournament`
+(staff `manager`) builds the match segments of a run in one shot from a
+tournament's matches. Body `{ tournament_id }`. Matches are appended to the
+queue (`MAX(ord)+1, …`) in broadcast order (stage `order_index` → `round_number`
+→ `scheduled_at` → `created_at`), one `type='match'` segment each, title
+`"<teamA> vs <teamB>"` (falls back to the match round label, then `Match <n>`).
+Anti-duplication: a match already bound to a segment of the run is skipped.
+Honors `Idempotency-Key`. Returns `200 { segments, created, skipped }`,
+`404 { code: 'TOURNAMENT_NOT_FOUND' }` for a foreign/missing tournament, and
+`409 { code: 'RUN_DONE' }` when the run is finished. This endpoint does **not**
+emit a bot event (segments start upcoming; `event_segment.transitioned` fires
+later on start/skip/end).
+
 The full webhook/outbox body shape (consistent with the rest of the catalog):
 
 ```json
