@@ -2,9 +2,11 @@
 // Dashboard joueur - page principale pour les utilisateurs connectes
 
 import { useEffect, useState, useCallback } from 'react';
+import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useToast } from '@/components/Toast';
 import ProfileSummaryCard from '@/components/player/ProfileSummaryCard';
 import DiscordLinkCard from '@/components/player/DiscordLinkCard';
 import TeamCard, { type TeamMemberLite } from '@/components/player/TeamCard';
@@ -19,7 +21,10 @@ import ScrimNegotiationCard, {
   type ScrimAction,
   type ScrimActionPayload,
 } from '@/components/player/ScrimNegotiationCard';
-import ScrimPlanningsDashboardCard from '@/components/player/ScrimPlanningsDashboardCard';
+import ScrimPlanningsDashboardCard, {
+  type PlanningEntry,
+} from '@/components/player/ScrimPlanningsDashboardCard';
+import ScrimsHubCard from '@/components/player/ScrimsHubCard';
 import SupportAssoCard from '@/components/player/SupportAssoCard';
 import PushOptIn from '@/components/shared/PushOptIn';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
@@ -35,6 +40,9 @@ type TeamInfo = {
   name: string;
   short_name: string | null;
   logo_url: string | null;
+  // Disponibilité aux scrims — déjà renvoyée par /api/player/dashboard via
+  // loadManagedTeamSlice. Sert d'état initial au toggle de ScrimsHubCard.
+  open_for_scrim?: boolean;
 } | null;
 
 type Demande = {
@@ -171,6 +179,27 @@ function buildQuickActions(args: {
   return actions;
 }
 
+// Section de catégorie du dashboard : un « eyebrow » discret (muet, uppercase,
+// tracking large — le style de label du site) suivi des cartes de la catégorie
+// avec un rythme vertical constant. À ne rendre QUE si la catégorie contient au
+// moins une carte visible (l'appelant décide via `visible`).
+function CategorySection({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="mt-10">
+      <h2 className="mb-4 text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">
+        {label}
+      </h2>
+      <div className="space-y-6">{children}</div>
+    </section>
+  );
+}
+
 // Product card — "Match readiness". Renders only when there is an upcoming
 // match. Surfaces (a) a roster-shortfall warning when the team is below the
 // tournament min_players, and (b) the per-team check-in status for that match.
@@ -203,7 +232,7 @@ function MatchReadinessCard({
 
   return (
     <div
-      className={`mt-6 rounded-2xl border backdrop-blur-xl p-6 ${
+      className={`rounded-2xl border backdrop-blur-xl p-6 ${
         hasWarning
           ? 'border-amber-400/30 bg-amber-500/[0.06]'
           : 'border-white/10 bg-white/[0.03]'
@@ -260,6 +289,7 @@ function PlayerDashboard() {
   const locale = useLocale();
   const { user, token, loading: authLoading, ready } = usePlayerSession();
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
+  const { addToast } = useToast();
   const { confirm, dialog } = useConfirmDialog();
   const [loading, setLoading] = useState(true);
   const [team, setTeam] = useState<TeamInfo>(null);
@@ -270,9 +300,16 @@ function PlayerDashboard() {
   const [pendingScrims, setPendingScrims] = useState<PendingScrim[]>([]);
   const [scrimActionId, setScrimActionId] = useState<string | null>(null);
   const [scrimError, setScrimError] = useState<string | null>(null);
+  // Grilles de dispo (scrim plannings) : fetch remonté ICI une seule fois, puis
+  // partagé — le compteur alimente ScrimsHubCard et les entrées alimentent
+  // ScrimPlanningsDashboardCard (qui ne re-fetch donc pas).
+  const [scrimPlannings, setScrimPlannings] = useState<PlanningEntry[]>([]);
+  const [togglingScrim, setTogglingScrim] = useState(false);
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [nextMatch, setNextMatch] = useState<NextMatchData | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const canManage = isCaptain || isManager;
 
   // Single aggregated call (one request, one wave). Each section is optional in
   // the payload and defaulted defensively, so a server-side section failure
@@ -410,6 +447,58 @@ function PlayerDashboard() {
     [adminFetchJson, confirm, t]
   );
 
+  // Grilles de dispo ouvertes : chargées une fois pour la catégorie Scrims.
+  // Réservé aux capitaines/managers avec équipe (les seuls à voir le hub).
+  useEffect(() => {
+    if (!ready || !token || !canManage) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/teams/scrim-plannings', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled && Array.isArray(data?.plannings)) {
+          setScrimPlannings(data.plannings as PlanningEntry[]);
+        }
+      } catch (err) {
+        logger.error('[player] scrim-plannings load error:', err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [ready, token, canManage]);
+
+  // Bascule la disponibilité aux scrims. L'état vit ici (page) : mise à jour
+  // optimiste de team.open_for_scrim + feedback toast, cohérent avec le reste.
+  const handleToggleScrimOpen = useCallback(async () => {
+    if (togglingScrim) return;
+    setTogglingScrim(true);
+    try {
+      const data = await adminFetchJson<{ open_for_scrim: boolean }>(
+        '/api/teams/toggle-scrim-open',
+        {
+          method: 'POST',
+          body: JSON.stringify({ open: !team?.open_for_scrim }),
+        }
+      );
+      setTeam((prev) =>
+        prev ? { ...prev, open_for_scrim: data.open_for_scrim } : prev
+      );
+      addToast(
+        data.open_for_scrim ? t.scrimsHubToggleOn : t.scrimsHubToggleOff,
+        'success'
+      );
+    } catch (err) {
+      logger.error('[player] toggle scrim-open error:', err);
+      addToast(t.scrimsHubToggleError, 'error');
+    } finally {
+      setTogglingScrim(false);
+    }
+  }, [adminFetchJson, addToast, t, team?.open_for_scrim, togglingScrim]);
+
   const handleLeaveTeam = async () => {
     setError(null);
     try {
@@ -501,27 +590,112 @@ function PlayerDashboard() {
             <SupportAssoCard />
           </div>
 
-          <div className="grid gap-6 md:grid-cols-2">
-            <ProfileSummaryCard user={user} displayName={displayName} />
-            <TeamCard
-              team={team}
-              isCaptain={isCaptain}
-              pendingCaptainRequest={pendingCaptainRequest}
-              pendingJoinRequest={pendingJoinRequest}
-              onLeaveTeam={handleLeaveTeam}
-              members={members}
-            />
-          </div>
+          {/* ─────────────  Profil & équipe  ───────────── */}
+          <CategorySection label={t.catProfileTeam}>
+            <div className="grid gap-6 md:grid-cols-2">
+              <ProfileSummaryCard user={user} displayName={displayName} />
+              <TeamCard
+                team={team}
+                isCaptain={isCaptain}
+                pendingCaptainRequest={pendingCaptainRequest}
+                pendingJoinRequest={pendingJoinRequest}
+                onLeaveTeam={handleLeaveTeam}
+                members={members}
+              />
+            </div>
+            <DiscordLinkCard />
+          </CategorySection>
 
-          <DiscordLinkCard />
+          {/* ─────────────  Compétition  ─────────────
+              NextMatchCard rend toujours un contenu (placeholder sobre s'il n'y
+              a pas de match), la catégorie est donc toujours pertinente. */}
+          <CategorySection label={t.catCompetition}>
+            <NextMatchCard initialData={nextMatch} />
+            <MatchReadinessCard nextMatch={nextMatch} t={t} />
+          </CategorySection>
 
-          <NextMatchCard initialData={nextMatch} />
+          {/* ─────────────  Scrims  ─────────────
+              Réservée aux capitaines/managers avec équipe : le hub en est
+              l'en-tête permanent, les blocs de détail (négociations, grilles)
+              s'affichent dessous quand ils sont non vides. */}
+          {team && canManage && (
+            <CategorySection label={t.catScrims}>
+              <ScrimsHubCard
+                team={team}
+                isCaptain={isCaptain}
+                isManager={isManager}
+                pendingCount={pendingScrims.length}
+                gridsCount={scrimPlannings.length}
+                openForScrim={!!team.open_for_scrim}
+                onToggle={handleToggleScrimOpen}
+                toggling={togglingScrim}
+                t={t}
+              />
 
-          <MatchReadinessCard nextMatch={nextMatch} t={t} />
+              {/* Scrims en attente de MON action */}
+              {pendingScrims.length > 0 && (
+                <div className="rounded-2xl border border-blue-400/20 bg-blue-500/5 backdrop-blur-xl p-6">
+                  <h3 className="text-lg font-semibold mb-4">
+                    {t.pendingScrims}
+                    <span className="ml-2 inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-blue-500 text-[10px] font-bold text-white">
+                      {pendingScrims.length}
+                    </span>
+                  </h3>
+                  {scrimError && (
+                    <div className="mb-3 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-100">
+                      {scrimError}
+                    </div>
+                  )}
+                  <div className="space-y-3">
+                    {pendingScrims.map((scrim) => (
+                      <ScrimNegotiationCard
+                        key={scrim.id}
+                        scrim={scrim}
+                        busy={scrimActionId === scrim.id}
+                        locale={locale}
+                        t={t}
+                        onAction={handleScrimAction}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
 
-          {/* Rejoindre le cast — toujours visible (indépendant de l'équipe) */}
+              {/* Grilles de dispo ouvertes — s'auto-masque si vide. Ancre ciblée
+                  par le CTA « Voir les grilles » du hub. Entrées fournies par la
+                  page pour éviter un second fetch. */}
+              <div id="scrim-plannings" className="scroll-mt-24">
+                <ScrimPlanningsDashboardCard
+                  token={token}
+                  entries={scrimPlannings}
+                />
+              </div>
+            </CategorySection>
+          )}
+
+          {/* ─────────────  Actions rapides  ───────────── */}
+          {team && (
+            <CategorySection label={t.catQuickActions}>
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {buildQuickActions({
+                    team,
+                    isCaptain,
+                    isManager,
+                    unreadMessages,
+                    t,
+                  }).map((action) => (
+                    <QuickAction key={action.href} {...action} />
+                  ))}
+                </div>
+              </div>
+            </CategorySection>
+          )}
+
+          {/* Rejoindre le cast — flux simple pour les joueuses SANS équipe
+              (pas de catégorie forcée). */}
           {!team && (
-            <div className="mt-6 rounded-2xl border border-cyan-400/20 bg-cyan-500/[0.06] backdrop-blur-xl p-6">
+            <div className="mt-10 rounded-2xl border border-cyan-400/20 bg-cyan-500/[0.06] backdrop-blur-xl p-6">
               <h2 className="text-lg font-semibold mb-4">{t.wantToCast}</h2>
               <div className="grid gap-3 sm:grid-cols-2">
                 <QuickAction
@@ -535,57 +709,17 @@ function PlayerDashboard() {
             </div>
           )}
 
-          {/* Actions rapides */}
-          {team && (
-            <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6">
-              <h2 className="text-lg font-semibold mb-4">{t.quickActions}</h2>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {buildQuickActions({
-                  team,
-                  isCaptain,
-                  isManager,
-                  unreadMessages,
-                  t,
-                }).map((action) => (
-                  <QuickAction key={action.href} {...action} />
-                ))}
-              </div>
-            </div>
+          {/* ─────────────  Activité  ─────────────
+              DemandesHistory s'auto-masque quand il n'y a aucune demande ; on
+              n'affiche donc l'en-tête de catégorie que dans ce cas. */}
+          {demandes.length > 0 && (
+            <CategorySection label={t.catActivity}>
+              <DemandesHistory
+                demandes={demandes}
+                onCancel={handleCancelDemande}
+              />
+            </CategorySection>
           )}
-
-          {/* Scrims en attente (capitaine ou manager) */}
-          {(isCaptain || isManager) && pendingScrims.length > 0 && (
-            <div className="mt-6 rounded-2xl border border-blue-400/20 bg-blue-500/5 backdrop-blur-xl p-6">
-              <h2 className="text-lg font-semibold mb-4">
-                {t.pendingScrims}
-                <span className="ml-2 inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-blue-500 text-[10px] font-bold text-white">
-                  {pendingScrims.length}
-                </span>
-              </h2>
-              {scrimError && (
-                <div className="mb-3 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-100">
-                  {scrimError}
-                </div>
-              )}
-              <div className="space-y-3">
-                {pendingScrims.map((scrim) => (
-                  <ScrimNegotiationCard
-                    key={scrim.id}
-                    scrim={scrim}
-                    busy={scrimActionId === scrim.id}
-                    locale={locale}
-                    t={t}
-                    onAction={handleScrimAction}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Grilles de dispo (scrim plannings ouverts) — s'auto-masque si vide */}
-          <ScrimPlanningsDashboardCard token={token} />
-
-          <DemandesHistory demandes={demandes} onCancel={handleCancelDemande} />
 
           {/* Liens utiles */}
           <div className="mt-8 flex flex-wrap gap-4 text-sm">

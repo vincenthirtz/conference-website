@@ -160,7 +160,7 @@ export default function NextMatchCard({
   // sober placeholder — or a discreet error note when the fetch failed.
   if (!hasMatch) {
     return (
-      <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6">
+      <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6">
         <div className="flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.16em] text-blue-200/80">
           <span className="inline-flex items-center rounded-full border border-blue-300/40 bg-blue-500/15 px-2.5 py-1 text-[10px] font-semibold text-blue-50">
             {t.nextMatch}
@@ -191,7 +191,7 @@ export default function NextMatchCard({
   const matchHref = `/match/${data.match.id}`;
 
   return (
-    <div className="mt-6 rounded-2xl border border-white/10 bg-gradient-to-br from-purple-500/10 via-white/[0.03] to-cyan-500/10 backdrop-blur-xl p-6">
+    <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-purple-500/10 via-white/[0.03] to-cyan-500/10 backdrop-blur-xl p-6">
       <div className="flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.16em] text-blue-200/80">
         <span className="inline-flex items-center rounded-full border border-blue-300/40 bg-blue-500/15 px-2.5 py-1 text-[10px] font-semibold text-blue-50">
           {t.nextMatch}

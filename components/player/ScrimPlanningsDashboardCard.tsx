@@ -12,14 +12,11 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useTeamNames } from '@/hooks/useTeamNames';
 import { useT, format } from '@/lib/i18n/useT';
-import type {
-  ScrimPlanningSummary,
-  ScrimPlanningParty,
-} from '@/types/admin';
+import type { ScrimPlanningSummary, ScrimPlanningParty } from '@/types/admin';
 
 import { logger } from '../../utils/logger';
 
-type PlanningEntry = {
+export type PlanningEntry = {
   planning: ScrimPlanningSummary;
   myParty: ScrimPlanningParty | null;
   myAvailability: string[];
@@ -27,13 +24,24 @@ type PlanningEntry = {
 
 export default function ScrimPlanningsDashboardCard({
   token,
+  entries: entriesProp,
 }: {
   token: string | null;
+  /**
+   * Optionnel : entrées déjà chargées par la page (fetch remonté une seule
+   * fois et partagée avec ScrimsHubCard pour le compteur de grilles). Quand
+   * fourni, la carte n'effectue AUCUNE requête. Sinon elle garde son fetch
+   * autonome (rétro-compatibilité pour tout autre appelant).
+   */
+  entries?: PlanningEntry[];
 }) {
   const t = useT('scrimPlanning');
-  const [entries, setEntries] = useState<PlanningEntry[]>([]);
+  const [fetchedEntries, setFetchedEntries] = useState<PlanningEntry[]>([]);
+  const controlled = entriesProp !== undefined;
+  const entries = controlled ? entriesProp : fetchedEntries;
 
   useEffect(() => {
+    if (controlled) return; // la page fournit les entrées : pas de fetch.
     if (!token) return;
     let cancelled = false;
     (async () => {
@@ -44,7 +52,7 @@ export default function ScrimPlanningsDashboardCard({
         if (!res.ok) return;
         const data = await res.json();
         if (!cancelled && Array.isArray(data?.plannings)) {
-          setEntries(data.plannings as PlanningEntry[]);
+          setFetchedEntries(data.plannings as PlanningEntry[]);
         }
       } catch (err) {
         logger.error('[scrim-plannings] dashboard load error:', err);
@@ -53,7 +61,7 @@ export default function ScrimPlanningsDashboardCard({
     return () => {
       cancelled = true;
     };
-  }, [token]);
+  }, [token, controlled]);
 
   const teamNames = useTeamNames(
     entries.flatMap((e) => [e.planning.team1_id, e.planning.team2_id])
@@ -71,7 +79,7 @@ export default function ScrimPlanningsDashboardCard({
           : t.dashUnknownTeam;
 
   return (
-    <div className="mt-6 rounded-2xl border border-emerald-400/20 bg-emerald-500/5 backdrop-blur-xl p-6">
+    <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/5 backdrop-blur-xl p-6">
       <h2 className="text-lg font-semibold mb-1">
         {t.dashTitle}
         <span className="ml-2 inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-emerald-500 text-[10px] font-bold text-white">
@@ -102,7 +110,9 @@ export default function ScrimPlanningsDashboardCard({
                     </div>
                   )}
                   <div className="flex items-center gap-2 flex-wrap text-xs text-gray-500 mt-2">
-                    <span>{format(t.dashMyParty, { party: partyLabel(myParty) })}</span>
+                    <span>
+                      {format(t.dashMyParty, { party: partyLabel(myParty) })}
+                    </span>
                     <span className="text-gray-600">&middot;</span>
                     <span>
                       {format(

@@ -72,7 +72,7 @@ export default function DemandesHistory({ demandes, onCancel }: Props) {
   };
 
   return (
-    <div className="mt-8 rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6">
+    <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6">
       {dialog}
       <h2 className="text-lg font-semibold mb-4">{t.title}</h2>
 
