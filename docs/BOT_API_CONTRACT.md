@@ -1630,6 +1630,85 @@ helix/predictions`. **Response 200** : `{ prediction }`. **Errors** :
 `400 { code: 'INVALID_PAYLOAD' }` (dont RESOLVED sans `winning_outcome_id`),
 `401`, `403 { code: 'MISSING_SCOPE' }`, `409 { code: 'NOT_CONNECTED' }`, `502`.
 
+##### `POST /api/admin/twitch/chat` (staff, `manager`+)
+
+Envoie un message dans le chat de la chaîne. Body zod : `message` (1..500).
+`POST helix/chat/messages` avec `{ broadcaster_id, sender_id: broadcasterId,
+message }`. Scope requis : **`user:write:chat`**. **Response 200** :
+`{ result }`. **Errors** : `400 { code: 'INVALID_PAYLOAD' }`, `401`,
+`403 { code: 'MISSING_SCOPE' }`, `409 { code: 'NOT_CONNECTED' }`, `502`.
+
+##### `POST /api/admin/twitch/moderation/ban` (staff, `manager`+)
+
+Ban permanent ou timeout d'un utilisateur. Body zod : `login` (1..25),
+`duration?` (int, 1..1209600 s ; absent = ban permanent), `reason?` (0..500).
+Résout d'abord `login → user_id` via `GET helix/users?login=` (**`400 { code:
+'USER_NOT_FOUND' }`** si introuvable), puis `POST
+helix/moderation/bans?broadcaster_id=&moderator_id=<broadcasterId>` avec
+`{ data: { user_id, duration?, reason? } }`. Scope requis :
+**`moderator:manage:banned_users`**. **Response 200** : `{ result }`.
+**Errors** : `400 { code: 'INVALID_PAYLOAD' | 'USER_NOT_FOUND' }`, `401`,
+`403 { code: 'MISSING_SCOPE' }`, `409 { code: 'NOT_CONNECTED' }`, `502`.
+
+##### `POST /api/admin/twitch/moderation/clear` (staff, `manager`+)
+
+Vide le chat de la chaîne. Pas de body. `DELETE
+helix/moderation/chat?broadcaster_id=&moderator_id=<broadcasterId>`. Scope
+requis : **`moderator:manage:chat_messages`**. **Response 200** :
+`{ cleared: true }`. **Errors** : `401`, `403 { code: 'MISSING_SCOPE' }`,
+`409 { code: 'NOT_CONNECTED' }`, `502`.
+
+##### `PATCH /api/admin/twitch/moderation/chat-settings` (staff, `manager`+)
+
+Met à jour les réglages de chat. Body zod (tous optionnels, **au moins un
+requis**) : `emote_mode?`, `subscriber_mode?`, `follower_mode?`,
+`follower_mode_duration?` (int), `slow_mode?`, `slow_mode_wait_time?` (int).
+`PATCH helix/chat/settings?broadcaster_id=&moderator_id=<broadcasterId>`. Scope
+requis : **`moderator:manage:chat_settings`**. **Response 200** :
+`{ settings }`. **Errors** : `400 { code: 'INVALID_PAYLOAD' }`, `401`,
+`403 { code: 'MISSING_SCOPE' }`, `409 { code: 'NOT_CONNECTED' }`, `502`.
+
+##### `GET /api/admin/twitch/channel-points/rewards` (staff, `manager`+)
+
+Liste les rewards de points de chaîne **gérables**. `GET
+helix/channel_points/custom_rewards?broadcaster_id=&only_manageable_rewards=true`.
+Scope requis : **`channel:read:redemptions`**. **Response 200** :
+`{ rewards: [] }`. **Errors** : `401`, `403 { code: 'MISSING_SCOPE' }`,
+`409 { code: 'NOT_CONNECTED' }`, `502`.
+
+> ⚠️ **Caveat points de chaîne** : l'API Helix ne permet de gérer (lister
+> demandes, FULFILLED/CANCELED) que les redemptions des rewards **créés par
+> NOTRE `client_id`** (`only_manageable_rewards`). Les rewards créés par le
+> streamer lui-même ou d'autres apps ne sont ni listables ni gérables via ces
+> endpoints. V1 = gestion des demandes en attente uniquement (pas de
+> création/édition de reward).
+
+##### `GET /api/admin/twitch/channel-points/redemptions` (staff, `manager`+)
+
+Liste les demandes (redemptions) d'un reward. Query zod : `reward_id` (requis),
+`status?` ∈ `UNFULFILLED | FULFILLED | CANCELED` (défaut `UNFULFILLED`). `GET
+helix/channel_points/custom_rewards/redemptions`. Scope requis :
+**`channel:read:redemptions`**. **Response 200** : `{ redemptions: [] }`.
+**Errors** : `400 { code: 'INVALID_PAYLOAD' }`, `401`,
+`403 { code: 'MISSING_SCOPE' }`, `409 { code: 'NOT_CONNECTED' }`, `502`.
+
+##### `PATCH /api/admin/twitch/channel-points/redemptions` (staff, `manager`+)
+
+Résout (FULFILLED) ou refuse (CANCELED) un lot de demandes. Body zod :
+`reward_id`, `redemption_ids` (`string[]`, 1..50), `status` ∈ `FULFILLED |
+CANCELED`. `PATCH
+helix/.../redemptions?broadcaster_id=&reward_id=&id=<...>&id=<...>`. Scope
+requis : **`channel:manage:redemptions`**. **Response 200** :
+`{ redemptions: [] }`. **Errors** : `400 { code: 'INVALID_PAYLOAD' }`, `401`,
+`403 { code: 'MISSING_SCOPE' }`, `409 { code: 'NOT_CONNECTED' }`, `502`.
+
+##### `POST /api/admin/twitch/clip` (staff, `manager`+)
+
+Capture un clip (~30 dernières secondes). Pas de body. `POST
+helix/clips?broadcaster_id=<broadcasterId>`. Scope requis : **`clips:edit`**.
+**Response 200** : `{ id, edit_url }`. **Errors** : `401`,
+`403 { code: 'MISSING_SCOPE' }`, `409 { code: 'NOT_CONNECTED' }`, `502`.
+
 #### `GET /api/bot/v1/tournament-help/inventory`
 
 Returns the canonical "manage a tournament from Discord" walkthrough used
