@@ -1028,6 +1028,42 @@ export function sendPasswordResetEmail(opts: {
 }
 
 /**
+ * Team-access email — sent to a captain right after their team is created via
+ * the public "Créer une équipe" flow. Carries a Supabase magic-link (generated
+ * server-side via `generateLink({ type: 'magiclink' })`, delivered as a
+ * `token_hash` URL toward /auth/team-access) so the captain can jump straight
+ * into their authenticated team space without a password.
+ */
+export function sendTeamAccessEmail(opts: {
+  to: string;
+  teamName: string;
+  actionLink: string;
+}): Promise<SendEmailResult> {
+  return sendEmail({
+    to: opts.to,
+    subject: `Accédez à votre espace équipe ${opts.teamName} — OW Women's Cup`,
+    tags: ['team-access'],
+    html: emailLayout(`
+      ${gradientBar()}
+      <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;">Votre équipe est créée !</h1>
+      <p style="margin:0 0 16px;font-size:15px;color:#C6BED9;line-height:1.6;">
+        L&apos;équipe <strong style="color:#ffffff;">${escapeHtml(opts.teamName)}</strong>
+        a bien été créée et vous en êtes le capitaine. Cliquez sur le bouton
+        ci-dessous pour accéder directement à votre espace équipe, sans mot de passe.
+      </p>
+      <p style="margin:0 0 20px;font-size:13px;color:#f59e0b;line-height:1.5;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.15);border-radius:8px;padding:10px 14px;">
+        Ce lien de connexion est personnel et temporaire. Si vous n&apos;êtes pas à
+        l&apos;origine de cette création, ignorez simplement cet email.
+      </p>
+      ${ctaButton(opts.actionLink, 'Accéder à mon espace équipe')}
+      <p style="margin:24px 0 0;font-size:12px;color:#675788;line-height:1.5;text-align:center;">
+        Lien direct&nbsp;: <a href="${opts.actionLink}" style="color:#9081B0;word-break:break-all;">${escapeHtml(opts.actionLink)}</a>
+      </p>
+    `),
+  });
+}
+
+/**
  * Staff notification for support tickets that bypass the reporter
  * confirmation flow: anonymous tickets and HIGH-severity tickets.
  */

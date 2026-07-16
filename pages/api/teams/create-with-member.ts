@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import slugify from 'slugify';
 import { supabaseAdmin } from '@/utils/supabase';
 import { findOrCreateUserByEmail } from '@/utils/find-or-create-user';
-import { sendTeamJoinEmail } from '@/utils/email';
+import { sendTeamJoinEmail, sendTeamAccessEmail } from '@/utils/email';
 import { applyRateLimit } from '@/utils/rateLimit';
 import {
   sanitizeUrl,
@@ -22,6 +22,25 @@ import {
 } from '@/utils/registrationFields';
 
 import { logger } from '../../../utils/logger';
+
+// Résolution SITE_URL : même convention que utils/email.ts / forgot-password.ts.
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  process.env.SITE_URL ||
+  'https://owwomenscup.fr';
+
+/**
+ * Masque un email pour l'exposer côté client sans divulguer l'adresse complète :
+ * "alice@domain.com" -> "a***@domain.com". Le token magic-link n'est JAMAIS
+ * renvoyé — seul l'email masqué confirme où le lien a été envoyé.
+ */
+function maskEmail(email: string): string {
+  const [local, domain] = email.split('@');
+  if (!domain) return '***';
+  const first = local.slice(0, 1) || '*';
+  return `${first}***@${domain}`;
+}
+
 type Body = {
   name?: string;
   short_name?: string | null;
@@ -93,15 +112,31 @@ type ApiResponse =
       invitedMembers?: InvitedMemberResult[];
       tournament?: { tournament_name: string; stages_count: number };
       info?: string;
+      /**
+       * Pont magic-link : indique si un email d'accès à l'espace équipe a été
+       * envoyé au capitaine (fire-and-forget, non bloquant). `to` = email masqué.
+       * Le token_hash n'est jamais exposé.
+       */
+      accessEmail?: { sent: boolean; to?: string };
     }
-  | { error: string; fieldErrors?: Record<string, string> };
+  | {
+      error: string;
+      /** Code machine-readable stable (cf. docs contrat §1). */
+      code?: string;
+      /** Champ(s) fautif(s) — ex. { logo_url: '…' } pour INVALID_URL. */
+      fields?: Record<string, string>;
+      fieldErrors?: Record<string, string>;
+    };
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ApiResponse>
 ) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    res.setHeader('Allow', 'POST');
+    return res
+      .status(405)
+      .json({ error: 'Method not allowed', code: 'METHOD_NOT_ALLOWED' });
   }
 
   // Rate limiting (durci) : ce endpoint public crée des équipes ET des comptes
@@ -128,7 +163,9 @@ export default async function handler(
     return;
 
   if (!supabaseAdmin) {
-    return res.status(503).json({ error: 'Service unavailable.' });
+    return res
+      .status(503)
+      .json({ error: 'Service unavailable.', code: 'SERVICE_UNAVAILABLE' });
   }
 
   const body: Body = req.body || {};
@@ -138,38 +175,47 @@ export default async function handler(
   // bot ne puisse pas créer de comptes auth ni déclencher d'emails sans
   // résoudre le challenge. Cohérent avec pages/api/news/comments.ts.
   if (body.honeypot && `${body.honeypot}`.trim().length > 0) {
-    return res.status(400).json({ error: 'Bot detected' });
+    return res.status(400).json({ error: 'Bot detected', code: 'HONEYPOT' });
   }
   const captchaResult = verifyCaptcha(
     (body.captchaToken || '').toString(),
     (body.captchaAnswer || '').toString()
   );
   if (!captchaResult.valid) {
-    return res
-      .status(400)
-      .json({ error: captchaResult.error || 'Captcha invalide' });
+    return res.status(400).json({
+      error: captchaResult.error || 'Captcha invalide',
+      code: 'CAPTCHA_INVALID',
+    });
   }
 
   const tenantId = resolveTenantIdForPublicRequest(req);
 
   const name = (body.name || '').trim();
 
-  if (!name || name.length < 2) {
+  if (!name) {
     return res
       .status(400)
-      .json({ error: 'Le nom doit faire au moins 2 caractères.' });
+      .json({ error: 'Le nom est requis.', code: 'NAME_REQUIRED' });
+  }
+  if (name.length < 2) {
+    return res.status(400).json({
+      error: 'Le nom doit faire au moins 2 caractères.',
+      code: 'NAME_TOO_SHORT',
+    });
   }
   if (name.length > 100) {
-    return res
-      .status(400)
-      .json({ error: 'Le nom ne peut pas dépasser 100 caractères.' });
+    return res.status(400).json({
+      error: 'Le nom ne peut pas dépasser 100 caractères.',
+      code: 'NAME_TOO_LONG',
+    });
   }
 
   const description = body.description?.toString().trim() || null;
   if (description && description.length > 2000) {
-    return res
-      .status(400)
-      .json({ error: 'La description ne peut pas dépasser 2000 caractères.' });
+    return res.status(400).json({
+      error: 'La description ne peut pas dépasser 2000 caractères.',
+      code: 'DESCRIPTION_TOO_LONG',
+    });
   }
 
   // Valider les URLs
@@ -181,9 +227,11 @@ export default async function handler(
   for (const [field, val] of Object.entries(urlFields)) {
     if (val && typeof val === 'string' && val.trim()) {
       if (!sanitizeUrl(val)) {
-        return res
-          .status(400)
-          .json({ error: `${field} doit être une URL http(s) valide.` });
+        return res.status(400).json({
+          error: `${field} doit être une URL http(s) valide.`,
+          code: 'INVALID_URL',
+          fields: { [field]: `${field} doit être une URL http(s) valide.` },
+        });
       }
     }
   }
@@ -206,6 +254,7 @@ export default async function handler(
   if (cleanedMembers.length > 5) {
     return res.status(400).json({
       error: 'You can add up to 5 members in one request',
+      code: 'TOO_MANY_MEMBERS',
     });
   }
 
@@ -214,9 +263,10 @@ export default async function handler(
   );
 
   if (body.set_captain && !wantsMember) {
-    return res
-      .status(400)
-      .json({ error: 'Provide a member to set as captain' });
+    return res.status(400).json({
+      error: 'Provide a member to set as captain',
+      code: 'CAPTAIN_REQUIRED',
+    });
   }
 
   // Lot 6 : BattleTag obligatoire UNIQUEMENT lors d'une inscription à un
@@ -241,6 +291,11 @@ export default async function handler(
     }
     return trimmed;
   };
+
+  // Distingue le code d'erreur BattleTag à partir du message levé par
+  // resolveBattleTag : "required" -> manquant (tournoi), sinon format invalide.
+  const battleTagErrorCode = (message: string): string =>
+    /required/i.test(message) ? 'BATTLETAG_REQUIRED' : 'BATTLETAG_INVALID';
 
   // Lot 6 helper : valide le BattleTag de manière conditionnelle.
   // - tournoi : required + format.
@@ -267,9 +322,10 @@ export default async function handler(
     try {
       resolvedBattleTag = resolveBattleTag(memberBattleTag);
     } catch (err: unknown) {
+      const message = (err as Error)?.message || 'Invalid BattleTag';
       return res
         .status(400)
-        .json({ error: (err as Error)?.message || 'Invalid BattleTag' });
+        .json({ error: message, code: battleTagErrorCode(message) });
     }
     if (memberUserId) {
       // Anti-abuse : ce endpoint est PUBLIC. Un `user_id` brut fourni par le
@@ -280,7 +336,9 @@ export default async function handler(
       // de `user_id`. On exige donc : UUID valide + utilisateur existant.
       const check = await validateExistingUserId(memberUserId);
       if (!check.ok) {
-        return res.status(check.status).json({ error: check.error });
+        return res
+          .status(check.status)
+          .json({ error: check.error, code: 'INVALID_USER_ID' });
       }
       memberRecords.push({
         user_id: check.userId,
@@ -307,7 +365,7 @@ export default async function handler(
         const message =
           (err as Error)?.message ||
           'User lookup failed for the provided email';
-        return res.status(500).json({ error: message });
+        return res.status(500).json({ error: message, code: 'SERVER_ERROR' });
       }
     }
   } else if (cleanedMembers.length > 0) {
@@ -318,9 +376,10 @@ export default async function handler(
       try {
         resolvedBattleTag = resolveBattleTag(m.battle_tag);
       } catch (err: unknown) {
+        const message = (err as Error)?.message || 'Invalid BattleTag';
         return res
           .status(400)
-          .json({ error: (err as Error)?.message || 'Invalid BattleTag' });
+          .json({ error: message, code: battleTagErrorCode(message) });
       }
 
       if (m.user_id) {
@@ -329,7 +388,9 @@ export default async function handler(
         // promotion capitaine sur ce endpoint public.
         const check = await validateExistingUserId(m.user_id);
         if (!check.ok) {
-          return res.status(check.status).json({ error: check.error });
+          return res
+            .status(check.status)
+            .json({ error: check.error, code: 'INVALID_USER_ID' });
         }
         memberRecords.push({
           user_id: check.userId,
@@ -357,7 +418,7 @@ export default async function handler(
         const message =
           (err as Error)?.message ||
           'User could not be found or created for one of the provided emails';
-        return res.status(500).json({ error: message });
+        return res.status(500).json({ error: message, code: 'SERVER_ERROR' });
       }
     }
   }
@@ -381,6 +442,7 @@ export default async function handler(
     return res.status(400).json({
       error:
         'Un capitaine doit être désigné (set_captain) quand des membres sont fournis.',
+      code: 'CAPTAIN_REQUIRED',
     });
   }
 
@@ -405,6 +467,7 @@ export default async function handler(
       if (!answers.ok) {
         return res.status(400).json({
           error: "Champs d'inscription invalides.",
+          code: 'FIELD_ERRORS',
           fieldErrors: answers.errors,
         });
       }
@@ -449,12 +512,14 @@ export default async function handler(
     if (isDuplicate) {
       return res.status(409).json({
         error: 'Une équipe avec ce nom existe déjà. Choisis un autre nom.',
+        code: 'SLUG_CONFLICT',
       });
     }
     return res.status(500).json({
       error:
         createErr?.message ||
         'Failed to create team. Try again with another name.',
+      code: 'SERVER_ERROR',
     });
   }
 
@@ -578,6 +643,7 @@ export default async function handler(
         error: isDuplicate
           ? 'One of the users already belongs to this team'
           : 'Member(s) could not be added. The team was not saved.',
+        code: 'MEMBER_INSERT_FAILED',
       });
     }
 
@@ -609,6 +675,7 @@ export default async function handler(
         error:
           captainErr.message ||
           'Failed to assign team captain. Team rolled back.',
+        code: 'SERVER_ERROR',
       });
     }
   }
@@ -631,6 +698,57 @@ export default async function handler(
       sendTeamJoinEmail(email, createdTeam.name, m.role).catch((err) => {
         logger.error('[create-with-member] team join email error:', err);
       });
+    }
+  }
+
+  // Pont magic-link (contrat §2) : le capitaine vient d'être inséré dans
+  // team_members mais n'a PAS de session (flux public anonyme). On lui envoie un
+  // lien de connexion Supabase (magiclink) pointant vers /auth/team-access pour
+  // qu'il rejoigne directement son espace équipe authentifié. Best-effort : un
+  // échec (génération de lien ou envoi email) ne fait JAMAIS échouer la création.
+  //
+  // On réutilise le pattern éprouvé de forgot-password.ts : on N'utilise PAS
+  // l'`action_link` renvoyé (code PKCE non échangeable côté client) mais on
+  // extrait `hashed_token` et on construit l'URL nous-mêmes (verifyOtp côté page).
+  let accessEmail: { sent: boolean; to?: string } = { sent: false };
+  if (captainUserId) {
+    const captainEmail = userIdToEmail.get(captainUserId) || null;
+    if (captainEmail) {
+      try {
+        const redirectTo = `${SITE_URL}/auth/team-access?next=/player/manage-team`;
+        const { data: linkData, error: linkErr } =
+          await supabaseAdmin.auth.admin.generateLink({
+            type: 'magiclink',
+            email: captainEmail,
+            options: { redirectTo },
+          });
+
+        const tokenHash = linkData?.properties?.hashed_token;
+        if (linkErr || !tokenHash) {
+          logger.error(
+            '[create-with-member] captain magic-link generateLink failed',
+            { teamId: createdTeam.id, error: linkErr?.message ?? 'no token' }
+          );
+        } else {
+          const actionLink = `${SITE_URL}/auth/team-access?token_hash=${encodeURIComponent(
+            tokenHash
+          )}&type=magiclink&next=${encodeURIComponent('/player/manage-team')}`;
+
+          // Fire-and-forget : un échec Brevo ne doit pas bloquer la création.
+          sendTeamAccessEmail({
+            to: captainEmail,
+            teamName: createdTeam.name,
+            actionLink,
+          }).catch(() => {});
+
+          accessEmail = { sent: true, to: maskEmail(captainEmail) };
+        }
+      } catch (e) {
+        logger.error('[create-with-member] captain magic-link bridge crash', {
+          teamId: createdTeam.id,
+          error: e instanceof Error ? e.message : String(e),
+        });
+      }
     }
   }
 
@@ -831,5 +949,6 @@ export default async function handler(
     invitedMembers: invitedMembers.length ? invitedMembers : undefined,
     tournament: tournamentRegistration || undefined,
     info: infoParts.join(' — '),
+    accessEmail,
   });
 }

@@ -1,10 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { sendTeamJoinEmail, sendWelcomeEmail } = vi.hoisted(() => ({
-  sendTeamJoinEmail: vi.fn(async () => undefined),
-  sendWelcomeEmail: vi.fn(async () => ({ success: true as const })),
+const { sendTeamJoinEmail, sendWelcomeEmail, sendTeamAccessEmail } = vi.hoisted(
+  () => ({
+    sendTeamJoinEmail: vi.fn(async () => undefined),
+    sendWelcomeEmail: vi.fn(async () => ({ success: true as const })),
+    sendTeamAccessEmail: vi.fn(async () => ({ success: true as const })),
+  })
+);
+vi.mock('@/utils/email', () => ({
+  sendTeamJoinEmail,
+  sendWelcomeEmail,
+  sendTeamAccessEmail,
 }));
-vi.mock('@/utils/email', () => ({ sendTeamJoinEmail, sendWelcomeEmail }));
 
 import {
   store,
@@ -73,6 +80,7 @@ beforeEach(() => {
   resetSupabaseMock();
   sendTeamJoinEmail.mockClear();
   sendWelcomeEmail.mockClear();
+  sendTeamAccessEmail.mockClear();
 });
 
 /* -----------------------------------------------------------
