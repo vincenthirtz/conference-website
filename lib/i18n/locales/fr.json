@@ -4174,5 +4174,29 @@
     "signinFailed": "Ton compte a bien été créé. Connecte-toi avec ton email et ton mot de passe.",
     "linkLogin": "Se connecter",
     "linkBackToDocs": "Voir la documentation de l'API"
+  },
+  "adminRegie": {
+    "docTitle": "Régie | OW Women's Cup",
+    "heading": "Régie",
+    "subtitle": "Pupitre régie en temps réel : segment en cours, cues, briefings et checklist.",
+    "openDirector": "Ouvrir le Director",
+    "signOut": "Se déconnecter",
+    "statusOnline": "En ligne",
+    "statusReconnecting": "Reconnexion…",
+    "statusOffline": "Hors ligne",
+    "statusSeen": "Vu par la régie"
+  },
+  "regieNewRun": {
+    "title": "Démarrer un nouveau run",
+    "description": "Aucun run n'est en cours. Crée un run et lance-le pour ouvrir le pupitre régie.",
+    "tournamentHint": "Un run peut être 100 % libre : aucun tournoi n'est requis.",
+    "nameLabel": "Nom du run",
+    "namePlaceholder": "Ex. Soirée de lancement",
+    "scheduledLabel": "Date planifiée",
+    "submit": "Créer et démarrer",
+    "submitting": "Démarrage…",
+    "nameRequired": "Le nom du run est requis.",
+    "createSuccess": "Run créé et démarré.",
+    "createError": "Impossible de créer ou démarrer le run."
   }
 }

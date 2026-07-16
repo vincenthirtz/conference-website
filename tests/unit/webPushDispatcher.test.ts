@@ -764,11 +764,11 @@ describe('event_segment.transitioned', () => {
     );
     expect(targets).toEqual(['https://push.example/a']);
 
-    // Render : url=/caster/cockpit, title=fallback, body inclut le segment.
+    // Render : url=/admin/regie, title=fallback, body inclut le segment.
     const payload = JSON.parse(sendNotification.mock.calls[0][1] as string);
     expect(payload.title).toBe('Match en direct');
     expect(payload.body).toContain('Demi A vs Demi B');
-    expect(payload.data.url).toBe('/caster/cockpit');
+    expect(payload.data.url).toBe('/admin/regie');
     expect(payload.tag).toBe('evt-seg-1');
   });
 

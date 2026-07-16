@@ -146,7 +146,7 @@ const getAudiences = (t: AppDict): AudienceCard[] => [
       t.audience2Bullet3,
       t.audience2Bullet4,
     ],
-    cta: { href: '/caster/cockpit', label: t.audience2Cta },
+    cta: { href: '/admin/regie', label: t.audience2Cta },
   },
   {
     emoji: '\u{1F6E0}\u{FE0F}',

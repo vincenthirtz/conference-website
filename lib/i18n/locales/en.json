@@ -4174,5 +4174,29 @@
     "signinFailed": "Your account was created successfully. Sign in with your email and password.",
     "linkLogin": "Sign in",
     "linkBackToDocs": "View the API documentation"
+  },
+  "adminRegie": {
+    "docTitle": "Control room | OW Women's Cup",
+    "heading": "Control room",
+    "subtitle": "Real-time control desk: live segment, cues, briefings and checklist.",
+    "openDirector": "Open the Director",
+    "signOut": "Sign out",
+    "statusOnline": "Online",
+    "statusReconnecting": "Reconnecting…",
+    "statusOffline": "Offline",
+    "statusSeen": "Seen by the control room"
+  },
+  "regieNewRun": {
+    "title": "Start a new run",
+    "description": "No run is live. Create a run and start it to open the control desk.",
+    "tournamentHint": "A run can be fully free-form: no tournament is required.",
+    "nameLabel": "Run name",
+    "namePlaceholder": "e.g. Launch night",
+    "scheduledLabel": "Scheduled date",
+    "submit": "Create and start",
+    "submitting": "Starting…",
+    "nameRequired": "The run name is required.",
+    "createSuccess": "Run created and started.",
+    "createError": "Could not create or start the run."
   }
 }

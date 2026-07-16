@@ -517,11 +517,12 @@ export function renderWebPushPayload(
           typeof pushBody === 'string' && pushBody.length > 0
             ? pushBody
             : `${segTitle} commence maintenant`,
-        // Audience = casters assignés au match. Le cockpit liste leurs
-        // segments du jour ; on évite /admin/events/<runId> qui suppose un
-        // accès staff.
-        url: '/caster/cockpit',
-        actions: [{ action: 'cockpit', title: 'Ouvrir le cockpit' }],
+        // Audience = casters assignés au match. La régie (/admin/regie, ex
+        // cockpit) liste leurs segments du jour ; les casters sont staff
+        // (rôle 'caster') donc y ont accès. On évite /admin/events/<runId> qui
+        // suppose un accès plus large.
+        url: '/admin/regie',
+        actions: [{ action: 'cockpit', title: 'Ouvrir la régie' }],
       };
     }
     case 'scrim.planning.opened': {

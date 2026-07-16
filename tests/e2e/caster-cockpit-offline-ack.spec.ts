@@ -78,7 +78,14 @@ async function loginAsCaster(page: import('@playwright/test').Page) {
   await page.fill('input#email', CASTER_EMAIL);
   await page.fill('input#password', CASTER_PASSWORD);
   await page.click('button[type="submit"]');
-  await page.waitForLoadState('networkidle');
+  // La régie (/admin/regie) est gatée SSR (requireStaffRoleFromRequest) : il
+  // faut que la session staff soit POSÉE côté serveur avant d'y naviguer.
+  // On attend donc la navigation hors de /login (login abouti) plutôt qu'un
+  // simple networkidle — sinon le goto suivant part sans cookie et le gate
+  // redirige vers /admin/login. (cf. admin-captain-view.spec.ts.)
+  await page.waitForURL((url) => !url.pathname.startsWith('/login'), {
+    timeout: 15_000,
+  });
 }
 
 test.describe
@@ -213,11 +220,15 @@ test.describe
     });
 
     await loginAsCaster(page);
-    await page.goto('/caster/cockpit');
+    await page.goto('/admin/regie');
     await page.waitForLoadState('networkidle');
 
+    // Timeout large : /admin/regie hérite du Navbar (chrome admin), qui a un
+    // mismatch d'hydratation préexistant (useStaffSession lit un cache
+    // localStorage → SSR≠client) ; React régénère l'arbre une fois au 1er
+    // rendu. On attend donc que la modal soit stable avant d'interagir.
     const modal = page.getByTestId('urgent-cue-modal');
-    await expect(modal).toBeVisible({ timeout: 20_000 });
+    await expect(modal).toBeVisible({ timeout: 30_000 });
 
     const ackBtn = page.getByTestId('urgent-cue-ack');
     const feedAckBtn = page.getByTestId(`cue-ack-${cueId}`);
@@ -226,13 +237,12 @@ test.describe
     await expect(feedAckBtn).toBeVisible({ timeout: 10_000 });
 
     // --- Ack sous coupure réseau : le POST est tenté puis échoue -----------
-    await Promise.all([
-      page.waitForRequest(
-        (r) => ACK_URL_RE.test(r.url()) && r.method() === 'POST'
-      ),
-      ackBtn.click(),
-    ]);
-    expect(abortCount).toBeGreaterThanOrEqual(1);
+    // On n'attend PAS l'événement requête (course fragile avec la régénération
+    // d'hydratation) : on clique puis on poll le compteur d'abort du routeur.
+    await ackBtn.click();
+    await expect
+      .poll(() => abortCount, { timeout: 10_000 })
+      .toBeGreaterThanOrEqual(1);
 
     // La modal reste ouverte (l'ack optimiste est rollback → cue non acké).
     await expect(modal).toBeVisible({ timeout: 10_000 });
@@ -294,36 +304,31 @@ test.describe
     });
 
     await loginAsCaster(page);
-    await page.goto('/caster/cockpit');
+    await page.goto('/admin/regie');
     await page.waitForLoadState('networkidle');
 
+    // Timeout large (cf. test précédent) : régénération d'hydratation du
+    // Navbar admin au 1er rendu → on laisse la modal se stabiliser.
     const modal = page.getByTestId('urgent-cue-modal');
-    await expect(modal).toBeVisible({ timeout: 20_000 });
+    await expect(modal).toBeVisible({ timeout: 30_000 });
 
     const ackBtn = page.getByTestId('urgent-cue-ack');
     const offlineBtn = page.getByTestId('urgent-cue-ack-offline');
 
     await expect(offlineBtn).toHaveCount(0);
 
-    // 1er échec.
-    await Promise.all([
-      page.waitForRequest(
-        (r) => ACK_URL_RE.test(r.url()) && r.method() === 'POST'
-      ),
-      ackBtn.click(),
-    ]);
+    // 1er échec. On attend le RÉSULTAT observable (bouton → « Réessayer »)
+    // plutôt que de courir après l'événement requête.
+    await ackBtn.click();
     await expect(ackBtn).toHaveText(/Réessayer/i, { timeout: 10_000 });
     await expect(offlineBtn).toHaveCount(0);
 
     // 2e échec → la porte de sortie hors-ligne apparaît.
-    await Promise.all([
-      page.waitForRequest(
-        (r) => ACK_URL_RE.test(r.url()) && r.method() === 'POST'
-      ),
-      ackBtn.click(),
-    ]);
+    await ackBtn.click();
     await expect(offlineBtn).toBeVisible({ timeout: 10_000 });
-    expect(abortCount).toBeGreaterThanOrEqual(2);
+    await expect
+      .poll(() => abortCount, { timeout: 10_000 })
+      .toBeGreaterThanOrEqual(2);
 
     // « Vu (hors ligne) » : fermeture locale SANS faux ack.
     await offlineBtn.click();

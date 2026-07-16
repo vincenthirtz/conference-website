@@ -168,12 +168,14 @@ export const ADMIN_NAV: AdminNavNode[] = [
               accent: 'border-pink-500/30 from-pink-500/10 text-pink-300',
             },
           },
-          // Cockpit Régie (caster) : ouvert aux admin/owner via une fiche
-          // cast_members interne auto-provisionnée (cf. utils/casterAuth.ts).
-          // Dashboard-only, admin-gated.
+          // Régie : page admin /admin/regie (ex-cockpit caster). Ouverte
+          // owner/admin/caster via une fiche cast_members interne
+          // auto-provisionnée pour admin/owner (cf. utils/casterAuth.ts). La
+          // card reste minRole 'admin' (raccourci dashboard) ; les casters
+          // atteignent la régie via leur propre flux.
           {
             id: 'caster-cockpit',
-            href: '/caster/cockpit',
+            href: '/admin/regie',
             minRole: 'admin',
             card: {
               order: 8.5,
