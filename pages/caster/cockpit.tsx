@@ -525,7 +525,11 @@ function CockpitPage() {
 
       {/* Modal bloquante pour cue urgent non ack. FIFO si plusieurs. */}
       {cueStream.pendingUrgent && (
-        <UrgentCueModal cue={cueStream.pendingUrgent} onAck={cueStream.ack} />
+        <UrgentCueModal
+          cue={cueStream.pendingUrgent}
+          onAck={cueStream.ack}
+          onDeferAck={cueStream.deferAck}
+        />
       )}
     </div>
   );

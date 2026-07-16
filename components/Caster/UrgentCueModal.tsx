@@ -10,6 +10,11 @@
 //   - Esc NE FERME PAS — il faut acker.
 //   - Click backdrop NE FERME PAS — il faut acker.
 //   - Retry inline si l ack reseau echoue.
+//   - Porte de sortie hors-ligne : apres 2 echecs d ack CONSECUTIFS (coupure
+//     reseau totale du studio), on affiche EN PLUS un bouton « Vu (hors
+//     ligne) ». Il ne pose PAS un faux ack : il enregistre l intention via
+//     onDeferAck (le hook retente l ack reel en fond jusqu au succes) et rend
+//     l ecran au caster. Voir la semantique dans hooks/useCueStream.ts.
 
 import { useEffect, useRef, useState } from 'react';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
@@ -17,18 +22,31 @@ import { playChime } from '@/utils/playChime';
 import type { CueWithAck } from '@/hooks/useCueStream';
 import { useT } from '@/lib/i18n/useT';
 
+// Nombre d echecs d ack CONSECUTIFS a partir duquel on propose la porte de
+// sortie hors-ligne. En dessous : comportement historique (bouton « Vu » qui
+// retente), pour ne pas banaliser le differe sur un simple glitch.
+const OFFLINE_ACK_THRESHOLD = 2;
+
 type Props = {
   cue: CueWithAck;
   /** Resolves quand l ack a abouti, throws sinon. */
   onAck: (cueId: string) => Promise<void>;
+  /**
+   * Ack differe (« Vu hors ligne ») : enregistre l intention et laisse le hook
+   * retenter l ack reel en fond. Optionnel (retro-compat) : sans lui, la porte
+   * de sortie hors-ligne n apparait pas.
+   */
+  onDeferAck?: (cueId: string) => void;
 };
 
-export default function UrgentCueModal({ cue, onAck }: Props) {
+export default function UrgentCueModal({ cue, onAck, onDeferAck }: Props) {
   const t = useT('urgentCueModal');
   const trapRef = useFocusTrap<HTMLDivElement>();
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Echecs d ack consecutifs pour CE cue. Reset au changement de cue.
+  const [failCount, setFailCount] = useState(0);
 
   // Effet on-open : chime + vibration. Re-trigger si on change de cue
   // (Director envoie un nouvel urgent pendant qu un est ouvert).
@@ -59,6 +77,12 @@ export default function UrgentCueModal({ cue, onAck }: Props) {
     buttonRef.current?.focus();
   }, [cue.id]);
 
+  // Nouveau cue → on repart de zero (compteur d echecs + erreur affichee).
+  useEffect(() => {
+    setFailCount(0);
+    setError(null);
+  }, [cue.id]);
+
   // Empeche Esc de declencher la fermeture native (au cas ou un parent
   // ajoute un handler global).
   useEffect(() => {
@@ -82,10 +106,22 @@ export default function UrgentCueModal({ cue, onAck }: Props) {
       // acked_by_me=true via le hook useCueStream.
     } catch (err) {
       setError((err as Error)?.message || t.ackFailed);
+      // Compte l echec : au 2e consecutif, la porte de sortie hors-ligne
+      // apparait (voir OFFLINE_ACK_THRESHOLD).
+      setFailCount((n) => n + 1);
     } finally {
       setSubmitting(false);
     }
   };
+
+  // Porte de sortie hors-ligne : on n acke PAS localement (pas de faux ✓). On
+  // delegue l intention au hook qui retentera l ack reel en fond. La modal se
+  // ferme d elle-meme : pendingUrgent EXCLUT desormais ce cue cote parent.
+  const handleDeferAck = () => {
+    onDeferAck?.(cue.id);
+  };
+
+  const showOfflineExit = !!onDeferAck && failCount >= OFFLINE_ACK_THRESHOLD;
 
   return (
     <div
@@ -141,6 +177,22 @@ export default function UrgentCueModal({ cue, onAck }: Props) {
         >
           {submitting ? t.sending : error ? t.retry : t.seen}
         </button>
+
+        {showOfflineExit && (
+          <div className="space-y-2 pt-1">
+            <p className="text-xs text-amber-100/90 leading-snug">
+              {t.offlineHint}
+            </p>
+            <button
+              type="button"
+              onClick={handleDeferAck}
+              className="w-full py-2.5 rounded-xl text-sm font-semibold border border-white/25 bg-white/10 hover:bg-white/20 text-white transition focus:outline-none focus:ring-2 focus:ring-white/60"
+              data-testid="urgent-cue-ack-offline"
+            >
+              {t.seenOffline}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

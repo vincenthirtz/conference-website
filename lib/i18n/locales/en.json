@@ -3368,7 +3368,9 @@
     "directorCue": "Director cue",
     "sending": "Sending…",
     "retry": "Try again",
-    "seen": "Seen"
+    "seen": "Seen",
+    "seenOffline": "Seen (offline)",
+    "offlineHint": "Network unreachable. \"Seen (offline)\" saves your confirmation and sends it once the connection is back."
   },
   "cockpitHotkeys": {
     "sessionExpired": "Session expired, sign in again.",

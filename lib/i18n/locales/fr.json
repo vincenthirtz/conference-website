@@ -3368,7 +3368,9 @@
     "directorCue": "Consigne Director",
     "sending": "Envoi…",
     "retry": "Réessayer",
-    "seen": "Vu"
+    "seen": "Vu",
+    "seenOffline": "Vu (hors ligne)",
+    "offlineHint": "Réseau injoignable. « Vu (hors ligne) » enregistre ta confirmation et l'envoie dès le retour du réseau."
   },
   "cockpitHotkeys": {
     "sessionExpired": "Session expirée, reconnecte-toi.",

@@ -19,8 +19,28 @@
 //   - Merge dedupe par id, garde les 50 plus recents.
 //   - pendingUrgent = cue urgent FIFO non-acked (le plus ancien d'abord).
 //   - ack(cueId) : POST + optimistic update + rollback en cas d erreur.
+//   - deferAck(cueId) : « ack differe » pour la porte de sortie hors-ligne de
+//     la UrgentCueModal (voir plus bas la semantique detaillee).
 //
-// API public : { cues, pendingUrgent, ack, error }
+// Semantique « ack differe, pas ack bidon » (porte de sortie hors-ligne) :
+//   Un ack signifie « j ai vu » et doit rester VRAI. En cas de coupure reseau
+//   totale du studio, l ack manuel echoue en boucle et la modal urgente reste
+//   bloquante au pire moment. deferAck(cueId) offre une sortie SANS trahir la
+//   semantique :
+//     - on NE marque PAS acked_by_me (ce serait un faux ack visible dans le
+//       CueFeed) ;
+//     - on enregistre l INTENTION d ack dans une file (deferredAckIds) et on
+//       retente l ack REEL en fond (interval court + evenement `online`) ;
+//     - le cue sort de pendingUrgent (la modal se ferme localement, le caster
+//       recupere son ecran) mais reste non-acke visible dans le CueFeed tant
+//       que l ack reel n a pas abouti ;
+//     - quand le reseau revient, l ack part pour de vrai → la regie finit par
+//       voir le ✓, juste differe. Ce n est donc pas un faux ack.
+//     - si l ack echoue pour une raison NON reseau (4xx/5xx, ex. 401), on
+//       purge l intention : le cue redevient un urgent non-acke (la modal peut
+//       se re-ouvrir, et il reste visible non-acke dans le CueFeed).
+//
+// API public : { cues, pendingUrgent, ack, deferAck, error }
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { logger } from '@/utils/logger';
@@ -31,6 +51,9 @@ import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 // Poll lent : safety-net si le canal realtime saute. Le realtime est la source
 // principale, donc on peut se permettre 30s sans degrader l UX.
 const POLL_INTERVAL_MS = 30_000;
+// Retry court des acks differes (« Vu hors ligne ») : on veut que le ✓ parte
+// vite des que le reseau revient, sans marteler l API.
+const RETRY_INTERVAL_MS = 5_000;
 const SEED_LIMIT = 20;
 const MAX_KEPT = 50;
 
@@ -45,6 +68,12 @@ export type UseCueStreamApi = {
   cues: CueWithAck[];
   pendingUrgent: CueWithAck | null;
   ack: (cueId: string) => Promise<void>;
+  /**
+   * Ack differe (« Vu hors ligne ») : enregistre l intention d ack et la
+   * retente en fond jusqu au succes reel, sans poser de faux acked_by_me.
+   * Voir la semantique detaillee en tete de fichier.
+   */
+  deferAck: (cueId: string) => void;
   error: string | null;
 };
 
@@ -84,6 +113,11 @@ export function useCueStream({
 }: UseCueStreamParams): UseCueStreamApi {
   const [cues, setCues] = useState<CueWithAck[]>([]);
   const [error, setError] = useState<string | null>(null);
+  // File des acks « en attente d envoi » (dismiss hors-ligne). Un id ici =
+  // intention d ack enregistree mais pas encore confirmee cote serveur.
+  const [deferredAckIds, setDeferredAckIds] = useState<Set<string>>(
+    () => new Set()
+  );
 
   // Refs pour la stabilite du polling.
   const tokenRef = useRef<string | null>(accessToken);
@@ -102,6 +136,7 @@ export function useCueStream({
     cuesRef.current = [];
     setCues([]);
     setError(null);
+    setDeferredAckIds(new Set());
   }, [runId]);
 
   // Wake-up handle exposé pour la subscription realtime ci-dessous.
@@ -289,6 +324,72 @@ export function useCueStream({
     onChange: onAckRealtimeChange,
   });
 
+  // Envoi bas-niveau de l ack. Ne touche pas au state cues : renvoie un
+  // resultat CLASSE pour que les deux appelants (ack manuel + retry differe)
+  // decident quoi faire. On distingue la coupure reseau (fetch rejette →
+  // transient, on retente) du refus serveur (reponse HTTP non-ok → definitif).
+  const postAck = useCallback(
+    async (
+      cueId: string,
+      token: string
+    ): Promise<
+      { ok: true } | { ok: false; network: boolean; message: string }
+    > => {
+      try {
+        const res = await fetch(`/api/caster/cues/${cueId}/ack`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        if (!res.ok) {
+          const body = (await res.json().catch(() => null)) as {
+            error?: string;
+          } | null;
+          // Une reponse HTTP a ete recue → ce n est PAS une coupure reseau.
+          // Echec « definitif » (401/403/4xx/5xx) : l intention differee ne
+          // doit pas rester en file indefiniment.
+          return {
+            ok: false,
+            network: false,
+            message: body?.error || `HTTP ${res.status}`,
+          };
+        }
+        (await res.json().catch(() => null)) as AckResponse | null;
+        return { ok: true };
+      } catch (err) {
+        // fetch a rejete → coupure reseau (studio hors ligne). Transient.
+        return {
+          ok: false,
+          network: true,
+          message: (err as Error)?.message || 'Ack echoue.',
+        };
+      }
+    },
+    []
+  );
+
+  const clearDeferredAck = useCallback((cueId: string) => {
+    setDeferredAckIds((prev) => {
+      if (!prev.has(cueId)) return prev;
+      const next = new Set(prev);
+      next.delete(cueId);
+      return next;
+    });
+  }, []);
+
+  // Confirme un ack ABOUTI (reel) en local : acked_by_me=true. Utilise par le
+  // retry differe quand le reseau revient et que l ack part pour de vrai.
+  const markAckedLocally = useCallback((cueId: string) => {
+    const idx = cuesRef.current.findIndex((c) => c.id === cueId);
+    if (idx === -1) return;
+    const next = [...cuesRef.current];
+    next[idx] = { ...next[idx], acked_by_me: true };
+    cuesRef.current = next;
+    setCues(next);
+  }, []);
+
   const ack = useCallback(
     async (cueId: string) => {
       const token = tokenRef.current;
@@ -305,49 +406,105 @@ export function useCueStream({
       cuesRef.current = optimistic;
       setCues(optimistic);
 
-      try {
-        const res = await fetch(`/api/caster/cues/${cueId}/ack`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        if (!res.ok) {
-          const body = (await res.json().catch(() => null)) as {
-            error?: string;
-          } | null;
-          throw new Error(body?.error || `HTTP ${res.status}`);
-        }
-        // Reponse OK : on confirme l optimistic update.
-        (await res.json().catch(() => null)) as AckResponse | null;
+      const result = await postAck(cueId, token);
+      if (result.ok) {
+        // Ack confirme cote serveur : purge une eventuelle intention differee
+        // pour ce cue (cas ou l utilisateur retente manuellement apres coup).
+        clearDeferredAck(cueId);
         setError(null);
-      } catch (err) {
-        logger.error('[cockpit-cues] ack error', err);
-        // Rollback.
-        cuesRef.current = previous;
-        setCues(previous);
-        const msg = (err as Error)?.message || 'Ack echoue.';
-        setError(msg);
-        throw err;
+        return;
       }
+      // Echec (reseau ou serveur) : rollback de l optimistic + throw pour que
+      // l appelant (UrgentCueModal / CueFeed) affiche l erreur et compte les
+      // echecs consecutifs.
+      logger.error('[cockpit-cues] ack error', result.message);
+      cuesRef.current = previous;
+      setCues(previous);
+      setError(result.message);
+      throw new Error(result.message);
     },
-    []
+    [postAck, clearDeferredAck]
   );
+
+  // Ack differe (« Vu hors ligne ») : enregistre l intention sans poser de
+  // faux acked_by_me. Le cue sort de pendingUrgent (modal fermee) mais reste
+  // non-acke dans le CueFeed jusqu au succes reel du retry en fond.
+  const deferAck = useCallback((cueId: string) => {
+    setDeferredAckIds((prev) => {
+      if (prev.has(cueId)) return prev;
+      const next = new Set(prev);
+      next.add(cueId);
+      return next;
+    });
+  }, []);
+
+  // Retry en fond des acks differes. Ne tourne que s il reste des intentions
+  // en file, sur interval court + a la reconnexion (evenement `online`). Chaque
+  // succes hydrate acked_by_me POUR DE VRAI ; un echec NON reseau purge
+  // l intention (le cue re-surgit en urgent non-acke) ; un echec reseau garde
+  // l intention pour le prochain tick.
+  useEffect(() => {
+    if (deferredAckIds.size === 0) return undefined;
+
+    let cancelled = false;
+
+    async function flush() {
+      if (cancelled) return;
+      const token = tokenRef.current;
+      if (!token) return;
+      // Snapshot des ids en file a cet instant (l effet se re-cree a chaque
+      // changement du Set, donc cette valeur est toujours la plus fraiche).
+      for (const cueId of deferredAckIds) {
+        if (cancelled) return;
+        const result = await postAck(cueId, token);
+        if (cancelled) return;
+        if (result.ok) {
+          markAckedLocally(cueId);
+          clearDeferredAck(cueId);
+        } else if (!result.network) {
+          clearDeferredAck(cueId);
+          setError(result.message);
+        }
+        // Echec reseau : on garde l intention → prochain tick / online.
+      }
+    }
+
+    // Tentative immediate (utile juste apres un deferAck / retour online).
+    void flush();
+    const handle = setInterval(() => void flush(), RETRY_INTERVAL_MS);
+    const onOnline = () => void flush();
+    if (typeof window !== 'undefined') {
+      window.addEventListener('online', onOnline);
+    }
+
+    return () => {
+      cancelled = true;
+      clearInterval(handle);
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('online', onOnline);
+      }
+    };
+  }, [deferredAckIds, postAck, clearDeferredAck, markAckedLocally]);
 
   const pendingUrgent = useMemo<CueWithAck | null>(() => {
     if (cues.length === 0) return null;
     // FIFO sur urgents non-acked et NON rétractés : on prend le plus ancien.
     // Un cue rétracté par le Director (retracted_at set, recu via realtime
     // UPDATE) sort d'ici → la UrgentCueModal se ferme automatiquement.
+    // Un cue « dismisse hors-ligne » (deferredAckIds) sort AUSSI d ici → la
+    // modal ne se ré-ouvre pas en boucle pendant que son ack part en fond.
     const urgents = cues.filter(
-      (c) => c.severity === 'urgent' && !c.acked_by_me && !c.retracted_at
+      (c) =>
+        c.severity === 'urgent' &&
+        !c.acked_by_me &&
+        !c.retracted_at &&
+        !deferredAckIds.has(c.id)
     );
     if (urgents.length === 0) return null;
     return urgents.reduce((oldest, c) =>
       c.created_at < oldest.created_at ? c : oldest
     );
-  }, [cues]);
+  }, [cues, deferredAckIds]);
 
-  return { cues, pendingUrgent, ack, error };
+  return { cues, pendingUrgent, ack, deferAck, error };
 }
