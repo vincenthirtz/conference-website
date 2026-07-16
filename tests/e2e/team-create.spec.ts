@@ -64,18 +64,22 @@ test.describe.serial('Team creation page', () => {
 
     await page.goto('/team/create');
 
+    // Étape 1 — Identité
     await page.getByPlaceholder('Ex : Phénix').fill(TEAM_NAME);
     await page.getByPlaceholder('France, Europe…').fill('France');
     await page
       .getByPlaceholder('Pitch rapide, palmarès, ambitions…')
       .fill('Equipe test e2e.');
-    // Ajouter un membre par défaut
+    await page.getByRole('button', { name: 'Suivant' }).click();
+
+    // Étape 2 — Roster (le rôle est désormais un select ; capitaine par défaut)
     await page.getByPlaceholder('joueuse@email.tld').fill(PLAYER_EMAIL);
-    await page.getByPlaceholder('player / coach / sub').fill('player');
+    await page.locator('#member-0-role').selectOption('player');
     await page.getByPlaceholder('Pseudo#0000').fill(PLAYER_BTAG);
+    await page.getByRole('button', { name: 'Suivant' }).click();
 
+    // Étape 3 — Tournoi & envoi
     await solveCaptcha(page);
-
     await page.getByRole('button', { name: "Créer l'équipe" }).click();
 
     await expect(page.getByText('Équipe créée')).toBeVisible({
@@ -118,32 +122,32 @@ test.describe.serial('Team creation page', () => {
 
     await page.goto('/team/create');
 
+    // Étape 1 — Identité
     await page.getByPlaceholder('Ex : Phénix').fill(teamName);
     await page.getByPlaceholder('France, Europe…').fill('France');
     await page
       .getByPlaceholder('Pitch rapide, palmarès, ambitions…')
       .fill('Equipe test e2e avec 5 membres.');
+    await page.getByRole('button', { name: 'Suivant' }).click();
 
-    // Premier membre déjà présent
+    // Étape 2 — Roster : premier membre déjà présent
     await page.getByPlaceholder('joueuse@email.tld').first().fill(PLAYER_EMAIL);
-    await page.getByPlaceholder('player / coach / sub').first().fill('player');
+    await page.locator('#member-0-role').selectOption('player');
     await page.getByPlaceholder('Pseudo#0000').first().fill(PLAYER_BTAG);
 
     // Ajouter 4 autres membres (total 5)
     for (let i = 0; i < 4; i++) {
       await page.getByRole('button', { name: 'Ajouter une personne' }).click();
       const emailInput = page.getByPlaceholder('joueuse@email.tld').nth(i + 1);
-      const roleInput = page
-        .getByPlaceholder('player / coach / sub')
-        .nth(i + 1);
       const btagInput = page.getByPlaceholder('Pseudo#0000').nth(i + 1);
       await emailInput.fill(EXTRA_MEMBER_EMAILS[i]);
-      await roleInput.fill('player');
+      await page.locator(`#member-${i + 1}-role`).selectOption('player');
       await btagInput.fill(EXTRA_MEMBER_BTAGS[i]);
     }
+    await page.getByRole('button', { name: 'Suivant' }).click();
 
+    // Étape 3 — Tournoi & envoi
     await solveCaptcha(page);
-
     await page.getByRole('button', { name: "Créer l'équipe" }).click();
 
     await expect(page.getByText('Équipe créée')).toBeVisible({
