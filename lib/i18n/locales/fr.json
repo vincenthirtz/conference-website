@@ -4191,7 +4191,18 @@
     "endRunConfirmBody": "Tous les segments non terminés passeront à « terminé ».",
     "endRunConfirmCta": "Terminer le run",
     "endRunSuccess": "Run terminé.",
-    "endRunError": "Impossible de terminer le run."
+    "endRunError": "Impossible de terminer le run.",
+    "endSegment": "Terminer le segment",
+    "endingSegment": "Fin du segment…",
+    "endSegmentConfirmTitle": "Terminer le segment en cours ?",
+    "endSegmentConfirmBody": "Le segment passera à « terminé ». Le pupitre attendra le prochain segment.",
+    "endSegmentConfirmCta": "Terminer le segment",
+    "endSegmentSuccess": "Segment terminé.",
+    "endSegmentError": "Impossible de terminer le segment.",
+    "startNext": "Démarrer le prochain",
+    "startingNext": "Démarrage…",
+    "startNextSuccess": "Segment suivant démarré.",
+    "startNextError": "Impossible de démarrer le segment suivant."
   },
   "regieNewRun": {
     "title": "Démarrer un nouveau run",
@@ -4200,11 +4211,16 @@
     "nameLabel": "Nom du run",
     "namePlaceholder": "Ex. Soirée de lancement",
     "scheduledLabel": "Date planifiée",
+    "tournamentLabel": "Tournoi lié (optionnel)",
+    "tournamentNone": "Aucun (run libre)",
     "submit": "Créer et démarrer",
     "submitting": "Démarrage…",
     "nameRequired": "Le nom du run est requis.",
     "createSuccess": "Run créé et démarré.",
-    "createError": "Impossible de créer ou démarrer le run."
+    "createError": "Impossible de créer ou démarrer le run.",
+    "segmentsCreated_one": "{count} segment ajouté depuis le tournoi.",
+    "segmentsCreated_other": "{count} segments ajoutés depuis le tournoi.",
+    "fromTournamentError": "Le run a été créé mais les segments du tournoi n'ont pas pu être ajoutés. Vous pouvez le lancer via « Démarrer un run préparé » ou le compléter dans le Director."
   },
   "regieStartPrepared": {
     "title": "Démarrer un run préparé",

@@ -136,13 +136,39 @@ function ConnectionIndicator({ connection }: { connection: Connection }) {
 function NewRunPanel({ onStarted }: { onStarted: () => Promise<void> }) {
   const t = useT('regieNewRun');
   const { addToast } = useToast();
-  // Deux intentions successives (create puis start) : la clé se régénère après
-  // chaque 2xx, la seconde mutation part donc avec une clé fraîche.
+  // Deux (ou trois) intentions successives (create → [from-tournament] →
+  // start) : la clé se régénère après chaque 2xx, chaque mutation part donc
+  // avec une clé fraîche.
   const { mutateJson } = useIdempotentMutation();
+  const { adminFetchJson } = useAdminFetch();
 
   const [name, setName] = useState('');
   const [scheduledAt, setScheduledAt] = useState(() => nowLocalInput());
   const [busy, setBusy] = useState(false);
+  // Sélecteur de tournoi optionnel : '' = run libre (comportement historique).
+  const [tournaments, setTournaments] = useState<
+    { id: string; name: string }[]
+  >([]);
+  const [tournamentId, setTournamentId] = useState('');
+
+  // Charge la liste des tournois pour le sélecteur. Optionnel : en cas d'échec
+  // on reste sur « run libre » sans bruit (le run 100 % libre reste possible).
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const json = await adminFetchJson<{
+          tournaments: { id: string; name: string }[];
+        }>('/api/admin/tournaments?limit=100&orderBy=start_date&orderDir=desc');
+        if (!cancelled) setTournaments(json.tournaments ?? []);
+      } catch {
+        if (!cancelled) setTournaments([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [adminFetchJson]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -159,11 +185,50 @@ function NewRunPanel({ onStarted }: { onStarted: () => Promise<void> }) {
         method: 'POST',
         body: JSON.stringify({ name: trimmed, scheduled_at: scheduledIso }),
       });
+
+      // Tournoi lié : on pré-remplit les segments match AVANT le /start (les
+      // segments sont ajoutés au draft). Si cet appel échoue, le run existe
+      // déjà en draft : on informe l'utilisateur, on refetch (le draft
+      // apparaît dans « Démarrer un run préparé ») et on NE démarre PAS —
+      // pas d'état incohérent silencieux.
+      if (tournamentId) {
+        try {
+          const res = await mutateJson<{
+            segments: unknown[];
+            created: number;
+            skipped: number;
+          }>(`/api/admin/events/${created.id}/segments/from-tournament`, {
+            method: 'POST',
+            body: JSON.stringify({ tournament_id: tournamentId }),
+          });
+          const count = res.created ?? 0;
+          addToast(
+            format(
+              count === 1 ? t.segmentsCreated_one : t.segmentsCreated_other,
+              { count }
+            ),
+            'success'
+          );
+        } catch (fromErr) {
+          const fe = fromErr as AdminFetchError;
+          const feError =
+            typeof fe.payload === 'object' && fe.payload && 'error' in fe.payload
+              ? String((fe.payload as { error: string }).error)
+              : null;
+          addToast(feError || t.fromTournamentError, 'error');
+          setName('');
+          setTournamentId('');
+          await onStarted();
+          return;
+        }
+      }
+
       await mutateJson(`/api/admin/events/${created.id}/start`, {
         method: 'POST',
       });
       addToast(t.createSuccess, 'success');
       setName('');
+      setTournamentId('');
       // Le run live apparaît via realtime, mais on refetch immédiatement pour
       // une transition instantanée (pas d'attente du canal).
       await onStarted();
@@ -221,6 +286,26 @@ function NewRunPanel({ onStarted }: { onStarted: () => Promise<void> }) {
           />
         </label>
       </div>
+
+      <label className="block">
+        <span className="block text-xs text-neutral-400 mb-1">
+          {t.tournamentLabel}
+        </span>
+        <select
+          value={tournamentId}
+          onChange={(e) => setTournamentId(e.target.value)}
+          disabled={busy}
+          className="w-full rounded-md bg-neutral-950 border border-neutral-700 px-2.5 py-2 text-sm text-white disabled:opacity-50"
+          data-testid="regie-new-run-tournament"
+        >
+          <option value="">{t.tournamentNone}</option>
+          {tournaments.map((tour) => (
+            <option key={tour.id} value={tour.id}>
+              {tour.name}
+            </option>
+          ))}
+        </select>
+      </label>
 
       <button
         type="submit"
@@ -393,6 +478,9 @@ function RegiePage({ staff }: StaffProps) {
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
   const { mutateJson } = useIdempotentMutation();
   const [endingRun, setEndingRun] = useState(false);
+  // Busy ciblé pour la barre d'actions segment (end / startNext), afin de
+  // désactiver les deux boutons pendant qu'une transition est en cours.
+  const [segAction, setSegAction] = useState<'end' | 'startNext' | null>(null);
 
   // Empêche l'écran de s'éteindre tant que l'opérateur est sur la régie.
   const { supported: wakeLockSupported } = useWakeLock(true);
@@ -660,6 +748,79 @@ function RegiePage({ staff }: StaffProps) {
     }
   }, [liveRunId, endingRun, confirm, tr, mutateJson, addToast, fetchRun]);
 
+  // Terminer le segment en cours : confirmation légère (warning, non bloquante)
+  // → POST .../{seg}/end → toast + refetch. Le realtime recale aussi l'écran.
+  const handleEndSegment = useCallback(async () => {
+    if (!liveRunId || !currentSegment || segAction) return;
+    const ok = await confirm({
+      title: tr.endSegmentConfirmTitle,
+      subtitle: tr.endSegmentConfirmBody,
+      variant: 'warning',
+      confirmLabel: tr.endSegmentConfirmCta,
+    });
+    if (!ok) return;
+    setSegAction('end');
+    try {
+      await mutateJson(
+        `/api/admin/events/${liveRunId}/segments/${currentSegment.id}/end`,
+        { method: 'POST' }
+      );
+      addToast(tr.endSegmentSuccess, 'success');
+      await fetchRun();
+    } catch (err) {
+      const e2 = err as AdminFetchError;
+      const payloadError =
+        typeof e2.payload === 'object' && e2.payload && 'error' in e2.payload
+          ? String((e2.payload as { error: string }).error)
+          : null;
+      addToast(payloadError || e2.message || tr.endSegmentError, 'error');
+    } finally {
+      setSegAction(null);
+    }
+  }, [
+    liveRunId,
+    currentSegment,
+    segAction,
+    confirm,
+    tr,
+    mutateJson,
+    addToast,
+    fetchRun,
+  ]);
+
+  // Démarrer le prochain segment : démarrer TERMINE automatiquement le segment
+  // live courant (invariant single-live côté transitionToSegment), donc un
+  // simple POST .../{next}/start suffit — pas besoin d'enchaîner un end.
+  const handleStartNext = useCallback(async () => {
+    if (!liveRunId || !nextSegment || segAction) return;
+    setSegAction('startNext');
+    try {
+      await mutateJson(
+        `/api/admin/events/${liveRunId}/segments/${nextSegment.id}/start`,
+        { method: 'POST' }
+      );
+      addToast(tr.startNextSuccess, 'success');
+      await fetchRun();
+    } catch (err) {
+      const e2 = err as AdminFetchError;
+      const payloadError =
+        typeof e2.payload === 'object' && e2.payload && 'error' in e2.payload
+          ? String((e2.payload as { error: string }).error)
+          : null;
+      addToast(payloadError || e2.message || tr.startNextError, 'error');
+    } finally {
+      setSegAction(null);
+    }
+  }, [
+    liveRunId,
+    nextSegment,
+    segAction,
+    tr,
+    mutateJson,
+    addToast,
+    fetchRun,
+  ]);
+
   // ---- Render ----
 
   // En-tête admin sobre (titre + connexion + Director + déconnexion), réutilisé
@@ -840,6 +1001,46 @@ function RegiePage({ staff }: StaffProps) {
           nextSegment={nextSegment}
           schedule={schedule}
         />
+
+        {/* Barre d'actions segment (admin/owner uniquement) : piloter les
+            transitions depuis la régie sans passer par le Director. Les
+            endpoints segments sont en rôle 'manager' → accessibles à
+            admin/owner (jamais à un caster). */}
+        {liveRunId && canStartRun && (currentSegment || nextSegment) && (
+          <div
+            className="flex flex-wrap items-center gap-2"
+            data-testid="regie-segment-actions"
+          >
+            {currentSegment && (
+              <button
+                type="button"
+                onClick={handleEndSegment}
+                disabled={!!segAction}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-xs font-medium disabled:opacity-40 disabled:cursor-not-allowed"
+                data-testid="regie-end-segment"
+              >
+                {segAction === 'end' && (
+                  <span className="inline-block h-3.5 w-3.5 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+                )}
+                {segAction === 'end' ? tr.endingSegment : tr.endSegment}
+              </button>
+            )}
+            {nextSegment && (
+              <button
+                type="button"
+                onClick={handleStartNext}
+                disabled={!!segAction}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600/90 hover:bg-indigo-500 border border-indigo-500/40 text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
+                data-testid="regie-start-next"
+              >
+                {segAction === 'startNext' && (
+                  <span className="inline-block h-3.5 w-3.5 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+                )}
+                {segAction === 'startNext' ? tr.startingNext : tr.startNext}
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Briefing match si pertinent */}
         {briefingMatchId && (

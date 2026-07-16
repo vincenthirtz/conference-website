@@ -4191,7 +4191,18 @@
     "endRunConfirmBody": "All unfinished segments will be marked as done.",
     "endRunConfirmCta": "End the run",
     "endRunSuccess": "Run ended.",
-    "endRunError": "Could not end the run."
+    "endRunError": "Could not end the run.",
+    "endSegment": "End the segment",
+    "endingSegment": "Ending segment…",
+    "endSegmentConfirmTitle": "End the current segment?",
+    "endSegmentConfirmBody": "The segment will be marked as done. The desk will wait for the next segment.",
+    "endSegmentConfirmCta": "End the segment",
+    "endSegmentSuccess": "Segment ended.",
+    "endSegmentError": "Could not end the segment.",
+    "startNext": "Start the next one",
+    "startingNext": "Starting…",
+    "startNextSuccess": "Next segment started.",
+    "startNextError": "Could not start the next segment."
   },
   "regieNewRun": {
     "title": "Start a new run",
@@ -4200,11 +4211,16 @@
     "nameLabel": "Run name",
     "namePlaceholder": "e.g. Launch night",
     "scheduledLabel": "Scheduled date",
+    "tournamentLabel": "Linked tournament (optional)",
+    "tournamentNone": "None (free-form run)",
     "submit": "Create and start",
     "submitting": "Starting…",
     "nameRequired": "The run name is required.",
     "createSuccess": "Run created and started.",
-    "createError": "Could not create or start the run."
+    "createError": "Could not create or start the run.",
+    "segmentsCreated_one": "{count} segment added from the tournament.",
+    "segmentsCreated_other": "{count} segments added from the tournament.",
+    "fromTournamentError": "The run was created but the tournament segments could not be added. You can start it via “Start a prepared run” or complete it in the Director."
   },
   "regieStartPrepared": {
     "title": "Start a prepared run",
