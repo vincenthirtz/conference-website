@@ -36,11 +36,11 @@ type StaffShape = {
 
 export const getServerSideProps = withStaffPage('manager');
 
-type TabKey = 'equipe' | 'joinRequests' | 'scrims' | 'history';
+type TabKey = 'team' | 'joinRequests' | 'scrims' | 'history';
 
 function getTabs(t: Dict): Array<{ key: TabKey; label: string }> {
   return [
-    { key: 'equipe', label: t.tabEquipe },
+    { key: 'team', label: t.tabEquipe },
     { key: 'joinRequests', label: t.tabJoinRequests },
     { key: 'scrims', label: t.tabScrims },
     { key: 'history', label: t.tabHistory },
@@ -231,7 +231,7 @@ function CaptainViewPage({ staff: _staff }: { staff: StaffShape }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
-  const [tab, setTab] = useState<TabKey>('equipe');
+  const [tab, setTab] = useState<TabKey>('team');
 
   // Per-action busy flag (keeps buttons from double-submitting).
   const [busy, setBusy] = useState<string | null>(null);
@@ -536,7 +536,7 @@ function CaptainViewPage({ staff: _staff }: { staff: StaffShape }) {
                       <StatPill
                         label={t.pillMembers}
                         value={memberCount}
-                        onClick={() => setTab('equipe')}
+                        onClick={() => setTab('team')}
                       />
                     </div>
                   )}
@@ -591,7 +591,7 @@ function CaptainViewPage({ staff: _staff }: { staff: StaffShape }) {
                   </div>
 
                   {/* Équipe */}
-                  {tab === 'equipe' && (
+                  {tab === 'team' && (
                     <section
                       role="tabpanel"
                       className="rounded-2xl border border-neutral-700/50 bg-neutral-800/40 p-6"
