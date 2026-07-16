@@ -65,16 +65,20 @@ export type StaffSession = {
 };
 
 export function useStaffSession(): StaffSession {
-  const [loading, setLoading] = useState(() => !readCache());
-  const [isStaff, setIsStaff] = useState(() => readCache()?.isStaff === true);
-  const [staffName, setStaffName] = useState<string | null>(
-    () => readCache()?.staffName ?? null
-  );
-  const [staffRole, setStaffRole] = useState<StaffRole | null>(
-    () => readCache()?.staffRole ?? null
-  );
+  // IMPORTANT — hydratation : on N'initialise PAS depuis le cache (sessionStorage)
+  // ici. readCache() renvoie null en SSR mais la valeur cachée côté client, donc
+  // lire le cache dans l'initialiseur useState faisait diverger le 1er rendu
+  // client du HTML SSR → mismatch d'hydratation sur TOUTE page rendant le Navbar
+  // (toutes les pages /admin), avec régénération complète de l'arbre par React.
+  // On part donc d'un état SSR-safe (loading, pas staff) ; le cache est appliqué
+  // aussitôt après le mount par checkStaff (branche synchrone isCacheFresh),
+  // donc sans attente réseau — juste un tick plus tard, cohérent avec le SSR.
+  const [loading, setLoading] = useState(true);
+  const [isStaff, setIsStaff] = useState(false);
+  const [staffName, setStaffName] = useState<string | null>(null);
+  const [staffRole, setStaffRole] = useState<StaffRole | null>(null);
   const [activeTenantKind, setActiveTenantKind] = useState<TenantKind | null>(
-    () => readCache()?.activeTenantKind ?? null
+    null
   );
 
   const inflight = useRef<Promise<void> | null>(null);
