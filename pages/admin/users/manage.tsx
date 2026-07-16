@@ -12,6 +12,7 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminResource } from '@/hooks/useAdminResource';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import Modal from '@/components/admin/Modal';
+import { Skeleton } from '@/components/admin/Skeleton';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 type Dict = ReturnType<typeof useAdminT<'adminUsersManage'>>;
@@ -156,6 +157,17 @@ function canGrantRole(requesterRole: string | null, role: string): boolean {
     ? (STAFF_ROLE_RANK[requesterRole as StaffRole] ?? -1)
     : -1;
   return newRank < requesterRank;
+}
+
+/**
+ * Options du <select> de rôle d'une ligne. Garantit que le rôle courant figure
+ * toujours dans la liste : un compte legacy portant un rôle hors `ROLES` (ex.
+ * `manager` supprimé) laisserait sinon le select contrôlé sans option
+ * correspondant à sa `value` → warning React + affichage vide.
+ */
+function roleOptionsFor(currentRole: string | null): string[] {
+  const current = (currentRole || 'member').toLowerCase();
+  return ROLES.includes(current) ? ROLES : [current, ...ROLES];
 }
 
 export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
@@ -443,7 +455,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
-        <div className="w-full px-4 sm:px-6 lg:px-8 pt-20 pb-12">
+        <div className="mx-auto w-full max-w-screen-2xl px-4 sm:px-6 lg:px-8 pt-20 pb-12">
           {/* Header */}
           <div className="mb-8">
             <div className="flex flex-wrap items-start justify-between gap-4">
@@ -469,6 +481,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
+                  aria-hidden="true"
                 >
                   <path
                     strokeLinecap="round"
@@ -483,13 +496,13 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
           </div>
 
           {/* Filters */}
-          <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 mb-6">
+          <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 mb-6">
             <form
               onSubmit={handleSearchSubmit}
               className="flex gap-4 flex-wrap items-end"
             >
               <div className="flex-1 min-w-[200px]">
-                <label className="block text-sm text-neutral-400 mb-1">
+                <label className="block text-sm text-neutral-300 mb-1.5">
                   {t.searchLabel}
                 </label>
                 <div className="relative">
@@ -498,6 +511,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
+                    aria-hidden="true"
                   >
                     <path
                       strokeLinecap="round"
@@ -510,7 +524,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
                     type="text"
                     aria-label={t.searchPlaceholder}
                     placeholder={t.searchPlaceholder}
-                    className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-neutral-950/50 border border-white/10 text-white placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-purple-500/70"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                   />
@@ -518,11 +532,11 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
               </div>
 
               <div className="min-w-[160px]">
-                <label className="block text-sm text-neutral-400 mb-1">
+                <label className="block text-sm text-neutral-300 mb-1.5">
                   {t.roleLabel}
                 </label>
                 <select
-                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-950/50 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/70"
                   value={roleFilter || ''}
                   onChange={(e) => setRoleFilter(e.target.value || null)}
                 >
@@ -537,13 +551,14 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
 
               <button
                 type="submit"
-                className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors flex items-center gap-2"
+                className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-sm font-semibold transition-colors flex items-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/60"
               >
                 <svg
                   className="w-4 h-4"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
+                  aria-hidden="true"
                 >
                   <path
                     strokeLinecap="round"
@@ -558,10 +573,19 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
           </section>
 
           {/* Users List */}
-          <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden">
+          <section className="rounded-2xl border border-white/10 bg-white/[0.03] overflow-hidden">
             {loading ? (
-              <div className="flex items-center justify-center py-20">
-                <div className="w-8 h-8 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
+              <div className="divide-y divide-white/5">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="flex items-center gap-4 p-4">
+                    <Skeleton className="w-12 h-12 flex-shrink-0" rounded="rounded-xl" />
+                    <div className="flex-1 min-w-0 space-y-2">
+                      <Skeleton className="h-4 w-40" />
+                      <Skeleton className="h-3 w-64" />
+                    </div>
+                    <Skeleton className="h-8 w-28 flex-shrink-0" rounded="rounded-lg" />
+                  </div>
+                ))}
               </div>
             ) : users.length === 0 ? (
               <div className="text-center py-20 text-neutral-400">
@@ -570,6 +594,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
+                  aria-hidden="true"
                 >
                   <path
                     strokeLinecap="round"
@@ -581,20 +606,23 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
                 {t.emptyUsers}
               </div>
             ) : (
-              <div className="divide-y divide-neutral-700/50">
+              <ul role="list" className="divide-y divide-white/5">
                 {users.map((u) => (
-                  <div
+                  <li
                     key={u.id}
-                    className="flex items-center gap-4 p-4 hover:bg-neutral-700/30 transition-colors group"
+                    className="flex flex-col gap-4 p-4 hover:bg-white/[0.03] transition-colors sm:flex-row sm:items-center"
                   >
+                    {/* Avatar + info wrapper (mobile: header row) */}
+                    <div className="flex flex-1 min-w-0 items-start gap-4">
                     {/* Avatar */}
                     <div className="flex-shrink-0">
-                      <div className="w-12 h-12 rounded-xl bg-neutral-700/50 flex items-center justify-center border border-neutral-700">
+                      <div className="w-12 h-12 rounded-xl bg-white/[0.04] flex items-center justify-center border border-white/10">
                         <svg
                           className="w-6 h-6 text-neutral-400"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
+                          aria-hidden="true"
                         >
                           <path
                             strokeLinecap="round"
@@ -622,7 +650,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
                       </div>
                       <div className="flex items-center gap-3 text-sm text-neutral-400 flex-wrap">
                         {u.email && (
-                          <span className="font-mono text-xs bg-neutral-800 px-2 py-0.5 rounded truncate max-w-[200px]">
+                          <span className="font-mono text-xs bg-white/[0.05] px-2 py-0.5 rounded truncate max-w-[200px]">
                             {u.email}
                           </span>
                         )}
@@ -707,19 +735,22 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
                         </div>
                       )}
                     </div>
+                    </div>
 
                     {/* Actions */}
-                    <div className="flex-shrink-0 flex items-center gap-2">
+                    <div className="flex flex-shrink-0 flex-wrap items-center justify-end gap-1.5 sm:flex-nowrap">
                       <Link
                         href={`/admin/users/${u.id}/player-view`}
                         title={t.playerViewTitle}
-                        className="p-2 rounded-lg text-neutral-400 hover:text-emerald-400 hover:bg-neutral-700 transition-colors"
+                        aria-label={t.playerViewTitle}
+                        className="p-2 rounded-lg text-neutral-400 hover:text-emerald-400 hover:bg-white/[0.06] transition-colors"
                       >
                         <svg
                           className="w-4 h-4"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
+                          aria-hidden="true"
                         >
                           <path
                             strokeLinecap="round"
@@ -742,13 +773,15 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
                         <Link
                           href={`/admin/users/${u.id}/captain-view`}
                           title={t.captainViewTitle}
-                          className="p-2 rounded-lg text-neutral-400 hover:text-amber-400 hover:bg-neutral-700 transition-colors"
+                          aria-label={t.captainViewTitle}
+                          className="p-2 rounded-lg text-neutral-400 hover:text-amber-400 hover:bg-white/[0.06] transition-colors"
                         >
                           <svg
                             className="w-4 h-4"
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
+                            aria-hidden="true"
                           >
                             <path
                               strokeLinecap="round"
@@ -771,9 +804,12 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
                             onChange={(e) => changeRole(u.id, e.target.value)}
                             disabled={updating === u.id || targetLocked}
                             title={targetLocked ? t.lockedTitle : undefined}
-                            className="px-3 py-1.5 rounded-lg bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                            aria-label={format(t.roleSelectAria, {
+                              name: u.display_name || u.email || t.defaultUser,
+                            })}
+                            className="px-3 py-1.5 rounded-lg bg-white/[0.06] border border-white/10 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/70 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            {ROLES.map((r) => {
+                            {roleOptionsFor(u.role).map((r) => {
                               // Toujours afficher le rôle courant (sinon le
                               // <select> contrôlé n'aurait aucune option
                               // correspondant à sa value). Les autres options
@@ -794,15 +830,17 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
                       <button
                         type="button"
                         title={t.resendTitle}
+                        aria-label={t.resendTitle}
                         onClick={() => resendCredentials(u)}
                         disabled={resendingUser === u.id || !u.email}
-                        className="p-2 rounded-lg text-neutral-400 hover:text-amber-400 hover:bg-neutral-700 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                        className="p-2 rounded-lg text-neutral-400 hover:text-amber-400 hover:bg-white/[0.06] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                       >
                         <svg
                           className="w-4 h-4"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
+                          aria-hidden="true"
                         >
                           <path
                             strokeLinecap="round"
@@ -816,14 +854,16 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
                       <button
                         type="button"
                         title={t.editTitle}
+                        aria-label={t.editTitle}
                         onClick={() => openEditUser(u)}
-                        className="p-2 rounded-lg text-neutral-400 hover:text-blue-400 hover:bg-neutral-700 transition-colors"
+                        className="p-2 rounded-lg text-neutral-400 hover:text-blue-400 hover:bg-white/[0.06] transition-colors"
                       >
                         <svg
                           className="w-4 h-4"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
+                          aria-hidden="true"
                         >
                           <path
                             strokeLinecap="round"
@@ -837,14 +877,16 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
                       <button
                         type="button"
                         title={t.deleteTitle}
+                        aria-label={t.deleteTitle}
                         onClick={() => setDeletingUser(u)}
-                        className="p-2 rounded-lg text-neutral-400 hover:text-red-400 hover:bg-neutral-700 transition-colors"
+                        className="p-2 rounded-lg text-neutral-400 hover:text-red-400 hover:bg-white/[0.06] transition-colors"
                       >
                         <svg
                           className="w-4 h-4"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
+                          aria-hidden="true"
                         >
                           <path
                             strokeLinecap="round"
@@ -855,9 +897,9 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
                         </svg>
                       </button>
                     </div>
-                  </div>
+                  </li>
                 ))}
-              </div>
+              </ul>
             )}
           </section>
 
@@ -867,13 +909,14 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
               type="button"
               disabled={offset === 0}
               onClick={() => setOffset(Math.max(0, offset - limit))}
-              className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="px-4 py-2.5 rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               <svg
                 className="w-4 h-4"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
+                aria-hidden="true"
               >
                 <path
                   strokeLinecap="round"
@@ -897,7 +940,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
               type="button"
               disabled={total !== null && offset + limit >= total}
               onClick={() => setOffset(offset + limit)}
-              className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="px-4 py-2.5 rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {t.next}
               <svg
@@ -905,6 +948,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
+                aria-hidden="true"
               >
                 <path
                   strokeLinecap="round"
@@ -928,14 +972,14 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
           <>
             <button
               onClick={() => setEditingUser(null)}
-              className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
+              className="px-4 py-2 rounded-lg border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-sm font-medium transition-colors"
             >
               {t.cancel}
             </button>
             <button
               onClick={saveEditUser}
               disabled={editSaving}
-              className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {editSaving && (
                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -947,14 +991,14 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
       >
         <div className="space-y-4">
           <div>
-            <label className="block text-sm text-neutral-400 mb-1">
+            <label className="block text-sm text-neutral-300 mb-1.5">
               {t.displayNameLabel}
             </label>
             <input
               type="text"
               value={editDisplayName}
               onChange={(e) => setEditDisplayName(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              className="w-full px-3 py-2.5 rounded-xl bg-neutral-950/50 border border-white/10 text-white placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-purple-500/70 text-sm"
               placeholder={t.displayNamePlaceholder}
             />
           </div>
@@ -980,7 +1024,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
           <>
             <button
               onClick={() => setDeletingUser(null)}
-              className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
+              className="px-4 py-2 rounded-lg border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-sm font-medium transition-colors"
             >
               {t.cancel}
             </button>
@@ -1024,14 +1068,14 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
           <>
             <button
               onClick={() => setEditingBattleTag(null)}
-              className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
+              className="px-4 py-2 rounded-lg border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-sm font-medium transition-colors"
             >
               {t.cancel}
             </button>
             <button
               onClick={saveBattleTag}
               disabled={battleTagSaving}
-              className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {battleTagSaving && (
                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -1043,14 +1087,14 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
       >
         <div className="space-y-4">
           <div>
-            <label className="block text-sm text-neutral-400 mb-1">
+            <label className="block text-sm text-neutral-300 mb-1.5">
               {t.battleTagLabel}
             </label>
             <input
               type="text"
               value={newBattleTag}
               onChange={(e) => setNewBattleTag(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              className="w-full px-3 py-2.5 rounded-xl bg-neutral-950/50 border border-white/10 text-white placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-purple-500/70 text-sm"
               placeholder={t.battleTagPlaceholder}
             />
             <p className="text-xs text-neutral-500 mt-1">{t.battleTagHelp}</p>

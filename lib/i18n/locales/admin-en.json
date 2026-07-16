@@ -2102,6 +2102,7 @@
     "searchLabel": "Search",
     "searchPlaceholder": "Email, name or BattleTag...",
     "roleLabel": "Role",
+    "roleSelectAria": "Change role of {name}",
     "allRoles": "All roles",
     "searchButton": "Search",
     "emptyUsers": "No users found",
