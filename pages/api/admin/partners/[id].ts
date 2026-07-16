@@ -99,7 +99,7 @@ async function handler(
     if (ctx.staff?.id) {
       await logStaffAction({
         staff_id: ctx.staff.id,
-        action: 'settings_update' as any,
+        action: 'settings_update',
         entity_type: 'partner',
         entity_id: id,
         payload: { updates },
@@ -130,7 +130,7 @@ async function handler(
     if (ctx.staff?.id) {
       await logStaffAction({
         staff_id: ctx.staff.id,
-        action: 'settings_update' as any,
+        action: 'settings_update',
         entity_type: 'partner',
         entity_id: id,
         payload: { name: existing.name, deleted: true },
