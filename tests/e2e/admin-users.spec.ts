@@ -139,9 +139,9 @@ test.describe.serial('Admin users management', () => {
     // Find the role select for the target user
     // After filtering, there should be only one user card with a combobox
     // Get the combobox that is NOT the filter combobox (which has "Tous les rôles")
-    const allComboboxes = page.getByRole('combobox');
-    // The second combobox should be the user's role select (first is the filter)
-    const roleSelect = allComboboxes.nth(1);
+    // Cible le select de rôle de la ligne via son aria-label (robuste aux
+    // autres combobox de la barre de filtres/tri).
+    const roleSelect = page.getByLabel(/^Changer le rôle de/).first();
 
     // Change role to caster
     await roleSelect.selectOption('caster');
@@ -196,8 +196,9 @@ test.describe.serial('Admin users management', () => {
       timeout: 10000,
     });
 
-    // Find the role select for the target user (second combobox after filter)
-    const roleSelect = page.getByRole('combobox').nth(1);
+    // Cible le select de rôle de la ligne via son aria-label (robuste aux
+    // autres combobox de la barre de filtres/tri).
+    const roleSelect = page.getByLabel(/^Changer le rôle de/).first();
 
     // Change role to member
     await roleSelect.selectOption('member');
