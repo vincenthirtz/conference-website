@@ -10212,6 +10212,39 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /api/admin/events/{runId}/cues/{cueId}:
+    parameters:
+      - $ref: '#/components/parameters/RunId'
+      - name: cueId
+        in: path
+        required: true
+        schema:
+          type: string
+    delete:
+      summary: Retract (soft-delete) a cue.
+      description: |
+        Requires `manager` role. Does not delete the row: sets `retracted_at` +
+        `retracted_by_user_id` so casters get a realtime UPDATE (not a DELETE).
+        Idempotent: an already-retracted cue returns 200 with `alreadyRetracted`.
+      operationId: adminRetractEventCue
+      tags:
+        - admin/events
+      security:
+        - StaffSession: []
+      responses:
+        '200':
+          description: Cue retracted (or already retracted).
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/admin/events/{runId}/presence:
     parameters:
       - $ref: '#/components/parameters/RunId'
@@ -18686,6 +18719,248 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /api/admin/twitch/connect:
+    get:
+      summary: Start the broadcaster OAuth flow (returns the authorize URL).
+      description: |
+        Requires `manager` role. Signs a state (tenant + user + nonce + returnTo),
+        sets an httpOnly nonce cookie (double-submit CSRF) and returns the Twitch
+        authorize URL in JSON. `503 TWITCH_NOT_CONFIGURED` when the feature is dormant.
+      operationId: adminTwitchConnect
+      tags:
+        - admin/twitch
+      security:
+        - StaffSession: []
+      responses:
+        '200':
+          description: Authorize URL.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - url
+                properties:
+                  url:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          description: Twitch broadcaster OAuth not configured.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+  /api/admin/twitch/connection:
+    get:
+      summary: Broadcaster connection status for the active tenant.
+      description: |
+        Requires `caster` role. Never returns tokens (not even encrypted).
+      operationId: adminTwitchConnectionStatus
+      tags:
+        - admin/twitch
+      security:
+        - StaffSession: []
+      responses:
+        '200':
+          description: Connection status.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - connected
+                properties:
+                  connected:
+                    type: boolean
+                  broadcaster_login:
+                    type: string
+                  scope:
+                    type: array
+                    items:
+                      type: string
+                  expires_at:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    delete:
+      summary: Disconnect the broadcaster channel (delete the connection row).
+      description: Requires `manager` role.
+      operationId: adminTwitchDisconnect
+      tags:
+        - admin/twitch
+      security:
+        - StaffSession: []
+      responses:
+        '200':
+          description: Disconnected.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/admin/twitch/predictions:
+    get:
+      summary: Latest Twitch prediction on the broadcaster channel (or null).
+      description: |
+        Requires `manager` role. `409 NOT_CONNECTED` when no channel is connected.
+      operationId: adminTwitchGetPrediction
+      tags:
+        - admin/twitch
+      security:
+        - StaffSession: []
+      responses:
+        '200':
+          description: Latest prediction (or null).
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: 'No broadcaster channel connected (code NOT_CONNECTED).'
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+    post:
+      summary: Create a Twitch prediction.
+      description: |
+        Requires `manager` role and the `channel:manage:predictions` scope.
+        `409 NOT_CONNECTED` if the channel is not connected, `403 MISSING_SCOPE`
+        if the granted scope lacks `channel:manage:predictions`.
+      operationId: adminTwitchCreatePrediction
+      tags:
+        - admin/twitch
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+                - outcomes
+                - prediction_window
+              properties:
+                title:
+                  type: string
+                  minLength: 1
+                  maxLength: 45
+                outcomes:
+                  type: array
+                  minItems: 2
+                  maxItems: 10
+                  items:
+                    type: string
+                    minLength: 1
+                    maxLength: 25
+                prediction_window:
+                  type: integer
+                  minimum: 30
+                  maximum: 1800
+      responses:
+        '201':
+          description: Prediction created.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: 'Missing scope (code MISSING_SCOPE) or forbidden role.'
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '409':
+          description: 'No broadcaster channel connected (code NOT_CONNECTED).'
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+  /api/admin/twitch/predictions/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+    patch:
+      summary: Lock, resolve or cancel a Twitch prediction.
+      description: |
+        Requires `manager` role and the `channel:manage:predictions` scope.
+        `status=RESOLVED` requires `winning_outcome_id`.
+      operationId: adminTwitchUpdatePrediction
+      tags:
+        - admin/twitch
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+              properties:
+                status:
+                  type: string
+                  enum:
+                    - LOCKED
+                    - RESOLVED
+                    - CANCELED
+                winning_outcome_id:
+                  type: string
+      responses:
+        '200':
+          description: Prediction updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: 'Missing scope (code MISSING_SCOPE) or forbidden role.'
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '409':
+          description: 'No broadcaster channel connected (code NOT_CONNECTED).'
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
   /api/admin/users:
     post:
       summary: Create a Supabase user on-the-fly (admin role).
@@ -22596,6 +22871,40 @@ paths:
       responses:
         '200':
           description: Channels.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+  /api/twitch/broadcaster-callback:
+    get:
+      tags:
+        - public/misc
+      summary: Broadcaster OAuth callback (signed-state, no session).
+      description: |
+        PUBLIC endpoint but protected by a signed state (HMAC) + double-submit
+        nonce cookie issued by `/api/admin/twitch/connect`. Exchanges the code,
+        reads the broadcaster identity (helix/users), stores the encrypted tokens,
+        then redirects (302) to `returnTo` with `?twitch=connected` or
+        `?twitch=error`. No token is ever placed in the URL.
+      operationId: twitchBroadcasterCallback
+      security: []
+      parameters:
+        - name: code
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: state
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '302':
+          description: Redirect to returnTo with a ?twitch=connected|error status.
+        '503':
+          description: Twitch broadcaster OAuth not configured.
           content:
             application/json:
               schema:

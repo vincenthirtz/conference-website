@@ -1560,6 +1560,76 @@ When the run is unknown or not live, a safe empty-ish shape is returned with a
 included) so the browser source never errors mid-broadcast. A malformed `runId`
 → `400`. **Rate limit** : `overlay` (120/min). **Idempotency** : non (GET).
 
+#### Twitch broadcaster actions (régie — écriture sur la chaîne)
+
+Socle OAuth « broadcaster » + Predictions. L'app token (`client_credentials`,
+read-only) ne suffit pas pour écrire sur la chaîne : on stocke un token OAuth du
+broadcaster (access + refresh) **chiffré au repos** (AES-256-GCM,
+[`utils/crypto.ts`](../utils/crypto.ts)) dans `twitch_broadcaster_connections`
+(1 row par tenant, RLS default-deny, `supabaseAdmin` only — voir
+[migration](../database/migrations/create_twitch_broadcaster_connections.sql)).
+Les tokens ne sont **jamais** renvoyés à un client ni placés dans une URL. Toute
+la logique vit dans [`utils/twitchBroadcaster.ts`](../utils/twitchBroadcaster.ts).
+Feature dormante (503) sans `TWITCH_CLIENT_ID` + `TWITCH_CLIENT_SECRET` +
+`TWITCH_REDIRECT_URI` + `TWITCH_TOKEN_ENC_KEY`.
+
+Scopes demandés au consentement (union, pour éviter un re-consentement futur ;
+V1 n'utilise que `channel:manage:predictions`) : `channel:manage:predictions`,
+`clips:edit`, `user:write:chat`, `channel:manage:redemptions`,
+`channel:read:redemptions`, `moderator:manage:banned_users`,
+`moderator:manage:chat_messages`, `moderator:manage:chat_settings`.
+
+##### `GET /api/admin/twitch/connect` (staff, `manager`+)
+
+Démarre le flux OAuth. Signe un state (`tenantId + userId + nonce + returnTo`,
+HMAC, TTL 10 min), pose un cookie httpOnly `tw_bc_oauth_state` (double-submit
+CSRF) et renvoie `{ url }` (l'authorize Twitch, `force_verify=true`). L'UI ouvre
+cette URL. **Errors** : `401`, `403`, `503 { code: 'TWITCH_NOT_CONFIGURED' }`.
+
+##### `GET /api/twitch/broadcaster-callback?code&state` (PUBLIC — state signé)
+
+Callback OAuth. Pas de session cookie : la confiance vient du state signé +
+cookie nonce. Vérifie le state (signature + TTL + nonce), échange le code, lit
+l'identité (`GET helix/users`), UPSERT la connexion (tokens chiffrés), puis
+**redirige 302** vers `returnTo` avec `?twitch=connected` ou `?twitch=error`.
+Jamais de token dans l'URL ; toute erreur est loggée serveur sans secret.
+**Errors** : `503` (dormant). Sinon 302 (statut porté par le query param).
+
+##### `GET /api/admin/twitch/connection` (staff, `caster`+)
+
+Statut de la connexion : `{ connected: boolean, broadcaster_login?, scope?,
+expires_at? }`. **Ne renvoie jamais les tokens** (même chiffrés). **Errors** :
+`401`, `403`. **Idempotency** : non (GET).
+
+##### `DELETE /api/admin/twitch/connection` (staff, `manager`+)
+
+Déconnecte la chaîne (supprime la row). Renvoie `{ connected: false }`.
+**Errors** : `401`, `403`.
+
+##### `POST /api/admin/twitch/predictions` (staff, `manager`+)
+
+Crée une prediction. Body zod : `title` (1..45), `outcomes` (`string[]`, 2..10,
+chaque 1..25), `prediction_window` (int, 30..1800). Passe par
+`getValidBroadcasterToken` (refresh proactif si expiré, marge 60 s) puis
+`POST helix/predictions`. **Response 201** : `{ prediction }`. **Errors** :
+`400 { code: 'INVALID_PAYLOAD' }`, `401`, `403 { code: 'MISSING_SCOPE' }`
+(scope `channel:manage:predictions` absent), `409 { code: 'NOT_CONNECTED' }`
+(aucune chaîne connectée), `502 { code: 'TWITCH_HELIX_ERROR' | 'TWITCH_TOKEN_ERROR' }`.
+
+##### `GET /api/admin/twitch/predictions` (staff, `manager`+)
+
+Renvoie la prediction la plus récente : `{ prediction: <la plus récente|null> }`
+(`GET helix/predictions?first=1`). **Errors** : `401`, `403`,
+`409 { code: 'NOT_CONNECTED' }`, `502`.
+
+##### `PATCH /api/admin/twitch/predictions/{id}` (staff, `manager`+)
+
+Verrouille / résout / annule. Body zod : `status` ∈ `LOCKED | RESOLVED |
+CANCELED`, `winning_outcome_id?` (**requis** si `RESOLVED`). `PATCH
+helix/predictions`. **Response 200** : `{ prediction }`. **Errors** :
+`400 { code: 'INVALID_PAYLOAD' }` (dont RESOLVED sans `winning_outcome_id`),
+`401`, `403 { code: 'MISSING_SCOPE' }`, `409 { code: 'NOT_CONNECTED' }`, `502`.
+
 #### `GET /api/bot/v1/tournament-help/inventory`
 
 Returns the canonical "manage a tournament from Discord" walkthrough used
@@ -2440,11 +2510,11 @@ l'inventaire complet. La feature est **dormante** tant que les creds Blizzard
 Le cookie httpOnly `bn_oauth_state` (posé par `start`, recroisé au `callback`)
 protège le flux contre le CSRF/replay.
 
-| Route                                                                          | Methods | Auth                          | Notes                                                                                                                                                                                                                                                                                                                                                                                                          |
-| ------------------------------------------------------------------------------ | ------- | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`pages/api/auth/battlenet/start.ts`](../pages/api/auth/battlenet/start.ts)     | GET     | session cookie Supabase joueur | Query optionnelle `returnTo` (chemin interne sanitizé — doit commencer par `/`, ni `//` ni scheme ; défaut `/player/profile`). `302` → URL authorize Blizzard + pose le cookie httpOnly `bn_oauth_state`. `401 { error }` si non connecté. `503 { error, code: 'BATTLENET_NOT_CONFIGURED' }` si dormant. Rate-limit **20 / min**.                                                                              |
-| [`pages/api/auth/battlenet/callback.ts`](../pages/api/auth/battlenet/callback.ts) | GET     | session cookie Supabase joueur | Query `code`, `state` (+ cookie `bn_oauth_state`). `302` vers `returnTo` avec `?battlenet=` : `verified` (BattleTag lié), `linked_no_match` (BattleTag déjà rattaché à un autre compte — conflit d'unicité), `already_linked` (identité déjà présente), `error` (state invalide, échange KO…). `302 /login` si la session Supabase est perdue. `503` si dormant. Endpoint de redirection : pas de JSON body. Rate-limit **20 / min**. |
-| [`pages/api/player/battlenet-status.ts`](../pages/api/player/battlenet-status.ts) | GET     | Bearer joueur (`withAuthRoute`) | `200 { configured:boolean, linked:boolean, battleTag:string\|null, verifiedAt:string\|null }`. `401` si Bearer absent/invalide. Rate-limit **30 / min**.                                                                                                                                                                                                                                                       |
+| Route                                                                             | Methods | Auth                            | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| --------------------------------------------------------------------------------- | ------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`pages/api/auth/battlenet/start.ts`](../pages/api/auth/battlenet/start.ts)       | GET     | session cookie Supabase joueur  | Query optionnelle `returnTo` (chemin interne sanitizé — doit commencer par `/`, ni `//` ni scheme ; défaut `/player/profile`). `302` → URL authorize Blizzard + pose le cookie httpOnly `bn_oauth_state`. `401 { error }` si non connecté. `503 { error, code: 'BATTLENET_NOT_CONFIGURED' }` si dormant. Rate-limit **20 / min**.                                                                                                     |
+| [`pages/api/auth/battlenet/callback.ts`](../pages/api/auth/battlenet/callback.ts) | GET     | session cookie Supabase joueur  | Query `code`, `state` (+ cookie `bn_oauth_state`). `302` vers `returnTo` avec `?battlenet=` : `verified` (BattleTag lié), `linked_no_match` (BattleTag déjà rattaché à un autre compte — conflit d'unicité), `already_linked` (identité déjà présente), `error` (state invalide, échange KO…). `302 /login` si la session Supabase est perdue. `503` si dormant. Endpoint de redirection : pas de JSON body. Rate-limit **20 / min**. |
+| [`pages/api/player/battlenet-status.ts`](../pages/api/player/battlenet-status.ts) | GET     | Bearer joueur (`withAuthRoute`) | `200 { configured:boolean, linked:boolean, battleTag:string\|null, verifiedAt:string\|null }`. `401` si Bearer absent/invalide. Rate-limit **30 / min**.                                                                                                                                                                                                                                                                              |
 
 ---
 

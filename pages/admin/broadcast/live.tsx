@@ -14,6 +14,8 @@ import { useEventRunRealtime } from '@/hooks/useEventRunRealtime';
 import { useToast } from '@/components/Toast';
 import RealtimeStatusBadge from '@/components/admin/RealtimeStatusBadge';
 import TwitchStatusPanel from '@/components/admin/broadcast/TwitchStatusPanel';
+import TwitchPredictionsPanel from '@/components/admin/broadcast/TwitchPredictionsPanel';
+import { useRouter } from 'next/router';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { StaffProps } from '@/types/admin';
 import type { EventRun, EventSegment } from '@/types/events';
@@ -91,6 +93,8 @@ export const getServerSideProps = withStaffPage('caster');
 
 function BroadcastLivePage({ staff }: StaffProps) {
   const t = useAdminT('adminBroadcastLive');
+  const tw = useAdminT('adminTwitchPredictions');
+  const router = useRouter();
   const { adminFetchJson } = useAdminFetch();
   const { mutateJson } = useIdempotentMutation({
     autoRegenerateOnSuccess: true,
@@ -130,6 +134,24 @@ function BroadcastLivePage({ staff }: StaffProps) {
   useEffect(() => {
     setOrigin(window.location.origin);
   }, []);
+
+  // Retour du flux OAuth Twitch : live.tsx peut recevoir ?twitch=connected|error.
+  // On affiche le toast correspondant puis on NETTOIE le query param (shallow,
+  // sans re-fetch SSR) pour ne pas rejouer le toast au refresh.
+  useEffect(() => {
+    if (!router.isReady) return;
+    const twitch = router.query.twitch;
+    if (twitch !== 'connected' && twitch !== 'error') return;
+    addToast(
+      twitch === 'connected' ? tw.oauthConnected : tw.oauthError,
+      twitch === 'connected' ? 'success' : 'error'
+    );
+    const { twitch: _omit, ...rest } = router.query;
+    router.replace({ pathname: router.pathname, query: rest }, undefined, {
+      shallow: true,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router.isReady, router.query.twitch]);
 
   const fetchState = useCallback(async () => {
     setError(null);
@@ -458,6 +480,10 @@ function BroadcastLivePage({ staff }: StaffProps) {
           {/* Statut Twitch (lecture seule) : indépendant du run, toujours visible
               pour que le régisseur surveille le live sans quitter la console. */}
           <TwitchStatusPanel />
+
+          {/* Twitch Predictions (écriture) : connexion de la chaîne + pilotage des
+              predictions. Indépendant du run, comme le statut ci-dessus. */}
+          <TwitchPredictionsPanel />
 
           {loading && !data && (
             <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 px-4 py-10 text-center text-neutral-400">
