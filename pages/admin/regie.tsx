@@ -37,7 +37,8 @@ import { useCockpitHeartbeat } from '@/hooks/useCockpitHeartbeat';
 import { useCueStream } from '@/hooks/useCueStream';
 import { useWakeLock } from '@/hooks/useWakeLock';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
-import { AdminFetchError } from '@/hooks/useAdminFetch';
+import { AdminFetchError, useAdminFetch } from '@/hooks/useAdminFetch';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { logger } from '@/utils/logger';
 import { unlockAudio } from '@/utils/playChime';
 import type { EventRun, EventSegment } from '@/types/events';
@@ -235,6 +236,147 @@ function NewRunPanel({ onStarted }: { onStarted: () => Promise<void> }) {
   );
 }
 
+/** Un draft d'event_run tel que renvoyé par GET /api/admin/events?status=draft. */
+type DraftRun = {
+  id: string;
+  name: string;
+  scheduled_at: string | null;
+  status: string;
+};
+
+/**
+ * Panneau « Démarrer un run préparé » — admin/owner, affiché quand aucun run
+ * n'est live ET qu'au moins un run draft existe. Complète NewRunPanel (créer à
+ * blanc) : ici on lance un run déjà construit (avec ses segments montés dans le
+ * Director) via POST /api/admin/events/{id}/start (rôle 'admin'). Si aucun
+ * draft, le composant ne rend rien (pas de bruit visuel).
+ */
+function StartPreparedPanel({ onStarted }: { onStarted: () => Promise<void> }) {
+  const t = useT('regieStartPrepared');
+  const { addToast } = useToast();
+  const { adminFetchJson } = useAdminFetch();
+  const { mutateJson } = useIdempotentMutation();
+
+  const [drafts, setDrafts] = useState<DraftRun[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  // Busy ciblé par ligne (id du draft en cours de démarrage).
+  const [startingId, setStartingId] = useState<string | null>(null);
+
+  const loadDrafts = useCallback(async () => {
+    setLoading(true);
+    try {
+      const json = await adminFetchJson<{ items: DraftRun[] }>(
+        '/api/admin/events?status=draft&limit=50'
+      );
+      setDrafts(json.items ?? []);
+      setError(null);
+    } catch (err) {
+      setError((err as AdminFetchError)?.message || t.loadError);
+    } finally {
+      setLoading(false);
+    }
+  }, [adminFetchJson, t.loadError]);
+
+  useEffect(() => {
+    void loadDrafts();
+  }, [loadDrafts]);
+
+  async function handleStart(id: string) {
+    if (startingId) return;
+    setStartingId(id);
+    try {
+      await mutateJson(`/api/admin/events/${id}/start`, { method: 'POST' });
+      addToast(t.startSuccess, 'success');
+      await onStarted();
+    } catch (err) {
+      const e2 = err as AdminFetchError;
+      const payloadError =
+        typeof e2.payload === 'object' && e2.payload && 'error' in e2.payload
+          ? String((e2.payload as { error: string }).error)
+          : null;
+      addToast(payloadError || e2.message || t.startError, 'error');
+      setStartingId(null);
+    }
+  }
+
+  // État de chargement discret pour éviter un flash.
+  if (loading) {
+    return (
+      <div
+        className="rounded-2xl border border-neutral-800 bg-neutral-900/50 p-4 text-xs text-neutral-500"
+        data-testid="regie-start-prepared-loading"
+      >
+        {t.loading}
+      </div>
+    );
+  }
+
+  // Erreur (rare) : petit encart, on ne bloque pas la création à blanc.
+  if (error) {
+    return (
+      <div className="rounded-2xl border border-red-500/30 bg-red-900/15 p-3 text-xs text-red-100">
+        {error}
+      </div>
+    );
+  }
+
+  // Aucun draft : on n'affiche rien (NewRunPanel reste seul à l'écran).
+  if (drafts.length === 0) return null;
+
+  const formatDate = (iso: string | null) => {
+    if (!iso) return t.noSchedule;
+    const d = new Date(iso);
+    return Number.isNaN(d.getTime()) ? t.noSchedule : d.toLocaleString();
+  };
+
+  return (
+    <div
+      className="rounded-2xl border border-neutral-800 bg-neutral-900/50 p-4 space-y-3"
+      data-testid="regie-start-prepared"
+    >
+      <div>
+        <h2 className="text-sm font-semibold text-white">{t.title}</h2>
+        <p className="text-xs text-neutral-400 mt-1">{t.description}</p>
+        <p className="text-[11px] text-neutral-500 mt-1">{t.directorHint}</p>
+      </div>
+
+      <ul className="space-y-2">
+        {drafts.map((d) => {
+          const busy = startingId === d.id;
+          return (
+            <li
+              key={d.id}
+              className="flex items-center justify-between gap-3 rounded-lg border border-neutral-800 bg-neutral-950/60 px-3 py-2"
+              data-testid="regie-draft-row"
+            >
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-white truncate">
+                  {d.name}
+                </p>
+                <p className="text-[11px] text-neutral-500">
+                  {formatDate(d.scheduled_at)}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleStart(d.id)}
+                disabled={!!startingId}
+                className="inline-flex items-center gap-1.5 shrink-0 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-xs font-bold disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {busy && (
+                  <span className="inline-block h-3.5 w-3.5 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+                )}
+                {busy ? t.starting : t.start}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
 function RegiePage({ staff }: StaffProps) {
   const router = useRouter();
   const { addToast } = useToast();
@@ -243,8 +385,14 @@ function RegiePage({ staff }: StaffProps) {
   const tr = useT('adminRegie');
 
   // Le panneau « Nouveau run » exige l'endpoint /start (rôle 'admin') : réservé
-  // aux admin/owner. Un caster ne le voit pas.
+  // aux admin/owner. Un caster ne le voit pas. L'endpoint /end est lui aussi
+  // 'admin' → on réutilise le même gate pour « Terminer le run ».
   const canStartRun = staff.role === 'admin' || staff.role === 'owner';
+
+  // Confirmation + mutation idempotente pour « Terminer le run ».
+  const { confirm, dialog: confirmDialog } = useConfirmDialog();
+  const { mutateJson } = useIdempotentMutation();
+  const [endingRun, setEndingRun] = useState(false);
 
   // Empêche l'écran de s'éteindre tant que l'opérateur est sur la régie.
   const { supported: wakeLockSupported } = useWakeLock(true);
@@ -482,6 +630,36 @@ function RegiePage({ staff }: StaffProps) {
     router.replace('/admin/login');
   };
 
+  // Terminer le run live : confirmation danger → POST /end (live→done, segments
+  // non-done → done) → toast + refetch (l'écran repasse à « pas de run »).
+  const handleEndRun = useCallback(async () => {
+    if (!liveRunId || endingRun) return;
+    const ok = await confirm({
+      title: tr.endRunConfirmTitle,
+      subtitle: tr.endRunConfirmBody,
+      variant: 'danger',
+      confirmLabel: tr.endRunConfirmCta,
+    });
+    if (!ok) return;
+    setEndingRun(true);
+    try {
+      await mutateJson(`/api/admin/events/${liveRunId}/end`, {
+        method: 'POST',
+      });
+      addToast(tr.endRunSuccess, 'success');
+      await fetchRun();
+    } catch (err) {
+      const e2 = err as AdminFetchError;
+      const payloadError =
+        typeof e2.payload === 'object' && e2.payload && 'error' in e2.payload
+          ? String((e2.payload as { error: string }).error)
+          : null;
+      addToast(payloadError || e2.message || tr.endRunError, 'error');
+    } finally {
+      setEndingRun(false);
+    }
+  }, [liveRunId, endingRun, confirm, tr, mutateJson, addToast, fetchRun]);
+
   // ---- Render ----
 
   // En-tête admin sobre (titre + connexion + Director + déconnexion), réutilisé
@@ -505,6 +683,20 @@ function RegiePage({ staff }: StaffProps) {
           >
             {tr.openDirector}
           </Link>
+        )}
+        {liveRunId && canStartRun && (
+          <button
+            type="button"
+            onClick={handleEndRun}
+            disabled={endingRun}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-900/20 hover:bg-red-900/40 border border-red-500/30 text-red-200 text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            data-testid="regie-end-run"
+          >
+            {endingRun && (
+              <span className="inline-block h-3.5 w-3.5 rounded-full border-2 border-red-300/40 border-t-red-200 animate-spin" />
+            )}
+            {endingRun ? tr.ending : tr.endRun}
+          </button>
         )}
         <button
           type="button"
@@ -628,9 +820,14 @@ function RegiePage({ staff }: StaffProps) {
           </div>
         ) : null}
 
-        {/* Panneau « Nouveau run » : admin/owner, quand aucun run n'est live. */}
+        {/* Aucun run live (admin/owner) : lancer un run préparé (draft) OU en
+            créer un à blanc. Le panneau « préparé » ne s'affiche que s'il existe
+            au moins un draft. */}
         {!loadingRun && !liveRunId && canStartRun && (
-          <NewRunPanel onStarted={fetchRun} />
+          <>
+            <StartPreparedPanel onStarted={fetchRun} />
+            <NewRunPanel onStarted={fetchRun} />
+          </>
         )}
 
         {/* Banniere cues : sticky, visible si un cue recent n est pas vu. */}
@@ -705,6 +902,9 @@ function RegiePage({ staff }: StaffProps) {
           onDeferAck={cueStream.deferAck}
         />
       )}
+
+      {/* Confirmation « Terminer le run ». */}
+      {confirmDialog}
     </>
   );
 }
@@ -752,9 +952,9 @@ export const getServerSideProps: GetServerSideProps = async (
     const { getTenantKind } = await import('@/utils/tenantKind');
     let activeTenantKind: 'organizer' | 'developer' = 'organizer';
     try {
-      activeTenantKind = (await getTenantKind(
-        staffCtx.tenantId
-      )) as 'organizer' | 'developer';
+      activeTenantKind = (await getTenantKind(staffCtx.tenantId)) as
+        | 'organizer'
+        | 'developer';
     } catch (e) {
       logger.error('[regie] getTenantKind error', e);
     }

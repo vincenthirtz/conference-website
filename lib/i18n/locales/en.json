@@ -4184,7 +4184,14 @@
     "statusOnline": "Online",
     "statusReconnecting": "Reconnecting…",
     "statusOffline": "Offline",
-    "statusSeen": "Seen by the control room"
+    "statusSeen": "Seen by the control room",
+    "endRun": "End the run",
+    "ending": "Ending…",
+    "endRunConfirmTitle": "End the current run?",
+    "endRunConfirmBody": "All unfinished segments will be marked as done.",
+    "endRunConfirmCta": "End the run",
+    "endRunSuccess": "Run ended.",
+    "endRunError": "Could not end the run."
   },
   "regieNewRun": {
     "title": "Start a new run",
@@ -4198,5 +4205,17 @@
     "nameRequired": "The run name is required.",
     "createSuccess": "Run created and started.",
     "createError": "Could not create or start the run."
+  },
+  "regieStartPrepared": {
+    "title": "Start a prepared run",
+    "description": "Launch a run already built with its segments, without starting from scratch.",
+    "directorHint": "A run’s segments are assembled and edited in the Director.",
+    "loading": "Loading prepared runs…",
+    "loadError": "Could not load prepared runs.",
+    "noSchedule": "No date",
+    "start": "Start",
+    "starting": "Starting…",
+    "startSuccess": "Run started.",
+    "startError": "Could not start the run."
   }
 }

@@ -4184,7 +4184,14 @@
     "statusOnline": "En ligne",
     "statusReconnecting": "Reconnexion…",
     "statusOffline": "Hors ligne",
-    "statusSeen": "Vu par la régie"
+    "statusSeen": "Vu par la régie",
+    "endRun": "Terminer le run",
+    "ending": "Fin en cours…",
+    "endRunConfirmTitle": "Terminer le run en cours ?",
+    "endRunConfirmBody": "Tous les segments non terminés passeront à « terminé ».",
+    "endRunConfirmCta": "Terminer le run",
+    "endRunSuccess": "Run terminé.",
+    "endRunError": "Impossible de terminer le run."
   },
   "regieNewRun": {
     "title": "Démarrer un nouveau run",
@@ -4198,5 +4205,17 @@
     "nameRequired": "Le nom du run est requis.",
     "createSuccess": "Run créé et démarré.",
     "createError": "Impossible de créer ou démarrer le run."
+  },
+  "regieStartPrepared": {
+    "title": "Démarrer un run préparé",
+    "description": "Lance un run déjà construit avec ses segments, sans repartir de zéro.",
+    "directorHint": "Les segments d’un run se montent et s’éditent dans le Director.",
+    "loading": "Chargement des runs préparés…",
+    "loadError": "Impossible de charger les runs préparés.",
+    "noSchedule": "Sans date",
+    "start": "Démarrer",
+    "starting": "Démarrage…",
+    "startSuccess": "Run démarré.",
+    "startError": "Impossible de démarrer le run."
   }
 }
