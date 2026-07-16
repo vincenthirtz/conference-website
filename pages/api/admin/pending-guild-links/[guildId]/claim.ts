@@ -24,6 +24,7 @@ import { withAdminIdempotency } from '@/utils/adminIdempotency';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { logger } from '@/utils/logger';
+import { logStaffAction } from '@/utils/staffLogs';
 
 const GUILD_ID_RE = /^[0-9]{15,25}$/;
 const SLUG_RE = /^[a-z0-9-]+$/;
@@ -218,13 +219,11 @@ async function handler(
       .from('pending_guild_links')
       .delete()
       .eq('guild_id', guildId);
-    return res
-      .status(409)
-      .json({
-        error: 'Guild already linked.',
-        code: 'ALREADY_LINKED',
-        tenant_id: existingLink.tenant_id,
-      });
+    return res.status(409).json({
+      error: 'Guild already linked.',
+      code: 'ALREADY_LINKED',
+      tenant_id: existingLink.tenant_id,
+    });
   }
 
   const body = (req.body ?? {}) as Record<string, unknown>;
@@ -254,16 +253,14 @@ async function handler(
   // Si on a cree un tenant a la volee, on ajoute le createur dans
   // tenant_staff (sinon il ne pourrait pas switcher dessus).
   if (resolved.created) {
-    const { error: tsErr } = await supabaseAdmin
-      .from('tenant_staff')
-      .upsert(
-        {
-          tenant_id: resolved.tenant.id,
-          staff_id: ctx.staff.id,
-          role: 'admin',
-        },
-        { onConflict: 'tenant_id,staff_id' }
-      );
+    const { error: tsErr } = await supabaseAdmin.from('tenant_staff').upsert(
+      {
+        tenant_id: resolved.tenant.id,
+        staff_id: ctx.staff.id,
+        role: 'admin',
+      },
+      { onConflict: 'tenant_id,staff_id' }
+    );
     if (tsErr) {
       logger.error(
         '[admin/pending-guild-links/[guildId]/claim] tenant_staff insert error',
@@ -282,6 +279,26 @@ async function handler(
       '[admin/pending-guild-links/[guildId]/claim] delete pending error',
       delErr
     );
+  }
+
+  if (ctx?.staff?.id) {
+    try {
+      await logStaffAction({
+        staff_id: ctx.staff.id,
+        action: 'claim_guild_link',
+        entity_type: 'tenant',
+        entity_id: resolved.tenant.id,
+        tenant_id: ctx.tenantId,
+        payload: {
+          guildId,
+          tenantSlug: resolved.tenant.slug,
+          tenantName: resolved.tenant.name,
+          createdTenant: resolved.created,
+        },
+      });
+    } catch (logErr) {
+      logger.error('logStaffAction(claim_guild_link) error:', logErr);
+    }
   }
 
   return res.status(200).json({

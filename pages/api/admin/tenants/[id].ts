@@ -24,6 +24,7 @@ import { applyRateLimit } from '@/utils/rateLimit';
 import { isValidUUID, sanitizeUrl } from '@/utils/apiHelpers';
 import { canAccessTenant, PROTECTED_TENANT_SLUGS } from '@/utils/adminTenants';
 import { logger } from '@/utils/logger';
+import { logStaffAction } from '@/utils/staffLogs';
 
 const NAME_MIN = 1;
 const NAME_MAX = 200;
@@ -153,32 +154,27 @@ async function handler(
           ? body.default_locale.trim()
           : '';
       if (!LOCALE_RE.test(loc)) {
-        return res
-          .status(400)
-          .json({
-            error: 'default_locale must be like "fr" or "en-US".',
-            code: 'INVALID_LOCALE',
-          });
+        return res.status(400).json({
+          error: 'default_locale must be like "fr" or "en-US".',
+          code: 'INVALID_LOCALE',
+        });
       }
       update.default_locale = loc;
     }
 
     if ('is_active' in body) {
       if (typeof body.is_active !== 'boolean') {
-        return res
-          .status(400)
-          .json({
-            error: 'is_active must be a boolean.',
-            code: 'INVALID_IS_ACTIVE',
-          });
+        return res.status(400).json({
+          error: 'is_active must be a boolean.',
+          code: 'INVALID_IS_ACTIVE',
+        });
       }
       update.is_active = body.is_active;
     }
 
     // ---- Marque blanche (white-label) ----
     if ('logo_url' in body) {
-      const raw =
-        typeof body.logo_url === 'string' ? body.logo_url.trim() : '';
+      const raw = typeof body.logo_url === 'string' ? body.logo_url.trim() : '';
       if (!raw) {
         update.logo_url = null;
       } else if (raw.startsWith('/') && !raw.startsWith('//')) {
@@ -199,9 +195,7 @@ async function handler(
 
     if ('primary_color' in body) {
       const raw =
-        typeof body.primary_color === 'string'
-          ? body.primary_color.trim()
-          : '';
+        typeof body.primary_color === 'string' ? body.primary_color.trim() : '';
       if (!raw) {
         update.primary_color = null;
       } else if (!HEX_RE.test(raw)) {
@@ -279,6 +273,21 @@ async function handler(
       return res.status(500).json({ error: 'Failed to update the tenant.' });
     }
 
+    if (ctx?.staff?.id) {
+      try {
+        await logStaffAction({
+          staff_id: ctx.staff.id,
+          action: 'update_tenant',
+          entity_type: 'tenant',
+          entity_id: id,
+          tenant_id: ctx.tenantId,
+          payload: { fields: Object.keys(update) },
+        });
+      } catch (logErr) {
+        logger.error('logStaffAction(update_tenant) error:', logErr);
+      }
+    }
+
     return res.status(200).json({ tenant: updated });
   }
 
@@ -299,12 +308,10 @@ async function handler(
     }
 
     if (PROTECTED_TENANT_SLUGS.has(existing.slug)) {
-      return res
-        .status(403)
-        .json({
-          error: 'This tenant cannot be deleted.',
-          code: 'TENANT_PROTECTED',
-        });
+      return res.status(403).json({
+        error: 'This tenant cannot be deleted.',
+        code: 'TENANT_PROTECTED',
+      });
     }
 
     const { data: updated, error } = await supabaseAdmin
@@ -319,6 +326,21 @@ async function handler(
       return res
         .status(500)
         .json({ error: 'Failed to deactivate the tenant.' });
+    }
+
+    if (ctx?.staff?.id) {
+      try {
+        await logStaffAction({
+          staff_id: ctx.staff.id,
+          action: 'deactivate_tenant',
+          entity_type: 'tenant',
+          entity_id: id,
+          tenant_id: ctx.tenantId,
+          payload: { slug: existing.slug, name: existing.name },
+        });
+      } catch (logErr) {
+        logger.error('logStaffAction(deactivate_tenant) error:', logErr);
+      }
     }
 
     return res.status(200).json({ tenant: updated });

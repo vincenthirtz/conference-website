@@ -1,9 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withStaffRoute } from '@/utils/staff';
+import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
 import { sanitizeUrl } from '@/utils/apiHelpers';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { isPoleKey } from '@/utils/associationPoles';
+import { logStaffAction } from '@/utils/staffLogs';
 
 import { logger } from '../../../../utils/logger';
 
@@ -18,7 +19,11 @@ type PoleMemberPayload = {
   sortOrder?: number;
 };
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  ctx: AuthenticatedStaffContext
+) {
   if (
     applyRateLimit(
       req,
@@ -91,7 +96,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       image_url: sanitizeUrl(body.imageUrl),
       link_url: sanitizeUrl(body.linkUrl),
       is_active: body.isActive ?? true,
-      sort_order: Number.isFinite(body.sortOrder) ? Number(body.sortOrder) : nextOrder,
+      sort_order: Number.isFinite(body.sortOrder)
+        ? Number(body.sortOrder)
+        : nextOrder,
     };
 
     const { data, error } = await admin
@@ -102,7 +109,24 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
     if (error) {
       logger.error('[admin/pole-members] create error', error);
-      return res.status(500).json({ error: 'Failed to create the pole member.' });
+      return res
+        .status(500)
+        .json({ error: 'Failed to create the pole member.' });
+    }
+
+    if (ctx?.staff?.id) {
+      try {
+        await logStaffAction({
+          staff_id: ctx.staff.id,
+          action: 'create_pole_member',
+          entity_type: 'pole_member',
+          entity_id: data.id,
+          tenant_id: ctx.tenantId,
+          payload: { name: data.name, poleKey: data.pole_key },
+        });
+      } catch (logErr) {
+        logger.error('logStaffAction(create_pole_member) error:', logErr);
+      }
     }
 
     return res.status(201).json(data);

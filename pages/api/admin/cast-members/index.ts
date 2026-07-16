@@ -9,6 +9,7 @@ import {
   escapePostgrestValue,
 } from '@/utils/apiHelpers';
 import { applyRateLimit } from '@/utils/rateLimit';
+import { logStaffAction } from '@/utils/staffLogs';
 
 import { logger } from '../../../../utils/logger';
 
@@ -197,6 +198,21 @@ async function handler(
       return res
         .status(500)
         .json({ error: 'Failed to create the cast member.' });
+    }
+
+    if (ctx?.staff?.id) {
+      try {
+        await logStaffAction({
+          staff_id: ctx.staff.id,
+          action: 'create_cast_member',
+          entity_type: 'cast_member',
+          entity_id: data.id,
+          tenant_id: ctx.tenantId,
+          payload: { name: data.name, isActive: data.is_active },
+        });
+      } catch (logErr) {
+        logger.error('logStaffAction(create_cast_member) error:', logErr);
+      }
     }
 
     return res.status(201).json(data);

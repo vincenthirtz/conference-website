@@ -1,11 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import {
-  withStaffRoute,
-  type AuthenticatedStaffContext,
-} from '@/utils/staff';
+import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
 import { isValidUUID, sanitizeUrl } from '@/utils/apiHelpers';
 import { applyRateLimit } from '@/utils/rateLimit';
+import { logStaffAction } from '@/utils/staffLogs';
 
 import { logger } from '../../../../utils/logger';
 type TwitchChannelPayload = {
@@ -87,6 +85,21 @@ async function handler(
       return res.status(500).json({ error: 'Failed to update the channel.' });
     }
 
+    if (ctx?.staff?.id) {
+      try {
+        await logStaffAction({
+          staff_id: ctx.staff.id,
+          action: 'update_twitch_channel',
+          entity_type: 'twitch_channel',
+          entity_id: id,
+          tenant_id: ctx.tenantId,
+          payload: { fields: Object.keys(updatePayload) },
+        });
+      } catch (logErr) {
+        logger.error('logStaffAction(update_twitch_channel) error:', logErr);
+      }
+    }
+
     return res.status(200).json(data);
   }
 
@@ -100,6 +113,20 @@ async function handler(
     if (error) {
       logger.error('[admin/twitch-channels] delete error', error);
       return res.status(500).json({ error: 'Failed to delete the channel.' });
+    }
+
+    if (ctx?.staff?.id) {
+      try {
+        await logStaffAction({
+          staff_id: ctx.staff.id,
+          action: 'delete_twitch_channel',
+          entity_type: 'twitch_channel',
+          entity_id: id,
+          tenant_id: ctx.tenantId,
+        });
+      } catch (logErr) {
+        logger.error('logStaffAction(delete_twitch_channel) error:', logErr);
+      }
     }
 
     return res.status(204).end();

@@ -5,7 +5,9 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withStaffRoute } from '@/utils/staff';
+import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
+import { logStaffAction } from '@/utils/staffLogs';
+import { logger } from '@/utils/logger';
 import type { TournamentTemplate } from '@/config/tournament-templates';
 
 const SETTINGS_KEY = 'custom_tournament_templates';
@@ -18,7 +20,11 @@ type ApiResponse =
 
 export default withStaffRoute(handler, 'admin');
 
-async function handler(req: NextApiRequest, res: NextApiResponse<ApiResponse>) {
+async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse<ApiResponse>,
+  ctx: AuthenticatedStaffContext
+) {
   if (!supabaseAdmin) {
     return res.status(500).json({ error: 'Database service unavailable.' });
   }
@@ -27,9 +33,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse<ApiResponse>) {
     case 'GET':
       return handleGet(req, res);
     case 'POST':
-      return handlePost(req, res);
+      return handlePost(req, res, ctx);
     case 'DELETE':
-      return handleDelete(req, res);
+      return handleDelete(req, res, ctx);
     default:
       return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -86,7 +92,8 @@ async function handleGet(
 
 async function handlePost(
   req: NextApiRequest,
-  res: NextApiResponse<ApiResponse>
+  res: NextApiResponse<ApiResponse>,
+  ctx: AuthenticatedStaffContext
 ) {
   const { name, description, stages } = req.body || {};
 
@@ -133,12 +140,32 @@ async function handlePost(
   templates.push(newTemplate);
   await saveCustomTemplates(templates);
 
+  if (ctx?.staff?.id) {
+    try {
+      await logStaffAction({
+        staff_id: ctx.staff.id,
+        action: 'update_tournament_template',
+        entity_type: 'tournament_template',
+        entity_id: newTemplate.id,
+        tenant_id: ctx.tenantId,
+        payload: {
+          op: 'create',
+          name: newTemplate.name,
+          stageCount: newTemplate.stages.length,
+        },
+      });
+    } catch (logErr) {
+      logger.error('logStaffAction(update_tournament_template) error:', logErr);
+    }
+  }
+
   return res.status(201).json({ template: newTemplate });
 }
 
 async function handleDelete(
   req: NextApiRequest,
-  res: NextApiResponse<ApiResponse>
+  res: NextApiResponse<ApiResponse>,
+  ctx: AuthenticatedStaffContext
 ) {
   const { templateId } = req.body || {};
 
@@ -154,5 +181,21 @@ async function handleDelete(
   }
 
   await saveCustomTemplates(filtered);
+
+  if (ctx?.staff?.id) {
+    try {
+      await logStaffAction({
+        staff_id: ctx.staff.id,
+        action: 'update_tournament_template',
+        entity_type: 'tournament_template',
+        entity_id: templateId,
+        tenant_id: ctx.tenantId,
+        payload: { op: 'delete' },
+      });
+    } catch (logErr) {
+      logger.error('logStaffAction(update_tournament_template) error:', logErr);
+    }
+  }
+
   return res.status(200).json({ deleted: true });
 }

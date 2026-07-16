@@ -22,6 +22,7 @@ import { applyRateLimit } from '@/utils/rateLimit';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { canAccessTenant } from '@/utils/adminTenants';
 import { logger } from '@/utils/logger';
+import { logStaffAction } from '@/utils/staffLogs';
 
 const SNOWFLAKE_RE = /^[0-9]{15,25}$/;
 const GUILD_ID_RE = /^[0-9]{15,25}$/;
@@ -218,6 +219,27 @@ async function handler(
       readErr
     );
     return res.status(500).json({ error: 'Failed to read config.' });
+  }
+
+  if (ctx?.staff?.id) {
+    try {
+      await logStaffAction({
+        staff_id: ctx.staff.id,
+        action: 'update_tenant_discord_config',
+        entity_type: 'tenant',
+        entity_id: id,
+        tenant_id: ctx.tenantId,
+        payload: {
+          guildId,
+          fields: Object.keys(upsertPayload).filter((k) => k !== 'guild_id'),
+        },
+      });
+    } catch (logErr) {
+      logger.error(
+        'logStaffAction(update_tenant_discord_config) error:',
+        logErr
+      );
+    }
   }
 
   return res.status(200).json({ config: config ?? upsertPayload });

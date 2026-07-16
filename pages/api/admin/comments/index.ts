@@ -4,6 +4,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
 import { logger } from '../../../../utils/logger';
+import { logStaffAction } from '@/utils/staffLogs';
 import {
   parsePagination,
   sanitizeSearch,
@@ -136,6 +137,21 @@ async function updateComment(
     return res.status(500).json({ error: 'Failed to update comment' });
   }
 
+  if (ctx?.staff?.id) {
+    try {
+      await logStaffAction({
+        staff_id: ctx.staff.id,
+        action: 'update_comment',
+        entity_type: 'comment',
+        entity_id: id,
+        tenant_id: ctx.tenantId,
+        payload: { fields: Object.keys(payload) },
+      });
+    } catch (logErr) {
+      logger.error('logStaffAction(update_comment) error:', logErr);
+    }
+  }
+
   return res.status(200).json({ comment: data as unknown as CommentRow });
 }
 
@@ -158,6 +174,20 @@ async function deleteComment(
   if (error) {
     logger.error('admin comments DELETE error:', error);
     return res.status(500).json({ error: 'Failed to delete comment' });
+  }
+
+  if (ctx?.staff?.id) {
+    try {
+      await logStaffAction({
+        staff_id: ctx.staff.id,
+        action: 'delete_comment',
+        entity_type: 'comment',
+        entity_id: id,
+        tenant_id: ctx.tenantId,
+      });
+    } catch (logErr) {
+      logger.error('logStaffAction(delete_comment) error:', logErr);
+    }
   }
 
   return res.status(200).json({ deleted: true });

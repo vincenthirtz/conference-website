@@ -9,6 +9,7 @@ import { sendTeamJoinEmail } from '@/utils/email';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { isValidUUID, validateRole } from '@/utils/apiHelpers';
 import { logger } from '../../../../../utils/logger';
+import { logStaffAction } from '@/utils/staffLogs';
 import {
   isTeamRosterLocked,
   rosterLockErrorMessage,
@@ -262,6 +263,36 @@ async function handler(
           .catch(() => {});
       }
 
+      if (ctx?.staff?.id) {
+        try {
+          await logStaffAction({
+            staff_id: ctx.staff.id,
+            action: 'add_team_member',
+            entity_type: 'team',
+            entity_id: String(teamId),
+            tenant_id: ctx.tenantId,
+            payload: {
+              memberUserId: resolvedUserId,
+              role: memberPayload.role,
+              isSubstitute: memberPayload.is_substitute,
+              setCaptain: setCaptain === true,
+            },
+          });
+          if (setCaptain) {
+            await logStaffAction({
+              staff_id: ctx.staff.id,
+              action: 'reassign_captain',
+              entity_type: 'team',
+              entity_id: String(teamId),
+              tenant_id: ctx.tenantId,
+              payload: { captainUserId: resolvedUserId },
+            });
+          }
+        } catch (logErr) {
+          logger.error('logStaffAction(add_team_member) error:', logErr);
+        }
+      }
+
       return res.status(201).json({
         member: member as TeamMemberRow,
         info: setCaptain ? 'Member added and set as captain' : 'Member added',
@@ -343,6 +374,28 @@ async function handler(
           return res.status(500).json({ error: 'Failed to swap members' });
         }
 
+        if (ctx?.staff?.id) {
+          try {
+            await logStaffAction({
+              staff_id: ctx.staff.id,
+              action: 'update_team_member',
+              entity_type: 'team',
+              entity_id: String(teamId),
+              tenant_id: ctx.tenantId,
+              payload: {
+                op: 'swap',
+                memberId: memberA.id,
+                swapWithMemberId: memberB.id,
+              },
+            });
+          } catch (logErr) {
+            logger.error(
+              'logStaffAction(update_team_member swap) error:',
+              logErr
+            );
+          }
+        }
+
         return res.status(200).json({
           success: true,
           info: `Swapped ${memberA.battle_tag} and ${memberB.battle_tag}`,
@@ -398,6 +451,25 @@ async function handler(
 
       if (!member) {
         return res.status(404).json({ error: 'Member not found' });
+      }
+
+      if (ctx?.staff?.id) {
+        try {
+          await logStaffAction({
+            staff_id: ctx.staff.id,
+            action: 'update_team_member',
+            entity_type: 'team',
+            entity_id: String(teamId),
+            tenant_id: ctx.tenantId,
+            payload: {
+              memberId,
+              memberUserId: member.user_id,
+              fields: Object.keys(updatePayload),
+            },
+          });
+        } catch (logErr) {
+          logger.error('logStaffAction(update_team_member) error:', logErr);
+        }
       }
 
       return res.status(200).json({
@@ -463,11 +535,31 @@ async function handler(
       }
 
       // Si c'était le capitaine, retirer le captain_id
-      if (team?.captain_id === member.user_id) {
+      const wasCaptain = team?.captain_id === member.user_id;
+      if (wasCaptain) {
         await supabaseAdmin
           .from('teams')
           .update({ captain_id: null })
           .eq('id', teamId);
+      }
+
+      if (ctx?.staff?.id) {
+        try {
+          await logStaffAction({
+            staff_id: ctx.staff.id,
+            action: 'remove_team_member',
+            entity_type: 'team',
+            entity_id: String(teamId),
+            tenant_id: ctx.tenantId,
+            payload: {
+              memberId,
+              memberUserId: member.user_id,
+              wasCaptain,
+            },
+          });
+        } catch (logErr) {
+          logger.error('logStaffAction(remove_team_member) error:', logErr);
+        }
       }
 
       return res.status(200).json({

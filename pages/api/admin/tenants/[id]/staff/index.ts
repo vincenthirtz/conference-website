@@ -21,6 +21,7 @@ import { applyRateLimit } from '@/utils/rateLimit';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { canAccessTenant } from '@/utils/adminTenants';
 import { logger } from '@/utils/logger';
+import { logStaffAction } from '@/utils/staffLogs';
 
 // Nomenclature stricte : le garde « dernier admin » de
 // tenants/[id]/staff/[staffId].ts compte les rows `role === 'admin'` — un
@@ -148,6 +149,21 @@ async function handler(
     if (error) {
       logger.error('[admin/tenants/[id]/staff] upsert error', error);
       return res.status(500).json({ error: 'Failed to add staff.' });
+    }
+
+    if (ctx?.staff?.id) {
+      try {
+        await logStaffAction({
+          staff_id: ctx.staff.id,
+          action: 'grant_tenant_staff',
+          entity_type: 'tenant',
+          entity_id: id,
+          tenant_id: ctx.tenantId,
+          payload: { staffId, role },
+        });
+      } catch (logErr) {
+        logger.error('logStaffAction(grant_tenant_staff) error:', logErr);
+      }
     }
 
     return res.status(200).json({

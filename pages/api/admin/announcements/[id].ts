@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
 import { isValidUUID, sanitizeUrl } from '@/utils/apiHelpers';
 import { applyRateLimit } from '@/utils/rateLimit';
+import { logStaffAction } from '@/utils/staffLogs';
 
 import { logger } from '../../../../utils/logger';
 type AnnouncementPayload = {
@@ -96,6 +97,21 @@ async function handler(
         .json({ error: 'Failed to update the announcement.' });
     }
 
+    if (ctx?.staff?.id) {
+      try {
+        await logStaffAction({
+          staff_id: ctx.staff.id,
+          action: 'update_announcement',
+          entity_type: 'announcement',
+          entity_id: id,
+          tenant_id: ctx.tenantId,
+          payload: { fields: Object.keys(updatePayload) },
+        });
+      } catch (logErr) {
+        logger.error('logStaffAction(update_announcement) error:', logErr);
+      }
+    }
+
     return res.status(200).json(data);
   }
 
@@ -111,6 +127,20 @@ async function handler(
       return res
         .status(500)
         .json({ error: 'Failed to delete the announcement.' });
+    }
+
+    if (ctx?.staff?.id) {
+      try {
+        await logStaffAction({
+          staff_id: ctx.staff.id,
+          action: 'delete_announcement',
+          entity_type: 'announcement',
+          entity_id: id,
+          tenant_id: ctx.tenantId,
+        });
+      } catch (logErr) {
+        logger.error('logStaffAction(delete_announcement) error:', logErr);
+      }
     }
 
     return res.status(204).end();

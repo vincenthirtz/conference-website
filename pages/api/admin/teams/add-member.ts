@@ -10,6 +10,7 @@ import {
   insertTeamMember,
   setTeamCaptain,
 } from '@/utils/teams/addMember';
+import { logStaffAction } from '@/utils/staffLogs';
 
 import { logger } from '../../../../utils/logger';
 type AddMemberResponse =
@@ -97,14 +98,22 @@ async function handler(
       enforceMaxPlayersPreCheck: true,
     });
     if (!insertResult.ok) {
-      return res.status(insertResult.status).json({ error: insertResult.error });
+      return res
+        .status(insertResult.status)
+        .json({ error: insertResult.error });
     }
 
     let captainSet = false;
     if (setCaptain) {
-      const captainResult = await setTeamCaptain(teamId, resolvedUserId, ctx.tenantId);
+      const captainResult = await setTeamCaptain(
+        teamId,
+        resolvedUserId,
+        ctx.tenantId
+      );
       if (!captainResult.ok) {
-        return res.status(captainResult.status).json({ error: captainResult.error });
+        return res
+          .status(captainResult.status)
+          .json({ error: captainResult.error });
       }
       captainSet = true;
     }
@@ -127,6 +136,25 @@ async function handler(
       });
     } catch (newsErr) {
       logger.error('[/api/admin/teams/add-member] create news error:', newsErr);
+    }
+
+    if (ctx?.staff?.id) {
+      try {
+        await logStaffAction({
+          staff_id: ctx.staff.id,
+          action: 'add_team_member',
+          entity_type: 'team',
+          entity_id: teamId,
+          tenant_id: ctx.tenantId,
+          payload: {
+            memberUserId: resolvedUserId,
+            role: resolvedRole,
+            setCaptain: captainSet,
+          },
+        });
+      } catch (logErr) {
+        logger.error('logStaffAction(add_team_member) error:', logErr);
+      }
     }
 
     return res.status(200).json({

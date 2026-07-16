@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
 import { isValidUUID, sanitizeUrl } from '@/utils/apiHelpers';
 import { applyRateLimit } from '@/utils/rateLimit';
+import { logStaffAction } from '@/utils/staffLogs';
 
 import { logger } from '../../../../utils/logger';
 type CastMemberPayload = {
@@ -116,6 +117,21 @@ async function handler(
         .json({ error: 'Failed to update the cast member.' });
     }
 
+    if (ctx?.staff?.id) {
+      try {
+        await logStaffAction({
+          staff_id: ctx.staff.id,
+          action: 'update_cast_member',
+          entity_type: 'cast_member',
+          entity_id: id,
+          tenant_id: ctx.tenantId,
+          payload: { fields: Object.keys(updatePayload) },
+        });
+      } catch (logErr) {
+        logger.error('logStaffAction(update_cast_member) error:', logErr);
+      }
+    }
+
     return res.status(200).json(data);
   }
 
@@ -131,6 +147,20 @@ async function handler(
       return res
         .status(500)
         .json({ error: 'Failed to delete the cast member.' });
+    }
+
+    if (ctx?.staff?.id) {
+      try {
+        await logStaffAction({
+          staff_id: ctx.staff.id,
+          action: 'delete_cast_member',
+          entity_type: 'cast_member',
+          entity_id: id,
+          tenant_id: ctx.tenantId,
+        });
+      } catch (logErr) {
+        logger.error('logStaffAction(delete_cast_member) error:', logErr);
+      }
     }
 
     return res.status(204).end();

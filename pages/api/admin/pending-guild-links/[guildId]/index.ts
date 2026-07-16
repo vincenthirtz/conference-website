@@ -10,13 +10,14 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { logger } from '@/utils/logger';
+import { logStaffAction } from '@/utils/staffLogs';
 
 const GUILD_ID_RE = /^[0-9]{15,25}$/;
 
 async function handler(
   req: NextApiRequest,
   res: NextApiResponse,
-  _ctx: AuthenticatedStaffContext
+  ctx: AuthenticatedStaffContext
 ) {
   if (
     applyRateLimit(
@@ -65,6 +66,21 @@ async function handler(
   if (error) {
     logger.error('[admin/pending-guild-links/[guildId]] delete error', error);
     return res.status(500).json({ error: 'Failed to delete pending link.' });
+  }
+
+  if (ctx?.staff?.id) {
+    try {
+      await logStaffAction({
+        staff_id: ctx.staff.id,
+        action: 'reject_guild_link',
+        entity_type: 'guild',
+        entity_id: guildId,
+        tenant_id: ctx.tenantId,
+        payload: { guildId },
+      });
+    } catch (logErr) {
+      logger.error('logStaffAction(reject_guild_link) error:', logErr);
+    }
   }
 
   return res.status(200).json({ deleted: true, guild_id: guildId });

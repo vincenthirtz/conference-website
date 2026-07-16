@@ -1,11 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import {
-  withStaffRoute,
-  type AuthenticatedStaffContext,
-} from '@/utils/staff';
+import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
 import { sanitizeUrl } from '@/utils/apiHelpers';
 import { applyRateLimit } from '@/utils/rateLimit';
+import { logStaffAction } from '@/utils/staffLogs';
 
 import { logger } from '../../../../utils/logger';
 type TwitchChannelPayload = {
@@ -99,6 +97,21 @@ async function handler(
         return res.status(400).json({ error: 'This channel already exists.' });
       }
       return res.status(500).json({ error: 'Failed to create the channel.' });
+    }
+
+    if (ctx?.staff?.id) {
+      try {
+        await logStaffAction({
+          staff_id: ctx.staff.id,
+          action: 'create_twitch_channel',
+          entity_type: 'twitch_channel',
+          entity_id: data.id,
+          tenant_id: ctx.tenantId,
+          payload: { channel: data.channel, label: data.label },
+        });
+      } catch (logErr) {
+        logger.error('logStaffAction(create_twitch_channel) error:', logErr);
+      }
     }
 
     return res.status(201).json(data);

@@ -17,6 +17,7 @@ import {
 import { withAdminIdempotency } from '@/utils/adminIdempotency';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { logger } from '@/utils/logger';
+import { logStaffAction } from '@/utils/staffLogs';
 import { assertOrganizerTenant } from '@/utils/tenantKind';
 
 const SLUG_RE = /^[a-z0-9-]+$/;
@@ -185,6 +186,25 @@ async function handler(
         '[admin/tenants] tenant_staff auto-insert error',
         staffInsertErr
       );
+    }
+
+    if (ctx?.staff?.id) {
+      try {
+        await logStaffAction({
+          staff_id: ctx.staff.id,
+          action: 'create_tenant',
+          entity_type: 'tenant',
+          entity_id: created.id,
+          tenant_id: ctx.tenantId,
+          payload: {
+            name: created.name,
+            slug: created.slug,
+            default_locale: created.default_locale,
+          },
+        });
+      } catch (logErr) {
+        logger.error('logStaffAction(create_tenant) error:', logErr);
+      }
     }
 
     return res.status(201).json({ tenant: created });

@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { emitBotEvent } from '@/utils/botEvents';
+import { logStaffAction } from '@/utils/staffLogs';
 
 import { logger } from '../../../../utils/logger';
 type NewsPayload = {
@@ -108,6 +109,25 @@ async function handler(
       return res.status(500).json({ error: 'Failed to create the article.' });
     }
 
+    if (ctx?.staff?.id) {
+      try {
+        await logStaffAction({
+          staff_id: ctx.staff.id,
+          action: 'publish_news',
+          entity_type: 'news',
+          entity_id: data.id,
+          tenant_id: ctx.tenantId,
+          payload: {
+            title: data.title,
+            slug: data.slug,
+            status: data.status,
+          },
+        });
+      } catch (logErr) {
+        logger.error('logStaffAction(publish_news) error:', logErr);
+      }
+    }
+
     if (body.status === 'published') {
       void emitBotEvent(
         'news.published',
@@ -121,9 +141,7 @@ async function handler(
           publishedAt: data.published_at,
         },
         ctx.tenantId
-      ).catch((e) =>
-        logger.error('[botEvents] news.published emit error', e)
-      );
+      ).catch((e) => logger.error('[botEvents] news.published emit error', e));
     }
 
     return res.status(201).json(data);

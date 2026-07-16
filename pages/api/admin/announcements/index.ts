@@ -9,6 +9,7 @@ import {
 } from '@/utils/apiHelpers';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { notifyAnnouncement } from '@/utils/discord';
+import { logStaffAction } from '@/utils/staffLogs';
 
 import { logger } from '../../../../utils/logger';
 
@@ -151,6 +152,21 @@ async function handler(
       return res
         .status(500)
         .json({ error: 'Failed to create the announcement.' });
+    }
+
+    if (ctx?.staff?.id) {
+      try {
+        await logStaffAction({
+          staff_id: ctx.staff.id,
+          action: 'create_announcement',
+          entity_type: 'announcement',
+          entity_id: data.id,
+          tenant_id: ctx.tenantId,
+          payload: { title: data.title, isActive: data.is_active },
+        });
+      } catch (logErr) {
+        logger.error('logStaffAction(create_announcement) error:', logErr);
+      }
     }
 
     if (data?.is_active) {

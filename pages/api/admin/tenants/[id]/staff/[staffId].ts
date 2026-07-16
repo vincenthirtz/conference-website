@@ -17,6 +17,7 @@ import { withAdminIdempotency } from '@/utils/adminIdempotency';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { logger } from '@/utils/logger';
+import { logStaffAction } from '@/utils/staffLogs';
 
 async function handler(
   req: NextApiRequest,
@@ -89,6 +90,21 @@ async function handler(
   if (error) {
     logger.error('[admin/tenants/[id]/staff/[staffId]] delete error', error);
     return res.status(500).json({ error: 'Failed to remove staff.' });
+  }
+
+  if (ctx?.staff?.id) {
+    try {
+      await logStaffAction({
+        staff_id: ctx.staff.id,
+        action: 'revoke_tenant_staff',
+        entity_type: 'tenant',
+        entity_id: id,
+        tenant_id: ctx.tenantId,
+        payload: { staffId, role: target.role },
+      });
+    } catch (logErr) {
+      logger.error('logStaffAction(revoke_tenant_staff) error:', logErr);
+    }
   }
 
   return res

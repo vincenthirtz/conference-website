@@ -1,9 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withStaffRoute } from '@/utils/staff';
+import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
 import { isValidUUID, sanitizeUrl } from '@/utils/apiHelpers';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { isPoleKey } from '@/utils/associationPoles';
+import { logStaffAction } from '@/utils/staffLogs';
 
 import { logger } from '../../../../utils/logger';
 
@@ -18,7 +19,11 @@ type PoleMemberPayload = {
   sortOrder?: number;
 };
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  ctx: AuthenticatedStaffContext
+) {
   if (
     applyRateLimit(
       req,
@@ -95,6 +100,21 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         .json({ error: 'Failed to update the pole member.' });
     }
 
+    if (ctx?.staff?.id) {
+      try {
+        await logStaffAction({
+          staff_id: ctx.staff.id,
+          action: 'update_pole_member',
+          entity_type: 'pole_member',
+          entity_id: id,
+          tenant_id: ctx.tenantId,
+          payload: { fields: Object.keys(updatePayload) },
+        });
+      } catch (logErr) {
+        logger.error('logStaffAction(update_pole_member) error:', logErr);
+      }
+    }
+
     return res.status(200).json(data);
   }
 
@@ -109,6 +129,20 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       return res
         .status(500)
         .json({ error: 'Failed to delete the pole member.' });
+    }
+
+    if (ctx?.staff?.id) {
+      try {
+        await logStaffAction({
+          staff_id: ctx.staff.id,
+          action: 'delete_pole_member',
+          entity_type: 'pole_member',
+          entity_id: id,
+          tenant_id: ctx.tenantId,
+        });
+      } catch (logErr) {
+        logger.error('logStaffAction(delete_pole_member) error:', logErr);
+      }
     }
 
     return res.status(204).end();
