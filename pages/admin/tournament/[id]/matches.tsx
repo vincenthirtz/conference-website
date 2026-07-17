@@ -10,7 +10,6 @@ import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
-import Breadcrumb from '@/components/admin/Breadcrumb';
 import TournamentTabsNav from '@/components/admin/tournament/TournamentTabsNav';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
@@ -866,16 +865,6 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
         <div className="w-full px-4 sm:px-6 lg:px-8 pt-20 pb-12">
           {/* Header */}
           <div className="mb-8">
-            <Breadcrumb
-              items={[
-                { label: t.breadcrumbTournaments, href: '/admin/tournaments' },
-                {
-                  label: tournament?.name || t.defaultTournamentName,
-                  href: `/admin/tournament/${id}`,
-                },
-                { label: t.breadcrumbMatches },
-              ]}
-            />
             <TournamentTabsNav
               tournamentId={String(id ?? '')}
               active="matches"

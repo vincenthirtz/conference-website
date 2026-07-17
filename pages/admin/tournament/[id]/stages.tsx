@@ -9,7 +9,6 @@ import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
-import Breadcrumb from '@/components/admin/Breadcrumb';
 import TournamentTabsNav from '@/components/admin/tournament/TournamentTabsNav';
 import Modal from '@/components/admin/Modal';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
@@ -233,16 +232,6 @@ function StagesPage(_: StaffProps) {
       </Head>
       <div className="min-h-screen bg-neutral-950 text-white pt-24">
         <div className="max-w-6xl mx-auto px-6 py-10">
-          <Breadcrumb
-            items={[
-              { label: t.breadcrumbTournaments, href: '/admin/tournaments' },
-              {
-                label: tournamentName,
-                href: `/admin/tournament/${tournamentId}`,
-              },
-              { label: t.breadcrumbStages },
-            ]}
-          />
           <TournamentTabsNav
             tournamentId={String(tournamentId ?? '')}
             active="stages"

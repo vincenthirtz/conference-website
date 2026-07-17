@@ -8,7 +8,6 @@ import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
-import Breadcrumb from '@/components/admin/Breadcrumb';
 import TournamentTabsNav from '@/components/admin/tournament/TournamentTabsNav';
 import RegistrationFieldsEditor, {
   hasRegistrationFieldErrors,
@@ -321,16 +320,6 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
         <div className="w-full px-4 sm:px-6 lg:px-8 pt-20 pb-12">
           {/* Header */}
           <div className="mb-8">
-            <Breadcrumb
-              items={[
-                { label: t.breadcrumbTournaments, href: '/admin/tournaments' },
-                {
-                  label: form.name || t.defaultTournamentName,
-                  href: `/admin/tournament/${id}`,
-                },
-                { label: t.breadcrumbEdit },
-              ]}
-            />
             <TournamentTabsNav tournamentId={String(id ?? '')} active="edit" />
 
             <div className="flex flex-wrap items-start justify-between gap-4">

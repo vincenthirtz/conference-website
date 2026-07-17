@@ -10,7 +10,6 @@ import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
-import Breadcrumb from '@/components/admin/Breadcrumb';
 import TournamentTabsNav from '@/components/admin/tournament/TournamentTabsNav';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { StaffProps, StageSummary, TournamentMini } from '@/types/admin';
@@ -283,17 +282,6 @@ function BulkOpsPage(_: StaffProps) {
       </Head>
       <div className="min-h-screen bg-neutral-950 text-white pt-24">
         <div className="max-w-5xl mx-auto px-6 py-10">
-          <Breadcrumb
-            items={[
-              { label: t.breadcrumbTournaments, href: '/admin/tournaments' },
-              {
-                label: tournament?.name || t.defaultTournamentName,
-                href: `/admin/tournament/${tournamentId}`,
-              },
-              { label: t.breadcrumbBulkOps },
-            ]}
-          />
-
           <TournamentTabsNav
             tournamentId={String(tournamentId ?? '')}
             active="bulk-ops"
