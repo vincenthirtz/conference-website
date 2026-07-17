@@ -4,7 +4,7 @@
 // KPIs, alertes priorisées, status workflow, phases, équipes,
 // matchs en cours / à venir / disputes, check-in du jour, accès rapide aux 15 sous-pages.
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -13,6 +13,9 @@ import type { StaffProps, StaffRole } from '@/types/admin';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { formatDateTimeTz, formatDateTz } from '@/utils/timezone';
 import { useRealtimeChannel } from '@/hooks/useRealtimeChannel';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
+import { useToast } from '@/components/Toast';
 import StatCard from '@/components/admin/dashboard/StatCard';
 import ActionableAlert from '@/components/admin/dashboard/ActionableAlert';
 import WidgetCard from '@/components/admin/dashboard/WidgetCard';
@@ -24,6 +27,16 @@ import ConfirmAdvanceModal from '@/components/admin/dashboard/ConfirmAdvanceModa
 import SupportTicketsDonut from '@/components/admin/dashboard/SupportTicketsDonut';
 import DiscordHealthGrid from '@/components/admin/dashboard/DiscordHealthGrid';
 import TournamentTabsNav from '@/components/admin/tournament/TournamentTabsNav';
+import ConfirmDialog from '@/components/admin/ConfirmDialog';
+import AddTeamModal from '@/components/admin/tournament/overview/AddTeamModal';
+import BulkAddTeamsModal from '@/components/admin/tournament/overview/BulkAddTeamsModal';
+import NewStageModal from '@/components/admin/tournament/overview/NewStageModal';
+import TeamRow from '@/components/admin/tournament/overview/TeamRow';
+import type {
+  Team,
+  TournamentTeam,
+} from '@/components/admin/tournament/overview/types';
+import type { RegistrationField } from '@/utils/registrationFields';
 import {
   fetchDashboardData,
   type DashboardData,
@@ -63,8 +76,35 @@ function getStatusLabel(tx: Dict): Record<string, string> {
   };
 }
 
+// Dictionnaire du namespace overview (statut cliquable + gestion d'équipes +
+// création de phase). Les composants TeamRow/AddTeamModal/BulkAddTeamsModal/
+// NewStageModal attendent CE dict, pas celui du dashboard.
+type OverviewDict = ReturnType<typeof useAdminT<'adminTournamentOverview'>>;
+
+// Ordre de progression du workflow — sert à détecter une régression de statut
+// (retour en arrière) qui déclenche la confirmation.
+const STATUS_ORDER: Record<string, number> = {
+  draft: 0,
+  published: 1,
+  running: 2,
+  completed: 3,
+  archived: 4,
+};
+
+function getStageTypeOptions(tov: OverviewDict) {
+  return [
+    { value: 'bracket', label: tov.stageTypeBracket },
+    { value: 'swiss', label: tov.stageTypeSwiss },
+    { value: 'group', label: tov.stageTypeGroupOption },
+    { value: 'round_robin', label: tov.stageTypeRoundRobin },
+    { value: 'showmatch', label: tov.stageTypeShowmatch },
+    { value: 'other', label: tov.stageTypeOther },
+  ];
+}
+
 /* -----------------------------------------------------------
- * Quick access grid des 15 sous-pages
+ * Quick access grid — uniquement les destinations SANS onglet
+ * dédié dans TournamentTabsNav (sinon on doublerait la nav).
  * ---------------------------------------------------------*/
 
 type QuickLink = {
@@ -79,34 +119,10 @@ type QuickLink = {
 function getQuickLinks(tx: Dict): QuickLink[] {
   return [
     {
-      label: tx.quickStagesLabel,
-      icon: '🧱',
-      href: (id) => `/admin/tournament/${id}/stages`,
-      description: tx.quickStagesDesc,
-    },
-    {
-      label: tx.quickMatchesLabel,
-      icon: '🎯',
-      href: (id) => `/admin/tournament/${id}/matches`,
-      description: tx.quickMatchesDesc,
-    },
-    {
-      label: tx.quickBracketLabel,
-      icon: '🏆',
-      href: (id) => `/admin/tournament/${id}/bracket`,
-      description: tx.quickBracketDesc,
-    },
-    {
       label: tx.quickBracketBuilderLabel,
       icon: '🛠️',
       href: (id) => `/admin/tournament/${id}/bracket?tab=builder`,
       description: tx.quickBracketBuilderDesc,
-    },
-    {
-      label: tx.quickMapsLabel,
-      icon: '🗺️',
-      href: (id) => `/admin/tournament/${id}/maps`,
-      description: tx.quickMapsDesc,
     },
     {
       label: tx.quickMapDrawLabel,
@@ -121,47 +137,16 @@ function getQuickLinks(tx: Dict): QuickLink[] {
       description: tx.quickVetoDesc,
     },
     {
-      label: tx.quickCheckinLabel,
-      icon: '✅',
-      href: (id) => `/admin/tournament/${id}/checkin`,
-      description: tx.quickCheckinDesc,
-    },
-    {
       label: tx.quickBulkOpsLabel,
       icon: '⚡',
       href: (id) => `/admin/tournament/${id}/bulk-ops`,
       description: tx.quickBulkOpsDesc,
     },
     {
-      label: tx.quickStatsLabel,
-      icon: '📊',
-      href: (id) => `/admin/tournament/${id}/stats`,
-      description: tx.quickStatsDesc,
-    },
-    {
       label: tx.quickAnalyticsLabel,
       icon: '📈',
       href: (id) => `/admin/tournament/${id}/stats?tab=analytics`,
       description: tx.quickAnalyticsDesc,
-    },
-    {
-      label: tx.quickDiscordLabel,
-      icon: '🔔',
-      href: (id) => `/admin/tournament/${id}/discord`,
-      description: tx.quickDiscordDesc,
-      role: 'admin',
-    },
-    {
-      label: tx.quickHistoryLabel,
-      icon: '📜',
-      href: (id) => `/admin/tournament/${id}/history`,
-      description: tx.quickHistoryDesc,
-    },
-    {
-      label: tx.quickEditLabel,
-      icon: '✏️',
-      href: (id) => `/admin/tournament/${id}/edit`,
-      description: tx.quickEditDesc,
     },
     {
       label: tx.quickSupportLabel,
@@ -237,8 +222,17 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
   const { id } = router.query;
   const tournamentId = Array.isArray(id) ? id[0] : id;
   const tx = useAdminT('adminTournamentDashboard');
+  // Dict overview pour les sections restées dans le dashboard (statut cliquable,
+  // gestion d'équipes, création de phase + leurs modales/composants).
+  const tov = useAdminT('adminTournamentOverview');
   const STATUS_LABEL = getStatusLabel(tx);
   const QUICK_LINKS = getQuickLinks(tx);
+  const STAGE_TYPE_OPTIONS = getStageTypeOptions(tov);
+
+  const { addToast } = useToast();
+  const { adminFetch, adminFetchJson } = useAdminFetch();
+  const { mutate: addTeamMutate } = useIdempotentMutation();
+  const { mutate: createStageMutate } = useIdempotentMutation();
 
   const [loading, setLoading] = useState(initialData == null);
   const [errorMsg, setErrorMsg] = useState<string | null>(initialError);
@@ -268,6 +262,40 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
     stageId: string;
     stageName: string;
   } | null>(null);
+
+  /* -----------------------------------------------------------
+   * State des sections gérées dans le dashboard (statut + équipes)
+   * ---------------------------------------------------------*/
+
+  // registration_fields absent du payload dashboard : nécessaire pour les
+  // colonnes des cartes équipe (TeamRow). Chargé via une meta séparée.
+  const [registrationFieldsMeta, setRegistrationFieldsMeta] = useState<
+    RegistrationField[] | null
+  >(null);
+
+  // Erreur inline pour les actions statut/équipes (bannière rouge locale).
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  // Gestion d'équipes
+  const [tournamentTeams, setTournamentTeams] = useState<TournamentTeam[]>([]);
+  const [loadingTeams, setLoadingTeams] = useState(false);
+  const [allTeams, setAllTeams] = useState<Team[]>([]);
+  const [showAddTeamModal, setShowAddTeamModal] = useState(false);
+  const [showBulkAddModal, setShowBulkAddModal] = useState(false);
+  const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
+  const [pendingRemoveTeamId, setPendingRemoveTeamId] = useState<string | null>(
+    null
+  );
+
+  // Changement de statut (stepper interactif)
+  const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [showStatusConfirm, setShowStatusConfirm] = useState(false);
+  const [pendingStatusValue, setPendingStatusValue] = useState<string | null>(
+    null
+  );
+
+  // Création de phase
+  const [showNewStageModal, setShowNewStageModal] = useState(false);
 
   const fetchDashboard = useCallback(async () => {
     if (!tournamentId) return;
@@ -352,6 +380,252 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
     const t = setInterval(() => setNowMs(Date.now()), 60_000);
     return () => clearInterval(t);
   }, []);
+
+  /* -----------------------------------------------------------
+   * Fetchers des sections gérées ici (registration_fields + équipes)
+   * ---------------------------------------------------------*/
+
+  // registration_fields absent du payload dashboard : requis pour les colonnes
+  // des cartes équipe (TeamRow).
+  const fetchRegistrationFields = useCallback(async () => {
+    if (!tournamentId) return;
+    try {
+      const json = await adminFetchJson<{
+        tournament: { registration_fields: RegistrationField[] | null };
+      }>(`/api/admin/tournament/${tournamentId}`);
+      setRegistrationFieldsMeta(json.tournament.registration_fields ?? null);
+    } catch {
+      // Silencieux : complément non bloquant pour le dashboard.
+    }
+  }, [tournamentId, adminFetchJson]);
+
+  const fetchTournamentTeams = useCallback(async () => {
+    if (!tournamentId) return;
+    setLoadingTeams(true);
+    try {
+      const res = await adminFetch(
+        `/api/admin/tournament/${tournamentId}/teams`
+      );
+      if (res.ok) {
+        const json = await res.json();
+        setTournamentTeams(json.teams || []);
+      }
+    } catch {
+      // Silencieux.
+    } finally {
+      setLoadingTeams(false);
+    }
+  }, [tournamentId, adminFetch]);
+
+  const fetchAllTeams = useCallback(async () => {
+    try {
+      const res = await adminFetch('/api/admin/teams?limit=200');
+      if (res.ok) {
+        const json = await res.json();
+        setAllTeams(json.teams || []);
+      }
+    } catch {
+      // Silencieux.
+    }
+  }, [adminFetch]);
+
+  // Chargement mono-shot des colonnes d'inscription + des équipes (le payload
+  // dashboard ne les porte pas). Borné à [tournamentId] : les fetchers sont
+  // stables (adminFetch* à identité figée), aucun state mutable listé.
+  useEffect(() => {
+    if (!tournamentId) return;
+    fetchRegistrationFields();
+    fetchTournamentTeams();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- chargement initial mono-shot borné à [tournamentId]
+  }, [tournamentId]);
+
+  /* -----------------------------------------------------------
+   * Handlers : statut, équipes, phase
+   * ---------------------------------------------------------*/
+
+  async function performStatusUpdate(newStatus: string) {
+    if (!tournamentId) return;
+    setUpdatingStatus(true);
+    setActionError(null);
+    try {
+      await adminFetchJson(`/api/admin/tournament/${tournamentId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: newStatus }),
+      });
+      addToast(
+        format(tov.toastStatusChanged, {
+          status: STATUS_LABEL[newStatus] ?? newStatus,
+        }),
+        'success'
+      );
+      // Rafraîchit tout le payload (guards, KPIs, alertes) d'un coup.
+      fetchDashboard();
+    } catch (err: unknown) {
+      setActionError((err as Error)?.message ?? tov.errorUnexpected);
+    } finally {
+      setUpdatingStatus(false);
+    }
+  }
+
+  function updateStatus(newStatus: string) {
+    const currentStatus = data?.guards.current_status ?? 'draft';
+    if (newStatus === currentStatus) return;
+    const currentOrder = STATUS_ORDER[currentStatus] ?? 0;
+    const newOrder = STATUS_ORDER[newStatus] ?? 0;
+    // Régression (retour en arrière) → confirmation explicite.
+    if (newOrder < currentOrder) {
+      setPendingStatusValue(newStatus);
+      setShowStatusConfirm(true);
+      return;
+    }
+    performStatusUpdate(newStatus);
+  }
+
+  const handleAddTeamSubmit = useCallback(
+    async (teamId: string, seed: number | null): Promise<boolean> => {
+      if (!tournamentId) return false;
+      setActionError(null);
+      try {
+        const res = await addTeamMutate(
+          `/api/admin/tournament/${tournamentId}/teams`,
+          {
+            method: 'POST',
+            body: JSON.stringify({ team_id: teamId, seed }),
+          }
+        );
+        if (!res.ok) {
+          const json = await res.json().catch(() => ({}));
+          throw new Error(json.error || tov.errorAddTeam);
+        }
+        addToast(tov.toastTeamAdded, 'success');
+        fetchTournamentTeams();
+        return true;
+      } catch (err: unknown) {
+        setActionError((err as Error)?.message ?? tov.errorUnexpected);
+        return false;
+      }
+    },
+    [tournamentId, addTeamMutate, tov, addToast, fetchTournamentTeams]
+  );
+
+  const handleBulkAddSubmit = useCallback(
+    async (
+      teamIds: string[],
+      onProgress: (done: number, total: number) => void
+    ): Promise<void> => {
+      if (teamIds.length === 0 || !tournamentId) return;
+      setActionError(null);
+      let failCount = 0;
+      for (let i = 0; i < teamIds.length; i++) {
+        try {
+          const res = await addTeamMutate(
+            `/api/admin/tournament/${tournamentId}/teams`,
+            {
+              method: 'POST',
+              body: JSON.stringify({ team_id: teamIds[i] }),
+            }
+          );
+          if (!res.ok) failCount++;
+        } catch {
+          failCount++;
+        }
+        onProgress(i + 1, teamIds.length);
+      }
+      if (failCount === 0) {
+        addToast(
+          format(tov.toastBulkTeamsAdded, { count: teamIds.length }),
+          'success'
+        );
+      } else {
+        addToast(
+          format(tov.toastBulkTeamsPartial, {
+            added: teamIds.length - failCount,
+            total: teamIds.length,
+            errors: failCount,
+          }),
+          'success'
+        );
+      }
+      fetchTournamentTeams();
+    },
+    [tournamentId, addTeamMutate, tov, addToast, fetchTournamentTeams]
+  );
+
+  const handleRemoveTeam = useCallback((tournamentTeamId: string) => {
+    setPendingRemoveTeamId(tournamentTeamId);
+    setShowRemoveConfirm(true);
+  }, []);
+
+  async function performRemoveTeam() {
+    if (!pendingRemoveTeamId || !tournamentId) return;
+    try {
+      await adminFetchJson(
+        `/api/admin/tournament/${tournamentId}/teams/${pendingRemoveTeamId}`,
+        { method: 'DELETE' }
+      );
+      addToast(tov.toastTeamRemoved, 'success');
+      fetchTournamentTeams();
+    } catch (err: unknown) {
+      setActionError((err as Error)?.message ?? tov.errorUnexpected);
+    } finally {
+      setShowRemoveConfirm(false);
+      setPendingRemoveTeamId(null);
+    }
+  }
+
+  const handleCreateStageSubmit = useCallback(
+    async (name: string, stageType: string): Promise<boolean> => {
+      if (!tournamentId) return false;
+      setActionError(null);
+      try {
+        const res = await createStageMutate(
+          `/api/admin/tournament/${tournamentId}/stages`,
+          {
+            method: 'POST',
+            body: JSON.stringify({
+              name,
+              stage_type: stageType,
+              order_index: data?.stages.length ?? 0,
+            }),
+          }
+        );
+        if (!res.ok) {
+          const json = await res.json().catch(() => ({}));
+          throw new Error(json.error || tov.errorCreateStage);
+        }
+        addToast(tov.toastStageCreated, 'success');
+        // Refetch global : les phases vivent dans le payload dashboard.
+        fetchDashboard();
+        return true;
+      } catch (err: unknown) {
+        setActionError((err as Error)?.message ?? tov.errorUnexpected);
+        return false;
+      }
+    },
+    [
+      tournamentId,
+      createStageMutate,
+      data?.stages.length,
+      tov,
+      addToast,
+      fetchDashboard,
+    ]
+  );
+
+  // Équipes non encore inscrites (pour les modales add/bulk).
+  const availableTeamsToAdd = useMemo(
+    () =>
+      allTeams.filter(
+        (tt) => !tournamentTeams.some((x) => x.team_id === tt.id)
+      ),
+    [allTeams, tournamentTeams]
+  );
+
+  // Référence stable pour les colonnes de TeamRow (évite d'invalider les rows).
+  const registrationFields = useMemo(
+    () => registrationFieldsMeta ?? [],
+    [registrationFieldsMeta]
+  );
 
   const t = data?.tournament;
   const s = data?.summary;
@@ -527,6 +801,32 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
 
           {data && t && s && sig && (
             <>
+              {/* Bannière d'erreur des actions à effet (statut/équipes/outils) */}
+              {actionError && (
+                <div className="mb-4 flex items-center gap-2 rounded-xl border border-red-500/50 bg-red-900/40 px-4 py-3 text-sm text-red-100">
+                  <svg
+                    className="h-5 w-5 flex-shrink-0 text-red-400"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  <span className="flex-1">{actionError}</span>
+                  <button
+                    type="button"
+                    onClick={() => setActionError(null)}
+                    className="text-red-300 transition-colors hover:text-white"
+                    aria-label="×"
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
+
               {/* ─── KPIs ───────────────────────────────────────────── */}
               <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
                 <StatCard
@@ -660,7 +960,7 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
                       message={tx.conflictsMsg}
                       cta={{
                         label: tx.view,
-                        href: `/admin/tournament/${tournamentId}`,
+                        href: `/admin/tournament/${tournamentId}/dashboard`,
                       }}
                     />
                     {sig.conflictsList.length > 0 && (
@@ -806,7 +1106,7 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
                     )}
                     cta={{
                       label: tx.teams,
-                      href: `/admin/tournament/${tournamentId}`,
+                      href: `/admin/tournament/${tournamentId}/dashboard`,
                     }}
                   />
                 )}
@@ -887,30 +1187,52 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
                 ))}
               </div>
 
-              {/* ─── Status workflow ────────────────────────────────── */}
-              <WidgetCard title={tx.workflowTitle} className="mb-6">
+              {/* ─── Status workflow (stepper interactif) ───────────── */}
+              <WidgetCard
+                title={tx.workflowTitle}
+                badge={
+                  updatingStatus ? (
+                    <span className="inline-flex items-center gap-1">
+                      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-purple-400" />
+                      {tov.updatingShort}
+                    </span>
+                  ) : undefined
+                }
+                className="mb-6"
+              >
                 <div className="flex flex-wrap items-center gap-2">
                   {data.guards.guards.map((g, i) => {
                     const isCurrent = g.status === data.guards.current_status;
+                    const clickable =
+                      !isCurrent && g.allowed && !updatingStatus;
                     return (
                       <div key={g.status} className="flex items-center gap-2">
-                        <div
-                          className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs ${
+                        <button
+                          type="button"
+                          disabled={!clickable}
+                          onClick={() => clickable && updateStatus(g.status)}
+                          className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs transition-colors ${
                             isCurrent
                               ? (STATUS_PILL_STYLE[g.status] ??
                                 STATUS_PILL_STYLE.draft)
                               : g.allowed
-                                ? 'border-white/10 text-gray-300'
-                                : 'border-red-500/20 text-red-400/70'
-                          }`}
-                          title={g.reason}
+                                ? 'border-white/10 text-gray-300 hover:border-purple-500/40 hover:text-white cursor-pointer'
+                                : 'border-red-500/20 text-red-400/70 cursor-not-allowed'
+                          } ${updatingStatus && !isCurrent ? 'opacity-60' : ''}`}
+                          title={
+                            isCurrent
+                              ? tov.currentStatus
+                              : g.allowed
+                                ? format(tov.switchTo, { label: g.label })
+                                : (g.reason ?? undefined)
+                          }
                         >
                           {isCurrent && '● '}
                           {g.label}
                           {!g.allowed && !isCurrent && (
                             <span className="text-red-400">🔒</span>
                           )}
-                        </div>
+                        </button>
                         {i < data.guards.guards.length - 1 && (
                           <span className="text-gray-600">→</span>
                         )}
@@ -943,6 +1265,28 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
                     ctaHref={`/admin/tournament/${tournamentId}/stages`}
                     ctaLabel={tx.manage}
                   >
+                    <div className="mb-3 flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => setShowNewStageModal(true)}
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-purple-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-purple-500"
+                      >
+                        <svg
+                          className="h-3.5 w-3.5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 4v16m8-8H4"
+                          />
+                        </svg>
+                        {tov.newStage}
+                      </button>
+                    </div>
                     {data.stages.length === 0 ? (
                       <p className="text-sm text-gray-500">{tx.noStages}</p>
                     ) : (
@@ -977,12 +1321,57 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
                     )}
                   </WidgetCard>
 
-                  <WidgetCard
-                    title={tx.teamsTitle}
-                    ctaHref={`/admin/tournament/${tournamentId}`}
-                    ctaLabel={tx.manage}
-                  >
-                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  <WidgetCard title={tx.teamsTitle} badge={`${s.totalTeams}`}>
+                    <div className="mb-3 flex flex-wrap justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowAddTeamModal(true);
+                          fetchAllTeams();
+                        }}
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-emerald-500"
+                      >
+                        <svg
+                          className="h-3.5 w-3.5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 4v16m8-8H4"
+                          />
+                        </svg>
+                        {tov.add}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowBulkAddModal(true);
+                          fetchAllTeams();
+                        }}
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-500"
+                      >
+                        <svg
+                          className="h-3.5 w-3.5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
+                          />
+                        </svg>
+                        {tov.bulkAdd}
+                      </button>
+                    </div>
+
+                    <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
                       <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3 text-center">
                         <div className="text-2xl font-bold text-emerald-300">
                           {s.activeTeams}
@@ -1016,6 +1405,30 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
                         </div>
                       </div>
                     </div>
+
+                    {loadingTeams ? (
+                      <p className="py-4 text-sm text-gray-500">
+                        {tov.loading}
+                      </p>
+                    ) : tournamentTeams.length === 0 ? (
+                      <p className="rounded-xl bg-white/[0.02] py-6 text-center text-sm text-gray-500">
+                        {tov.noTeams}
+                      </p>
+                    ) : (
+                      <div className="grid max-h-64 grid-cols-1 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
+                        {[...tournamentTeams]
+                          .sort((a, b) => (a.seed ?? 999) - (b.seed ?? 999))
+                          .map((tt) => (
+                            <TeamRow
+                              key={tt.id}
+                              tt={tt}
+                              registrationFields={registrationFields}
+                              onRemove={handleRemoveTeam}
+                              tx={tov}
+                            />
+                          ))}
+                      </div>
+                    )}
                   </WidgetCard>
 
                   <WidgetCard
@@ -1384,6 +1797,74 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
         onClose={() => setAdvanceTarget(null)}
         onSuccess={fetchDashboard}
       />
+
+      {/* ─── Modales migrées depuis l'overview ───────────────────────── */}
+      <AddTeamModal
+        open={showAddTeamModal}
+        availableTeams={availableTeamsToAdd}
+        onClose={() => setShowAddTeamModal(false)}
+        onSubmit={handleAddTeamSubmit}
+        tx={tov}
+      />
+
+      <BulkAddTeamsModal
+        open={showBulkAddModal}
+        availableTeams={availableTeamsToAdd}
+        onClose={() => setShowBulkAddModal(false)}
+        onSubmit={handleBulkAddSubmit}
+        tx={tov}
+      />
+
+      <NewStageModal
+        open={showNewStageModal}
+        stageTypeOptions={STAGE_TYPE_OPTIONS}
+        onClose={() => setShowNewStageModal(false)}
+        onSubmit={handleCreateStageSubmit}
+        tx={tov}
+      />
+
+      {/* Confirmation de régression de statut */}
+      {showStatusConfirm && pendingStatusValue && (
+        <ConfirmDialog
+          title={tov.demoteTitle}
+          subtitle={format(tov.demoteSubtitle, {
+            from:
+              STATUS_LABEL[data?.guards.current_status ?? 'draft'] ??
+              data?.guards.current_status ??
+              '',
+            to: STATUS_LABEL[pendingStatusValue] ?? pendingStatusValue,
+          })}
+          variant="warning"
+          loading={updatingStatus}
+          confirmLabel={tov.demote}
+          confirmingLabel={tov.updatingShort}
+          onCancel={() => {
+            setShowStatusConfirm(false);
+            setPendingStatusValue(null);
+          }}
+          onConfirm={() => {
+            setShowStatusConfirm(false);
+            performStatusUpdate(pendingStatusValue);
+            setPendingStatusValue(null);
+          }}
+        />
+      )}
+
+      {/* Confirmation de retrait d'équipe */}
+      {showRemoveConfirm && pendingRemoveTeamId && (
+        <ConfirmDialog
+          title={tov.removeTeamTitle}
+          subtitle={tov.removeTeamSubtitle}
+          variant="danger"
+          loading={false}
+          confirmLabel={tov.remove}
+          onCancel={() => {
+            setShowRemoveConfirm(false);
+            setPendingRemoveTeamId(null);
+          }}
+          onConfirm={performRemoveTeam}
+        />
+      )}
     </>
   );
 }

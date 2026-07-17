@@ -1442,7 +1442,7 @@ function TournamentSimulatorPage() {
               </div>
               <div className="flex gap-2">
                 <Link
-                  href={`/admin/tournament/${createTournamentResult.id}`}
+                  href={`/admin/tournament/${createTournamentResult.id}/dashboard`}
                   className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-semibold shadow transition-colors text-white"
                 >
                   {tx.viewTournament}

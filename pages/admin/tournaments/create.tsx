@@ -229,7 +229,7 @@ function AdminTournamentCreatePage({ staff }: Props) {
           }
         }
 
-        router.push(`/admin/tournament/${created.id}`);
+        router.push(`/admin/tournament/${created.id}/dashboard`);
       } else {
         router.push('/admin/tournaments');
       }

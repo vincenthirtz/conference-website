@@ -376,7 +376,7 @@ function AdminTournamentsPage({
                 {tournaments.map((tourn) => (
                   <Link
                     key={tourn.id}
-                    href={`/admin/tournament/${tourn.id}`}
+                    href={`/admin/tournament/${tourn.id}/dashboard`}
                     className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-4 hover:bg-neutral-700/30 transition-colors group"
                   >
                     <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">

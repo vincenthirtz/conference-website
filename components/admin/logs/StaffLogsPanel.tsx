@@ -81,7 +81,7 @@ const ENTITY_ROUTES: Record<string, (id: string) => string> = {
   match: (id) => `/admin/matches/${id}`,
   stage: (id) => `/admin/stages/${id}`,
   team: (id) => `/admin/teams/${id}`,
-  tournament: (id) => `/admin/tournament/${id}`,
+  tournament: (id) => `/admin/tournament/${id}/dashboard`,
 };
 
 function shortId(id: string | null | undefined) {
@@ -630,7 +630,7 @@ export default function StaffLogsPanel() {
                       )}
                     {log.tournament_id && log.entity_type !== 'tournament' && (
                       <Link
-                        href={`/admin/tournament/${log.tournament_id}`}
+                        href={`/admin/tournament/${log.tournament_id}/dashboard`}
                         className="text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1"
                       >
                         <svg

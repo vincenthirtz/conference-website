@@ -34,7 +34,7 @@ const TAB_ROUTE: Record<TournamentTabId, string> = {
   'prize-pool': 'prize-pool',
   history: 'history',
   edit: 'edit',
-  tools: 'bulk-ops',
+  tools: 'tools',
 };
 
 /** Ordered tabs with the i18n key of their label. */
@@ -88,7 +88,7 @@ export default function TournamentTabsNav({
       className={`mb-6 flex flex-col gap-3 ${className}`}
     >
       <Link
-        href={`/admin/tournament/${tournamentId}`}
+        href={`/admin/tournament/${tournamentId}/dashboard`}
         className="inline-flex w-fit items-center gap-2 text-sm text-neutral-400 hover:text-white"
       >
         {t.back}
