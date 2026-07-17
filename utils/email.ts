@@ -553,6 +553,105 @@ export function sendMatchCheckinEmail(opts: {
 }
 
 /**
+ * Notification envoyée au(x) capitaine(s) d'équipe lorsqu'une demande ou une
+ * création de scrim les concerne. Deux variantes (`kind`) :
+ *
+ *  - `request`   : demande de scrim dirigée (site) — envoyée au capitaine de
+ *                  l'équipe CIBLE. « {opponentName} souhaite organiser un scrim
+ *                  avec {recipientTeamName}. »
+ *  - `scheduled` : scrim créé par un admin via le bot — envoyé aux capitaines
+ *                  des deux équipes. « Un scrim entre {recipientTeamName} et
+ *                  {opponentName} a été créé. »
+ *
+ * S'AJOUTE à la notif Discord existante, ne la remplace pas. Best-effort côté
+ * appelant (fire-and-forget) — un échec ici ne doit jamais bloquer la réponse.
+ */
+export function sendScrimRequestEmail(opts: {
+  to: string;
+  recipientTeamName: string;
+  opponentName: string;
+  dateLabel?: string | null;
+  message?: string | null;
+  requesterName?: string | null;
+  isExternal?: boolean;
+  ctaUrl: string;
+  kind: 'request' | 'scheduled';
+}): Promise<SendEmailResult> {
+  const isRequest = opts.kind === 'request';
+
+  const subject = isRequest
+    ? `Nouvelle demande de scrim : ${opts.opponentName}`
+    : `Scrim programmé : ${opts.recipientTeamName} vs ${opts.opponentName}`;
+
+  const title = isRequest
+    ? '🎯 Nouvelle demande de scrim'
+    : '🗓️ Scrim programmé';
+
+  const intro = isRequest
+    ? `<strong style="color:#ffffff;">${escapeHtml(opts.opponentName)}</strong> souhaite organiser un scrim avec <strong style="color:#ffffff;">${escapeHtml(opts.recipientTeamName)}</strong>.`
+    : `Un scrim entre <strong style="color:#ffffff;">${escapeHtml(opts.recipientTeamName)}</strong> et <strong style="color:#ffffff;">${escapeHtml(opts.opponentName)}</strong> a &eacute;t&eacute; cr&eacute;&eacute;.`;
+
+  const ctaLabel = isRequest ? 'Voir la demande' : 'Voir mes scrims';
+
+  // Build the info rows (only those with a value). `request` may carry a date,
+  // a message and a contact; `scheduled` only surfaces the date when provided.
+  type InfoRow = { label: string; value: string; highlight?: boolean };
+  const rows: InfoRow[] = [];
+
+  if (opts.dateLabel) {
+    rows.push({
+      label: 'Date souhait&eacute;e',
+      value: escapeHtml(opts.dateLabel),
+      highlight: true,
+    });
+  }
+  if (isRequest && opts.message) {
+    rows.push({ label: 'Message', value: escapeHtml(opts.message) });
+  }
+  if (isRequest && opts.requesterName) {
+    rows.push({
+      label: opts.isExternal ? 'Contact externe' : 'Capitaine',
+      value: escapeHtml(opts.requesterName),
+    });
+  }
+
+  const rowsHtml =
+    rows.length > 0
+      ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:rgba(255,255,255,0.05);border-radius:10px;border:1px solid rgba(255,255,255,0.08);margin:0 0 24px;">${rows
+          .map((r, i) => {
+            // Last row drops the divider for a clean card edge.
+            const border =
+              i < rows.length - 1
+                ? 'border-bottom:1px solid rgba(255,255,255,0.06);'
+                : '';
+            return `
+        <tr>
+          <td style="padding:14px 20px;${border}">
+            <span style="font-size:12px;color:#9081B0;text-transform:uppercase;letter-spacing:0.1em;">${r.label}</span><br/>
+            <span style="font-size:15px;color:${r.highlight ? '#7bc96a' : '#ffffff'};font-weight:500;">${r.value}</span>
+          </td>
+        </tr>`;
+          })
+          .join('')}</table>`
+      : '';
+
+  return sendEmail({
+    to: opts.to,
+    subject,
+    tags: ['scrim-request'],
+    html: emailLayout(`
+      ${gradientBar()}
+      <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;">${title}</h1>
+      <p style="margin:0 0 24px;font-size:15px;color:#C6BED9;line-height:1.6;">
+        ${intro}
+      </p>
+      ${rowsHtml}
+      ${ctaButton(opts.ctaUrl, ctaLabel)}
+    `),
+  });
+}
+
+/**
  * Urgent check-in reminder sent at T-30 / T-15 to captains who have not yet
  * checked in. Uses the SAME check-in link/token as `sendMatchCheckinEmail`.
  * Critical-transactional — sent unconditionally (a missed reminder = forfeit),
