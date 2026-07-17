@@ -1816,6 +1816,11 @@ Response shape (truncated):
 | [`scrims/[scrimId]/matches.ts`](../pages/api/bot/v1/scrims/[scrimId]/matches.ts)                     | GET, POST  | yes   | `bot-scrim-matches`     |
 | [`scrims/[scrimId]/matches/[matchId].ts`](../pages/api/bot/v1/scrims/[scrimId]/matches/[matchId].ts) | PATCH      | yes   | `bot-scrim-match-patch` |
 
+> **Effet de bord — `POST /api/bot/v1/scrims`** : si `team1_id` ET `team2_id`
+> sont fournis (même en statut `draft`), un email best-effort est envoyé aux
+> capitaines des deux équipes (`kind=scheduled`). Fire-and-forget : un échec
+> email ne modifie jamais la réponse `201`.
+
 ### Stages
 
 | Route                                                                                  | Methods | Idem. | Rate-key               |
