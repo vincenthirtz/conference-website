@@ -20,12 +20,20 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
-import { computeAudienceRecipients, getCampaign } from '@/utils/broadcasts';
+import {
+  computeAudienceRecipients,
+  getCampaign,
+  type CampaignAudience,
+} from '@/utils/broadcasts';
 
 import { logger } from '../../../../../utils/logger';
 export default withStaffRoute(handler, 'admin');
 
-async function handler(req: NextApiRequest, res: NextApiResponse, ctx: AuthenticatedStaffContext) {
+async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  ctx: AuthenticatedStaffContext
+) {
   if (!supabaseAdmin) {
     return res.status(500).json({ error: 'Supabase admin not configured' });
   }
@@ -101,7 +109,7 @@ async function handlePost(
   res: NextApiResponse,
   ctx: AuthenticatedStaffContext,
   campaignId: string,
-  audience: 'all-confirmed-users',
+  audience: CampaignAudience,
   campaignName: string
 ) {
   const rawWaveSize = Number(req.body?.waveSize);

@@ -17,6 +17,7 @@ import {
   computeAudienceRecipients,
   getCampaign,
   buildBroadcastUnsubscribeUrl,
+  buildRecipientUnsubscribeUrl,
   type BroadcastCampaign,
 } from '@/utils/broadcasts';
 import { campaignInputSchema } from '@/utils/campaignSchema';
@@ -24,7 +25,11 @@ import { campaignInputSchema } from '@/utils/campaignSchema';
 import { logger } from '../../../../../utils/logger';
 export default withStaffRoute(handler, 'admin');
 
-async function handler(req: NextApiRequest, res: NextApiResponse, ctx: AuthenticatedStaffContext) {
+async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  ctx: AuthenticatedStaffContext
+) {
   const campaignId = String(req.query.campaignId ?? '');
   const campaign = await getCampaign(campaignId);
   if (!campaign) {
@@ -60,7 +65,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: Authentic
         ? req.body.testLabel.trim() || null
         : null;
     try {
-      const result = await campaign.send(testTo, testLabel);
+      // Cohérence RGPD : même un envoi de test porte un lien de désinscription
+      // fonctionnel. Le staff identifié (ctx.user) sert de sujet du token user.
+      const testUnsubscribeUrl = ctx?.user?.id
+        ? buildBroadcastUnsubscribeUrl(ctx.user.id)
+        : undefined;
+      const result = await campaign.send(testTo, testLabel, testUnsubscribeUrl);
       return res.status(200).json({
         success: result.success,
         test: true,
@@ -117,7 +127,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: Authentic
 
   for (const r of windowed) {
     try {
-      const unsubscribeUrl = buildBroadcastUnsubscribeUrl(r.user_id);
+      const unsubscribeUrl = buildRecipientUnsubscribeUrl(r);
       const result = await campaign.send(r.email, r.label, unsubscribeUrl);
       if (result.success) {
         sent++;
@@ -180,9 +190,9 @@ async function handleUpdate(
   campaign: BroadcastCampaign
 ) {
   if (campaign.source !== 'db') {
-    return res
-      .status(403)
-      .json({ error: 'Cette campagne est figée et ne peut pas être modifiée.' });
+    return res.status(403).json({
+      error: 'Cette campagne est figée et ne peut pas être modifiée.',
+    });
   }
   const parsed = campaignInputSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -247,9 +257,9 @@ async function handleDelete(
   campaign: BroadcastCampaign
 ) {
   if (campaign.source !== 'db') {
-    return res
-      .status(403)
-      .json({ error: 'Cette campagne est figée et ne peut pas être supprimée.' });
+    return res.status(403).json({
+      error: 'Cette campagne est figée et ne peut pas être supprimée.',
+    });
   }
 
   // Nettoie le planning + le snapshot de destinataires (sinon orphelins).
