@@ -1703,6 +1703,8 @@
     "tabHistory": "History",
     "tabEdit": "Edit",
     "tabTools": "Tools",
+    "tabBulkOps": "Bulk ops",
+    "tabMore": "More",
     "subCheckinSettings": "Settings",
     "subCheckinLive": "Live console",
     "subBracketView": "Bracket",

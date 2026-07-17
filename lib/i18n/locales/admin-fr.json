@@ -1703,6 +1703,8 @@
     "tabHistory": "Historique",
     "tabEdit": "Édition",
     "tabTools": "Outils",
+    "tabBulkOps": "Ops groupées",
+    "tabMore": "Plus",
     "subCheckinSettings": "Réglages",
     "subCheckinLive": "Console live",
     "subBracketView": "Arbre",
