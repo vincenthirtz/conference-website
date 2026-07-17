@@ -14,7 +14,10 @@ import {
   sendCampaignEmail,
 } from './email';
 import type { SendEmailResult, CampaignBody } from './email';
-import { generateUnsubscribeToken } from './emailUnsubscribe';
+import {
+  generateUnsubscribeToken,
+  generateEmailUnsubscribeToken,
+} from './emailUnsubscribe';
 import { BROADCAST_OPT_OUT_EVENT_TYPE } from './webPushEvents';
 import { slugifyCampaignName } from './campaignSchema';
 
@@ -39,7 +42,41 @@ export function buildBroadcastUnsubscribeUrl(userId: string): string {
   )}&scope=broadcast`;
 }
 
-export type CampaignAudience = 'all-confirmed-users';
+/**
+ * Variante EMAIL de l'URL de désinscription broadcast : pour un destinataire
+ * SANS compte auth (ex. adhérent·e importé·e). Le token encode l'email (champ
+ * `e`) au lieu d'un userId ; l'endpoint /api/email/unsubscribe route alors vers
+ * broadcast_email_optouts. Même `&scope=broadcast` que la variante user.
+ */
+export function buildEmailUnsubscribeUrl(email: string): string {
+  return `${SITE_URL.replace(/\/$/, '')}/api/email/unsubscribe?token=${generateEmailUnsubscribeToken(
+    email
+  )}&scope=broadcast`;
+}
+
+/**
+ * Construit l'URL de désinscription broadcast adaptée au TYPE de destinataire :
+ * - `user_id` présent → token user (compte auth, opt-out en notification_prefs)
+ * - sinon → token email (destinataire sans compte, opt-out en
+ *   broadcast_email_optouts)
+ * Garantit qu'un lien de désinscription fonctionnel existe pour CHAQUE
+ * destinataire réel, qu'il ait un compte ou non.
+ */
+export function buildRecipientUnsubscribeUrl(recipient: {
+  user_id: string | null;
+  email: string;
+}): string {
+  return recipient.user_id
+    ? buildBroadcastUnsubscribeUrl(recipient.user_id)
+    : buildEmailUnsubscribeUrl(recipient.email);
+}
+
+export type CampaignAudience =
+  | 'all-confirmed-users'
+  | 'team-captains'
+  | 'team-members'
+  | 'staff'
+  | 'adherents';
 export type CampaignStatus = 'active' | 'draft' | 'archived';
 
 export type BroadcastCampaign = {
@@ -212,7 +249,12 @@ export async function listCampaigns(): Promise<BroadcastCampaign[]> {
 }
 
 export type ComputedRecipient = {
-  user_id: string;
+  /**
+   * Compte auth du destinataire, ou `null` pour un destinataire « email direct »
+   * (audience `adherents` sans compte lié). `null` ⇒ l'URL de désinscription
+   * passe par un token EMAIL (cf. buildRecipientUnsubscribeUrl).
+   */
+  user_id: string | null;
   email: string;
   label: string | null;
 };
@@ -359,28 +401,94 @@ function resolveLabel(
 }
 
 /**
- * Calcule la liste des destinataires éligibles pour une audience donnée.
- * - Itère auth.users (paginé), filtre les comptes confirmés
- * - Récupère profiles.battle_tag pour le greeting (split sur "#")
- * - Fallback sur user_metadata.display_name puis null
- * - Exclut les opt-out RGPD broadcast (UNE requête, pas de N+1)
+ * Charge en UNE requête l'ensemble des opt-out RGPD broadcast keyés par EMAIL
+ * (broadcast_email_optouts). Pendant email-only de fetchBroadcastOptOuts (keyé
+ * user_id). Renvoie un Set d'emails en minuscules. Consommé par l'audience
+ * `adherents` (destinataires souvent sans compte auth).
  */
-export async function computeAudienceRecipients(
-  audience: CampaignAudience
-): Promise<ComputedRecipient[]> {
+async function fetchBroadcastEmailOptOuts(): Promise<Set<string>> {
   if (!supabaseAdmin) {
     throw new Error('Supabase admin not configured');
   }
-  if (audience !== 'all-confirmed-users') {
-    throw new Error(`Unsupported audience: ${audience}`);
+  const { data, error } = await supabaseAdmin
+    .from('broadcast_email_optouts')
+    .select('email');
+  if (error) throw error;
+  const set = new Set<string>();
+  for (const r of data ?? []) {
+    const email = (r as { email?: string | null }).email;
+    if (email) set.add(email.trim().toLowerCase());
   }
+  return set;
+}
 
+/**
+ * Résout l'ensemble des auth user ids capitaines d'une équipe active. Catalogue
+ * broadcast GLOBAL → PAS de filtre tenant. Dédup implicite (Set).
+ */
+async function listTeamCaptainIds(): Promise<Set<string>> {
+  const { data, error } = await supabaseAdmin!
+    .from('teams')
+    .select('captain_id')
+    .eq('is_active', true)
+    .is('deleted_at', null);
+  if (error) throw error;
+  const set = new Set<string>();
+  for (const r of data ?? []) {
+    const id = (r as { captain_id?: string | null }).captain_id;
+    if (id) set.add(id);
+  }
+  return set;
+}
+
+/**
+ * Résout l'ensemble des auth user ids membres d'une équipe (toutes équipes,
+ * global). team_members n'a pas de colonne deleted_at → pas de filtre soft-delete.
+ */
+async function listTeamMemberIds(): Promise<Set<string>> {
+  const { data, error } = await supabaseAdmin!
+    .from('team_members')
+    .select('user_id');
+  if (error) throw error;
+  const set = new Set<string>();
+  for (const r of data ?? []) {
+    const id = (r as { user_id?: string | null }).user_id;
+    if (id) set.add(id);
+  }
+  return set;
+}
+
+/**
+ * Résout l'ensemble des auth user ids du staff actif (non soft-deleted). Global.
+ */
+async function listStaffAuthUserIds(): Promise<Set<string>> {
+  const { data, error } = await supabaseAdmin!
+    .from('staff')
+    .select('auth_user_id')
+    .eq('is_active', true)
+    .is('deleted_at', null);
+  if (error) throw error;
+  const set = new Set<string>();
+  for (const r of data ?? []) {
+    const id = (r as { auth_user_id?: string | null }).auth_user_id;
+    if (id) set.add(id);
+  }
+  return set;
+}
+
+/**
+ * Destinataires « comptes confirmés » filtrés à un sous-ensemble d'auth user ids
+ * (`idSet = null` ⇒ tous les confirmés, chemin all-confirmed-users). Réutilise
+ * le pipeline commun : confirmés − opt-out broadcast, label via battle-tag.
+ */
+async function computeConfirmedRecipients(
+  idSet: Set<string> | null
+): Promise<ComputedRecipient[]> {
   const confirmed = await listConfirmedUsers();
   const optedOut = await fetchBroadcastOptOuts();
-  const eligible =
-    optedOut.size > 0
-      ? confirmed.filter((u) => !optedOut.has(u.id))
-      : confirmed;
+  const eligible = confirmed.filter(
+    (u) => (idSet === null || idSet.has(u.id)) && !optedOut.has(u.id)
+  );
 
   const battleTagById = await fetchBattleTags(eligible.map((u) => u.id));
 
@@ -389,6 +497,85 @@ export async function computeAudienceRecipients(
     email: u.email,
     label: resolveLabel(battleTagById.get(u.id), u.display_name),
   }));
+}
+
+/**
+ * Destinataires de l'audience `adherents` : audience « email direct » — les
+ * cibles n'ont souvent PAS de compte auth. Sélectionne les adhérent·es actif·ves
+ * à jour de cotisation (paid), dédupe par lower(email), exclut les emails
+ * présents dans broadcast_email_optouts. `user_id` = auth_user_id ?? null (⇒
+ * l'unsubscribe route vers un token email quand le compte n'est pas lié).
+ */
+async function computeAdherentRecipients(): Promise<ComputedRecipient[]> {
+  const { data, error } = await supabaseAdmin!
+    .from('adherents')
+    .select('first_name,last_name,email,auth_user_id')
+    .is('deleted_at', null)
+    .eq('is_active', true)
+    .eq('payment_status', 'paid');
+  if (error) throw error;
+
+  const optedOut = await fetchBroadcastEmailOptOuts();
+  const byEmail = new Map<string, ComputedRecipient>();
+
+  for (const r of data ?? []) {
+    const row = r as {
+      first_name?: string | null;
+      last_name?: string | null;
+      email?: string | null;
+      auth_user_id?: string | null;
+    };
+    if (!row.email) continue;
+    const lower = row.email.trim().toLowerCase();
+    if (!lower) continue;
+    if (optedOut.has(lower)) continue;
+    if (byEmail.has(lower)) continue; // dédup par lower(email)
+
+    const label =
+      `${row.first_name ?? ''} ${row.last_name ?? ''}`.trim() || null;
+    byEmail.set(lower, {
+      user_id: row.auth_user_id ?? null,
+      email: row.email,
+      label,
+    });
+  }
+
+  return Array.from(byEmail.values());
+}
+
+/**
+ * Calcule la liste des destinataires éligibles pour une audience donnée.
+ *
+ * Deux familles d'audiences :
+ * - « comptes auth » (all-confirmed-users, team-captains, team-members, staff) :
+ *   résout un Set<authUserId>, filtre les comptes confirmés à ce set, retire les
+ *   opt-out RGPD broadcast (notification_prefs), label via profiles.battle_tag
+ *   (fallback display_name). Catalogue broadcast GLOBAL → aucun filtre tenant.
+ * - « email direct » (adherents) : destinataires souvent sans compte auth,
+ *   filtrés par cotisation payée, dédupés par email, opt-out via
+ *   broadcast_email_optouts.
+ */
+export async function computeAudienceRecipients(
+  audience: CampaignAudience
+): Promise<ComputedRecipient[]> {
+  if (!supabaseAdmin) {
+    throw new Error('Supabase admin not configured');
+  }
+
+  switch (audience) {
+    case 'all-confirmed-users':
+      return computeConfirmedRecipients(null);
+    case 'team-captains':
+      return computeConfirmedRecipients(await listTeamCaptainIds());
+    case 'team-members':
+      return computeConfirmedRecipients(await listTeamMemberIds());
+    case 'staff':
+      return computeConfirmedRecipients(await listStaffAuthUserIds());
+    case 'adherents':
+      return computeAdherentRecipients();
+    default:
+      throw new Error(`Unsupported audience: ${audience as string}`);
+  }
 }
 
 export type UnsubscribedUser = {
@@ -590,7 +777,10 @@ export async function processCampaignWave(
     let success = false;
     let errorMsg: string | null = null;
     try {
-      const unsubscribeUrl = buildBroadcastUnsubscribeUrl(r.user_id as string);
+      const unsubscribeUrl = buildRecipientUnsubscribeUrl({
+        user_id: (r.user_id as string | null) ?? null,
+        email: r.email as string,
+      });
       const result = await campaign.send(
         r.email as string,
         (r.label as string | null) ?? null,

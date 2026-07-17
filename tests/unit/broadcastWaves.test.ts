@@ -196,9 +196,136 @@ describe('computeAudienceRecipients', () => {
   });
 
   it('throws on unsupported audience', async () => {
-    await expect(
-      computeAudienceRecipients('unknown' as any)
-    ).rejects.toThrow(/Unsupported audience/);
+    await expect(computeAudienceRecipients('unknown' as any)).rejects.toThrow(
+      /Unsupported audience/
+    );
+  });
+
+  it('team-captains: confirmed captains only, minus broadcast opt-outs', async () => {
+    setAuthListUsers([
+      { id: 'u1', email: 'a@x.com', email_confirmed_at: '2026-01-01' } as any,
+      { id: 'u2', email: 'b@x.com', email_confirmed_at: '2026-01-01' } as any,
+      { id: 'u3', email: 'c@x.com', email_confirmed_at: '2026-01-01' } as any,
+    ]);
+    store.teams = [
+      { id: 't1', captain_id: 'u1', is_active: true },
+      { id: 't2', captain_id: 'u2', is_active: true },
+      // équipe inactive → capitaine u3 ignoré
+      { id: 't3', captain_id: 'u3', is_active: false },
+      // capitaine null → ignoré
+      { id: 't4', captain_id: null, is_active: true },
+    ] as any;
+    store.notification_prefs = [
+      {
+        user_id: 'u2',
+        event_type: 'broadcast',
+        channel: 'email',
+        enabled: false,
+      },
+    ] as any;
+
+    const recipients = await computeAudienceRecipients('team-captains');
+    expect(recipients.map((r) => r.user_id)).toEqual(['u1']);
+  });
+
+  it('team-members: dedups user ids across teams, intersected with confirmed', async () => {
+    setAuthListUsers([
+      { id: 'u1', email: 'a@x.com', email_confirmed_at: '2026-01-01' } as any,
+      { id: 'u2', email: 'b@x.com', email_confirmed_at: '2026-01-01' } as any,
+    ]);
+    store.team_members = [
+      { team_id: 't1', user_id: 'u1' },
+      { team_id: 't2', user_id: 'u1' }, // doublon → dédupé
+      { team_id: 't1', user_id: 'u2' },
+      // membre non confirmé côté auth → exclu (pas dans la liste confirmée)
+      { team_id: 't1', user_id: 'u9' },
+      { team_id: 't1', user_id: null }, // null → ignoré
+    ] as any;
+
+    const recipients = await computeAudienceRecipients('team-members');
+    expect(recipients.map((r) => r.user_id).sort()).toEqual(['u1', 'u2']);
+  });
+
+  it('staff: active non-deleted staff auth ids, intersected with confirmed', async () => {
+    setAuthListUsers([
+      { id: 'u1', email: 'a@x.com', email_confirmed_at: '2026-01-01' } as any,
+      { id: 'u2', email: 'b@x.com', email_confirmed_at: '2026-01-01' } as any,
+    ]);
+    store.staff = [
+      { id: 's1', auth_user_id: 'u1', is_active: true, deleted_at: null },
+      // inactif → exclu
+      { id: 's2', auth_user_id: 'u2', is_active: false, deleted_at: null },
+    ] as any;
+
+    const recipients = await computeAudienceRecipients('staff');
+    expect(recipients.map((r) => r.user_id)).toEqual(['u1']);
+  });
+
+  it('adherents: paid+active only, deduped by lower(email), email opt-outs excluded', async () => {
+    store.adherents = [
+      {
+        first_name: 'Alice',
+        last_name: 'Martin',
+        email: 'Alice@Example.com',
+        auth_user_id: 'u1',
+        is_active: true,
+        payment_status: 'paid',
+        deleted_at: null,
+      },
+      // doublon email (casse différente) → dédupé
+      {
+        first_name: 'Alice',
+        last_name: 'Dup',
+        email: 'alice@example.com',
+        auth_user_id: null,
+        is_active: true,
+        payment_status: 'paid',
+        deleted_at: null,
+      },
+      // sans compte auth → user_id null
+      {
+        first_name: 'Bob',
+        last_name: '',
+        email: 'bob@example.com',
+        auth_user_id: null,
+        is_active: true,
+        payment_status: 'paid',
+        deleted_at: null,
+      },
+      // non payé → exclu
+      {
+        first_name: 'Carol',
+        last_name: 'X',
+        email: 'carol@example.com',
+        auth_user_id: null,
+        is_active: true,
+        payment_status: 'pending',
+        deleted_at: null,
+      },
+      // opt-out email → exclu
+      {
+        first_name: 'Dan',
+        last_name: 'Y',
+        email: 'dan@example.com',
+        auth_user_id: null,
+        is_active: true,
+        payment_status: 'paid',
+        deleted_at: null,
+      },
+    ] as any;
+    store.broadcast_email_optouts = [
+      { email: 'dan@example.com', source: 'broadcast' },
+    ] as any;
+
+    const recipients = await computeAudienceRecipients('adherents');
+    expect(recipients).toEqual([
+      {
+        user_id: 'u1',
+        email: 'Alice@Example.com',
+        label: 'Alice Martin',
+      },
+      { user_id: null, email: 'bob@example.com', label: 'Bob' },
+    ]);
   });
 });
 
@@ -320,9 +447,7 @@ describe('processCampaignWave', () => {
 
     const result = await processCampaignWave(CAMPAIGN_ID);
     expect(result?.status).toBe('completed');
-    expect(
-      (store.broadcast_schedules as any[])[0].status
-    ).toBe('completed');
+    expect((store.broadcast_schedules as any[])[0].status).toBe('completed');
   });
 
   it('skips when schedule is paused or completed', async () => {

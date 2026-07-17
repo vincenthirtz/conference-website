@@ -349,6 +349,36 @@ describe('campaignInputSchema', () => {
       ).success
     ).toBe(true);
   });
+
+  // ── audience enum ─────────────────────────────────────────
+
+  it('accepts every allowed audience id', () => {
+    for (const audience of [
+      'all-confirmed-users',
+      'team-captains',
+      'team-members',
+      'staff',
+      'adherents',
+    ]) {
+      const parsed = campaignInputSchema.safeParse(validInput({ audience }));
+      expect(parsed.success, audience).toBe(true);
+      if (parsed.success) expect(parsed.data.audience).toBe(audience);
+    }
+  });
+
+  it('defaults audience to all-confirmed-users when omitted', () => {
+    const parsed = campaignInputSchema.safeParse(validInput());
+    expect(parsed.success).toBe(true);
+    if (parsed.success)
+      expect(parsed.data.audience).toBe('all-confirmed-users');
+  });
+
+  it('rejects an unknown audience', () => {
+    const parsed = campaignInputSchema.safeParse(
+      validInput({ audience: 'everyone' })
+    );
+    expect(parsed.success).toBe(false);
+  });
 });
 
 /* -----------------------------------------------------------

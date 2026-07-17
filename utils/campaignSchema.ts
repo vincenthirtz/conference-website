@@ -11,7 +11,13 @@ export const campaignInputSchema = z
     subject: z.string().trim().min(1, 'Objet requis').max(200),
     description: z.string().trim().max(500).optional().default(''),
     audience: z
-      .literal('all-confirmed-users')
+      .enum([
+        'all-confirmed-users',
+        'team-captains',
+        'team-members',
+        'staff',
+        'adherents',
+      ])
       .optional()
       .default('all-confirmed-users'),
     status: z.enum(['draft', 'active', 'archived']).optional().default('draft'),
