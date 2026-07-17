@@ -106,7 +106,22 @@ function getStatusStyles(
 function getAudienceLabels(t: Dict): Record<string, string> {
   return {
     'all-confirmed-users': t.audienceAllConfirmed,
+    'team-captains': t.audienceTeamCaptains,
+    'team-members': t.audienceTeamMembers,
+    staff: t.audienceStaff,
+    adherents: t.audienceAdherents,
   };
+}
+
+function getAudienceOptions(t: Dict): { value: string; label: string }[] {
+  const labels = getAudienceLabels(t);
+  return [
+    'all-confirmed-users',
+    'team-captains',
+    'team-members',
+    'staff',
+    'adherents',
+  ].map((value) => ({ value, label: labels[value] ?? value }));
 }
 
 function formatDateTime(iso: string | null) {
@@ -1615,6 +1630,9 @@ function CampaignFormModal({
       ? campaign.status
       : 'draft'
   );
+  const [audience, setAudience] = useState<string>(
+    campaign?.audience ?? 'all-confirmed-users'
+  );
   const [heading, setHeading] = useState(campaign?.body?.heading ?? '');
   const [greetingEnabled, setGreetingEnabled] = useState(
     campaign?.body?.greetingEnabled ?? true
@@ -1671,6 +1689,7 @@ function CampaignFormModal({
       subject: subject.trim(),
       description: description.trim() || undefined,
       status,
+      audience,
       heading: heading.trim(),
       greetingEnabled,
       bodyParagraphs,
@@ -1800,13 +1819,17 @@ function CampaignFormModal({
               </FormField>
 
               <FormField label={t.audienceLabel} hint={t.audienceHint}>
-                <input
-                  type="text"
-                  value={t.audienceValue}
-                  disabled
-                  readOnly
-                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/30 border border-neutral-700 text-neutral-400 text-sm cursor-not-allowed"
-                />
+                <select
+                  value={audience}
+                  onChange={(e) => setAudience(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                >
+                  {getAudienceOptions(t).map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
               </FormField>
             </div>
           </div>
