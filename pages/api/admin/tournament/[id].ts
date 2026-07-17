@@ -24,6 +24,11 @@ type TournamentDetail = {
   end_date: string | null;
   timezone: string | null;
   max_teams: number | null;
+  min_players: number | null;
+  max_players: number | null;
+  roster_locked_at: string | null;
+  is_public: boolean;
+  is_featured: boolean;
   logo_url: string | null;
   banner_url: string | null;
   rules_url: string | null;
@@ -40,6 +45,14 @@ type ApiResponse =
   | { tournament: TournamentDetail }
   | { error: string }
   | { success: boolean; tournament: TournamentDetail };
+
+// The DB stores publication state as `visibility` ('public' | 'private'), but
+// the edit UI consumes a boolean `is_public`. Map it on the way out so a full
+// round-trip (GET → edit form → PATCH) preserves the flag.
+function toTournamentDetail(row: Record<string, any>): TournamentDetail {
+  const { visibility, ...rest } = row ?? {};
+  return { ...rest, is_public: visibility === 'public' } as TournamentDetail;
+}
 
 const VALID_STATUSES = [
   'draft',
@@ -97,6 +110,11 @@ async function handleGet(
         format,
         format_type,
         max_teams,
+        min_players,
+        max_players,
+        roster_locked_at,
+        visibility,
+        is_featured,
         logo_url,
         banner_url,
         rules_url,
@@ -122,7 +140,7 @@ async function handleGet(
       return res.status(404).json({ error: 'Tournament not found' });
     }
 
-    return res.status(200).json({ tournament: data as TournamentDetail });
+    return res.status(200).json({ tournament: toTournamentDetail(data) });
   } catch (err: unknown) {
     logger.error('admin GET tournament internal error:', err);
     return res
@@ -390,6 +408,11 @@ async function handlePatch(
         format,
         format_type,
         max_teams,
+        min_players,
+        max_players,
+        roster_locked_at,
+        visibility,
+        is_featured,
         logo_url,
         banner_url,
         rules_url,
@@ -432,7 +455,7 @@ async function handlePatch(
 
     return res.status(200).json({
       success: true,
-      tournament: after as TournamentDetail,
+      tournament: toTournamentDetail(after),
     });
   } catch (err: unknown) {
     logger.error('admin PATCH tournament internal error:', err);
