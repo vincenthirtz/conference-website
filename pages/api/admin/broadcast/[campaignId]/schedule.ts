@@ -135,9 +135,26 @@ async function handlePost(
       .json({ error: 'Aucun destinataire éligible pour cette campagne.' });
   }
 
+  // broadcast_recipients.user_id est NOT NULL : le snapshot planifié/vagues ne
+  // peut stocker que des destinataires avec compte auth. Les destinataires
+  // email-only (ex. adhérent·es HelloAsso sans compte) ne sont adressables que
+  // via l'envoi direct (« Envoyer maintenant »). On les écarte ici pour ne pas
+  // violer la contrainte, et on le signale au staff (jamais de drop silencieux).
+  const schedulable = recipients.filter(
+    (r): r is typeof r & { user_id: string } => Boolean(r.user_id)
+  );
+  const emailOnlySkipped = recipients.length - schedulable.length;
+  if (schedulable.length === 0) {
+    return res.status(400).json({
+      error:
+        'Cette audience ne contient que des destinataires sans compte (email-only). ' +
+        'Utilisez « Envoyer maintenant » pour les adresser : l’envoi planifié par vagues nécessite un compte utilisateur.',
+    });
+  }
+
   // 2) Snapshot dans broadcast_recipients (insert ON CONFLICT DO NOTHING)
   // — préserve les statuts existants si une vague a déjà été envoyée
-  const rows = recipients.map((r) => ({
+  const rows = schedulable.map((r) => ({
     campaign_id: campaignId,
     user_id: r.user_id,
     email: r.email,
@@ -179,7 +196,7 @@ async function handlePost(
         campaign_id: campaignId,
         wave_size: waveSize,
         status: 'scheduled',
-        total_recipients: recipients.length,
+        total_recipients: schedulable.length,
         ...(existing ? {} : { created_by: userId }),
         updated_at: new Date().toISOString(),
       },
@@ -201,7 +218,8 @@ async function handlePost(
           campaign: campaignId,
           campaign_name: campaignName,
           wave_size: waveSize,
-          total_recipients: recipients.length,
+          total_recipients: schedulable.length,
+          email_only_skipped: emailOnlySkipped,
           newly_inserted: inserted,
           mode: existing ? 'updated' : 'created',
         },
@@ -215,7 +233,8 @@ async function handlePost(
     success: true,
     campaignId,
     waveSize,
-    totalRecipients: recipients.length,
+    totalRecipients: schedulable.length,
+    emailOnlySkipped,
     newlyInserted: inserted,
   });
 }
