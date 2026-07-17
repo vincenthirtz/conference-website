@@ -208,6 +208,7 @@ export type DashboardData = {
     timezone: string | null;
     format: string | null;
     min_players: number | null;
+    max_teams: number | null;
     roster_locked_at: string | null;
   };
   summary: {
@@ -569,7 +570,7 @@ export async function fetchDashboardData(
     const { data: tournament, error: tErr } = await supabaseAdmin
       .from('tournaments')
       .select(
-        'id, name, status, start_date, end_date, timezone, format, min_players, roster_locked_at'
+        'id, name, status, start_date, end_date, timezone, format, min_players, max_teams, roster_locked_at'
       )
       .eq('id', tournamentId)
       .eq('tenant_id', tenantId)
@@ -1312,6 +1313,7 @@ export async function fetchDashboardData(
         timezone: tournament.timezone ?? null,
         format: tournament.format ?? null,
         min_players: tournament.min_players ?? null,
+        max_teams: tournament.max_teams ?? null,
         roster_locked_at: tournament.roster_locked_at ?? null,
       },
       summary: {

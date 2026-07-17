@@ -828,10 +828,10 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
               )}
 
               {/* ─── KPIs ───────────────────────────────────────────── */}
-              <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
+              <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8">
                 <StatCard
                   label={tx.kpiTeams}
-                  value={`${s.activeTeams}/${s.totalTeams}`}
+                  value={`${s.totalTeams}/${t.max_teams ?? '∞'}`}
                   hint={format(tx.kpiTeamsEliminated, {
                     count: s.eliminatedTeams,
                   })}
@@ -902,10 +902,12 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
                   value={
                     t.start_date ? formatDateTz(t.start_date, t.timezone) : '—'
                   }
-                  hint={
-                    t.end_date
-                      ? `→ ${formatDateTz(t.end_date, t.timezone)}`
-                      : undefined
+                  accent="amber"
+                />
+                <StatCard
+                  label={tx.kpiEnd}
+                  value={
+                    t.end_date ? formatDateTz(t.end_date, t.timezone) : '—'
                   }
                   accent="amber"
                 />

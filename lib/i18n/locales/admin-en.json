@@ -671,6 +671,7 @@
     "kpiAllPlayed": "All matches have been played",
     "kpiCadenceTooLow": "Cadence too low to estimate",
     "kpiStart": "Start",
+    "kpiEnd": "End",
     "disputesOpenTitle_one": "{count} open dispute",
     "disputesOpenTitle_other": "{count} open disputes",
     "disputesOpenMsg": "Bracket propagation is blocked until they're resolved.",

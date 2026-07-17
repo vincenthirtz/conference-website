@@ -21,6 +21,7 @@ function makeData(
       timezone: null,
       format: null,
       min_players: null,
+      max_teams: null,
       roster_locked_at: null,
     },
     summary: {
