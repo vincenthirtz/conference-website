@@ -139,11 +139,17 @@ export default function TournamentTabsNav({
       aria-label={t.ariaLabel}
       className={`mb-6 flex flex-col gap-3 ${className}`}
     >
+      {/* "Up one level": from the dashboard (tournament root) → tournaments
+          list; from any sub-tab → the tournament dashboard. */}
       <Link
-        href={`/admin/tournament/${tournamentId}/dashboard`}
+        href={
+          active === 'dashboard'
+            ? '/admin/tournaments'
+            : `/admin/tournament/${tournamentId}/dashboard`
+        }
         className="inline-flex w-fit items-center gap-2 text-sm text-neutral-400 hover:text-white"
       >
-        {t.back}
+        {active === 'dashboard' ? tx.backToList : t.back}
       </Link>
       <div className="flex flex-wrap items-end gap-1 border-b border-neutral-700/60">
         {CORE_TABS.map(({ id, labelKey }) => {

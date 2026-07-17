@@ -1691,6 +1691,7 @@
   "adminTournamentNav": {
     "ariaLabel": "Tournament navigation",
     "back": "← Tournament",
+    "backToList": "← Tournaments",
     "tabDashboard": "Dashboard",
     "tabCheckin": "Check-in",
     "tabBracket": "Bracket",
