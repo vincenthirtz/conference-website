@@ -35,7 +35,10 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 
 import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
-import { verifyUnsubscribeToken } from '@/utils/emailUnsubscribe';
+import {
+  verifyUnsubscribeToken,
+  verifyEmailUnsubscribeToken,
+} from '@/utils/emailUnsubscribe';
 import {
   EMAIL_EVENT_TYPES,
   BROADCAST_OPT_OUT_EVENT_TYPE,
@@ -124,6 +127,26 @@ async function disableEmailFor(
   return true;
 }
 
+/**
+ * Opt-out broadcast d'un destinataire SANS compte auth : upsert dans
+ * broadcast_email_optouts, keyé par email (minuscules). Idempotent — un re-clic
+ * ne touche pas la row existante (ignoreDuplicates → préserve unsubscribed_at).
+ * Retourne true en cas de succès.
+ */
+async function optOutEmailBroadcast(email: string): Promise<boolean> {
+  const { error } = await supabaseAdmin!
+    .from('broadcast_email_optouts')
+    .upsert(
+      { email: email.toLowerCase(), source: 'broadcast' },
+      { onConflict: 'email', ignoreDuplicates: true }
+    );
+  if (error) {
+    logger.error('[email/unsubscribe] broadcast_email_optouts upsert', error);
+    return false;
+  }
+  return true;
+}
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -138,10 +161,15 @@ export default async function handler(
   const token = typeof req.query.token === 'string' ? req.query.token : '';
   const userId = verifyUnsubscribeToken(token);
 
+  // Fallback token EMAIL (destinataire sans compte auth, ex. adhérent·e) : on ne
+  // le tente QUE si le token user a échoué. Les deux familles sont disjointes
+  // (champ `u` vs `e`), donc au plus une des deux vérifications réussit.
+  const emailFromToken = userId ? null : verifyEmailUnsubscribeToken(token);
+
   // scope reste dans la query string (le POST one-click conserve l'URL).
   const isBroadcastScope = req.query.scope === 'broadcast';
 
-  if (!userId) {
+  if (!userId && !emailFromToken) {
     return sendHtml(
       res,
       400,
@@ -159,6 +187,33 @@ export default async function handler(
     logger.error('[email/unsubscribe] Supabase admin not configured');
     return sendHtml(res, 400, ERROR_PAGE);
   }
+
+  // Token EMAIL : opt-out broadcast keyé par email (pas de compte auth). Même
+  // page de confirmation que le scope broadcast user.
+  if (emailFromToken) {
+    const ok = await optOutEmailBroadcast(emailFromToken);
+    if (!ok) return sendHtml(res, 400, ERROR_PAGE);
+
+    logger.info(
+      '[email/unsubscribe] email %s opted out of broadcast email',
+      emailFromToken
+    );
+    return sendHtml(
+      res,
+      200,
+      htmlPage({
+        title: 'Désabonnement confirmé',
+        heading: 'C’est fait',
+        message:
+          'Tu ne recevras plus les annonces &amp; campagnes par email à cette ' +
+          'adresse.',
+      })
+    );
+  }
+
+  // À ce stade emailFromToken est null : le token user a donc été validé.
+  // Garde défensive (inatteignable) pour narrower le type de userId.
+  if (!userId) return sendHtml(res, 400, ERROR_PAGE);
 
   if (isBroadcastScope) {
     // Opt-out CIBLÉ broadcast : une seule row 'broadcast'/'email'/false. Ne

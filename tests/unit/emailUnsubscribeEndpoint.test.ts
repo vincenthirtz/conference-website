@@ -12,7 +12,10 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 
 import { store, resetSupabaseMock } from './__helpers__/supabaseMock';
-import { generateUnsubscribeToken } from '@/utils/emailUnsubscribe';
+import {
+  generateUnsubscribeToken,
+  generateEmailUnsubscribeToken,
+} from '@/utils/emailUnsubscribe';
 import {
   EMAIL_EVENT_TYPES,
   BROADCAST_OPT_OUT_EVENT_TYPE,
@@ -235,5 +238,61 @@ describe('GET /api/email/unsubscribe?scope=broadcast', () => {
     expect(rows.map((r) => r.event_type).sort()).toEqual(
       [...EMAIL_EVENT_TYPES].sort()
     );
+  });
+});
+
+/* -----------------------------------------------------------
+ * Token EMAIL — opt-out d'un destinataire sans compte auth
+ * ---------------------------------------------------------*/
+
+describe('GET /api/email/unsubscribe (email token)', () => {
+  const prev = process.env.UNSUBSCRIBE_SECRET;
+
+  beforeEach(() => {
+    resetSupabaseMock();
+    process.env.UNSUBSCRIBE_SECRET = 'fixed-endpoint-secret';
+    store.notification_prefs = [];
+    store.broadcast_email_optouts = [];
+  });
+
+  afterEach(() => {
+    if (prev === undefined) delete process.env.UNSUBSCRIBE_SECRET;
+    else process.env.UNSUBSCRIBE_SECRET = prev;
+  });
+
+  it('upserts broadcast_email_optouts (200) and touches no notification_prefs', async () => {
+    const token = generateEmailUnsubscribeToken('Adherent@Example.com');
+    const res = makeRes();
+    await handler(makeReq({ query: { token, scope: 'broadcast' } }), res);
+
+    expect(res.statusCode).toBe(200);
+    expect(String(res.body)).toContain('annonces');
+
+    const opts = store.broadcast_email_optouts ?? [];
+    expect(opts).toHaveLength(1);
+    // Stocké en minuscules, source = broadcast.
+    expect(opts[0].email).toBe('adherent@example.com');
+    expect(opts[0].source).toBe('broadcast');
+    // Aucune écriture côté notification_prefs (pas de compte auth).
+    expect((store.notification_prefs ?? []).length).toBe(0);
+  });
+
+  it('is idempotent: two clicks leave exactly one opt-out row', async () => {
+    const token = generateEmailUnsubscribeToken('a@b.com');
+    await handler(makeReq({ query: { token, scope: 'broadcast' } }), makeRes());
+    await handler(makeReq({ query: { token, scope: 'broadcast' } }), makeRes());
+
+    expect(store.broadcast_email_optouts ?? []).toHaveLength(1);
+  });
+
+  it('works without the scope param (email token always = broadcast opt-out)', async () => {
+    const token = generateEmailUnsubscribeToken('c@d.com');
+    const res = makeRes();
+    await handler(makeReq({ query: { token } }), res);
+
+    expect(res.statusCode).toBe(200);
+    expect((store.broadcast_email_optouts ?? []).map((r) => r.email)).toEqual([
+      'c@d.com',
+    ]);
   });
 });
