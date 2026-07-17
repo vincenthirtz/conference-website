@@ -18,6 +18,10 @@ import {
   isoDateSchema,
 } from '@/utils/botValidation';
 import { logger } from '@/utils/logger';
+import {
+  notifyAdminScrimEmails,
+  formatScrimDateFr,
+} from '@/utils/scrimRequestNotify';
 
 const VALID_STATUSES = [
   'draft',
@@ -168,6 +172,18 @@ async function handleCreate(req: BotTenantRequest, res: NextApiResponse) {
       slug: data.slug,
     },
   });
+
+  // Effet de bord best-effort : dès que les deux équipes sont connues (même en
+  // draft), on notifie par email les capitaines des DEUX équipes. S'ajoute à la
+  // notif Discord ; fire-and-forget → ne modifie jamais la réponse 201.
+  if (team1Id && team2Id) {
+    void notifyAdminScrimEmails({
+      tenantId: req.botContext.tenantId,
+      team1Id,
+      team2Id,
+      dateLabel: formatScrimDateFr(input.scheduled_date ?? null),
+    }).catch(() => {});
+  }
 
   return res.status(201).json({ scrim: data });
 }

@@ -15,6 +15,10 @@ import {
 } from '@/utils/teams/managementAccess';
 import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
 import { normalizeSlots } from '@/utils/teams/scrimNegotiation';
+import {
+  notifyScrimRequestEmail,
+  formatScrimDateFr,
+} from '@/utils/scrimRequestNotify';
 
 import { logger } from '../../../utils/logger';
 export type ScrimRequestBody = {
@@ -42,7 +46,9 @@ export default withAuthRoute(async function handler(
     return;
 
   const userId = user.id;
-  const tenantId = await resolveTenantIdForUserRequestAsync(req, { authUserId: userId });
+  const tenantId = await resolveTenantIdForUserRequestAsync(req, {
+    authUserId: userId,
+  });
 
   if (req.method === 'GET') {
     const { data: demandes, error: demandesErr } = await supabaseAdmin
@@ -199,6 +205,18 @@ export default withAuthRoute(async function handler(
         (payload.user_display_name as string | null) ||
         (user.email as string | null),
     });
+
+    // Email best-effort au capitaine de l'équipe CIBLE (s'ajoute au Discord).
+    // Fire-and-forget : un échec email ne doit jamais casser la réponse 201.
+    void notifyScrimRequestEmail({
+      tenantId,
+      targetTeamId: teamId,
+      opponentName: myTeam.name,
+      dateLabel: formatScrimDateFr(proposedSlots),
+      message,
+      requesterName: myTeam.name,
+      isExternal: false,
+    }).catch(() => {});
 
     return res.status(201).json({
       success: true,

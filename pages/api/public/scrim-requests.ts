@@ -11,6 +11,10 @@ import { verifyCaptcha } from '@/utils/captcha';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { notifyScrimRequest } from '@/utils/discord';
 import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
+import {
+  notifyScrimRequestEmail,
+  formatScrimDateFr,
+} from '@/utils/scrimRequestNotify';
 
 import { logger } from '../../../utils/logger';
 type Body = {
@@ -261,6 +265,18 @@ export default async function handler(
     requesterDisplayName: requesterName,
     isExternal: true,
   });
+
+  // Email best-effort au capitaine de l'équipe CIBLE (s'ajoute au Discord).
+  // Fire-and-forget : un échec email ne doit jamais casser la réponse 201.
+  void notifyScrimRequestEmail({
+    tenantId,
+    targetTeamId: target.id,
+    opponentName: fromTeamName,
+    dateLabel: formatScrimDateFr(preferredDate),
+    message: message || null,
+    requesterName,
+    isExternal: true,
+  }).catch(() => {});
 
   // Return a generic confirmation; don't echo back the row to limit enumeration.
   return res.status(201).json({
