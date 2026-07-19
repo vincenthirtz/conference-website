@@ -376,7 +376,6 @@ describe('/api/admin/tenants/[id]/discord-config', () => {
     expect(body.configs[0].guild_id).toBe(GUILD_ID);
     expect(body.configs[0].staff_role_owner_id).toBeNull();
     expect(body.configs[0].staff_role_admin_id).toBeNull();
-    expect(body.configs[0].staff_role_manager_id).toBeNull();
     expect(body.configs[0].staff_role_caster_id).toBeNull();
     expect(body.configs[0].staff_log_channel_id).toBeNull();
     // Accueil des nouveaux arrivants (defauts).
@@ -451,7 +450,7 @@ describe('/api/admin/tenants/[id]/discord-config', () => {
     expect((res.body as any).field).toBe('staff_role_admin_id');
   });
 
-  it('PUT 200 upsert config (incluant les 4 staff_role_*_id)', async () => {
+  it('PUT 200 upsert config (incluant les staff_role_*_id)', async () => {
     const res = makeRes();
     await discordConfigPut(
       makeReq({
@@ -461,7 +460,6 @@ describe('/api/admin/tenants/[id]/discord-config', () => {
           staff_log_channel_id: '9876543210123456789',
           staff_role_owner_id: '1111111111111111111',
           staff_role_admin_id: '2222222222222222222',
-          staff_role_manager_id: null,
           staff_role_caster_id: null,
         },
       }),

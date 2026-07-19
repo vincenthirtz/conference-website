@@ -38,7 +38,6 @@ const NULLABLE_SNOWFLAKE_KEYS = [
   'substitute_role_id',
   'staff_role_owner_id',
   'staff_role_admin_id',
-  'staff_role_manager_id',
   'staff_role_caster_id',
   'teams_voice_category_id',
   'disputes_forum_tag_open_id',

@@ -1,0 +1,34 @@
+-- Migration: DROP tenant_discord_config.staff_role_manager_id (colonne vestigiale)
+-- Date: 2026-07-16
+--
+-- WHY:
+--   Le rôle STAFF 'manager' a été supprimé (cf. remove_staff_manager_role.sql :
+--   StaffRole = owner|admin|caster). La colonne
+--     tenant_discord_config.staff_role_manager_id
+--   mappait un rôle Discord (snowflake) -> le rôle staff 'manager' pour la
+--   role-sync du bot. Elle est devenue vestigiale : plus aucun staff n'est
+--   'manager', donc le mapping n'accorde/synchronise plus rien.
+--
+--   Le code a été nettoyé EN AMONT (à déployer AVANT cette migration) :
+--     - site : whitelist PUT, config par défaut, et surtout les SELECT des
+--       endpoints API bot (/api/bot/v1/tenants/all-configs, /by-guild/[guildId])
+--       ne référencent plus cette colonne ;
+--     - bot (docker-box) : role-sync / tickets / dispute-forum / match-channel /
+--       tenant-config ne lisent plus staff_role_manager_id.
+--
+--   /!\ ORDRE DE DÉPLOIEMENT : appliquer cette migration UNIQUEMENT APRÈS que le
+--   site déployé a cessé de SELECT cette colonne (sinon l'API bot renverrait un
+--   500 « column does not exist »). Idempotente (IF EXISTS) : ré-exécutable.
+--
+--   /!\ NE concerne QUE le mapping du rôle STAFF manager. Le rôle d'ÉQUIPE
+--   'manager' (team_members.role) n'a AUCUN rapport et n'est pas touché.
+--
+-- CAVEATS:
+--   - DROP COLUMN destructif : la valeur (un role_id Discord) est définitivement
+--     perdue. C'est voulu (rôle staff manager supprimé).
+--   - Les autres colonnes staff_role_{owner,admin,caster}_id restent.
+--   - Pas de FK / index sur cette colonne (simple text snowflake) ⇒ pas de
+--     dépendance à nettoyer.
+
+ALTER TABLE public.tenant_discord_config
+  DROP COLUMN IF EXISTS staff_role_manager_id;

@@ -105,7 +105,6 @@ describe('GET /api/bot/v1/tenants/all-configs', () => {
         substitute_role_id: null,
         staff_role_owner_id: '777777777777777777',
         staff_role_admin_id: '888888888888888888',
-        staff_role_manager_id: null,
         staff_role_caster_id: null,
         teams_voice_category_id: null,
         disputes_forum_tag_open_id: null,
@@ -137,7 +136,6 @@ describe('GET /api/bot/v1/tenants/all-configs', () => {
     expect(a.discord_config.captain_role_id).toBe('222222222222222222');
     expect(a.discord_config.staff_role_owner_id).toBe('777777777777777777');
     expect(a.discord_config.staff_role_admin_id).toBe('888888888888888888');
-    expect(a.discord_config.staff_role_manager_id).toBeNull();
     // Accueil des nouveaux arrivants.
     expect(a.discord_config.welcome_enabled).toBe(true);
     expect(a.discord_config.welcome_channel_id).toBe('333333333333333333');
@@ -156,7 +154,6 @@ describe('GET /api/bot/v1/tenants/all-configs', () => {
     expect(b.discord_config.staff_log_channel_id).toBeNull();
     expect(b.discord_config.staff_role_owner_id).toBeNull();
     expect(b.discord_config.staff_role_admin_id).toBeNull();
-    expect(b.discord_config.staff_role_manager_id).toBeNull();
     expect(b.discord_config.staff_role_caster_id).toBeNull();
     // Defauts accueil (pas de row → welcome_enabled=false, reste null).
     expect(b.discord_config.welcome_enabled).toBe(false);

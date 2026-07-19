@@ -72,7 +72,7 @@ The site sits at the center of a small ecosystem:
 ### Key Modules (utils/)
 
 - `supabase.ts` + `supabaseAdmin.ts` — browser/server clients (cookies via `@supabase/ssr`) and admin client (service role, bypasses RLS).
-- `staff.ts` — staff auth, roles, CSRF (`csrfCheck`), `withStaffRoute(handler, minRole)`, `withStaffPage(minRole, loader?)`, `getStaffContextFromRequest`. Roles: `owner > admin > manager > caster`.
+- `staff.ts` — staff auth, roles, CSRF (`csrfCheck`), `withStaffRoute(handler, minRole)`, `withStaffPage(minRole, loader?)`, `getStaffContextFromRequest`. Roles: `owner > admin > caster`.
 - `casterAuth.ts` — caster-cockpit auth.
 - `tenant.ts` + `adminTenants.ts` — multi-tenant resolution (path-prefix from `tenants.slug`, legacy `DEFAULT_TENANT_ID` fallback, in-memory slug cache).
 - `botAuth.ts` + `botActor.ts` + `botEvents.ts` + `botPlayerLogs.ts` + `botRoleSync.ts` — Discord-bot API auth (per-tenant `x-api-key`), actor resolution, outbox event emission, audit logs.
@@ -100,7 +100,7 @@ Three distinct session surfaces, all backed by Supabase Auth:
 | Surface             | Helper                                | Storage  | Notes                                              |
 | ------------------- | ------------------------------------- | -------- | -------------------------------------------------- |
 | Public/player       | `getServerClient(req, res)`           | Cookies  | RLS-enforced; user-bearer for API routes           |
-| Admin/staff         | `withStaffRoute` / `withStaffPage`    | Cookies  | Role gate `owner > admin > manager > caster`       |
+| Admin/staff         | `withStaffRoute` / `withStaffPage`    | Cookies  | Role gate `owner > admin > caster`               |
 | Caster cockpit      | `casterAuth.ts`                       | Cookies  | Separate gate; `useCasterSession` on client        |
 | Discord bot         | `withBotAuth` (per-tenant `x-api-key`) | Header   | Bypasses RLS via `supabaseAdmin`; logs actor       |
 

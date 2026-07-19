@@ -118,7 +118,6 @@ describe('GET /api/bot/v1/tenants/by-guild/[guildId]', () => {
     expect(body.discord_config.captain_role_id).toBeNull();
     expect(body.discord_config.staff_role_owner_id).toBeNull();
     expect(body.discord_config.staff_role_admin_id).toBeNull();
-    expect(body.discord_config.staff_role_manager_id).toBeNull();
     expect(body.discord_config.staff_role_caster_id).toBeNull();
     expect(body.discord_config.extras).toEqual({});
   });
@@ -150,7 +149,6 @@ describe('GET /api/bot/v1/tenants/by-guild/[guildId]', () => {
         substitute_role_id: null,
         staff_role_owner_id: '555555555555555555',
         staff_role_admin_id: '666666666666666666',
-        staff_role_manager_id: null,
         staff_role_caster_id: null,
         teams_voice_category_id: null,
         disputes_forum_tag_open_id: null,
@@ -172,7 +170,6 @@ describe('GET /api/bot/v1/tenants/by-guild/[guildId]', () => {
     expect(body.discord_config.captain_role_id).toBe('333333333333333333');
     expect(body.discord_config.staff_role_owner_id).toBe('555555555555555555');
     expect(body.discord_config.staff_role_admin_id).toBe('666666666666666666');
-    expect(body.discord_config.staff_role_manager_id).toBeNull();
     expect(body.discord_config.staff_role_caster_id).toBeNull();
     expect(body.discord_config.extras).toEqual({ mvp_emoji_id: '444' });
   });
@@ -204,7 +201,6 @@ describe('GET /api/bot/v1/tenants/by-guild/[guildId]', () => {
         substitute_role_id: null,
         staff_role_owner_id: null,
         staff_role_admin_id: null,
-        staff_role_manager_id: null,
         staff_role_caster_id: null,
         teams_voice_category_id: null,
         disputes_forum_tag_open_id: null,
