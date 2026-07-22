@@ -2329,6 +2329,56 @@ curl -sS -X POST https://site.example/api/bot/v1/tickets/close-log \
 | [`teams/[teamId]/transfer-captain.ts`](../pages/api/bot/v1/teams/[teamId]/transfer-captain.ts) | POST       | yes   | `bot-team-transfer-captain` |
 | [`teams/leave.ts`](../pages/api/bot/v1/teams/leave.ts)                                         | POST       | yes   | `bot-team-leave`            |
 
+#### `PATCH /api/bot/v1/teams/:teamId/discord`
+
+Writeback bot → site des IDs Discord natifs d'une equipe, pose par le
+provisioning `team-voice.js` (event `team.created`) pour assurer l'idempotence
+des runs suivants. **Auth** : `x-api-key` + `actorDiscordUserId` (staff
+admin/owner ; le bot agit via `DISCORD_BOT_ACTOR_ID`).
+
+**Body** — toutes les cles sont optionnelles ; chacune accepte un snowflake
+valide **ou** `null` (pour vider la colonne). Cle absente = champ non touche.
+
+| Cle body                 | Colonne DB                  | Objet Discord              |
+| ------------------------ | --------------------------- | -------------------------- |
+| `discordRoleId`          | `discord_role_id`           | Role d'equipe (mentions)   |
+| `discordChannelId`       | `discord_channel_id`        | Salon TEXTE prive d'equipe |
+| `discordVoiceChannelId`  | `discord_voice_channel_id`  | Salon VOCAL prive d'equipe |
+
+**Rate limit** : 30/min (`bot-team-discord`). **Idempotency** : oui.
+
+#### Events `team.created` / `team.dissolved` (site → bot, via outbox/webhook)
+
+Le site n'appelle pas le bot directement : il emet ces events dans
+`bot_event_outbox` (+ push HMAC optionnel). Le handler `team-voice.js` les
+consomme.
+
+**`team.created`** — payload : `{ teamId, name, slug, captainAuthUserId,
+captainDiscordUserId, discordRoleId }` (`discordRoleId` est `null` a la
+creation ; il n'existe qu'apres le writeback ci-dessus). Le bot provisionne, de
+maniere **idempotente** :
+
+1. **Role d'equipe** — scan de l'existant AVANT creation : reuse par
+   `discordRoleId` (si deja writeback), sinon par **nom** (insensible a la
+   casse). Si plusieurs roles portent ce nom (ambigu) → **aucune creation**,
+   une demande de resolution manuelle est postee (voir plus bas). Sinon le role
+   est cree et assigne a la capitaine (`captainDiscordUserId`).
+2. **Salon vocal + salon texte** — parentes sous `teams_voice_category_id`
+   (texte : `teams_text_category_id`, defaut = meme categorie). Overwrites :
+   `@everyone` ferme (deny View/Connect), role d'equipe + roles staff ouverts.
+3. **Writeback** des IDs role/texte/vocal via le PATCH ci-dessus.
+
+**`team.dissolved`** — payload inclut `discordRoleId`, `discordChannelId`,
+`discordVoiceChannelId` (enrichis depuis `teams`). Le bot supprime le salon
+vocal, le salon texte et le role d'equipe, puis remet les 3 colonnes a `null`.
+
+**Resolution manuelle** — tout conflit/probleme bloquant (perms bot
+insuffisantes sur la categorie, role ambigu, hierarchie du role du bot trop
+basse, echec de creation d'un salon, assignation capitaine impossible) est
+poste dans un salon dedie (`TEAM_PROVISION_RESOLUTION_CHANNEL_ID` cote bot)
+plutot que d'echouer en silence. Aucun retry auto, aucun re-throw vers
+l'outbox.
+
 ### Tournaments
 
 | Route                                                                                                | Methods   | Idem. | Rate-key                 |
