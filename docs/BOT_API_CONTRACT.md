@@ -1056,6 +1056,53 @@ Le caster clique le bouton "Je confirme" du DM T-30. Marque
 | [`events/handled.ts`](../pages/api/bot/v1/events/handled.ts)                       | POST    | no    | `bot-events-handled`    | per-tenant                                        |
 | [`events/[id]/ack.ts`](../pages/api/bot/v1/events/[id]/ack.ts)                     | POST    | yes   | `bot-events-ack`        | `crossTenant: true` — PK globally unique          |
 | [`reconcile/discord-orphans.ts`](../pages/api/bot/v1/reconcile/discord-orphans.ts) | GET     | —     | `bot-reconcile-orphans` | per-tenant                                        |
+| [`reconcile/team-channels.ts`](../pages/api/bot/v1/reconcile/team-channels.ts) | GET | — | `bot-reconcile-team-channels` | per-tenant |
+
+#### `GET /api/bot/v1/reconcile/team-channels`
+
+Cron quotidien de réconciliation Discord côté bot. Retourne les **équipes
+ACTIVES** du tenant (`is_active = true` ET `deleted_at IS NULL`) avec leurs IDs
+Discord (rôle, salon texte, salon vocal), l'ID Discord du capitaine, et pour
+chaque équipe la liste de ses membres résolus vers leur ID Discord. Le bot
+itère pour vérifier/reposer les rôles d'équipe, permissions de salon, etc.
+
+**Query** : `limit` (défaut 200, max 500), `offset` (défaut 0) — même clamping
+que `discord-orphans`.
+
+**Notes** :
+
+- Les membres **sans lien Discord** (aucune row `user_discord_links`) sont
+  **omis** — le bot ne peut pas agir sur eux. `user_discord_links` est GLOBAL
+  (pas de colonne `tenant_id`) : la résolution ne filtre pas par tenant.
+- `isCaptain` = (`member.user_id === team.captain_id`). `isSubstitute` vient de
+  `team_members.is_substitute`. Les membres sont dédupliqués par `discordUserId`.
+- `captainDiscordUserId` = l'ID Discord du capitaine s'il est lié, sinon `null`.
+- `count` = nombre d'équipes retournées sur cette page.
+
+```json
+{
+  "teams": [
+    {
+      "teamId": "uuid",
+      "name": "Alpha",
+      "slug": "alpha",
+      "discordRoleId": "123",
+      "discordChannelId": "456",
+      "discordVoiceChannelId": "789",
+      "captainDiscordUserId": "111",
+      "members": [
+        { "discordUserId": "111", "isCaptain": true, "isSubstitute": false }
+      ]
+    }
+  ],
+  "limit": 200,
+  "offset": 0,
+  "count": 12
+}
+```
+
+**Errors** : `401` (clé invalide), `500` (erreur DB). **Rate limit** : 30/min
+global, bucket `bot-reconcile-team-channels`. **Idempotency** : non.
 
 ### Locks (distributed cron / fullSync coordination)
 
@@ -2454,7 +2501,7 @@ sa ligne ici **et** dans la fixture.
 | `/scrim create / show / start / finish / score`                                                                  | admin   | `GET`/`POST`/`PATCH /api/bot/v1/scrims*`                                                                                              |
 | Autocomplete (tournois, équipes, matchs, phases, cast-members)                                                   | —       | `GET /api/bot/v1/autocomplete/*`                                                                                                      |
 | `outbox-poller` (jobs internes)                                                                                  | —       | `GET /api/bot/v1/events/pending`, `POST /api/bot/v1/events/handled`, `POST /api/bot/v1/events/:id/ack`                                |
-| `reconciliation` (jobs internes)                                                                                 | —       | `GET /api/bot/v1/reconcile/discord-orphans`                                                                                           |
+| `reconciliation` (jobs internes)                                                                                 | —       | `GET /api/bot/v1/reconcile/discord-orphans`, `GET /api/bot/v1/reconcile/team-channels`                                                |
 | `match-thread` / `team-voice` / `dispute-forum` (event-driven, pas de slash)                                     | —       | `PATCH /api/bot/v1/matches/:matchId/discord`, `PATCH /api/bot/v1/teams/:teamId/discord`                                               |
 | `/aide-tournoi` _(à venir, conso de cette fixture)_                                                              | public  | `GET /api/bot/v1/tournament-help/inventory`                                                                                           |
 

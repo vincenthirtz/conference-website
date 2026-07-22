@@ -8391,6 +8391,85 @@ paths:
                     type: integer
                   offset:
                     type: integer
+  /api/bot/v1/reconcile/team-channels:
+    get:
+      tags:
+        - bot/misc
+      summary: >-
+        Liste les equipes ACTIVES du tenant avec leurs IDs Discord (role, salon
+        texte, salon vocal), l'ID Discord du capitaine, et pour chaque equipe
+        ses membres resolus vers leur ID Discord.
+      description: >-
+        Consomme par un cron quotidien de reconciliation cote bot. Selectionne
+        les equipes ou `is_active = true` et `deleted_at IS NULL`, paginees via
+        `limit` (defaut 200, max 500) et `offset`. Les membres sans lien Discord
+        (aucune row `user_discord_links`) sont omis : le bot ne peut pas agir sur
+        eux. `captainDiscordUserId` est null si le capitaine n'est pas lie a
+        Discord. Les membres sont dedupliques par `discordUserId`.
+      operationId: botGetReconcileTeamChannels
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 200
+            maximum: 500
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Equipes actives + IDs Discord + membres.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  teams:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        teamId:
+                          type: string
+                          format: uuid
+                        name:
+                          type: string
+                          nullable: true
+                        slug:
+                          type: string
+                          nullable: true
+                        discordRoleId:
+                          type: string
+                          nullable: true
+                        discordChannelId:
+                          type: string
+                          nullable: true
+                        discordVoiceChannelId:
+                          type: string
+                          nullable: true
+                        captainDiscordUserId:
+                          type: string
+                          nullable: true
+                        members:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              discordUserId:
+                                type: string
+                              isCaptain:
+                                type: boolean
+                              isSubstitute:
+                                type: boolean
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+                  count:
+                    type: integer
   /api/bot/v1/reminders:
     get:
       tags:
