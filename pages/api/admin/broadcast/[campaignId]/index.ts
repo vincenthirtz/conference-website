@@ -15,10 +15,14 @@ import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import {
   computeAudienceRecipients,
+  computeNewRecipients,
+  recordSentRecipients,
   getCampaign,
   buildBroadcastUnsubscribeUrl,
   buildRecipientUnsubscribeUrl,
   type BroadcastCampaign,
+  type ComputedRecipient,
+  type NewRecipientsResult,
 } from '@/utils/broadcasts';
 import { campaignInputSchema } from '@/utils/campaignSchema';
 
@@ -87,6 +91,10 @@ async function handler(
   }
 
   const dryRun = Boolean(req.body?.dryRun);
+  // onlyNew : ne cibler que les « nouveaux inscrits » — destinataires de
+  // l'audience actuelle jamais encore adressés pour cette campagne (diff sur
+  // broadcast_recipients `sent`). Sert le renvoi après de nouvelles inscriptions.
+  const onlyNew = Boolean(req.body?.onlyNew);
   const rawLimit = Number(req.body?.limit);
   const rawOffset = Number(req.body?.offset);
   const limit =
@@ -94,9 +102,15 @@ async function handler(
   const offset =
     Number.isFinite(rawOffset) && rawOffset > 0 ? Math.floor(rawOffset) : 0;
 
-  let recipients;
+  let recipients: ComputedRecipient[];
+  let newMeta: NewRecipientsResult | null = null;
   try {
-    recipients = await computeAudienceRecipients(campaign.audience);
+    if (onlyNew) {
+      newMeta = await computeNewRecipients(campaignId, campaign.audience);
+      recipients = newMeta.newRecipients;
+    } else {
+      recipients = await computeAudienceRecipients(campaign.audience);
+    }
   } catch (err: unknown) {
     logger.error('[broadcast] computeAudienceRecipients error:', err);
     return res.status(500).json({ error: 'Echec du chargement des comptes' });
@@ -111,6 +125,7 @@ async function handler(
     return res.status(200).json({
       success: true,
       dryRun: true,
+      onlyNew,
       campaignId,
       totalConfirmedUsers: recipients.length,
       windowSize: windowed.length,
@@ -118,12 +133,23 @@ async function handler(
       limit,
       withLabel: windowed.filter((r) => !!r.label).length,
       withoutLabel: windowed.filter((r) => !r.label).length,
+      ...(newMeta
+        ? {
+            newCount: newMeta.newRecipients.length,
+            audienceTotal: newMeta.audienceTotal,
+            alreadySent: newMeta.alreadySent,
+            emailOnlyExcluded: newMeta.emailOnlyExcluded,
+          }
+        : {}),
     });
   }
 
   let sent = 0;
   let failed = 0;
   const errors: string[] = [];
+  // Destinataires effectivement envoyés — enregistrés ensuite comme `sent` dans
+  // broadcast_recipients pour amorcer / tenir à jour le diff « nouveaux inscrits ».
+  const sentRecipients: ComputedRecipient[] = [];
 
   for (const r of windowed) {
     try {
@@ -131,6 +157,7 @@ async function handler(
       const result = await campaign.send(r.email, r.label, unsubscribeUrl);
       if (result.success) {
         sent++;
+        sentRecipients.push(r);
       } else {
         failed++;
         if (errors.length < 20) {
@@ -142,6 +169,17 @@ async function handler(
       if (errors.length < 20) {
         errors.push(`${r.email}: ${(err as Error).message}`);
       }
+    }
+  }
+
+  // Trace par-destinataire (best-effort) : sans elle, un envoi direct ne
+  // laisserait aucune référence et le prochain « nouveaux inscrits » renverrait
+  // à tout le monde. Un échec ici ne doit pas faire échouer l'envoi.
+  if (sentRecipients.length > 0) {
+    try {
+      await recordSentRecipients(campaignId, sentRecipients);
+    } catch (recErr) {
+      logger.error('[broadcast] recordSentRecipients error:', recErr);
     }
   }
 
@@ -160,7 +198,10 @@ async function handler(
           limit,
           sent,
           failed,
-          mode: 'manual',
+          mode: onlyNew ? 'manual-new' : 'manual',
+          only_new: onlyNew,
+          already_sent: newMeta?.alreadySent,
+          email_only_excluded: newMeta?.emailOnlyExcluded,
           errors: errors.length > 0 ? errors : undefined,
         },
       });
@@ -172,12 +213,20 @@ async function handler(
   return res.status(200).json({
     success: true,
     campaignId,
+    onlyNew,
     totalConfirmedUsers: recipients.length,
     windowSize: windowed.length,
     offset,
     limit,
     sent,
     failed,
+    ...(newMeta
+      ? {
+          newCount: newMeta.newRecipients.length,
+          alreadySent: newMeta.alreadySent,
+          emailOnlyExcluded: newMeta.emailOnlyExcluded,
+        }
+      : {}),
     errors: errors.length > 0 ? errors : undefined,
   });
 }

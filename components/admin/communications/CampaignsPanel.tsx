@@ -1085,6 +1085,66 @@ function CampaignDrawer({
     }
   }
 
+  // Envoi aux « nouveaux inscrits » : recalcule l'audience et ne renvoie qu'aux
+  // comptes jamais encore adressés pour cette campagne (diff sur les envois déjà
+  // enregistrés). Flux en un clic : dry-run onlyNew → confirmation → envoi ciblé.
+  async function runNewSubscribers() {
+    setSendBusy(true);
+    setActionError(null);
+    try {
+      const res = await adminFetch(`/api/admin/broadcast/${campaign.id}`, {
+        method: 'POST',
+        body: JSON.stringify({ dryRun: true, onlyNew: true }),
+      });
+      const dry = await res.json();
+      if (!res.ok || dry.error) {
+        throw new Error(dry.error || t.dryRunFailed);
+      }
+      const n = Number(dry.newCount ?? 0);
+      if (n <= 0) {
+        addToast(t.newSubscribersNone, 'info');
+        return;
+      }
+      const ok = await confirm({
+        title: t.newSubscribersTitle,
+        subtitle: format(t.newSubscribersConfirmBody, {
+          count: n,
+          name: campaign.name,
+        }),
+        variant: 'warning',
+        confirmLabel: format(t.newSubscribersConfirmBtn, { count: n }),
+        cancelLabel: t.cancel,
+      });
+      if (!ok) return;
+
+      const json = await mutateJson<SendResult & { errors?: string[] }>(
+        `/api/admin/broadcast/${campaign.id}`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ onlyNew: true }),
+        }
+      );
+      setSendResult({
+        totalConfirmedUsers: json.totalConfirmedUsers,
+        windowSize: json.windowSize,
+        sent: json.sent,
+        failed: json.failed,
+        errors: json.errors,
+      });
+      addToast(
+        format(t.sendDoneToast, { sent: json.sent, failed: json.failed }),
+        json.failed > 0 ? 'warning' : 'success'
+      );
+      await onRefresh();
+    } catch (err: unknown) {
+      const msg = (err as Error)?.message || t.sendFailed;
+      setActionError(msg);
+      addToast(msg, 'error');
+    } finally {
+      setSendBusy(false);
+    }
+  }
+
   return (
     <>
       {confirmDialog}
@@ -1458,7 +1518,33 @@ function CampaignDrawer({
                   </svg>
                   {t.launchBroadcast}
                 </button>
+                <button
+                  type="button"
+                  onClick={runNewSubscribers}
+                  disabled={dryRunBusy || sendBusy}
+                  title={t.newSubscribersHint}
+                  className="px-4 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-600 border border-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors flex items-center gap-2"
+                >
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 4v16m8-8H4"
+                    />
+                  </svg>
+                  {t.newSubscribersBtn}
+                </button>
               </div>
+
+              <p className="text-xs text-neutral-500">
+                {t.newSubscribersHint}
+              </p>
 
               {actionError && (
                 <div className="px-3 py-2 rounded-xl bg-red-900/40 border border-red-500/50 text-red-300 text-sm">

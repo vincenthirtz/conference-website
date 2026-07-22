@@ -578,6 +578,138 @@ export async function computeAudienceRecipients(
   }
 }
 
+/**
+ * Résout l'ensemble des auth user ids déjà marqués `sent` pour une campagne
+ * dans broadcast_recipients (paginé). C'est la référence du diff « nouveaux
+ * inscrits » : un id présent ici a déjà reçu l'email (envoi direct enregistré
+ * via recordSentRecipients OU vague planifiée passée à sent).
+ */
+async function fetchSentRecipientIds(campaignId: string): Promise<Set<string>> {
+  if (!supabaseAdmin) {
+    throw new Error('Supabase admin not configured');
+  }
+  const ids = new Set<string>();
+  const PAGE = 1000;
+  let from = 0;
+  while (true) {
+    const { data, error } = await supabaseAdmin
+      .from('broadcast_recipients')
+      .select('user_id')
+      .eq('campaign_id', campaignId)
+      .eq('status', 'sent')
+      .range(from, from + PAGE - 1);
+    if (error) throw error;
+    const batch = data ?? [];
+    for (const r of batch) {
+      const id = (r as { user_id?: string | null }).user_id;
+      if (id) ids.add(id);
+    }
+    if (batch.length < PAGE) break;
+    from += PAGE;
+  }
+  return ids;
+}
+
+export type NewRecipientsResult = {
+  /**
+   * Destinataires de l'audience ACTUELLE jamais encore adressés pour cette
+   * campagne (compte auth requis) — la cible de l'envoi « nouveaux inscrits ».
+   */
+  newRecipients: ComputedRecipient[];
+  /** Taille de l'audience résolue, tous types de destinataires confondus. */
+  audienceTotal: number;
+  /** Destinataires AVEC compte déjà marqués `sent` (donc exclus du renvoi). */
+  alreadySent: number;
+  /**
+   * Destinataires email-only (sans compte auth, ex. adhérent·es) écartés du
+   * diff : impossible de savoir s'ils ont déjà reçu (broadcast_recipients.user_id
+   * NOT NULL ⇒ aucune trace par-destinataire possible). Compté, jamais droppé
+   * en silence.
+   */
+  emailOnlyExcluded: number;
+};
+
+/**
+ * Calcule les « nouveaux inscrits » d'une campagne : les destinataires de
+ * l'audience ACTUELLE absents de la trace d'envoi (broadcast_recipients `sent`).
+ * Alimente le bouton « Envoyer aux nouveaux inscrits » — quand de nouveaux
+ * comptes rejoignent l'audience après un premier envoi, on ne renvoie qu'à eux
+ * (zéro double-envoi).
+ *
+ * Restriction : diff account-based uniquement (user_id requis). Les
+ * destinataires email-only sont exclus et comptés dans emailOnlyExcluded.
+ * Prérequis : l'envoi initial doit avoir laissé une trace (envoi direct via
+ * l'API — qui appelle recordSentRecipients — ou vague planifiée). Une campagne
+ * envoyée AVANT l'introduction de cette trace n'a aucun `sent` enregistré : tous
+ * ses destinataires ressortiraient comme « nouveaux ».
+ */
+export async function computeNewRecipients(
+  campaignId: string,
+  audience: CampaignAudience
+): Promise<NewRecipientsResult> {
+  const recipients = await computeAudienceRecipients(audience);
+  const sentIds = await fetchSentRecipientIds(campaignId);
+
+  let emailOnlyExcluded = 0;
+  const accountBased: (ComputedRecipient & { user_id: string })[] = [];
+  for (const r of recipients) {
+    if (r.user_id) {
+      accountBased.push(r as ComputedRecipient & { user_id: string });
+    } else {
+      emailOnlyExcluded += 1;
+    }
+  }
+
+  const newRecipients = accountBased.filter((r) => !sentIds.has(r.user_id));
+  return {
+    newRecipients,
+    audienceTotal: recipients.length,
+    alreadySent: accountBased.length - newRecipients.length,
+    emailOnlyExcluded,
+  };
+}
+
+/**
+ * Enregistre des destinataires comme `sent` dans broadcast_recipients (upsert
+ * idempotent, chunké). Appelé après un envoi direct réussi pour amorcer / tenir
+ * à jour la trace par-destinataire que computeNewRecipients soustrait ensuite.
+ * N'enregistre que les destinataires AVEC compte (user_id NOT NULL) ; les
+ * email-only sont ignorés (comptés dans `skippedEmailOnly`).
+ */
+export async function recordSentRecipients(
+  campaignId: string,
+  recipients: ComputedRecipient[]
+): Promise<{ recorded: number; skippedEmailOnly: number }> {
+  if (!supabaseAdmin) {
+    throw new Error('Supabase admin not configured');
+  }
+  const nowIso = new Date().toISOString();
+  const rows = recipients
+    .filter((r) => r.user_id)
+    .map((r) => ({
+      campaign_id: campaignId,
+      user_id: r.user_id as string,
+      email: r.email,
+      label: r.label,
+      status: 'sent' as const,
+      sent_at: nowIso,
+      error: null,
+    }));
+  const skippedEmailOnly = recipients.length - rows.length;
+
+  const CHUNK = 500;
+  let recorded = 0;
+  for (let i = 0; i < rows.length; i += CHUNK) {
+    const slice = rows.slice(i, i + CHUNK);
+    const { error, count } = await supabaseAdmin
+      .from('broadcast_recipients')
+      .upsert(slice, { onConflict: 'campaign_id,user_id', count: 'exact' });
+    if (error) throw error;
+    recorded += count ?? slice.length;
+  }
+  return { recorded, skippedEmailOnly };
+}
+
 export type UnsubscribedUser = {
   email: string;
   label: string | null;
