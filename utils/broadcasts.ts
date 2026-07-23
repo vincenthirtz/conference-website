@@ -257,10 +257,21 @@ export type ComputedRecipient = {
   user_id: string | null;
   email: string;
   label: string | null;
+  /**
+   * Date de création du compte (ISO) — sert au calcul « nouveaux inscrits »
+   * (compte créé après le dernier envoi). `null` si inconnue (destinataire
+   * email-only sans date, ou source qui ne l'expose pas).
+   */
+  createdAt?: string | null;
 };
 
 /** Un compte confirmé, projeté sur les seules colonnes utiles ici. */
-type ConfirmedUser = { id: string; email: string; display_name: string | null };
+type ConfirmedUser = {
+  id: string;
+  email: string;
+  display_name: string | null;
+  created_at: string | null;
+};
 
 /**
  * Pagine `auth.users` et ne garde que les comptes confirmés avec un email.
@@ -289,6 +300,7 @@ async function listConfirmedUsers(): Promise<ConfirmedUser[]> {
         email: u.email,
         display_name:
           (u.user_metadata?.display_name as string | undefined) ?? null,
+        created_at: u.created_at ?? null,
       });
     }
     if (batch.length < perPage) break;
@@ -323,6 +335,7 @@ async function fetchConfirmedUsersByIds(
       email: u.email,
       display_name:
         (u.user_metadata?.display_name as string | undefined) ?? null,
+      created_at: u.created_at ?? null,
     });
   }
   return out;
@@ -496,6 +509,7 @@ async function computeConfirmedRecipients(
     user_id: u.id,
     email: u.email,
     label: resolveLabel(battleTagById.get(u.id), u.display_name),
+    createdAt: u.created_at,
   }));
 }
 
@@ -509,7 +523,7 @@ async function computeConfirmedRecipients(
 async function computeAdherentRecipients(): Promise<ComputedRecipient[]> {
   const { data, error } = await supabaseAdmin!
     .from('adherents')
-    .select('first_name,last_name,email,auth_user_id')
+    .select('first_name,last_name,email,auth_user_id,created_at')
     .is('deleted_at', null)
     .eq('is_active', true)
     .eq('payment_status', 'paid');
@@ -524,6 +538,7 @@ async function computeAdherentRecipients(): Promise<ComputedRecipient[]> {
       last_name?: string | null;
       email?: string | null;
       auth_user_id?: string | null;
+      created_at?: string | null;
     };
     if (!row.email) continue;
     const lower = row.email.trim().toLowerCase();
@@ -537,6 +552,7 @@ async function computeAdherentRecipients(): Promise<ComputedRecipient[]> {
       user_id: row.auth_user_id ?? null,
       email: row.email,
       label,
+      createdAt: row.created_at ?? null,
     });
   }
 
@@ -610,45 +626,98 @@ async function fetchSentRecipientIds(campaignId: string): Promise<Set<string>> {
   return ids;
 }
 
+/**
+ * Résout la date du DERNIER envoi d'une campagne (high-water mark), en prenant
+ * le max de deux sources :
+ *  - staff_logs (entity_type='broadcast', payload.campaign=id) : chaque envoi
+ *    direct/vague y logge un agrégat daté — SEULE trace des envois historiques
+ *    (avant la trace par-destinataire).
+ *  - broadcast_recipients.sent_at (status='sent') : trace par-destinataire des
+ *    envois récents (envoi direct enregistré / vagues).
+ * Renvoie l'ISO le plus récent, ou null si la campagne n'a jamais été envoyée.
+ */
+async function fetchLastSentAt(campaignId: string): Promise<string | null> {
+  if (!supabaseAdmin) {
+    throw new Error('Supabase admin not configured');
+  }
+  let last: number | null = null;
+  const consider = (iso: string | null | undefined) => {
+    if (!iso) return;
+    const t = Date.parse(iso);
+    if (Number.isFinite(t) && (last === null || t > last)) last = t;
+  };
+
+  const { data: logs, error: logErr } = await supabaseAdmin
+    .from('staff_logs')
+    .select('created_at')
+    .eq('entity_type', 'broadcast')
+    .filter('payload->>campaign', 'eq', campaignId)
+    .order('created_at', { ascending: false })
+    .limit(1);
+  if (logErr) throw logErr;
+  consider((logs?.[0] as { created_at?: string | null } | undefined)?.created_at);
+
+  const { data: recs, error: recErr } = await supabaseAdmin
+    .from('broadcast_recipients')
+    .select('sent_at')
+    .eq('campaign_id', campaignId)
+    .eq('status', 'sent')
+    .order('sent_at', { ascending: false })
+    .limit(1);
+  if (recErr) throw recErr;
+  consider((recs?.[0] as { sent_at?: string | null } | undefined)?.sent_at);
+
+  return last === null ? null : new Date(last).toISOString();
+}
+
 export type NewRecipientsResult = {
   /**
-   * Destinataires de l'audience ACTUELLE jamais encore adressés pour cette
-   * campagne (compte auth requis) — la cible de l'envoi « nouveaux inscrits ».
+   * Destinataires de l'audience ACTUELLE qui ont rejoint APRÈS le dernier envoi
+   * (compte créé après le high-water mark) — la cible de « nouveaux inscrits ».
    */
   newRecipients: ComputedRecipient[];
   /** Taille de l'audience résolue, tous types de destinataires confondus. */
   audienceTotal: number;
-  /** Destinataires AVEC compte déjà marqués `sent` (donc exclus du renvoi). */
+  /** Destinataires AVEC compte déjà présents au dernier envoi (donc exclus). */
   alreadySent: number;
   /**
-   * Destinataires email-only (sans compte auth, ex. adhérent·es) écartés du
-   * diff : impossible de savoir s'ils ont déjà reçu (broadcast_recipients.user_id
-   * NOT NULL ⇒ aucune trace par-destinataire possible). Compté, jamais droppé
-   * en silence.
+   * Destinataires email-only (sans compte auth, ex. adhérent·es) écartés :
+   * pas de date de compte fiable pour le diff « nouvel inscrit ». Compté,
+   * jamais droppé en silence.
    */
   emailOnlyExcluded: number;
+  /** Date du dernier envoi (ISO) retenue comme seuil, ou null si jamais envoyée. */
+  lastSentAt: string | null;
 };
 
 /**
  * Calcule les « nouveaux inscrits » d'une campagne : les destinataires de
- * l'audience ACTUELLE absents de la trace d'envoi (broadcast_recipients `sent`).
- * Alimente le bouton « Envoyer aux nouveaux inscrits » — quand de nouveaux
- * comptes rejoignent l'audience après un premier envoi, on ne renvoie qu'à eux
- * (zéro double-envoi).
+ * l'audience ACTUELLE dont le COMPTE a été créé APRÈS le dernier envoi
+ * (high-water mark daté). Alimente le bouton « Envoyer aux nouveaux inscrits »
+ * — on ne renvoie qu'aux comptes qui ont rejoint depuis, sans re-spammer les
+ * anciens.
  *
- * Restriction : diff account-based uniquement (user_id requis). Les
- * destinataires email-only sont exclus et comptés dans emailOnlyExcluded.
- * Prérequis : l'envoi initial doit avoir laissé une trace (envoi direct via
- * l'API — qui appelle recordSentRecipients — ou vague planifiée). Une campagne
- * envoyée AVANT l'introduction de cette trace n'a aucun `sent` enregistré : tous
- * ses destinataires ressortiraient comme « nouveaux ».
+ * Pourquoi date-based (et non un diff d'identités) : les envois HISTORIQUES ne
+ * laissent souvent qu'un compteur agrégé dans staff_logs (aucune ligne
+ * broadcast_recipients). Un diff par identité compterait alors TOUTE l'audience
+ * comme « nouvelle ». Le seuil daté (dernier envoi) donne le vrai nombre de
+ * nouveaux inscrits (ex. 37 confirmés − 32 présents au dernier envoi = 5).
+ *
+ * Robustesse : on exclut aussi les comptes déjà tracés `sent`
+ * (broadcast_recipients) le cas échéant. Si la campagne n'a JAMAIS été envoyée
+ * (lastSentAt null), tout le monde est nouveau. Les destinataires email-only
+ * sont exclus (emailOnlyExcluded).
  */
 export async function computeNewRecipients(
   campaignId: string,
   audience: CampaignAudience
 ): Promise<NewRecipientsResult> {
   const recipients = await computeAudienceRecipients(audience);
-  const sentIds = await fetchSentRecipientIds(campaignId);
+  const [lastSentAt, sentIds] = await Promise.all([
+    fetchLastSentAt(campaignId),
+    fetchSentRecipientIds(campaignId),
+  ]);
+  const thresholdMs = lastSentAt ? Date.parse(lastSentAt) : null;
 
   let emailOnlyExcluded = 0;
   const accountBased: (ComputedRecipient & { user_id: string })[] = [];
@@ -660,12 +729,20 @@ export async function computeNewRecipients(
     }
   }
 
-  const newRecipients = accountBased.filter((r) => !sentIds.has(r.user_id));
+  const newRecipients = accountBased.filter((r) => {
+    if (sentIds.has(r.user_id)) return false; // déjà tracé sent
+    if (thresholdMs === null) return true; // jamais envoyée → tout est nouveau
+    const created = r.createdAt ? Date.parse(r.createdAt) : NaN;
+    // Compte créé strictement après le dernier envoi = nouvel inscrit.
+    return Number.isFinite(created) && created > thresholdMs;
+  });
+
   return {
     newRecipients,
     audienceTotal: recipients.length,
     alreadySent: accountBased.length - newRecipients.length,
     emailOnlyExcluded,
+    lastSentAt,
   };
 }
 

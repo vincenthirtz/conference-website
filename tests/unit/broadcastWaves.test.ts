@@ -139,7 +139,9 @@ describe('computeAudienceRecipients', () => {
     store.profiles = [{ id: 'u1', battle_tag: 'Alpha#1234' }] as any;
 
     const recipients = await computeAudienceRecipients('all-confirmed-users');
-    expect(recipients).toEqual([
+    expect(
+      recipients.map(({ user_id, email, label }) => ({ user_id, email, label }))
+    ).toEqual([
       { user_id: 'u1', email: 'a@x.com', label: 'Alpha' },
       { user_id: 'u2', email: 'b@x.com', label: 'Bee' },
       { user_id: 'u3', email: 'c@x.com', label: null },
@@ -318,7 +320,9 @@ describe('computeAudienceRecipients', () => {
     ] as any;
 
     const recipients = await computeAudienceRecipients('adherents');
-    expect(recipients).toEqual([
+    expect(
+      recipients.map(({ user_id, email, label }) => ({ user_id, email, label }))
+    ).toEqual([
       {
         user_id: 'u1',
         email: 'Alice@Example.com',

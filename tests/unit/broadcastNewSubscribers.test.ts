@@ -83,11 +83,12 @@ function makeRes() {
   return res;
 }
 
-function confirmedUser(id: string) {
+function confirmedUser(id: string, createdAt = '2026-01-01T00:00:00.000Z') {
   return {
     id,
     email: `${id}@x.com`,
     email_confirmed_at: '2026-01-01',
+    created_at: createdAt,
     user_metadata: {},
   } as any;
 }
@@ -144,6 +145,41 @@ describe('onlyNew — dry-run diff', () => {
     expect(res.statusCode).toBe(200);
     expect(res.body.newCount).toBe(2); // u2 + u3
     expect(res.body.alreadySent).toBe(1); // u1
+  });
+
+  it('date-based : envoi historique (staff_logs) → seuls les comptes créés APRÈS comptent', async () => {
+    // Scénario « Vérification Battle.net » : 32 envois passés sans trace
+    // par-destinataire (seulement un agrégat daté dans staff_logs). L'audience a
+    // grandi ; seuls les comptes créés après le dernier envoi sont « nouveaux ».
+    const lastSend = '2026-07-13T12:55:23.000Z';
+    setAuthListUsers([
+      confirmedUser('old1', '2026-06-01T00:00:00.000Z'), // avant → déjà envoyé
+      confirmedUser('old2', '2026-07-10T00:00:00.000Z'), // avant → déjà envoyé
+      confirmedUser('new1', '2026-07-20T00:00:00.000Z'), // après → nouveau
+      confirmedUser('new2', '2026-07-21T00:00:00.000Z'), // après → nouveau
+    ]);
+    // Aucune ligne broadcast_recipients (envoi historique agrégé) — juste le log.
+    store.staff_logs = [
+      {
+        entity_type: 'broadcast',
+        payload: { campaign: BUILTIN_ID, sent: 32 },
+        created_at: lastSend,
+      },
+    ] as any;
+
+    const res = makeRes();
+    await campaignHandler(
+      makeReq({
+        query: { campaignId: BUILTIN_ID },
+        body: { dryRun: true, onlyNew: true },
+      }),
+      res
+    );
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.newCount).toBe(2); // new1 + new2 uniquement
+    expect(res.body.alreadySent).toBe(2); // old1 + old2
+    expect(res.body.audienceTotal).toBe(4);
   });
 });
 
