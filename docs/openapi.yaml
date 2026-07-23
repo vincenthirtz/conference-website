@@ -8427,6 +8427,12 @@ paths:
               schema:
                 type: object
                 properties:
+                  tournamentInProgress:
+                    type: boolean
+                    description: >-
+                      True si un tournoi du tenant est EN COURS (status
+                      `running`). Le cron bot saute alors entierement le run
+                      (aucune modification de salon pendant un tournoi).
                   teams:
                     type: array
                     items:

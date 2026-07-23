@@ -42,6 +42,22 @@ type MemberRow = {
 async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const tenantId = req.botContext.tenantId;
 
+  // Un tournoi EN COURS (status='running') → le bot NE doit PAS réconcilier les
+  // salons (création/suppression/permissions pourraient perturber les matchs en
+  // cours). On expose le flag ; le cron saute entièrement le run si true.
+  const { count: runningCount, error: runningErr } = await supabaseAdmin
+    .from('tournaments')
+    .select('id', { count: 'exact', head: true })
+    .eq('tenant_id', tenantId)
+    .eq('status', 'running');
+  if (runningErr) {
+    logger.error('[reconcile/team-channels] tournaments lookup error', runningErr);
+    return res
+      .status(500)
+      .json({ error: 'Erreur lors de la vérification des tournois.' });
+  }
+  const tournamentInProgress = (runningCount ?? 0) > 0;
+
   const limitRaw = Number(req.query.limit);
   const limit = Number.isFinite(limitRaw)
     ? Math.min(Math.max(Math.floor(limitRaw), 1), MAX_LIMIT)
@@ -169,6 +185,7 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
   });
 
   return res.status(200).json({
+    tournamentInProgress,
     teams: payloadTeams,
     limit,
     offset,

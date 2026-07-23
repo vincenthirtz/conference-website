@@ -283,4 +283,30 @@ describe('GET /api/bot/v1/reconcile/team-channels', () => {
     expect(firstSlug).not.toBe(secondSlug);
     expect((second.body as any).offset).toBe(1);
   });
+
+  it('tournamentInProgress is false when no running tournament', async () => {
+    const res = makeRes();
+    await handler(makeBotReq(), res);
+    expect((res.body as any).tournamentInProgress).toBe(false);
+  });
+
+  it('tournamentInProgress is true when a running tournament exists for the tenant', async () => {
+    store.tournaments = [
+      { id: 't-run', tenant_id: CONFERENCE_TENANT_ID, status: 'running' },
+      { id: 't-done', tenant_id: CONFERENCE_TENANT_ID, status: 'completed' },
+    ] as any;
+    const res = makeRes();
+    await handler(makeBotReq(), res);
+    expect(res.statusCode).toBe(200);
+    expect((res.body as any).tournamentInProgress).toBe(true);
+  });
+
+  it('tournamentInProgress ignores running tournaments of OTHER tenants', async () => {
+    store.tournaments = [
+      { id: 't-other', tenant_id: 'some-other-tenant', status: 'running' },
+    ] as any;
+    const res = makeRes();
+    await handler(makeBotReq(), res);
+    expect((res.body as any).tournamentInProgress).toBe(false);
+  });
 });

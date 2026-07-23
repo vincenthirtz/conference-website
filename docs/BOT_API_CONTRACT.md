@@ -1078,9 +1078,13 @@ que `discord-orphans`.
   `team_members.is_substitute`. Les membres sont dédupliqués par `discordUserId`.
 - `captainDiscordUserId` = l'ID Discord du capitaine s'il est lié, sinon `null`.
 - `count` = nombre d'équipes retournées sur cette page.
+- `tournamentInProgress` = `true` s'il existe un tournoi du tenant au statut
+  `running`. Le cron bot **saute alors entièrement le run** (aucune création /
+  suppression de salon ni changement de permission pendant un tournoi en cours).
 
 ```json
 {
+  "tournamentInProgress": false,
   "teams": [
     {
       "teamId": "uuid",
