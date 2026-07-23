@@ -1077,6 +1077,7 @@ que `discord-orphans`.
 - `isCaptain` = (`member.user_id === team.captain_id`). `isSubstitute` vient de
   `team_members.is_substitute`. Les membres sont dédupliqués par `discordUserId`.
 - `captainDiscordUserId` = l'ID Discord du capitaine s'il est lié, sinon `null`.
+- **Scoping** : seules les équipes **inscrites au tournoi de l'année en cours** (via `tournament_teams`) sont renvoyées ; aucune inscription / aucun tournoi de l'année → `teams: []`.
 - `count` = nombre d'équipes retournées sur cette page.
 - `tournamentInProgress` = `true` s'il existe un tournoi du tenant au statut
   `running`. Le cron bot **saute alors entièrement le run** (aucune création /

@@ -24,6 +24,8 @@ const TEAM_A = '550e8400-e29b-41d4-a716-446655440c01';
 const TEAM_B = '550e8400-e29b-41d4-a716-446655440c02';
 const TEAM_INACTIVE = '550e8400-e29b-41d4-a716-446655440c03';
 const TEAM_DELETED = '550e8400-e29b-41d4-a716-446655440c04';
+const TOURNEY = '550e8400-e29b-41d4-a716-4466554400f1';
+const CURRENT_YEAR = new Date().getFullYear();
 
 function makeBotReq(over: Partial<any> = {}, method = 'GET'): any {
   return {
@@ -172,6 +174,26 @@ beforeEach(() => {
     { auth_user_id: 'user-mem-b', discord_user_id: 'discord-mem-b' },
     // user-unlinked-a and user-cap-b intentionally have NO link.
   ] as any;
+
+  // Tournoi de l'ANNÉE EN COURS + les 4 équipes inscrites : le scoping ne
+  // renvoie que les équipes inscrites (is_active/deleted_at filtrés ensuite).
+  store.tournaments = [
+    {
+      id: TOURNEY,
+      tenant_id: CONFERENCE_TENANT_ID,
+      status: 'published',
+      start_date: `${CURRENT_YEAR}-05-01`,
+      end_date: `${CURRENT_YEAR}-06-01`,
+    },
+  ] as any;
+  store.tournament_teams = [TEAM_A, TEAM_B, TEAM_INACTIVE, TEAM_DELETED].map(
+    (team_id, i) => ({
+      id: `tt-${i}`,
+      tenant_id: CONFERENCE_TENANT_ID,
+      tournament_id: TOURNEY,
+      team_id,
+    })
+  ) as any;
 });
 
 describe('GET /api/bot/v1/reconcile/team-channels', () => {
@@ -282,6 +304,48 @@ describe('GET /api/bot/v1/reconcile/team-channels', () => {
     const secondSlug = (second.body as any).teams[0].slug;
     expect(firstSlug).not.toBe(secondSlug);
     expect((second.body as any).offset).toBe(1);
+  });
+
+  it('excludes teams NOT registered in the current-year tournament', async () => {
+    // Seul TEAM_A est inscrit → TEAM_B (actif mais non inscrit) est exclu.
+    store.tournament_teams = [
+      {
+        id: 'tt-only-a',
+        tenant_id: CONFERENCE_TENANT_ID,
+        tournament_id: TOURNEY,
+        team_id: TEAM_A,
+      },
+    ] as any;
+    const res = makeRes();
+    await handler(makeBotReq(), res);
+    expect(res.statusCode).toBe(200);
+    const slugs = (res.body as any).teams.map((t: any) => t.slug);
+    expect(slugs).toEqual(['alpha']);
+  });
+
+  it('returns no teams when there is no current-year tournament', async () => {
+    store.tournaments = [] as any;
+    store.tournament_teams = [] as any;
+    const res = makeRes();
+    await handler(makeBotReq(), res);
+    expect(res.statusCode).toBe(200);
+    expect((res.body as any).teams).toEqual([]);
+    expect((res.body as any).count).toBe(0);
+  });
+
+  it('ignores a tournament from a DIFFERENT year', async () => {
+    store.tournaments = [
+      {
+        id: TOURNEY,
+        tenant_id: CONFERENCE_TENANT_ID,
+        status: 'published',
+        start_date: `${CURRENT_YEAR - 1}-05-01`,
+        end_date: `${CURRENT_YEAR - 1}-06-01`,
+      },
+    ] as any;
+    const res = makeRes();
+    await handler(makeBotReq(), res);
+    expect((res.body as any).teams).toEqual([]);
   });
 
   it('tournamentInProgress is false when no running tournament', async () => {

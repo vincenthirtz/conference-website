@@ -58,6 +58,73 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
   }
   const tournamentInProgress = (runningCount ?? 0) > 0;
 
+  // SCOPING : seules les équipes INSCRITES au tournoi féminin de l'ANNÉE EN
+  // COURS sont provisionnées côté Discord. On résout le tournoi de l'année
+  // (running prioritaire, sinon le plus récent de l'année parmi
+  // running/published/completed), puis ses équipes inscrites via
+  // tournament_teams. Aucun tournoi de l'année → aucune équipe renvoyée.
+  const currentYear = new Date().getFullYear();
+  const { data: tourneyRows, error: tourneyErr } = await supabaseAdmin
+    .from('tournaments')
+    .select('id, status, start_date, end_date')
+    .eq('tenant_id', tenantId)
+    .in('status', ['running', 'published', 'completed']);
+  if (tourneyErr) {
+    logger.error(
+      '[reconcile/team-channels] tournaments year lookup error',
+      tourneyErr
+    );
+    return res
+      .status(500)
+      .json({ error: 'Erreur lors de la vérification des tournois.' });
+  }
+  const yearTourneys = (
+    (tourneyRows ?? []) as Array<{
+      id: string;
+      status: string;
+      start_date: string | null;
+      end_date: string | null;
+    }>
+  ).filter((t) => {
+    const sy = t.start_date ? new Date(t.start_date).getFullYear() : null;
+    const ey = t.end_date ? new Date(t.end_date).getFullYear() : null;
+    return sy === currentYear || ey === currentYear;
+  });
+  const pickedTournament =
+    yearTourneys.find((t) => t.status === 'running') ??
+    yearTourneys
+      .slice()
+      .sort((a, b) =>
+        String(a.start_date ?? '').localeCompare(String(b.start_date ?? ''))
+      )
+      .pop() ??
+    null;
+
+  let registeredTeamIds: string[] = [];
+  if (pickedTournament) {
+    const { data: ttRows, error: ttErr } = await supabaseAdmin
+      .from('tournament_teams')
+      .select('team_id')
+      .eq('tenant_id', tenantId)
+      .eq('tournament_id', pickedTournament.id);
+    if (ttErr) {
+      logger.error(
+        '[reconcile/team-channels] tournament_teams lookup error',
+        ttErr
+      );
+      return res
+        .status(500)
+        .json({ error: 'Erreur lors du chargement des équipes inscrites.' });
+    }
+    registeredTeamIds = Array.from(
+      new Set(
+        (ttRows ?? [])
+          .map((r) => (r as { team_id?: string | null }).team_id)
+          .filter((id): id is string => Boolean(id))
+      )
+    );
+  }
+
   const limitRaw = Number(req.query.limit);
   const limit = Number.isFinite(limitRaw)
     ? Math.min(Math.max(Math.floor(limitRaw), 1), MAX_LIMIT)
@@ -67,7 +134,21 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
     ? Math.max(Math.floor(offsetRaw), 0)
     : 0;
 
-  // 1. Équipes ACTIVES du tenant (non supprimées), paginées et ordonnées.
+  // Aucune équipe inscrite au tournoi de l'année → réponse vide (le bot ne
+  // provisionne rien et, ensemble connu vide, le nettoyage est neutralisé par
+  // sa garde de sécurité côté cron).
+  if (registeredTeamIds.length === 0) {
+    return res.status(200).json({
+      tournamentInProgress,
+      teams: [],
+      limit,
+      offset,
+      count: 0,
+    });
+  }
+
+  // 1. Équipes ACTIVES du tenant INSCRITES au tournoi de l'année (non
+  // supprimées), paginées et ordonnées.
   const { data: teamsRaw, error: teamErr } = await supabaseAdmin
     .from('teams')
     .select(
@@ -76,6 +157,7 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
     .eq('tenant_id', tenantId)
     .eq('is_active', true)
     .is('deleted_at', null)
+    .in('id', registeredTeamIds)
     .order('id', { ascending: true })
     .range(offset, offset + limit - 1);
   if (teamErr) {
