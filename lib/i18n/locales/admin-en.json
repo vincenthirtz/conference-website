@@ -390,6 +390,10 @@
   },
   "adminEmailLogs": {
     "pageTitle": "Admin – Email logs (Brevo)",
+    "viewMessages": "Messages",
+    "viewEvents": "Events",
+    "viewToggleAria": "Choose view: messages or events",
+    "messagesCount": "{count} distinct email(s)",
     "eventRequests": "Sent",
     "eventDelivered": "Delivered",
     "eventOpened": "Opened",

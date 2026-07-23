@@ -94,6 +94,61 @@ function formatDateTime(iso: string) {
 type EmailLogsResponse = { events?: BrevoEvent[] };
 type TestEmailResponse = { success?: boolean; id?: string; error?: string };
 
+// Un EMAIL distinct (messageId) agrégeant ses événements Brevo. La vue
+// « Messages » affiche une ligne par email (envoi réel) plutôt qu'une ligne
+// par événement (une même lettre ouverte 6× = 6 événements mais 1 email).
+type EmailMessage = {
+  messageId: string;
+  email: string;
+  subject: string;
+  from: string;
+  tag: string;
+  date: string; // date d'envoi (plus ancien événement du message)
+  statuses: Record<string, number>; // type d'événement → nombre
+};
+
+// Ordre d'affichage des badges de statut dans la vue « Messages ».
+const STATUS_ORDER = [
+  'requests',
+  'delivered',
+  'opened',
+  'clicks',
+  'softBounces',
+  'hardBounces',
+  'deferred',
+  'spam',
+  'blocked',
+  'invalid',
+];
+
+function groupByMessage(events: BrevoEvent[]): EmailMessage[] {
+  const byId = new Map<string, EmailMessage>();
+  for (const ev of events) {
+    let m = byId.get(ev.messageId);
+    if (!m) {
+      m = {
+        messageId: ev.messageId,
+        email: ev.email,
+        subject: ev.subject,
+        from: ev.from,
+        tag: ev.tag,
+        date: ev.date,
+        statuses: {},
+      };
+      byId.set(ev.messageId, m);
+    }
+    m.statuses[ev.event] = (m.statuses[ev.event] || 0) + 1;
+    if (!m.subject && ev.subject) m.subject = ev.subject;
+    // La date d'envoi = le plus ancien événement (typiquement `requests`).
+    if (new Date(ev.date).getTime() < new Date(m.date).getTime()) {
+      m.date = ev.date;
+    }
+  }
+  return [...byId.values()].sort(
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+  );
+}
+
 /**
  * "Emails" tab of the merged /admin/logs page: Brevo transactional email
  * delivery events. Admin-only — rendered only when the current staff role is
@@ -103,6 +158,11 @@ export default function EmailLogsPanel() {
   const { adminFetch } = useAdminFetch();
   const t = useAdminT('adminEmailLogs');
   const eventLabels = getEventLabels(t);
+
+  // Vue : « Messages » (1 ligne par email distinct) ou « Événements » (détail
+  // Brevo brut, 1 ligne par événement). Par défaut on montre les messages —
+  // plus lisible (un email ouvert plusieurs fois ne gonfle pas la liste).
+  const [view, setView] = useState<'messages' | 'events'>('messages');
 
   // Filters
   const [emailFilter, setEmailFilter] = useState('');
@@ -142,6 +202,12 @@ export default function EmailLogsPanel() {
     },
     select: (res) => res.events || [],
   });
+
+  // Vue « Messages » : regroupe les événements de la page courante par email
+  // distinct (messageId). Le regroupement porte sur la page chargée ; un même
+  // email dont les événements s'étalent sur plusieurs pages peut apparaître sur
+  // deux pages — acceptable au vu des volumes filtrés.
+  const messages = view === 'messages' ? groupByMessage(events) : [];
 
   function handleFilterSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -369,7 +435,41 @@ export default function EmailLogsPanel() {
         </form>
       </section>
 
-      {/* Events list */}
+      {/* Sélecteur de vue : Messages (1 ligne / email) vs Événements (détail) */}
+      <div
+        className="mb-4 inline-flex rounded-xl border border-neutral-700/50 bg-neutral-800/50 p-1"
+        role="tablist"
+        aria-label={t.viewToggleAria}
+      >
+        <button
+          type="button"
+          role="tab"
+          aria-selected={view === 'messages'}
+          onClick={() => setView('messages')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            view === 'messages'
+              ? 'bg-blue-600 text-white'
+              : 'text-neutral-300 hover:text-white'
+          }`}
+        >
+          {t.viewMessages}
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={view === 'events'}
+          onClick={() => setView('events')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            view === 'events'
+              ? 'bg-blue-600 text-white'
+              : 'text-neutral-300 hover:text-white'
+          }`}
+        >
+          {t.viewEvents}
+        </button>
+      </div>
+
+      {/* Liste */}
       <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden">
         <AdminListShell
           loading={loading}
@@ -393,6 +493,64 @@ export default function EmailLogsPanel() {
             </svg>
           }
         >
+          {view === 'messages' && (
+            <div className="divide-y divide-neutral-700/50">
+              {messages.map((m) => (
+                <div
+                  key={m.messageId}
+                  className="p-4 hover:bg-neutral-700/30 transition-colors"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
+                    <span className="text-xs font-mono text-neutral-500 bg-neutral-900/50 px-2 py-1 rounded-lg">
+                      {formatDateTime(m.date)}
+                    </span>
+                    <span
+                      className="text-sm font-medium text-white truncate max-w-[240px]"
+                      title={m.email}
+                    >
+                      {m.email}
+                    </span>
+                  </div>
+
+                  {m.subject && (
+                    <p
+                      className="text-sm text-neutral-200 mb-2 truncate"
+                      title={m.subject}
+                    >
+                      {m.subject}
+                    </p>
+                  )}
+
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {STATUS_ORDER.filter((s) => m.statuses[s]).map((s) => {
+                      const style = eventLabels[s] || {
+                        label: s,
+                        color:
+                          'bg-neutral-600/20 text-neutral-300 border-neutral-500/30',
+                      };
+                      const count = m.statuses[s];
+                      return (
+                        <span
+                          key={s}
+                          className={`px-2 py-0.5 rounded-lg text-xs font-semibold border ${style.color}`}
+                        >
+                          {style.label}
+                          {count > 1 ? ` ×${count}` : ''}
+                        </span>
+                      );
+                    })}
+                    {m.tag && (
+                      <span className="px-2 py-0.5 rounded-lg bg-neutral-700/50 border border-neutral-600/50 text-xs text-neutral-400">
+                        {m.tag}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {view === 'events' && (
           <div className="divide-y divide-neutral-700/50">
             {events.map((ev, i) => {
               const style = eventLabels[ev.event] || {
@@ -457,6 +615,7 @@ export default function EmailLogsPanel() {
               );
             })}
           </div>
+          )}
         </AdminListShell>
       </section>
 
@@ -486,7 +645,9 @@ export default function EmailLogsPanel() {
           </button>
 
           <span className="text-neutral-400 text-sm">
-            {offset + 1} – {offset + events.length}
+            {view === 'messages'
+              ? format(t.messagesCount, { count: messages.length })
+              : `${offset + 1} – ${offset + events.length}`}
           </span>
 
           <button
