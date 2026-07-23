@@ -94,3 +94,60 @@ Ajouter l'endpoint `GET /api/bot/v1/moderation/blacklist` et l'event `registrati
 2. **Page admin** : CRUD + endpoints admin.
 3. **Endpoint bot + module bot** : `GET …/moderation/blacklist`, cache, `guildMemberAdd`, scan boot/cron, alerte channel.
 4. **Commande slash + réception event** : `/blacklist`, dispatch `registration.blacklisted`, MAJ contrat.
+
+## Extension : blacklist entités (équipes / structures-assos)
+
+Pendant de la blacklist joueurs pour les **noms** d'équipes et de structures.
+Mêmes décisions produit : alerter seulement, ne jamais bloquer la création.
+
+- **Table** `entity_blacklist` (RLS default-deny, service-role only) :
+  `id`, `tenant_id`, `entity_type` CHECK (`'team' | 'org'`), `name` NOT NULL,
+  `reason`, `notes`, `banned_by` (FK auth.users SET NULL), `active` DEFAULT true,
+  `created_at`, `updated_at`.
+- **Matching** (`utils/moderation/entityBlacklist.ts` → `checkEntityBlacklist`) :
+  fetch des entrées `active` du tenant (limit 500) puis matching **en JS**
+  (liste petite, évite l'escaping PostgREST). Normalisation = trim + lowercase +
+  espaces multiples réduits à un. Égalité exacte → match **fort** ; inclusion
+  dans un sens OU l'autre (nom stocké normalisé ≥ 4 caractères) → **soft** :
+  une structure bannie « XYZ Org » matche l'équipe « XYZ Org Blue », et
+  inversement. Dédupe par id (strong > soft). Erreur DB → warn + no-match
+  (un check ne fait JAMAIS échouer une création d'équipe).
+- **Event** : `alertIfEntityBlacklisted(...)` (fire-and-forget, appelé depuis
+  `pages/api/teams/create-with-member.ts`, `context: 'team_create'`) émet UN
+  event outbox agrégé `registration.entity_blacklisted` (payload : match le
+  plus fort + `matches[]` complet, cf. `BOT_API_CONTRACT.md`). Contrairement
+  aux joueurs, **pas** d'insert `blacklist_alerts` (table spécifique joueurs,
+  `discord_user_id` NOT NULL) — l'event outbox EST l'alerte.
+- **Endpoints admin** (`withStaffRoute` minRole `admin`, `logStaffAction`
+  `entity_blacklist_add|update|remove`) :
+  `pages/api/admin/moderation/entity-blacklist/` — GET liste paginée (search
+  ilike sur `name`, filtres `active` / `entity_type`), POST création ;
+  `.../entity-blacklist/[id]` — PATCH (`name` / `entity_type` / `reason` /
+  `notes` / `active`) + DELETE.
+
+### Conversion depuis un signalement
+
+Le formulaire public de support (`pages/support/index.tsx` →
+`POST /api/support/ticket`) porte un bloc optionnel « cible signalée » :
+`reported_target_type` (`player | team | org`), `reported_target_name`
+(requis si un type est fourni), `reported_battle_tag` (joueur uniquement).
+Ces champs sont stockés sur `support_tickets` (migration
+`add_reported_target_to_support_tickets.sql`) et affichés dans l'embed
+Discord du ticket (champ « Cible signalée »).
+
+L'admin convertit ensuite le ticket en entrée de blacklist via
+`POST /api/admin/support/tickets/[id]/convert-blacklist` (`withStaffRoute`
+minRole `admin`, body discriminé sur `kind`) :
+
+- `kind: 'player'` → insert `player_blacklist` (mêmes règles que le POST
+  admin : ≥ 1 identifiant, battle_tag lowercase/trim, snowflake validé) ;
+- `kind: 'entity'` → insert `entity_blacklist` (`entity_type` + `name` requis).
+
+`tenant_id` = tenant courant du staff (`support_tickets` n'a pas de
+tenant_id), `banned_by` = auth user du staff. La conversion est tracée sur le
+ticket (`converted_player_blacklist_id` / `converted_entity_blacklist_id`,
+FKs ON DELETE SET NULL) → **409** si déjà converti pour ce `kind`. Si l'UPDATE
+de traçabilité échoue après l'insert, on renvoie quand même 201 (l'entrée
+existe ; le lien est best-effort). Audit :
+`logStaffAction('support_ticket_convert_blacklist')`. Réponse 201 :
+`{ kind, entry, ticket_id }`.

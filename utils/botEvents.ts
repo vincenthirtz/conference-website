@@ -51,6 +51,7 @@ export type BotEventName =
   | 'team.forfeit'
   | 'registration.new'
   | 'registration.blacklisted'
+  | 'registration.entity_blacklisted'
   | 'helloasso.payment.received'
   | 'captain.support.opened'
   | 'tournament.finalized'

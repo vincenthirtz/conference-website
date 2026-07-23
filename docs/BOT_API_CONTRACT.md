@@ -243,6 +243,7 @@ catalog can grow without forcing a bot deploy.
 | `broadcast.state_changed` (Lot 7) | Admin `POST /api/admin/broadcast/state`                                                       | `{ runId, runSlug, state: { v: 1, on_air, lower_third, pip, scene, auto_director, scene_updated_at }, currentSegmentId, matchId }`             |
 | `news.published`                  | Admin / bot ingest                                                                            | `{ newsId, slug, title, tag, excerpt, imageUrl, publishedAt }`                                                                                 |
 | `registration.blacklisted`        | `utils/moderation/blacklist.ts` (`alertIfBlacklisted`) at register / team create / add-member | `{ context, matchedOn, strength, reason, matchCount, matches[], battleTag?, displayName?, discordUserId? }`                                    |
+| `registration.entity_blacklisted` | `utils/moderation/entityBlacklist.ts` (`alertIfEntityBlacklisted`) at team create             | `{ context, entityName, matchedOn: 'name', entityType, matchedName, strength, reason, matchCount, matches[] }`                                 |
 | `team.*` / `scrim.*` / `cast.*`   | various admin / bot routes                                                                    | see emitter call sites                                                                                                                         |
 | `scrim.planning.opened`           | `pages/api/admin/scrim-plannings/index.ts` (POST) — grille de dispos ouverte entre 2 équipes  | `{ planningId, title, game, status, team1, team2, horizonStart, horizonDays }`                                                                 |
 | `scrim.planning.validated`        | `pages/api/admin/scrim-plannings/[planningId]/validate.ts` — créneau validé → scrim créé      | `{ planningId, validatedSlot, scrimId, team1, team2 }` (le `scrim.scheduled` du scrim créé est émis en parallèle)                              |
@@ -467,6 +468,59 @@ detection via `POST /api/bot/v1/moderation/blacklist-alert` so the alert is
 persisted in `blacklist_alerts` (auditable from the admin dashboard). The
 registration flow itself also persists a `source: 'registration'` row directly
 (best-effort, never blocks the registration).
+
+#### `registration.entity_blacklisted` (Blacklist entités)
+
+Emitted by `utils/moderation/entityBlacklist.ts` (`alertIfEntityBlacklisted`)
+when a submitted **team/org name** matches a banned entity in the tenant's
+`entity_blacklist` table (no creation is ever blocked — alert only):
+
+- `pages/api/teams/create-with-member.ts` — team creation (`context: 'team_create'`).
+
+The matcher (`checkEntityBlacklist`) normalises names (trim + lowercase +
+collapsed whitespace) and compares against the tenant's `active` rows: exact
+equality is a **strong** match; containment in either direction (stored name of
+at least 4 normalised chars) is **soft** — a banned org "XYZ Org" matches a
+team "XYZ Org Blue" and vice versa. On any match a **single aggregated** event
+is emitted; `entityType` / `matchedName` / `strength` / `reason` reflect the
+strongest match, and `matches[]` carries every hit.
+
+Payload :
+
+```json
+{
+  "id": "<event uuid>",
+  "event": "registration.entity_blacklisted",
+  "tenantId": "<uuid>",
+  "timestamp": "2026-07-23T18:42:00.000Z",
+  "data": {
+    "context": "team_create",
+    "entityName": "XYZ Org Blue",
+    "matchedOn": "name",
+    "entityType": "org",
+    "matchedName": "XYZ Org",
+    "strength": "soft",
+    "reason": "Structure bannie — impayés 2026",
+    "matchCount": 1,
+    "matches": [
+      {
+        "id": "<entity_blacklist row uuid>",
+        "entityType": "org",
+        "matchedName": "XYZ Org",
+        "strength": "soft",
+        "reason": "Structure bannie — impayés 2026"
+      }
+    ]
+  }
+}
+```
+
+`context` is currently always `team_create` (type is extensible). `entityType`
+is `team | org`; `strength` is `strong | soft`. Unlike the player flow there is
+**no** `blacklist_alerts` insert (that table is player-specific — NOT NULL
+`discord_user_id`): the outbox event **is** the alert. The bot posts an alert
+embed in the configured `staff_log_channel_id` — it does **not** delete or
+rename the team automatically (human decision).
 
 ## Idempotency
 

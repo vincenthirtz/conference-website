@@ -132,6 +132,10 @@ export type StaffLogAction =
   | 'blacklist_add'
   | 'blacklist_update'
   | 'blacklist_remove'
+  | 'entity_blacklist_add'
+  | 'entity_blacklist_update'
+  | 'entity_blacklist_remove'
+  | 'support_ticket_convert_blacklist'
   // --- Broadcast ---
   | 'broadcast_state_update'
   | 'broadcast_next_match'

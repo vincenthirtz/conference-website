@@ -10,6 +10,7 @@ import Tabs, {
 import CommentsPanel from '@/components/admin/moderation/CommentsPanel';
 import DisputesPanel from '@/components/admin/moderation/DisputesPanel';
 import BlacklistPanel from '@/components/admin/moderation/BlacklistPanel';
+import EntityBlacklistPanel from '@/components/admin/moderation/EntityBlacklistPanel';
 import SupportPanel from '@/components/admin/moderation/SupportPanel';
 import type { StaffProps } from '@/types/admin';
 
@@ -48,6 +49,15 @@ export default function AdminModerationPage({ staff }: StaffProps) {
   ];
   const [active, setActive] = useQueryTab(tabs);
 
+  // Sous-onglets de l'onglet Blacklist (joueurs / équipes & structures),
+  // deep-linkables via un second param `?bl=players|entities` qui compose avec
+  // le `?tab=blacklist` existant.
+  const blSubTabs = [
+    { id: 'players', label: t.blSubTabPlayers },
+    { id: 'entities', label: t.blSubTabEntities },
+  ];
+  const [blActive, setBlActive] = useQueryTab(blSubTabs, 'bl');
+
   return (
     <>
       <Head>
@@ -80,7 +90,27 @@ export default function AdminModerationPage({ staff }: StaffProps) {
             {active === 'comments' && isManager ? (
               <CommentsPanel />
             ) : active === 'blacklist' && isManager ? (
-              <BlacklistPanel />
+              <>
+                <Tabs
+                  tabs={blSubTabs}
+                  active={blActive}
+                  onChange={setBlActive}
+                  ariaLabel={t.blSubTabsAriaLabel}
+                  idBase={`${ID_BASE}-bl`}
+                  className="mb-6"
+                />
+                <div
+                  role="tabpanel"
+                  id={tabPanelId(`${ID_BASE}-bl`, blActive)}
+                  aria-labelledby={tabButtonId(`${ID_BASE}-bl`, blActive)}
+                >
+                  {blActive === 'entities' ? (
+                    <EntityBlacklistPanel />
+                  ) : (
+                    <BlacklistPanel />
+                  )}
+                </div>
+              </>
             ) : active === 'support' && isManager ? (
               <SupportPanel />
             ) : (

@@ -291,6 +291,10 @@ export const STAFF_LOG_ACTION_LABELS: Record<StaffLogAction, string> = {
   blacklist_add: 'Ajout blacklist joueur',
   blacklist_update: 'Modification blacklist joueur',
   blacklist_remove: 'Suppression blacklist joueur',
+  entity_blacklist_add: 'Ajout blacklist entité',
+  entity_blacklist_update: 'Modification blacklist entité',
+  entity_blacklist_remove: 'Suppression blacklist entité',
+  support_ticket_convert_blacklist: 'Conversion signalement → blacklist',
   // Broadcast
   broadcast_state_update: 'Mise à jour état broadcast',
   broadcast_next_match: 'Passage au match suivant (broadcast)',

@@ -14,6 +14,7 @@ import { emitBotEvent } from '@/utils/botEvents';
 import { createInvitation } from '@/utils/teams/invitations';
 import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
 import { alertIfBlacklisted } from '@/utils/moderation/blacklist';
+import { alertIfEntityBlacklisted } from '@/utils/moderation/entityBlacklist';
 import { verifyCaptcha } from '@/utils/captcha';
 import {
   validateFieldDefinitions,
@@ -919,6 +920,12 @@ export default async function handler(
       battleTag: m.battle_tag,
     });
   }
+
+  // Blacklist entités : alerte (ne bloque pas) si le NOM de l'équipe créée
+  // matche une équipe/structure bannie. Fire-and-forget.
+  void alertIfEntityBlacklisted(supabaseAdmin, tenantId, 'team_create', {
+    name: createdTeam.name,
+  });
 
   // Bot push : team.created -> le bot cree le salon vocal natif de l'equipe
   // (chantier voice par equipe). Idempotent cote bot via teams.discord_voice_channel_id.
