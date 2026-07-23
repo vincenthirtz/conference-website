@@ -693,6 +693,10 @@ export default async function handler(
     userIdToEmail.set(memberRecords[0].user_id, memberEmail);
   }
   for (const m of insertedMembers) {
+    // Le capitaine/créateur reçoit l'email d'accès dédié (magic-link ci-dessous)
+    // — pas l'email « vous avez rejoint l'équipe » (redondant : il vient de la
+    // créer). On l'exclut donc de la boucle join pour ne pas lui envoyer 2 mails.
+    if (captainUserId !== null && m.user_id === captainUserId) continue;
     const email = userIdToEmail.get(m.user_id);
     if (email) {
       sendTeamJoinEmail(email, createdTeam.name, m.role).catch((err) => {

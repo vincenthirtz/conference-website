@@ -221,6 +221,10 @@ describe('POST /api/teams/create-with-member', () => {
     expect(res.statusCode).toBe(201);
     expect((store.teams as any)[0].captain_id).toBe('u-new');
     expect(store.team_members.length).toBe(1);
+    // La capitaine ne doit recevoir QUE le magic-link d'accès — pas l'email
+    // « vous avez rejoint l'équipe » (elle vient de créer l'équipe).
+    expect(sendTeamAccessEmail).toHaveBeenCalledTimes(1);
+    expect(sendTeamJoinEmail).not.toHaveBeenCalled();
   });
 
   // Invite-accept model : seul le capitaine (set_captain) est inséré dans
