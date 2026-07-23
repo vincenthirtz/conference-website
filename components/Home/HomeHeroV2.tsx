@@ -139,16 +139,14 @@ export default function HomeHeroV2({
 
         {(isLive || showCountdown) && (
           <div
-            className="mt-8 inline-flex flex-wrap items-center justify-center gap-x-4 gap-y-2 rounded-full border border-white/10 bg-[var(--bg-elevated)]/60 py-2.5 pl-4 pr-2.5 backdrop-blur"
+            className="mt-9 inline-flex flex-wrap items-center justify-center gap-x-3 gap-y-2.5 rounded-2xl border border-white/15 bg-black/50 px-4 py-2.5 shadow-lg shadow-black/40 backdrop-blur-md"
             aria-live="polite"
           >
-            <span className="inline-flex items-center gap-2 text-[13px] font-semibold tracking-wide">
+            <span className="inline-flex items-center gap-2 text-[13px] font-semibold text-white">
               <span className="relative flex h-2 w-2" aria-hidden>
                 <span
-                  className={`absolute inline-flex h-full w-full rounded-full opacity-60 ${
-                    isLive
-                      ? 'motion-safe:animate-ping bg-rose-400'
-                      : 'motion-safe:animate-ping bg-[var(--color-yellow)]'
+                  className={`absolute inline-flex h-full w-full rounded-full opacity-70 motion-safe:animate-ping ${
+                    isLive ? 'bg-rose-400' : 'bg-[var(--color-yellow)]'
                   }`}
                 />
                 <span
@@ -161,39 +159,45 @@ export default function HomeHeroV2({
             </span>
 
             {!isLive && showCountdown && (
-              <span className="inline-flex gap-1.5">
-                {parts
-                  ? cells.map(({ value, label }) => (
-                      <span
-                        key={label}
-                        className="flex min-w-[46px] flex-col items-center rounded-lg border border-white/10 bg-white/5 px-2 py-1"
-                      >
-                        <span className="text-lg font-extrabold leading-none tabular-nums text-white">
-                          {pad(value)}
-                        </span>
-                        <span className="mt-0.5 text-[9px] uppercase tracking-[0.12em] text-gray-400">
-                          {label}
-                        </span>
-                      </span>
-                    ))
-                  : // Slot réservé pré-hydratation pour éviter le CLS.
-                    [t.cdDays, t.cdHours, t.cdMinutes, t.cdSeconds].map(
-                      (label) => (
+              <>
+                <span
+                  className="hidden h-6 w-px bg-white/15 sm:block"
+                  aria-hidden
+                />
+                <span className="inline-flex gap-1.5">
+                  {parts
+                    ? cells.map(({ value, label }) => (
                         <span
                           key={label}
-                          className="flex min-w-[46px] flex-col items-center rounded-lg border border-white/10 bg-white/5 px-2 py-1"
-                          aria-hidden
+                          className="flex min-w-[48px] flex-col items-center rounded-lg border border-white/12 bg-white/[0.07] px-2 py-1"
                         >
-                          <span className="text-lg font-extrabold leading-none tabular-nums text-white/30">
-                            ––
+                          <span className="text-lg font-extrabold leading-none tabular-nums text-white">
+                            {pad(value)}
                           </span>
-                          <span className="mt-0.5 text-[9px] uppercase tracking-[0.12em] text-gray-400">
+                          <span className="mt-1 text-[9px] font-medium uppercase tracking-[0.14em] text-gray-300">
                             {label}
                           </span>
                         </span>
-                      )
-                    )}
-              </span>
+                      ))
+                    : // Slot réservé pré-hydratation pour éviter le CLS.
+                      [t.cdDays, t.cdHours, t.cdMinutes, t.cdSeconds].map(
+                        (label) => (
+                          <span
+                            key={label}
+                            className="flex min-w-[48px] flex-col items-center rounded-lg border border-white/12 bg-white/[0.07] px-2 py-1"
+                            aria-hidden
+                          >
+                            <span className="text-lg font-extrabold leading-none tabular-nums text-white/30">
+                              ––
+                            </span>
+                            <span className="mt-1 text-[9px] font-medium uppercase tracking-[0.14em] text-gray-300">
+                              {label}
+                            </span>
+                          </span>
+                        )
+                      )}
+                </span>
+              </>
             )}
           </div>
         )}
