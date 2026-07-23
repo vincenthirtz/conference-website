@@ -920,6 +920,15 @@ export type SupportTicketNotification = {
   subject: string | null;
   message: string;
   adminUrl?: string;
+  /**
+   * Cible signalée (bloc optionnel du formulaire support) : qui est visé par
+   * le signalement. `battleTag` n'est renseigné que pour un joueur.
+   */
+  reportedTarget?: {
+    type: 'player' | 'team' | 'org';
+    name: string;
+    battleTag: string | null;
+  } | null;
 };
 
 const CATEGORY_LABEL: Record<SupportTicketNotification['category'], string> = {
@@ -974,6 +983,27 @@ export async function notifySupportTicket(
     fields.push({
       name: 'Sujet',
       value: data.subject.slice(0, 256),
+      inline: false,
+    });
+  }
+
+  // Cible signalée (bloc optionnel du formulaire) : type + nom + battletag.
+  if (data.reportedTarget) {
+    const TARGET_TYPE_LABEL: Record<
+      NonNullable<SupportTicketNotification['reportedTarget']>['type'],
+      string
+    > = {
+      player: 'Joueur',
+      team: 'Équipe',
+      org: 'Structure',
+    };
+    const t = data.reportedTarget;
+    const value = `${TARGET_TYPE_LABEL[t.type]} — ${t.name}${
+      t.battleTag ? ` (${t.battleTag})` : ''
+    }`;
+    fields.push({
+      name: 'Cible signalée',
+      value: value.slice(0, 1024),
       inline: false,
     });
   }

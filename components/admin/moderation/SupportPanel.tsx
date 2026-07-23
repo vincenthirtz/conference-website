@@ -8,7 +8,7 @@ import LoadingSpinner from '@/components/admin/LoadingSpinner';
 import EmptyState from '@/components/admin/EmptyState';
 import Modal from '@/components/admin/Modal';
 import { useUrlFilters } from '@/utils/useUrlFilters';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
@@ -16,6 +16,10 @@ type Severity = 'low' | 'medium' | 'high';
 type Category = 'dispute' | 'behavior' | 'technical' | 'other';
 type Status = 'open' | 'in_progress' | 'resolved' | 'closed';
 type Source = 'web' | 'discord_bot';
+type ReportedTargetType = 'player' | 'team' | 'org';
+// Kind UI du formulaire de conversion : 'player' → blacklist joueurs ;
+// 'team' / 'org' → blacklist entités (kind API 'entity' + entity_type).
+type ConvertKind = 'player' | 'team' | 'org';
 
 type Ticket = {
   id: string;
@@ -33,8 +37,19 @@ type Ticket = {
   source: Source | null;
   discord_user_id: string | null;
   discord_username: string | null;
+  reported_target_type: ReportedTargetType | null;
+  reported_target_name: string | null;
+  reported_battle_tag: string | null;
+  converted_player_blacklist_id: string | null;
+  converted_entity_blacklist_id: string | null;
   created_at: string;
   updated_at: string;
+};
+
+type ConvertBlacklistResponse = {
+  kind: 'player' | 'entity';
+  entry: { id: string };
+  ticket_id: string;
 };
 
 // Aggregate counts computed server-side over the WHOLE filtered set (not just
@@ -130,6 +145,9 @@ export default function SupportPanel() {
   const { adminFetchJson } = useAdminFetch();
   const { mutate: blacklistMutate, regenerate: regenerateBlacklistKey } =
     useIdempotentMutation({ autoRegenerateOnSuccess: false });
+  // Conversion signalement → blacklist : une clé par intention, régénérée
+  // après chaque 2xx (défaut) pour pouvoir enchaîner joueur puis entité.
+  const { mutateJson: convertMutateJson } = useIdempotentMutation();
 
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [total, setTotal] = useState<number | null>(null);
@@ -143,6 +161,19 @@ export default function SupportPanel() {
   const [blacklistRows, setBlacklistRows] = useState<string[]>(['']);
   const [blacklistReason, setBlacklistReason] = useState('');
   const [blacklisting, setBlacklisting] = useState(false);
+
+  // Formulaire « Convertir en blacklist » (replié par défaut dans le détail).
+  const [convertOpen, setConvertOpen] = useState(false);
+  const [convertKind, setConvertKind] = useState<ConvertKind>('player');
+  const [convertForm, setConvertForm] = useState({
+    battle_tag: '',
+    display_name: '',
+    discord_user_id: '',
+    name: '',
+    reason: '',
+    notes: '',
+  });
+  const [converting, setConverting] = useState(false);
 
   const status = filters.status ?? '';
   const severity = filters.severity ?? '';
@@ -228,6 +259,113 @@ export default function SupportPanel() {
         category: categoryLabels[t.category],
       })
     );
+
+    // Conversion → blacklist : présélectionne le kind depuis la cible signalée
+    // ('player' → joueur ; 'team'/'org' → entité) et pré-remplit les champs.
+    // Sans cible structurée : kind joueur par défaut, champs vides.
+    const playerDone = Boolean(t.converted_player_blacklist_id);
+    const entityDone = Boolean(t.converted_entity_blacklist_id);
+    let kind: ConvertKind =
+      t.reported_target_type === 'team' || t.reported_target_type === 'org'
+        ? t.reported_target_type
+        : 'player';
+    // Évite de présélectionner un kind déjà converti quand l'autre reste dispo.
+    if (kind === 'player' && playerDone && !entityDone) kind = 'team';
+    else if (kind !== 'player' && entityDone && !playerDone) kind = 'player';
+    setConvertKind(kind);
+    setConvertOpen(false);
+    setConvertForm({
+      battle_tag: t.reported_battle_tag ?? '',
+      display_name:
+        t.reported_target_type === 'player'
+          ? (t.reported_target_name ?? '')
+          : '',
+      discord_user_id: '',
+      name:
+        t.reported_target_type === 'team' || t.reported_target_type === 'org'
+          ? (t.reported_target_name ?? '')
+          : '',
+      reason: t.subject ?? '',
+      notes: format(tx.convertNotesDefault, {
+        ref: t.subject || t.id.slice(0, 8),
+      }),
+    });
+  }
+
+  const convertValid =
+    convertKind === 'player'
+      ? [
+          convertForm.battle_tag,
+          convertForm.display_name,
+          convertForm.discord_user_id,
+        ].some((v) => v.trim().length > 0)
+      : convertForm.name.trim().length > 0;
+
+  async function convertToBlacklist() {
+    if (!selected) return;
+    if (!convertValid) {
+      addToast(
+        convertKind === 'player'
+          ? tx.convertErrorPlayerIdentifier
+          : tx.convertErrorNameRequired,
+        'error'
+      );
+      return;
+    }
+
+    setConverting(true);
+    try {
+      const body: Record<string, unknown> =
+        convertKind === 'player'
+          ? { kind: 'player' }
+          : {
+              kind: 'entity',
+              entity_type: convertKind,
+              name: convertForm.name.trim(),
+            };
+      if (convertKind === 'player') {
+        if (convertForm.battle_tag.trim())
+          body.battle_tag = convertForm.battle_tag.trim();
+        if (convertForm.display_name.trim())
+          body.display_name = convertForm.display_name.trim();
+        if (convertForm.discord_user_id.trim())
+          body.discord_user_id = convertForm.discord_user_id.trim();
+      }
+      if (convertForm.reason.trim()) body.reason = convertForm.reason.trim();
+      if (convertForm.notes.trim()) body.notes = convertForm.notes.trim();
+
+      const json = await convertMutateJson<ConvertBlacklistResponse>(
+        `/api/admin/support/tickets/${selected.id}/convert-blacklist`,
+        { method: 'POST', body: JSON.stringify(body) }
+      );
+
+      addToast(
+        json.kind === 'player'
+          ? tx.convertSuccessPlayer
+          : tx.convertSuccessEntity,
+        'success'
+      );
+      const patch =
+        json.kind === 'player'
+          ? { converted_player_blacklist_id: json.entry.id }
+          : { converted_entity_blacklist_id: json.entry.id };
+      setSelected((prev) => (prev ? { ...prev, ...patch } : prev));
+      setTickets((prev) =>
+        prev.map((tk) => (tk.id === selected.id ? { ...tk, ...patch } : tk))
+      );
+      setConvertOpen(false);
+    } catch (err) {
+      if (err instanceof AdminFetchError && err.status === 409) {
+        // Déjà converti pour ce kind (course avec un autre admin) : message
+        // clair + refetch pour récupérer les converted_* à jour.
+        addToast(tx.convertConflict, 'error');
+        fetchTickets();
+      } else {
+        addToast((err as Error).message, 'error');
+      }
+    } finally {
+      setConverting(false);
+    }
   }
 
   function setBlacklistRow(index: number, value: string) {
@@ -485,6 +623,16 @@ export default function SupportPanel() {
                         {tx.anonymousTag}
                       </span>
                     )}
+                    {t.converted_player_blacklist_id && (
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-red-700/30 text-red-200 border border-red-500/40">
+                        {tx.convertedPlayerBadge}
+                      </span>
+                    )}
+                    {t.converted_entity_blacklist_id && (
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-purple-700/30 text-purple-200 border border-purple-500/40">
+                        {tx.convertedEntityBadge}
+                      </span>
+                    )}
                   </div>
                   <div className="text-sm text-white mt-1 truncate">
                     {t.subject || t.message.slice(0, 100)}
@@ -652,6 +800,41 @@ export default function SupportPanel() {
               <Field label={tx.fieldCreatedAt}>
                 {formatDateFr(selected.created_at)}
               </Field>
+              {(selected.reported_target_type ||
+                selected.reported_target_name ||
+                selected.reported_battle_tag) && (
+                <Field label={tx.targetLabel}>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {selected.reported_target_type && (
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-xs font-medium border ${
+                          selected.reported_target_type === 'player'
+                            ? 'bg-indigo-600/20 text-indigo-200 border-indigo-500/40'
+                            : selected.reported_target_type === 'team'
+                              ? 'bg-sky-600/20 text-sky-200 border-sky-500/40'
+                              : 'bg-purple-600/20 text-purple-200 border-purple-500/40'
+                        }`}
+                      >
+                        {selected.reported_target_type === 'player'
+                          ? tx.targetTypePlayer
+                          : selected.reported_target_type === 'team'
+                            ? tx.targetTypeTeam
+                            : tx.targetTypeOrg}
+                      </span>
+                    )}
+                    {selected.reported_target_name && (
+                      <span className="text-white font-medium">
+                        {selected.reported_target_name}
+                      </span>
+                    )}
+                    {selected.reported_battle_tag && (
+                      <span className="font-mono text-neutral-300 text-xs">
+                        {selected.reported_battle_tag}
+                      </span>
+                    )}
+                  </div>
+                </Field>
+              )}
               <Field label={tx.fieldMessage}>
                 <div className="bg-neutral-900/50 border border-neutral-700 rounded-xl p-3 text-sm whitespace-pre-wrap leading-relaxed">
                   {selected.message}
@@ -661,6 +844,165 @@ export default function SupportPanel() {
                 <Field label={tx.fieldResolvedAt}>
                   {formatDateFr(selected.resolved_at)}
                 </Field>
+              )}
+            </div>
+
+            {/* Conversion signalement → blacklist (joueur ou entité) */}
+            <div className="space-y-3 border-t border-neutral-700 pt-4">
+              <div>
+                <label className="block text-sm font-medium text-neutral-200">
+                  {tx.convertHeading}
+                </label>
+                <p className="text-xs text-neutral-500 mt-1">
+                  {tx.convertHelp}
+                </p>
+              </div>
+
+              {(selected.converted_player_blacklist_id ||
+                selected.converted_entity_blacklist_id) && (
+                <div className="flex gap-2 flex-wrap">
+                  {selected.converted_player_blacklist_id && (
+                    <span className="text-xs px-1.5 py-0.5 rounded bg-red-700/30 text-red-200 border border-red-500/40">
+                      {tx.convertedPlayerBadge}
+                    </span>
+                  )}
+                  {selected.converted_entity_blacklist_id && (
+                    <span className="text-xs px-1.5 py-0.5 rounded bg-purple-700/30 text-purple-200 border border-purple-500/40">
+                      {tx.convertedEntityBadge}
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {selected.converted_player_blacklist_id &&
+              selected.converted_entity_blacklist_id ? (
+                <p className="text-xs text-neutral-400">{tx.convertAllDone}</p>
+              ) : !convertOpen ? (
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setConvertOpen(true)}
+                    className="px-3 py-2 rounded-xl bg-red-700 hover:bg-red-600 text-sm font-medium transition-colors"
+                  >
+                    {tx.convertOpenBtn}
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs text-neutral-500 uppercase tracking-wide mb-1">
+                      {tx.convertKindLabel}
+                    </label>
+                    <select
+                      value={convertKind}
+                      onChange={(e) =>
+                        setConvertKind(e.target.value as ConvertKind)
+                      }
+                      className="px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 text-sm"
+                    >
+                      <option
+                        value="player"
+                        disabled={Boolean(
+                          selected.converted_player_blacklist_id
+                        )}
+                      >
+                        {tx.convertKindPlayer}
+                      </option>
+                      <option
+                        value="team"
+                        disabled={Boolean(
+                          selected.converted_entity_blacklist_id
+                        )}
+                      >
+                        {tx.convertKindTeam}
+                      </option>
+                      <option
+                        value="org"
+                        disabled={Boolean(
+                          selected.converted_entity_blacklist_id
+                        )}
+                      >
+                        {tx.convertKindOrg}
+                      </option>
+                    </select>
+                  </div>
+
+                  {convertKind === 'player' ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <ConvertInput
+                        label={tx.convertBattleTagLabel}
+                        value={convertForm.battle_tag}
+                        onChange={(v) =>
+                          setConvertForm((f) => ({ ...f, battle_tag: v }))
+                        }
+                        placeholder={tx.convertBattleTagPlaceholder}
+                      />
+                      <ConvertInput
+                        label={tx.convertDisplayNameLabel}
+                        value={convertForm.display_name}
+                        onChange={(v) =>
+                          setConvertForm((f) => ({ ...f, display_name: v }))
+                        }
+                      />
+                      <ConvertInput
+                        label={tx.convertDiscordIdLabel}
+                        value={convertForm.discord_user_id}
+                        onChange={(v) =>
+                          setConvertForm((f) => ({ ...f, discord_user_id: v }))
+                        }
+                        placeholder="123456789012345678"
+                      />
+                    </div>
+                  ) : (
+                    <ConvertInput
+                      label={tx.convertNameLabel}
+                      value={convertForm.name}
+                      onChange={(v) =>
+                        setConvertForm((f) => ({ ...f, name: v }))
+                      }
+                      placeholder={tx.convertNamePlaceholder}
+                      maxLength={190}
+                    />
+                  )}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <ConvertInput
+                      label={tx.convertReasonLabel}
+                      value={convertForm.reason}
+                      onChange={(v) =>
+                        setConvertForm((f) => ({ ...f, reason: v }))
+                      }
+                      maxLength={1000}
+                    />
+                    <ConvertInput
+                      label={tx.convertNotesLabel}
+                      value={convertForm.notes}
+                      onChange={(v) =>
+                        setConvertForm((f) => ({ ...f, notes: v }))
+                      }
+                      maxLength={2000}
+                    />
+                  </div>
+
+                  <div className="flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setConvertOpen(false)}
+                      disabled={converting}
+                      className="px-3 py-2 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm transition-colors disabled:opacity-50"
+                    >
+                      {tx.convertCancel}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={convertToBlacklist}
+                      disabled={converting || !convertValid}
+                      className="px-3 py-2 rounded-xl bg-red-700 hover:bg-red-600 text-sm font-medium transition-colors disabled:opacity-50"
+                    >
+                      {converting ? tx.convertSubmitting : tx.convertSubmit}
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
 
@@ -815,6 +1157,36 @@ function Stat({
         {value}
       </p>
     </div>
+  );
+}
+
+function ConvertInput({
+  label,
+  value,
+  onChange,
+  placeholder,
+  maxLength,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  maxLength?: number;
+}) {
+  return (
+    <label className="block">
+      <span className="block text-xs text-neutral-500 uppercase tracking-wide mb-1">
+        {label}
+      </span>
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        maxLength={maxLength}
+        className="w-full px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+      />
+    </label>
   );
 }
 

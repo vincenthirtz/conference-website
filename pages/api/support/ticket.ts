@@ -69,7 +69,8 @@ function applyBotUserRateLimit(
   if (timestamps.length >= max) {
     res.setHeader('Retry-After', String(Math.ceil(windowMs / 1000)));
     res.status(429).json({
-      error: 'Trop de signalements depuis ce compte Discord. Réessaye plus tard.',
+      error:
+        'Trop de signalements depuis ce compte Discord. Réessaye plus tard.',
     });
     return true;
   }
@@ -127,6 +128,9 @@ export default async function handler(
     email,
     discordUserId: rawDiscordUserId,
     discordUsername: rawDiscordUsername,
+    reported_target_type: rawReportedType,
+    reported_target_name: rawReportedName,
+    reported_battle_tag: rawReportedBattleTag,
   } = body;
 
   // Validation
@@ -169,6 +173,55 @@ export default async function handler(
       .json({ error: 'Sujet trop long (max 200 caractères)' });
   }
 
+  // Cible signalée (bloc optionnel du formulaire). Si un type est fourni il
+  // doit être dans l'enum ET être accompagné d'un nom non vide ; le battletag
+  // n'est pertinent que pour un joueur (ignoré/null sinon). Bloc absent →
+  // les trois colonnes restent NULL.
+  const VALID_REPORTED_TYPES = ['player', 'team', 'org'] as const;
+  type ReportedType = (typeof VALID_REPORTED_TYPES)[number];
+  let reportedTargetType: ReportedType | null = null;
+  let reportedTargetName: string | null = null;
+  let reportedBattleTag: string | null = null;
+  if (rawReportedType !== undefined && rawReportedType !== null) {
+    if (
+      typeof rawReportedType !== 'string' ||
+      !(VALID_REPORTED_TYPES as readonly string[]).includes(rawReportedType)
+    ) {
+      return res.status(400).json({
+        error: `Type de cible invalide. Valeurs : ${VALID_REPORTED_TYPES.join(', ')}`,
+      });
+    }
+    reportedTargetType = rawReportedType as ReportedType;
+
+    if (
+      typeof rawReportedName !== 'string' ||
+      rawReportedName.trim().length === 0
+    ) {
+      return res.status(400).json({
+        error: 'Nom de la cible requis quand un type de cible est fourni',
+      });
+    }
+    if (rawReportedName.trim().length > 190) {
+      return res
+        .status(400)
+        .json({ error: 'Nom de la cible trop long (max 190 caractères)' });
+    }
+    reportedTargetName = rawReportedName.trim();
+
+    if (
+      reportedTargetType === 'player' &&
+      typeof rawReportedBattleTag === 'string'
+    ) {
+      const tag = rawReportedBattleTag.trim();
+      if (tag.length > 190) {
+        return res
+          .status(400)
+          .json({ error: 'Battletag trop long (max 190 caractères)' });
+      }
+      reportedBattleTag = tag.length > 0 ? tag : null;
+    }
+  }
+
   let validTournamentId: string | null = null;
   if (tournamentId) {
     if (typeof tournamentId !== 'string' || !isValidUUID(tournamentId)) {
@@ -199,8 +252,7 @@ export default async function handler(
     }
     cleanDiscordUserId = rawDiscordUserId;
     if (typeof rawDiscordUsername === 'string') {
-      cleanDiscordUsername =
-        rawDiscordUsername.trim().slice(0, 100) || null;
+      cleanDiscordUsername = rawDiscordUsername.trim().slice(0, 100) || null;
     }
 
     // Bot-mode rate-limit is per Discord user, not per IP.
@@ -238,6 +290,9 @@ export default async function handler(
       source: isBotRequest ? 'discord_bot' : 'web',
       discord_user_id: storedDiscordUserId,
       discord_username: storedDiscordUsername,
+      reported_target_type: reportedTargetType,
+      reported_target_name: reportedTargetName,
+      reported_battle_tag: reportedBattleTag,
     })
     .select('*')
     .single();
@@ -277,6 +332,14 @@ export default async function handler(
     subject: ticket.subject,
     message: ticket.message,
     adminUrl: `${SITE_URL.replace(/\/$/, '')}/admin/support`,
+    reportedTarget:
+      reportedTargetType && reportedTargetName
+        ? {
+            type: reportedTargetType,
+            name: reportedTargetName,
+            battleTag: reportedBattleTag,
+          }
+        : null,
   })
     .then((r) => {
       if (r.messageId) {

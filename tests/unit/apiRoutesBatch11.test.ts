@@ -540,4 +540,127 @@ describe('POST /api/support/ticket', () => {
     const body = res.body as any;
     expect(body.referenceShort).toBe(body.ticketId.slice(0, 8));
   });
+
+  /* ---------------------------------------------------------
+   * Cible signalée (bloc optionnel reported_target_*)
+   * -------------------------------------------------------*/
+
+  it('400 on invalid reported_target_type', async () => {
+    const res = makeRes();
+    await supportTicketHandler(
+      makeReq({
+        method: 'POST',
+        body: {
+          category: 'behavior',
+          severity: 'medium',
+          message: 'A longer message about an issue',
+          isAnonymous: true,
+          reported_target_type: 'guild',
+          reported_target_name: 'Someone',
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('400 when reported_target_type provided without a name', async () => {
+    const res = makeRes();
+    await supportTicketHandler(
+      makeReq({
+        method: 'POST',
+        body: {
+          category: 'behavior',
+          severity: 'medium',
+          message: 'A longer message about an issue',
+          isAnonymous: true,
+          reported_target_type: 'player',
+          reported_target_name: '   ',
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('201 stores the reported target (player + battletag) and forwards it to Discord', async () => {
+    store.support_tickets = [];
+    const res = makeRes();
+    await supportTicketHandler(
+      makeReq({
+        method: 'POST',
+        body: {
+          category: 'behavior',
+          severity: 'medium',
+          message: 'A longer message about an issue',
+          isAnonymous: true,
+          reported_target_type: 'player',
+          reported_target_name: '  Cheater  ',
+          reported_battle_tag: ' Cheater#1234 ',
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(201);
+    const row = (store.support_tickets as any[])[0];
+    expect(row.reported_target_type).toBe('player');
+    expect(row.reported_target_name).toBe('Cheater');
+    expect(row.reported_battle_tag).toBe('Cheater#1234');
+
+    await new Promise((r) => setImmediate(r));
+    expect(notifySupportTicket).toHaveBeenCalledOnce();
+    expect((notifySupportTicket.mock.calls[0] as any[])[0]).toMatchObject({
+      reportedTarget: {
+        type: 'player',
+        name: 'Cheater',
+        battleTag: 'Cheater#1234',
+      },
+    });
+  });
+
+  it('201 team target: battletag is ignored (players only), block optional when absent', async () => {
+    store.support_tickets = [];
+    const res = makeRes();
+    await supportTicketHandler(
+      makeReq({
+        method: 'POST',
+        body: {
+          category: 'behavior',
+          severity: 'medium',
+          message: 'A longer message about an issue',
+          isAnonymous: true,
+          reported_target_type: 'team',
+          reported_target_name: 'Toxic Squad',
+          reported_battle_tag: 'Ignored#1234',
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(201);
+    const row = (store.support_tickets as any[])[0];
+    expect(row.reported_target_type).toBe('team');
+    expect(row.reported_target_name).toBe('Toxic Squad');
+    expect(row.reported_battle_tag).toBeNull();
+
+    // Bloc absent → colonnes NULL.
+    store.support_tickets = [];
+    const res2 = makeRes();
+    await supportTicketHandler(
+      makeReq({
+        method: 'POST',
+        body: {
+          category: 'other',
+          severity: 'low',
+          message: 'A longer message about an issue',
+          isAnonymous: true,
+        },
+      }),
+      res2
+    );
+    expect(res2.statusCode).toBe(201);
+    const row2 = (store.support_tickets as any[])[0];
+    expect(row2.reported_target_type).toBeNull();
+    expect(row2.reported_target_name).toBeNull();
+    expect(row2.reported_battle_tag).toBeNull();
+  });
 });

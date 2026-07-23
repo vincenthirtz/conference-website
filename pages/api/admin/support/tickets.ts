@@ -109,7 +109,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
   // Page query: full rows for the current window, with the filtered total.
   const pageQuery = buildFilteredQuery(
-    'id, tournament_id, reporter_name, reporter_email, is_anonymous, category, severity, subject, message, status, resolved_at, resolution_note, source, discord_user_id, discord_username, created_at, updated_at',
+    'id, tournament_id, reporter_name, reporter_email, is_anonymous, category, severity, subject, message, status, resolved_at, resolution_note, source, discord_user_id, discord_username, reported_target_type, reported_target_name, reported_battle_tag, converted_player_blacklist_id, converted_entity_blacklist_id, created_at, updated_at',
     { count: 'exact' }
   )
     .order('created_at', { ascending: false })

@@ -10,6 +10,16 @@ type SupportDict = ReturnType<typeof useT<'supportPage'>>;
 
 type Category = 'dispute' | 'behavior' | 'technical' | 'other';
 type Severity = 'low' | 'medium' | 'high';
+type ReportedTargetType = '' | 'player' | 'team' | 'org';
+
+const getReportedTypeOptions = (
+  t: SupportDict
+): { value: ReportedTargetType; label: string }[] => [
+  { value: '', label: t.reportedTypeNone },
+  { value: 'player', label: t.reportedTypePlayer },
+  { value: 'team', label: t.reportedTypeTeam },
+  { value: 'org', label: t.reportedTypeOrg },
+];
 
 const getCategoryOptions = (
   t: SupportDict
@@ -67,6 +77,7 @@ export default function SupportPage() {
   const t = useT('supportPage');
   const categoryOptions = getCategoryOptions(t);
   const severityOptions = getSeverityOptions(t);
+  const reportedTypeOptions = getReportedTypeOptions(t);
   const [category, setCategory] = useState<Category>('behavior');
   const [severity, setSeverity] = useState<Severity>('medium');
   const [isAnonymous, setIsAnonymous] = useState(false);
@@ -74,6 +85,9 @@ export default function SupportPage() {
   const [email, setEmail] = useState('');
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
+  const [reportedType, setReportedType] = useState<ReportedTargetType>('');
+  const [reportedName, setReportedName] = useState('');
+  const [reportedBattleTag, setReportedBattleTag] = useState('');
 
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState<{ ref: string } | null>(null);
@@ -91,6 +105,10 @@ export default function SupportPage() {
       setError(t.errEmailRequired);
       return;
     }
+    if (reportedType && !reportedName.trim()) {
+      setError(t.errReportedNameRequired);
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -105,6 +123,15 @@ export default function SupportPage() {
           email: isAnonymous ? null : email.trim() || null,
           subject: subject.trim() || null,
           message: message.trim(),
+          ...(reportedType
+            ? {
+                reported_target_type: reportedType,
+                reported_target_name: reportedName.trim(),
+                ...(reportedType === 'player' && reportedBattleTag.trim()
+                  ? { reported_battle_tag: reportedBattleTag.trim() }
+                  : {}),
+              }
+            : {}),
         }),
       });
       const json = await res.json().catch(() => ({}));
@@ -162,6 +189,9 @@ export default function SupportPage() {
                 setSuccess(null);
                 setSubject('');
                 setMessage('');
+                setReportedType('');
+                setReportedName('');
+                setReportedBattleTag('');
               }}
               className="px-4 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-sm font-medium transition-colors"
             >
@@ -244,6 +274,81 @@ export default function SupportPage() {
                     </label>
                   );
                 })}
+              </div>
+            </div>
+
+            {/* Reported person / team (optional, feeds moderation) */}
+            <div className="bg-neutral-900/40 border border-neutral-700 rounded-xl p-3 space-y-3">
+              <div>
+                <span className="block text-sm font-medium text-neutral-200">
+                  {t.reportedTitle}
+                </span>
+                <span className="block text-xs text-neutral-400 mt-0.5">
+                  {t.reportedHint}
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label
+                    htmlFor="reported-type"
+                    className="block text-sm text-neutral-400 mb-1"
+                  >
+                    {t.reportedTypeLabel}
+                  </label>
+                  <select
+                    id="reported-type"
+                    value={reportedType}
+                    onChange={(e) =>
+                      setReportedType(e.target.value as ReportedTargetType)
+                    }
+                    className="w-full px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    {reportedTypeOptions.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {reportedType && (
+                  <div>
+                    <label
+                      htmlFor="reported-name"
+                      className="block text-sm text-neutral-400 mb-1"
+                    >
+                      {t.reportedNameLabel}{' '}
+                      <span className="text-red-400">*</span>
+                    </label>
+                    <input
+                      id="reported-name"
+                      type="text"
+                      value={reportedName}
+                      onChange={(e) => setReportedName(e.target.value)}
+                      maxLength={190}
+                      className="w-full px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder={t.reportedNamePlaceholder}
+                    />
+                  </div>
+                )}
+                {reportedType === 'player' && (
+                  <div>
+                    <label
+                      htmlFor="reported-battletag"
+                      className="block text-sm text-neutral-400 mb-1"
+                    >
+                      {t.reportedBattleTagLabel}
+                    </label>
+                    <input
+                      id="reported-battletag"
+                      type="text"
+                      value={reportedBattleTag}
+                      onChange={(e) => setReportedBattleTag(e.target.value)}
+                      maxLength={190}
+                      className="w-full px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder={t.reportedBattleTagPlaceholder}
+                    />
+                  </div>
+                )}
               </div>
             </div>
 
