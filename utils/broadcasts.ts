@@ -20,6 +20,7 @@ import {
 } from './emailUnsubscribe';
 import { BROADCAST_OPT_OUT_EVENT_TYPE } from './webPushEvents';
 import { slugifyCampaignName } from './campaignSchema';
+import { DEFAULT_TENANT_ID } from './tenant';
 
 import { logger } from './logger';
 
@@ -76,7 +77,11 @@ export type CampaignAudience =
   | 'team-captains'
   | 'team-members'
   | 'staff'
-  | 'adherents';
+  | 'adherents'
+  // Newsletter externe (abonné·es sans compte site) + combinaisons.
+  | 'newsletter'
+  | 'all-plus-newsletter'
+  | 'adherents-plus-newsletter';
 export type CampaignStatus = 'active' | 'draft' | 'archived';
 
 export type BroadcastCampaign = {
@@ -560,6 +565,68 @@ async function computeAdherentRecipients(): Promise<ComputedRecipient[]> {
 }
 
 /**
+ * Destinataires de l'audience `newsletter` : abonné·es newsletter EXTERNES
+ * (sans compte site), double opt-in → on ne garde que `status='confirmed'`.
+ * Audience « email direct » (user_id null ⇒ unsubscribe via token email).
+ * Scopée au tenant courant (DEFAULT_TENANT_ID), dédup par lower(email), exclut
+ * les emails désinscrits (broadcast_email_optouts).
+ */
+async function computeNewsletterRecipients(): Promise<ComputedRecipient[]> {
+  const { data, error } = await supabaseAdmin!
+    .from('newsletter_subscribers')
+    .select('email, confirmed_at, created_at')
+    .eq('tenant_id', DEFAULT_TENANT_ID)
+    .eq('status', 'confirmed');
+  if (error) throw error;
+
+  const optedOut = await fetchBroadcastEmailOptOuts();
+  const byEmail = new Map<string, ComputedRecipient>();
+  for (const r of data ?? []) {
+    const row = r as {
+      email?: string | null;
+      confirmed_at?: string | null;
+      created_at?: string | null;
+    };
+    if (!row.email) continue;
+    const lower = row.email.trim().toLowerCase();
+    if (!lower || optedOut.has(lower) || byEmail.has(lower)) continue;
+    byEmail.set(lower, {
+      user_id: null,
+      email: row.email,
+      label: null,
+      createdAt: row.confirmed_at ?? row.created_at ?? null,
+    });
+  }
+  return Array.from(byEmail.values());
+}
+
+/**
+ * Fusionne plusieurs listes de destinataires en dédupliquant par lower(email).
+ * En cas de doublon d'email, on PRÉFÈRE le destinataire AVEC compte auth
+ * (user_id présent) — greeting personnalisé + unsubscribe user plutôt qu'email.
+ * L'ordre des listes fait foi pour la 1re occurrence ; un compte remplace une
+ * entrée email-only déjà vue.
+ */
+function mergeRecipientsByEmail(
+  ...lists: ComputedRecipient[][]
+): ComputedRecipient[] {
+  const byEmail = new Map<string, ComputedRecipient>();
+  for (const list of lists) {
+    for (const r of list) {
+      const key = r.email.trim().toLowerCase();
+      if (!key) continue;
+      const existing = byEmail.get(key);
+      if (!existing) {
+        byEmail.set(key, r);
+      } else if (!existing.user_id && r.user_id) {
+        byEmail.set(key, r); // un compte auth supplante une entrée email-only
+      }
+    }
+  }
+  return Array.from(byEmail.values());
+}
+
+/**
  * Calcule la liste des destinataires éligibles pour une audience donnée.
  *
  * Deux familles d'audiences :
@@ -589,6 +656,18 @@ export async function computeAudienceRecipients(
       return computeConfirmedRecipients(await listStaffAuthUserIds());
     case 'adherents':
       return computeAdherentRecipients();
+    case 'newsletter':
+      return computeNewsletterRecipients();
+    case 'all-plus-newsletter':
+      return mergeRecipientsByEmail(
+        await computeConfirmedRecipients(null),
+        await computeNewsletterRecipients()
+      );
+    case 'adherents-plus-newsletter':
+      return mergeRecipientsByEmail(
+        await computeAdherentRecipients(),
+        await computeNewsletterRecipients()
+      );
     default:
       throw new Error(`Unsupported audience: ${audience as string}`);
   }

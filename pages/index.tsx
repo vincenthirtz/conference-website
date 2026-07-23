@@ -27,6 +27,7 @@ const HomeNewsSection = dynamic(
 );
 const HomeSponsors = dynamic(() => import('@/components/Home/HomeSponsors'));
 const PressSection = dynamic(() => import('@/components/Press/PressSection'));
+const NewsletterSignup = dynamic(() => import('@/components/NewsletterSignup'));
 const AnnouncementsTicker = dynamic(
   () => import('@/components/Ads/AnnouncementsTicker')
 );
@@ -313,6 +314,8 @@ function Home({
       <HomeNewsSection initialNews={news} />
       <HomeSponsors partners={partners} />
       <PressSection />
+
+      <NewsletterSignup variant="section" source="homepage" />
 
       <div className="mt-5">
         <AnnouncementsTicker initialItems={announcements} />

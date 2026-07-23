@@ -1010,6 +1010,31 @@
     "legal": "Legal notice",
     "copyright": "WOMEN'S CUP association — All rights reserved — Made with ❤️ by"
   },
+  "newsletterSignup": {
+    "footerTitle": "Newsletter",
+    "footerDescription": "Get highlights, tournament dates and announcements by email.",
+    "sectionTitle": "Never miss an announcement",
+    "sectionDescription": "Subscribe to the newsletter to get tournament dates, highlights and OW Women's Cup news straight to your inbox.",
+    "emailLabel": "Email address",
+    "emailPlaceholder": "your@email.com",
+    "captchaLabel": "Anti-bot — what is {question}?",
+    "captchaPlaceholder": "Answer with a number",
+    "submit": "Subscribe",
+    "submitting": "Sending…",
+    "successTitle": "Almost there!",
+    "successBody": "Check your inbox to confirm your subscription.",
+    "errorEmail": "Please enter a valid email address.",
+    "errorGeneric": "Subscription failed. Please try again in a moment.",
+    "honeypotLabel": "Do not fill in",
+    "privacyNote": "One confirmation email only. Unsubscribe anytime."
+  },
+  "newsletterMerci": {
+    "confirmedTitle": "Thank you!",
+    "confirmedBody": "Your newsletter subscription is confirmed.",
+    "invalidTitle": "Invalid link",
+    "invalidBody": "This confirmation link is invalid or has expired.",
+    "backHome": "Back to home"
+  },
   "cookieBanner": {
     "title": "Cookie settings",
     "description": "We use cookies to keep the site running smoothly and improve your experience. You can customise your preferences below.",

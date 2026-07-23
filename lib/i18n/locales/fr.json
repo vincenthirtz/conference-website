@@ -1010,6 +1010,31 @@
     "legal": "Mentions légales",
     "copyright": "Association WOMEN'S CUP — Tous droits réservés — Fait avec ❤️ par"
   },
+  "newsletterSignup": {
+    "footerTitle": "Newsletter",
+    "footerDescription": "Reçois les temps forts, dates de tournois et annonces par email.",
+    "sectionTitle": "Ne rate aucune annonce",
+    "sectionDescription": "Inscris-toi à la newsletter pour recevoir les dates des tournois, les temps forts et les nouveautés de l'OW Women's Cup, directement dans ta boîte mail.",
+    "emailLabel": "Adresse email",
+    "emailPlaceholder": "ton@email.com",
+    "captchaLabel": "Anti-bot — combien font {question} ?",
+    "captchaPlaceholder": "Réponds par un nombre",
+    "submit": "S'inscrire",
+    "submitting": "Envoi…",
+    "successTitle": "Presque terminé !",
+    "successBody": "Vérifie ta boîte mail pour confirmer ton inscription.",
+    "errorEmail": "Merci de saisir une adresse email valide.",
+    "errorGeneric": "L'inscription a échoué. Réessaie dans un instant.",
+    "honeypotLabel": "Ne pas remplir",
+    "privacyNote": "Un seul email de confirmation. Désinscription possible à tout moment."
+  },
+  "newsletterMerci": {
+    "confirmedTitle": "Merci !",
+    "confirmedBody": "Ton inscription à la newsletter est confirmée.",
+    "invalidTitle": "Lien invalide",
+    "invalidBody": "Ce lien de confirmation est invalide ou a expiré.",
+    "backHome": "Retour à l'accueil"
+  },
   "cookieBanner": {
     "title": "Gestion des cookies",
     "description": "Nous utilisons des cookies pour assurer le bon fonctionnement du site et améliorer votre expérience. Vous pouvez personnaliser vos préférences ci-dessous.",

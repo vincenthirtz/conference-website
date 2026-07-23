@@ -2,6 +2,7 @@ import React, { JSX } from 'react';
 import Link from 'next/link';
 import type { SVGTypes } from '@/types/types';
 import { CookieSettingsButton } from '@/components/CookieBanner';
+import NewsletterSignup from '@/components/NewsletterSignup';
 import { useT } from '@/lib/i18n/useT';
 import { useTenantBranding } from '@/lib/branding/TenantBrandingProvider';
 import {
@@ -173,6 +174,7 @@ function Footer(): JSX.Element {
                 </li>
               ))}
             </ul>
+            <NewsletterSignup variant="footer" source="footer" />
           </div>
 
           {/* Col 2 — Tournoi */}

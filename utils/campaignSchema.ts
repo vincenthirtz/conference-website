@@ -17,6 +17,9 @@ export const campaignInputSchema = z
         'team-members',
         'staff',
         'adherents',
+        'newsletter',
+        'all-plus-newsletter',
+        'adherents-plus-newsletter',
       ])
       .optional()
       .default('all-confirmed-users'),

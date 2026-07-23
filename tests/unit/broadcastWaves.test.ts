@@ -331,6 +331,45 @@ describe('computeAudienceRecipients', () => {
       { user_id: null, email: 'bob@example.com', label: 'Bob' },
     ]);
   });
+
+  it('newsletter: seulement les abonné·es confirmé·es, email-only, sans opt-out', async () => {
+    store.newsletter_subscribers = [
+      { email: 'ext1@x.com', status: 'confirmed', confirmed_at: '2026-07-01' },
+      { email: 'ext2@x.com', status: 'pending' }, // pas confirmé → exclu
+      { email: 'ext3@x.com', status: 'unsubscribed' }, // désinscrit → exclu
+      { email: 'OptedOut@x.com', status: 'confirmed' }, // opt-out email → exclu
+    ] as any;
+    store.broadcast_email_optouts = [{ email: 'optedout@x.com' }] as any;
+
+    const recipients = await computeAudienceRecipients('newsletter');
+    expect(
+      recipients.map(({ user_id, email }) => ({ user_id, email }))
+    ).toEqual([{ user_id: null, email: 'ext1@x.com' }]);
+  });
+
+  it('all-plus-newsletter: comptes confirmés + newsletter, dédupé par email (compte prioritaire)', async () => {
+    setAuthListUsers([
+      {
+        id: 'u1',
+        email: 'shared@x.com', // aussi dans la newsletter → le compte gagne
+        email_confirmed_at: '2026-01-01',
+        user_metadata: { display_name: 'Shared' },
+      } as any,
+    ]);
+    store.newsletter_subscribers = [
+      { email: 'shared@x.com', status: 'confirmed' }, // doublon → dédup vers le compte
+      { email: 'extonly@x.com', status: 'confirmed' },
+    ] as any;
+
+    const recipients = await computeAudienceRecipients('all-plus-newsletter');
+    const byEmail = Object.fromEntries(
+      recipients.map((r) => [r.email.toLowerCase(), r.user_id])
+    );
+    // shared@x.com résolu vers le compte auth (user_id présent), pas email-only
+    expect(byEmail['shared@x.com']).toBe('u1');
+    expect(byEmail['extonly@x.com']).toBeNull();
+    expect(recipients).toHaveLength(2);
+  });
 });
 
 /* -----------------------------------------------------------

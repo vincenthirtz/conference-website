@@ -3351,6 +3351,26 @@ components:
           type: string
         captchaAnswer:
           type: string
+    PublicNewsletterSubscribeInput:
+      type: object
+      required:
+        - email
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 200
+        source:
+          type: string
+          maxLength: 80
+          description: Provenance libre (ex. `footer`, `landing`). Defaut `public`.
+        honeypot:
+          type: string
+          description: Doit etre vide (anti-bot).
+        captchaToken:
+          type: string
+        captchaAnswer:
+          type: string
     PublicNewsItem:
       type: object
       required:
@@ -23465,6 +23485,63 @@ paths:
                 $ref: '#/components/schemas/Error'
         '429':
           $ref: '#/components/responses/RateLimited'
+  /api/public/newsletter/subscribe:
+    post:
+      tags:
+        - public/misc
+      summary: Inscription newsletter (double opt-in) — anti-bot captcha + honeypot.
+      description: >
+        Enregistre (ou re-arme) un abonne `pending` avec un `confirm_token`
+        aleatoire et envoie l'email de confirmation. Reponse toujours generique
+        `{ success: true }` (enumeration-safe) : ne revele jamais si l'adresse
+        existait deja. Un honeypot rempli est silencieusement absorbe (200).
+      operationId: subscribePublicNewsletter
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PublicNewsletterSubscribeInput'
+      responses:
+        '200':
+          description: Toujours renvoye tant que la requete est bien formee (succes generique).
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - success
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /api/public/newsletter/confirm:
+    get:
+      tags:
+        - public/misc
+      summary: Confirme une inscription newsletter (double opt-in) via le lien email.
+      description: >
+        Cible du lien de confirmation. Passe l'abonne a `confirmed` puis redirige
+        (302) vers `/newsletter/merci`. Token manquant / invalide / introuvable →
+        redirige vers `/newsletter/merci?status=invalid`. Pas de captcha (clic sur
+        un lien).
+      operationId: confirmPublicNewsletter
+      security: []
+      parameters:
+        - name: token
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Le `confirm_token` recu par email.
+      responses:
+        '302':
+          description: Redirection vers la page de remerciement (ou `?status=invalid`).
   /api/checkin/{token}:
     parameters:
       - name: token

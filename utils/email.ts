@@ -936,6 +936,55 @@ export function sendPlanRenewalReminderEmail(opts: {
   });
 }
 
+// ─── Newsletter double opt-in ──────────────────────────────────
+//
+// Transactional confirmation email for the public newsletter (double opt-in).
+// Sent by POST /api/public/newsletter/subscribe. NO unsubscribe footer: the
+// address is not yet confirmed, so there is nothing to unsubscribe from — the
+// consent itself is what this email requests.
+
+const NEWSLETTER_CONFIRM_SUBJECT =
+  'Confirme ton inscription à la newsletter';
+
+/**
+ * Build the HTML for the newsletter double opt-in confirmation email.
+ * `confirmUrl` is the one-time link to GET /api/public/newsletter/confirm.
+ */
+export function buildNewsletterConfirmEmailHtml(confirmUrl: string): string {
+  return emailLayout(`
+    ${gradientBar()}
+    <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;">Confirme ton inscription</h1>
+    <p style="margin:0 0 20px;font-size:15px;color:#C6BED9;line-height:1.6;">
+      Merci de vouloir suivre l&apos;actualit&eacute; de la <strong style="color:#ffffff;">OW Women&apos;s Cup</strong> !
+      Il ne reste qu&apos;une &eacute;tape&nbsp;: clique sur le bouton ci-dessous pour confirmer
+      ton adresse et recevoir la newsletter.
+    </p>
+    ${ctaButton(confirmUrl, 'Confirmer mon inscription')}
+    <p style="margin:24px 0 0;font-size:12px;color:#675788;line-height:1.5;text-align:center;">
+      Lien direct&nbsp;: <a href="${escapeHtml(confirmUrl)}" style="color:#9081B0;word-break:break-all;">${escapeHtml(confirmUrl)}</a>
+    </p>
+    <p style="margin:16px 0 0;font-size:12px;color:#675788;line-height:1.5;text-align:center;">
+      Si tu n&apos;es pas &agrave; l&apos;origine de cette demande, ignore simplement cet email.
+    </p>
+  `);
+}
+
+/**
+ * Send the newsletter confirmation (double opt-in) email. Transactional —
+ * best-effort; the caller keeps a generic success even if this fails.
+ */
+export function sendNewsletterConfirmEmail(opts: {
+  to: string;
+  confirmUrl: string;
+}): Promise<SendEmailResult> {
+  return sendEmail({
+    to: opts.to,
+    subject: NEWSLETTER_CONFIRM_SUBJECT,
+    tags: ['newsletter-confirm'],
+    html: buildNewsletterConfirmEmailHtml(opts.confirmUrl),
+  });
+}
+
 /**
  * Default staff inbox for inbound notifications (contact, partnerships,
  * anonymous / HIGH severity support tickets). Override via STAFF_NOTIFY_EMAIL.

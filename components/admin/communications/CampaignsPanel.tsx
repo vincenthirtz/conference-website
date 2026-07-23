@@ -110,6 +110,9 @@ function getAudienceLabels(t: Dict): Record<string, string> {
     'team-members': t.audienceTeamMembers,
     staff: t.audienceStaff,
     adherents: t.audienceAdherents,
+    newsletter: t.audienceNewsletter,
+    'all-plus-newsletter': t.audienceAllPlusNewsletter,
+    'adherents-plus-newsletter': t.audienceAdherentsPlusNewsletter,
   };
 }
 
@@ -121,6 +124,9 @@ function getAudienceOptions(t: Dict): { value: string; label: string }[] {
     'team-members',
     'staff',
     'adherents',
+    'newsletter',
+    'all-plus-newsletter',
+    'adherents-plus-newsletter',
   ].map((value) => ({ value, label: labels[value] ?? value }));
 }
 
