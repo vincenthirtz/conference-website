@@ -1,36 +1,33 @@
+// pages/index.tsx
+//
+// Page d'accueil — refonte 2026 : structure resserrée en sections claires
+// (barre d'annonce fine, hero focalisé avec countdown intégré, spotlight
+// événement live-aware, « participer en 3 étapes », actus, soutiens, newsletter).
+//
+// Le chargement des données passe par le loader partagé `loadHomeData`
+// (+ `loadTournamentPrizeCents` pour le spotlight). Les présentateurs V2 vivent
+// sous `components/Home/*`.
+
 import type { GetStaticProps } from 'next';
-import { useEffect, useRef, useState } from 'react';
-import dynamic from 'next/dynamic';
-import Header from '@/components/Header/header';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { type HomeNewsItem } from '@/components/News/HomeNewsSection';
 import { type Announcement } from '@/components/Ads/AnnouncementsTicker';
-import HomeCountdown from '@/components/Home/HomeCountdown';
 import { type UpcomingTournament } from '@/components/Home/HomeUpcomingTournament';
 import { type HomePartner } from '@/components/Home/HomeSponsors';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
-import { loadHomeData } from '@/utils/home/loadHomeData';
+import {
+  loadHomeData,
+  loadTournamentPrizeCents,
+} from '@/utils/home/loadHomeData';
 import { useT } from '@/lib/i18n/useT';
-
-// Above-the-fold: Header + HomeCountdown stay direct imports.
-// HomeTwitchEmbed is client-only (handles auth/iframe).
-const HomeTwitchEmbed = dynamic(
-  () => import('@/components/Home/HomeTwitchEmbed'),
-  { ssr: false }
-);
-// Below-the-fold: code-split into separate chunks. SSR stays on so news
-// excerpts, tournament info and press logos remain in the initial HTML
-// (good for SEO and content visibility before JS hydrates).
-const HomeEvents = dynamic(() => import('@/components/Home/HomeEvents'));
-const HomeNewsSection = dynamic(
-  () => import('@/components/News/HomeNewsSection')
-);
-const HomeSponsors = dynamic(() => import('@/components/Home/HomeSponsors'));
-const PressSection = dynamic(() => import('@/components/Press/PressSection'));
-const NewsletterSignup = dynamic(() => import('@/components/NewsletterSignup'));
-const AnnouncementsTicker = dynamic(
-  () => import('@/components/Ads/AnnouncementsTicker')
-);
+import { useTwitchLive } from '@/components/Home/useTwitchLive';
+import HomeTopAnnounce from '@/components/Home/HomeTopAnnounce';
+import HomeHeroV2 from '@/components/Home/HomeHeroV2';
+import HomeSpotlight from '@/components/Home/HomeSpotlight';
+import HomeSteps from '@/components/Home/HomeSteps';
+import HomeNewsV2 from '@/components/Home/HomeNewsV2';
+import HomeSupportStrip from '@/components/Home/HomeSupportStrip';
+import NewsletterSignup from '@/components/NewsletterSignup';
 
 type HomeProps = {
   news: HomeNewsItem[];
@@ -38,18 +35,19 @@ type HomeProps = {
   upcomingTournament: UpcomingTournament | null;
   partners: HomePartner[];
   countdownTarget: string | null;
-  // Vrai quand le chargement du contenu dynamique (news / annonces) a échoué
-  // côté serveur. Permet d'afficher un avis d'erreur distinct d'un site
-  // simplement vide, sans masquer le hero statique.
+  prizeCents: number | null;
+  // Vrai quand le chargement du contenu dynamique a échoué côté serveur : on le
+  // signale plutôt que d'afficher une home faussement vide (hero reste rendu).
   loadError: boolean;
 };
 
+// S5d: getStaticProps n'a pas la requête → DEFAULT_TENANT_ID. TODO(S7) SSR/ISR
+// par tenant en multi-tenant.
 export const getStaticProps: GetStaticProps<HomeProps> = async () => {
-  // S5d: pas de req → DEFAULT_TENANT_ID. TODO(S7) — switcher en SSR ou ISR
-  // par-tenant quand le multi-tenant sera actif. Les loaders sont extraits dans
-  // `utils/home/loadHomeData` (partagés avec la refonte en preview) ; la sortie
-  // reste identique à l'ancien `getStaticProps` inline.
   const data = await loadHomeData(DEFAULT_TENANT_ID);
+  const prizeCents = data.upcomingTournament
+    ? await loadTournamentPrizeCents(data.upcomingTournament.id)
+    : null;
 
   return {
     props: {
@@ -58,6 +56,7 @@ export const getStaticProps: GetStaticProps<HomeProps> = async () => {
       upcomingTournament: data.upcomingTournament,
       partners: data.partners,
       countdownTarget: data.countdownTarget,
+      prizeCents,
       loadError: data.loadError,
     },
     revalidate: 900,
@@ -70,71 +69,44 @@ function Home({
   upcomingTournament,
   partners,
   countdownTarget,
+  prizeCents,
   loadError,
 }: HomeProps) {
-  const t = useT('home');
-
-  // Perf : met en pause les animations décoratives du hero (aurora + connecteur)
-  // dès qu'il quitte le viewport — coût GPU/CPU nul hors-écran, rendu identique
-  // quand visible.
-  const heroRef = useRef<HTMLDivElement>(null);
-  const [heroPaused, setHeroPaused] = useState(false);
-  useEffect(() => {
-    const el = heroRef.current;
-    if (!el || typeof IntersectionObserver === 'undefined') return;
-    const io = new IntersectionObserver(
-      ([entry]) => setHeroPaused(!entry.isIntersecting),
-      { threshold: 0 }
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
+  const t = useT('homeV2');
+  const live = useTwitchLive();
+  const topAnnouncement = announcements[0] ?? null;
 
   return (
     <div>
-      <div
-        ref={heroRef}
-        className={heroPaused ? 'hero-anim-paused' : undefined}
-      >
-        <Header />
+      <HomeTopAnnounce announcement={topAnnouncement} />
 
-        {loadError && (
-          <div className="container mx-auto px-4 mt-6">
-            <div
-              className="mx-auto max-w-2xl rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-center"
-              role="alert"
-            >
-              <p className="text-sm text-red-200">{t.loadError}</p>
-            </div>
-          </div>
-        )}
+      <HomeHeroV2 countdownTarget={countdownTarget} isLive={live.live} />
 
-        <div
-          className="relative -mt-14 md:-mt-20 -mb-6 md:-mb-10 flex justify-center pointer-events-none select-none"
-          aria-hidden="true"
-        >
-          <div className="hero-connector">
-            <span className="hero-connector__halo hero-connector__halo--top" />
-            <span className="hero-connector__beam" />
-            <span className="hero-connector__pulse" />
-            <span className="hero-connector__pulse hero-connector__pulse--delay" />
-            <span className="hero-connector__diamond" />
-            <span className="hero-connector__halo hero-connector__halo--bottom" />
+      {loadError && (
+        <div className="container mx-auto mt-6 px-4">
+          <div
+            className="mx-auto max-w-2xl rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-center"
+            role="alert"
+          >
+            <p className="text-sm text-red-200">{t.loadError}</p>
           </div>
         </div>
-      </div>
+      )}
 
-      <HomeCountdown targetDate={countdownTarget} />
-      <HomeTwitchEmbed />
-      <HomeEvents tournament={upcomingTournament} />
-      <HomeNewsSection initialNews={news} />
-      <HomeSponsors partners={partners} />
-      <PressSection />
+      <HomeSpotlight
+        tournament={upcomingTournament}
+        prizeCents={prizeCents}
+        live={live}
+      />
 
-      <NewsletterSignup variant="section" source="homepage" />
+      <HomeSteps />
 
-      <div className="mt-5">
-        <AnnouncementsTicker initialItems={announcements} />
+      <HomeNewsV2 news={news} />
+
+      <HomeSupportStrip partners={partners} />
+
+      <div className="container mx-auto mt-16 px-4 md:mt-20 md:px-0">
+        <NewsletterSignup variant="section" source="homepage" />
       </div>
     </div>
   );

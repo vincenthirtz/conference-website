@@ -1,5 +1,9 @@
 import { test, expect } from '@playwright/test';
 
+// Refonte accueil 2026 : hero focalisé (countdown intégré), spotlight événement
+// live-aware, « participer en 3 étapes », actus (section#news), bande soutiens,
+// newsletter. Footer inchangé (composant partagé).
+
 test.describe('Home — hero', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
@@ -9,213 +13,128 @@ test.describe('Home — hero', () => {
     const heading = page.getByRole('heading', { level: 1 });
     await expect(heading).toBeVisible();
     await expect(heading).toContainText(/OW WOMEN['’]?S CUP/i);
-    // currentYear is read at request time on SSG → should match the year in the title
     const text = await heading.textContent();
     expect(text).toMatch(/\b20\d{2}\b/);
   });
 
-  test('renders the four primary CTAs and they link to the right places', async ({
-    page,
-  }) => {
+  test('primary CTAs link to the right places', async ({ page }) => {
     const inscrire = page.getByRole('link', { name: /Inscrire mon équipe/i });
-    const discord = page.getByRole('link', { name: /^Discord$/i });
-    const faq = page.getByRole('link', { name: /^FAQ$/i });
-    const roadmap = page.getByRole('link', { name: /^Roadmap$/i });
+    await expect(inscrire.first()).toBeVisible();
+    await expect(inscrire.first()).toHaveAttribute('href', '/team/create');
 
-    await expect(inscrire).toBeVisible();
-    await expect(inscrire).toHaveAttribute('href', '/team/create');
-
+    const discord = page.getByRole('link', { name: /Rejoindre le Discord/i });
     await expect(discord).toBeVisible();
     await expect(discord).toHaveAttribute(
       'href',
       'https://discord.gg/gERSsjC3Vd'
     );
-
-    await expect(faq).toBeVisible();
-    await expect(faq).toHaveAttribute('href', '/inscription-2026#faq');
-
-    await expect(roadmap).toBeVisible();
-    await expect(roadmap).toHaveAttribute('href', '/timeline-2026');
   });
 
-  test('hero glow image is decorative (no alt content) and inside the hero', async ({
-    page,
-  }) => {
-    const glow = page.locator('header.hero-section img.hero-glow');
-    await expect(glow).toBeAttached();
-    await expect(glow).toHaveAttribute('alt', '');
-    // aria-hidden is on the parent <picture>, not the <img> itself
-    const picture = page.locator('header.hero-section picture[aria-hidden="true"]');
-    await expect(picture).toBeAttached();
-    await expect(picture.locator('img.hero-glow')).toBeAttached();
+  test('hero decorative aurora is present and aria-hidden', async ({ page }) => {
+    const aurora = page.locator('header.hero-section .hero-aurora');
+    await expect(aurora).toBeAttached();
+    await expect(aurora).toHaveAttribute('aria-hidden', 'true');
   });
 });
 
-test.describe('Home — countdown', () => {
-  test('skeleton or live countdown card is rendered when a target date is configured', async ({
+test.describe('Home — countdown (integrated pill)', () => {
+  test('when a target date is set, the hero pill shows 4 countdown cells', async ({
     page,
   }) => {
     await page.goto('/');
-    const countdown = page.locator(
-      'section[aria-label="Compte à rebours avant le tournoi"]'
-    );
+    // Pastille de statut/countdown intégrée au hero (aria-live). Conditionnelle :
+    // sans date configurée, la pastille n'apparaît pas → skip.
+    const pill = page.locator('header.hero-section [aria-live="polite"]');
+    const count = await pill.count();
+    test.skip(count === 0, 'No countdown target configured');
 
-    // Section is conditional (no date set → component returns null).
-    // Skip this test instead of failing if the data isn't there.
-    const count = await countdown.count();
-    test.skip(count === 0, 'No homepage_event_date / tournament configured');
-
-    await expect(countdown).toBeVisible();
-    await expect(countdown.getByText(/Coup d['’]envoi/i)).toBeVisible();
-
-    // Either the skeleton ("––") or four live numeric cells appear.
-    const cells = countdown.locator('span.tabular-nums');
+    await expect(pill.first()).toBeVisible();
+    const cells = pill.first().locator('span.tabular-nums');
     await expect(cells).toHaveCount(4);
   });
 });
 
-test.describe('Home — agenda', () => {
-  test('section heading is visible', async ({ page }) => {
+test.describe('Home — event spotlight', () => {
+  test('spotlight section + "Voir le tournoi" link when a tournament exists', async ({
+    page,
+  }) => {
     await page.goto('/');
-    await expect(
-      page.getByRole('heading', { name: /Prochains rendez-vous/i })
-    ).toBeVisible();
-  });
-
-  test("IDAHOTB event renders before the OW Women's Cup tournament card", async ({
-    page,
-  }) => {
-    // networkidle ensures client-side date filtering has run.
-    await page.goto('/', { waitUntil: 'networkidle' });
-
-    // Scope to the agenda section (the press section also contains an
-    // "OW Women's Cup" heading via the Ranked Actu article).
-    const agenda = page.locator('section', {
-      has: page.getByRole('heading', { name: /Prochains rendez-vous/i }),
+    const heading = page.getByRole('heading', {
+      name: /Le prochain rendez-vous/i,
     });
-    const idahot = agenda.getByRole('heading', {
-      name: /Journée internationale contre l['’]homophobie et la transphobie/i,
-    });
-    const tournament = agenda.getByRole('heading', {
-      name: /OW WOMEN['’]?S CUP/i,
-      level: 3,
-    });
+    // La section spotlight n'est rendue que s'il existe un tournoi
+    // running/published (sinon HomeSpotlight renvoie null) → skip si absente.
+    const count = await heading.count();
+    test.skip(count === 0, 'No running/published tournament configured');
 
-    // The IDAHOTB event is dated 17 May 2026; once that date passes, the
-    // event is filtered out client-side. Skip rather than fail in that case.
-    const idahotCount = await idahot.count();
-    test.skip(idahotCount === 0, 'IDAHOTB event has passed or is hidden');
-
-    await expect(idahot).toBeVisible();
-    await expect(tournament).toBeVisible();
-
-    // Compare bounding boxes vertically — the IDAHOTB card sits above
-    // the tournament card in the DOM order.
-    const idahotBox = await idahot.boundingBox();
-    const tournamentBox = await tournament.boundingBox();
-    expect(idahotBox).not.toBeNull();
-    expect(tournamentBox).not.toBeNull();
-    expect(idahotBox!.y).toBeLessThan(tournamentBox!.y);
-  });
-
-  test('IDAHOTB card has a Twitch CTA pointing to womens_cup', async ({
-    page,
-  }) => {
-    // networkidle ensures client-side date filtering has run (hydration
-    // removes past events from the SSR-rendered DOM).
-    await page.goto('/', { waitUntil: 'networkidle' });
-    const cta = page.getByRole('link', { name: /Voir sur Twitch/i });
-    const count = await cta.count();
-    test.skip(count === 0, 'IDAHOTB event has passed or is hidden');
-    await expect(cta).toHaveAttribute(
+    await expect(heading).toBeVisible();
+    const seeTournament = page.getByRole('link', { name: /Voir le tournoi/i });
+    await expect(seeTournament.first()).toBeVisible();
+    await expect(seeTournament.first()).toHaveAttribute(
       'href',
-      'https://www.twitch.tv/womens_cup'
+      /^\/tournament\//
     );
-    await expect(cta).toHaveAttribute('target', '_blank');
+  });
+});
+
+test.describe('Home — participer en 3 étapes', () => {
+  test('renders the 3-step section with a primary CTA', async ({ page }) => {
+    await page.goto('/');
+    const section = page.locator('section#participer');
+    await expect(section).toBeVisible();
+    await expect(
+      section.getByRole('heading', { name: /en 3 étapes/i })
+    ).toBeVisible();
+
+    // 3 étapes numérotées, liens vers create / inscription / live.
+    const stepLinks = section.locator('ol a');
+    await expect(stepLinks).toHaveCount(3);
+    await expect(section.locator('a[href="/team/create"]').first()).toBeVisible();
+    await expect(section.locator('a[href="/inscription-2026"]')).toBeVisible();
+    await expect(section.locator('a[href="/live"]')).toBeVisible();
   });
 });
 
 test.describe('Home — news', () => {
-  test('section renders with featured + compact cards layout', async ({
+  test('section renders featured cards + "Toutes les actus" link', async ({
     page,
   }) => {
     await page.goto('/');
     const section = page.locator('section#news');
     await expect(section).toBeVisible();
 
-    // Section heading
     await expect(
-      section.getByRole('heading', { name: /Dernières news/i })
+      section.getByRole('heading', { name: /derni[eè]res actus/i })
     ).toBeVisible();
 
-    // CTA toward /actualites
-    const seeAll = page.getByRole('link', {
-      name: /Toutes les actualités/i,
-    });
+    const seeAll = page
+      .getByRole('link', { name: /Toutes les actus/i })
+      .first();
     await expect(seeAll).toBeVisible();
-    await expect(seeAll).toHaveAttribute('href', '/actualites');
+    await expect(seeAll).toHaveAttribute('href', '/news');
 
-    // The grid renders article links to /news/<slug>
     const articleLinks = section.locator('a[href^="/news/"]');
     if ((await articleLinks.count()) > 0) {
-      // Featured card has an image OR a gradient placeholder depending on
-      // whether the article has an imageUrl. Assert the card itself is
-      // visible rather than requiring an <img> (data-dependent).
       await expect(articleLinks.first()).toBeVisible();
     }
   });
 });
 
-test.describe('Home — sponsors', () => {
-  test('marquee renders with logos when partners are loaded', async ({
+test.describe('Home — support strip (sponsors + press merged)', () => {
+  test('renders the support lead and a partners link when data exists', async ({
     page,
   }) => {
     await page.goto('/');
-    const sponsors = page.locator('section#sponsors');
-    await expect(sponsors).toBeVisible();
+    const lead = page.getByText(/soutiennent la comp[ée]tition/i);
+    const count = await lead.count();
+    test.skip(count === 0, 'No partners/press configured');
 
-    await expect(
-      sponsors.getByRole('heading', { name: /Ils soutiennent/i })
-    ).toBeVisible();
-
-    const marquee = sponsors.locator('.sponsor-marquee');
-    await expect(marquee).toBeVisible();
-
-    // Track items are duplicated (loop). Aria-hidden on duplicated half:
-    // visible items should be at least 1 if partners exist.
-    const items = marquee.locator('[role="listitem"]');
-    const count = await items.count();
-    expect(count).toBeGreaterThan(0);
-
+    await expect(lead.first()).toBeVisible();
     const seeAll = page.getByRole('link', {
       name: /Voir tous les partenaires/i,
     });
     await expect(seeAll).toBeVisible();
     await expect(seeAll).toHaveAttribute('href', '/partenaires');
-  });
-
-  test('marquee has accessibility hints (mask + reduced-motion)', async ({
-    page,
-  }) => {
-    await page.goto('/');
-    const marquee = page.locator('.sponsor-marquee');
-    if ((await marquee.count()) === 0) test.skip();
-
-    // The mask-image fade is applied via CSS — assert the computed value
-    // mentions a linear gradient (jsdom-like check via evaluate).
-    const maskImage = await marquee.evaluate(
-      (el) => getComputedStyle(el as HTMLElement).maskImage || ''
-    );
-    expect(maskImage).toContain('linear-gradient');
-  });
-});
-
-test.describe('Home — press section', () => {
-  test('renders heading "Ils parlent de nous"', async ({ page }) => {
-    await page.goto('/');
-    await expect(
-      page.getByRole('heading', { name: /Ils parlent de nous/i })
-    ).toBeVisible();
   });
 });
 
@@ -225,7 +144,6 @@ test.describe('Home — footer 3 columns', () => {
     const footer = page.locator('[data-test="footer"]');
     await expect(footer).toBeVisible();
 
-    // Brand block + the three column headings (h2 with uppercase tracking)
     await expect(
       footer.getByText("OW Women's Cup", { exact: true })
     ).toBeVisible();
