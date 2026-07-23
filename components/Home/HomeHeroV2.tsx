@@ -137,6 +137,8 @@ export default function HomeHeroV2({
           </Link>
         </div>
 
+        <p className="mt-5 text-[13px] text-gray-400">{t.heroTrust}</p>
+
         {(isLive || showCountdown) && (
           <div
             className="mt-9 inline-flex flex-wrap items-center justify-center gap-x-3 gap-y-2.5 rounded-2xl border border-white/15 bg-black/50 px-4 py-2.5 shadow-lg shadow-black/40 backdrop-blur-md"

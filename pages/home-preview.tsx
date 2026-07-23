@@ -25,6 +25,7 @@ import { useTwitchLive } from '@/components/Home/useTwitchLive';
 import HomeTopAnnounce from '@/components/Home/HomeTopAnnounce';
 import HomeHeroV2 from '@/components/Home/HomeHeroV2';
 import HomeSpotlight from '@/components/Home/HomeSpotlight';
+import HomeSteps from '@/components/Home/HomeSteps';
 import HomeNewsV2 from '@/components/Home/HomeNewsV2';
 import HomeSupportStrip from '@/components/Home/HomeSupportStrip';
 import NewsletterSignup from '@/components/NewsletterSignup';
@@ -94,6 +95,8 @@ function HomePreview({
         prizeCents={prizeCents}
         live={live}
       />
+
+      <HomeSteps />
 
       <HomeNewsV2 news={news} />
 
