@@ -75,7 +75,7 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
   }
   if (target.authUserId === actor.authUserId) {
     return res.status(400).json({
-      error: 'Utilise /quitter-equipe pour partir toi-même.',
+      error: 'Utilise /equipe quitter pour partir toi-même.',
     });
   }
 

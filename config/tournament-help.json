@@ -1,5 +1,5 @@
 {
-  "version": "2026-05-20.2",
+  "version": "2026-07-24.1",
   "sections": [
     {
       "id": "setup",
@@ -7,8 +7,8 @@
       "description": "Créer le tournoi côté site, ajouter une ou plusieurs phases (Swiss, élim, RR…), et générer un bracket vide pour pouvoir y inscrire des équipes.",
       "commands": [
         {
-          "name": "creer-tournoi",
-          "signature": "/creer-tournoi nom:<str> [statut] [debut] [fin] [equipes-max] [jeu]",
+          "name": "tournoi creer",
+          "signature": "/tournoi creer nom:<str> [statut] [debut] [fin] [equipes-max] [jeu]",
           "role": "admin",
           "phase": "setup",
           "prereqs": ["Rôle staff Discord (admin ou manager)"],
@@ -30,11 +30,11 @@
               "expected": "Tournoi créé en brouillon, visible dans /admin/tournois."
             }
           ],
-          "deeplink_admin": "/admin/aide-tournoi#creer-tournoi"
+          "deeplink_admin": "/admin/aide-tournoi#tournoi-creer"
         },
         {
-          "name": "publier-tournoi",
-          "signature": "/publier-tournoi tournoi-id:<uuid> [status:published|registration_open|in_progress|completed|cancelled|draft]",
+          "name": "tournoi publier",
+          "signature": "/tournoi publier tournoi-id:<uuid> [status:published|registration_open|in_progress|completed|cancelled|draft]",
           "role": "admin",
           "phase": "setup",
           "prereqs": ["Tournoi existant", "Rôle staff"],
@@ -53,11 +53,11 @@
               "expected": "Le tournoi devient visible publiquement, inscriptions activées."
             }
           ],
-          "deeplink_admin": "/admin/aide-tournoi#publier-tournoi"
+          "deeplink_admin": "/admin/aide-tournoi#tournoi-publier"
         },
         {
-          "name": "cloner-tournoi",
-          "signature": "/cloner-tournoi tournoi-id:<uuid> [nom] [slug]",
+          "name": "tournoi cloner",
+          "signature": "/tournoi cloner tournoi-id:<uuid> [nom] [slug]",
           "role": "admin",
           "phase": "setup",
           "prereqs": ["Tournoi source existant", "Rôle staff"],
@@ -81,11 +81,11 @@
               "expected": "Nouveau tournoi en brouillon avec stages + map pool copiés depuis la source."
             }
           ],
-          "deeplink_admin": "/admin/aide-tournoi#cloner-tournoi"
+          "deeplink_admin": "/admin/aide-tournoi#tournoi-cloner"
         },
         {
-          "name": "creer-phase",
-          "signature": "/creer-phase tournoi:<autocomplete> nom:<str> [type:swiss|single-elim|double-elim|round-robin|other]",
+          "name": "phase creer",
+          "signature": "/phase creer tournoi:<autocomplete> nom:<str> [type:swiss|single-elim|double-elim|round-robin|other]",
           "role": "admin",
           "phase": "setup",
           "prereqs": ["Tournoi existant", "Rôle staff"],
@@ -105,11 +105,11 @@
               "expected": "Phase créée, son ID est retourné pour les commandes suivantes."
             }
           ],
-          "deeplink_admin": "/admin/aide-tournoi#creer-phase"
+          "deeplink_admin": "/admin/aide-tournoi#phase-creer"
         },
         {
-          "name": "generer-bracket-vide",
-          "signature": "/generer-bracket-vide tournoi:<autocomplete> phase:<uuid> nombre:<int>",
+          "name": "phase bracket-vide",
+          "signature": "/phase bracket-vide tournoi:<autocomplete> phase:<uuid> nombre:<int>",
           "role": "admin",
           "phase": "setup",
           "prereqs": ["Phase existante", "Rôle staff"],
@@ -129,7 +129,7 @@
               "expected": "8 matchs placeholder créés dans la phase, prêts à recevoir des équipes."
             }
           ],
-          "deeplink_admin": "/admin/aide-tournoi#generer-bracket-vide"
+          "deeplink_admin": "/admin/aide-tournoi#phase-bracket-vide"
         }
       ]
     },
@@ -139,8 +139,8 @@
       "description": "Créer une équipe, la rattacher à un tournoi, gérer roster, invitations, et changements de capitaine.",
       "commands": [
         {
-          "name": "creer-mon-equipe",
-          "signature": "/creer-mon-equipe (modal: nom, short_name, description)",
+          "name": "equipe creer",
+          "signature": "/equipe creer (modal: nom, short_name, description)",
           "role": "captain",
           "phase": "equipes",
           "prereqs": ["Compte site lié (cf. /inscription)"],
@@ -161,11 +161,11 @@
               "expected": "Équipe créée, l'acteur en devient capitaine."
             }
           ],
-          "deeplink_admin": "/admin/aide-tournoi#creer-mon-equipe"
+          "deeplink_admin": "/admin/aide-tournoi#equipe-creer"
         },
         {
-          "name": "modifier-equipe",
-          "signature": "/modifier-equipe (modal éditable : nom, short_name, description, country, logo_url)",
+          "name": "equipe modifier",
+          "signature": "/equipe modifier (modal éditable : nom, short_name, description, country, logo_url)",
           "role": "captain",
           "phase": "equipes",
           "prereqs": ["Être capitaine de l'équipe"],
@@ -185,7 +185,7 @@
               "expected": "Champs mis à jour côté site, audit-log staff inscrit."
             }
           ],
-          "deeplink_admin": "/admin/aide-tournoi#modifier-equipe"
+          "deeplink_admin": "/admin/aide-tournoi#equipe-modifier"
         },
         {
           "name": "inscrire-equipe",
@@ -262,8 +262,8 @@
           "deeplink_admin": "/admin/aide-tournoi#inscription"
         },
         {
-          "name": "inviter send",
-          "signature": "/inviter send membre:<user> [role:player|substitute|coach] [battletag] [message]",
+          "name": "equipe inviter",
+          "signature": "/equipe inviter membre:<user> [role:player|substitute|coach] [battletag] [message]",
           "role": "captain",
           "phase": "equipes",
           "prereqs": ["Être capitaine d'une équipe"],
@@ -285,11 +285,11 @@
               "expected": "Invitation envoyée, DM à la joueuse avec boutons Accepter/Refuser."
             }
           ],
-          "deeplink_admin": "/admin/aide-tournoi#inviter-send"
+          "deeplink_admin": "/admin/aide-tournoi#equipe-inviter"
         },
         {
-          "name": "inviter cancel",
-          "signature": "/inviter cancel invitation-id:<uuid>",
+          "name": "equipe annuler-invitation",
+          "signature": "/equipe annuler-invitation invitation-id:<uuid>",
           "role": "captain",
           "phase": "equipes",
           "prereqs": ["Avoir envoyé l'invitation OU être staff"],
@@ -308,7 +308,7 @@
               "expected": "L'invitation est marquée annulée."
             }
           ],
-          "deeplink_admin": "/admin/aide-tournoi#inviter-cancel"
+          "deeplink_admin": "/admin/aide-tournoi#equipe-annuler-invitation"
         },
         {
           "name": "invite:accept | invite:reject (boutons DM)",
@@ -334,8 +334,8 @@
           "deeplink_admin": "/admin/aide-tournoi#invite-buttons"
         },
         {
-          "name": "quitter-equipe",
-          "signature": "/quitter-equipe",
+          "name": "equipe quitter",
+          "signature": "/equipe quitter",
           "role": "player",
           "phase": "equipes",
           "prereqs": ["Faire partie d'une équipe et ne pas en être la capitaine"],
@@ -351,11 +351,11 @@
               "expected": "Joueuse retirée du roster, audit-log inscrit."
             }
           ],
-          "deeplink_admin": "/admin/aide-tournoi#quitter-equipe"
+          "deeplink_admin": "/admin/aide-tournoi#equipe-quitter"
         },
         {
-          "name": "team show / member / roster",
-          "signature": "/team show id_ou_slug:<str> [roster:bool]  •  /team member membre:<user>  •  /roster equipe:<autocomplete>",
+          "name": "equipe voir / membre / roster",
+          "signature": "/equipe voir id_ou_slug:<str> [roster:bool]  •  /equipe membre membre:<user>  •  /equipe roster equipe:<autocomplete>",
           "role": "public",
           "phase": "equipes",
           "prereqs": ["Aucun (lecture)"],
@@ -371,11 +371,11 @@
               "expected": "Embed Discord listant capitaine + roster + slug + logo."
             }
           ],
-          "deeplink_admin": "/admin/aide-tournoi#team-show"
+          "deeplink_admin": "/admin/aide-tournoi#equipe-voir"
         },
         {
-          "name": "tournois",
-          "signature": "/tournois [statut]",
+          "name": "tournoi liste",
+          "signature": "/tournoi liste [statut]",
           "role": "public",
           "phase": "equipes",
           "prereqs": ["Aucun"],
@@ -391,7 +391,7 @@
               "expected": "Liste paginée des tournois publiés / en cours / terminés."
             }
           ],
-          "deeplink_admin": "/admin/aide-tournoi#tournois"
+          "deeplink_admin": "/admin/aide-tournoi#tournoi-liste"
         }
       ]
     },
@@ -401,8 +401,8 @@
       "description": "Assigner des casteurs à des matchs, lister les casts à venir, retirer un cast.",
       "commands": [
         {
-          "name": "casters",
-          "signature": "/casters [hours:int] [tournoi-id:<uuid>]",
+          "name": "cast liste",
+          "signature": "/cast liste [hours:int] [tournoi-id:<uuid>]",
           "role": "public",
           "phase": "casts",
           "prereqs": ["Aucun"],
@@ -418,11 +418,11 @@
               "expected": "Embed avec les matchs castés à venir + caster + briefing."
             }
           ],
-          "deeplink_admin": "/admin/aide-tournoi#casters"
+          "deeplink_admin": "/admin/aide-tournoi#cast-liste"
         },
         {
-          "name": "assigner-cast",
-          "signature": "/assigner-cast match-id:<uuid> cast-member-id:<autocomplete> [briefing:datetime]",
+          "name": "cast assigner",
+          "signature": "/cast assigner match-id:<uuid> cast-member-id:<autocomplete> [briefing:datetime]",
           "role": "admin",
           "phase": "casts",
           "prereqs": ["Match existant", "Rôle staff"],
@@ -442,11 +442,11 @@
               "expected": "Cast assigné, DM au caster avec briefing."
             }
           ],
-          "deeplink_admin": "/admin/aide-tournoi#assigner-cast"
+          "deeplink_admin": "/admin/aide-tournoi#cast-assigner"
         },
         {
-          "name": "retirer-cast",
-          "signature": "/retirer-cast match-id:<uuid> cast-member-id:<autocomplete>",
+          "name": "cast retirer",
+          "signature": "/cast retirer match-id:<uuid> cast-member-id:<autocomplete>",
           "role": "admin",
           "phase": "casts",
           "prereqs": ["Cast existant", "Rôle staff"],
@@ -465,7 +465,7 @@
               "expected": "Cast retiré, DM au caster pour info."
             }
           ],
-          "deeplink_admin": "/admin/aide-tournoi#retirer-cast"
+          "deeplink_admin": "/admin/aide-tournoi#cast-retirer"
         },
         {
           "name": "cast-ack-dm-rappel",
@@ -587,8 +587,8 @@
           "deeplink_admin": "/admin/aide-tournoi#match-meta"
         },
         {
-          "name": "participants",
-          "signature": "/participants tournoi-id:<uuid>",
+          "name": "tournoi participants",
+          "signature": "/tournoi participants tournoi-id:<uuid>",
           "role": "public",
           "phase": "matchs",
           "prereqs": ["Aucun"],
@@ -604,11 +604,11 @@
               "expected": "Embed Discord avec les équipes inscrites + capitaines."
             }
           ],
-          "deeplink_admin": "/admin/aide-tournoi#participants"
+          "deeplink_admin": "/admin/aide-tournoi#tournoi-participants"
         },
         {
-          "name": "bracket",
-          "signature": "/bracket tournoi-id:<uuid> [phase-id:<uuid>]",
+          "name": "tournoi bracket",
+          "signature": "/tournoi bracket tournoi-id:<uuid> [phase-id:<uuid>]",
           "role": "public",
           "phase": "matchs",
           "prereqs": ["Aucun"],
@@ -624,11 +624,11 @@
               "expected": "Embed avec le bracket courant + lien deep-link site."
             }
           ],
-          "deeplink_admin": "/admin/aide-tournoi#bracket"
+          "deeplink_admin": "/admin/aide-tournoi#tournoi-bracket"
         },
         {
-          "name": "mes-actions",
-          "signature": "/mes-actions  •  Bouton 💤 « Snooze 1h » (customId `actions:snooze:<actionKey>`)",
+          "name": "moi actions",
+          "signature": "/moi actions  •  Bouton 💤 « Snooze 1h » (customId `actions:snooze:<actionKey>`)",
           "role": "player",
           "phase": "matchs",
           "prereqs": ["Compte site lié"],
@@ -653,11 +653,11 @@
               "expected": "L'action disparaît de la liste pendant 1 h. Réappel passé l'échéance. Idempotent : 2e snooze met à jour snoozed_until."
             }
           ],
-          "deeplink_admin": "/admin/aide-tournoi#mes-actions"
+          "deeplink_admin": "/admin/aide-tournoi#moi-actions"
         },
         {
-          "name": "next-round",
-          "signature": "/next-round phase-id:<uuid>",
+          "name": "phase next-round",
+          "signature": "/phase next-round phase-id:<uuid>",
           "role": "admin",
           "phase": "matchs",
           "prereqs": ["Phase à élimination ou Swiss avec round courant terminé"],
@@ -673,7 +673,7 @@
               "expected": "Matchs du round suivant créés à partir des winners du round précédent."
             }
           ],
-          "deeplink_admin": "/admin/aide-tournoi#next-round"
+          "deeplink_admin": "/admin/aide-tournoi#phase-next-round"
         }
       ]
     },
@@ -708,8 +708,8 @@
           "deeplink_admin": "/admin/aide-tournoi#ma-dispute"
         },
         {
-          "name": "disputes",
-          "signature": "/disputes [tournoi-id:<uuid>]",
+          "name": "dispute liste",
+          "signature": "/dispute liste [tournoi-id:<uuid>]",
           "role": "admin",
           "phase": "disputes",
           "prereqs": ["Rôle staff"],
@@ -725,11 +725,11 @@
               "expected": "Liste des matchs status='disputed' avec liens thread forum."
             }
           ],
-          "deeplink_admin": "/admin/aide-tournoi#disputes"
+          "deeplink_admin": "/admin/aide-tournoi#dispute-liste"
         },
         {
-          "name": "resoudre-dispute",
-          "signature": "/resoudre-dispute match-id:<uuid> resolution:<str> [score-team1] [score-team2] [forfait-team-id] [resume-status]",
+          "name": "dispute resoudre",
+          "signature": "/dispute resoudre match-id:<uuid> resolution:<str> [score-team1] [score-team2] [forfait-team-id] [resume-status]",
           "role": "admin",
           "phase": "disputes",
           "prereqs": ["Match en status='disputed'", "Rôle staff"],
@@ -755,7 +755,7 @@
               "expected": "Match finalisé, thread forum tagué resolved + archive."
             }
           ],
-          "deeplink_admin": "/admin/aide-tournoi#resoudre-dispute"
+          "deeplink_admin": "/admin/aide-tournoi#dispute-resoudre"
         },
         {
           "name": "forfait",
@@ -828,8 +828,8 @@
       "description": "Finaliser une phase, clore le tournoi, syncer les rôles Discord et publier le classement.",
       "commands": [
         {
-          "name": "finaliser-phase",
-          "signature": "/finaliser-phase phase-id:<uuid> [force:bool]",
+          "name": "phase finaliser",
+          "signature": "/phase finaliser phase-id:<uuid> [force:bool]",
           "role": "admin",
           "phase": "cloture",
           "prereqs": ["Tous les matchs de la phase terminés (sauf si force=true)", "Rôle staff"],
@@ -848,11 +848,11 @@
               "expected": "Phase verrouillée, classements gelés, qualifiés extraits."
             }
           ],
-          "deeplink_admin": "/admin/aide-tournoi#finaliser-phase"
+          "deeplink_admin": "/admin/aide-tournoi#phase-finaliser"
         },
         {
-          "name": "auto-byes",
-          "signature": "(POST direct — pas de slash dédié) phase-id:<uuid>",
+          "name": "phase auto-byes",
+          "signature": "/phase auto-byes phase-id:<uuid>",
           "role": "admin",
           "phase": "cloture",
           "prereqs": ["Phase Swiss avec round courant", "Rôle staff"],
@@ -868,7 +868,7 @@
               "expected": "Matchs bye créés pour les équipes en attente."
             }
           ],
-          "deeplink_admin": "/admin/aide-tournoi#auto-byes"
+          "deeplink_admin": "/admin/aide-tournoi#phase-auto-byes"
         },
         {
           "name": "classement",
@@ -911,8 +911,8 @@
           "deeplink_admin": "/admin/aide-tournoi#sync-roles"
         },
         {
-          "name": "annoncer",
-          "signature": "/annoncer [cta-label] [cta-url] [active:bool] [priorite:int] (modal: titre + message)",
+          "name": "tournoi annoncer",
+          "signature": "/tournoi annoncer [cta-label] [cta-url] [active:bool] [priorite:int] (modal: titre + message)",
           "role": "admin",
           "phase": "cloture",
           "prereqs": ["Rôle staff"],
@@ -936,7 +936,7 @@
               "expected": "Annonce créée et sticky en haut du site."
             }
           ],
-          "deeplink_admin": "/admin/aide-tournoi#annoncer"
+          "deeplink_admin": "/admin/aide-tournoi#tournoi-annoncer"
         },
         {
           "name": "repost-news",

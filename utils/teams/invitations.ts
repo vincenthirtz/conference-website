@@ -312,7 +312,7 @@ export async function acceptInvitation(
       ok: false,
       status: 400,
       error:
-        "Tu fais déjà partie d'une équipe. Quitte-la d'abord via /quitter-equipe.",
+        "Tu fais déjà partie d'une équipe. Quitte-la d'abord via /equipe quitter.",
     };
   }
 

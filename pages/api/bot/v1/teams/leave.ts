@@ -61,7 +61,7 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
   if (team?.captain_id === actor.authUserId) {
     return res.status(403).json({
       error:
-        "Le capitaine ne peut pas quitter l'équipe. Transfère le rôle d'abord via /transferer-capitaine.",
+        "Le capitaine ne peut pas quitter l'équipe. Transfère le rôle d'abord via /equipe transferer-capitaine.",
     });
   }
 
