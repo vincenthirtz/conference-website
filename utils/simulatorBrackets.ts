@@ -217,8 +217,80 @@ export function generateDoubleElim(
   };
 
   const allMatches = [...wbMatches, ...lbMatches, gfMatch];
+  const gfIdx = wbMatches.length + lbMatches.length;
+
+  // ---- Wire propagation pointers between WB, LB and the Grand Final. ----
+  // Without this the lower bracket and grand final are generated as empty
+  // shells that never receive teams. Sizes are powers of two, so the LB
+  // alternates "minor" rounds (LB survivors meet) and "major" rounds (LB
+  // survivors meet freshly-dropped WB losers).
+  if (wbRounds >= 2) {
+    const wbByRound = new Map<number, number[]>();
+    const lbByRound = new Map<number, number[]>();
+    const pushRound = (map: Map<number, number[]>, round: number, i: number) => {
+      const arr = map.get(round);
+      if (arr) arr.push(i);
+      else map.set(round, [i]);
+    };
+    for (let i = 0; i < allMatches.length; i++) {
+      const mm = allMatches[i];
+      if (mm.bracket_side === 'wb') pushRound(wbByRound, mm.round_number, i);
+      else if (mm.bracket_side === 'lb') pushRound(lbByRound, mm.round_number, i);
+    }
+
+    const setWin = (src: number, dst: number, slot: 1 | 2) => {
+      allMatches[src].next_match_win_idx = dst;
+      allMatches[src].next_match_win_slot = slot;
+      allMatches[src].next_match_win_id = allMatches[dst].id;
+    };
+    const setLose = (src: number, dst: number, slot: 1 | 2) => {
+      allMatches[src].next_match_lose_idx = dst;
+      allMatches[src].next_match_lose_slot = slot;
+      allMatches[src].next_match_lose_id = allMatches[dst].id;
+    };
+
+    // WB round 1 losers drop into LB round 1 (two WB matches feed one LB match).
+    const wb1 = wbByRound.get(1) ?? [];
+    const lb1 = lbByRound.get(1) ?? [];
+    for (let m = 0; m < wb1.length; m++) {
+      const dst = lb1[Math.floor(m / 2)];
+      if (dst != null) setLose(wb1[m], dst, m % 2 === 0 ? 1 : 2);
+    }
+    // WB round r (>=2) losers drop into LB major round 2*(r-1), slot 2.
+    for (let r = 2; r <= wbRounds; r++) {
+      const wbR = wbByRound.get(r) ?? [];
+      const lbR = lbByRound.get(2 * (r - 1)) ?? [];
+      for (let m = 0; m < wbR.length; m++) {
+        if (lbR[m] != null) setLose(wbR[m], lbR[m], 2);
+      }
+    }
+    // WB final winner enters the Grand Final in slot 1.
+    const wbFinal = wbByRound.get(wbRounds) ?? [];
+    if (wbFinal.length === 1) setWin(wbFinal[0], gfIdx, 1);
+
+    // LB winners advance: minor->major is 1:1 (slot 1), major->minor pairs 2:1.
+    for (let lbR = 1; lbR < lbRoundsCount; lbR++) {
+      const cur = lbByRound.get(lbR) ?? [];
+      const next = lbByRound.get(lbR + 1) ?? [];
+      if (next.length === cur.length) {
+        for (let m = 0; m < cur.length; m++) {
+          if (next[m] != null) setWin(cur[m], next[m], 1);
+        }
+      } else {
+        for (let m = 0; m < cur.length; m++) {
+          const dst = next[Math.floor(m / 2)];
+          if (dst != null) setWin(cur[m], dst, m % 2 === 0 ? 1 : 2);
+        }
+      }
+    }
+    // LB final winner enters the Grand Final in slot 2.
+    const lbFinal = lbByRound.get(lbRoundsCount) ?? [];
+    if (lbFinal.length === 1) setWin(lbFinal[0], gfIdx, 2);
+  }
 
   if (grandFinalReset) {
+    // The reset match is a conditional extra (only played if the LB team wins
+    // GF1); it stays unwired and inert, matching a bracket-reset placeholder.
     allMatches.push({
       ...gfMatch,
       id: fakeId(),

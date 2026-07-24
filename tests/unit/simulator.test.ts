@@ -16,6 +16,10 @@ import type {
   ScheduleConfig,
   EscalationConfig,
 } from '../../utils/simulator';
+import {
+  generateSingleElim,
+  generateDoubleElim,
+} from '../../utils/simulatorBrackets';
 
 /* ------------------------------------------------------------------ */
 /*  Test helpers                                                        */
@@ -793,5 +797,208 @@ describe('runMonteCarlo', () => {
     const seed4Wins = result.winCounts.get('t4') ?? 0;
     // With seed advantage, seed 1 should win more often than seed 4
     expect(seed1Wins).toBeGreaterThan(seed4Wins);
+  });
+});
+
+/* ================================================================== */
+/*  Double elimination bracket wiring & simulation                     */
+/* ================================================================== */
+
+const NOOP_SCHEDULE: ScheduleConfig = {
+  startDate: '',
+  matchDurationMin: 60,
+  breakBetweenMatchesMin: 15,
+  breakBetweenRoundsMin: 30,
+  dayStartHour: 10,
+  dayEndHour: 22,
+  matchesPerDay: 0,
+};
+
+const NO_ESCALATION: EscalationConfig = {
+  enabled: false,
+  earlyRoundsBo: 3,
+  semiFinalsBo: 3,
+  finalsBo: 3,
+};
+
+const MAP_POOL = ['Map A', 'Map B', 'Map C', 'Map D', 'Map E'];
+
+function makeSeededTeams(count: number): SimTeam[] {
+  return Array.from({ length: count }, (_, i) => makeTeam(`t${i + 1}`, i + 1));
+}
+
+/** Run a bracket stage to completion using the exported primitives —
+ *  simulate every ready match, propagate, repeat. Mirrors the engine in
+ *  simulateFullTournament and lets us inspect the resulting matches. */
+function simulateBracketStage(stage: SimStage): SimMatch[] {
+  let matches = stage.matches.map((m) => ({ ...m }));
+  const maxPasses = matches.length + 2;
+  for (let pass = 0; pass < maxPasses; pass++) {
+    let progressed = false;
+    for (let i = 0; i < matches.length; i++) {
+      const m = matches[i];
+      if (m.status === 'pending' && m.team1 && m.team2) {
+        matches[i] = simulateMatch(m);
+        progressed = true;
+      }
+    }
+    matches = propagateBracket(matches);
+    if (!progressed) break;
+  }
+  return matches;
+}
+
+describe('generateDoubleElim wiring', () => {
+  it('routes every WB loser into the lower bracket', () => {
+    const teams = makeSeededTeams(8);
+    const stage = generateDoubleElim(
+      teams,
+      3,
+      MAP_POOL,
+      NOOP_SCHEDULE,
+      NO_ESCALATION,
+      false
+    );
+    const wbMatches = stage.matches.filter((m) => m.bracket_side === 'wb');
+    expect(wbMatches.length).toBe(7); // 4 + 2 + 1
+    for (const m of wbMatches) {
+      expect(m.next_match_lose_id).not.toBeNull();
+    }
+  });
+
+  it('feeds both finalists into the grand final', () => {
+    const teams = makeSeededTeams(8);
+    const stage = generateDoubleElim(
+      teams,
+      3,
+      MAP_POOL,
+      NOOP_SCHEDULE,
+      NO_ESCALATION,
+      false
+    );
+    const gf = stage.matches.find((m) => m.bracket_side === 'final');
+    expect(gf).toBeDefined();
+    const feeders = stage.matches.filter(
+      (m) => m.next_match_win_id === gf!.id
+    );
+    // Exactly the WB final and the LB final advance into the grand final.
+    expect(feeders).toHaveLength(2);
+    const sides = feeders.map((m) => m.bracket_side).sort();
+    expect(sides).toEqual(['lb', 'wb']);
+  });
+
+  it('gives every lower-bracket match an outgoing winner pointer', () => {
+    const teams = makeSeededTeams(8);
+    const stage = generateDoubleElim(
+      teams,
+      3,
+      MAP_POOL,
+      NOOP_SCHEDULE,
+      NO_ESCALATION,
+      false
+    );
+    const lbMatches = stage.matches.filter((m) => m.bracket_side === 'lb');
+    for (const m of lbMatches) {
+      expect(m.next_match_win_id).not.toBeNull();
+    }
+  });
+
+  for (const size of [4, 8, 16]) {
+    it(`simulates a ${size}-team double elimination to completion`, () => {
+      const teams = makeSeededTeams(size);
+      const stage = generateDoubleElim(
+        teams,
+        3,
+        MAP_POOL,
+        NOOP_SCHEDULE,
+        NO_ESCALATION,
+        false
+      );
+      const simulated = simulateBracketStage(stage);
+      // Every match (WB, LB and grand final) must receive teams and finish.
+      for (const m of simulated) {
+        expect(m.status).toBe('finished');
+        expect(m.winner_team_id).not.toBeNull();
+      }
+    });
+  }
+
+  it('crowns a valid champion and full standings via simulateFullTournament', () => {
+    const teams = makeSeededTeams(8);
+    const stage = generateDoubleElim(
+      teams,
+      3,
+      MAP_POOL,
+      NOOP_SCHEDULE,
+      NO_ESCALATION,
+      false
+    );
+    const { winnerId, standings } = simulateFullTournament([stage]);
+    expect(teams.map((t) => t.id)).toContain(winnerId);
+    expect(standings).toHaveLength(8);
+  });
+
+  it('leaves the grand final reset match inert (unwired)', () => {
+    const teams = makeSeededTeams(8);
+    const stage = generateDoubleElim(
+      teams,
+      3,
+      MAP_POOL,
+      NOOP_SCHEDULE,
+      NO_ESCALATION,
+      true
+    );
+    const finals = stage.matches.filter((m) => m.bracket_side === 'final');
+    expect(finals).toHaveLength(2);
+    const reset = finals.find((m) => m.round_name === 'Grande Finale Reset');
+    expect(reset).toBeDefined();
+    // No match points into the reset — it stays a manual placeholder.
+    expect(
+      stage.matches.some(
+        (m) =>
+          m.next_match_win_id === reset!.id ||
+          m.next_match_lose_id === reset!.id
+      )
+    ).toBe(false);
+  });
+});
+
+describe('runMonteCarlo on double elimination', () => {
+  it('keeps win counts consistent and favours the top seed', () => {
+    const teams = makeSeededTeams(8);
+    const stage = generateDoubleElim(
+      teams,
+      3,
+      MAP_POOL,
+      NOOP_SCHEDULE,
+      NO_ESCALATION,
+      false
+    );
+    const result = runMonteCarlo([stage], teams, 200);
+    let totalWins = 0;
+    for (const count of result.winCounts.values()) totalWins += count;
+    expect(totalWins).toBe(200);
+    // A double-elim run must produce a champion in every iteration.
+    const seed1 = result.winCounts.get('t1') ?? 0;
+    const seed8 = result.winCounts.get('t8') ?? 0;
+    expect(seed1).toBeGreaterThan(seed8);
+  });
+});
+
+describe('generateSingleElim still simulates to completion', () => {
+  it('finishes every match of an 8-team single elimination', () => {
+    const teams = makeSeededTeams(8);
+    const stage = generateSingleElim(
+      teams,
+      3,
+      MAP_POOL,
+      NOOP_SCHEDULE,
+      NO_ESCALATION
+    );
+    const simulated = simulateBracketStage(stage);
+    for (const m of simulated) {
+      expect(m.status).toBe('finished');
+      expect(m.winner_team_id).not.toBeNull();
+    }
   });
 });

@@ -407,17 +407,25 @@ function TournamentSimulatorPage() {
       prev.map((stage) => {
         let matches = [...stage.matches];
         if (stage.stage_type === 'bracket') {
-          const roundNums = [
-            ...new Set(matches.map((m) => m.round_number)),
-          ].sort((a, b) => a - b);
-          for (const rn of roundNums) {
+          // Topological pass: simulate every ready match, propagate, repeat.
+          // Ordering by round_number breaks double elimination, where LB round
+          // numbers restart at 1 and depend on WB results propagated later.
+          const maxPasses = matches.length + 2;
+          let progressed = true;
+          let pass = 0;
+          while (progressed && pass < maxPasses) {
+            progressed = false;
+            pass++;
             for (let i = 0; i < matches.length; i++) {
+              const m = matches[i];
               if (
-                matches[i].round_number === rn &&
-                matches[i].status === 'pending' &&
-                !matches[i].locked
+                m.status === 'pending' &&
+                !m.locked &&
+                m.team1 &&
+                m.team2
               ) {
-                matches[i] = simulateMatch(matches[i]);
+                matches[i] = simulateMatch(m);
+                progressed = true;
               }
             }
             matches = propagateBracket(matches);

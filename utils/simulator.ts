@@ -308,16 +308,21 @@ export function simulateFullTournament(stagesInput: SimStage[]): {
 
   for (const stage of stages) {
     if (stage.stage_type === 'bracket' || stage.stage_type === 'showmatch') {
-      const roundNums = [
-        ...new Set(stage.matches.map((m) => m.round_number)),
-      ].sort((a, b) => a - b);
-      for (const rn of roundNums) {
+      // Topological simulation: repeatedly simulate every match whose two
+      // teams are known, then propagate. This is robust to interleaved
+      // brackets — notably double elimination, where LB round numbers restart
+      // at 1 and WB losers feed LB rounds out of round_number order.
+      const maxPasses = stage.matches.length + 2;
+      let progressed = true;
+      let pass = 0;
+      while (progressed && pass < maxPasses) {
+        progressed = false;
+        pass++;
         for (let i = 0; i < stage.matches.length; i++) {
-          if (
-            stage.matches[i].round_number === rn &&
-            stage.matches[i].status === 'pending'
-          ) {
-            stage.matches[i] = simulateMatch(stage.matches[i]);
+          const m = stage.matches[i];
+          if (m.status === 'pending' && m.team1 && m.team2) {
+            stage.matches[i] = simulateMatch(m);
+            progressed = true;
           }
         }
         stage.matches = propagateBracket(stage.matches);
@@ -383,36 +388,38 @@ export function runMonteCarlo(
   for (let i = 0; i < iterations; i++) {
     const clonedStages = baseStages.map((s) => ({
       ...s,
-      matches: s.matches.map(
-        (m) =>
-          ({
+      matches: s.matches.map((m): SimMatch => {
+        if (m.locked) {
+          return {
             ...m,
-            ...(m.locked
-              ? {}
-              : {
-                  status: 'pending' as MatchStatus,
-                  team1_score: null,
-                  team2_score: null,
-                  winner_team_id: null,
-                }),
-            ...(!m.locked &&
-            m.round_number > 1 &&
-            (m.bracket_side === 'wb' ||
-              m.bracket_side === 'lb' ||
-              m.bracket_side === 'final')
-              ? {
-                  team1: null,
-                  team1_id: null,
-                  team2: null,
-                  team2_id: null,
-                }
-              : {}),
-            maps: m.maps.map((mp) => ({
-              ...mp,
-              winner_team_id: null as string | null | undefined,
-            })),
-          }) as SimMatch
-      ),
+            maps: m.maps.map((mp) => ({ ...mp })),
+          };
+        }
+        // Only first-round winner-bracket matches keep their seeded teams;
+        // every other bracket slot (later WB rounds, the whole lower bracket,
+        // and the grand final) is refilled by propagation each iteration.
+        const isBracketMatch =
+          m.bracket_side === 'wb' ||
+          m.bracket_side === 'lb' ||
+          m.bracket_side === 'final';
+        const isInitialWbRound =
+          m.bracket_side === 'wb' && m.round_number === 1;
+        const clearTeams = isBracketMatch && !isInitialWbRound;
+        return {
+          ...m,
+          status: 'pending' as MatchStatus,
+          team1_score: null,
+          team2_score: null,
+          winner_team_id: null,
+          ...(clearTeams
+            ? { team1: null, team1_id: null, team2: null, team2_id: null }
+            : {}),
+          maps: m.maps.map((mp) => ({
+            ...mp,
+            winner_team_id: null as string | null | undefined,
+          })),
+        };
+      }),
     }));
 
     for (const stage of clonedStages) {
