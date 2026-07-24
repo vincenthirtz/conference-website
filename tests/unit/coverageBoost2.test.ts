@@ -160,7 +160,7 @@ const M_ID = '550e8400-e29b-41d4-a716-446655440013';
 describe('swissPairByRecord', () => {
   it('returns pairings for an even number of teams with no history', () => {
     const teams = [team('a', 1), team('b', 2), team('c', 3), team('d', 4)];
-    const pairings = swissPairByRecord(teams, []);
+    const { pairings } = swissPairByRecord(teams, []);
     expect(pairings.length).toBe(2);
     // Every team appears exactly once
     const indices = new Set<number>();
@@ -191,7 +191,7 @@ describe('swissPairByRecord', () => {
         team2Score: 1,
       }),
     ];
-    const pairings = swissPairByRecord(teams, previous);
+    const { pairings } = swissPairByRecord(teams, previous);
     expect(pairings.length).toBe(2);
     // Teams 'a' and 'b' both have 1 win — they should be paired together
     const winnersTogether = pairings.some(
@@ -208,7 +208,7 @@ describe('swissPairByRecord', () => {
       finishedMatch({ id: 'm1', team1Id: 'a', team2Id: 'b', winnerId: 'a' }),
       finishedMatch({ id: 'm2', team1Id: 'c', team2Id: 'd', winnerId: 'c' }),
     ];
-    const pairings = swissPairByRecord(teams, previous);
+    const { pairings } = swissPairByRecord(teams, previous);
     // 'a' and 'c' both have 1 win. They should be paired since they haven't met.
     const newMeetings = pairings.map((p) =>
       [teams[p.team1Idx].id, teams[p.team2Idx].id].sort().join('-')
@@ -223,15 +223,16 @@ describe('swissPairByRecord', () => {
     const previous: SimMatch[] = [
       finishedMatch({ id: 'm1', team1Id: 'a', team2Id: 'b', winnerId: 'a' }),
     ];
-    const pairings = swissPairByRecord(teams, previous);
+    const { pairings } = swissPairByRecord(teams, previous);
     expect(pairings.length).toBe(1);
   });
 
-  it('skips teams with odd-team-out (no opponent left)', () => {
+  it('assigns a bye to the odd team out', () => {
     const teams = [team('a'), team('b'), team('c')];
-    const pairings = swissPairByRecord(teams, []);
-    // 1 pair + 1 odd team out
+    const { pairings, byeTeamIdx } = swissPairByRecord(teams, []);
+    // 1 pair + 1 bye
     expect(pairings.length).toBe(1);
+    expect(byeTeamIdx).not.toBeNull();
   });
 
   it('handles previously played matches without scores', () => {
@@ -244,7 +245,7 @@ describe('swissPairByRecord', () => {
     });
     matchNoScores.team1_score = null;
     matchNoScores.team2_score = null;
-    const pairings = swissPairByRecord(teams, [matchNoScores]);
+    const { pairings } = swissPairByRecord(teams, [matchNoScores]);
     expect(pairings.length).toBe(2);
   });
 });

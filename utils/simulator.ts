@@ -294,6 +294,104 @@ export function propagateBracket(matches: SimMatch[]): SimMatch[] {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Byes (non-power-of-2 brackets, odd Swiss rounds)                    */
+/* ------------------------------------------------------------------ */
+
+/** Resolve "byes": pending matches that can never receive a second team.
+ *
+ *  A match with exactly one team is a bye when no still-pending match feeds
+ *  its empty slot — either it has no feeder at all (a first-round bracket slot
+ *  or a lone Swiss team) or its feeder already finished without producing an
+ *  opponent (e.g. a winner-bracket bye has no loser to drop into the LB).
+ *  The lone team advances: the match is marked finished with that team as
+ *  winner and no map score, so it counts as a win for standings but is ignored
+ *  by map-diff and competitiveness (which require two teams). */
+export function resolveByes(matches: SimMatch[]): SimMatch[] {
+  const updated = [...matches];
+  const idxById = new Map<string, number>();
+  for (let i = 0; i < updated.length; i++) idxById.set(updated[i].id, i);
+
+  const resolveTarget = (id: string | null, idx: number | null) =>
+    id != null ? idxById.get(id) : idx ?? undefined;
+
+  const hasPendingFeeder = (targetIdx: number, slot: 1 | 2): boolean => {
+    for (const f of updated) {
+      if (f.status === 'finished') continue;
+      if (
+        resolveTarget(f.next_match_win_id, f.next_match_win_idx) === targetIdx &&
+        f.next_match_win_slot === slot
+      )
+        return true;
+      if (
+        resolveTarget(f.next_match_lose_id, f.next_match_lose_idx) ===
+          targetIdx &&
+        f.next_match_lose_slot === slot
+      )
+        return true;
+    }
+    return false;
+  };
+
+  for (let i = 0; i < updated.length; i++) {
+    const m = updated[i];
+    if (m.status !== 'pending' || m.locked) continue;
+    const hasT1 = !!m.team1;
+    const hasT2 = !!m.team2;
+    if (hasT1 === hasT2) continue; // 0 or 2 teams — not a bye
+    const emptySlot: 1 | 2 = hasT1 ? 2 : 1;
+    if (hasPendingFeeder(i, emptySlot)) continue; // opponent may still arrive
+    const soleTeam = (hasT1 ? m.team1 : m.team2)!;
+    updated[i] = {
+      ...m,
+      status: 'finished',
+      winner_team_id: soleTeam.id,
+      team1_score: null,
+      team2_score: null,
+    };
+  }
+  return updated;
+}
+
+/** Simulate a bracket/showmatch stage to completion: repeatedly resolve byes,
+ *  play every ready two-team match, and propagate results, until a full pass
+ *  makes no progress. Robust to interleaved brackets (double elimination) and
+ *  byes that only surface once earlier rounds have been played. */
+export function simulateBracketToCompletion(
+  matches: SimMatch[],
+  opts: { skipLocked?: boolean } = {}
+): SimMatch[] {
+  const skipLocked = opts.skipLocked ?? false;
+  let cur = matches.map((m) => ({ ...m }));
+  const maxPasses = cur.length * 2 + 4;
+  let prevFinished = -1;
+
+  for (let pass = 0; pass < maxPasses; pass++) {
+    cur = propagateBracket(resolveByes(cur));
+    const next = [...cur];
+    for (let i = 0; i < next.length; i++) {
+      const m = next[i];
+      if (
+        m.status === 'pending' &&
+        !(skipLocked && m.locked) &&
+        m.team1 &&
+        m.team2
+      ) {
+        next[i] = simulateMatch(m);
+      }
+    }
+    cur = propagateBracket(next);
+
+    const finished = cur.reduce(
+      (n, m) => n + (m.status === 'finished' ? 1 : 0),
+      0
+    );
+    if (finished === prevFinished) break; // no progress — done or stuck
+    prevFinished = finished;
+  }
+  return cur;
+}
+
+/* ------------------------------------------------------------------ */
 /*  Full tournament simulation (for Monte Carlo)                        */
 /* ------------------------------------------------------------------ */
 
@@ -308,28 +406,14 @@ export function simulateFullTournament(stagesInput: SimStage[]): {
 
   for (const stage of stages) {
     if (stage.stage_type === 'bracket' || stage.stage_type === 'showmatch') {
-      // Topological simulation: repeatedly simulate every match whose two
-      // teams are known, then propagate. This is robust to interleaved
-      // brackets — notably double elimination, where LB round numbers restart
-      // at 1 and WB losers feed LB rounds out of round_number order.
-      const maxPasses = stage.matches.length + 2;
-      let progressed = true;
-      let pass = 0;
-      while (progressed && pass < maxPasses) {
-        progressed = false;
-        pass++;
-        for (let i = 0; i < stage.matches.length; i++) {
-          const m = stage.matches[i];
-          if (m.status === 'pending' && m.team1 && m.team2) {
-            stage.matches[i] = simulateMatch(m);
-            progressed = true;
-          }
-        }
-        stage.matches = propagateBracket(stage.matches);
-      }
+      stage.matches = simulateBracketToCompletion(stage.matches);
     } else {
-      stage.matches = stage.matches.map((m) =>
-        m.status === 'pending' ? simulateMatch(m) : m
+      // Non-bracket stages (Swiss, round robin, group) play every match at
+      // once; resolveByes finishes any lone Swiss team (odd-count bye).
+      stage.matches = resolveByes(
+        stage.matches.map((m) =>
+          m.status === 'pending' ? simulateMatch(m) : m
+        )
       );
     }
   }
@@ -544,23 +628,36 @@ export function computeCompetitiveness(
 /* ------------------------------------------------------------------ */
 
 export type SwissPairing = { team1Idx: number; team2Idx: number };
+export type SwissRoundPairing = {
+  pairings: SwissPairing[];
+  byeTeamIdx: number | null;
+};
 
 /** Pair teams by similar W-L record for a Swiss round.
  *  Teams are sorted by (wins desc, map diff desc), then paired sequentially.
- *  Already-played matchups are avoided when possible. */
+ *  Already-played matchups are avoided when possible. With an odd number of
+ *  teams, the lowest-ranked team that has not already had a bye receives one
+ *  (returned as `byeTeamIdx`) and sits the round out with a free win. */
 export function swissPairByRecord(
   teams: SimTeam[],
   previousMatches: SimMatch[]
-): SwissPairing[] {
+): SwissRoundPairing {
   // Build record
   const wins = new Map<string, number>();
   const mapDiff = new Map<string, number>();
   const playedPairs = new Set<string>();
+  const hadBye = new Set<string>();
 
   for (const m of previousMatches) {
     if (m.status !== 'finished') continue;
     if (m.winner_team_id)
       wins.set(m.winner_team_id, (wins.get(m.winner_team_id) ?? 0) + 1);
+    // A finished match with a single team is a bye — remember it so a team
+    // is not handed two byes when it can be avoided.
+    if (!!m.team1_id !== !!m.team2_id) {
+      hadBye.add((m.team1_id ?? m.team2_id)!);
+      continue;
+    }
     if (m.team1_id && m.team2_id) {
       const pairKey = [m.team1_id, m.team2_id].sort().join('-');
       playedPairs.add(pairKey);
@@ -588,19 +685,32 @@ export function swissPairByRecord(
     return dB - dA;
   });
 
+  // Odd count: give the bye to the lowest-ranked team without a previous bye.
+  let byeTeamIdx: number | null = null;
+  let pool = indices;
+  if (indices.length % 2 === 1) {
+    let pick = indices.length - 1;
+    for (let k = indices.length - 1; k >= 0; k--) {
+      if (!hadBye.has(teams[indices[k]].id)) {
+        pick = k;
+        break;
+      }
+    }
+    byeTeamIdx = indices[pick];
+    pool = indices.filter((_, k) => k !== pick);
+  }
+
   // Greedy pairing: pick pairs sequentially, avoiding rematches when possible
   const paired = new Set<number>();
   const pairings: SwissPairing[] = [];
 
-  for (let i = 0; i < indices.length; i++) {
-    if (paired.has(indices[i])) continue;
+  for (let i = 0; i < pool.length; i++) {
+    if (paired.has(pool[i])) continue;
     let bestJ = -1;
     // First pass: find unpaired opponent we haven't played
-    for (let j = i + 1; j < indices.length; j++) {
-      if (paired.has(indices[j])) continue;
-      const pairKey = [teams[indices[i]].id, teams[indices[j]].id]
-        .sort()
-        .join('-');
+    for (let j = i + 1; j < pool.length; j++) {
+      if (paired.has(pool[j])) continue;
+      const pairKey = [teams[pool[i]].id, teams[pool[j]].id].sort().join('-');
       if (!playedPairs.has(pairKey)) {
         bestJ = j;
         break;
@@ -608,20 +718,20 @@ export function swissPairByRecord(
     }
     // Fallback: take next unpaired
     if (bestJ === -1) {
-      for (let j = i + 1; j < indices.length; j++) {
-        if (!paired.has(indices[j])) {
+      for (let j = i + 1; j < pool.length; j++) {
+        if (!paired.has(pool[j])) {
           bestJ = j;
           break;
         }
       }
     }
-    if (bestJ === -1) continue; // odd team out
-    paired.add(indices[i]);
-    paired.add(indices[bestJ]);
-    pairings.push({ team1Idx: indices[i], team2Idx: indices[bestJ] });
+    if (bestJ === -1) continue;
+    paired.add(pool[i]);
+    paired.add(pool[bestJ]);
+    pairings.push({ team1Idx: pool[i], team2Idx: pool[bestJ] });
   }
 
-  return pairings;
+  return { pairings, byeTeamIdx };
 }
 
 /* ------------------------------------------------------------------ */

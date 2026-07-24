@@ -9,6 +9,8 @@ import {
   getBestOfForRound,
   simulateMatch,
   swissPairByRecord,
+  propagateBracket,
+  resolveByes,
 } from '@/utils/simulator';
 import type {
   SimTeam,
@@ -26,15 +28,19 @@ export function generateSingleElim(
   schedule: ScheduleConfig,
   escalation: EscalationConfig
 ): SimStage {
-  const size = teams.length;
-  const totalRounds = Math.log2(size);
+  const teamCount = teams.length;
+  // Pad up to the next power of two; the empty slots become byes for the top
+  // seeds (standard seeding places byes opposite seeds 1, 2, …).
+  const bracketSize = Math.max(2, 1 << Math.ceil(Math.log2(teamCount)));
+  const totalRounds = Math.log2(bracketSize);
+  const seedIdx = bracketSeedOrder(bracketSize);
   const matches: SimMatch[] = [];
 
   // Collect all round numbers for scheduling
   const roundNumbers: number[] = [];
 
   for (let r = 0; r < totalRounds; r++) {
-    const matchesInRound = size / Math.pow(2, r + 1);
+    const matchesInRound = bracketSize / Math.pow(2, r + 1);
     for (let m = 0; m < matchesInRound; m++) {
       roundNumbers.push(r + 1);
     }
@@ -48,7 +54,7 @@ export function generateSingleElim(
 
   let schedIdx = 0;
   for (let r = 0; r < totalRounds; r++) {
-    const matchesInRound = size / Math.pow(2, r + 1);
+    const matchesInRound = bracketSize / Math.pow(2, r + 1);
     let roundName: string;
     if (r + 1 === totalRounds) roundName = 'Finale';
     else if (r + 1 === totalRounds - 1) roundName = 'Demi-finales';
@@ -60,9 +66,11 @@ export function generateSingleElim(
 
     for (let m = 0; m < matchesInRound; m++) {
       const isFirstRound = r === 0;
-      const seedIdx = bracketSeedOrder(size);
-      const t1 = isFirstRound ? teams[seedIdx[m * 2]] : null;
-      const t2 = isFirstRound ? teams[seedIdx[m * 2 + 1]] : null;
+      // Seed indices beyond teamCount are byes (null slot).
+      const a = seedIdx[m * 2];
+      const b = seedIdx[m * 2 + 1];
+      const t1 = isFirstRound && a < teamCount ? teams[a] : null;
+      const t2 = isFirstRound && b < teamCount ? teams[b] : null;
 
       matches.push({
         id: fakeId(),
@@ -97,7 +105,7 @@ export function generateSingleElim(
   // Fix next_match pointers (index + id)
   let offset = 0;
   for (let r = 0; r < totalRounds - 1; r++) {
-    const countInRound = size / Math.pow(2, r + 1);
+    const countInRound = bracketSize / Math.pow(2, r + 1);
     const nextOffset = offset + countInRound;
     for (let m = 0; m < countInRound; m++) {
       const nextIdx = nextOffset + Math.floor(m / 2);
@@ -109,11 +117,14 @@ export function generateSingleElim(
     offset = nextOffset;
   }
 
+  // Auto-advance the top seeds through their first-round byes so the bracket
+  // is immediately consistent (byes are re-resolved after any Monte Carlo
+  // reset by the simulation engine).
   return {
     id: fakeId(),
     name: 'Single Elimination',
     stage_type: 'bracket',
-    matches,
+    matches: propagateBracket(resolveByes(matches)),
   };
 }
 
@@ -138,12 +149,14 @@ export function generateDoubleElim(
     bracket_side: 'wb' as const,
   }));
 
-  // LB matches
-  const size = teams.length;
-  const wbRounds = Math.log2(size);
+  // LB matches — structure follows the padded bracket size, not the raw team
+  // count, so non-power-of-2 fields keep a well-formed lower bracket (the
+  // missing WB losers simply surface as byes inside the LB during simulation).
+  const bracketSize = Math.max(2, 1 << Math.ceil(Math.log2(teams.length)));
+  const wbRounds = Math.log2(bracketSize);
   const lbRoundsCount = 2 * (wbRounds - 1);
   const lbMatches: SimMatch[] = [];
-  let lbTeams = size / 2;
+  let lbTeams = bracketSize / 2;
 
   for (let lbR = 1; lbR <= lbRoundsCount; lbR++) {
     let count: number;
@@ -303,7 +316,7 @@ export function generateDoubleElim(
     id: fakeId(),
     name: 'Double Elimination',
     stage_type: 'bracket',
-    matches: allMatches,
+    matches: propagateBracket(resolveByes(allMatches)),
   };
 }
 
@@ -315,13 +328,11 @@ export function generateSwiss(
   schedule: ScheduleConfig
 ): SimStage {
   const matches: SimMatch[] = [];
+  // Only the played matches (not byes) consume schedule slots.
+  const realPerRound = Math.floor(teams.length / 2);
   const roundNumbers: number[] = [];
-  // Pre-compute match count for scheduling
   for (let r = 0; r < rounds; r++) {
-    const matchesInRound = Math.floor(teams.length / 2);
-    for (let m = 0; m < matchesInRound; m++) {
-      roundNumbers.push(r + 1);
-    }
+    for (let m = 0; m < realPerRound; m++) roundNumbers.push(r + 1);
   }
   const scheduledDates = computeSchedule(
     roundNumbers.length,
@@ -330,59 +341,103 @@ export function generateSwiss(
   );
   let schedIdx = 0;
 
+  const makeMatch = (
+    r: number,
+    pos: number,
+    t1: SimTeam | null,
+    t2: SimTeam | null,
+    scheduledAt: string | null,
+    roundName: string
+  ): SimMatch => ({
+    id: fakeId(),
+    round_number: r + 1,
+    round_name: roundName,
+    position_in_round: pos,
+    status: 'pending',
+    match_format: `bo${bestOf}`,
+    best_of: bestOf,
+    team1: t1,
+    team2: t2,
+    team1_id: t1?.id ?? null,
+    team2_id: t2?.id ?? null,
+    team1_score: null,
+    team2_score: null,
+    winner_team_id: null,
+    scheduled_at: scheduledAt,
+    maps: pickMaps(bestOf, mapPool),
+    bracket_side: 'none',
+    next_match_win_idx: null,
+    next_match_win_slot: null,
+    next_match_lose_idx: null,
+    next_match_lose_slot: null,
+    next_match_win_id: null,
+    next_match_lose_id: null,
+    locked: false,
+  });
+
   for (let r = 0; r < rounds; r++) {
-    // Round 1: random pairing. Later rounds: pair by record (W-L)
+    // Round 1: random pairing. Later rounds: pair by record (W-L).
     let pairings: { t1: SimTeam; t2: SimTeam }[];
+    let byeTeam: SimTeam | null = null;
+
     if (r === 0) {
       const shuffled = [...teams].sort(() => Math.random() - 0.5);
+      if (shuffled.length % 2 === 1) {
+        // Round-1 bye goes to the weakest team (highest seed number).
+        let weakest = 0;
+        for (let k = 1; k < shuffled.length; k++) {
+          if (shuffled[k].seed > shuffled[weakest].seed) weakest = k;
+        }
+        byeTeam = shuffled.splice(weakest, 1)[0];
+      }
       pairings = [];
       for (let m = 0; m < Math.floor(shuffled.length / 2); m++) {
         pairings.push({ t1: shuffled[m * 2], t2: shuffled[m * 2 + 1] });
       }
     } else {
-      // Simulate previous rounds to get records for pairing
-      const simulated = matches.map((m) =>
-        m.status === 'pending' ? simulateMatch(m) : m
+      // Simulate previous rounds (byes included) to get records for pairing.
+      const simulated = resolveByes(
+        matches.map((m) => (m.status === 'pending' ? simulateMatch(m) : m))
       );
-      const swissPairs = swissPairByRecord(teams, simulated);
+      const { pairings: swissPairs, byeTeamIdx } = swissPairByRecord(
+        teams,
+        simulated
+      );
       pairings = swissPairs.map((p) => ({
         t1: teams[p.team1Idx],
         t2: teams[p.team2Idx],
       }));
+      byeTeam = byeTeamIdx != null ? teams[byeTeamIdx] : null;
     }
 
-    for (let m = 0; m < pairings.length; m++) {
-      const { t1, t2 } = pairings[m];
-      matches.push({
-        id: fakeId(),
-        round_number: r + 1,
-        round_name: `Round ${r + 1}`,
-        position_in_round: m + 1,
-        status: 'pending',
-        match_format: `bo${bestOf}`,
-        best_of: bestOf,
-        team1: t1,
-        team2: t2,
-        team1_id: t1.id,
-        team2_id: t2.id,
-        team1_score: null,
-        team2_score: null,
-        winner_team_id: null,
-        scheduled_at: scheduledDates[schedIdx] ?? null,
-        maps: pickMaps(bestOf, mapPool),
-        bracket_side: 'none',
-        next_match_win_idx: null,
-        next_match_win_slot: null,
-        next_match_lose_idx: null,
-        next_match_lose_slot: null,
-        next_match_win_id: null,
-        next_match_lose_id: null,
-        locked: false,
-      });
+    let pos = 1;
+    for (const { t1, t2 } of pairings) {
+      matches.push(
+        makeMatch(
+          r,
+          pos++,
+          t1,
+          t2,
+          scheduledDates[schedIdx] ?? null,
+          `Round ${r + 1}`
+        )
+      );
       schedIdx++;
     }
+    if (byeTeam) {
+      matches.push(
+        makeMatch(r, pos++, byeTeam, null, null, `Round ${r + 1} — Bye`)
+      );
+    }
   }
-  return { id: fakeId(), name: 'Swiss System', stage_type: 'swiss', matches };
+
+  // Resolve the lone-team bye matches into free wins (display + records ready).
+  return {
+    id: fakeId(),
+    name: 'Swiss System',
+    stage_type: 'swiss',
+    matches: resolveByes(matches),
+  };
 }
 
 export function generateRoundRobin(

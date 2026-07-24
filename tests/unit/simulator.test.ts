@@ -6,8 +6,11 @@ import {
   simulateMatch,
   propagateBracket,
   simulateFullTournament,
+  simulateBracketToCompletion,
+  resolveByes,
   runMonteCarlo,
   computeCompetitiveness,
+  swissPairByRecord,
 } from '../../utils/simulator';
 import type {
   SimTeam,
@@ -19,6 +22,7 @@ import type {
 import {
   generateSingleElim,
   generateDoubleElim,
+  generateSwiss,
 } from '../../utils/simulatorBrackets';
 
 /* ------------------------------------------------------------------ */
@@ -827,25 +831,9 @@ function makeSeededTeams(count: number): SimTeam[] {
   return Array.from({ length: count }, (_, i) => makeTeam(`t${i + 1}`, i + 1));
 }
 
-/** Run a bracket stage to completion using the exported primitives —
- *  simulate every ready match, propagate, repeat. Mirrors the engine in
- *  simulateFullTournament and lets us inspect the resulting matches. */
+/** Run a bracket stage to completion via the real shared engine. */
 function simulateBracketStage(stage: SimStage): SimMatch[] {
-  let matches = stage.matches.map((m) => ({ ...m }));
-  const maxPasses = matches.length + 2;
-  for (let pass = 0; pass < maxPasses; pass++) {
-    let progressed = false;
-    for (let i = 0; i < matches.length; i++) {
-      const m = matches[i];
-      if (m.status === 'pending' && m.team1 && m.team2) {
-        matches[i] = simulateMatch(m);
-        progressed = true;
-      }
-    }
-    matches = propagateBracket(matches);
-    if (!progressed) break;
-  }
-  return matches;
+  return simulateBracketToCompletion(stage.matches);
 }
 
 describe('generateDoubleElim wiring', () => {
@@ -1000,5 +988,179 @@ describe('generateSingleElim still simulates to completion', () => {
       expect(m.status).toBe('finished');
       expect(m.winner_team_id).not.toBeNull();
     }
+  });
+});
+
+/* ================================================================== */
+/*  Byes — resolveByes primitive                                       */
+/* ================================================================== */
+
+describe('resolveByes', () => {
+  it('advances a lone team with no feeder (a bye) as a free win', () => {
+    const t1 = makeTeam('t1', 1);
+    const m = makeMatch('m1', {
+      team1: t1,
+      team1_id: 't1',
+      team2: null,
+      team2_id: null,
+      bracket_side: 'none',
+    });
+    const [resolved] = resolveByes([m]);
+    expect(resolved.status).toBe('finished');
+    expect(resolved.winner_team_id).toBe('t1');
+    // A bye has no map score, so it stays out of map-diff / competitiveness.
+    expect(resolved.team1_score).toBeNull();
+    expect(resolved.team2_score).toBeNull();
+  });
+
+  it('does not advance a lone team while a pending feeder can still arrive', () => {
+    const t1 = makeTeam('t1', 1);
+    const feeder = makeMatch('f1', {
+      team1: t1,
+      team1_id: 't1',
+      team2: makeTeam('t2', 2),
+      team2_id: 't2',
+      next_match_win_id: 'target',
+      next_match_win_idx: 1,
+      next_match_win_slot: 2,
+    });
+    const target = makeMatch('target', {
+      team1: makeTeam('t3', 3),
+      team1_id: 't3',
+      team2: null,
+      team2_id: null,
+      round_number: 2,
+    });
+    const [, resolvedTarget] = resolveByes([feeder, target]);
+    // The pending feeder still owes an opponent to slot 2 → no bye.
+    expect(resolvedTarget.status).toBe('pending');
+  });
+
+  it('leaves two-team matches untouched', () => {
+    const m = makeMatch('m1', {
+      team1: makeTeam('t1', 1),
+      team1_id: 't1',
+      team2: makeTeam('t2', 2),
+      team2_id: 't2',
+    });
+    const [resolved] = resolveByes([m]);
+    expect(resolved.status).toBe('pending');
+  });
+});
+
+/* ================================================================== */
+/*  Byes — non-power-of-2 elimination brackets                         */
+/* ================================================================== */
+
+describe('non-power-of-2 elimination brackets', () => {
+  it('gives the top seeds a first-round bye (6-team single elim)', () => {
+    const teams = makeSeededTeams(6);
+    const stage = generateSingleElim(
+      teams,
+      3,
+      MAP_POOL,
+      NOOP_SCHEDULE,
+      NO_ESCALATION
+    );
+    // Padded to 8 → 4 first-round matches, 2 of them byes.
+    const r1 = stage.matches.filter((m) => m.round_number === 1);
+    expect(r1).toHaveLength(4);
+    const byes = r1.filter((m) => !!m.team1 !== !!m.team2);
+    expect(byes).toHaveLength(2);
+    // Byes are pre-resolved and their teams already advanced.
+    for (const b of byes) {
+      expect(b.status).toBe('finished');
+      expect(b.winner_team_id).toBeTruthy();
+    }
+    // The two byes belong to the two best seeds.
+    const byeSeeds = byes
+      .map((b) => (b.team1 ?? b.team2)!.seed)
+      .sort((a, c) => a - c);
+    expect(byeSeeds).toEqual([1, 2]);
+  });
+
+  // Single elimination supports arbitrary field sizes via byes.
+  for (const size of [5, 6, 7, 9, 12, 13]) {
+    it(`simulates a ${size}-team single elimination to completion`, () => {
+      const teams = makeSeededTeams(size);
+      const stage = generateSingleElim(
+        teams,
+        3,
+        MAP_POOL,
+        NOOP_SCHEDULE,
+        NO_ESCALATION
+      );
+      const simulated = simulateBracketStage(stage);
+      for (const m of simulated) {
+        expect(m.status).toBe('finished');
+        expect(m.winner_team_id).not.toBeNull();
+      }
+      const { winnerId, standings } = simulateFullTournament([stage]);
+      expect(teams.map((t) => t.id)).toContain(winnerId);
+      expect(standings).toHaveLength(size);
+    });
+  }
+
+  it('keeps Monte Carlo win counts consistent for a 6-team bracket', () => {
+    const teams = makeSeededTeams(6);
+    const stage = generateSingleElim(
+      teams,
+      3,
+      MAP_POOL,
+      NOOP_SCHEDULE,
+      NO_ESCALATION
+    );
+    const result = runMonteCarlo([stage], teams, 100);
+    let total = 0;
+    for (const c of result.winCounts.values()) total += c;
+    expect(total).toBe(100);
+    for (const t of teams) expect(result.winProbability.has(t.id)).toBe(true);
+  });
+});
+
+/* ================================================================== */
+/*  Byes — odd Swiss rounds                                             */
+/* ================================================================== */
+
+describe('odd Swiss brackets', () => {
+  it('gives one bye per round and never a double bye when avoidable', () => {
+    const teams = makeSeededTeams(5);
+    const rounds = 4;
+    const stage = generateSwiss(teams, rounds, 3, MAP_POOL, NOOP_SCHEDULE);
+
+    const byeMatches = stage.matches.filter((m) => !!m.team1 !== !!m.team2);
+    expect(byeMatches).toHaveLength(rounds); // one bye each round
+
+    // Every bye is resolved as a free win.
+    for (const b of byeMatches) {
+      expect(b.status).toBe('finished');
+      expect(b.winner_team_id).toBeTruthy();
+    }
+
+    // 5 teams over 4 rounds → 4 distinct bye recipients (no repeats).
+    const byeTeamIds = byeMatches.map((m) => m.team1_id ?? m.team2_id);
+    expect(new Set(byeTeamIds).size).toBe(rounds);
+  });
+
+  it('round-1 bye goes to the weakest seed', () => {
+    const teams = makeSeededTeams(5);
+    const stage = generateSwiss(teams, 1, 3, MAP_POOL, NOOP_SCHEDULE);
+    const bye = stage.matches.find((m) => !!m.team1 !== !!m.team2)!;
+    expect(bye).toBeDefined();
+    expect(bye.team1_id ?? bye.team2_id).toBe('t5'); // highest seed number
+  });
+
+  it('a Swiss bye counts as a win in the standings', () => {
+    const teams = makeSeededTeams(5);
+    const stage = generateSwiss(teams, 3, 3, MAP_POOL, NOOP_SCHEDULE);
+    const { standings } = simulateFullTournament([stage]);
+    expect(standings).toHaveLength(5);
+  });
+
+  it('swissPairByRecord flags a bye for an odd field', () => {
+    const teams = makeSeededTeams(5);
+    const { pairings, byeTeamIdx } = swissPairByRecord(teams, []);
+    expect(pairings).toHaveLength(2);
+    expect(byeTeamIdx).not.toBeNull();
   });
 });

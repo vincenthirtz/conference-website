@@ -21,6 +21,8 @@ import {
   bracketSeedOrder,
   simulateMatch,
   propagateBracket,
+  resolveByes,
+  simulateBracketToCompletion,
   runMonteCarlo,
   computeCompetitiveness,
   computeHeadToHead,
@@ -215,10 +217,16 @@ function TournamentSimulatorPage() {
     setOccurrences(restored);
   }, [redoStack, occurrences]);
 
-  const validTeamCounts =
-    config.formatType === 'single_elim' || config.formatType === 'double_elim'
-      ? [4, 8, 16, 32]
-      : [4, 6, 8, 10, 12, 16];
+  // Single elimination now supports non-power-of-2 fields via byes (the top
+  // seeds get a first-round pass, e.g. 6, 12, 24 teams). Double elimination
+  // stays power-of-2 — an uneven lower bracket would leave phantom matches.
+  const validCountsFor = (f: FormatType): number[] => {
+    if (f === 'showmatch') return [2];
+    if (f === 'single_elim') return [4, 6, 8, 12, 16, 24, 32];
+    if (f === 'double_elim') return [4, 8, 16, 32];
+    return [4, 6, 8, 10, 12, 16];
+  };
+  const validTeamCounts = validCountsFor(config.formatType);
 
   const generateOneOccurrence = useCallback(
     (
@@ -406,33 +414,15 @@ function TournamentSimulatorPage() {
     setStages((prev) =>
       prev.map((stage) => {
         let matches = [...stage.matches];
-        if (stage.stage_type === 'bracket') {
-          // Topological pass: simulate every ready match, propagate, repeat.
-          // Ordering by round_number breaks double elimination, where LB round
-          // numbers restart at 1 and depend on WB results propagated later.
-          const maxPasses = matches.length + 2;
-          let progressed = true;
-          let pass = 0;
-          while (progressed && pass < maxPasses) {
-            progressed = false;
-            pass++;
-            for (let i = 0; i < matches.length; i++) {
-              const m = matches[i];
-              if (
-                m.status === 'pending' &&
-                !m.locked &&
-                m.team1 &&
-                m.team2
-              ) {
-                matches[i] = simulateMatch(m);
-                progressed = true;
-              }
-            }
-            matches = propagateBracket(matches);
-          }
+        if (stage.stage_type === 'bracket' || stage.stage_type === 'showmatch') {
+          // Shared engine: resolves byes, plays ready matches and propagates,
+          // handling double elimination and non-power-of-2 fields correctly.
+          matches = simulateBracketToCompletion(matches, { skipLocked: true });
         } else {
-          matches = matches.map((m) =>
-            m.status === 'pending' && !m.locked ? simulateMatch(m) : m
+          matches = resolveByes(
+            matches.map((m) =>
+              m.status === 'pending' && !m.locked ? simulateMatch(m) : m
+            )
           );
         }
         return { ...stage, matches };
@@ -444,7 +434,11 @@ function TournamentSimulatorPage() {
   const handleSimulateNextRound = useCallback(() => {
     setStages((prev) =>
       prev.map((stage) => {
+        const isBracket =
+          stage.stage_type === 'bracket' || stage.stage_type === 'showmatch';
         let matches = [...stage.matches];
+        // Advance any pending byes first so their teams are in place.
+        if (isBracket) matches = propagateBracket(resolveByes(matches));
         const pendingRounds = [
           ...new Set(
             matches
@@ -454,19 +448,25 @@ function TournamentSimulatorPage() {
               .map((m) => m.round_number)
           ),
         ].sort((a, b) => a - b);
-        if (pendingRounds.length === 0) return stage;
+        if (pendingRounds.length === 0) return { ...stage, matches };
         const nextRound = pendingRounds[0];
         for (let i = 0; i < matches.length; i++) {
           if (
             matches[i].round_number === nextRound &&
             matches[i].status === 'pending' &&
-            !matches[i].locked
+            !matches[i].locked &&
+            matches[i].team1 &&
+            matches[i].team2
           ) {
             matches[i] = simulateMatch(matches[i]);
           }
         }
-        if (stage.stage_type === 'bracket') {
+        if (isBracket) {
+          // Propagate, then resolve byes newly exposed by this round.
           matches = propagateBracket(matches);
+          matches = propagateBracket(resolveByes(matches));
+        } else {
+          matches = resolveByes(matches);
         }
         return { ...stage, matches };
       })
@@ -726,9 +726,20 @@ function TournamentSimulatorPage() {
       if (!animatingRef.current) return;
 
       setStages((prev) => {
+        // Silently advance any pending byes (auto-wins) across every stage
+        // before revealing the next real match.
+        const working = prev.map((stage) => {
+          const isBracket =
+            stage.stage_type === 'bracket' || stage.stage_type === 'showmatch';
+          const resolved = isBracket
+            ? propagateBracket(resolveByes(stage.matches))
+            : resolveByes(stage.matches);
+          return { ...stage, matches: resolved };
+        });
+
         // Find next playable match across all stages
-        for (let sIdx = 0; sIdx < prev.length; sIdx++) {
-          const stage = prev[sIdx];
+        for (let sIdx = 0; sIdx < working.length; sIdx++) {
+          const stage = working[sIdx];
           const roundNums = [
             ...new Set(
               stage.matches
@@ -752,7 +763,7 @@ function TournamentSimulatorPage() {
           );
           if (mIdx === -1) continue;
 
-          const next = [...prev];
+          const next = [...working];
           const updatedStage = {
             ...next[sIdx],
             matches: [...next[sIdx].matches],
@@ -760,7 +771,10 @@ function TournamentSimulatorPage() {
           updatedStage.matches[mIdx] = simulateMatch(
             updatedStage.matches[mIdx]
           );
-          if (updatedStage.stage_type === 'bracket') {
+          if (
+            updatedStage.stage_type === 'bracket' ||
+            updatedStage.stage_type === 'showmatch'
+          ) {
             updatedStage.matches = propagateBracket(updatedStage.matches);
           }
           next[sIdx] = updatedStage;
@@ -773,7 +787,7 @@ function TournamentSimulatorPage() {
         // No more matches to simulate
         animatingRef.current = false;
         setAnimating(false);
-        return prev;
+        return working;
       });
     };
 
@@ -1603,12 +1617,11 @@ function TournamentSimulatorPage() {
                           type="button"
                           onClick={() => {
                             const tc =
-                              (f === 'single_elim' || f === 'double_elim') &&
-                              ![4, 8, 16, 32].includes(config.teamCount)
-                                ? 8
-                                : f === 'showmatch'
-                                  ? 2
-                                  : config.teamCount;
+                              f === 'showmatch'
+                                ? 2
+                                : validCountsFor(f).includes(config.teamCount)
+                                  ? config.teamCount
+                                  : 8;
                             setConfig((c) => ({
                               ...c,
                               formatType: f,
@@ -3225,12 +3238,11 @@ function TournamentSimulatorPage() {
                           (f) => f !== config.formatType && f !== 'showmatch'
                         )
                         .map((f) => {
-                          const tc =
-                            f === 'single_elim' || f === 'double_elim'
-                              ? [4, 8, 16, 32].includes(config.teamCount)
-                                ? config.teamCount
-                                : 8
-                              : config.teamCount;
+                          const tc = validCountsFor(f).includes(
+                            config.teamCount
+                          )
+                            ? config.teamCount
+                            : 8;
                           return (
                             <button
                               key={f}

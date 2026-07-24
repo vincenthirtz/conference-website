@@ -105,8 +105,13 @@ function SimMatchCardComponent({
 }) {
   const t = useAdminT('adminSimulatorSimMatchCard');
   const statusCfg = STATUS_CONFIG[match.status];
-  const t1Name = match.team1?.short_name ?? match.team1?.name ?? 'TBD';
-  const t2Name = match.team2?.short_name ?? match.team2?.name ?? 'TBD';
+  // A resolved bye is a finished match with a single team; label the empty
+  // slot "Bye" rather than "TBD" (which means an opponent is still to come).
+  const isBye =
+    !!match.winner_team_id && !match.team1 !== !match.team2;
+  const emptyLabel = isBye ? 'Bye' : 'TBD';
+  const t1Name = match.team1?.short_name ?? match.team1?.name ?? emptyLabel;
+  const t2Name = match.team2?.short_name ?? match.team2?.name ?? emptyLabel;
   const w1 = match.winner_team_id === match.team1_id && !!match.winner_team_id;
   const w2 = match.winner_team_id === match.team2_id && !!match.winner_team_id;
   const winProb =
