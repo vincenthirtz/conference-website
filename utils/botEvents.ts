@@ -57,7 +57,10 @@ export type BotEventName =
   | 'tournament.finalized'
   | 'dispute.sla_breached'
   | 'checkin.nudge'
-  | 'broadcast.state_changed';
+  | 'broadcast.state_changed'
+  | 'task.created'
+  | 'task.moved'
+  | 'task.assigned';
 
 export type BotEventPayload = Record<string, unknown>;
 

@@ -8669,6 +8669,200 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /api/bot/v1/tasks:
+    get:
+      tags:
+        - bot/tasks
+      summary: Liste des cartes Kanban (filtres boardId, columnId, assignee=me, q, limit).
+      operationId: botListTasks
+      parameters:
+        - name: actorDiscordUserId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: boardId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: columnId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: assignee
+          in: query
+          schema:
+            type: string
+            enum: [me]
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+      responses:
+        '200':
+          description: Cartes normalisees (id, title, boardName, columnName, priority, assigneeName, dueDate).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tasks:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+    post:
+      tags:
+        - bot/tasks
+      summary: Cree une carte Kanban (createTaskCore). Emet task.created.
+      operationId: botCreateTask
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [actorDiscordUserId, boardId, columnId, title]
+              properties:
+                actorDiscordUserId: { type: string }
+                boardId: { type: string, format: uuid }
+                columnId: { type: string, format: uuid }
+                title: { type: string }
+                description: { type: string }
+                priority: { type: string, enum: [low, medium, high, urgent] }
+                assigneeStaffId: { type: string, format: uuid, nullable: true }
+                dueDate: { type: string }
+                labels:
+                  type: array
+                  items: { type: string }
+      responses:
+        '201':
+          description: Carte creee.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+  /api/bot/v1/tasks/boards:
+    get:
+      tags:
+        - bot/tasks
+      summary: Boards Kanban non archives (id, name) pour autocomplete /kanban.
+      operationId: botListTaskBoards
+      parameters:
+        - name: actorDiscordUserId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Boards (id, name).
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+  /api/bot/v1/tasks/columns:
+    get:
+      tags:
+        - bot/tasks
+      summary: Colonnes d'un board (id, name, isDone) pour autocomplete /kanban.
+      operationId: botListTaskColumns
+      parameters:
+        - name: actorDiscordUserId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: boardId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Colonnes (id, name, isDone).
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+  /api/bot/v1/tasks/{id}/move:
+    patch:
+      tags:
+        - bot/tasks
+      summary: Deplace une carte Kanban (moveTaskCore). Emet task.moved. Idempotent.
+      operationId: botMoveTask
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [actorDiscordUserId, columnId]
+              properties:
+                actorDiscordUserId: { type: string }
+                columnId: { type: string, format: uuid }
+                position: { type: integer, minimum: 0 }
+      responses:
+        '200':
+          description: Carte deplacee.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+  /api/bot/v1/tasks/{id}/assign:
+    patch:
+      tags:
+        - bot/tasks
+      summary: (Des)assigne une carte Kanban (assignTaskCore). Emet task.assigned. Idempotent.
+      operationId: botAssignTask
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [actorDiscordUserId]
+              properties:
+                actorDiscordUserId: { type: string }
+                assignSelf: { type: boolean }
+                assigneeStaffId: { type: string, format: uuid, nullable: true }
+                assigneeDiscordUserId: { type: string }
+      responses:
+        '200':
+          description: Carte (des)assignee.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
   /api/bot/v1/staff-logs:
     get:
       tags:
@@ -9984,6 +10178,457 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '500':
           $ref: '#/components/responses/ServerError'
+  /api/admin/tasks/boards:
+    get:
+      tags:
+        - admin/tasks
+      summary: Liste des boards Kanban (colonnes ordonnees + compte de cartes).
+      operationId: adminListTaskBoards
+      security:
+        - StaffSession: []
+      parameters:
+        - name: includeArchived
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Boards.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags:
+        - admin/tasks
+      summary: Cree un board Kanban + ses 4 colonnes par defaut.
+      operationId: adminCreateTaskBoard
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+                description: { type: string }
+      responses:
+        '201':
+          description: Board cree.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/admin/tasks/boards/{id}:
+    get:
+      tags:
+        - admin/tasks
+      summary: Board complet (colonnes ordonnees, cartes triees par position).
+      operationId: adminGetTaskBoard
+      security:
+        - StaffSession: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Board complet.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags:
+        - admin/tasks
+      summary: Edite un board (name, description, position, is_archived).
+      operationId: adminUpdateTaskBoard
+      security:
+        - StaffSession: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                description: { type: string, nullable: true }
+                position: { type: integer }
+                is_archived: { type: boolean }
+      responses:
+        '200':
+          description: Board mis a jour.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags:
+        - admin/tasks
+      summary: Supprime un board (CASCADE colonnes + cartes).
+      operationId: adminDeleteTaskBoard
+      security:
+        - StaffSession: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Board supprime.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/admin/tasks/columns:
+    post:
+      tags:
+        - admin/tasks
+      summary: Cree une colonne dans un board (position = max+1).
+      operationId: adminCreateTaskColumn
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [boardId, name]
+              properties:
+                boardId: { type: string, format: uuid }
+                name: { type: string }
+                wipLimit: { type: integer, nullable: true }
+                isDone: { type: boolean }
+      responses:
+        '201':
+          description: Colonne creee.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/admin/tasks/columns/{id}:
+    patch:
+      tags:
+        - admin/tasks
+      summary: Edite une colonne (name, wipLimit, isDone, position/reorder).
+      operationId: adminUpdateTaskColumn
+      security:
+        - StaffSession: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                wipLimit: { type: integer, nullable: true }
+                isDone: { type: boolean }
+                position: { type: integer, minimum: 0 }
+      responses:
+        '200':
+          description: Colonne mise a jour.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags:
+        - admin/tasks
+      summary: Supprime une colonne. 409 column_not_empty si des cartes vivantes y sont.
+      operationId: adminDeleteTaskColumn
+      security:
+        - StaffSession: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Colonne supprimee.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Colonne non vide (code column_not_empty).
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+  /api/admin/tasks/tasks:
+    post:
+      tags:
+        - admin/tasks
+      summary: Cree une carte (createTaskCore). Emet task.created.
+      operationId: adminCreateTask
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [boardId, columnId, title]
+              properties:
+                boardId: { type: string, format: uuid }
+                columnId: { type: string, format: uuid }
+                title: { type: string }
+                description: { type: string }
+                priority: { type: string, enum: [low, medium, high, urgent] }
+                assigneeStaffId: { type: string, format: uuid, nullable: true }
+                dueDate: { type: string }
+                labels:
+                  type: array
+                  items: { type: string }
+      responses:
+        '201':
+          description: Carte creee.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/admin/tasks/tasks/{id}:
+    get:
+      tags:
+        - admin/tasks
+      summary: Detail d'une carte.
+      operationId: adminGetTask
+      security:
+        - StaffSession: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Carte.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags:
+        - admin/tasks
+      summary: Edite une carte (title, description, priority, dueDate, labels).
+      operationId: adminUpdateTask
+      security:
+        - StaffSession: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: { type: string }
+                description: { type: string, nullable: true }
+                priority: { type: string, enum: [low, medium, high, urgent] }
+                dueDate: { type: string, nullable: true }
+                labels:
+                  type: array
+                  items: { type: string }
+      responses:
+        '200':
+          description: Carte mise a jour.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags:
+        - admin/tasks
+      summary: Soft-delete d'une carte (deleted_at = now()).
+      operationId: adminDeleteTask
+      security:
+        - StaffSession: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Carte supprimee.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/admin/tasks/tasks/{id}/move:
+    patch:
+      tags:
+        - admin/tasks
+      summary: Deplace une carte (moveTaskCore). Emet task.moved. Idempotent.
+      operationId: adminMoveTask
+      security:
+        - StaffSession: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [columnId]
+              properties:
+                columnId: { type: string, format: uuid }
+                position: { type: integer, minimum: 0 }
+      responses:
+        '200':
+          description: Carte deplacee.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/admin/tasks/tasks/{id}/assign:
+    patch:
+      tags:
+        - admin/tasks
+      summary: (Des)assigne une carte (assignTaskCore). Emet task.assigned. Idempotent.
+      operationId: adminAssignTask
+      security:
+        - StaffSession: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [assigneeStaffId]
+              properties:
+                assigneeStaffId: { type: string, format: uuid, nullable: true }
+      responses:
+        '200':
+          description: Carte (des)assignee.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/admin/disputes:
     get:
       summary: List open match disputes across the tenant.

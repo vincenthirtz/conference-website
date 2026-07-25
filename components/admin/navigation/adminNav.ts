@@ -685,6 +685,22 @@ export const ADMIN_NAV: AdminNavNode[] = [
           accent: 'border-amber-500/30 from-amber-500/10 text-amber-300',
         },
       },
+      // Kanban interne staff-only (task_boards) : organisation du travail par
+      // board/colonne/carte. Exposé en top-bar Configuration ET en carte
+      // dashboard. Réutilise l'icône 'inbox' existante (pas de nouvel SVG).
+      {
+        id: 'task-board',
+        topBarLabel: 'Tâches',
+        href: '/admin/tasks',
+        minRole: 'admin',
+        card: {
+          order: 21,
+          titleKey: 'navTaskBoardTitle',
+          descKey: 'navTaskBoardDesc',
+          icon: 'inbox',
+          accent: 'border-indigo-500/30 from-indigo-500/10 text-indigo-300',
+        },
+      },
     ],
   },
 ];

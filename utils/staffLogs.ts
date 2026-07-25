@@ -362,6 +362,18 @@ export const STAFF_LOG_ACTION_LABELS: Record<StaffLogAction, string> = {
   import_mvp: 'MVP importé',
   // Partenaires / paramètres
   settings_update: 'Mise à jour paramètres',
+  // Kanban interne (task board)
+  task_board_create: 'Création tableau Kanban',
+  task_board_update: 'Modification tableau Kanban',
+  task_board_delete: 'Suppression tableau Kanban',
+  task_column_create: 'Création colonne Kanban',
+  task_column_update: 'Modification colonne Kanban',
+  task_column_delete: 'Suppression colonne Kanban',
+  task_create: 'Création tâche',
+  task_update: 'Modification tâche',
+  task_delete: 'Suppression tâche',
+  task_move: 'Déplacement tâche',
+  task_assign: 'Assignation tâche',
   // Verbes génériques
   create: 'Création',
   update: 'Modification',

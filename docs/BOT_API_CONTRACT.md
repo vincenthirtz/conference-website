@@ -229,26 +229,62 @@ CHECK constraint). The list below documents the names emitted by the website
 today. The bot must tolerate unknown names (treat them as no-ops) so the
 catalog can grow without forcing a bot deploy.
 
-| Event name                        | Emitted by                                                                                    | Payload `data` shape (high-level)                                                                                                              |
-| --------------------------------- | --------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| `match.starting`                  | `pages/api/admin/matches/[matchId].ts` (status → ongoing)                                     | `{ matchId, tournamentId?, scrimId?, team1Id, team2Id, scheduledAt, ..., enriched }`                                                           |
-| `match.scheduled`                 | Admin match meta update (`scheduled_at` set)                                                  | `{ matchId, scheduledAt, ..., enriched }`                                                                                                      |
-| `match.unscheduled`               | Admin match meta update (`scheduled_at` cleared)                                              | `{ matchId }`                                                                                                                                  |
-| `match.finished`                  | Score apply / admin                                                                           | `{ matchId, team1Score, team2Score, winnerTeamId }`                                                                                            |
-| `match.disputed`                  | Admin `POST .../dispute`                                                                      | `{ matchId, reason, openedBy }`                                                                                                                |
-| `match.dispute.resolved`          | Admin `POST .../resolve-dispute`                                                              | `{ matchId, resolution, resolvedBy }`                                                                                                          |
-| `dispute.sla_breached` (Lot 4)    | Cron `/api/cron/dispute-sla-check`                                                            | `{ matchId, tournamentId, disputeReason, disputeOpenedAt, ageMinutes, slaMinutes }`                                                            |
-| `checkin.nudge` (Lot 5)           | Admin `POST /api/admin/matches/[matchId]/checkin-nudge`                                       | `{ matchId, tournamentId, teamSide: 1 \| 2, scheduledAt, nudgedByStaffId, enriched }`                                                          |
-| `tournament.finalized` (Lot 1)    | Admin `POST /api/admin/tournament/[id]/finalize`                                              | `{ tournament_id, tournament_name, rankings: [{ team_id, team_name, rank, prize }, ...] }`                                                     |
-| `broadcast.state_changed` (Lot 7) | Admin `POST /api/admin/broadcast/state`                                                       | `{ runId, runSlug, state: { v: 1, on_air, lower_third, pip, scene, auto_director, scene_updated_at }, currentSegmentId, matchId }`             |
-| `news.published`                  | Admin / bot ingest                                                                            | `{ newsId, slug, title, tag, excerpt, imageUrl, publishedAt }`                                                                                 |
-| `registration.blacklisted`        | `utils/moderation/blacklist.ts` (`alertIfBlacklisted`) at register / team create / add-member | `{ context, matchedOn, strength, reason, matchCount, matches[], battleTag?, displayName?, discordUserId? }`                                    |
-| `registration.entity_blacklisted` | `utils/moderation/entityBlacklist.ts` (`alertIfEntityBlacklisted`) at team create             | `{ context, entityName, matchedOn: 'name', entityType, matchedName, strength, reason, matchCount, matches[] }`                                 |
-| `team.*` / `scrim.*` / `cast.*`   | various admin / bot routes                                                                    | see emitter call sites                                                                                                                         |
-| `scrim.planning.opened`           | `pages/api/admin/scrim-plannings/index.ts` (POST) — grille de dispos ouverte entre 2 équipes  | `{ planningId, title, game, status, team1, team2, horizonStart, horizonDays }`                                                                 |
-| `scrim.planning.validated`        | `pages/api/admin/scrim-plannings/[planningId]/validate.ts` — créneau validé → scrim créé      | `{ planningId, validatedSlot, scrimId, team1, team2 }` (le `scrim.scheduled` du scrim créé est émis en parallèle)                              |
-| `scrim.planning.reminder`         | `emitScrimPlanningEvent('scrim.planning.reminder', ...)` — relance : dispos encore manquantes | `{ planningId, title, game, status, team1, team2, horizonStart, horizonDays }` (fanout push/email : staff + capitaines/managers des 2 équipes) |
-| `event_segment.transitioned`      | Admin `/api/admin/events/.../segments/.../{start,skip,end}.ts` (Lot 2 run-of-show)            | `{ runId, segmentId, fromStatus, toStatus, tenantId, broadcastMessage, segment: { ord, type, title, durationMin, matchId } }`                  |
+| Event name                        | Emitted by                                                                                                                        | Payload `data` shape (high-level)                                                                                                              |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `match.starting`                  | `pages/api/admin/matches/[matchId].ts` (status → ongoing)                                                                         | `{ matchId, tournamentId?, scrimId?, team1Id, team2Id, scheduledAt, ..., enriched }`                                                           |
+| `match.scheduled`                 | Admin match meta update (`scheduled_at` set)                                                                                      | `{ matchId, scheduledAt, ..., enriched }`                                                                                                      |
+| `match.unscheduled`               | Admin match meta update (`scheduled_at` cleared)                                                                                  | `{ matchId }`                                                                                                                                  |
+| `match.finished`                  | Score apply / admin                                                                                                               | `{ matchId, team1Score, team2Score, winnerTeamId }`                                                                                            |
+| `match.disputed`                  | Admin `POST .../dispute`                                                                                                          | `{ matchId, reason, openedBy }`                                                                                                                |
+| `match.dispute.resolved`          | Admin `POST .../resolve-dispute`                                                                                                  | `{ matchId, resolution, resolvedBy }`                                                                                                          |
+| `dispute.sla_breached` (Lot 4)    | Cron `/api/cron/dispute-sla-check`                                                                                                | `{ matchId, tournamentId, disputeReason, disputeOpenedAt, ageMinutes, slaMinutes }`                                                            |
+| `checkin.nudge` (Lot 5)           | Admin `POST /api/admin/matches/[matchId]/checkin-nudge`                                                                           | `{ matchId, tournamentId, teamSide: 1 \| 2, scheduledAt, nudgedByStaffId, enriched }`                                                          |
+| `tournament.finalized` (Lot 1)    | Admin `POST /api/admin/tournament/[id]/finalize`                                                                                  | `{ tournament_id, tournament_name, rankings: [{ team_id, team_name, rank, prize }, ...] }`                                                     |
+| `broadcast.state_changed` (Lot 7) | Admin `POST /api/admin/broadcast/state`                                                                                           | `{ runId, runSlug, state: { v: 1, on_air, lower_third, pip, scene, auto_director, scene_updated_at }, currentSegmentId, matchId }`             |
+| `news.published`                  | Admin / bot ingest                                                                                                                | `{ newsId, slug, title, tag, excerpt, imageUrl, publishedAt }`                                                                                 |
+| `registration.blacklisted`        | `utils/moderation/blacklist.ts` (`alertIfBlacklisted`) at register / team create / add-member                                     | `{ context, matchedOn, strength, reason, matchCount, matches[], battleTag?, displayName?, discordUserId? }`                                    |
+| `registration.entity_blacklisted` | `utils/moderation/entityBlacklist.ts` (`alertIfEntityBlacklisted`) at team create                                                 | `{ context, entityName, matchedOn: 'name', entityType, matchedName, strength, reason, matchCount, matches[] }`                                 |
+| `team.*` / `scrim.*` / `cast.*`   | various admin / bot routes                                                                                                        | see emitter call sites                                                                                                                         |
+| `scrim.planning.opened`           | `pages/api/admin/scrim-plannings/index.ts` (POST) — grille de dispos ouverte entre 2 équipes                                      | `{ planningId, title, game, status, team1, team2, horizonStart, horizonDays }`                                                                 |
+| `scrim.planning.validated`        | `pages/api/admin/scrim-plannings/[planningId]/validate.ts` — créneau validé → scrim créé                                          | `{ planningId, validatedSlot, scrimId, team1, team2 }` (le `scrim.scheduled` du scrim créé est émis en parallèle)                              |
+| `scrim.planning.reminder`         | `emitScrimPlanningEvent('scrim.planning.reminder', ...)` — relance : dispos encore manquantes                                     | `{ planningId, title, game, status, team1, team2, horizonStart, horizonDays }` (fanout push/email : staff + capitaines/managers des 2 équipes) |
+| `event_segment.transitioned`      | Admin `/api/admin/events/.../segments/.../{start,skip,end}.ts` (Lot 2 run-of-show)                                                | `{ runId, segmentId, fromStatus, toStatus, tenantId, broadcastMessage, segment: { ord, type, title, durationMin, matchId } }`                  |
+| `task.created` (Kanban)           | `createTaskCore` — admin `POST /api/admin/tasks/tasks` OU bot `POST /api/bot/v1/tasks`                                            | `{ taskId, boardId, boardName, columnName, title, priority, assigneeStaffId?, assigneeDiscordUserId?, assigneeName?, actorLabel }`             |
+| `task.moved` (Kanban)             | `moveTaskCore` — admin `PATCH .../tasks/{id}/move` OU bot `PATCH /api/bot/v1/tasks/{id}/move`                                     | `{ taskId, boardName, title, fromColumnName, toColumnName, isDone, assigneeDiscordUserId?, assigneeName?, actorLabel }`                        |
+| `task.assigned` (Kanban)          | `assignTaskCore` — admin `PATCH .../tasks/{id}/assign` OU bot `PATCH /api/bot/v1/tasks/{id}/assign` (assigné non-null uniquement) | `{ taskId, boardName, title, assigneeStaffId, assigneeName, assigneeDiscordUserId?, actorLabel }`                                              |
+
+#### Kanban interne (`task.created` / `task.moved` / `task.assigned`)
+
+Tableau de tâches interne **staff-only** (tables `task_boards` / `task_columns`
+/ `tasks`, RLS default-deny — service_role uniquement). Ces trois events sont
+émis par le **cœur partagé** [`utils/taskBoard.ts`](../utils/taskBoard.ts), donc
+identiques que l'action vienne du back-office admin ou de la commande Discord
+`/kanban`.
+
+- `assigneeDiscordUserId` est résolu depuis `assignee_staff_id → staff.auth_user_id
+→ user_discord_links.discord_user_id` ; absent si l'assigné n'a pas lié son
+  Discord. `assigneeName` = `staff.display_name`.
+- `actorLabel` = nom d'affichage de l'acteur (staff back-office ou staff Discord).
+- `task.assigned` n'est **PAS** émis lors d'une désassignation (`assigneeStaffId
+= null`) — seul un assigné non-null déclenche l'event.
+- `task.moved` porte `isDone` = la colonne cible est-elle terminale (permet au bot
+  d'annoncer « tâche terminée »).
+
+**Endpoints bot** (tous exigent un acteur `actorDiscordUserId` **staff
+admin/owner** via `requireBotStaff` — 403 sinon) :
+
+| Méthode + path                        | Corps / query                                                                                                           | Réponse                                      |
+| ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| `GET /api/bot/v1/tasks/boards`        | query `actorDiscordUserId`                                                                                              | `{ boards: [{ id, name }], count }`          |
+| `GET /api/bot/v1/tasks/columns`       | query `actorDiscordUserId`, `boardId` (requis)                                                                          | `{ columns: [{ id, name, isDone }], count }` |
+| `GET /api/bot/v1/tasks`               | query `actorDiscordUserId`, `boardId?`, `columnId?`, `assignee=me?`, `q?`, `limit?`                                     | `{ tasks: [NormalizedTask], count }`         |
+| `POST /api/bot/v1/tasks`              | `{ actorDiscordUserId, boardId, columnId, title, description?, priority?, assigneeStaffId?, dueDate?, labels? }`        | `201 { task: NormalizedTask }`               |
+| `PATCH /api/bot/v1/tasks/{id}/move`   | `{ actorDiscordUserId, columnId, position? }` (idempotent)                                                              | `{ task: NormalizedTask }`                   |
+| `PATCH /api/bot/v1/tasks/{id}/assign` | `{ actorDiscordUserId, assignSelf?:true \| assigneeDiscordUserId? \| assigneeStaffId?(null=désassigner) }` (idempotent) | `{ task: NormalizedTask }`                   |
+
+`NormalizedTask` = `{ id, title, description, boardId, boardName, columnId,
+columnName, priority, assigneeStaffId, assigneeName, dueDate, labels }`.
+`assigneeDiscordUserId` non-staff sur `/assign` → `400 { code:'assignee_not_staff' }`.
 
 #### `event_segment.transitioned` (Lot 2 run-of-show)
 
@@ -679,6 +715,19 @@ body shapes live there. `Idem.` means the route honours `Idempotency-Key`.
 | [`moderation/blacklist-alert.ts`](../pages/api/bot/v1/moderation/blacklist-alert.ts) | POST            | yes    | `bot-moderation`           |
 | [`staff-logs.ts`](../pages/api/bot/v1/staff-logs.ts)                                 | GET             | —      | `bot-staff-logs`           |
 
+### Kanban interne (task board)
+
+Staff-only (`requireBotStaff`). Voir la section « Kanban interne » du catalogue
+d'events pour les corps/réponses détaillés.
+
+| Route                                                              | Methods  | Idem. | Rate-key            |
+| ------------------------------------------------------------------ | -------- | ----- | ------------------- |
+| [`tasks/index.ts`](../pages/api/bot/v1/tasks/index.ts)             | GET/POST | —     | `bot-tasks`         |
+| [`tasks/boards.ts`](../pages/api/bot/v1/tasks/boards.ts)           | GET      | —     | `bot-tasks-boards`  |
+| [`tasks/columns.ts`](../pages/api/bot/v1/tasks/columns.ts)         | GET      | —     | `bot-tasks-columns` |
+| [`tasks/[id]/move.ts`](../pages/api/bot/v1/tasks/[id]/move.ts)     | PATCH    | yes   | `bot-tasks-move`    |
+| [`tasks/[id]/assign.ts`](../pages/api/bot/v1/tasks/[id]/assign.ts) | PATCH    | yes   | `bot-tasks-assign`  |
+
 #### `GET /api/bot/v1/disputes/escalations`
 
 Liste enrichie des disputes en cours pour le board staff (slash
@@ -1104,13 +1153,13 @@ Le caster clique le bouton "Je confirme" du DM T-30. Marque
 
 ### Events queue (bot ↔ site eventual-consistency channel)
 
-| Route                                                                              | Methods | Idem. | Rate-key                | Tenant scope                                      |
-| ---------------------------------------------------------------------------------- | ------- | ----- | ----------------------- | ------------------------------------------------- |
-| [`events/pending.ts`](../pages/api/bot/v1/events/pending.ts)                       | GET     | —     | `bot-events-pending`    | `crossTenant: true` — `tenantId` returned per row |
-| [`events/handled.ts`](../pages/api/bot/v1/events/handled.ts)                       | POST    | no    | `bot-events-handled`    | per-tenant                                        |
-| [`events/[id]/ack.ts`](../pages/api/bot/v1/events/[id]/ack.ts)                     | POST    | yes   | `bot-events-ack`        | `crossTenant: true` — PK globally unique          |
-| [`reconcile/discord-orphans.ts`](../pages/api/bot/v1/reconcile/discord-orphans.ts) | GET     | —     | `bot-reconcile-orphans` | per-tenant                                        |
-| [`reconcile/team-channels.ts`](../pages/api/bot/v1/reconcile/team-channels.ts) | GET | — | `bot-reconcile-team-channels` | per-tenant |
+| Route                                                                              | Methods | Idem. | Rate-key                      | Tenant scope                                      |
+| ---------------------------------------------------------------------------------- | ------- | ----- | ----------------------------- | ------------------------------------------------- |
+| [`events/pending.ts`](../pages/api/bot/v1/events/pending.ts)                       | GET     | —     | `bot-events-pending`          | `crossTenant: true` — `tenantId` returned per row |
+| [`events/handled.ts`](../pages/api/bot/v1/events/handled.ts)                       | POST    | no    | `bot-events-handled`          | per-tenant                                        |
+| [`events/[id]/ack.ts`](../pages/api/bot/v1/events/[id]/ack.ts)                     | POST    | yes   | `bot-events-ack`              | `crossTenant: true` — PK globally unique          |
+| [`reconcile/discord-orphans.ts`](../pages/api/bot/v1/reconcile/discord-orphans.ts) | GET     | —     | `bot-reconcile-orphans`       | per-tenant                                        |
+| [`reconcile/team-channels.ts`](../pages/api/bot/v1/reconcile/team-channels.ts)     | GET     | —     | `bot-reconcile-team-channels` | per-tenant                                        |
 
 #### `GET /api/bot/v1/reconcile/team-channels`
 
@@ -2445,11 +2494,11 @@ admin/owner ; le bot agit via `DISCORD_BOT_ACTOR_ID`).
 **Body** — toutes les cles sont optionnelles ; chacune accepte un snowflake
 valide **ou** `null` (pour vider la colonne). Cle absente = champ non touche.
 
-| Cle body                 | Colonne DB                  | Objet Discord              |
-| ------------------------ | --------------------------- | -------------------------- |
-| `discordRoleId`          | `discord_role_id`           | Role d'equipe (mentions)   |
-| `discordChannelId`       | `discord_channel_id`        | Salon TEXTE prive d'equipe |
-| `discordVoiceChannelId`  | `discord_voice_channel_id`  | Salon VOCAL prive d'equipe |
+| Cle body                | Colonne DB                 | Objet Discord              |
+| ----------------------- | -------------------------- | -------------------------- |
+| `discordRoleId`         | `discord_role_id`          | Role d'equipe (mentions)   |
+| `discordChannelId`      | `discord_channel_id`       | Salon TEXTE prive d'equipe |
+| `discordVoiceChannelId` | `discord_voice_channel_id` | Salon VOCAL prive d'equipe |
 
 **Rate limit** : 30/min (`bot-team-discord`). **Idempotency** : oui.
 
@@ -2583,19 +2632,19 @@ fallback sur le premier tenant accessible par slug ASC, puis sur
 Cookie `staff_active_tenant_id` : `HttpOnly; SameSite=Lax; Path=/`,
 session cookie (pas de Max-Age), `Secure` ajoute en production.
 
-| Route                                                                                                     | Methods            | Min role       | Notes                                                                                                                             |
-| --------------------------------------------------------------------------------------------------------- | ------------------ | -------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| [`active-tenant.ts`](../pages/api/admin/active-tenant.ts)                                                 | GET, POST          | caster         | GET → tenant courant + source. POST → switch + Set-Cookie.                                                                        |
-| [`tenants/accessible.ts`](../pages/api/admin/tenants/accessible.ts)                                       | GET                | caster         | Tenants accessibles au staff (pour dropdown switcher).                                                                            |
-| [`tenants/index.ts`](../pages/api/admin/tenants/index.ts)                                                 | GET, POST          | admin | GET liste globale + guild_count/staff_count. POST cree tenant.                                                                    |
+| Route                                                                                                     | Methods            | Min role     | Notes                                                                                                                         |
+| --------------------------------------------------------------------------------------------------------- | ------------------ | ------------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| [`active-tenant.ts`](../pages/api/admin/active-tenant.ts)                                                 | GET, POST          | caster       | GET → tenant courant + source. POST → switch + Set-Cookie.                                                                    |
+| [`tenants/accessible.ts`](../pages/api/admin/tenants/accessible.ts)                                       | GET                | caster       | Tenants accessibles au staff (pour dropdown switcher).                                                                        |
+| [`tenants/index.ts`](../pages/api/admin/tenants/index.ts)                                                 | GET, POST          | admin        | GET liste globale + guild_count/staff_count. POST cree tenant.                                                                |
 | [`tenants/[id].ts`](../pages/api/admin/tenants/[id].ts)                                                   | GET, PATCH, DELETE | caster/admin | GET = admin+ OU staff du tenant. PATCH/DELETE = admin+. Slug immuable. DELETE = soft (is_active=false), `conference` protege. |
-| [`tenants/[id]/discord-config/index.ts`](../pages/api/admin/tenants/[id]/discord-config/index.ts)         | GET                | caster         | Liste configs par guild du tenant.                                                                                                |
-| [`tenants/[id]/discord-config/[guildId].ts`](../pages/api/admin/tenants/[id]/discord-config/[guildId].ts) | PUT                | caster         | Upsert config Discord. Verifie que guildId est dans le tenant.                                                                    |
+| [`tenants/[id]/discord-config/index.ts`](../pages/api/admin/tenants/[id]/discord-config/index.ts)         | GET                | caster       | Liste configs par guild du tenant.                                                                                            |
+| [`tenants/[id]/discord-config/[guildId].ts`](../pages/api/admin/tenants/[id]/discord-config/[guildId].ts) | PUT                | caster       | Upsert config Discord. Verifie que guildId est dans le tenant.                                                                |
 | [`tenants/[id]/staff/index.ts`](../pages/api/admin/tenants/[id]/staff/index.ts)                           | GET, POST          | caster/admin | GET = staff du tenant ou admin+. POST = admin+.                                                                               |
-| [`tenants/[id]/staff/[staffId].ts`](../pages/api/admin/tenants/[id]/staff/[staffId].ts)                   | DELETE             | admin | 409 si on retire le dernier admin du tenant.                                                                                      |
-| [`pending-guild-links/index.ts`](../pages/api/admin/pending-guild-links/index.ts)                         | GET                | admin | Guilds en attente de linkage (rempli par `POST /bot/v1/tenants/link-guild`).                                                      |
-| [`pending-guild-links/[guildId]/claim.ts`](../pages/api/admin/pending-guild-links/[guildId]/claim.ts)     | POST               | admin | Body `{ tenant_id }` OU `{ new_tenant: { slug, name, default_locale? } }`. Cree row dans `discord_guilds` + delete pending.       |
-| [`pending-guild-links/[guildId]/index.ts`](../pages/api/admin/pending-guild-links/[guildId]/index.ts)     | DELETE             | admin | Rejette la demande (delete pending). V2 TODO : signaler au bot pour `guild.leave()`.                                              |
+| [`tenants/[id]/staff/[staffId].ts`](../pages/api/admin/tenants/[id]/staff/[staffId].ts)                   | DELETE             | admin        | 409 si on retire le dernier admin du tenant.                                                                                  |
+| [`pending-guild-links/index.ts`](../pages/api/admin/pending-guild-links/index.ts)                         | GET                | admin        | Guilds en attente de linkage (rempli par `POST /bot/v1/tenants/link-guild`).                                                  |
+| [`pending-guild-links/[guildId]/claim.ts`](../pages/api/admin/pending-guild-links/[guildId]/claim.ts)     | POST               | admin        | Body `{ tenant_id }` OU `{ new_tenant: { slug, name, default_locale? } }`. Cree row dans `discord_guilds` + delete pending.   |
+| [`pending-guild-links/[guildId]/index.ts`](../pages/api/admin/pending-guild-links/[guildId]/index.ts)     | DELETE             | admin        | Rejette la demande (delete pending). V2 TODO : signaler au bot pour `guild.leave()`.                                          |
 
 Idempotence : les mutations POST/PATCH/PUT/DELETE supportent
 l'header `Idempotency-Key` via `withAdminIdempotency` (cache scope =
@@ -2640,10 +2689,10 @@ détaillés dans `components.schemas.DraftEngineError` de `openapi.yaml`).
 
 | Route                                                                                               | Methods     | Min role | Notes                                                                                                                                                                                        |
 | --------------------------------------------------------------------------------------------------- | ----------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`drafts/index.ts`](../pages/api/admin/matches/[matchId]/drafts/index.ts)                           | POST        | admin | Init draft pour `gameIndex`. Résout le `game` depuis `tournaments.game`. Seed les `match_draft_steps` depuis `config/games/<slug>.draftFlows[format]`. 409 si déjà existant.                 |
-| [`drafts/[gameIndex]/index.ts`](../pages/api/admin/matches/[matchId]/drafts/[gameIndex]/index.ts)   | GET, DELETE | admin | GET = read assemblé du `DraftState`. DELETE = drop le draft + ses steps (recovery sans SQL). Refuse `in_progress` sauf `?force=1` → 409 `DRAFT_NOT_PENDING`.                                 |
-| [`drafts/[gameIndex]/side.ts`](../pages/api/admin/matches/[matchId]/drafts/[gameIndex]/side.ts)     | PATCH       | admin | Assigne `team1_side` + `team2_side`. Enum game-specific (lol `blue/red`, dota2 `radiant/dire`). Pre-step uniquement.                                                                         |
-| [`drafts/[gameIndex]/commit.ts`](../pages/api/admin/matches/[matchId]/drafts/[gameIndex]/commit.ts) | POST        | admin | Commit un ban/pick. Transition `pending → in_progress` sur step 1, auto-complete sur dernier step. Stamp `deadline_at` du step suivant. Bloque hero déjà banni/picked + fearless cross-game. |
+| [`drafts/index.ts`](../pages/api/admin/matches/[matchId]/drafts/index.ts)                           | POST        | admin    | Init draft pour `gameIndex`. Résout le `game` depuis `tournaments.game`. Seed les `match_draft_steps` depuis `config/games/<slug>.draftFlows[format]`. 409 si déjà existant.                 |
+| [`drafts/[gameIndex]/index.ts`](../pages/api/admin/matches/[matchId]/drafts/[gameIndex]/index.ts)   | GET, DELETE | admin    | GET = read assemblé du `DraftState`. DELETE = drop le draft + ses steps (recovery sans SQL). Refuse `in_progress` sauf `?force=1` → 409 `DRAFT_NOT_PENDING`.                                 |
+| [`drafts/[gameIndex]/side.ts`](../pages/api/admin/matches/[matchId]/drafts/[gameIndex]/side.ts)     | PATCH       | admin    | Assigne `team1_side` + `team2_side`. Enum game-specific (lol `blue/red`, dota2 `radiant/dire`). Pre-step uniquement.                                                                         |
+| [`drafts/[gameIndex]/commit.ts`](../pages/api/admin/matches/[matchId]/drafts/[gameIndex]/commit.ts) | POST        | admin    | Commit un ban/pick. Transition `pending → in_progress` sur step 1, auto-complete sur dernier step. Stamp `deadline_at` du step suivant. Bloque hero déjà banni/picked + fearless cross-game. |
 
 ### Timer serveur + auto-pick (Lot 3)
 
@@ -2656,8 +2705,8 @@ migration `enable_realtime_on_match_drafts.sql` ajoute `match_drafts`
 
 | Route                                                                                                     | Methods   | Auth       | Notes                                                                                                                                                                            |
 | --------------------------------------------------------------------------------------------------------- | --------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`drafts/[gameIndex]/start.ts`](../pages/api/admin/matches/[matchId]/drafts/[gameIndex]/start.ts)         | POST      | admin | Transition explicite `pending → in_progress`. Stamp `started_at` + `deadline_at` sur step 1. Exige sides set.                                                                    |
-| [`drafts/[gameIndex]/auto-pick.ts`](../pages/api/admin/matches/[matchId]/drafts/[gameIndex]/auto-pick.ts) | POST      | admin | Trigger manuel : si `deadline_at < now()`, pick le premier hero éligible (alphabétique) avec `auto_picked=true`. Sinon `{ autoPicked: false }`.                                  |
+| [`drafts/[gameIndex]/start.ts`](../pages/api/admin/matches/[matchId]/drafts/[gameIndex]/start.ts)         | POST      | admin      | Transition explicite `pending → in_progress`. Stamp `started_at` + `deadline_at` sur step 1. Exige sides set.                                                                    |
+| [`drafts/[gameIndex]/auto-pick.ts`](../pages/api/admin/matches/[matchId]/drafts/[gameIndex]/auto-pick.ts) | POST      | admin      | Trigger manuel : si `deadline_at < now()`, pick le premier hero éligible (alphabétique) avec `auto_picked=true`. Sinon `{ autoPicked: false }`.                                  |
 | [`pages/api/cron/draft-auto-pick.ts`](../pages/api/cron/draft-auto-pick.ts)                               | POST, GET | CronSecret | Schedule `* * * * *` (1 min). Scan cross-tenant des steps `deadline_at < now AND hero_id IS NULL`, applique l'auto-pick. Heartbeat `site_settings.last_cron_draft_auto_pick_at`. |
 
 Mécanique :
@@ -2693,8 +2742,8 @@ Page admin staff-protected qui pilote un draft en live, branchée sur
 Supabase Realtime pour fan-out immédiat des bans/picks. Pas de bot, pas
 d'endpoint nouveau — purement orchestration côté client des Lots 0-3.
 
-| Route                                                                                                           | Auth                                    | Notes                                                                                                                                                                                                                                                                                                                |
-| --------------------------------------------------------------------------------------------------------------- | --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Route                                                                                                           | Auth                                  | Notes                                                                                                                                                                                                                                                                                                                |
+| --------------------------------------------------------------------------------------------------------------- | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [`pages/admin/matches/[matchId]/draft/[gameIndex].tsx`](../pages/admin/matches/[matchId]/draft/[gameIndex].tsx) | `withStaffPage('admin')` + loader SSR | Captain UI : init → sides → start → boucle commit (clic sur hero) avec auto-pick fallback. Hero pool fetch via `/api/games/[slug]/heroes`. **SSR pré-valide** que le match existe + tournament.game ∈ {lol, dota2} ; sinon `blockReason` prop → vue "Draft indisponible" propre (au lieu d'un toast 400 après clic). |
 
 Hooks dédiés :
@@ -2776,10 +2825,10 @@ Tables RLS **service-role-only** → lues via `supabaseAdmin`, mais toujours
 scopées strict par `tenant_id` (+ `tournament_id`). Unité monétaire : **centimes**
 partout (body, HelloAsso, DB) — pas d'arrondi flottant euros→centimes.
 
-| Route                                                                                                 | Methods        | Auth                           | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| ----------------------------------------------------------------------------------------------------- | -------------- | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`pages/api/helloasso/prize-checkout.ts`](../pages/api/helloasso/prize-checkout.ts)                   | POST           | public                         | Contribuer à une cagnotte. Body `{ tournamentId? \| prizePoolId?, amountCents (100..10 000 000), contributorName?, email?, message?, isAnonymous? }` — au moins un de `tournamentId`/`prizePoolId` (si les deux, `prizePoolId` gagne). `200 { redirectUrl }`. `400 { error, code: INVALID_BODY \| POOL_NOT_FOUND \| POOL_CLOSED }`. `502` si HelloAsso amont échoue. Rate-limit **10 / IP / heure** (`helloasso-prize-checkout`). Persiste `prize_pool_checkouts` (pending) + attache `metadata:{ kind:'prize_pool', prize_pool_id, tenant_id }`.                                  |
-| [`pages/api/tournaments/[id]/prize-pool.ts`](../pages/api/tournaments/[id]/prize-pool.ts)             | GET            | public                         | Jauge publique. `200 { exists, isOpen, currency, baseAmountCents, raisedAmountCents, totalCents, goalAmountCents\|null, contributorCount, recentContributors:[{ name\|null, amountCents, message\|null, createdAt }] }`. Aucune cagnotte → même forme, `exists:false`, zéros, `[]`. Jamais d'email ; contributeur anonyme → `name:null`. `Cache-Control: s-maxage=60`. Rate-limit 60 / IP / min (`prize-pool-public`).                                                                                                                                                             |
+| Route                                                                                                 | Methods        | Auth                         | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| ----------------------------------------------------------------------------------------------------- | -------------- | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`pages/api/helloasso/prize-checkout.ts`](../pages/api/helloasso/prize-checkout.ts)                   | POST           | public                       | Contribuer à une cagnotte. Body `{ tournamentId? \| prizePoolId?, amountCents (100..10 000 000), contributorName?, email?, message?, isAnonymous? }` — au moins un de `tournamentId`/`prizePoolId` (si les deux, `prizePoolId` gagne). `200 { redirectUrl }`. `400 { error, code: INVALID_BODY \| POOL_NOT_FOUND \| POOL_CLOSED }`. `502` si HelloAsso amont échoue. Rate-limit **10 / IP / heure** (`helloasso-prize-checkout`). Persiste `prize_pool_checkouts` (pending) + attache `metadata:{ kind:'prize_pool', prize_pool_id, tenant_id }`.                                  |
+| [`pages/api/tournaments/[id]/prize-pool.ts`](../pages/api/tournaments/[id]/prize-pool.ts)             | GET            | public                       | Jauge publique. `200 { exists, isOpen, currency, baseAmountCents, raisedAmountCents, totalCents, goalAmountCents\|null, contributorCount, recentContributors:[{ name\|null, amountCents, message\|null, createdAt }] }`. Aucune cagnotte → même forme, `exists:false`, zéros, `[]`. Jamais d'email ; contributeur anonyme → `name:null`. `Cache-Control: s-maxage=60`. Rate-limit 60 / IP / min (`prize-pool-public`).                                                                                                                                                             |
 | [`pages/api/admin/tournaments/[id]/prize-pool.ts`](../pages/api/admin/tournaments/[id]/prize-pool.ts) | GET, PUT, POST | `withStaffRoute(_, 'admin')` | GET → `{ pool: {id, tournament_id, tenant_id, title, currency, goal_amount_cents, base_amount_cents, raised_amount_cents, is_open, total_cents, created_at, updated_at} \| null, contributions:[{id, amount_cents, contributor_name, is_anonymous, message, helloasso_payment_id, checkout_intent_id, created_at}], contributorCount }`. PUT/POST body `{ title?, goal_amount_cents?:int\|null, base_amount_cents?:int, is_open?:bool }` → `201` (create) / `200` (update) `{ pool }`. `raised_amount_cents` jamais modifiable ici. `Cache-Control: no-store`. `staff_logs` écrit. |
 
 **Webhook — branche prize pool.** `POST /api/helloasso/webhook` (déjà documenté

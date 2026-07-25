@@ -202,6 +202,18 @@ export type StaffLogAction =
   | 'import_mvp'
   // --- Partenaires / paramètres ---
   | 'settings_update'
+  // --- Kanban interne (task board) ---
+  | 'task_board_create'
+  | 'task_board_update'
+  | 'task_board_delete'
+  | 'task_column_create'
+  | 'task_column_update'
+  | 'task_column_delete'
+  | 'task_create'
+  | 'task_update'
+  | 'task_delete'
+  | 'task_move'
+  | 'task_assign'
   // --- Verbes génériques (endpoints à statut / actions polyvalentes) ---
   | 'create'
   | 'update'
