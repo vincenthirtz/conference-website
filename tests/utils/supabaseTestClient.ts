@@ -8,6 +8,42 @@ const serviceRoleKey =
   process.env.NEXT_SUPABASE_SERVICE_ROLE_KEY ||
   '';
 
+// RÈGLE DURE : les tests e2e ne doivent JAMAIS seeder la Supabase de PRODUCTION.
+// Ce module est le SEUL point d'accès service-role des e2e, donc on bloque ici,
+// à la source. Politique :
+//   - Supabase LOCALE (supabase start)      → autorisé
+//   - projet PROD (owwomenscup / yhfdhp…)    → REFUSÉ EN ABSOLU (aucun override)
+//   - tout autre remote (projet de test)     → refusé sauf ALLOW_E2E_REMOTE_SUPABASE=1
+const isLocalSupabase =
+  /^https?:\/\/(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\]|kong)(:\d+)?/i.test(
+    supabaseUrl
+  ) || supabaseUrl.includes('.supabase.internal');
+
+// Ref/hôte du projet de PRODUCTION — jamais seedable par les e2e.
+const PROD_SUPABASE_MARKERS = ['yhfdhpqgmazfxyyklomp', 'owwomenscup'];
+const isProdSupabase = PROD_SUPABASE_MARKERS.some((m) =>
+  supabaseUrl.includes(m)
+);
+
+if (serviceRoleKey && supabaseUrl && !isLocalSupabase) {
+  const masked = supabaseUrl.replace(/(https?:\/\/[a-z0-9]{6}).*/i, '$1…');
+  if (isProdSupabase) {
+    throw new Error(
+      `[tests] REFUS ABSOLU: les tests e2e ne doivent JAMAIS seeder la Supabase de PRODUCTION (${masked}). ` +
+        'Lancez une Supabase LOCALE (`supabase start`) et pointez ' +
+        'TEST_SUPABASE_URL + TEST_SUPABASE_SERVICE_ROLE_KEY dessus. ' +
+        'Aucun override ne débloque la prod.'
+    );
+  }
+  if (process.env.ALLOW_E2E_REMOTE_SUPABASE !== '1') {
+    throw new Error(
+      `[tests] REFUS: seed e2e contre une Supabase distante (${masked}). ` +
+        'Utilisez une Supabase LOCALE, ou un projet de TEST dédié avec ' +
+        'ALLOW_E2E_REMOTE_SUPABASE=1 (jamais la prod).'
+    );
+  }
+}
+
 const envReady = Boolean(supabaseUrl && serviceRoleKey);
 
 if (!envReady) {
