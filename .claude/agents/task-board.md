@@ -48,6 +48,14 @@ Keep the two sides in lockstep. **The site is canonical**; the bot consumes it.
 - Due reminders: `pages/api/cron/task-due-reminders.ts` (cron-secret auth, J-1: `due_date = CURRENT_DATE + 1`, non-done column) → emits `task.due_soon`. Wired as a Netlify scheduled function `netlify/functions/task-due-reminders-cron.ts` at `0 8 * * *` (netlify.toml). Bot handler `handleTaskDueSoon` in `kanban-events.js`.
 - Comment mutations log `task_comment_create` / `task_comment_delete`; checklist toggles are NOT logged (too noisy).
 
+## v3 extras (colored labels, WIP, my-tasks, activity, digest)
+
+- Table `task_labels(id, tenant_id, board_id→CASCADE, name, color CHECK '^#[0-9a-fA-F]{6}$', position, UNIQUE(board_id,name))`. Cards still store label NAMES in `tasks.labels text[]`; `task_labels` carries the color per name (join by name; undefined name → neutral). Rename cascades into `tasks.labels[]`; delete leaves the name (neutral).
+- Admin API: `labels.ts` (POST), `labels/[id].ts` (PATCH/DELETE); board detail returns `board.labels`. `my.ts` (GET, cards assigned to `ctx.staff.id` across boards). `tasks/[id]/activity.ts` (GET, reads `staff_logs` by task — card actions by `entity_id=taskId`, comment actions by `payload->>task_id`).
+- **WIP guard** lives in `moveTaskCore` only (admin+bot inherit): moving into a different column at/over `wip_limit` → `409 { code:'wip_exceeded', limit, current }`. Reorder same-column and create are NOT guarded.
+- Digest: `pages/api/cron/task-board-digest.ts` (cron-secret) → emits ONE `task.digest` per tenant `{ boards:[{ boardId, boardName, total, overdue, dueToday, columns:[{name,count}] }] }`. Netlify scheduled `task-board-digest-cron.ts` at `30 7 * * *`. Bot handler `handleTaskDigest`; `/kanban deplacer` surfaces the WIP 409.
+- **Gotcha (fixed)**: boards share identical default column names — the UI MUST clear stale `detail` when `activeBoardId` changes (`setDetail(prev => prev?.id === activeBoardId ? prev : null)`), else a card gets created against the previous board's column → `400 column_not_in_board`. Keep this guard.
+
 ## Data model (exact)
 
 - `task_boards(id, tenant_id NOT NULL, name, description, position, is_archived, created_by→staff, created_at, updated_at)`
