@@ -252,7 +252,8 @@ catalog can grow without forcing a bot deploy.
 | `task.created` (Kanban)           | `createTaskCore` — admin `POST /api/admin/tasks/tasks` OU bot `POST /api/bot/v1/tasks`                                            | `{ taskId, boardId, boardName, columnName, title, priority, assigneeStaffId?, assigneeDiscordUserId?, assigneeName?, actorLabel }`             |
 | `task.moved` (Kanban)             | `moveTaskCore` — admin `PATCH .../tasks/{id}/move` OU bot `PATCH /api/bot/v1/tasks/{id}/move`                                     | `{ taskId, boardName, title, fromColumnName, toColumnName, isDone, assigneeDiscordUserId?, assigneeName?, actorLabel }`                        |
 | `task.assigned` (Kanban)          | `assignTaskCore` — admin `PATCH .../tasks/{id}/assign` OU bot `PATCH /api/bot/v1/tasks/{id}/assign` (assigné non-null uniquement) | `{ taskId, boardName, title, assigneeStaffId, assigneeName, assigneeDiscordUserId?, actorLabel }`                                              |
-| `task.due_soon` (Kanban)          | Cron `/api/cron/task-due-reminders` — carte due J-1, hors colonne terminale                                                      | `{ taskId, boardName, title, dueDate, columnName, priority, assigneeStaffId?, assigneeName?, assigneeDiscordUserId? }`                         |
+| `task.due_soon` (Kanban)          | Cron `/api/cron/task-due-reminders` — carte due J-1, hors colonne terminale                                                       | `{ taskId, boardName, title, dueDate, columnName, priority, assigneeStaffId?, assigneeName?, assigneeDiscordUserId? }`                         |
+| `task.digest` (Kanban)            | Cron `/api/cron/task-board-digest` — digest quotidien, **un event par tenant**                                                    | `{ boards: [{ boardId, boardName, total, overdue, dueToday, columns: [{ name, count }] }] }`                                                   |
 
 #### Kanban interne (`task.created` / `task.moved` / `task.assigned`)
 
@@ -279,20 +280,66 @@ identiques que l'action vienne du back-office admin ou de la commande Discord
   Kanban (absent si l'assigné n'a pas lié son Discord, ou si la carte n'a pas
   d'assigné). Auth cron : `Authorization: Bearer <CRON_SECRET>` **ou**
   `?secret=<CRON_SECRET>` ; réponse `{ processed, emitted }`.
+- `task.digest` est émis par le **cron** [`/api/cron/task-board-digest`](../pages/api/cron/task-board-digest.ts)
+  (Netlify scheduled function). Une passe quotidienne agrège, **par tenant**, l'état
+  de tous ses boards **non archivés** : pour chaque board `total` (cartes vivantes),
+  `columns: [{ name, count }]` (compte par colonne, ordre `position`), `overdue`
+  (`due_date < CURRENT_DATE`, colonne non terminale, non supprimée) et `dueToday`
+  (`due_date = CURRENT_DATE`, colonne non terminale). **UN** event `task.digest`
+  par tenant (payload `{ boards: [...] }`), pas un event par board. Auth cron
+  identique ; réponse `{ emitted, boards }` (`emitted` = nombre de tenants notifiés,
+  `boards` = nombre total de boards agrégés).
+
+**Garde WIP sur le déplacement** — `moveTaskCore` refuse un déplacement **vers une
+autre colonne** dont la `wip_limit` est atteinte : si la colonne cible contient déjà
+`>= wip_limit` cartes vivantes (la carte déplacée exclue du compte), l'appel renvoie
+`409 { error, code: 'wip_exceeded', limit, current }` (`limit` = plafond de la
+colonne, `current` = cartes déjà présentes). Vaut pour l'admin
+(`PATCH /api/admin/tasks/tasks/{id}/move`) **et** le bot
+(`PATCH /api/bot/v1/tasks/{id}/move`). Un **reorder dans la même colonne** n'est
+jamais bloqué ; la **création** de carte (`createTaskCore`) n'est pas gardée (saisie
+de backlog volontaire).
+
+**Labels colorés (admin uniquement)** — catalogue de définitions de labels par board
+(table `task_labels`, RLS default-deny, service_role). Le lien carte ↔ label est par
+**NOM** : `tasks.labels[]` stocke les noms bruts, `task_labels` porte la couleur +
+position de chaque nom ; un nom présent sur une carte sans définition retombe en
+couleur neutre côté UI.
+
+| Méthode + path                        | Corps                          | Réponse                                                                                                                                                                        |
+| ------------------------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `POST /api/admin/tasks/labels`        | `{ boardId, name, color }`     | `201 { label: { id, name, color, position } }` (position=max+1) ; `409 { code:'label_exists' }` si (board,name) pris ; loggue `task_label_create`                              |
+| `PATCH /api/admin/tasks/labels/{id}`  | `{ name?, color?, position? }` | `200 { label }` ; si `name` change → **cascade** le rename dans `tasks.labels[]` des cartes du board ; `409 { code:'label_exists' }` en collision ; loggue `task_label_update` |
+| `DELETE /api/admin/tasks/labels/{id}` | —                              | `200 { success: true }` ; **ne strippe PAS** le nom des cartes (redevient neutre) ; loggue `task_label_delete`                                                                 |
+
+Le détail board `GET /api/admin/tasks/boards/{id}` renvoie désormais
+`labels: [{ id, name, color, position }]` (définitions du board, triées par position).
+
+**Vue « Mes tâches » (admin)** — `GET /api/admin/tasks/my` : toutes les cartes
+vivantes assignées au staff courant, **tous boards du tenant**, chacune enrichie de
+`boardName` / `columnName` / `columnIsDone` / `dueDate`. Tri : `dueDate` asc (null en
+dernier), puis priorité (urgent > high > medium > low). Réponse `{ tasks: [...] }`.
+
+**Timeline d'activité de carte (admin)** — `GET /api/admin/tasks/tasks/{id}/activity` :
+historique `staff_logs` de la carte, `created_at` DESC. Agrège les actions « carte »
+(`entity_type='task'`, `entity_id=taskId`) **et** les actions « commentaire »
+(rattachées via `payload.task_id`). Réponse
+`{ activity: [{ action, actorName, createdAt, payload }] }` — action **brute** +
+payload ; l'humanisation des libellés se fait côté UI.
 
 **Extras de carte (commentaires + checklist)** — endpoints **admin uniquement**
 (pas d'exposition bot), `withStaffRoute('admin')`, tables `task_comments` /
 `task_checklist_items` (RLS default-deny, service_role) :
 
-| Méthode + path                                 | Corps         | Réponse                                                                 |
-| ---------------------------------------------- | ------------- | ---------------------------------------------------------------------- |
-| `GET /api/admin/tasks/tasks/{id}/comments`     | —             | `{ comments: [{ id, body, authorStaffId, authorName, createdAt }] }`   |
-| `POST /api/admin/tasks/tasks/{id}/comments`    | `{ body }`    | `201 { comment }` (auteur = staff courant ; loggue `task_comment_create`) |
-| `DELETE /api/admin/tasks/comments/{id}`        | —             | `200 { success: true }` (loggue `task_comment_delete`)                 |
-| `GET /api/admin/tasks/tasks/{id}/checklist`    | —             | `{ items: [{ id, label, isDone, position }] }` (triés par position)    |
-| `POST /api/admin/tasks/tasks/{id}/checklist`   | `{ label }`   | `201 { item }` (position = max+1)                                       |
-| `PATCH /api/admin/tasks/checklist/{id}`        | `{ label?, isDone?, position? }` | `200 { item }`                                     |
-| `DELETE /api/admin/tasks/checklist/{id}`       | —             | `200 { success: true }`                                                |
+| Méthode + path                               | Corps                            | Réponse                                                                   |
+| -------------------------------------------- | -------------------------------- | ------------------------------------------------------------------------- |
+| `GET /api/admin/tasks/tasks/{id}/comments`   | —                                | `{ comments: [{ id, body, authorStaffId, authorName, createdAt }] }`      |
+| `POST /api/admin/tasks/tasks/{id}/comments`  | `{ body }`                       | `201 { comment }` (auteur = staff courant ; loggue `task_comment_create`) |
+| `DELETE /api/admin/tasks/comments/{id}`      | —                                | `200 { success: true }` (loggue `task_comment_delete`)                    |
+| `GET /api/admin/tasks/tasks/{id}/checklist`  | —                                | `{ items: [{ id, label, isDone, position }] }` (triés par position)       |
+| `POST /api/admin/tasks/tasks/{id}/checklist` | `{ label }`                      | `201 { item }` (position = max+1)                                         |
+| `PATCH /api/admin/tasks/checklist/{id}`      | `{ label?, isDone?, position? }` | `200 { item }`                                                            |
+| `DELETE /api/admin/tasks/checklist/{id}`     | —                                | `200 { success: true }`                                                   |
 
 Le détail carte `GET /api/admin/tasks/tasks/{id}` inclut désormais `comments: [...]`
 et `checklist: [...]` complets ; le détail board `GET /api/admin/tasks/boards/{id}`

@@ -59,12 +59,13 @@ async function handler(
   });
 
   if (!result.ok) {
-    return res
-      .status(result.status)
-      .json({
-        error: result.error,
-        ...(result.code ? { code: result.code } : {}),
-      });
+    return res.status(result.status).json({
+      error: result.error,
+      ...(result.code ? { code: result.code } : {}),
+      ...(result.code === 'wip_exceeded'
+        ? { limit: result.limit, current: result.current }
+        : {}),
+    });
   }
   return res.status(200).json({ task: result.task });
 }

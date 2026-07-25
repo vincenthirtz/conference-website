@@ -67,6 +67,7 @@ export const KNOWN_TABLES: readonly string[] = [
   'tasks',
   'task_comments',
   'task_checklist_items',
+  'task_labels',
 ];
 
 /**

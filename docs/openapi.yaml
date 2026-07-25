@@ -10849,6 +10849,192 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+  /api/admin/tasks/labels:
+    post:
+      tags:
+        - admin/tasks
+      summary: Cree une definition de label coloree pour un board (position=max+1).
+      operationId: adminCreateTaskLabel
+      description: |
+        Catalogue de labels colores (table `task_labels`). Le lien carte <-> label
+        se fait par NOM : `tasks.labels[]` stocke les noms bruts, cette table porte
+        la couleur/position de chaque nom. 409 `label_exists` si (board, name) est
+        deja pris.
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [boardId, name, color]
+              properties:
+                boardId: { type: string, format: uuid }
+                name: { type: string, minLength: 1, maxLength: 40 }
+                color:
+                  type: string
+                  pattern: '^#[0-9a-fA-F]{6}$'
+                  description: Couleur hex '#rrggbb'.
+      responses:
+        '201':
+          description: '`{ label: { id, name, color, position } }`.'
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: '`{ error, code: "label_exists" }` — (board, name) deja pris.'
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+  /api/admin/tasks/labels/{id}:
+    patch:
+      tags:
+        - admin/tasks
+      summary: Edite un label (name, color, position). Cascade le rename sur les cartes.
+      operationId: adminUpdateTaskLabel
+      description: |
+        Si `name` change, le renommage est repercute dans `tasks.labels[]` de
+        toutes les cartes du board (jointure par nom). 409 `label_exists` si le
+        nouveau nom entre en collision dans le board.
+      security:
+        - StaffSession: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string, minLength: 1, maxLength: 40 }
+                color: { type: string, pattern: '^#[0-9a-fA-F]{6}$' }
+                position: { type: integer, minimum: 0 }
+      responses:
+        '200':
+          description: '`{ label: { id, name, color, position } }`.'
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: '`{ error, code: "label_exists" }`.'
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+    delete:
+      tags:
+        - admin/tasks
+      summary: Supprime une definition de label (ne strippe PAS le nom des cartes).
+      operationId: adminDeleteTaskLabel
+      description: |
+        La definition est supprimee ; les occurrences du nom dans `tasks.labels[]`
+        restent inertes et retombent en couleur neutre cote UI (choix assume).
+      security:
+        - StaffSession: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: '`{ success: true }`.'
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/admin/tasks/my:
+    get:
+      tags:
+        - admin/tasks
+      summary: Vue transverse « Mes taches » (cartes assignees au staff courant).
+      operationId: adminListMyTasks
+      description: |
+        Toutes les cartes vivantes (`deleted_at IS NULL`) assignees a
+        `ctx.staff.id`, tous boards du tenant confondus. Enrichi de boardName /
+        columnName / columnIsDone / dueDate. Tri : dueDate asc (null en dernier)
+        puis priorite (urgent > high > medium > low).
+      security:
+        - StaffSession: []
+      responses:
+        '200':
+          description: '`{ tasks: [NormalizedTask + boardName + columnName + columnIsDone + dueDate] }`.'
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/admin/tasks/tasks/{id}/activity:
+    get:
+      tags:
+        - admin/tasks
+      summary: Timeline d'activite d'une carte (staff_logs, created_at DESC).
+      operationId: adminGetTaskActivity
+      description: |
+        Historique des actions staff portant sur la carte : actions « carte »
+        (entity_type='task', entity_id=taskId) + actions « commentaire »
+        (rattachees via payload.task_id). Renvoie l'action brute + payload ;
+        l'humanisation des libelles se fait cote UI.
+      security:
+        - StaffSession: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: '`{ activity: [{ action, actorName, createdAt, payload }] }`.'
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/admin/disputes:
     get:
       summary: List open match disputes across the tenant.
@@ -21625,6 +21811,57 @@ paths:
       responses:
         '200':
           description: '`{ processed, emitted }` du tick.'
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/cron/task-board-digest:
+    get:
+      tags:
+        - cron
+      summary: Digest quotidien des boards Kanban (emet task.digest par tenant).
+      operationId: cronTaskBoardDigestGet
+      description: |
+        Netlify scheduled function. Pour chaque board NON archivé (tous tenants),
+        calcule les compteurs de cartes vivantes par colonne, `overdue`
+        (due_date < CURRENT_DATE, colonne non terminale) et `dueToday`
+        (due_date = CURRENT_DATE, colonne non terminale). Émet UN event outbox
+        `task.digest` par tenant :
+        `{ boards: [{ boardId, boardName, total, overdue, dueToday,
+        columns: [{ name, count }] }] }`.
+
+        Auth : `Authorization: Bearer <CRON_SECRET>` header OU
+        `?secret=<CRON_SECRET>` query string. GET et POST acceptés.
+      security:
+        - CronSecret: []
+      responses:
+        '200':
+          description: '`{ emitted, boards }` du tick.'
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      tags:
+        - cron
+      summary: Digest quotidien des boards Kanban (variante POST).
+      operationId: cronTaskBoardDigestPost
+      description: Same as `GET /api/cron/task-board-digest`.
+      security:
+        - CronSecret: []
+      responses:
+        '200':
+          description: '`{ emitted, boards }` du tick.'
           content:
             application/json:
               schema:

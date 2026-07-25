@@ -61,7 +61,8 @@ export type BotEventName =
   | 'task.created'
   | 'task.moved'
   | 'task.assigned'
-  | 'task.due_soon';
+  | 'task.due_soon'
+  | 'task.digest';
 
 export type BotEventPayload = Record<string, unknown>;
 

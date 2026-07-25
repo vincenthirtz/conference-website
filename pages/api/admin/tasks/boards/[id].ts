@@ -15,6 +15,7 @@ import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { patchBoardBodySchema } from '@/utils/taskBoardSchemas';
+import { loadBoardLabels } from '@/utils/taskBoard';
 import { formatZodError } from '@/utils/validation';
 import { logger } from '@/utils/logger';
 
@@ -150,6 +151,10 @@ async function getBoard(
     }
   }
 
+  // Définitions de labels colorés du board (triées par position) — sert à colorer
+  // les pastilles côté UI (jointure applicative par nom avec tasks.labels[]).
+  const labels = await loadBoardLabels(ctx.tenantId, id);
+
   const b = board as {
     id: string;
     name: string;
@@ -195,6 +200,7 @@ async function getBoard(
       description: b.description ?? null,
       position: b.position ?? 0,
       isArchived: b.is_archived === true,
+      labels,
       columns,
     },
   });

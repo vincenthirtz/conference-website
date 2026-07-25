@@ -136,3 +136,45 @@ export const patchColumnBodySchema = z
     message: 'Aucun champ à modifier',
   });
 export type PatchColumnBody = z.infer<typeof patchColumnBodySchema>;
+
+/* ---------------------------------------------------------------------------
+ * Labels colorés (task_labels — create_task_labels_table.sql)
+ * ------------------------------------------------------------------------- */
+
+/**
+ * Couleur hex '#rrggbb' — aligné sur le CHECK Postgres task_labels_color_chk.
+ * On borne au format 6-hex (pas de shorthand #rgb, pas d'alpha) pour rester
+ * strictement compatible avec la contrainte DB.
+ */
+export const hexColorSchema = z
+  .string()
+  .trim()
+  .regex(/^#[0-9a-fA-F]{6}$/, {
+    message: 'Couleur invalide (format attendu #rrggbb)',
+  });
+
+/**
+ * Nom de label : borné à 40 comme les entrées de `labelsSchema` (les cartes
+ * stockent ces noms bruts dans `tasks.labels text[]`, la longueur doit matcher).
+ */
+export const labelNameSchema = z.string().trim().min(1).max(40);
+
+/** Création d'une définition de label colorée pour un board. */
+export const createLabelBodySchema = z.object({
+  boardId: uuid,
+  name: labelNameSchema,
+  color: hexColorSchema,
+});
+export type CreateLabelBody = z.infer<typeof createLabelBodySchema>;
+
+/** Édition d'une définition de label (nom / couleur / position). */
+export const patchLabelBodySchema = z
+  .object({
+    name: labelNameSchema.optional(),
+    color: hexColorSchema.optional(),
+    position: z.number().int().min(0).optional(),
+  })
+  .refine((v) => Object.keys(v).length > 0, {
+    message: 'Aucun champ à modifier',
+  });
+export type PatchLabelBody = z.infer<typeof patchLabelBodySchema>;

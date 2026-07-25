@@ -27,6 +27,10 @@ import columnIdHandler from '../../pages/api/admin/tasks/columns/[id]';
 import tasksHandler from '../../pages/api/admin/tasks/tasks';
 import moveHandler from '../../pages/api/admin/tasks/tasks/[id]/move';
 import assignHandler from '../../pages/api/admin/tasks/tasks/[id]/assign';
+import labelsHandler from '../../pages/api/admin/tasks/labels';
+import labelIdHandler from '../../pages/api/admin/tasks/labels/[id]';
+import myHandler from '../../pages/api/admin/tasks/my';
+import activityHandler from '../../pages/api/admin/tasks/tasks/[id]/activity';
 
 const TENANT_A = 'ce69a726-773e-4d12-b5eb-d2503aa752b4';
 const STAFF_ID = '11111111-1111-4111-8111-111111111111';
@@ -376,5 +380,346 @@ describe('POST /api/admin/tasks/columns', () => {
     );
     expect(res.statusCode).toBe(201);
     expect((res.body as any).column.position).toBe(2);
+  });
+});
+
+const LABEL1 = '66666666-6666-4666-8666-666666666601';
+
+describe('Labels colorés (task_labels)', () => {
+  beforeEach(seedBoard);
+
+  it('POST crée un label (position max+1) et logue task_label_create', async () => {
+    store.task_labels = [
+      {
+        id: LABEL1,
+        tenant_id: TENANT_A,
+        board_id: BOARD,
+        name: 'Urgent',
+        color: '#ff0000',
+        position: 0,
+      },
+    ] as any;
+    const res = makeRes();
+    await labelsHandler(
+      makeReq({
+        method: 'POST',
+        body: { boardId: BOARD, name: 'Blocué', color: '#00ff00' },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(201);
+    expect((res.body as any).label.position).toBe(1);
+    expect((res.body as any).label.color).toBe('#00ff00');
+    const log = (store.staff_logs ?? []).find(
+      (l: any) => l.action === 'task_label_create'
+    );
+    expect(log).toBeTruthy();
+  });
+
+  it('POST 400 sur couleur invalide', async () => {
+    const res = makeRes();
+    await labelsHandler(
+      makeReq({
+        method: 'POST',
+        body: { boardId: BOARD, name: 'X', color: 'red' },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('POST 409 label_exists sur (board,name) déjà pris', async () => {
+    store.task_labels = [
+      {
+        id: LABEL1,
+        tenant_id: TENANT_A,
+        board_id: BOARD,
+        name: 'Urgent',
+        color: '#ff0000',
+        position: 0,
+      },
+    ] as any;
+    const res = makeRes();
+    await labelsHandler(
+      makeReq({
+        method: 'POST',
+        body: { boardId: BOARD, name: 'Urgent', color: '#123456' },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(409);
+    expect((res.body as any).code).toBe('label_exists');
+  });
+
+  it('PATCH renomme et CASCADE le rename dans les cartes du board', async () => {
+    store.task_labels = [
+      {
+        id: LABEL1,
+        tenant_id: TENANT_A,
+        board_id: BOARD,
+        name: 'Urgent',
+        color: '#ff0000',
+        position: 0,
+      },
+    ] as any;
+    store.tasks[0].labels = ['Urgent', 'Autre'];
+    const res = makeRes();
+    await labelIdHandler(
+      makeReq({
+        method: 'PATCH',
+        query: { id: LABEL1 },
+        body: { name: 'Critique' },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    expect((res.body as any).label.name).toBe('Critique');
+    const card = store.tasks.find((t: any) => t.id === TASK) as any;
+    expect(card.labels).toContain('Critique');
+    expect(card.labels).not.toContain('Urgent');
+    expect(card.labels).toContain('Autre');
+    const log = (store.staff_logs ?? []).find(
+      (l: any) => l.action === 'task_label_update'
+    );
+    expect((log as any).payload.cards_updated).toBe(1);
+  });
+
+  it('DELETE supprime la définition SANS stripper le nom des cartes', async () => {
+    store.task_labels = [
+      {
+        id: LABEL1,
+        tenant_id: TENANT_A,
+        board_id: BOARD,
+        name: 'Urgent',
+        color: '#ff0000',
+        position: 0,
+      },
+    ] as any;
+    store.tasks[0].labels = ['Urgent'];
+    const res = makeRes();
+    await labelIdHandler(
+      makeReq({ method: 'DELETE', query: { id: LABEL1 } }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    expect(store.task_labels.find((l: any) => l.id === LABEL1)).toBeUndefined();
+    // Le nom reste inerte sur la carte (redevient neutre côté UI).
+    const card = store.tasks.find((t: any) => t.id === TASK) as any;
+    expect(card.labels).toEqual(['Urgent']);
+  });
+
+  it('board détail expose labels triés par position', async () => {
+    store.task_labels = [
+      {
+        id: LABEL1,
+        tenant_id: TENANT_A,
+        board_id: BOARD,
+        name: 'Urgent',
+        color: '#ff0000',
+        position: 1,
+      },
+      {
+        id: '66666666-6666-4666-8666-666666666602',
+        tenant_id: TENANT_A,
+        board_id: BOARD,
+        name: 'Info',
+        color: '#0000ff',
+        position: 0,
+      },
+    ] as any;
+    const res = makeRes();
+    await boardIdHandler(makeReq({ method: 'GET', query: { id: BOARD } }), res);
+    expect(res.statusCode).toBe(200);
+    const labels = (res.body as any).board.labels;
+    expect(labels.map((l: any) => l.name)).toEqual(['Info', 'Urgent']);
+  });
+
+  it('caster → 403 sur POST label', async () => {
+    seedStaff('caster');
+    store.tenant_staff = [
+      { tenant_id: TENANT_A, staff_id: STAFF_ID, role: 'caster' },
+    ] as any;
+    invalidateStaffCache();
+    const res = makeRes();
+    await labelsHandler(
+      makeReq({
+        method: 'POST',
+        body: { boardId: BOARD, name: 'X', color: '#ffffff' },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(403);
+  });
+});
+
+describe('Garde WIP sur le move', () => {
+  beforeEach(seedBoard);
+
+  it('409 wip_exceeded quand la colonne cible est pleine (changement de colonne)', async () => {
+    // COL2 a une limite de 1 et contient déjà une carte.
+    (store.task_columns.find((c: any) => c.id === COL2) as any).wip_limit = 1;
+    store.tasks.push({
+      id: '55555555-5555-4555-8555-555555555599',
+      tenant_id: TENANT_A,
+      board_id: BOARD,
+      column_id: COL2,
+      title: 'Déjà là',
+      description: null,
+      priority: 'medium',
+      assignee_staff_id: null,
+      due_date: null,
+      position: 0,
+      labels: [],
+      created_by: STAFF_ID,
+      deleted_at: null,
+    } as any);
+    const res = makeRes();
+    await moveHandler(
+      makeReq({
+        method: 'PATCH',
+        query: { id: TASK },
+        body: { columnId: COL2 },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(409);
+    expect((res.body as any).code).toBe('wip_exceeded');
+    expect((res.body as any).limit).toBe(1);
+    expect((res.body as any).current).toBe(1);
+    // La carte n'a PAS bougé.
+    expect((store.tasks.find((t: any) => t.id === TASK) as any).column_id).toBe(
+      COL1
+    );
+  });
+
+  it('reorder dans la MÊME colonne n’est jamais bloqué par la limite WIP', async () => {
+    // COL1 porte une limite de 1 mais contiendra 2 cartes ; un reorder interne
+    // ne doit pas être refusé.
+    (store.task_columns.find((c: any) => c.id === COL1) as any).wip_limit = 1;
+    store.tasks.push({
+      id: '55555555-5555-4555-8555-5555555555aa',
+      tenant_id: TENANT_A,
+      board_id: BOARD,
+      column_id: COL1,
+      title: 'Voisine',
+      description: null,
+      priority: 'medium',
+      assignee_staff_id: null,
+      due_date: null,
+      position: 1,
+      labels: [],
+      created_by: STAFF_ID,
+      deleted_at: null,
+    } as any);
+    const res = makeRes();
+    await moveHandler(
+      makeReq({
+        method: 'PATCH',
+        query: { id: TASK },
+        body: { columnId: COL1, position: 1 },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+  });
+});
+
+describe('GET /api/admin/tasks/my', () => {
+  beforeEach(seedBoard);
+
+  it('ne renvoie que mes cartes, triées dueDate asc (null en dernier)', async () => {
+    // TASK (COL1) sans échéance, assignée à moi.
+    store.tasks[0].assignee_staff_id = STAFF_ID;
+    store.tasks.push(
+      {
+        id: '55555555-5555-4555-8555-555555555511',
+        tenant_id: TENANT_A,
+        board_id: BOARD,
+        column_id: COL1,
+        title: 'Due bientôt',
+        description: null,
+        priority: 'low',
+        assignee_staff_id: STAFF_ID,
+        due_date: '2026-08-01',
+        position: 1,
+        labels: [],
+        created_by: STAFF_ID,
+        deleted_at: null,
+      } as any,
+      {
+        id: '55555555-5555-4555-8555-555555555512',
+        tenant_id: TENANT_A,
+        board_id: BOARD,
+        column_id: COL1,
+        title: 'Pas la mienne',
+        description: null,
+        priority: 'urgent',
+        assignee_staff_id: null,
+        due_date: '2026-07-01',
+        position: 2,
+        labels: [],
+        created_by: STAFF_ID,
+        deleted_at: null,
+      } as any
+    );
+    const res = makeRes();
+    await myHandler(makeReq({ method: 'GET' }), res);
+    expect(res.statusCode).toBe(200);
+    const tasks = (res.body as any).tasks;
+    expect(tasks).toHaveLength(2);
+    expect(tasks.every((t: any) => t.assigneeStaffId === STAFF_ID)).toBe(true);
+    // Carte avec échéance d'abord, celle sans échéance en dernier.
+    expect(tasks[0].title).toBe('Due bientôt');
+    expect(tasks[1].dueDate).toBe(null);
+    expect(tasks[0].columnName).toBe('À faire');
+    expect(typeof tasks[0].columnIsDone).toBe('boolean');
+  });
+});
+
+describe('GET /api/admin/tasks/tasks/[id]/activity', () => {
+  beforeEach(seedBoard);
+
+  it('lit staff_logs par carte (actions carte + commentaires) DESC', async () => {
+    store.staff_logs = [
+      {
+        id: 'log-1',
+        tenant_id: TENANT_A,
+        staff_id: STAFF_ID,
+        action: 'task_move',
+        entity_type: 'task',
+        entity_id: TASK,
+        payload: { to_column_id: COL2 },
+        created_at: '2026-07-01T10:00:00.000Z',
+      },
+      {
+        id: 'log-2',
+        tenant_id: TENANT_A,
+        staff_id: STAFF_ID,
+        action: 'task_comment_create',
+        entity_type: 'task_comment',
+        entity_id: 'comment-1',
+        payload: { task_id: TASK },
+        created_at: '2026-07-02T10:00:00.000Z',
+      },
+      {
+        id: 'log-3',
+        tenant_id: TENANT_A,
+        staff_id: STAFF_ID,
+        action: 'task_move',
+        entity_type: 'task',
+        entity_id: '55555555-5555-4555-8555-5555555555ff',
+        payload: {},
+        created_at: '2026-07-03T10:00:00.000Z',
+      },
+    ] as any;
+    const res = makeRes();
+    await activityHandler(makeReq({ method: 'GET', query: { id: TASK } }), res);
+    expect(res.statusCode).toBe(200);
+    const activity = (res.body as any).activity;
+    // Seules les 2 entrées liées à TASK, la plus récente (commentaire) d'abord.
+    expect(activity).toHaveLength(2);
+    expect(activity[0].action).toBe('task_comment_create');
+    expect(activity[1].action).toBe('task_move');
+    expect(activity[0].actorName).toBe('Admin One');
   });
 });

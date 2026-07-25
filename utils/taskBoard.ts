@@ -58,6 +58,10 @@ export type CoreErr = {
   status: number;
   error: string;
   code?: string;
+  /** WIP guard (`code === 'wip_exceeded'`) : limite de la colonne cible. */
+  limit?: number;
+  /** WIP guard (`code === 'wip_exceeded'`) : cartes vivantes déjà présentes. */
+  current?: number;
 };
 export type CoreResult = CoreOk | CoreErr;
 
@@ -319,6 +323,121 @@ export async function loadTaskComments(
       : null,
     createdAt: r.created_at,
   }));
+}
+
+/* ---------------------------------------------------------------------------
+ * Labels colorés (task_labels — create_task_labels_table.sql). Le lien
+ * carte ↔ définition se fait par NOM : `tasks.labels[]` porte les noms bruts,
+ * `task_labels` porte la couleur de chaque nom. Un nom sans définition retombe
+ * en couleur neutre côté UI (jointure applicative souple, pas de FK).
+ * ------------------------------------------------------------------------- */
+
+/** Vue JSON normalisée d'une définition de label colorée. */
+export type TaskLabelView = {
+  id: string;
+  name: string;
+  color: string;
+  position: number;
+};
+
+/**
+ * Définitions de labels d'un board, triées par `position` puis `name`. Partagé
+ * par le détail board (`GET /api/admin/tasks/boards/{id}`) et les endpoints de
+ * gestion des labels — évite la dérive de contrat.
+ */
+export async function loadBoardLabels(
+  tenantId: string,
+  boardId: string
+): Promise<TaskLabelView[]> {
+  const { data } = await supabaseAdmin
+    .from('task_labels')
+    .select('id, name, color, position')
+    .eq('tenant_id', tenantId)
+    .eq('board_id', boardId);
+  const rows = (data ?? []) as Array<{
+    id: string;
+    name: string;
+    color: string;
+    position: number | null;
+  }>;
+  return rows
+    .sort(
+      (a, b) =>
+        (a.position ?? 0) - (b.position ?? 0) || a.name.localeCompare(b.name)
+    )
+    .map((r) => ({
+      id: r.id,
+      name: r.name,
+      color: r.color,
+      position: r.position ?? 0,
+    }));
+}
+
+/**
+ * Position max des labels d'un board, ou -1 si aucun. Sert au positionnement
+ * `max+1` à la création d'une nouvelle définition.
+ */
+export async function maxLabelPosition(
+  tenantId: string,
+  boardId: string
+): Promise<number> {
+  const { data } = await supabaseAdmin
+    .from('task_labels')
+    .select('position')
+    .eq('tenant_id', tenantId)
+    .eq('board_id', boardId);
+  const rows = (data ?? []) as { position: number | null }[];
+  return rows.reduce(
+    (max, r) => Math.max(max, typeof r.position === 'number' ? r.position : 0),
+    -1
+  );
+}
+
+/**
+ * Répercute un renommage de définition de label sur les CARTES du board :
+ * remplace `oldName` par `newName` dans `tasks.labels[]` pour chaque carte du
+ * board (tenant-scopé) qui porte l'ancien nom. Garde les pastilles cohérentes
+ * après un rename (le lien étant par nom, sans cette cascade les cartes
+ * garderaient l'ancien libellé et retomberaient en couleur neutre).
+ *
+ * Implémenté en application (fetch + update par carte) plutôt qu'en
+ * `array_replace` SQL brut pour rester testable et éviter une RPC dédiée.
+ * Renvoie le nombre de cartes mises à jour. Best-effort : ne jette pas.
+ */
+export async function cascadeRenameLabel(
+  tenantId: string,
+  boardId: string,
+  oldName: string,
+  newName: string
+): Promise<number> {
+  if (oldName === newName) return 0;
+  const { data } = await supabaseAdmin
+    .from('tasks')
+    .select('id, labels')
+    .eq('tenant_id', tenantId)
+    .eq('board_id', boardId);
+  const rows = (data ?? []) as Array<{ id: string; labels: string[] | null }>;
+  let updated = 0;
+  for (const row of rows) {
+    const labels = Array.isArray(row.labels) ? row.labels : [];
+    if (!labels.includes(oldName)) continue;
+    // Remplace toutes les occurrences ; déduplique si `newName` était déjà
+    // présent sur la carte (évite un doublon dans le text[]).
+    const next = Array.from(
+      new Set(labels.map((l) => (l === oldName ? newName : l)))
+    );
+    const { error } = await supabaseAdmin
+      .from('tasks')
+      .update({ labels: next, updated_at: new Date().toISOString() })
+      .eq('tenant_id', tenantId)
+      .eq('id', row.id);
+    if (error) {
+      logger.error('[taskBoard] cascadeRenameLabel update error', error);
+      continue;
+    }
+    updated += 1;
+  }
+  return updated;
 }
 
 /** Checklist d'une carte, triée par `position` puis `created_at`. */
@@ -652,6 +771,26 @@ export async function moveTaskCore(input: MoveTaskInput): Promise<CoreResult> {
     .filter((r) => r.id !== task.id)
     .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
     .map((r) => r.id);
+
+  // Garde WIP : uniquement sur un CHANGEMENT de colonne (le reorder dans la même
+  // colonne n'est jamais bloqué). Si la colonne cible porte une limite et
+  // contient déjà >= wip_limit cartes vivantes (la carte déplacée est déjà
+  // exclue de `dest` puisqu'elle vient d'une autre colonne), on refuse en 409.
+  // `createTaskCore` n'est PAS gardé : la création dans une colonne pleine reste
+  // intentionnelle (on ne veut pas bloquer la saisie d'un backlog).
+  if (!sameColumn && toColumn.wip_limit != null) {
+    const current = dest.length;
+    if (current >= toColumn.wip_limit) {
+      return {
+        ok: false,
+        status: 409,
+        error: `Limite WIP atteinte (${current}/${toColumn.wip_limit}) sur « ${toColumn.name} »`,
+        code: 'wip_exceeded',
+        limit: toColumn.wip_limit,
+        current,
+      };
+    }
+  }
 
   let insertIdx =
     targetPositionRequested === null ? dest.length : targetPositionRequested;

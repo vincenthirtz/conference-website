@@ -159,9 +159,7 @@ test.describe('Admin – Kanban des tâches', () => {
     ).toBeVisible({ timeout: 10000 });
 
     // --- Checklist : ajoute un item et vérifie qu'on peut le cocher. ---
-    await page
-      .getByPlaceholder('Ajouter un élément…')
-      .fill(checklistItem);
+    await page.getByPlaceholder('Ajouter un élément…').fill(checklistItem);
     // Le bouton "Ajouter" de la checklist (vert) — dans la section checklist.
     await page
       .getByRole('button', { name: 'Ajouter', exact: true })
@@ -177,5 +175,83 @@ test.describe('Admin – Kanban des tâches', () => {
     await page.getByPlaceholder('Écrire un commentaire…').fill(commentBody);
     await page.getByRole('button', { name: 'Commenter', exact: true }).click();
     await expect(page.getByText(commentBody)).toBeVisible({ timeout: 10000 });
+  });
+
+  test('crée un label coloré du board et l’applique à une carte (pastille visible)', async ({
+    page,
+  }) => {
+    test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
+
+    // Pré-consentement cookies (idem autres tests) pour que la bannière fixée en
+    // bas n'intercepte pas les clics dans les modales.
+    await page.addInitScript(() => {
+      localStorage.setItem(
+        'cookie_consent',
+        JSON.stringify({
+          version: '1.0',
+          preferences: { essential: true, analytics: false, marketing: false },
+          consentDate: '2026-01-01T00:00:00.000Z',
+        })
+      );
+    });
+
+    await login(page);
+    await page.goto('/admin/tasks');
+    await page.waitForLoadState('networkidle');
+
+    const localBoard = `E2E Labels ${Date.now()}`;
+    const localCard = `E2E carte label ${Date.now()}`;
+    const labelName = `prio-${Date.now()}`;
+
+    // Board dédié.
+    await page.getByRole('button', { name: 'Nouveau board' }).click();
+    await page.getByLabel('Nom du board').fill(localBoard);
+    await page.getByRole('button', { name: 'Créer', exact: true }).click();
+    await expect(
+      page.getByRole('tab', { name: new RegExp(localBoard) })
+    ).toBeVisible({ timeout: 10000 });
+
+    // Ouvre le panneau des labels du board et crée un label (couleur par défaut).
+    await page.getByRole('button', { name: 'Labels', exact: true }).click();
+    await expect(
+      page.getByRole('heading', { name: 'Labels du board' })
+    ).toBeVisible({ timeout: 10000 });
+    await page.getByLabel('Nom du label').fill(labelName);
+    await page
+      .getByRole('button', { name: 'Créer le label', exact: true })
+      .click();
+    // Le label apparaît dans la liste (ligne éditable → input renommage).
+    await expect(page.getByLabel(`Nom du label : ${labelName}`)).toBeVisible({
+      timeout: 10000,
+    });
+    // Ferme le panneau.
+    await page.getByRole('button', { name: 'Annuler', exact: true }).click();
+
+    // Crée une carte dans la 1re colonne.
+    await page
+      .getByRole('button', { name: '+ Ajouter une carte' })
+      .first()
+      .click();
+    await page.getByLabel('Titre').fill(localCard);
+    await page.getByRole('button', { name: 'Ajouter', exact: true }).click();
+    await expect(page.getByText(localCard)).toBeVisible({ timeout: 10000 });
+
+    // Ouvre la carte et applique le label via le chip cliquable du board.
+    await page.getByText(localCard).click();
+    await expect(
+      page.getByRole('heading', { name: 'Modifier la carte' })
+    ).toBeVisible({ timeout: 10000 });
+    await page
+      .getByRole('button', { name: `Ajouter à la carte : ${labelName}` })
+      .click();
+    // Enregistre la carte (mode édition).
+    await page
+      .getByRole('button', { name: 'Enregistrer', exact: true })
+      .click();
+
+    // La pastille du label est désormais visible SUR la carte du board
+    // (scopé à la carte pour éviter l'<option> homonyme du filtre par label).
+    const cardEl = page.getByRole('button').filter({ hasText: localCard });
+    await expect(cardEl.getByText(labelName)).toBeVisible({ timeout: 10000 });
   });
 });

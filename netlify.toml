@@ -113,6 +113,14 @@
 [functions."task-due-reminders-cron"]
   schedule = "0 8 * * *"
 
+# Scheduled function: digest matinal des boards Kanban internes. Pour chaque
+# board non archivé, agrège les compteurs (total, colonnes, overdue, dueToday)
+# et émet un event `task.digest` par tenant (outbox → push/DM Discord).
+# Une fois par jour à 07:30 UTC — juste avant les rappels d'échéance de 08:00,
+# pour un point de situation matinal. Requiert CRON_SECRET + URL (ou SITE_URL).
+[functions."task-board-digest-cron"]
+  schedule = "30 7 * * *"
+
 [[headers]]
   for = "/*"
   [headers.values]
