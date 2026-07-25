@@ -986,3 +986,110 @@ export async function assignTaskCore(
     }),
   };
 }
+
+/* ---------------------------------------------------------------------------
+ * restoreTaskCore — sort une carte de la corbeille (deleted_at → NULL)
+ * ------------------------------------------------------------------------- */
+
+export type RestoreTaskInput = {
+  tenantId: string;
+  taskId: string;
+  actorStaffId: string | null;
+  via?: TaskActorVia;
+};
+
+/**
+ * Restaure une carte soft-deleted : `deleted_at = NULL` + repositionnement en
+ * bas de sa colonne d'origine (`max(position)+1`). La colonne d'origine existe
+ * toujours (la suppression physique d'une colonne CASCADE ses cartes, même
+ * soft-deleted) ; si `loadColumn` renvoie néanmoins null on refuse proprement
+ * en 409 `column_gone`. Aucun event bot (restauration = geste interne).
+ *
+ * Contrairement à `loadTask` (qui filtre `deleted_at IS NULL`), on charge la
+ * row brute pour distinguer 404 (inexistante) de 409 (déjà active).
+ */
+export async function restoreTaskCore(
+  input: RestoreTaskInput
+): Promise<CoreResult> {
+  const tenantId = input.tenantId;
+  const via = input.via ?? 'website';
+
+  const { data: raw } = await supabaseAdmin
+    .from('tasks')
+    .select(
+      'id, tenant_id, board_id, column_id, title, description, priority, assignee_staff_id, due_date, position, labels, created_by, deleted_at'
+    )
+    .eq('tenant_id', tenantId)
+    .eq('id', input.taskId)
+    .maybeSingle();
+  const task = (raw as TaskRow | null) ?? null;
+  if (!task) {
+    return {
+      ok: false,
+      status: 404,
+      error: 'Tâche introuvable',
+      code: 'task_not_found',
+    };
+  }
+  if (task.deleted_at === null || task.deleted_at === undefined) {
+    return {
+      ok: false,
+      status: 409,
+      error: "La tâche n'est pas dans la corbeille",
+      code: 'not_deleted',
+    };
+  }
+
+  const column = await loadColumn(tenantId, task.column_id);
+  if (!column) {
+    return {
+      ok: false,
+      status: 409,
+      error: "La colonne d'origine n'existe plus",
+      code: 'column_gone',
+    };
+  }
+
+  const position = (await maxPositionInColumn(tenantId, task.column_id)) + 1;
+
+  const { error } = await supabaseAdmin
+    .from('tasks')
+    .update({
+      deleted_at: null,
+      position,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('tenant_id', tenantId)
+    .eq('id', input.taskId);
+  if (error) {
+    logger.error('[taskBoard] restoreTaskCore update error', error);
+    return { ok: false, status: 500, error: 'Échec de la restauration' };
+  }
+
+  const board = await loadBoard(tenantId, task.board_id);
+  const assignee = await resolveStaffInfo(task.assignee_staff_id ?? null);
+
+  await auditTask({
+    tenantId,
+    actorStaffId: input.actorStaffId,
+    action: 'task_restore',
+    entityType: 'task',
+    entityId: task.id,
+    via,
+    payload: {
+      board_id: task.board_id,
+      column_id: task.column_id,
+      title: task.title,
+    },
+  });
+
+  const restoredRow: TaskRow = { ...task, deleted_at: null, position };
+  return {
+    ok: true,
+    task: toNormalized(restoredRow, {
+      boardName: board?.name ?? null,
+      columnName: column.name,
+      assigneeName: assignee.name,
+    }),
+  };
+}

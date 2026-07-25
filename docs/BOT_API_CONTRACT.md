@@ -327,6 +327,14 @@ historique `staff_logs` de la carte, `created_at` DESC. Agrège les actions « c
 `{ activity: [{ action, actorName, createdAt, payload }] }` — action **brute** +
 payload ; l'humanisation des libellés se fait côté UI.
 
+**Corbeille (admin)** — cartes soft-deleted (`deleted_at IS NOT NULL`) et leur
+restauration. Endpoints **admin uniquement**, `withStaffRoute('admin')` :
+
+| Méthode + path                              | Corps / query                 | Réponse                                                                                                                                                                                                                                                 |
+| ------------------------------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /api/admin/tasks/deleted`              | `?boardId=<uuid?>&limit=<n?>` | `{ tasks: [{ id, title, boardId, boardName, columnId, columnName, priority, dueDate, deletedAt }] }` — filtre `boardId` optionnel, tri `deletedAt` DESC, plafond défaut 100 (max 500). Montre TOUT, y compris cartes de boards archivés.                |
+| `PATCH /api/admin/tasks/tasks/{id}/restore` | —                             | `200 { task: NormalizedTask }` — `deleted_at = NULL` + `position = max(position dans sa colonne)+1`. `404 { code:'task_not_found' }`, `409 { code:'not_deleted' }` (déjà active), `409 { code:'column_gone' }`. Loggue `task_restore`. Pas d'event bot. |
+
 **Extras de carte (commentaires + checklist)** — endpoints **admin uniquement**
 (pas d'exposition bot), `withStaffRoute('admin')`, tables `task_comments` /
 `task_checklist_items` (RLS default-deny, service_role) :

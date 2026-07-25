@@ -56,6 +56,17 @@ export const patchTaskBodySchema = z
   });
 export type PatchTaskBody = z.infer<typeof patchTaskBodySchema>;
 
+/**
+ * Query de la corbeille (`GET /api/admin/tasks/deleted`). `boardId` filtre
+ * optionnel ; `limit` borné (défaut appliqué côté handler). Les valeurs
+ * arrivent en string dans `req.query` — `z.coerce.number()` gère `limit`.
+ */
+export const deletedTasksQuerySchema = z.object({
+  boardId: uuid.optional(),
+  limit: z.coerce.number().int().min(1).max(500).optional(),
+});
+export type DeletedTasksQuery = z.infer<typeof deletedTasksQuerySchema>;
+
 /** Déplacement de carte. */
 export const moveTaskBodySchema = z.object({
   columnId: uuid,

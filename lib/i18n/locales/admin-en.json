@@ -7494,6 +7494,21 @@
     "activityTaskCommentCreate": "commented",
     "activityTaskCommentDelete": "deleted a comment",
     "activityTaskLabel": "changed a label",
-    "activityUnknownAction": "performed an action"
+    "activityUnknownAction": "performed an action",
+    "sortLabel": "Sort",
+    "sortManual": "Manual",
+    "sortPriority": "Priority",
+    "sortDue": "Due date",
+    "sortAutoHint": "Automatic sort active: card drag & drop is disabled.",
+    "trashButton": "Trash",
+    "trashTitle": "Deleted cards",
+    "trashEmpty": "No deleted cards.",
+    "trashLoadError": "Unable to load the trash.",
+    "trashRestore": "Restore",
+    "trashRestoring": "Restoring…",
+    "trashRestored": "Card restored.",
+    "trashDeletedAt": "Deleted {value}",
+    "trashAlreadyRestored": "This card was already restored.",
+    "trashColumnGone": "The original column no longer exists: cannot restore."
   }
 }

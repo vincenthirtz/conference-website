@@ -11003,6 +11003,76 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /api/admin/tasks/deleted:
+    get:
+      tags:
+        - admin/tasks
+      summary: Corbeille — cartes soft-deleted du tenant (deleted_at IS NOT NULL).
+      operationId: adminListDeletedTasks
+      description: |
+        Cartes supprimees (`deleted_at IS NOT NULL`) du tenant, filtrees par
+        `boardId` si fourni, triees `deleted_at` DESC, plafonnees (defaut 100).
+        Montre TOUT, y compris les cartes dont le board est archive. La
+        restauration se fait via `PATCH /api/admin/tasks/tasks/{id}/restore`.
+      security:
+        - StaffSession: []
+      parameters:
+        - name: boardId
+          in: query
+          required: false
+          schema: { type: string, format: uuid }
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 500 }
+      responses:
+        '200':
+          description: '`{ tasks: [{ id, title, boardId, boardName, columnId, columnName, priority, dueDate, deletedAt }] }`.'
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/admin/tasks/tasks/{id}/restore:
+    patch:
+      tags:
+        - admin/tasks
+      summary: Restaure une carte de la corbeille (restoreTaskCore). Loggue task_restore.
+      operationId: adminRestoreTask
+      description: |
+        Repositionne une carte soft-deleted comme active : `deleted_at = NULL`
+        + `position = max(position dans sa colonne)+1`. 404 `task_not_found` si
+        la carte n'existe pas, 409 `not_deleted` si elle est deja active, 409
+        `column_gone` si la colonne d'origine a disparu. Pas d'event bot.
+      security:
+        - StaffSession: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: '`{ task: NormalizedTask }`.'
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
   /api/admin/tasks/tasks/{id}/activity:
     get:
       tags:

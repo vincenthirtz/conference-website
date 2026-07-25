@@ -7494,6 +7494,21 @@
     "activityTaskCommentCreate": "a commenté",
     "activityTaskCommentDelete": "a supprimé un commentaire",
     "activityTaskLabel": "a modifié un label",
-    "activityUnknownAction": "a effectué une action"
+    "activityUnknownAction": "a effectué une action",
+    "sortLabel": "Trier",
+    "sortManual": "Manuel",
+    "sortPriority": "Priorité",
+    "sortDue": "Échéance",
+    "sortAutoHint": "Tri automatique actif : le glisser-déposer des cartes est désactivé.",
+    "trashButton": "Corbeille",
+    "trashTitle": "Cartes supprimées",
+    "trashEmpty": "Aucune carte supprimée.",
+    "trashLoadError": "Impossible de charger la corbeille.",
+    "trashRestore": "Restaurer",
+    "trashRestoring": "Restauration…",
+    "trashRestored": "Carte restaurée.",
+    "trashDeletedAt": "Supprimée {value}",
+    "trashAlreadyRestored": "Cette carte a déjà été restaurée.",
+    "trashColumnGone": "La colonne d'origine n'existe plus : impossible de restaurer."
   }
 }

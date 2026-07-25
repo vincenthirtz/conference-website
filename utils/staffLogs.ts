@@ -372,6 +372,7 @@ export const STAFF_LOG_ACTION_LABELS: Record<StaffLogAction, string> = {
   task_create: 'Création tâche',
   task_update: 'Modification tâche',
   task_delete: 'Suppression tâche',
+  task_restore: 'Restauration tâche',
   task_move: 'Déplacement tâche',
   task_assign: 'Assignation tâche',
   task_comment_create: 'Commentaire de tâche ajouté',

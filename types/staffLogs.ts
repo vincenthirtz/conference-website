@@ -212,6 +212,7 @@ export type StaffLogAction =
   | 'task_create'
   | 'task_update'
   | 'task_delete'
+  | 'task_restore'
   | 'task_move'
   | 'task_assign'
   | 'task_comment_create'

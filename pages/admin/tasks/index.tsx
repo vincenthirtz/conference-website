@@ -31,6 +31,14 @@ type StaffProps = { staff: StaffShape };
 type Priority = 'low' | 'medium' | 'high' | 'urgent';
 const PRIORITIES: Priority[] = ['low', 'medium', 'high', 'urgent'];
 
+// Rang de tri par priorité (urgent en premier). Plus petit = plus haut.
+const PRIORITY_RANK: Record<Priority, number> = {
+  urgent: 0,
+  high: 1,
+  medium: 2,
+  low: 3,
+};
+
 type BoardListColumn = {
   id: string;
   name: string;
@@ -101,6 +109,22 @@ type MyTask = {
   dueDate: string | null;
   labels: string[];
 };
+
+// Carte soft-deleted listée dans la corbeille (GET /tasks/deleted).
+type DeletedTask = {
+  id: string;
+  title: string;
+  boardId: string;
+  boardName: string | null;
+  columnId: string;
+  columnName: string | null;
+  priority: Priority;
+  dueDate: string | null;
+  deletedAt: string;
+};
+
+// Mode de tri d'affichage des cartes dans une colonne (client-side).
+type CardSort = 'manual' | 'priority' | 'due';
 
 // Entrée brute de la timeline d'activité (GET /tasks/{id}/activity).
 type TaskActivity = {
@@ -175,6 +199,31 @@ function isOverdue(dueDate: string | null, columnIsDone: boolean): boolean {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   return d.getTime() < today.getTime();
+}
+
+// Tri d'affichage des cartes d'une colonne (client-side, ne touche pas
+// `position` en base). `position` reste le départage stable dans tous les cas.
+function sortTasksForDisplay(tasks: BoardTask[], mode: CardSort): BoardTask[] {
+  const byPosition = (a: BoardTask, b: BoardTask) => a.position - b.position;
+  if (mode === 'priority') {
+    return [...tasks].sort((a, b) => {
+      const d = PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority];
+      return d !== 0 ? d : a.position - b.position;
+    });
+  }
+  if (mode === 'due') {
+    return [...tasks].sort((a, b) => {
+      // Échéances renseignées d'abord (asc), puis les sans-échéance.
+      if (a.dueDate && b.dueDate) {
+        const d = a.dueDate.localeCompare(b.dueDate);
+        return d !== 0 ? d : a.position - b.position;
+      }
+      if (a.dueDate) return -1;
+      if (b.dueDate) return 1;
+      return a.position - b.position;
+    });
+  }
+  return [...tasks].sort(byPosition);
 }
 
 function formatCommentDate(iso: string): string {
@@ -605,6 +654,7 @@ function AdminTasksPage({ staff: currentStaff }: StaffProps) {
   const checklistMutation = useIdempotentMutation();
   const commentMutation = useIdempotentMutation();
   const labelMutation = useIdempotentMutation();
+  const restoreMutation = useIdempotentMutation();
 
   const router = useRouter();
   // `?board=<id>` deep-links / survives a reload. Captured once (SSR provides
@@ -694,8 +744,19 @@ function AdminTasksPage({ staff: currentStaff }: StaffProps) {
   const [filterLabel, setFilterLabel] = useState('');
   const [filterMine, setFilterMine] = useState(false);
 
+  // Tri d'affichage des cartes dans les colonnes (client-side).
+  const [cardSort, setCardSort] = useState<CardSort>('manual');
+
+  // Corbeille (cartes soft-deleted du board actif).
+  const [trashOpen, setTrashOpen] = useState(false);
+  const [deletedTasks, setDeletedTasks] = useState<DeletedTask[]>([]);
+  const [deletedLoading, setDeletedLoading] = useState(false);
+  const [restoringId, setRestoringId] = useState<string | null>(null);
+
   // DnD
   const dragTaskId = useRef<string | null>(null);
+  // Le glisser-déposer n'a de sens que sous tri Manuel (ordre = position).
+  const dndEnabled = cardSort === 'manual';
 
   // -------------------------------------------------------------------------
   // Chargements
@@ -762,6 +823,62 @@ function AdminTasksPage({ staff: currentStaff }: StaffProps) {
       setLoadingMy(false);
     }
   }, [adminFetchJson, addToast, t]);
+
+  // Corbeille : cartes soft-deleted du board actif (triées deletedAt DESC).
+  const fetchDeletedTasks = useCallback(async () => {
+    if (!activeBoardId) {
+      setDeletedTasks([]);
+      return;
+    }
+    setDeletedLoading(true);
+    try {
+      const json = await adminFetchJson<{ tasks: DeletedTask[] }>(
+        `/api/admin/tasks/deleted?boardId=${encodeURIComponent(activeBoardId)}`
+      );
+      setDeletedTasks(json.tasks || []);
+    } catch (err: unknown) {
+      addToast((err as Error)?.message || t.trashLoadError, 'error');
+    } finally {
+      setDeletedLoading(false);
+    }
+  }, [activeBoardId, adminFetchJson, addToast, t]);
+
+  function openTrash() {
+    setTrashOpen(true);
+    void fetchDeletedTasks();
+  }
+
+  // Restaure une carte : retire la ligne de la corbeille et rafraîchit le board
+  // actif pour la voir réapparaître. Gère 409 not_deleted (déjà restaurée) et
+  // 409 column_gone (colonne d'origine disparue).
+  async function handleRestoreTask(task: DeletedTask) {
+    setRestoringId(task.id);
+    try {
+      await restoreMutation.mutateJson(
+        `/api/admin/tasks/tasks/${encodeURIComponent(task.id)}/restore`,
+        { method: 'PATCH' }
+      );
+      addToast(t.trashRestored, 'success');
+      setDeletedTasks((prev) => prev.filter((d) => d.id !== task.id));
+      if (activeBoardId) void fetchDetail(activeBoardId);
+      void fetchBoards({ keepActive: true });
+    } catch (err: unknown) {
+      const anyErr = err as { payload?: { code?: string }; message?: string };
+      const code = anyErr?.payload?.code;
+      if (code === 'not_deleted') {
+        // Déjà restaurée ailleurs : on retire simplement la ligne obsolète.
+        addToast(t.trashAlreadyRestored, 'error');
+        setDeletedTasks((prev) => prev.filter((d) => d.id !== task.id));
+        if (activeBoardId) void fetchDetail(activeBoardId);
+      } else if (code === 'column_gone') {
+        addToast(t.trashColumnGone, 'error');
+      } else {
+        addToast(anyErr?.message || t.errorGeneric, 'error');
+      }
+    } finally {
+      setRestoringId(null);
+    }
+  }
 
   useEffect(() => {
     fetchBoards();
@@ -1655,6 +1772,7 @@ function AdminTasksPage({ staff: currentStaff }: StaffProps) {
   ) {
     e.preventDefault();
     e.stopPropagation();
+    if (!dndEnabled) return;
     const taskId = dragTaskId.current;
     if (!taskId || !detail) return;
     const col = detail.columns.find((c) => c.id === toColumnId);
@@ -1666,6 +1784,7 @@ function AdminTasksPage({ staff: currentStaff }: StaffProps) {
 
   function onDropOnColumn(e: React.DragEvent, toColumnId: string) {
     e.preventDefault();
+    if (!dndEnabled) return;
     performMove(toColumnId, null);
   }
 
@@ -1837,6 +1956,12 @@ function AdminTasksPage({ staff: currentStaff }: StaffProps) {
                     {t.manageLabels}
                   </button>
                   <button
+                    onClick={openTrash}
+                    className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-sm hover:bg-white/10"
+                  >
+                    {t.trashButton}
+                  </button>
+                  <button
                     onClick={openAddColumn}
                     className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium"
                   >
@@ -1920,7 +2045,32 @@ function AdminTasksPage({ staff: currentStaff }: StaffProps) {
                       />
                       {t.filterMyCards}
                     </label>
+                    <label
+                      className="inline-flex items-center gap-2 text-sm text-neutral-300"
+                      htmlFor="card-sort"
+                    >
+                      <span className="text-neutral-400">{t.sortLabel}</span>
+                      <select
+                        id="card-sort"
+                        value={cardSort}
+                        onChange={(e) =>
+                          setCardSort(e.target.value as CardSort)
+                        }
+                        className="px-3 py-1.5 rounded-lg bg-white/10 border border-white/20 text-white text-sm"
+                      >
+                        <option value="manual">{t.sortManual}</option>
+                        <option value="priority">{t.sortPriority}</option>
+                        <option value="due">{t.sortDue}</option>
+                      </select>
+                    </label>
                   </div>
+
+                  {/* Hint : le DnD est désactivé sous tri automatique. */}
+                  {!dndEnabled && (
+                    <p className="mt-2 text-xs text-amber-300/80">
+                      {t.sortAutoHint}
+                    </p>
+                  )}
 
                   {/* Chips de filtres actifs */}
                   {hasActiveFilters && (
@@ -2052,8 +2202,9 @@ function AdminTasksPage({ staff: currentStaff }: StaffProps) {
                         // Saturation : colonne pleine (au moins à la limite).
                         const atLimit =
                           col.wipLimit != null && totalCount >= col.wipLimit;
-                        const allTasks = [...col.tasks].sort(
-                          (a, b) => a.position - b.position
+                        const allTasks = sortTasksForDisplay(
+                          col.tasks,
+                          cardSort
                         );
                         const tasks = hasActiveFilters
                           ? allTasks.filter(taskMatchesFilters)
@@ -2174,14 +2325,25 @@ function AdminTasksPage({ staff: currentStaff }: StaffProps) {
                                 return (
                                   <div
                                     key={card.id}
-                                    draggable
-                                    onDragStart={(e) =>
-                                      onCardDragStart(e, card.id)
+                                    draggable={dndEnabled}
+                                    onDragStart={
+                                      dndEnabled
+                                        ? (e) => onCardDragStart(e, card.id)
+                                        : undefined
                                     }
-                                    onDragEnd={onCardDragEnd}
-                                    onDragOver={(e) => e.preventDefault()}
-                                    onDrop={(e) =>
-                                      onDropOnCard(e, col.id, card.id)
+                                    onDragEnd={
+                                      dndEnabled ? onCardDragEnd : undefined
+                                    }
+                                    onDragOver={
+                                      dndEnabled
+                                        ? (e) => e.preventDefault()
+                                        : undefined
+                                    }
+                                    onDrop={
+                                      dndEnabled
+                                        ? (e) =>
+                                            onDropOnCard(e, col.id, card.id)
+                                        : undefined
                                     }
                                     onClick={() => openEditCard(card)}
                                     role="button"
@@ -2192,7 +2354,11 @@ function AdminTasksPage({ staff: currentStaff }: StaffProps) {
                                         openEditCard(card);
                                       }
                                     }}
-                                    className="cursor-grab active:cursor-grabbing rounded-lg bg-neutral-900/80 border border-white/10 p-3 hover:border-indigo-500/40 transition-colors"
+                                    className={`rounded-lg bg-neutral-900/80 border border-white/10 p-3 hover:border-indigo-500/40 transition-colors ${
+                                      dndEnabled
+                                        ? 'cursor-grab active:cursor-grabbing'
+                                        : 'cursor-pointer'
+                                    }`}
                                   >
                                     <div className="flex items-start justify-between gap-2">
                                       <p className="text-sm font-medium leading-snug flex-1">
@@ -3019,6 +3185,82 @@ function AdminTasksPage({ staff: currentStaff }: StaffProps) {
                 </ul>
               )}
             </div>
+          </Modal>
+
+          {/* ------------------------------------------------------------- */}
+          {/* Modale corbeille (cartes supprimées du board actif) */}
+          {/* ------------------------------------------------------------- */}
+          <Modal
+            open={trashOpen}
+            onClose={() => setTrashOpen(false)}
+            title={<h2 className="text-xl font-semibold">{t.trashTitle}</h2>}
+            size="lg"
+            panelChromeClassName="bg-neutral-900 rounded-xl border border-white/10"
+            footer={
+              <button
+                onClick={() => setTrashOpen(false)}
+                className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/15 text-white text-sm"
+              >
+                {t.cancel}
+              </button>
+            }
+          >
+            {deletedLoading ? (
+              <p className="text-sm text-neutral-500">{t.loading}</p>
+            ) : deletedTasks.length === 0 ? (
+              <div className="p-8 rounded-xl bg-white/5 border border-white/10 text-center">
+                <p className="text-sm text-neutral-200">{t.trashEmpty}</p>
+              </div>
+            ) : (
+              <ul className="space-y-2">
+                {deletedTasks.map((task) => (
+                  <li
+                    key={task.id}
+                    className="flex items-start gap-3 rounded-lg bg-white/5 border border-white/10 p-3"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium leading-snug break-words">
+                        {task.title}
+                      </p>
+                      <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[11px] text-neutral-400">
+                        {task.columnName && (
+                          <span className="px-1.5 py-0.5 rounded bg-white/5 border border-white/10">
+                            {task.columnName}
+                          </span>
+                        )}
+                        <span
+                          className={`px-1.5 py-0.5 rounded border ${priorityClasses(
+                            task.priority
+                          )}`}
+                        >
+                          {priorityLabel(t, task.priority)}
+                        </span>
+                        {task.dueDate && (
+                          <span className="text-neutral-300">
+                            {task.dueDate.slice(0, 10)}
+                          </span>
+                        )}
+                        <span className="text-neutral-500">
+                          {format(t.trashDeletedAt, {
+                            value: formatCommentDate(task.deletedAt),
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => void handleRestoreTask(task)}
+                      disabled={restoringId === task.id}
+                      className="flex-shrink-0 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:bg-neutral-600 text-white text-sm font-medium"
+                    >
+                      {restoringId === task.id
+                        ? t.trashRestoring
+                        : t.trashRestore}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </Modal>
 
           {dialog}
