@@ -40,6 +40,14 @@ Keep the two sides in lockstep. **The site is canonical**; the bot consumes it.
 | Registration | `commands.js` (pushes `kanbanCommand`) |
 | Tests | `tests/kanban.test.js`, `tests/kanban-events.test.js` |
 
+## v2 extras (card comments, checklist, filters, due reminders)
+
+- Tables: `task_comments(id, tenant_id, task_id→tasks CASCADE, author_staff_id→staff SET NULL, body, …)` and `task_checklist_items(id, tenant_id, task_id CASCADE, label, is_done, position, …)` — same RLS default-deny.
+- Admin API: `tasks/[id]/comments.ts` (GET/POST), `comments/[id].ts` (DELETE), `tasks/[id]/checklist.ts` (GET/POST), `checklist/[id].ts` (PATCH/DELETE). The board detail (`boards/[id]`) now returns `checklist:{done,total}` + `commentCount` per card; the task detail (`tasks/[id]`) returns full `comments[]` + `checklist[]`.
+- Filters/search in the board UI are 100% client-side over the loaded detail. "My cards" uses the current staff id from the `withStaffPage` SSR prop (NOT `useStaffSession`, which lacks the id). Active board is persisted in the URL (`?board=`).
+- Due reminders: `pages/api/cron/task-due-reminders.ts` (cron-secret auth, J-1: `due_date = CURRENT_DATE + 1`, non-done column) → emits `task.due_soon`. Wired as a Netlify scheduled function `netlify/functions/task-due-reminders-cron.ts` at `0 8 * * *` (netlify.toml). Bot handler `handleTaskDueSoon` in `kanban-events.js`.
+- Comment mutations log `task_comment_create` / `task_comment_delete`; checklist toggles are NOT logged (too noisy).
+
 ## Data model (exact)
 
 - `task_boards(id, tenant_id NOT NULL, name, description, position, is_archived, created_by→staff, created_at, updated_at)`
