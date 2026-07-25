@@ -828,7 +828,58 @@ export type BulkProcessResult = {
   acted: number;
   errors: number;
   details: ProcessStepResult[];
+  /**
+   * Set to `true` when the cron short-circuited because no tournament window is
+   * currently active (see `hasActiveTournamentWindow`). Purely observability —
+   * a skipped run leaves `scanned/acted/errors` at 0. Absent on normal runs and
+   * on the targeted admin path (which bypasses the guard).
+   */
+  skipped?: boolean;
 };
+
+/**
+ * True s'il existe ≥1 tournoi « actif » (status ∈ published|running) dont la
+ * fenêtre [start_date, end_date] chevauche [today-1j, today+1j].
+ *
+ * Le buffer ±1 jour couvre les matchs proches de minuit et l'écart UTC vs
+ * Europe/Paris (start_date/end_date sont des DATE sans fuseau). On compare des
+ * chaînes 'YYYY-MM-DD' (slice ISO) — cohérent avec le type DATE côté Postgres.
+ *
+ * FAIL-OPEN : si la requête échoue (colonne/réseau/exception), on retourne
+ * `true` + on logge l'erreur, pour ne JAMAIS couper silencieusement le check-in
+ * pendant un vrai tournoi à cause d'une erreur transitoire. La vraie sécurité
+ * downstream reste la fenêtre de match (±65 min) du scanner. Le seul cas
+ * renvoyant `false` sans requête est `supabaseAdmin` absent — auquel cas le
+ * scanner ne tournerait de toute façon pas.
+ */
+export async function hasActiveTournamentWindow(
+  now: Date = new Date()
+): Promise<boolean> {
+  if (!supabaseAdmin) return false;
+
+  const DAY_MS = 24 * 60 * 60 * 1000;
+  const upper = new Date(now.getTime() + DAY_MS).toISOString().slice(0, 10); // today+1
+  const lower = new Date(now.getTime() - DAY_MS).toISOString().slice(0, 10); // today-1
+
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('tournaments')
+      .select('id')
+      .in('status', ['published', 'running'])
+      .lte('start_date', upper)
+      .gte('end_date', lower)
+      .limit(1);
+
+    if (error) {
+      logger.error('[checkin] hasActiveTournamentWindow query error:', error);
+      return true; // fail-open
+    }
+    return Array.isArray(data) && data.length > 0;
+  } catch (e) {
+    logger.error('[checkin] hasActiveTournamentWindow exception:', e);
+    return true; // fail-open
+  }
+}
 
 const SELECT_FIELDS = `
   id, tenant_id, tournament_id, status, is_bye, scheduled_at,
@@ -866,6 +917,18 @@ export async function processCheckinForUpcomingMatches(opts?: {
   if (!supabaseAdmin) return summary;
 
   const now = new Date();
+
+  // Garde « hors période tournoi » : le cron (sans tournamentId ciblé) ne doit
+  // scanner que pendant la fenêtre d'un tournoi actif. Le chemin admin ciblé
+  // (avec tournamentId) BYPASSE ce garde — il sait ce qu'il déclenche.
+  if (!opts?.tournamentId) {
+    const active = await hasActiveTournamentWindow(now);
+    if (!active) {
+      logger.info('[checkin] hors période tournoi — scan ignoré');
+      return { ...summary, skipped: true };
+    }
+  }
+
   // Past edge must cover the widest possible auto-forfeit catch-up span: a
   // tournament may set checkin_grace_minutes up to GRACE_MAX (120), so a match
   // can still be forfeit-eligible up to ~that many minutes after kickoff. We

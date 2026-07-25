@@ -31,6 +31,7 @@ import {
   store,
   resetSupabaseMock,
   setAdminUser,
+  supabaseAdmin,
 } from './__helpers__/supabaseMock';
 
 import {
@@ -41,6 +42,7 @@ import {
   processMatchCheckin,
   listCheckinStatus,
   processCheckinForUpcomingMatches,
+  hasActiveTournamentWindow,
 } from '../../utils/checkin';
 
 /* -----------------------------------------------------------
@@ -116,6 +118,22 @@ beforeEach(() => {
   notifyCheckinReminder.mockClear();
   notifyCheckinForfeit.mockClear();
   applyMatchScore.mockClear();
+
+  // Le bulk scanner (cron, sans tournamentId) est désormais gardé par
+  // hasActiveTournamentWindow(). On seede par défaut un tournoi ACTIF grand-
+  // ouvert (id distinct de 'tour-1' pour ne pas interférer avec la résolution
+  // de checkin_grace_minutes sur 'tour-1') afin que les tests de scan
+  // existants passent le garde. Les tests « hors période » vident
+  // explicitement store.tournaments.
+  store.tournaments = [
+    {
+      id: 'active-window-tour',
+      tenant_id: TENANT_ID,
+      status: 'running',
+      start_date: '2020-01-01',
+      end_date: '2999-12-31',
+    },
+  ] as any;
 });
 
 /* -----------------------------------------------------------
@@ -857,5 +875,111 @@ describe('processCheckinForUpcomingMatches', () => {
     expect(
       summary.details[0].steps.some((s) => s.startsWith('reminder_30'))
     ).toBe(true);
+  });
+
+  it('short-circuits (skipped:true, scanned:0) when no tournament window is active', async () => {
+    // Aucun tournoi actif : le garde du cron doit court-circuiter AVANT tout
+    // scan de matches, même si un match est parfaitement dans la fenêtre.
+    store.tournaments = [];
+    const inWindow = new Date(Date.now() + 30 * 60_000).toISOString();
+    store.matches = [
+      defaultMatchSeed({ id: 'in', scheduled_at: inWindow }),
+    ] as any;
+
+    const summary = await processCheckinForUpcomingMatches();
+
+    expect(summary.skipped).toBe(true);
+    expect(summary.scanned).toBe(0);
+    expect(summary.acted).toBe(0);
+    // Aucun effet de bord : pas d'email envoyé (le scan des matches n'a pas eu lieu).
+    expect(sendMatchCheckinEmail).not.toHaveBeenCalled();
+  });
+
+  it('bypasses the guard when a targeted tournamentId is provided (admin path)', async () => {
+    // Pas de tournoi actif dans le mock, mais l'appel ciblé (bouton admin)
+    // doit tout de même scanner le tournoi demandé.
+    store.tournaments = [];
+    const inWindow = new Date(Date.now() + 30 * 60_000).toISOString();
+    store.matches = [
+      defaultMatchSeed({
+        id: 'm1',
+        scheduled_at: inWindow,
+        tournament_id: 'tour-A',
+      }),
+    ] as any;
+
+    const summary = await processCheckinForUpcomingMatches({
+      tournamentId: 'tour-A',
+    });
+
+    expect(summary.skipped).toBeUndefined();
+    expect(summary.scanned).toBe(1);
+  });
+});
+
+/* -----------------------------------------------------------
+ * hasActiveTournamentWindow
+ * ---------------------------------------------------------*/
+
+describe('hasActiveTournamentWindow', () => {
+  it('returns true when a published tournament overlaps the current window', async () => {
+    const now = new Date();
+    const iso = (d: Date) => d.toISOString().slice(0, 10);
+    store.tournaments = [
+      {
+        id: 'pub',
+        tenant_id: TENANT_ID,
+        status: 'published',
+        start_date: iso(new Date(now.getTime() - 5 * 86_400_000)),
+        end_date: iso(new Date(now.getTime() + 5 * 86_400_000)),
+      },
+    ] as any;
+
+    expect(await hasActiveTournamentWindow(now)).toBe(true);
+  });
+
+  it('returns false when all tournaments are out of window or finished', async () => {
+    const now = new Date();
+    const iso = (d: Date) => d.toISOString().slice(0, 10);
+    store.tournaments = [
+      // Future tournament, entirely beyond the +1 day upper bound.
+      {
+        id: 'future',
+        tenant_id: TENANT_ID,
+        status: 'published',
+        start_date: iso(new Date(now.getTime() + 30 * 86_400_000)),
+        end_date: iso(new Date(now.getTime() + 40 * 86_400_000)),
+      },
+      // Active window but a non-active status → excluded by the .in() filter.
+      {
+        id: 'done',
+        tenant_id: TENANT_ID,
+        status: 'completed',
+        start_date: iso(new Date(now.getTime() - 5 * 86_400_000)),
+        end_date: iso(new Date(now.getTime() + 5 * 86_400_000)),
+      },
+    ] as any;
+
+    expect(await hasActiveTournamentWindow(now)).toBe(false);
+  });
+
+  it('fails open (returns true) when the tournaments query errors', async () => {
+    // Force la requête .from('tournaments') à renvoyer une erreur : le garde
+    // ne doit JAMAIS couper le check-in à cause d'une erreur transitoire.
+    const errChain: any = {
+      select: () => errChain,
+      in: () => errChain,
+      lte: () => errChain,
+      gte: () => errChain,
+      limit: () =>
+        Promise.resolve({ data: null, error: { message: 'boom' } }),
+    };
+    const spy = vi
+      .spyOn(supabaseAdmin, 'from')
+      .mockReturnValueOnce(errChain);
+
+    expect(await hasActiveTournamentWindow()).toBe(true);
+
+    spy.mockRestore();
   });
 });
