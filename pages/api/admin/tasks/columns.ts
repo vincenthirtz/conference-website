@@ -11,6 +11,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { createColumnBodySchema } from '@/utils/taskBoardSchemas';
+import { emitBoardChanged } from '@/utils/taskBoard';
 import { formatZodError } from '@/utils/validation';
 import { logger } from '@/utils/logger';
 
@@ -90,6 +91,8 @@ async function handler(
   } catch (e) {
     logger.error('[admin/tasks/columns] audit error', e);
   }
+
+  await emitBoardChanged(ctx.tenantId, boardId);
 
   const c = inserted as {
     id: string;

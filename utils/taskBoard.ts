@@ -537,6 +537,32 @@ async function auditTask(params: {
   }
 }
 
+/**
+ * Signal LÉGER de rafraîchissement de la vue « live » d'un board dans Discord.
+ * Émis **en plus** des events spécifiques (task.created / moved / assigned…) à
+ * CHAQUE mutation qui change le contenu d'un board (carte, colonne ou board
+ * lui-même). Payload minimal `{ boardId, boardName }` : le bot n'a besoin que de
+ * savoir QUEL board rafraîchir, il refetch l'état complet ensuite.
+ *
+ * Best-effort absolu : ne jette JAMAIS (un échec d'émission ne doit pas casser
+ * la mutation qui vient de réussir). Toute erreur est loggée puis avalée.
+ */
+export async function emitBoardChanged(
+  tenantId: string,
+  boardId: string,
+  boardName?: string
+): Promise<void> {
+  try {
+    await emitBotEvent(
+      'task.board_changed',
+      { boardId, boardName: boardName ?? null },
+      tenantId
+    );
+  } catch (e) {
+    logger.error('[taskBoard] emitBoardChanged error', e);
+  }
+}
+
 /** Position max (non-deleted) dans une colonne, ou -1 si vide. */
 async function maxPositionInColumn(
   tenantId: string,
@@ -674,6 +700,7 @@ export async function createTaskCore(
       payload.assigneeDiscordUserId = assignee.discordUserId;
   }
   await emitBotEvent('task.created', payload, tenantId);
+  await emitBoardChanged(tenantId, board.id, board.name);
 
   return {
     ok: true,
@@ -859,6 +886,9 @@ export async function moveTaskCore(input: MoveTaskInput): Promise<CoreResult> {
       payload.assigneeDiscordUserId = assignee.discordUserId;
   }
   await emitBotEvent('task.moved', payload, tenantId);
+  // Émis uniquement sur un déplacement réel : le no-op (même colonne / même
+  // position) a court-circuité plus haut, donc aucun board_changed superflu.
+  await emitBoardChanged(tenantId, task.board_id, board?.name ?? undefined);
 
   return {
     ok: true,
@@ -973,6 +1003,10 @@ export async function assignTaskCore(
     await emitBotEvent('task.assigned', payload, tenantId);
   }
 
+  // board_changed sur CHAQUE (dés)assignation, y compris `assigneeStaffId = null`
+  // (task.assigned lui n'est émis que pour un assigné non-null).
+  await emitBoardChanged(tenantId, task.board_id, board?.name ?? undefined);
+
   const movedRow: TaskRow = {
     ...task,
     assignee_staff_id: input.assigneeStaffId,
@@ -1082,6 +1116,8 @@ export async function restoreTaskCore(
       title: task.title,
     },
   });
+
+  await emitBoardChanged(tenantId, task.board_id, board?.name ?? undefined);
 
   const restoredRow: TaskRow = { ...task, deleted_at: null, position };
   return {

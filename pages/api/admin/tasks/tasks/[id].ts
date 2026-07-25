@@ -15,7 +15,11 @@ import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { patchTaskBodySchema } from '@/utils/taskBoardSchemas';
-import { loadTaskComments, loadChecklistItems } from '@/utils/taskBoard';
+import {
+  loadTaskComments,
+  loadChecklistItems,
+  emitBoardChanged,
+} from '@/utils/taskBoard';
 import { formatZodError } from '@/utils/validation';
 import { logger } from '@/utils/logger';
 
@@ -179,6 +183,7 @@ async function patchTask(
   }
 
   const row = updated as TaskRow;
+  await emitBoardChanged(ctx.tenantId, row.board_id);
   const name = await resolveAssigneeName(row.assignee_staff_id ?? null);
   return res.status(200).json({ task: shape(row, name) });
 }
@@ -190,7 +195,7 @@ async function softDeleteTask(
 ) {
   const { data: existing } = await supabaseAdmin!
     .from('tasks')
-    .select('id, title')
+    .select('id, title, board_id')
     .eq('tenant_id', ctx.tenantId)
     .eq('id', id)
     .is('deleted_at', null)
@@ -219,6 +224,11 @@ async function softDeleteTask(
   } catch (e) {
     logger.error('[admin/tasks/tasks/:id] audit error', e);
   }
+
+  await emitBoardChanged(
+    ctx.tenantId,
+    (existing as { board_id: string }).board_id
+  );
 
   return res.status(200).json({ success: true });
 }

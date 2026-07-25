@@ -25,8 +25,10 @@ import boardIdHandler from '../../pages/api/admin/tasks/boards/[id]';
 import columnsHandler from '../../pages/api/admin/tasks/columns';
 import columnIdHandler from '../../pages/api/admin/tasks/columns/[id]';
 import tasksHandler from '../../pages/api/admin/tasks/tasks';
+import taskIdHandler from '../../pages/api/admin/tasks/tasks/[id]';
 import moveHandler from '../../pages/api/admin/tasks/tasks/[id]/move';
 import assignHandler from '../../pages/api/admin/tasks/tasks/[id]/assign';
+import restoreHandler from '../../pages/api/admin/tasks/tasks/[id]/restore';
 import labelsHandler from '../../pages/api/admin/tasks/labels';
 import labelIdHandler from '../../pages/api/admin/tasks/labels/[id]';
 import myHandler from '../../pages/api/admin/tasks/my';
@@ -87,6 +89,15 @@ function makeRes(): any {
       return this;
     },
   };
+}
+
+/** Cartes `task.board_changed` émises pour un boardId donné. */
+function boardChangedFor(boardId: string): any[] {
+  return ((store.bot_event_outbox ?? []) as any[]).filter(
+    (e) =>
+      e.event_name === 'task.board_changed' &&
+      e.payload?.data?.boardId === boardId
+  );
 }
 
 function seedStaff(role: 'owner' | 'admin' | 'caster' = 'admin') {
@@ -244,6 +255,8 @@ describe('POST /api/admin/tasks/tasks', () => {
       (e: any) => e.event_name === 'task.created'
     );
     expect(evt).toBeTruthy();
+    // Signal live board_changed émis EN PLUS de task.created.
+    expect(boardChangedFor(BOARD)).toHaveLength(1);
   });
 
   it("400 si la colonne n'appartient pas au board", async () => {
@@ -286,6 +299,10 @@ describe('PATCH /api/admin/tasks/tasks/[id]/move', () => {
     expect(evt).toBeTruthy();
     expect((evt as any).payload.data.toColumnName).toBe('Terminé');
     expect((evt as any).payload.data.isDone).toBe(true);
+    // board_changed émis EN PLUS de task.moved (déplacement réel).
+    const bc = boardChangedFor(BOARD);
+    expect(bc).toHaveLength(1);
+    expect(bc[0].payload.data.boardName).toBe('Association');
   });
 
   it("404 sur une colonne cible d'un autre board (introuvable)", async () => {
@@ -322,6 +339,8 @@ describe('PATCH /api/admin/tasks/tasks/[id]/assign', () => {
     );
     expect(evt).toBeTruthy();
     expect((evt as any).payload.data.assigneeName).toBe('Admin One');
+    // board_changed émis EN PLUS de task.assigned.
+    expect(boardChangedFor(BOARD)).toHaveLength(1);
   });
 
   it('désassigne (null) sans émettre task.assigned', async () => {
@@ -342,6 +361,8 @@ describe('PATCH /api/admin/tasks/tasks/[id]/assign', () => {
       (e: any) => e.event_name === 'task.assigned'
     );
     expect(evt).toBeUndefined();
+    // Mais board_changed EST émis (la désassignation change le board).
+    expect(boardChangedFor(BOARD)).toHaveLength(1);
   });
 });
 
@@ -366,6 +387,78 @@ describe('DELETE /api/admin/tasks/columns/[id]', () => {
     );
     expect(res.statusCode).toBe(200);
     expect(store.task_columns.find((c: any) => c.id === COL2)).toBeUndefined();
+    expect(boardChangedFor(BOARD)).toHaveLength(1);
+  });
+});
+
+describe('task.board_changed sur les autres mutations', () => {
+  beforeEach(seedBoard);
+
+  it('PATCH carte (édition) émet board_changed', async () => {
+    const res = makeRes();
+    await taskIdHandler(
+      makeReq({
+        method: 'PATCH',
+        query: { id: TASK },
+        body: { title: 'Titre modifié', priority: 'high' },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    const bc = boardChangedFor(BOARD);
+    expect(bc).toHaveLength(1);
+    expect(bc[0].payload.data.boardId).toBe(BOARD);
+  });
+
+  it('DELETE carte (soft-delete) émet board_changed', async () => {
+    const res = makeRes();
+    await taskIdHandler(
+      makeReq({ method: 'DELETE', query: { id: TASK } }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    expect(boardChangedFor(BOARD)).toHaveLength(1);
+  });
+
+  it('PATCH restore émet board_changed', async () => {
+    store.tasks[0].deleted_at = '2026-07-01T00:00:00.000Z';
+    const res = makeRes();
+    await restoreHandler(
+      makeReq({ method: 'PATCH', query: { id: TASK } }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    expect(boardChangedFor(BOARD)).toHaveLength(1);
+  });
+
+  it('PATCH colonne (rename) émet board_changed', async () => {
+    const res = makeRes();
+    await columnIdHandler(
+      makeReq({
+        method: 'PATCH',
+        query: { id: COL1 },
+        body: { name: 'Backlog' },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    expect(boardChangedFor(BOARD)).toHaveLength(1);
+  });
+
+  it('PATCH board (rename/archive) émet board_changed avec boardName', async () => {
+    const res = makeRes();
+    await boardIdHandler(
+      makeReq({
+        method: 'PATCH',
+        query: { id: BOARD },
+        body: { name: 'Association 2026' },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    const bc = boardChangedFor(BOARD);
+    expect(bc).toHaveLength(1);
+    expect(bc[0].payload.data.boardName).toBe('Association 2026');
   });
 });
 
@@ -380,6 +473,7 @@ describe('POST /api/admin/tasks/columns', () => {
     );
     expect(res.statusCode).toBe(201);
     expect((res.body as any).column.position).toBe(2);
+    expect(boardChangedFor(BOARD)).toHaveLength(1);
   });
 });
 

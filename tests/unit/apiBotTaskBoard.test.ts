@@ -22,6 +22,7 @@ import {
 import listHandler from '../../pages/api/bot/v1/tasks/index';
 import boardsHandler from '../../pages/api/bot/v1/tasks/boards';
 import columnsHandler from '../../pages/api/bot/v1/tasks/columns';
+import snapshotHandler from '../../pages/api/bot/v1/tasks/board-snapshot';
 import moveHandler from '../../pages/api/bot/v1/tasks/[id]/move';
 import assignHandler from '../../pages/api/bot/v1/tasks/[id]/assign';
 
@@ -214,6 +215,95 @@ describe('GET bot /tasks + autocomplete', () => {
     );
     expect(res.statusCode).toBe(200);
     expect((res.body as any).columns).toHaveLength(2);
+  });
+});
+
+describe('GET bot /tasks/board-snapshot (vue live, sans acteur staff)', () => {
+  it('renvoie colonnes ordonnées + cartes non-deleted + checklist counts', async () => {
+    store.tasks[0].assignee_staff_id = STAFF_A;
+    store.tasks[0].due_date = '2026-08-01';
+    store.task_checklist_items = [
+      { id: 'ci-1', tenant_id: T, task_id: TASK, label: 'a', is_done: true, position: 0 },
+      { id: 'ci-2', tenant_id: T, task_id: TASK, label: 'b', is_done: false, position: 1 },
+      { id: 'ci-3', tenant_id: T, task_id: TASK, label: 'c', is_done: false, position: 2 },
+    ] as any;
+    // Carte soft-deleted : NE doit PAS apparaître dans le snapshot.
+    store.tasks.push({
+      id: '55555555-5555-4555-8555-5555555555de',
+      tenant_id: T,
+      board_id: BOARD,
+      column_id: COL1,
+      title: 'Supprimée',
+      description: null,
+      priority: 'low',
+      assignee_staff_id: null,
+      due_date: null,
+      position: 5,
+      labels: [],
+      deleted_at: '2026-01-01T00:00:00.000Z',
+    } as any);
+
+    const res = makeRes();
+    await snapshotHandler(makeBotReq({ query: { boardId: BOARD } }), res);
+    expect(res.statusCode).toBe(200);
+    const board = (res.body as any).board;
+    expect(board.id).toBe(BOARD);
+    expect(board.name).toBe('Association');
+    // Colonnes triées par position.
+    expect(board.columns.map((c: any) => c.name)).toEqual(['À faire', 'Terminé']);
+    const col1 = board.columns[0];
+    expect(col1.isDone).toBe(false);
+    expect(col1.cards).toHaveLength(1);
+    expect(col1.cards[0].title).toBe('Publier le règlement');
+    expect(col1.cards[0].priority).toBe('high');
+    expect(col1.cards[0].assigneeName).toBe('Bot Admin A');
+    expect(col1.cards[0].dueDate).toBe('2026-08-01');
+    expect(col1.cards[0].checklist).toEqual({ done: 1, total: 3 });
+    // Colonne terminale vide (la carte y est absente).
+    expect(board.columns[1].isDone).toBe(true);
+    expect(board.columns[1].cards).toHaveLength(0);
+  });
+
+  it('assigneeName null quand la carte n’est pas assignée + checklist 0/0', async () => {
+    const res = makeRes();
+    await snapshotHandler(makeBotReq({ query: { boardId: BOARD } }), res);
+    expect(res.statusCode).toBe(200);
+    const card = (res.body as any).board.columns[0].cards[0];
+    expect(card.assigneeName).toBe(null);
+    expect(card.checklist).toEqual({ done: 0, total: 0 });
+  });
+
+  it('200 avec la clé bot SANS acteur staff (lecture seule)', async () => {
+    const res = makeRes();
+    // Aucun actorDiscordUserId fourni — l'endpoint ne l'exige pas.
+    await snapshotHandler(makeBotReq({ query: { boardId: BOARD } }), res);
+    expect(res.statusCode).toBe(200);
+  });
+
+  it('401 sans clé bot', async () => {
+    const res = makeRes();
+    await snapshotHandler(
+      { ...makeBotReq({ query: { boardId: BOARD } }), headers: { host: 'h' } },
+      res
+    );
+    expect(res.statusCode).toBe(401);
+  });
+
+  it('400 INVALID_QUERY sans boardId', async () => {
+    const res = makeRes();
+    await snapshotHandler(makeBotReq({ query: {} }), res);
+    expect(res.statusCode).toBe(400);
+    expect((res.body as any).code).toBe('INVALID_QUERY');
+  });
+
+  it('404 board_not_found sur board inconnu', async () => {
+    const res = makeRes();
+    await snapshotHandler(
+      makeBotReq({ query: { boardId: '33333333-3333-4333-8333-3333333333ff' } }),
+      res
+    );
+    expect(res.statusCode).toBe(404);
+    expect((res.body as any).code).toBe('board_not_found');
   });
 });
 

@@ -8723,7 +8723,7 @@ paths:
     post:
       tags:
         - bot/tasks
-      summary: Cree une carte Kanban (createTaskCore). Emet task.created.
+      summary: Cree une carte Kanban (createTaskCore). Emet task.created + task.board_changed.
       operationId: botCreateTask
       requestBody:
         required: true
@@ -8798,11 +8798,76 @@ paths:
               schema:
                 type: object
                 additionalProperties: true
+  /api/bot/v1/tasks/board-snapshot:
+    get:
+      tags:
+        - bot/tasks
+      summary: Etat complet d'un board pour la vue live du bot (LECTURE SEULE, sans acteur staff).
+      description: |
+        Snapshot COMPLET d'un board Kanban pour le rendu « live » dans Discord,
+        rafraîchi sur l'event `task.board_changed`. N'exige PAS d'acteur staff
+        (`requireBotStaff`) : lecture seule scopée au tenant de la clé bot.
+        Colonnes triées par position ; cartes non supprimées triées par position ;
+        `assigneeName` résolu (null si non assigné) ; `checklist` = compteur
+        done/total des items ; `dueDate` = date ISO ou null.
+      operationId: botTaskBoardSnapshot
+      parameters:
+        - name: boardId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Snapshot du board.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [board]
+                properties:
+                  board:
+                    type: object
+                    required: [id, name, columns]
+                    properties:
+                      id: { type: string, format: uuid }
+                      name: { type: string }
+                      columns:
+                        type: array
+                        items:
+                          type: object
+                          required: [name, isDone, cards]
+                          properties:
+                            name: { type: string }
+                            isDone: { type: boolean }
+                            cards:
+                              type: array
+                              items:
+                                type: object
+                                required: [title, priority, assigneeName, dueDate, checklist]
+                                properties:
+                                  title: { type: string }
+                                  priority: { type: string, enum: [low, medium, high, urgent] }
+                                  assigneeName: { type: string, nullable: true }
+                                  dueDate: { type: string, nullable: true }
+                                  checklist:
+                                    type: object
+                                    required: [done, total]
+                                    properties:
+                                      done: { type: integer }
+                                      total: { type: integer }
+        '400':
+          description: boardId absent ou invalide (INVALID_QUERY).
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Board introuvable dans le tenant (code board_not_found).
   /api/bot/v1/tasks/{id}/move:
     patch:
       tags:
         - bot/tasks
-      summary: Deplace une carte Kanban (moveTaskCore). Emet task.moved. Idempotent.
+      summary: Deplace une carte Kanban (moveTaskCore). Emet task.moved + task.board_changed. Idempotent.
       operationId: botMoveTask
       parameters:
         - name: id
@@ -8834,7 +8899,7 @@ paths:
     patch:
       tags:
         - bot/tasks
-      summary: (Des)assigne une carte Kanban (assignTaskCore). Emet task.assigned. Idempotent.
+      summary: (Des)assigne une carte Kanban (assignTaskCore). Emet task.assigned + task.board_changed. Idempotent.
       operationId: botAssignTask
       parameters:
         - name: id
@@ -10262,7 +10327,7 @@ paths:
     patch:
       tags:
         - admin/tasks
-      summary: Edite un board (name, description, position, is_archived).
+      summary: Edite un board (name, description, position, is_archived). Emet task.board_changed.
       operationId: adminUpdateTaskBoard
       security:
         - StaffSession: []
@@ -10326,7 +10391,7 @@ paths:
     post:
       tags:
         - admin/tasks
-      summary: Cree une colonne dans un board (position = max+1).
+      summary: Cree une colonne dans un board (position = max+1). Emet task.board_changed.
       operationId: adminCreateTaskColumn
       security:
         - StaffSession: []
@@ -10358,7 +10423,7 @@ paths:
     patch:
       tags:
         - admin/tasks
-      summary: Edite une colonne (name, wipLimit, isDone, position/reorder).
+      summary: Edite une colonne (name, wipLimit, isDone, position/reorder). Emet task.board_changed.
       operationId: adminUpdateTaskColumn
       security:
         - StaffSession: []
@@ -10395,7 +10460,7 @@ paths:
     delete:
       tags:
         - admin/tasks
-      summary: Supprime une colonne. 409 column_not_empty si des cartes vivantes y sont.
+      summary: Supprime une colonne. 409 column_not_empty si des cartes vivantes y sont. Emet task.board_changed.
       operationId: adminDeleteTaskColumn
       security:
         - StaffSession: []
@@ -10429,7 +10494,7 @@ paths:
     post:
       tags:
         - admin/tasks
-      summary: Cree une carte (createTaskCore). Emet task.created.
+      summary: Cree une carte (createTaskCore). Emet task.created + task.board_changed.
       operationId: adminCreateTask
       security:
         - StaffSession: []
@@ -10493,7 +10558,7 @@ paths:
     patch:
       tags:
         - admin/tasks
-      summary: Edite une carte (title, description, priority, dueDate, labels).
+      summary: Edite une carte (title, description, priority, dueDate, labels). Emet task.board_changed.
       operationId: adminUpdateTask
       security:
         - StaffSession: []
@@ -10533,7 +10598,7 @@ paths:
     delete:
       tags:
         - admin/tasks
-      summary: Soft-delete d'une carte (deleted_at = now()).
+      summary: Soft-delete d'une carte (deleted_at = now()). Emet task.board_changed.
       operationId: adminDeleteTask
       security:
         - StaffSession: []
@@ -10560,7 +10625,7 @@ paths:
     patch:
       tags:
         - admin/tasks
-      summary: Deplace une carte (moveTaskCore). Emet task.moved. Idempotent.
+      summary: Deplace une carte (moveTaskCore). Emet task.moved + task.board_changed. Idempotent.
       operationId: adminMoveTask
       security:
         - StaffSession: []
@@ -10597,7 +10662,7 @@ paths:
     patch:
       tags:
         - admin/tasks
-      summary: (Des)assigne une carte (assignTaskCore). Emet task.assigned. Idempotent.
+      summary: (Des)assigne une carte (assignTaskCore). Emet task.assigned + task.board_changed. Idempotent.
       operationId: adminAssignTask
       security:
         - StaffSession: []
@@ -11043,7 +11108,7 @@ paths:
     patch:
       tags:
         - admin/tasks
-      summary: Restaure une carte de la corbeille (restoreTaskCore). Loggue task_restore.
+      summary: Restaure une carte de la corbeille (restoreTaskCore). Loggue task_restore. Emet task.board_changed.
       operationId: adminRestoreTask
       description: |
         Repositionne une carte soft-deleted comme active : `deleted_at = NULL`

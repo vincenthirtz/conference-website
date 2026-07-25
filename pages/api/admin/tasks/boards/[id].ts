@@ -15,7 +15,7 @@ import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { patchBoardBodySchema } from '@/utils/taskBoardSchemas';
-import { loadBoardLabels } from '@/utils/taskBoard';
+import { loadBoardLabels, emitBoardChanged } from '@/utils/taskBoard';
 import { formatZodError } from '@/utils/validation';
 import { logger } from '@/utils/logger';
 
@@ -271,6 +271,7 @@ async function patchBoard(
     position: number | null;
     is_archived: boolean;
   };
+  await emitBoardChanged(ctx.tenantId, u.id, u.name);
   return res.status(200).json({
     board: {
       id: u.id,

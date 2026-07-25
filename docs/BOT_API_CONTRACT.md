@@ -252,6 +252,7 @@ catalog can grow without forcing a bot deploy.
 | `task.created` (Kanban)           | `createTaskCore` — admin `POST /api/admin/tasks/tasks` OU bot `POST /api/bot/v1/tasks`                                            | `{ taskId, boardId, boardName, columnName, title, priority, assigneeStaffId?, assigneeDiscordUserId?, assigneeName?, actorLabel }`             |
 | `task.moved` (Kanban)             | `moveTaskCore` — admin `PATCH .../tasks/{id}/move` OU bot `PATCH /api/bot/v1/tasks/{id}/move`                                     | `{ taskId, boardName, title, fromColumnName, toColumnName, isDone, assigneeDiscordUserId?, assigneeName?, actorLabel }`                        |
 | `task.assigned` (Kanban)          | `assignTaskCore` — admin `PATCH .../tasks/{id}/assign` OU bot `PATCH /api/bot/v1/tasks/{id}/assign` (assigné non-null uniquement) | `{ taskId, boardName, title, assigneeStaffId, assigneeName, assigneeDiscordUserId?, actorLabel }`                                              |
+| `task.board_changed` (Kanban)     | **Chaque** mutation d'un board — cores (`createTaskCore` / `moveTaskCore` / `assignTaskCore` / `restoreTaskCore`) **et** handlers admin (édition/soft-delete carte, POST/PATCH/DELETE colonne, PATCH board) | `{ boardId, boardName }` (`boardName` peut être `null`)                                                                                        |
 | `task.due_soon` (Kanban)          | Cron `/api/cron/task-due-reminders` — carte due J-1, hors colonne terminale                                                       | `{ taskId, boardName, title, dueDate, columnName, priority, assigneeStaffId?, assigneeName?, assigneeDiscordUserId? }`                         |
 | `task.digest` (Kanban)            | Cron `/api/cron/task-board-digest` — digest quotidien, **un event par tenant**                                                    | `{ boards: [{ boardId, boardName, total, overdue, dueToday, columns: [{ name, count }] }] }`                                                   |
 
@@ -271,6 +272,18 @@ identiques que l'action vienne du back-office admin ou de la commande Discord
 = null`) — seul un assigné non-null déclenche l'event.
 - `task.moved` porte `isDone` = la colonne cible est-elle terminale (permet au bot
   d'annoncer « tâche terminée »).
+- `task.board_changed` est un **signal de rafraîchissement** LÉGER de la vue « live »
+  d'un board dans Discord, émis **en plus** des events spécifiques (`task.created` /
+  `task.moved` / `task.assigned`…) à **chaque** mutation qui change le contenu d'un
+  board : création/édition/déplacement/(dés)assignation/soft-delete/restauration
+  d'une carte, création/édition/suppression d'une colonne, et rename/archivage du
+  board lui-même. Payload minimal `{ boardId, boardName }` (`boardName` peut être
+  `null` selon le point d'émission) : le bot n'a besoin que de savoir **quel** board
+  rafraîchir, puis il refetch l'état complet via `GET /api/bot/v1/tasks/board-snapshot?boardId=`.
+  Émis uniquement sur un changement réel (le no-op d'un move — même colonne/même
+  position — ne l'émet pas). Non émis à la **création** d'un board (aucune vue live
+  n'existe encore) ni à sa suppression (le board a disparu). Best-effort : un échec
+  d'émission ne casse jamais la mutation.
 - `task.due_soon` est émis par le **cron** [`/api/cron/task-due-reminders`](../pages/api/cron/task-due-reminders.ts)
   (Netlify scheduled function), **pas** par le cœur partagé : une passe quotidienne
   sélectionne les cartes dont `due_date = CURRENT_DATE + 1` (rappel J-1), non
@@ -355,20 +368,60 @@ expose par carte `checklist: { done, total }` et `commentCount`. La checklist n'
 **pas** auditée (toggle trop verbeux) — seuls les commentaires le sont.
 
 **Endpoints bot** (tous exigent un acteur `actorDiscordUserId` **staff
-admin/owner** via `requireBotStaff` — 403 sinon) :
+admin/owner** via `requireBotStaff` — 403 sinon — **SAUF** `board-snapshot`, cf.
+note ci-dessous) :
 
-| Méthode + path                        | Corps / query                                                                                                           | Réponse                                      |
-| ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
-| `GET /api/bot/v1/tasks/boards`        | query `actorDiscordUserId`                                                                                              | `{ boards: [{ id, name }], count }`          |
-| `GET /api/bot/v1/tasks/columns`       | query `actorDiscordUserId`, `boardId` (requis)                                                                          | `{ columns: [{ id, name, isDone }], count }` |
-| `GET /api/bot/v1/tasks`               | query `actorDiscordUserId`, `boardId?`, `columnId?`, `assignee=me?`, `q?`, `limit?`                                     | `{ tasks: [NormalizedTask], count }`         |
-| `POST /api/bot/v1/tasks`              | `{ actorDiscordUserId, boardId, columnId, title, description?, priority?, assigneeStaffId?, dueDate?, labels? }`        | `201 { task: NormalizedTask }`               |
-| `PATCH /api/bot/v1/tasks/{id}/move`   | `{ actorDiscordUserId, columnId, position? }` (idempotent)                                                              | `{ task: NormalizedTask }`                   |
-| `PATCH /api/bot/v1/tasks/{id}/assign` | `{ actorDiscordUserId, assignSelf?:true \| assigneeDiscordUserId? \| assigneeStaffId?(null=désassigner) }` (idempotent) | `{ task: NormalizedTask }`                   |
+| Méthode + path                            | Corps / query                                                                                                           | Réponse                                      |
+| ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| `GET /api/bot/v1/tasks/boards`            | query `actorDiscordUserId`                                                                                              | `{ boards: [{ id, name }], count }`          |
+| `GET /api/bot/v1/tasks/columns`           | query `actorDiscordUserId`, `boardId` (requis)                                                                          | `{ columns: [{ id, name, isDone }], count }` |
+| `GET /api/bot/v1/tasks`                   | query `actorDiscordUserId`, `boardId?`, `columnId?`, `assignee=me?`, `q?`, `limit?`                                     | `{ tasks: [NormalizedTask], count }`         |
+| `GET /api/bot/v1/tasks/board-snapshot`    | query `boardId` (requis, uuid) — **PAS d'acteur staff**                                                                 | `{ board: BoardSnapshot }` (voir ci-dessous) |
+| `POST /api/bot/v1/tasks`                  | `{ actorDiscordUserId, boardId, columnId, title, description?, priority?, assigneeStaffId?, dueDate?, labels? }`        | `201 { task: NormalizedTask }`               |
+| `PATCH /api/bot/v1/tasks/{id}/move`       | `{ actorDiscordUserId, columnId, position? }` (idempotent)                                                              | `{ task: NormalizedTask }`                   |
+| `PATCH /api/bot/v1/tasks/{id}/assign`     | `{ actorDiscordUserId, assignSelf?:true \| assigneeDiscordUserId? \| assigneeStaffId?(null=désassigner) }` (idempotent) | `{ task: NormalizedTask }`                   |
 
 `NormalizedTask` = `{ id, title, description, boardId, boardName, columnId,
 columnName, priority, assigneeStaffId, assigneeName, dueDate, labels }`.
 `assigneeDiscordUserId` non-staff sur `/assign` → `400 { code:'assignee_not_staff' }`.
+
+**`GET /api/bot/v1/tasks/board-snapshot`** — état COMPLET d'un board pour la vue
+« live » du bot, à rafraîchir sur réception d'un event `task.board_changed`.
+**N'exige PAS d'acteur staff** (`requireBotStaff`) : le rendu live est déclenché
+par un event, pas par une commande utilisateur. Lecture seule, scopée au tenant
+de la clé bot (`req.botContext.tenantId`). Query `boardId` requis (uuid) validée
+par `withBotRoute({ querySchema })` → `400 { code:'INVALID_QUERY' }` si absent /
+invalide. `404 { code:'board_not_found' }` si le board n'existe pas dans le
+tenant. Rate-limit dédié `bot-tasks-snapshot` (60/min). Réponse :
+
+```json
+{
+  "board": {
+    "id": "<uuid>",
+    "name": "Association",
+    "columns": [
+      {
+        "name": "À faire",
+        "isDone": false,
+        "cards": [
+          {
+            "title": "Réserver la salle",
+            "priority": "high",
+            "assigneeName": "Alice",
+            "dueDate": "2026-08-01",
+            "checklist": { "done": 1, "total": 3 }
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+Colonnes triées par `position` ; cartes non supprimées (`deleted_at IS NULL`)
+triées par `position` ; `assigneeName` = `staff.display_name` (`null` si non
+assignée) ; `checklist` = compteur `done`/`total` des `task_checklist_items` de
+la carte ; `dueDate` = date ISO ou `null`.
 
 #### `event_segment.transitioned` (Lot 2 run-of-show)
 
@@ -801,16 +854,18 @@ body shapes live there. `Idem.` means the route honours `Idempotency-Key`.
 
 ### Kanban interne (task board)
 
-Staff-only (`requireBotStaff`). Voir la section « Kanban interne » du catalogue
-d'events pour les corps/réponses détaillés.
+Staff-only (`requireBotStaff`) **sauf `board-snapshot`** (lecture seule pour la
+vue live, sans acteur). Voir la section « Kanban interne » du catalogue d'events
+pour les corps/réponses détaillés.
 
-| Route                                                              | Methods  | Idem. | Rate-key            |
-| ------------------------------------------------------------------ | -------- | ----- | ------------------- |
-| [`tasks/index.ts`](../pages/api/bot/v1/tasks/index.ts)             | GET/POST | —     | `bot-tasks`         |
-| [`tasks/boards.ts`](../pages/api/bot/v1/tasks/boards.ts)           | GET      | —     | `bot-tasks-boards`  |
-| [`tasks/columns.ts`](../pages/api/bot/v1/tasks/columns.ts)         | GET      | —     | `bot-tasks-columns` |
-| [`tasks/[id]/move.ts`](../pages/api/bot/v1/tasks/[id]/move.ts)     | PATCH    | yes   | `bot-tasks-move`    |
-| [`tasks/[id]/assign.ts`](../pages/api/bot/v1/tasks/[id]/assign.ts) | PATCH    | yes   | `bot-tasks-assign`  |
+| Route                                                                     | Methods  | Idem. | Rate-key             |
+| ------------------------------------------------------------------------- | -------- | ----- | -------------------- |
+| [`tasks/index.ts`](../pages/api/bot/v1/tasks/index.ts)                    | GET/POST | —     | `bot-tasks`          |
+| [`tasks/boards.ts`](../pages/api/bot/v1/tasks/boards.ts)                  | GET      | —     | `bot-tasks-boards`   |
+| [`tasks/columns.ts`](../pages/api/bot/v1/tasks/columns.ts)                | GET      | —     | `bot-tasks-columns`  |
+| [`tasks/board-snapshot.ts`](../pages/api/bot/v1/tasks/board-snapshot.ts)  | GET      | —     | `bot-tasks-snapshot` |
+| [`tasks/[id]/move.ts`](../pages/api/bot/v1/tasks/[id]/move.ts)            | PATCH    | yes   | `bot-tasks-move`     |
+| [`tasks/[id]/assign.ts`](../pages/api/bot/v1/tasks/[id]/assign.ts)        | PATCH    | yes   | `bot-tasks-assign`   |
 
 #### `GET /api/bot/v1/disputes/escalations`
 

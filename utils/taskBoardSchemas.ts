@@ -67,6 +67,17 @@ export const deletedTasksQuerySchema = z.object({
 });
 export type DeletedTasksQuery = z.infer<typeof deletedTasksQuerySchema>;
 
+/**
+ * Query du snapshot « live » d'un board (bot — `GET /api/bot/v1/tasks/board-snapshot`).
+ * `boardId` requis : la vue live du bot rafraîchit un board précis. Validé en
+ * bord de route via `withBotRoute({ querySchema })` → 400 INVALID_QUERY si absent
+ * ou non-uuid.
+ */
+export const boardSnapshotQuerySchema = z.object({
+  boardId: uuid,
+});
+export type BoardSnapshotQuery = z.infer<typeof boardSnapshotQuerySchema>;
+
 /** Déplacement de carte. */
 export const moveTaskBodySchema = z.object({
   columnId: uuid,

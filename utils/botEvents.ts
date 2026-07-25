@@ -61,6 +61,7 @@ export type BotEventName =
   | 'task.created'
   | 'task.moved'
   | 'task.assigned'
+  | 'task.board_changed'
   | 'task.due_soon'
   | 'task.digest';
 

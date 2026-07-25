@@ -13,6 +13,7 @@ import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { patchColumnBodySchema } from '@/utils/taskBoardSchemas';
+import { emitBoardChanged } from '@/utils/taskBoard';
 import { formatZodError } from '@/utils/validation';
 import { logger } from '@/utils/logger';
 
@@ -107,6 +108,7 @@ async function patchColumn(
     wip_limit: number | null;
     is_done: boolean;
   };
+  await emitBoardChanged(ctx.tenantId, c.board_id);
   return res.status(200).json({
     column: {
       id: c.id,
@@ -126,7 +128,7 @@ async function deleteColumn(
 ) {
   const { data: existing } = await supabaseAdmin!
     .from('task_columns')
-    .select('id, name')
+    .select('id, name, board_id')
     .eq('tenant_id', ctx.tenantId)
     .eq('id', id)
     .maybeSingle();
@@ -169,6 +171,11 @@ async function deleteColumn(
   } catch (e) {
     logger.error('[admin/tasks/columns/:id] audit error', e);
   }
+
+  await emitBoardChanged(
+    ctx.tenantId,
+    (existing as { board_id: string }).board_id
+  );
 
   return res.status(200).json({ success: true });
 }
