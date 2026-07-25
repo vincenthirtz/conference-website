@@ -41,6 +41,19 @@ test.describe('Admin – Kanban des tâches', () => {
   }) => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
 
+    // Pré-accepte le consentement cookies pour que la bannière (dialog fixé en
+    // bas) n'intercepte pas les clics sur les boutons de la modale carte.
+    await page.addInitScript(() => {
+      localStorage.setItem(
+        'cookie_consent',
+        JSON.stringify({
+          version: '1.0',
+          preferences: { essential: true, analytics: false, marketing: false },
+          consentDate: '2026-01-01T00:00:00.000Z',
+        })
+      );
+    });
+
     await login(page);
 
     // Va directement sur la page Kanban.

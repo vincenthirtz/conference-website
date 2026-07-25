@@ -10,6 +10,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Head from 'next/head';
+import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
@@ -153,6 +154,13 @@ function AdminTasksPage(_: StaffProps) {
   const cardMutation = useIdempotentMutation();
   const moveMutation = useIdempotentMutation();
 
+  const router = useRouter();
+  // `?board=<id>` deep-links / survives a reload. Captured once (SSR provides
+  // the query on first render) so it seeds the initial board selection without
+  // re-triggering the board fetch on every subsequent board switch.
+  const initialUrlBoardRef = useRef<string | null>(
+    typeof router.query.board === 'string' ? router.query.board : null
+  );
   const [boards, setBoards] = useState<BoardListItem[]>([]);
   const [showArchived, setShowArchived] = useState(false);
   const [activeBoardId, setActiveBoardId] = useState<string | null>(null);
@@ -216,6 +224,9 @@ function AdminTasksPage(_: StaffProps) {
           }
           const visible = list.filter((b) => showArchived || !b.isArchived);
           if (prev && visible.some((b) => b.id === prev)) return prev;
+          // Prefer the board deep-linked in the URL (?board=) on first load.
+          const urlBoard = initialUrlBoardRef.current;
+          if (urlBoard && visible.some((b) => b.id === urlBoard)) return urlBoard;
           return visible[0]?.id ?? null;
         });
       } catch (err: unknown) {
@@ -255,6 +266,19 @@ function AdminTasksPage(_: StaffProps) {
       setDetail(null);
     }
   }, [activeBoardId, fetchDetail]);
+
+  // Reflect the active board in the URL (?board=) — shallow, no reload — so a
+  // refresh or shared link reopens the same board. Deps intentionally limited
+  // to activeBoardId to avoid re-fetching the board list on URL changes.
+  useEffect(() => {
+    if (!activeBoardId || router.query.board === activeBoardId) return;
+    router.replace(
+      { pathname: router.pathname, query: { ...router.query, board: activeBoardId } },
+      undefined,
+      { shallow: true }
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeBoardId]);
 
   // Liste du staff (assignation) — via le tenant actif.
   useEffect(() => {
