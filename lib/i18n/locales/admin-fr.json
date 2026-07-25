@@ -6239,7 +6239,8 @@
     "quizBoDescFive": "Trois maps gagnantes — format de finale.",
     "quizBoDescSeven": "Quatre maps gagnantes — marathon.",
     "quizRoundsUnit": "{count} rondes",
-    "quizFinishedReveal": "Résultat de la simulation"
+    "quizFinishedReveal": "Résultat de la simulation",
+    "quizRecommended": "conseillé"
   },
   "adminAdvancementRulesEditor": {
     "seedByStandings": "Classement (automatique)",

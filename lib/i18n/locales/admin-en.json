@@ -6239,7 +6239,8 @@
     "quizBoDescFive": "Three map wins — final-level format.",
     "quizBoDescSeven": "Four map wins — a marathon.",
     "quizRoundsUnit": "{count} rounds",
-    "quizFinishedReveal": "Simulation result"
+    "quizFinishedReveal": "Simulation result",
+    "quizRecommended": "recommended"
   },
   "adminAdvancementRulesEditor": {
     "seedByStandings": "Standings (automatic)",

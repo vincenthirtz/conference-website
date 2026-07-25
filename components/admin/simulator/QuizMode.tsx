@@ -350,6 +350,9 @@ export default function QuizMode({
                   onClick={() => pickFormat(f)}
                   icon={FORMAT_ICONS[f]}
                   title={FORMAT_LABELS[f]}
+                  recommended={
+                    f === 'single_elim' ? tx.quizRecommended : undefined
+                  }
                   desc={
                     f === 'single_elim'
                       ? tx.quizFmtSingleDesc
@@ -381,6 +384,7 @@ export default function QuizMode({
                 <BigChip
                   key={n}
                   selected={config.teamCount === n}
+                  recommended={n === 8 ? tx.quizRecommended : undefined}
                   onClick={() =>
                     pickAndAdvance((c) => ({ ...c, teamCount: n }))
                   }
@@ -406,6 +410,7 @@ export default function QuizMode({
                 <ChoiceCard
                   key={bo}
                   selected={config.bestOf === bo}
+                  recommended={bo === 3 ? tx.quizRecommended : undefined}
                   onClick={() => pickAndAdvance((c) => ({ ...c, bestOf: bo }))}
                   title={`BO${bo}`}
                   desc={
@@ -437,6 +442,7 @@ export default function QuizMode({
                 <BigChip
                   key={n}
                   selected={config.mapPoolSize === n}
+                  recommended={n === 7 ? tx.quizRecommended : undefined}
                   onClick={() =>
                     pickAndAdvance((c) => ({ ...c, mapPoolSize: n }))
                   }
@@ -462,6 +468,7 @@ export default function QuizMode({
                 <BigChip
                   key={n}
                   selected={config.swissRounds === n}
+                  recommended={n === 5 ? tx.quizRecommended : undefined}
                   onClick={() =>
                     pickAndAdvance((c) => ({ ...c, swissRounds: n }))
                   }
@@ -500,6 +507,7 @@ export default function QuizMode({
                 icon="🏁"
                 title={tx.quizResetNo}
                 desc=""
+                recommended={tx.quizRecommended}
               />
             </div>
           </QuestionShell>
@@ -604,28 +612,39 @@ function QuestionShell({
   );
 }
 
+function RecommendedBadge({ label }: { label: string }) {
+  return (
+    <span className="absolute -top-2 -right-2 px-2 py-0.5 rounded-full bg-amber-500 text-[10px] font-bold text-neutral-950 shadow">
+      ★ {label}
+    </span>
+  );
+}
+
 function ChoiceCard({
   selected,
   onClick,
   icon,
   title,
   desc,
+  recommended,
 }: {
   selected: boolean;
   onClick: () => void;
   icon?: string;
   title: string;
   desc: string;
+  recommended?: string;
 }) {
   return (
     <button
       onClick={onClick}
-      className={`text-left rounded-xl border p-4 transition-all hover:scale-[1.02] ${
+      className={`relative text-left rounded-xl border p-4 transition-all hover:scale-[1.02] ${
         selected
           ? 'border-purple-500 bg-purple-600/15 ring-1 ring-purple-500/40'
           : 'border-white/10 bg-white/[0.03] hover:bg-white/[0.06]'
       }`}
     >
+      {recommended && <RecommendedBadge label={recommended} />}
       {icon && <div className="text-2xl mb-1">{icon}</div>}
       <div className="font-bold text-white">{title}</div>
       {desc && <div className="text-xs text-neutral-400 mt-1">{desc}</div>}
@@ -637,20 +656,23 @@ function BigChip({
   selected,
   onClick,
   children,
+  recommended,
 }: {
   selected: boolean;
   onClick: () => void;
   children: React.ReactNode;
+  recommended?: string;
 }) {
   return (
     <button
       onClick={onClick}
-      className={`min-w-[4.5rem] h-16 rounded-xl border text-2xl font-black transition-all hover:scale-105 ${
+      className={`relative min-w-[4.5rem] h-16 rounded-xl border text-2xl font-black transition-all hover:scale-105 ${
         selected
           ? 'border-purple-500 bg-purple-600/20 text-white ring-1 ring-purple-500/40'
           : 'border-white/10 bg-white/[0.03] text-neutral-200 hover:bg-white/[0.06]'
       }`}
     >
+      {recommended && <RecommendedBadge label={recommended} />}
       {children}
     </button>
   );
