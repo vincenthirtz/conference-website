@@ -68,6 +68,9 @@ import {
   type RoundGroup,
 } from '@/components/admin/simulator/EliminationView';
 import { SummaryCard } from '@/components/admin/simulator/SummaryCard';
+import QuizMode, {
+  type QuizOutcome,
+} from '@/components/admin/simulator/QuizMode';
 
 export const getServerSideProps = withStaffPage('admin');
 
@@ -172,6 +175,14 @@ function TournamentSimulatorPage() {
     | 'history'
   >('bracket');
   const [configCollapsed, setConfigCollapsed] = useState(false);
+
+  // Two ways to drive the same engine: the dense "form" panel, or a guided
+  // "quiz/slides" deck (QuizMode) that walks through the config one question at
+  // a time and ends on an animated champion reveal.
+  const [viewMode, setViewMode] = useState<'form' | 'slides'>('form');
+  // The quiz builds + simulates an occurrence off to the side; we stash it here
+  // so "Open in editor" can commit exactly what the reveal showed.
+  const quizStashRef = useRef<OccurrenceData | null>(null);
 
   // Convenience accessors for current occurrence
   const stages = useMemo(
@@ -364,6 +375,120 @@ function TournamentSimulatorPage() {
     setGenerated(true);
     setActiveTab('bracket');
   }, [config, generateOneOccurrence, tx]);
+
+  /**
+   * Quiz/slides mode: build one occurrence, simulate it to completion, and
+   * derive the reveal payload (champion, podium, fun stats). The simulated
+   * occurrence is stashed so "Open in editor" commits exactly what was shown.
+   */
+  const handleQuizLaunch = useCallback((): QuizOutcome => {
+    resetFakeIdCounter();
+    const pool = FAKE_MAPS.slice(0, config.mapPoolSize);
+    const occSchedule: ScheduleConfig = { ...config.schedule };
+    const { stages: builtStages, teams: builtTeams } = generateOneOccurrence(
+      pool,
+      occSchedule
+    );
+
+    // Mirror handleSimulateAll's per-stage-type simulation.
+    const simStages: SimStage[] = builtStages.map((stage) => {
+      if (
+        stage.stage_type === 'bracket' ||
+        stage.stage_type === 'showmatch'
+      ) {
+        return {
+          ...stage,
+          matches: simulateBracketToCompletion(stage.matches),
+        };
+      }
+      return {
+        ...stage,
+        matches: resolveByes(
+          stage.matches.map((m) =>
+            m.status === 'pending' ? simulateMatch(m) : m
+          )
+        ),
+      };
+    });
+
+    const allMatches = simStages.flatMap((s) => s.matches);
+
+    // Standings by wins then map-diff (same convention as
+    // simulateFullTournament), computed off the *displayed* simulation so the
+    // announced champion matches the bracket the user can open.
+    const wins = new Map<string, number>();
+    const mapDiff = new Map<string, number>();
+    let matchesPlayed = 0;
+    let mapsPlayed = 0;
+    for (const m of allMatches) {
+      if (m.status !== 'finished' || !m.winner_team_id) continue;
+      wins.set(m.winner_team_id, (wins.get(m.winner_team_id) ?? 0) + 1);
+      if (m.team1_id && m.team1_score != null && m.team2_score != null) {
+        matchesPlayed += 1;
+        mapsPlayed += m.team1_score + m.team2_score;
+        mapDiff.set(
+          m.team1_id,
+          (mapDiff.get(m.team1_id) ?? 0) + m.team1_score - m.team2_score
+        );
+        mapDiff.set(
+          m.team2_id!,
+          (mapDiff.get(m.team2_id!) ?? 0) + m.team2_score - m.team1_score
+        );
+      }
+    }
+    const standings = [...builtTeams].sort(
+      (a, b) =>
+        (wins.get(b.id) ?? 0) - (wins.get(a.id) ?? 0) ||
+        (mapDiff.get(b.id) ?? 0) - (mapDiff.get(a.id) ?? 0)
+    );
+    // A finished grand final (double elim) decides the title outright; every
+    // other format falls back to the wins/map-diff standings leader.
+    const grandFinal = allMatches.find(
+      (m) =>
+        m.bracket_side === 'final' &&
+        m.status === 'finished' &&
+        m.winner_team_id
+    );
+    const championId =
+      grandFinal?.winner_team_id ?? standings[0]?.id ?? null;
+    const champion = builtTeams.find((t) => t.id === championId) ?? null;
+    const podium = [
+      ...(champion ? [champion] : []),
+      ...standings.filter((t) => t.id !== championId),
+    ].slice(0, 3);
+
+    const { upsets } = computeCompetitiveness(allMatches, builtTeams);
+
+    quizStashRef.current = {
+      index: 0,
+      label: tx.tournamentLabel,
+      startDate: occSchedule.startDate,
+      stages: simStages,
+      teams: builtTeams,
+    };
+    setMapPool(pool);
+
+    return {
+      championName: champion?.name ?? null,
+      championSeed: champion?.seed ?? null,
+      podium: podium.map((t) => ({ name: t.name, seed: t.seed })),
+      matchesPlayed,
+      mapsPlayed,
+      upsets,
+      teamCount: builtTeams.length,
+    };
+  }, [config, generateOneOccurrence, tx]);
+
+  /** Commit the last quiz-simulated occurrence into the form editor. */
+  const handleQuizOpenInEditor = useCallback(() => {
+    const stash = quizStashRef.current;
+    if (!stash) return;
+    setOccurrences([stash]);
+    setActiveOccurrence(0);
+    setGenerated(true);
+    setActiveTab('bracket');
+    setViewMode('form');
+  }, []);
 
   const handleSimulateMatch = useCallback(
     (stageIdx: number, matchId: string) => {
@@ -1353,7 +1478,31 @@ function TournamentSimulatorPage() {
               <h1 className="text-2xl font-semibold">{tx.heading}</h1>
               <p className="text-sm text-neutral-400 mt-1">{tx.subtitle}</p>
             </div>
-            {generated && (
+            <div className="flex flex-col items-end gap-3">
+              {/* Mode toggle: dense form vs guided quiz/slides */}
+              <div className="inline-flex rounded-lg border border-white/10 bg-white/[0.03] p-1 print:hidden">
+                <button
+                  onClick={() => setViewMode('form')}
+                  className={`px-3 py-1.5 rounded-md text-sm font-semibold transition-colors ${
+                    viewMode === 'form'
+                      ? 'bg-purple-600 text-white shadow'
+                      : 'text-neutral-400 hover:text-white'
+                  }`}
+                >
+                  {tx.formModeToggle}
+                </button>
+                <button
+                  onClick={() => setViewMode('slides')}
+                  className={`px-3 py-1.5 rounded-md text-sm font-semibold transition-colors ${
+                    viewMode === 'slides'
+                      ? 'bg-purple-600 text-white shadow'
+                      : 'text-neutral-400 hover:text-white'
+                  }`}
+                >
+                  ✨ {tx.quizModeToggle}
+                </button>
+              </div>
+              {generated && viewMode === 'form' && (
               <div className="flex gap-2 flex-wrap">
                 <button
                   onClick={handleSimulateNextRound}
@@ -1446,7 +1595,8 @@ function TournamentSimulatorPage() {
                   PDF
                 </button>
               </div>
-            )}
+              )}
+            </div>
           </div>
 
           {/* Tournament creation feedback */}
@@ -1492,6 +1642,19 @@ function TournamentSimulatorPage() {
             </div>
           )}
 
+          {/* Guided quiz/slides mode — same engine, playful reveal */}
+          {viewMode === 'slides' && (
+            <QuizMode
+              config={config}
+              setConfig={setConfig}
+              validCountsFor={validCountsFor}
+              onLaunch={handleQuizLaunch}
+              onOpenInEditor={handleQuizOpenInEditor}
+            />
+          )}
+
+          {viewMode === 'form' && (
+            <>
           {/* Configuration panel */}
           <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6 mb-8 space-y-6">
             <div className="flex items-center justify-between">
@@ -3605,6 +3768,8 @@ function TournamentSimulatorPage() {
                 </div>
               )}
               </div>
+            </>
+          )}
             </>
           )}
         </div>
