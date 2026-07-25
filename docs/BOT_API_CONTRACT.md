@@ -409,7 +409,11 @@ tenant. Rate-limit dédié `bot-tasks-snapshot` (60/min). Réponse :
             "priority": "high",
             "assigneeName": "Alice",
             "dueDate": "2026-08-01",
-            "checklist": { "done": 1, "total": 3 }
+            "checklist": { "done": 1, "total": 3 },
+            "labels": [
+              { "name": "Logistique", "color": "#e11d48" },
+              { "name": "Urgent", "color": null }
+            ]
           }
         ]
       }
@@ -421,7 +425,10 @@ tenant. Rate-limit dédié `bot-tasks-snapshot` (60/min). Réponse :
 Colonnes triées par `position` ; cartes non supprimées (`deleted_at IS NULL`)
 triées par `position` ; `assigneeName` = `staff.display_name` (`null` si non
 assignée) ; `checklist` = compteur `done`/`total` des `task_checklist_items` de
-la carte ; `dueDate` = date ISO ou `null`.
+la carte ; `dueDate` = date ISO ou `null` ; `labels` = liste
+`{ name, color }` des labels portés par la carte (`tasks.labels[]`, ordre
+préservé), la couleur venant de `task_labels` (`color` = `null` si le nom n'a
+pas de définition de label sur le board ; `[]` si la carte n'a aucun label).
 
 #### `event_segment.transitioned` (Lot 2 run-of-show)
 

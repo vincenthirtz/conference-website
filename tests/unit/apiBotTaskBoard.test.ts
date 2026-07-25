@@ -222,6 +222,19 @@ describe('GET bot /tasks/board-snapshot (vue live, sans acteur staff)', () => {
   it('renvoie colonnes ordonnées + cartes non-deleted + checklist counts', async () => {
     store.tasks[0].assignee_staff_id = STAFF_A;
     store.tasks[0].due_date = '2026-08-01';
+    // Deux labels sur la carte : « Logistique » a une définition colorée sur le
+    // board, « Urgent » n'en a pas (→ color null). L'ordre stocké est préservé.
+    store.tasks[0].labels = ['Logistique', 'Urgent'];
+    store.task_labels = [
+      {
+        id: 'lbl-1',
+        tenant_id: T,
+        board_id: BOARD,
+        name: 'Logistique',
+        color: '#e11d48',
+        position: 0,
+      },
+    ] as any;
     store.task_checklist_items = [
       { id: 'ci-1', tenant_id: T, task_id: TASK, label: 'a', is_done: true, position: 0 },
       { id: 'ci-2', tenant_id: T, task_id: TASK, label: 'b', is_done: false, position: 1 },
@@ -259,6 +272,12 @@ describe('GET bot /tasks/board-snapshot (vue live, sans acteur staff)', () => {
     expect(col1.cards[0].assigneeName).toBe('Bot Admin A');
     expect(col1.cards[0].dueDate).toBe('2026-08-01');
     expect(col1.cards[0].checklist).toEqual({ done: 1, total: 3 });
+    // Labels enrichis : couleur depuis task_labels pour « Logistique », null
+    // pour « Urgent » (pas de définition), ordre de la carte préservé.
+    expect(col1.cards[0].labels).toEqual([
+      { name: 'Logistique', color: '#e11d48' },
+      { name: 'Urgent', color: null },
+    ]);
     // Colonne terminale vide (la carte y est absente).
     expect(board.columns[1].isDone).toBe(true);
     expect(board.columns[1].cards).toHaveLength(0);
@@ -271,6 +290,8 @@ describe('GET bot /tasks/board-snapshot (vue live, sans acteur staff)', () => {
     const card = (res.body as any).board.columns[0].cards[0];
     expect(card.assigneeName).toBe(null);
     expect(card.checklist).toEqual({ done: 0, total: 0 });
+    // Carte sans label (tasks.labels[] vide) → labels: [].
+    expect(card.labels).toEqual([]);
   });
 
   it('200 avec la clé bot SANS acteur staff (lecture seule)', async () => {

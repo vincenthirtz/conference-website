@@ -8809,7 +8809,9 @@ paths:
         (`requireBotStaff`) : lecture seule scopée au tenant de la clé bot.
         Colonnes triées par position ; cartes non supprimées triées par position ;
         `assigneeName` résolu (null si non assigné) ; `checklist` = compteur
-        done/total des items ; `dueDate` = date ISO ou null.
+        done/total des items ; `dueDate` = date ISO ou null ; `labels` = noms
+        portés par la carte (ordre préservé) enrichis de leur couleur
+        (`color` null si le nom n'a pas de définition de label sur le board).
       operationId: botTaskBoardSnapshot
       parameters:
         - name: boardId
@@ -8845,7 +8847,7 @@ paths:
                               type: array
                               items:
                                 type: object
-                                required: [title, priority, assigneeName, dueDate, checklist]
+                                required: [title, priority, assigneeName, dueDate, checklist, labels]
                                 properties:
                                   title: { type: string }
                                   priority: { type: string, enum: [low, medium, high, urgent] }
@@ -8857,6 +8859,18 @@ paths:
                                     properties:
                                       done: { type: integer }
                                       total: { type: integer }
+                                  labels:
+                                    type: array
+                                    description: >-
+                                      Labels portes par la carte (noms de tasks.labels[], ordre
+                                      preserve), chacun enrichi de sa couleur via task_labels.
+                                      color null si le nom n'a pas de definition de label sur le board.
+                                    items:
+                                      type: object
+                                      required: [name, color]
+                                      properties:
+                                        name: { type: string }
+                                        color: { type: string, nullable: true }
         '400':
           description: boardId absent ou invalide (INVALID_QUERY).
         '401':

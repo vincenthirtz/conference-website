@@ -15,17 +15,21 @@
 // Réponse 200 :
 //   { board: { id, name, columns: [
 //       { name, isDone, cards: [
-//           { title, priority, assigneeName, dueDate, checklist: { done, total } }
+//           { title, priority, assigneeName, dueDate, checklist: { done, total },
+//             labels: [{ name, color }] }
 //       ] }
 //   ] } }
 //   - colonnes triées par position ; cartes non supprimées triées par position.
+//   - labels : noms portés par la carte (tasks.labels[], ordre préservé), chacun
+//     enrichi de sa couleur via task_labels (color null si le nom n'a pas de
+//     définition de label sur le board).
 //   - 404 { code:'board_not_found' } si le board n'existe pas dans le tenant.
 
 import type { NextApiResponse } from 'next';
 import type { z } from 'zod';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
-import { resolveStaffNames } from '@/utils/taskBoard';
+import { resolveStaffNames, loadBoardLabels } from '@/utils/taskBoard';
 import { boardSnapshotQuerySchema } from '@/utils/taskBoardSchemas';
 import { logger } from '@/utils/logger';
 
@@ -63,7 +67,9 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
         .eq('board_id', boardId),
       supabaseAdmin
         .from('tasks')
-        .select('id, column_id, title, priority, assignee_staff_id, due_date, position')
+        .select(
+          'id, column_id, title, priority, assignee_staff_id, due_date, position, labels'
+        )
         .eq('tenant_id', tenantId)
         .eq('board_id', boardId)
         .is('deleted_at', null),
@@ -87,10 +93,19 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
     assignee_staff_id: string | null;
     due_date: string | null;
     position: number | null;
+    labels: string[] | null;
   }>;
 
   // Noms d'assignés (batch, 1 round-trip) via le helper partagé.
   const nameById = await resolveStaffNames(tasks.map((t) => t.assignee_staff_id));
+
+  // Définitions de labels du board (1 round-trip) → map name → color. Le lien
+  // carte ↔ définition se fait par NOM (tasks.labels[] porte des noms bruts) ;
+  // un nom sans définition retombe en couleur neutre (color = null).
+  const boardLabels = await loadBoardLabels(tenantId, boardId);
+  const colorByLabelName = new Map<string, string>(
+    boardLabels.map((l) => [l.name, l.color])
+  );
 
   // Compteurs de checklist par carte (done/total) — un select groupé, pas de N+1.
   const taskIds = tasks.map((t) => t.id);
@@ -132,6 +147,10 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
             : null,
           dueDate: t.due_date ?? null,
           checklist: checklistByTask.get(t.id) ?? { done: 0, total: 0 },
+          labels: (Array.isArray(t.labels) ? t.labels : []).map((name) => ({
+            name,
+            color: colorByLabelName.get(name) ?? null,
+          })),
         })),
     }));
 
