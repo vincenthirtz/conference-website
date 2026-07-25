@@ -115,6 +115,41 @@ async function getBoard(
     }
   }
 
+  // Agrégats extras de carte (checklist + commentaires) — un count groupé par
+  // task_id sur les cartes du board, pas de N+1. Cartes sans extras → 0/0.
+  const taskIds = tasks.map((t) => t.id);
+  const checklistByTask = new Map<string, { done: number; total: number }>();
+  const commentCountByTask = new Map<string, number>();
+  if (taskIds.length) {
+    const [{ data: checklistRows }, { data: commentRows }] = await Promise.all([
+      supabaseAdmin!
+        .from('task_checklist_items')
+        .select('task_id, is_done')
+        .eq('tenant_id', ctx.tenantId)
+        .in('task_id', taskIds),
+      supabaseAdmin!
+        .from('task_comments')
+        .select('task_id')
+        .eq('tenant_id', ctx.tenantId)
+        .in('task_id', taskIds),
+    ]);
+    for (const r of (checklistRows ?? []) as Array<{
+      task_id: string;
+      is_done: boolean;
+    }>) {
+      const agg = checklistByTask.get(r.task_id) ?? { done: 0, total: 0 };
+      agg.total += 1;
+      if (r.is_done === true) agg.done += 1;
+      checklistByTask.set(r.task_id, agg);
+    }
+    for (const r of (commentRows ?? []) as Array<{ task_id: string }>) {
+      commentCountByTask.set(
+        r.task_id,
+        (commentCountByTask.get(r.task_id) ?? 0) + 1
+      );
+    }
+  }
+
   const b = board as {
     id: string;
     name: string;
@@ -148,6 +183,8 @@ async function getBoard(
                 name: nameById.get(t.assignee_staff_id) ?? null,
               }
             : null,
+          checklist: checklistByTask.get(t.id) ?? { done: 0, total: 0 },
+          commentCount: commentCountByTask.get(t.id) ?? 0,
         })),
     }));
 

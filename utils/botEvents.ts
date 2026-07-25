@@ -60,7 +60,8 @@ export type BotEventName =
   | 'broadcast.state_changed'
   | 'task.created'
   | 'task.moved'
-  | 'task.assigned';
+  | 'task.assigned'
+  | 'task.due_soon';
 
 export type BotEventPayload = Record<string, unknown>;
 

@@ -105,6 +105,14 @@
 [functions."plan-renewal-cron"]
   schedule = "0 8 * * *"
 
+# Scheduled function: rappel J-1 des cartes du Kanban interne dont l'échéance
+# (`tasks.due_date`) tombe demain et qui ne sont pas dans une colonne terminale.
+# Une fois par jour à 08:00 UTC (≈ 09h/10h Paris) — le matin pour un rappel J-1.
+# Émet `task.due_soon` (outbox → push/DM Discord). Idempotent : cible exactement
+# `due_date = CURRENT_DATE + 1`. Requiert CRON_SECRET + URL (ou SITE_URL).
+[functions."task-due-reminders-cron"]
+  schedule = "0 8 * * *"
+
 [[headers]]
   for = "/*"
   [headers.values]

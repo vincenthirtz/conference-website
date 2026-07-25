@@ -10629,6 +10629,226 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+  /api/admin/tasks/tasks/{id}/comments:
+    get:
+      tags:
+        - admin/tasks
+      summary: Fil de commentaires d'une carte (triés created_at asc).
+      operationId: adminListTaskComments
+      security:
+        - StaffSession: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Liste des commentaires de la carte.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags:
+        - admin/tasks
+      summary: Ajoute un commentaire (auteur = staff courant). Loggue task_comment_create.
+      operationId: adminCreateTaskComment
+      security:
+        - StaffSession: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body]
+              properties:
+                body: { type: string, minLength: 1, maxLength: 5000 }
+      responses:
+        '201':
+          description: Commentaire cree.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/admin/tasks/comments/{id}:
+    delete:
+      tags:
+        - admin/tasks
+      summary: Supprime un commentaire de carte. Loggue task_comment_delete.
+      operationId: adminDeleteTaskComment
+      security:
+        - StaffSession: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Commentaire supprime.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/admin/tasks/tasks/{id}/checklist:
+    get:
+      tags:
+        - admin/tasks
+      summary: Checklist (sous-taches) d'une carte, triee par position.
+      operationId: adminListTaskChecklist
+      security:
+        - StaffSession: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Items de la checklist.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags:
+        - admin/tasks
+      summary: Ajoute un item de checklist (position = max+1).
+      operationId: adminCreateTaskChecklistItem
+      security:
+        - StaffSession: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [label]
+              properties:
+                label: { type: string, minLength: 1, maxLength: 500 }
+      responses:
+        '201':
+          description: Item cree.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/admin/tasks/checklist/{id}:
+    patch:
+      tags:
+        - admin/tasks
+      summary: Edite un item de checklist (label, isDone, position).
+      operationId: adminUpdateTaskChecklistItem
+      security:
+        - StaffSession: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                label: { type: string, minLength: 1, maxLength: 500 }
+                isDone: { type: boolean }
+                position: { type: integer, minimum: 0 }
+      responses:
+        '200':
+          description: Item mis a jour.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags:
+        - admin/tasks
+      summary: Supprime un item de checklist.
+      operationId: adminDeleteTaskChecklistItem
+      security:
+        - StaffSession: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Item supprime.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/admin/disputes:
     get:
       summary: List open match disputes across the tenant.
@@ -21354,6 +21574,57 @@ paths:
       responses:
         '200':
           description: Counters from the reminder tick.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/cron/task-due-reminders:
+    get:
+      tags:
+        - cron
+      summary: Rappel J-1 des cartes Kanban dues demain (emet task.due_soon).
+      operationId: cronTaskDueRemindersGet
+      description: |
+        Netlify scheduled function. Sélectionne les cartes (`tasks`) avec
+        `deleted_at IS NULL` et `due_date = CURRENT_DATE + 1` (rappel J-1) qui ne
+        sont PAS dans une colonne terminale (`task_columns.is_done`). Pour chaque
+        carte, émet un event outbox `task.due_soon`
+        (`{ taskId, boardName, title, dueDate, columnName, priority,
+        assigneeStaffId?, assigneeName?, assigneeDiscordUserId? }`). Déduplication
+        naturelle par la date (une notif/carte le jour J-1).
+
+        Auth : `Authorization: Bearer <CRON_SECRET>` header OU
+        `?secret=<CRON_SECRET>` query string. GET et POST acceptés.
+      security:
+        - CronSecret: []
+      responses:
+        '200':
+          description: '`{ processed, emitted }` du tick.'
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      tags:
+        - cron
+      summary: Rappel J-1 des cartes Kanban dues demain (emet task.due_soon).
+      operationId: cronTaskDueRemindersPost
+      description: Same as `GET /api/cron/task-due-reminders`.
+      security:
+        - CronSecret: []
+      responses:
+        '200':
+          description: '`{ processed, emitted }` du tick.'
           content:
             application/json:
               schema:

@@ -15,6 +15,7 @@ import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { patchTaskBodySchema } from '@/utils/taskBoardSchemas';
+import { loadTaskComments, loadChecklistItems } from '@/utils/taskBoard';
 import { formatZodError } from '@/utils/validation';
 import { logger } from '@/utils/logger';
 
@@ -108,8 +109,14 @@ async function getTask(
   }
   if (!data) return res.status(404).json({ error: 'Tâche introuvable' });
   const row = data as TaskRow;
-  const name = await resolveAssigneeName(row.assignee_staff_id ?? null);
-  return res.status(200).json({ task: shape(row, name) });
+  const [name, comments, checklist] = await Promise.all([
+    resolveAssigneeName(row.assignee_staff_id ?? null),
+    loadTaskComments(ctx.tenantId, row.id),
+    loadChecklistItems(ctx.tenantId, row.id),
+  ]);
+  return res
+    .status(200)
+    .json({ task: { ...shape(row, name), comments, checklist } });
 }
 
 async function patchTask(

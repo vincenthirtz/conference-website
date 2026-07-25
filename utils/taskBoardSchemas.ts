@@ -83,6 +83,38 @@ export const patchBoardBodySchema = z
   });
 export type PatchBoardBody = z.infer<typeof patchBoardBodySchema>;
 
+/* ---------------------------------------------------------------------------
+ * Extras de carte : commentaires + checklist (create_task_card_extras_tables.sql)
+ * ------------------------------------------------------------------------- */
+
+/** Corps de création d'un commentaire de carte. */
+export const createCommentBodySchema = z.object({
+  body: z.string().trim().min(1).max(5000),
+});
+export type CreateCommentBody = z.infer<typeof createCommentBodySchema>;
+
+/** Corps de création d'un item de checklist. */
+export const createChecklistItemBodySchema = z.object({
+  label: z.string().trim().min(1).max(500),
+});
+export type CreateChecklistItemBody = z.infer<
+  typeof createChecklistItemBodySchema
+>;
+
+/** Édition d'un item de checklist (label / coché / position). */
+export const patchChecklistItemBodySchema = z
+  .object({
+    label: z.string().trim().min(1).max(500).optional(),
+    isDone: z.boolean().optional(),
+    position: z.number().int().min(0).optional(),
+  })
+  .refine((v) => Object.keys(v).length > 0, {
+    message: 'Aucun champ à modifier',
+  });
+export type PatchChecklistItemBody = z.infer<
+  typeof patchChecklistItemBodySchema
+>;
+
 /** Création de colonne. */
 export const createColumnBodySchema = z.object({
   boardId: uuid,

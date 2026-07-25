@@ -214,6 +214,8 @@ export type StaffLogAction =
   | 'task_delete'
   | 'task_move'
   | 'task_assign'
+  | 'task_comment_create'
+  | 'task_comment_delete'
   // --- Verbes génériques (endpoints à statut / actions polyvalentes) ---
   | 'create'
   | 'update'

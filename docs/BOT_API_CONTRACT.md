@@ -252,6 +252,7 @@ catalog can grow without forcing a bot deploy.
 | `task.created` (Kanban)           | `createTaskCore` — admin `POST /api/admin/tasks/tasks` OU bot `POST /api/bot/v1/tasks`                                            | `{ taskId, boardId, boardName, columnName, title, priority, assigneeStaffId?, assigneeDiscordUserId?, assigneeName?, actorLabel }`             |
 | `task.moved` (Kanban)             | `moveTaskCore` — admin `PATCH .../tasks/{id}/move` OU bot `PATCH /api/bot/v1/tasks/{id}/move`                                     | `{ taskId, boardName, title, fromColumnName, toColumnName, isDone, assigneeDiscordUserId?, assigneeName?, actorLabel }`                        |
 | `task.assigned` (Kanban)          | `assignTaskCore` — admin `PATCH .../tasks/{id}/assign` OU bot `PATCH /api/bot/v1/tasks/{id}/assign` (assigné non-null uniquement) | `{ taskId, boardName, title, assigneeStaffId, assigneeName, assigneeDiscordUserId?, actorLabel }`                                              |
+| `task.due_soon` (Kanban)          | Cron `/api/cron/task-due-reminders` — carte due J-1, hors colonne terminale                                                      | `{ taskId, boardName, title, dueDate, columnName, priority, assigneeStaffId?, assigneeName?, assigneeDiscordUserId? }`                         |
 
 #### Kanban interne (`task.created` / `task.moved` / `task.assigned`)
 
@@ -269,6 +270,34 @@ identiques que l'action vienne du back-office admin ou de la commande Discord
 = null`) — seul un assigné non-null déclenche l'event.
 - `task.moved` porte `isDone` = la colonne cible est-elle terminale (permet au bot
   d'annoncer « tâche terminée »).
+- `task.due_soon` est émis par le **cron** [`/api/cron/task-due-reminders`](../pages/api/cron/task-due-reminders.ts)
+  (Netlify scheduled function), **pas** par le cœur partagé : une passe quotidienne
+  sélectionne les cartes dont `due_date = CURRENT_DATE + 1` (rappel J-1), non
+  supprimées et **hors** colonne terminale (`is_done`), et émet un event par carte.
+  Déduplication naturelle par la date (une notif/carte, le jour J-1) — pas
+  d'estampille. `assigneeDiscordUserId` est résolu comme pour les autres events
+  Kanban (absent si l'assigné n'a pas lié son Discord, ou si la carte n'a pas
+  d'assigné). Auth cron : `Authorization: Bearer <CRON_SECRET>` **ou**
+  `?secret=<CRON_SECRET>` ; réponse `{ processed, emitted }`.
+
+**Extras de carte (commentaires + checklist)** — endpoints **admin uniquement**
+(pas d'exposition bot), `withStaffRoute('admin')`, tables `task_comments` /
+`task_checklist_items` (RLS default-deny, service_role) :
+
+| Méthode + path                                 | Corps         | Réponse                                                                 |
+| ---------------------------------------------- | ------------- | ---------------------------------------------------------------------- |
+| `GET /api/admin/tasks/tasks/{id}/comments`     | —             | `{ comments: [{ id, body, authorStaffId, authorName, createdAt }] }`   |
+| `POST /api/admin/tasks/tasks/{id}/comments`    | `{ body }`    | `201 { comment }` (auteur = staff courant ; loggue `task_comment_create`) |
+| `DELETE /api/admin/tasks/comments/{id}`        | —             | `200 { success: true }` (loggue `task_comment_delete`)                 |
+| `GET /api/admin/tasks/tasks/{id}/checklist`    | —             | `{ items: [{ id, label, isDone, position }] }` (triés par position)    |
+| `POST /api/admin/tasks/tasks/{id}/checklist`   | `{ label }`   | `201 { item }` (position = max+1)                                       |
+| `PATCH /api/admin/tasks/checklist/{id}`        | `{ label?, isDone?, position? }` | `200 { item }`                                     |
+| `DELETE /api/admin/tasks/checklist/{id}`       | —             | `200 { success: true }`                                                |
+
+Le détail carte `GET /api/admin/tasks/tasks/{id}` inclut désormais `comments: [...]`
+et `checklist: [...]` complets ; le détail board `GET /api/admin/tasks/boards/{id}`
+expose par carte `checklist: { done, total }` et `commentCount`. La checklist n'est
+**pas** auditée (toggle trop verbeux) — seuls les commentaires le sont.
 
 **Endpoints bot** (tous exigent un acteur `actorDiscordUserId` **staff
 admin/owner** via `requireBotStaff` — 403 sinon) :

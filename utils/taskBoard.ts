@@ -245,6 +245,114 @@ export async function resolveStaffIdByDiscord(
 }
 
 /* ---------------------------------------------------------------------------
+ * Extras de carte : commentaires + checklist (task_comments /
+ * task_checklist_items — create_task_card_extras_tables.sql). Ces loaders sont
+ * partagés par les handlers admin (liste dédiée + enrichissement du détail
+ * carte) pour éviter la dérive de contrat.
+ * ------------------------------------------------------------------------- */
+
+/** Vue JSON normalisée d'un commentaire de carte. */
+export type TaskCommentView = {
+  id: string;
+  body: string;
+  authorStaffId: string | null;
+  authorName: string | null;
+  createdAt: string;
+};
+
+/** Vue JSON normalisée d'un item de checklist. */
+export type TaskChecklistItemView = {
+  id: string;
+  label: string;
+  isDone: boolean;
+  position: number;
+};
+
+/**
+ * Résout en un seul round-trip `staff.id → display_name`. Renvoie une Map ;
+ * les ids inconnus sont simplement absents (le caller lit `?? null`).
+ */
+export async function resolveStaffNames(
+  staffIds: Array<string | null>
+): Promise<Map<string, string | null>> {
+  const map = new Map<string, string | null>();
+  const ids = Array.from(new Set(staffIds.filter(Boolean))) as string[];
+  if (ids.length === 0) return map;
+  const { data } = await supabaseAdmin
+    .from('staff')
+    .select('id, display_name')
+    .in('id', ids);
+  for (const s of (data ?? []) as Array<{
+    id: string;
+    display_name: string | null;
+  }>) {
+    map.set(s.id, s.display_name ?? null);
+  }
+  return map;
+}
+
+/** Fil de commentaires d'une carte, trié `created_at` asc, auteurs résolus. */
+export async function loadTaskComments(
+  tenantId: string,
+  taskId: string
+): Promise<TaskCommentView[]> {
+  const { data } = await supabaseAdmin
+    .from('task_comments')
+    .select('id, body, author_staff_id, created_at')
+    .eq('tenant_id', tenantId)
+    .eq('task_id', taskId);
+  const rows = (
+    (data ?? []) as Array<{
+      id: string;
+      body: string;
+      author_staff_id: string | null;
+      created_at: string;
+    }>
+  ).sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)));
+  const names = await resolveStaffNames(rows.map((r) => r.author_staff_id));
+  return rows.map((r) => ({
+    id: r.id,
+    body: r.body,
+    authorStaffId: r.author_staff_id ?? null,
+    authorName: r.author_staff_id
+      ? (names.get(r.author_staff_id) ?? null)
+      : null,
+    createdAt: r.created_at,
+  }));
+}
+
+/** Checklist d'une carte, triée par `position` puis `created_at`. */
+export async function loadChecklistItems(
+  tenantId: string,
+  taskId: string
+): Promise<TaskChecklistItemView[]> {
+  const { data } = await supabaseAdmin
+    .from('task_checklist_items')
+    .select('id, label, is_done, position, created_at')
+    .eq('tenant_id', tenantId)
+    .eq('task_id', taskId);
+  const rows = (
+    (data ?? []) as Array<{
+      id: string;
+      label: string;
+      is_done: boolean;
+      position: number | null;
+      created_at: string;
+    }>
+  ).sort(
+    (a, b) =>
+      (a.position ?? 0) - (b.position ?? 0) ||
+      String(a.created_at).localeCompare(String(b.created_at))
+  );
+  return rows.map((r) => ({
+    id: r.id,
+    label: r.label,
+    isDone: r.is_done === true,
+    position: r.position ?? 0,
+  }));
+}
+
+/* ---------------------------------------------------------------------------
  * Helpers internes
  * ------------------------------------------------------------------------- */
 

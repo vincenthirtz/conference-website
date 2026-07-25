@@ -105,4 +105,77 @@ test.describe('Admin – Kanban des tâches', () => {
 
     void columns; // gardé pour lisibilité du scénario multi-colonnes
   });
+
+  test('ouvre une carte, ajoute un item de checklist et un commentaire', async ({
+    page,
+  }) => {
+    test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
+
+    // Pré-consentement cookies (idem 1er test) pour que la bannière n'intercepte
+    // pas les clics dans la modale carte.
+    await page.addInitScript(() => {
+      localStorage.setItem(
+        'cookie_consent',
+        JSON.stringify({
+          version: '1.0',
+          preferences: { essential: true, analytics: false, marketing: false },
+          consentDate: '2026-01-01T00:00:00.000Z',
+        })
+      );
+    });
+
+    await login(page);
+
+    await page.goto('/admin/tasks');
+    await page.waitForLoadState('networkidle');
+
+    // Noms uniques propres à ce test (board indépendant du 1er scénario).
+    const localBoard = `E2E Détails ${Date.now()}`;
+    const localCard = `E2E carte détail ${Date.now()}`;
+    const checklistItem = `Item ${Date.now()}`;
+    const commentBody = `Commentaire ${Date.now()}`;
+
+    // Crée un board dédié.
+    await page.getByRole('button', { name: 'Nouveau board' }).click();
+    await page.getByLabel('Nom du board').fill(localBoard);
+    await page.getByRole('button', { name: 'Créer', exact: true }).click();
+    await expect(
+      page.getByRole('tab', { name: new RegExp(localBoard) })
+    ).toBeVisible({ timeout: 10000 });
+
+    // Crée une carte dans la 1re colonne.
+    await page
+      .getByRole('button', { name: '+ Ajouter une carte' })
+      .first()
+      .click();
+    await page.getByLabel('Titre').fill(localCard);
+    await page.getByRole('button', { name: 'Ajouter', exact: true }).click();
+    await expect(page.getByText(localCard)).toBeVisible({ timeout: 10000 });
+
+    // Ouvre la carte (clic sur la carte → modale d'édition).
+    await page.getByText(localCard).click();
+    await expect(
+      page.getByRole('heading', { name: 'Modifier la carte' })
+    ).toBeVisible({ timeout: 10000 });
+
+    // --- Checklist : ajoute un item et vérifie qu'on peut le cocher. ---
+    await page
+      .getByPlaceholder('Ajouter un élément…')
+      .fill(checklistItem);
+    // Le bouton "Ajouter" de la checklist (vert) — dans la section checklist.
+    await page
+      .getByRole('button', { name: 'Ajouter', exact: true })
+      .last()
+      .click();
+
+    const itemCheckbox = page.getByRole('checkbox', { name: checklistItem });
+    await expect(itemCheckbox).toBeVisible({ timeout: 10000 });
+    await itemCheckbox.check();
+    await expect(itemCheckbox).toBeChecked();
+
+    // --- Commentaire : ajoute et vérifie qu'il apparaît dans le fil. ---
+    await page.getByPlaceholder('Écrire un commentaire…').fill(commentBody);
+    await page.getByRole('button', { name: 'Commenter', exact: true }).click();
+    await expect(page.getByText(commentBody)).toBeVisible({ timeout: 10000 });
+  });
 });

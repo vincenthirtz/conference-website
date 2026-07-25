@@ -61,6 +61,12 @@ export const KNOWN_TABLES: readonly string[] = [
   'tournament_prize_pools',
   'prize_pool_checkouts',
   'prize_pool_contributions',
+  // Kanban interne — boards / colonnes / cartes + extras de carte
+  'task_boards',
+  'task_columns',
+  'tasks',
+  'task_comments',
+  'task_checklist_items',
 ];
 
 /**
