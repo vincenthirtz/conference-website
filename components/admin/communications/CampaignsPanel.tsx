@@ -111,6 +111,8 @@ function getAudienceLabels(t: Dict): Record<string, string> {
     staff: t.audienceStaff,
     adherents: t.audienceAdherents,
     'tournament-never-logged-in': t.audienceTournamentNeverLoggedIn,
+    'tournament-captains-incomplete-roster':
+      t.audienceTournamentIncompleteRoster,
     newsletter: t.audienceNewsletter,
     'all-plus-newsletter': t.audienceAllPlusNewsletter,
     'adherents-plus-newsletter': t.audienceAdherentsPlusNewsletter,
@@ -126,6 +128,7 @@ function getAudienceOptions(t: Dict): { value: string; label: string }[] {
     'staff',
     'adherents',
     'tournament-never-logged-in',
+    'tournament-captains-incomplete-roster',
     'newsletter',
     'all-plus-newsletter',
     'adherents-plus-newsletter',

@@ -81,6 +81,8 @@ export type CampaignAudience =
   | 'adherents'
   // Relance : inscrit·es au tournoi en cours qui n'ont JAMAIS ouvert de session.
   | 'tournament-never-logged-in'
+  // Relance : capitaines d'une équipe inscrite dont le roster est incomplet.
+  | 'tournament-captains-incomplete-roster'
   // Newsletter externe (abonné·es sans compte site) + combinaisons.
   | 'newsletter'
   | 'all-plus-newsletter'
@@ -541,6 +543,78 @@ async function listCurrentTournamentMemberIds(): Promise<Set<string>> {
 }
 
 /**
+ * Résout l'ensemble des auth user ids des CAPITAINES d'équipes inscrites au
+ * tournoi en cours dont le roster est INCOMPLET : moins de `min_players`
+ * titulaires (les remplaçant·es, `is_substitute`, ne comptent pas — l'objet de
+ * la relance est « as-tu assez de titulaires pour jouer »). Les équipes sans
+ * aucun membre sont incluses (compte = 0).
+ *
+ * Garde-fou : si le tournoi ne déclare PAS de `min_players`, il n'y a aucun
+ * seuil objectif de complétude → audience vide plutôt qu'une relance à
+ * l'aveugle. Idem hors période de tournoi.
+ */
+async function listIncompleteRosterCaptainIds(): Promise<Set<string>> {
+  const set = new Set<string>();
+  const tournamentId = await resolveCurrentTournamentId();
+  if (!tournamentId) return set;
+
+  const { data: tournament, error: tournamentError } = await supabaseAdmin!
+    .from('tournaments')
+    .select('id, min_players')
+    .eq('id', tournamentId)
+    .maybeSingle();
+  if (tournamentError) throw tournamentError;
+
+  const minPlayers = (tournament as { min_players?: number | null } | null)
+    ?.min_players;
+  if (!minPlayers || minPlayers < 1) return set;
+
+  const { data: entries, error: entriesError } = await supabaseAdmin!
+    .from('tournament_teams')
+    .select('team_id')
+    .eq('tournament_id', tournamentId);
+  if (entriesError) throw entriesError;
+
+  const teamIds = (entries ?? [])
+    .map((r) => (r as { team_id?: string | null }).team_id)
+    .filter((id): id is string => Boolean(id));
+  if (teamIds.length === 0) return set;
+
+  const { data: teams, error: teamsError } = await supabaseAdmin!
+    .from('teams')
+    .select('id, captain_id')
+    .in('id', teamIds)
+    .eq('is_active', true)
+    .is('deleted_at', null);
+  if (teamsError) throw teamsError;
+
+  const { data: members, error: membersError } = await supabaseAdmin!
+    .from('team_members')
+    .select('team_id, is_substitute')
+    .in('team_id', teamIds);
+  if (membersError) throw membersError;
+
+  const starterCountByTeam = new Map<string, number>();
+  for (const r of members ?? []) {
+    const row = r as { team_id?: string | null; is_substitute?: boolean | null };
+    if (!row.team_id || row.is_substitute) continue;
+    starterCountByTeam.set(
+      row.team_id,
+      (starterCountByTeam.get(row.team_id) ?? 0) + 1
+    );
+  }
+
+  for (const r of teams ?? []) {
+    const team = r as { id?: string | null; captain_id?: string | null };
+    if (!team.id || !team.captain_id) continue;
+    if ((starterCountByTeam.get(team.id) ?? 0) < minPlayers) {
+      set.add(team.captain_id);
+    }
+  }
+  return set;
+}
+
+/**
  * Destinataires « comptes confirmés » filtrés à un sous-ensemble d'auth user ids
  * (`idSet = null` ⇒ tous les confirmés, chemin all-confirmed-users). Réutilise
  * le pipeline commun : confirmés − opt-out broadcast, label via battle-tag.
@@ -683,7 +757,7 @@ function mergeRecipientsByEmail(
  *
  * Deux familles d'audiences :
  * - « comptes auth » (all-confirmed-users, team-captains, team-members, staff,
- *   tournament-never-logged-in) :
+ *   tournament-never-logged-in, tournament-captains-incomplete-roster) :
  *   résout un Set<authUserId>, filtre les comptes confirmés à ce set, retire les
  *   opt-out RGPD broadcast (notification_prefs), label via profiles.battle_tag
  *   (fallback display_name). Catalogue broadcast GLOBAL → aucun filtre tenant.
@@ -712,6 +786,8 @@ export async function computeAudienceRecipients(
         await listCurrentTournamentMemberIds(),
         { neverSignedIn: true }
       );
+    case 'tournament-captains-incomplete-roster':
+      return computeConfirmedRecipients(await listIncompleteRosterCaptainIds());
     case 'adherents':
       return computeAdherentRecipients();
     case 'newsletter':

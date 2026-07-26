@@ -348,6 +348,80 @@ describe('computeAudienceRecipients', () => {
     expect(recipients).toEqual([]);
   });
 
+  it('tournament-captains-incomplete-roster: capitaines sous le min_players (titulaires seuls)', async () => {
+    setAuthListUsers([
+      { id: 'cap1', email: 'cap1@x.com', email_confirmed_at: '2026-01-01' } as any,
+      { id: 'cap2', email: 'cap2@x.com', email_confirmed_at: '2026-01-01' } as any,
+      { id: 'cap3', email: 'cap3@x.com', email_confirmed_at: '2026-01-01' } as any,
+      { id: 'cap4', email: 'cap4@x.com', email_confirmed_at: '2026-01-01' } as any,
+    ]);
+    store.tournaments = [
+      {
+        id: 'e8fa740c-d92b-49d8-a654-05a37d0eea3b',
+        status: 'published',
+        tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4',
+        min_players: 3,
+      },
+    ] as any;
+    store.tournament_teams = [
+      { tournament_id: 'e8fa740c-d92b-49d8-a654-05a37d0eea3b', team_id: 't1' },
+      { tournament_id: 'e8fa740c-d92b-49d8-a654-05a37d0eea3b', team_id: 't2' },
+      { tournament_id: 'e8fa740c-d92b-49d8-a654-05a37d0eea3b', team_id: 't3' },
+      // équipe d'un autre tournoi → capitaine hors audience
+      { tournament_id: 'other', team_id: 't4' },
+    ] as any;
+    store.teams = [
+      { id: 't1', captain_id: 'cap1', is_active: true, deleted_at: null },
+      { id: 't2', captain_id: 'cap2', is_active: true, deleted_at: null },
+      // roster vide → incluse
+      { id: 't3', captain_id: 'cap3', is_active: true, deleted_at: null },
+      { id: 't4', captain_id: 'cap4', is_active: true, deleted_at: null },
+    ] as any;
+    store.team_members = [
+      // t1 : 2 titulaires + 1 remplaçante → 2 < 3 → capitaine relancée
+      { team_id: 't1', user_id: 'u1', is_substitute: false },
+      { team_id: 't1', user_id: 'u2', is_substitute: false },
+      { team_id: 't1', user_id: 'u3', is_substitute: true },
+      // t2 : 3 titulaires → complet, capitaine exclue
+      { team_id: 't2', user_id: 'u4', is_substitute: false },
+      { team_id: 't2', user_id: 'u5', is_substitute: null },
+      { team_id: 't2', user_id: 'u6', is_substitute: false },
+      // t4 : hors tournoi
+      { team_id: 't4', user_id: 'u7', is_substitute: false },
+    ] as any;
+
+    const recipients = await computeAudienceRecipients(
+      'tournament-captains-incomplete-roster'
+    );
+    expect(recipients.map((r) => r.user_id).sort()).toEqual(['cap1', 'cap3']);
+  });
+
+  it('tournament-captains-incomplete-roster: audience vide si min_players non configuré', async () => {
+    setAuthListUsers([
+      { id: 'cap1', email: 'cap1@x.com', email_confirmed_at: '2026-01-01' } as any,
+    ]);
+    store.tournaments = [
+      {
+        id: 'e8fa740c-d92b-49d8-a654-05a37d0eea3b',
+        status: 'published',
+        tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4',
+        min_players: null,
+      },
+    ] as any;
+    store.tournament_teams = [
+      { tournament_id: 'e8fa740c-d92b-49d8-a654-05a37d0eea3b', team_id: 't1' },
+    ] as any;
+    store.teams = [
+      { id: 't1', captain_id: 'cap1', is_active: true, deleted_at: null },
+    ] as any;
+    store.team_members = [] as any;
+
+    const recipients = await computeAudienceRecipients(
+      'tournament-captains-incomplete-roster'
+    );
+    expect(recipients).toEqual([]);
+  });
+
   it('adherents: paid+active only, deduped by lower(email), email opt-outs excluded', async () => {
     store.adherents = [
       {
