@@ -5671,6 +5671,7 @@
     "audienceTeamMembers": "Players (team members)",
     "audienceStaff": "Staff / volunteers",
     "audienceAdherents": "Association members",
+    "audienceTournamentNeverLoggedIn": "Tournament entrants who never signed in",
     "audienceNewsletter": "Newsletter (external subscribers)",
     "audienceAllPlusNewsletter": "Confirmed accounts + newsletter",
     "audienceAdherentsPlusNewsletter": "Members + newsletter",

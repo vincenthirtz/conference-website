@@ -21,6 +21,7 @@ import {
 import { BROADCAST_OPT_OUT_EVENT_TYPE } from './webPushEvents';
 import { slugifyCampaignName } from './campaignSchema';
 import { DEFAULT_TENANT_ID } from './tenant';
+import { resolveCurrentTournamentId } from './currentTournament';
 
 import { logger } from './logger';
 
@@ -78,6 +79,8 @@ export type CampaignAudience =
   | 'team-members'
   | 'staff'
   | 'adherents'
+  // Relance : inscrit·es au tournoi en cours qui n'ont JAMAIS ouvert de session.
+  | 'tournament-never-logged-in'
   // Newsletter externe (abonné·es sans compte site) + combinaisons.
   | 'newsletter'
   | 'all-plus-newsletter'
@@ -276,6 +279,12 @@ type ConfirmedUser = {
   email: string;
   display_name: string | null;
   created_at: string | null;
+  /**
+   * Dernière ouverture de session (ISO) ou `null` si le compte n'a JAMAIS été
+   * utilisé pour se connecter — critère de l'audience de relance
+   * `tournament-never-logged-in`.
+   */
+  last_sign_in_at?: string | null;
 };
 
 /**
@@ -306,6 +315,7 @@ async function listConfirmedUsers(): Promise<ConfirmedUser[]> {
         display_name:
           (u.user_metadata?.display_name as string | undefined) ?? null,
         created_at: u.created_at ?? null,
+        last_sign_in_at: u.last_sign_in_at ?? null,
       });
     }
     if (batch.length < perPage) break;
@@ -495,17 +505,59 @@ async function listStaffAuthUserIds(): Promise<Set<string>> {
 }
 
 /**
+ * Résout l'ensemble des auth user ids inscrit·es au tournoi EN COURS : membres
+ * (titulaires + remplaçant·es) des équipes présentes dans tournament_teams pour
+ * le tournoi résolu par `resolveCurrentTournamentId` (tenant par défaut).
+ * Renvoie un Set vide si aucun tournoi actif — l'audience est alors vide, ce qui
+ * est le comportement voulu (pas de relance hors période de tournoi).
+ */
+async function listCurrentTournamentMemberIds(): Promise<Set<string>> {
+  const set = new Set<string>();
+  const tournamentId = await resolveCurrentTournamentId();
+  if (!tournamentId) return set;
+
+  const { data: entries, error: entriesError } = await supabaseAdmin!
+    .from('tournament_teams')
+    .select('team_id')
+    .eq('tournament_id', tournamentId);
+  if (entriesError) throw entriesError;
+
+  const teamIds = (entries ?? [])
+    .map((r) => (r as { team_id?: string | null }).team_id)
+    .filter((id): id is string => Boolean(id));
+  if (teamIds.length === 0) return set;
+
+  const { data: members, error: membersError } = await supabaseAdmin!
+    .from('team_members')
+    .select('user_id')
+    .in('team_id', teamIds);
+  if (membersError) throw membersError;
+
+  for (const r of members ?? []) {
+    const id = (r as { user_id?: string | null }).user_id;
+    if (id) set.add(id);
+  }
+  return set;
+}
+
+/**
  * Destinataires « comptes confirmés » filtrés à un sous-ensemble d'auth user ids
  * (`idSet = null` ⇒ tous les confirmés, chemin all-confirmed-users). Réutilise
  * le pipeline commun : confirmés − opt-out broadcast, label via battle-tag.
+ * `opts.neverSignedIn` restreint en plus aux comptes qui n'ont JAMAIS ouvert de
+ * session (`last_sign_in_at` absent) — audience de relance.
  */
 async function computeConfirmedRecipients(
-  idSet: Set<string> | null
+  idSet: Set<string> | null,
+  opts: { neverSignedIn?: boolean } = {}
 ): Promise<ComputedRecipient[]> {
   const confirmed = await listConfirmedUsers();
   const optedOut = await fetchBroadcastOptOuts();
   const eligible = confirmed.filter(
-    (u) => (idSet === null || idSet.has(u.id)) && !optedOut.has(u.id)
+    (u) =>
+      (idSet === null || idSet.has(u.id)) &&
+      !optedOut.has(u.id) &&
+      (!opts.neverSignedIn || !u.last_sign_in_at)
   );
 
   const battleTagById = await fetchBattleTags(eligible.map((u) => u.id));
@@ -630,7 +682,8 @@ function mergeRecipientsByEmail(
  * Calcule la liste des destinataires éligibles pour une audience donnée.
  *
  * Deux familles d'audiences :
- * - « comptes auth » (all-confirmed-users, team-captains, team-members, staff) :
+ * - « comptes auth » (all-confirmed-users, team-captains, team-members, staff,
+ *   tournament-never-logged-in) :
  *   résout un Set<authUserId>, filtre les comptes confirmés à ce set, retire les
  *   opt-out RGPD broadcast (notification_prefs), label via profiles.battle_tag
  *   (fallback display_name). Catalogue broadcast GLOBAL → aucun filtre tenant.
@@ -654,6 +707,11 @@ export async function computeAudienceRecipients(
       return computeConfirmedRecipients(await listTeamMemberIds());
     case 'staff':
       return computeConfirmedRecipients(await listStaffAuthUserIds());
+    case 'tournament-never-logged-in':
+      return computeConfirmedRecipients(
+        await listCurrentTournamentMemberIds(),
+        { neverSignedIn: true }
+      );
     case 'adherents':
       return computeAdherentRecipients();
     case 'newsletter':

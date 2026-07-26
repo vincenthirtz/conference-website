@@ -263,6 +263,91 @@ describe('computeAudienceRecipients', () => {
     expect(recipients.map((r) => r.user_id)).toEqual(['u1']);
   });
 
+  it('tournament-never-logged-in: membres du tournoi en cours sans aucune session ouverte', async () => {
+    setAuthListUsers([
+      // inscrite au tournoi + jamais connectée → cible de la relance
+      {
+        id: 'u1',
+        email: 'never@x.com',
+        email_confirmed_at: '2026-01-01',
+        last_sign_in_at: null,
+      } as any,
+      // inscrite mais déjà connectée → exclue
+      {
+        id: 'u2',
+        email: 'active@x.com',
+        email_confirmed_at: '2026-01-01',
+        last_sign_in_at: '2026-06-01',
+      } as any,
+      // jamais connectée mais PAS inscrite au tournoi en cours → exclue
+      {
+        id: 'u3',
+        email: 'outsider@x.com',
+        email_confirmed_at: '2026-01-01',
+        last_sign_in_at: null,
+      } as any,
+      // inscrite + jamais connectée MAIS opt-out broadcast → exclue
+      {
+        id: 'u4',
+        email: 'optout@x.com',
+        email_confirmed_at: '2026-01-01',
+        last_sign_in_at: null,
+      } as any,
+    ]);
+    store.tournaments = [
+      {
+        id: 'e8fa740c-d92b-49d8-a654-05a37d0eea3b',
+        status: 'published',
+        tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4',
+      },
+    ] as any;
+    store.tournament_teams = [
+      {
+        tournament_id: 'e8fa740c-d92b-49d8-a654-05a37d0eea3b',
+        team_id: 't1',
+      },
+      // équipe d'un autre tournoi → membres hors audience
+      { tournament_id: 'other-tournament', team_id: 't9' },
+    ] as any;
+    store.team_members = [
+      { team_id: 't1', user_id: 'u1' },
+      { team_id: 't1', user_id: 'u2' },
+      { team_id: 't1', user_id: 'u4' },
+      { team_id: 't9', user_id: 'u3' },
+    ] as any;
+    store.notification_prefs = [
+      {
+        user_id: 'u4',
+        event_type: 'broadcast',
+        channel: 'email',
+        enabled: false,
+      },
+    ] as any;
+
+    const recipients = await computeAudienceRecipients(
+      'tournament-never-logged-in'
+    );
+    expect(recipients.map((r) => r.user_id)).toEqual(['u1']);
+  });
+
+  it('tournament-never-logged-in: audience vide si aucun tournoi en cours', async () => {
+    setAuthListUsers([
+      {
+        id: 'u1',
+        email: 'never@x.com',
+        email_confirmed_at: '2026-01-01',
+        last_sign_in_at: null,
+      } as any,
+    ]);
+    store.tournaments = [] as any;
+    store.team_members = [{ team_id: 't1', user_id: 'u1' }] as any;
+
+    const recipients = await computeAudienceRecipients(
+      'tournament-never-logged-in'
+    );
+    expect(recipients).toEqual([]);
+  });
+
   it('adherents: paid+active only, deduped by lower(email), email opt-outs excluded', async () => {
     store.adherents = [
       {
