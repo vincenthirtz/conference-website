@@ -20,6 +20,7 @@ import QuickAction, {
 } from '@/components/player/QuickAction';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
 import InvitationsSection from '@/components/player/InvitationsSection';
+import BattlenetVerifyCard from '@/components/player/BattlenetVerifyCard';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import type { PlayerNotificationsPayload } from '@/pages/api/player/notifications';
 
@@ -64,6 +65,9 @@ function PlayerNotifications() {
   const [prefs, setPrefs] = useState<PrefsResponse | null>(null);
   const [savingKey, setSavingKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Passe à true dès qu'une invitation est acceptée : déclenche la proposition
+  // de vérification Battle.net (cf. le rendu plus bas).
+  const [justJoined, setJustJoined] = useState(false);
 
   const load = useCallback(async () => {
     const [countersData, prefsData] = await Promise.all([
@@ -227,7 +231,20 @@ function PlayerNotifications() {
 
         <div className="space-y-8">
           {/* (a) Invitations reçues — masquée s'il n'y en a aucune. */}
-          <InvitationsSection />
+          <InvitationsSection onJoined={() => setJustJoined(true)} />
+
+          {/* Onboarding Battle.net : proposé juste après l'entrée sur un roster.
+              La vérification est personnelle (chaque joueuse relie SON compte
+              Blizzard), donc c'est ici qu'on l'attrape pour une non-capitaine —
+              la capitaine, elle, la voit sur /player/manage-team?welcome=1.
+              Masquée si déjà vérifiée ou si la feature est dormante. */}
+          {justJoined && (
+            <BattlenetVerifyCard
+              variant="onboarding"
+              hideWhenVerified
+              returnTo="/player/notifications"
+            />
+          )}
 
           {/* (b) En attente */}
           <section>

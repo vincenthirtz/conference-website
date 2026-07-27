@@ -4,12 +4,14 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useManagedTeam } from '@/hooks/useManagedTeam';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
 import CopyButton from '@/components/player/CopyButton';
 import FreePlayersSection from '@/components/player/FreePlayersSection';
+import BattlenetVerifyCard from '@/components/player/BattlenetVerifyCard';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
@@ -65,6 +67,15 @@ type JoinRequest = {
 export default function ManageTeamPage() {
   const t = useT('manageTeam');
   const locale = useLocale();
+  const router = useRouter();
+
+  // Onboarding post-création : le magic-link « accès espace équipe » atterrit ici
+  // avec ?welcome=1. C'est le seul moment du parcours où la capitaine vient de
+  // créer son compte ET est déjà connectée — donc le meilleur endroit pour
+  // proposer la vérification Battle.net (le profil suppose qu'elle aille la
+  // chercher). Refermable, et masquée d'office si elle est déjà vérifiée.
+  const [welcomeDismissed, setWelcomeDismissed] = useState(false);
+  const showWelcome = router.query.welcome === '1' && !welcomeDismissed;
   const { loading: authLoading, ready } = usePlayerSession();
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
   const {
@@ -393,6 +404,18 @@ export default function ManageTeamPage() {
           >
             &larr; {t.backToSpace}
           </Link>
+
+          {showWelcome && (
+            <BattlenetVerifyCard
+              variant="onboarding"
+              hideWhenVerified
+              // On garde `welcome=1` dans le retour : sinon la carte n'est plus
+              // montée au retour de Blizzard et le toast de confirmation (porté
+              // par elle) ne partirait jamais.
+              returnTo="/player/manage-team?welcome=1"
+              onDismiss={() => setWelcomeDismissed(true)}
+            />
+          )}
 
           {/* Team header */}
           <div className="flex items-center gap-4 mb-8">

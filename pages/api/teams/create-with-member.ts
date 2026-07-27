@@ -129,6 +129,13 @@ type ApiResponse =
       fieldErrors?: Record<string, string>;
     };
 
+/**
+ * Atterrissage du capitaine après consommation du magic-link. Le `welcome=1`
+ * active la carte d'onboarding Battle.net dans /player/manage-team ; il est
+ * inerte partout ailleurs.
+ */
+const CAPTAIN_LANDING = '/player/manage-team?welcome=1';
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ApiResponse>
@@ -720,7 +727,14 @@ export default async function handler(
     const captainEmail = userIdToEmail.get(captainUserId) || null;
     if (captainEmail) {
       try {
-        const redirectTo = `${SITE_URL}/auth/team-access?next=/player/manage-team`;
+        // `welcome=1` déclenche, à l'arrivée dans l'espace équipe, la carte
+        // d'onboarding « vérifie ton BattleTag » (Battle.net OAuth). C'est le
+        // seul instant du parcours où la capitaine vient de créer son compte et
+        // est déjà connectée ; proposer la vérification ailleurs suppose qu'elle
+        // aille la chercher dans son profil.
+        const redirectTo = `${SITE_URL}/auth/team-access?next=${encodeURIComponent(
+          CAPTAIN_LANDING
+        )}`;
         const { data: linkData, error: linkErr } =
           await supabaseAdmin.auth.admin.generateLink({
             type: 'magiclink',
@@ -737,7 +751,7 @@ export default async function handler(
         } else {
           const actionLink = `${SITE_URL}/auth/team-access?token_hash=${encodeURIComponent(
             tokenHash
-          )}&type=magiclink&next=${encodeURIComponent('/player/manage-team')}`;
+          )}&type=magiclink&next=${encodeURIComponent(CAPTAIN_LANDING)}`;
 
           // Fire-and-forget : un échec Brevo ne doit pas bloquer la création.
           sendTeamAccessEmail({

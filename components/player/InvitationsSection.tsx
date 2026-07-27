@@ -8,6 +8,14 @@
 //
 // Convention du fichier : si aucune invitation, le composant ne rend rien
 // (section masquée) — l'appelant peut le placer inconditionnellement.
+//
+// `onJoined` est appelé après une acceptation réussie. La vérification
+// Battle.net est strictement PERSONNELLE (chaque joueuse relie SON compte
+// Blizzard ; la capitaine ne peut pas le faire à sa place), donc l'acceptation
+// d'invitation est LE moment de la proposer à une joueuse non-capitaine : elle
+// vient d'entrer sur un roster et elle est connectée. La carte est rendue par
+// l'appelant, parce que cette section se démonte dès qu'il n'y a plus
+// d'invitation en attente.
 
 import { useCallback, useEffect, useState } from 'react';
 import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';
@@ -30,7 +38,12 @@ export type PlayerInvitation = {
 
 type InvitationsResponse = { invitations: PlayerInvitation[] };
 
-export default function InvitationsSection() {
+type Props = {
+  /** Appelé après une acceptation réussie (invitation → membre du roster). */
+  onJoined?: (teamName: string) => void;
+};
+
+export default function InvitationsSection({ onJoined }: Props = {}) {
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
   const { addToast } = useToast();
   const { confirm, dialog } = useConfirmDialog();
@@ -118,6 +131,7 @@ export default function InvitationsSection() {
         });
         // Succès : retrait optimiste de la carte.
         setInvites((prev) => prev.filter((i) => i.id !== invite.id));
+        if (action === 'accept') onJoined?.(invite.teamName);
         addToast(
           action === 'accept'
             ? format(t.inviteAccepted, { team: invite.teamName })
@@ -140,7 +154,7 @@ export default function InvitationsSection() {
         setPendingId(null);
       }
     },
-    [pendingId, adminFetchJson, addToast, confirm, t, mapError]
+    [pendingId, adminFetchJson, addToast, confirm, t, mapError, onJoined]
   );
 
   // Empty state : on ne rend rien quand il n'y a pas d'invitation.

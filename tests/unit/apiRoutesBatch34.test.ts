@@ -4,7 +4,13 @@ const { sendTeamJoinEmail, sendWelcomeEmail, sendTeamAccessEmail } = vi.hoisted(
   () => ({
     sendTeamJoinEmail: vi.fn(async () => undefined),
     sendWelcomeEmail: vi.fn(async () => ({ success: true as const })),
-    sendTeamAccessEmail: vi.fn(async () => ({ success: true as const })),
+    sendTeamAccessEmail: vi.fn(
+      async (_input: {
+        to: string;
+        teamName: string;
+        actionLink: string;
+      }) => ({ success: true as const })
+    ),
   })
 );
 vi.mock('@/utils/email', () => ({
@@ -225,6 +231,43 @@ describe('POST /api/teams/create-with-member', () => {
     // « vous avez rejoint l'équipe » (elle vient de créer l'équipe).
     expect(sendTeamAccessEmail).toHaveBeenCalledTimes(1);
     expect(sendTeamJoinEmail).not.toHaveBeenCalled();
+  });
+
+  it("le magic-link capitaine atterrit sur l'onboarding Battle.net (welcome=1)", async () => {
+    // Le `next` du pont doit porter ?welcome=1 : c'est ce paramètre qui déclenche
+    // la carte « vérifie ton BattleTag » dans /player/manage-team, au seul moment
+    // du parcours où la capitaine a un compte ET une session.
+    store.teams = [];
+    store.team_members = [];
+    setAuthListUsers([]);
+    setCreateUserResult({
+      data: { user: { id: 'u-new', email: 'cap@example.com' } },
+      error: null,
+    });
+    const res = makeRes();
+    await createWithMemberHandler(
+      makeReq({
+        body: {
+          name: 'Welcome Team',
+          member_email: 'cap@example.com',
+          member_battle_tag: 'Captain#1234',
+          set_captain: true,
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(201);
+    expect(sendTeamAccessEmail).toHaveBeenCalledTimes(1);
+
+    const { actionLink } = sendTeamAccessEmail.mock.calls[0][0] as {
+      actionLink: string;
+    };
+    expect(actionLink).toContain('/auth/team-access');
+    expect(actionLink).toContain('type=magiclink');
+    // `next` est url-encodé dans le lien.
+    expect(decodeURIComponent(actionLink)).toContain(
+      'next=/player/manage-team?welcome=1'
+    );
   });
 
   // Invite-accept model : seul le capitaine (set_captain) est inséré dans
