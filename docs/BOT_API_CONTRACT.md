@@ -2629,6 +2629,7 @@ curl -sS -X POST https://site.example/api/bot/v1/tickets/close-log \
 | [`teams/[teamId]/members.ts`](../pages/api/bot/v1/teams/[teamId]/members.ts)                   | DELETE     | yes   | `bot-team-members-kick`     |
 | [`teams/[teamId]/transfer-captain.ts`](../pages/api/bot/v1/teams/[teamId]/transfer-captain.ts) | POST       | yes   | `bot-team-transfer-captain` |
 | [`teams/leave.ts`](../pages/api/bot/v1/teams/leave.ts)                                         | POST       | yes   | `bot-team-leave`            |
+| [`teams/messages.ts`](../pages/api/bot/v1/teams/messages.ts)                                   | POST       | yes   | `bot-team-messages`         |
 
 #### `PATCH /api/bot/v1/teams/:teamId/discord`
 
@@ -2679,6 +2680,72 @@ basse, echec de creation d'un salon, assignation capitaine impossible) est
 poste dans un salon dedie (`TEAM_PROVISION_RESOLUTION_CHANNEL_ID` cote bot)
 plutot que d'echouer en silence. Aucun retry auto, aucun re-throw vers
 l'outbox.
+
+#### `POST /api/bot/v1/teams/messages`
+
+Envoi d'un message PERSONNALISE dans le salon textuel de chaque equipe inscrite
+au tournoi (`teams.discord_channel_id`, provisionne par `team.created`).
+**Auth** : `x-api-key` + `actorDiscordUserId` (staff admin/owner).
+
+Le site est la source de verite : il lit l'etat reel du roster (titulaires,
+remplacantes, comptes jamais connectes, BattleTags manquants), rend un message
+par equipe (`utils/teamMessages.ts`), puis emet un event `team.message` par
+equipe livrable. Le bot ne fait que poster.
+
+**Body**
+
+| Cle                  | Type                                        | Defaut            | Role                                        |
+| -------------------- | ------------------------------------------- | ----------------- | ------------------------------------------- |
+| `actorDiscordUserId` | snowflake                                   | —                 | staff admin/owner (requis)                  |
+| `preset`             | `roster-reminder` \| `custom`               | `roster-reminder` | gabarit auto ou libre                       |
+| `template`           | string (<= 4000)                            | —                 | requis si `preset=custom`                   |
+| `teamIds`            | uuid[] (<= 200)                             | toutes            | restreint le ciblage                        |
+| `only`               | `all` \| `incomplete` \| `needs_attention` | `all`             | filtre sur l'etat du roster                 |
+| `mention`            | bool                                        | `false`           | ping le role d'equipe                       |
+| `tournamentId`       | uuid                                        | tournoi en cours  | cible un autre tournoi                      |
+| `dryRun`             | bool                                        | **`true`**        | `true` = apercu seul, rien n'est poste      |
+
+Variables de gabarit (`preset=custom`) : `{equipe}`, `{tournoi}`,
+`{titulaires}`, `{remplacantes}`, `{manquants}`, `{minimum}`,
+`{sans_battletag}`, `{jamais_connectees}`, `{deadline}`, `{debut}`,
+`{lien_equipe}`. Une variable inconnue est laissee VISIBLE dans le rendu
+(jamais remplacee par du vide).
+
+**Reponse** : `{ dryRun, tournament, messages[] }` en apercu ; en envoi reel
+s'y ajoutent `sent`, `skipped` et `teams[]` (statut par equipe :
+`sent` / `skipped_no_channel` / `error`). Une equipe sans salon provisionne est
+comptee dans `skipped`, jamais droppee en silence.
+
+**Rate limit** : 10/min (`bot-team-messages`), 3/min par acteur.
+**Idempotency** : oui.
+
+Cote docker-box, le script one-shot
+`services/discord-bot/scripts/send-team-roster-reminder.js` appelle cet endpoint
+(`--send` pour sortir du dry-run, `--mention`, `--only=`, `--teams=`,
+`--template-file=`).
+
+#### Event `team.message` (site → bot, via outbox/webhook)
+
+Emis par `/api/admin/team-messages`, `/api/bot/v1/teams/messages` et le cron
+`/api/cron/team-roster-reminders`. Consomme par `team-message.js`.
+
+**Payload** : `{ teamId, teamName, channelId, roleId, content, mentionRole,
+kind, source, tournamentId }`.
+
+- `content` est **deja rendu** cote site (mention du role incluse si demandee).
+- `mentionRole` autorise le ping : le bot passe
+  `allowedMentions: { parse: [], roles: [roleId] }` si vrai, `{ parse: [] }`
+  sinon — donc un `@everyone` glisse dans un gabarit admin reste inerte.
+- `kind` : `incomplete` / `complete_with_warnings` / `complete` / `custom`.
+- `source` : `admin` / `bot` / `cron`.
+- Contenu tronque a 1900 caracteres cote site ET cote bot.
+
+**Automatisation** — le cron `/api/cron/team-roster-reminders` (Netlify,
+quotidien 09:00 UTC) n'envoie qu'aux jalons **J-21 / J-14 / J-7 / J-3 / J-1**
+avant `site_settings.roster_lock_deadline` (fallback `tournaments.start_date`).
+Le ciblage sur un jour exact tient lieu de deduplication (pas de table d'etat).
+Par defaut seules les equipes avec un motif reel sont notifiees
+(`only=needs_attention`).
 
 ### Tournaments
 

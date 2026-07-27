@@ -231,6 +231,7 @@ export const STAFF_LOG_ACTION_LABELS: Record<StaffLogAction, string> = {
   update_team_member: "Modification d'un membre d'équipe",
   kick_member: "Exclusion d'un membre",
   leave_team: "Départ d'une équipe",
+  send_team_message: "Message envoyé aux salons d'équipe",
   update_player_battle_tag: 'BattleTag joueur modifié',
   update_member_profile: 'Modification profil membre',
   update_profile: 'Modification profil',

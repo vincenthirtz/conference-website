@@ -31,6 +31,7 @@ export type BotEventName =
   | 'news.published'
   | 'team.created'
   | 'team.dissolved'
+  | 'team.message'
   | 'team.member.added'
   | 'team.member.removed'
   | 'team.captain.changed'

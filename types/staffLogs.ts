@@ -72,6 +72,7 @@ export type StaffLogAction =
   | 'update_team_member'
   | 'kick_member'
   | 'leave_team'
+  | 'send_team_message'
   | 'update_player_battle_tag'
   | 'update_member_profile'
   | 'update_profile'

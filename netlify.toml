@@ -121,6 +121,16 @@
 [functions."task-board-digest-cron"]
   schedule = "30 7 * * *"
 
+# Scheduled function: relance des équipes dans LEUR salon textuel Discord pour
+# compléter leur roster avant le verrouillage. Tourne tous les jours à 09:00 UTC
+# mais n'envoie qu'aux jalons J-21/14/7/3/1 avant
+# `site_settings.roster_lock_deadline` (fallback `tournaments.start_date`) — le
+# ciblage sur un jour exact tient lieu de déduplication. Seules les équipes avec
+# un motif réel (roster incomplet, comptes jamais connectés, BattleTag manquant)
+# sont notifiées. Émet `team.message` (outbox → bot). Requiert CRON_SECRET + URL.
+[functions."team-roster-reminders-cron"]
+  schedule = "0 9 * * *"
+
 [[headers]]
   for = "/*"
   [headers.values]

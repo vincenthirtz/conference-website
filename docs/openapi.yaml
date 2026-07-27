@@ -6270,6 +6270,70 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+  /api/bot/v1/teams/messages:
+    post:
+      tags:
+        - bot/teams
+      summary: Poste un message personnalise dans le salon Discord de chaque equipe inscrite.
+      operationId: botSendTeamMessages
+      description: |
+        Declenche l'envoi d'un message par equipe inscrite au tournoi (rappel
+        roster auto-personnalise ou gabarit libre a variables). Le rendu est fait
+        cote site (`utils/teamMessages.ts`) a partir de l'etat reel du roster
+        (titulaires, remplacantes, comptes jamais connectes, BattleTags
+        manquants), puis un event outbox `team.message` est emis par equipe
+        livrable — le bot poste dans `teams.discord_channel_id`.
+
+        `dryRun` vaut TRUE par defaut : la reponse contient l'apercu rendu et
+        RIEN n'est poste. Passer `dryRun: false` pour envoyer.
+
+        Une equipe sans salon textuel provisionne est comptee dans `skipped`
+        (jamais droppee en silence). Acteur : staff admin/owner.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [actorDiscordUserId]
+              properties:
+                actorDiscordUserId: { type: string }
+                preset:
+                  type: string
+                  enum: [roster-reminder, custom]
+                  default: roster-reminder
+                template:
+                  type: string
+                  maxLength: 4000
+                  description: Requis si `preset=custom`. Variables `{equipe}`, `{titulaires}`, `{manquants}`, `{minimum}`, `{remplacantes}`, `{sans_battletag}`, `{jamais_connectees}`, `{deadline}`, `{debut}`, `{lien_equipe}`.
+                teamIds:
+                  type: array
+                  maxItems: 200
+                  items: { type: string, format: uuid }
+                only:
+                  type: string
+                  enum: [all, incomplete, needs_attention]
+                mention:
+                  type: boolean
+                  description: Ping le role d'equipe (sinon message silencieux).
+                tournamentId: { type: string, format: uuid }
+                dryRun:
+                  type: boolean
+                  default: true
+      responses:
+        '200':
+          description: "Apercu (`dryRun: true`) ou resultat d'envoi (`sent`, `skipped`, `teams[]`)."
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Aucun tournoi en cours.
   /api/bot/v1/teams/leave:
     post:
       tags:
@@ -17042,6 +17106,88 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+  /api/admin/team-messages:
+    get:
+      summary: Etat roster des equipes inscrites + capacite de livraison Discord.
+      operationId: adminGetTeamMessagesState
+      tags:
+        - admin/teams
+      description: |
+        Alimente l'onglet « Equipes » de /admin/communications : par equipe,
+        titulaires / remplacantes / BattleTags manquants / comptes jamais
+        connectes, plus `discordChannelId` (null = pas de salon provisionne, donc
+        equipe non contactable). Renvoie aussi la liste des variables de gabarit.
+      security:
+        - StaffSession: []
+      parameters:
+        - name: tournamentId
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Defaut = tournoi en cours.
+      responses:
+        '200':
+          description: '`{ tournament, teams[], variables[], maxLength }`.'
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      summary: Apercu (dryRun) ou envoi d'un message vers les salons d'equipe.
+      operationId: adminSendTeamMessages
+      tags:
+        - admin/teams
+      description: |
+        Meme coeur que `POST /api/bot/v1/teams/messages`, authentifie par session
+        staff. `dryRun` vaut TRUE par defaut — l'UI exige un apercu avant de
+        deverrouiller l'envoi. Un envoi reel emet un event `team.message` par
+        equipe livrable et journalise `send_team_message` dans staff_logs.
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                preset:
+                  type: string
+                  enum: [roster-reminder, custom]
+                  default: roster-reminder
+                template: { type: string, maxLength: 4000 }
+                teamIds:
+                  type: array
+                  maxItems: 200
+                  items: { type: string, format: uuid }
+                mention: { type: boolean }
+                only:
+                  type: string
+                  enum: [all, incomplete, needs_attention]
+                tournamentId: { type: string, format: uuid }
+                dryRun: { type: boolean, default: true }
+      responses:
+        '200':
+          description: Apercu ou resultat d'envoi.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: Aucun tournoi en cours.
   /api/admin/teams:
     get:
       summary: List teams of the active tenant.
@@ -22011,6 +22157,61 @@ paths:
       responses:
         '200':
           description: '`{ emitted, boards }` du tick.'
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/cron/team-roster-reminders:
+    get:
+      tags:
+        - cron
+      summary: Relance roster des equipes dans leur salon Discord (jalons J-21/14/7/3/1).
+      operationId: cronTeamRosterRemindersGet
+      description: |
+        Netlify scheduled function (quotidienne). N'envoie QUE si le nombre de
+        jours restants avant `site_settings.roster_lock_deadline` (fallback
+        `tournaments.start_date`) tombe sur un jalon (21, 14, 7, 3, 1) — ce
+        ciblage sur un jour exact tient lieu de deduplication, sans table
+        d'etat. Les autres jours : `200 { skipped: 'not_a_milestone' }`.
+
+        Par defaut seules les equipes avec un motif reel sont notifiees
+        (`only=needs_attention`). Emet un event `team.message` par equipe
+        livrable, avec mention du role.
+
+        Query : `?force=1` ignore la fenetre de jalons, `?dry_run=1` renvoie
+        l'apercu sans emettre, `?only=all|incomplete` change le ciblage.
+
+        Auth : `Authorization: Bearer <CRON_SECRET>` OU `?secret=<CRON_SECRET>`.
+      security:
+        - CronSecret: []
+      responses:
+        '200':
+          description: '`{ daysRemaining, sent, skipped, teams[] }` ou `{ skipped: <raison> }`.'
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      tags:
+        - cron
+      summary: Relance roster des equipes dans leur salon Discord (jalons J-21/14/7/3/1).
+      operationId: cronTeamRosterRemindersPost
+      description: Same as `GET /api/cron/team-roster-reminders`.
+      security:
+        - CronSecret: []
+      responses:
+        '200':
+          description: '`{ daysRemaining, sent, skipped, teams[] }` ou `{ skipped: <raison> }`.'
           content:
             application/json:
               schema:

@@ -14,6 +14,7 @@ import NewsListPanel, {
 } from '@/components/admin/communications/NewsListPanel';
 import AnnouncementsListPanel from '@/components/admin/communications/AnnouncementsListPanel';
 import CampaignsPanel from '@/components/admin/communications/CampaignsPanel';
+import TeamMessagesPanel from '@/components/admin/communications/TeamMessagesPanel';
 import NotificationsPanel from '@/components/admin/communications/NotificationsPanel';
 import type { StaffProps } from '@/types/admin';
 import { logger } from '@/utils/logger';
@@ -97,6 +98,7 @@ export const getServerSideProps = withStaffPage<{
  *   - Actualités    → admin+
  *   - Annonces      → admin+
  *   - Campagnes     → admin+
+ *   - Équipes       → admin+ (messages vers les salons Discord d'équipe)
  */
 export default function AdminCommunicationsPage({
   staff,
@@ -113,6 +115,7 @@ export default function AdminCommunicationsPage({
           { id: 'news', label: t.tabNews },
           { id: 'announcements', label: t.tabAnnouncements },
           { id: 'campaigns', label: t.tabCampaigns },
+          { id: 'teams', label: t.tabTeams },
         ]
       : []),
     { id: 'notifications', label: t.tabNotifications },
@@ -158,6 +161,8 @@ export default function AdminCommunicationsPage({
               <AnnouncementsListPanel />
             ) : active === 'campaigns' && isAdmin ? (
               <CampaignsPanel />
+            ) : active === 'teams' && isAdmin ? (
+              <TeamMessagesPanel />
             ) : (
               <NotificationsPanel />
             )}
