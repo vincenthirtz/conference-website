@@ -7,6 +7,8 @@
 //     création d'équipe (arrivée par le magic-link). C'est LE moment où la
 //     joueuse est connectée et encore engagée ; la proposer seulement depuis le
 //     profil supposait qu'elle aille l'y chercher.
+//   - `chrome="bare"`        → contenu SANS encadré, pour être posé dans le
+//     chrome d'un hôte (la modale profil admin a ses propres SectionCard).
 //
 // La carte porte tout l'état : lecture de /api/player/battlenet-status, toast de
 // retour du flux OAuth (`?battlenet=…`) et nettoyage du paramètre. Les pages
@@ -35,6 +37,16 @@ export type BattlenetStatus = {
 type Props = {
   variant?: 'section' | 'onboarding';
   /**
+   * 'card' (défaut) rend l'encadré ; 'bare' rend le contenu nu, à charge de
+   * l'hôte de fournir titre + encadré (cas de la modale profil admin).
+   */
+  chrome?: 'card' | 'bare';
+  /**
+   * Où renvoyer sur 401. `/login` côté joueuse, `/admin/login` côté staff —
+   * un·e admin déconnectée ne doit pas atterrir sur le login joueur.
+   */
+  loginPath?: string;
+  /**
    * Chemin de retour après le round-trip Blizzard. Par défaut le chemin courant
    * sans query — `/api/auth/battlenet/start` n'accepte qu'un chemin interne.
    */
@@ -47,6 +59,8 @@ type Props = {
 
 export default function BattlenetVerifyCard({
   variant = 'section',
+  chrome = 'card',
+  loginPath = '/login',
   returnTo,
   hideWhenVerified = false,
   onDismiss,
@@ -55,7 +69,7 @@ export default function BattlenetVerifyCard({
   const t = useT('battlenetVerify');
   const locale = useLocale();
   const { addToast } = useToast();
-  const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
+  const { adminFetchJson } = useAdminFetch({ loginPath });
 
   const [status, setStatus] = useState<BattlenetStatus | null>(null);
 
@@ -89,6 +103,9 @@ export default function BattlenetVerifyCard({
       { msg: string; variant: 'success' | 'warning' | 'error' }
     > = {
       verified: { msg: t.toastVerified, variant: 'success' },
+      // `linked` = compte relié mais aucun roster (staff non-joueuse) : succès
+      // neutre, jamais l'avertissement « ton tag ne correspond pas ».
+      linked: { msg: t.toastLinked, variant: 'success' },
       linked_no_match: { msg: t.toastNoMatch, variant: 'warning' },
       already_linked: { msg: t.toastAlreadyLinked, variant: 'error' },
       error: { msg: t.toastError, variant: 'error' },
@@ -114,17 +131,13 @@ export default function BattlenetVerifyCard({
 
   const isOnboarding = variant === 'onboarding';
 
-  return (
-    <section
-      className={
-        isOnboarding
-          ? 'mb-6 rounded-2xl border border-[#148eff]/40 bg-[#148eff]/[0.07] p-5'
-          : 'rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6'
-      }
-    >
-      <h2 className="mb-2 text-lg font-semibold">
-        {isOnboarding ? t.onboardingTitle : t.title}
-      </h2>
+  const body = (
+    <>
+      {chrome === 'card' && (
+        <h2 className="mb-2 text-lg font-semibold">
+          {isOnboarding ? t.onboardingTitle : t.title}
+        </h2>
+      )}
       <p className="mb-4 text-sm text-gray-400">
         {isOnboarding ? t.onboardingWhy : t.why}
       </p>
@@ -172,6 +185,20 @@ export default function BattlenetVerifyCard({
           )}
         </div>
       )}
+    </>
+  );
+
+  if (chrome === 'bare') return body;
+
+  return (
+    <section
+      className={
+        isOnboarding
+          ? 'mb-6 rounded-2xl border border-[#148eff]/40 bg-[#148eff]/[0.07] p-5'
+          : 'rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6'
+      }
+    >
+      {body}
     </section>
   );
 }

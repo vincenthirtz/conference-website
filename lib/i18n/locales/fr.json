@@ -4427,6 +4427,7 @@
     "verifiedProof": "Ce BattleTag t'appartient réellement : preuve anti-usurpation et anti-smurf.",
     "verifiedOn": "Vérifié le {date}",
     "toastVerified": "Ton BattleTag est vérifié ✅",
+    "toastLinked": "Ton compte Battle.net est relié ✅",
     "toastNoMatch": "Compte Battle.net lié, mais il ne correspond à aucun BattleTag de tes rosters. Vérifie que le tag saisi dans ton équipe correspond bien à ce compte.",
     "toastAlreadyLinked": "Ce compte Battle.net est déjà lié à une autre joueuse.",
     "toastError": "La vérification a échoué, réessaie."

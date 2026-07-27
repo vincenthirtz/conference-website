@@ -7,6 +7,9 @@
 // statut ?battlenet=... que l'UI affiche :
 //
 //   ?battlenet=verified         → lien créé + au moins 1 ligne roster estampillée
+//   ?battlenet=linked           → lien créé, l'utilisateur n'a AUCUNE ligne de
+//                                 roster (cas normal d'un staff non-joueuse) —
+//                                 succès neutre, surtout pas un avertissement
 //   ?battlenet=linked_no_match  → lien créé mais aucun battle_tag roster ne matche
 //   ?battlenet=already_linked   → compte Blizzard déjà lié à un autre utilisateur
 //   ?battlenet=error            → toute autre erreur (state invalide, échange, etc.)
@@ -45,6 +48,7 @@ const DEFAULT_RETURN_TO = '/player/profile';
 
 type BattlenetStatus =
   | 'verified'
+  | 'linked'
   | 'linked_no_match'
   | 'already_linked'
   | 'error';
@@ -193,16 +197,24 @@ export default async function handler(
       return redirect(res, withStatus(returnTo, 'error'));
     }
 
-    const { verifiedCount } = await stampVerifiedTeamMembers(
+    const { verifiedCount, mismatchCount } = await stampVerifiedTeamMembers(
       user.id,
       info.battleTag,
       info.battleNetId
     );
 
-    return redirect(
-      res,
-      withStatus(returnTo, verifiedCount > 0 ? 'verified' : 'linked_no_match')
-    );
+    // Aucune ligne estampillée ET aucun mismatch ⇒ l'utilisateur n'est dans
+    // aucun roster (staff non-joueuse, joueuse pas encore inscrite). Le lien est
+    // valide : c'est un succès neutre, pas le « ton tag ne correspond pas »
+    // qui n'aurait aucun sens ici.
+    const status: BattlenetStatus =
+      verifiedCount > 0
+        ? 'verified'
+        : mismatchCount > 0
+          ? 'linked_no_match'
+          : 'linked';
+
+    return redirect(res, withStatus(returnTo, status));
   } catch (err) {
     logger.error('[battlenet/callback] flow error', err);
     return redirect(res, withStatus(returnTo, 'error'));

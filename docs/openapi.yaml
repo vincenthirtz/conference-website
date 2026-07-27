@@ -23749,7 +23749,10 @@ paths:
               schema:
                 type: string
               description: >-
-                `returnTo?battlenet=verified|linked_no_match|already_linked|error`
+                `returnTo?battlenet=verified|linked|linked_no_match|already_linked|error`
+                (`linked` = lien cree mais l'utilisateur n'a AUCUNE ligne de
+                roster — cas normal d'un staff non-joueuse : succes neutre, pas
+                un avertissement)
                 ou `/login` si la session est perdue.
         '429':
           $ref: '#/components/responses/RateLimited'

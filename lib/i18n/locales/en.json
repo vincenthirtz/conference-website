@@ -4427,6 +4427,7 @@
     "verifiedProof": "This BattleTag really belongs to you: proof against impersonation and smurfing.",
     "verifiedOn": "Verified on {date}",
     "toastVerified": "Your BattleTag is verified ✅",
+    "toastLinked": "Your Battle.net account is linked ✅",
     "toastNoMatch": "Battle.net account linked, but it doesn't match any BattleTag on your rosters. Check that the tag entered in your team matches this account.",
     "toastAlreadyLinked": "This Battle.net account is already linked to another player.",
     "toastError": "Verification failed, please try again."

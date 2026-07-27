@@ -135,7 +135,8 @@
     "toastProfileUpdated": "Profile updated.",
     "errorExport": "Error during export.",
     "errorDelete": "Error during deletion.",
-    "errorUnexpected": "Unexpected error"
+    "errorUnexpected": "Unexpected error",
+    "battlenetHeading": "Verify my BattleTag"
   },
   "adminDashboard": {
     "pageTitle": "Admin – Dashboard",

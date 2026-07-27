@@ -248,6 +248,47 @@ describe('GET /api/auth/battlenet/callback', () => {
     expect(store.team_members[0].verified_battle_net_id).toBe(BNET_ID);
   });
 
+  it('aucune ligne de roster (staff non-joueuse) → ?battlenet=linked, pas un avertissement', async () => {
+    configure();
+    setCookieUser({ id: USER_A });
+    // Un membre du staff peut n'être dans aucune équipe : le lien est valide,
+    // le retour doit être un succès neutre et surtout PAS « ton tag ne
+    // correspond à aucun roster ».
+    store.team_members = [];
+
+    vi.spyOn(global, 'fetch' as any)
+      .mockImplementationOnce(
+        async () =>
+          new Response(JSON.stringify({ access_token: 'tok' }), { status: 200 })
+      )
+      .mockImplementationOnce(
+        async () =>
+          new Response(JSON.stringify({ sub: BNET_ID, battletag: BTAG }), {
+            status: 200,
+          })
+      );
+
+    const nonce = 'nonce-staff';
+    const state = signBattlenetState({
+      nonce,
+      authUserId: USER_A,
+      returnTo: '/admin?profile=1',
+    });
+    const handler = (await import('../../pages/api/auth/battlenet/callback'))
+      .default;
+    const res = makeRes();
+    await handler(
+      makeReq({ code: 'c', state }, { bn_oauth_state: nonce }),
+      res
+    );
+
+    expect(res.statusCode).toBe(302);
+    expect(res.headers.Location).toBe('/admin?profile=1&battlenet=linked');
+    // Le lien existe bien malgré l'absence de roster.
+    expect(store.user_battlenet_links).toHaveLength(1);
+    expect(store.user_battlenet_links[0].auth_user_id).toBe(USER_A);
+  });
+
   it('lié mais aucun tag roster ne matche → ?battlenet=linked_no_match', async () => {
     configure();
     setCookieUser({ id: USER_A });
