@@ -230,6 +230,21 @@ export const ADMIN_NAV: AdminNavNode[] = [
               accent: 'border-teal-500/30 from-teal-500/10 text-teal-300',
             },
           },
+          // Presets de partie personnalisée : code d'import du jeu poussé à
+          // l'hôte du match (aucune API éditeur ne permet de créer le lobby).
+          // Voisin naturel du map pool — même famille « config de jeu ».
+          {
+            id: 'custom-game-presets',
+            href: '/admin/custom-game-presets',
+            minRole: 'admin',
+            card: {
+              order: 19,
+              titleKey: 'navCustomGamePresetsTitle',
+              descKey: 'navCustomGamePresetsDesc',
+              icon: 'key',
+              accent: 'border-amber-500/30 from-amber-500/10 text-amber-300',
+            },
+          },
           {
             id: 'leagues',
             href: '/admin/leagues',

@@ -172,6 +172,10 @@ export type StaffLogAction =
   | 'update_map_pool_entry'
   | 'delete_map_pool_entry'
   | 'import_default_maps'
+  // --- Presets de partie personnalisée ---
+  | 'create_custom_game_preset'
+  | 'update_custom_game_preset'
+  | 'delete_custom_game_preset'
   // --- Twitch ---
   | 'connect_twitch_broadcaster'
   | 'disconnect_twitch_broadcaster'

@@ -332,6 +332,10 @@ export const STAFF_LOG_ACTION_LABELS: Record<StaffLogAction, string> = {
   update_map_pool_entry: 'Modification map du pool',
   delete_map_pool_entry: 'Suppression map du pool',
   import_default_maps: 'Import maps par défaut',
+  // Presets de partie personnalisée
+  create_custom_game_preset: 'Création preset partie perso',
+  update_custom_game_preset: 'Modification preset partie perso',
+  delete_custom_game_preset: 'Suppression preset partie perso',
   // Twitch
   connect_twitch_broadcaster: 'Connexion broadcaster Twitch',
   disconnect_twitch_broadcaster: 'Déconnexion broadcaster Twitch',

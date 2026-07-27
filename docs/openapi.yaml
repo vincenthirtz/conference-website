@@ -5223,6 +5223,101 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+  /api/bot/v1/matches/{matchId}/preset:
+    parameters:
+      - $ref: '#/components/parameters/MatchId'
+    get:
+      tags:
+        - bot/matches
+      summary: Preset de partie personnalisee applicable a un match.
+      description: >
+        Renvoie le code d'import de partie personnalisee que l'hote doit coller
+        dans le jeu (Partie perso > Parametres > Importer). Aucun titre qu'on
+        opere (Overwatch en tete) n'expose d'API pour CREER ou LANCER un lobby :
+        ce code est le seul artefact automatisable.
+
+
+        Le perimetre est resolu cote site — phase > tournoi > defaut du tenant
+        (cf. `utils/customGamePresets.ts`) — le bot ne duplique aucune regle.
+        `lines` porte la mise en forme prete a poster, pour que le thread de
+        match, le DM hote et `/preset` affichent le meme bloc.
+
+
+        `preset: null` (et `lines: []`) est un cas NOMINAL : aucun preset
+        configure pour ce perimetre.
+      operationId: botGetMatchPreset
+      responses:
+        '200':
+          description: Preset resolu, ou null si aucun preset configure.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - matchId
+                  - game
+                  - preset
+                  - lines
+                properties:
+                  matchId:
+                    $ref: '#/components/schemas/Uuid'
+                  tournamentId:
+                    allOf:
+                      - $ref: '#/components/schemas/Uuid'
+                    nullable: true
+                  stageId:
+                    allOf:
+                      - $ref: '#/components/schemas/Uuid'
+                    nullable: true
+                  game:
+                    type: string
+                    description: GameSlug du tournoi, `overwatch` par defaut (scrims).
+                  preset:
+                    type: object
+                    nullable: true
+                    required:
+                      - id
+                      - name
+                      - importCode
+                      - scope
+                    properties:
+                      id:
+                        $ref: '#/components/schemas/Uuid'
+                      game:
+                        type: string
+                      name:
+                        type: string
+                      importCode:
+                        type: string
+                        description: Code d'import genere par le jeu (Overwatch = alphanumerique majuscules).
+                      description:
+                        type: string
+                        nullable: true
+                      mapPool:
+                        type: array
+                        items:
+                          type: string
+                        description: Rappel indicatif pour l'hote (le pool contraignant reste celui du tournoi).
+                      scope:
+                        type: string
+                        enum: [stage, tournament, tenant]
+                      tournamentId:
+                        allOf:
+                          - $ref: '#/components/schemas/Uuid'
+                        nullable: true
+                      stageId:
+                        allOf:
+                          - $ref: '#/components/schemas/Uuid'
+                        nullable: true
+                  lines:
+                    type: array
+                    items:
+                      type: string
+                    description: Bloc pret a poster dans Discord. Vide si `preset` est null.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/bot/v1/matches/{matchId}/evidence:
     parameters:
       - $ref: '#/components/parameters/MatchId'
@@ -18084,6 +18179,207 @@ paths:
                     type: string
                   revokedAt:
                     type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/admin/custom-game-presets:
+    get:
+      summary: List the active tenant's custom-game presets for a game.
+      description: >
+        Presets de partie personnalisee : code d'import du jeu + rappel de
+        config, resolus par perimetre (defaut tenant > tournoi > phase). Aucun
+        jeu n'expose d'API pour lancer un lobby, ce code est le seul raccourci
+        automatisable.
+
+
+        `?game=<slug>` (defaut `overwatch`). `?tournament_id=<uuid>` restreint au
+        perimetre de ce tournoi PLUS le defaut tenant (son repli). Tri du plus
+        general au plus specifique.
+      operationId: adminListCustomGamePresets
+      tags:
+        - admin/misc
+      security:
+        - StaffSession: []
+      parameters:
+        - name: game
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: tournament_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Presets du tenant pour ce jeu.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  presets:
+                    type: array
+                    items:
+                      type: object
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      summary: Create a custom-game preset for a scope.
+      description: >
+        Cree un preset. Un seul preset par perimetre (tenant, jeu,
+        tournament_id, stage_id) — index unique DB, ce qui rend la resolution
+        deterministe : 409 `DUPLICATE_PRESET_SCOPE` sinon. `stage_id` exige
+        `tournament_id`. Le code d'import est normalise (Overwatch : majuscules,
+        espaces et tirets retires) puis valide (4-12 alphanumeriques).
+      operationId: adminCreateCustomGamePreset
+      tags:
+        - admin/misc
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - import_code
+              properties:
+                game:
+                  type: string
+                tournament_id:
+                  type: string
+                  format: uuid
+                  nullable: true
+                stage_id:
+                  type: string
+                  format: uuid
+                  nullable: true
+                name:
+                  type: string
+                import_code:
+                  type: string
+                description:
+                  type: string
+                  nullable: true
+                map_pool:
+                  type: array
+                  items:
+                    type: string
+                enabled:
+                  type: boolean
+      responses:
+        '201':
+          description: Preset cree.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  preset:
+                    type: object
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Un preset existe deja sur ce perimetre.
+  /api/admin/custom-game-presets/{presetId}:
+    parameters:
+      - name: presetId
+        in: path
+        required: true
+        description: Id (UUID) du preset.
+        schema:
+          type: string
+          format: uuid
+    patch:
+      summary: Update a custom-game preset (partial).
+      description: >
+        Met a jour nom / code d'import / description / map_pool / enabled. Le
+        PERIMETRE (game, tournament_id, stage_id) n'est PAS modifiable :
+        supprimer + recreer, sinon on peut heurter l'index unique de scope et
+        rendre la resolution ambigue. 404 hors tenant actif.
+      operationId: adminUpdateCustomGamePreset
+      tags:
+        - admin/misc
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                import_code:
+                  type: string
+                description:
+                  type: string
+                  nullable: true
+                map_pool:
+                  type: array
+                  items:
+                    type: string
+                enabled:
+                  type: boolean
+      responses:
+        '200':
+          description: Preset mis a jour.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  preset:
+                    type: object
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      summary: Delete a custom-game preset.
+      description: >
+        Supprime le preset. Les matchs concernes retombent sur le perimetre
+        superieur (tournoi puis defaut tenant), ou sur aucun preset.
+      operationId: adminDeleteCustomGamePreset
+      tags:
+        - admin/misc
+      security:
+        - StaffSession: []
+      responses:
+        '200':
+          description: Supprime.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':

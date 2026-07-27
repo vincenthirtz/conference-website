@@ -614,6 +614,24 @@ sans jamais faire echouer l'enrichissement ni l'event. Le bot s'en sert pour
 l'idempotence (savoir si le salon existe deja avant d'en creer un).
 `checkinUrl1/2` n'apparaissent que dans le payload `checkin.nudge`.
 
+`enriched.preset` (presets de partie personnalisee) provient du meme
+`enrichMatchEvent` et porte le preset **deja resolu** pour ce match
+(`{ id, game, name, importCode, description, mapPool[], scope, tournamentId,
+stageId }`), ou `null` si aucun preset n'est configure. `scope` vaut
+`stage | tournament | tenant` selon le niveau qui a gagne la resolution.
+Comme pour `discordMatchChannelId`, la lecture est **defensive** : table absente
+ou requete en echec ⇒ `null`, jamais d'event match.* casse.
+
+Le bot s'en sert pour afficher le code d'import dans l'embed de match
+(`embed-helpers.js`). Pour un bloc complet **pret a poster**, il appelle
+`GET /matches/:matchId/preset` qui renvoie `lines` (voir plus haut) — le champ
+`enriched.preset` reste la version condensee, sans mise en forme.
+
+Sur `match.scheduled`, le bot pousse en plus ce bloc dans les **salons textuels
+des deux equipes** (`enriched.team{1,2}.discordChannelId`), avec dedup sur le
+couple `(matchId, importCode)` : replanifier ne respamme pas, changer le code
+re-notifie.
+
 #### `registration.blacklisted` (Blacklist joueurs)
 
 Emitted by `utils/moderation/blacklist.ts` (`alertIfBlacklisted`) when a
@@ -1396,6 +1414,7 @@ global, bucket `bot-reconcile-team-channels`. **Idempotency** : non.
 | [`matches/[matchId]/evidence.ts`](../pages/api/bot/v1/matches/[matchId]/evidence.ts)               | GET, POST         | yes   | `bot-match-evidence`        |
 | [`matches/[matchId]/forfeit.ts`](../pages/api/bot/v1/matches/[matchId]/forfeit.ts)                 | POST              | yes   | `bot-match-forfeit`         |
 | [`matches/[matchId]/report.ts`](../pages/api/bot/v1/matches/[matchId]/report.ts)                   | POST              | yes   | `bot-match-report`          |
+| [`matches/[matchId]/preset.ts`](../pages/api/bot/v1/matches/[matchId]/preset.ts)                   | GET               | —     | `bot-match-preset`          |
 | [`matches/[matchId]/reset.ts`](../pages/api/bot/v1/matches/[matchId]/reset.ts)                     | POST              | yes   | `bot-match-reset`           |
 | [`matches/[matchId]/resolve-dispute.ts`](../pages/api/bot/v1/matches/[matchId]/resolve-dispute.ts) | POST              | yes   | `bot-match-resolve-dispute` |
 | [`matches/[matchId]/veto.ts`](../pages/api/bot/v1/matches/[matchId]/veto.ts)                       | GET, POST, DELETE | yes   | `bot-match-veto`            |
@@ -1426,6 +1445,84 @@ PATCH des 3 champs historiques ne dependent jamais de cette colonne.
 **Errors** : `400` (matchId invalide, snowflake invalide, body vide), `401`,
 `404` (match introuvable), `503` (`CHANNEL_COLUMN_MISSING`).
 **Rate limit** : 60/min global (`bot-match-discord`). **Idempotency** : oui.
+
+#### `GET /api/bot/v1/matches/:matchId/preset`
+
+Preset de **partie personnalisee** applicable a un match : le code d'import que
+l'hote colle dans le jeu (Partie perso > Parametres > Importer).
+
+**Pourquoi cet endpoint existe** : aucun titre qu'on opere — Overwatch en tete —
+n'expose d'API pour CREER ou LANCER un lobby. L'hote configure tout a la main.
+Le seul artefact automatisable est ce code d'import, qui restaure d'un coup
+regles, cartes et heros interdits. C'est le pendant « lancement de partie » de
+ce que `matches.lobby_code` fait pour la *jonction* au lobby.
+
+**Auth** : `x-api-key` + `x-tenant-id`. **Pas** d'`actorDiscordUserId` : c'est
+une lecture, et l'hote d'un match est souvent une capitaine, pas du staff.
+Le code n'est jamais expose par l'API publique (`/api/public/*`).
+
+**Resolution du perimetre** — faite **cote site** (`utils/customGamePresets.ts`),
+le bot n'en duplique aucune regle. Le plus specifique gagne :
+
+1. `stage` — meme `tournament_id` **et** meme `stage_id`
+2. `tournament` — meme `tournament_id`
+3. `tenant` — defaut du tenant pour ce jeu
+
+Un preset de phase ne fuit jamais sur une phase voisine : sans repli de rang
+inferieur, la reponse est `preset: null`. Le jeu vient de `tournaments.game`
+(defaut `overwatch` pour les scrims, qui n'ont pas de tournoi).
+
+**Reponse `200`**
+
+```json
+{
+  "matchId": "4e8c…",
+  "tournamentId": "22…",
+  "stageId": "44…",
+  "game": "overwatch",
+  "preset": {
+    "id": "aa…",
+    "game": "overwatch",
+    "name": "OWWC – Phase finale Bo5",
+    "importCode": "A1B2C3",
+    "description": "Heros interdits : …",
+    "mapPool": ["Ilios", "Busan"],
+    "scope": "stage",
+    "tournamentId": "22…",
+    "stageId": "44…"
+  },
+  "lines": [
+    "🎮 Preset partie perso : **OWWC – Phase finale Bo5**",
+    "📋 Code d'import : `A1B2C3`",
+    "🗺️ Cartes : Ilios · Busan",
+    "_Dans le jeu : Partie perso > Parametres > Importer > colle le code._"
+  ]
+}
+```
+
+`preset: null` **et** `lines: []` est un cas **nominal** (aucun preset configure
+pour ce perimetre) — pas une erreur. Le bot doit rester silencieux dans ce cas
+plutot que d'annoncer une absence.
+
+`lines` porte la mise en forme **prete a poster** : le thread de match, la
+notification aux salons d'equipe et `/preset` affichent ainsi exactement le meme
+bloc, sans duplication de rendu cote bot.
+
+**Errors** : `400` (matchId invalide), `401`, `404` (match introuvable dans ce
+tenant). **Rate limit** : 60/min (`bot-match-preset`). **Idempotency** : n/a (GET).
+
+**Cote bot** : `api-client.getMatchPreset()`, consomme par
+[`preset-command.js`](../../docker-box/services/discord-bot/preset-command.js)
+(`/preset`), [`match-thread.js`](../../docker-box/services/discord-bot/match-thread.js)
+(message epingle a la creation du thread) et
+[`match-preset-notify.js`](../../docker-box/services/discord-bot/match-preset-notify.js)
+(push dans les salons des deux equipes sur `match.scheduled`).
+
+**Admin** : les presets se gerent sur `/admin/custom-game-presets`
+(`GET|POST /api/admin/custom-game-presets`,
+`PATCH|DELETE /api/admin/custom-game-presets/:presetId`), table
+`custom_game_presets`, un seul preset par perimetre (index unique
+`uq_custom_game_presets_scope`).
 
 #### `GET /api/bot/v1/matches/:matchId/dispute`
 
@@ -2814,6 +2911,7 @@ sa ligne ici **et** dans la fixture.
 | `/cast retirer`                                                                                                                                  | admin   | `DELETE /api/bot/v1/matches/:matchId/cast`                                                                                            |
 | Job DM T-30 caster + bouton `cast:ack:<id>`                                                                                                      | caster  | `GET /api/bot/v1/cast/upcoming`, `POST /api/bot/v1/cast/:assignmentId/ack`                                                            |
 | `/checkin` + bouton DM `checkin:<matchId>`                                                                                                       | captain | `POST /api/bot/v1/matches/:matchId/checkin`                                                                                           |
+| `/preset`                                                                                                                                        | public  | `GET /api/bot/v1/matches/:matchId/preset`                                                                                             |
 | Bouton DM `veto:<matchId>`                                                                                                                       | captain | `GET`/`POST`/`DELETE /api/bot/v1/matches/:matchId/veto`                                                                               |
 | `/report-score` + bouton DM `report:<matchId>`                                                                                                   | captain | `POST /api/bot/v1/matches/:matchId/report`                                                                                            |
 | `/match-meta`                                                                                                                                    | admin   | `PATCH /api/bot/v1/matches/:matchId`                                                                                                  |

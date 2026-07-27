@@ -13,6 +13,8 @@
 
 import { supabaseAdmin } from '../supabase';
 import { logger } from '../logger';
+import { fetchPresetForScope } from './resolveMatchPreset';
+import type { ResolvedPreset } from '../customGamePresets';
 
 type EnrichedTeam = {
   id: string;
@@ -47,6 +49,13 @@ export type EnrichedMatchEvent = {
   discordScheduledEventId: string | null;
   discordDisputeThreadId: string | null;
   discordMatchChannelId: string | null;
+  /**
+   * Preset de partie personnalisée applicable (code d'import + config), résolu
+   * côté site : phase > tournoi > tenant. `null` si aucun preset n'est
+   * configuré. Le bot l'affiche tel quel dans le thread du match — c'est ce
+   * qui évite à l'hôte de reconfigurer le lobby à la main.
+   */
+  preset: ResolvedPreset | null;
 };
 
 /**
@@ -95,6 +104,7 @@ export async function enrichMatchEvent(
       .select(
         `
         id,
+        tenant_id,
         tournament_id,
         scrim_id,
         stage_id,
@@ -112,7 +122,7 @@ export async function enrichMatchEvent(
         discord_dispute_thread_id,
         team1:team1_id(id, name, short_name, logo_url, discord_role_id, discord_channel_id, discord_voice_channel_id, captain_id),
         team2:team2_id(id, name, short_name, logo_url, discord_role_id, discord_channel_id, discord_voice_channel_id, captain_id),
-        tournament:tournament_id(id, name),
+        tournament:tournament_id(id, name, game),
         scrim:scrim_id(id, name)
         `
       )
@@ -126,10 +136,20 @@ export async function enrichMatchEvent(
     const tnRaw = Array.isArray(m.tournament) ? m.tournament[0] : m.tournament;
     const scRaw = Array.isArray(m.scrim) ? m.scrim[0] : m.scrim;
 
-    const [t1Captain, t2Captain, matchChannelId] = await Promise.all([
+    const [t1Captain, t2Captain, matchChannelId, preset] = await Promise.all([
       fetchCaptainDiscordUserId(t1Raw?.captain_id ?? null),
       fetchCaptainDiscordUserId(t2Raw?.captain_id ?? null),
       fetchMatchChannelId(m.id),
+      // Le jeu vient du tournoi (déjà joint) ; un scrim n'en a pas → défaut
+      // overwatch, géré par fetchPresetForScope.
+      m.tenant_id
+        ? fetchPresetForScope({
+            tenantId: m.tenant_id as string,
+            game: (tnRaw as { game?: string } | null)?.game ?? null,
+            tournamentId: m.tournament_id ?? null,
+            stageId: m.stage_id ?? null,
+          })
+        : Promise.resolve(null),
     ]);
 
     const team1 = t1Raw
@@ -179,6 +199,7 @@ export async function enrichMatchEvent(
       discordScheduledEventId: m.discord_scheduled_event_id ?? null,
       discordDisputeThreadId: m.discord_dispute_thread_id ?? null,
       discordMatchChannelId: matchChannelId,
+      preset,
     };
   } catch (err) {
     logger.error('[botEventEnrich] fetch error', err);
