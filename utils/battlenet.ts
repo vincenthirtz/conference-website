@@ -335,3 +335,91 @@ export function verifyBattlenetState(
   }
   return parsed;
 }
+
+/* -----------------------------------------------------------
+ * State du flux « connexion » (anonyme), distinct de la vérification
+ * ---------------------------------------------------------*/
+
+/**
+ * State du flux de CONNEXION Battle.net. Contrairement au state de
+ * vérification, il n'y a pas de session à lier (la joueuse n'est pas connectée)
+ * — la protection CSRF repose donc uniquement sur le double-submit du nonce.
+ *
+ * `purpose: 'login'` est une séparation de domaine OBLIGATOIRE : les deux flux
+ * partagent la même clé HMAC, donc sans ce discriminant un state de
+ * vérification signé pourrait être rejoué sur le callback de connexion. La
+ * réciproque est déjà couverte : `verifyBattlenetState` exige un `authUserId`,
+ * absent d'un state de connexion.
+ */
+export type BattlenetLoginStatePayload = {
+  nonce: string;
+  purpose: 'login';
+  /** Chemin interne où atterrir une fois la session établie. */
+  returnTo: string;
+  issuedAt: number;
+};
+
+/** Signe un state de connexion en `<body>.<sig>`. */
+export function signBattlenetLoginState(payload: {
+  nonce: string;
+  returnTo: string;
+  issuedAt?: number;
+}): string {
+  const full: BattlenetLoginStatePayload = {
+    nonce: payload.nonce,
+    purpose: 'login',
+    returnTo: payload.returnTo,
+    issuedAt: payload.issuedAt ?? Date.now(),
+  };
+  const body = b64urlEncode(JSON.stringify(full));
+  return `${body}.${hmac(body)}`;
+}
+
+/**
+ * Vérifie + décode un state de connexion. Renvoie null sur signature invalide,
+ * payload malformé, expiration, ou `purpose` différent de 'login' (donc un
+ * state de vérification est rejeté ici).
+ */
+export function verifyBattlenetLoginState(
+  state: string | undefined | null,
+  opts: { maxAgeMs?: number; now?: number } = {}
+): BattlenetLoginStatePayload | null {
+  if (!state || typeof state !== 'string') return null;
+  const dot = state.indexOf('.');
+  if (dot <= 0) return null;
+  const body = state.slice(0, dot);
+  const sig = state.slice(dot + 1);
+
+  let expected: string;
+  try {
+    expected = hmac(body);
+  } catch {
+    return null;
+  }
+  const a = Buffer.from(sig);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
+
+  let parsed: BattlenetLoginStatePayload;
+  try {
+    parsed = JSON.parse(b64urlDecode(body)) as BattlenetLoginStatePayload;
+  } catch {
+    return null;
+  }
+  if (
+    !parsed ||
+    parsed.purpose !== 'login' ||
+    typeof parsed.nonce !== 'string' ||
+    typeof parsed.returnTo !== 'string' ||
+    typeof parsed.issuedAt !== 'number'
+  ) {
+    return null;
+  }
+
+  const now = opts.now ?? Date.now();
+  const maxAge = opts.maxAgeMs ?? STATE_MAX_AGE_MS;
+  if (now - parsed.issuedAt > maxAge || parsed.issuedAt > now + 60_000) {
+    return null;
+  }
+  return parsed;
+}

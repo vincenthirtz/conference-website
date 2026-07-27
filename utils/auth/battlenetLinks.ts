@@ -186,3 +186,31 @@ export async function getBattlenetLinkStatus(
     verifiedAt: (data as { verified_at?: string | null }).verified_at ?? null,
   };
 }
+
+/**
+ * Résout le compte site propriétaire d'un compte Blizzard (`battle_net_id`).
+ * Sert au flux de CONNEXION Battle.net : on ne se connecte qu'à un compte
+ * DÉJÀ lié — Blizzard ne renvoyant pas d'email, on ne peut ni créer ni
+ * rattacher un compte à l'aveugle sans ouvrir une prise de contrôle.
+ *
+ * Renvoie null si aucun lien n'existe (l'appelant doit alors renvoyer vers la
+ * connexion classique, jamais créer de compte).
+ */
+export async function findAuthUserIdByBattleNetId(
+  battleNetId: string
+): Promise<string | null> {
+  if (!supabaseAdmin) return null;
+  const id = battleNetId.trim();
+  if (!id) return null;
+
+  const { data, error } = await supabaseAdmin
+    .from('user_battlenet_links')
+    .select('auth_user_id')
+    .eq('battle_net_id', id)
+    .maybeSingle();
+  if (error) {
+    logger.error('[battlenetLinks] login lookup error', error);
+    return null;
+  }
+  return (data as { auth_user_id?: string | null } | null)?.auth_user_id ?? null;
+}

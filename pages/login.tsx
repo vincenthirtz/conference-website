@@ -57,6 +57,11 @@ const LoginPage = () => {
   const [isCheckingSession, setIsCheckingSession] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Connexion Battle.net : disponible seulement si l'intégration Blizzard est
+  // configurée (sinon le bouton mènerait à un 503). Endpoint public dédié —
+  // la page de connexion est anonyme, elle ne peut pas lire l'état joueur.
+  const [battlenetAvailable, setBattlenetAvailable] = useState(false);
+
   useEffect(() => {
     let cancelled = false;
     const checkExistingSession = async () => {
@@ -177,6 +182,43 @@ const LoginPage = () => {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/auth/battlenet/available')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!cancelled && data?.configured) setBattlenetAvailable(true);
+      })
+      .catch(() => {
+        // Feature indisponible ou réseau : on laisse le bouton masqué.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Retour d'un échec de connexion Battle.net (?battlenet=not_linked|error).
+  // `not_linked` n'est PAS une erreur technique : le compte Blizzard est valide
+  // mais aucun compte du site ne lui est rattaché — on explique quoi faire.
+  useEffect(() => {
+    if (!router.isReady) return;
+    const bn = router.query.battlenet;
+    if (typeof bn !== 'string') return;
+    if (bn === 'not_linked') setError(t.battlenetNotLinked);
+    else if (bn === 'error') setError(t.battlenetError);
+    const { battlenet: _omit, ...rest } = router.query;
+    void router.replace({ pathname: router.pathname, query: rest }, undefined, {
+      shallow: true,
+    });
+  }, [router, t]);
+
+  const handleBattlenetLogin = () => {
+    const next = safeNext(router.query.next) ?? '/player';
+    window.location.href = `/api/auth/battlenet/login-start?returnTo=${encodeURIComponent(
+      next
+    )}`;
   };
 
   const handleDiscordLogin = async () => {
@@ -363,7 +405,25 @@ const LoginPage = () => {
                         <span>{t.continueWithDiscord}</span>
                       </span>
                     </button>
+                    {battlenetAvailable && (
+                      <button
+                        type="button"
+                        onClick={handleBattlenetLogin}
+                        disabled={isSubmitting || isCheckingSession}
+                        className="w-full justify-center px-4 py-2 text-sm font-semibold rounded-xl border border-white/15 bg-black/50 hover:border-[#148eff]/70 hover:text-[#9ed0ff] transition flex items-center gap-2"
+                      >
+                        <span className="inline-flex items-center gap-2">
+                          <span aria-hidden="true">🛡️</span>
+                          <span>{t.continueWithBattlenet}</span>
+                        </span>
+                      </button>
+                    )}
                   </div>
+                  {battlenetAvailable && (
+                    <p className="pt-2 text-center text-xs text-gray-500">
+                      {t.battlenetLinkedOnly}
+                    </p>
+                  )}
                 </form>
 
                 <div className="mt-4 border-t border-white/5 pt-3">

@@ -10,6 +10,9 @@
 //   - callback dormant (non configuré → 503)
 //   - callback happy path (userinfo mocké) → redirect ?battlenet=verified
 //   - callback state/CSRF invalide → redirect ?battlenet=error
+//   - CONNEXION Battle.net (comptes déjà liés) : compte lié → magic-link,
+//     compte inconnu → ?battlenet=not_linked (jamais de création), nonce
+//     invalide → error, et séparation de domaine des states login/vérification
 //
 // Les appels réseau Blizzard (token + userinfo) sont mockés via global.fetch.
 
@@ -24,12 +27,19 @@ import {
   store,
   resetSupabaseMock,
   setCookieUser,
+  setAdminUser,
+  setGenerateLinkResult,
 } from './__helpers__/supabaseMock';
 import {
   upsertBattlenetLink,
   stampVerifiedTeamMembers,
 } from '../../utils/auth/battlenetLinks';
-import { signBattlenetState } from '../../utils/battlenet';
+import {
+  signBattlenetState,
+  signBattlenetLoginState,
+  verifyBattlenetLoginState,
+  verifyBattlenetState,
+} from '../../utils/battlenet';
 
 const USER_A = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 const USER_B = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
@@ -371,5 +381,275 @@ describe('GET /api/auth/battlenet/callback', () => {
 
     expect(res.statusCode).toBe(302);
     expect(res.headers.Location).toBe('/player/profile?battlenet=error');
+  });
+});
+
+/* -----------------------------------------------------------
+ * Connexion Battle.net (comptes DÉJÀ liés)
+ * ---------------------------------------------------------*/
+
+describe('states login vs vérification : séparation de domaine', () => {
+  const OLD = process.env.BLIZZARD_CLIENT_SECRET;
+  beforeEach(() => {
+    process.env.BLIZZARD_CLIENT_SECRET = 'test-client-secret';
+  });
+  afterEach(() => {
+    process.env.BLIZZARD_CLIENT_SECRET = OLD;
+  });
+
+  it("un state de vérification n'est pas accepté comme state de connexion", () => {
+    const verif = signBattlenetState({
+      nonce: 'n',
+      authUserId: USER_A,
+      returnTo: '/player/profile',
+    });
+    expect(verifyBattlenetLoginState(verif)).toBeNull();
+  });
+
+  it("un state de connexion n'est pas accepté comme state de vérification", () => {
+    const login = signBattlenetLoginState({ nonce: 'n', returnTo: '/player' });
+    expect(verifyBattlenetState(login)).toBeNull();
+  });
+
+  it('un state de connexion signé avec une autre clé est rejeté', () => {
+    process.env.BLIZZARD_CLIENT_SECRET = 'attacker-secret';
+    const forged = signBattlenetLoginState({ nonce: 'n', returnTo: '/player' });
+    process.env.BLIZZARD_CLIENT_SECRET = 'test-client-secret';
+    expect(verifyBattlenetLoginState(forged)).toBeNull();
+  });
+
+  it('un state de connexion expiré est rejeté', () => {
+    const old = signBattlenetLoginState({
+      nonce: 'n',
+      returnTo: '/player',
+      issuedAt: Date.now() - 20 * 60 * 1000,
+    });
+    expect(verifyBattlenetLoginState(old)).toBeNull();
+  });
+});
+
+describe('GET /api/auth/battlenet/login-start', () => {
+  const OLD_SECRET = process.env.BLIZZARD_CLIENT_SECRET;
+
+  function configure() {
+    process.env.BLIZZARD_CLIENT_ID = 'test-client-id';
+    process.env.BLIZZARD_CLIENT_SECRET = 'test-client-secret';
+    process.env.BLIZZARD_REDIRECT_URI =
+      'http://localhost:3000/api/auth/battlenet/callback';
+    process.env.BLIZZARD_OAUTH_BASE = 'https://oauth.battle.net';
+  }
+
+  afterEach(() => {
+    process.env.BLIZZARD_CLIENT_SECRET = OLD_SECRET;
+  });
+
+  it('dormant → 503', async () => {
+    delete process.env.BLIZZARD_CLIENT_ID;
+    delete process.env.BLIZZARD_CLIENT_SECRET;
+    const handler = (await import('../../pages/api/auth/battlenet/login-start'))
+      .default;
+    const res = makeRes();
+    await handler(makeReq(), res);
+    expect(res.statusCode).toBe(503);
+    expect((res.body as any).code).toBe('BATTLENET_NOT_CONFIGURED');
+  });
+
+  it('302 vers Blizzard + cookie de nonce DISTINCT du flux vérification', async () => {
+    configure();
+    const handler = (await import('../../pages/api/auth/battlenet/login-start'))
+      .default;
+    const res = makeRes();
+    await handler(makeReq({ returnTo: '/player/matches' }), res);
+
+    expect(res.statusCode).toBe(302);
+    expect(String(res.headers.Location)).toContain('oauth.battle.net');
+    const cookie = String(res.headers['Set-Cookie']);
+    expect(cookie).toContain('bn_login_state=');
+    expect(cookie).not.toContain('bn_oauth_state=');
+    expect(cookie).toContain('HttpOnly');
+  });
+
+  it("returnTo externe est ramené à un chemin interne", async () => {
+    configure();
+    const handler = (await import('../../pages/api/auth/battlenet/login-start'))
+      .default;
+    const res = makeRes();
+    await handler(makeReq({ returnTo: '//evil.example.com' }), res);
+
+    // Le returnTo vit dans le state signé : on le relit pour vérifier.
+    const url = new URL(String(res.headers.Location));
+    const state = url.searchParams.get('state');
+    expect(verifyBattlenetLoginState(state)?.returnTo).toBe('/player');
+  });
+});
+
+describe('GET /api/auth/battlenet/callback — branche connexion', () => {
+  const OLD_SECRET = process.env.BLIZZARD_CLIENT_SECRET;
+
+  function configure() {
+    process.env.BLIZZARD_CLIENT_ID = 'test-client-id';
+    process.env.BLIZZARD_CLIENT_SECRET = 'test-client-secret';
+    process.env.BLIZZARD_REDIRECT_URI =
+      'http://localhost:3000/api/auth/battlenet/callback';
+    process.env.BLIZZARD_OAUTH_BASE = 'https://oauth.battle.net';
+  }
+
+  function mockBlizzard(battleNetId = BNET_ID) {
+    return vi
+      .spyOn(global, 'fetch' as any)
+      .mockImplementationOnce(
+        async () =>
+          new Response(JSON.stringify({ access_token: 'tok' }), { status: 200 })
+      )
+      .mockImplementationOnce(
+        async () =>
+          new Response(
+            JSON.stringify({ sub: battleNetId, battletag: BTAG }),
+            { status: 200 }
+          )
+      );
+  }
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    process.env.BLIZZARD_CLIENT_SECRET = OLD_SECRET;
+  });
+
+  it('compte lié → magic-link vers /auth/battlenet, sans session préalable', async () => {
+    configure();
+    // Aucun setCookieUser : la connexion est anonyme par définition.
+    store.user_battlenet_links = [
+      {
+        auth_user_id: USER_A,
+        battle_net_id: BNET_ID,
+        battle_tag: BTAG,
+        verified_at: '2026-07-01T00:00:00.000Z',
+      },
+    ];
+    setAdminUser(USER_A, 'tracer@example.com');
+    setGenerateLinkResult({
+      data: { properties: { hashed_token: 'login-token-hash' } },
+      error: null,
+    });
+    mockBlizzard();
+
+    const nonce = 'login-nonce';
+    const state = signBattlenetLoginState({ nonce, returnTo: '/player' });
+    const handler = (await import('../../pages/api/auth/battlenet/callback'))
+      .default;
+    const res = makeRes();
+    await handler(
+      makeReq({ code: 'auth-code', state }, { bn_login_state: nonce }),
+      res
+    );
+
+    expect(res.statusCode).toBe(302);
+    const loc = String(res.headers.Location);
+    expect(loc).toContain('/auth/battlenet?token_hash=login-token-hash');
+    expect(loc).toContain('type=magiclink');
+    expect(loc).toContain(`next=${encodeURIComponent('/player')}`);
+  });
+
+  it('compte Blizzard inconnu → ?battlenet=not_linked et AUCUNE création', async () => {
+    configure();
+    store.user_battlenet_links = [];
+    mockBlizzard('9999999');
+
+    const nonce = 'login-nonce-2';
+    const state = signBattlenetLoginState({ nonce, returnTo: '/player' });
+    const handler = (await import('../../pages/api/auth/battlenet/callback'))
+      .default;
+    const res = makeRes();
+    await handler(
+      makeReq({ code: 'auth-code', state }, { bn_login_state: nonce }),
+      res
+    );
+
+    expect(res.statusCode).toBe(302);
+    expect(res.headers.Location).toBe('/login?battlenet=not_linked');
+    // Le point crucial : on ne fabrique pas de compte ni de lien.
+    expect(store.user_battlenet_links).toHaveLength(0);
+  });
+
+  it('nonce cookie absent ou différent → error (double-submit CSRF)', async () => {
+    configure();
+    const state = signBattlenetLoginState({
+      nonce: 'expected',
+      returnTo: '/player',
+    });
+    const handler = (await import('../../pages/api/auth/battlenet/callback'))
+      .default;
+
+    const noCookie = makeRes();
+    await handler(makeReq({ code: 'c', state }), noCookie);
+    expect(noCookie.headers.Location).toBe('/login?battlenet=error');
+
+    const wrongCookie = makeRes();
+    await handler(
+      makeReq({ code: 'c', state }, { bn_login_state: 'other' }),
+      wrongCookie
+    );
+    expect(wrongCookie.headers.Location).toBe('/login?battlenet=error');
+  });
+
+  it('compte lié mais sans email → error (pas de session bricolée)', async () => {
+    configure();
+    store.user_battlenet_links = [
+      { auth_user_id: USER_B, battle_net_id: BNET_ID, battle_tag: BTAG },
+    ];
+    setAdminUser(USER_B, null);
+    mockBlizzard();
+
+    const nonce = 'login-nonce-3';
+    const state = signBattlenetLoginState({ nonce, returnTo: '/player' });
+    const handler = (await import('../../pages/api/auth/battlenet/callback'))
+      .default;
+    const res = makeRes();
+    await handler(
+      makeReq({ code: 'auth-code', state }, { bn_login_state: nonce }),
+      res
+    );
+    expect(res.headers.Location).toBe('/login?battlenet=error');
+  });
+
+  it('refus de consentement Blizzard → error', async () => {
+    configure();
+    const nonce = 'login-nonce-4';
+    const state = signBattlenetLoginState({ nonce, returnTo: '/player' });
+    const handler = (await import('../../pages/api/auth/battlenet/callback'))
+      .default;
+    const res = makeRes();
+    await handler(
+      makeReq({ error: 'access_denied', state }, { bn_login_state: nonce }),
+      res
+    );
+    expect(res.headers.Location).toBe('/login?battlenet=error');
+  });
+});
+
+describe('GET /api/auth/battlenet/available', () => {
+  const OLD_ID = process.env.BLIZZARD_CLIENT_ID;
+  const OLD_SECRET = process.env.BLIZZARD_CLIENT_SECRET;
+  afterEach(() => {
+    if (OLD_ID) process.env.BLIZZARD_CLIENT_ID = OLD_ID;
+    if (OLD_SECRET) process.env.BLIZZARD_CLIENT_SECRET = OLD_SECRET;
+  });
+
+  it('reflète la configuration sans rien divulguer de plus', async () => {
+    const handler = (await import('../../pages/api/auth/battlenet/available'))
+      .default;
+
+    delete process.env.BLIZZARD_CLIENT_ID;
+    delete process.env.BLIZZARD_CLIENT_SECRET;
+    const off = makeRes();
+    await handler(makeReq(), off);
+    expect(off.statusCode).toBe(200);
+    expect(off.body).toEqual({ configured: false });
+
+    process.env.BLIZZARD_CLIENT_ID = 'id';
+    process.env.BLIZZARD_CLIENT_SECRET = 'secret';
+    const on = makeRes();
+    await handler(makeReq(), on);
+    expect(on.body).toEqual({ configured: true });
   });
 });

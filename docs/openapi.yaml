@@ -23610,13 +23610,111 @@ paths:
               example:
                 error: Battle.net verification is not configured.
                 code: BATTLENET_NOT_CONFIGURED
+  /api/auth/battlenet/available:
+    get:
+      tags:
+        - public/auth
+      summary: L'integration Battle.net est-elle configuree (pour la page de connexion).
+      operationId: battlenetAvailable
+      description: |
+        Endpoint PUBLIC minimal : dit a une page anonyme (la page de connexion)
+        si le bouton « Continuer avec Battle.net » doit s'afficher. Sans lui, la
+        page proposerait un bouton menant a un 503 quand la feature est dormante.
+        N'expose qu'un booleen — rien sur les identifiants Blizzard. Le pendant
+        authentifie est `GET /api/player/battlenet-status`. Rate-limit 60/min.
+      security: []
+      responses:
+        '200':
+          description: '`{ configured: boolean }`.'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  configured:
+                    type: boolean
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /api/auth/battlenet/login-start:
+    get:
+      tags:
+        - public/auth
+      summary: Demarre la CONNEXION Battle.net (comptes deja lies uniquement).
+      operationId: battlenetLoginStart
+      description: |
+        Pendant ANONYME de `GET /api/auth/battlenet/start` (qui, lui, exige une
+        session : c'est le flux de verification d'identite). Aucune session
+        requise — c'est le but.
+
+        Le state ne peut donc pas etre lie a un utilisateur : la protection CSRF
+        repose sur le double-submit du nonce (cookie httpOnly `bn_login_state`,
+        DISTINCT du `bn_oauth_state` de la verification) et sur le discriminant
+        `purpose: 'login'` du state signe. Les deux flux ne peuvent pas consommer
+        le state ni le nonce l'un de l'autre.
+
+        La `redirect_uri` declaree chez Blizzard reste UNIQUE :
+        `/api/auth/battlenet/callback`, qui branche sur le `purpose` du state.
+
+        Cette connexion ne marche QUE pour un compte deja lie. Blizzard ne
+        renvoie pas d'email (`oauth/userinfo` = `sub` + `battletag`), donc un
+        compte Blizzard inconnu ne peut etre ni cree ni rattache sans ouvrir une
+        prise de controle : il repart vers `/login?battlenet=not_linked`.
+        Rate-limit 15/min par IP.
+      security: []
+      parameters:
+        - name: returnTo
+          in: query
+          required: false
+          schema:
+            type: string
+            default: /player
+          description: |
+            Chemin interne ou atterrir une fois la session posee (sanitize :
+            doit commencer par `/`, ni `//` ni backslash). Defaut `/player`.
+      responses:
+        '302':
+          description: |
+            Redirection vers l'URL authorize Battle.net ; pose le cookie
+            httpOnly `bn_login_state`.
+          headers:
+            Location:
+              schema:
+                type: string
+            Set-Cookie:
+              schema:
+                type: string
+              description: Cookie httpOnly `bn_login_state` (nonce anti-CSRF).
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          description: 'Feature dormante : creds Blizzard absents.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: Battle.net sign-in is not configured.
+                code: BATTLENET_NOT_CONFIGURED
   /api/auth/battlenet/callback:
     get:
       tags:
         - public/auth
-      summary: Callback OAuth Battle.net — lie le BattleTag verifie au joueur.
+      summary: Callback OAuth Battle.net — verification du BattleTag OU connexion.
       operationId: battlenetOauthCallback
       description: |
+        DEUX FLUX, une seule `redirect_uri` declaree chez Blizzard. Le handler
+        branche sur le state signe, AVANT toute lecture de session :
+
+        - state `purpose: 'login'` (cookie `bn_login_state`) → CONNEXION, anonyme :
+          resout `battle_net_id` -> `user_battlenet_links.auth_user_id`, puis pose
+          la session via un magic-link genere cote serveur
+          (`admin.generateLink` -> `hashed_token`), consomme par la page
+          `/auth/battlenet`. Compte Blizzard inconnu -> `/login?battlenet=not_linked`
+          (JAMAIS de creation de compte : Blizzard ne fournit pas d'email).
+          Nonce absent/different, refus de consentement ou compte sans email ->
+          `/login?battlenet=error`.
+        - sinon → VERIFICATION (comportement historique decrit ci-dessous).
+
         Auth via session cookie Supabase (`getServerClient`). Recoit `code` +
         `state` de Blizzard, recroise `state` avec le cookie `bn_oauth_state`,
         echange le code, recupere le BattleTag et l'ecrit dans le profil du

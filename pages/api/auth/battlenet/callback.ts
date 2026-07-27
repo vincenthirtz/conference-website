@@ -12,6 +12,13 @@
 //   ?battlenet=error            → toute autre erreur (state invalide, échange, etc.)
 //
 // Navigation pleine page → auth via session cookie Supabase (getServerClient).
+//
+// DEUX FLUX, UNE SEULE redirect_uri (celle déclarée chez Blizzard) :
+//   - vérification (défaut) : state signé PORTANT un authUserId, session requise ;
+//   - connexion : state signé `purpose: 'login'`, AUCUNE session, cookie de
+//     nonce distinct (`bn_login_state`). On branche sur le state AVANT de lire
+//     la session, sinon une connexion (par définition anonyme) serait rejetée
+//     par le garde-fou de session du flux de vérification.
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { serialize } from 'cookie';
@@ -20,13 +27,17 @@ import { applyRateLimit } from '@/utils/rateLimit';
 import {
   isBattlenetConfigured,
   verifyBattlenetState,
+  verifyBattlenetLoginState,
   exchangeCodeForToken,
   fetchBattlenetUserinfo,
 } from '@/utils/battlenet';
 import {
   upsertBattlenetLink,
   stampVerifiedTeamMembers,
+  findAuthUserIdByBattleNetId,
 } from '@/utils/auth/battlenetLinks';
+import { supabaseAdmin } from '@/utils/supabase';
+import { LOGIN_STATE_COOKIE } from './login-start';
 import { logger } from '../../../../utils/logger';
 
 const STATE_COOKIE = 'bn_oauth_state';
@@ -37,6 +48,13 @@ type BattlenetStatus =
   | 'linked_no_match'
   | 'already_linked'
   | 'error';
+
+/** Statuts propres au flux de connexion, affichés sur /login. */
+type BattlenetLoginStatus = 'not_linked' | 'error';
+
+/** Page qui consomme le token magic-link et pose la session côté client. */
+const LOGIN_LANDING = '/auth/battlenet';
+const LOGIN_FALLBACK = '/login';
 
 function sanitizeReturnTo(raw: string | undefined): string {
   if (!raw || typeof raw !== 'string') return DEFAULT_RETURN_TO;
@@ -56,8 +74,8 @@ function withStatus(returnTo: string, status: BattlenetStatus): string {
   return `${returnTo}${sep}battlenet=${status}`;
 }
 
-function clearStateCookie(res: NextApiResponse): void {
-  const cookie = serialize(STATE_COOKIE, '', {
+function clearCookie(res: NextApiResponse, name: string): void {
+  const cookie = serialize(name, '', {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
@@ -69,6 +87,10 @@ function clearStateCookie(res: NextApiResponse): void {
   else if (Array.isArray(existing))
     res.setHeader('Set-Cookie', [...existing, cookie]);
   else res.setHeader('Set-Cookie', [existing.toString(), cookie]);
+}
+
+function clearStateCookie(res: NextApiResponse): void {
+  clearCookie(res, STATE_COOKIE);
 }
 
 function redirect(res: NextApiResponse, url: string): void {
@@ -101,6 +123,17 @@ export default async function handler(
       error: "La vérification Battle.net n'est pas configurée.",
       code: 'BATTLENET_NOT_CONFIGURED',
     });
+  }
+
+  // ── Flux CONNEXION ────────────────────────────────────────────────────────
+  // Branché AVANT la lecture de session : une connexion est par définition
+  // anonyme. Un state de vérification est rejeté ici (purpose absent), et
+  // réciproquement un state de connexion n'a pas d'authUserId.
+  const stateRaw =
+    typeof req.query.state === 'string' ? req.query.state : undefined;
+  const loginState = verifyBattlenetLoginState(stateRaw);
+  if (loginState) {
+    return handleLogin(req, res, loginState.nonce, loginState.returnTo);
   }
 
   const supabase = getServerClient(req, res);
@@ -173,5 +206,88 @@ export default async function handler(
   } catch (err) {
     logger.error('[battlenet/callback] flow error', err);
     return redirect(res, withStatus(returnTo, 'error'));
+  }
+}
+
+/**
+ * Connexion via Battle.net, pour un compte DÉJÀ lié uniquement.
+ *
+ * Blizzard ne renvoie pas d'email : on ne peut donc ni créer un compte, ni en
+ * rattacher un existant sans identifiant commun fiable — ce serait une prise de
+ * contrôle de compte. Un compte Blizzard inconnu est renvoyé vers /login avec
+ * `?battlenet=not_linked`, jamais créé.
+ *
+ * La session est posée par le même pont éprouvé que l'accès équipe : on génère
+ * un magic-link côté serveur (`admin.generateLink`), on n'utilise PAS
+ * l'`action_link` (code PKCE non échangeable côté client) mais le
+ * `hashed_token`, consommé par /auth/battlenet via `verifyOtp`.
+ */
+async function handleLogin(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  stateNonce: string,
+  rawReturnTo: string
+): Promise<void> {
+  const cookieNonce = req.cookies?.[LOGIN_STATE_COOKIE];
+  clearCookie(res, LOGIN_STATE_COOKIE);
+
+  const fail = (status: BattlenetLoginStatus) =>
+    redirect(res, `${LOGIN_FALLBACK}?battlenet=${status}`);
+
+  // Double-submit : le nonce du state signé doit égaler celui du cookie.
+  if (!cookieNonce || cookieNonce !== stateNonce) return fail('error');
+
+  // Refus de consentement côté Blizzard.
+  if (typeof req.query.error === 'string' && req.query.error) {
+    return fail('error');
+  }
+  const code = typeof req.query.code === 'string' ? req.query.code : '';
+  if (!code) return fail('error');
+  if (!supabaseAdmin) return fail('error');
+
+  try {
+    const token = await exchangeCodeForToken(code);
+    const info = await fetchBattlenetUserinfo(token.accessToken);
+
+    const authUserId = await findAuthUserIdByBattleNetId(info.battleNetId);
+    if (!authUserId) {
+      // Compte Blizzard valide mais inconnu du site : on n'invente rien.
+      return fail('not_linked');
+    }
+
+    const { data: userData, error: userErr } =
+      await supabaseAdmin.auth.admin.getUserById(authUserId);
+    const email = userData?.user?.email;
+    if (userErr || !email) {
+      logger.error('[battlenet/callback] login: compte lié sans email', {
+        authUserId,
+        error: userErr?.message,
+      });
+      return fail('error');
+    }
+
+    const returnTo = sanitizeReturnTo(rawReturnTo);
+    const { data: linkData, error: linkErr } =
+      await supabaseAdmin.auth.admin.generateLink({
+        type: 'magiclink',
+        email,
+      });
+    const tokenHash = linkData?.properties?.hashed_token;
+    if (linkErr || !tokenHash) {
+      logger.error('[battlenet/callback] login: generateLink failed', {
+        error: linkErr?.message ?? 'no token',
+      });
+      return fail('error');
+    }
+
+    return redirect(
+      res,
+      `${LOGIN_LANDING}?token_hash=${encodeURIComponent(
+        tokenHash
+      )}&type=magiclink&next=${encodeURIComponent(returnTo)}`
+    );
+  } catch (err) {
+    logger.error('[battlenet/callback] login flow error', err);
+    return fail('error');
   }
 }

@@ -1132,7 +1132,11 @@
     "errorUserNotFound": "Utilisateur non trouvé après la connexion.",
     "errorGeneric": "Une erreur est survenue pendant la connexion. Réessaie dans un instant.",
     "errorDiscordUnavailable": "Connexion Discord impossible pour le moment.",
-    "errorDiscordGeneric": "Une erreur est survenue avec Discord. Réessaie dans un instant."
+    "errorDiscordGeneric": "Une erreur est survenue avec Discord. Réessaie dans un instant.",
+    "continueWithBattlenet": "Continuer avec Battle.net",
+    "battlenetLinkedOnly": "Battle.net fonctionne uniquement si tu as déjà relié ton compte Blizzard depuis ton profil.",
+    "battlenetNotLinked": "Ce compte Battle.net n'est relié à aucun compte OW Women's Cup. Connecte-toi par email ou Discord, puis relie ton compte Blizzard depuis ton profil — tu pourras ensuite utiliser ce bouton.",
+    "battlenetError": "La connexion Battle.net a échoué, réessaie ou utilise ton email."
   },
   "registerPage": {
     "badgeRole": "Staff / Joueur",
@@ -4426,5 +4430,16 @@
     "toastNoMatch": "Compte Battle.net lié, mais il ne correspond à aucun BattleTag de tes rosters. Vérifie que le tag saisi dans ton équipe correspond bien à ce compte.",
     "toastAlreadyLinked": "Ce compte Battle.net est déjà lié à une autre joueuse.",
     "toastError": "La vérification a échoué, réessaie."
+  },
+  "battlenetLogin": {
+    "pageTitle": "Connexion Battle.net – OW Women's Cup",
+    "heading": "Connexion en cours",
+    "intro": "On valide ta connexion Battle.net et on t'emmène dans ton espace.",
+    "loadingSession": "Vérification du lien…",
+    "redirecting": "Connectée ! Redirection…",
+    "errorInvalidLink": "Ce lien de connexion est invalide ou a expiré.",
+    "errorNoSession": "Impossible d'établir la session. Reprends depuis la page de connexion.",
+    "singleUseNote": "Ce lien est à usage unique et expire rapidement.",
+    "backToLogin": "Retour à la connexion"
   }
 }
