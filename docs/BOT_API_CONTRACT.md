@@ -254,7 +254,7 @@ catalog can grow without forcing a bot deploy.
 | `task.assigned` (Kanban)          | `assignTaskCore` — admin `PATCH .../tasks/{id}/assign` OU bot `PATCH /api/bot/v1/tasks/{id}/assign` (assigné non-null uniquement) | `{ taskId, boardName, title, assigneeStaffId, assigneeName, assigneeDiscordUserId?, actorLabel }`                                              |
 | `task.board_changed` (Kanban)     | **Chaque** mutation d'un board — cores (`createTaskCore` / `moveTaskCore` / `assignTaskCore` / `restoreTaskCore`) **et** handlers admin (édition/soft-delete carte, POST/PATCH/DELETE colonne, PATCH board) | `{ boardId, boardName }` (`boardName` peut être `null`)                                                                                        |
 | `task.due_soon` (Kanban)          | Cron `/api/cron/task-due-reminders` — carte due J-1, hors colonne terminale                                                       | `{ taskId, boardName, title, dueDate, columnName, priority, assigneeStaffId?, assigneeName?, assigneeDiscordUserId? }`                         |
-| `task.digest` (Kanban)            | Cron `/api/cron/task-board-digest` — digest quotidien, **un event par tenant**                                                    | `{ boards: [{ boardId, boardName, total, overdue, dueToday, columns: [{ name, count }] }] }`                                                   |
+| `task.digest` (Kanban)            | Cron `/api/cron/task-board-digest` — digest quotidien, **un event par tenant**                                                    | `{ boards: [{ boardId, boardName, total, overdue, dueToday, columns: [{ name, count }], overdueTasks, dueTodayTasks, topTasks }] }`             |
 
 #### Kanban interne (`task.created` / `task.moved` / `task.assigned`)
 
@@ -302,6 +302,27 @@ identiques que l'action vienne du back-office admin ou de la commande Discord
   par tenant (payload `{ boards: [...] }`), pas un event par board. Auth cron
   identique ; réponse `{ emitted, boards }` (`emitted` = nombre de tenants notifiés,
   `boards` = nombre total de boards agrégés).
+- **Noms des cartes dans le digest** — les compteurs seuls ne disent pas *quoi*
+  faire, donc chaque board porte en plus trois listes **nommées**, chacune de la
+  forme `{ items: [{ taskId, title, columnName, priority, dueDate, assigneeName }],
+  omitted }` :
+  - `overdueTasks` — cartes en retard, **les plus anciennes d'abord** ;
+  - `dueTodayTasks` — cartes dues aujourd'hui ;
+  - `topTasks` — filet de sécurité : cartes actives triées par priorité
+    décroissante, renseigné **uniquement** si le board n'a ni retard ni échéance
+    du jour (sinon un board sans dates n'afficherait aucun nom).
+
+  Chaque liste est plafonnée à **5** cartes (`DIGEST_TASKS_PER_LIST`) et `omitted`
+  porte le reliquat : une troncature est toujours annoncée, jamais muette. Les
+  cartes en colonne terminale ne sont jamais nommées. Les noms d'assignées sont
+  résolus en **une** requête `staff` pour tout le tick (pas un appel par carte) ;
+  un nom introuvable laisse `assigneeName: null` sans faire échouer le digest.
+
+  Côté bot, `formatBoardFieldValue` (kanban-events.js) rend ces listes sous les
+  compteurs, une ligne par carte (`• 🔶 Titre — Colonne · 31/08 · Assignée`), en
+  coupant à la **ligne entière** pour rester sous la limite Discord de 1024
+  caractères par field. Un payload « legacy » sans ces clés (event émis avant le
+  déploiement, rattrapé par l'outbox) reste rendu comme avant.
 
 **Garde WIP sur le déplacement** — `moveTaskCore` refuse un déplacement **vers une
 autre colonne** dont la `wip_limit` est atteinte : si la colonne cible contient déjà

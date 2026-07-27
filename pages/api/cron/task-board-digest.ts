@@ -11,7 +11,20 @@
 //                   terminale).
 // Émet UN event outbox `task.digest` par TENANT (payload agrège tous ses boards) :
 //   { boards: [{ boardId, boardName, total, overdue, dueToday,
-//                columns: [{ name, count }] }] }.
+//                columns: [{ name, count }],
+//                overdueTasks, dueTodayTasks, topTasks }] }.
+//
+// NOMS DES CARTES — les compteurs seuls ne disent pas *quoi* faire, donc chaque
+// board porte aussi des listes nommées (titre, colonne, priorité, échéance,
+// assignée), plafonnées à DIGEST_TASKS_PER_LIST par liste :
+//   - `overdueTasks`  : les cartes en retard, les plus anciennes d'abord ;
+//   - `dueTodayTasks` : les cartes dues aujourd'hui ;
+//   - `topTasks`      : filet de sécurité — les cartes actives les plus
+//     prioritaires, renseigné UNIQUEMENT quand il n'y a ni retard ni échéance
+//     du jour. Sans ça un board sans dates n'afficherait aucun nom, et le récap
+//     resterait une colonne de chiffres.
+// Chaque liste porte `omitted` (nombre de cartes non listées) : une troncature
+// est toujours annoncée, jamais silencieuse.
 //
 // Auth : `Authorization: Bearer <CRON_SECRET>` header OU `?secret=<CRON_SECRET>`
 // query. Même pattern que /api/cron/task-due-reminders. GET + POST.
@@ -59,9 +72,33 @@ type TaskRow = {
   board_id: string;
   column_id: string;
   due_date: string | null;
+  title: string;
+  priority: string | null;
+  assignee_staff_id: string | null;
+};
+
+/** Nombre max de cartes nommées par liste (retard / du jour / prioritaires). */
+export const DIGEST_TASKS_PER_LIST = 5;
+
+/** Ordre décroissant d'urgence, pour trier `topTasks`. */
+const PRIORITY_RANK: Record<string, number> = {
+  urgent: 0,
+  high: 1,
+  medium: 2,
+  low: 3,
 };
 
 export type DigestColumnCount = { name: string; count: number };
+export type DigestTask = {
+  taskId: string;
+  title: string;
+  columnName: string | null;
+  priority: string | null;
+  dueDate: string | null;
+  assigneeName: string | null;
+};
+/** Liste nommée + nombre de cartes tronquées (jamais de coupe silencieuse). */
+export type DigestTaskList = { items: DigestTask[]; omitted: number };
 export type DigestBoard = {
   boardId: string;
   boardName: string;
@@ -69,7 +106,41 @@ export type DigestBoard = {
   overdue: number;
   dueToday: number;
   columns: DigestColumnCount[];
+  overdueTasks: DigestTaskList;
+  dueTodayTasks: DigestTaskList;
+  /** Rempli seulement si ni retard ni échéance du jour (voir en-tête). */
+  topTasks: DigestTaskList;
 };
+
+/**
+ * Résout `staff.display_name` pour un lot d'ids, en une requête. Un id absent
+ * de la table (staff supprimé) est simplement omis de la map.
+ */
+async function fetchStaffNames(
+  staffIds: string[]
+): Promise<Map<string, string>> {
+  const names = new Map<string, string>();
+  const unique = Array.from(new Set(staffIds));
+  if (!supabaseAdmin || unique.length === 0) return names;
+
+  const { data, error } = await supabaseAdmin
+    .from('staff')
+    .select('id, display_name')
+    .in('id', unique);
+  if (error) {
+    // Non bloquant : le digest part sans les noms d'assignées plutôt que de
+    // sauter le tick entier.
+    logger.warn('[cron/task-board-digest] staff names fetch: %s', error.message);
+    return names;
+  }
+  for (const row of (data ?? []) as Array<{
+    id: string;
+    display_name: string | null;
+  }>) {
+    if (row.display_name) names.set(row.id, row.display_name);
+  }
+  return names;
+}
 
 /**
  * Cœur testable : agrège les boards par tenant et émet `task.digest`.
@@ -102,7 +173,9 @@ export async function runTaskBoardDigest(): Promise<Counters> {
       .in('board_id', boardIds),
     supabaseAdmin
       .from('tasks')
-      .select('id, board_id, column_id, due_date')
+      .select(
+        'id, board_id, column_id, due_date, title, priority, assignee_staff_id'
+      )
       .is('deleted_at', null)
       .in('board_id', boardIds),
   ]);
@@ -126,6 +199,31 @@ export async function runTaskBoardDigest(): Promise<Counters> {
     tasksByBoard.set(t.board_id, arr);
   }
 
+  // Noms des assignées : UNE requête pour tous les staff concernés (pas un
+  // resolveStaffInfo par carte — le digest balaie tous les boards de tous les
+  // tenants). Un nom introuvable reste `null`, la carte est listée sans nom.
+  const staffNameById = await fetchStaffNames(
+    tasks
+      .map((t) => t.assignee_staff_id)
+      .filter((id): id is string => Boolean(id))
+  );
+
+  const toDigestTask = (t: TaskRow): DigestTask => ({
+    taskId: t.id,
+    title: t.title,
+    columnName: columnById.get(t.column_id)?.name ?? null,
+    priority: t.priority ?? null,
+    dueDate: t.due_date ?? null,
+    assigneeName: t.assignee_staff_id
+      ? (staffNameById.get(t.assignee_staff_id) ?? null)
+      : null,
+  });
+
+  const toList = (rows: TaskRow[]): DigestTaskList => ({
+    items: rows.slice(0, DIGEST_TASKS_PER_LIST).map(toDigestTask),
+    omitted: Math.max(0, rows.length - DIGEST_TASKS_PER_LIST),
+  });
+
   // Un board par tenant (préserve l'ordre d'apparition).
   const boardsByTenant = new Map<string, DigestBoard[]>();
 
@@ -140,27 +238,47 @@ export async function runTaskBoardDigest(): Promise<Counters> {
       countByColumn.set(t.column_id, (countByColumn.get(t.column_id) ?? 0) + 1);
     }
 
-    let overdue = 0;
-    let dueToday = 0;
+    const overdueRows: TaskRow[] = [];
+    const dueTodayRows: TaskRow[] = [];
+    const activeRows: TaskRow[] = [];
     for (const t of boardTasks) {
-      if (!t.due_date) continue;
       const col = columnById.get(t.column_id);
       // Colonne terminale → la carte est faite, pas de retard/échéance.
       if (col?.is_done) continue;
-      if (t.due_date < today) overdue += 1;
-      else if (t.due_date === today) dueToday += 1;
+      activeRows.push(t);
+      if (!t.due_date) continue;
+      if (t.due_date < today) overdueRows.push(t);
+      else if (t.due_date === today) dueTodayRows.push(t);
     }
+
+    // Retards : les plus anciens d'abord (le plus urgent en tête de liste).
+    overdueRows.sort((a, b) => (a.due_date ?? '').localeCompare(b.due_date ?? ''));
+
+    const rank = (t: TaskRow) => PRIORITY_RANK[t.priority ?? 'medium'] ?? 2;
+    const hasDated = overdueRows.length > 0 || dueTodayRows.length > 0;
+    // `topTasks` n'existe que pour éviter un récap 100 % chiffré sur un board
+    // sans dates : dès qu'il y a du daté, les listes datées suffisent.
+    const topRows = hasDated
+      ? []
+      : activeRows
+          .slice()
+          .sort(
+            (a, b) => rank(a) - rank(b) || a.title.localeCompare(b.title, 'fr')
+          );
 
     const digest: DigestBoard = {
       boardId: board.id,
       boardName: board.name,
       total: boardTasks.length,
-      overdue,
-      dueToday,
+      overdue: overdueRows.length,
+      dueToday: dueTodayRows.length,
       columns: boardCols.map((c) => ({
         name: c.name,
         count: countByColumn.get(c.id) ?? 0,
       })),
+      overdueTasks: toList(overdueRows),
+      dueTodayTasks: toList(dueTodayRows),
+      topTasks: toList(topRows),
     };
 
     const arr = boardsByTenant.get(board.tenant_id) ?? [];
