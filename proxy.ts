@@ -18,13 +18,26 @@ import type { NextRequest } from 'next/server';
 // pas exécuter de code, le risque XSS reste très limité. Le nonce sur
 // script-src (l'attaque principale) reste intact.
 const CSP_STATIC_HEAD = "default-src 'self'; script-src 'self' 'nonce-";
+
+const CONNECT_SRC_BASE =
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.twitch.tv https://id.twitch.tv https://challenges.cloudflare.com";
+// Cockpit caster web (/admin/caster) UNIQUEMENT : pilotage d'OBS en local
+// (obs-websocket sur ws://localhost:4455) + chat IRC et EventSub Twitch en
+// WebSocket direct. Le loopback en clair depuis une page HTTPS est permis par
+// les navigateurs Chromium (origine « potentially trustworthy ») ; le reste du
+// site garde le connect-src strict ci-dessus.
+const CONNECT_SRC_CASTER_COCKPIT =
+  CONNECT_SRC_BASE +
+  ' ws://localhost:4455 ws://127.0.0.1:4455 wss://irc-ws.chat.twitch.tv wss://eventsub.wss.twitch.tv';
+
 // Everything between the nonce and the (variable) frame-ancestors directive.
-const CSP_STATIC_MID =
+// Precomputed for both connect-src variants (cf. buildCspMid).
+const buildCspMid = (connectSrc: string) =>
   "' https://challenges.cloudflare.com; " +
   [
     `style-src 'self' 'unsafe-inline'`,
     `img-src 'self' data: blob: https:`,
-    `connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.twitch.tv https://id.twitch.tv https://challenges.cloudflare.com`,
+    connectSrc,
     `media-src 'self' https://*.supabase.co`,
     "font-src 'self'",
     // player.twitch.tv = lecteur vidéo (site public + régie) ; www.twitch.tv =
@@ -38,6 +51,9 @@ const CSP_STATIC_MID =
     "form-action 'self'",
   ].join('; ') +
   '; ';
+
+const CSP_STATIC_MID = buildCspMid(CONNECT_SRC_BASE);
+const CSP_CASTER_COCKPIT_MID = buildCspMid(CONNECT_SRC_CASTER_COCKPIT);
 
 export function proxy(request: NextRequest) {
   // Generate a random nonce for each request
@@ -54,15 +70,21 @@ export function proxy(request: NextRequest) {
     ? 'frame-ancestors *'
     : "frame-ancestors 'none'";
 
-  // Only the nonce and frame-ancestors vary per request; the rest is hoisted
-  // to module-level constants above. Output is byte-identical to the previous
-  // array-join build (see CSP_STATIC_HEAD / CSP_STATIC_MID).
+  // Cockpit caster web : connect-src élargi (OBS local + IRC/EventSub Twitch)
+  // et PAS de upgrade-insecure-requests — la directive upgraderait ws:// en
+  // wss:// et casserait la connexion à l'OBS local. Scopé au strict préfixe.
+  const isCasterCockpit = request.nextUrl.pathname.startsWith('/admin/caster');
+
+  // Only the nonce, connect-src variant and frame-ancestors vary per request;
+  // the rest is hoisted to module-level constants above. Output is
+  // byte-identical to the previous array-join build for every non-cockpit
+  // route (see CSP_STATIC_HEAD / CSP_STATIC_MID).
   const csp =
     CSP_STATIC_HEAD +
     nonce +
-    CSP_STATIC_MID +
+    (isCasterCockpit ? CSP_CASTER_COCKPIT_MID : CSP_STATIC_MID) +
     frameAncestors +
-    '; upgrade-insecure-requests';
+    (isCasterCockpit ? '' : '; upgrade-insecure-requests');
 
   // Forward the nonce to _document via a request header
   const requestHeaders = new Headers(request.headers);

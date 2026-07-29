@@ -187,6 +187,23 @@ export const ADMIN_NAV: AdminNavNode[] = [
               accent: 'border-rose-500/30 from-rose-500/10 text-rose-300',
             },
           },
+          // Scènes caster : édition web des scènes de stream (`caster_scenes`,
+          // table partagée avec l'app desktop womenscup-caster — synchro
+          // Realtime bidirectionnelle) + overlays hébergés /overlay/caster/*.
+          // Comme la régie : carte minRole 'admin', page accessible à tout
+          // staff (gate SSR 'caster' + RLS écriture staff actif).
+          {
+            id: 'caster-scenes',
+            href: '/admin/caster',
+            minRole: 'admin',
+            card: {
+              order: 8.7,
+              titleKey: 'navCasterScenesTitle',
+              descKey: 'navCasterScenesDesc',
+              icon: 'signal',
+              accent: 'border-cyan-500/30 from-cyan-500/10 text-cyan-300',
+            },
+          },
           // Dashboard-only (pas d'entrée top-bar historiquement).
           {
             id: 'quick-bracket',

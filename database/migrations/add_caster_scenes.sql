@@ -1,4 +1,15 @@
 -- database/migrations/add_caster_scenes.sql
+--
+-- ⚠️ MIGRATION JAMAIS APPLIQUEE — NE PAS EXECUTER (archivee 2026-07-29).
+-- La table `caster_scenes` reellement deployee en base vient du repo
+-- womenscup-caster (sql/001_add_caster_scenes.sql) : schema SANS tenant_id
+-- ni is_active/created_by, CHECK type etendu (mvp/scrim/webcam au lieu de
+-- custom), RLS select public + ecriture staff actif (policies
+-- caster_scenes_{select,insert,update,delete}), Realtime active. Ce fichier
+-- decrivait une variante multi-tenant jamais retenue ; il est conserve pour
+-- l'historique uniquement. Le cockpit web (/admin/caster, types/caster.ts)
+-- s'appuie sur le schema DEPLOYE, pas sur celui-ci.
+--
 -- Scenes partagees pour l'app WomensCup Caster.
 -- Chaque scene (starting, match, pause, results, end) est stockee en DB
 -- avec ses donnees dynamiques (equipes, scores, maps, messages).
