@@ -20,6 +20,7 @@
 
 import { useCallback, useEffect, useState, type ComponentType } from 'react';
 import Head from 'next/head';
+import dynamic from 'next/dynamic';
 import type { GetServerSideProps, GetServerSidePropsContext } from 'next';
 
 import EmptyState from '@/components/admin/EmptyState';
@@ -48,6 +49,12 @@ import {
   StaffUnauthenticatedError,
   StaffUnauthorizedError,
 } from '@/utils/staff';
+
+// Panneau OBS (lot 3) : WebSocket direct navigateur → OBS local + localStorage
+// — browser-only, donc chargé côté client uniquement (ssr:false).
+const ObsPanel = dynamic(() => import('@/components/admin/caster/ObsPanel'), {
+  ssr: false,
+});
 
 type SceneEditorProps = {
   scene: CasterScene;
@@ -277,6 +284,12 @@ function CasterScenesPage() {
               </section>
             </div>
           )}
+
+          {/* Pilotage OBS (lot 3) — indépendant de la liste des scènes
+              Supabase : rendu même pendant le chargement / liste vide. */}
+          <div className="mt-4">
+            <ObsPanel />
+          </div>
         </div>
       </div>
     </>
