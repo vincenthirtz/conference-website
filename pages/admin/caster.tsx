@@ -1,12 +1,13 @@
 // pages/admin/caster.tsx
 //
-// Feature: Cockpit caster web — lot 1 : édition des scènes de stream.
+// Feature: Cockpit caster web — lots 1-2 : édition des scènes de stream.
 //
 // Édition web de la table `caster_scenes` (Supabase, partagée avec l'app
 // desktop womenscup-caster) : liste des scènes triées par sort_order à gauche,
-// éditeur de la scène sélectionnée à droite. Lot 1 = édition seulement (pas de
-// CRUD création/suppression/réordonnancement) ; seul le type `match` a son
-// éditeur (MatchSceneEditor), les autres affichent un placeholder.
+// éditeur de la scène sélectionnée à droite. Édition seulement (pas de CRUD
+// création/suppression/réordonnancement) ; les 8 types de scènes ont leur
+// éditeur (registry EDITORS) — un type inconnu (ex. bracket, créé côté app
+// desktop) garde le placeholder.
 //
 // Synchro : useCasterScenes (chargement + Realtime + saveSceneData). Le badge
 // RealtimeStatusBadge reflète l'état du canal (SUBSCRIBED = temps réel, sinon
@@ -17,25 +18,54 @@
 // requireStaffRoleFromRequest(_, 'caster') + baseProps { staff,
 // activeTenantKind } comme withStaffPage (voir getServerSideProps en bas).
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type ComponentType } from 'react';
 import Head from 'next/head';
 import type { GetServerSideProps, GetServerSidePropsContext } from 'next';
 
 import EmptyState from '@/components/admin/EmptyState';
 import LoadingSpinner from '@/components/admin/LoadingSpinner';
 import RealtimeStatusBadge from '@/components/admin/RealtimeStatusBadge';
+import EndSceneEditor from '@/components/admin/caster/EndSceneEditor';
 import MatchSceneEditor from '@/components/admin/caster/MatchSceneEditor';
+import MvpSceneEditor from '@/components/admin/caster/MvpSceneEditor';
+import PauseSceneEditor from '@/components/admin/caster/PauseSceneEditor';
+import ResultsSceneEditor from '@/components/admin/caster/ResultsSceneEditor';
+import ScrimSceneEditor from '@/components/admin/caster/ScrimSceneEditor';
+import StartingSceneEditor from '@/components/admin/caster/StartingSceneEditor';
+import WebcamSceneEditor from '@/components/admin/caster/WebcamSceneEditor';
 import { useToast } from '@/components/Toast';
 import { useCasterScenes } from '@/hooks/useCasterScenes';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { logger } from '@/utils/logger';
-import type { CasterSceneType } from '@/types/caster';
+import {
+  CASTER_SCENE_TYPES,
+  type CasterScene,
+  type CasterSceneType,
+} from '@/types/caster';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import {
   requireStaffRoleFromRequest,
   StaffUnauthenticatedError,
   StaffUnauthorizedError,
 } from '@/utils/staff';
+
+type SceneEditorProps = {
+  scene: CasterScene;
+  onSave: (sceneId: string, data: Record<string, unknown>) => Promise<void>;
+};
+
+// Registry type de scène → éditeur (lot 2 : les 8 types). Un type hors
+// registry (scène desktop d'un type plus récent) retombe sur le placeholder.
+const EDITORS: Record<CasterSceneType, ComponentType<SceneEditorProps>> = {
+  starting: StartingSceneEditor,
+  match: MatchSceneEditor,
+  pause: PauseSceneEditor,
+  results: ResultsSceneEditor,
+  end: EndSceneEditor,
+  mvp: MvpSceneEditor,
+  scrim: ScrimSceneEditor,
+  webcam: WebcamSceneEditor,
+};
 
 function CasterScenesPage() {
   const t = useAdminT('adminCasterScenes');
@@ -77,10 +107,13 @@ function CasterScenesPage() {
   const typeLabel = (type: string) =>
     typeLabels[type as CasterSceneType] ?? type;
 
-  // URL Browser Source de l'overlay hébergé — type match uniquement (lot 1).
+  // URL Browser Source de l'overlay hébergé — /overlay/caster/<type> pour
+  // chacun des 8 types portés (les overlays sont livrés au lot 2 aussi).
   const overlayUrl =
-    selected?.type === 'match' && origin
-      ? `${origin}/overlay/caster/match`
+    selected &&
+    origin &&
+    (CASTER_SCENE_TYPES as readonly string[]).includes(selected.type)
+      ? `${origin}/overlay/caster/${selected.type}`
       : '';
 
   async function copyOverlayUrl() {
@@ -217,22 +250,28 @@ function CasterScenesPage() {
                       </div>
                     )}
 
-                    {selected.type === 'match' ? (
+                    {(() => {
+                      const Editor = EDITORS[selected.type];
+                      if (!Editor) {
+                        return (
+                          <EmptyState
+                            title={t.placeholderTitle}
+                            description={format(t.placeholderBody, {
+                              type: typeLabel(selected.type),
+                            })}
+                          />
+                        );
+                      }
                       // key={id} : remonte l'éditeur (draft ré-initialisé) au
                       // changement de scène sélectionnée.
-                      <MatchSceneEditor
-                        key={selected.id}
-                        scene={selected}
-                        onSave={saveSceneData}
-                      />
-                    ) : (
-                      <EmptyState
-                        title={t.placeholderTitle}
-                        description={format(t.placeholderBody, {
-                          type: typeLabel(selected.type),
-                        })}
-                      />
-                    )}
+                      return (
+                        <Editor
+                          key={selected.id}
+                          scene={selected}
+                          onSave={saveSceneData}
+                        />
+                      );
+                    })()}
                   </>
                 )}
               </section>

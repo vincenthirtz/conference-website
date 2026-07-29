@@ -28,8 +28,13 @@ const ROOT = process.cwd();
 const SCAN_DIRS = ['pages', 'components'];
 
 // Directories/paths that are intentionally NOT internationalised.
-// (Empty: the whole public site AND the admin are now on i18n.)
-const EXCLUDED_DIR_SEGMENTS: string[] = [];
+// components/overlay/caster: overlays OBS du cockpit caster — sortie ANTENNE
+// en français figé, port au pixel des overlays de l'app desktop (mêmes
+// libellés que src/overlays/*.html du repo womenscup-caster). Ce n'est pas de
+// l'UI utilisateur : pas d'i18n, comme sur le desktop.
+const EXCLUDED_DIR_SEGMENTS: string[] = [
+  path.join('components', 'overlay', 'caster'),
+];
 
 // Curated allowlist of accepted accented snippets (brand copy, etc.). Keep this
 // SMALL — every entry is a hole in the guard. Format: exact trimmed snippet.
@@ -165,7 +170,8 @@ function stripComments(src: string): string {
 }
 
 const JSX_TEXT_RE = />([^<>{}]*)</g;
-const ATTR_RE = /\b(?:placeholder|aria-label|alt|title|aria-description)=(["'])([^"']*?)\1/g;
+const ATTR_RE =
+  /\b(?:placeholder|aria-label|alt|title|aria-description)=(["'])([^"']*?)\1/g;
 
 type Offender = { file: string; snippet: string };
 

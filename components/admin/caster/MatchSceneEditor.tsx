@@ -2,27 +2,25 @@
 //
 // Éditeur web de la scène `match` du cockpit caster — port React fidèle de
 // l'éditeur de l'app desktop womenscup-caster (src/renderer/matchEditor.js +
-// teamFields.js + brandSocials.js). Écrit EXACTEMENT la shape MatchSceneData
-// dans `caster_scenes.data` pour rester interopérable avec l'app desktop.
+// teamFields.js + brandSocials.js + heroBans.js). Écrit EXACTEMENT la shape
+// MatchSceneData dans `caster_scenes.data` pour rester interopérable.
 //
-// Comportement clé :
-//  - Draft local initialisé via normalizeMatchData(scene.data), auto-save
-//    debounce ~600 ms via onSave(scene.id, next) où next = { ...scene.data,
-//    ...champs édités } — le spread de la data brute d'abord préserve les
-//    champs inconnus/futurs (obsScene, matchId, banLabel, castersLabel…).
-//  - Anti-clobber : tant que le draft est dirty ou qu'une sauvegarde est en
-//    vol, les mises à jour Realtime de la scène active sont ignorées ; le
-//    draft est ré-initialisé quand une maj distante arrive draft propre. Le
-//    parent remonte le composant (key={scene.id}) au changement de scène.
-//  - Bans héros : AFFICHAGE SEUL dans ce lot (édition au lot 2). Les valeurs
-//    ban1/ban2 ne changent que via « Échanger les équipes » (swap), sinon
-//    elles sont réécrites telles quelles au save.
+// Lot 2 : la machinerie draft/auto-save/anti-clobber vit dans useSceneDraft
+// (comportement inchangé) ; les blocs marque/logos/steppers sont partagés
+// (BrandSocialsFields, LogosFields, ScoreStepper) ; les bans héros deviennent
+// éditables via deux <select> peuplés du manifeste statique ow-heroes.json.
+//
+//  - Bans : valeur du <select> = clé héros ('' = aucun) ; la sélection est
+//    résolue en objet complet { key, name, portrait } via resolveHero — un ban
+//    legacy à clé inconnue reste sélectionnable (option fantôme) et est
+//    préservé tel quel (sémantique desktop). Visibles seulement quand le HUD
+//    Overwatch est actif, comme dans l'app.
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 
-import { useToast } from '@/components/Toast';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
-import type { CasterScene, MatchSceneData } from '@/types/caster';
+import type { CasterScene, HeroBan, MatchSceneData } from '@/types/caster';
+import { loadHeroes, resolveHero, type OwHero } from '@/utils/caster/heroBans';
 import {
   mapOptions,
   normalizeBan,
@@ -30,8 +28,22 @@ import {
   parseCastersInput,
   teamInitial,
 } from '@/utils/caster/matchScene';
+import owHeroesJson from '@/lib/data/ow-heroes.json';
 
-type SaveState = 'idle' | 'saving' | 'saved' | 'error';
+import BrandSocialsFields from './BrandSocialsFields';
+import LogosFields from './LogosFields';
+import ScoreStepper from './ScoreStepper';
+import SaveIndicator from './SaveIndicator';
+import {
+  detailsClass,
+  inputClass,
+  labelClass,
+  summaryClass,
+} from './fieldClasses';
+import { useSceneDraft } from './useSceneDraft';
+
+// Manifeste statique (aucune requête réseau) — validé une fois au chargement.
+const HERO_LIST: OwHero[] = loadHeroes(owHeroesJson);
 
 type Props = {
   scene: CasterScene;
@@ -39,16 +51,17 @@ type Props = {
   onSave: (sceneId: string, data: Record<string, unknown>) => Promise<void>;
 };
 
-/** Clamp d'un score de série : entier entre 0 et 9 (comme le stepper desktop). */
-function clampScore(value: number): number {
-  if (!Number.isFinite(value)) return 0;
-  return Math.min(9, Math.max(0, Math.trunc(value)));
-}
+/** État de formulaire : la data normalisée + le texte brut du champ casters. */
+type MatchForm = MatchSceneData & { castersText: string };
 
 /** Texte du champ casters depuis la data brute (tableau → « A, B »). */
 function castersTextFrom(raw: Record<string, unknown>): string {
   const casters = raw?.casters;
   return Array.isArray(casters) ? casters.filter(Boolean).join(', ') : '';
+}
+
+function normalizeForm(raw: Record<string, unknown>): MatchForm {
+  return { ...normalizeMatchData(raw), castersText: castersTextFrom(raw) };
 }
 
 /**
@@ -57,8 +70,7 @@ function castersTextFrom(raw: Record<string, unknown>): string {
  */
 function buildPayload(
   raw: Record<string, unknown>,
-  draft: MatchSceneData,
-  castersText: string
+  draft: MatchForm
 ): Record<string, unknown> {
   return {
     ...raw,
@@ -70,11 +82,11 @@ function buildPayload(
     bestOf: draft.bestOf,
     seriesDots: draft.seriesDots,
     overwatchHud: draft.overwatchHud,
-    // Pas d'édition des bans dans ce lot : seules les valeurs existantes
-    // (éventuellement échangées par le swap) sont réécrites telles quelles.
+    // Bans résolus au moment de la sélection (resolveHero) puis réécrits tels
+    // quels — un ban legacy non touché est préservé.
     ban1: draft.ban1,
     ban2: draft.ban2,
-    casters: parseCastersInput(castersText),
+    casters: parseCastersInput(draft.castersText),
     team1Logo: draft.team1Logo,
     team2Logo: draft.team2Logo,
     hashtag: draft.hashtag,
@@ -82,12 +94,30 @@ function buildPayload(
   };
 }
 
-/** Vignette d'un ban héros (nom + portrait si dispo) — lecture seule (lot 1). */
-function BanChip({ ban, teamName }: { ban: unknown; teamName: string }) {
+/**
+ * Sélecteur de ban héros + vignette portrait. La valeur est la clé du héros ;
+ * un ban existant à clé hors manifeste est gardé sélectionnable (option
+ * fantôme) pour ne pas l'effacer d'un simple passage sur la scène.
+ */
+function BanSelect({
+  ban,
+  teamName,
+  onChange,
+}: {
+  ban: HeroBan;
+  teamName: string;
+  onChange: (next: HeroBan) => void;
+}) {
   const t = useAdminT('adminCasterScenes');
   const b = normalizeBan(ban);
+  const currentKey = (ban && typeof ban === 'object' && ban.key) || '';
+  const ghost =
+    currentKey && !HERO_LIST.some((h) => h.key === currentKey)
+      ? { key: currentKey, name: b?.name || currentKey }
+      : null;
+
   return (
-    <div className="flex items-center gap-2 rounded-lg border border-neutral-800 bg-neutral-950/60 px-2.5 py-2">
+    <div className="flex items-center gap-2">
       {b?.portrait ? (
         // eslint-disable-next-line @next/next/no-img-element -- portrait externe (CDN Blizzard), pas d'optimisation next/image nécessaire
         <img
@@ -104,170 +134,48 @@ function BanChip({ ban, teamName }: { ban: unknown; teamName: string }) {
           {b ? teamInitial(b.name) : '—'}
         </span>
       )}
-      <div className="min-w-0">
-        <p className="text-[11px] text-neutral-500 truncate">
+      <label className="block flex-1 min-w-0">
+        <span className={labelClass}>
           {format(t.banTeamLabel, { team: teamName })}
-        </p>
-        <p className="text-sm text-neutral-200 truncate">
-          {b ? b.name : t.banNone}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-/** Champ score avec steppers −/+ (réglage rapide à l'antenne, sans clavier). */
-function ScoreStepper({
-  value,
-  label,
-  minusLabel,
-  plusLabel,
-  onChange,
-}: {
-  value: number;
-  label: string;
-  minusLabel: string;
-  plusLabel: string;
-  onChange: (next: number) => void;
-}) {
-  return (
-    <div className="inline-flex items-center rounded-lg border border-neutral-700 bg-neutral-950 overflow-hidden">
-      <button
-        type="button"
-        tabIndex={-1}
-        aria-label={minusLabel}
-        onClick={() => onChange(clampScore(value - 1))}
-        className="px-3 py-2 text-neutral-300 hover:bg-neutral-800 text-lg leading-none"
-      >
-        −
-      </button>
-      <input
-        type="number"
-        min={0}
-        max={9}
-        value={value}
-        aria-label={label}
-        onChange={(e) => onChange(clampScore(Number(e.target.value)))}
-        className="w-14 bg-transparent text-center text-xl font-extrabold text-white py-1.5 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-      />
-      <button
-        type="button"
-        tabIndex={-1}
-        aria-label={plusLabel}
-        onClick={() => onChange(clampScore(value + 1))}
-        className="px-3 py-2 text-neutral-300 hover:bg-neutral-800 text-lg leading-none"
-      >
-        +
-      </button>
+        </span>
+        <select
+          value={currentKey}
+          onChange={(e) =>
+            onChange(
+              resolveHero(
+                HERO_LIST,
+                e.target.value,
+                ban && typeof ban === 'object' ? ban : null
+              )
+            )
+          }
+          className={inputClass}
+        >
+          <option value="">{t.banNoneOption}</option>
+          {ghost && <option value={ghost.key}>{ghost.name}</option>}
+          {HERO_LIST.map((h) => (
+            <option key={h.key} value={h.key}>
+              {h.name}
+            </option>
+          ))}
+        </select>
+      </label>
     </div>
   );
 }
 
 export default function MatchSceneEditor({ scene, onSave }: Props) {
   const t = useAdminT('adminCasterScenes');
-  const { addToast } = useToast();
 
-  const [draft, setDraft] = useState<MatchSceneData>(() =>
-    normalizeMatchData(scene.data)
-  );
-  const [castersText, setCastersText] = useState(() =>
-    castersTextFrom(scene.data)
-  );
-  const [dirty, setDirty] = useState(false);
-  const [saveState, setSaveState] = useState<SaveState>('idle');
-
-  // Data brute la plus fraîche (base du spread au save — préserve les champs
-  // inconnus, dont ceux mis à jour à distance pendant l'édition).
-  const rawRef = useRef<Record<string, unknown>>(scene.data);
-  useEffect(() => {
-    rawRef.current = scene.data;
-  }, [scene.data]);
-
-  // Anti-clobber : save en vol + numéro de séquence des éditions locales.
-  const inFlightRef = useRef(false);
-  const editSeqRef = useRef(0);
-
-  // Maj distante (Realtime) alors que le draft est propre → ré-init du draft.
-  // Gardé par identité pour ne pas ré-initialiser quand seul `dirty` bouge
-  // (retour à propre après save : l'écho Realtime n'est pas encore arrivé).
-  const lastAppliedRef = useRef<Record<string, unknown>>(scene.data);
-  useEffect(() => {
-    if (scene.data === lastAppliedRef.current) return;
-    lastAppliedRef.current = scene.data;
-    if (dirty || inFlightRef.current) return;
-    setDraft(normalizeMatchData(scene.data));
-    setCastersText(castersTextFrom(scene.data));
-  }, [scene.data, dirty]);
-
-  // Auto-save debounce ~600 ms : chaque édition re-arme le timer (le draft est
-  // une dépendance de l'effet), la fermeture capture donc l'état le plus frais.
-  useEffect(() => {
-    if (!dirty) return undefined;
-    const seq = editSeqRef.current;
-    const timer = setTimeout(async () => {
-      inFlightRef.current = true;
-      setSaveState('saving');
-      try {
-        await onSave(
-          scene.id,
-          buildPayload(rawRef.current, draft, castersText)
-        );
-        // Une édition pendant le vol re-déclenchera un save : on ne repasse à
-        // propre que si rien n'a bougé depuis la capture du payload.
-        if (editSeqRef.current === seq) {
-          setDirty(false);
-          setSaveState('saved');
-        }
-      } catch (err) {
-        setSaveState('error');
-        addToast(
-          format(t.saveErrorToast, {
-            message: (err as Error)?.message || '',
-          }),
-          'error'
-        );
-      } finally {
-        inFlightRef.current = false;
-      }
-    }, 600);
-    return () => clearTimeout(timer);
-  }, [dirty, draft, castersText, scene.id, onSave, addToast, t]);
-
-  // Flush best-effort à l'unmount (changement de scène / navigation) pour ne
-  // pas perdre une édition tombée dans la fenêtre de debounce.
-  const latestRef = useRef({ draft, castersText, dirty });
-  useEffect(() => {
-    latestRef.current = { draft, castersText, dirty };
+  const { draft, patch, update, saveState } = useSceneDraft<MatchForm>({
+    scene,
+    onSave,
+    normalize: normalizeForm,
+    buildPayload,
   });
-  useEffect(() => {
-    return () => {
-      const l = latestRef.current;
-      if (!l.dirty) return;
-      void onSave(
-        scene.id,
-        buildPayload(rawRef.current, l.draft, l.castersText)
-      ).catch(() => {
-        /* best-effort : la page se démonte, pas de toast possible */
-      });
-    };
-  }, [scene.id, onSave]);
-
-  const markEdit = useCallback(() => {
-    editSeqRef.current += 1;
-    setDirty(true);
-    setSaveState('saving');
-  }, []);
-
-  const patch = useCallback(
-    (p: Partial<MatchSceneData>) => {
-      setDraft((d) => ({ ...d, ...p }));
-      markEdit();
-    },
-    [markEdit]
-  );
 
   const swapTeams = useCallback(() => {
-    setDraft((d) => ({
+    update((d) => ({
       ...d,
       team1: d.team2,
       team2: d.team1,
@@ -278,8 +186,7 @@ export default function MatchSceneEditor({ scene, onSave }: Props) {
       ban1: d.ban2,
       ban2: d.ban1,
     }));
-    markEdit();
-  }, [markEdit]);
+  }, [update]);
 
   // Pas de maps tournoi dans ce lot : pool par défaut + valeur courante.
   const maps = useMemo(() => mapOptions(null, draft.map), [draft.map]);
@@ -287,71 +194,9 @@ export default function MatchSceneEditor({ scene, onSave }: Props) {
   const linkedMatchId =
     (scene.data?.matchId as string | null | undefined) ?? null;
 
-  const socialsFields: Array<{
-    key: keyof MatchSceneData['socials'];
-    label: string;
-    placeholder: string;
-  }> = [
-    {
-      key: 'site',
-      label: t.socialSiteLabel,
-      placeholder: t.socialSitePlaceholder,
-    },
-    {
-      key: 'discord',
-      label: t.socialDiscordLabel,
-      placeholder: t.socialDiscordPlaceholder,
-    },
-    {
-      key: 'twitch',
-      label: t.socialTwitchLabel,
-      placeholder: t.socialTwitchPlaceholder,
-    },
-    {
-      key: 'youtube',
-      label: t.socialYoutubeLabel,
-      placeholder: t.socialYoutubePlaceholder,
-    },
-    {
-      key: 'instagram',
-      label: t.socialInstagramLabel,
-      placeholder: t.socialInstagramPlaceholder,
-    },
-    {
-      key: 'tiktok',
-      label: t.socialTiktokLabel,
-      placeholder: t.socialTiktokPlaceholder,
-    },
-  ];
-
-  const inputClass =
-    'w-full rounded-md bg-neutral-950 border border-neutral-700 px-2.5 py-2 text-sm text-white placeholder:text-neutral-600';
-
   return (
     <div className="space-y-4" data-testid="caster-match-editor">
-      {/* Indicateur de sauvegarde (auto-save) */}
-      <div className="flex items-center justify-end min-h-[1rem]">
-        <span
-          role="status"
-          aria-live="polite"
-          className={`text-[11px] font-medium ${
-            saveState === 'error'
-              ? 'text-red-300'
-              : saveState === 'saving'
-                ? 'text-amber-300'
-                : 'text-neutral-500'
-          }`}
-          data-testid="caster-save-indicator"
-        >
-          {saveState === 'saving'
-            ? t.saveSaving
-            : saveState === 'saved'
-              ? t.saveSaved
-              : saveState === 'error'
-                ? t.saveErrorShort
-                : ''}
-        </span>
-      </div>
+      <SaveIndicator state={saveState} />
 
       {/* Match lié au site : le score live peut écraser la saisie manuelle. */}
       {linkedMatchId && (
@@ -424,9 +269,7 @@ export default function MatchSceneEditor({ scene, onSave }: Props) {
       {/* Map + format */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <label className="block">
-          <span className="block text-xs text-neutral-400 mb-1">
-            {t.mapLabel}
-          </span>
+          <span className={labelClass}>{t.mapLabel}</span>
           <select
             value={draft.map}
             onChange={(e) => patch({ map: e.target.value })}
@@ -440,9 +283,7 @@ export default function MatchSceneEditor({ scene, onSave }: Props) {
           </select>
         </label>
         <label className="block">
-          <span className="block text-xs text-neutral-400 mb-1">
-            {t.bestOfLabel}
-          </span>
+          <span className={labelClass}>{t.bestOfLabel}</span>
           <select
             value={String(draft.bestOf)}
             onChange={(e) => patch({ bestOf: Number(e.target.value) || 5 })}
@@ -456,10 +297,8 @@ export default function MatchSceneEditor({ scene, onSave }: Props) {
       </div>
 
       {/* Options match (repliable) */}
-      <details className="rounded-xl border border-neutral-800 bg-neutral-900/40 px-3 py-2">
-        <summary className="cursor-pointer text-sm font-medium text-neutral-200 py-1">
-          {t.optionsSummary}
-        </summary>
+      <details className={detailsClass}>
+        <summary className={summaryClass}>{t.optionsSummary}</summary>
         <div className="space-y-3 pt-2 pb-1">
           <label className="flex items-center gap-2 text-sm text-neutral-300">
             <input
@@ -480,38 +319,34 @@ export default function MatchSceneEditor({ scene, onSave }: Props) {
             {t.overwatchHudLabel}
           </label>
 
-          {/* Bans héros : affichage seul (édition au lot 2, valeurs préservées).
-              Comme l'app desktop, visibles uniquement quand le HUD OW est actif. */}
+          {/* Bans héros : sélecteurs peuplés du manifeste statique. Comme
+              l'app desktop, visibles uniquement quand le HUD OW est actif. */}
           {draft.overwatchHud && (
             <div className="space-y-2" data-testid="caster-hero-bans">
               <p className="text-xs font-medium text-neutral-400">
                 {t.bansTitle}
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <BanChip
+                <BanSelect
                   ban={draft.ban1}
                   teamName={draft.team1 || t.team1Placeholder}
+                  onChange={(next) => patch({ ban1: next })}
                 />
-                <BanChip
+                <BanSelect
                   ban={draft.ban2}
                   teamName={draft.team2 || t.team2Placeholder}
+                  onChange={(next) => patch({ ban2: next })}
                 />
               </div>
-              <p className="text-[11px] text-neutral-500">{t.bansLot2Note}</p>
             </div>
           )}
 
           <label className="block">
-            <span className="block text-xs text-neutral-400 mb-1">
-              {t.castersLabel}
-            </span>
+            <span className={labelClass}>{t.castersLabel}</span>
             <input
               type="text"
-              value={castersText}
-              onChange={(e) => {
-                setCastersText(e.target.value);
-                markEdit();
-              }}
+              value={draft.castersText}
+              onChange={(e) => patch({ castersText: e.target.value })}
               placeholder={t.castersPlaceholder}
               className={inputClass}
             />
@@ -520,76 +355,21 @@ export default function MatchSceneEditor({ scene, onSave }: Props) {
       </details>
 
       {/* Logos des équipes (repliable) */}
-      <details className="rounded-xl border border-neutral-800 bg-neutral-900/40 px-3 py-2">
-        <summary className="cursor-pointer text-sm font-medium text-neutral-200 py-1">
-          {t.logosSummary}
-        </summary>
-        <div className="space-y-3 pt-2 pb-1">
-          <label className="block">
-            <span className="block text-xs text-neutral-400 mb-1">
-              {t.team1LogoLabel}
-            </span>
-            <input
-              type="text"
-              value={draft.team1Logo}
-              onChange={(e) => patch({ team1Logo: e.target.value })}
-              placeholder={t.logo1Placeholder}
-              className={inputClass}
-            />
-          </label>
-          <label className="block">
-            <span className="block text-xs text-neutral-400 mb-1">
-              {t.team2LogoLabel}
-            </span>
-            <input
-              type="text"
-              value={draft.team2Logo}
-              onChange={(e) => patch({ team2Logo: e.target.value })}
-              placeholder={t.logo2Placeholder}
-              className={inputClass}
-            />
-          </label>
-        </div>
-      </details>
+      <LogosFields
+        team1Logo={draft.team1Logo}
+        team2Logo={draft.team2Logo}
+        onChange={(p) => patch(p)}
+      />
 
       {/* Marque & réseaux (repliable) */}
-      <details className="rounded-xl border border-neutral-800 bg-neutral-900/40 px-3 py-2">
-        <summary className="cursor-pointer text-sm font-medium text-neutral-200 py-1">
-          {t.brandSummary}
-        </summary>
-        <div className="space-y-3 pt-2 pb-1">
-          <label className="block">
-            <span className="block text-xs text-neutral-400 mb-1">
-              {t.hashtagLabel}
-            </span>
-            <input
-              type="text"
-              value={draft.hashtag}
-              onChange={(e) => patch({ hashtag: e.target.value })}
-              placeholder={t.hashtagPlaceholder}
-              className={inputClass}
-            />
-          </label>
-          {socialsFields.map((f) => (
-            <label key={f.key} className="block">
-              <span className="block text-xs text-neutral-400 mb-1">
-                {f.label}
-              </span>
-              <input
-                type="text"
-                value={draft.socials[f.key]}
-                onChange={(e) =>
-                  patch({
-                    socials: { ...draft.socials, [f.key]: e.target.value },
-                  })
-                }
-                placeholder={f.placeholder}
-                className={inputClass}
-              />
-            </label>
-          ))}
-        </div>
-      </details>
+      <BrandSocialsFields
+        socials={draft.socials}
+        onSocialsChange={(socials) => patch({ socials })}
+        hashtag={{
+          value: draft.hashtag,
+          onChange: (hashtag) => patch({ hashtag }),
+        }}
+      />
     </div>
   );
 }

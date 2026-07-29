@@ -77,3 +77,88 @@ export type MatchSceneData = {
   /** Nom de la scène OBS associée (setup-overlay-scenes côté app desktop). */
   obsScene?: string;
 };
+
+// ---- Shapes `data` des autres types de scènes (lot 2) ----------------------
+// Contrats relevés dans SCENE_FORMS (womenscup-caster/src/renderer/editor.js +
+// *Editor.js) et recoupés avec les lignes réelles en base. Tous les éditeurs
+// web écrivent `{ ...data brute, ...champs édités }` pour préserver les champs
+// inconnus (obsScene, labels de thème…).
+
+export type StartingSceneData = {
+  title: string;
+  /** Compte à rebours en secondes (défaut app : 300 ; seed : 600). */
+  countdown: number;
+  nextMatch: { team1: string; team2: string; bestOf?: number };
+  hashtag: string;
+  socials: CasterSocials;
+  /** Libellés surchargeables (phase thème côté app). */
+  nextLabel?: string;
+  countdownLabel?: string;
+};
+
+export type PauseSceneData = {
+  title: string;
+  message: string;
+  /** Bandeau défilant optionnel ('' = masqué). */
+  marquee: string;
+  hashtag: string;
+  socials: CasterSocials;
+};
+
+export type ResultsSceneData = {
+  team1: string;
+  team2: string;
+  score1: number;
+  score2: number;
+  bestOf?: number;
+  /** MVP du match (optionnel, '' = masqué). */
+  mvp: string;
+  mapResults: Array<{ map: string; score1: number; score2: number }>;
+  team1Logo: string;
+  team2Logo: string;
+  hashtag: string;
+  socials: CasterSocials;
+};
+
+export type EndSceneData = {
+  title: string;
+  subtitle: string;
+  credits: Array<{ label: string; value: string }>;
+  sponsors: string[];
+  socials: CasterSocials;
+};
+
+export type MvpCandidate = {
+  name: string;
+  team?: string;
+  votes?: number;
+};
+
+export type MvpSceneData = {
+  title: string;
+  candidates: MvpCandidate[];
+  /** Snapshot du poll (le tally live du chat arrive au lot 4 via broadcast). */
+  total: number;
+  isOpen: boolean;
+};
+
+export type ScrimSceneData = {
+  /** matchup = un scrim précis ; next = le prochain public ; list = agenda. */
+  mode: 'matchup' | 'next' | 'list';
+  /** UUID ou slug du scrim (mode matchup), sinon null. */
+  scrimId: string | null;
+  title: string;
+  hashtag: string;
+  socials: CasterSocials;
+  countdownLabel?: string;
+};
+
+export type WebcamCamConfig = { label: string; deviceId: string };
+
+export type WebcamSceneData = {
+  mode: 'solo' | 'duo';
+  cam1: WebcamCamConfig;
+  cam2: WebcamCamConfig;
+  shape: string;
+  mirror: boolean;
+};
