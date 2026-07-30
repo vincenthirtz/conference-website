@@ -854,7 +854,7 @@ export default function PublicCreateTeamPage() {
 
   // ── Formulaire wizard ─────────────────────────────────────────────────────
   const wizardForm = (
-    <div className="grid items-start gap-6 lg:grid-cols-[1.7fr,1fr]">
+    <div className="grid items-start gap-6 lg:grid-cols-[1.7fr_1fr]">
       <form
         onSubmit={handleSubmit}
         className="order-last space-y-6 rounded-3xl border border-white/10 bg-white/[0.03] p-5 shadow-2xl shadow-black/40 sm:p-6 lg:order-first"

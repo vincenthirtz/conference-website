@@ -194,7 +194,7 @@ function AdminNewTeamPage({ staff, teamRoles }: StaffProps) {
           {/* Form */}
           <form
             onSubmit={handleSubmit}
-            className="grid gap-6 lg:grid-cols-[2fr,1fr]"
+            className="grid gap-6 lg:grid-cols-[2fr_1fr]"
           >
             {/* Colonne gauche : infos equipe + membres */}
             <div className="space-y-6">

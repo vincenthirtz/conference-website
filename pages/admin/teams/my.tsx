@@ -940,7 +940,7 @@ function MyTeamPage({ staff }: StaffProps) {
 
           {/* Team content */}
           {!loading && !error && data?.team && (
-            <div className="grid gap-6 lg:grid-cols-[1.2fr,1fr]">
+            <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
               {/* Team Info */}
               <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 space-y-5">
                 <div className="flex items-center gap-4">

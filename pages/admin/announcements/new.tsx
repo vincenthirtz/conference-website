@@ -151,7 +151,7 @@ function AdminAnnouncementCreatePage({ staff }: Props) {
             </div>
           </div>
 
-          <div className="grid gap-6 lg:grid-cols-[2fr,1fr] items-start">
+          <div className="grid gap-6 lg:grid-cols-[2fr_1fr] items-start">
             {/* Form */}
             <div className="space-y-6">
               {showDraftBanner && (

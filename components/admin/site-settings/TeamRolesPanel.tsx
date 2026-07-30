@@ -297,7 +297,7 @@ export default function TeamRolesPanel() {
                 key={d._key}
                 className="bg-neutral-900/50 border border-neutral-700/50 rounded-xl p-4 space-y-4"
               >
-                <div className="grid gap-3 md:grid-cols-[auto,1fr,1fr,auto] items-end">
+                <div className="grid gap-3 md:grid-cols-[auto_1fr_1fr_auto] items-end">
                   <div className="flex flex-col gap-1">
                     <button
                       type="button"

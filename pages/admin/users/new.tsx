@@ -359,7 +359,7 @@ function AdminCreateUserPage({ staff, teamRoles }: StaffProps) {
             </div>
           )}
 
-          <div className="grid gap-6 lg:grid-cols-[2fr,1fr]">
+          <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
             {/* Form */}
             <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
               <form onSubmit={handleSubmit} className="space-y-6">

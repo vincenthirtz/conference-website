@@ -484,7 +484,7 @@ function AdminSwissStagePage({ staff }: StaffProps) {
         )}
 
         {!loading && stage && (
-          <div className="grid gap-6 pt-20 lg:grid-cols-[1.5fr,2fr] xl:grid-cols-[1.3fr,2fr]">
+          <div className="grid gap-6 pt-20 lg:grid-cols-[1.5fr_2fr] xl:grid-cols-[1.3fr_2fr]">
             {/* Standings */}
             <section className="bg-neutral-800 border border-neutral-700 rounded-xl overflow-hidden">
               <div className="px-4 py-3 border-b border-neutral-700 flex justify-between items-center">

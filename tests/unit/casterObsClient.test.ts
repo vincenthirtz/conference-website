@@ -92,12 +92,46 @@ function makeClient(): ObsClient {
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
+/**
+ * Attend qu'une condition devienne vraie en rendant la main à la boucle
+ * d'événements entre deux essais.
+ *
+ * Pourquoi pas un simple `await flush()` : le handshake enchaîne PLUSIEURS
+ * `await` — jusqu'à deux digests WebCrypto quand un mot de passe est fourni —
+ * donc un tick unique ne suffit pas toujours. La suite passait en isolation mais
+ * échouait par intermittence quand elle tournait en parallèle du reste
+ * (worker chargé ⇒ le digest n'a pas rendu la main au premier tick).
+ *
+ * Le budget est compté en ITÉRATIONS et non en millisecondes : ainsi le helper
+ * reste utilisable sans dépendre de l'horloge (et ne suppose pas de timers
+ * réels côté appelant).
+ */
+async function waitFor(
+  predicate: () => boolean,
+  label = 'condition',
+  maxTicks = 500
+): Promise<void> {
+  for (let i = 0; i < maxTicks && !predicate(); i++) {
+    await flush();
+  }
+  if (!predicate()) {
+    throw new Error(
+      `waitFor: ${label} jamais satisfaite après ${maxTicks} ticks`
+    );
+  }
+}
+
 /** Connecte un client (handshake sans auth) et rend la socket mockée. */
 async function connectClient(client: ObsClient): Promise<MockWs> {
   const p = client.connect({ host: 'localhost', port: 4455 });
   const ws = MockWs.instances[MockWs.instances.length - 1];
   ws.receive({ op: 0, d: {} });
-  await flush();
+  // L'Identify part après un await : on attend qu'il soit RÉELLEMENT envoyé
+  // avant de simuler l'Identified, sinon la réponse arrive avant la demande.
+  await waitFor(
+    () => ws.sentMessages().some((m) => m.op === 1),
+    'Identify envoyé'
+  );
   ws.receive({ op: 2, d: {} });
   await expect(p).resolves.toEqual({ ok: true });
   return ws;
@@ -188,7 +222,9 @@ describe('ObsClient — handshake', () => {
       op: 0,
       d: { authentication: { challenge: 'ch', salt: 'sa' } },
     });
-    await flush();
+    // Avec mot de passe, l'Identify attend DEUX digests WebCrypto : on attend la
+    // condition plutôt qu'un tick (cf. waitFor).
+    await waitFor(() => ws.sentMessages().length > 0, 'Identify envoyé');
     const identify = ws.sentMessages()[0] as {
       op: number;
       d: { authentication?: string; eventSubscriptions: number };
@@ -347,7 +383,7 @@ describe('ObsClient — événements', () => {
       op: 5,
       d: { eventType: 'InputCreated', eventData: { inputName: 'x' } },
     });
-    await flush();
+    await waitFor(() => seen.length >= 2, '2 events dispatchés');
 
     expect(seen).toEqual([
       ['stream', { outputActive: true }],

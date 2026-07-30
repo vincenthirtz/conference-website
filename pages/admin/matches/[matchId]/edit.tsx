@@ -606,7 +606,7 @@ function AdminMatchEditPage({ staff }: StaffProps) {
         )}
 
         {!loading && match && (
-          <div className="grid gap-6 pt-20 lg:grid-cols-[2fr,1.3fr]">
+          <div className="grid gap-6 pt-20 lg:grid-cols-[2fr_1.3fr]">
             {/* Formulaire principal */}
             <div className="bg-neutral-800 border border-neutral-700 rounded-xl p-6 pt-20">
               <form onSubmit={handleSubmit} className="space-y-6">
