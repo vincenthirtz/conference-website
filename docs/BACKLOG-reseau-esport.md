@@ -64,7 +64,13 @@ Effet concret : confier « gérer les scrims » à une coach lui donne aussi le 
 d'équipe et les inscriptions tournoi. C'est un risque de sécurité _et_ la raison probable du
 **0 manager / 0 coach** en prod : personne ne délègue quand déléguer signifie tout donner.
 
-### C4 · La négociation de scrim est riche mais sans porte d'entrée
+### C4 · La négociation de scrim est riche mais sans chemin pour y arriver
+
+> **Corrigé le 2026-07-31 (livraison R3).** La formulation initiale — « le geste
+> de base manque » — était fausse : le formulaire connecté existait bien
+> (`/player/requests?tab=scrim`, multi-créneaux + négociation). Ce qui manquait
+> était le **chemin** (aucun point d'entrée depuis un contexte) et le **contexte
+> de choix** (adversaire choisi dans une liste alphabétique muette).
 
 `demandes.payload.scrim_nego` (5 créneaux, contre-propositions, `rounds`, `agreed_slot` — cf.
 [`scrimNegotiation.ts`](../utils/teams/scrimNegotiation.ts)), grilles `scrim_plannings` (23 colonnes,
@@ -105,18 +111,30 @@ Entre deux éditions, le site n'a aucune raison d'être rouvert.
 
 ### P0 — Amorçage : débloquer ce qui est déjà construit
 
-#### R1 · Rejouer le calcul des ratings + garantir la rétro-alimentation
+#### R1 · Rejouer le calcul des ratings + garantir la rétro-alimentation — ✅ LIVRÉ
 
 - **Impact / Effort** : 🟥 / **S**
+- **Résultat (2026-07-31)** : rebuild joué sur la prod → **6 joueuses notées sur
+  7 matchs**. Découverte au passage : **6 des 7 matchs terminés ne peuvent PAS
+  produire de rating** — un côté n'a aucun membre rattaché à un compte, or le
+  moteur exige des participants des deux côtés. Le rating n'était donc pas
+  cassé : les rosters sont incomplets. Un écran de couverture
+  (`GET /api/admin/ratings/coverage` + section dans `/admin/ratings`) expose
+  désormais l'écart **et sa cause**. Renforce R11 (identité/roster).
 - **Problème** : C5 — 0 rating pour 7 matchs terminés, toutes les surfaces de réputation sont vides.
 - **Proposition** : lancer `POST /api/admin/ratings/rebuild` sur le tenant, puis ajouter un garde-fou
   (test ou job) qui détecte l'écart « matchs terminés sans rating ».
 - **Acceptation** : leaderboard non vide ; profil joueuse affiche un rating ; un match terminé
   aujourd'hui produit une ligne sans intervention.
 
-#### R2 · Rendre les permissions d'équipe réellement granulaires
+#### R2 · Rendre les permissions d'équipe réellement granulaires — ✅ LIVRÉ
 
 - **Impact / Effort** : 🟥 / **M**
+- **Résultat (2026-07-31)** : `getManagedTeam` expose les permissions
+  effectives (capitaine = toutes, sans requête supplémentaire) ;
+  `assertTeamPermission` garde 17 routes avec la permission qui les concerne.
+  Aucun changement pour l'existant (capitaine et rôle `manager` par défaut ont
+  tout le catalogue) ; un rôle à privilèges partiels est enfin borné.
 - **Problème** : C3 — une permission accordée = toutes les permissions.
 - **Proposition** : `getManagedTeam` renvoie les **permissions effectives** du membre ; chaque route
   gated exige la permission qui la concerne (`manage_scrims` pour les scrims, `manage_join_requests`
@@ -125,10 +143,15 @@ Entre deux éditions, le site n'a aucune raison d'être rouvert.
   au roster ; test unitaire par permission ; aucune régression sur les 24 routes.
 - **Bénéfice réseau** : débloque la délégation, donc l'apparition de managers/coachs (aujourd'hui 0).
 
-#### R3 · « Proposer un scrim » depuis l'espace connecté
+#### R3 · « Proposer un scrim » depuis l'espace connecté — ✅ LIVRÉ
 
 - **Impact / Effort** : 🟥 / **M**
-- **Problème** : C4 — la négociation existe, la porte d'entrée non.
+- **Problème** : C4 — la négociation existe, le chemin pour l'atteindre non.
+- **Résultat (2026-07-31)** : `/api/teams` expose `open_for_scrim` (+ filtre) ;
+  le sélecteur d'adversaire badge « cherche un scrim » et remonte les équipes
+  disponibles en tête ; `?team=<id>` pré-sélectionne l'adversaire ; la fiche
+  d'équipe propose le formulaire connecté aux capitaines/managers d'une autre
+  équipe. Aucune API créée — celle qui existait suffisait.
 - **Proposition** : bouton sur la fiche d'équipe et dans l'annuaire (R4) → modale multi-créneaux qui
   crée directement la demande `type='scrim'` avec `scrim_nego`, sans repasser par le formulaire public.
 - **Acceptation** : un capitaine crée une proposition en < 30 s ; l'équipe cible la voit dans son hub
