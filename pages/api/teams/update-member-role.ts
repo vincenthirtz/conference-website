@@ -10,6 +10,7 @@ import { isValidUUID } from '@/utils/apiHelpers';
 import { withAuthRoute } from '@/utils/staff';
 import {
   getManagedTeam,
+  assertTeamPermission,
   TEAM_MANAGEMENT_FORBIDDEN,
 } from '@/utils/teams/managementAccess';
 import {
@@ -46,13 +47,20 @@ export default withAuthRoute(async function handler(
     return;
 
   const userId = user.id;
-  const tenantId = await resolveTenantIdForUserRequestAsync(req, { authUserId: userId });
+  const tenantId = await resolveTenantIdForUserRequestAsync(req, {
+    authUserId: userId,
+  });
 
   // Check if user can manage a team (captain or manager)
   const access = await getManagedTeam(userId, tenantId);
   if (!access) {
     return res.status(403).json({ error: TEAM_MANAGEMENT_FORBIDDEN });
   }
+
+  // Permission fine (R2) : le rôle doit couvrir `manage_roster` — un rôle
+  // à privilèges partiels n'ouvre plus l'ensemble de la gestion d'équipe.
+  const denied = assertTeamPermission(access, 'manage_roster');
+  if (denied) return res.status(denied.status).json({ error: denied.error });
 
   const { data: captainTeam, error: teamErr } = await supabaseAdmin
     .from('teams')
@@ -128,10 +136,7 @@ export default withAuthRoute(async function handler(
 
   // Anti-escalation : un membre privilegie ne peut etre degrade que par le
   // capitaine.
-  if (
-    roleHasAnyPermission(teamRoles, member.role) &&
-    !access.isCaptain
-  ) {
+  if (roleHasAnyPermission(teamRoles, member.role) && !access.isCaptain) {
     return res.status(403).json({
       error: "Seul le capitaine peut modifier le rôle d'un membre privilégié.",
     });

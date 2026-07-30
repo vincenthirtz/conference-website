@@ -9,6 +9,7 @@ import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
 import {
   getManagedTeam,
+  assertTeamPermission,
   TEAM_MANAGEMENT_FORBIDDEN,
 } from '@/utils/teams/managementAccess';
 import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
@@ -102,6 +103,11 @@ export default withAuthRoute(async function handler(
           "Seul le capitaine ou un manager de l'equipe peut soumettre une inscription.",
       });
     }
+
+    // Permission fine (R2) : inscrire l'équipe est une permission à part
+    // entière (`register_tournaments`), distincte de la gestion du roster.
+    const denied = assertTeamPermission(access, 'register_tournaments');
+    if (denied) return res.status(denied.status).json({ error: denied.error });
 
     // Verify tournament exists and is published
     const { data: tournament, error: tourErr } = await supabaseAdmin

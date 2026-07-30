@@ -29,12 +29,12 @@ import { findOrCreateUserByEmail } from '@/utils/find-or-create-user';
 import { sendTeamInviteLinkEmail } from '@/utils/email';
 import {
   getManagedTeam,
+  assertTeamPermission,
   TEAM_MANAGEMENT_FORBIDDEN,
 } from '@/utils/teams/managementAccess';
 import {
   loadTeamRolesFromSupabase,
   roleHasAnyPermission,
-  roleHasPermission,
 } from '@/utils/teamRoles';
 import {
   isTeamRosterLocked,
@@ -105,6 +105,14 @@ export default withAuthRoute(async function handler(
       .json({ error: TEAM_MANAGEMENT_FORBIDDEN, code: 'FORBIDDEN' });
   }
 
+  // Permission fine (R2) : inviter, c'est modifier le roster.
+  const denied = assertTeamPermission(access, 'manage_roster');
+  if (denied) {
+    return res
+      .status(denied.status)
+      .json({ error: denied.error, code: 'FORBIDDEN' });
+  }
+
   const { data: team } = await supabaseAdmin
     .from('teams')
     .select('id, name, captain_id')
@@ -122,12 +130,10 @@ export default withAuthRoute(async function handler(
   // on n'invite plus non plus (l'acceptation échouerait de toute façon).
   const lockStatus = await isTeamRosterLocked(tenantId, team.id);
   if (lockStatus.locked) {
-    return res
-      .status(409)
-      .json({
-        error: rosterLockErrorMessage(lockStatus),
-        code: 'ROSTER_LOCKED',
-      });
+    return res.status(409).json({
+      error: rosterLockErrorMessage(lockStatus),
+      code: 'ROSTER_LOCKED',
+    });
   }
 
   const roles = await loadTeamRolesFromSupabase(supabaseAdmin);
@@ -151,22 +157,8 @@ export default withAuthRoute(async function handler(
         code: 'CAPTAIN_ALREADY_SET',
       });
     }
-    const { data: membership } = await supabaseAdmin
-      .from('team_members')
-      .select('role')
-      .eq('team_id', team.id)
-      .eq('tenant_id', tenantId)
-      .eq('user_id', userId)
-      .maybeSingle();
-    if (
-      !access.isCaptain &&
-      !roleHasPermission(roles, membership?.role, 'manage_roster')
-    ) {
-      return res.status(403).json({
-        error: "Tu n'as pas le droit de désigner la capitaine de cette équipe.",
-        code: 'FORBIDDEN',
-      });
-    }
+    // Le droit de désigner découle de `manage_roster`, déjà exigé plus haut
+    // pour toute la route — pas de re-lecture du membership ici.
     // Un coach ne peut pas être capitaine (invariant partagé avec les RPC
     // transfer_captain / designate_captain).
     if (body.role === 'coach') {

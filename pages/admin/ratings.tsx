@@ -13,12 +13,14 @@ import EmptyState from '@/components/admin/EmptyState';
 import { Skeleton } from '@/components/admin/Skeleton';
 import type { StaffProps } from '@/types/admin';
 import type { LeaderboardPlayer, LeaderboardResponse } from '@/types/rating';
+import type { RatingCoverageResponse } from '../api/admin/ratings/coverage';
 
 import { logger } from '../../utils/logger';
 
 export const getServerSideProps = withStaffPage('admin');
 
 type RebuildResult = { players: number; matches: number };
+type RatingCoverage = RatingCoverageResponse;
 
 function AdminRatingsPage(_props: StaffProps) {
   const { adminFetchJson } = useAdminFetch();
@@ -38,6 +40,27 @@ function AdminRatingsPage(_props: StaffProps) {
   const [loadingBoard, setLoadingBoard] = useState(true);
   const [boardError, setBoardError] = useState<string | null>(null);
 
+  // Couverture : combien de matchs terminés produisent réellement un rating.
+  // Un match peut rester non noté SANS erreur (roster non rattaché à des
+  // comptes) — c'est invisible partout ailleurs.
+  const [coverage, setCoverage] = useState<RatingCoverage | null>(null);
+  const [loadingCoverage, setLoadingCoverage] = useState(true);
+
+  const loadCoverage = useCallback(async () => {
+    setLoadingCoverage(true);
+    try {
+      const data = await adminFetchJson<RatingCoverage>(
+        '/api/admin/ratings/coverage'
+      );
+      setCoverage(data);
+    } catch (err: unknown) {
+      logger.error('load ratings coverage error', err);
+      setCoverage(null);
+    } finally {
+      setLoadingCoverage(false);
+    }
+  }, [adminFetchJson]);
+
   const loadBoard = useCallback(async () => {
     setLoadingBoard(true);
     setBoardError(null);
@@ -56,7 +79,8 @@ function AdminRatingsPage(_props: StaffProps) {
 
   useEffect(() => {
     loadBoard();
-  }, [loadBoard]);
+    loadCoverage();
+  }, [loadBoard, loadCoverage]);
 
   async function handleRebuild() {
     const ok = await confirm({
@@ -81,7 +105,7 @@ function AdminRatingsPage(_props: StaffProps) {
         }),
         'success'
       );
-      await loadBoard();
+      await Promise.all([loadBoard(), loadCoverage()]);
     } catch (err: unknown) {
       logger.error('rebuild ratings error', err);
       addToast((err as Error)?.message || t.errorRebuild, 'error');
@@ -150,6 +174,80 @@ function AdminRatingsPage(_props: StaffProps) {
               </svg>
               {rebuilding ? t.rebuilding : t.rebuildBtn}
             </button>
+          </section>
+
+          {/* --- Couverture du rating --- */}
+          <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 space-y-4">
+            <h2 className="text-lg font-semibold">{t.coverageHeading}</h2>
+            <p className="text-sm text-neutral-400 leading-relaxed">
+              {t.coverageDesc}
+            </p>
+
+            {loadingCoverage ? (
+              <Skeleton className="h-16 w-full" rounded="rounded-xl" />
+            ) : !coverage ? (
+              <p className="text-sm text-neutral-500">
+                {t.coverageUnavailable}
+              </p>
+            ) : (
+              <>
+                <div className="flex flex-wrap gap-3">
+                  <span className="rounded-xl border border-neutral-700/50 bg-neutral-900/50 px-4 py-2 text-sm">
+                    {format(t.coverageFinished, { count: coverage.finished })}
+                  </span>
+                  <span className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 px-4 py-2 text-sm text-emerald-200">
+                    {format(t.coverageRated, { count: coverage.rated })}
+                  </span>
+                  <span
+                    className={`rounded-xl border px-4 py-2 text-sm ${
+                      coverage.unrated > 0
+                        ? 'border-amber-500/40 bg-amber-500/10 text-amber-200'
+                        : 'border-neutral-700/50 bg-neutral-900/50 text-neutral-400'
+                    }`}
+                  >
+                    {format(t.coverageUnrated, { count: coverage.unrated })}
+                  </span>
+                </div>
+
+                {coverage.samples.length > 0 && (
+                  <div className="overflow-x-auto border border-neutral-700/50 rounded-xl">
+                    <table className="w-full text-sm">
+                      <thead className="bg-neutral-900/50 text-neutral-400">
+                        <tr>
+                          <Th className="text-left px-4 py-2.5">
+                            {t.coverageColMatch}
+                          </Th>
+                          <Th className="text-left px-4 py-2.5">
+                            {t.coverageColReason}
+                          </Th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-neutral-700/50">
+                        {coverage.samples.map((s) => (
+                          <tr
+                            key={s.matchId}
+                            className="hover:bg-neutral-700/20"
+                          >
+                            <td className="px-4 py-2.5">
+                              {s.team1 ?? '—'}{' '}
+                              <span className="text-neutral-500">vs</span>{' '}
+                              {s.team2 ?? '—'}
+                            </td>
+                            <td className="px-4 py-2.5 text-neutral-300">
+                              {s.reason === 'no_participants'
+                                ? t.coverageReasonNoParticipants
+                                : s.reason === 'one_side_only'
+                                  ? t.coverageReasonOneSide
+                                  : t.coverageReasonUnknown}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </>
+            )}
           </section>
 
           {/* --- Top leaderboard --- */}

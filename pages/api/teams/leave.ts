@@ -28,7 +28,9 @@ export default withAuthRoute(async function handler(
     return;
 
   const userId = user.id;
-  const tenantId = await resolveTenantIdForUserRequestAsync(req, { authUserId: userId });
+  const tenantId = await resolveTenantIdForUserRequestAsync(req, {
+    authUserId: userId,
+  });
 
   // Trouver le membership
   const { data: membership, error: membershipErr } = await supabaseAdmin
@@ -105,7 +107,10 @@ export default withAuthRoute(async function handler(
       .eq('tenant_id', tenantId);
 
     if (deleteErr) {
-      logger.error('[teams/leave] delete membership (dissolve) error:', deleteErr);
+      logger.error(
+        '[teams/leave] delete membership (dissolve) error:',
+        deleteErr
+      );
       return res.status(500).json({ error: 'Failed to leave team.' });
     }
 
@@ -132,9 +137,7 @@ export default withAuthRoute(async function handler(
         discordVoiceChannelId: team?.discord_voice_channel_id ?? null,
       },
       tenantId
-    ).catch((e) =>
-      logger.error('[botEvents] team.dissolved emit error:', e)
-    );
+    ).catch((e) => logger.error('[botEvents] team.dissolved emit error:', e));
 
     return res.status(200).json({
       success: true,

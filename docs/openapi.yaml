@@ -29050,6 +29050,67 @@ paths:
           description: Méthode non autorisée.
         '429':
           $ref: '#/components/responses/RateLimited'
+  /api/admin/ratings/coverage:
+    get:
+      summary: Couverture du rating — matchs terminés notés vs non notés, et pourquoi.
+      description: |
+        Un match terminé ne produit de rating que si les DEUX équipes ont des
+        participants snapshottés (match_participants), c.-à-d. des membres
+        rattachés à un compte. Sinon il reste non noté SANS erreur. Cet endpoint
+        expose l'écart et sa cause, sur les 20 premiers matchs concernés.
+      operationId: adminRatingsCoverage
+      tags:
+        - admin/ratings
+      security:
+        - StaffSession: []
+      responses:
+        '200':
+          description: Couverture du rating pour le tenant courant.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - finished
+                  - rated
+                  - unrated
+                  - samples
+                properties:
+                  finished:
+                    type: integer
+                  rated:
+                    type: integer
+                  unrated:
+                    type: integer
+                  samples:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        matchId:
+                          type: string
+                          format: uuid
+                        reason:
+                          type: string
+                          enum: [no_participants, one_side_only, unknown]
+                        team1:
+                          type: string
+                          nullable: true
+                        team2:
+                          type: string
+                          nullable: true
+                        completedAt:
+                          type: string
+                          format: date-time
+                          nullable: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '405':
+          description: Méthode non autorisée.
+        '429':
+          $ref: '#/components/responses/RateLimited'
   /api/players/leaderboard:
     get:
       summary: Classement des joueurs par rating Glicko-2 (games_played > 0).

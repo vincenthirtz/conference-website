@@ -305,7 +305,18 @@
     "colPlayer": "Joueur",
     "colRating": "Rating",
     "colGames": "Parties",
-    "colWinLoss": "V / D"
+    "colWinLoss": "V / D",
+    "coverageHeading": "Couverture du rating",
+    "coverageDesc": "Un match terminé ne produit un rating que si les DEUX équipes ont des membres rattachés à un compte. Sinon il reste non noté, sans erreur — c'est ici qu'on le voit.",
+    "coverageUnavailable": "Couverture indisponible pour le moment.",
+    "coverageFinished": "{count} match(s) terminé(s)",
+    "coverageRated": "{count} noté(s)",
+    "coverageUnrated": "{count} non noté(s)",
+    "coverageColMatch": "Match",
+    "coverageColReason": "Pourquoi",
+    "coverageReasonNoParticipants": "Aucun roster rattaché (les deux équipes)",
+    "coverageReasonOneSide": "Roster rattaché d'un seul côté",
+    "coverageReasonUnknown": "Rosters présents mais aucun rating — à investiguer"
   },
   "adminRecycleBin": {
     "pageTitle": "Admin – Corbeille",

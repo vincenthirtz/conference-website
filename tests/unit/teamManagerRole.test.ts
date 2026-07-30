@@ -26,7 +26,12 @@ import {
 } from './__helpers__/supabaseMock';
 
 import { invalidateStaffCache } from '../../utils/staff';
-import { getManagedTeam } from '../../utils/teams/managementAccess';
+import {
+  getManagedTeam,
+  accessHasPermission,
+  assertTeamPermission,
+} from '../../utils/teams/managementAccess';
+import { TEAM_PERMISSION_VALUES } from '../../utils/teamRoles';
 
 import addMemberHandler from '../../pages/api/teams/add-member';
 import updateRoleHandler from '../../pages/api/teams/update-member-role';
@@ -137,22 +142,68 @@ beforeEach(() => {
  * ---------------------------------------------------------*/
 
 describe('getManagedTeam helper', () => {
-  it('returns isCaptain=true for the captain', async () => {
+  it('returns isCaptain=true for the captain, with ALL permissions', async () => {
     const access = await getManagedTeam(CAPTAIN_ID);
-    expect(access).toEqual({
+    expect(access).toMatchObject({
       teamId: TEAM_ID,
       isCaptain: true,
       isManager: false,
     });
+    // La capitaine a toutes les permissions par définition du rôle.
+    expect(new Set(access!.permissions)).toEqual(
+      new Set(TEAM_PERMISSION_VALUES)
+    );
   });
 
   it('returns isManager=true for a member with role=manager', async () => {
     const access = await getManagedTeam(MANAGER_ID);
-    expect(access).toEqual({
+    expect(access).toMatchObject({
       teamId: TEAM_ID,
       isCaptain: false,
       isManager: true,
     });
+    // Le rôle `manager` par défaut porte l'intégralité du catalogue.
+    expect(new Set(access!.permissions)).toEqual(
+      new Set(TEAM_PERMISSION_VALUES)
+    );
+  });
+
+  // R2 — le cœur du correctif : un rôle à privilèges PARTIELS n'ouvre plus
+  // toute la gestion d'équipe. Avant, `isManager` étant vrai dès UNE
+  // permission, les ~24 routes gated accordaient tout.
+  it('n’expose QUE les permissions du rôle (privilèges partiels)', async () => {
+    store.site_settings = [
+      {
+        key: 'team_roles',
+        value: JSON.stringify([
+          { value: 'player', label: 'Player', permissions: [] },
+          {
+            value: 'coach',
+            label: 'Coach',
+            permissions: ['manage_scrims'],
+          },
+        ]),
+      },
+    ] as any;
+    store.team_members = [
+      {
+        id: 'tm-coach',
+        team_id: TEAM_ID,
+        user_id: MANAGER_ID,
+        role: 'coach',
+      },
+    ] as any;
+
+    const access = await getManagedTeam(MANAGER_ID);
+    expect(access?.isManager).toBe(true);
+    expect(access?.permissions).toEqual(['manage_scrims']);
+    expect(accessHasPermission(access, 'manage_scrims')).toBe(true);
+    expect(accessHasPermission(access, 'manage_roster')).toBe(false);
+    // La garde de route renvoie un 403 explicite sur la permission manquante.
+    expect(assertTeamPermission(access, 'manage_roster')).toMatchObject({
+      status: 403,
+    });
+    expect(assertTeamPermission(access, 'manage_scrims')).toBeNull();
   });
 
   it('returns null for a plain player (no role=manager)', async () => {

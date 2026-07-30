@@ -25,7 +25,9 @@ export default withAuthRoute(async function handler(
     return;
 
   const userId = user.id;
-  const tenantId = await resolveTenantIdForUserRequestAsync(req, { authUserId: userId });
+  const tenantId = await resolveTenantIdForUserRequestAsync(req, {
+    authUserId: userId,
+  });
   const { demandeId } = req.body || {};
 
   if (!demandeId || typeof demandeId !== 'string' || !isValidUUID(demandeId)) {

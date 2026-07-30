@@ -49,7 +49,9 @@ export default withAuthRoute(async function handler(
     return;
 
   const userId = user.id;
-  const tenantId = await resolveTenantIdForUserRequestAsync(req, { authUserId: userId });
+  const tenantId = await resolveTenantIdForUserRequestAsync(req, {
+    authUserId: userId,
+  });
 
   if (req.method === 'GET') {
     const { data: latest, error: getErr } = await supabaseAdmin
@@ -90,7 +92,10 @@ export default withAuthRoute(async function handler(
       .maybeSingle();
 
     if (staffErr) {
-      logger.error('[demandes/caster-application] staff check error:', staffErr);
+      logger.error(
+        '[demandes/caster-application] staff check error:',
+        staffErr
+      );
       return res.status(500).json({ error: 'Verification error.' });
     }
 

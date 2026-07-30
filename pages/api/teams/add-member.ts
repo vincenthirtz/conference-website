@@ -12,6 +12,7 @@ import {
 } from '@/utils/teams/rosterLock';
 import {
   getManagedTeam,
+  assertTeamPermission,
   TEAM_MANAGEMENT_FORBIDDEN,
 } from '@/utils/teams/managementAccess';
 import {
@@ -57,13 +58,20 @@ export default withAuthRoute(async function handler(
   )
     return;
 
-  const tenantId = await resolveTenantIdForUserRequestAsync(req, { authUserId: user.id });
+  const tenantId = await resolveTenantIdForUserRequestAsync(req, {
+    authUserId: user.id,
+  });
 
   // Check if user can manage a team (captain OR manager)
   const access = await getManagedTeam(user.id, tenantId);
   if (!access) {
     return res.status(403).json({ error: TEAM_MANAGEMENT_FORBIDDEN });
   }
+
+  // Permission fine (R2) : le rôle doit couvrir `manage_roster` — un rôle
+  // à privilèges partiels n'ouvre plus l'ensemble de la gestion d'équipe.
+  const denied = assertTeamPermission(access, 'manage_roster');
+  if (denied) return res.status(denied.status).json({ error: denied.error });
 
   const { data: captainTeam } = await supabaseAdmin
     .from('teams')
@@ -133,7 +141,9 @@ export default withAuthRoute(async function handler(
     });
 
     if (!insertResult.ok) {
-      return res.status(insertResult.status).json({ error: insertResult.error });
+      return res
+        .status(insertResult.status)
+        .json({ error: insertResult.error });
     }
     const member = { id: insertResult.memberId };
     const memberPayload = { role: validatedRole };
@@ -167,10 +177,7 @@ export default withAuthRoute(async function handler(
         );
         if (!result.success) {
           emailWarning = `Email d'invitation non envoye (${result.error ?? 'raison inconnue'}).`;
-          logger.error(
-            '[add-member] team join email failed:',
-            result.error
-          );
+          logger.error('[add-member] team join email failed:', result.error);
         }
       } catch (err: unknown) {
         emailWarning = "Email d'invitation non envoye (erreur reseau).";

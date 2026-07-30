@@ -21,11 +21,10 @@ import {
   rosterLockErrorMessage,
 } from '@/utils/teams/rosterLock';
 import { mapTeamRpcError } from '@/utils/teams/rpcErrors';
-import { getManagedTeam } from '@/utils/teams/managementAccess';
 import {
-  loadTeamRolesFromSupabase,
-  roleHasPermission,
-} from '@/utils/teamRoles';
+  getManagedTeam,
+  accessHasPermission,
+} from '@/utils/teams/managementAccess';
 import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
 import { emitRoleSyncEvent } from '@/utils/botRoleSync';
 
@@ -156,27 +155,17 @@ export default withAuthRoute(async function handler(
   let bootstrapTeamId: string | null = null;
   if (!team) {
     const access = await getManagedTeam(userId, tenantId);
-    if (access?.isManager) {
-      const roles = await loadTeamRolesFromSupabase(supabaseAdmin);
+    // `permissions` est désormais exposé par getManagedTeam (R2) : plus besoin
+    // de relire le rôle du membre ni la config des rôles ici.
+    if (accessHasPermission(access, 'manage_roster')) {
       const { data: managedTeamRow } = await supabaseAdmin
         .from('teams')
         .select('id, captain_id')
-        .eq('id', access.teamId)
+        .eq('id', access!.teamId)
         .eq('tenant_id', tenantId)
-        .maybeSingle();
-      const { data: membership } = await supabaseAdmin
-        .from('team_members')
-        .select('role')
-        .eq('team_id', access.teamId)
-        .eq('tenant_id', tenantId)
-        .eq('user_id', userId)
         .maybeSingle();
 
-      if (
-        managedTeamRow &&
-        !managedTeamRow.captain_id &&
-        roleHasPermission(roles, membership?.role, 'manage_roster')
-      ) {
+      if (managedTeamRow && !managedTeamRow.captain_id) {
         bootstrapTeamId = managedTeamRow.id as string;
       }
     }

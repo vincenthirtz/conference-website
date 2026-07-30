@@ -22,7 +22,9 @@ export default withAuthRoute(async function handler(
     return;
 
   const userId = user.id;
-  const tenantId = await resolveTenantIdForUserRequestAsync(req, { authUserId: userId });
+  const tenantId = await resolveTenantIdForUserRequestAsync(req, {
+    authUserId: userId,
+  });
 
   if (req.method === 'GET') {
     // Récupérer les demandes de capitaine de l'utilisateur

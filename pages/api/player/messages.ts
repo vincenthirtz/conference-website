@@ -10,8 +10,10 @@ import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
 import {
   getManagedTeam,
+  assertTeamPermission,
   TEAM_MANAGEMENT_FORBIDDEN,
 } from '@/utils/teams/managementAccess';
+import type { TeamPermission } from '@/utils/teamRoles';
 import { resolveTenantIdForUserRequest } from '@/utils/tenant';
 
 import { logger } from '../../../utils/logger';
@@ -30,12 +32,26 @@ type CaptainTeam = { id: string; captain_id: string | null; name: string };
 async function loadCaptainTeam(
   res: NextApiResponse,
   user: User,
-  tenantId: string
+  tenantId: string,
+  /**
+   * Permission fine (R2) exigée pour l'opération. La LECTURE des conversations
+   * reste ouverte à toute personne qui gère l'équipe ; seul l'ENVOI demande
+   * `send_captain_messages`.
+   */
+  permission?: TeamPermission
 ): Promise<CaptainTeam | null> {
   const access = await getManagedTeam(user.id, tenantId);
   if (!access) {
     res.status(403).json({ error: TEAM_MANAGEMENT_FORBIDDEN });
     return null;
+  }
+
+  if (permission) {
+    const denied = assertTeamPermission(access, permission);
+    if (denied) {
+      res.status(denied.status).json({ error: denied.error });
+      return null;
+    }
   }
 
   const { data: myTeam } = await supabaseAdmin
@@ -153,7 +169,13 @@ export default withAuthRoute(async function handler(
   }
 
   if (req.method === 'POST') {
-    const team = await loadCaptainTeam(res, user, tenantId);
+    // Envoyer un message d'équipe demande `send_captain_messages`.
+    const team = await loadCaptainTeam(
+      res,
+      user,
+      tenantId,
+      'send_captain_messages'
+    );
     if (!team) return;
 
     const body = req.body as SendMessageBody;

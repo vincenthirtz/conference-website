@@ -8,6 +8,7 @@ import { isValidUUID } from '@/utils/apiHelpers';
 import { withAuthRoute } from '@/utils/staff';
 import {
   getManagedTeam,
+  assertTeamPermission,
   TEAM_MANAGEMENT_FORBIDDEN,
 } from '@/utils/teams/managementAccess';
 import {
@@ -62,6 +63,10 @@ export default withAuthRoute(async function handler(
     return res.status(403).json({ error: TEAM_MANAGEMENT_FORBIDDEN });
   }
 
+  // Permission fine (R2) : le rôle doit couvrir `manage_roster`.
+  const denied = assertTeamPermission(access, 'manage_roster');
+  if (denied) return res.status(denied.status).json({ error: denied.error });
+
   const { memberId } = req.body || {};
   if (!memberId || typeof memberId !== 'string' || !isValidUUID(memberId)) {
     return res.status(400).json({ error: 'memberId (UUID) requis.' });
@@ -93,10 +98,7 @@ export default withAuthRoute(async function handler(
   // Anti-escalation : un membre privilegie (role accordant des permissions)
   // ne peut etre retire que par le capitaine.
   const teamRoles = await loadTeamRolesFromSupabase(supabaseAdmin);
-  if (
-    roleHasAnyPermission(teamRoles, member.role) &&
-    !access.isCaptain
-  ) {
+  if (roleHasAnyPermission(teamRoles, member.role) && !access.isCaptain) {
     return res.status(403).json({
       error: 'Seul le capitaine peut retirer un autre membre privilégié.',
     });

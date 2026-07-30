@@ -22,6 +22,7 @@ import { isValidUUID, validateRole } from '@/utils/apiHelpers';
 import { withAuthRoute, getStaffByUserId } from '@/utils/staff';
 import {
   getManagedTeam,
+  assertTeamPermission,
   TEAM_MANAGEMENT_FORBIDDEN,
 } from '@/utils/teams/managementAccess';
 import {
@@ -51,13 +52,20 @@ export default withAuthRoute(async function handler(
     return;
 
   const userId = user.id;
-  const tenantId = await resolveTenantIdForUserRequestAsync(req, { authUserId: userId });
+  const tenantId = await resolveTenantIdForUserRequestAsync(req, {
+    authUserId: userId,
+  });
 
   // Acces : capitaine ou manager d'une equipe
   const access = await getManagedTeam(userId, tenantId);
   if (!access) {
     return res.status(403).json({ error: TEAM_MANAGEMENT_FORBIDDEN });
   }
+
+  // Permission fine (R2) : le rôle doit couvrir `manage_roster` — un rôle
+  // à privilèges partiels n'ouvre plus l'ensemble de la gestion d'équipe.
+  const denied = assertTeamPermission(access, 'manage_roster');
+  if (denied) return res.status(denied.status).json({ error: denied.error });
 
   const { memberId } = req.body || {};
   if (!memberId || typeof memberId !== 'string' || !isValidUUID(memberId)) {
@@ -70,11 +78,9 @@ export default withAuthRoute(async function handler(
     'is_substitute' in (req.body || {}) && req.body.is_substitute != null;
 
   if (!hasRole && !hasBattleTag && !hasIsSubstitute) {
-    return res
-      .status(400)
-      .json({
-        error: 'Aucun champ a mettre a jour (role/battle_tag/is_substitute).',
-      });
+    return res.status(400).json({
+      error: 'Aucun champ a mettre a jour (role/battle_tag/is_substitute).',
+    });
   }
 
   // Charger le membre cible et verifier qu'il appartient a l'equipe geree

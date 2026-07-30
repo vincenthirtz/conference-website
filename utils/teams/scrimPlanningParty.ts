@@ -6,7 +6,7 @@
 // (un caster qui gère aussi team1 peint en tant que team1). Un utilisateur qui
 // ne gère aucune des deux équipes et n'est pas staff → null (403 côté route).
 
-import { getManagedTeam } from './managementAccess';
+import { getManagedTeam, accessHasPermission } from './managementAccess';
 import { getStaffRole } from '@/utils/staff';
 import type { PlanningParty } from './scrimPlanningOverlap';
 
@@ -21,9 +21,14 @@ export async function resolvePlanningParty(
   planning: PlanningTeams,
   tenantId: string
 ): Promise<PlanningParty | null> {
+  // Permission fine (R2) : peindre/valider des créneaux relève de
+  // `manage_scrims`. Un rôle d'équipe sans cette permission ne parle pas au nom
+  // de l'équipe sur une grille — même s'il gère le roster par ailleurs.
   const managed = await getManagedTeam(userId, tenantId);
-  if (managed?.teamId === planning.team1_id) return 'team1';
-  if (managed?.teamId === planning.team2_id) return 'team2';
+  if (accessHasPermission(managed, 'manage_scrims')) {
+    if (managed?.teamId === planning.team1_id) return 'team1';
+    if (managed?.teamId === planning.team2_id) return 'team2';
+  }
 
   const role = await getStaffRole(userId);
   if (role) return 'staff';

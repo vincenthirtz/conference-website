@@ -12,6 +12,7 @@ import { escapePostgrestValue } from '@/utils/apiHelpers';
 import { withAuthRoute } from '@/utils/staff';
 import {
   getManagedTeam,
+  assertTeamPermission,
   TEAM_MANAGEMENT_FORBIDDEN,
 } from '@/utils/teams/managementAccess';
 import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
@@ -66,6 +67,11 @@ export default withAuthRoute(async function handler(
   if (!access) {
     return res.status(403).json({ error: TEAM_MANAGEMENT_FORBIDDEN });
   }
+
+  // Permission fine (R2) : le rôle doit couvrir `manage_roster` — un rôle
+  // à privilèges partiels n'ouvre plus l'ensemble de la gestion d'équipe.
+  const denied = assertTeamPermission(access, 'manage_roster');
+  if (denied) return res.status(denied.status).json({ error: denied.error });
 
   const { q } = req.query;
   const query = typeof q === 'string' ? q.trim() : '';
