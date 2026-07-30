@@ -24,6 +24,10 @@ export const CASTER_SCENE_TYPES = [
   'player',
   'leaderboard',
   'standings',
+  // `camera` est WEB-ONLY (add_caster_camera_scene_type.sql) : l'app desktop
+  // n'a ni son formulaire ni son overlay local. Ne pas confondre avec `webcam`,
+  // qui ouvre une caméra LOCALE de la machine OBS.
+  'camera',
 ] as const;
 
 export type CasterSceneType = (typeof CASTER_SCENE_TYPES)[number];
@@ -169,6 +173,38 @@ export type WebcamSceneData = {
   cam2: WebcamCamConfig;
   shape: string;
   mirror: boolean;
+};
+
+/**
+ * Scène `camera` — captation d'un opérateur DISTANT, intégrée par un lien
+ * (VDO.Ninja, chaîne Twitch/YouTube, flux HLS, fichier MP4). Le type de rendu
+ * est déduit de l'URL par `utils/caster/cameraSource.ts` : rien n'est stocké
+ * d'autre que le lien et l'habillage, pour qu'un simple changement d'URL suffise
+ * à basculer de source à l'antenne.
+ *
+ * ≠ `WebcamSceneData`, qui ouvre un périphérique local de la machine OBS.
+ */
+export type CameraSceneData = {
+  /** Lien fourni par l'opérateur, tel qu'il l'a communiqué. */
+  url: string;
+  /** Libellé affiché en incrustation ('' = masqué). */
+  label: string;
+  /** Cadrage du flux dans la zone : couvrir (rogne) ou contenir (bandes). */
+  fit: 'cover' | 'contain';
+  shape: string;
+  mirror: boolean;
+  /**
+   * Plein cadre 1920×1080 (caméra de salle) ou vignette d'angle (opérateur en
+   * incrustation par-dessus le jeu).
+   */
+  layout: 'fullscreen' | 'corner';
+  /** Coin de la vignette quand `layout === 'corner'`. */
+  corner: 'tl' | 'tr' | 'bl' | 'br';
+  /**
+   * Son de la source. Faux par défaut : l'audio du programme vient d'OBS, et
+   * deux sources audio simultanées créent un écho à l'antenne.
+   */
+  audio: boolean;
 };
 
 // ---- Types de scènes « données du site » (lot 6) ---------------------------

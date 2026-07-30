@@ -30,19 +30,38 @@ const CONNECT_SRC_CASTER_COCKPIT =
   CONNECT_SRC_BASE +
   ' ws://localhost:4455 ws://127.0.0.1:4455 wss://irc-ws.chat.twitch.tv wss://eventsub.wss.twitch.tv';
 
+// Scène `camera` du cockpit caster : captation d'un opérateur DISTANT intégrée
+// par un lien. Deux élargissements, appliqués UNIQUEMENT aux surfaces caster
+// (cockpit + overlays), cf. isCasterSurface plus bas :
+//   - frame-src + vdo.ninja : WebRTC sub-seconde, seule option réellement temps
+//     réel pour un caméraman distant (Twitch/YouTube sont déjà autorisés, mais
+//     avec 5-15 s de latence).
+//   - media-src + https: : un flux HLS/MP4 vient d'un serveur de captation dont
+//     l'hôte n'est pas connu à l'avance (il change d'un événement à l'autre).
+//     Même posture que `img-src ... https:` déjà en place : ce sont des médias
+//     affichés, pas du script — et la portée reste limitée aux pages caster.
+const FRAME_SRC_BASE =
+  "frame-src 'self' https://player.twitch.tv https://www.twitch.tv https://www.youtube.com https://challenges.cloudflare.com";
+const FRAME_SRC_CASTER = `${FRAME_SRC_BASE} https://vdo.ninja https://*.vdo.ninja`;
+const MEDIA_SRC_BASE = `media-src 'self' https://*.supabase.co`;
+const MEDIA_SRC_CASTER = `${MEDIA_SRC_BASE} https: blob:`;
+
 // Everything between the nonce and the (variable) frame-ancestors directive.
-// Precomputed for both connect-src variants (cf. buildCspMid).
-const buildCspMid = (connectSrc: string) =>
+// Precomputed for each variant (cf. buildCspMid).
+const buildCspMid = (
+  connectSrc: string,
+  opts: { casterMedia?: boolean } = {}
+) =>
   "' https://challenges.cloudflare.com; " +
   [
     `style-src 'self' 'unsafe-inline'`,
     `img-src 'self' data: blob: https:`,
     connectSrc,
-    `media-src 'self' https://*.supabase.co`,
+    opts.casterMedia ? MEDIA_SRC_CASTER : MEDIA_SRC_BASE,
     "font-src 'self'",
     // player.twitch.tv = lecteur vidéo (site public + régie) ; www.twitch.tv =
     // embed du chat Twitch (console régie broadcast live). Hosts distincts.
-    "frame-src 'self' https://player.twitch.tv https://www.twitch.tv https://www.youtube.com https://challenges.cloudflare.com",
+    opts.casterMedia ? FRAME_SRC_CASTER : FRAME_SRC_BASE,
     // PWA /admin: allow Service Worker (/sw.js) and Web App Manifest from same origin.
     "worker-src 'self'",
     "manifest-src 'self'",
@@ -53,7 +72,26 @@ const buildCspMid = (connectSrc: string) =>
   '; ';
 
 const CSP_STATIC_MID = buildCspMid(CONNECT_SRC_BASE);
-const CSP_CASTER_COCKPIT_MID = buildCspMid(CONNECT_SRC_CASTER_COCKPIT);
+// Cockpit : connect-src élargi (OBS/IRC/EventSub) ET médias caméra.
+const CSP_CASTER_COCKPIT_MID = buildCspMid(CONNECT_SRC_CASTER_COCKPIT, {
+  casterMedia: true,
+});
+// Overlays : mêmes médias caméra que le cockpit — c'est là que le flux est rendu
+// — PLUS `https:` en connect-src, sans quoi la scène `camera` ne lirait pas un
+// flux HLS tiers : hls.js télécharge manifeste et segments en XHR, donc soumis à
+// connect-src (et non à media-src, qui ne couvre que le chargement natif par
+// <video>). Sans cet ajout, seul un .m3u8 same-origin fonctionnerait.
+//
+// Portée du risque : les overlays sont des pages PUBLIQUES sans secret (elles
+// lisent `caster_scenes` avec la clé anon, publiable par conception) et sans
+// aucune entrée utilisateur — la donnée affichée est écrite par du staff
+// authentifié. Leur surface autorise déjà `img-src https:` et `media-src https:`.
+// L'élargissement reste scopé à `/overlay/*` : ni le cockpit, ni l'admin, ni le
+// site public ne le reçoivent.
+const CONNECT_SRC_OVERLAY = `${CONNECT_SRC_BASE} https:`;
+const CSP_OVERLAY_MID = buildCspMid(CONNECT_SRC_OVERLAY, {
+  casterMedia: true,
+});
 
 export function proxy(request: NextRequest) {
   // Generate a random nonce for each request
@@ -85,14 +123,20 @@ export function proxy(request: NextRequest) {
   // wss:// et casserait la connexion à l'OBS local. Scopé au strict préfixe.
   const isCasterCockpit = request.nextUrl.pathname.startsWith('/admin/caster');
 
-  // Only the nonce, connect-src variant and frame-ancestors vary per request;
-  // the rest is hoisted to module-level constants above. Output is
-  // byte-identical to the previous array-join build for every non-cockpit
-  // route (see CSP_STATIC_HEAD / CSP_STATIC_MID).
+  // Only the nonce, the CSP variant and frame-ancestors vary per request; the
+  // rest is hoisted to module-level constants above. Output is byte-identical
+  // to the previous array-join build for every route outside the cockpit and
+  // the overlays (see CSP_STATIC_HEAD / CSP_STATIC_MID).
+  const cspMid = isCasterCockpit
+    ? CSP_CASTER_COCKPIT_MID
+    : isOverlay
+      ? CSP_OVERLAY_MID
+      : CSP_STATIC_MID;
+
   const csp =
     CSP_STATIC_HEAD +
     nonce +
-    (isCasterCockpit ? CSP_CASTER_COCKPIT_MID : CSP_STATIC_MID) +
+    cspMid +
     frameAncestors +
     (isCasterCockpit ? '' : '; upgrade-insecure-requests');
 

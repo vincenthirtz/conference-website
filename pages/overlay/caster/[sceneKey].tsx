@@ -20,11 +20,13 @@
 //   récente du caster) : page vide transparente — jamais de 404 ni de texte,
 //   ça partirait à l'antenne.
 //
-// Les 12 types de scènes sont portés — un composant par type sous
+// Les 13 types de scènes sont portés — un composant par type sous
 // components/overlay/caster/ : lot 2 pour match + starting / pause / results /
 // end / mvp / scrim / webcam, lot 6 pour bracket / player / leaderboard /
 // standings (ces 4 dernières ne stockent qu'une référence et vont chercher
-// leurs données sur l'API publique du site, en same-origin).
+// leurs données sur l'API publique du site, en same-origin), lot 7 pour
+// `camera` (captation d'un opérateur distant intégrée par un lien — WEB-ONLY,
+// l'app desktop n'a pas cet overlay).
 
 import Head from 'next/head';
 import { useRouter } from 'next/router';
@@ -49,6 +51,7 @@ import { CasterBracketOverlay } from '@/components/overlay/caster/CasterBracketO
 import { CasterPlayerOverlay } from '@/components/overlay/caster/CasterPlayerOverlay';
 import { CasterLeaderboardOverlay } from '@/components/overlay/caster/CasterLeaderboardOverlay';
 import { CasterStandingsOverlay } from '@/components/overlay/caster/CasterStandingsOverlay';
+import { CasterCameraOverlay } from '@/components/overlay/caster/CasterCameraOverlay';
 
 /** Filet de sécurité si le socket Realtime lâche en cours de show. */
 const POLL_MS = 15_000;
@@ -87,6 +90,10 @@ function SceneOverlay({ scene }: { scene: CasterScene }) {
       return <CasterLeaderboardOverlay data={scene.data} />;
     case 'standings':
       return <CasterStandingsOverlay data={scene.data} />;
+    // `camera` = captation d'un opérateur DISTANT par un lien (WEB-ONLY). Ne
+    // pas confondre avec `webcam`, caméra LOCALE de la machine OBS.
+    case 'camera':
+      return <CasterCameraOverlay data={scene.data} />;
     default:
       return null;
   }

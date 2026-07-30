@@ -90,6 +90,7 @@ const DEFAULT_SCENE_NAMES: Record<CasterSceneType, string> = {
   player: 'Joueuse',
   leaderboard: 'Classement',
   standings: 'Classement final',
+  camera: 'Caméra opérateur',
 };
 
 /**
@@ -218,6 +219,20 @@ export function defaultSceneData(
         tournamentName: '',
         socials,
         hashtag: DEFAULT_HASHTAG,
+      };
+    case 'camera':
+      // Vignette en bas à droite et son COUPÉ par défaut : c'est le réglage qui
+      // ne peut pas nuire à l'antenne si la scène est activée par erreur (pas de
+      // plein cadre inattendu, pas d'écho audio avec le son du programme).
+      return {
+        url: '',
+        label: '',
+        fit: 'cover',
+        shape: 'rounded',
+        mirror: false,
+        layout: 'corner',
+        corner: 'br',
+        audio: false,
       };
   }
 }

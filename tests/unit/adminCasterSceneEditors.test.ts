@@ -23,6 +23,7 @@ import MvpSceneEditor from '@/components/admin/caster/MvpSceneEditor';
 import ScrimSceneEditor from '@/components/admin/caster/ScrimSceneEditor';
 import WebcamSceneEditor from '@/components/admin/caster/WebcamSceneEditor';
 import BracketSceneEditor from '@/components/admin/caster/BracketSceneEditor';
+import CameraSceneEditor from '@/components/admin/caster/CameraSceneEditor';
 import PlayerSceneEditor from '@/components/admin/caster/PlayerSceneEditor';
 import LeaderboardSceneEditor from '@/components/admin/caster/LeaderboardSceneEditor';
 import StandingsSceneEditor from '@/components/admin/caster/StandingsSceneEditor';
@@ -226,6 +227,33 @@ const CASES: Array<{
     testid: 'caster-standings-editor',
     markers: ['caster-standings-picker', 'PODIUM'],
   },
+  // ---- Scène `camera` : captation d'un opérateur DISTANT par un lien --------
+  {
+    type: 'camera',
+    Editor: CameraSceneEditor,
+    data: {
+      url: 'https://vdo.ninja/?view=wc7k2m9x',
+      label: 'Caméra salle',
+      fit: 'contain',
+      shape: 'circle',
+      mirror: true,
+      layout: 'corner',
+      corner: 'tl',
+      audio: true,
+    },
+    testid: 'caster-camera-editor',
+    markers: [
+      'caster-camera-url',
+      'https://vdo.ninja/?view=wc7k2m9x',
+      'Caméra salle',
+      // Source reconnue ⇒ pastille de latence, pas de bandeau « non reconnu ».
+      'caster-camera-detected',
+      'caster-camera-latency',
+      // Coin visible car layout=corner, et audio coché ⇒ avertissement d'écho.
+      'caster-camera-corner',
+      'caster-camera-audio-warning',
+    ],
+  },
 ];
 
 describe('éditeurs de scènes caster (rendu SSR)', () => {
@@ -267,6 +295,67 @@ describe('éditeurs de scènes caster (rendu SSR)', () => {
   it("bracket : pas de lien d'aperçu sans tournoi sélectionné", () => {
     const html = render(BracketSceneEditor, scene('bracket', { title: 'X' }));
     expect(html).not.toContain('caster-bracket-preview');
+  });
+});
+
+/**
+ * Scène `camera` : le retour sur le LIEN est la fonction critique de l'éditeur
+ * (un lien non reconnu = cadre noir à l'antenne, un lien Twitch = 15 s de
+ * retard). Chacun des trois états du champ est vérifié.
+ */
+describe('CameraSceneEditor (retour sur le lien de captation)', () => {
+  const renderCamera = (data: Record<string, unknown>) =>
+    render(CameraSceneEditor, scene('camera', data));
+
+  it('champ vide : aide aux formats, aucun bandeau d’alerte', () => {
+    const html = renderCamera({});
+    expect(html).toContain('caster-camera-empty-hint');
+    expect(html).not.toContain('caster-camera-unknown');
+    expect(html).not.toContain('caster-camera-detected');
+  });
+
+  it('lien non reconnu : bandeau ambre + liste des formats acceptés', () => {
+    const html = renderCamera({ url: 'https://example.com/ma-page' });
+    expect(html).toContain('caster-camera-unknown');
+    expect(html).toContain('Lien non reconnu');
+    expect(html).toContain('vdo.ninja/?view=salle');
+    expect(html).not.toContain('caster-camera-detected');
+  });
+
+  it('lien Twitch : latence élevée signalée comme inexploitable en direct', () => {
+    const html = renderCamera({ url: 'twitch.tv/womens_cup' });
+    expect(html).toContain('caster-camera-detected');
+    expect(html).toContain('caster-camera-latency-warning');
+    // L'URL normalisée (player + parent) est montrée telle qu'utilisée à l'antenne.
+    expect(html).toContain('player.twitch.tv');
+  });
+
+  it('lien VDO.Ninja : temps réel, aucun avertissement de latence', () => {
+    const html = renderCamera({ url: 'https://vdo.ninja/?view=wc7k2m9x' });
+    expect(html).toContain('caster-camera-detected');
+    expect(html).not.toContain('caster-camera-latency-warning');
+  });
+
+  it('plein cadre : le sélecteur de coin disparaît', () => {
+    const corner = renderCamera({ layout: 'corner' });
+    expect(corner).toContain('caster-camera-corner');
+    const full = renderCamera({ layout: 'fullscreen' });
+    expect(full).not.toContain('caster-camera-corner');
+  });
+
+  it('audio décoché par défaut : pas d’avertissement d’écho, mais le rappel', () => {
+    const html = renderCamera({ url: 'https://vdo.ninja/?view=wc1' });
+    expect(html).not.toContain('caster-camera-audio-warning');
+    expect(html).toContain('Son coupé');
+  });
+
+  it('générateur VDO.Ninja présent, sans identifiant tiré au rendu (pureté)', () => {
+    // Le tirage aléatoire vit dans un effet : en SSR l'identifiant est vide, donc
+    // aucun couple de liens n'est rendu (et le rendu reste déterministe).
+    const html = renderCamera({});
+    expect(html).toContain('caster-camera-vdo');
+    expect(html).toContain('caster-camera-vdo-room');
+    expect(html).not.toContain('caster-camera-vdo-push');
   });
 });
 

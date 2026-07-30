@@ -4,10 +4,11 @@
 //
 // Édition web de la table `caster_scenes` (Supabase, partagée avec l'app
 // desktop womenscup-caster) : liste des scènes triées par sort_order à gauche,
-// éditeur de la scène sélectionnée à droite. Les 12 types de scènes ont leur
+// éditeur de la scène sélectionnée à droite. Les 13 types de scènes ont leur
 // éditeur (registry EDITORS), y compris les 4 scènes « données du site » du
 // lot 6 (bracket, player, leaderboard, standings) qui ne stockent qu'une
-// référence et laissent l'overlay lire l'API publique.
+// référence et laissent l'overlay lire l'API publique, et la scène `camera`
+// (captation d'un opérateur DISTANT par un lien, web-only).
 //
 // Lot 7 — trois ajouts :
 //
@@ -78,6 +79,7 @@ import Tabs, {
 import CasterCollabBanner from '@/components/admin/caster/CasterCollabBanner';
 import CasterPresenceBar from '@/components/admin/caster/CasterPresenceBar';
 import BracketSceneEditor from '@/components/admin/caster/BracketSceneEditor';
+import CameraSceneEditor from '@/components/admin/caster/CameraSceneEditor';
 import EndSceneEditor from '@/components/admin/caster/EndSceneEditor';
 import LeaderboardSceneEditor from '@/components/admin/caster/LeaderboardSceneEditor';
 import MatchPickerPanel from '@/components/admin/caster/MatchPickerPanel';
@@ -160,8 +162,9 @@ function linkedMatchIdOf(scene: CasterScene): string | null {
   return typeof id === 'string' && id ? id : null;
 }
 
-// Registry type de scène → éditeur : les 8 types du lot 2 + les 4 scènes
-// « données du site » du lot 6 (bracket, player, leaderboard, standings). Le
+// Registry type de scène → éditeur : les 8 types du lot 2, les 4 scènes
+// « données du site » du lot 6 (bracket, player, leaderboard, standings) et la
+// scène `camera` (captation d'un opérateur distant par un lien, web-only). Le
 // Record est EXHAUSTIF sur CasterSceneType : ajouter un type dans types/caster.ts
 // sans son éditeur casse le typecheck (garde-fou volontaire) — le placeholder ne
 // sert plus qu'aux lignes d'un type inconnu venues d'une base plus récente.
@@ -178,6 +181,9 @@ const EDITORS: Record<CasterSceneType, ComponentType<SceneEditorProps>> = {
   player: PlayerSceneEditor,
   leaderboard: LeaderboardSceneEditor,
   standings: StandingsSceneEditor,
+  // `camera` est WEB-ONLY : captation d'un opérateur DISTANT par un lien
+  // (≠ `webcam`, qui ouvre une caméra locale de la machine OBS).
+  camera: CameraSceneEditor,
 };
 
 function CasterScenesPage({ staff }: PageProps) {
@@ -401,12 +407,13 @@ function CasterScenesPage({ staff }: PageProps) {
     player: t.typePlayer,
     leaderboard: t.typeLeaderboard,
     standings: t.typeStandings,
+    camera: t.typeCamera,
   };
   const typeLabel = (type: string) =>
     typeLabels[type as CasterSceneType] ?? type;
 
   // URL Browser Source de l'overlay hébergé — /overlay/caster/<type> pour
-  // chacun des 12 types portés (la route [sceneKey] accepte le type ou l'UUID).
+  // chacun des 13 types portés (la route [sceneKey] accepte le type ou l'UUID).
   const overlayUrl =
     selected &&
     origin &&

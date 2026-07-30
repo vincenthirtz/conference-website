@@ -111,6 +111,52 @@ describe('proxy.ts CSP — frame-ancestors scoping (T7)', () => {
   });
 });
 
+describe('proxy.ts CSP — scène caméra (surfaces caster uniquement)', () => {
+  it('autorise vdo.ninja en frame-src sur le cockpit et les overlays', () => {
+    for (const p of ['/admin/caster', '/overlay/caster/camera']) {
+      expect(getCsp(proxy(makeRequest(p) as never))['frame-src'], p).toContain(
+        'https://vdo.ninja'
+      );
+    }
+  });
+
+  it('élargit media-src aux flux https/blob sur ces mêmes surfaces', () => {
+    for (const p of ['/admin/caster', '/overlay/caster/camera']) {
+      const media = getCsp(proxy(makeRequest(p) as never))['media-src'];
+      expect(media, p).toContain('https:');
+      expect(media, p).toContain('blob:');
+    }
+  });
+
+  it('autorise connect-src https: sur les overlays (hls.js charge en XHR)', () => {
+    // Sans ça, un .m3u8 tiers échouerait alors que media-src l'autorise :
+    // hls.js passe par XHR, donc par connect-src.
+    const overlay = getCsp(
+      proxy(makeRequest('/overlay/caster/camera') as never)
+    );
+    expect(overlay['connect-src']).toContain('https:');
+  });
+
+  it('laisse le reste du site strict (ni vdo.ninja, ni media/connect élargis)', () => {
+    for (const p of ['/', '/admin/dashboard', '/embed/tournament/1/bracket']) {
+      const csp = getCsp(proxy(makeRequest(p) as never));
+      expect(csp['frame-src'], p).not.toContain('vdo.ninja');
+      // `https:` SEUL (source générique) est interdit ; `https://*.supabase.co`
+      // reste évidemment permis — d'où la regex plutôt qu'un toContain.
+      expect(csp['media-src'], p).not.toMatch(/(^|\s)https:(\s|$)/);
+      expect(csp['connect-src'], p).not.toMatch(/(^|\s)https:(\s|$)/);
+    }
+  });
+
+  it('garde le cockpit sur son connect-src OBS/IRC sans https: générique', () => {
+    // Le cockpit n'a pas besoin de lire un flux tiers en XHR (l'aperçu se fait
+    // dans une iframe /overlay/*, qui a sa propre politique).
+    const csp = getCsp(proxy(makeRequest('/admin/caster') as never));
+    expect(csp['connect-src']).toContain('ws://localhost:4455');
+    expect(csp['connect-src']).not.toMatch(/(^|\s)https:(\s|$)/);
+  });
+});
+
 describe('proxy.ts — X-Frame-Options stripping', () => {
   // netlify.toml pose un X-Frame-Options global à valeur INVALIDE
   // (`ALLOW-FROM …`), que les navigateurs traitent comme DENY. Il doit être

@@ -34,7 +34,7 @@ côté est vue en direct de l'autre. Les deux peuvent tourner en parallèle.
 
 Le schéma **réellement déployé** est celui du repo caster
 (`sql/001_add_caster_scenes.sql` : pas de `tenant_id`), dont le CHECK a été
-étendu ici aux 12 types (`extend_caster_scene_types.sql`). La migration
+étendu ici aux 13 types (`extend_caster_scene_types.sql`, puis `add_caster_camera_scene_type.sql`). La migration
 `database/migrations/add_caster_scenes.sql` de ce repo (variante multi-tenant)
 **n'a jamais été appliquée** et porte un en-tête d'avertissement. Se référer au
 schéma déployé, décrit par `types/caster.ts`.
@@ -107,7 +107,7 @@ web, sans ouvrir l'app desktop. Port de `sceneManager.js` du repo caster, sur la
 même table.
 
 - Logique **pure** : `utils/caster/sceneCrud.ts` (réordonnancement, nom de copie,
-  nom/overlay/`data` par défaut des 12 types) et `utils/caster/sceneReorder.ts`
+  nom/overlay/`data` par défaut des 13 types) et `utils/caster/sceneReorder.ts`
   (diff des `sort_order`, placement d'une copie).
 - Écritures : `hooks/useCasterScenes.ts` (`createScene`, `renameScene`,
   `duplicateScene`, `deleteScene`, `reorderScenes`), en direct dans Supabase
@@ -259,8 +259,56 @@ Windows**, **soundboard** (fichiers locaux) et **serveur Stream Deck** local.
 Ces fonctions supposent un accès système ou un serveur persistant : elles ne
 sont pas portables dans un navigateur sur un hébergement serverless.
 
-Les 12 types de scènes sont en revanche tous couverts, y compris les 4 plus
-récents — voir « Scènes “données du site” » ci-dessus.
+Les 13 types de scènes sont en revanche tous couverts, y compris les 4 scènes
+« données du site » et la scène `camera` — cette dernière n'existe QUE côté web
+(voir ci-dessous).
+
+## Scène `camera` — captation d'un opérateur distant
+
+Permet d'intégrer la captation d'un **opérateur distant** (caméraman sur site,
+second commentateur, caméra de salle) à partir d'un simple lien. À ne pas
+confondre avec la scène `webcam`, qui ouvre un périphérique **local** de la
+machine OBS via `getUserMedia` : ici rien n'est branché en local.
+
+`utils/caster/cameraSource.ts` détecte la nature du lien et le **réécrit** pour
+qu'il soit embarquable. Le choix de la source est d'abord un choix de latence :
+
+| Lien collé                         | Rendu                                            | Latence                                             |
+| ---------------------------------- | ------------------------------------------------ | --------------------------------------------------- |
+| `vdo.ninja/?view=…`                | iframe WebRTC (`cleanoutput` forcé)              | **< 1 s** — seule option pour du direct synchronisé |
+| `twitch.tv/<chaîne>`               | player Twitch (`parent` = domaine courant, muet) | 5-15 s                                              |
+| `youtu.be/…`, `watch?v=`, `/live/` | `/embed/` muet, sans contrôles                   | 5-15 s                                              |
+| `….m3u8`                           | `<video>` + hls.js (import dynamique)            | 10-30 s                                             |
+| `….mp4` / `.webm` / `.mov`         | `<video>` natif                                  | ~1 s                                                |
+
+Un lien non reconnu, ou vide, ne rend **rien** (page transparente) : jamais de
+message d'erreur à l'antenne. L'éditeur, lui, avertit explicitement.
+
+Défauts choisis pour ne pas nuire si la scène est activée par erreur : vignette
+en bas à droite (pas de plein cadre inattendu) et **son coupé** — le programme a
+déjà son audio OBS, et deux sources simultanées créent un écho.
+
+**CSP** — trois élargissements, scopés aux seules surfaces caster (le reste du
+site garde la politique stricte) : `frame-src` + `vdo.ninja`, `media-src` +
+`https: blob:`, et sur `/overlay/*` uniquement `connect-src` + `https:` — sans
+ce dernier, un flux HLS **tiers** échouerait, car hls.js télécharge manifeste et
+segments en XHR (donc soumis à `connect-src`, pas à `media-src`).
+
+**Limites à connaître** :
+
+- une iframe peint son propre fond : une salle VDO.Ninja sans émetteur affiche un
+  rectangle sombre, pas du transparent (l'opérateur peut ajouter `&transparent`) ;
+- l'autoplay du player Twitch n'est pas garanti dans une page overlay — à
+  revérifier dans OBS avant de compter sur ce chemin ; ses 5-15 s de latence le
+  réservent de toute façon à de l'ambiance ;
+- hors OBS (onglet navigateur, aperçu du cockpit), `audio: true` retombe muet ;
+  l'image, elle, est conservée ;
+- un chemin relatif n'est pas reconnu (l'URL doit être absolue), et un MP4 en
+  `data:` est refusé (`media-src` liste `https:` et `blob:`, pas `data:`).
+
+**Type web-only** : l'app desktop n'a ni formulaire ni overlay local pour
+`camera`. Une telle scène y reste listée mais inerte, et ses Browser Sources
+doivent pointer sur `/overlay/caster/camera` du site.
 
 ## Carte du code
 
@@ -273,6 +321,7 @@ récents — voir « Scènes “données du site” » ci-dessus.
 | `utils/caster/twitchProtocol.ts`, `mvpTally.ts`              | Parsing IRC Twitch et décompte des votes MVP (purs, testés).                                                             |
 | `utils/caster/publicApiClient.ts`                            | Lectures `/api/public/v1/*` des pickers des scènes « données du site ».                                                  |
 | `utils/caster/dataSceneOptions.ts`                           | Libellés, sélection et bornage `topN` de ces scènes (purs, testés).                                                      |
+| `utils/caster/cameraSource.ts`, `vdoNinja.ts`                | Détection/réécriture du lien de captation et générateur VDO.Ninja (purs, testés).                                        |
 | `utils/caster/twitchChatClient.ts`, `eventsubClient.ts`      | Transports navigateur : IRC anonyme (lecture) et EventSub WebSocket.                                                     |
 | `utils/caster/mvpPollState.ts`                               | Machine à états immuable du poll MVP + snapshot publiable.                                                               |
 | `pages/api/admin/twitch/eventsub/subscribe.ts`               | Crée les souscriptions EventSub pour une session ouverte par le navigateur.                                              |
