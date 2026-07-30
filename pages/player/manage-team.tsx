@@ -120,6 +120,16 @@ export default function ManageTeamPage() {
   const [pendingRemoval, setPendingRemoval] = useState<string | null>(null);
   const successTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Invitation par email / lien privé (capitaine ↔ manager).
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteRole, setInviteRole] = useState<
+    'player' | 'substitute' | 'coach' | 'manager' | 'captain'
+  >('player');
+  const [inviteResult, setInviteResult] = useState<{
+    invite_url: string;
+    email_sent: boolean;
+  } | null>(null);
+
   const loading = authLoading || teamLoading || requestsLoading;
 
   // Une équipe créée « en tant que manager » naît sans capitaine : la capitaine
@@ -172,6 +182,39 @@ export default function ManageTeamPage() {
       if (successTimer.current) clearTimeout(successTimer.current);
     };
   }, []);
+
+  // ── Invitation par email + lien privé ────────────────────────────────────
+  // La capitaine peut confier un rôle de gestion (manager) ; le manager peut, à
+  // l'inverse, désigner la capitaine tant que l'équipe n'en a pas. Le serveur
+  // ré-applique ces deux règles (anti-escalade / capitanat déjà pris).
+  const handleInvite = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inviteEmail.trim()) return;
+    setActionLoading('invite');
+    setError(null);
+    setInviteResult(null);
+    try {
+      const asCaptain = inviteRole === 'captain';
+      const data = await adminFetchJson<{
+        invite_url: string;
+        email_sent: boolean;
+      }>('/api/teams/invitations', {
+        method: 'POST',
+        body: JSON.stringify({
+          email: inviteEmail.trim(),
+          role: asCaptain ? 'player' : inviteRole,
+          set_captain: asCaptain,
+        }),
+      });
+      setInviteResult(data);
+      setInviteEmail('');
+      showSuccess(data.email_sent ? t.inviteSentEmail : t.inviteCreated);
+    } catch (err: unknown) {
+      setError((err as Error).message || t.inviteError);
+    } finally {
+      setActionLoading(null);
+    }
+  };
 
   const handleToggleJoinable = async () => {
     setActionLoading('joinable');
@@ -523,6 +566,90 @@ export default function ManageTeamPage() {
                 />
               </button>
             </div>
+          </div>
+
+          {/* Inviter par email / lien privé */}
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6 mb-6">
+            <h2 className="text-lg font-semibold">{t.inviteTitle}</h2>
+            <p className="mt-1 text-sm text-gray-400">{t.inviteHelp}</p>
+
+            <form
+              onSubmit={handleInvite}
+              className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end"
+            >
+              <div className="flex-1">
+                <label
+                  htmlFor="invite-email"
+                  className="block text-xs font-semibold uppercase tracking-[0.14em] text-gray-300 mb-2"
+                >
+                  {t.inviteEmailLabel}
+                </label>
+                <input
+                  id="invite-email"
+                  type="email"
+                  required
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  placeholder={t.inviteEmailPlaceholder}
+                  className="w-full rounded-xl border border-white/15 bg-black/50 px-3 py-2.5 text-sm text-white placeholder:text-gray-500 focus:border-purple-400/70 focus:outline-none focus:ring-2 focus:ring-purple-400/60"
+                />
+              </div>
+              <div className="sm:w-52">
+                <label
+                  htmlFor="invite-role"
+                  className="block text-xs font-semibold uppercase tracking-[0.14em] text-gray-300 mb-2"
+                >
+                  {t.inviteRoleLabel}
+                </label>
+                <select
+                  id="invite-role"
+                  value={inviteRole}
+                  onChange={(e) =>
+                    setInviteRole(e.target.value as typeof inviteRole)
+                  }
+                  className="w-full rounded-xl border border-white/15 bg-black/50 px-3 py-2.5 text-sm text-white focus:border-purple-400/70 focus:outline-none focus:ring-2 focus:ring-purple-400/60"
+                >
+                  <option value="player">{t.optionPlayer}</option>
+                  <option value="substitute">{t.optionSubstitute}</option>
+                  <option value="coach">{t.optionCoach}</option>
+                  {/* Confier un rôle de gestion est réservé à la capitaine. */}
+                  {isCaptain && (
+                    <option value="manager">{t.roleManager}</option>
+                  )}
+                  {/* Le pendant : désigner la capitaine, seulement s'il n'y en a pas. */}
+                  {!hasCaptain && <option value="captain">{t.captain}</option>}
+                </select>
+              </div>
+              <button
+                type="submit"
+                disabled={actionLoading === 'invite' || !inviteEmail.trim()}
+                className="rounded-xl bg-purple-600 px-5 py-2.5 text-sm font-semibold transition hover:bg-purple-500 disabled:opacity-50"
+              >
+                {actionLoading === 'invite' ? t.invitePending : t.inviteCta}
+              </button>
+            </form>
+
+            {inviteResult && (
+              <div className="mt-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3">
+                <p className="text-sm font-semibold text-emerald-100">
+                  {inviteResult.email_sent
+                    ? t.inviteSentEmail
+                    : t.inviteEmailFailed}
+                </p>
+                <p className="mt-1 text-xs text-emerald-100/80">
+                  {t.inviteLinkHint}
+                </p>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <code className="min-w-0 flex-1 break-all rounded-lg bg-black/50 px-3 py-2 text-[11px] text-gray-300">
+                    {inviteResult.invite_url}
+                  </code>
+                  <CopyButton
+                    value={inviteResult.invite_url}
+                    label={t.inviteCopyLink}
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Roster */}

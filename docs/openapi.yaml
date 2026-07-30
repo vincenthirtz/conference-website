@@ -9006,10 +9006,22 @@ paths:
                               type: array
                               items:
                                 type: object
-                                required: [title, priority, assigneeName, dueDate, checklist, labels]
+                                required:
+                                  [
+                                    title,
+                                    priority,
+                                    assigneeName,
+                                    dueDate,
+                                    checklist,
+                                    labels,
+                                  ]
                                 properties:
                                   title: { type: string }
-                                  priority: { type: string, enum: [low, medium, high, urgent] }
+                                  priority:
+                                    {
+                                      type: string,
+                                      enum: [low, medium, high, urgent],
+                                    }
                                   assigneeName: { type: string, nullable: true }
                                   dueDate: { type: string, nullable: true }
                                   checklist:
@@ -24574,6 +24586,243 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /api/teams/invitations:
+    post:
+      tags:
+        - public/teams
+      summary: >-
+        La capitaine (ou un membre au rôle de gestion) invite quelqu'un par
+        email et récupère un lien privé partageable.
+      description: >-
+        Crée une invitation pending (demandes type='invite') et un « lien privé »
+        (jeton aléatoire, stocké uniquement hashé) que l'appelante peut
+        transmettre elle-même. Le compte auth est créé à la volée si l'email est
+        inconnu. Deux usages symétriques : la capitaine confie un rôle de gestion
+        (`role: manager`), ou un manager désigne la capitaine
+        (`set_captain: true`, uniquement si l'équipe n'en a pas encore — sinon
+        409 CAPTAIN_ALREADY_SET). Accorder un rôle à privilèges est réservé à la
+        capitaine (403 ROLE_ESCALATION). Le lien n'authentifie pas : il expire
+        avec l'invitation (7 jours) et exige une session correspondant à
+        l'invitée pour être accepté.
+      operationId: playerCreateTeamInvitation
+      security:
+        - PlayerBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+                  format: email
+                role:
+                  type: string
+                  enum: [player, substitute, coach, manager]
+                  default: player
+                battle_tag:
+                  type: string
+                  nullable: true
+                specialty:
+                  type: string
+                  enum: [tank, dps, support, flex]
+                  nullable: true
+                set_captain:
+                  type: boolean
+                  default: false
+                comment:
+                  type: string
+                  nullable: true
+      responses:
+        '201':
+          description: Invitation créée. Le jeton en clair n'est renvoyé qu'ici.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - invitation
+                  - invite_url
+                  - email_sent
+                properties:
+                  invitation:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      team_id:
+                        type: string
+                        format: uuid
+                      user_id:
+                        type: string
+                        format: uuid
+                      role:
+                        type: string
+                      set_captain:
+                        type: boolean
+                      expires_at:
+                        type: string
+                        format: date-time
+                        nullable: true
+                  invite_url:
+                    type: string
+                    format: uri
+                  email_sent:
+                    type: boolean
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /api/teams/invitations/by-token:
+    get:
+      tags:
+        - public/teams
+      summary: Métadonnées publiques d'une invitation à partir de son lien privé.
+      description: >-
+        Route PUBLIQUE (pas de session) : décrit l'invitation pour la page
+        /invitation/[token] — équipe, rôle proposé, adresse masquée, expiration.
+        N'expose ni l'id de la demande, ni l'email en clair, ni l'identité de
+        l'inviteuse. 404 si le jeton est inconnu/mal formé, 409 si l'invitation
+        est déjà traitée, 410 si elle a expiré.
+      operationId: publicGetInvitationByToken
+      security: []
+      parameters:
+        - in: query
+          name: token
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Invitation pending.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - invitation
+                properties:
+                  invitation:
+                    type: object
+                    properties:
+                      team_name:
+                        type: string
+                        nullable: true
+                      team_slug:
+                        type: string
+                        nullable: true
+                      team_logo_url:
+                        type: string
+                        nullable: true
+                      role:
+                        type: string
+                      as_captain:
+                        type: boolean
+                      battle_tag:
+                        type: string
+                        nullable: true
+                      specialty:
+                        type: string
+                        nullable: true
+                      invited_email:
+                        type: string
+                        nullable: true
+                        description: Adresse masquée (a***@domain.tld).
+                      expires_at:
+                        type: string
+                        format: date-time
+                        nullable: true
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '410':
+          description: Invitation expirée.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+    post:
+      tags:
+        - public/teams
+      summary: Accepte ou refuse une invitation via son lien privé.
+      description: >-
+        Exige une SESSION : le lien seul n'authentifie jamais. L'appelante doit
+        être la destinataire (même auth user ; une correspondance par email sur
+        un autre compte renvoie 409 ACCOUNT_MISMATCH). À l'acceptation, une
+        invitation portant `set_captain` donne aussi le capitanat si l'équipe
+        n'en a pas encore.
+      operationId: playerAnswerInvitationByToken
+      security:
+        - PlayerBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - token
+                - action
+              properties:
+                token:
+                  type: string
+                action:
+                  type: string
+                  enum: [accept, reject]
+      responses:
+        '200':
+          description: Invitation traitée.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - success
+                  - action
+                properties:
+                  success:
+                    type: boolean
+                  action:
+                    type: string
+                    enum: [accept, reject]
+                  teamId:
+                    type: string
+                    format: uuid
+                  promotedToCaptain:
+                    type: boolean
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '410':
+          description: Invitation expirée.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '429':
           $ref: '#/components/responses/RateLimited'
   /api/teams/leave:

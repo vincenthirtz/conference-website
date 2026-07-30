@@ -60,6 +60,19 @@ export type InvitationPayload = {
    * SI l'équipe n'a toujours pas de capitaine (cf. acceptInvitation).
    */
   set_captain?: boolean;
+  /**
+   * Optionnel : SHA-256 du « lien privé » d'invitation (cf.
+   * utils/teams/inviteLinks.ts). Présent uniquement pour les invitations créées
+   * depuis l'espace équipe avec un lien partageable. Le jeton en clair n'est
+   * jamais stocké.
+   */
+  invite_token_hash?: string;
+  /**
+   * Optionnel : email visé par l'invitation, mémorisé pour que le lien privé
+   * puisse vérifier que la personne connectée est bien la destinataire même si
+   * son compte a été créé à la volée.
+   */
+  invite_email?: string;
   expires_at: string;
 };
 
@@ -122,6 +135,13 @@ export type CreateInvitationInput = {
   battleTag?: string | null;
   /** Optional in-game specialty (tank | dps | support | flex). */
   specialty?: string | null;
+  /**
+   * SHA-256 du lien privé partageable (cf. utils/teams/inviteLinks.ts). Fourni
+   * quand l'invitation est créée depuis l'espace équipe.
+   */
+  inviteTokenHash?: string | null;
+  /** Email visé — mémorisé pour la vérification d'identité du lien privé. */
+  inviteEmail?: string | null;
   /**
    * L'invitée est la capitaine désignée de l'équipe (création par un manager).
    * Elle prendra le capitanat à l'acceptation si l'équipe n'en a pas encore.
@@ -216,9 +236,12 @@ export async function createInvitation(
     specialty: input.specialty ?? null,
     expires_at: expiresAtFromNow(),
   };
-  // On ne pose la clé que quand elle est vraie : les invitations « normales »
-  // gardent exactement le payload historique (diff nul côté bot / tests).
+  // On ne pose ces clés que quand elles sont renseignées : les invitations
+  // « normales » gardent exactement le payload historique (diff nul côté bot /
+  // tests).
   if (input.setCaptain) payload.set_captain = true;
+  if (input.inviteTokenHash) payload.invite_token_hash = input.inviteTokenHash;
+  if (input.inviteEmail) payload.invite_email = input.inviteEmail;
 
   const { data: inserted, error: insertErr } = await supabaseAdmin
     .from('demandes')
@@ -283,6 +306,62 @@ async function loadPendingInvitation(
     };
   }
   return { ok: true, data: data as InvitationRow };
+}
+
+/* ---------------------------------------------------------------------------
+ * Lien privé (jeton partageable)
+ * ------------------------------------------------------------------------- */
+
+/**
+ * Résout une invitation PENDING à partir du hash de son lien privé.
+ *
+ * Volontairement NON scopée tenant : le porteur du lien n'a pas de contexte
+ * tenant (page publique, éventuellement ouverte sur un autre domaine). Le hash
+ * est un secret de 32 octets, il identifie donc l'invitation à lui seul ; le
+ * tenant réel est lu sur la ligne trouvée et sert ensuite à toutes les
+ * opérations en aval.
+ */
+export async function findInvitationByTokenHash(
+  tokenHash: string
+): Promise<Result<InvitationRow & { tenant_id: string }>> {
+  if (!supabaseAdmin) {
+    return { ok: false, error: 'Service unavailable.', status: 503 };
+  }
+  if (!tokenHash) {
+    return { ok: false, error: 'Invitation introuvable', status: 404 };
+  }
+
+  // `.filter(col, 'eq', …)` est la forme utilisée partout dans le repo pour un
+  // accès JSONB (cf. pages/api/player/dashboard.ts, admin/scrims/forward.ts…).
+  const { data, error } = await supabaseAdmin
+    .from('demandes')
+    .select('*')
+    .eq('type', 'invite')
+    .filter('payload->>invite_token_hash', 'eq', tokenHash)
+    .maybeSingle();
+
+  if (error) {
+    logger.error('[invitations] token load error', error);
+    return {
+      ok: false,
+      error: "Erreur de chargement de l'invitation",
+      status: 500,
+    };
+  }
+  if (!data) {
+    return { ok: false, error: 'Invitation introuvable', status: 404 };
+  }
+  if (data.status !== 'pending') {
+    return {
+      ok: false,
+      error: `Cette invitation est déjà ${data.status}.`,
+      status: 409,
+    };
+  }
+  if (isExpired((data as InvitationRow).payload)) {
+    return { ok: false, error: 'Cette invitation a expiré.', status: 410 };
+  }
+  return { ok: true, data: data as InvitationRow & { tenant_id: string } };
 }
 
 /* ---------------------------------------------------------------------------

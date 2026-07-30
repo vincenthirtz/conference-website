@@ -943,8 +943,7 @@ export function sendPlanRenewalReminderEmail(opts: {
 // address is not yet confirmed, so there is nothing to unsubscribe from — the
 // consent itself is what this email requests.
 
-const NEWSLETTER_CONFIRM_SUBJECT =
-  'Confirme ton inscription à la newsletter';
+const NEWSLETTER_CONFIRM_SUBJECT = 'Confirme ton inscription à la newsletter';
 
 /**
  * Build the HTML for the newsletter double opt-in confirmation email.
@@ -1206,6 +1205,63 @@ export function sendTeamAccessEmail(opts: {
       ${ctaButton(opts.actionLink, 'Accéder à mon espace équipe')}
       <p style="margin:24px 0 0;font-size:12px;color:#675788;line-height:1.5;text-align:center;">
         Lien direct&nbsp;: <a href="${opts.actionLink}" style="color:#9081B0;word-break:break-all;">${escapeHtml(opts.actionLink)}</a>
+      </p>
+    `),
+  });
+}
+
+/** Libellés FR des rôles d'équipe pour l'email d'invitation. */
+const TEAM_ROLE_EMAIL_LABELS: Record<string, string> = {
+  player: 'joueuse',
+  substitute: 'remplaçante',
+  coach: 'coach',
+  manager: 'manager',
+};
+
+/**
+ * Invitation à rejoindre une équipe via le « lien privé » (cf.
+ * utils/teams/inviteLinks.ts). Envoyé quand une capitaine invite un manager —
+ * ou qu'un manager désigne la capitaine.
+ *
+ * IMPORTANT : ce lien n'est PAS un lien de connexion. Il ouvre une page qui
+ * demande de se connecter avec l'adresse invitée avant d'accepter.
+ */
+export function sendTeamInviteLinkEmail(opts: {
+  to: string;
+  teamName: string;
+  role: string;
+  asCaptain?: boolean;
+  inviteUrl: string;
+}): Promise<SendEmailResult> {
+  const roleLabel = opts.asCaptain
+    ? 'capitaine'
+    : TEAM_ROLE_EMAIL_LABELS[opts.role] || 'membre';
+
+  return sendEmail({
+    to: opts.to,
+    subject: `Invitation à rejoindre ${opts.teamName} en tant que ${roleLabel} — OW Women's Cup`,
+    tags: ['team-invite-link'],
+    html: emailLayout(`
+      ${gradientBar()}
+      <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;">Vous êtes invité(e) dans une équipe</h1>
+      <p style="margin:0 0 16px;font-size:15px;color:#C6BED9;line-height:1.6;">
+        L&apos;équipe <strong style="color:#ffffff;">${escapeHtml(opts.teamName)}</strong>
+        vous invite à la rejoindre en tant que
+        <strong style="color:#7bc96a;">${escapeHtml(roleLabel)}</strong>.
+        ${
+          opts.asCaptain
+            ? 'Vous prendrez le capitanat de l&apos;équipe dès que vous aurez accepté.'
+            : 'Rien n&apos;est fait tant que vous n&apos;avez pas accepté.'
+        }
+      </p>
+      <p style="margin:0 0 20px;font-size:13px;color:#f59e0b;line-height:1.5;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.15);border-radius:8px;padding:10px 14px;">
+        Ce lien ne vous connecte pas automatiquement&nbsp;: il vous sera demandé
+        de vous connecter avec cette adresse email avant d&apos;accepter.
+        L&apos;invitation expire dans 7 jours.
+      </p>
+      ${ctaButton(opts.inviteUrl, "Voir l'invitation")}
+      <p style="margin:24px 0 0;font-size:12px;color:#675788;line-height:1.5;text-align:center;">
+        Lien direct&nbsp;: <a href="${opts.inviteUrl}" style="color:#9081B0;word-break:break-all;">${escapeHtml(opts.inviteUrl)}</a>
       </p>
     `),
   });

@@ -89,6 +89,12 @@ const ALLOWLIST_AUTH_MISMATCH = new Set<string>([
   // legitimately declares BotApiKey+BotTenantId security. Keep entry
   // until the handler migrates to withBotRoute.
   'POST /api/news',
+  // Lien privé d'invitation : un seul fichier sert DEUX surfaces — un GET
+  // PUBLIC (métadonnées de l'invitation, affichées avant connexion) et un POST
+  // sous `withAuthRoute` (accepter/refuser). `detectAuth()` raisonne au fichier
+  // et voit donc `player` pour les deux ; côté spec, seul le POST porte
+  // PlayerBearer. La divergence est voulue, pas une dérive.
+  'GET /api/teams/invitations/by-token',
 ]);
 
 /** Bot client URLs that intentionally don't have a matching openapi entry. */
