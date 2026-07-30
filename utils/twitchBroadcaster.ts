@@ -48,6 +48,13 @@ export const BROADCASTER_SCOPES: readonly string[] = [
   // Stream markers (POST /helix/streams/markers) — repérer les temps forts sur
   // le VOD pour le montage.
   'channel:manage:broadcast',
+  // EventSub (pages/api/admin/twitch/eventsub/subscribe.ts) — ce que l'IRC ne
+  // livre pas : follows (channel.follow v2) et shoutouts reçus
+  // (channel.shoutout.receive v1). Une connexion établie AVANT l'ajout de ces
+  // deux scopes ne les a pas : la route répond alors 403 MISSING_SCOPE (ou les
+  // liste dans `missing_scopes`) → il faut reconnecter la chaîne.
+  'moderator:read:followers',
+  'moderator:read:shoutouts',
 ];
 
 /* -----------------------------------------------------------

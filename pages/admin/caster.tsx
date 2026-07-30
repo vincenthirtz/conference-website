@@ -56,6 +56,14 @@ const ObsPanel = dynamic(() => import('@/components/admin/caster/ObsPanel'), {
   ssr: false,
 });
 
+// Chat Twitch + poll MVP (lot 4) : WebSocket IRC anonyme + EventSub — browser
+// only. Monté au niveau PAGE (hors du panneau d'édition) pour que la connexion
+// chat et les votes en cours survivent au changement de scène sélectionnée.
+const CasterChatSection = dynamic(
+  () => import('@/components/admin/caster/CasterChatSection'),
+  { ssr: false }
+);
+
 type SceneEditorProps = {
   scene: CasterScene;
   onSave: (sceneId: string, data: Record<string, unknown>) => Promise<void>;
@@ -94,6 +102,9 @@ function CasterScenesPage() {
   // scène sélectionnée disparaît (suppression côté app desktop).
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = scenes.find((s) => s.id === selectedId) ?? scenes[0] ?? null;
+
+  // Cible de publication du tally MVP (lot 4) — indépendante de la sélection.
+  const mvpScene = scenes.find((s) => s.type === 'mvp') ?? null;
 
   // Origin côté client uniquement (SSR n'a pas window) pour l'URL overlay.
   const [origin, setOrigin] = useState('');
@@ -289,6 +300,13 @@ function CasterScenesPage() {
               Supabase : rendu même pendant le chargement / liste vide. */}
           <div className="mt-4">
             <ObsPanel />
+          </div>
+
+          {/* Chat Twitch + poll MVP (lot 4) — hors du panneau d'édition : le
+              chat reste connecté et les votes vivants quand on change de
+              scène. `mvpScene` est la cible de publication du tally. */}
+          <div className="mt-4">
+            <CasterChatSection mvpScene={mvpScene} onSave={saveSceneData} />
           </div>
         </div>
       </div>

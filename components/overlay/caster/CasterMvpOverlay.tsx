@@ -5,10 +5,12 @@
 // EN ATTENTE), candidates triées par votes avec barres + numéro d'origine
 // (le badge suit l'ordre de saisie pour que `!mvp 1` reste lisible).
 //
-// Lot 2 = SNAPSHOT depuis scene.data uniquement. Le tally live du chat
-// (votes en temps réel via canal broadcast, leaderId serveur) arrive au
-// lot 4 — ici le leader est déduit du snapshot (max de votes > 0, poll
-// ouvert). Scène PLEIN ÉCRAN à fond opaque var(--bg).
+// Le tally live du chat est publié dans `caster_scenes.data` par le cockpit
+// (components/admin/caster/MvpPollPanel, debounce ~1,5 s) : cet overlay le
+// reçoit donc via le Realtime de la scène, sans canal séparé. `leaderId` est
+// lu du snapshot quand il est présent, sinon déduit (max de votes > 0, poll
+// ouvert) pour rester tolérant aux data écrites par l'app desktop.
+// Scène PLEIN ÉCRAN à fond opaque var(--bg).
 
 import { useMemo } from 'react';
 import { overlayRootCss, scanlinesCss } from './overlayChrome';

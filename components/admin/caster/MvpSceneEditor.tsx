@@ -6,9 +6,11 @@
 // (max 8). Le desktop saisit les candidates dans un textarea (1/ligne) ; ici,
 // liste ajout/suppression — même shape écrite en base.
 //
-// `total` / `isOpen` = état du poll (votes chat Twitch) : affiché en LECTURE
-// SEULE — le tally live arrive au lot 4 ; ces champs traversent le payload
-// intacts via le spread de la data brute.
+// `total` / `isOpen` = état du poll (votes chat Twitch) : affiché ici en
+// LECTURE SEULE. Le poll live (démarrer/arrêter/reset + tally des votes) est
+// piloté par MvpPollPanel, monté au niveau de la PAGE pour survivre au
+// changement de scène ; il publie son snapshot dans cette même `data`. Ces
+// champs traversent le payload intacts via le spread de la data brute.
 
 import type { CasterScene } from '@/types/caster';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
@@ -50,15 +52,40 @@ function normalizeForm(raw: Record<string, unknown>): MvpForm {
   };
 }
 
+/** Compteurs déjà publiés par le poll, indexés par id de candidate. */
+function existingCounts(
+  raw: Record<string, unknown>
+): Record<string, { count?: number; percent?: number }> {
+  const list = Array.isArray(raw?.candidates) ? raw.candidates : [];
+  const out: Record<string, { count?: number; percent?: number }> = {};
+  for (const c of list) {
+    const o = (c || {}) as { id?: unknown; count?: unknown; percent?: unknown };
+    if (o.id == null) continue;
+    if (o.count == null && o.percent == null) continue;
+    out[String(o.id)] = {
+      count: Number(o.count) || 0,
+      percent: Number(o.percent) || 0,
+    };
+  }
+  return out;
+}
+
 function buildPayload(
   raw: Record<string, unknown>,
   draft: MvpForm
 ): Record<string, unknown> {
+  // Le poll live (MvpPollPanel) publie count/percent dans ces mêmes objets :
+  // on les reporte pour qu'une simple correction de libellé ne remette pas
+  // l'overlay à zéro en attendant la prochaine publication du tally.
+  const counts = existingCounts(raw);
   const candidates = draft.candidates
     .map((label) => label.trim())
     .filter(Boolean)
     .slice(0, MAX_CANDIDATES)
-    .map((label, i) => ({ id: String(i + 1), label }));
+    .map((label, i) => {
+      const id = String(i + 1);
+      return counts[id] ? { id, label, ...counts[id] } : { id, label };
+    });
   return {
     ...raw,
     title: draft.title || 'Vote MVP',
@@ -160,7 +187,7 @@ export default function MvpSceneEditor({ scene, onSave }: Props) {
             {format(t.mvpPollTotal, { total: String(total) })}
           </span>
         </div>
-        <p className="text-[11px] text-neutral-500">{t.mvpLot4Note}</p>
+        <p className="text-[11px] text-neutral-500">{t.mvpPollPanelNote}</p>
       </div>
 
       <p className="text-[11px] text-neutral-500">{t.mvpHint}</p>

@@ -21533,6 +21533,112 @@ paths:
               schema:
                 type: object
                 additionalProperties: true
+  /api/admin/twitch/eventsub/subscribe:
+    post:
+      summary: Create EventSub websocket subscriptions for a browser session.
+      description: |
+        Requires `caster` role. The BROWSER opens
+        `wss://eventsub.wss.twitch.tv/ws` itself, receives its `session_welcome`
+        and posts the resulting `session_id` here; the SERVER then creates the
+        subscriptions with the tenant's stored broadcaster token (which never
+        reaches the browser).
+
+        Subscriptions created (mirrors the desktop caster app): `channel.follow`
+        v2 (scope `moderator:read:followers`) and `channel.shoutout.receive` v1
+        (scope `moderator:read:shoutouts`). Condition for both:
+        `broadcaster_user_id = moderator_user_id = broadcaster_id`.
+
+        Returns `200 { session_id, created[], failed[], missing_scopes[] }`
+        (`created` = subscription types now active on that session) even on
+        PARTIAL failure — one scope may be missing while the other is granted.
+        A Helix `409` (already subscribed on that session) is folded into
+        `created`, so the call is idempotent. `403 MISSING_SCOPE` (with
+        `missing[]`) only when NO subscription is possible; `409 NOT_CONNECTED`
+        when no channel is linked; `502 TWITCH_HELIX_ERROR` when Helix is
+        unreachable/5xx for everything.
+      operationId: adminTwitchEventSubSubscribe
+      tags:
+        - admin/twitch
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - session_id
+              properties:
+                session_id:
+                  type: string
+                  minLength: 8
+                  maxLength: 300
+                  description: EventSub websocket session id from `session_welcome`.
+      responses:
+        '200':
+          description: Subscriptions created (possibly partially).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  session_id:
+                    type: string
+                  created:
+                    description: Subscription types now active on that session.
+                    type: array
+                    items:
+                      type: string
+                  failed:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        type:
+                          type: string
+                        version:
+                          type: string
+                        status:
+                          type: integer
+                        message:
+                          type: string
+                        code:
+                          type: string
+                  missing_scopes:
+                    type: array
+                    items:
+                      type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: |
+            No subscription possible — every required scope is missing
+            (code MISSING_SCOPE, with `missing[]`), or forbidden role.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '409':
+          description: 'No broadcaster channel connected (code NOT_CONNECTED).'
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '502':
+          description: |
+            Twitch unreachable for every attempted subscription
+            (code TWITCH_HELIX_ERROR) or token refresh failure
+            (code TWITCH_TOKEN_ERROR).
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
   /api/admin/twitch/marker:
     post:
       summary: Add a stream marker on the live broadcast.
