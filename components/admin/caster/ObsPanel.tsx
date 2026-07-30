@@ -19,6 +19,7 @@ import { useEffect, useState } from 'react';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import { logCasterAction } from '@/utils/caster/auditClient';
 
 import { inputClass, labelClass } from './fieldClasses';
 import { useObs } from './useObs';
@@ -119,6 +120,12 @@ export default function ObsPanel() {
       if (res.streaming && !res.verified) {
         addToast(t.obsStreamStartUnverified, 'error');
       }
+      // Journal (lot 5) : passer à l'antenne / en sortir est l'action la plus
+      // notable du cockpit. `verified` dit si OBS a réellement démarré.
+      logCasterAction({
+        action: 'caster_stream_toggle',
+        details: { streaming: res.streaming, verified: res.verified },
+      });
     } catch (err) {
       addToast(
         format(t.obsActionError, { message: (err as Error)?.message || '' }),
@@ -145,6 +152,10 @@ export default function ObsPanel() {
     setBusy('record');
     try {
       await toggleRecord();
+      logCasterAction({
+        action: 'caster_record_toggle',
+        details: { recording: starting },
+      });
     } catch (err) {
       addToast(
         format(t.obsActionError, { message: (err as Error)?.message || '' }),
@@ -166,6 +177,14 @@ export default function ObsPanel() {
           : t.obsSetupScenesNothing,
         'success'
       );
+      // Journalisé seulement quand quelque chose a été créé : l'action est
+      // idempotente et souvent rejouée « pour vérifier ».
+      if (n > 0) {
+        logCasterAction({
+          action: 'caster_obs_setup_scenes',
+          details: { created: res.created },
+        });
+      }
     } catch (err) {
       addToast(
         format(t.obsActionError, { message: (err as Error)?.message || '' }),

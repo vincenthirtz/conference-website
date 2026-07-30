@@ -299,6 +299,13 @@ export const STAFF_LOG_ACTION_LABELS: Record<StaffLogAction, string> = {
   // Broadcast
   broadcast_state_update: 'Mise à jour état broadcast',
   broadcast_next_match: 'Passage au match suivant (broadcast)',
+  // Cockpit caster web (/admin/caster)
+  caster_match_import: 'Import d’un match dans une scène caster',
+  caster_stream_toggle: 'Démarrage / arrêt du stream OBS',
+  caster_record_toggle: 'Démarrage / arrêt de l’enregistrement OBS',
+  caster_obs_setup_scenes: 'Configuration des scènes OBS (overlays)',
+  caster_poll_toggle: 'Ouverture / fermeture du vote MVP',
+  caster_theme_activate: 'Activation d’un thème d’overlay',
   // Run of show
   create_event_run: 'Création run of show',
   update_event_run: 'Modification run of show',

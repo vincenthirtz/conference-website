@@ -22,6 +22,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import { logCasterAction } from '@/utils/caster/auditClient';
 import { normalizeCandidates, parseVoteCommand } from '@/utils/caster/mvpTally';
 import {
   MIN_CANDIDATES,
@@ -216,11 +217,25 @@ export default function MvpPollPanel({
     }
     applyState(next, true);
     addToast(t.mvpPollStarted, 'success');
+    // Journal (lot 5) : ouvrir/fermer le vote change ce que voit le public.
+    logCasterAction({
+      action: 'caster_poll_toggle',
+      entityId: scene?.id ?? null,
+      details: {
+        open: true,
+        candidates: candidatesRef.current.map((c) => c.label),
+      },
+    });
   }
 
   function onStop() {
     applyState(stopPoll(stateRef.current), true);
     addToast(t.mvpPollStopped, 'info');
+    logCasterAction({
+      action: 'caster_poll_toggle',
+      entityId: scene?.id ?? null,
+      details: { open: false, total: stateRef.current.votes.size },
+    });
   }
 
   async function onReset() {

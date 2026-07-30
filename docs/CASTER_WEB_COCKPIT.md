@@ -85,6 +85,95 @@ première donnée — jamais de placeholder à l'antenne.
 - Le bouton « Configurer les scènes OBS » crée/complète les scènes OBS avec un
   Browser Source par overlay pointant sur ce site (idempotent, rejouable).
 
+## Thèmes des overlays
+
+Le desktop stocke ses thèmes en fichiers (`userData/themes`) et les pousse à
+l'overlay dans le payload SSE. Le web n'a ni disque local ni serveur
+persistant : le thème vit donc dans la table **`caster_themes`** (une seule
+ligne `is_active`, garantie par un index unique partiel), lue par les overlays
+avec la clé anon et suivie en Realtime — un changement d'habillage se voit à
+l'antenne sans recharger la Browser Source.
+
+La `data` d'un thème porte **la même shape que les fichiers du desktop** : un
+thème exporté de l'app est donc importable ici, et réciproquement.
+
+L'application se fait en variables CSS posées sur un wrapper de la page
+overlay : les custom properties étant héritées, elles atteignent la racine de
+l'overlay et l'emportent sur ses défauts (déclarés en règle de classe). Les
+tokens dérivés (`--panel`, `--glow`, `--muted-2`…) sont des `color-mix()` de ces
+variables et suivent automatiquement.
+
+**Limite assumée** : seuls les **couleurs et les polices** (famille, graisse,
+échelle) sont appliqués. Les **gabarits** (`template: compact | full | minimal`)
+et le **repositionnement** (`positions`) ne sont pas portés — les overlays React
+n'implémentent que le gabarit `default`. Les champs restent lus et préservés
+(un aller-retour avec le desktop ne les perd pas), et `utils/caster/theme.ts`
+expose déjà `templateClass()` et `positionStyle()` pour le jour où les variantes
+seront portées.
+
+## Journal des actions
+
+Le cockpit écrit les scènes directement dans Supabase et pilote OBS depuis le
+navigateur : aucune de ces actions ne traverse le serveur, donc rien ne peut les
+tracer côté back. `POST /api/admin/caster/audit` est le point d'entrée unique du
+journal et réutilise **`staff_logs`** (déjà consulté dans `/admin/logs`) plutôt
+que d'ajouter un journal parallèle — le desktop, lui, n'a qu'un journal local
+non partagé.
+
+Seules les actions **notables** sont journalisées (import de match, stream,
+enregistrement, configuration des scènes OBS, poll, activation de thème) : pas
+chaque frappe de l'auto-save, pour lequel `caster_scenes.updated_at` suffit. Un
+échec du journal n'interrompt jamais une action à l'antenne.
+
+## Match picker & score live
+
+Les scènes `match` et `results` peuvent être remplies depuis un match du site :
+sélecteur tournoi → match (recherche accent-insensible au-delà de 8 matchs,
+pastille de statut et créneau dans le libellé), puis « Importer dans la scène ».
+L'import écrase les champs dérivés du match (équipes, logos, score, format, map,
+détail par map pour `results`) et **préserve** le contexte saisi par le caster
+(casters, marque & réseaux, MVP) : `buildSceneDataFromMatch` spread la data
+précédente d'abord. `data.matchId` mémorise le lien.
+
+Les lectures passent par les **GET publics `/api/caster/v1/*`** — les mêmes que
+l'app desktop (cf. [`CASTER_API_CONTRACT.md`](./CASTER_API_CONTRACT.md)), donc un
+seul contrat à maintenir. Le map pool du tournoi alimente le `<select>` map de
+l'éditeur match.
+
+> ⚠️ **Le score live est un POLL (~10 s), pas du Realtime.** L'app desktop
+> s'abonne en `postgres_changes` sur `public.matches`, mais cette table n'est
+> **pas** membre de la publication `supabase_realtime` : aucun event n'est jamais
+> répliqué, donc le score live du desktop est silencieusement mort (la policy
+> SELECT publique `matches_select_public` existe bien — elle ne suffit pas, elle
+> ne fait que filtrer des events qui n'arrivent pas). Le web lit donc
+> périodiquement `/api/caster/v1/matches/:id`, poll coupé quand l'onglet est
+> masqué et relancé au retour au premier plan. Pour basculer en Realtime plus
+> tard : ajouter `matches` à la publication, puis brancher un
+> `useRealtimeChannel` qui appelle `refresh()` dans `useLinkedMatchTracker` — le
+> contrat du hook ne change pas, et le poll reste en filet.
+
+Le score n'est réécrit dans la scène que sur changement réel (sinon chaque tour
+de poll produirait un UPDATE, donc un écho Realtime, pour rien). « Détacher »
+remet `matchId` à `null` et rend la main à la saisie manuelle.
+
+## Présence multi-caster
+
+Supabase Realtime **Presence** sur le canal **`caster_presence`** — le même que
+l'app desktop, avec la même shape trackée
+(`{ staffId, displayName, role, activeScene, activeField, joinedAt }`, clé de
+présence = `staffId`, `activeScene` = **id** de scène). Casters web et desktop se
+voient donc mutuellement.
+
+C'est un canal Presence, pas du `postgres_changes` : il ne dépend ni de la
+publication Realtime ni d'une RLS, et rien n'est écrit en base. À ne pas
+confondre avec la **table** `caster_presence` (heartbeats du cockpit régie,
+`/api/caster/heartbeat`), qui n'a aucun rapport.
+
+L'affichage est **consultatif** : bandeau d'avatars en tête de page, pastille
+« 👁 » sur les scènes ouvertes par quelqu'un d'autre, et avertissement d'édition
+simultanée dans le panneau. **Aucun verrou dur** — en direct, il faut toujours
+pouvoir corriger une faute immédiatement (même posture que le desktop).
+
 ## Hors périmètre (reste sur l'app desktop)
 
 Capture d'écran et encodage **FFmpeg** (gdigrab/dshow → RTMP), **mixer audio
@@ -107,7 +196,12 @@ ne les autorise pas (aucune migration n'a été appliquée pour eux).
 | `utils/caster/twitchChatClient.ts`, `eventsubClient.ts`      | Transports navigateur : IRC anonyme (lecture) et EventSub WebSocket.                           |
 | `utils/caster/mvpPollState.ts`                               | Machine à états immuable du poll MVP + snapshot publiable.                                     |
 | `pages/api/admin/twitch/eventsub/subscribe.ts`               | Crée les souscriptions EventSub pour une session ouverte par le navigateur.                    |
+| `utils/caster/matchPickerFormat.ts`, `presence.ts`           | Libellés/recherche/mapping du match picker et helpers de présence (purs, testés).              |
+| `utils/caster/tournamentsClient.ts`                          | Lectures HTTP `/api/caster/v1/*` du picker (timeout borné, same-origin).                       |
 | `hooks/useCasterScenes.ts`                                   | Chargement + Realtime + écriture des scènes.                                                   |
+| `hooks/useCasterTournaments.ts`                              | État du picker (tournois, matchs, map pool ; dernier tournoi mémorisé).                        |
+| `hooks/useLinkedMatchTracker.ts`                             | Suivi du score des matchs liés — **poll** (voir « Match picker & score live »).                |
+| `hooks/useCasterPresence.ts`                                 | Canal Realtime Presence `caster_presence` (partagé avec le desktop).                           |
 | `components/admin/caster/*`                                  | Éditeurs par type, `useSceneDraft` (auto-save/anti-clobber), panneaux OBS et chat.             |
 | `components/overlay/caster/*`                                | Overlays (ports px-exacts des HTML desktop).                                                   |
 | `lib/data/ow-heroes.json`                                    | Manifeste des héros Overwatch (copié du repo caster).                                          |

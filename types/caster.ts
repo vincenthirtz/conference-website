@@ -162,3 +162,80 @@ export type WebcamSceneData = {
   shape: string;
   mirror: boolean;
 };
+
+// ---- Contrat HTTP /api/caster/v1/* (lot 5 : match picker) -------------------
+// Shapes relevées dans utils/casterApi.ts (les handlers partagés v1 + legacy) —
+// mêmes payloads que ceux consommés par l'app desktop (tournamentsApi.js).
+// Les colonnes nullables de la base restent nullables ici : l'UI applique ses
+// propres replis (TBD, 0, pool de maps par défaut…).
+
+export type CasterApiTeam = {
+  id: string;
+  name: string | null;
+  short_name: string | null;
+  logo_url: string | null;
+};
+
+/** GET /api/caster/v1/tournaments (status ∈ {running, published}). */
+export type CasterApiTournament = {
+  id: string;
+  name: string;
+  slug: string | null;
+  game: string | null;
+  status: string;
+  start_date: string | null;
+  format_type: string | null;
+};
+
+/**
+ * GET /api/caster/v1/tournaments/:id/matches (statuts pending/ongoing/finished)
+ * et champ `match` de GET /api/caster/v1/matches/:id.
+ */
+export type CasterApiMatch = {
+  id: string;
+  status: string | null;
+  best_of: number | null;
+  match_format: string | null;
+  scheduled_at: string | null;
+  team1_score: number | null;
+  team2_score: number | null;
+  round_name: string | null;
+  stream_url: string | null;
+  team1: CasterApiTeam | null;
+  team2: CasterApiTeam | null;
+};
+
+/** Champ `games` de GET /api/caster/v1/matches/:id (une ligne par map jouée). */
+export type CasterApiGame = {
+  id: string;
+  map_name: string | null;
+  map_order: number | null;
+  team1_score: number | null;
+  team2_score: number | null;
+};
+
+/** GET /api/caster/v1/tournaments/:id/maps (map pool actif du tournoi). */
+export type CasterApiTournamentMap = {
+  id: string;
+  map_name: string;
+  map_type: string | null;
+  image_url: string | null;
+};
+
+/**
+ * Entrée de présence trackée sur le canal Supabase Realtime `caster_presence`
+ * — MÊME shape que l'app desktop (src/main/presence.js) pour que casters web et
+ * desktop se voient mutuellement. `activeScene` = **id** de la scène éditée.
+ *
+ * ⚠️ Ne pas confondre avec la TABLE `caster_presence` (heartbeats du cockpit
+ * régie, cf. pages/api/caster/heartbeat.ts) : ici c'est un canal Realtime
+ * Presence éphémère, aucune écriture en base.
+ */
+export type CasterPresenceUser = {
+  staffId: string;
+  displayName: string;
+  role: string;
+  activeScene: string | null;
+  activeField: string | null;
+  joinedAt: string;
+};

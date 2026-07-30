@@ -33,6 +33,8 @@ import { useRealtimeChannel } from '@/hooks/useRealtimeChannel';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { CASTER_SCENE_TYPES, type CasterScene } from '@/types/caster';
 import { normalizeMatchData } from '@/utils/caster/matchScene';
+import { useCasterTheme } from '@/hooks/useCasterTheme';
+import { themeCssVars } from '@/utils/caster/theme';
 import { CasterMatchOverlay } from '@/components/overlay/caster/CasterMatchOverlay';
 import { CasterStartingOverlay } from '@/components/overlay/caster/CasterStartingOverlay';
 import { CasterPauseOverlay } from '@/components/overlay/caster/CasterPauseOverlay';
@@ -143,6 +145,12 @@ function CasterOverlayPage() {
     onChange,
   });
 
+  // Thème actif (couleurs + polices) — suivi en Realtime comme la scène : un
+  // changement d'habillage se voit à l'antenne sans recharger la source OBS.
+  const { theme, loaded: themeLoaded } = useCasterTheme({
+    channel: 'caster-overlay-theme',
+  });
+
   return (
     <>
       <Head>
@@ -157,7 +165,18 @@ function CasterOverlayPage() {
           background: transparent !important;
         }
       `}</style>
-      {loaded && scene ? <SceneOverlay scene={scene} /> : null}
+      {/* Thème actif appliqué en variables CSS sur un wrapper : les custom
+          properties étant héritées, elles atteignent la racine de l'overlay et
+          gagnent sur ses défauts (déclarés en règle de classe). Les tokens
+          dérivés (--panel, --glow, --muted-2…) sont des color-mix de ces
+          variables : ils suivent sans rien de plus.
+          `themeLoaded` fait partie du flash-guard — rendre avant l'aurait
+          affiché une fraction de seconde aux couleurs par défaut. */}
+      {loaded && themeLoaded && scene ? (
+        <div style={themeCssVars(theme) as React.CSSProperties}>
+          <SceneOverlay scene={scene} />
+        </div>
+      ) : null}
     </>
   );
 }

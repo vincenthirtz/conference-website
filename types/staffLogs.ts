@@ -140,6 +140,17 @@ export type StaffLogAction =
   // --- Broadcast ---
   | 'broadcast_state_update'
   | 'broadcast_next_match'
+  // --- Cockpit caster web (/admin/caster) ---
+  // Journalisées via POST /api/admin/caster/audit : le cockpit écrit les scènes
+  // en direct dans Supabase (RLS staff), aucune route serveur ne pourrait donc
+  // les tracer. Seules les actions NOTABLES sont loggées — pas chaque frappe de
+  // l'auto-save.
+  | 'caster_match_import'
+  | 'caster_stream_toggle'
+  | 'caster_record_toggle'
+  | 'caster_obs_setup_scenes'
+  | 'caster_poll_toggle'
+  | 'caster_theme_activate'
   // --- Run of show (event runs / segments / cues) ---
   | 'create_event_run'
   | 'update_event_run'

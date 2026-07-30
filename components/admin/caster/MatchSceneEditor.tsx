@@ -10,6 +10,9 @@
 // (BrandSocialsFields, LogosFields, ScoreStepper) ; les bans héros deviennent
 // éditables via deux <select> peuplés du manifeste statique ow-heroes.json.
 //
+// Lot 5 : le <select> map est alimenté par le map pool du tournoi sélectionné
+// dans le match picker quand il y en a un (prop `tournamentMaps`).
+//
 //  - Bans : valeur du <select> = clé héros ('' = aucun) ; la sélection est
 //    résolue en objet complet { key, name, portrait } via resolveHero — un ban
 //    legacy à clé inconnue reste sélectionnable (option fantôme) et est
@@ -49,6 +52,11 @@ type Props = {
   scene: CasterScene;
   /** saveSceneData du hook useCasterScenes (throw en cas d'erreur RLS/réseau). */
   onSave: (sceneId: string, data: Record<string, unknown>) => Promise<void>;
+  /**
+   * Map pool du tournoi sélectionné dans le match picker (lot 5). Absent/vide →
+   * pool Overwatch par défaut, comme avant.
+   */
+  tournamentMaps?: Array<{ map_name: string }> | null;
 };
 
 /** État de formulaire : la data normalisée + le texte brut du champ casters. */
@@ -164,7 +172,11 @@ function BanSelect({
   );
 }
 
-export default function MatchSceneEditor({ scene, onSave }: Props) {
+export default function MatchSceneEditor({
+  scene,
+  onSave,
+  tournamentMaps = null,
+}: Props) {
   const t = useAdminT('adminCasterScenes');
 
   const { draft, patch, update, saveState } = useSceneDraft<MatchForm>({
@@ -188,8 +200,12 @@ export default function MatchSceneEditor({ scene, onSave }: Props) {
     }));
   }, [update]);
 
-  // Pas de maps tournoi dans ce lot : pool par défaut + valeur courante.
-  const maps = useMemo(() => mapOptions(null, draft.map), [draft.map]);
+  // Maps du tournoi sélectionné dans le match picker si dispo, sinon le pool par
+  // défaut ; la valeur courante est conservée même hors liste (map renommée).
+  const maps = useMemo(
+    () => mapOptions(tournamentMaps, draft.map),
+    [tournamentMaps, draft.map]
+  );
 
   const linkedMatchId =
     (scene.data?.matchId as string | null | undefined) ?? null;

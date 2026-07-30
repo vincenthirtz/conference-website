@@ -10244,6 +10244,92 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /api/admin/caster/audit:
+    post:
+      summary: Log a notable caster-cockpit action to the staff journal.
+      description: |
+        Requires `caster` role. The web cockpit (`/admin/caster`) writes scenes
+        straight to Supabase (staff RLS) and drives OBS over a browser
+        WebSocket, so those actions never reach the server and nothing could
+        trace them. This route is the single journal entry point and reuses
+        `staff_logs` (surfaced in `/admin/logs`) rather than adding a parallel
+        journal.
+
+        Scope is deliberately narrow: actions with a visible on-air or
+        configuration effect, NOT every scene auto-save keystroke
+        (`caster_scenes.updated_at` covers that, and the noise would make the
+        journal useless).
+
+        A journal failure never breaks an on-air action: the error is logged
+        server-side and the route still answers `200` — the cockpit has nothing
+        to replay.
+      operationId: adminCasterAudit
+      tags:
+        - admin/caster
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - action
+              properties:
+                action:
+                  type: string
+                  description: Allow-listed subset of `StaffLogAction`.
+                  enum:
+                    - caster_match_import
+                    - caster_stream_toggle
+                    - caster_record_toggle
+                    - caster_obs_setup_scenes
+                    - caster_poll_toggle
+                    - caster_theme_activate
+                details:
+                  type: object
+                  additionalProperties: true
+                  description: Free-form context (scene name, imported match, target state…).
+                entity_id:
+                  type: string
+                  maxLength: 100
+                  description: Affected entity when one exists (scene, match or theme id).
+      responses:
+        '200':
+          description: Action logged (or silently dropped on journal failure).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+        '400':
+          description: Invalid payload.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: string
+                    enum: [INVALID_PAYLOAD]
+                  details:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '405':
+          description: Method not allowed.
+        '429':
+          description: Rate limit exceeded.
   /api/admin/comments:
     get:
       summary: List user comments awaiting moderation.
