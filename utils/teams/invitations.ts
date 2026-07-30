@@ -33,10 +33,17 @@ import { validateBattleTag } from './addMember';
 import { isTeamRosterLocked, rosterLockErrorMessage } from './rosterLock';
 import { mapTeamRpcError } from './rpcErrors';
 import { validateRole } from '../apiHelpers';
+import { emitRoleSyncEvent } from '../botRoleSync';
 
 export const INVITATION_EXPIRY_DAYS = 7;
 
 export type InvitationPayload = {
+  /**
+   * Auteur de l'invitation. Historiquement toujours le capitaine — depuis la
+   * création d'équipe par un MANAGER (cf. /api/teams/create-with-member), ce
+   * peut aussi être un membre au rôle de gestion. Le nom du champ est conservé
+   * pour ne pas casser les invitations déjà stockées / le contrat bot.
+   */
   captain_auth_user_id: string;
   /** Optionnel : absent pour les invites créées côté site (pas de Discord). */
   captain_discord_user_id?: string | null;
@@ -46,6 +53,13 @@ export type InvitationPayload = {
   battle_tag: string | null;
   /** Optionnel : spécialité in-game (tank | dps | support | flex). */
   specialty?: string | null;
+  /**
+   * Optionnel : l'invitée a été désignée capitaine à la création de l'équipe
+   * (mode « créée par un manager » — l'équipe naît sans capitaine puisque la
+   * capitaine doit d'abord consentir). À l'acceptation, elle prend le capitanat
+   * SI l'équipe n'a toujours pas de capitaine (cf. acceptInvitation).
+   */
+  set_captain?: boolean;
   expires_at: string;
 };
 
@@ -62,7 +76,9 @@ export type InvitationRow = {
   processed_at: string | null;
 };
 
-type Result<T> = { ok: true; data: T } | { ok: false; error: string; status: number };
+type Result<T> =
+  | { ok: true; data: T }
+  | { ok: false; error: string; status: number };
 
 function nowIso() {
   return new Date().toISOString();
@@ -84,6 +100,10 @@ function isExpired(payload: InvitationPayload | null | undefined): boolean {
 
 export type CreateInvitationInput = {
   teamId: string;
+  /**
+   * Auteur de l'invitation : capitaine OU membre au rôle de gestion (manager),
+   * cf. `InvitationPayload.captain_auth_user_id`.
+   */
   captainAuthUserId: string;
   /**
    * Optionnel : id Discord du capitaine. Requis pour les invites bot (le bot
@@ -102,6 +122,11 @@ export type CreateInvitationInput = {
   battleTag?: string | null;
   /** Optional in-game specialty (tank | dps | support | flex). */
   specialty?: string | null;
+  /**
+   * L'invitée est la capitaine désignée de l'équipe (création par un manager).
+   * Elle prendra le capitanat à l'acceptation si l'équipe n'en a pas encore.
+   */
+  setCaptain?: boolean;
   /** Optional free-text message from the captain. */
   comment?: string | null;
   /**
@@ -191,6 +216,9 @@ export async function createInvitation(
     specialty: input.specialty ?? null,
     expires_at: expiresAtFromNow(),
   };
+  // On ne pose la clé que quand elle est vraie : les invitations « normales »
+  // gardent exactement le payload historique (diff nul côté bot / tests).
+  if (input.setCaptain) payload.set_captain = true;
 
   const { data: inserted, error: insertErr } = await supabaseAdmin
     .from('demandes')
@@ -238,7 +266,11 @@ async function loadPendingInvitation(
     .maybeSingle();
   if (error) {
     logger.error('[invitations] load error', error);
-    return { ok: false, error: "Erreur de chargement de l'invitation", status: 500 };
+    return {
+      ok: false,
+      error: "Erreur de chargement de l'invitation",
+      status: 500,
+    };
   }
   if (!data) {
     return { ok: false, error: 'Invitation introuvable', status: 404 };
@@ -261,7 +293,14 @@ export async function acceptInvitation(
   tenantId: string,
   demandeId: string,
   actorAuthUserId: string
-): Promise<Result<{ teamId: string; memberId: string | null }>> {
+): Promise<
+  Result<{
+    teamId: string;
+    memberId: string | null;
+    /** true si l'invitée vient aussi de prendre le capitanat (cf. set_captain). */
+    promotedToCaptain?: boolean;
+  }>
+> {
   if (!supabaseAdmin) {
     return { ok: false, error: 'Service unavailable.', status: 503 };
   }
@@ -344,12 +383,43 @@ export async function acceptInvitation(
     return { ok: false, error: mapped.error, status: mapped.status };
   }
 
-  const memberId =
-    (rpcData as { id?: string | null } | null)?.id ?? null;
+  const memberId = (rpcData as { id?: string | null } | null)?.id ?? null;
+
+  // Capitaine désignée à la création (équipe créée par un manager) : elle vient
+  // d'accepter, donc elle consent — on lui donne le capitanat. Conditionnel
+  // (`captain_id IS NULL`) : si une autre joueuse a été désignée entre-temps, on
+  // ne lui vole pas le rôle. Best-effort : un échec ne remet pas en cause
+  // l'acceptation déjà persistée (le manager pourra désigner depuis son espace).
+  let promotedToCaptain = false;
+  if (demande.payload?.set_captain) {
+    const { data: promoted, error: promoteErr } = await supabaseAdmin
+      .from('teams')
+      .update({ captain_id: actorAuthUserId })
+      .eq('id', demande.team_id)
+      .eq('tenant_id', tenantId)
+      .is('captain_id', null)
+      .select('id')
+      .maybeSingle();
+
+    if (promoteErr) {
+      logger.error(
+        '[invitations] designated-captain promote error',
+        promoteErr
+      );
+    } else if (promoted) {
+      promotedToCaptain = true;
+      void emitRoleSyncEvent(
+        'team.captain.changed',
+        actorAuthUserId,
+        tenantId,
+        { extras: { teamId: demande.team_id, role: 'new' } }
+      ).catch((e) => logger.error('[invitations] captain role-sync error', e));
+    }
+  }
 
   return {
     ok: true,
-    data: { teamId: demande.team_id, memberId },
+    data: { teamId: demande.team_id, memberId, promotedToCaptain },
   };
 }
 

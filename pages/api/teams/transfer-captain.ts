@@ -1,5 +1,14 @@
 // pages/api/teams/transfer-captain.ts
-// PATCH : le capitaine transfère son rôle à un autre membre de l'équipe
+// PATCH : le capitaine transfère son rôle à un autre membre de l'équipe.
+//
+// Deux acteurs possibles :
+//   1. la CAPITAINE en poste → transfert (RPC `transfer_captain`) ;
+//   2. un MANAGER d'une équipe SANS capitaine → amorçage du capitanat (RPC
+//      `designate_captain`). C'est le pendant de la création d'équipe « en tant
+//      que manager » : l'équipe naît sans capitaine puisque la capitaine
+//      désignée doit d'abord accepter son invitation.
+// Dans les deux cas, la mutation est atomique côté RPC et le roster verrouillé
+// par un tournoi en cours bloque l'opération.
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
@@ -12,10 +21,80 @@ import {
   rosterLockErrorMessage,
 } from '@/utils/teams/rosterLock';
 import { mapTeamRpcError } from '@/utils/teams/rpcErrors';
+import { getManagedTeam } from '@/utils/teams/managementAccess';
+import {
+  loadTeamRolesFromSupabase,
+  roleHasPermission,
+} from '@/utils/teamRoles';
 import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
 import { emitRoleSyncEvent } from '@/utils/botRoleSync';
 
 import { logger } from '../../../utils/logger';
+
+/**
+ * Amorçage du capitanat par un manager (équipe sans capitaine). Séparé du
+ * transfert classique : pas d'ancien capitaine, donc un seul event role-sync
+ * (`role: 'new'`) et un log d'audit distinct.
+ */
+async function designateCaptain({
+  res,
+  tenantId,
+  teamId,
+  actorUserId,
+  newCaptainUserId,
+}: {
+  res: NextApiResponse;
+  tenantId: string;
+  teamId: string;
+  actorUserId: string;
+  newCaptainUserId: string;
+}) {
+  const lockStatus = await isTeamRosterLocked(tenantId, teamId);
+  if (lockStatus.locked) {
+    return res.status(409).json({ error: rosterLockErrorMessage(lockStatus) });
+  }
+
+  const { error: rpcErr } = await supabaseAdmin.rpc('designate_captain', {
+    p_team_id: teamId,
+    p_new_captain: newCaptainUserId,
+    p_tenant: tenantId,
+  });
+
+  if (rpcErr) {
+    const mapped = mapTeamRpcError(rpcErr);
+    if (mapped.status >= 500) {
+      logger.error('[transfer-captain] designate_captain rpc error:', rpcErr);
+    }
+    return res.status(mapped.status).json({ error: mapped.error });
+  }
+
+  // Pas d'ancien capitaine à désynchroniser : un seul event, pour la nouvelle.
+  void emitRoleSyncEvent('team.captain.changed', newCaptainUserId, tenantId, {
+    extras: { teamId, role: 'new' },
+  }).catch(logger.error);
+
+  const staff = await getStaffByUserId(actorUserId);
+  if (staff?.id) {
+    await logStaffAction({
+      staff_id: staff.id,
+      action: 'assign_team_captain',
+      entity_type: 'team',
+      entity_id: teamId,
+      tenant_id: tenantId,
+      payload: {
+        previous_captain_id: null,
+        new_captain_id: newCaptainUserId,
+        designated_by: 'manager',
+      },
+    });
+  }
+
+  return res.status(200).json({
+    success: true,
+    info: 'Capitaine désignée avec succès.',
+    newCaptainUserId,
+  });
+}
 export default withAuthRoute(async function handler(
   req: NextApiRequest,
   res: NextApiResponse,
@@ -37,7 +116,9 @@ export default withAuthRoute(async function handler(
     return;
 
   const userId = user.id;
-  const tenantId = await resolveTenantIdForUserRequestAsync(req, { authUserId: userId });
+  const tenantId = await resolveTenantIdForUserRequestAsync(req, {
+    authUserId: userId,
+  });
   const { newCaptainUserId } = req.body || {};
 
   if (
@@ -63,6 +144,52 @@ export default withAuthRoute(async function handler(
   if (teamErr) {
     logger.error('[transfer-captain] team lookup error:', teamErr);
     return res.status(500).json({ error: 'Failed to find your team.' });
+  }
+
+  // Repli MANAGER : une équipe créée par un manager naît SANS capitaine
+  // (`captain_id IS NULL` — la capitaine désignée doit d'abord accepter son
+  // invitation). Le manager, qui a la permission `manage_roster`, doit pouvoir
+  // amorcer le capitanat. On ne l'autorise QUE sur une équipe sans capitaine :
+  // voler un capitanat existant reste réservé à la capitaine (et aux routes
+  // admin). L'invariant est re-vérifié atomiquement par la RPC
+  // `designate_captain` (captain_already_set → 409).
+  let bootstrapTeamId: string | null = null;
+  if (!team) {
+    const access = await getManagedTeam(userId, tenantId);
+    if (access?.isManager) {
+      const roles = await loadTeamRolesFromSupabase(supabaseAdmin);
+      const { data: managedTeamRow } = await supabaseAdmin
+        .from('teams')
+        .select('id, captain_id')
+        .eq('id', access.teamId)
+        .eq('tenant_id', tenantId)
+        .maybeSingle();
+      const { data: membership } = await supabaseAdmin
+        .from('team_members')
+        .select('role')
+        .eq('team_id', access.teamId)
+        .eq('tenant_id', tenantId)
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (
+        managedTeamRow &&
+        !managedTeamRow.captain_id &&
+        roleHasPermission(roles, membership?.role, 'manage_roster')
+      ) {
+        bootstrapTeamId = managedTeamRow.id as string;
+      }
+    }
+  }
+
+  if (bootstrapTeamId) {
+    return await designateCaptain({
+      res,
+      tenantId,
+      teamId: bootstrapTeamId,
+      actorUserId: userId,
+      newCaptainUserId,
+    });
   }
 
   if (!team) {

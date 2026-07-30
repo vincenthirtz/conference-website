@@ -176,6 +176,16 @@ export default function PublicCreateTeamPage() {
     },
   ]);
   const [captainIndex, setCaptainIndex] = useState<number | null>(0);
+  // Qui crée l'équipe ? « captain » = la personne qui remplit le formulaire joue
+  // et prend le capitanat (flux historique). « manager » = elle encadre sans
+  // jouer : elle est ajoutée avec le rôle manager, reçoit le lien d'accès à
+  // l'espace équipe, et TOUTES les joueuses du roster — capitaine désignée
+  // comprise — sont invitées (le capitanat est attribué à l'acceptation).
+  const [creatorRole, setCreatorRole] = useState<'captain' | 'manager'>(
+    'captain'
+  );
+  const [managerEmail, setManagerEmail] = useState('');
+  const isManagerMode = creatorRole === 'manager';
 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -356,6 +366,19 @@ export default function PublicCreateTeamPage() {
       ? undefined
       : format(t.validationEmailInvalid, { email });
   }
+  function managerEmailError(): string | undefined {
+    if (!isManagerMode) return undefined;
+    const email = managerEmail.trim().toLowerCase();
+    if (!email) return t.validationManagerEmailRequired;
+    if (!EMAIL_REGEX.test(email))
+      return format(t.validationEmailInvalid, { email: managerEmail.trim() });
+    // Le serveur rejette (MANAGER_DUPLICATE) : on le dit avant l'envoi.
+    const clash = members.some(
+      (m) => m.email.trim().toLowerCase() === email && m.email.trim().length > 0
+    );
+    if (clash) return t.validationManagerEmailDuplicate;
+    return undefined;
+  }
   function memberBattleTagError(idx: number): string | undefined {
     const m = members[idx];
     if (!m || m.email.trim().length === 0) return undefined;
@@ -386,11 +409,17 @@ export default function PublicCreateTeamPage() {
       const filled = members
         .map((_, i) => i)
         .filter((i) => members[i].email.trim().length > 0);
+      const me = managerEmailError();
+      if (me) errs.push(me);
       for (const i of filled) {
         const e = memberEmailError(i);
         if (e) errs.push(e);
       }
-      if (filled.length > 0 && captainIndex === null) {
+      // En mode manager, la capitaine est facultative à la création : elle peut
+      // être désignée plus tard depuis l'espace équipe (le manager pilote déjà
+      // l'équipe). En mode capitaine, elle reste obligatoire dès qu'un membre
+      // est saisi — sinon personne ne peut inviter le roster.
+      if (!isManagerMode && filled.length > 0 && captainIndex === null) {
         errs.push(t.validationCaptainRequired);
       }
       for (const i of filled) {
@@ -420,6 +449,7 @@ export default function PublicCreateTeamPage() {
           next[`member-${i}-battleTag`] = true;
         });
         next.captain = true;
+        next.managerEmail = true;
       }
       return next;
     });
@@ -458,6 +488,8 @@ export default function PublicCreateTeamPage() {
       TOO_MANY_MEMBERS: t.errTooManyMembers,
       CAPTAIN_REQUIRED: t.errCaptainRequired,
       MULTIPLE_CAPTAINS: t.errMultipleCaptains,
+      MANAGER_EMAIL_INVALID: t.errManagerEmailInvalid,
+      MANAGER_DUPLICATE: t.errManagerDuplicate,
       BATTLETAG_REQUIRED: t.errBattletagRequired,
       BATTLETAG_INVALID: t.errBattletagInvalid,
       FIELD_ERRORS: t.errFieldErrors,
@@ -525,6 +557,9 @@ export default function PublicCreateTeamPage() {
         description: description || null,
         discord: discord || null,
         members: preparedMembers,
+        // Mode manager : le serveur insère le manager (rôle `manager`), lui
+        // envoie le magic-link et invite tout le roster en son nom.
+        manager_email: isManagerMode ? managerEmail.trim() : undefined,
         tournament_id: tournamentIdParam || null,
         // Réponses aux champs d'inscription personnalisés (vide si le tournoi
         // n'en définit aucun). Le serveur les valide/coerce et bloque en 400
@@ -583,6 +618,8 @@ export default function PublicCreateTeamPage() {
         { id: 'm-0', email: '', role: 'player', battleTag: '', specialty: '' },
       ]);
       setCaptainIndex(null);
+      setCreatorRole('captain');
+      setManagerEmail('');
       // Réinitialise les réponses aux champs personnalisés (valeurs par défaut).
       setFieldValues(() => {
         const next: Record<string, FieldValue> = {};
@@ -704,11 +741,19 @@ export default function PublicCreateTeamPage() {
                     </div>
                     {captainIndex === idx && (
                       <span
-                        title={t.captainLabel}
+                        title={
+                          isManagerMode
+                            ? t.captainDesignatedLabel
+                            : t.captainLabel
+                        }
                         className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--color-yellow)] text-black ring-2 ring-[#160b28]"
                       >
                         <CrownIcon className="h-2.5 w-2.5" />
-                        <span className="sr-only">{t.captainLabel}</span>
+                        <span className="sr-only">
+                          {isManagerMode
+                            ? t.captainDesignatedLabel
+                            : t.captainLabel}
+                        </span>
                       </span>
                     )}
                   </li>
@@ -1102,6 +1147,108 @@ export default function PublicCreateTeamPage() {
               <span className="text-xs text-gray-400">{t.rosterMax}</span>
             </div>
 
+            {/* Qui crée l'équipe : capitaine (elle joue) ou manager (il encadre) */}
+            <fieldset className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+              <legend className={labelCls}>{t.creatorRoleLegend}</legend>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {[
+                  {
+                    value: 'captain' as const,
+                    label: t.creatorRoleCaptain,
+                    hint: t.creatorRoleCaptainHint,
+                  },
+                  {
+                    value: 'manager' as const,
+                    label: t.creatorRoleManager,
+                    hint: t.creatorRoleManagerHint,
+                  },
+                ].map((opt) => (
+                  <label
+                    key={opt.value}
+                    className={`cursor-pointer rounded-xl border p-3 transition ${
+                      creatorRole === opt.value
+                        ? 'border-[var(--color-violet)]/60 bg-[var(--color-violet)]/10'
+                        : 'border-white/10 hover:border-white/30'
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        name="creator-role"
+                        className="sr-only"
+                        checked={creatorRole === opt.value}
+                        onChange={() => {
+                          setCreatorRole(opt.value);
+                          markTouched('creatorRole');
+                        }}
+                      />
+                      <span
+                        aria-hidden="true"
+                        className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
+                          creatorRole === opt.value
+                            ? 'border-[var(--color-violet)] bg-[var(--color-violet)]'
+                            : 'border-white/30'
+                        }`}
+                      >
+                        {creatorRole === opt.value && (
+                          <span className="h-1.5 w-1.5 rounded-full bg-white" />
+                        )}
+                      </span>
+                      <span className="text-sm font-semibold text-white">
+                        {opt.label}
+                      </span>
+                    </span>
+                    <span className="mt-1 block pl-6 text-[11px] leading-snug text-gray-400">
+                      {opt.hint}
+                    </span>
+                  </label>
+                ))}
+              </div>
+
+              {isManagerMode && (
+                <div className="mt-4">
+                  <label htmlFor="manager-email" className={labelCls}>
+                    {t.managerEmailLabel}
+                  </label>
+                  <input
+                    id="manager-email"
+                    type="email"
+                    value={managerEmail}
+                    onChange={(e) => setManagerEmail(e.target.value)}
+                    onBlur={() => markTouched('managerEmail')}
+                    aria-invalid={
+                      !!(touched.managerEmail && managerEmailError())
+                    }
+                    aria-describedby={
+                      touched.managerEmail && managerEmailError()
+                        ? 'err-manager-email'
+                        : 'hint-manager-email'
+                    }
+                    className={inputCls}
+                    placeholder={t.emailPlaceholder}
+                  />
+                  {touched.managerEmail && managerEmailError() ? (
+                    <p id="err-manager-email" className={errCls}>
+                      {managerEmailError()}
+                    </p>
+                  ) : (
+                    <p
+                      id="hint-manager-email"
+                      className="mt-1.5 text-[11px] text-gray-400"
+                    >
+                      {t.managerEmailHint}
+                    </p>
+                  )}
+                </div>
+              )}
+            </fieldset>
+
+            {isManagerMode && (
+              <p className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-xs leading-relaxed text-gray-300">
+                {t.managerCaptainNote}
+              </p>
+            )}
+
             <div className="space-y-3">
               {members.map((member, idx) => {
                 const emailErr = touched[`member-${idx}-email`]
@@ -1147,7 +1294,9 @@ export default function PublicCreateTeamPage() {
                             }}
                           />
                           <CrownIcon className="h-3 w-3" />
-                          {t.captainLabel}
+                          {isManagerMode
+                            ? t.captainDesignatedLabel
+                            : t.captainLabel}
                         </label>
                         {members.length > 1 && (
                           <button
@@ -1305,7 +1454,8 @@ export default function PublicCreateTeamPage() {
               })}
             </div>
 
-            {touched.captain &&
+            {!isManagerMode &&
+              touched.captain &&
               filledMemberIdx.length > 0 &&
               captainIndex === null && (
                 <p className={errCls}>{t.validationCaptainRequired}</p>

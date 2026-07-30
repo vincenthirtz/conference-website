@@ -30,6 +30,7 @@ export type MappedRpcError = { status: number; error: string };
  *       team_not_found          -> 404  (aussi code P0002 — no_data_found)
  *       not_captain             -> 403
  *       same_user               -> 400
+ *       captain_already_set     -> 409  (designate_captain : capitanat déjà pris)
  *       target_not_member       -> 400  (cible absente ou coach)
  *   - defaut                    -> 500
  */
@@ -94,10 +95,20 @@ export function mapTeamRpcError(error: {
   if (message.includes('same_user')) {
     return { status: 400, error: 'Tu es déjà capitaine.' };
   }
+  // Sentinelle propre a designate_captain : on n'ecrase jamais un capitanat
+  // existant (le manager ne peut qu'amorcer une equipe sans capitaine).
+  if (message.includes('captain_already_set')) {
+    return {
+      status: 409,
+      error:
+        'Cette équipe a déjà une capitaine. Seule la capitaine peut transmettre son rôle.',
+    };
+  }
   if (message.includes('target_not_member')) {
     return {
       status: 400,
-      error: "Ce joueur n'est pas un membre valide de ton équipe (ou est coach).",
+      error:
+        "Ce joueur n'est pas un membre valide de ton équipe (ou est coach).",
     };
   }
 

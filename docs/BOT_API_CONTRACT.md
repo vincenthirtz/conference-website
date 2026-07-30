@@ -2774,9 +2774,20 @@ Le site n'appelle pas le bot directement : il emet ces events dans
 consomme.
 
 **`team.created`** — payload : `{ teamId, name, slug, captainAuthUserId,
-captainDiscordUserId, discordRoleId }` (`discordRoleId` est `null` a la
-creation ; il n'existe qu'apres le writeback ci-dessus). Le bot provisionne, de
-maniere **idempotente** :
+captainDiscordUserId, creatorAuthUserId, creatorDiscordUserId, creatorRole,
+discordRoleId }` (`discordRoleId` est `null` a la creation ; il n'existe
+qu'apres le writeback ci-dessus).
+
+`creatorRole` vaut `'captain'` (flux historique : la creatrice joue et prend le
+capitanat) ou `'manager'` — equipe creee depuis `/team/create` par une personne
+qui l'encadre sans y jouer. En mode `manager`, `captainAuthUserId` /
+`captainDiscordUserId` sont **`null`** : la capitaine designee n'est
+qu'**invitee** tant qu'elle n'a pas accepte (`teams.captain_id` reste NULL), il
+ne faut donc pas lui assigner le role d'equipe. Le bot assigne le role a
+`creatorDiscordUserId` a la place. Le champ `set_captain` du payload
+d'invitation lui donne le capitanat au moment ou elle accepte.
+
+Le bot provisionne, de maniere **idempotente** :
 
 1. **Role d'equipe** — scan de l'existant AVANT creation : reuse par
    `discordRoleId` (si deja writeback), sinon par **nom** (insensible a la

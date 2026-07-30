@@ -30,6 +30,9 @@ const SITE_URL =
   process.env.SITE_URL ||
   'https://owwomenscup.fr';
 
+/** Même forme que la validation client (pages/team/create.tsx). */
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 /**
  * Masque un email pour l'exposer côté client sans divulguer l'adresse complète :
  * "alice@domain.com" -> "a***@domain.com". Le token magic-link n'est JAMAIS
@@ -57,6 +60,16 @@ type Body = {
   member_specialty?: string | null;
   set_captain?: boolean;
   members?: MemberInput[];
+  /**
+   * Création « en tant que manager » : email de la personne qui crée l'équipe
+   * sans y jouer. Elle est insérée directement dans `team_members` avec le rôle
+   * `manager` (rôle à permissions, cf. utils/teamRoles.ts) et reçoit le
+   * magic-link d'accès à l'espace équipe. Toutes les joueuses du roster — y
+   * compris la capitaine désignée — sont alors INVITÉES (consentement requis),
+   * et `teams.captain_id` reste NULL jusqu'à ce que la capitaine désignée
+   * accepte (cf. `set_captain` dans le payload d'invitation).
+   */
+  manager_email?: string | null;
   tournament_id?: string | null;
   /** Réponses aux champs d'inscription personnalisés du tournoi (Flow A). */
   field_values?: Record<string, unknown> | null;
@@ -115,7 +128,8 @@ type ApiResponse =
       info?: string;
       /**
        * Pont magic-link : indique si un email d'accès à l'espace équipe a été
-       * envoyé au capitaine (fire-and-forget, non bloquant). `to` = email masqué.
+       * envoyé au créateur — capitaine, ou manager en mode « je gère l'équipe »
+       * (fire-and-forget, non bloquant). `to` = email masqué.
        * Le token_hash n'est jamais exposé.
        */
       accessEmail?: { sent: boolean; to?: string };
@@ -135,6 +149,12 @@ type ApiResponse =
  * inerte partout ailleurs.
  */
 const CAPTAIN_LANDING = '/player/manage-team?welcome=1';
+
+/**
+ * Atterrissage du MANAGER créateur : même espace équipe, sans la carte
+ * d'onboarding Battle.net (il ne joue pas, il n'a pas de BattleTag à vérifier).
+ */
+const MANAGER_LANDING = '/player/manage-team';
 
 export default async function handler(
   req: NextApiRequest,
@@ -247,6 +267,17 @@ export default async function handler(
   const memberEmail = body.member_email?.trim().toLowerCase() || null;
   const memberUserId = body.member_user_id?.trim() || null;
 
+  // Mode « créée par un manager » : l'email du manager pilote tout le flux
+  // (créateur inséré, destinataire du magic-link, inviteur du roster).
+  const managerEmail = body.manager_email?.trim().toLowerCase() || null;
+  if (managerEmail && !EMAIL_REGEX.test(managerEmail)) {
+    return res.status(400).json({
+      error: "L'email du manager est invalide.",
+      code: 'MANAGER_EMAIL_INVALID',
+      fields: { manager_email: "L'email du manager est invalide." },
+    });
+  }
+
   const rawMembers = Array.isArray(body.members) ? body.members : [];
   const cleanedMembers = rawMembers
     .map((m) => ({
@@ -274,6 +305,24 @@ export default async function handler(
     return res.status(400).json({
       error: 'Provide a member to set as captain',
       code: 'CAPTAIN_REQUIRED',
+    });
+  }
+
+  // Le manager ne peut pas figurer AUSSI dans le roster : il serait à la fois
+  // inviteur et invité (createInvitation refuse l'auto-invitation) et on ne
+  // saurait pas quel rôle lui poser. On rejette AVANT toute création de compte.
+  if (
+    managerEmail &&
+    (cleanedMembers.some((m) => m.email === managerEmail) ||
+      memberEmail === managerEmail)
+  ) {
+    return res.status(400).json({
+      error:
+        "L'email du manager ne peut pas être aussi celui d'une joueuse du roster.",
+      code: 'MANAGER_DUPLICATE',
+      fields: {
+        manager_email: 'Cet email est déjà utilisé par un membre du roster.',
+      },
     });
   }
 
@@ -441,12 +490,43 @@ export default async function handler(
     captain: firstCaptainIdx === idx && m.captain,
   }));
 
-  // Ferme le trou « équipe orpheline sans capitaine » : si des membres sont
-  // fournis mais qu'AUCUN n'est désigné capitaine, on ne peut ni les insérer
-  // (personne pour piloter la team) ni les inviter (pas d'inviteur). On rejette
-  // AVANT de créer la team (aucune donnée à nettoyer). Une team sans membre du
-  // tout (création « à blanc ») reste autorisée : le créateur pourra recruter.
-  if (memberRecords.length > 0 && captainUserId === null) {
+  // Mode manager : on résout (ou crée) son compte AVANT la création de l'équipe
+  // pour pouvoir échouer sans laisser d'orphelin.
+  let managerUserId: string | null = null;
+  if (managerEmail) {
+    try {
+      const { userId } = await findOrCreateUserByEmail(managerEmail, 'manager');
+      managerUserId = userId;
+    } catch (err: unknown) {
+      const message =
+        (err as Error)?.message ||
+        'User lookup failed for the provided manager email';
+      return res.status(500).json({ error: message, code: 'SERVER_ERROR' });
+    }
+    // Filet supplémentaire : un membre du roster peut pointer sur le MÊME
+    // compte que le manager sans avoir le même email (résolution par user_id,
+    // alias d'email…). Dans ce cas on rejette plutôt que de produire une
+    // invitation impossible (auto-invitation) et un roster incohérent.
+    if (memberRecords.some((m) => m.user_id === managerUserId)) {
+      return res.status(400).json({
+        error:
+          "Le manager ne peut pas être aussi membre du roster de l'équipe.",
+        code: 'MANAGER_DUPLICATE',
+      });
+    }
+  }
+
+  // Créateur de l'équipe = la personne insérée directement + destinataire du
+  // magic-link + inviteur du reste du roster. C'est le manager quand il y en a
+  // un, sinon la capitaine (flux historique).
+  const creatorUserId = managerUserId ?? captainUserId;
+
+  // Ferme le trou « équipe orpheline sans pilote » : si des membres sont
+  // fournis mais qu'AUCUN créateur n'est identifiable (ni manager, ni capitaine
+  // désignée), on ne peut ni les insérer ni les inviter (pas d'inviteur). On
+  // rejette AVANT de créer la team (aucune donnée à nettoyer). Une team sans
+  // membre du tout (création « à blanc ») reste autorisée.
+  if (memberRecords.length > 0 && creatorUserId === null) {
     return res.status(400).json({
       error:
         'Un capitaine doit être désigné (set_captain) quand des membres sont fournis.',
@@ -560,21 +640,65 @@ export default async function handler(
     }
   };
 
-  // Invite-accept model : SEUL le capitaine/créateur (m.user_id ===
-  // captainUserId) est inséré directement dans team_members. Tous les autres
-  // membres du roster web sont INVITÉS (consentement requis) — on crée une
-  // invitation pending (demandes type='invite') au lieu de les forcer dans la
-  // team. L'échec d'une invitation (déjà membre d'une équipe, doublon, …) ne
-  // fait PAS échouer la création de l'équipe : on collecte et on continue (la
-  // team + le capitaine restent valides).
-  for (const m of memberRecords) {
-    const isCaptainRecord =
-      captainUserId !== null && m.user_id === captainUserId;
+  // Mode manager : le créateur n'est PAS dans `memberRecords` (il ne joue pas).
+  // On l'insère directement, avec le rôle `manager` — rôle à permissions
+  // (utils/teamRoles.ts) qui lui donne la gestion du roster, des scrims, des
+  // demandes… sans être capitaine. C'est lui qui invite ensuite le roster.
+  if (managerUserId) {
+    const { data: managerMember, error: managerInsertErr } = await supabaseAdmin
+      .from('team_members')
+      .insert({
+        team_id: createdTeam.id,
+        user_id: managerUserId,
+        role: 'manager',
+        battle_tag: null,
+        specialty: null,
+        tenant_id: tenantId,
+      })
+      .select('id')
+      .maybeSingle();
 
-    if (!isCaptainRecord) {
-      // Membre non-créateur → invitation pending. Nécessite un capitaine
-      // (inviteur). Sans capitaine désigné, on ne peut pas inviter : on skip.
-      if (captainUserId === null) {
+    if (managerInsertErr) {
+      logger.error(
+        '[/api/teams/create-with-member] manager insert error:',
+        managerInsertErr
+      );
+      await cleanupOrphanTeam(createdTeam.id, 'manager-insert-failed');
+      const msg = managerInsertErr.message?.toLowerCase() || '';
+      const isDuplicate = msg.includes('duplicate') || msg.includes('unique');
+      return res.status(400).json({
+        error: isDuplicate
+          ? 'Ce manager appartient déjà à une équipe.'
+          : "Le manager n'a pas pu être ajouté. L'équipe n'a pas été enregistrée.",
+        code: 'MEMBER_INSERT_FAILED',
+      });
+    }
+
+    insertedMembers.push({
+      id: managerMember?.id ?? null,
+      user_id: managerUserId,
+      role: 'manager',
+      captain: false,
+      battle_tag: null,
+      specialty: null,
+    });
+  }
+
+  // Invite-accept model : SEUL le créateur (m.user_id === creatorUserId, càd la
+  // capitaine ou — en mode manager — personne dans cette boucle) est inséré
+  // directement dans team_members. Tous les autres membres du roster web sont
+  // INVITÉS (consentement requis) — on crée une invitation pending (demandes
+  // type='invite') au lieu de les forcer dans la team. L'échec d'une invitation
+  // (déjà membre d'une équipe, doublon, …) ne fait PAS échouer la création de
+  // l'équipe : on collecte et on continue (la team + le créateur restent valides).
+  for (const m of memberRecords) {
+    const isCreatorRecord =
+      creatorUserId !== null && m.user_id === creatorUserId;
+
+    if (!isCreatorRecord) {
+      // Membre non-créateur → invitation pending. Nécessite un inviteur (le
+      // créateur). Sans créateur, on ne peut pas inviter : on skip.
+      if (creatorUserId === null) {
         invitedMembers.push({
           invitation_id: null,
           user_id: m.user_id,
@@ -589,10 +713,14 @@ export default async function handler(
       const inviteResult = await createInvitation(tenantId, {
         teamId: createdTeam.id,
         inviteeAuthUserId: m.user_id,
-        captainAuthUserId: captainUserId,
+        captainAuthUserId: creatorUserId,
         role: m.role,
         battleTag: m.battle_tag,
         specialty: m.specialty,
+        // Mode manager : la capitaine désignée est invitée comme les autres.
+        // Le drapeau lui donne le capitanat au moment où elle accepte (l'équipe
+        // n'a pas de capitaine d'ici là).
+        setCaptain: Boolean(managerUserId && m.captain),
         source: 'website',
       });
 
@@ -621,7 +749,7 @@ export default async function handler(
       continue;
     }
 
-    // Capitaine/créateur → insertion directe dans team_members.
+    // Créateur (capitaine) → insertion directe dans team_members.
     const memberPayload = {
       team_id: createdTeam.id,
       user_id: m.user_id,
@@ -665,7 +793,11 @@ export default async function handler(
     });
   }
 
-  if (captainUserId) {
+  // Mode manager : `captain_id` reste NULL. La capitaine désignée n'est encore
+  // qu'invitée — on ne la nomme qu'au moment où elle accepte (drapeau
+  // `set_captain` du payload d'invitation), ou via l'espace équipe du manager
+  // (PATCH /api/teams/transfer-captain → RPC designate_captain).
+  if (captainUserId && !managerUserId) {
     const { error: captainErr } = await supabaseAdmin
       .from('teams')
       .update({ captain_id: captainUserId })
@@ -700,11 +832,14 @@ export default async function handler(
   if (memberEmail && memberRecords.length === 1) {
     userIdToEmail.set(memberRecords[0].user_id, memberEmail);
   }
+  if (managerUserId && managerEmail) {
+    userIdToEmail.set(managerUserId, managerEmail);
+  }
   for (const m of insertedMembers) {
-    // Le capitaine/créateur reçoit l'email d'accès dédié (magic-link ci-dessous)
-    // — pas l'email « vous avez rejoint l'équipe » (redondant : il vient de la
-    // créer). On l'exclut donc de la boucle join pour ne pas lui envoyer 2 mails.
-    if (captainUserId !== null && m.user_id === captainUserId) continue;
+    // Le créateur reçoit l'email d'accès dédié (magic-link ci-dessous) — pas
+    // l'email « vous avez rejoint l'équipe » (redondant : il vient de la créer).
+    // On l'exclut donc de la boucle join pour ne pas lui envoyer 2 mails.
+    if (creatorUserId !== null && m.user_id === creatorUserId) continue;
     const email = userIdToEmail.get(m.user_id);
     if (email) {
       sendTeamJoinEmail(email, createdTeam.name, m.role).catch((err) => {
@@ -723,9 +858,12 @@ export default async function handler(
   // l'`action_link` renvoyé (code PKCE non échangeable côté client) mais on
   // extrait `hashed_token` et on construit l'URL nous-mêmes (verifyOtp côté page).
   let accessEmail: { sent: boolean; to?: string } = { sent: false };
-  if (captainUserId) {
-    const captainEmail = userIdToEmail.get(captainUserId) || null;
-    if (captainEmail) {
+  if (creatorUserId) {
+    const creatorEmail = userIdToEmail.get(creatorUserId) || null;
+    // Le manager ne joue pas : la carte d'onboarding Battle.net (`welcome=1`)
+    // ne le concerne pas, on l'envoie directement sur son espace équipe.
+    const landing = managerUserId ? MANAGER_LANDING : CAPTAIN_LANDING;
+    if (creatorEmail) {
       try {
         // `welcome=1` déclenche, à l'arrivée dans l'espace équipe, la carte
         // d'onboarding « vérifie ton BattleTag » (Battle.net OAuth). C'est le
@@ -733,37 +871,37 @@ export default async function handler(
         // est déjà connectée ; proposer la vérification ailleurs suppose qu'elle
         // aille la chercher dans son profil.
         const redirectTo = `${SITE_URL}/auth/team-access?next=${encodeURIComponent(
-          CAPTAIN_LANDING
+          landing
         )}`;
         const { data: linkData, error: linkErr } =
           await supabaseAdmin.auth.admin.generateLink({
             type: 'magiclink',
-            email: captainEmail,
+            email: creatorEmail,
             options: { redirectTo },
           });
 
         const tokenHash = linkData?.properties?.hashed_token;
         if (linkErr || !tokenHash) {
           logger.error(
-            '[create-with-member] captain magic-link generateLink failed',
+            '[create-with-member] creator magic-link generateLink failed',
             { teamId: createdTeam.id, error: linkErr?.message ?? 'no token' }
           );
         } else {
           const actionLink = `${SITE_URL}/auth/team-access?token_hash=${encodeURIComponent(
             tokenHash
-          )}&type=magiclink&next=${encodeURIComponent(CAPTAIN_LANDING)}`;
+          )}&type=magiclink&next=${encodeURIComponent(landing)}`;
 
           // Fire-and-forget : un échec Brevo ne doit pas bloquer la création.
           sendTeamAccessEmail({
-            to: captainEmail,
+            to: creatorEmail,
             teamName: createdTeam.name,
             actionLink,
           }).catch(() => {});
 
-          accessEmail = { sent: true, to: maskEmail(captainEmail) };
+          accessEmail = { sent: true, to: maskEmail(creatorEmail) };
         }
       } catch (e) {
-        logger.error('[create-with-member] captain magic-link bridge crash', {
+        logger.error('[create-with-member] creator magic-link bridge crash', {
           teamId: createdTeam.id,
           error: e instanceof Error ? e.message : String(e),
         });
@@ -791,11 +929,11 @@ export default async function handler(
       if (tournament && tournament.status === 'published') {
         // Check max_teams limit
         let canRegister = true;
-        // min_players = nombre de JOUEURS (player + substitute), coachs
-        // EXCLUS (décision produit : un coach ne compte pas dans le roster
-        // minimum requis pour l'inscription auto).
+        // min_players = nombre de JOUEURS (player + substitute), coachs ET
+        // managers EXCLUS (décision produit : l'encadrement ne compte pas dans
+        // le roster minimum requis pour l'inscription auto).
         const playerCount = insertedMembers.filter(
-          (m) => m.role !== 'coach'
+          (m) => m.role !== 'coach' && m.role !== 'manager'
         ).length;
         if (tournament.min_players && playerCount < tournament.min_players) {
           canRegister = false;
@@ -907,7 +1045,8 @@ export default async function handler(
   }
 
   const infoParts: string[] = [];
-  if (insertedMembers.length)
+  if (managerUserId) infoParts.push('Équipe créée et manager ajouté');
+  else if (insertedMembers.length)
     infoParts.push('Équipe créée et capitaine ajouté');
   else infoParts.push('Équipe créée');
   const sentInvites = invitedMembers.filter((i) => i.invitation_id).length;
@@ -944,24 +1083,41 @@ export default async function handler(
   // Bot push : team.created -> le bot cree le salon vocal natif de l'equipe
   // (chantier voice par equipe). Idempotent cote bot via teams.discord_voice_channel_id.
   void (async () => {
-    let captainDiscordUserId: string | null = null;
-    if (captainUserId) {
+    // Mode manager : il n'y a PAS encore de capitaine (la désignée n'a pas
+    // accepté). On n'annonce donc aucun capitaine au bot — sinon il assignerait
+    // le rôle d'équipe à quelqu'un qui n'en fait pas partie. Le créateur
+    // (manager) est exposé à part : le bot lui donne le rôle à la place.
+    const effectiveCaptainUserId = managerUserId ? null : captainUserId;
+    const resolveDiscordId = async (
+      authUserId: string | null
+    ): Promise<string | null> => {
+      if (!authUserId) return null;
       const { data: link } = await supabaseAdmin
         .from('user_discord_links')
         .select('discord_user_id')
-        .eq('user_id', captainUserId)
+        .eq('user_id', authUserId)
         .maybeSingle();
-      captainDiscordUserId =
-        (link?.discord_user_id as string | undefined) ?? null;
-    }
+      return (link?.discord_user_id as string | undefined) ?? null;
+    };
+
+    const captainDiscordUserId = await resolveDiscordId(effectiveCaptainUserId);
+    const creatorDiscordUserId = managerUserId
+      ? await resolveDiscordId(managerUserId)
+      : captainDiscordUserId;
+
     await emitBotEvent(
       'team.created',
       {
         teamId: createdTeam.id,
         name: createdTeam.name,
         slug: createdTeam.slug ?? null,
-        captainAuthUserId: captainUserId,
+        captainAuthUserId: effectiveCaptainUserId,
         captainDiscordUserId,
+        // Créateur de l'équipe : capitaine (flux historique) ou manager. Le bot
+        // s'en sert comme cible de repli pour l'assignation du rôle d'équipe.
+        creatorAuthUserId: creatorUserId,
+        creatorDiscordUserId,
+        creatorRole: managerUserId ? 'manager' : 'captain',
         discordRoleId: createdTeam.discord_role_id ?? null,
       },
       tenantId

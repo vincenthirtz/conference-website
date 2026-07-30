@@ -18,6 +18,13 @@ vi.mock('@/utils/supabase', async () => {
   return { supabaseAdmin: m.supabaseAdmin, getServerClient: m.getServerClient };
 });
 
+// La promotion « capitaine désignée » (payload.set_captain) émet un role-sync ;
+// on l'espionne au lieu de laisser partir un event bot.
+const emitRoleSyncEvent = vi.fn((..._args: unknown[]) => Promise.resolve());
+vi.mock('@/utils/botRoleSync', () => ({
+  emitRoleSyncEvent: (...args: unknown[]) => emitRoleSyncEvent(...args),
+}));
+
 import {
   store,
   resetSupabaseMock,
@@ -275,6 +282,57 @@ describe('acceptInvitation', () => {
     const r = await acceptInvitation(TENANT, id, INVITEE);
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.status).toBe(409);
+  });
+
+  // Équipe créée par un manager : la capitaine désignée est invitée
+  // (payload.set_captain) et ne prend le capitanat qu'en acceptant — c'est le
+  // moment où elle consent.
+  describe('capitaine désignée (set_captain)', () => {
+    beforeEach(() => {
+      emitRoleSyncEvent.mockClear();
+      // Équipe SANS capitaine : c'est l'état d'une équipe créée par un manager.
+      store.teams = [{ id: TEAM, tenant_id: TENANT, captain_id: null }] as any;
+      setRpcResult('accept_invitation', {
+        data: { id: 'tm-inv', team_id: TEAM, user_id: INVITEE },
+        error: null,
+      });
+    });
+
+    it('donne le capitanat à l’acceptation quand l’équipe n’en a pas', async () => {
+      const id = seedPending({ set_captain: true });
+      const r = await acceptInvitation(TENANT, id, INVITEE);
+      expect(r.ok).toBe(true);
+      if (r.ok) expect(r.data.promotedToCaptain).toBe(true);
+      expect((store.teams as any[])[0].captain_id).toBe(INVITEE);
+      expect(emitRoleSyncEvent).toHaveBeenCalledWith(
+        'team.captain.changed',
+        INVITEE,
+        TENANT,
+        { extras: { teamId: TEAM, role: 'new' } }
+      );
+    });
+
+    it('ne vole pas un capitanat déjà attribué entre-temps', async () => {
+      store.teams = [
+        { id: TEAM, tenant_id: TENANT, captain_id: CAPTAIN },
+      ] as any;
+      const id = seedPending({ set_captain: true });
+      const r = await acceptInvitation(TENANT, id, INVITEE);
+      // L'acceptation reste un succès : seule la promotion est abandonnée.
+      expect(r.ok).toBe(true);
+      if (r.ok) expect(r.data.promotedToCaptain).toBe(false);
+      expect((store.teams as any[])[0].captain_id).toBe(CAPTAIN);
+      expect(emitRoleSyncEvent).not.toHaveBeenCalled();
+    });
+
+    it('ne touche pas au capitanat sans le drapeau', async () => {
+      const id = seedPending();
+      const r = await acceptInvitation(TENANT, id, INVITEE);
+      expect(r.ok).toBe(true);
+      if (r.ok) expect(r.data.promotedToCaptain).toBe(false);
+      expect((store.teams as any[])[0].captain_id ?? null).toBeNull();
+      expect(emitRoleSyncEvent).not.toHaveBeenCalled();
+    });
   });
 });
 

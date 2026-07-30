@@ -297,3 +297,107 @@ describe('PATCH /api/teams/transfer-captain', () => {
     expect(emitRoleSyncEvent).not.toHaveBeenCalled();
   });
 });
+
+/* ---------------------------------------------------------------------------
+ * Amorçage du capitanat par un MANAGER (équipe sans capitaine)
+ *
+ * Une équipe créée « en tant que manager » (POST /api/teams/create-with-member
+ * avec `manager_email`) naît avec `captain_id = NULL` : la capitaine désignée
+ * n'est qu'invitée. Le manager doit pouvoir amorcer le capitanat — mais JAMAIS
+ * voler un capitanat existant (ça reste réservé à la capitaine en poste).
+ * Le handler route alors vers la RPC `designate_captain`.
+ * ------------------------------------------------------------------------- */
+
+const MANAGER_ID = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee';
+
+describe('PATCH /api/teams/transfer-captain — désignation par un manager', () => {
+  beforeEach(() => {
+    resetSupabaseMock();
+    emitRoleSyncEvent.mockClear();
+    store.staff = [];
+    store.team_members = [
+      {
+        id: '44444444-4444-4444-4444-444444444444',
+        team_id: TEAM_ID,
+        user_id: MANAGER_ID,
+        role: 'manager',
+        tenant_id: CONFERENCE_TENANT_ID,
+      },
+      {
+        id: '33333333-3333-3333-3333-333333333333',
+        team_id: TEAM_ID,
+        user_id: MEMBER_ID,
+        role: 'player',
+        tenant_id: CONFERENCE_TENANT_ID,
+      },
+    ];
+  });
+
+  it('appelle designate_captain quand l’équipe n’a pas de capitaine', async () => {
+    store.teams = [
+      { id: TEAM_ID, captain_id: null, tenant_id: CONFERENCE_TENANT_ID },
+    ];
+    authAs(MANAGER_ID);
+    const res = makeRes();
+
+    await transferCaptainHandler(
+      makeAuthedReq({ body: { newCaptainUserId: MEMBER_ID } }),
+      res
+    );
+
+    expect(res.statusCode).toBe(200);
+    const rpc = rpcCalls.find((c) => c.fn === 'designate_captain');
+    expect(rpc).toBeDefined();
+    expect(rpc!.params).toEqual({
+      p_team_id: TEAM_ID,
+      p_new_captain: MEMBER_ID,
+      p_tenant: CONFERENCE_TENANT_ID,
+    });
+    // Pas d'ancien capitaine → un seul event (la nouvelle).
+    expect(emitRoleSyncEvent).toHaveBeenCalledTimes(1);
+    expect(emitRoleSyncEvent).toHaveBeenCalledWith(
+      'team.captain.changed',
+      MEMBER_ID,
+      CONFERENCE_TENANT_ID,
+      { extras: { teamId: TEAM_ID, role: 'new' } }
+    );
+  });
+
+  it('403 quand l’équipe a déjà une capitaine (pas de vol de capitanat)', async () => {
+    store.teams = [
+      { id: TEAM_ID, captain_id: CAPTAIN_ID, tenant_id: CONFERENCE_TENANT_ID },
+    ];
+    authAs(MANAGER_ID);
+    const res = makeRes();
+
+    await transferCaptainHandler(
+      makeAuthedReq({ body: { newCaptainUserId: MEMBER_ID } }),
+      res
+    );
+
+    expect(res.statusCode).toBe(403);
+    expect(rpcCalls.find((c) => c.fn === 'designate_captain')).toBeUndefined();
+    expect(store.teams[0].captain_id).toBe(CAPTAIN_ID);
+    expect(emitRoleSyncEvent).not.toHaveBeenCalled();
+  });
+
+  it('mappe captain_already_set → 409 (course entre deux désignations)', async () => {
+    store.teams = [
+      { id: TEAM_ID, captain_id: null, tenant_id: CONFERENCE_TENANT_ID },
+    ];
+    setRpcResult('designate_captain', {
+      data: null,
+      error: { message: 'captain_already_set' },
+    });
+    authAs(MANAGER_ID);
+    const res = makeRes();
+
+    await transferCaptainHandler(
+      makeAuthedReq({ body: { newCaptainUserId: MEMBER_ID } }),
+      res
+    );
+
+    expect(res.statusCode).toBe(409);
+    expect(emitRoleSyncEvent).not.toHaveBeenCalled();
+  });
+});

@@ -122,6 +122,10 @@ export default function ManageTeamPage() {
 
   const loading = authLoading || teamLoading || requestsLoading;
 
+  // Une équipe créée « en tant que manager » naît sans capitaine : la capitaine
+  // désignée doit d'abord accepter son invitation (ou être désignée ici).
+  const hasCaptain = members.some((m) => m.is_captain);
+
   // Sync local mirror whenever the shared team payload changes.
   useEffect(() => {
     if (!managedTeam) return;
@@ -286,10 +290,14 @@ export default function ManageTeamPage() {
   const confirmPromote = async (member: Member) => {
     if (!member.user_id) return;
     const ok = await confirm({
-      title: format(t.promoteConfirm, {
+      // Sans capitaine en poste, il ne s'agit pas d'un transfert mais d'une
+      // désignation (cas du manager qui amorce le capitanat).
+      title: format(hasCaptain ? t.promoteConfirm : t.designateConfirm, {
         name: member.battle_tag || t.unknown,
       }),
-      subtitle: t.promoteDialogSubtitle,
+      subtitle: hasCaptain
+        ? t.promoteDialogSubtitle
+        : t.designateDialogSubtitle,
       variant: 'warning',
       confirmLabel: t.promoteConfirmYes,
       cancelLabel: t.promoteCancel,
@@ -524,6 +532,19 @@ export default function ManageTeamPage() {
                 count: members.length,
               })}
             </h2>
+            {/* Équipe créée par un manager : tant qu'aucune joueuse n'a accepté
+                et pris le capitanat, on rappelle au manager qu'il peut désigner
+                la capitaine (bouton « Promouvoir » sur chaque membre). */}
+            {!hasCaptain && (
+              <div className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3">
+                <p className="text-sm font-semibold text-amber-100">
+                  {t.noCaptainTitle}
+                </p>
+                <p className="mt-1 text-xs text-amber-100/80">
+                  {members.length > 1 ? t.noCaptainBody : t.noCaptainBodyEmpty}
+                </p>
+              </div>
+            )}
             {members.filter((m) => !m.is_captain).length === 0 ? (
               <div className="rounded-xl border border-purple-500/30 bg-purple-500/10 px-4 py-5 text-center">
                 <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-purple-500/20 flex items-center justify-center">
@@ -677,10 +698,10 @@ export default function ManageTeamPage() {
                             onClick={() => confirmPromote(m)}
                             disabled={!!actionLoading || !m.user_id}
                             className="px-2 py-1 rounded-lg border border-purple-500/30 bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 text-xs font-semibold transition disabled:opacity-50"
-                            title={t.promote}
-                            aria-label={t.promote}
+                            title={hasCaptain ? t.promote : t.designate}
+                            aria-label={hasCaptain ? t.promote : t.designate}
                           >
-                            {t.promote}
+                            {hasCaptain ? t.promote : t.designate}
                           </button>
                           <button
                             onClick={() => setPendingRemoval(m.id)}
