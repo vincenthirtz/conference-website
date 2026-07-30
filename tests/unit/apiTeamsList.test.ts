@@ -121,7 +121,7 @@ describe('GET /api/teams?joinable=1', () => {
     expect(teams.map((t: any) => t.id)).toEqual(['a']);
   });
 
-  it('scope au tenant courant (équipe d\'un autre tenant absente)', async () => {
+  it("scope au tenant courant (équipe d'un autre tenant absente)", async () => {
     store.teams = [
       // Pas de tenant_id => le mock laisse passer (= tenant courant).
       seedTeam({ id: 'mine', member_count: 1 }),
@@ -139,7 +139,7 @@ describe('GET /api/teams?joinable=1', () => {
     expect(teams.map((t: any) => t.id)).toEqual(['mine']);
   });
 
-  it('aplatit member_count depuis l\'agrégat team_members(count)', async () => {
+  it("aplatit member_count depuis l'agrégat team_members(count)", async () => {
     store.teams = [seedTeam({ id: 'a', member_count: 3 })];
     const res = makeRes();
     await teamsHandler(makeReq({ query: { joinable: '1' } }), res);
@@ -173,12 +173,58 @@ describe('GET /api/teams?joinable=1', () => {
  * GET /api/teams (sans joinable)
  * ---------------------------------------------------------*/
 
+/* -----------------------------------------------------------
+ * Disponibilité scrim (R3)
+ *
+ * `open_for_scrim` est le signal qui rend la sélection d'adversaire informée :
+ * sans lui, choisir revient à tirer au sort dans une liste alphabétique.
+ * ---------------------------------------------------------*/
+
+describe('GET /api/teams — disponibilité scrim', () => {
+  it('expose open_for_scrim sur chaque équipe (défaut false)', async () => {
+    store.teams = [
+      seedTeam({ id: 'a', name: 'Dispo', open_for_scrim: true }),
+      seedTeam({ id: 'b', name: 'Pas dispo', open_for_scrim: false }),
+      // Colonne absente (équipe ancienne) → false, jamais undefined.
+      seedTeam({ id: 'c', name: 'Inconnue' }),
+    ] as any;
+
+    const res = makeRes();
+    await teamsHandler(makeReq({ query: {} }), res);
+
+    expect(res.statusCode).toBe(200);
+    const teams = (res.body as any).teams as Array<Record<string, unknown>>;
+    const byId = new Map(teams.map((t) => [t.id, t]));
+    expect(byId.get('a')!.open_for_scrim).toBe(true);
+    expect(byId.get('b')!.open_for_scrim).toBe(false);
+    expect(byId.get('c')!.open_for_scrim).toBe(false);
+  });
+
+  it('?open_for_scrim=1 ne renvoie que les équipes disponibles', async () => {
+    store.teams = [
+      seedTeam({ id: 'a', name: 'Dispo', open_for_scrim: true }),
+      seedTeam({ id: 'b', name: 'Pas dispo', open_for_scrim: false }),
+    ] as any;
+
+    const res = makeRes();
+    await teamsHandler(makeReq({ query: { open_for_scrim: '1' } }), res);
+
+    expect(res.statusCode).toBe(200);
+    const teams = (res.body as any).teams as Array<Record<string, unknown>>;
+    expect(teams.map((t) => t.id)).toEqual(['a']);
+  });
+});
+
 describe('GET /api/teams (sans joinable)', () => {
   it('renvoie toutes les équipes du tenant, pleines incluses', async () => {
     store.teams = [
       seedTeam({ id: 'a', is_joinable: true, member_count: 2 }),
       seedTeam({ id: 'b', is_joinable: false, member_count: 2 }),
-      seedTeam({ id: 'full', is_joinable: true, member_count: MAX_TEAM_PLAYERS }),
+      seedTeam({
+        id: 'full',
+        is_joinable: true,
+        member_count: MAX_TEAM_PLAYERS,
+      }),
     ];
     const res = makeRes();
     await teamsHandler(makeReq({ query: {} }), res);

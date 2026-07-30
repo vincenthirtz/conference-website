@@ -130,6 +130,17 @@ export default function PlayerRequestsPage() {
     if (router.query.tab === 'scrim') setTab('scrim');
   }, [router.query.tab]);
 
+  // Pré-sélection de l'adversaire depuis l'URL (R3) : `?tab=scrim&team=<id>`.
+  // C'est ce qui permet d'arriver ici DEPUIS un contexte (fiche d'équipe, hub
+  // scrims) avec l'adversaire déjà choisi, au lieu de le rechercher à la main
+  // dans une liste alphabétique.
+  useEffect(() => {
+    const target = router.query.team;
+    if (typeof target === 'string' && target && target !== myTeamId) {
+      setSelectedTeamId(target);
+    }
+  }, [router.query.team, myTeamId]);
+
   // Recharge la liste d'equipes quand la recherche (debouncee) change.
   useEffect(() => {
     if (!ready) return;
@@ -293,7 +304,16 @@ export default function PlayerRequestsPage() {
   // Pour le transfert, ne montrer que les equipes rejoignables
   const transferTeams = filteredTeams.filter((t) => t.is_joinable);
 
-  const displayTeams = tab === 'transfer' ? transferTeams : filteredTeams;
+  // Onglet scrim : les équipes qui SE DÉCLARENT disponibles remontent en tête
+  // (R3). L'ordre alphabétique de l'API ne dit rien de l'envie de jouer ; ici,
+  // la première décision — « qui est dispo ? » — se lit d'un coup d'œil.
+  const scrimTeams = [...filteredTeams].sort((a, b) => {
+    const av = a.open_for_scrim ? 0 : 1;
+    const bv = b.open_for_scrim ? 0 : 1;
+    return av !== bv ? av - bv : a.name.localeCompare(b.name);
+  });
+
+  const displayTeams = tab === 'transfer' ? transferTeams : scrimTeams;
 
   if (authLoading || loading) {
     return <PlayerPageSkeleton rows={3} />;

@@ -544,6 +544,10 @@ export default function TeamPage({
   // or manager of *this* team (per /api/admin/teams/my) may edit its public
   // page. Defaults to false so the SSG markup never leaks an edit affordance.
   const [canEdit, setCanEdit] = useState(false);
+  // Le visiteur gère-t-il une AUTRE équipe ? Si oui, il n'a rien à faire du
+  // formulaire public : il peut proposer un scrim depuis son espace, avec cette
+  // équipe déjà sélectionnée (R3). Même résolution client-side que `canEdit`.
+  const [canProposeScrim, setCanProposeScrim] = useState(false);
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -557,9 +561,12 @@ export default function TeamPage({
           isCaptain?: boolean;
           isManager?: boolean;
         };
+        if (cancelled) return;
+        const managesATeam = !!(data.isCaptain || data.isManager);
         const sameTeam = data?.team?.id === team.id;
-        if (!cancelled && sameTeam && (data.isCaptain || data.isManager)) {
-          setCanEdit(true);
+        if (sameTeam && managesATeam) setCanEdit(true);
+        if (!sameTeam && managesATeam && data?.team?.id) {
+          setCanProposeScrim(true);
         }
       } catch {
         // Silent: an unauthenticated / failed check simply hides the edit CTA.
@@ -769,7 +776,10 @@ export default function TeamPage({
                 )}
               </div>
 
-              <Heading typeStyle="heading-lg" className="text-brand-gradient mb-2">
+              <Heading
+                typeStyle="heading-lg"
+                className="text-brand-gradient mb-2"
+              >
                 {team.name}
               </Heading>
 
@@ -1027,13 +1037,25 @@ export default function TeamPage({
             </p>
             <p className="text-xs text-gray-400 mt-1">{t.scrimCtaDesc}</p>
           </div>
-          <button
-            type="button"
-            onClick={() => setScrimDialogOpen(true)}
-            className="flex-shrink-0 px-4 py-2 rounded-lg bg-[var(--color-violet)] hover:brightness-110 text-sm font-medium text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet)]"
-          >
-            {t.scrimCtaBtn}
-          </button>
+          {canProposeScrim ? (
+            // Capitaine/manager d'une autre équipe : on l'envoie sur le
+            // formulaire connecté, adversaire pré-sélectionné (multi-créneaux,
+            // négociation, notifications) plutôt que sur le formulaire public.
+            <Link
+              href={`/player/requests?tab=scrim&team=${encodeURIComponent(team.id)}`}
+              className="flex-shrink-0 px-4 py-2 rounded-lg bg-[var(--color-violet)] hover:brightness-110 text-sm font-medium text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet)]"
+            >
+              {t.scrimCtaBtnConnected}
+            </Link>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setScrimDialogOpen(true)}
+              className="flex-shrink-0 px-4 py-2 rounded-lg bg-[var(--color-violet)] hover:brightness-110 text-sm font-medium text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet)]"
+            >
+              {t.scrimCtaBtn}
+            </button>
+          )}
         </section>
 
         <PublicScrimDialog
@@ -1353,8 +1375,7 @@ function MemberCard({
   const t = useT('teamDetail');
   const name = member.display_name || member.battle_tag || t.memberFallback;
   const specialtyStyle =
-    member.specialty &&
-    getSpecialtyStyle(t)[member.specialty.toLowerCase()];
+    member.specialty && getSpecialtyStyle(t)[member.specialty.toLowerCase()];
   const avatar =
     member.avatar_url && safeHref(member.avatar_url) ? member.avatar_url : null;
   const twitterHref = socialHref('twitter', member.twitter ?? null);

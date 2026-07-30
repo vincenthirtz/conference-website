@@ -10,6 +10,8 @@ export type Team = {
   country: string | null;
   member_count?: number;
   is_joinable?: boolean;
+  /** L'équipe se déclare disponible pour un scrim (cf. /api/teams). */
+  open_for_scrim?: boolean;
 };
 
 export type TransferTeamMember = {

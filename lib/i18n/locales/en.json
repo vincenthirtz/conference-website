@@ -797,7 +797,8 @@
     "loading": "Loading...",
     "countryLabel": "Filter by country",
     "countryAll": "All countries",
-    "membersCount": "{count}/5 members"
+    "membersCount": "{count}/5 members",
+    "openForScrimBadge": "looking for a scrim"
   },
   "playerNotifications": {
     "eventLabels": {
@@ -3898,7 +3899,8 @@
     "statusRunning": "Ongoing",
     "statusUpcoming": "Upcoming",
     "statusFinished": "Finished",
-    "statusDraft": "Draft"
+    "statusDraft": "Draft",
+    "scrimCtaBtnConnected": "Propose a scrim"
   },
   "teamStats": {
     "badge": "Team stats",

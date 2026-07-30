@@ -20,6 +20,12 @@ export type TeamPickerTeam = {
   logo_url?: string | null;
   country?: string | null;
   member_count?: number;
+  /**
+   * L'équipe se déclare disponible pour un scrim. Affiché en badge (R3) : sans
+   * ce signal, choisir un adversaire revient à tirer au sort dans une liste
+   * alphabétique.
+   */
+  open_for_scrim?: boolean;
 };
 
 type AccentColor = 'emerald' | 'purple' | 'blue';
@@ -214,8 +220,15 @@ export default function TeamPicker({
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="font-medium text-white truncate">
-                      {team.name}
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="font-medium text-white truncate">
+                        {team.name}
+                      </span>
+                      {team.open_for_scrim && (
+                        <span className="flex-shrink-0 rounded-full border border-emerald-400/40 bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-200">
+                          {t.openForScrimBadge}
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-2 text-xs text-gray-400">
                       {team.short_name && <span>{team.short_name}</span>}

@@ -797,7 +797,8 @@
     "loading": "Chargement...",
     "countryLabel": "Filtrer par pays",
     "countryAll": "Tous les pays",
-    "membersCount": "{count}/5 membres"
+    "membersCount": "{count}/5 membres",
+    "openForScrimBadge": "cherche un scrim"
   },
   "playerNotifications": {
     "eventLabels": {
@@ -3898,7 +3899,8 @@
     "statusRunning": "En cours",
     "statusUpcoming": "À venir",
     "statusFinished": "Terminé",
-    "statusDraft": "Brouillon"
+    "statusDraft": "Brouillon",
+    "scrimCtaBtnConnected": "Proposer un scrim"
   },
   "teamStats": {
     "badge": "Stats équipe",

@@ -22,6 +22,12 @@ export type PublicTeam = {
   country: string | null;
   member_count: number;
   is_joinable: boolean;
+  /**
+   * L'équipe se déclare disponible pour un scrim. Exposé (R3) pour que la
+   * sélection d'adversaire soit informée : sans ce signal, choisir un
+   * adversaire revient à tirer au sort dans une liste alphabétique.
+   */
+  open_for_scrim: boolean;
 };
 
 export default async function handler(
@@ -48,13 +54,15 @@ export default async function handler(
 
     const joinable = req.query.joinable;
     const onlyJoinable = joinable === '1' || joinable === 'true';
+    const scrimQuery = req.query.open_for_scrim;
+    const onlyOpenForScrim = scrimQuery === '1' || scrimQuery === 'true';
     const country =
       typeof req.query.country === 'string' ? req.query.country.trim() : '';
 
     let query = supabaseAdmin
       .from('teams')
       .select(
-        'id, name, short_name, logo_url, country, is_joinable, team_members(count)',
+        'id, name, short_name, logo_url, country, is_joinable, open_for_scrim, team_members(count)',
         {
           count: 'exact',
         }
@@ -64,6 +72,11 @@ export default async function handler(
     // Filter by joinable status
     if (onlyJoinable) {
       query = query.eq('is_joinable', true);
+    }
+
+    // Ne garder que les équipes qui cherchent un scrim.
+    if (onlyOpenForScrim) {
+      query = query.eq('open_for_scrim', true);
     }
 
     // Filter by country
@@ -97,6 +110,7 @@ export default async function handler(
       country: t.country,
       member_count: t.team_members?.[0]?.count ?? 0,
       is_joinable: t.is_joinable ?? false,
+      open_for_scrim: t.open_for_scrim ?? false,
     }));
 
     // Exclusion des équipes PLEINES en mode « rejoindre » (joinable=1).

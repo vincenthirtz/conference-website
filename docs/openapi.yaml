@@ -3208,6 +3208,9 @@ components:
           type: integer
         is_joinable:
           type: boolean
+        open_for_scrim:
+          type: boolean
+          description: L'equipe se declare disponible pour un scrim.
     PublicTournamentSummary:
       type: object
       required:
@@ -24299,6 +24302,15 @@ paths:
         - name: joinable
           in: query
           required: false
+          schema:
+            type: string
+            enum:
+              - '1'
+              - 'true'
+        - name: open_for_scrim
+          in: query
+          required: false
+          description: Ne renvoyer que les equipes qui se declarent disponibles pour un scrim.
           schema:
             type: string
             enum:
