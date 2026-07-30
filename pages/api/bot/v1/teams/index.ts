@@ -235,6 +235,13 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
       slug: created.slug ?? null,
       captainAuthUserId: captainAuthId,
       captainDiscordUserId,
+      // Création via Discord : la capitaine EST la créatrice. On expose quand
+      // même les champs `creator*` pour que le payload team.created ait la même
+      // forme quelle que soit la surface (cf. /api/teams/create-with-member, où
+      // le créateur peut être un manager et où il n'y a pas encore de capitaine).
+      creatorAuthUserId: captainAuthId,
+      creatorDiscordUserId: captainDiscordUserId,
+      creatorRole: 'captain',
       discordRoleId: created.discord_role_id ?? null,
     },
     req.botContext.tenantId

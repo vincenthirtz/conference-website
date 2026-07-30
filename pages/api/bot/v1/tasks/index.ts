@@ -14,13 +14,13 @@
 // Auth : x-api-key (per-tenant) + actorDiscordUserId staff admin/owner.
 
 import type { NextApiResponse } from 'next';
+import type { z } from 'zod';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotStaff } from '@/utils/botActor';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { createTaskCore, resolveStaffInfo } from '@/utils/taskBoard';
 import { createTaskBodySchema } from '@/utils/taskBoardSchemas';
-import { formatZodError } from '@/utils/validation';
 import { logger } from '@/utils/logger';
 
 const MAX_LIMIT = 100;
@@ -151,38 +151,32 @@ async function createTask(req: BotTenantRequest, res: NextApiResponse) {
   );
   if (!actor) return;
 
-  const parsed = createTaskBodySchema.safeParse(req.body ?? {});
-  if (!parsed.success) {
-    return res.status(400).json({
-      error: formatZodError(parsed.error),
-      code: 'INVALID_BODY',
-      fields: parsed.error.flatten().fieldErrors,
-    });
-  }
+  // Body déjà validé par le middleware (`bodySchema` ci-dessous) : même forme
+  // d'erreur 400 INVALID_BODY + `fields` qu'auparavant, mais la garde est
+  // désormais déclarative — comme sur les autres routes bot en écriture.
+  const input = req.botInput as z.infer<typeof createTaskBodySchema>;
 
   const info = await resolveStaffInfo(actor.staffId);
   const result = await createTaskCore({
     tenantId,
-    boardId: parsed.data.boardId,
-    columnId: parsed.data.columnId,
-    title: parsed.data.title,
-    description: parsed.data.description ?? null,
-    priority: parsed.data.priority,
-    assigneeStaffId: parsed.data.assigneeStaffId ?? null,
-    dueDate: parsed.data.dueDate ?? null,
-    labels: parsed.data.labels,
+    boardId: input.boardId,
+    columnId: input.columnId,
+    title: input.title,
+    description: input.description ?? null,
+    priority: input.priority,
+    assigneeStaffId: input.assigneeStaffId ?? null,
+    dueDate: input.dueDate ?? null,
+    labels: input.labels,
     actorStaffId: actor.staffId,
     actorLabel: info.name ?? 'Staff Discord',
     via: 'discord_bot',
   });
 
   if (!result.ok) {
-    return res
-      .status(result.status)
-      .json({
-        error: result.error,
-        ...(result.code ? { code: result.code } : {}),
-      });
+    return res.status(result.status).json({
+      error: result.error,
+      ...(result.code ? { code: result.code } : {}),
+    });
   }
   return res.status(201).json({ task: result.task });
 }
@@ -194,4 +188,6 @@ export default withBotRoute(handler, {
     key: 'bot-tasks',
     perActor: { max: 20, actorField: 'actorDiscordUserId' },
   },
+  // Ne s'applique qu'aux méthodes non-safe : le GET (liste) n'est pas concerné.
+  bodySchema: createTaskBodySchema,
 });
