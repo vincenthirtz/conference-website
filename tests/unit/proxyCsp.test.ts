@@ -92,6 +92,54 @@ describe('proxy.ts CSP — frame-ancestors scoping (T7)', () => {
     const res = proxy(makeRequest('/embed') as never);
     expect(getCsp(res)['frame-ancestors']).toBe('*');
   });
+
+  // Overlays caster : cadrables par NOTRE origine seulement (aperçu live dans
+  // /admin/caster), jamais par un tiers — celui-ci passe par /embed/*.
+  it("sets frame-ancestors 'self' for /overlay/* (caster preview iframe)", () => {
+    const res = proxy(makeRequest('/overlay/caster/match') as never);
+    expect(getCsp(res)['frame-ancestors']).toBe("'self'");
+  });
+
+  it("keeps frame-ancestors 'self' for the run-of-show overlay too", () => {
+    const res = proxy(makeRequest('/overlay/some-run-id') as never);
+    expect(getCsp(res)['frame-ancestors']).toBe("'self'");
+  });
+
+  it('never opens overlays to third parties (not *)', () => {
+    const csp = getCsp(proxy(makeRequest('/overlay/caster/match') as never));
+    expect(csp['frame-ancestors']).not.toBe('*');
+  });
+});
+
+describe('proxy.ts — X-Frame-Options stripping', () => {
+  // netlify.toml pose un X-Frame-Options global à valeur INVALIDE
+  // (`ALLOW-FROM …`), que les navigateurs traitent comme DENY. Il doit être
+  // retiré sur les préfixes cadrables, sinon l'iframe est bloquée en prod même
+  // avec un frame-ancestors permissif. Absent en `next dev`, d'où ce test.
+  function proxyWithSeededXfo(pathname: string) {
+    const res = proxy(makeRequest(pathname) as never) as unknown as {
+      headers: Headers;
+    };
+    return res;
+  }
+
+  it('strips X-Frame-Options on /embed/* and /overlay/*', () => {
+    for (const p of ['/embed/tournament/1/bracket', '/overlay/caster/match']) {
+      const res = proxyWithSeededXfo(p);
+      // Le middleware appelle delete() : l'en-tête ne doit jamais être présent
+      // en sortie sur ces préfixes.
+      expect(res.headers.get('X-Frame-Options')).toBeNull();
+    }
+  });
+
+  it('leaves other routes untouched (netlify.toml header survives)', () => {
+    // Sur les autres routes le middleware ne touche pas l'en-tête : notre mock
+    // de réponse démarre vide, donc on vérifie surtout qu'aucune valeur n'est
+    // AJOUTÉE par le middleware (la protection vient de frame-ancestors 'none').
+    const res = proxyWithSeededXfo('/admin/dashboard');
+    expect(res.headers.get('X-Frame-Options')).toBeNull();
+    expect(getCsp(res)['frame-ancestors']).toBe("'none'");
+  });
 });
 
 describe('proxy.ts CSP — invariants preserved on every route', () => {

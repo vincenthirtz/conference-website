@@ -27,6 +27,8 @@ import PlayerSceneEditor from '@/components/admin/caster/PlayerSceneEditor';
 import LeaderboardSceneEditor from '@/components/admin/caster/LeaderboardSceneEditor';
 import StandingsSceneEditor from '@/components/admin/caster/StandingsSceneEditor';
 import PublicDataPicker from '@/components/admin/caster/PublicDataPicker';
+import OverlayPreview from '@/components/admin/caster/OverlayPreview';
+import SceneList from '@/components/admin/caster/SceneList';
 import type { CasterScene, CasterSceneType } from '@/types/caster';
 
 type EditorProps = {
@@ -326,5 +328,150 @@ describe('PublicDataPicker (états de liste)', () => {
     });
     expect(html).toContain('Hors top 100');
     expect(html).not.toContain('pick-ghost-note');
+  });
+});
+
+/* ------------------------------------------------------------------------- *
+ * Lot 7 — liste des scènes avec ses actions CRUD, et aperçu de l'overlay
+ * ------------------------------------------------------------------------- */
+
+/** Scène nommée, avec un id distinct (la liste en manipule plusieurs). */
+function named(
+  id: string,
+  name: string,
+  type: CasterSceneType = 'match'
+): CasterScene {
+  return { ...scene(type, {}), id, name };
+}
+
+/** Mutateurs neutres : le SSR ne déclenche aucune interaction. */
+const crud = {
+  createScene: async () => 'new-id',
+  renameScene: async () => {},
+  duplicateScene: async () => 'copy-id',
+  deleteScene: async () => {},
+  reorderScenes: async () => {},
+};
+
+function renderSceneList(scenes: CasterScene[], selectedId: string | null) {
+  return renderToString(
+    createElement(
+      ToastProvider,
+      null,
+      createElement(SceneList, {
+        scenes,
+        selectedId,
+        onSelect: () => {},
+        othersByScene: {},
+        typeLabel: (type: string) => type.toUpperCase(),
+        crud,
+      })
+    )
+  );
+}
+
+describe('SceneList (liste + actions CRUD, rendu SSR)', () => {
+  const three = [
+    named('s-1', 'Starting Soon', 'starting'),
+    named('s-2', 'Match en cours', 'match'),
+    named('s-3', 'Pause', 'pause'),
+  ];
+
+  it('rend la liste, le bouton de création et les 5 actions par scène', () => {
+    const html = renderSceneList(three, 's-2');
+    expect(html).toContain('caster-scene-list');
+    expect(html).toContain('caster-scene-new');
+    // Le menu de types n'est ouvert que sur clic.
+    expect(html).not.toContain('caster-scene-new-menu');
+    for (const testid of [
+      'caster-scene-move-up',
+      'caster-scene-move-down',
+      'caster-scene-rename',
+      'caster-scene-duplicate',
+      'caster-scene-delete',
+    ]) {
+      expect(html).toContain(testid);
+    }
+    // Une ligne d'actions par scène.
+    expect(html.split('caster-scene-actions').length - 1).toBe(three.length);
+    expect(html).toContain('Match en cours');
+    expect(html).not.toMatch(/>undefined</);
+  });
+
+  it('les flèches de bout de liste sont désactivées, pas absentes', () => {
+    const html = renderSceneList(three, 's-1');
+    // 1 « monter » désactivée (première) + 1 « descendre » désactivée (dernière).
+    const disabledCount = html.split('disabled=""').length - 1;
+    expect(disabledCount).toBe(2);
+  });
+
+  it('scène unique : suppression désactivée avec son explication', () => {
+    const html = renderSceneList([named('s-1', 'Seule scène')], 's-1');
+    expect(html).toContain('caster-scene-delete');
+    expect(html).toContain('La dernière scène ne peut pas être supprimée.');
+  });
+
+  it('liste vide : le bouton de création reste offert (pas de cul-de-sac)', () => {
+    const html = renderSceneList([], null);
+    expect(html).toContain('caster-scene-new');
+    expect(html).not.toContain('caster-scene-item');
+  });
+
+  it('présence : pastille « autre caster » sur la scène concernée', () => {
+    const html = renderToString(
+      createElement(
+        ToastProvider,
+        null,
+        createElement(SceneList, {
+          scenes: three,
+          selectedId: 's-1',
+          onSelect: () => {},
+          othersByScene: {
+            's-2': [
+              {
+                staffId: 'other',
+                displayName: 'Alice',
+                role: 'caster',
+                activeScene: 's-2',
+                activeField: null,
+                joinedAt: '2026-01-01T00:00:00Z',
+              },
+            ],
+          },
+          typeLabel: (type: string) => type,
+          crud,
+        })
+      )
+    );
+    expect(html).toContain('caster-scene-presence-dot');
+    expect(html).toContain('Alice');
+  });
+});
+
+describe('OverlayPreview (aperçu iframe, rendu SSR)', () => {
+  function renderPreview(s: CasterScene) {
+    return renderToString(createElement(OverlayPreview, { scene: s }));
+  }
+
+  it('cible l’overlay par UUID (et pas par type) et offre ses deux commandes', () => {
+    const html = renderPreview(
+      named('11111111-2222-3333-4444-555555555555', 'M')
+    );
+    expect(html).toContain('caster-overlay-preview');
+    expect(html).toContain('caster-overlay-preview-refresh');
+    expect(html).toContain(
+      'href="/overlay/caster/11111111-2222-3333-4444-555555555555"'
+    );
+    // L'iframe n'est montée qu'après mesure de la largeur (échelle 1920→panneau),
+    // donc jamais en SSR : aucun chargement d'overlay côté serveur.
+    expect(html).not.toContain('<iframe');
+    expect(html).not.toMatch(/>undefined</);
+  });
+
+  it('scène webcam : garde explicite, aucune iframe (la caméra reste éteinte)', () => {
+    const html = renderPreview(named('cam-1', 'Webcam', 'webcam'));
+    expect(html).toContain('caster-overlay-preview-webcam-guard');
+    expect(html).toContain('caster-overlay-preview-webcam-allow');
+    expect(html).not.toContain('<iframe');
   });
 });

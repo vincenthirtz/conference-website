@@ -306,6 +306,8 @@ export const STAFF_LOG_ACTION_LABELS: Record<StaffLogAction, string> = {
   caster_obs_setup_scenes: 'Configuration des scènes OBS (overlays)',
   caster_poll_toggle: 'Ouverture / fermeture du vote MVP',
   caster_theme_activate: 'Activation d’un thème d’overlay',
+  caster_scene_create: 'Création d’une scène caster',
+  caster_scene_delete: 'Suppression d’une scène caster',
   // Run of show
   create_event_run: 'Création run of show',
   update_event_run: 'Modification run of show',

@@ -233,7 +233,7 @@ export default function ThemePanel({ themes, activeId, reload }: Props) {
       </div>
       <p className="text-xs text-neutral-500 mb-4">{t.themeIntro}</p>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[220px,1fr] gap-4 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr] gap-4 items-start">
         {/* Liste des thèmes + activation */}
         <div className="space-y-2">
           <span className={labelClass}>{t.themeListLabel}</span>

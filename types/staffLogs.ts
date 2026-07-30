@@ -151,6 +151,8 @@ export type StaffLogAction =
   | 'caster_obs_setup_scenes'
   | 'caster_poll_toggle'
   | 'caster_theme_activate'
+  | 'caster_scene_create'
+  | 'caster_scene_delete'
   // --- Run of show (event runs / segments / cues) ---
   | 'create_event_run'
   | 'update_event_run'

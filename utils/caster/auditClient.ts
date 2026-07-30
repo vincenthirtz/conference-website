@@ -18,7 +18,13 @@ export type CasterAuditAction =
   | 'caster_record_toggle'
   | 'caster_obs_setup_scenes'
   | 'caster_poll_toggle'
-  | 'caster_theme_activate';
+  | 'caster_theme_activate'
+  // Lot 7 — CRUD des scènes. Création et suppression seulement : ce sont les
+  // actions IRRÉVERSIBLES/structurantes (une scène de moins, c'est un overlay
+  // qui se vide à l'antenne). Renommage, duplication et réordonnancement sont
+  // du confort, tracés par `caster_scenes.updated_at`.
+  | 'caster_scene_create'
+  | 'caster_scene_delete';
 
 type AuditInput = {
   action: CasterAuditAction;

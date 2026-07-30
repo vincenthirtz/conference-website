@@ -36,6 +36,10 @@ const CASTER_AUDIT_ACTIONS = [
   'caster_obs_setup_scenes',
   'caster_poll_toggle',
   'caster_theme_activate',
+  // Lot 7 : CRUD des scènes — création / suppression seulement (le renommage et
+  // le réordonnancement sont du confort, `caster_scenes.updated_at` suffit).
+  'caster_scene_create',
+  'caster_scene_delete',
 ] as const satisfies readonly StaffLogAction[];
 
 const AuditSchema = z.object({

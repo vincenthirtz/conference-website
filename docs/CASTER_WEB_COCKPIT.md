@@ -47,7 +47,7 @@ réservée au staff actif.
 
 | Route                        | Rôle                                                                                                                                                                 |
 | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/admin/caster`              | Cockpit : édition des scènes, pilotage OBS, chat, poll MVP. Gate SSR tout staff (caster/admin/owner), comme `/admin/regie`.                                          |
+| `/admin/caster`              | Cockpit : CRUD + édition des scènes, pilotage OBS, chat, poll MVP. Gate SSR tout staff (caster/admin/owner), comme `/admin/regie`.                                   |
 | `/overlay/caster/<sceneKey>` | Overlay Browser Source public 1920×1080. `sceneKey` = UUID de scène **ou** type (première scène du type par `sort_order`). Chrome-less, `noindex`, fond transparent. |
 
 Les overlays lisent avec la clé anon + Realtime, avec un poll de secours (les
@@ -86,6 +86,81 @@ première donnée — jamais de placeholder à l'antenne.
 - Le bouton « Configurer les scènes OBS » crée/complète les scènes OBS avec un
   Browser Source par overlay pointant sur ce site (idempotent, rejouable).
 
+## Onglets du cockpit
+
+La page est organisée en onglets deep-linkables (`?tab=scenes|obs|chat|theme`),
+avec le composant `components/admin/Tabs.tsx` + `useQueryTab` partagé par les
+autres hubs admin (`/admin/moderation`, `/admin/communications`…). Empilés
+verticalement, les quatre panneaux étaient inutilisables sur un écran de régie.
+
+> ⚠️ Les quatre panneaux sont **montés en permanence** et seulement masqués en
+> CSS (`hidden`), jamais démontés. `CasterChatSection` tient la WebSocket IRC +
+> EventSub et l'état du poll MVP (un démontage couperait le chat et perdrait les
+> votes en cours) ; `ObsPanel` tient la WebSocket OBS ; l'éditeur de scène et
+> `ThemePanel` ont un auto-save **débouncé** (un démontage juste après une frappe
+> perdrait la dernière saisie). Ne pas « optimiser » ça en rendu conditionnel.
+
+## CRUD des scènes
+
+Créer (par type), renommer, dupliquer, supprimer, monter/descendre — depuis le
+web, sans ouvrir l'app desktop. Port de `sceneManager.js` du repo caster, sur la
+même table.
+
+- Logique **pure** : `utils/caster/sceneCrud.ts` (réordonnancement, nom de copie,
+  nom/overlay/`data` par défaut des 12 types) et `utils/caster/sceneReorder.ts`
+  (diff des `sort_order`, placement d'une copie).
+- Écritures : `hooks/useCasterScenes.ts` (`createScene`, `renameScene`,
+  `duplicateScene`, `deleteScene`, `reorderScenes`), en direct dans Supabase
+  comme `saveSceneData` (RLS staff actif).
+- UI : `components/admin/caster/SceneList.tsx` — orchestre confirmation
+  (`useConfirmDialog`, variant danger, scène nommée), toasts et journal.
+- **Pas de drag & drop** : des flèches monter/descendre, utilisables au clavier.
+  En régie, une souris qui dérape sur un glisser-déposer réordonne l'antenne.
+- `reorderScenes` n'écrit que les lignes dont le rang **change réellement** :
+  chaque UPDATE part en Realtime vers l'app desktop et vers chaque Browser
+  Source ouverte (le trigger `updated_at` fait muter la ligne).
+- La colonne **`overlay`** est renseignée à la création (`defaultOverlayFile` →
+  `match.html`…) : elle ne sert pas au web (les overlays sont des routes) mais
+  l'app **desktop** s'en sert pour charger son HTML local. Une scène créée ici
+  doit rester ouvrable là-bas.
+- Une duplication est insérée en fin de table puis remontée juste après son
+  original — deux allers-retours, mais aucun `sort_order` en doublon (le desktop,
+  lui, écrit `idx + 1` et laisse deux lignes partager le même rang).
+
+## Aperçu live de l'overlay
+
+`components/admin/caster/OverlayPreview.tsx` : une iframe sur
+`/overlay/caster/<uuid>`, c'est-à-dire **la vraie page overlay** de la scène
+éditée. Aucune plomberie de données — l'overlay lit `caster_scenes` avec la clé
+anon et suit sa ligne en Realtime, donc une frappe dans l'éditeur (auto-save →
+event Realtime) s'y voit toute seule. C'est aussi, au pixel, ce que voit OBS.
+
+> 🚧 **PRÉREQUIS CSP NON ENCORE EN PLACE.** `proxy.ts` pose
+> `frame-ancestors 'none'` partout sauf sous `/embed` : le navigateur refuse donc
+> d'embarquer `/overlay/*`, et l'aperçu affiche un encart explicite (« Aperçu
+> bloqué par la politique de sécurité ») au lieu d'un cadre noir muet — il sonde
+> l'en-tête CSP en HEAD same-origin pour le savoir. Il suffit d'autoriser
+> `frame-ancestors 'self'` sur le préfixe `/overlay` dans `proxy.ts` (les
+> overlays sont déjà des pages publiques chrome-less conçues pour être
+> embarquées, dans une Browser Source OBS) et l'aperçu s'active sans changement
+> côté composant. À valider avec `tests/unit/proxyCsp.test.ts`. Vérifié en
+> navigateur : avec la CSP détournée en `'self'`, l'aperçu affiche l'overlay et
+> reflète une édition en ~1 s (Realtime).
+
+- Ciblage par **UUID** et non par type : `/overlay/caster/match` résout la
+  première scène `match` par `sort_order`, ce qui montrerait la mauvaise scène
+  dès qu'il en existe deux du même type (banal depuis le CRUD).
+- Mise à l'échelle par `transform: scale()` + `transform-origin: top left` dans
+  un conteneur `aspect-ratio: 16/9` en `overflow: hidden` : le rendu interne
+  reste px-exact en 1920×1080, seul l'affichage est réduit.
+- Repliable, choix mémorisé en `localStorage` (`caster.preview.open`), **ouvert
+  par défaut**.
+- ⚠️ **Scène `webcam` : aperçu derrière un clic explicite.** L'overlay appelle
+  `getUserMedia` ; le monter à chaque sélection allumerait la webcam du poste et
+  la prendrait à OBS, consommateur unique de la caméra et seul à partir à
+  l'antenne. Le desktop résout ça avec un flag `preview: true` (placeholder) que
+  la page overlay web n'a pas.
+
 ## Thèmes des overlays
 
 Le desktop stocke ses thèmes en fichiers (`userData/themes`) et les pousse à
@@ -122,9 +197,11 @@ que d'ajouter un journal parallèle — le desktop, lui, n'a qu'un journal local
 non partagé.
 
 Seules les actions **notables** sont journalisées (import de match, stream,
-enregistrement, configuration des scènes OBS, poll, activation de thème) : pas
-chaque frappe de l'auto-save, pour lequel `caster_scenes.updated_at` suffit. Un
-échec du journal n'interrompt jamais une action à l'antenne.
+enregistrement, configuration des scènes OBS, poll, activation de thème,
+création et suppression d'une scène) : pas chaque frappe de l'auto-save, ni le
+renommage / la duplication / le réordonnancement, pour lesquels
+`caster_scenes.updated_at` suffit. Un échec du journal n'interrompt jamais une
+action à l'antenne.
 
 ## Match picker & score live
 
@@ -187,23 +264,24 @@ récents — voir « Scènes “données du site” » ci-dessus.
 
 ## Carte du code
 
-| Chemin                                                       | Contenu                                                                                        |
-| ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------- |
-| `types/caster.ts`                                            | Shapes de `caster_scenes.data` par type de scène.                                              |
-| `utils/caster/matchScene.ts`, `sceneParse.ts`, `heroBans.ts` | Logique pure portée du renderer desktop (testée unitairement).                                 |
-| `utils/caster/obsClient.ts`, `obsOps.ts`                     | OBS WebSocket v5 navigateur (protocole écrit à la main, comme le desktop — aucune dépendance). |
-| `utils/caster/twitchProtocol.ts`, `mvpTally.ts`              | Parsing IRC Twitch et décompte des votes MVP (purs, testés).                                   |
-| `utils/caster/publicApiClient.ts`                            | Lectures `/api/public/v1/*` des pickers des scènes « données du site ».                        |
-| `utils/caster/dataSceneOptions.ts`                           | Libellés, sélection et bornage `topN` de ces scènes (purs, testés).                            |
-| `utils/caster/twitchChatClient.ts`, `eventsubClient.ts`      | Transports navigateur : IRC anonyme (lecture) et EventSub WebSocket.                           |
-| `utils/caster/mvpPollState.ts`                               | Machine à états immuable du poll MVP + snapshot publiable.                                     |
-| `pages/api/admin/twitch/eventsub/subscribe.ts`               | Crée les souscriptions EventSub pour une session ouverte par le navigateur.                    |
-| `utils/caster/matchPickerFormat.ts`, `presence.ts`           | Libellés/recherche/mapping du match picker et helpers de présence (purs, testés).              |
-| `utils/caster/tournamentsClient.ts`                          | Lectures HTTP `/api/caster/v1/*` du picker (timeout borné, same-origin).                       |
-| `hooks/useCasterScenes.ts`                                   | Chargement + Realtime + écriture des scènes.                                                   |
-| `hooks/useCasterTournaments.ts`                              | État du picker (tournois, matchs, map pool ; dernier tournoi mémorisé).                        |
-| `hooks/useLinkedMatchTracker.ts`                             | Suivi du score des matchs liés — **poll** (voir « Match picker & score live »).                |
-| `hooks/useCasterPresence.ts`                                 | Canal Realtime Presence `caster_presence` (partagé avec le desktop).                           |
-| `components/admin/caster/*`                                  | Éditeurs par type, `useSceneDraft` (auto-save/anti-clobber), panneaux OBS et chat.             |
-| `components/overlay/caster/*`                                | Overlays (ports px-exacts des HTML desktop).                                                   |
-| `lib/data/ow-heroes.json`                                    | Manifeste des héros Overwatch (copié du repo caster).                                          |
+| Chemin                                                       | Contenu                                                                                                                  |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
+| `types/caster.ts`                                            | Shapes de `caster_scenes.data` par type de scène.                                                                        |
+| `utils/caster/matchScene.ts`, `sceneParse.ts`, `heroBans.ts` | Logique pure portée du renderer desktop (testée unitairement).                                                           |
+| `utils/caster/sceneCrud.ts`, `sceneReorder.ts`               | Réordonnancement, nom de copie, défauts par type, diff des `sort_order` (purs, testés).                                  |
+| `utils/caster/obsClient.ts`, `obsOps.ts`                     | OBS WebSocket v5 navigateur (protocole écrit à la main, comme le desktop — aucune dépendance).                           |
+| `utils/caster/twitchProtocol.ts`, `mvpTally.ts`              | Parsing IRC Twitch et décompte des votes MVP (purs, testés).                                                             |
+| `utils/caster/publicApiClient.ts`                            | Lectures `/api/public/v1/*` des pickers des scènes « données du site ».                                                  |
+| `utils/caster/dataSceneOptions.ts`                           | Libellés, sélection et bornage `topN` de ces scènes (purs, testés).                                                      |
+| `utils/caster/twitchChatClient.ts`, `eventsubClient.ts`      | Transports navigateur : IRC anonyme (lecture) et EventSub WebSocket.                                                     |
+| `utils/caster/mvpPollState.ts`                               | Machine à états immuable du poll MVP + snapshot publiable.                                                               |
+| `pages/api/admin/twitch/eventsub/subscribe.ts`               | Crée les souscriptions EventSub pour une session ouverte par le navigateur.                                              |
+| `utils/caster/matchPickerFormat.ts`, `presence.ts`           | Libellés/recherche/mapping du match picker et helpers de présence (purs, testés).                                        |
+| `utils/caster/tournamentsClient.ts`                          | Lectures HTTP `/api/caster/v1/*` du picker (timeout borné, same-origin).                                                 |
+| `hooks/useCasterScenes.ts`                                   | Chargement + Realtime + écriture des scènes + CRUD de la liste.                                                          |
+| `hooks/useCasterTournaments.ts`                              | État du picker (tournois, matchs, map pool ; dernier tournoi mémorisé).                                                  |
+| `hooks/useLinkedMatchTracker.ts`                             | Suivi du score des matchs liés — **poll** (voir « Match picker & score live »).                                          |
+| `hooks/useCasterPresence.ts`                                 | Canal Realtime Presence `caster_presence` (partagé avec le desktop).                                                     |
+| `components/admin/caster/*`                                  | Éditeurs par type, `useSceneDraft` (auto-save/anti-clobber), `SceneList` (CRUD), `OverlayPreview`, panneaux OBS et chat. |
+| `components/overlay/caster/*`                                | Overlays (ports px-exacts des HTML desktop).                                                                             |
+| `lib/data/ow-heroes.json`                                    | Manifeste des héros Overwatch (copié du repo caster).                                                                    |

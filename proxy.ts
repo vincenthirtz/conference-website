@@ -64,11 +64,21 @@ export function proxy(request: NextRequest) {
   // third-party sites/streams. Only this prefix may be framed by any origin;
   // every other route keeps the strict anti-clickjacking posture below.
   const isEmbed = request.nextUrl.pathname.startsWith('/embed');
+  // Overlays caster (`/overlay/*`) : le cockpit /admin/caster en affiche un
+  // APERÇU dans une iframe same-origin — ce que voit le caster est alors
+  // littéralement la page qui part à l'antenne, sans plomberie de données.
+  // 'self' suffit : notre propre admin peut cadrer, aucune origine tierce.
+  // (Un site tiers voulant afficher un overlay passe par /embed/*, prévu pour.)
+  // Sans effet sur OBS : une Browser Source charge la page directement, pas
+  // dans une iframe, donc frame-ancestors ne s'y applique pas.
+  const isOverlay = request.nextUrl.pathname.startsWith('/overlay');
   // frame-ancestors: '*' allows any parent to iframe the embed pages.
   // Everywhere else stays 'none' (no framing at all).
   const frameAncestors = isEmbed
     ? 'frame-ancestors *'
-    : "frame-ancestors 'none'";
+    : isOverlay
+      ? "frame-ancestors 'self'"
+      : "frame-ancestors 'none'";
 
   // Cockpit caster web : connect-src élargi (OBS local + IRC/EventSub Twitch)
   // et PAS de upgrade-insecure-requests — la directive upgraderait ws:// en
@@ -101,7 +111,14 @@ export function proxy(request: NextRequest) {
   // embed pages regardless of CSP. Strip it for /embed/* so frame-ancestors
   // (above) is the sole, authoritative framing policy there. Everywhere else
   // the netlify.toml header is untouched.
-  if (isEmbed) {
+  //
+  // Idem pour /overlay/* (aperçu same-origin dans le cockpit caster) : la spec
+  // CSP2+ veut qu'un navigateur IGNORE X-Frame-Options dès que frame-ancestors
+  // est présent, mais on ne s'appuie pas sur cette précédence pour un en-tête à
+  // valeur invalide — même prudence que pour /embed. `frame-ancestors 'self'`
+  // reste la protection effective. NB : ce header est posé par netlify.toml,
+  // donc absent en `next dev` — l'écart ne se voit qu'en prod.
+  if (isEmbed || isOverlay) {
     response.headers.delete('X-Frame-Options');
   }
 

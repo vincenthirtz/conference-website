@@ -230,7 +230,7 @@ export default function MatchSceneEditor({
       )}
 
       {/* Scoreboard : équipes + scores + swap */}
-      <div className="grid grid-cols-[1fr,auto,1fr] items-start gap-3">
+      <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-3">
         <div className="space-y-2">
           <input
             type="text"

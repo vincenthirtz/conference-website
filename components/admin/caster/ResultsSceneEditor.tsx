@@ -88,7 +88,7 @@ export default function ResultsSceneEditor({ scene, onSave }: Props) {
       <SaveIndicator state={saveState} />
 
       {/* Scoreboard final : équipes + scores */}
-      <div className="grid grid-cols-[1fr,auto,1fr] items-start gap-3">
+      <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-3">
         <div className="space-y-2">
           <input
             type="text"

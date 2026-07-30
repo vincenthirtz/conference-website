@@ -10287,6 +10287,8 @@ paths:
                     - caster_obs_setup_scenes
                     - caster_poll_toggle
                     - caster_theme_activate
+                    - caster_scene_create
+                    - caster_scene_delete
                 details:
                   type: object
                   additionalProperties: true

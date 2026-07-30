@@ -159,6 +159,29 @@ describe('POST /api/admin/caster/audit', () => {
     );
   });
 
+  // Lot 7 : le CRUD des scènes se fait aussi en direct dans Supabase depuis le
+  // navigateur — seules la création et la suppression sont journalisées.
+  it.each(['caster_scene_create', 'caster_scene_delete'] as const)(
+    'accepte l’action CRUD de scène %s',
+    async (action) => {
+      const res = makeRes();
+      await auditHandler(
+        makeAuthedReq({
+          body: { action, entity_id: 'scene-7', details: { type: 'match' } },
+        }),
+        res
+      );
+      expect(res.statusCode).toBe(200);
+      expect(logStaffActionMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action,
+          entity_id: 'scene-7',
+          entity_type: 'caster_cockpit',
+        })
+      );
+    }
+  );
+
   it('un échec du journal ne casse pas l’action à l’antenne (200)', async () => {
     logStaffActionMock.mockImplementation(async () => {
       throw new Error('staff_logs unreachable');
