@@ -1,13 +1,14 @@
 // pages/admin/caster.tsx
 //
-// Feature: Cockpit caster web — lots 1-5.
+// Feature: Cockpit caster web — lots 1-6.
 //
 // Édition web de la table `caster_scenes` (Supabase, partagée avec l'app
 // desktop womenscup-caster) : liste des scènes triées par sort_order à gauche,
 // éditeur de la scène sélectionnée à droite. Édition seulement (pas de CRUD
-// création/suppression/réordonnancement) ; les 8 types de scènes ont leur
-// éditeur (registry EDITORS) — un type inconnu (ex. bracket, créé côté app
-// desktop) garde le placeholder.
+// création/suppression/réordonnancement) ; les 12 types de scènes ont leur
+// éditeur (registry EDITORS), y compris les 4 scènes « données du site » du
+// lot 6 (bracket, player, leaderboard, standings) qui ne stockent qu'une
+// référence et laissent l'overlay lire l'API publique.
 //
 // Synchro : useCasterScenes (chargement + Realtime + saveSceneData). Le badge
 // RealtimeStatusBadge reflète l'état du canal (SUBSCRIBED = temps réel, sinon
@@ -50,13 +51,17 @@ import LoadingSpinner from '@/components/admin/LoadingSpinner';
 import RealtimeStatusBadge from '@/components/admin/RealtimeStatusBadge';
 import CasterCollabBanner from '@/components/admin/caster/CasterCollabBanner';
 import CasterPresenceBar from '@/components/admin/caster/CasterPresenceBar';
+import BracketSceneEditor from '@/components/admin/caster/BracketSceneEditor';
 import EndSceneEditor from '@/components/admin/caster/EndSceneEditor';
+import LeaderboardSceneEditor from '@/components/admin/caster/LeaderboardSceneEditor';
 import MatchPickerPanel from '@/components/admin/caster/MatchPickerPanel';
 import MatchSceneEditor from '@/components/admin/caster/MatchSceneEditor';
 import MvpSceneEditor from '@/components/admin/caster/MvpSceneEditor';
 import PauseSceneEditor from '@/components/admin/caster/PauseSceneEditor';
+import PlayerSceneEditor from '@/components/admin/caster/PlayerSceneEditor';
 import ResultsSceneEditor from '@/components/admin/caster/ResultsSceneEditor';
 import ScrimSceneEditor from '@/components/admin/caster/ScrimSceneEditor';
+import StandingsSceneEditor from '@/components/admin/caster/StandingsSceneEditor';
 import StartingSceneEditor from '@/components/admin/caster/StartingSceneEditor';
 import ThemePanel from '@/components/admin/caster/ThemePanel';
 import WebcamSceneEditor from '@/components/admin/caster/WebcamSceneEditor';
@@ -124,8 +129,11 @@ function linkedMatchIdOf(scene: CasterScene): string | null {
   return typeof id === 'string' && id ? id : null;
 }
 
-// Registry type de scène → éditeur (lot 2 : les 8 types). Un type hors
-// registry (scène desktop d'un type plus récent) retombe sur le placeholder.
+// Registry type de scène → éditeur : les 8 types du lot 2 + les 4 scènes
+// « données du site » du lot 6 (bracket, player, leaderboard, standings). Le
+// Record est EXHAUSTIF sur CasterSceneType : ajouter un type dans types/caster.ts
+// sans son éditeur casse le typecheck (garde-fou volontaire) — le placeholder ne
+// sert plus qu'aux lignes d'un type inconnu venues d'une base plus récente.
 const EDITORS: Record<CasterSceneType, ComponentType<SceneEditorProps>> = {
   starting: StartingSceneEditor,
   match: MatchSceneEditor,
@@ -135,6 +143,10 @@ const EDITORS: Record<CasterSceneType, ComponentType<SceneEditorProps>> = {
   mvp: MvpSceneEditor,
   scrim: ScrimSceneEditor,
   webcam: WebcamSceneEditor,
+  bracket: BracketSceneEditor,
+  player: PlayerSceneEditor,
+  leaderboard: LeaderboardSceneEditor,
+  standings: StandingsSceneEditor,
 };
 
 function CasterScenesPage({ staff }: PageProps) {
@@ -332,12 +344,16 @@ function CasterScenesPage({ staff }: PageProps) {
     mvp: t.typeMvp,
     scrim: t.typeScrim,
     webcam: t.typeWebcam,
+    bracket: t.typeBracket,
+    player: t.typePlayer,
+    leaderboard: t.typeLeaderboard,
+    standings: t.typeStandings,
   };
   const typeLabel = (type: string) =>
     typeLabels[type as CasterSceneType] ?? type;
 
   // URL Browser Source de l'overlay hébergé — /overlay/caster/<type> pour
-  // chacun des 8 types portés (les overlays sont livrés au lot 2 aussi).
+  // chacun des 12 types portés (la route [sceneKey] accepte le type ou l'UUID).
   const overlayUrl =
     selected &&
     origin &&

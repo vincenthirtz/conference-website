@@ -33,10 +33,11 @@ côté est vue en direct de l'autre. Les deux peuvent tourner en parallèle.
 ### Schéma `caster_scenes` — attention au piège
 
 Le schéma **réellement déployé** est celui du repo caster
-(`sql/001_add_caster_scenes.sql` : pas de `tenant_id`, 8 types dans le CHECK).
-La migration `database/migrations/add_caster_scenes.sql` de ce repo (variante
-multi-tenant) **n'a jamais été appliquée** et porte un en-tête d'avertissement.
-Se référer au schéma déployé, décrit par `types/caster.ts`.
+(`sql/001_add_caster_scenes.sql` : pas de `tenant_id`), dont le CHECK a été
+étendu ici aux 12 types (`extend_caster_scene_types.sql`). La migration
+`database/migrations/add_caster_scenes.sql` de ce repo (variante multi-tenant)
+**n'a jamais été appliquée** et porte un en-tête d'avertissement. Se référer au
+schéma déployé, décrit par `types/caster.ts`.
 
 RLS : lecture publique (`caster_scenes_select_public`, rôle `anon` — ajoutée
 pour les overlays hébergés, la donnée est de l'affichage d'antenne), écriture
@@ -181,9 +182,8 @@ Windows**, **soundboard** (fichiers locaux) et **serveur Stream Deck** local.
 Ces fonctions supposent un accès système ou un serveur persistant : elles ne
 sont pas portables dans un navigateur sur un hébergement serverless.
 
-Les types de scènes récents du caster (`bracket`, `player`, `leaderboard`,
-`standings`) ne sont pas encore supportés : le CHECK de `caster_scenes` en base
-ne les autorise pas (aucune migration n'a été appliquée pour eux).
+Les 12 types de scènes sont en revanche tous couverts, y compris les 4 plus
+récents — voir « Scènes “données du site” » ci-dessus.
 
 ## Carte du code
 
@@ -193,6 +193,8 @@ ne les autorise pas (aucune migration n'a été appliquée pour eux).
 | `utils/caster/matchScene.ts`, `sceneParse.ts`, `heroBans.ts` | Logique pure portée du renderer desktop (testée unitairement).                                 |
 | `utils/caster/obsClient.ts`, `obsOps.ts`                     | OBS WebSocket v5 navigateur (protocole écrit à la main, comme le desktop — aucune dépendance). |
 | `utils/caster/twitchProtocol.ts`, `mvpTally.ts`              | Parsing IRC Twitch et décompte des votes MVP (purs, testés).                                   |
+| `utils/caster/publicApiClient.ts`                            | Lectures `/api/public/v1/*` des pickers des scènes « données du site ».                        |
+| `utils/caster/dataSceneOptions.ts`                           | Libellés, sélection et bornage `topN` de ces scènes (purs, testés).                            |
 | `utils/caster/twitchChatClient.ts`, `eventsubClient.ts`      | Transports navigateur : IRC anonyme (lecture) et EventSub WebSocket.                           |
 | `utils/caster/mvpPollState.ts`                               | Machine à états immuable du poll MVP + snapshot publiable.                                     |
 | `pages/api/admin/twitch/eventsub/subscribe.ts`               | Crée les souscriptions EventSub pour une session ouverte par le navigateur.                    |

@@ -16,13 +16,15 @@
 //   heures ; même posture que useOverlayState pour /overlay/[runId]).
 // - Flash-guard : rien n'est rendu avant la première donnée (équivalent du
 //   `body:not(.data-ready)` de match.html — pas de placeholders à l'antenne).
-// - Scène introuvable ou type non porté (types futurs : bracket / player /
-//   leaderboard / standings n'existent pas encore en base) : page vide
-//   transparente — jamais de 404 ni de texte, ça partirait à l'antenne.
+// - Scène introuvable ou type inconnu (ligne écrite par une version plus
+//   récente du caster) : page vide transparente — jamais de 404 ni de texte,
+//   ça partirait à l'antenne.
 //
-// Lot 2 : les 8 types de scènes sont portés (match + starting / pause /
-// results / end / mvp / scrim / webcam) — un composant par type sous
-// components/overlay/caster/.
+// Les 12 types de scènes sont portés — un composant par type sous
+// components/overlay/caster/ : lot 2 pour match + starting / pause / results /
+// end / mvp / scrim / webcam, lot 6 pour bracket / player / leaderboard /
+// standings (ces 4 dernières ne stockent qu'une référence et vont chercher
+// leurs données sur l'API publique du site, en same-origin).
 
 import Head from 'next/head';
 import { useRouter } from 'next/router';
@@ -43,6 +45,10 @@ import { CasterEndOverlay } from '@/components/overlay/caster/CasterEndOverlay';
 import { CasterMvpOverlay } from '@/components/overlay/caster/CasterMvpOverlay';
 import { CasterScrimOverlay } from '@/components/overlay/caster/CasterScrimOverlay';
 import { CasterWebcamOverlay } from '@/components/overlay/caster/CasterWebcamOverlay';
+import { CasterBracketOverlay } from '@/components/overlay/caster/CasterBracketOverlay';
+import { CasterPlayerOverlay } from '@/components/overlay/caster/CasterPlayerOverlay';
+import { CasterLeaderboardOverlay } from '@/components/overlay/caster/CasterLeaderboardOverlay';
+import { CasterStandingsOverlay } from '@/components/overlay/caster/CasterStandingsOverlay';
 
 /** Filet de sécurité si le socket Realtime lâche en cours de show. */
 const POLL_MS = 15_000;
@@ -73,6 +79,14 @@ function SceneOverlay({ scene }: { scene: CasterScene }) {
       return <CasterScrimOverlay data={scene.data} />;
     case 'webcam':
       return <CasterWebcamOverlay data={scene.data} />;
+    case 'bracket':
+      return <CasterBracketOverlay data={scene.data} />;
+    case 'player':
+      return <CasterPlayerOverlay data={scene.data} />;
+    case 'leaderboard':
+      return <CasterLeaderboardOverlay data={scene.data} />;
+    case 'standings':
+      return <CasterStandingsOverlay data={scene.data} />;
     default:
       return null;
   }

@@ -7,6 +7,10 @@
 // locale database/migrations/add_caster_scenes.sql (tenant_id, is_active…) n'a
 // JAMAIS été appliquée — ne pas s'y fier.
 
+// ⚠️ Doit rester aligné sur le CHECK de `caster_scenes.type` en base (voir
+// database/migrations/extend_caster_scene_types.sql). Les 4 derniers types ont
+// été ajoutés au CHECK le 2026-07-30 : le repo caster avait leurs éditeurs et
+// overlays mais aucune migration, donc la base les refusait des deux côtés.
 export const CASTER_SCENE_TYPES = [
   'starting',
   'match',
@@ -16,6 +20,10 @@ export const CASTER_SCENE_TYPES = [
   'mvp',
   'scrim',
   'webcam',
+  'bracket',
+  'player',
+  'leaderboard',
+  'standings',
 ] as const;
 
 export type CasterSceneType = (typeof CASTER_SCENE_TYPES)[number];
@@ -161,6 +169,51 @@ export type WebcamSceneData = {
   cam2: WebcamCamConfig;
   shape: string;
   mirror: boolean;
+};
+
+// ---- Types de scènes « données du site » (lot 6) ---------------------------
+// Ces 4 scènes ne stockent qu'une RÉFÉRENCE (id de tournoi, de joueuse, slug de
+// ligue) : l'overlay va chercher les données lui-même sur l'API PUBLIQUE du site
+// (`/api/public/v1/*`, sans token, rate-limitée et cachée). Même découpage que
+// la scène scrim : la config en base, les données live hors base.
+// Shapes relevées dans les read() des éditeurs desktop
+// (womenscup-caster/src/renderer/{bracket,player,leaderboard,standings}Editor.js).
+
+export type BracketSceneData = {
+  title: string;
+  tournamentId: string | null;
+  /** Libellé mémorisé pour l'affichage hors ligne / si l'API tombe. */
+  tournamentName: string;
+  theme: 'dark' | 'light';
+};
+
+export type PlayerSceneData = {
+  title: string;
+  /** `userId` du profil public (GET /api/public/v1/players/:userId). */
+  userId: string | null;
+  playerName: string;
+  socials: CasterSocials;
+  hashtag?: string;
+};
+
+export type LeaderboardSceneData = {
+  title: string;
+  /** leaderboard = classement global des joueuses ; league = une ligue. */
+  mode: 'leaderboard' | 'league';
+  leagueSlug: string | null;
+  leagueName: string;
+  /** Nombre de lignes affichées, borné 3..20 côté éditeur. */
+  topN: number;
+  socials: CasterSocials;
+  hashtag?: string;
+};
+
+export type StandingsSceneData = {
+  title: string;
+  tournamentId: string | null;
+  tournamentName: string;
+  socials: CasterSocials;
+  hashtag?: string;
 };
 
 // ---- Contrat HTTP /api/caster/v1/* (lot 5 : match picker) -------------------
