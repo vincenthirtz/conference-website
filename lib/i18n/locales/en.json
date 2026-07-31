@@ -1489,7 +1489,14 @@
     "statusScheduled": "Scheduled",
     "statusRunning": "Live",
     "statusCompleted": "Finished",
-    "statusCancelled": "Cancelled"
+    "statusCancelled": "Cancelled",
+    "ladderTitle": "Scrim standings",
+    "ladderSubtitle": "Based on scrims reported by both teams. Distinct from tournament rankings: this measures practice.",
+    "ladderTeam": "Team",
+    "ladderPlayed": "P",
+    "ladderRecord": "W-D-L",
+    "ladderDiff": "Diff.",
+    "ladderPoints": "Pts"
   },
   "scrimLanding": {
     "badge": "Open scrims",
@@ -4572,5 +4579,28 @@
     "stepDiscoveryTitle": "Make yourself discoverable",
     "stepDiscoveryWhy": "Visible behind login only, never indexed: recruiting teams can find you. Reversible at any time.",
     "stepDiscoveryCta": "Enable"
+  },
+  "myScrims": {
+    "title": "Our scrims",
+    "toReportLabel": "To report",
+    "upcomingLabel": "Upcoming",
+    "recentLabel": "Recent",
+    "unknownOpponent": "Unknown opponent",
+    "noDate": "Date TBD",
+    "noScore": "No score",
+    "unranked": "unranked",
+    "reportCta": "Report score",
+    "correctCta": "Correct my report",
+    "submitCta": "Submit",
+    "usLabel": "Us",
+    "themLabel": "Them",
+    "reportHint": "The scrim closes when both teams report the same score. If they disagree, it goes to dispute.",
+    "awaitingOpponent": "Your report is saved — waiting for the opponent.",
+    "disputed": "Conflicting reports: needs arbitration.",
+    "reportCompleted": "Score confirmed by both teams: scrim closed.",
+    "reportAwaiting": "Report saved — waiting for the opponent.",
+    "reportDisputed": "Both reports disagree: the scrim goes to dispute.",
+    "errorScores": "Enter two valid scores.",
+    "errorReport": "The report could not be saved."
   }
 }

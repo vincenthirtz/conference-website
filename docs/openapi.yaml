@@ -3316,6 +3316,85 @@ components:
               items:
                 type: string
                 format: date-time
+    PlayerScrim:
+      type: object
+      required:
+        - id
+        - status
+        - isTeam1
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        name:
+          type: string
+          nullable: true
+        scheduledDate:
+          type: string
+          format: date-time
+          nullable: true
+        status:
+          type: string
+        ranked:
+          type: boolean
+        isTeam1:
+          type: boolean
+        opponentName:
+          type: string
+          nullable: true
+        team1Score:
+          type: integer
+          nullable: true
+        team2Score:
+          type: integer
+          nullable: true
+        winnerTeamId:
+          type: string
+          format: uuid
+          nullable: true
+        disputeReason:
+          type: string
+          nullable: true
+        myReport:
+          nullable: true
+          type: object
+          properties:
+            team1Score:
+              type: integer
+            team2Score:
+              type: integer
+    LadderRow:
+      type: object
+      required:
+        - teamId
+        - teamName
+        - played
+        - points
+        - rank
+      properties:
+        teamId:
+          $ref: '#/components/schemas/Uuid'
+        teamName:
+          type: string
+        slug:
+          type: string
+          nullable: true
+        logoUrl:
+          type: string
+          nullable: true
+        played:
+          type: integer
+        won:
+          type: integer
+        drawn:
+          type: integer
+        lost:
+          type: integer
+        scoreDiff:
+          type: integer
+        points:
+          type: integer
+        rank:
+          type: integer
     PublicTournamentSummary:
       type: object
       required:
@@ -25050,6 +25129,146 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /api/player/scrims:
+    get:
+      tags:
+        - public/teams
+      summary: Les scrims de mon equipe (a rapporter, a venir, recents).
+      description: >-
+        Surface qui manquait : le tableau de bord montrait les negociations et
+        les grilles de dispo, jamais les scrims eux-memes. `toReport` regroupe
+        ceux qui appellent une action (dates passees, en cours, ou en litige).
+      operationId: playerMyScrims
+      security:
+        - PlayerBearer: []
+      responses:
+        '200':
+          description: Scrims de l'equipe geree (listes vides si aucune equipe).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  toReport:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PlayerScrim'
+                  upcoming:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PlayerScrim'
+                  recent:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PlayerScrim'
+                  teamId:
+                    type: string
+                    format: uuid
+                    nullable: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /api/player/scrims/{scrimId}/report:
+    post:
+      tags:
+        - public/teams
+      summary: Rapporter le score d'un scrim de mon equipe.
+      description: >-
+        Decalque du report de match : un seul report -> `awaiting_opponent` ;
+        deux concordants -> scrim clos (`completed`, vainqueur calcule) ; deux
+        divergents -> `disputed`. Re-soumission supportee (un report par camp) :
+        une correction qui rejoint l'adversaire referme le litige.
+        Permission requise : `manage_scrims` sur une des deux equipes.
+      operationId: playerReportScrimScore
+      security:
+        - PlayerBearer: []
+      parameters:
+        - in: path
+          name: scrimId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - team1Score
+                - team2Score
+              properties:
+                team1Score:
+                  type: integer
+                  minimum: 0
+                  maximum: 99
+                team2Score:
+                  type: integer
+                  minimum: 0
+                  maximum: 99
+      responses:
+        '200':
+          description: Report enregistre.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - outcome
+                properties:
+                  outcome:
+                    type: string
+                    enum: [awaiting_opponent, completed, disputed]
+                  scrimStatus:
+                    type: string
+                  winnerTeamId:
+                    type: string
+                    format: uuid
+                    nullable: true
+                  reason:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /api/scrims/ladder:
+    get:
+      tags:
+        - public/teams
+      summary: Classement permanent des scrims (public).
+      description: >-
+        Calcule a la volee depuis les scrims `completed` et `ranked`. Bareme
+        victoire 3 / nul 1 / defaite 0, departage par difference de manches puis
+        victoires. Distinct du rating de tournoi (Glicko-2) : ici on mesure
+        l'entrainement, pas le niveau competitif officiel.
+      operationId: publicScrimLadder
+      security: []
+      responses:
+        '200':
+          description: Classement du tenant resolu (vide si aucun scrim rapporte).
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - ladder
+                properties:
+                  ladder:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LadderRow'
         '429':
           $ref: '#/components/responses/RateLimited'
   /api/player/network-status:

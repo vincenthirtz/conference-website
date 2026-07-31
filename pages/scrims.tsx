@@ -10,6 +10,7 @@ import Paragraph from '@/components/Typography/paragraph';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
+import { loadLadder, type LadderRow } from '@/utils/scrims/ladder';
 import { useT } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import { logger } from '../utils/logger';
@@ -36,11 +37,13 @@ type PublicScrim = {
 
 type ScrimsPageProps = {
   scrims: PublicScrim[];
+  /** Classement permanent des scrims (R8) — vide tant qu'aucun n'est rapporté. */
+  ladder: LadderRow[];
 };
 
 export const getStaticProps: GetStaticProps<ScrimsPageProps> = async () => {
   if (!supabaseAdmin) {
-    return { props: { scrims: [] }, revalidate: 60 };
+    return { props: { scrims: [], ladder: [] }, revalidate: 60 };
   }
 
   // S5d: getStaticProps → DEFAULT_TENANT_ID (TODO(S7) — passer en SSR/ISR).
@@ -61,11 +64,14 @@ export const getStaticProps: GetStaticProps<ScrimsPageProps> = async () => {
 
   if (error) {
     logger.error('[scrims] fetch error:', error);
-    return { props: { scrims: [] }, revalidate: 60 };
+    return { props: { scrims: [], ladder: [] }, revalidate: 60 };
   }
 
+  // Classement calculé à la volée depuis les scrims rapportés (R8).
+  const ladder = await loadLadder(DEFAULT_TENANT_ID);
+
   return {
-    props: { scrims: (data || []) as unknown as PublicScrim[] },
+    props: { scrims: (data || []) as unknown as PublicScrim[], ladder },
     revalidate: 300,
   };
 };
@@ -115,7 +121,7 @@ function statusColor(status: string) {
   }
 }
 
-function ScrimsPage({ scrims }: ScrimsPageProps) {
+function ScrimsPage({ scrims, ladder }: ScrimsPageProps) {
   const t = useT('scrimsPage');
   const { upcoming, running, past } = useMemo(() => {
     const upcoming: PublicScrim[] = [];
@@ -143,6 +149,80 @@ function ScrimsPage({ scrims }: ScrimsPageProps) {
         <Paragraph className="text-neutral-400 mt-3 max-w-2xl">
           {t.subtitle}
         </Paragraph>
+
+        {/* Classement permanent (R8). Masqué tant qu'aucun scrim n'a été
+            rapporté : un tableau vide n'apprend rien et donne l'impression
+            d'une fonctionnalité cassée. */}
+        {ladder.length > 0 && (
+          <section className="mt-10" aria-labelledby="scrim-ladder-heading">
+            <h2
+              id="scrim-ladder-heading"
+              className="text-lg font-semibold text-white"
+            >
+              {t.ladderTitle}
+            </h2>
+            <p className="mt-1 text-sm text-neutral-400">{t.ladderSubtitle}</p>
+            <div className="mt-4 overflow-x-auto rounded-2xl border border-neutral-700/50">
+              <table className="w-full text-sm">
+                <thead className="bg-neutral-900/60 text-neutral-400">
+                  <tr>
+                    <th scope="col" className="px-4 py-2.5 text-left w-12">
+                      #
+                    </th>
+                    <th scope="col" className="px-4 py-2.5 text-left">
+                      {t.ladderTeam}
+                    </th>
+                    <th scope="col" className="px-4 py-2.5 text-right">
+                      {t.ladderPlayed}
+                    </th>
+                    <th scope="col" className="px-4 py-2.5 text-right">
+                      {t.ladderRecord}
+                    </th>
+                    <th scope="col" className="px-4 py-2.5 text-right">
+                      {t.ladderDiff}
+                    </th>
+                    <th scope="col" className="px-4 py-2.5 text-right">
+                      {t.ladderPoints}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-neutral-700/50">
+                  {ladder.map((row) => (
+                    <tr key={row.teamId} className="hover:bg-neutral-800/40">
+                      <td className="px-4 py-2.5 font-semibold">{row.rank}</td>
+                      <td className="px-4 py-2.5">
+                        {row.slug ? (
+                          <Link
+                            href={`/team/${row.slug}`}
+                            className="hover:underline"
+                          >
+                            {row.teamName}
+                          </Link>
+                        ) : (
+                          row.teamName
+                        )}
+                      </td>
+                      <td className="px-4 py-2.5 text-right text-neutral-400">
+                        {row.played}
+                      </td>
+                      <td className="px-4 py-2.5 text-right text-neutral-400">
+                        {row.won}-{row.drawn}-{row.lost}
+                      </td>
+                      <td className="px-4 py-2.5 text-right text-neutral-400">
+                        {row.scoreDiff > 0
+                          ? `+${row.scoreDiff}`
+                          : row.scoreDiff}
+                      </td>
+                      <td className="px-4 py-2.5 text-right font-semibold">
+                        {row.points}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
 
         {scrims.length === 0 && (
           <div className="mt-10 rounded-2xl border border-neutral-700/50 bg-neutral-800/30 p-8 text-center text-neutral-400">

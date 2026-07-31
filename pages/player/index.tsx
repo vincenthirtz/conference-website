@@ -10,6 +10,7 @@ import { useToast } from '@/components/Toast';
 import ProfileSummaryCard from '@/components/player/ProfileSummaryCard';
 import DiscordLinkCard from '@/components/player/DiscordLinkCard';
 import NetworkOnboardingCard from '@/components/player/NetworkOnboardingCard';
+import MyScrimsCard from '@/components/player/MyScrimsCard';
 import TeamCard, { type TeamMemberLite } from '@/components/player/TeamCard';
 import DemandesHistory from '@/components/player/DemandesHistory';
 import QuickAction, {
@@ -640,6 +641,11 @@ function PlayerDashboard() {
                 toggling={togglingScrim}
                 t={t}
               />
+
+              {/* Les scrims eux-mêmes : à rapporter, à venir, récents. Le hub
+                  au-dessus pilote la disponibilité ; ce bloc porte les
+                  rencontres et le report de score. */}
+              <MyScrimsCard />
 
               {/* Scrims en attente de MON action */}
               {pendingScrims.length > 0 && (
