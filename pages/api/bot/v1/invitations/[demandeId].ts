@@ -51,6 +51,7 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
       return res.status(result.status).json({ error: result.error });
     }
     void logPlayerAction({
+      tenantId: req.botContext.tenantId,
       actorAuthUserId: actor.authUserId,
       actorDiscordUserId: actor.discordUserId,
       action: 'invite_accept',
@@ -76,6 +77,7 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
       return res.status(result.status).json({ error: result.error });
     }
     void logPlayerAction({
+      tenantId: req.botContext.tenantId,
       actorAuthUserId: actor.authUserId,
       actorDiscordUserId: actor.discordUserId,
       action: 'invite_reject',
@@ -95,6 +97,7 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
     return res.status(result.status).json({ error: result.error });
   }
   void logPlayerAction({
+    tenantId: req.botContext.tenantId,
     actorAuthUserId: actor.authUserId,
     actorDiscordUserId: actor.discordUserId,
     action: 'invite_cancel',

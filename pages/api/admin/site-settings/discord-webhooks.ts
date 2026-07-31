@@ -36,7 +36,7 @@ async function handler(
   try {
     switch (req.method) {
       case 'GET':
-        return await handleGet(res);
+        return await handleGet(res, ctx);
       case 'PUT':
         return await handlePut(req, res, ctx);
       case 'DELETE':
@@ -50,10 +50,14 @@ async function handler(
   }
 }
 
-async function handleGet(res: NextApiResponse) {
+async function handleGet(
+  res: NextApiResponse,
+  ctx: AuthenticatedStaffContext
+) {
   const { data, error } = await supabaseAdmin
     .from('discord_webhooks')
     .select('*')
+    .eq('tenant_id', ctx.tenantId)
     .is('tournament_id', null)
     .order('channel_type', { ascending: true });
 
@@ -94,10 +98,13 @@ async function handlePut(
       ? roleMention.trim()
       : null;
 
-  // Upsert : try update first (matched by tournament_id IS NULL + channel_type), then insert
+  // Upsert : try update first (matched by tenant + tournament_id IS NULL +
+  // channel_type — c'est la clé de l'index unique
+  // `discord_webhooks_tenant_global_channel_uidx`), then insert.
   const { data: existing } = await supabaseAdmin
     .from('discord_webhooks')
     .select('id')
+    .eq('tenant_id', ctx.tenantId)
     .is('tournament_id', null)
     .eq('channel_type', channelType)
     .maybeSingle();
@@ -113,6 +120,7 @@ async function handlePut(
         updated_at: new Date().toISOString(),
       })
       .eq('id', existing.id)
+      .eq('tenant_id', ctx.tenantId)
       .select('*')
       .maybeSingle();
 
@@ -125,6 +133,9 @@ async function handlePut(
     const { data, error } = await supabaseAdmin
       .from('discord_webhooks')
       .insert({
+        // `tenant_id` est NOT NULL sans default : sans lui l'insert part en 23502
+        // et la création d'un webhook global échoue en 500.
+        tenant_id: ctx.tenantId,
         tournament_id: null,
         channel_type: channelType,
         webhook_url: cleanUrl,
@@ -143,6 +154,7 @@ async function handlePut(
 
   await logStaffAction({
     staff_id: ctx.staff.id,
+    tenant_id: ctx.tenantId,
     action: 'update_discord_webhook',
     entity_type: 'site_settings',
     entity_id: null,
@@ -172,6 +184,7 @@ async function handleDelete(
   const { error } = await supabaseAdmin
     .from('discord_webhooks')
     .delete()
+    .eq('tenant_id', ctx.tenantId)
     .is('tournament_id', null)
     .eq('channel_type', channelType);
 
@@ -182,6 +195,7 @@ async function handleDelete(
 
   await logStaffAction({
     staff_id: ctx.staff.id,
+    tenant_id: ctx.tenantId,
     action: 'delete_discord_webhook',
     entity_type: 'site_settings',
     entity_id: null,

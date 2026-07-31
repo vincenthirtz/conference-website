@@ -94,6 +94,7 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
   );
 
   void logPlayerAction({
+    tenantId: req.botContext.tenantId,
     actorAuthUserId: actor.authUserId,
     actorDiscordUserId: actor.discordUserId,
     action: 'leave_team',

@@ -176,6 +176,7 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
   });
 
   void logPlayerAction({
+    tenantId: req.botContext.tenantId,
     actorAuthUserId: reportingAuthId,
     actorDiscordUserId: discordUserId,
     action: 'report_score',
@@ -311,6 +312,7 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
       // joueuses (bot_player_actions) pour garder l'audit trail complet.
       if (outcome.outcome === 'auto_resolved') {
         void logPlayerAction({
+          tenantId: req.botContext.tenantId,
           actorAuthUserId: reportingAuthId,
           actorDiscordUserId: discordUserId,
           action: 'report_score',

@@ -368,6 +368,7 @@ async function handleRegister(
       actorDiscordUserId,
     });
     void logPlayerAction({
+      tenantId: req.botContext.tenantId,
       actorAuthUserId: captainAuthUserId,
       actorDiscordUserId,
       action: 'register_team',

@@ -28,6 +28,13 @@ export type PlayerAction =
   | 'update_profile';
 
 export type LogPlayerActionInput = {
+  /**
+   * Tenant de l'action. `bot_player_actions.tenant_id` est NOT NULL sans
+   * default : sans lui l'insert part en 23502 et la trace est perdue en
+   * silence (l'audit est fire-and-forget). Requis — les routes bot le tiennent
+   * de `req.botContext.tenantId`.
+   */
+  tenantId: string;
   actorAuthUserId: string;
   actorDiscordUserId: string;
   action: PlayerAction;
@@ -52,6 +59,7 @@ export async function logPlayerAction(
   if (!supabaseAdmin) return;
   try {
     const { error } = await supabaseAdmin.from('bot_player_actions').insert({
+      tenant_id: params.tenantId,
       actor_auth_user_id: params.actorAuthUserId,
       actor_discord_user_id: params.actorDiscordUserId,
       action: params.action,

@@ -274,6 +274,7 @@ async function handlePatch(req: BotTenantRequest, res: NextApiResponse) {
   const changedFields = Object.keys(updates).filter((k) => k !== 'updated_at');
 
   void logPlayerAction({
+    tenantId: req.botContext.tenantId,
     actorAuthUserId,
     actorDiscordUserId,
     action: 'update_team',

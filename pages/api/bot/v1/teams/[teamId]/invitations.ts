@@ -211,6 +211,7 @@ async function handleCreate(
   }
 
   void logPlayerAction({
+    tenantId: req.botContext.tenantId,
     actorAuthUserId: actor.authUserId,
     actorDiscordUserId: actor.discordUserId,
     action: 'invite_create',

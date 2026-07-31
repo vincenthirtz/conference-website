@@ -218,6 +218,7 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
     captainDiscordUserId,
   });
   void logPlayerAction({
+    tenantId: req.botContext.tenantId,
     actorAuthUserId: captainAuthId,
     actorDiscordUserId: captainDiscordUserId,
     action: 'create_team',

@@ -20,6 +20,7 @@ import {
   setAuthUser,
 } from './__helpers__/supabaseMock';
 import { invalidateStaffCache } from '../../utils/staff';
+import { DEFAULT_TENANT_ID } from '../../utils/tenant';
 
 import discordWebhooksHandler from '../../pages/api/admin/site-settings/discord-webhooks';
 import discordTestHandler from '../../pages/api/admin/site-settings/discord-test';
@@ -178,6 +179,9 @@ describe('PUT /api/admin/site-settings/discord-webhooks', () => {
     expect(rows[0].channel_type).toBe('mvp_polls');
     expect(rows[0].webhook_url).toBe(VALID_DISCORD_URL);
     expect(rows[0].role_mention).toBe('1234567890');
+    // Régression : `discord_webhooks.tenant_id` est NOT NULL sans default en
+    // base — l'omettre partait en 23502 et l'insert échouait en 500.
+    expect(rows[0].tenant_id).toBe(DEFAULT_TENANT_ID);
   });
 
   it('updates the existing global webhook for a given channel_type', async () => {

@@ -273,6 +273,7 @@ async function handlePost(
 
   if (authUserId) {
     void logPlayerAction({
+      tenantId: req.botContext.tenantId,
       actorAuthUserId: authUserId,
       actorDiscordUserId: input.discordUserId,
       action: 'attach_evidence',

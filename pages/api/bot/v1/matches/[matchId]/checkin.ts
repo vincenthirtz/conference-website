@@ -112,6 +112,7 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
       captainAuthId: matchedCaptainAuthId,
     });
     void logPlayerAction({
+      tenantId: req.botContext.tenantId,
       actorAuthUserId: matchedCaptainAuthId,
       actorDiscordUserId: discordUserId,
       action: 'checkin',
