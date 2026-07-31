@@ -217,16 +217,31 @@ Entre deux éditions, le site n'a aucune raison d'être rouvert.
 
 ### P2 — Tissu : récurrence, réputation, identité
 
-#### R8 · Ladder / ligue de scrims permanente
+#### R8 · Ladder / ligue de scrims permanente — ⛔ BLOQUÉ (prérequis manquant)
 
 - **Impact / Effort** : 🟧 / **L**
+- **Blocage constaté le 2026-07-31** : la table `scrims` ne porte **ni vainqueur
+  ni score** (colonnes : statut, date, équipes, stream, Discord…). Un classement
+  permanent est donc impossible en l'état — il ne manque pas « le classement »,
+  il manque **le résultat**.
+- **Prérequis** : report de résultat de scrim, sur le modèle éprouvé des matchs
+  (`match_score_reports` : report par les deux capitaines, concordance →
+  validation auto, divergence → litige). Chantier à part entière (M), à livrer
+  AVANT tout ladder.
+- **Décision** : ne rien bâtir à moitié ici. Un ladder alimenté par des
+  résultats saisis à la main par le staff serait une dette immédiate.
 - **Problème** : C8 — rien ne fait revenir entre deux tournois.
 - **Proposition** : les scrims joués comptent pour un classement permanent adossé à l'objet `leagues`
   déjà en base ; saison glissante, montée/descente, rôle Discord par palier (le role-sync existe).
 - **Acceptation** : un scrim validé met à jour le classement ; page de classement publique ; opt-in par
   équipe (un scrim d'entraînement peut rester hors classement).
 
-#### R9 · Fiche d'équipe = profil réseau
+#### R9 · Fiche d'équipe = profil réseau — ✅ LIVRÉ
+
+- **Résultat (2026-07-31)** : la fiche existante (vitrine riche : bannière,
+  roster, sponsors, palmarès, stats de matchs) gagne une section « Dans le
+  réseau » — 5 derniers scrims + fiabilité. Chargée en ISR ; masquée tant qu'il
+  n'y a rien à dire.
 
 - **Impact / Effort** : 🟧 / **M**
 - **Problème** : la fiche est une vitrine (logo, sponsors, contenu riche) sans dimension relationnelle.
@@ -235,7 +250,11 @@ Entre deux éditions, le site n'a aucune raison d'être rouvert.
 - **Acceptation** : depuis une fiche, un capitaine connecté engage un scrim ou une conversation sans
   quitter la page.
 
-#### R10 · Réputation de fiabilité (anti-ghosting)
+#### R10 · Réputation de fiabilité (anti-ghosting) — ✅ LIVRÉ
+
+- **Résultat (2026-07-31)** : `utils/teams/reliability.ts` — taux de réponse,
+  délai médian, propositions ignorées, dérivés des `demandes` type='scrim'.
+  Aucune note subjective ; rien affiché sous 3 propositions reçues.
 
 - **Impact / Effort** : 🟧 / **M**
 - **Problème** : la monnaie d'un réseau de scrims, c'est la fiabilité — invisible aujourd'hui.
@@ -244,7 +263,12 @@ Entre deux éditions, le site n'a aucune raison d'être rouvert.
 - **Acceptation** : indicateurs calculés sans saisie manuelle ; jamais de note subjective entre
   équipes (pas de système de reviews) ; masqués sous un seuil d'échantillon.
 
-#### R11 · Onboarding réseau : lier Discord, vérifier son BattleTag
+#### R11 · Onboarding réseau : lier Discord, vérifier son BattleTag — ✅ LIVRÉ
+
+- **Résultat (2026-07-31)** : checklist « Exister dans le réseau » en tête du
+  tableau de bord (`NetworkOnboardingCard` + `GET /api/player/network-status`).
+  Correction du diagnostic : les boutons existaient déjà — ce qui manquait était
+  la mise en regard avec ce qu'ils débloquent.
 
 - **Impact / Effort** : 🟥 / **S-M**
 - **Problème** : C6 — 6/38 comptes liés, 3/19 BattleTags vérifiés ; sans ça, invisible du réseau.
@@ -253,7 +277,10 @@ Entre deux éditions, le site n'a aucune raison d'être rouvert.
   existe déjà sur `?welcome=1` — l'étendre au-delà de la seule création d'équipe.
 - **Acceptation** : taux de liaison mesurable ; aucune relance répétée ; parcours skippable.
 
-#### R12 · Activer la découverte joueuse au bon moment
+#### R12 · Activer la découverte joueuse au bon moment — ✅ LIVRÉ
+
+- **Résultat (2026-07-31)** : intégré à la checklist R11, avec la promesse
+  explicite « visible derrière connexion seulement, jamais indexé, réversible ».
 
 - **Impact / Effort** : 🟩 / **S**
 - **Problème** : 0 profil découvrable — l'opt-in global existe mais personne ne le rencontre.
