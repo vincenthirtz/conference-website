@@ -1424,7 +1424,10 @@ export default function PublicCreateTeamPage() {
                             className={labelCls}
                           >
                             {t.battleTagLabel}
-                            {tournamentIdParam ? ' *' : ''}
+                            {tournamentIdParam &&
+                            roleRequiresBattleTag(member.role)
+                              ? ' *'
+                              : ''}
                           </label>
                           <input
                             id={`member-${idx}-btag`}

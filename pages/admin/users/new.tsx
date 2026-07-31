@@ -14,6 +14,7 @@ import {
   type TeamRole,
 } from '@/utils/teamRoles';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import { roleRequiresBattleTag } from '@/utils/teams/addMember';
 
 import { logger } from '../../../utils/logger';
 
@@ -145,12 +146,17 @@ function AdminCreateUserPage({ staff, teamRoles }: StaffProps) {
         if (!selectedTeamId) {
           throw new Error(t.errSelectTeam);
         }
+        // Coach / manager : encadrement, pas de BattleTag exigé (même règle
+        // que l'API, cf. utils/teams/addMember). Un tag saisi reste validé.
         if (!battleTag.trim()) {
-          throw new Error(t.errBattleTagRequired);
-        }
-        const battleTagRegex = /^[A-Za-z0-9]{2,}#[0-9]{3,6}$/;
-        if (!battleTagRegex.test(battleTag.trim())) {
-          throw new Error(t.errBattleTagInvalid);
+          if (roleRequiresBattleTag(teamRole)) {
+            throw new Error(t.errBattleTagRequired);
+          }
+        } else {
+          const battleTagRegex = /^[A-Za-z0-9]{2,}#[0-9]{3,6}$/;
+          if (!battleTagRegex.test(battleTag.trim())) {
+            throw new Error(t.errBattleTagInvalid);
+          }
         }
       }
 
@@ -486,7 +492,9 @@ function AdminCreateUserPage({ staff, teamRoles }: StaffProps) {
                         <div>
                           <label className="block text-sm text-neutral-400 mb-1">
                             {t.battleTagField}{' '}
-                            <span className="text-red-400">*</span>
+                            {roleRequiresBattleTag(teamRole) && (
+                              <span className="text-red-400">*</span>
+                            )}
                           </label>
                           <input
                             type="text"
