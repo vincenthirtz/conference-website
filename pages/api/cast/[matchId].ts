@@ -11,6 +11,10 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { isNonPlayingTeamRole } from '@/utils/teams/roleKind';
+import {
+  resolveMissingDisplayNames,
+  withFallbackDisplayName,
+} from '@/utils/teams/memberDisplayName';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
 import type { AuthenticatedStaffContext } from '@/utils/staff';
@@ -137,6 +141,16 @@ async function handler(
       .eq('tenant_id', tenantId)
       .in('team_id', teamIds);
 
+    // Le pseudo vit sur le compte : `team_members.display_name` est une
+    // surcharge par équipe, presque toujours nulle. Sans ce repli, un membre
+    // d'encadrement (pas de BattleTag obligatoire) n'a rien à afficher.
+    const memberNames = await resolveMissingDisplayNames(
+      (members || []) as {
+        user_id?: string | null;
+        display_name?: string | null;
+      }[]
+    );
+
     for (const m of members || []) {
       const enriched: Member = {
         id: m.id,
@@ -148,7 +162,7 @@ async function handler(
           (m.team_id === match.team2_id && team2?.captain_id === m.user_id),
         is_manager: m.role === 'manager',
         is_staff: isNonPlayingTeamRole(m.role as string | null),
-        display_name: (m.display_name as string | null) ?? null,
+        display_name: withFallbackDisplayName(m, memberNames),
       };
       if (m.team_id === match.team1_id) team1Members.push(enriched);
       else if (m.team_id === match.team2_id) team2Members.push(enriched);

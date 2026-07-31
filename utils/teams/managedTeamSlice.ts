@@ -42,7 +42,10 @@
 import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
 import { getManagedTeam } from '@/utils/teams/managementAccess';
-import { fetchAdminUserProfiles } from '@/utils/adminUserProfiles';
+import {
+  resolveMissingDisplayNames,
+  withFallbackDisplayName,
+} from '@/utils/teams/memberDisplayName';
 
 /** Team détaillée, surensemble des deux sources (inclut captain_id + open_for_scrim). */
 export type ManagedTeamRow = {
@@ -199,14 +202,10 @@ export async function loadManagedTeamSlice(
     const memberRows = (membersRaw || []) as Record<string, unknown>[];
 
     // Repli de pseudo pour les lignes sans `display_name` en roster (typique de
-    // l'encadrement, ajouté sans BattleTag) : UN appel RPC batch. Best-effort,
-    // un échec laisse simplement le champ nul.
-    const missingNameIds = memberRows
-      .filter((m) => !m.display_name && m.user_id)
-      .map((m) => m.user_id as string);
-    const authProfiles = missingNameIds.length
-      ? await fetchAdminUserProfiles(missingNameIds)
-      : new Map();
+    // l'encadrement, ajouté sans BattleTag).
+    const memberNames = await resolveMissingDisplayNames(
+      memberRows as { user_id?: string | null; display_name?: string | null }[]
+    );
 
     const members: ManagedTeamMemberRow[] = memberRows.map((m) => {
       const memberUserId = (m.user_id as string | null) ?? null;
@@ -215,9 +214,10 @@ export async function loadManagedTeamSlice(
         id: m.id as string,
         user_id: memberUserId,
         role: (m.role as string | null) ?? null,
-        display_name:
-          (m.display_name as string | null) ??
-          (memberUserId ? (authProfiles.get(memberUserId)?.display_name ?? null) : null),
+        display_name: withFallbackDisplayName(
+          m as { user_id?: string | null; display_name?: string | null },
+          memberNames
+        ),
         battle_tag: (m.battle_tag as string | null) ?? null,
         battle_tag_verified_at:
           (m.battle_tag_verified_at as string | null) ?? null,

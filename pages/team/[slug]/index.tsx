@@ -16,6 +16,10 @@ import {
 } from '@/utils/teams/reliability';
 import { maskBattleTag } from '@/utils/battleTag';
 import { splitTeamMembers } from '@/utils/teams/roleKind';
+import {
+  resolveMissingDisplayNames,
+  withFallbackDisplayName,
+} from '@/utils/teams/memberDisplayName';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import {
@@ -364,11 +368,22 @@ export const getStaticProps: GetStaticProps<TeamPageProps> = async (ctx) => {
     logger.error('Error fetching team members:', membersResult.error);
   }
 
+  // Le pseudo vit sur le compte : `team_members.display_name` est une surcharge
+  // par équipe, presque toujours nulle. Sans ce repli, l'encadrement (pas de
+  // BattleTag obligatoire) n'a aucune identité à afficher.
+  const memberNames = await resolveMissingDisplayNames(
+    (rawMembers || []) as {
+      user_id?: string | null;
+      display_name?: string | null;
+    }[]
+  );
+
   // Compute is_captain based on team.captain_id
   const membersWithCaptain = (rawMembers || []).map((m: any) => ({
     ...m,
     // Anonymat public : on masque l'ID numérique du BattleTag (après le « # »).
     battle_tag: maskBattleTag(m.battle_tag ?? null),
+    display_name: withFallbackDisplayName(m, memberNames),
     is_captain: team.captain_id === m.user_id,
   }));
   // Sort captain first

@@ -15,6 +15,10 @@ import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { findTournamentByIdOrSlug } from '@/utils/tournamentLookup';
 import { maskBattleTag } from '@/utils/battleTag';
 import {
+  resolveMissingDisplayNames,
+  withFallbackDisplayName,
+} from '@/utils/teams/memberDisplayName';
+import {
   splitTeamMembers,
   isNonPlayingTeamRole,
 } from '@/utils/teams/roleKind';
@@ -250,11 +254,18 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
   );
 
   // 9) Construire le roster final
+  // Le pseudo vit sur le compte : `team_members.display_name` est une surcharge
+  // par équipe, presque toujours nulle. Sans ce repli, un membre sans BattleTag
+  // (l'encadrement) n'a aucune identité à afficher.
+  const memberNames = await resolveMissingDisplayNames(
+    (members || []) as { user_id?: string | null; display_name?: string | null }[]
+  );
+
   const roster: RosterMember[] = (members || []).map((m: any) => ({
     id: m.id,
     // Anonymat public : on retire l'ID numérique du BattleTag (après le « # »).
     battle_tag: maskBattleTag(m.battle_tag ?? null),
-    display_name: m.display_name ?? null,
+    display_name: withFallbackDisplayName(m, memberNames),
     role: m.role,
     is_substitute: !!m.is_substitute,
     is_captain: m.user_id === team.captain_id,

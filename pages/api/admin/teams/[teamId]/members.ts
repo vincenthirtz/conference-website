@@ -15,7 +15,10 @@ import {
   rosterLockErrorMessage,
 } from '@/utils/teams/rosterLock';
 import { computeBattleTagMismatch } from '@/utils/auth/battleTagMismatch';
-import { fetchAdminUserProfiles } from '@/utils/adminUserProfiles';
+import {
+  resolveMissingDisplayNames,
+  withFallbackDisplayName,
+} from '@/utils/teams/memberDisplayName';
 import {
   validateBattleTagForRole,
   roleRequiresBattleTag,
@@ -122,21 +125,14 @@ async function handler(
     }
 
     // Pseudo de repli pour les membres sans `display_name` en roster (typique
-    // de l'encadrement, ajouté sans BattleTag) : on résout le nom du compte en
-    // UN appel RPC batch. Best-effort — un échec laisse simplement le champ nul.
-    const missingNameIds = rawMembers
-      .filter((m) => !m.display_name && m.user_id)
-      .map((m) => m.user_id);
-    const authProfiles = missingNameIds.length
-      ? await fetchAdminUserProfiles(missingNameIds)
-      : new Map();
+    // de l'encadrement, ajouté sans BattleTag).
+    const memberNames = await resolveMissingDisplayNames(rawMembers);
 
     const members: TeamMemberRow[] = rawMembers.map((m) => {
       const { verified_battle_net_id, ...rest } = m;
       return {
         ...rest,
-        display_name:
-          m.display_name ?? authProfiles.get(m.user_id)?.display_name ?? null,
+        display_name: withFallbackDisplayName(m, memberNames),
         battle_tag_verified_at: m.battle_tag_verified_at ?? null,
         battle_tag_mismatch: computeBattleTagMismatch({
           battleTag: m.battle_tag ?? null,
