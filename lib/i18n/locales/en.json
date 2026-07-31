@@ -4564,7 +4564,19 @@
     "empty": "No team matches this filter.",
     "errorLoad": "The directory could not be loaded.",
     "retry": "Retry",
-    "responseRate": "{rate}% reply rate"
+    "responseRate": "{rate}% reply rate",
+    "matchScore": "Match {score}",
+    "matchScoreHelp": "Score based on shared slots, level gap, reliability and how recently you played this opponent.",
+    "commonRhythm": "{count} recurring slot(s) in common",
+    "reasonCommonSlots": "shared advertised slots",
+    "reasonCommonRhythm": "same weekly habits",
+    "reasonNoCommonSlots": "no slot in common",
+    "reasonSimilarLevel": "similar level",
+    "reasonLevelGap": "large level gap",
+    "reasonReliable": "answers proposals",
+    "reasonSlowToAnswer": "rarely answers",
+    "reasonNeverPlayed": "not played recently",
+    "reasonPlayedRecently": "played several times already"
   },
   "networkOnboarding": {
     "title": "Exist in the network",
@@ -4602,5 +4614,20 @@
     "reportDisputed": "Both reports disagree: the scrim goes to dispute.",
     "errorScores": "Enter two valid scores.",
     "errorReport": "The report could not be saved."
+  },
+  "teamRhythm": {
+    "title": "Team rhythm",
+    "subtitle": "Paint the slots you usually play. The team sees when it is at full strength — and can turn that into a scrim listing.",
+    "declaredCount": "{declared} of {total} have declared",
+    "cellAvailable": "{count} available",
+    "saveCta": "Save my slots",
+    "saving": "Saving…",
+    "saved": "Your slots have been saved.",
+    "saveError": "Could not save your slots.",
+    "coreTitle": "Slots with {threshold} players or more",
+    "coreEmpty": "No slot gathers the required line-up yet.",
+    "announceCta": "Advertise these {count} slots to other teams",
+    "announced": "Listing published: matching teams have been notified.",
+    "announceError": "Could not publish the listing."
   }
 }

@@ -26,6 +26,7 @@ import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import type { DirectoryTeam } from '../api/player/teams-directory';
+import type { OpponentReason } from '../../utils/teams/opponentMatch';
 
 import { logger } from '../../utils/logger';
 
@@ -44,6 +45,17 @@ type MySearch = {
 } | null;
 
 type Filter = 'all' | 'scrim' | 'recruiting';
+
+/**
+ * Couleur du badge de score. Trois bandes seulement : au-delà, la nuance
+ * devient du bruit — le score sert à trier, pas à noter au point près.
+ */
+function scoreTone(score: number): string {
+  if (score >= 70)
+    return 'border-emerald-400/40 bg-emerald-500/15 text-emerald-200';
+  if (score >= 45) return 'border-sky-400/40 bg-sky-500/15 text-sky-200';
+  return 'border-white/15 bg-white/5 text-gray-300';
+}
 
 function PlayerTeamsPage() {
   const t = useT('playerTeams');
@@ -170,6 +182,20 @@ function PlayerTeamsPage() {
       hour: '2-digit',
       minute: '2-digit',
     });
+
+  /** Libellé d'une raison de score. Les codes viennent de l'API, jamais le texte. */
+  const reasonLabel = (code: OpponentReason): string =>
+    ({
+      common_slots: t.reasonCommonSlots,
+      common_rhythm: t.reasonCommonRhythm,
+      no_common_slots: t.reasonNoCommonSlots,
+      similar_level: t.reasonSimilarLevel,
+      level_gap: t.reasonLevelGap,
+      reliable: t.reasonReliable,
+      slow_to_answer: t.reasonSlowToAnswer,
+      never_played: t.reasonNeverPlayed,
+      played_recently: t.reasonPlayedRecently,
+    })[code] ?? '';
 
   const visibleTeams = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -373,6 +399,17 @@ function PlayerTeamsPage() {
                             {t.badgeRecruiting}
                           </span>
                         )}
+                        {/* Score de compatibilité (N4) : il porte le tri, donc
+                            il doit être visible — un classement qu'on ne voit
+                            pas est un classement auquel on ne croit pas. */}
+                        <span
+                          title={t.matchScoreHelp}
+                          className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${scoreTone(
+                            team.match.score
+                          )}`}
+                        >
+                          {format(t.matchScore, { score: team.match.score })}
+                        </span>
                       </div>
                       <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-400">
                         {team.country && <span>{team.country}</span>}
@@ -404,6 +441,28 @@ function PlayerTeamsPage() {
                             </span>
                           )}
                       </div>
+
+                      {/* Les raisons du score : sans elles, le classement est
+                          un oracle. Codes machine côté API, libellés ici. */}
+                      {team.match.reasons.length > 0 && (
+                        <p className="mt-1 text-xs text-gray-400">
+                          {team.match.reasons
+                            .map((code) => reasonLabel(code))
+                            .filter(Boolean)
+                            .join(' · ')}
+                        </p>
+                      )}
+
+                      {/* Créneaux d'habitude en commun (N1) : le repli quand
+                          personne n'a d'annonce vivante — le cas normal. */}
+                      {!team.scrim_search &&
+                        team.common_rhythm_slots.length > 0 && (
+                          <p className="mt-1 text-xs text-sky-200">
+                            {format(t.commonRhythm, {
+                              count: team.common_rhythm_slots.length,
+                            })}
+                          </p>
+                        )}
 
                       {team.scrim_search && (
                         <div className="mt-2">

@@ -11,6 +11,7 @@ import ProfileSummaryCard from '@/components/player/ProfileSummaryCard';
 import DiscordLinkCard from '@/components/player/DiscordLinkCard';
 import NetworkOnboardingCard from '@/components/player/NetworkOnboardingCard';
 import MyScrimsCard from '@/components/player/MyScrimsCard';
+import TeamRhythmCard from '@/components/player/TeamRhythmCard';
 import TeamCard, { type TeamMemberLite } from '@/components/player/TeamCard';
 import DemandesHistory from '@/components/player/DemandesHistory';
 import QuickAction, {
@@ -610,6 +611,12 @@ function PlayerDashboard() {
                 members={members}
               />
             </div>
+            {/* Rythme d'équipe (N1) — délibérément DANS cette section et non
+                dans « Scrims » : déclarer sa disponibilité récurrente est un
+                geste de membre, pas de capitaine. C'est le premier objet
+                auquel les 4 personnes d'un roster qui ne gèrent rien peuvent
+                contribuer. */}
+            {team && <TeamRhythmCard />}
             {/* id : cible du lien « lier Discord » de la checklist réseau. */}
             <div id="discord-link" className="scroll-mt-24">
               <DiscordLinkCard />

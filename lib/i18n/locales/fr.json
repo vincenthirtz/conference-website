@@ -4564,7 +4564,19 @@
     "empty": "Aucune équipe ne correspond à ce filtre.",
     "errorLoad": "L'annuaire n'a pas pu être chargé.",
     "retry": "Réessayer",
-    "responseRate": "{rate} % de réponse"
+    "responseRate": "{rate} % de réponse",
+    "matchScore": "Compatibilité {score}",
+    "matchScoreHelp": "Score calculé à partir des créneaux communs, de l'écart de niveau, de la fiabilité et de la nouveauté de l'adversaire.",
+    "commonRhythm": "{count} créneau(x) d'habitude en commun",
+    "reasonCommonSlots": "créneaux annoncés en commun",
+    "reasonCommonRhythm": "mêmes habitudes horaires",
+    "reasonNoCommonSlots": "aucun créneau en commun",
+    "reasonSimilarLevel": "niveau proche",
+    "reasonLevelGap": "écart de niveau important",
+    "reasonReliable": "répond aux propositions",
+    "reasonSlowToAnswer": "répond rarement",
+    "reasonNeverPlayed": "jamais affrontée récemment",
+    "reasonPlayedRecently": "déjà affrontée plusieurs fois"
   },
   "networkOnboarding": {
     "title": "Exister dans le réseau",
@@ -4602,5 +4614,20 @@
     "reportDisputed": "Les deux reports divergent : le scrim passe en litige.",
     "errorScores": "Saisis deux scores valides.",
     "errorReport": "Le report n'a pas pu être enregistré."
+  },
+  "teamRhythm": {
+    "title": "Rythme d'équipe",
+    "subtitle": "Peins tes créneaux habituels. L'équipe voit où elle est au complet — et peut en faire une annonce de scrim.",
+    "declaredCount": "{declared} / {total} ont déclaré",
+    "cellAvailable": "{count} disponible(s)",
+    "saveCta": "Enregistrer mes créneaux",
+    "saving": "Enregistrement…",
+    "saved": "Tes créneaux sont enregistrés.",
+    "saveError": "Enregistrement impossible.",
+    "coreTitle": "Créneaux à {threshold} joueuses ou plus",
+    "coreEmpty": "Aucun créneau ne réunit encore l'effectif requis.",
+    "announceCta": "Annoncer ces {count} créneaux aux autres équipes",
+    "announced": "Annonce publiée : les équipes compatibles sont prévenues.",
+    "announceError": "Publication de l'annonce impossible."
   }
 }

@@ -32,8 +32,20 @@ import {
   loadReliabilityMap,
   type TeamReliability,
 } from '@/utils/teams/reliability';
+import {
+  computeOpponentMatch,
+  type OpponentMatch,
+} from '@/utils/teams/opponentMatch';
+import {
+  loadMyRhythmTimezone,
+  loadTeamRhythmCores,
+} from '@/utils/teams/teamRhythmStore';
+import { overlappingRhythmSlots } from '@/utils/teams/teamRhythm';
 import { MAX_TEAM_PLAYERS } from '@/utils/constants';
 import { logger } from '@/utils/logger';
+
+/** Fenêtre sur laquelle « on les a déjà jouées » reste une information utile. */
+const ENCOUNTER_WINDOW_DAYS = 90;
 
 export type DirectoryTeam = {
   id: string;
@@ -62,7 +74,72 @@ export type DirectoryTeam = {
     /** Créneaux communs avec MA propre recherche — le signal le plus actionnable. */
     common_slots: string[];
   } | null;
+  /**
+   * Créneaux RÉCURRENTS en commun (rythmes d'équipe, N1). C'est le repli quand
+   * aucune des deux équipes n'a d'annonce vivante — c'est-à-dire le cas normal.
+   */
+  common_rhythm_slots: string[];
+  /** Affrontements (match ou scrim) sur les 90 derniers jours. */
+  encounters_recent: number;
+  /** Score de compatibilité expliqué (N4). Porte le tri de l'annuaire. */
+  match: OpponentMatch;
 };
+
+/**
+ * Nombre d'affrontements récents (match OU scrim) entre mon équipe et chaque
+ * autre. Alimente le facteur de NOUVEAUTÉ du score : à niveau et disponibilité
+ * égaux, mieux vaut proposer une équipe qu'on n'a pas jouée trois fois ce mois-ci.
+ *
+ * Ne throw jamais : sans cette donnée, le facteur retombe simplement sur 0
+ * affrontement, ce qui est aussi le cas de très loin le plus fréquent.
+ */
+async function loadRecentEncounters(
+  tenantId: string,
+  myTeamId: string | null
+): Promise<Map<string, number>> {
+  const out = new Map<string, number>();
+  if (!myTeamId) return out;
+
+  const since = new Date(
+    Date.now() - ENCOUNTER_WINDOW_DAYS * 86_400_000
+  ).toISOString();
+  const involvesMe = `team1_id.eq.${myTeamId},team2_id.eq.${myTeamId}`;
+
+  const bump = (rows: Array<Record<string, unknown>> | null | undefined) => {
+    for (const row of rows || []) {
+      const other =
+        row.team1_id === myTeamId
+          ? (row.team2_id as string | null)
+          : (row.team1_id as string | null);
+      if (!other) continue;
+      out.set(other, (out.get(other) ?? 0) + 1);
+    }
+  };
+
+  try {
+    const [matchesRes, scrimsRes] = await Promise.all([
+      supabaseAdmin
+        .from('matches')
+        .select('team1_id, team2_id')
+        .eq('tenant_id', tenantId)
+        .is('deleted_at', null)
+        .gte('scheduled_at', since)
+        .or(involvesMe),
+      supabaseAdmin
+        .from('scrims')
+        .select('team1_id, team2_id')
+        .eq('tenant_id', tenantId)
+        .is('deleted_at', null)
+        .gte('scheduled_date', since)
+        .or(involvesMe),
+    ]);
+    bump(matchesRes.data as Array<Record<string, unknown>> | null);
+    bump(scrimsRes.data as Array<Record<string, unknown>> | null);
+  } catch (err) {
+    logger.error('[teams-directory] encounters crash', err);
+  }
+  return out;
+}
 
 export default withAuthRoute(async function handler(
   req: NextApiRequest,
@@ -109,18 +186,35 @@ export default withAuthRoute(async function handler(
   const teams = (teamRows || []) as Array<Record<string, unknown>>;
   const teamIds = teams.map((t) => t.id as string);
 
-  const [searchesRes, ratingsRes, reliabilityMap] = await Promise.all([
-    supabaseAdmin
-      .from('scrim_searches')
-      .select('team_id, slots, format, note, status, expires_at')
-      .eq('tenant_id', tenantId)
-      .eq('status', 'active'),
-    supabaseAdmin
-      .from('team_ratings')
-      .select('team_id, rating')
-      .eq('tenant_id', tenantId),
-    loadReliabilityMap(tenantId, teamIds),
-  ]);
+  const memberCountByTeam = new Map<string, number>();
+  for (const t of teams) {
+    memberCountByTeam.set(
+      t.id as string,
+      (t.team_members as Array<{ count: number }> | undefined)?.[0]?.count ?? 0
+    );
+  }
+
+  // Fuseau de référence : celui que J'AI déclaré. Comparer des créneaux
+  // récurrents entre fuseaux différents sans reprojection produirait des
+  // recoupements fantômes.
+  const referenceTimezone =
+    (await loadMyRhythmTimezone(tenantId, user.id)) || 'Europe/Paris';
+
+  const [searchesRes, ratingsRes, reliabilityMap, rhythmCores, encounters] =
+    await Promise.all([
+      supabaseAdmin
+        .from('scrim_searches')
+        .select('team_id, slots, format, note, status, expires_at')
+        .eq('tenant_id', tenantId)
+        .eq('status', 'active'),
+      supabaseAdmin
+        .from('team_ratings')
+        .select('team_id, rating')
+        .eq('tenant_id', tenantId),
+      loadReliabilityMap(tenantId, teamIds),
+      loadTeamRhythmCores(tenantId, referenceTimezone, memberCountByTeam),
+      loadRecentEncounters(tenantId, myTeamId),
+    ]);
 
   const searchByTeam = new Map<string, ScrimSearchRow>();
   for (const row of (searchesRes.data || []) as ScrimSearchRow[]) {
@@ -139,15 +233,37 @@ export default withAuthRoute(async function handler(
   // Mes propres créneaux : c'est ce qui permet d'afficher « 3 créneaux en
   // commun » plutôt qu'une simple pastille « cherche un scrim ».
   const mySlots = myTeamId ? (searchByTeam.get(myTeamId)?.slots ?? []) : [];
+  const myRhythm = myTeamId ? (rhythmCores.get(myTeamId) ?? []) : [];
+  const myRating = myTeamId ? (ratingByTeam.get(myTeamId) ?? null) : null;
 
   const directory: DirectoryTeam[] = teams
     .filter((t) => (t.id as string) !== myTeamId)
     .map((t) => {
       const id = t.id as string;
-      const memberCount =
-        (t.team_members as Array<{ count: number }> | undefined)?.[0]?.count ??
-        0;
+      const memberCount = memberCountByTeam.get(id) ?? 0;
       const search = searchByTeam.get(id) ?? null;
+      const reliability = reliabilityMap.get(id) ?? EMPTY_RELIABILITY;
+      const commonSlots = search
+        ? overlappingSlots(mySlots, search.slots || [])
+        : [];
+      const theirRhythm = rhythmCores.get(id) ?? [];
+      const commonRhythm = overlappingRhythmSlots(myRhythm, theirRhythm);
+      const encountersRecent = encounters.get(id) ?? 0;
+
+      const match = computeOpponentMatch({
+        commonSearchSlots: commonSlots.length,
+        commonRhythmSlots: commonRhythm.length,
+        // Sans déclaration des deux côtés, « 0 créneau commun » ne dit rien :
+        // c'est un trou de données, pas une incompatibilité.
+        slotsComparable:
+          (mySlots.length > 0 || myRhythm.length > 0) &&
+          ((search?.slots?.length ?? 0) > 0 || theirRhythm.length > 0),
+        myRating,
+        theirRating: ratingByTeam.get(id) ?? null,
+        responseRate: reliability.responseRate,
+        encountersRecent,
+      });
+
       return {
         id,
         name: t.name as string,
@@ -159,26 +275,33 @@ export default withAuthRoute(async function handler(
         is_joinable: Boolean(t.is_joinable),
         is_full: memberCount >= MAX_TEAM_PLAYERS,
         rating: ratingByTeam.get(id) ?? null,
-        reliability: reliabilityMap.get(id) ?? EMPTY_RELIABILITY,
+        reliability,
         scrim_search: search
           ? {
               slots: search.slots || [],
               format: search.format,
               note: search.note,
               expires_at: search.expires_at,
-              common_slots: overlappingSlots(mySlots, search.slots || []),
+              common_slots: commonSlots,
             }
           : null,
+        common_rhythm_slots: commonRhythm,
+        encounters_recent: encountersRecent,
+        match,
       };
     });
 
-  // Tri : d'abord les créneaux en commun (le plus actionnable), puis les
-  // équipes qui cherchent un scrim, puis l'alphabétique. L'ordre porte
-  // l'information — il n'y a pas de tri « neutre » utile ici.
+  // Tri par SCORE de compatibilité (N4), plus par un proxy.
+  //
+  // Avant : créneaux communs → « cherche un scrim » → alphabétique. Le rating
+  // et la fiabilité étaient affichés mais n'entraient pas dans l'ordre, si bien
+  // qu'une équipe à 1200 et une à 1900 se retrouvaient côte à côte.
+  //
+  // Départages conservés derrière le score : une annonce vivante l'emporte à
+  // score égal (c'est une intention datée, pas une habitude), puis l'ordre
+  // alphabétique pour rester déterministe.
   directory.sort((a, b) => {
-    const ac = a.scrim_search?.common_slots.length ?? 0;
-    const bc = b.scrim_search?.common_slots.length ?? 0;
-    if (ac !== bc) return bc - ac;
+    if (a.match.score !== b.match.score) return b.match.score - a.match.score;
     const as = a.scrim_search ? 0 : 1;
     const bs = b.scrim_search ? 0 : 1;
     if (as !== bs) return as - bs;

@@ -3316,6 +3316,124 @@ components:
               items:
                 type: string
                 format: date-time
+        common_rhythm_slots:
+          type: array
+          description: >-
+            Creneaux RECURRENTS en commun (rythme d'equipe). Repli quand aucune
+            des deux equipes n'a d'annonce vivante. Cles "<jour ISO>-<minutes>".
+          items:
+            type: string
+        encounters_recent:
+          type: integer
+          description: Affrontements (match ou scrim) sur les 90 derniers jours.
+        match:
+          type: object
+          description: >-
+            Score de compatibilite d'adversaire. Porte le tri de l'annuaire. Un
+            facteur `null` vaut un a priori neutre dans le calcul.
+          required:
+            - score
+            - factors
+            - reasons
+          properties:
+            score:
+              type: integer
+              minimum: 0
+              maximum: 100
+            factors:
+              type: object
+              properties:
+                slots:
+                  type: number
+                  nullable: true
+                level:
+                  type: number
+                  nullable: true
+                reliability:
+                  type: number
+                  nullable: true
+                novelty:
+                  type: number
+                  nullable: true
+            reasons:
+              type: array
+              description: Codes de raison, traduits cote UI. Trois au maximum.
+              items:
+                type: string
+                enum:
+                  - common_slots
+                  - common_rhythm
+                  - no_common_slots
+                  - similar_level
+                  - level_gap
+                  - reliable
+                  - slow_to_answer
+                  - never_played
+                  - played_recently
+    TeamRhythm:
+      type: object
+      description: >-
+        Rythme d'equipe : disponibilite RECURRENTE du roster. La heatmap et le
+        noyau sont exprimes dans `referenceTimezone` (celui de l'appelant) ;
+        chaque membre declare dans le sien et est reprojete.
+      required:
+        - teamId
+        - referenceTimezone
+        - mySlots
+        - threshold
+        - heatmap
+        - coreSlots
+      properties:
+        teamId:
+          type: string
+          format: uuid
+          nullable: true
+        teamName:
+          type: string
+          nullable: true
+        referenceTimezone:
+          type: string
+        mySlots:
+          type: array
+          items:
+            type: string
+        myTimezone:
+          type: string
+        memberNames:
+          type: object
+          additionalProperties:
+            type: string
+        memberCount:
+          type: integer
+        declaredCount:
+          type: integer
+        threshold:
+          type: integer
+          description: Nombre de disponibles a partir duquel un creneau est « noyau ».
+        heatmap:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              count:
+                type: integer
+              userIds:
+                type: array
+                items:
+                  type: string
+                  format: uuid
+        coreSlots:
+          type: array
+          items:
+            type: string
+        suggestedSlots:
+          type: array
+          description: Prochaines occurrences reelles du noyau, pretes pour une annonce.
+          items:
+            type: string
+            format: date-time
+        canAnnounce:
+          type: boolean
     PlayerScrim:
       type: object
       required:
@@ -25351,6 +25469,90 @@ paths:
                     type: boolean
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /api/player/team-rhythm:
+    get:
+      tags:
+        - public/teams
+      summary: Rythme de mon equipe — disponibilite recurrente du roster.
+      description: >-
+        Grille hebdomadaire agregee de l'equipe de l'appelant : sa propre
+        declaration, la heatmap de tous les membres, le noyau (creneaux ou
+        l'effectif requis est atteint) et les prochaines occurrences reelles de
+        ce noyau. Ouverte a TOUT membre, sans permission de gestion : declarer
+        sa disponibilite est un geste de membre. Repond 200 avec `teamId: null`
+        quand l'appelant n'a pas d'equipe.
+      operationId: playerTeamRhythm
+      security:
+        - PlayerBearer: []
+      parameters:
+        - in: query
+          name: tz
+          required: false
+          schema:
+            type: string
+          description: >-
+            Fuseau IANA de repli pour le rendu, utilise seulement si l'appelant
+            n'a encore rien declare.
+      responses:
+        '200':
+          description: Rythme de l'equipe, exprime dans le fuseau de l'appelant.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamRhythm'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+    put:
+      tags:
+        - public/teams
+      summary: Declarer MES creneaux recurrents dans mon equipe.
+      operationId: playerTeamRhythmUpdate
+      security:
+        - PlayerBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - slots
+              properties:
+                slots:
+                  type: array
+                  description: >-
+                    Cles "<jour ISO 1-7>-<minutes depuis minuit>", granularite
+                    horaire, dans le fuseau `timezone`. Le tableau vide retire
+                    la declaration.
+                  items:
+                    type: string
+                timezone:
+                  type: string
+                  description: Fuseau IANA du membre. Defaut Europe/Paris.
+      responses:
+        '200':
+          description: Declaration enregistree.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  slots:
+                    type: array
+                    items:
+                      type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: L'appelant n'appartient a aucune equipe active.
         '429':
           $ref: '#/components/responses/RateLimited'
   /api/teams/leave:
