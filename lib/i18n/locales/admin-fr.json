@@ -2565,6 +2565,7 @@
     "recruitmentOpen": "Recrutement ouvert",
     "recruitmentOn": "Les joueurs peuvent demander à rejoindre ton equipe",
     "recruitmentOff": "Personne ne peut envoyer de demande",
+    "noCaptainScope": "Cette équipe n'a pas de capitaine : le recrutement et les demandes d'adhésion ne sont pas pilotables d'ici. Désigne une capitaine d'abord.",
     "saving": "Enregistrement...",
     "save": "Enregistrer",
     "members": "Membres",

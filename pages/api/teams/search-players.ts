@@ -9,13 +9,12 @@ import {
   clientKeyFromReq,
 } from '@/utils/durableRateLimit';
 import { escapePostgrestValue } from '@/utils/apiHelpers';
-import { withAuthRoute } from '@/utils/staff';
+import { withSubjectRoute, type SubjectContext } from '@/utils/subject';
 import {
   getManagedTeam,
   assertTeamPermission,
   TEAM_MANAGEMENT_FORBIDDEN,
 } from '@/utils/teams/managementAccess';
-import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
 import { fetchAdminUserProfiles } from '@/utils/adminUserProfiles';
 
 import { logger } from '../../../utils/logger';
@@ -29,10 +28,21 @@ type PlayerResult = {
 
 type SearchResponse = { players: PlayerResult[] } | { error: string };
 
-export default withAuthRoute(async function handler(
+// `withSubjectRoute` (et pas `withAuthRoute`) : le cockpit staff /admin/teams/my
+// pilote l'équipe SÉLECTIONNÉE, pas celle de l'appelant. Il passe donc
+// `?as=<capitaine>` et la recherche s'évalue avec les droits de cette
+// capitaine — le gate `getManagedTeam` ci-dessous tourne toujours, sur le
+// SUJET. GET uniquement, donc pas d'`allowActAs` : c'est de la consultation,
+// tracée en `view_captain_data`.
+export default withSubjectRoute(handler, {
+  tenantResolution: 'async',
+  auditAction: 'view_captain_data',
+});
+
+async function handler(
   req: NextApiRequest,
   res: NextApiResponse<SearchResponse>,
-  { user }
+  { subject }: { subject: SubjectContext }
 ) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -58,12 +68,10 @@ export default withAuthRoute(async function handler(
       .json({ error: 'Trop de requêtes. Réessayez plus tard.' });
   }
 
-  const tenantId = await resolveTenantIdForUserRequestAsync(req, {
-    authUserId: user.id,
-  });
+  const { userId, tenantId } = subject;
 
   // Check if user can manage a team (captain or manager)
-  const access = await getManagedTeam(user.id, tenantId);
+  const access = await getManagedTeam(userId, tenantId);
   if (!access) {
     return res.status(403).json({ error: TEAM_MANAGEMENT_FORBIDDEN });
   }
@@ -235,4 +243,4 @@ export default withAuthRoute(async function handler(
     logger.error('[api/teams/search-players] error:', err);
     return res.status(500).json({ error: 'Search failed' });
   }
-});
+}

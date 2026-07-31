@@ -39,6 +39,7 @@ import { withSubjectRoute, type SubjectContext } from '../../utils/subject';
 
 import matchesHandler from '../../pages/api/player/matches';
 import toggleJoinableHandler from '../../pages/api/teams/toggle-joinable';
+import searchPlayersHandler from '../../pages/api/teams/search-players';
 
 /* -----------------------------------------------------------
  * Constants
@@ -630,5 +631,76 @@ describe('/api/teams/toggle-joinable — act-as', () => {
     expect(res.body).toMatchObject({ code: 'subject_read_only' });
     const target = (store.teams as any[]).find((t) => t.id === TEAM_A_ID);
     expect(target.is_joinable).toBe(false);
+  });
+});
+
+/* -----------------------------------------------------------
+ * D. Inspection (GET) à travers une route scopée capitaine
+ *
+ * `/api/teams/search-players` gate sur `getManagedTeam(...)`. Le cockpit staff
+ * /admin/teams/my pilote une équipe dont il n'est pas capitaine : sans sujet
+ * il se prenait un 403 TEAM_MANAGEMENT_FORBIDDEN. Avec `?as=<capitaine>`, le
+ * gate tourne sur ELLE — le staff n'obtient pas plus de droits qu'elle.
+ * ---------------------------------------------------------*/
+
+describe('/api/teams/search-players — inspection capitaine', () => {
+  beforeEach(() => {
+    setAuthUser({ id: STAFF_AUTH_USER_ID });
+    seedStaff('admin');
+    // Le staff ne capitaine RIEN : seule la cible a une équipe.
+    store.teams = [
+      {
+        id: TEAM_A_ID,
+        tenant_id: TENANT_A,
+        name: 'Phenix',
+        captain_id: TARGET_USER_ID,
+      },
+    ] as any;
+    store.team_members = [
+      {
+        id: 'tm-target',
+        team_id: TEAM_A_ID,
+        tenant_id: TENANT_A,
+        user_id: TARGET_USER_ID,
+        role: 'captain',
+        battle_tag: 'Cible#1234',
+      },
+    ] as any;
+    store.profiles = [];
+  });
+
+  it('403 sans sujet : le staff n’a pas le scope capitaine', async () => {
+    const res = makeRes();
+    await searchPlayersHandler(
+      makeReq({
+        method: 'GET',
+        url: '/api/teams/search-players',
+        query: { q: 'cible' },
+      }),
+      res
+    );
+
+    expect(res.statusCode).toBe(403);
+  });
+
+  it('200 avec ?as=<capitaine> : le gate est évalué sur le sujet', async () => {
+    const res = makeRes();
+    await searchPlayersHandler(
+      makeReq({
+        method: 'GET',
+        url: '/api/teams/search-players',
+        query: { q: 'cible', as: TARGET_USER_ID },
+      }),
+      res
+    );
+
+    expect(res.statusCode).toBe(200);
+    expect((res.body as any).players).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: TARGET_USER_ID })])
+    );
+    // Inspection tracée côté capitaine, jamais muette.
+    expect(logStaffActionMock).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'view_captain_data' })
+    );
   });
 });

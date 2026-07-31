@@ -2565,6 +2565,7 @@
     "recruitmentOpen": "Recruitment open",
     "recruitmentOn": "Players can request to join your team",
     "recruitmentOff": "No one can send a request",
+    "noCaptainScope": "This team has no captain, so recruitment and join requests can't be managed from here. Assign a captain first.",
     "saving": "Saving...",
     "save": "Save",
     "members": "Members",

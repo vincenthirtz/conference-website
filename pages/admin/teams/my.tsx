@@ -12,6 +12,7 @@ import {
   roleRequiresBattleTag,
 } from '@/utils/teams/addMember';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import { withSubjectParam } from '@/utils/subjectParam';
 import { MemberRosterRow } from '@/components/admin/teams/my/MemberRosterRow';
 import { PlayerSearchResults } from '@/components/admin/teams/my/PlayerSearchResults';
 import type { Member, SearchResult } from '@/components/admin/teams/my/types';
@@ -35,6 +36,8 @@ type TeamLite = {
   bio: string | null;
   country?: string | null;
   description?: string | null;
+  /** Sujet emprunté par le staff pour les routes scopées capitaine (act-as). */
+  captain_id?: string | null;
 };
 
 type TeamOption = {
@@ -74,6 +77,21 @@ function MyTeamPage({ staff }: StaffProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  // Les routes `/api/teams/*` sont scopées CAPITAINE : elles résolvent l'équipe
+  // depuis `getManagedTeam(appelant)`. Quand le staff pilote ici une AUTRE
+  // équipe que la sienne, il n'a pas ce scope — d'où des 403
+  // TEAM_MANAGEMENT_FORBIDDEN. On ne contourne pas le gate : on lui donne le
+  // bon sujet via `?as=<capitaine>` (S1) — il continue de tourner, sur elle,
+  // et le staff n'obtient jamais plus de droits qu'elle. Les écritures ajoutent
+  // `&act=1` (S4, routes qui déclarent `allowActAs`).
+  // Null hors de ce cas : `withSubjectParam` est alors un no-op et le chemin
+  // capitaine reste identique à avant.
+  const actAsCaptainId =
+    isStaffAdmin && selectedTeamId ? (data?.team?.captain_id ?? null) : null;
+  /** Équipe pilotée par le staff mais SANS capitaine : aucun sujet à emprunter. */
+  const captainScopeUnavailable =
+    isStaffAdmin && !!selectedTeamId && !!data?.team && !actAsCaptainId;
 
   const [form, setForm] = useState({
     name: '',
@@ -266,7 +284,10 @@ function MyTeamPage({ staff }: StaffProps) {
       setSearchLoading(true);
       try {
         const json = await adminFetchJson<{ players?: SearchResult[] }>(
-          `/api/teams/search-players?q=${encodeURIComponent(query)}`,
+          withSubjectParam(
+            `/api/teams/search-players?q=${encodeURIComponent(query)}`,
+            actAsCaptainId
+          ),
           { signal: controller.signal }
         );
         // Ignore les reponses d'une requete qui a ete supplantee entre-temps.
@@ -281,7 +302,7 @@ function MyTeamPage({ staff }: StaffProps) {
         if (searchAbortRef.current === controller) setSearchLoading(false);
       }
     },
-    [adminFetchJson]
+    [adminFetchJson, actAsCaptainId]
   );
 
   // Debounced search
@@ -357,10 +378,18 @@ function MyTeamPage({ staff }: StaffProps) {
 
   // Load join requests for the team
   const loadJoinRequests = useCallback(async () => {
+    // Sans capitaine à emprunter, l'appel ne peut que 403 : on n'essaie pas.
+    if (captainScopeUnavailable) {
+      setJoinRequests([]);
+      return;
+    }
     setJoinRequestsLoading(true);
     try {
       const json = await adminFetchJson<{ demandes?: JoinRequest[] }>(
-        '/api/teams/join-requests?status=pending'
+        withSubjectParam(
+          '/api/teams/join-requests?status=pending',
+          actAsCaptainId
+        )
       );
       setJoinRequests(json.demandes || []);
     } catch (err) {
@@ -368,16 +397,19 @@ function MyTeamPage({ staff }: StaffProps) {
     } finally {
       setJoinRequestsLoading(false);
     }
-  }, [adminFetchJson]);
+  }, [adminFetchJson, actAsCaptainId, captainScopeUnavailable]);
 
   // Toggle joinable status
   const handleToggleJoinable = async () => {
     setTogglingJoinable(true);
     try {
-      const res = await adminFetch('/api/teams/toggle-joinable', {
-        method: 'POST',
-        body: JSON.stringify({ joinable: !isJoinable }),
-      });
+      const res = await adminFetch(
+        withSubjectParam('/api/teams/toggle-joinable', actAsCaptainId, true),
+        {
+          method: 'POST',
+          body: JSON.stringify({ joinable: !isJoinable }),
+        }
+      );
       const json = await res.json();
       if (res.ok) {
         setIsJoinable(json.is_joinable);
@@ -398,10 +430,13 @@ function MyTeamPage({ staff }: StaffProps) {
   ) => {
     setProcessingRequestId(demandeId);
     try {
-      const res = await adminFetch('/api/teams/join-requests', {
-        method: 'POST',
-        body: JSON.stringify({ demandeId, action }),
-      });
+      const res = await adminFetch(
+        withSubjectParam('/api/teams/join-requests', actAsCaptainId, true),
+        {
+          method: 'POST',
+          body: JSON.stringify({ demandeId, action }),
+        }
+      );
       const json = await res.json();
       if (res.ok) {
         // Remove from list and reload members
@@ -1068,16 +1103,20 @@ function MyTeamPage({ staff }: StaffProps) {
                         {t.recruitmentOpen}
                       </p>
                       <p className="text-xs text-neutral-500">
-                        {isJoinable ? t.recruitmentOn : t.recruitmentOff}
+                        {captainScopeUnavailable
+                          ? t.noCaptainScope
+                          : isJoinable
+                            ? t.recruitmentOn
+                            : t.recruitmentOff}
                       </p>
                     </div>
                     <button
                       type="button"
                       onClick={handleToggleJoinable}
-                      disabled={togglingJoinable}
+                      disabled={togglingJoinable || captainScopeUnavailable}
                       className={`relative w-12 h-7 rounded-full transition-colors ${
                         isJoinable ? 'bg-emerald-600' : 'bg-neutral-600'
-                      } ${togglingJoinable ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      } ${togglingJoinable || captainScopeUnavailable ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                       <span
                         className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full transition-transform ${
@@ -1387,6 +1426,11 @@ function MyTeamPage({ staff }: StaffProps) {
         }
       >
         <div className="space-y-4">
+          {captainScopeUnavailable && (
+            <p className="rounded-xl bg-amber-950/40 border border-amber-700/50 px-3 py-2 text-xs text-amber-200">
+              {t.noCaptainScope}
+            </p>
+          )}
           {!selectedPlayer ? (
             <>
               {/* Search input */}
