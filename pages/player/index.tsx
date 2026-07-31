@@ -9,6 +9,7 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
 import ProfileSummaryCard from '@/components/player/ProfileSummaryCard';
 import DiscordLinkCard from '@/components/player/DiscordLinkCard';
+import NetworkOnboardingCard from '@/components/player/NetworkOnboardingCard';
 import TeamCard, { type TeamMemberLite } from '@/components/player/TeamCard';
 import DemandesHistory from '@/components/player/DemandesHistory';
 import QuickAction, {
@@ -590,6 +591,11 @@ function PlayerDashboard() {
             <SupportAssoCard />
           </div>
 
+          {/* Identité réseau : ce qui manque pour EXISTER dans le réseau
+              (Discord lié, BattleTag vérifié, découverte). Ne s'affiche que
+              s'il reste quelque chose à faire, et refermable. */}
+          {user?.id && <NetworkOnboardingCard userId={user.id} />}
+
           {/* ─────────────  Profil & équipe  ───────────── */}
           <CategorySection label={t.catProfileTeam}>
             <div className="grid gap-6 md:grid-cols-2">
@@ -603,7 +609,10 @@ function PlayerDashboard() {
                 members={members}
               />
             </div>
-            <DiscordLinkCard />
+            {/* id : cible du lien « lier Discord » de la checklist réseau. */}
+            <div id="discord-link" className="scroll-mt-24">
+              <DiscordLinkCard />
+            </div>
           </CategorySection>
 
           {/* ─────────────  Compétition  ─────────────

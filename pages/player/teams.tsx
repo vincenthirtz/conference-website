@@ -386,6 +386,23 @@ function PlayerTeamsPage() {
                             })}
                           </span>
                         )}
+                        {/* Fiabilité (R10) : affichée seulement au-dessus du
+                            seuil d'échantillon — un taux calculé sur deux
+                            demandes serait trompeur. */}
+                        {team.reliability?.responseRate !== null &&
+                          team.reliability?.responseRate !== undefined && (
+                            <span
+                              className={
+                                team.reliability.responseRate >= 70
+                                  ? 'text-emerald-300'
+                                  : 'text-amber-300'
+                              }
+                            >
+                              {format(t.responseRate, {
+                                rate: team.reliability.responseRate,
+                              })}
+                            </span>
+                          )}
                       </div>
 
                       {team.scrim_search && (

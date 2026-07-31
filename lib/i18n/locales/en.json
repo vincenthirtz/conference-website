@@ -3901,7 +3901,13 @@
     "statusUpcoming": "Upcoming",
     "statusFinished": "Finished",
     "statusDraft": "Draft",
-    "scrimCtaBtnConnected": "Propose a scrim"
+    "scrimCtaBtnConnected": "Propose a scrim",
+    "networkTitle": "In the network",
+    "networkResponseRate": "{rate}% reply rate to proposals",
+    "networkResponseDelay": "replies in {hours} h on average",
+    "networkSample": "over {count} proposal(s) received",
+    "networkScrimsTitle": "Latest scrims",
+    "networkUnknownOpponent": "Unknown opponent"
   },
   "teamStats": {
     "badge": "Team stats",
@@ -4550,6 +4556,21 @@
     "viewCta": "View page",
     "empty": "No team matches this filter.",
     "errorLoad": "The directory could not be loaded.",
-    "retry": "Retry"
+    "retry": "Retry",
+    "responseRate": "{rate}% reply rate"
+  },
+  "networkOnboarding": {
+    "title": "Exist in the network",
+    "subtitle": "Three links drive almost everything: notifications, team channels, rankings and matchmaking.",
+    "dismiss": "Hide this reminder",
+    "stepDiscordTitle": "Link your Discord account",
+    "stepDiscordWhy": "Without it the bot cannot grant your roles, open your team channels, or notify you.",
+    "stepDiscordCta": "Link",
+    "stepBattleTagTitle": "Verify your BattleTag",
+    "stepBattleTagWhy": "A verified roster is credible to other teams, and it is what lets you count in the rankings.",
+    "stepBattleTagCta": "Verify",
+    "stepDiscoveryTitle": "Make yourself discoverable",
+    "stepDiscoveryWhy": "Visible behind login only, never indexed: recruiting teams can find you. Reversible at any time.",
+    "stepDiscoveryCta": "Enable"
   }
 }

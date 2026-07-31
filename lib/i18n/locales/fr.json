@@ -3901,7 +3901,13 @@
     "statusUpcoming": "À venir",
     "statusFinished": "Terminé",
     "statusDraft": "Brouillon",
-    "scrimCtaBtnConnected": "Proposer un scrim"
+    "scrimCtaBtnConnected": "Proposer un scrim",
+    "networkTitle": "Dans le réseau",
+    "networkResponseRate": "{rate} % de réponse aux propositions",
+    "networkResponseDelay": "répond en {hours} h en moyenne",
+    "networkSample": "sur {count} proposition(s) reçue(s)",
+    "networkScrimsTitle": "Derniers scrims",
+    "networkUnknownOpponent": "Adversaire inconnu"
   },
   "teamStats": {
     "badge": "Stats équipe",
@@ -4550,6 +4556,21 @@
     "viewCta": "Voir la fiche",
     "empty": "Aucune équipe ne correspond à ce filtre.",
     "errorLoad": "L'annuaire n'a pas pu être chargé.",
-    "retry": "Réessayer"
+    "retry": "Réessayer",
+    "responseRate": "{rate} % de réponse"
+  },
+  "networkOnboarding": {
+    "title": "Exister dans le réseau",
+    "subtitle": "Trois liaisons conditionnent presque tout : les notifications, les salons d'équipe, le classement et la mise en relation.",
+    "dismiss": "Masquer ce rappel",
+    "stepDiscordTitle": "Lier ton compte Discord",
+    "stepDiscordWhy": "Sans lui, le bot ne peut ni te donner tes rôles, ni t'ouvrir les salons de ton équipe, ni te prévenir.",
+    "stepDiscordCta": "Lier",
+    "stepBattleTagTitle": "Vérifier ton BattleTag",
+    "stepBattleTagWhy": "Un roster vérifié est crédible auprès des autres équipes, et c'est ce qui permet de te compter dans le classement.",
+    "stepBattleTagCta": "Vérifier",
+    "stepDiscoveryTitle": "Te rendre découvrable",
+    "stepDiscoveryWhy": "Visible uniquement derrière connexion, jamais indexé : les équipes qui recrutent peuvent te trouver. Réversible à tout moment.",
+    "stepDiscoveryCta": "Activer"
   }
 }

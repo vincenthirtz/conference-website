@@ -10,6 +10,10 @@ import Paragraph from '@/components/Typography/paragraph';
 import PublicScrimDialog from '@/components/Team/PublicScrimDialog';
 import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
+import {
+  loadTeamReliability,
+  type TeamReliability,
+} from '@/utils/teams/reliability';
 import { maskBattleTag } from '@/utils/battleTag';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
@@ -170,6 +174,14 @@ type RecentMatch = {
   isTeam1: boolean;
 };
 
+/** Un scrim joué / programmé, vu depuis cette équipe (R9). */
+type ScrimHistoryEntry = {
+  id: string;
+  name: string | null;
+  scheduledDate: string | null;
+  opponentName: string | null;
+};
+
 type TeamPageProps = {
   team: Team;
   members: TeamMember[];
@@ -178,6 +190,12 @@ type TeamPageProps = {
   recentMatches: RecentMatch[];
   embedHost: string;
   announcementActive: boolean;
+  /**
+   * Profil RÉSEAU (R9) : ce que la fiche ne disait pas — avec qui cette équipe
+   * a joué hors tournoi, et si elle répond quand on la sollicite.
+   */
+  scrimHistory: ScrimHistoryEntry[];
+  reliability: TeamReliability;
 };
 
 export const getStaticPaths: GetStaticPaths = async () => {
@@ -514,6 +532,55 @@ export const getStaticProps: GetStaticProps<TeamPageProps> = async (ctx) => {
     (!team.pinned_announcement_until ||
       new Date(team.pinned_announcement_until).getTime() > Date.now());
 
+  // Profil réseau (R9) : historique de scrims + fiabilité. Ces deux signaux
+  // bougent lentement — l'ISR (60 s) est largement suffisant, pas besoin de
+  // les charger côté client.
+  const { data: scrimRows } = await supabaseAdmin
+    .from('scrims')
+    .select('id, name, scheduled_date, team1_id, team2_id, status')
+    .eq('tenant_id', tenantId)
+    .is('deleted_at', null)
+    .neq('status', 'draft')
+    .or(`team1_id.eq.${team.id},team2_id.eq.${team.id}`)
+    .order('scheduled_date', { ascending: false, nullsFirst: false })
+    .limit(5);
+
+  const opponentIdsForScrims = new Set<string>();
+  for (const row of (scrimRows || []) as Array<Record<string, unknown>>) {
+    const other =
+      row.team1_id === team.id
+        ? (row.team2_id as string | null)
+        : (row.team1_id as string | null);
+    if (other) opponentIdsForScrims.add(other);
+  }
+  const scrimOpponentNames = new Map<string, string>();
+  if (opponentIdsForScrims.size > 0) {
+    const { data: oppRows } = await supabaseAdmin
+      .from('teams')
+      .select('id, name')
+      .in('id', Array.from(opponentIdsForScrims));
+    for (const o of (oppRows || []) as Array<{ id: string; name: string }>) {
+      scrimOpponentNames.set(o.id, o.name);
+    }
+  }
+
+  const scrimHistory: ScrimHistoryEntry[] = (
+    (scrimRows || []) as Array<Record<string, unknown>>
+  ).map((row) => {
+    const otherId =
+      row.team1_id === team.id
+        ? (row.team2_id as string | null)
+        : (row.team1_id as string | null);
+    return {
+      id: row.id as string,
+      name: (row.name as string | null) ?? null,
+      scheduledDate: (row.scheduled_date as string | null) ?? null,
+      opponentName: otherId ? (scrimOpponentNames.get(otherId) ?? null) : null,
+    };
+  });
+
+  const reliability = await loadTeamReliability(tenantId, team.id);
+
   return {
     props: {
       team: team as Team,
@@ -523,6 +590,8 @@ export const getStaticProps: GetStaticProps<TeamPageProps> = async (ctx) => {
       recentMatches,
       embedHost,
       announcementActive,
+      scrimHistory,
+      reliability,
     },
     revalidate: 60,
   };
@@ -533,6 +602,8 @@ export default function TeamPage({
   members,
   tournaments,
   matchStats,
+  scrimHistory,
+  reliability,
   recentMatches,
   embedHost,
   announcementActive,
@@ -1026,6 +1097,72 @@ export default function TeamPage({
                 <SponsorTile key={i} sponsor={s} />
               ))}
             </div>
+          </section>
+        )}
+
+        {/* ── Profil réseau (R9) ──────────────────────────────────────────
+            La fiche était une vitrine : elle disait qui est l'équipe, pas
+            comment elle se comporte dans le réseau. Ces deux signaux répondent
+            à « est-ce que ça vaut le coup de leur proposer un créneau ? ».
+            Masqués quand il n'y a rien à dire — un bloc vide n'informe pas. */}
+        {(scrimHistory.length > 0 || reliability.responseRate !== null) && (
+          <section className="mb-6 rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-4">
+            <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-gray-300">
+              {t.networkTitle}
+            </h2>
+
+            {reliability.responseRate !== null && (
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <span
+                  className={`rounded-full border px-3 py-1 text-xs font-semibold ${
+                    reliability.responseRate >= 70
+                      ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-200'
+                      : 'border-amber-400/40 bg-amber-500/10 text-amber-200'
+                  }`}
+                >
+                  {format(t.networkResponseRate, {
+                    rate: reliability.responseRate,
+                  })}
+                </span>
+                {reliability.medianResponseHours !== null && (
+                  <span className="rounded-full border border-white/15 px-3 py-1 text-xs text-gray-300">
+                    {format(t.networkResponseDelay, {
+                      hours: reliability.medianResponseHours,
+                    })}
+                  </span>
+                )}
+                <span className="text-[11px] text-gray-500">
+                  {format(t.networkSample, { count: reliability.received })}
+                </span>
+              </div>
+            )}
+
+            {scrimHistory.length > 0 && (
+              <div className="mt-4">
+                <p className="text-xs font-semibold text-gray-300">
+                  {t.networkScrimsTitle}
+                </p>
+                <ul className="mt-2 space-y-1.5">
+                  {scrimHistory.map((scrim) => (
+                    <li
+                      key={scrim.id}
+                      className="flex flex-wrap items-center gap-2 text-xs text-gray-400"
+                    >
+                      <span className="text-gray-200">
+                        {scrim.opponentName ?? t.networkUnknownOpponent}
+                      </span>
+                      {scrim.scheduledDate && (
+                        <span>
+                          {new Date(scrim.scheduledDate).toLocaleDateString(
+                            locale
+                          )}
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </section>
         )}
 

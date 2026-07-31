@@ -27,6 +27,11 @@ import {
   overlappingSlots,
   type ScrimSearchRow,
 } from '@/utils/teams/scrimSearch';
+import {
+  EMPTY_RELIABILITY,
+  loadReliabilityMap,
+  type TeamReliability,
+} from '@/utils/teams/reliability';
 import { MAX_TEAM_PLAYERS } from '@/utils/constants';
 import { logger } from '@/utils/logger';
 
@@ -42,6 +47,12 @@ export type DirectoryTeam = {
   is_full: boolean;
   /** Rating d'équipe dérivé des matchs (null si jamais noté). */
   rating: number | null;
+  /**
+   * Fiabilité dérivée des propositions de scrim reçues (R10). Les taux sont
+   * `null` sous le seuil d'échantillon : mieux vaut rien afficher qu'un
+   * pourcentage calculé sur deux demandes.
+   */
+  reliability: TeamReliability;
   /** Recherche de scrim vivante, si l'équipe en a une. */
   scrim_search: {
     slots: string[];
@@ -98,7 +109,7 @@ export default withAuthRoute(async function handler(
   const teams = (teamRows || []) as Array<Record<string, unknown>>;
   const teamIds = teams.map((t) => t.id as string);
 
-  const [searchesRes, ratingsRes] = await Promise.all([
+  const [searchesRes, ratingsRes, reliabilityMap] = await Promise.all([
     supabaseAdmin
       .from('scrim_searches')
       .select('team_id, slots, format, note, status, expires_at')
@@ -108,6 +119,7 @@ export default withAuthRoute(async function handler(
       .from('team_ratings')
       .select('team_id, rating')
       .eq('tenant_id', tenantId),
+    loadReliabilityMap(tenantId, teamIds),
   ]);
 
   const searchByTeam = new Map<string, ScrimSearchRow>();
@@ -147,6 +159,7 @@ export default withAuthRoute(async function handler(
         is_joinable: Boolean(t.is_joinable),
         is_full: memberCount >= MAX_TEAM_PLAYERS,
         rating: ratingByTeam.get(id) ?? null,
+        reliability: reliabilityMap.get(id) ?? EMPTY_RELIABILITY,
         scrim_search: search
           ? {
               slots: search.slots || [],
