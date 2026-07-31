@@ -573,6 +573,26 @@ export async function runWebPushDispatcher(): Promise<TickCounters> {
       if (matchId) {
         playerUserIds = await loadPlayerUserIdsForMatch(matchId);
       }
+    } else if (event.event_name === 'scrim.search.matched') {
+      // R6 : l'émetteur a déjà résolu les équipes compatibles
+      // (payload.targetTeamIds) — on notifie leurs capitaines/managers. Pas de
+      // re-calcul ici : le matching appartient au producteur, le dispatcher ne
+      // fait que router.
+      const data = (event.payload ?? {}) as Record<string, unknown>;
+      const inner =
+        data.data && typeof data.data === 'object'
+          ? (data.data as Record<string, unknown>)
+          : data;
+      const raw = inner.targetTeamIds;
+      const teamIds = Array.isArray(raw)
+        ? raw.filter((v): v is string => typeof v === 'string' && v.length > 0)
+        : [];
+      if (teamIds.length > 0) {
+        playerUserIds = await loadCaptainManagerUserIdsForTeams(
+          teamIds,
+          event.tenant_id
+        );
+      }
     } else if (event.event_name.startsWith('scrim.planning.')) {
       // Scrim planning : audience player = capitaines/managers des 2 équipes
       // (les décideurs de la grille de dispos). Le staff du tenant reste
@@ -664,8 +684,7 @@ export async function runWebPushDispatcher(): Promise<TickCounters> {
       // perspective admin (URL /admin/...). Sinon, on bascule sur l'URL
       // player (/player) si l'event en a une, sinon fallback sur rendered.url.
       const isStaffPerspective = staffSet.has(sub.user_id);
-      const url =
-        isStaffPerspective || !playerUrl ? rendered.url : playerUrl;
+      const url = isStaffPerspective || !playerUrl ? rendered.url : playerUrl;
       return JSON.stringify({
         title: rendered.title,
         body: rendered.body,

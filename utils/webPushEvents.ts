@@ -46,6 +46,9 @@ export const WEB_PUSH_EVENT_TYPES = [
   'scrim.planning.opened',
   'scrim.planning.reminder',
   'scrim.planning.validated',
+  // R6 : une équipe annonce des créneaux qui recoupent les nôtres. Audience =
+  // capitaines/managers des équipes ciblées (payload.targetTeamIds).
+  'scrim.search.matched',
 ] as const;
 
 export type WebPushEventType = (typeof WEB_PUSH_EVENT_TYPES)[number];
@@ -92,6 +95,9 @@ export function playerUrlForEvent(
       const planningId = str(unwrap(payload), 'planningId');
       return planningId ? `/player/scrim-planning/${planningId}` : null;
     }
+    case 'scrim.search.matched':
+      // L'annuaire, où l'annonce et le bouton « proposer un scrim » vivent.
+      return '/player/teams';
     case 'news.published':
       // V1 : pas de fanout player news (audience trop large), géré V2.
       return null;
@@ -525,6 +531,21 @@ export function renderWebPushPayload(
         actions: [{ action: 'cockpit', title: 'Ouvrir la régie' }],
       };
     }
+    case 'scrim.search.matched': {
+      const data = unwrap(payload);
+      const url = playerUrlForEvent(eventName, payload) ?? '/player/teams';
+      const raw = data['slots'];
+      const count = Array.isArray(raw) ? raw.length : 0;
+      return {
+        title: '🎯 Une équipe cherche un scrim',
+        body:
+          count > 0
+            ? `Ses créneaux recoupent les vôtres (${count} proposé(s)).`
+            : 'Ses créneaux recoupent les vôtres.',
+        url,
+        actions: [{ action: 'view', title: 'Voir l’annuaire' }],
+      };
+    }
     case 'scrim.planning.opened': {
       const data = unwrap(payload);
       const url = playerUrlForEvent(eventName, payload) ?? '/player';
@@ -667,7 +688,9 @@ export function renderEmailPayload(
       const title = str(data, 'title');
       return {
         heading: 'Nouvelle actualité',
-        body: title ? `« ${title} » est en ligne.` : 'Une actualité est en ligne.',
+        body: title
+          ? `« ${title} » est en ligne.`
+          : 'Une actualité est en ligne.',
         url,
       };
     }

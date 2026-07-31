@@ -11,6 +11,8 @@
 // pour pouvoir simuler 410 Gone (subscription expirée) et erreurs génériques.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+import { WEB_PUSH_EVENT_TYPES } from '../../utils/webPushEvents';
 import type { StaffMember } from '../../types/staff';
 
 import {
@@ -377,8 +379,10 @@ describe('GET /api/admin/notifications/prefs', () => {
     expect(res.statusCode).toBe(200);
     const prefs = (res.body as any).prefs;
     expect(prefs).toBeInstanceOf(Array);
-    // 18 events dans la liste canonique (cf. WEB_PUSH_EVENT_TYPES).
-    expect(prefs).toHaveLength(18);
+    // Ancré sur la liste canonique plutôt que sur un compte figé : ajouter un
+    // event_type ne doit pas casser ce test (il vérifie le défaut opt-out, pas
+    // la taille du catalogue).
+    expect(prefs).toHaveLength(WEB_PUSH_EVENT_TYPES.length);
     expect(prefs.every((p: any) => p.enabled === true)).toBe(true);
 
     const types = prefs.map((p: any) => p.event_type);
@@ -485,7 +489,7 @@ describe('PUT /api/admin/notifications/prefs', () => {
       event_type: string;
       enabled: boolean;
     }>;
-    expect(prefs).toHaveLength(18);
+    expect(prefs).toHaveLength(WEB_PUSH_EVENT_TYPES.length);
     expect(prefs.find((p) => p.event_type === 'news.published')?.enabled).toBe(
       false
     );

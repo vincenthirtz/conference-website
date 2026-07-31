@@ -317,6 +317,14 @@ export default function TeamCard({
               >
                 {t.createTeam}
               </Link>
+              {/* R7 : les équipes qui recrutent et les joueuses libres
+                  s'ignoraient. L'annuaire les met face à face. */}
+              <Link
+                href="/player/teams?filter=recruiting"
+                className="block w-full text-center px-4 py-3 rounded-xl border border-white/10 bg-white/[0.03] hover:bg-white/10 text-gray-200 text-sm font-medium transition"
+              >
+                {t.browseTeams}
+              </Link>
             </div>
           )}
         </div>

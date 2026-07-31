@@ -166,8 +166,11 @@ export default function ScrimsHubCard({
             <span aria-hidden>↓</span>
           </a>
         )}
+        {/* R4 : l'annuaire CONNECTÉ remplace la page publique /scrim (ISR
+            10 min, sans créneaux ni niveau) — c'est là que se lit qui est
+            disponible, quand, et avec quels créneaux en commun. */}
         <Link
-          href="/scrim"
+          href="/player/teams"
           className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/5 px-4 py-1.5 text-xs font-medium text-white transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
         >
           {t.scrimsHubBrowseCta}

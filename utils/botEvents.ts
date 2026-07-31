@@ -45,6 +45,9 @@ export type BotEventName =
   | 'scrim.planning.opened'
   | 'scrim.planning.validated'
   | 'scrim.planning.reminder'
+  // R6 — une équipe annonce des créneaux ; on alerte celles dont les créneaux
+  // se recoupent. Sans ça, l'annonce attend qu'on vienne la lire.
+  | 'scrim.search.matched'
   | 'cast.assigned'
   | 'cast.unassigned'
   | 'cast.briefing.rescheduled'

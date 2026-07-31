@@ -3211,6 +3211,93 @@ components:
         open_for_scrim:
           type: boolean
           description: L'equipe se declare disponible pour un scrim.
+    ScrimSearch:
+      type: object
+      required:
+        - id
+        - team_id
+        - slots
+        - status
+        - expires_at
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        team_id:
+          $ref: '#/components/schemas/Uuid'
+        slots:
+          type: array
+          items:
+            type: string
+            format: date-time
+        format:
+          type: string
+          nullable: true
+        note:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [active, fulfilled, cancelled]
+        expires_at:
+          type: string
+          format: date-time
+    DirectoryTeam:
+      type: object
+      required:
+        - id
+        - name
+        - member_count
+        - is_joinable
+        - is_full
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        name:
+          type: string
+        short_name:
+          type: string
+          nullable: true
+        logo_url:
+          type: string
+          nullable: true
+        slug:
+          type: string
+          nullable: true
+        country:
+          type: string
+          nullable: true
+        member_count:
+          type: integer
+        is_joinable:
+          type: boolean
+        is_full:
+          type: boolean
+        rating:
+          type: number
+          nullable: true
+        scrim_search:
+          nullable: true
+          type: object
+          properties:
+            slots:
+              type: array
+              items:
+                type: string
+                format: date-time
+            format:
+              type: string
+              nullable: true
+            note:
+              type: string
+              nullable: true
+            expires_at:
+              type: string
+              format: date-time
+            common_slots:
+              type: array
+              items:
+                type: string
+                format: date-time
     PublicTournamentSummary:
       type: object
       required:
@@ -24835,6 +24922,153 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /api/teams/scrim-searches:
+    get:
+      tags:
+        - public/teams
+      summary: Recherche de scrim active de mon equipe (ou null).
+      operationId: playerGetScrimSearch
+      security:
+        - PlayerBearer: []
+      responses:
+        '200':
+          description: Recherche active, ou null si aucune (ou perimee).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  search:
+                    nullable: true
+                    $ref: '#/components/schemas/ScrimSearch'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+    post:
+      tags:
+        - public/teams
+      summary: Publier / relancer la recherche de scrim de mon equipe.
+      description: >-
+        Annonce DATEE et perissable : les creneaux doivent etre futurs, et
+        l'annonce expire d'elle-meme (dernier creneau + 2 h). Une seule annonce
+        active par equipe — republier met a jour l'existante. Les equipes dont
+        les creneaux se recoupent recoivent `scrim.search.matched` (push /
+        Discord / email selon leurs preferences). `teams.open_for_scrim` est
+        recale en consequence : le booleen devient un derive.
+        Permission requise : `manage_scrims`.
+      operationId: playerPublishScrimSearch
+      security:
+        - PlayerBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - slots
+              properties:
+                slots:
+                  type: array
+                  minItems: 1
+                  maxItems: 10
+                  items:
+                    type: string
+                    format: date-time
+                format:
+                  type: string
+                  nullable: true
+                note:
+                  type: string
+                  maxLength: 280
+                  nullable: true
+      responses:
+        '201':
+          description: Annonce publiee.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  search:
+                    $ref: '#/components/schemas/ScrimSearch'
+                  matchedTeams:
+                    type: integer
+                    description: Nombre d'equipes compatibles notifiees.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+    delete:
+      tags:
+        - public/teams
+      summary: Clore la recherche de scrim active de mon equipe.
+      operationId: playerCloseScrimSearch
+      security:
+        - PlayerBearer: []
+      responses:
+        '200':
+          description: Annonce close.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  search:
+                    nullable: true
+                    type: object
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /api/player/teams-directory:
+    get:
+      tags:
+        - public/teams
+      summary: Annuaire connecte — qui cherche un scrim, qui recrute, a quel niveau.
+      description: >-
+        Croise les equipes actives avec leur recherche de scrim vivante, leur
+        rating d'equipe et leur etat de recrutement. Trie par creneaux EN COMMUN
+        avec ma propre annonce, puis par presence d'annonce, puis alphabetique.
+        Purge au passage les annonces perimees.
+      operationId: playerTeamsDirectory
+      security:
+        - PlayerBearer: []
+      responses:
+        '200':
+          description: Annuaire du tenant courant.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - teams
+                properties:
+                  teams:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DirectoryTeam'
+                  myTeamId:
+                    type: string
+                    format: uuid
+                    nullable: true
+                  hasOwnSearch:
+                    type: boolean
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '429':
           $ref: '#/components/responses/RateLimited'
   /api/teams/leave:

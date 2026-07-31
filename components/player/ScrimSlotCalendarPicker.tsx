@@ -11,7 +11,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocale } from '@/lib/i18n/useLocale';
 import { addDaysYmd } from '@/utils/teams/scrimCalendar';
-import { fmtHourOfDay as fmtHour, formatInstant } from '@/utils/teams/scrimTime';
+import {
+  fmtHourOfDay as fmtHour,
+  formatInstant,
+} from '@/utils/teams/scrimTime';
 
 const MAX_SLOTS = 5;
 const DAYS_AHEAD = 28; // horizon de sélection
@@ -56,11 +59,18 @@ export default function ScrimSlotCalendarPicker({
   onChange,
   labels,
   accent = 'blue',
+  maxSlots = MAX_SLOTS,
 }: {
   slots: string[];
   onChange: (slots: string[]) => void;
   labels: ScrimSlotCalendarLabels;
   accent?: 'blue' | 'purple';
+  /**
+   * Plafond de créneaux. Défaut 5 (proposition ciblée) ; une ANNONCE de
+   * recherche ratisse plus large et en autorise davantage (cf.
+   * utils/teams/scrimSearch.ts).
+   */
+  maxSlots?: number;
 }) {
   const locale = useLocale();
   const [page, setPage] = useState(0);
@@ -116,10 +126,14 @@ export default function ScrimSlotCalendarPicker({
   const toggle = (value: string) => {
     if (selected.has(value)) {
       setMaxHit(false);
-      onChange(Array.from(selected).filter((v) => v !== value).sort());
+      onChange(
+        Array.from(selected)
+          .filter((v) => v !== value)
+          .sort()
+      );
       return;
     }
-    if (selected.size >= MAX_SLOTS) {
+    if (selected.size >= maxSlots) {
       setMaxHit(true);
       return;
     }
@@ -129,7 +143,11 @@ export default function ScrimSlotCalendarPicker({
 
   const remove = (value: string) => {
     setMaxHit(false);
-    onChange(Array.from(selected).filter((v) => v !== value).sort());
+    onChange(
+      Array.from(selected)
+        .filter((v) => v !== value)
+        .sort()
+    );
   };
 
   const sortedSelected = useMemo(() => Array.from(selected).sort(), [selected]);
@@ -253,7 +271,7 @@ export default function ScrimSlotCalendarPicker({
 
       {maxHit && (
         <p className="mt-2 text-xs text-amber-300/80">
-          {labels.maxReached.replace('{max}', String(MAX_SLOTS))}
+          {labels.maxReached.replace('{max}', String(maxSlots))}
         </p>
       )}
       <p className="mt-1 text-xs text-gray-500">{labels.maxSlotsHint}</p>
