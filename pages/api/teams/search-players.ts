@@ -105,12 +105,14 @@ async function handler(
     // puis filtrait en mémoire. Problème : `auth.users` est GLOBAL à toute
     // l'instance Supabase (tous tenants confondus) → fuite d'emails d'autres
     // tenants + recherche non déterministe (on ne voyait que les 50 premiers
-    // users tous tenants). On ne touche plus jamais à `auth.users` pour la
-    // recherche : les candidats viennent uniquement de tables tenant-scopées
-    // (`team_members` filtré par tenant_id, `profiles`). Les emails ne sont
-    // résolus (via le RPC batch admin_get_user_profiles) QUE pour des candidats
-    // déjà confirmés du tenant courant, donc aucun email cross-tenant ne peut
-    // être renvoyé.
+    // users tous tenants). Deux sources, toutes deux non énumérables :
+    //   1. `team_members` filtré par tenant_id — recherche par sous-chaîne sur
+    //      battle_tag / display_name, donc bornée au tenant courant ;
+    //   2. l'adresse email EXACTE (cf. plus bas) — pas de sous-chaîne, donc
+    //      aucun balayage possible.
+    // Les emails ne sont résolus (via le RPC batch admin_get_user_profiles) QUE
+    // pour des candidats déjà confirmés du tenant courant, donc aucun email
+    // cross-tenant ne peut être renvoyé par la source 1.
     type Candidate = {
       id: string;
       email: string | null;
@@ -142,31 +144,45 @@ async function handler(
       }
     }
 
-    // 2) Recherche dans profiles (username / battle_tag).
+    // 2) Recherche par EMAIL EXACT.
     //
-    // `profiles` n'est pas (encore) tenant-scopé en colonne, mais on ne
-    // résout AUCUN email à partir de profiles : on ne fait que collecter des
-    // ids candidats. L'email n'est résolu qu'après avoir confirmé l'id comme
-    // membre du tenant courant (voir l'intersection ci-dessous), donc une row
-    // profiles d'un autre tenant ne révèle jamais d'email — au pire elle
-    // apparaît avec un email null si l'user n'a aucune appartenance au tenant.
-    const { data: profiles } = await supabaseAdmin
-      .from('profiles')
-      .select('id, username, battle_tag')
-      .or(`username.ilike.%${safeQuery}%,battle_tag.ilike.%${safeQuery}%`)
-      .limit(20);
-
-    if (profiles) {
-      for (const profile of profiles) {
-        if (profile.id && !seenUserIds.has(profile.id)) {
-          seenUserIds.add(profile.id);
-          candidates.push({
-            id: profile.id,
-            email: null,
-            display_name: profile.username || null,
-            battle_tag_hint: profile.battle_tag || null,
-          });
-        }
+    // L'étape 1 ne peut trouver QUE des joueuses déjà membres d'une équipe du
+    // tenant — c'est la seule table tenant-scopée qui existe. Or cet écran sert
+    // précisément à ajouter quelqu'un qui n'y est pas encore : une joueuse sans
+    // équipe était introuvable, y compris avec son adresse complète (le
+    // placeholder promet pourtant « email@example.com »). L'ancienne 2ᵉ source
+    // visait `profiles`, une table qui n'existe dans AUCUN schéma : la requête
+    // partait en erreur, ignorée silencieusement, à chaque frappe.
+    //
+    // On rétablit ce chemin sans rouvrir la fuite d'énumération qui avait fait
+    // supprimer `listUsers` : match sur l'adresse EXACTE, jamais une
+    // sous-chaîne. On ne peut donc que CONFIRMER une adresse déjà connue, pas
+    // balayer l'annuaire. Le RPC fait un LIKE côté SQL ; tout ce qui n'est pas
+    // l'égalité stricte est jeté ici.
+    const emailNeedle = query.includes('@') ? query.toLowerCase() : null;
+    if (emailNeedle) {
+      const { data: byEmail, error: rpcErr } = await supabaseAdmin.rpc(
+        'admin_search_users',
+        { p_query: emailNeedle }
+      );
+      if (rpcErr) {
+        logger.error('[api/teams/search-players] admin_search_users:', rpcErr);
+      }
+      for (const row of (byEmail ?? []) as {
+        id?: string;
+        email?: string | null;
+        display_name?: string | null;
+        battle_tag?: string | null;
+      }[]) {
+        if (!row?.id || seenUserIds.has(row.id)) continue;
+        if (String(row.email ?? '').toLowerCase() !== emailNeedle) continue;
+        seenUserIds.add(row.id);
+        candidates.push({
+          id: row.id,
+          email: row.email ?? null,
+          display_name: row.display_name ?? null,
+          battle_tag_hint: row.battle_tag ?? null,
+        });
       }
     }
 

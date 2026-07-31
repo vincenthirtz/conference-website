@@ -17,6 +17,8 @@ import {
   setAuthUser,
   setAuthListUsers,
   setCreateUserResult,
+  setRpcResult,
+  rpcCalls,
 } from './__helpers__/supabaseMock';
 
 import scrimHandler from '../../pages/api/demandes/scrim';
@@ -687,5 +689,94 @@ describe('GET /api/teams/search-players', () => {
       res
     );
     expect((res.body as any).players).toEqual([]);
+  });
+});
+
+/* -----------------------------------------------------------
+ * Recherche par email exact
+ *
+ * Régression : `team_members` ne contient que des joueuses DÉJÀ en équipe, et
+ * la 2ᵉ source visait `profiles` — une table qui n'existe dans aucun schéma.
+ * Une joueuse sans équipe était donc introuvable même avec son adresse
+ * complète, alors que l'écran sert justement à l'ajouter.
+ * ---------------------------------------------------------*/
+
+describe('GET /api/teams/search-players — email exact', () => {
+  beforeEach(() => {
+    setAuthUser({ id: 'user-1' });
+    store.teams = [
+      {
+        id: 'team-1',
+        tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4',
+        captain_id: 'user-1',
+        name: 'A',
+      },
+    ] as any;
+    store.team_members = [];
+  });
+
+  it('trouve une joueuse SANS équipe via son adresse complète', async () => {
+    setRpcResult('admin_search_users', {
+      data: [
+        {
+          id: 'u-solo',
+          email: 'solo@example.com',
+          display_name: 'Solo',
+          battle_tag: null,
+        },
+      ],
+    });
+
+    const res = makeRes();
+    await searchPlayersHandler(
+      makeReq({ method: 'GET', query: { q: 'solo@example.com' } }, true),
+      res
+    );
+
+    expect(res.statusCode).toBe(200);
+    const players = (res.body as any).players;
+    expect(players).toHaveLength(1);
+    expect(players[0]).toMatchObject({
+      id: 'u-solo',
+      email: 'solo@example.com',
+      display_name: 'Solo',
+      has_team: false,
+    });
+  });
+
+  it('jette les correspondances partielles : pas d’énumération', async () => {
+    // Le RPC fait un LIKE côté SQL : il peut ramener des voisins. Seule
+    // l'égalité stricte doit ressortir.
+    setRpcResult('admin_search_users', {
+      data: [
+        { id: 'u-a', email: 'solo@example.com', display_name: 'Solo' },
+        { id: 'u-b', email: 'solo@example.com.br', display_name: 'Voisine' },
+        { id: 'u-c', email: 'presolo@example.com', display_name: 'Autre' },
+      ],
+    });
+
+    const res = makeRes();
+    await searchPlayersHandler(
+      makeReq({ method: 'GET', query: { q: 'solo@example.com' } }, true),
+      res
+    );
+
+    const players = (res.body as any).players;
+    expect(players.map((p: any) => p.id)).toEqual(['u-a']);
+  });
+
+  it('ne consulte pas le RPC quand la requête n’est pas une adresse', async () => {
+    setRpcResult('admin_search_users', {
+      data: [{ id: 'u-x', email: 'x@example.com', display_name: 'X' }],
+    });
+
+    const res = makeRes();
+    await searchPlayersHandler(
+      makeReq({ method: 'GET', query: { q: 'solo' } }, true),
+      res
+    );
+
+    expect((res.body as any).players).toEqual([]);
+    expect(rpcCalls.some((c) => c.fn === 'admin_search_users')).toBe(false);
   });
 });
