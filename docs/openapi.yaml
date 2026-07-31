@@ -3434,6 +3434,64 @@ components:
             format: date-time
         canAnnounce:
           type: boolean
+    TeamHealth:
+      type: object
+      description: >-
+        Sante d'equipe : constats derives des donnees existantes. Pas de score,
+        pas d'indicateur declaratif — chaque code se rattache a un geste precis.
+      required:
+        - teamId
+        - issues
+        - blockingCount
+      properties:
+        teamId:
+          type: string
+          format: uuid
+          nullable: true
+        teamName:
+          type: string
+          nullable: true
+        blockingCount:
+          type: integer
+        memberCount:
+          type: integer
+        requiredStarters:
+          type: integer
+          description: Effectif requis pour aligner une equipe.
+        requiredStartersSource:
+          type: string
+          enum: [tournament, lineup]
+          description: >-
+            `tournament` quand l'equipe est inscrite a un tournoi declarant
+            `min_players`, `lineup` sinon (taille de line-up du jeu).
+        issues:
+          type: array
+          description: Ordonnes du plus bloquant au plus accessoire.
+          items:
+            type: object
+            required:
+              - code
+              - severity
+              - count
+            properties:
+              code:
+                type: string
+                enum:
+                  - no_captain
+                  - roster_shortfall
+                  - missing_battle_tag
+                  - unverified_battle_tag
+                  - discord_unlinked
+                  - never_logged_in
+                  - no_rhythm
+                  - invisible_for_scrims
+                  - unreviewed_encounters
+              severity:
+                type: string
+                enum: [blocking, warning, info]
+              count:
+                type: integer
+                description: Personnes ou objets concernes. 0 pour un constat binaire.
     TeamReviews:
       type: object
       description: >-
@@ -25641,6 +25699,34 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           description: L'appelant n'appartient a aucune equipe active.
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /api/player/team-health:
+    get:
+      tags:
+        - public/teams
+      summary: Sante d'equipe — constats derives, ordonnes par gravite.
+      description: >-
+        Diagnostic de l'equipe de l'appelant : capitanat vacant, roster
+        incomplet, BattleTags manquants ou non verifies, comptes Discord non
+        lies, comptes jamais utilises, rythme non declare, invisibilite pour les
+        scrims, debriefs en retard. AUCUN score agrege et aucun indicateur
+        declaratif — uniquement des codes comptes, que l'UI traduit et relie a
+        la surface qui repare. Reservee a qui GERE l'equipe (`getManagedTeam`) ;
+        repond 200 avec `teamId: null` sinon. Une liste vide est la reponse
+        normale d'une equipe en regle.
+      operationId: playerTeamHealth
+      security:
+        - PlayerBearer: []
+      responses:
+        '200':
+          description: Constats de l'equipe geree par l'appelant.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamHealth'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '429':
           $ref: '#/components/responses/RateLimited'
   /api/player/team-reviews:

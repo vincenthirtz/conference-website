@@ -130,14 +130,24 @@ Le rating est un chiffre, pas un récit — donc il ne motive personne.
 - **Acceptation** : une équipe retrouve en 10 s ce qu'elle avait noté sur son dernier affrontement
   contre X ; rien n'est visible par l'adversaire.
 
-#### N3 · Santé d'équipe : un diagnostic actionnable, pas des checklists éparses
+#### N3 · Santé d'équipe : un diagnostic actionnable, pas des checklists éparses — ✅ LIVRÉ
 
 - **Impact / Effort** : 🟧 / **S-M**
 - **Problème** : M6 + dispersion — la carte d'onboarding réseau (R11) couvre l'identité individuelle,
   rien ne couvre l'équipe : effectif sous le minimum, membres jamais connectés, comptes non liés,
   noyau insuffisant pour le prochain match, BattleTags non vérifiés.
-- **Proposition** : un seul bloc « santé » côté capitaine, dérivé des données existantes, qui liste
-  ce qui bloque **et pourquoi ça compte**, avec le lien qui répare.
+- **Correction du diagnostic (2026-07-31)** : le calcul EXISTAIT déjà. `utils/teamMessages.ts` sait
+  dire roster incomplet, comptes dormants et BattleTags manquants — mais uniquement pour composer
+  une relance Discord (`cron/team-roster-reminders`), et scopé à un TOURNOI. Une équipe ne pouvait
+  découvrir ce qui la bloque qu'en **recevant un message**, jamais en venant regarder.
+- **Résultat** : `utils/teams/teamHealth.ts` (9 constats typés, triés bloquant › avertissement ›
+  accessoire), `GET /api/player/team-health` et carte `TeamHealthCard` réservée à la gestion.
+  Trois règles portent la crédibilité du bloc : **aucun score agrégé** (un score se contemple, il ne
+  se répare pas), **chaque ligne porte son « pourquoi »** (« 3 comptes Discord non liés » est une
+  statistique ; « ces 3 personnes ne recevront aucune convocation » est un motif d'agir), et **la
+  carte disparaît quand tout va bien** — un bloc qui affiche en permanence « rien à signaler »
+  entraîne à ne plus le lire. Les constats croisent les trois vagues : identité, rythme (N1),
+  débriefs en retard (N2), invisibilité pour les scrims.
 - **Acceptation** : aucun indicateur déclaratif ; chaque ligne pointe vers une action existante.
 
 ### P1 — Intelligence : transformer les données en décisions

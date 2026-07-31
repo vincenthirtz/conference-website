@@ -13,6 +13,7 @@ import NetworkOnboardingCard from '@/components/player/NetworkOnboardingCard';
 import MyScrimsCard from '@/components/player/MyScrimsCard';
 import TeamRhythmCard from '@/components/player/TeamRhythmCard';
 import TeamMemoryCard from '@/components/player/TeamMemoryCard';
+import TeamHealthCard from '@/components/player/TeamHealthCard';
 import TeamCard, { type TeamMemberLite } from '@/components/player/TeamCard';
 import DemandesHistory from '@/components/player/DemandesHistory';
 import QuickAction, {
@@ -612,6 +613,11 @@ function PlayerDashboard() {
                 members={members}
               />
             </div>
+            {/* Santé d'équipe (N3) — réservée à qui gère : les constats portent
+                sur le roster entier et les gestes de réparation sont des gestes
+                de gestion. Se masque d'elle-même quand il n'y a rien à
+                signaler ; l'équivalent individuel est NetworkOnboardingCard. */}
+            {team && canManage && <TeamHealthCard />}
             {/* Rythme d'équipe (N1) — délibérément DANS cette section et non
                 dans « Scrims » : déclarer sa disponibilité récurrente est un
                 geste de membre, pas de capitaine. C'est le premier objet
