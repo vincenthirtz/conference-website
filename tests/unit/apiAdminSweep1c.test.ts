@@ -54,6 +54,7 @@ import {
 } from './__helpers__/supabaseMock';
 
 import { invalidateStaffCache } from '../../utils/staff';
+import { DEFAULT_TENANT_ID } from '../../utils/tenant';
 
 import membersHandler from '../../pages/api/admin/teams/[teamId]/members';
 import autoScheduleHandler from '../../pages/api/admin/tournament/[id]/auto-schedule';
@@ -237,6 +238,24 @@ describe('/api/admin/teams/[teamId]/members', () => {
       'Alpha',
       'player'
     );
+  });
+
+  // Régression : `team_members.tenant_id` est NOT NULL sans default en base
+  // (enforce_tenant_id_not_null_and_fk.sql). Le handler l'omettait → 23502 →
+  // 400 « Failed to add member » sur TOUT ajout via cet endpoint.
+  it('POST stamps tenant_id on the inserted member', async () => {
+    store.teams = [{ id: TEAM_UUID, name: 'Alpha' }] as any;
+    const res = makeRes();
+    await membersHandler(
+      makeAuthedReq({
+        method: 'POST',
+        query: { teamId: TEAM_UUID },
+        body: { email: 'tenant@y.com', role: 'manager' },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(201);
+    expect((store.team_members as any)[0].tenant_id).toBe(DEFAULT_TENANT_ID);
   });
 
   it('POST creates a member by userId and sets captain', async () => {

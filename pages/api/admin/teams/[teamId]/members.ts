@@ -207,8 +207,12 @@ async function handler(
         }
       }
 
-      // Insérer dans team_members (battle_tag est toujours requis)
+      // Insérer dans team_members. `tenant_id` est NOT NULL sans default depuis
+      // enforce_tenant_id_not_null_and_fk.sql : l'omettre fait échouer l'insert
+      // (23502) quel que soit le rôle. Tous les autres chemins d'ajout
+      // (utils/teams/addMember, teams/create-with-member, bot, import) le posent.
       const memberPayload = {
+        tenant_id: ctx.tenantId,
         team_id: teamId,
         user_id: resolvedUserId,
         role: validateRole(role),
@@ -223,6 +227,7 @@ async function handler(
         .maybeSingle();
 
       if (insertErr) {
+        logger.error('[members POST] insert error:', insertErr);
         const msg =
           insertErr.message?.includes('duplicate') ||
           insertErr.message?.includes('unique')
