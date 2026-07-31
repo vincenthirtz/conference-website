@@ -3434,6 +3434,183 @@ components:
             format: date-time
         canAnnounce:
           type: boolean
+    ScoutingReport:
+      type: object
+      description: >-
+        Dossier d'adversaire. Tout ce qui concerne la cible derive de RESULTATS
+        publics ; `myNotes` seul est prive et appartient a l'appelant.
+      required:
+        - myTeam
+        - target
+        - report
+      properties:
+        myTeam:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+        timezone:
+          type: string
+          description: Fuseau dans lequel `usualSlots` est exprime.
+        teamNames:
+          type: object
+          description: Noms des adversaires communs, indexes par id.
+          additionalProperties:
+            type: string
+        target:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+            shortName:
+              type: string
+              nullable: true
+            logoUrl:
+              type: string
+              nullable: true
+            slug:
+              type: string
+              nullable: true
+            country:
+              type: string
+              nullable: true
+            rating:
+              type: number
+              nullable: true
+            reliability:
+              type: object
+              description: Identique a celle exposee par l'annuaire.
+              properties:
+                received:
+                  type: integer
+                answered:
+                  type: integer
+                ignored:
+                  type: integer
+                responseRate:
+                  type: integer
+                  nullable: true
+                medianResponseHours:
+                  type: number
+                  nullable: true
+        myNotes:
+          type: array
+          description: >-
+            Revues de l'equipe APPELANTE sur cette cible. Jamais celles de la
+            cible.
+          items:
+            type: object
+            properties:
+              subjectType:
+                type: string
+                enum: [match, scrim]
+              subjectId:
+                type: string
+                format: uuid
+              playedAt:
+                type: string
+                format: date-time
+                nullable: true
+              vodUrl:
+                type: string
+                nullable: true
+              notes:
+                type: string
+                nullable: true
+        report:
+          type: object
+          properties:
+            headToHead:
+              type: object
+              properties:
+                played:
+                  type: integer
+                wins:
+                  type: integer
+                losses:
+                  type: integer
+                draws:
+                  type: integer
+                recent:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      subjectType:
+                        type: string
+                        enum: [match, scrim]
+                      subjectId:
+                        type: string
+                        format: uuid
+                      playedAt:
+                        type: string
+                        format: date-time
+                        nullable: true
+                      result:
+                        type: string
+                        enum: [win, loss, draw]
+                      myScore:
+                        type: integer
+                        nullable: true
+                      opponentScore:
+                        type: integer
+                        nullable: true
+            recentForm:
+              type: array
+              nullable: true
+              description: '`null` sous le seuil d''echantillon.'
+              items:
+                type: string
+                enum: [win, loss, draw]
+            record:
+              type: object
+              nullable: true
+              properties:
+                played:
+                  type: integer
+                wins:
+                  type: integer
+                losses:
+                  type: integer
+            commonOpponents:
+              type: array
+              items:
+                type: object
+                properties:
+                  teamId:
+                    type: string
+                    format: uuid
+                  myWins:
+                    type: integer
+                  myLosses:
+                    type: integer
+                  theirWins:
+                    type: integer
+                  theirLosses:
+                    type: integer
+            usualSlots:
+              type: array
+              nullable: true
+              description: >-
+                Derives des heures REELLEMENT jouees. `null` sous le seuil
+                d'echantillon.
+              items:
+                type: object
+                properties:
+                  weekday:
+                    type: integer
+                    minimum: 1
+                    maximum: 7
+                  hour:
+                    type: integer
+                  count:
+                    type: integer
     TeamHealth:
       type: object
       description: >-
@@ -25699,6 +25876,61 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           description: L'appelant n'appartient a aucune equipe active.
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /api/player/scouting:
+    get:
+      tags:
+        - public/teams
+      summary: Dossier d'adversaire — preparation d'un affrontement.
+      description: >-
+        Recompose, pour l'equipe cible : bilan des confrontations directes,
+        forme et bilan recents, adversaires communs avec resultats croises,
+        creneaux habituels, rating et fiabilite.
+
+        CONFIDENTIALITE — ce qui vient de l'adversaire se limite a des RESULTATS
+        (publics, connus des deux camps) : jamais ses revues, jamais son rythme
+        declare, jamais son roster. Ses creneaux habituels sont derives des
+        heures REELLEMENT jouees, pas d'une disponibilite declaree. En revanche
+        `myNotes` porte les revues de l'equipe APPELANTE sur cette cible, qui
+        lui appartiennent.
+
+        Chaque section se tait sous le seuil d'echantillon (meme regle que la
+        fiabilite) : `recentForm`, `record` et `usualSlots` valent alors `null`.
+      operationId: playerScouting
+      security:
+        - PlayerBearer: []
+      parameters:
+        - in: query
+          name: team
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Equipe cible. Doit differer de celle de l'appelant.
+        - in: query
+          name: tz
+          required: false
+          schema:
+            type: string
+          description: >-
+            Fuseau IANA de repli pour lire les creneaux habituels, utilise
+            seulement si l'appelant n'a rien declare.
+      responses:
+        '200':
+          description: Dossier de l'equipe cible.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScoutingReport'
+        '400':
+          description: Equipe cible manquante, ou identique a celle de l'appelant.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: L'appelant n'appartient a aucune equipe active.
+        '404':
+          description: Equipe cible introuvable dans ce tenant.
         '429':
           $ref: '#/components/responses/RateLimited'
   /api/player/team-health:

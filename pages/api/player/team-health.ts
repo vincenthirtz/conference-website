@@ -40,6 +40,7 @@ import {
   type RhythmMemberInput,
 } from '@/utils/teams/teamRhythm';
 import { isSearchLive, type ScrimSearchRow } from '@/utils/teams/scrimSearch';
+import { loadPlayedGames } from '@/utils/teams/playedGames';
 import { logger } from '@/utils/logger';
 
 export type TeamHealthResponse = {
@@ -147,25 +148,8 @@ async function countUnreviewedEncounters(
   teamId: string
 ): Promise<number> {
   try {
-    const involvesMe = `team1_id.eq.${teamId},team2_id.eq.${teamId}`;
-    const belongsToMe = (row: Row) =>
-      row.team1_id === teamId || row.team2_id === teamId;
-
-    const [matchesRes, scrimsRes, reviewsRes] = await Promise.all([
-      supabaseAdmin
-        .from('matches')
-        .select('id, team1_id, team2_id')
-        .eq('tenant_id', tenantId)
-        .eq('status', 'finished')
-        .is('deleted_at', null)
-        .or(involvesMe),
-      supabaseAdmin
-        .from('scrims')
-        .select('id, team1_id, team2_id')
-        .eq('tenant_id', tenantId)
-        .eq('status', 'completed')
-        .is('deleted_at', null)
-        .or(involvesMe),
+    const [games, reviewsRes] = await Promise.all([
+      loadPlayedGames(tenantId, teamId),
       supabaseAdmin
         .from('team_reviews')
         .select('subject_type, subject_id')
@@ -179,15 +163,8 @@ async function countUnreviewedEncounters(
       )
     );
 
-    const unreviewed = (rows: Row[] | null, type: 'match' | 'scrim') =>
-      (rows || [])
-        .filter(belongsToMe)
-        .filter((r) => !reviewed.has(`${type}:${r.id}`)).length;
-
-    return (
-      unreviewed(matchesRes.data as Row[] | null, 'match') +
-      unreviewed(scrimsRes.data as Row[] | null, 'scrim')
-    );
+    return games.filter((g) => !reviewed.has(`${g.subjectType}:${g.subjectId}`))
+      .length;
   } catch (err) {
     logger.error('[team-health] unreviewed error', err);
     return 0;

@@ -512,6 +512,17 @@ function PlayerTeamsPage() {
                           {t.joinCta}
                         </Link>
                       )}
+                      {/* Dossier d'adversaire (N5) — réservé à qui a une
+                          équipe : sans la sienne, il n'y a ni confrontation
+                          directe ni adversaire commun à comparer. */}
+                      {myTeamId && (
+                        <Link
+                          href={`/player/scouting/${encodeURIComponent(team.id)}`}
+                          className="rounded-xl border border-white/15 px-4 py-2 text-xs font-semibold transition hover:bg-white/10"
+                        >
+                          {t.scoutCta}
+                        </Link>
+                      )}
                       {team.slug && (
                         <Link
                           href={`/team/${team.slug}`}

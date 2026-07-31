@@ -327,7 +327,8 @@
     "mins": "{n}min",
     "emptyTitle": "Pas de prochain match",
     "emptyBody": "Ton prochain match programmé apparaîtra ici avec le check-in.",
-    "loadErrorShort": "Impossible de charger ton prochain match pour le moment."
+    "loadErrorShort": "Impossible de charger ton prochain match pour le moment.",
+    "scoutOpponent": "Préparer l'adversaire"
   },
   "playerProfile": {
     "defaultName": "Joueuse",
@@ -4576,7 +4577,8 @@
     "reasonReliable": "répond aux propositions",
     "reasonSlowToAnswer": "répond rarement",
     "reasonNeverPlayed": "jamais affrontée récemment",
-    "reasonPlayedRecently": "déjà affrontée plusieurs fois"
+    "reasonPlayedRecently": "déjà affrontée plusieurs fois",
+    "scoutCta": "Dossier"
   },
   "networkOnboarding": {
     "title": "Exister dans le réseau",
@@ -4683,5 +4685,36 @@
     "whyInvisibleForScrims": "Sans annonce vivante ni créneaux d'habitude, aucune équipe ne peut vous proposer de jouer.",
     "unreviewedEncounters": "{count} affrontement(s) jamais débriefé(s)",
     "whyUnreviewedEncounters": "Ce que vous en avez appris se perd si personne ne l'écrit pendant que c'est frais."
+  },
+  "scouting": {
+    "title": "Dossier d'adversaire",
+    "pageTitle": "Dossier : {team}",
+    "subtitle": "Tout est dérivé de résultats déjà joués. Rien de privé côté adversaire — seules vos propres notes le sont.",
+    "backToDirectory": "← Retour à l'annuaire",
+    "loading": "Chargement du dossier…",
+    "errorLoad": "Dossier indisponible.",
+    "retry": "Réessayer",
+    "viewProfile": "Voir la fiche publique",
+    "rating": "Niveau {rating}",
+    "responseRate": "{rate} % de réponse",
+    "headToHead": "Confrontations directes",
+    "headToHeadSummary": "{played} affrontement(s) : {wins} victoire(s), {losses} défaite(s).",
+    "neverPlayed": "Vous ne vous êtes jamais affrontées.",
+    "typeMatch": "Match",
+    "typeScrim": "Scrim",
+    "win": "Victoire",
+    "loss": "Défaite",
+    "draw": "Nul",
+    "form": "Forme récente",
+    "recordSummary": "{played} affrontement(s) joué(s) : {wins} victoire(s), {losses} défaite(s).",
+    "notEnoughData": "Pas encore assez d'affrontements pour en tirer quoi que ce soit.",
+    "commonOpponents": "Adversaires communs",
+    "commonOpponentsHint": "Un résultat croisé situe mieux qu'un classement.",
+    "commonOpponentLine": "vous {myWins}-{myLosses} · elles {theirWins}-{theirLosses}",
+    "usualSlots": "Créneaux habituels",
+    "usualSlotsHint": "Déduit des heures réellement jouées, pas d'une disponibilité déclarée. Heures en {timezone}.",
+    "myNotes": "Vos notes sur cette équipe",
+    "myNotesHint": "Vos revues de match et de scrim contre elles. Privées : personne d'autre ne les voit.",
+    "watchVod": "Voir la VOD"
   }
 }

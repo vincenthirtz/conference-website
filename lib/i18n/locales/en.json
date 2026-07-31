@@ -327,7 +327,8 @@
     "mins": "{n}min",
     "emptyTitle": "No upcoming match",
     "emptyBody": "Your next scheduled match will show up here along with check-in.",
-    "loadErrorShort": "Couldn't load your next match right now."
+    "loadErrorShort": "Couldn't load your next match right now.",
+    "scoutOpponent": "Scout the opponent"
   },
   "playerProfile": {
     "defaultName": "Player",
@@ -4576,7 +4577,8 @@
     "reasonReliable": "answers proposals",
     "reasonSlowToAnswer": "rarely answers",
     "reasonNeverPlayed": "not played recently",
-    "reasonPlayedRecently": "played several times already"
+    "reasonPlayedRecently": "played several times already",
+    "scoutCta": "Dossier"
   },
   "networkOnboarding": {
     "title": "Exist in the network",
@@ -4683,5 +4685,36 @@
     "whyInvisibleForScrims": "With no live listing and no recurring slots, no team can offer you a game.",
     "unreviewedEncounters": "{count} encounter(s) never reviewed",
     "whyUnreviewedEncounters": "What you learned is lost unless someone writes it down while it is still fresh."
+  },
+  "scouting": {
+    "title": "Opponent dossier",
+    "pageTitle": "Dossier: {team}",
+    "subtitle": "Everything here derives from games already played. Nothing private from the opponent — only your own notes are.",
+    "backToDirectory": "← Back to the directory",
+    "loading": "Loading the dossier…",
+    "errorLoad": "Dossier unavailable.",
+    "retry": "Try again",
+    "viewProfile": "View public profile",
+    "rating": "Rating {rating}",
+    "responseRate": "{rate}% response rate",
+    "headToHead": "Head to head",
+    "headToHeadSummary": "{played} encounter(s): {wins} win(s), {losses} loss(es).",
+    "neverPlayed": "You have never faced each other.",
+    "typeMatch": "Match",
+    "typeScrim": "Scrim",
+    "win": "Win",
+    "loss": "Loss",
+    "draw": "Draw",
+    "form": "Recent form",
+    "recordSummary": "{played} encounter(s) played: {wins} win(s), {losses} loss(es).",
+    "notEnoughData": "Not enough encounters yet to read anything into it.",
+    "commonOpponents": "Common opponents",
+    "commonOpponentsHint": "A crossed result places a team better than a rating does.",
+    "commonOpponentLine": "you {myWins}-{myLosses} · them {theirWins}-{theirLosses}",
+    "usualSlots": "Usual slots",
+    "usualSlotsHint": "Derived from hours actually played, not from any declared availability. Times in {timezone}.",
+    "myNotes": "Your notes on this team",
+    "myNotesHint": "Your match and scrim reviews against them. Private: nobody else sees them.",
+    "watchVod": "Watch the VOD"
   }
 }

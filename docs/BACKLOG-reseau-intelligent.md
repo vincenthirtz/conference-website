@@ -167,12 +167,24 @@ Le rating est un chiffre, pas un récit — donc il ne motive personne.
   `/player/teams` (badge de score + raisons). Le rythme N1 sert de repli quand aucune des deux
   équipes n'a d'annonce vivante — c'est ce qui rend le score utile **avant** que le réseau soit dense.
 
-#### N5 · Dossier d'adversaire (scouting) avant un match
+#### N5 · Dossier d'adversaire (scouting) avant un match — ✅ LIVRÉ
 
 - **Impact / Effort** : 🟧 / **M**
 - **Problème** : à J-1 d'un match, une équipe n'a aucune préparation possible depuis le site.
 - **Proposition** : fiche auto-générée à partir de l'existant — historique commun, forme récente,
   adversaires communs et résultats croisés, créneaux préférés, fiabilité. Zéro saisie.
+- **Résultat (2026-07-31)** : `utils/teams/scouting.ts` (pur) + `GET /api/player/scouting` + page
+  `/player/scouting/[teamId]`, atteignable depuis l'annuaire **et** depuis la carte du prochain
+  match — c'est là qu'on prépare une rencontre, pas dans un annuaire qu'on n'ouvre pas la veille.
+- **La ligne de confidentialité, qui a décidé du reste** : ce qui vient de l'adversaire se limite à
+  des **résultats**, publics et connus des deux camps — jamais ses revues (N2), jamais son rythme
+  déclaré (N1), jamais son roster. Conséquence directe sur les « créneaux préférés » : ils sont
+  dérivés des heures **réellement jouées**, pas d'une disponibilité déclarée. Ce qu'une équipe a
+  joué est public ; ce qu'elle a déclaré ne l'est pas. En revanche, **mes** revues sur cet
+  adversaire sont jointes au dossier : elles m'appartiennent, et ce sont elles la vraie matière
+  d'une préparation. Un test vérifie qu'aucune revue adverse ne fuit dans la réponse.
+- **Au passage** : `utils/teams/playedGames.ts` extrait la lecture « affrontements joués », que
+  trois surfaces (N2, N3, N5) posaient déjà en double aux mêmes deux tables.
 - **Acceptation** : accessible depuis le match et depuis l'annuaire ; masquée si l'échantillon est
   trop maigre (même règle que R10) ; jamais de donnée privée de l'adversaire.
 
