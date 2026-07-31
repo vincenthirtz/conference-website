@@ -4630,7 +4630,12 @@
     "coreEmpty": "Aucun créneau ne réunit encore l'effectif requis.",
     "announceCta": "Annoncer ces {count} créneaux aux autres équipes",
     "announced": "Annonce publiée : les équipes compatibles sont prévenues.",
-    "announceError": "Publication de l'annonce impossible."
+    "announceError": "Publication de l'annonce impossible.",
+    "suggestionNeverPlayed": "Vous êtes {count} le {slot} — et vous n'y jouez jamais.",
+    "suggestionRarelyPlayed": "Vous êtes {count} le {slot}, et vous n'y avez joué que {played} fois.",
+    "suggestionWhy": "C'est le créneau que votre équipe possède déjà sans rien changer à son organisation.",
+    "suggestionAnnounceCta": "Chercher un scrim sur ce créneau",
+    "suggestionDismiss": "Masquer cette suggestion"
   },
   "teamMemory": {
     "title": "Mémoire d'équipe",

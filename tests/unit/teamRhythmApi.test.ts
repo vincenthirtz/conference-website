@@ -228,3 +228,81 @@ describe('canAnnounce', () => {
     expect(res.body.canAnnounce).toBe(true);
   });
 });
+
+describe('suggestion d’entraînement (N6)', () => {
+  beforeEach(() => {
+    // Les deux membres sont libres le mardi 21 h → c'est le noyau.
+    store.team_availability = [
+      {
+        id: 'av-1',
+        tenant_id: CONFERENCE_TENANT_ID,
+        team_id: TEAM_A,
+        user_id: PLAYER,
+        timezone: 'Europe/Paris',
+        slots: [TUE_21],
+      },
+      {
+        id: 'av-2',
+        tenant_id: CONFERENCE_TENANT_ID,
+        team_id: TEAM_A,
+        user_id: CAPTAIN,
+        timezone: 'Europe/Paris',
+        slots: [TUE_21],
+      },
+    ] as any;
+    store.matches = [] as any;
+    store.scrims = [] as any;
+    store.scrim_searches = [] as any;
+  });
+
+  it('propose le créneau du noyau que l’équipe ne joue jamais', async () => {
+    const res = await call();
+    expect(res.body.suggestion).toMatchObject({
+      slot: TUE_21,
+      availableCount: 2,
+      playedCount: 0,
+    });
+    // Les occurrences proposées sont des instants réels, pas des clés.
+    expect(res.body.suggestionSlots.length).toBeGreaterThan(0);
+    expect(Number.isFinite(Date.parse(res.body.suggestionSlots[0]))).toBe(true);
+  });
+
+  it('se tait quand le créneau est déjà couvert par une annonce vivante', async () => {
+    // Mardi 21 h à Paris en juillet = 19 h UTC.
+    const nextTuesday = new Date();
+    nextTuesday.setUTCDate(
+      nextTuesday.getUTCDate() + ((9 - nextTuesday.getUTCDay()) % 7 || 7)
+    );
+    nextTuesday.setUTCHours(19, 0, 0, 0);
+    store.scrim_searches = [
+      {
+        id: 'search-1',
+        tenant_id: CONFERENCE_TENANT_ID,
+        team_id: TEAM_A,
+        status: 'active',
+        slots: [nextTuesday.toISOString()],
+        expires_at: new Date(Date.now() + 86_400_000).toISOString(),
+      },
+    ] as any;
+    const res = await call();
+    expect(res.body.suggestion).toBeNull();
+  });
+
+  it('se tait quand l’équipe joue déjà ce créneau toutes les semaines', async () => {
+    store.matches = [1, 8].map((day) => ({
+      id: `m-${day}`,
+      tenant_id: CONFERENCE_TENANT_ID,
+      status: 'finished',
+      scheduled_at: `2026-07-${String(day + 6).padStart(2, '0')}T19:00:00.000Z`,
+      completed_at: null,
+      team1_id: TEAM_A,
+      team2_id: 'other',
+      team1_score: 3,
+      team2_score: 0,
+      winner_team_id: TEAM_A,
+      deleted_at: null,
+    })) as any;
+    const res = await call();
+    expect(res.body.suggestion).toBeNull();
+  });
+});

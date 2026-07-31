@@ -37,7 +37,7 @@ import {
   type TeamReliability,
 } from '@/utils/teams/reliability';
 import { loadMyRhythmTimezone } from '@/utils/teams/teamRhythmStore';
-import { getTimeZoneOffsetMs } from '@/utils/timezone';
+import { getTimeZoneOffsetMinutes } from '@/utils/timezone';
 import { logger } from '@/utils/logger';
 
 export type ScoutingResponse = {
@@ -171,7 +171,7 @@ export default withAuthRoute(async function handler(
         .order('played_at', { ascending: false }),
     ]);
 
-  const offsetMinutes = getTimeZoneOffsetMs(new Date(), timezone) / 60_000;
+  const offsetMinutes = getTimeZoneOffsetMinutes(new Date(), timezone);
 
   const report = buildScoutingReport(
     myTeam.id,

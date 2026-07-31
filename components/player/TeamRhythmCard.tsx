@@ -34,6 +34,9 @@ import { logger } from '../../utils/logger';
 /** Lundi 1er janvier 2024 — base neutre pour dériver les noms de jours. */
 const REFERENCE_MONDAY = Date.UTC(2024, 0, 1);
 
+/** Clé locale du créneau de suggestion refermé (N6). */
+const SUGGESTION_KEY = 'team-rhythm-suggestion-dismissed';
+
 function fmtMinutes(minutes: number): string {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
@@ -70,6 +73,12 @@ export default function TeamRhythmCard() {
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [announcing, setAnnouncing] = useState(false);
+  /**
+   * Suggestion refermée (N6). On mémorise LE CRÉNEAU, pas un booléen : refermer
+   * « mercredi 21 h » ne doit pas masquer la suggestion suivante quand le
+   * rythme de l'équipe change.
+   */
+  const [dismissedSlot, setDismissedSlot] = useState<string | null>(null);
 
   // Mode de peinture en cours : on décide à l'appui (ajout ou retrait) et on
   // garde le même mode pendant tout le glisser — sinon un aller-retour du
@@ -93,6 +102,14 @@ export default function TeamRhythmCard() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    try {
+      setDismissedSlot(window.localStorage.getItem(SUGGESTION_KEY));
+    } catch {
+      setDismissedSlot(null);
+    }
+  }, []);
 
   useEffect(() => {
     const stop = () => {
@@ -152,15 +169,16 @@ export default function TeamRhythmCard() {
     }
   };
 
-  const announce = async () => {
-    if (!data?.suggestedSlots.length) return;
+  const announce = async (slots: string[]) => {
+    if (slots.length === 0) return;
     setAnnouncing(true);
     try {
       await adminFetchJson('/api/teams/scrim-searches', {
         method: 'POST',
-        body: JSON.stringify({ slots: data.suggestedSlots }),
+        body: JSON.stringify({ slots }),
       });
       addToast(t.announced, 'success');
+      await load();
     } catch (err) {
       logger.error('[TeamRhythmCard] announce error', err);
       addToast(t.announceError, 'error');
@@ -169,11 +187,33 @@ export default function TeamRhythmCard() {
     }
   };
 
+  const dismissSuggestion = () => {
+    if (!data?.suggestion) return;
+    setDismissedSlot(data.suggestion.slot);
+    try {
+      window.localStorage.setItem(SUGGESTION_KEY, data.suggestion.slot);
+    } catch {
+      // Pas de localStorage (navigation privée) : la suggestion réapparaîtra.
+    }
+  };
+
   // Sans équipe, il n'y a pas de rythme à déclarer : la carte disparaît plutôt
   // que d'afficher une grille inerte.
   if (!data || !data.teamId) return null;
 
   const heatmap = data.heatmap;
+
+  const slotLabel = (key: string) => {
+    const [weekday, min] = key.split('-').map(Number);
+    return `${dayLabels[weekday - 1]} ${fmtMinutes(min)}`;
+  };
+
+  // Une seule suggestion, et seulement si elle n'a pas été refermée. Refermer
+  // mémorise LE CRÉNEAU : la suivante réapparaîtra d'elle-même.
+  const suggestion =
+    data.suggestion && data.suggestion.slot !== dismissedSlot
+      ? data.suggestion
+      : null;
 
   return (
     <section
@@ -197,6 +237,60 @@ export default function TeamRhythmCard() {
           })}
         </p>
       </div>
+
+      {/* Suggestion d'entraînement (N6) — la seule information du rythme qui
+          fasse AGIR : « vous êtes au complet » constate, « et vous n'y jouez
+          jamais » propose. Une seule à la fois, refermable. */}
+      {suggestion && (
+        <div className="mt-4 flex flex-wrap items-start justify-between gap-3 rounded-xl border border-amber-400/30 bg-amber-500/10 px-4 py-3">
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-amber-100">
+              {format(
+                suggestion.playedCount === 0
+                  ? t.suggestionNeverPlayed
+                  : t.suggestionRarelyPlayed,
+                {
+                  slot: slotLabel(suggestion.slot),
+                  count: suggestion.availableCount,
+                  played: suggestion.playedCount,
+                }
+              )}
+            </p>
+            <p className="mt-0.5 text-xs text-amber-200/80">
+              {t.suggestionWhy}
+            </p>
+            {data.canAnnounce && data.suggestionSlots.length > 0 && (
+              <button
+                type="button"
+                onClick={() => void announce(data.suggestionSlots)}
+                disabled={announcing}
+                className="mt-2 rounded-xl bg-amber-500 px-4 py-2 text-xs font-semibold text-black transition hover:bg-amber-400 disabled:opacity-40"
+              >
+                {t.suggestionAnnounceCta}
+              </button>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={dismissSuggestion}
+            aria-label={t.suggestionDismiss}
+            title={t.suggestionDismiss}
+            className="flex-shrink-0 rounded-full p-1.5 text-amber-200/70 transition hover:bg-white/10 hover:text-white"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+              className="h-4 w-4"
+              aria-hidden="true"
+            >
+              <path d="M18 6 6 18M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      )}
 
       <div className="mt-4 overflow-x-auto">
         <table className="w-full min-w-[420px] border-separate border-spacing-1">
@@ -290,17 +384,12 @@ export default function TeamRhythmCard() {
         ) : (
           <>
             <p className="mt-1 text-sm text-emerald-200">
-              {data.coreSlots
-                .map((key) => {
-                  const [weekday, min] = key.split('-').map(Number);
-                  return `${dayLabels[weekday - 1]} ${fmtMinutes(min)}`;
-                })
-                .join(' · ')}
+              {data.coreSlots.map(slotLabel).join(' · ')}
             </p>
             {data.canAnnounce && data.suggestedSlots.length > 0 && (
               <button
                 type="button"
-                onClick={announce}
+                onClick={() => void announce(data.suggestedSlots)}
                 disabled={announcing}
                 className="mt-3 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold transition hover:bg-emerald-500 disabled:opacity-40"
               >

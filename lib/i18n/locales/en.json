@@ -4630,7 +4630,12 @@
     "coreEmpty": "No slot gathers the required line-up yet.",
     "announceCta": "Advertise these {count} slots to other teams",
     "announced": "Listing published: matching teams have been notified.",
-    "announceError": "Could not publish the listing."
+    "announceError": "Could not publish the listing.",
+    "suggestionNeverPlayed": "{count} of you are free on {slot} — and you never play then.",
+    "suggestionRarelyPlayed": "{count} of you are free on {slot}, and you have only played then {played} time(s).",
+    "suggestionWhy": "This is the slot your team already has, without changing anything about how it is organised.",
+    "suggestionAnnounceCta": "Look for a scrim on this slot",
+    "suggestionDismiss": "Hide this suggestion"
   },
   "teamMemory": {
     "title": "Team memory",

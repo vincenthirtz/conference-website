@@ -188,12 +188,26 @@ Le rating est un chiffre, pas un récit — donc il ne motive personne.
 - **Acceptation** : accessible depuis le match et depuis l'annuaire ; masquée si l'échantillon est
   trop maigre (même règle que R10) ; jamais de donnée privée de l'adversaire.
 
-#### N6 · Suggestion de créneau d'entraînement
+#### N6 · Suggestion de créneau d'entraînement — ✅ LIVRÉ
 
 - **Impact / Effort** : 🟧 / **S** (dès N1 livré)
 - **Proposition** : à partir du rythme (N1), proposer le meilleur créneau récurrent non exploité
   (« vous êtes 5 le mercredi 21 h et vous ne jouez jamais ce jour-là ») et le transformer en
   entraînement récurrent ou en annonce de scrim.
+- **Résultat (2026-07-31)** : `utils/teams/trainingSuggestion.ts` (pur) branché sur
+  `GET /api/player/team-rhythm` — pas de route nouvelle, la donnée était déjà là — et rendu en
+  bannière refermable dans `TeamRhythmCard`, avec un bouton qui annonce **ce seul créneau**.
+  C'est la seule information du rythme qui fasse AGIR : « vous êtes au complet » constate,
+  « et vous n'y jouez jamais » propose. Le refermement mémorise **le créneau**, pas un booléen :
+  la suggestion suivante réapparaît d'elle-même quand le rythme change.
+  Deux refus : jamais un créneau déjà couvert par l'annonce vivante (suggérer ce que l'équipe vient
+  de publier ferait douter du reste), jamais un créneau déjà joué deux fois ou plus.
+- **Bug attrapé au passage** : `getTimeZoneOffsetMs(...) / 60_000` rendait 119,99 min au lieu de 120
+  — l'heure murale est reconstruite à la seconde près et comparée à un `getTime()` qui porte des
+  millisecondes. Décaler de 119,99 min fait retomber 21 h 00 sur 20 h 59 min 59 s, soit **un créneau
+  entier de décalage** après troncature. Le défaut touchait aussi les « créneaux habituels » de N5,
+  déjà livré. Corrigé par `getTimeZoneOffsetMinutes` (arrondi à la minute entière), avec test de
+  non-régression.
 - **Acceptation** : une seule suggestion à la fois, dérivée, refermable.
 
 ### P2 — Récurrence : le déclencheur de retour

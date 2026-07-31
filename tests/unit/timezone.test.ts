@@ -3,6 +3,7 @@ import {
   formatDateTimeTz,
   formatDateTz,
   formatTimeTz,
+  getTimeZoneOffsetMinutes,
   localInputToUTC,
   TOURNAMENT_TIMEZONES,
 } from '../../utils/timezone';
@@ -185,5 +186,39 @@ describe('localInputToUTC', () => {
       // Throwing is also acceptable behavior for malformed input
       expect(true).toBe(true);
     }
+  });
+});
+
+describe('getTimeZoneOffsetMinutes', () => {
+  // Régression : `getTimeZoneOffsetMs` reconstruit l'heure murale à la SECONDE
+  // près et la compare à `getTime()`, qui porte des millisecondes. Diviser par
+  // 60 000 donnait donc 119,99… au lieu de 120 — et décaler un instant de
+  // 119,99 min fait retomber 21 h 00 sur 20 h 59 min 59 s, soit un créneau
+  // entier de décalage une fois l'heure tronquée.
+  it('renvoie un nombre entier de minutes, même avec des millisecondes', () => {
+    const withMillis = new Date('2026-07-07T19:00:00.847Z');
+    const offset = getTimeZoneOffsetMinutes(withMillis, 'Europe/Paris');
+    expect(offset).toBe(120);
+    expect(Number.isInteger(offset)).toBe(true);
+  });
+
+  it('suit le changement d’heure', () => {
+    expect(
+      getTimeZoneOffsetMinutes(
+        new Date('2026-01-07T19:00:00.123Z'),
+        'Europe/Paris'
+      )
+    ).toBe(60);
+  });
+
+  it('relit la bonne heure locale une fois le décalage appliqué', () => {
+    const instant = new Date('2026-07-07T19:00:00.847Z');
+    const offset = getTimeZoneOffsetMinutes(instant, 'Europe/Paris');
+    const local = new Date(instant.getTime() + offset * 60_000);
+    expect(local.getUTCHours()).toBe(21);
+  });
+
+  it('vaut 0 pour UTC', () => {
+    expect(getTimeZoneOffsetMinutes(new Date(), 'UTC')).toBe(0);
   });
 });

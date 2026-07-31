@@ -3432,6 +3432,29 @@ components:
           items:
             type: string
             format: date-time
+        suggestion:
+          type: object
+          nullable: true
+          description: >-
+            Creneau d'entrainement suggere : appartient au noyau, n'est pas
+            couvert par l'annonce vivante, et n'a pas ete joue plus d'une fois.
+            `null` quand il n'y a rien a proposer — cas normal. Une seule
+            suggestion a la fois.
+          properties:
+            slot:
+              type: string
+              description: Cle de creneau recurrent "<jour ISO>-<minutes>".
+            availableCount:
+              type: integer
+            playedCount:
+              type: integer
+              description: Fois ou l'equipe a REELLEMENT joue a cette heure-la.
+        suggestionSlots:
+          type: array
+          description: Prochaines occurrences du seul creneau suggere.
+          items:
+            type: string
+            format: date-time
         canAnnounce:
           type: boolean
     ScoutingReport:

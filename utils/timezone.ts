@@ -178,6 +178,27 @@ export function getTimeZoneOffsetMs(date: Date, timeZone: string): number {
 }
 
 /**
+ * Le même décalage, en MINUTES ENTIÈRES.
+ *
+ * À utiliser dès qu'on décale un instant pour en relire le jour ou l'heure.
+ * `getTimeZoneOffsetMs` compare une heure murale reconstruite à la SECONDE
+ * près avec `date.getTime()`, qui porte des millisecondes : le quotient par
+ * 60 000 vaut donc 119,99… plutôt que 120. Décaler de 119,99 min au lieu de
+ * 120 fait retomber 21 h 00 sur 20 h 59 min 59 s — soit, après troncature à
+ * l'heure, un créneau entier de décalage.
+ *
+ * Un décalage de fuseau est toujours un nombre entier de minutes : arrondir
+ * n'approxime rien, ça supprime un artefact.
+ */
+export function getTimeZoneOffsetMinutes(date: Date, timeZone: string): number {
+  const minutes = Math.round(getTimeZoneOffsetMs(date, timeZone) / 60_000);
+  // `Math.round` d'un très petit négatif rend -0, qui n'est pas `Object.is`-égal
+  // à 0. Sans conséquence arithmétique, mais surprenant à comparer : on
+  // normalise plutôt que de laisser le piège en aval.
+  return minutes === 0 ? 0 : minutes;
+}
+
+/**
  * Convertit une valeur datetime-local (sans timezone) en ISO UTC,
  * en interpretant la saisie comme étant dans le fuseau du tournoi.
  *

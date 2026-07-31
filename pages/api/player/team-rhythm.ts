@@ -31,7 +31,19 @@ import {
   type RhythmHeatmap,
   type RhythmMemberInput,
 } from '@/utils/teams/teamRhythm';
-import { MAX_SEARCH_SLOTS } from '@/utils/teams/scrimSearch';
+import {
+  isSearchLive,
+  MAX_SEARCH_SLOTS,
+  type ScrimSearchRow,
+} from '@/utils/teams/scrimSearch';
+import { loadPlayedGames } from '@/utils/teams/playedGames';
+import {
+  announcedSlotKeys,
+  pickTrainingSlot,
+  tallyPlayedBySlot,
+  type TrainingSuggestion,
+} from '@/utils/teams/trainingSuggestion';
+import { getTimeZoneOffsetMinutes } from '@/utils/timezone';
 import { logger } from '@/utils/logger';
 
 const DEFAULT_TIMEZONE = 'Europe/Paris';
@@ -55,6 +67,13 @@ export type TeamRhythmResponse = {
   coreSlots: string[];
   /** Prochaines occurrences réelles du noyau, prêtes pour une annonce. */
   suggestedSlots: string[];
+  /**
+   * Créneau d'entraînement suggéré (N6) : disponible et pourtant jamais joué.
+   * `null` quand il n'y a rien à proposer — cas normal.
+   */
+  suggestion: TrainingSuggestion | null;
+  /** Prochaines occurrences du seul créneau suggéré. */
+  suggestionSlots: string[];
   /** L'utilisateur peut-il créer la recherche de scrim depuis le noyau ? */
   canAnnounce: boolean;
 };
@@ -95,6 +114,8 @@ const EMPTY: Omit<TeamRhythmResponse, 'referenceTimezone'> = {
   heatmap: {},
   coreSlots: [],
   suggestedSlots: [],
+  suggestion: null,
+  suggestionSlots: [],
   canAnnounce: false,
 };
 
@@ -237,7 +258,45 @@ export default withAuthRoute(async function handler(
 
   const myNormalized = normalizeRhythmSlots(mine?.slots ?? []);
 
+  // Suggestion d'entraînement (N6) : le créneau où l'équipe est disponible et
+  // ne joue pourtant jamais. C'est la seule information du rythme qui fasse
+  // AGIR — « vous êtes au complet » constate, « et vous n'y jouez jamais »
+  // propose. Best-effort : une erreur de lecture n'empêche pas la grille.
+  const offsetMinutes = getTimeZoneOffsetMinutes(new Date(), referenceTimezone);
+  let suggestion: TrainingSuggestion | null = null;
+  try {
+    const [games, searchesRes] = await Promise.all([
+      loadPlayedGames(tenantId, team.id),
+      supabaseAdmin
+        .from('scrim_searches')
+        .select('team_id, slots, status, expires_at')
+        .eq('tenant_id', tenantId)
+        .eq('team_id', team.id)
+        .eq('status', 'active'),
+    ]);
+    const liveSlots = ((searchesRes.data || []) as ScrimSearchRow[])
+      .filter((s) => isSearchLive(s))
+      .flatMap((s) => s.slots || []);
+
+    suggestion = pickTrainingSlot({
+      coreSlots: core,
+      heatmap,
+      playedBySlot: tallyPlayedBySlot(
+        games.map((g) => g.playedAt),
+        offsetMinutes
+      ),
+      announcedSlots: announcedSlotKeys(liveSlots, offsetMinutes),
+    });
+  } catch (err) {
+    logger.error('[team-rhythm] suggestion error', err);
+  }
+
   const payload: TeamRhythmResponse = {
+    suggestion,
+    /** Prochaines occurrences du seul créneau suggéré, prêtes à annoncer. */
+    suggestionSlots: suggestion
+      ? projectRhythmSlots([suggestion.slot], referenceTimezone, { max: 4 })
+      : [],
     teamId: team.id,
     teamName: team.name,
     referenceTimezone,
