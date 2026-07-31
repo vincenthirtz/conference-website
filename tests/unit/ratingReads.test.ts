@@ -105,7 +105,10 @@ describe('readLeaderboard (DB-paginated)', () => {
     expect(players[0]).toEqual({
       userId: 'u1',
       displayName: 'Top',
-      battleTag: 'Top#1',
+      // Le classement est une surface PUBLIQUE : le BattleTag en sort masqué
+      // (« Top#1 » -> « Top »), comme partout ailleurs en public
+      // (cf. utils/battleTag.ts et tests/unit/publicBattleTagPrivacy.test.ts).
+      battleTag: 'Top',
       avatarUrl: 'http://x/a.png',
       rating: 1600,
       rd: 55,

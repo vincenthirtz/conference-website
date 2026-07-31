@@ -10,6 +10,7 @@
 // build. Le handler API délègue désormais ici et renvoie exactement la même
 // shape / pagination.
 
+import { maskBattleTag } from '../battleTag';
 import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
 import type {
@@ -77,7 +78,10 @@ export async function readLeaderboard(
   const players: LeaderboardPlayer[] = rows.map((r, i) => ({
     userId: r.user_id,
     displayName: r.display_name ?? null,
-    battleTag: r.battle_tag ?? null,
+    // Anonymat public (cf. utils/battleTag.ts) : le classement est une surface
+    // PUBLIQUE, on n'y sérialise jamais l'identifiant numérique — sinon
+    // n'importe qui peut ajouter la joueuse en jeu depuis le classement.
+    battleTag: maskBattleTag(r.battle_tag ?? null),
     avatarUrl: r.avatar_url ?? null,
     rating: r.rating,
     rd: r.rd,

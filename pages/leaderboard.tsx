@@ -128,13 +128,24 @@ export default function LeaderboardPage({
                 <table className="w-full text-sm">
                   <thead className="bg-neutral-900/80 text-xs uppercase text-neutral-400">
                     <tr>
-                      <th scope="col" className="w-16 px-4 py-3 text-left">{t.thRank}</th>
-                      <th scope="col" className="px-4 py-3 text-left">{t.thPlayer}</th>
-                      <th scope="col" className="px-4 py-3 text-right">{t.thRating}</th>
-                      <th scope="col" className="hidden px-4 py-3 text-right sm:table-cell">
+                      <th scope="col" className="w-16 px-4 py-3 text-left">
+                        {t.thRank}
+                      </th>
+                      <th scope="col" className="px-4 py-3 text-left">
+                        {t.thPlayer}
+                      </th>
+                      <th scope="col" className="px-4 py-3 text-right">
+                        {t.thRating}
+                      </th>
+                      <th
+                        scope="col"
+                        className="hidden px-4 py-3 text-right sm:table-cell"
+                      >
                         {t.thMatches}
                       </th>
-                      <th scope="col" className="px-4 py-3 text-right">{t.thWinLoss}</th>
+                      <th scope="col" className="px-4 py-3 text-right">
+                        {t.thWinLoss}
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -172,11 +183,11 @@ export default function LeaderboardPage({
                               )}
                               <span className="flex flex-col leading-tight">
                                 <span className="font-medium">{label}</span>
-                                {p.displayName && p.battleTag ? (
-                                  <span className="text-xs text-neutral-500">
-                                    {p.battleTag}
-                                  </span>
-                                ) : null}
+                                {/* On n'affiche PAS le BattleTag en second
+                                    libellé : le classement est public, et un
+                                    tag y a valeur d'identifiant de contact.
+                                    Le pseudo (masqué à la source) suffit à
+                                    reconnaître la joueuse. */}
                               </span>
                             </Link>
                           </td>

@@ -11,6 +11,7 @@
 // Convention de retour : `null` = joueuse introuvable (aucune ligne
 // `player_ratings`) → 404 côté handler / `notFound: true` côté page.
 
+import { maskBattleTag } from '../battleTag';
 import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
 import { computeAchievements } from '@/utils/profile/achievements';
@@ -359,7 +360,8 @@ export async function readPlayerProfile(
   const player: PlayerProfileCore = {
     userId: pr.user_id,
     displayName: pr.display_name ?? null,
-    battleTag: pr.battle_tag ?? null,
+    // Profil PUBLIC : jamais l'identifiant numérique (cf. utils/battleTag.ts).
+    battleTag: maskBattleTag(pr.battle_tag ?? null),
     avatarUrl: pr.avatar_url ?? null,
     rating: pr.rating,
     rd: pr.rd,
@@ -512,12 +514,13 @@ export async function readPlayerProfile(
           losses: 0,
           games: 0,
           displayName: null,
-          battleTag: p.battle_tag ?? null,
+          battleTag: maskBattleTag(p.battle_tag ?? null),
         } as H2HAgg);
       e.games += 1;
       if (won) e.wins += 1;
       else e.losses += 1;
-      if (!e.battleTag && p.battle_tag) e.battleTag = p.battle_tag;
+      if (!e.battleTag && p.battle_tag)
+        e.battleTag = maskBattleTag(p.battle_tag);
       h2hAgg.set(p.user_id, e);
     }
   }
@@ -538,7 +541,8 @@ export async function readPlayerProfile(
       const e = h2hAgg.get(r.user_id);
       if (e) {
         if (r.display_name) e.displayName = r.display_name;
-        if (!e.battleTag && r.battle_tag) e.battleTag = r.battle_tag;
+        if (!e.battleTag && r.battle_tag)
+          e.battleTag = maskBattleTag(r.battle_tag);
       }
     }
   }

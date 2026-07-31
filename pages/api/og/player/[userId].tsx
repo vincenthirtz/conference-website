@@ -18,6 +18,7 @@
 
 import { ImageResponse } from 'next/og';
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { maskBattleTag } from '@/utils/battleTag';
 import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { logger } from '@/utils/logger';
@@ -84,7 +85,9 @@ async function readCardData(userId: string): Promise<CardData | null> {
       losses: number;
     };
 
-    const name = row.display_name ?? row.battle_tag ?? 'Joueuse';
+    // Image PARTAGEABLE : jamais l'identifiant numérique complet
+    // (cf. utils/battleTag.ts) — une image circule bien plus loin qu'une page.
+    const name = row.display_name ?? maskBattleTag(row.battle_tag) ?? 'Joueuse';
 
     // Rang best-effort : nombre de joueuses notées mieux classées + 1. Si le
     // COUNT échoue, on omet le rang plutôt que d'échouer la carte.
@@ -323,9 +326,7 @@ export default async function handler(
     const userId = Array.isArray(rawUserId) ? rawUserId[0] : rawUserId;
 
     const data =
-      userId && typeof userId === 'string'
-        ? await readCardData(userId)
-        : null;
+      userId && typeof userId === 'string' ? await readCardData(userId) : null;
 
     const img = new ImageResponse(data ? playerCard(data) : fallbackCard(), {
       width: WIDTH,
