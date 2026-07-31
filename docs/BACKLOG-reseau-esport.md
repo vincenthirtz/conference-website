@@ -159,7 +159,11 @@ Entre deux éditions, le site n'a aucune raison d'être rouvert.
 
 ### P1 — Liquidité : faire se rencontrer l'offre et la demande
 
-#### R4 · Annuaire d'équipes connecté et filtrable
+#### R4 · Annuaire d'équipes connecté et filtrable — ✅ LIVRÉ
+
+- **Résultat (2026-07-31)** : `/player/teams` + `GET /api/player/teams-directory`.
+  Croise annonce vivante, rating d'équipe et recrutement ; trié par créneaux EN
+  COMMUN avec ma propre annonce. Le hub scrims y pointe au lieu de `/scrim`.
 
 - **Impact / Effort** : 🟥 / **M**
 - **Problème** : C1 — pas de surface de découverte pour un capitaine connecté.
@@ -169,7 +173,11 @@ Entre deux éditions, le site n'a aucune raison d'être rouvert.
 - **Acceptation** : filtres combinables ; l'état « cherche un scrim » est à la seconde, pas à 10 min ;
   `/scrim` reste la vitrine publique mais n'est plus le seul chemin.
 
-#### R5 · Disponibilité datée et périssable
+#### R5 · Disponibilité datée et périssable — ✅ LIVRÉ
+
+- **Résultat (2026-07-31)** : table `scrim_searches` (créneaux futurs, expiration
+  auto dernier créneau + 2 h, une seule annonce active par équipe).
+  `teams.open_for_scrim` devient un dérivé maintenu par l'API.
 
 - **Impact / Effort** : 🟧 / **M**
 - **Problème** : C2 — un booléen sans date ni péremption.
@@ -179,7 +187,11 @@ Entre deux éditions, le site n'a aucune raison d'être rouvert.
 - **Acceptation** : une recherche expire seule ; l'annuaire n'affiche que des disponibilités vivantes ;
   relance J-1 à l'auteur (réutilise le cron de relance des grilles).
 
-#### R6 · Matching et alerte d'adversaire
+#### R6 · Matching et alerte d'adversaire — ✅ LIVRÉ
+
+- **Résultat (2026-07-31)** : `scrim.search.matched` émis à la publication, vers
+  les seules équipes aux créneaux réellement communs (plafond 10). Câblé outbox
+  - catalogue push + dispatcher (audience = capitaines/managers ciblés).
 
 - **Impact / Effort** : 🟥 / **M-L**
 - **Problème** : même avec R4/R5, personne ne revient regarder l'annuaire.
@@ -189,7 +201,11 @@ Entre deux éditions, le site n'a aucune raison d'être rouvert.
 - **Acceptation** : une recherche produit ≤ N notifications ciblées ; opt-out par équipe ; aucune
   notification vers une équipe déjà occupée sur le créneau.
 
-#### R7 · Marché joueuses libres ↔ équipes qui recrutent
+#### R7 · Marché joueuses libres ↔ équipes qui recrutent — ✅ LIVRÉ (v1)
+
+- **Résultat (2026-07-31)** : une joueuse sans équipe atteint l'annuaire filtré
+  « recrutent » depuis sa carte équipe. Le sens capitaine → joueuses libres
+  existait déjà (`FreePlayersSection`).
 
 - **Impact / Effort** : 🟧 / **S-M**
 - **Problème** : C7 — 4 joueuses libres et 8 équipes ouvertes au recrutement s'ignorent.
