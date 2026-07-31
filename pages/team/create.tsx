@@ -10,6 +10,7 @@ import {
   type RegistrationField,
 } from '@/utils/registrationFields';
 import { ACTIVE_WOMEN_TOURNAMENT_ID } from '@/utils/activeEdition';
+import { roleRequiresBattleTag } from '@/utils/teams/addMember';
 
 /** Valeur d'une réponse à un champ d'inscription personnalisé. */
 type FieldValue = string | number | boolean;
@@ -383,7 +384,9 @@ export default function PublicCreateTeamPage() {
     const m = members[idx];
     if (!m || m.email.trim().length === 0) return undefined;
     const bt = m.battleTag.trim();
-    if (tournamentIdParam) {
+    // Coach / manager : jamais obligatoire, même à l'inscription — ils ne
+    // comptent pas dans le roster jouant (cf. utils/teams/addMember).
+    if (tournamentIdParam && roleRequiresBattleTag(m.role)) {
       if (!bt || !BATTLE_TAG_REGEX.test(bt)) return t.errorBattleTagRequired;
     } else if (bt && !BATTLE_TAG_REGEX.test(bt)) {
       return t.errorBattleTagInvalid;
@@ -534,10 +537,22 @@ export default function PublicCreateTeamPage() {
       // laissé vide — utile pour les équipes "scrim only".
       if (tournamentIdParam) {
         const missingBattle = preparedMembers.find(
-          (m) => !m.battle_tag || !battleTagRegex.test(m.battle_tag)
+          (m) =>
+            roleRequiresBattleTag(m.role) &&
+            (!m.battle_tag || !battleTagRegex.test(m.battle_tag))
         );
         if (preparedMembers.length && missingBattle) {
           throw new Error(t.errorBattleTagRequired);
+        }
+        // L'encadrement peut ne rien saisir, mais pas saisir n'importe quoi.
+        const invalidStaffBattle = preparedMembers.find(
+          (m) =>
+            !roleRequiresBattleTag(m.role) &&
+            m.battle_tag &&
+            !battleTagRegex.test(m.battle_tag)
+        );
+        if (invalidStaffBattle) {
+          throw new Error(t.errorBattleTagInvalid);
         }
       } else {
         const invalidBattle = preparedMembers.find(
@@ -1432,6 +1447,7 @@ export default function PublicCreateTeamPage() {
                             placeholder={t.battleTagPlaceholder}
                             required={
                               !!tournamentIdParam &&
+                              roleRequiresBattleTag(member.role) &&
                               member.email.trim().length > 0
                             }
                           />
@@ -1440,7 +1456,8 @@ export default function PublicCreateTeamPage() {
                               {btErr}
                             </p>
                           ) : (
-                            !tournamentIdParam && (
+                            (!tournamentIdParam ||
+                              !roleRequiresBattleTag(member.role)) && (
                               <p className="mt-1 text-[10px] text-gray-500">
                                 {t.battleTagOptionalNote}
                               </p>

@@ -31,6 +31,7 @@ import {
 } from '@/utils/teamRoles';
 import {
   validateBattleTag,
+  roleRequiresBattleTag,
   BATTLE_TAG_FORMAT_HINT,
 } from '@/utils/teams/addMember';
 import { logStaffAction } from '@/utils/staffLogs';
@@ -105,13 +106,25 @@ export default withAuthRoute(async function handler(
   let newBattleTag: string | null = member.battle_tag;
   if (hasBattleTag) {
     const raw = req.body.battle_tag;
+    // Rôle visé par CETTE requête (le bloc « Role » plus bas le revalide) :
+    // vider le BattleTag n'est légitime que pour l'encadrement, y compris
+    // quand le rôle change au même appel (player → coach, par exemple).
+    const prospectiveRole =
+      hasRole && typeof req.body.role === 'string'
+        ? req.body.role
+        : member.role;
+
     if (raw == null || (typeof raw === 'string' && raw.trim() === '')) {
-      return res.status(400).json({ error: BATTLE_TAG_FORMAT_HINT });
-    }
-    try {
-      newBattleTag = validateBattleTag(String(raw));
-    } catch {
-      return res.status(400).json({ error: BATTLE_TAG_FORMAT_HINT });
+      if (roleRequiresBattleTag(prospectiveRole)) {
+        return res.status(400).json({ error: BATTLE_TAG_FORMAT_HINT });
+      }
+      newBattleTag = null;
+    } else {
+      try {
+        newBattleTag = validateBattleTag(String(raw));
+      } catch {
+        return res.status(400).json({ error: BATTLE_TAG_FORMAT_HINT });
+      }
     }
     if (newBattleTag !== member.battle_tag) {
       updatePayload.battle_tag = newBattleTag;

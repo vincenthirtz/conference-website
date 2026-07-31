@@ -5,7 +5,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
 import {
-  validateBattleTag,
+  validateBattleTagForRole,
   resolveUserIdByEmail,
   insertTeamMember,
   setTeamCaptain,
@@ -54,9 +54,10 @@ async function handler(
   let resolvedUserId =
     typeof userId === 'string' && userId.trim().length > 0 ? userId.trim() : '';
 
-  let battleTagValue: string;
+  // BattleTag exigé des rôles jouants uniquement (cf. utils/teams/addMember).
+  let battleTagValue: string | null;
   try {
-    battleTagValue = validateBattleTag(battleTag);
+    battleTagValue = validateBattleTagForRole(battleTag, resolvedRole);
   } catch (err: unknown) {
     return res
       .status(400)
@@ -120,7 +121,14 @@ async function handler(
 
     // Créer une news auto
     try {
-      const playerName = battleTagValue.split('#')[0];
+      // Sans BattleTag (coach / manager), on retombe sur la partie locale de
+      // l'email puis sur un libellé neutre : la news ne doit pas afficher
+      // "undefined rejoint …".
+      const playerName =
+        battleTagValue?.split('#')[0] ||
+        (typeof email === 'string' && email.includes('@')
+          ? email.split('@')[0]
+          : 'Un nouveau membre');
       const teamName = team?.name || 'une equipe';
       const newsSlug = `team-${teamId}-member-${Date.now().toString(36)}`;
       await supabaseAdmin.from('news').insert({

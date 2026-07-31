@@ -16,7 +16,7 @@ import {
   TEAM_MANAGEMENT_FORBIDDEN,
 } from '@/utils/teams/managementAccess';
 import {
-  validateBattleTag,
+  validateBattleTagForRole,
   resolveUserIdByEmail,
   insertTeamMember,
 } from '@/utils/teams/addMember';
@@ -98,9 +98,11 @@ export default withAuthRoute(async function handler(
   let resolvedUserId =
     typeof userId === 'string' && userId.trim().length > 0 ? userId.trim() : '';
 
-  let battleTagValue: string;
+  // BattleTag exigé des rôles jouants uniquement : un coach ou une manager
+  // n'a pas nécessairement de compte Overwatch (cf. utils/teams/addMember).
+  let battleTagValue: string | null;
   try {
-    battleTagValue = validateBattleTag(battleTag);
+    battleTagValue = validateBattleTagForRole(battleTag, validatedRole);
   } catch (err: unknown) {
     return res
       .status(400)
@@ -187,7 +189,14 @@ export default withAuthRoute(async function handler(
 
     // Create auto news
     try {
-      const playerName = battleTagValue.split('#')[0];
+      // Sans BattleTag (coach / manager), on retombe sur la partie locale de
+      // l'email puis sur un libellé neutre : la news ne doit pas afficher
+      // "undefined rejoint …".
+      const playerName =
+        battleTagValue?.split('#')[0] ||
+        (typeof email === 'string' && email.includes('@')
+          ? email.split('@')[0]
+          : 'Un nouveau membre');
       const newsSlug = `team-${captainTeam.id}-member-${Date.now().toString(36)}`;
       await supabaseAdmin.from('news').insert({
         title: `${playerName} rejoint ${captainTeam.name}`,

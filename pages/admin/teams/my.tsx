@@ -7,7 +7,10 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
 import Modal from '@/components/admin/Modal';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
-import { BATTLE_TAG_REGEX } from '@/utils/teams/addMember';
+import {
+  BATTLE_TAG_REGEX,
+  roleRequiresBattleTag,
+} from '@/utils/teams/addMember';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { MemberRosterRow } from '@/components/admin/teams/my/MemberRosterRow';
 import { PlayerSearchResults } from '@/components/admin/teams/my/PlayerSearchResults';
@@ -1452,7 +1455,10 @@ function MyTeamPage({ staff }: StaffProps) {
 
               <div>
                 <label className="block text-sm text-neutral-300 mb-1">
-                  {t.battleTagLabel} <span className="text-red-400">*</span>
+                  {t.battleTagLabel}{' '}
+                  {roleRequiresBattleTag(newMemberRole) && (
+                    <span className="text-red-400">*</span>
+                  )}
                 </label>
                 <input
                   type="text"

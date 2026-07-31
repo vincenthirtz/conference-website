@@ -2,6 +2,7 @@ import React from 'react';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import Modal from '@/components/admin/Modal';
 import type { TeamRole } from '@/utils/teamRoles';
+import { roleRequiresBattleTag } from '@/utils/teams/addMember';
 import type { MemberFormState, SearchResult } from './types';
 
 type AddMemberModalProps = {
@@ -38,6 +39,9 @@ function AddMemberModalComponent({
   onSubmit,
 }: AddMemberModalProps) {
   const t = useAdminT('adminTeamsAddMemberModal');
+  // Coach / manager = encadrement : pas forcément de compte Overwatch, donc
+  // pas de BattleTag exigé (même règle que l'API, cf. utils/teams/addMember).
+  const battleTagRequired = roleRequiresBattleTag(memberForm.role);
   return (
     <Modal
       open={open}
@@ -242,11 +246,12 @@ function AddMemberModalComponent({
 
           <div>
             <label className="block text-sm font-medium text-neutral-200 mb-1.5">
-              BattleTag <span className="text-red-400">*</span>
+              BattleTag{' '}
+              {battleTagRequired && <span className="text-red-400">*</span>}
             </label>
             <input
               type="text"
-              required
+              required={battleTagRequired}
               value={memberForm.battleTag}
               onChange={(e) =>
                 setMemberForm((prev) => ({

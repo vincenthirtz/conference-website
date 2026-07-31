@@ -259,6 +259,61 @@ describe('/api/teams/add-member as manager', () => {
     );
     expect(res.statusCode).toBe(403);
   });
+
+  // Encadrement : un coach ou une manager n'a pas forcément de compte
+  // Overwatch. Exiger un BattleTag bloquait un ajout légitime.
+  it('adds a coach with no BattleTag at all', async () => {
+    const res = makeRes();
+    await addMemberHandler(
+      makeAuthedReq({
+        method: 'POST',
+        body: { userId: 'new-coach', role: 'coach' },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    const inserted = (store.team_members as any[]).find(
+      (m) => m.user_id === 'new-coach'
+    );
+    expect(inserted).toBeTruthy();
+    expect(inserted.battle_tag ?? null).toBeNull();
+  });
+
+  it('adds a manager with an empty BattleTag', async () => {
+    const res = makeRes();
+    await addMemberHandler(
+      makeAuthedReq({
+        method: 'POST',
+        body: { userId: 'new-manager', role: 'manager', battleTag: '  ' },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+  });
+
+  it('still refuses a player without a BattleTag', async () => {
+    const res = makeRes();
+    await addMemberHandler(
+      makeAuthedReq({
+        method: 'POST',
+        body: { userId: 'new-player-2', role: 'player' },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('still refuses a malformed BattleTag from a coach', async () => {
+    const res = makeRes();
+    await addMemberHandler(
+      makeAuthedReq({
+        method: 'POST',
+        body: { userId: 'new-coach-2', role: 'coach', battleTag: 'nope' },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+  });
 });
 
 /* -----------------------------------------------------------

@@ -2,7 +2,8 @@
 //
 // Vise les helpers extraits pour mutualiser la logique entre les 3 endpoints
 // d'ajout de membre (capitaine, admin, discord) :
-//   - validateBattleTag
+//   - validateBattleTag / validateBattleTagForRole (BattleTag optionnel pour
+//     l'encadrement : coach, manager)
 //   - resolveUserIdByEmail
 //   - insertTeamMember (avec et sans pre-check max_players)
 //   - setTeamCaptain
@@ -16,6 +17,9 @@ import {
 } from './__helpers__/supabaseMock';
 import {
   validateBattleTag,
+  validateBattleTagForRole,
+  roleRequiresBattleTag,
+  isNonPlayingTeamRole,
   resolveUserIdByEmail,
   insertTeamMember,
   setTeamCaptain,
@@ -65,6 +69,55 @@ describe('validateBattleTag', () => {
   it('exposes the canonical regex for reuse / cross-checks', () => {
     expect(BATTLE_TAG_REGEX.test('Player#1234')).toBe(true);
     expect(BATTLE_TAG_REGEX.test('bad')).toBe(false);
+  });
+});
+
+/* -----------------------------------------------------------
+ * BattleTag selon le rôle
+ *
+ * Règle produit : coach et manager encadrent, ils ne jouent pas — on ne peut
+ * pas leur imposer un compte Overwatch. Même notion que l'exclusion du
+ * `min_players` à l'inscription (create-with-member.ts).
+ * ---------------------------------------------------------*/
+
+describe('roleRequiresBattleTag', () => {
+  it('exempts coaching roles, whatever the casing / padding', () => {
+    expect(roleRequiresBattleTag('coach')).toBe(false);
+    expect(roleRequiresBattleTag('manager')).toBe(false);
+    expect(roleRequiresBattleTag('  Manager ')).toBe(false);
+    expect(isNonPlayingTeamRole('COACH')).toBe(true);
+  });
+
+  it('requires it from every playing role', () => {
+    expect(roleRequiresBattleTag('player')).toBe(true);
+    expect(roleRequiresBattleTag('substitute')).toBe(true);
+    // Rôle custom d'un tenant : on suppose qu'il joue (choix conservateur).
+    expect(roleRequiresBattleTag('igl')).toBe(true);
+    // Rôle absent → traité comme jouant, l'appelant defaulte sur 'player'.
+    expect(roleRequiresBattleTag(null)).toBe(true);
+    expect(roleRequiresBattleTag('')).toBe(true);
+  });
+});
+
+describe('validateBattleTagForRole', () => {
+  it('returns null when a coach or manager leaves it empty', () => {
+    expect(validateBattleTagForRole('', 'coach')).toBeNull();
+    expect(validateBattleTagForRole('   ', 'manager')).toBeNull();
+    expect(validateBattleTagForRole(null, 'coach')).toBeNull();
+    expect(validateBattleTagForRole(undefined, 'manager')).toBeNull();
+  });
+
+  it('still rejects a malformed tag from a coach — optional is not "anything"', () => {
+    expect(() => validateBattleTagForRole('nope', 'coach')).toThrow();
+    expect(validateBattleTagForRole('Coach#1234', 'coach')).toBe('Coach#1234');
+  });
+
+  it('keeps the requirement for playing roles', () => {
+    expect(() => validateBattleTagForRole('', 'player')).toThrow();
+    expect(() => validateBattleTagForRole('   ', 'substitute')).toThrow();
+    expect(validateBattleTagForRole(' Player#1234 ', 'player')).toBe(
+      'Player#1234'
+    );
   });
 });
 

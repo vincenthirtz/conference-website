@@ -17,6 +17,10 @@ import { alertIfBlacklisted } from '@/utils/moderation/blacklist';
 import { alertIfEntityBlacklisted } from '@/utils/moderation/entityBlacklist';
 import { verifyCaptcha } from '@/utils/captcha';
 import {
+  roleRequiresBattleTag,
+  isNonPlayingTeamRole,
+} from '@/utils/teams/addMember';
+import {
   validateFieldDefinitions,
   validateRegistrationAnswers,
   type RegistrationAnswers,
@@ -355,12 +359,14 @@ export default async function handler(
     /required/i.test(message) ? 'BATTLETAG_REQUIRED' : 'BATTLETAG_INVALID';
 
   // Lot 6 helper : valide le BattleTag de manière conditionnelle.
-  // - tournoi : required + format.
+  // - tournoi + rôle jouant : required + format.
+  // - coach / manager : toujours optionnel, même à l'inscription — ils ne
+  //   comptent pas dans le roster jouant (cf. min_players plus bas).
   // - hors tournoi : optionnel (renvoie null si vide) + format si fourni.
-  const resolveBattleTag = (raw: string): string | null => {
+  const resolveBattleTag = (raw: string, role: string): string | null => {
     const trimmed = (raw ?? '').trim();
     if (!trimmed) {
-      if (tournamentRequiresBattleTag) {
+      if (tournamentRequiresBattleTag && roleRequiresBattleTag(role)) {
         throw new Error(
           'BattleTag required for each member when registering to a tournament.'
         );
@@ -377,7 +383,7 @@ export default async function handler(
     const memberBattleTag = body.member_battle_tag?.trim() || '';
     let resolvedBattleTag: string | null;
     try {
-      resolvedBattleTag = resolveBattleTag(memberBattleTag);
+      resolvedBattleTag = resolveBattleTag(memberBattleTag, resolvedRole);
     } catch (err: unknown) {
       const message = (err as Error)?.message || 'Invalid BattleTag';
       return res
@@ -431,7 +437,7 @@ export default async function handler(
       const resolvedSpecialty = validateSpecialty(m.specialty);
       let resolvedBattleTag: string | null;
       try {
-        resolvedBattleTag = resolveBattleTag(m.battle_tag);
+        resolvedBattleTag = resolveBattleTag(m.battle_tag, resolvedRole);
       } catch (err: unknown) {
         const message = (err as Error)?.message || 'Invalid BattleTag';
         return res
@@ -933,7 +939,7 @@ export default async function handler(
         // managers EXCLUS (décision produit : l'encadrement ne compte pas dans
         // le roster minimum requis pour l'inscription auto).
         const playerCount = insertedMembers.filter(
-          (m) => m.role !== 'coach' && m.role !== 'manager'
+          (m) => !isNonPlayingTeamRole(m.role)
         ).length;
         if (tournament.min_players && playerCount < tournament.min_players) {
           canRegister = false;

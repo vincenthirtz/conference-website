@@ -15,6 +15,10 @@ import {
   rosterLockErrorMessage,
 } from '@/utils/teams/rosterLock';
 import { computeBattleTagMismatch } from '@/utils/auth/battleTagMismatch';
+import {
+  validateBattleTagForRole,
+  roleRequiresBattleTag,
+} from '@/utils/teams/addMember';
 
 type TeamMemberRow = {
   id: string;
@@ -151,22 +155,21 @@ async function handler(
         ? userId.trim()
         : '';
 
-    // BattleTag est obligatoire pour rejoindre une équipe
-    if (!battleTag || typeof battleTag !== 'string' || !battleTag.trim()) {
+    // BattleTag : exigé des rôles jouants, facultatif pour l'encadrement
+    // (coach / manager). Validation déléguée au helper partagé pour que les
+    // trois chemins d'ajout appliquent la même règle.
+    const resolvedRole =
+      typeof role === 'string' && role.trim() ? role.trim() : 'player';
+    let battleTagValue: string | null;
+    try {
+      battleTagValue = validateBattleTagForRole(battleTag, resolvedRole);
+    } catch {
       return res.status(400).json({
-        error: 'BattleTag is required to join a team',
+        error: roleRequiresBattleTag(resolvedRole)
+          ? 'BattleTag is required to join a team (format Name#0000)'
+          : 'Invalid BattleTag (format Name#0000)',
       });
     }
-
-    // Valider le format du BattleTag
-    const trimmedBattleTag = battleTag.trim();
-    const re = /^[A-Za-z0-9]{2,}#[0-9]{3,6}$/;
-    if (!re.test(trimmedBattleTag)) {
-      return res.status(400).json({
-        error: 'Invalid BattleTag (format Name#0000)',
-      });
-    }
-    const battleTagValue = trimmedBattleTag;
 
     try {
       // Vérifier l'équipe

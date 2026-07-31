@@ -36,6 +36,52 @@ export function validateBattleTag(tag: string | null | undefined): string {
   return trimmed;
 }
 
+/**
+ * Rôles d'encadrement : ils appartiennent au staff de l'équipe, pas au roster
+ * jouant. Même notion que l'exclusion du `min_players` à l'inscription
+ * (cf. pages/api/teams/create-with-member.ts) — un coach ou une manager n'a
+ * pas forcément de compte Overwatch, lui imposer un BattleTag bloquait un
+ * ajout parfaitement légitime.
+ */
+export const NON_PLAYING_TEAM_ROLES = ['coach', 'manager'] as const;
+
+export function isNonPlayingTeamRole(role: string | null | undefined): boolean {
+  const normalized = (role ?? '').trim().toLowerCase();
+  return (NON_PLAYING_TEAM_ROLES as readonly string[]).includes(normalized);
+}
+
+/** Un BattleTag n'est exigé que des rôles qui jouent. */
+export function roleRequiresBattleTag(
+  role: string | null | undefined
+): boolean {
+  return !isNonPlayingTeamRole(role);
+}
+
+/**
+ * Valide un BattleTag en tenant compte du rôle.
+ *
+ * - rôle jouant (player, substitute, rôle custom) : obligatoire + format ;
+ * - coach / manager : facultatif → `null` si vide, format validé s'il est
+ *   fourni (on n'accepte pas un tag mal formé sous prétexte qu'il est
+ *   optionnel).
+ *
+ * @throws Error(BATTLE_TAG_FORMAT_HINT) si manquant alors qu'il est requis,
+ *         ou si le format est invalide.
+ */
+export function validateBattleTagForRole(
+  tag: string | null | undefined,
+  role: string | null | undefined
+): string | null {
+  const trimmed = (tag ?? '').trim();
+  if (!trimmed) {
+    if (roleRequiresBattleTag(role)) {
+      throw new Error(BATTLE_TAG_FORMAT_HINT);
+    }
+    return null;
+  }
+  return validateBattleTag(trimmed);
+}
+
 /* -----------------------------------------------------------
  * Resolution user par email
  * ---------------------------------------------------------*/
