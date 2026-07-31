@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type JSX } from 'react';
 import Link from 'next/link';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { usePlayerArea } from '@/components/player/PlayerAreaContext';
 import { useLang, type Lang } from '@/lib/i18n/LanguageProvider';
 import { localeTag } from '@/lib/i18n/useLocale';
 import { useT, format } from '@/lib/i18n/useT';
@@ -77,6 +78,7 @@ export default function NextMatchCard({
   initialData,
 }: Props = {}): JSX.Element | null {
   const { adminFetchJson } = useAdminFetch();
+  const { withSubject } = usePlayerArea();
   const { lang } = useLang();
   const t = useT('nextMatchCard');
   const [data, setData] = useState<NextMatch | null>(initialData ?? null);
@@ -88,9 +90,10 @@ export default function NextMatchCard({
 
   const load = useCallback(async () => {
     try {
-      const json = await adminFetchJson<NextMatch>('/api/player/next-match', {
-        skipAuthRedirect: true,
-      });
+      const json = await adminFetchJson<NextMatch>(
+        withSubject('/api/player/next-match'),
+        { skipAuthRedirect: true }
+      );
       setData(json);
       setError(null);
     } catch (err) {
@@ -102,7 +105,7 @@ export default function NextMatchCard({
     } finally {
       setLoading(false);
     }
-  }, [adminFetchJson, t]);
+  }, [adminFetchJson, t, withSubject]);
 
   // Keep in sync if the parent re-supplies a payload (e.g. after loadData).
   useEffect(() => {

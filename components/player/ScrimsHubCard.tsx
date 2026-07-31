@@ -36,9 +36,10 @@ export type ScrimsHubCardProps = {
   /** Disponibilité aux scrims courante (team.open_for_scrim). */
   openForScrim: boolean;
   /** Bascule la disponibilité — la page possède l'état + le feedback toast. */
-  onToggle: () => void;
+  /** Absent ⇒ lecture seule : l'interrupteur est rendu mais inerte. */
+  onToggle?: () => void;
   /** Vrai pendant la requête de bascule (désactive le switch). */
-  toggling: boolean;
+  toggling?: boolean;
   t: ReturnType<typeof useT<'playerIndex'>>;
 };
 
@@ -71,7 +72,7 @@ export default function ScrimsHubCard({
           <button
             type="button"
             onClick={onToggle}
-            disabled={toggling}
+            disabled={toggling || !onToggle}
             role="switch"
             aria-checked={openForScrim}
             aria-label={t.scrimsHubOpenLabel}

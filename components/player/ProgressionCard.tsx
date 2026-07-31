@@ -19,6 +19,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { usePlayerArea } from '@/components/player/PlayerAreaContext';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import {
@@ -34,19 +35,20 @@ export default function ProgressionCard() {
   const t = useT('progression');
   const locale = useLocale();
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
+  const { withSubject } = usePlayerArea();
   const [data, setData] = useState<ProgressionResponse | null>(null);
 
   const load = useCallback(async () => {
     try {
       const payload = await adminFetchJson<ProgressionResponse>(
-        '/api/player/progression',
+        withSubject('/api/player/progression'),
         { skipAuthRedirect: true }
       );
       setData(payload);
     } catch (err) {
       logger.error('[ProgressionCard] load error', err);
     }
-  }, [adminFetchJson]);
+  }, [adminFetchJson, withSubject]);
 
   useEffect(() => {
     void load();

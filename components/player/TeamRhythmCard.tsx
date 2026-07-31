@@ -20,6 +20,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { usePlayerArea } from '@/components/player/PlayerAreaContext';
 import { useToast } from '@/components/Toast';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
@@ -66,6 +67,7 @@ export default function TeamRhythmCard() {
   const t = useT('teamRhythm');
   const locale = useLocale();
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
+  const { withSubject, readOnly } = usePlayerArea();
   const { addToast } = useToast();
 
   const [data, setData] = useState<TeamRhythmResponse | null>(null);
@@ -88,7 +90,9 @@ export default function TeamRhythmCard() {
   const load = useCallback(async () => {
     try {
       const payload = await adminFetchJson<TeamRhythmResponse>(
-        `/api/player/team-rhythm?tz=${encodeURIComponent(detectTimezone())}`,
+        withSubject(
+          `/api/player/team-rhythm?tz=${encodeURIComponent(detectTimezone())}`
+        ),
         { skipAuthRedirect: true }
       );
       setData(payload);
@@ -97,7 +101,7 @@ export default function TeamRhythmCard() {
     } catch (err) {
       logger.error('[TeamRhythmCard] load error', err);
     }
-  }, [adminFetchJson]);
+  }, [adminFetchJson, withSubject]);
 
   useEffect(() => {
     void load();
@@ -259,16 +263,18 @@ export default function TeamRhythmCard() {
             <p className="mt-0.5 text-xs text-amber-200/80">
               {t.suggestionWhy}
             </p>
-            {data.canAnnounce && data.suggestionSlots.length > 0 && (
-              <button
-                type="button"
-                onClick={() => void announce(data.suggestionSlots)}
-                disabled={announcing}
-                className="mt-2 rounded-xl bg-amber-500 px-4 py-2 text-xs font-semibold text-black transition hover:bg-amber-400 disabled:opacity-40"
-              >
-                {t.suggestionAnnounceCta}
-              </button>
-            )}
+            {!readOnly &&
+              data.canAnnounce &&
+              data.suggestionSlots.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => void announce(data.suggestionSlots)}
+                  disabled={announcing}
+                  className="mt-2 rounded-xl bg-amber-500 px-4 py-2 text-xs font-semibold text-black transition hover:bg-amber-400 disabled:opacity-40"
+                >
+                  {t.suggestionAnnounceCta}
+                </button>
+              )}
           </div>
           <button
             type="button"
@@ -336,16 +342,25 @@ export default function TeamRhythmCard() {
                           { count }
                         )}`}
                         title={names || undefined}
-                        onPointerDown={(e) => {
-                          e.preventDefault();
-                          paintMode.current = mine ? 'remove' : 'add';
-                          applyPaint(key, paintMode.current);
-                        }}
-                        onPointerEnter={() => {
-                          if (paintMode.current) {
-                            applyPaint(key, paintMode.current);
-                          }
-                        }}
+                        disabled={readOnly}
+                        onPointerDown={
+                          readOnly
+                            ? undefined
+                            : (e) => {
+                                e.preventDefault();
+                                paintMode.current = mine ? 'remove' : 'add';
+                                applyPaint(key, paintMode.current);
+                              }
+                        }
+                        onPointerEnter={
+                          readOnly
+                            ? undefined
+                            : () => {
+                                if (paintMode.current) {
+                                  applyPaint(key, paintMode.current);
+                                }
+                              }
+                        }
                         className={`h-6 w-full rounded transition ${cellTone(
                           count,
                           data.threshold,
@@ -362,14 +377,16 @@ export default function TeamRhythmCard() {
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-3">
-        <button
-          type="button"
-          onClick={save}
-          disabled={!dirty || saving}
-          className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-semibold transition hover:bg-blue-500 disabled:opacity-40"
-        >
-          {saving ? t.saving : t.saveCta}
-        </button>
+        {!readOnly && (
+          <button
+            type="button"
+            onClick={save}
+            disabled={!dirty || saving}
+            className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-semibold transition hover:bg-blue-500 disabled:opacity-40"
+          >
+            {saving ? t.saving : t.saveCta}
+          </button>
+        )}
         <span className="text-xs text-gray-500">{data.referenceTimezone}</span>
       </div>
 
@@ -386,18 +403,20 @@ export default function TeamRhythmCard() {
             <p className="mt-1 text-sm text-emerald-200">
               {data.coreSlots.map(slotLabel).join(' · ')}
             </p>
-            {data.canAnnounce && data.suggestedSlots.length > 0 && (
-              <button
-                type="button"
-                onClick={() => void announce(data.suggestedSlots)}
-                disabled={announcing}
-                className="mt-3 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold transition hover:bg-emerald-500 disabled:opacity-40"
-              >
-                {format(t.announceCta, {
-                  count: data.suggestedSlots.length,
-                })}
-              </button>
-            )}
+            {!readOnly &&
+              data.canAnnounce &&
+              data.suggestedSlots.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => void announce(data.suggestedSlots)}
+                  disabled={announcing}
+                  className="mt-3 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold transition hover:bg-emerald-500 disabled:opacity-40"
+                >
+                  {format(t.announceCta, {
+                    count: data.suggestedSlots.length,
+                  })}
+                </button>
+              )}
           </>
         )}
       </div>

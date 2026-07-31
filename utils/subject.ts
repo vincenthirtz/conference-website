@@ -60,11 +60,13 @@ import {
 } from './tenant';
 import { logStaffAction } from './staffLogs';
 import type { StaffLogAction } from '@/types/staffLogs';
+import { SUBJECT_QUERY_PARAM } from './subjectParam';
 
 import { logger } from './logger';
 
-/** Query param carrying the inspected user id. */
-export const SUBJECT_QUERY_PARAM = 'as';
+// Re-exported so server code has a single import site; the constant itself
+// lives in `subjectParam` because the client imports it too.
+export { SUBJECT_QUERY_PARAM, withSubjectParam } from './subjectParam';
 
 /** uuid v1-v5 shape (Supabase auth issues v4, but stay lenient). */
 const UUID_RE =

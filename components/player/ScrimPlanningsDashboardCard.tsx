@@ -11,6 +11,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useTeamNames } from '@/hooks/useTeamNames';
+import { usePlayerArea } from '@/components/player/PlayerAreaContext';
 import { useT, format } from '@/lib/i18n/useT';
 import type { ScrimPlanningSummary, ScrimPlanningParty } from '@/types/admin';
 
@@ -36,6 +37,7 @@ export default function ScrimPlanningsDashboardCard({
   entries?: PlanningEntry[];
 }) {
   const t = useT('scrimPlanning');
+  const { withSubject } = usePlayerArea();
   const [fetchedEntries, setFetchedEntries] = useState<PlanningEntry[]>([]);
   const controlled = entriesProp !== undefined;
   const entries = controlled ? entriesProp : fetchedEntries;
@@ -46,7 +48,7 @@ export default function ScrimPlanningsDashboardCard({
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch('/api/teams/scrim-plannings', {
+        const res = await fetch(withSubject('/api/teams/scrim-plannings'), {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) return;
@@ -61,7 +63,7 @@ export default function ScrimPlanningsDashboardCard({
     return () => {
       cancelled = true;
     };
-  }, [token, controlled]);
+  }, [token, controlled, withSubject]);
 
   const teamNames = useTeamNames(
     entries.flatMap((e) => [e.planning.team1_id, e.planning.team2_id])

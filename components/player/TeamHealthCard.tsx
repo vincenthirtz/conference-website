@@ -18,6 +18,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { usePlayerArea } from '@/components/player/PlayerAreaContext';
 import { useT, format } from '@/lib/i18n/useT';
 import type { HealthCode, HealthSeverity } from '../../utils/teams/teamHealth';
 import type { TeamHealthResponse } from '../../pages/api/player/team-health';
@@ -48,19 +49,20 @@ const SEVERITY_TONE: Record<HealthSeverity, string> = {
 export default function TeamHealthCard() {
   const t = useT('teamHealth');
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
+  const { withSubject } = usePlayerArea();
   const [data, setData] = useState<TeamHealthResponse | null>(null);
 
   const load = useCallback(async () => {
     try {
       const payload = await adminFetchJson<TeamHealthResponse>(
-        '/api/player/team-health',
+        withSubject('/api/player/team-health'),
         { skipAuthRedirect: true }
       );
       setData(payload);
     } catch (err) {
       logger.error('[TeamHealthCard] load error', err);
     }
-  }, [adminFetchJson]);
+  }, [adminFetchJson, withSubject]);
 
   useEffect(() => {
     void load();

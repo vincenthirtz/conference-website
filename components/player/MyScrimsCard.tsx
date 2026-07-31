@@ -13,6 +13,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { usePlayerArea } from '@/components/player/PlayerAreaContext';
 import { useToast } from '@/components/Toast';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
@@ -35,6 +36,7 @@ export default function MyScrimsCard() {
   const t = useT('myScrims');
   const locale = useLocale();
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
+  const { withSubject, readOnly } = usePlayerArea();
   const { addToast } = useToast();
 
   const [data, setData] = useState<ScrimsPayload | null>(null);
@@ -46,14 +48,14 @@ export default function MyScrimsCard() {
   const load = useCallback(async () => {
     try {
       const payload = await adminFetchJson<ScrimsPayload>(
-        '/api/player/scrims',
+        withSubject('/api/player/scrims'),
         { skipAuthRedirect: true }
       );
       setData(payload);
     } catch (err) {
       logger.error('[MyScrimsCard] load error', err);
     }
-  }, [adminFetchJson]);
+  }, [adminFetchJson, withSubject]);
 
   useEffect(() => {
     void load();
@@ -162,15 +164,17 @@ export default function MyScrimsCard() {
                     </p>
                   )}
                 </div>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setOpenReport(openReport === scrim.id ? null : scrim.id)
-                  }
-                  className="rounded-xl bg-amber-500/90 px-4 py-2 text-xs font-semibold text-black transition hover:bg-amber-400"
-                >
-                  {scrim.myReport ? t.correctCta : t.reportCta}
-                </button>
+                {!readOnly && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setOpenReport(openReport === scrim.id ? null : scrim.id)
+                    }
+                    className="rounded-xl bg-amber-500/90 px-4 py-2 text-xs font-semibold text-black transition hover:bg-amber-400"
+                  >
+                    {scrim.myReport ? t.correctCta : t.reportCta}
+                  </button>
+                )}
               </div>
 
               {openReport === scrim.id && (

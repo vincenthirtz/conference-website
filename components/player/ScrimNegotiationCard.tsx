@@ -67,7 +67,8 @@ type Props = {
   /** Traductions du namespace `playerIndex`. */
   t: Tr;
   /** Callback STABLE : la carte ne remonte que la soumission. */
-  onAction: (
+  /** Absent ⇒ lecture seule : la négociation est lisible, pas actionnable. */
+  onAction?: (
     scrimId: string,
     action: ScrimAction,
     payload?: ScrimActionPayload
@@ -196,6 +197,7 @@ function ScrimNegotiationCardImpl({ scrim, busy, locale, t, onAction }: Props) {
                   value={slot}
                   checked={checked}
                   onChange={() => setSelectedSlot(slot)}
+                  disabled={!onAction}
                   className="accent-blue-500"
                 />
                 <span>{formatSlot(slot)}</span>
@@ -253,7 +255,7 @@ function ScrimNegotiationCardImpl({ scrim, busy, locale, t, onAction }: Props) {
             type="button"
             disabled={busy}
             onClick={() =>
-              onAction(scrim.id, 'counter', { slots: counterSlots })
+              onAction?.(scrim.id, 'counter', { slots: counterSlots })
             }
             className="mt-3 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-xs font-medium text-white"
           >
@@ -262,38 +264,42 @@ function ScrimNegotiationCardImpl({ scrim, busy, locale, t, onAction }: Props) {
         </div>
       )}
 
-      <div className="flex flex-wrap gap-2">
-        {!agreedSlot && (
-          <button
-            type="button"
-            disabled={busy || !selectedSlot}
-            onClick={() =>
-              onAction(scrim.id, 'accept', { slot: selectedSlot ?? undefined })
-            }
-            className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-medium text-white"
-          >
-            {t.acceptSlot}
-          </button>
-        )}
-        {!agreedSlot && (
+      {onAction && (
+        <div className="flex flex-wrap gap-2">
+          {!agreedSlot && (
+            <button
+              type="button"
+              disabled={busy || !selectedSlot}
+              onClick={() =>
+                onAction?.(scrim.id, 'accept', {
+                  slot: selectedSlot ?? undefined,
+                })
+              }
+              className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-medium text-white"
+            >
+              {t.acceptSlot}
+            </button>
+          )}
+          {!agreedSlot && (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => setCounterOpen((open) => !open)}
+              className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-50 text-xs"
+            >
+              {t.counterCta}
+            </button>
+          )}
           <button
             type="button"
             disabled={busy}
-            onClick={() => setCounterOpen((open) => !open)}
-            className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-50 text-xs"
+            onClick={() => onAction?.(scrim.id, 'reject')}
+            className="px-3 py-1.5 rounded-lg border border-red-500/30 text-red-200 hover:bg-red-500/10 disabled:opacity-50 text-xs ml-auto"
           >
-            {t.counterCta}
+            {t.rejectScrim}
           </button>
-        )}
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => onAction(scrim.id, 'reject')}
-          className="px-3 py-1.5 rounded-lg border border-red-500/30 text-red-200 hover:bg-red-500/10 disabled:opacity-50 text-xs ml-auto"
-        >
-          {t.rejectScrim}
-        </button>
-      </div>
+        </div>
+      )}
     </div>
   );
 }
