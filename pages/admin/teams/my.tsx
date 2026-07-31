@@ -10,7 +10,8 @@ import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import {
   BATTLE_TAG_REGEX,
   roleRequiresBattleTag,
-} from '@/utils/teams/addMember';
+  splitTeamMembers,
+} from '@/utils/teams/roleKind';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { withSubjectParam } from '@/utils/subjectParam';
 import { MemberRosterRow } from '@/components/admin/teams/my/MemberRosterRow';
@@ -734,9 +735,17 @@ function MyTeamPage({ staff }: StaffProps) {
   // de remplaçants à chaque frappe/tick (recherche joueur, formulaire, etc.).
   const members = useMemo(() => data?.members ?? [], [data?.members]);
   const membersCount = members.length;
+  // Joueuses vs encadrement (coach / manager) : même prédicat partagé que
+  // l'API et que /admin/teams/[id]/edit.
+  const { playingMembers, staffMembers } = useMemo(() => {
+    const { roster, subs, staff } = splitTeamMembers(members);
+    return { playingMembers: [...roster, ...subs], staffMembers: staff };
+  }, [members]);
+  // Le décompte de remplaçantes ne porte que sur les joueuses : un membre
+  // d'encadrement marqué remplaçant serait compté deux fois sinon.
   const subsCount = useMemo(
-    () => members.filter((m) => m.is_substitute).length,
-    [members]
+    () => playingMembers.filter((m) => m.is_substitute).length,
+    [playingMembers]
   );
 
   const renderMembers = () => {
@@ -764,30 +773,50 @@ function MyTeamPage({ staff }: StaffProps) {
 
     const swapMode = swapSourceId !== null;
 
+    const renderRow = (m: Member) => (
+      <MemberRosterRow
+        key={m.id}
+        member={m}
+        canEdit={!!canEdit}
+        membersCount={membersCount}
+        isEditingTag={editingBattleTagId === m.id}
+        battleTagDraft={editingBattleTagId === m.id ? battleTagDraft : ''}
+        busy={memberActionId === m.id}
+        swapMode={swapMode}
+        isSwapSource={swapSourceId === m.id}
+        onStartEditBattleTag={startEditBattleTag}
+        onBattleTagDraftChange={setBattleTagDraft}
+        onSaveBattleTag={saveBattleTag}
+        onCancelEditBattleTag={cancelEditBattleTag}
+        onToggleSubstitute={toggleSubstitute}
+        onStartSwap={startSwap}
+        onCancelSwap={cancelSwap}
+        onSwapWith={handleSwapWith}
+        onTransferCaptain={handleTransferCaptain}
+      />
+    );
+
+    // Encadrement à part : coach et manager ne sont pas des joueuses, les
+    // mélanger au roster gonflait l'effectif lu à l'œil. Même découpage que
+    // /admin/teams/[id]/edit.
+    if (staffMembers.length === 0) {
+      return <div className="space-y-2">{playingMembers.map(renderRow)}</div>;
+    }
+
     return (
-      <div className="space-y-2">
-        {members.map((m) => (
-          <MemberRosterRow
-            key={m.id}
-            member={m}
-            canEdit={!!canEdit}
-            membersCount={membersCount}
-            isEditingTag={editingBattleTagId === m.id}
-            battleTagDraft={editingBattleTagId === m.id ? battleTagDraft : ''}
-            busy={memberActionId === m.id}
-            swapMode={swapMode}
-            isSwapSource={swapSourceId === m.id}
-            onStartEditBattleTag={startEditBattleTag}
-            onBattleTagDraftChange={setBattleTagDraft}
-            onSaveBattleTag={saveBattleTag}
-            onCancelEditBattleTag={cancelEditBattleTag}
-            onToggleSubstitute={toggleSubstitute}
-            onStartSwap={startSwap}
-            onCancelSwap={cancelSwap}
-            onSwapWith={handleSwapWith}
-            onTransferCaptain={handleTransferCaptain}
-          />
-        ))}
+      <div className="space-y-5">
+        <div>
+          <h3 className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2">
+            {format(t.playersTitle, { count: playingMembers.length })}
+          </h3>
+          <div className="space-y-2">{playingMembers.map(renderRow)}</div>
+        </div>
+        <div data-testid="team-staff-section">
+          <h3 className="text-xs font-semibold text-sky-300/80 uppercase tracking-wide mb-2">
+            {format(t.staffTitle, { count: staffMembers.length })}
+          </h3>
+          <div className="space-y-2">{staffMembers.map(renderRow)}</div>
+        </div>
       </div>
     );
   };

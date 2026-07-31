@@ -42,6 +42,7 @@
 import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
 import { getManagedTeam } from '@/utils/teams/managementAccess';
+import { fetchAdminUserProfiles } from '@/utils/adminUserProfiles';
 
 /** Team détaillée, surensemble des deux sources (inclut captain_id + open_for_scrim). */
 export type ManagedTeamRow = {
@@ -62,6 +63,12 @@ export type ManagedTeamMemberRow = {
   id: string;
   user_id: string | null;
   role: string | null;
+  /**
+   * Pseudo affichable : colonne roster, à défaut nom du compte. Sans lui, les
+   * écrans retombaient sur l'UUID (cockpit staff) ou sur « Inconnu » (espace
+   * capitaine) — visible surtout pour l'encadrement, qui n'a pas de BattleTag.
+   */
+  display_name: string | null;
   battle_tag: string | null;
   battle_tag_verified_at: string | null;
   specialty: string | null;
@@ -146,7 +153,7 @@ export async function loadManagedTeamSlice(
       supabaseAdmin
         .from('team_members')
         .select(
-          'id, user_id, role, battle_tag, battle_tag_verified_at, specialty, is_substitute'
+          'id, user_id, role, display_name, battle_tag, battle_tag_verified_at, specialty, is_substitute'
         )
         .eq('team_id', teamId)
         .eq('tenant_id', tenantId)
@@ -189,15 +196,28 @@ export async function loadManagedTeamSlice(
       return { team, members: [], teamId, isCaptain, isManager };
     }
 
-    const members: ManagedTeamMemberRow[] = (
-      (membersRaw || []) as Record<string, unknown>[]
-    ).map((m) => {
+    const memberRows = (membersRaw || []) as Record<string, unknown>[];
+
+    // Repli de pseudo pour les lignes sans `display_name` en roster (typique de
+    // l'encadrement, ajouté sans BattleTag) : UN appel RPC batch. Best-effort,
+    // un échec laisse simplement le champ nul.
+    const missingNameIds = memberRows
+      .filter((m) => !m.display_name && m.user_id)
+      .map((m) => m.user_id as string);
+    const authProfiles = missingNameIds.length
+      ? await fetchAdminUserProfiles(missingNameIds)
+      : new Map();
+
+    const members: ManagedTeamMemberRow[] = memberRows.map((m) => {
       const memberUserId = (m.user_id as string | null) ?? null;
       const isMemberCaptain = captainId != null && captainId === memberUserId;
       return {
         id: m.id as string,
         user_id: memberUserId,
         role: (m.role as string | null) ?? null,
+        display_name:
+          (m.display_name as string | null) ??
+          (memberUserId ? (authProfiles.get(memberUserId)?.display_name ?? null) : null),
         battle_tag: (m.battle_tag as string | null) ?? null,
         battle_tag_verified_at:
           (m.battle_tag_verified_at as string | null) ?? null,

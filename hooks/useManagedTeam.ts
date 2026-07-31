@@ -41,6 +41,8 @@ export type ManagedTeamMember = TeamMemberLite & {
   user_id: string | null;
   battle_tag: string | null;
   specialty?: string | null;
+  /** Pseudo affichable — l'encadrement n'a pas forcément de BattleTag. */
+  display_name?: string | null;
 };
 
 export type ManagedTeamData = {

@@ -7,6 +7,10 @@ import { withStaffPage } from '@/utils/staff';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import Breadcrumb from '@/components/admin/Breadcrumb';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import {
+  isNonPlayingTeamRole,
+  splitTeamMembers,
+} from '@/utils/teams/roleKind';
 
 type StaffShape = {
   id: string;
@@ -38,6 +42,8 @@ type TeamMemberRow = {
   team_id: string;
   user_id: string;
   role: string;
+  /** Pseudo — l'encadrement n'a pas forcément de BattleTag. */
+  display_name?: string | null;
   battle_tag?: string | null;
   created_at: string;
   battle_tag_verified_at?: string | null;
@@ -71,6 +77,12 @@ function AdminTeamDetailPage({ staff }: StaffProps) {
   const [membersLoading, setMembersLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [membersError, setMembersError] = useState<string | null>(null);
+
+  // Joueuses d'abord, encadrement ensuite — cohérent avec /edit.
+  const orderedMembers = (() => {
+    const { roster, subs, staff } = splitTeamMembers(members);
+    return [...roster, ...subs, ...staff];
+  })();
 
   const fetchTeam = useCallback(async () => {
     setLoading(true);
@@ -257,9 +269,11 @@ function AdminTeamDetailPage({ staff }: StaffProps) {
               <p className="text-neutral-300 text-sm">{t.noMembers}</p>
             ) : (
               <div className="space-y-2">
-                {members.map((m) => {
+                {/* Encadrement en fin de liste : coach et manager ne sont pas
+                    des joueuses (même règle que l'écran d'édition). */}
+                {orderedMembers.map((m) => {
                   const isCaptain = team?.captain_id === m.user_id;
-                  const isManager = !isCaptain && m.role === 'manager';
+                  const isManager = !isCaptain && isNonPlayingTeamRole(m.role);
                   const containerClass = isCaptain
                     ? 'bg-amber-900/20 border border-amber-500/30'
                     : isManager
@@ -314,7 +328,10 @@ function AdminTeamDetailPage({ staff }: StaffProps) {
                         <div className="flex flex-col">
                           <div className="flex items-center gap-2">
                             <span className="font-semibold">
-                              {m.battle_tag || m.user_id.slice(0, 8) + '...'}
+                              {(isNonPlayingTeamRole(m.role)
+                                ? m.display_name || m.battle_tag
+                                : m.battle_tag || m.display_name) ||
+                                m.user_id.slice(0, 8) + '...'}
                             </span>
                             {isCaptain && (
                               <span className="px-1.5 py-0.5 rounded text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 font-semibold">

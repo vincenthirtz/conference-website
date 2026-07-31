@@ -9,7 +9,13 @@
 // d'invitation, changement de rôle ou de spécialité, promotion, exclusion,
 // acceptation/refus des demandes, section joueuses libres.
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import {
+  useEffect,
+  useState,
+  useCallback,
+  useRef,
+  Fragment,
+} from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -25,6 +31,10 @@ import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import { usePlayerArea } from '@/components/player/PlayerAreaContext';
 import Switch from '@/components/ui/Switch';
+import {
+  isNonPlayingTeamRole,
+  splitTeamMembers,
+} from '@/utils/teams/roleKind';
 
 type Specialty = 'tank' | 'dps' | 'support' | 'flex' | null;
 
@@ -32,6 +42,11 @@ type Member = {
   id: string;
   user_id: string | null;
   role: string | null;
+  /**
+   * Pseudo affichable. L'encadrement (coach / manager) n'a pas d'obligation de
+   * BattleTag : sans ce champ la ligne s'affichait « Inconnu ».
+   */
+  display_name?: string | null;
   battle_tag: string | null;
   is_substitute: boolean;
   is_captain?: boolean;
@@ -101,6 +116,17 @@ export default function PlayerManageTeamScreen() {
   const [requestsLoading, setRequestsLoading] = useState(true);
   const [requestsError, setRequestsError] = useState(false);
 
+  // Identité affichée d'un membre. Les joueuses sont identifiées par leur
+  // BattleTag ; l'encadrement (coach / manager) n'en a pas l'obligation, donc
+  // on retombe sur le pseudo avant « Inconnu ».
+  const memberLabel = useCallback(
+    (m: Pick<Member, 'battle_tag' | 'display_name' | 'role'>): string =>
+      (isNonPlayingTeamRole(m.role)
+        ? m.display_name || m.battle_tag
+        : m.battle_tag || m.display_name) || t.unknown,
+    [t]
+  );
+
   // Map a raw member/desired role to a localized label.
   const roleLabel = useCallback(
     (role: string | null | undefined): string => {
@@ -148,6 +174,11 @@ export default function PlayerManageTeamScreen() {
   // Une équipe créée « en tant que manager » naît sans capitaine : la capitaine
   // désignée doit d'abord accepter son invitation (ou être désignée ici).
   const hasCaptain = members.some((m) => m.is_captain);
+
+  // Joueuses d'abord, encadrement (coach / manager) ensuite sous son intitulé.
+  const { roster, subs, staff } = splitTeamMembers(members);
+  const orderedMembers = [...roster, ...subs, ...staff];
+  const firstStaffIndex = staff.length ? roster.length + subs.length : -1;
 
   // Sync local mirror whenever the shared team payload changes.
   useEffect(() => {
@@ -334,7 +365,7 @@ export default function PlayerManageTeamScreen() {
       });
       await reloadTeam();
       showSuccess(
-        format(t.promoteSuccess, { name: member.battle_tag || t.unknown })
+        format(t.promoteSuccess, { name: memberLabel(member) })
       );
     } catch (err: unknown) {
       setError((err as Error).message || t.promoteError);
@@ -349,7 +380,7 @@ export default function PlayerManageTeamScreen() {
       // Sans capitaine en poste, il ne s'agit pas d'un transfert mais d'une
       // désignation (cas du manager qui amorce le capitanat).
       title: format(hasCaptain ? t.promoteConfirm : t.designateConfirm, {
-        name: member.battle_tag || t.unknown,
+        name: memberLabel(member),
       }),
       subtitle: hasCaptain
         ? t.promoteDialogSubtitle
@@ -709,21 +740,28 @@ export default function PlayerManageTeamScreen() {
               </div>
             ) : null}
             <div className="space-y-3">
-              {members.map((m) => (
-                <div
-                  key={m.id}
-                  className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5"
-                >
+              {orderedMembers.map((m, idx) => (
+                <Fragment key={m.id}>
+                  {/* Encadrement en fin de liste, sous son propre intitulé :
+                      coach et manager ne sont pas des joueuses. */}
+                  {idx === firstStaffIndex && (
+                    <h3 className="pt-2 text-xs font-semibold uppercase tracking-wide text-sky-300/80">
+                      {format(t.staffTitle, {
+                        count: orderedMembers.length - firstStaffIndex,
+                      })}
+                    </h3>
+                  )}
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5">
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="w-8 h-8 rounded-full bg-black/60 border border-white/10 flex items-center justify-center flex-shrink-0">
                       <span className="text-xs text-gray-500">
-                        {(m.battle_tag || '??').slice(0, 2).toUpperCase()}
+                        {memberLabel(m).slice(0, 2).toUpperCase()}
                       </span>
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
                         <span className="font-medium text-sm truncate">
-                          {m.battle_tag || t.unknown}
+                          {memberLabel(m)}
                         </span>
                         {m.battle_tag && (
                           <CopyButton
@@ -769,7 +807,7 @@ export default function PlayerManageTeamScreen() {
                         <div className="flex flex-wrap items-center justify-end gap-2">
                           <span className="text-xs text-red-200 basis-full sm:basis-auto">
                             {format(t.removeConfirm, {
-                              name: m.battle_tag || t.unknown,
+                              name: memberLabel(m),
                             })}
                             <span className="block text-[11px] text-red-300/80 mt-0.5">
                               {t.removeConsequences}
@@ -860,7 +898,8 @@ export default function PlayerManageTeamScreen() {
                       )}
                     </div>
                   )}
-                </div>
+                  </div>
+                </Fragment>
               ))}
             </div>
           </div>

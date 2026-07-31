@@ -20,6 +20,8 @@ type MemberRow = {
   id: string;
   user_id: string | null;
   role: string | null;
+  /** Pseudo affichable — l'encadrement n'a pas forcément de BattleTag. */
+  display_name: string | null;
   battle_tag: string | null;
   battle_tag_verified_at: string | null;
   specialty: string | null;

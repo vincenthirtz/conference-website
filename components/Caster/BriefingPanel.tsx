@@ -14,6 +14,8 @@ type TeamMember = {
   battle_tag: string | null;
   role: string;
   is_substitute: boolean;
+  is_staff?: boolean;
+  display_name?: string | null;
   is_captain: boolean;
   is_manager: boolean;
 };
@@ -194,7 +196,9 @@ export default function BriefingPanel({ matchId, accessToken }: Props) {
                       className="flex items-center gap-2 text-[11px] text-gray-200"
                     >
                       <span className="font-mono truncate flex-1">
-                        {maskBattleTag(m.battle_tag) || '—'}
+                        {maskBattleTag(m.battle_tag) ||
+                          m.display_name ||
+                          '—'}
                       </span>
                       <span className="text-[11px] text-gray-300">
                         {m.role}

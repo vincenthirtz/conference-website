@@ -2,6 +2,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
+import { isNonPlayingTeamRole } from '@/utils/teams/roleKind';
 
 type TeamInfo = {
   id: string;
@@ -64,12 +65,15 @@ function computeRoster(members: TeamMemberLite[] | undefined): RosterCounts {
   for (const m of members ?? []) {
     counts.total += 1;
     const role = (m.role || '').toLowerCase();
-    if (m.is_substitute || role === 'substitute') {
-      counts.substitute += 1;
+    // Encadrement AVANT le test remplaçante : coach ET manager. Une manager
+    // tombait auparavant dans la répartition par spécialité, donc comptée
+    // comme joueuse (et invisible faute de spécialité renseignée).
+    if (isNonPlayingTeamRole(role)) {
+      counts.coach += 1;
       continue;
     }
-    if (role === 'coach') {
-      counts.coach += 1;
+    if (m.is_substitute || role === 'substitute') {
+      counts.substitute += 1;
       continue;
     }
     // In-game role lives in `specialty` ('tank'|'dps'|'support'|'flex'|null),

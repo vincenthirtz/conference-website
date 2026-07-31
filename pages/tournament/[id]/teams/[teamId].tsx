@@ -14,6 +14,10 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { findTournamentByIdOrSlug } from '@/utils/tournamentLookup';
 import { maskBattleTag } from '@/utils/battleTag';
+import {
+  splitTeamMembers,
+  isNonPlayingTeamRole,
+} from '@/utils/teams/roleKind';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import TournamentTabs from '@/components/tournament/TournamentTabs';
@@ -49,6 +53,8 @@ type Team = {
 type RosterMember = {
   id: string;
   battle_tag: string | null;
+  /** Pseudo — l'encadrement n'a pas forcément de BattleTag. */
+  display_name: string | null;
   role: string;
   is_substitute: boolean;
   is_captain: boolean;
@@ -153,7 +159,9 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
         .maybeSingle(),
       supabaseAdmin
         .from('team_members')
-        .select('id, battle_tag, role, is_substitute, user_id, created_at')
+        .select(
+          'id, battle_tag, display_name, role, is_substitute, user_id, created_at'
+        )
         .eq('tenant_id', tenantId)
         .eq('team_id', teamId)
         .order('is_substitute', { ascending: true })
@@ -246,6 +254,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
     id: m.id,
     // Anonymat public : on retire l'ID numérique du BattleTag (après le « # »).
     battle_tag: maskBattleTag(m.battle_tag ?? null),
+    display_name: m.display_name ?? null,
     role: m.role,
     is_substitute: !!m.is_substitute,
     is_captain: m.user_id === team.captain_id,
@@ -358,8 +367,12 @@ export default function TournamentTeamPage({
 }: Props) {
   const t = useT('tournamentTeamDetail');
   const locale = useLocale();
-  const titulaires = roster.filter((m) => !m.is_substitute);
-  const remplacants = roster.filter((m) => m.is_substitute);
+  // Coach et manager hors roster jouant : ils ont leur propre bloc.
+  const {
+    roster: titulaires,
+    subs: remplacants,
+    staff: encadrement,
+  } = splitTeamMembers(roster);
   const winrate = stats.played > 0 ? (stats.wins / stats.played) * 100 : 0;
   const tournamentPath = `/tournament/${tournament.slug || tournament.id}`;
   const isCompleted =
@@ -460,9 +473,11 @@ export default function TournamentTeamPage({
               {format(t.rosterHeading, { count: roster.length })}
             </h2>
 
-            {titulaires.length === 0 && remplacants.length === 0 && (
-              <p className="text-sm text-neutral-500">{t.rosterEmpty}</p>
-            )}
+            {titulaires.length === 0 &&
+              remplacants.length === 0 &&
+              encadrement.length === 0 && (
+                <p className="text-sm text-neutral-500">{t.rosterEmpty}</p>
+              )}
 
             {titulaires.length > 0 && (
               <>
@@ -482,8 +497,21 @@ export default function TournamentTeamPage({
                 <p className="text-[10px] uppercase tracking-widest text-neutral-500 mb-2">
                   {t.substitutes}
                 </p>
-                <ul className="space-y-1">
+                <ul className="space-y-1 mb-4">
                   {remplacants.map((m) => (
+                    <RosterRow key={m.id} member={m} />
+                  ))}
+                </ul>
+              </>
+            )}
+
+            {encadrement.length > 0 && (
+              <>
+                <p className="text-[10px] uppercase tracking-widest text-neutral-500 mb-2">
+                  {t.teamStaff}
+                </p>
+                <ul className="space-y-1">
+                  {encadrement.map((m) => (
                     <RosterRow key={m.id} member={m} />
                   ))}
                 </ul>
@@ -584,7 +612,9 @@ function RosterRow({ member }: { member: RosterMember }) {
     <li className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg bg-white/5">
       <div className="flex items-center gap-3 min-w-0">
         <span className="text-sm font-medium truncate">
-          {member.battle_tag || t.unknownMember}
+          {(isNonPlayingTeamRole(member.role)
+            ? member.display_name || member.battle_tag
+            : member.battle_tag || member.display_name) || t.unknownMember}
         </span>
         {member.is_captain && (
           <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold border bg-yellow-500/20 text-yellow-300 border-yellow-500/40">

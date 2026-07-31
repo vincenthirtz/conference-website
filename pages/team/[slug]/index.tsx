@@ -15,6 +15,7 @@ import {
   type TeamReliability,
 } from '@/utils/teams/reliability';
 import { maskBattleTag } from '@/utils/battleTag';
+import { splitTeamMembers } from '@/utils/teams/roleKind';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import {
@@ -1209,8 +1210,13 @@ export default function TeamPage({
             {/* Members */}
             <section className="bg-black/60 border border-white/5 rounded-2xl p-5">
               {(() => {
-                const rosterMembers = members.filter((m) => !m.is_substitute);
-                const subMembers = members.filter((m) => m.is_substitute);
+                // Coach et manager ne sont pas des joueuses : ils ont leur
+                // propre bloc et ne gonflent pas le décompte du roster.
+                const {
+                  roster: rosterMembers,
+                  subs: subMembers,
+                  staff: staffMembers,
+                } = splitTeamMembers(members);
 
                 return (
                   <>
@@ -1261,6 +1267,28 @@ export default function TeamPage({
                               member={member}
                               accent={accent}
                               substitute
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {staffMembers.length > 0 && (
+                      <div className="mt-5 pt-4 border-t border-white/5">
+                        <div className="flex items-center justify-between mb-3">
+                          <p className="text-xs uppercase tracking-wide text-gray-500">
+                            {t.staffLabel}
+                          </p>
+                          <span className="text-xs text-gray-600">
+                            {staffMembers.length}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {staffMembers.map((member) => (
+                            <MemberCard
+                              key={member.id}
+                              member={member}
+                              accent={accent}
                             />
                           ))}
                         </div>

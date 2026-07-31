@@ -21,6 +21,8 @@ type Member = {
   battle_tag: string | null;
   role: string;
   is_substitute: boolean;
+  is_staff?: boolean;
+  display_name?: string | null;
   is_captain: boolean;
   is_manager: boolean;
 };
@@ -756,7 +758,9 @@ function RosterColumn({ team }: { team: Team | null }) {
                       : 'text-neutral-200'
                 }`}
               >
-                {maskBattleTag(m.battle_tag) || `(${m.id.slice(0, 6)})`}
+                {maskBattleTag(m.battle_tag) ||
+                  m.display_name ||
+                  `(${m.id.slice(0, 6)})`}
               </span>
               {m.is_substitute && (
                 <span className="text-[9px] uppercase text-neutral-500 tracking-widest">

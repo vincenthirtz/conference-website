@@ -23,6 +23,7 @@
 // du nom complet ou du short_name d'une des 2 equipes.
 
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { isNonPlayingTeamRole } from '@/utils/teams/roleKind';
 import slugify from 'slugify';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
@@ -40,6 +41,10 @@ type TeamMember = {
   is_substitute: boolean;
   is_captain: boolean;
   is_manager: boolean;
+  /** Encadrement (coach / manager) : hors roster jouant. */
+  is_staff: boolean;
+  /** Pseudo — l'encadrement n'a pas forcément de BattleTag. */
+  display_name: string | null;
 };
 
 type TeamRaw = {
@@ -130,7 +135,9 @@ async function handler(
   if (teamIds.length > 0) {
     const { data: members } = await admin
       .from('team_members')
-      .select('id, team_id, user_id, role, battle_tag, is_substitute')
+      .select(
+        'id, team_id, user_id, role, battle_tag, display_name, is_substitute'
+      )
       .eq('tenant_id', ctx.tenantId)
       .in('team_id', teamIds);
 
@@ -144,13 +151,18 @@ async function handler(
           (m.team_id === match.team1_id && team1?.captain_id === m.user_id) ||
           (m.team_id === match.team2_id && team2?.captain_id === m.user_id),
         is_manager: m.role === 'manager',
+        is_staff: isNonPlayingTeamRole(m.role as string | null),
+        display_name: (m.display_name as string | null) ?? null,
       };
       if (m.team_id === match.team1_id) team1Members.push(enriched);
       else if (m.team_id === match.team2_id) team2Members.push(enriched);
     }
     const sortMembers = (a: TeamMember, b: TeamMember) => {
       if (a.is_captain !== b.is_captain) return a.is_captain ? -1 : 1;
-      if (a.is_manager !== b.is_manager) return a.is_manager ? -1 : 1;
+      // Encadrement en DERNIER : il précédait les joueuses, ce qui le mettait
+      // en tête d'un roster de diffusion — et le tronquait (BriefingPanel
+      // n'affiche que les 8 premières lignes).
+      if (a.is_staff !== b.is_staff) return a.is_staff ? 1 : -1;
       if (a.is_substitute !== b.is_substitute) return a.is_substitute ? 1 : -1;
       return (a.battle_tag || '').localeCompare(b.battle_tag || '');
     };

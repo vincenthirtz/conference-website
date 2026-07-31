@@ -20,7 +20,18 @@ import {
  * BattleTag
  * ---------------------------------------------------------*/
 
-export const BATTLE_TAG_REGEX = /^[A-Za-z0-9]{2,}#[0-9]{3,6}$/;
+// Prédicats purs : ils vivent dans `roleKind` pour que les composants React
+// puissent les importer sans embarquer supabaseAdmin. Ré-exportés ici pour ne
+// pas casser les ~10 imports serveur existants.
+export {
+  BATTLE_TAG_REGEX,
+  NON_PLAYING_TEAM_ROLES,
+  isNonPlayingTeamRole,
+  roleRequiresBattleTag,
+  splitTeamMembers,
+} from './roleKind';
+import { BATTLE_TAG_REGEX, roleRequiresBattleTag } from './roleKind';
+
 export const BATTLE_TAG_FORMAT_HINT =
   'BattleTag required (format Name#0000, alphanumeric + # + 3 to 6 digits)';
 
@@ -34,27 +45,6 @@ export function validateBattleTag(tag: string | null | undefined): string {
     throw new Error(BATTLE_TAG_FORMAT_HINT);
   }
   return trimmed;
-}
-
-/**
- * Rôles d'encadrement : ils appartiennent au staff de l'équipe, pas au roster
- * jouant. Même notion que l'exclusion du `min_players` à l'inscription
- * (cf. pages/api/teams/create-with-member.ts) — un coach ou une manager n'a
- * pas forcément de compte Overwatch, lui imposer un BattleTag bloquait un
- * ajout parfaitement légitime.
- */
-export const NON_PLAYING_TEAM_ROLES = ['coach', 'manager'] as const;
-
-export function isNonPlayingTeamRole(role: string | null | undefined): boolean {
-  const normalized = (role ?? '').trim().toLowerCase();
-  return (NON_PLAYING_TEAM_ROLES as readonly string[]).includes(normalized);
-}
-
-/** Un BattleTag n'est exigé que des rôles qui jouent. */
-export function roleRequiresBattleTag(
-  role: string | null | undefined
-): boolean {
-  return !isNonPlayingTeamRole(role);
 }
 
 /**
