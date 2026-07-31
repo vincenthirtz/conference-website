@@ -18,10 +18,7 @@
 
 import { supabaseAdmin } from './supabase';
 import { logger } from './logger';
-import {
-  loadTeamRolesFromSupabase,
-  privilegedRoleValues,
-} from './teamRoles';
+import { loadTeamRolesFromSupabase, privilegedRoleValues } from './teamRoles';
 
 export type OutboxRow = {
   id: number;
@@ -234,6 +231,41 @@ export async function loadCaptainManagerUserIdsForTeams(
 }
 
 /**
+ * Renvoie les auth_user_id de TOUS les membres d'une équipe.
+ *
+ * À distinguer de `loadCaptainManagerUserIdsForTeams`, qui ne vise que les
+ * décideurs : le récap hebdomadaire (N7) s'adresse au roster entier, parce
+ * qu'une équipe dont seule la capitaine reçoit le bilan est une équipe dont
+ * seule la capitaine revient.
+ */
+export async function loadTeamMemberUserIds(
+  teamIds: string[],
+  tenantId: string
+): Promise<string[]> {
+  const ids = teamIds.filter(
+    (v): v is string => typeof v === 'string' && v.length > 0
+  );
+  if (ids.length === 0) return [];
+
+  const { data, error } = await supabaseAdmin
+    .from('team_members')
+    .select('user_id')
+    .in('team_id', ids)
+    .eq('tenant_id', tenantId);
+
+  if (error) {
+    logger.error('[notificationAudience] loadTeamMemberUserIds error', error);
+    return [];
+  }
+
+  const userIds = new Set<string>();
+  for (const r of (data ?? []) as Array<{ user_id: string | null }>) {
+    if (r.user_id) userIds.add(r.user_id);
+  }
+  return Array.from(userIds);
+}
+
+/**
  * Renvoie les auth_user_id des casters assignés à un match (cast_assignments
  * → cast_members actifs). Audience réduite pour les transitions de segment
  * match→live.
@@ -246,7 +278,10 @@ export async function loadCasterUserIdsForMatch(
     .select('cast_member_id')
     .eq('match_id', matchId);
   if (assignErr) {
-    logger.error('[notificationAudience] cast_assignments load error', assignErr);
+    logger.error(
+      '[notificationAudience] cast_assignments load error',
+      assignErr
+    );
     return [];
   }
   const memberIds = ((assignments ?? []) as Array<{ cast_member_id: string }>)

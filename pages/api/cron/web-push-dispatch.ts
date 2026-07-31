@@ -67,6 +67,7 @@ import {
   loadCandidateEvents as loadCandidateEventsShared,
   loadStaffUserIdsForTenant,
   loadPlayerUserIdsForMatch,
+  loadTeamMemberUserIds,
   loadCasterUserIdsForMatch,
   loadCaptainManagerUserIdsForTeams,
   loadOptedOutUserIds,
@@ -526,7 +527,13 @@ export async function runWebPushDispatcher(): Promise<TickCounters> {
     // transitions de segment match→live, on cible les casters assignés au
     // match uniquement (audience réduite, cf. loadCasterUserIdsForMatch).
     let staffUserIds: string[];
-    if (event.event_name === 'event_segment.transitioned') {
+    if (event.event_name === 'team.weekly.recap') {
+      // N7 : un récap d'équipe n'est PAS une information de staff. Sans cette
+      // exception, chaque staff recevrait le bilan hebdomadaire de toutes les
+      // équipes du tenant — le meilleur moyen de faire couper les
+      // notifications à tout le monde.
+      staffUserIds = [];
+    } else if (event.event_name === 'event_segment.transitioned') {
       const data = (event.payload ?? {}) as Record<string, unknown>;
       const inner =
         data.data && typeof data.data === 'object'
@@ -572,6 +579,19 @@ export async function runWebPushDispatcher(): Promise<TickCounters> {
             : null;
       if (matchId) {
         playerUserIds = await loadPlayerUserIdsForMatch(matchId);
+      }
+    } else if (event.event_name === 'team.weekly.recap') {
+      // Audience = TOUT le roster (pas seulement les décideurs) : une équipe
+      // dont seule la capitaine reçoit le bilan est une équipe dont seule la
+      // capitaine revient.
+      const data = (event.payload ?? {}) as Record<string, unknown>;
+      const inner =
+        data.data && typeof data.data === 'object'
+          ? (data.data as Record<string, unknown>)
+          : data;
+      const teamId = typeof inner.teamId === 'string' ? inner.teamId : null;
+      if (teamId) {
+        playerUserIds = await loadTeamMemberUserIds([teamId], event.tenant_id);
       }
     } else if (event.event_name === 'scrim.search.matched') {
       // R6 : l'émetteur a déjà résolu les équipes compatibles

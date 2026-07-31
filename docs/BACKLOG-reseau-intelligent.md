@@ -212,15 +212,29 @@ Le rating est un chiffre, pas un récit — donc il ne motive personne.
 
 ### P2 — Récurrence : le déclencheur de retour
 
-#### N7 · Récap hebdomadaire d'équipe
+#### N7 · Récap hebdomadaire d'équipe — ✅ LIVRÉ
 
 - **Impact / Effort** : 🟥 / **M**
 - **Problème** : M4 — rien ne repart vers l'équipe.
 - **Proposition** : un digest hebdo (canal au choix, préférences déjà livrées) : scrims joués et
   résultats, évolution du rating, propositions en attente, créneaux du noyau non exploités, membres
   dont l'identité manque. Branché sur l'outbox et le cron existants.
-- **Acceptation** : opt-out par membre ; jamais envoyé si la semaine est vide ; une seule
-  notification par équipe et par semaine.
+- **Résultat (2026-07-31)** : `utils/teams/weeklyRecap.ts` (pur) + `/api/cron/team-weekly-recap`
+  (Netlify, lundi 09:00 UTC) + event `team.weekly.recap` au catalogue push/email. Le cron ne
+  notifie personne : il émet **un event par équipe** dans l'outbox et les dispatchers existants le
+  livrent selon les préférences de chaque membre — une seule mécanique de livraison pour tout le
+  site.
+- **La règle qui protège le canal** : les constats **chroniques** (comptes non liés, créneau
+  inexploité, débriefs en retard) n'**ouvrent jamais** un récap. Les traiter comme un motif d'envoi
+  ferait partir le même message toutes les semaines à une équipe dormante — c'est-à-dire du spam,
+  et la fin de la crédibilité du canal. Ils ne font que s'**ajouter** à un récap qui avait déjà une
+  raison d'exister : un affrontement joué, une variation de niveau, une proposition reçue.
+- **Deux autres garde-fous** : dédup par lecture unique de l'outbox sur la fenêtre (le cron se
+  rejoue sans dupliquer, et s'abstient si la lecture de dédup échoue — un récap manquant se
+  rattrape, un doublon non) ; et **staff exclu** dans les deux dispatchers, sinon chaque staff
+  recevrait le bilan de toutes les équipes du tenant.
+- **Acceptation** : opt-out par membre (toggle `team.weekly.recap` dans les préférences) ; jamais
+  envoyé si la semaine est vide ; une seule notification par équipe et par semaine.
 
 #### N8 · Progression et jalons
 

@@ -36,6 +36,7 @@ import {
   loadPlayerUserIdsForMatch,
   loadCasterUserIdsForMatch,
   loadCaptainManagerUserIdsForTeams,
+  loadTeamMemberUserIds,
   loadEmailOptedInUserIds,
   type OutboxRow,
 } from './notificationAudience';
@@ -121,6 +122,21 @@ async function resolveEmailAudience(event: OutboxRow): Promise<string[]> {
         : null;
 
   const audience = new Set<string>();
+
+  // N7 : le récap hebdomadaire d'une équipe s'adresse à SON roster, et à lui
+  // seul. Il sort donc du fanout habituel — y compris de l'ajout du staff, qui
+  // recevrait sinon le bilan de toutes les équipes du tenant.
+  if (event.event_name === 'team.weekly.recap') {
+    const teamId = typeof inner.teamId === 'string' ? inner.teamId : null;
+    if (!teamId) return [];
+    const roster = await loadTeamMemberUserIds([teamId], event.tenant_id);
+    if (roster.length === 0) return [];
+    const optedInRoster = await loadEmailOptedInUserIds(
+      roster,
+      event.event_name
+    );
+    return roster.filter((u) => optedInRoster.has(u));
+  }
 
   // Staff du tenant (+ pole admins) reçoivent tous les events email-éligibles.
   for (const u of await loadStaffUserIdsForTenant(event.tenant_id)) {
@@ -239,9 +255,18 @@ export async function runEmailDispatcher(): Promise<EmailDispatcherResult> {
   _emailDispatcherInFlight = true;
 
   try {
-    const windowHours = envNumber('EMAIL_DIGEST_WINDOW_HOURS', DEFAULT_WINDOW_HOURS);
-    const batchLimit = envNumber('EMAIL_DIGEST_BATCH_LIMIT', DEFAULT_BATCH_LIMIT);
-    const maxPerRun = envNumber('EMAIL_DIGEST_MAX_PER_RUN', DEFAULT_MAX_PER_RUN);
+    const windowHours = envNumber(
+      'EMAIL_DIGEST_WINDOW_HOURS',
+      DEFAULT_WINDOW_HOURS
+    );
+    const batchLimit = envNumber(
+      'EMAIL_DIGEST_BATCH_LIMIT',
+      DEFAULT_BATCH_LIMIT
+    );
+    const maxPerRun = envNumber(
+      'EMAIL_DIGEST_MAX_PER_RUN',
+      DEFAULT_MAX_PER_RUN
+    );
 
     const events = await loadCandidateEvents(
       EMAIL_EVENT_TYPES,

@@ -49,6 +49,10 @@ export const WEB_PUSH_EVENT_TYPES = [
   // R6 : une équipe annonce des créneaux qui recoupent les nôtres. Audience =
   // capitaines/managers des équipes ciblées (payload.targetTeamIds).
   'scrim.search.matched',
+  // N7 : récap hebdomadaire. Audience = TOUT le roster de l'équipe visée
+  // (payload.teamId), staff exclu — un récap d'équipe n'est pas une info de
+  // staff. Opt-out par membre via le modèle habituel.
+  'team.weekly.recap',
 ] as const;
 
 export type WebPushEventType = (typeof WEB_PUSH_EVENT_TYPES)[number];
@@ -98,6 +102,10 @@ export function playerUrlForEvent(
     case 'scrim.search.matched':
       // L'annuaire, où l'annonce et le bouton « proposer un scrim » vivent.
       return '/player/teams';
+    case 'team.weekly.recap':
+      // Le tableau de bord : c'est là que vivent le rythme, la mémoire et la
+      // santé d'équipe, c'est-à-dire tout ce dont le récap parle.
+      return '/player';
     case 'news.published':
       // V1 : pas de fanout player news (audience trop large), géré V2.
       return null;
@@ -139,6 +147,7 @@ export const EMAIL_EVENT_TYPES = [
   'scrim.planning.reminder',
   'scrim.planning.validated',
   'news.published',
+  'team.weekly.recap',
 ] as const;
 
 export type EmailEventType = (typeof EMAIL_EVENT_TYPES)[number];
@@ -173,6 +182,10 @@ export const PLAYER_PUSH_EVENT_TYPES = [
   'scrim.planning.validated',
   'team.forfeit',
   'news.published',
+  // N7 : le récap hebdo s'adresse au roster, il doit donc être désactivable
+  // par chaque membre depuis ses préférences — sinon « opt-out par membre »
+  // n'existe que sur le papier.
+  'team.weekly.recap',
 ] as const satisfies readonly WebPushEventType[];
 
 export type PlayerPushEventType = (typeof PLAYER_PUSH_EVENT_TYPES)[number];
@@ -546,6 +559,19 @@ export function renderWebPushPayload(
         actions: [{ action: 'view', title: 'Voir l’annuaire' }],
       };
     }
+    case 'team.weekly.recap': {
+      const data = unwrap(payload);
+      // Le résumé est composé par le producteur (utils/teams/weeklyRecap.ts) :
+      // lui seul sait ce qu'il a mesuré, et il n'écrit que ce qu'il sait.
+      const summary = str(data, 'summary');
+      const teamName = str(data, 'teamName');
+      return {
+        title: teamName ? `📊 Votre semaine — ${teamName}` : '📊 Votre semaine',
+        body: summary || 'Le bilan de la semaine de votre équipe est prêt.',
+        url: playerUrlForEvent(eventName, payload) ?? '/player',
+        actions: [{ action: 'view', title: 'Voir le tableau de bord' }],
+      };
+    }
     case 'scrim.planning.opened': {
       const data = unwrap(payload);
       const url = playerUrlForEvent(eventName, payload) ?? '/player';
@@ -691,6 +717,15 @@ export function renderEmailPayload(
         body: title
           ? `« ${title} » est en ligne.`
           : 'Une actualité est en ligne.',
+        url,
+      };
+    }
+    case 'team.weekly.recap': {
+      const summary = str(data, 'summary');
+      const teamName = str(data, 'teamName');
+      return {
+        heading: teamName ? `Votre semaine — ${teamName}` : 'Votre semaine',
+        body: summary || 'Le bilan de la semaine de votre équipe est prêt.',
         url,
       };
     }

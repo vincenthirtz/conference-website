@@ -811,7 +811,8 @@
       "scrim.invitation": "Invitation à un scrim",
       "scrim.confirmed": "Scrim confirmé",
       "team.forfeit": "Forfait d’équipe",
-      "news.published": "Nouvelle actualité"
+      "news.published": "Nouvelle actualité",
+      "team.weekly.recap": "Récap hebdomadaire d'équipe"
     },
     "eventDescriptions": {
       "match.starting": "Quand un de tes matchs va bientôt commencer.",
@@ -821,7 +822,8 @@
       "scrim.invitation": "Quand ton équipe reçoit une invitation à un scrim.",
       "scrim.confirmed": "Quand un scrim est confirmé.",
       "team.forfeit": "Quand un forfait concerne ton équipe.",
-      "news.published": "Quand une actualité est publiée."
+      "news.published": "Quand une actualité est publiée.",
+      "team.weekly.recap": "Le bilan de la semaine de ton équipe. Envoyé seulement s'il s'est passé quelque chose."
     },
     "loadError": "Erreur lors du chargement de tes notifications.",
     "prefSaved": "Préférence enregistrée.",

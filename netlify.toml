@@ -131,6 +131,14 @@
 [functions."team-roster-reminders-cron"]
   schedule = "0 9 * * *"
 
+# N7 — récap hebdomadaire d'équipe. Lundi 09:00 UTC : la semaine écoulée est
+# close et la suivante se prépare. N'émet `team.weekly.recap` que pour les
+# équipes dont la semaine a quelque chose à raconter (jamais pour une équipe
+# dormante), au plus une fois par équipe et par semaine. La livraison passe par
+# les dispatchers push/email existants. Requiert CRON_SECRET + URL.
+[functions."team-weekly-recap-cron"]
+  schedule = "0 9 * * 1"
+
 [[headers]]
   for = "/*"
   [headers.values]

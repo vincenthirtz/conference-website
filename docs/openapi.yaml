@@ -23374,6 +23374,66 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '500':
           $ref: '#/components/responses/ServerError'
+  /api/cron/team-weekly-recap:
+    get:
+      tags:
+        - cron
+      summary: Recap hebdomadaire d'equipe — emet team.weekly.recap par equipe.
+      operationId: cronTeamWeeklyRecapGet
+      description: |
+        Netlify scheduled function (lundi 09:00 UTC). Ne notifie PERSONNE
+        directement : emet un event `team.weekly.recap` par equipe dans
+        `bot_event_outbox`, que les dispatchers existants livrent selon les
+        preferences de chaque membre (push opt-out, email opt-in).
+
+        Trois garde-fous :
+          - RIEN si la semaine est vide. Les constats CHRONIQUES (comptes non
+            lies, creneau inexploite, debriefs en retard) n'ouvrent jamais un
+            recap : ils ne font que s'ajouter a un recap qui avait deja une
+            raison d'exister. Sans cette regle, une equipe dormante recevrait le
+            meme message toutes les semaines.
+          - UNE SEULE FOIS par equipe et par semaine (relecture de l'outbox sur
+            la fenetre). Le cron peut se rejouer sans dupliquer ; en cas
+            d'erreur de lecture de dedup, il s'abstient d'emettre.
+          - AUCUN envoi au staff : l'audience est le roster de l'equipe.
+
+        Query : `?tenant=<uuid>` cible un tenant (defaut : tenant par defaut).
+
+        Auth : `Authorization: Bearer <CRON_SECRET>` OU `?secret=<CRON_SECRET>`.
+      security:
+        - CronSecret: []
+      responses:
+        '200':
+          description: '`{ teams, emitted, empty, alreadySent, failed }`.'
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      tags:
+        - cron
+      summary: Recap hebdomadaire d'equipe — emet team.weekly.recap par equipe.
+      operationId: cronTeamWeeklyRecapPost
+      description: Same as `GET /api/cron/team-weekly-recap`.
+      security:
+        - CronSecret: []
+      responses:
+        '200':
+          description: '`{ teams, emitted, empty, alreadySent, failed }`.'
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
   /api/cron/webhook-dispatch:
     get:
       tags:

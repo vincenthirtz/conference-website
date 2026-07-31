@@ -67,7 +67,11 @@ export type BotEventName =
   | 'task.assigned'
   | 'task.board_changed'
   | 'task.due_soon'
-  | 'task.digest';
+  | 'task.digest'
+  // N7 — récap hebdomadaire d'une équipe. Émis par cron, au plus une fois par
+  // équipe et par semaine, et UNIQUEMENT si la semaine a quelque chose à
+  // raconter (cf. utils/teams/weeklyRecap.ts).
+  | 'team.weekly.recap';
 
 export type BotEventPayload = Record<string, unknown>;
 
