@@ -105,9 +105,13 @@ async function findMyTeam(
   userId: string,
   tenantId: string
 ): Promise<{ id: string; name: string } | null> {
-  const { data, error } = await supabaseAdmin
+  // Deux lectures plates plutôt qu'un embed PostgREST : la forme d'un embed
+  // (objet ou tableau) dépend de la cardinalité déduite de la FK, ce qui se
+  // prête mal à un cast, et l'appartenance à une équipe est le point d'entrée
+  // de toute la route — mieux vaut qu'il soit trivialement lisible.
+  const { data: member, error } = await supabaseAdmin
     .from('team_members')
-    .select('team_id, team:teams!team_id(id, name, is_active, deleted_at)')
+    .select('team_id')
     .eq('user_id', userId)
     .eq('tenant_id', tenantId)
     .maybeSingle();
@@ -116,18 +120,28 @@ async function findMyTeam(
     logger.error('[team-rhythm] member lookup error', error);
     return null;
   }
-  const team = (
-    data as {
-      team?: {
-        id: string;
-        name: string;
-        is_active: boolean;
-        deleted_at: string | null;
-      } | null;
-    } | null
-  )?.team;
-  if (!team || team.deleted_at || team.is_active === false) return null;
-  return { id: team.id, name: team.name };
+  const teamId = (member as { team_id?: string | null } | null)?.team_id;
+  if (!teamId) return null;
+
+  const { data: team, error: teamErr } = await supabaseAdmin
+    .from('teams')
+    .select('id, name, is_active, deleted_at')
+    .eq('id', teamId)
+    .eq('tenant_id', tenantId)
+    .maybeSingle();
+
+  if (teamErr) {
+    logger.error('[team-rhythm] team lookup error', teamErr);
+    return null;
+  }
+  const row = team as {
+    id: string;
+    name: string;
+    is_active: boolean | null;
+    deleted_at: string | null;
+  } | null;
+  if (!row || row.deleted_at || row.is_active === false) return null;
+  return { id: row.id, name: row.name };
 }
 
 export default withAuthRoute(async function handler(
