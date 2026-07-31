@@ -481,7 +481,11 @@ export default function TournamentTeamPage({
         <section className="mb-8">
           <div className="bg-black/60 border border-white/5 rounded-2xl p-4">
             <h2 className="text-xs uppercase tracking-[0.16em] text-gray-400 mb-3">
-              {format(t.rosterHeading, { count: roster.length })}
+              {/* Effectif = joueuses seulement : l'encadrement a son bloc et
+                  ne gonfle pas le décompte. */}
+              {format(t.rosterHeading, {
+                count: titulaires.length + remplacants.length,
+              })}
             </h2>
 
             {titulaires.length === 0 &&

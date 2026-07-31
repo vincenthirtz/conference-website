@@ -179,6 +179,7 @@ export default function PlayerManageTeamScreen() {
   const { roster, subs, staff } = splitTeamMembers(members);
   const orderedMembers = [...roster, ...subs, ...staff];
   const firstStaffIndex = staff.length ? roster.length + subs.length : -1;
+  const playingCount = roster.length + subs.length;
 
   // Sync local mirror whenever the shared team payload changes.
   useEffect(() => {
@@ -691,8 +692,10 @@ export default function PlayerManageTeamScreen() {
           {/* Roster */}
           <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6 mb-6">
             <h2 className="text-lg font-semibold mb-4">
-              {format(members.length > 1 ? t.roster_other : t.roster_one, {
-                count: members.length,
+              {/* « Roster » = joueuses : l'encadrement a son propre bloc et ne
+                  compte pas dans l'effectif. */}
+              {format(playingCount > 1 ? t.roster_other : t.roster_one, {
+                count: playingCount,
               })}
             </h2>
             {/* Équipe créée par un manager : tant qu'aucune joueuse n'a accepté
