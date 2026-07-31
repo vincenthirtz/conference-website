@@ -3457,6 +3457,77 @@ components:
             format: date-time
         canAnnounce:
           type: boolean
+    PlayerProgression:
+      type: object
+      description: >-
+        Niveau de l'appelante dans le temps + jalons de son equipe. Toutes les
+        valeurs sont derivees ; rien n'est declaratif.
+      required:
+        - series
+        - milestones
+      properties:
+        teamId:
+          type: string
+          format: uuid
+          nullable: true
+        teamName:
+          type: string
+          nullable: true
+        rating:
+          type: integer
+          nullable: true
+          description: Niveau courant. `null` si jamais notee.
+        peak:
+          type: integer
+          nullable: true
+          description: Meilleur niveau atteint, courant compris.
+        delta:
+          type: integer
+          nullable: true
+          description: >-
+            Variation entre le premier et le dernier point de la serie
+            affichee. `null` sous deux mesures — `0` signifierait « n'a pas
+            bouge », ce qui n'est pas la meme information.
+        ratedGames:
+          type: integer
+          description: Affrontements notes qui alimentent la serie.
+        series:
+          type: array
+          description: Serie chronologique plafonnee (12 points max).
+          items:
+            type: object
+            properties:
+              at:
+                type: string
+                format: date-time
+              rating:
+                type: number
+        milestones:
+          type: array
+          description: >-
+            Faits dates ou chiffres, dans l'ordre du recit. `streakType` n'est
+            renseigne que pour le code `streak`.
+          items:
+            type: object
+            required:
+              - code
+            properties:
+              code:
+                type: string
+                enum:
+                  - first_encounter
+                  - first_win
+                  - encounters_reached
+                  - peak_rating
+                  - streak
+              value:
+                type: integer
+              at:
+                type: string
+                format: date-time
+              streakType:
+                type: string
+                enum: [win, loss]
     ScoutingReport:
       type: object
       description: >-
@@ -25959,6 +26030,40 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           description: L'appelant n'appartient a aucune equipe active.
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /api/player/progression:
+    get:
+      tags:
+        - public/teams
+      summary: Progression — courbe de niveau de l'appelante et jalons d'equipe.
+      description: >-
+        Restitue `player_rating_history`, jusque-la stockee et jamais montree :
+        niveau courant, meilleur atteint, variation sur la fenetre affichee et
+        serie chronologique plafonnee (sparkline d'une stat tile, pas un
+        graphe : la donnee est « une valeur courante + une tendance »).
+
+        Y sont joints les JALONS de l'equipe (premier affrontement, premiere
+        victoire, palier franchi, serie en cours). Aucun jalon fabrique : ni
+        points, ni badges, ni niveaux inventes — chaque entree est un fait
+        pointable dans une table.
+
+        Repond 200 meme sans equipe : le niveau appartient a la joueuse, seuls
+        les jalons d'equipe disparaissent. `delta` vaut `null` sous deux
+        mesures, `peak` vaut `null` si rien n'a jamais ete note — ne pas savoir
+        n'est pas « n'a pas bouge ».
+      operationId: playerProgression
+      security:
+        - PlayerBearer: []
+      responses:
+        '200':
+          description: Progression de l'appelante et jalons de son equipe.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlayerProgression'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '429':
           $ref: '#/components/responses/RateLimited'
   /api/player/scouting:

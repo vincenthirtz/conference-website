@@ -236,15 +236,36 @@ Le rating est un chiffre, pas un récit — donc il ne motive personne.
 - **Acceptation** : opt-out par membre (toggle `team.weekly.recap` dans les préférences) ; jamais
   envoyé si la semaine est vide ; une seule notification par équipe et par semaine.
 
-#### N8 · Progression et jalons
+#### N8 · Progression et jalons — ✅ LIVRÉ
 
 - **Impact / Effort** : 🟧 / **M**
 - **Problème** : M7 — le rating est un chiffre sans récit.
 - **Proposition** : restituer `player_rating_history` en courbe, et marquer les jalons d'équipe
   (premier scrim, 10 scrims, meilleur rating atteint, série en cours). Aucun jalon fabriqué :
   uniquement des faits dérivés.
+- **Résultat (2026-07-31)** : `utils/teams/progression.ts` (pur, géométrie de tracé comprise) +
+  `GET /api/player/progression` + carte `ProgressionCard` au tableau de bord.
+- **Choix de forme, contre l'énoncé** : la donnée est « une valeur courante + une tendance », donc
+  une **stat tile** (valeur, delta, sparkline) et non un graphe. Un axe complet pour cinq mesures
+  est une mise en scène, pas une lecture. La sparkline disparaît sous trois points : deux points ne
+  forment pas une tendance, ils forment un segment — qui se lirait comme une trajectoire.
+- **Deux garde-fous contre l'invention** : pas de variation sous deux mesures (`null`, jamais `0` —
+  « n'a pas bougé » est une autre information) ; et une série en cours **s'interrompt** sur un
+  résultat inconnu au lieu de le traverser, sinon on compterait une série qui n'a jamais eu lieu.
+- **Trois bugs attrapés par les tests** : `Number(null) === 0` faisait tracer un niveau absent à
+  zéro (écrasant l'échelle de la sparkline) et produisait un jalon « meilleur niveau : 0 » pour une
+  joueuse jamais notée ; la série traversait les résultats inconnus. La géométrie du tracé a été
+  sortie du composant pour être **vérifiable** — une erreur de projection ne lève rien, elle dessine
+  simplement une courbe fausse, ce qui est le pire mode d'échec d'un graphique.
 - **Acceptation** : aucune gamification artificielle (pas de points, pas de badges décoratifs) ;
   tout jalon est vérifiable dans les données.
+
+---
+
+> **Les huit axes de cette vague sont livrés.** Le prochain jalon utile n'est pas une feature :
+> c'est une mesure. Les compteurs du § 1 (0 recherche de scrim, 0 scrim, 0 grille) doivent être
+> relus dans quelques semaines — ce sont eux, et non une nouvelle brique, qui diront si le réseau a
+> commencé à tourner.
 
 ---
 

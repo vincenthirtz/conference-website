@@ -4723,5 +4723,20 @@
     "myNotes": "Your notes on this team",
     "myNotesHint": "Your match and scrim reviews against them. Private: nobody else sees them.",
     "watchVod": "Watch the VOD"
+  },
+  "progression": {
+    "title": "Your progression",
+    "subtitle": "Your rating over time and your team's milestones. Nothing invented: every line is a measured fact.",
+    "ratingLabel": "Current rating",
+    "deltaOverGames": "{delta} over your last {count} rated matches",
+    "deltaUnknown": "Not enough rated matches yet to measure a trend.",
+    "peakInline": "· best: {rating}",
+    "sparkAria": "Rating trend over {count} rated matches, from {from} to {to}.",
+    "firstEncounter": "First encounter on {date}",
+    "firstWin": "First win on {date}",
+    "encountersReached": "{count} encounters played",
+    "peakRating": "Best rating reached: {rating}",
+    "streakWin": "Current streak: {count} wins",
+    "streakLoss": "Current streak: {count} losses"
   }
 }

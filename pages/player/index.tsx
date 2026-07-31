@@ -14,6 +14,7 @@ import MyScrimsCard from '@/components/player/MyScrimsCard';
 import TeamRhythmCard from '@/components/player/TeamRhythmCard';
 import TeamMemoryCard from '@/components/player/TeamMemoryCard';
 import TeamHealthCard from '@/components/player/TeamHealthCard';
+import ProgressionCard from '@/components/player/ProgressionCard';
 import TeamCard, { type TeamMemberLite } from '@/components/player/TeamCard';
 import DemandesHistory from '@/components/player/DemandesHistory';
 import QuickAction, {
@@ -636,6 +637,10 @@ function PlayerDashboard() {
           <CategorySection label={t.catCompetition}>
             <NextMatchCard initialData={nextMatch} />
             <MatchReadinessCard nextMatch={nextMatch} t={t} />
+            {/* Progression (N8) — MA courbe de niveau et les jalons de mon
+                équipe. Pas de gate d'équipe : le niveau appartient à la
+                joueuse, la carte se masque d'elle-même si rien n'est mesuré. */}
+            <ProgressionCard />
             {/* Mémoire d'équipe (N2) — ouverte à tout le roster, comme le
                 rythme : une revue est le document partagé de l'équipe, pas le
                 carnet de sa capitaine. Se masque d'elle-même tant qu'aucun

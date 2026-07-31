@@ -4723,5 +4723,20 @@
     "myNotes": "Vos notes sur cette équipe",
     "myNotesHint": "Vos revues de match et de scrim contre elles. Privées : personne d'autre ne les voit.",
     "watchVod": "Voir la VOD"
+  },
+  "progression": {
+    "title": "Ta progression",
+    "subtitle": "Ton niveau dans le temps et les jalons de ton équipe. Rien d'inventé : chaque ligne est un fait mesuré.",
+    "ratingLabel": "Niveau actuel",
+    "deltaOverGames": "{delta} sur tes {count} derniers matchs notés",
+    "deltaUnknown": "Pas encore assez de matchs notés pour mesurer une évolution.",
+    "peakInline": "· meilleur : {rating}",
+    "sparkAria": "Évolution du niveau sur {count} matchs notés, de {from} à {to}.",
+    "firstEncounter": "Premier affrontement le {date}",
+    "firstWin": "Première victoire le {date}",
+    "encountersReached": "{count} affrontements joués",
+    "peakRating": "Meilleur niveau atteint : {rating}",
+    "streakWin": "Série en cours : {count} victoires",
+    "streakLoss": "Série en cours : {count} défaites"
   }
 }
