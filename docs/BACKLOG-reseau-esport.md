@@ -217,7 +217,7 @@ Entre deux éditions, le site n'a aucune raison d'être rouvert.
 
 ### P2 — Tissu : récurrence, réputation, identité
 
-#### R8 · Ladder / ligue de scrims permanente — ⛔ BLOQUÉ (prérequis manquant)
+#### R8 · Ladder / ligue de scrims permanente — ✅ LIVRÉ (prérequis compris)
 
 - **Impact / Effort** : 🟧 / **L**
 - **Blocage constaté le 2026-07-31** : la table `scrims` ne porte **ni vainqueur
@@ -228,8 +228,15 @@ Entre deux éditions, le site n'a aucune raison d'être rouvert.
   (`match_score_reports` : report par les deux capitaines, concordance →
   validation auto, divergence → litige). Chantier à part entière (M), à livrer
   AVANT tout ladder.
-- **Décision** : ne rien bâtir à moitié ici. Un ladder alimenté par des
-  résultats saisis à la main par le staff serait une dette immédiate.
+- **Décision initiale** : ne rien bâtir à moitié. Un ladder alimenté par des
+  résultats saisis à la main par le staff aurait été une dette immédiate.
+- **Résultat (2026-07-31)** : le prérequis a été livré avec le ticket.
+  `scrims` porte désormais vainqueur / scores / `ranked` ;
+  `scrim_score_reports` applique le modèle des matchs (deux reports concordants
+  closent, divergents → litige, correction possible). Nouveau bloc « Nos
+  scrims » côté équipe (la surface manquait totalement) et classement public sur
+  `/scrims`, calculé à la volée, **séparé du rating Glicko-2** pour ne pas
+  corrompre le niveau compétitif avec des entraînements.
 - **Problème** : C8 — rien ne fait revenir entre deux tournois.
 - **Proposition** : les scrims joués comptent pour un classement permanent adossé à l'objet `leagues`
   déjà en base ; saison glissante, montée/descente, rôle Discord par palier (le role-sync existe).
