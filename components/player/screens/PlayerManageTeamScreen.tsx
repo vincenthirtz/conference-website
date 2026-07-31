@@ -24,6 +24,7 @@ import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import { usePlayerArea } from '@/components/player/PlayerAreaContext';
+import Switch from '@/components/ui/Switch';
 
 type Specialty = 'tank' | 'dps' | 'support' | 'flex' | null;
 
@@ -536,22 +537,13 @@ export default function PlayerManageTeamScreen() {
                       : t.recruitmentClosedDesc}
                   </p>
                 </div>
-                <button
-                  onClick={handleToggleJoinable}
+                <Switch
+                  checked={!!team.is_joinable}
+                  onChange={handleToggleJoinable}
                   disabled={actionLoading === 'joinable'}
-                  role="switch"
-                  aria-checked={!!team.is_joinable}
-                  aria-label={t.recruitment}
-                  className={`relative w-12 h-7 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60 ${
-                    team.is_joinable ? 'bg-emerald-500' : 'bg-gray-600'
-                  } ${actionLoading === 'joinable' ? 'opacity-50' : ''}`}
-                >
-                  <span
-                    className={`absolute top-1 w-5 h-5 rounded-full bg-white transition-transform ${
-                      team.is_joinable ? 'left-6' : 'left-1'
-                    }`}
-                  />
-                </button>
+                  label={t.recruitment}
+                  size="md"
+                />
               </div>
             </div>
           )}
@@ -566,22 +558,13 @@ export default function PlayerManageTeamScreen() {
                     {t.scrimOpenHelp}
                   </p>
                 </div>
-                <button
-                  onClick={handleToggleScrimOpen}
+                <Switch
+                  checked={!!team.open_for_scrim}
+                  onChange={handleToggleScrimOpen}
                   disabled={actionLoading === 'scrim-open'}
-                  role="switch"
-                  aria-checked={!!team.open_for_scrim}
-                  aria-label={t.scrimOpenLabel}
-                  className={`relative w-12 h-7 rounded-full transition-colors flex-shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60 ${
-                    team.open_for_scrim ? 'bg-emerald-500' : 'bg-gray-600'
-                  } ${actionLoading === 'scrim-open' ? 'opacity-50' : ''}`}
-                >
-                  <span
-                    className={`absolute top-1 w-5 h-5 rounded-full bg-white transition-transform ${
-                      team.open_for_scrim ? 'left-6' : 'left-1'
-                    }`}
-                  />
-                </button>
+                  label={t.scrimOpenLabel}
+                  size="md"
+                />
               </div>
             </div>
           )}

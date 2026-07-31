@@ -18,6 +18,7 @@
 import Link from 'next/link';
 import type { JSX } from 'react';
 import { useT, format } from '@/lib/i18n/useT';
+import Switch from '@/components/ui/Switch';
 
 type ScrimsHubTeam = {
   id: string;
@@ -69,23 +70,13 @@ export default function ScrimsHubCard({
           <p className="mt-1 text-sm text-gray-400">{t.scrimsHubSubtitle}</p>
         </div>
         <div className="flex flex-col items-end gap-1 flex-shrink-0">
-          <button
-            type="button"
-            onClick={onToggle}
+          <Switch
+            checked={openForScrim}
+            onChange={() => onToggle?.()}
             disabled={toggling || !onToggle}
-            role="switch"
-            aria-checked={openForScrim}
-            aria-label={t.scrimsHubOpenLabel}
-            className={`relative w-12 h-7 rounded-full transition-colors motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60 ${
-              openForScrim ? 'bg-emerald-500' : 'bg-gray-600'
-            } ${toggling ? 'opacity-50' : ''}`}
-          >
-            <span
-              className={`absolute top-1 w-5 h-5 rounded-full bg-white transition-transform motion-reduce:transition-none ${
-                openForScrim ? 'left-6' : 'left-1'
-              }`}
-            />
-          </button>
+            label={t.scrimsHubOpenLabel}
+            size="md"
+          />
           <span
             className={`text-[11px] font-medium ${
               openForScrim ? 'text-emerald-300' : 'text-gray-500'

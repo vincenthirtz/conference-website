@@ -46,6 +46,7 @@ import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useToast } from '@/components/Toast';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import Switch from '@/components/ui/Switch';
 
 // --- Formes du contrat (figées) ---------------------------------------------
 
@@ -1183,22 +1184,11 @@ function Toggle({
 }) {
   return (
     <label className="inline-flex cursor-pointer items-center gap-2 text-sm">
-      <button
-        type="button"
-        role="switch"
-        aria-checked={checked}
-        aria-label={label}
-        onClick={() => onChange(!checked)}
-        className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
-          checked ? 'bg-emerald-600' : 'bg-neutral-700'
-        }`}
-      >
-        <span
-          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-            checked ? 'translate-x-6' : 'translate-x-1'
-          }`}
-        />
-      </button>
+      <Switch
+        checked={checked}
+        onChange={() => onChange(!checked)}
+        label={label}
+      />
       <span className="text-neutral-200">{label}</span>
     </label>
   );

@@ -16,6 +16,7 @@
 // toast est géré par la page parente.
 
 import { useT } from '@/lib/i18n/useT';
+import Switch from '@/components/ui/Switch';
 
 type NotificationChannel = 'push' | 'email';
 
@@ -35,6 +36,10 @@ type Props = {
   ) => void;
 };
 
+/**
+ * Interrupteur de canal — conservé comme point d'entrée nommé (plusieurs
+ * écrans l'importent), mais ce n'est plus qu'un alias du kit partagé.
+ */
 export function ChannelToggle({
   checked,
   disabled,
@@ -47,23 +52,12 @@ export function ChannelToggle({
   label: string;
 }) {
   return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      aria-label={label}
+    <Switch
+      checked={checked}
+      onChange={onChange}
       disabled={disabled}
-      onClick={onChange}
-      className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/60 disabled:opacity-50 disabled:cursor-not-allowed ${
-        checked ? 'bg-purple-500' : 'bg-white/15'
-      }`}
-    >
-      <span
-        className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
-          checked ? 'translate-x-6' : 'translate-x-1'
-        }`}
-      />
-    </button>
+      label={label}
+    />
   );
 }
 

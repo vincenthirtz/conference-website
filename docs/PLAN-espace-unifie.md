@@ -37,7 +37,7 @@ lequel l'admin entre**, via une résolution de sujet explicite au niveau API.
 | S2 | Extraction des corps de pages `pages/player/*` en composants `subjectId` / `readOnly` | ✅ livré |
 | S3 | `/admin/users/[id]/{player,captain}-view` rendent les vrais écrans ; suppression des doublons (~3 470 LOC) | ✅ livré |
 | S4 | Écritures staff via `?as=` + toggle explicite « agir en tant que » | ✅ livré |
-| S5 | Kit UI partagé (`components/ui`) — **doit ressembler le plus possible à `/admin`** | à faire |
+| S5 | Kit UI partagé (`components/ui`), au look `/admin` | ✅ livré |
 
 ## S1 — ce qui est en place
 
@@ -180,9 +180,37 @@ actionnable (cadre ambre + bandeau d'avertissement).
 - Le quota `applyActorRateLimit` reste sur l'appelant : une intervention staff
   ne consomme pas le quota de la personne dépannée.
 
+## S5 — kit UI partagé
+
+`components/ui/` (voir son [README](../components/ui/README.md)) : `Switch`,
+`Badge`, `EmptyState`, `Modal`, `Tabs`, `Skeleton`, `StatusBadge`. Le look
+`/admin` fait foi.
+
+Les quatre dernières ont simplement déménagé depuis `components/admin/` ;
+`components/admin/{Modal,Tabs,Skeleton,StatusBadge,EmptyState}.tsx` restent
+comme ré-exports dépréciés, ce qui évite de toucher ~70 imports existants.
+
+Vraie dé-duplication : **`Switch`** remplace cinq interrupteurs quasi
+identiques mais divergents (h-6/h-7, w-11/w-12, emerald-500/600/purple-500,
+gray-600/neutral-700/white-15, `translate-x` vs `left-*`), chacun redécouvrant
+son `role="switch"` + `aria-checked` + anneau de focus — l'endroit exact où
+l'accessibilité se perd au copier-coller. **`Badge`** couvre une quinzaine de
+pastilles manuscrites, `EmptyState` quatre définitions locales.
+
+### Non migré, volontairement
+
+- **La surface « carte »**. L'espace joueur emploie
+  `rounded-2xl border-white/10 bg-white/[0.03] backdrop-blur-xl` à **132
+  endroits** ; l'admin n'a pas d'équivalent unique (3 occurrences de sa
+  variante la plus fréquente). Converger = re-skinner l'espace joueur : un
+  chantier visuel à part entière, sans filet de tests de composants, et sans
+  rapport avec la duplication de logique visée par ce plan. **À arbitrer.**
+- Deux bascules qui ne sont pas des interrupteurs piste + pastille :
+  `/admin/map-pool` (pilule avec libellé) et `prize-pool` (case à cocher
+  `role="switch"`).
+
 ## Reste à faire
 
-- **S5** — kit UI partagé, calqué sur `/admin`.
 - Pages joueur non extraites (pas encore nécessaires à l'inspection) :
   `profile`, `teams`, `requests`, `messages`, `checkin`, `discovery`,
   `scouting`, `join-team`, `request-captain`, `caster-application`,

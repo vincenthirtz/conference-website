@@ -18,6 +18,7 @@ import TwitchPredictionsPanel from '@/components/admin/broadcast/TwitchPredictio
 import TwitchCommandsPanel from '@/components/admin/broadcast/TwitchCommandsPanel';
 import { useRouter } from 'next/router';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import Switch from '@/components/ui/Switch';
 import type { StaffProps } from '@/types/admin';
 import type { EventRun, EventSegment } from '@/types/events';
 
@@ -632,28 +633,18 @@ function BroadcastLivePage({ staff }: StaffProps) {
                         : t.autoDirectorOffHint}
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={autoDirector}
-                    aria-label={t.autoDirectorLabel}
-                    disabled={isPending('auto_director') || !canEdit}
-                    onClick={() =>
+                  <Switch
+                    checked={autoDirector}
+                    onChange={() =>
                       applyPatch(
                         { auto_director: !autoDirector },
                         'auto_director'
                       )
                     }
-                    className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
-                      autoDirector ? 'bg-emerald-600' : 'bg-neutral-700'
-                    }`}
-                  >
-                    <span
-                      className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
-                        autoDirector ? 'translate-x-6' : 'translate-x-1'
-                      }`}
-                    />
-                  </button>
+                    disabled={isPending('auto_director') || !canEdit}
+                    label={t.autoDirectorLabel}
+                    size="md"
+                  />
                 </div>
 
                 {/* Scene selector */}

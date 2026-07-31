@@ -36,8 +36,10 @@ import {
 import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
-import Modal from '@/components/admin/Modal';
+import Modal from '@/components/ui/Modal';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import EmptyState from '@/components/ui/EmptyState';
+import Badge, { type BadgeTone } from '@/components/ui/Badge';
 import { PlayerAreaProvider } from '@/components/player/PlayerAreaContext';
 import PlayerDashboardScreen from '@/components/player/screens/PlayerDashboardScreen';
 import PlayerMatchesScreen from '@/components/player/screens/PlayerMatchesScreen';
@@ -143,37 +145,23 @@ function getDemandeTypeLabels(t: Dict): Record<string, string> {
   };
 }
 
-function roleBadgeClass(role: string | null): string {
+function roleTone(role: string | null): BadgeTone {
   switch ((role || '').toLowerCase()) {
     case 'owner':
-      return 'bg-purple-600/20 text-purple-200 border-purple-500/30';
+      return 'purple';
     case 'admin':
-      return 'bg-red-600/20 text-red-200 border-red-500/30';
+      return 'red';
     case 'caster':
-      return 'bg-blue-600/20 text-blue-200 border-blue-500/30';
+      return 'blue';
     case 'player':
-      return 'bg-emerald-600/20 text-emerald-200 border-emerald-500/30';
+      return 'emerald';
     default:
-      return 'bg-neutral-600/20 text-neutral-300 border-neutral-500/30';
+      return 'neutral';
   }
 }
 
 function RoleBadge({ t, role }: { t: Dict; role: string | null }) {
-  return (
-    <span
-      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${roleBadgeClass(role)}`}
-    >
-      {roleLabel(t, role)}
-    </span>
-  );
-}
-
-function EmptyState({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="rounded-2xl border border-neutral-700/50 bg-neutral-800/40 px-6 py-10 text-center text-neutral-400">
-      {children}
-    </div>
-  );
+  return <Badge tone={roleTone(role)}>{roleLabel(t, role)}</Badge>;
 }
 
 /**
@@ -646,12 +634,7 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
               <div className="h-40 rounded-2xl bg-neutral-800/60 animate-pulse" />
             </div>
           ) : notFound ? (
-            <EmptyState>
-              <p className="text-lg font-semibold text-white">
-                {t.notFoundTitle}
-              </p>
-              <p className="mt-2 text-sm">{t.notFoundDesc}</p>
-            </EmptyState>
+            <EmptyState title={t.notFoundTitle} description={t.notFoundDesc} />
           ) : error ? (
             <div className="rounded-2xl border border-red-500/40 bg-red-500/10 px-5 py-4 text-sm text-red-100">
               {error}
@@ -689,9 +672,9 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
                       <p className="mt-1 text-sm text-neutral-400">
                         {profile.team.name}
                         {profile.team.role === 'captain' && (
-                          <span className="ml-2 px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-600/20 text-emerald-200 border border-emerald-500/30">
+                          <Badge tone="emerald" className="ml-2">
                             {t.teamRoleCaptain}
-                          </span>
+                          </Badge>
                         )}
                       </p>
                     )}

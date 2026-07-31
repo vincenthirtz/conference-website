@@ -25,6 +25,9 @@ import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import EmptyState from '@/components/ui/EmptyState';
+import Badge from '@/components/ui/Badge';
+import Switch from '@/components/ui/Switch';
 import { PlayerAreaProvider } from '@/components/player/PlayerAreaContext';
 import PlayerManageTeamScreen from '@/components/player/screens/PlayerManageTeamScreen';
 import { withSubjectParam } from '@/utils/subjectParam';
@@ -86,14 +89,6 @@ function formatDate(d: string | null | undefined): string {
   } catch {
     return '—';
   }
-}
-
-function EmptyState({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="rounded-2xl border border-neutral-700/50 bg-neutral-800/40 px-6 py-10 text-center text-neutral-400">
-      {children}
-    </div>
-  );
 }
 
 function CaptainViewPage({ staff: _staff }: { staff: StaffShape }) {
@@ -338,12 +333,7 @@ function CaptainViewPage({ staff: _staff }: { staff: StaffShape }) {
               <div className="h-40 rounded-2xl bg-neutral-800/60 animate-pulse" />
             </div>
           ) : notFound ? (
-            <EmptyState>
-              <p className="text-lg font-semibold text-white">
-                {t.notFoundTitle}
-              </p>
-              <p className="mt-2 text-sm">{t.notFoundDesc}</p>
-            </EmptyState>
+            <EmptyState title={t.notFoundTitle} description={t.notFoundDesc} />
           ) : error ? (
             <div className="rounded-2xl border border-red-500/40 bg-red-500/10 px-5 py-4 text-sm text-red-100">
               {error}
@@ -377,11 +367,11 @@ function CaptainViewPage({ staff: _staff }: { staff: StaffShape }) {
                     {managed?.team && (
                       <p className="mt-1 text-sm text-neutral-400">
                         {managed.team.name}
-                        <span className="ml-2 px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-600/20 text-emerald-200 border border-emerald-500/30">
+                        <Badge tone="emerald" className="ml-2">
                           {managed.isCaptain
                             ? t.teamCaptainBadge
                             : t.teamManagerBadge}
-                        </span>
+                        </Badge>
                       </p>
                     )}
                   </div>
@@ -389,12 +379,10 @@ function CaptainViewPage({ staff: _staff }: { staff: StaffShape }) {
               </div>
 
               {!managed?.team ? (
-                <EmptyState>
-                  <p className="text-lg font-semibold text-white">
-                    {t.notCaptainTitle}
-                  </p>
-                  <p className="mt-2 text-sm">{t.notCaptainDesc}</p>
-                </EmptyState>
+                <EmptyState
+                  title={t.notCaptainTitle}
+                  description={t.notCaptainDesc}
+                />
               ) : (
                 <>
                   {/* Actions staff — hors périmètre de l'UI capitaine */}
@@ -414,22 +402,13 @@ function CaptainViewPage({ staff: _staff }: { staff: StaffShape }) {
                           {format(t.actAsToggleHelp, { name: headerName })}
                         </p>
                       </div>
-                      <button
-                        type="button"
-                        role="switch"
-                        aria-checked={actAs}
-                        aria-label={t.actAsToggleLabel}
-                        onClick={() => setActAs((v) => !v)}
-                        className={`relative h-7 w-12 flex-shrink-0 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60 ${
-                          actAs ? 'bg-amber-500' : 'bg-neutral-600'
-                        }`}
-                      >
-                        <span
-                          className={`absolute top-1 h-5 w-5 rounded-full bg-white transition-transform ${
-                            actAs ? 'left-6' : 'left-1'
-                          }`}
-                        />
-                      </button>
+                      <Switch
+                        checked={actAs}
+                        onChange={() => setActAs((v) => !v)}
+                        label={t.actAsToggleLabel}
+                        size="md"
+                        tone="amber"
+                      />
                     </div>
 
                     {/* Promotion capitaine */}
