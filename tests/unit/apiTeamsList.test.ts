@@ -40,14 +40,20 @@ function makeRes() {
 }
 
 /**
- * Le mock supabase ne résout pas l'agrégat embarqué `team_members(count)` :
+ * Le mock supabase ne résout pas la ressource embarquée `team_members(role)` :
  * il renvoie la row brute telle que seedée. On reproduit donc la forme que
  * PostgREST renverrait en posant directement la propriété `team_members`.
+ *
+ * `member_count` = nombre de JOUEUSES ; `staff_count` ajoute de l'encadrement,
+ * qui ne doit jamais consommer de place.
  */
 function seedTeam(
-  over: Partial<Record<string, unknown>> & { member_count?: number } = {}
+  over: Partial<Record<string, unknown>> & {
+    member_count?: number;
+    staff_count?: number;
+  } = {}
 ) {
-  const { member_count = 0, ...rest } = over;
+  const { member_count = 0, staff_count = 0, ...rest } = over;
   return {
     id: 'team-x',
     name: 'Team',
@@ -55,7 +61,10 @@ function seedTeam(
     logo_url: null,
     country: null,
     is_joinable: true,
-    team_members: [{ count: member_count }],
+    team_members: [
+      ...Array.from({ length: member_count }, () => ({ role: 'player' })),
+      ...Array.from({ length: staff_count }, () => ({ role: 'coach' })),
+    ],
     ...rest,
   };
 }
@@ -139,7 +148,7 @@ describe('GET /api/teams?joinable=1', () => {
     expect(teams.map((t: any) => t.id)).toEqual(['mine']);
   });
 
-  it("aplatit member_count depuis l'agrégat team_members(count)", async () => {
+  it('aplatit member_count depuis les rôles embarqués', async () => {
     store.teams = [seedTeam({ id: 'a', member_count: 3 })];
     const res = makeRes();
     await teamsHandler(makeReq({ query: { joinable: '1' } }), res);
@@ -147,6 +156,18 @@ describe('GET /api/teams?joinable=1', () => {
     const teams = (res.body as any).teams;
     expect(teams[0].member_count).toBe(3);
     expect(teams[0].is_joinable).toBe(true);
+  });
+
+  // Règle produit : l'encadrement ne consomme JAMAIS de place. Une équipe de 4
+  // joueuses + 2 encadrants n'est pas pleine et doit rester recrutable.
+  it("n'inclut pas l'encadrement dans member_count", async () => {
+    store.teams = [seedTeam({ id: 'a', member_count: 4, staff_count: 2 })];
+    const res = makeRes();
+    await teamsHandler(makeReq({ query: { joinable: '1' } }), res);
+
+    const teams = (res.body as any).teams;
+    expect(teams).toHaveLength(1);
+    expect(teams[0].member_count).toBe(4);
   });
 
   // NOTE mock : la recherche `search` passe par `.or('name.ilike...,short_name.ilike...')`

@@ -36,6 +36,18 @@ export function roleRequiresBattleTag(
 }
 
 /**
+ * Effectif JOUANT d'une liste de membres — le seul décompte qui compte pour
+ * « équipe pleine » / `tournaments.max_players`. L'encadrement ne consomme
+ * jamais de place. Tolère un tableau absent (embed PostgREST vide).
+ */
+export function countPlayingMembers(
+  members: readonly { role?: string | null }[] | null | undefined
+): number {
+  if (!Array.isArray(members)) return 0;
+  return members.filter((m) => !isNonPlayingTeamRole(m?.role)).length;
+}
+
+/**
  * Sépare des membres en roster jouant / remplaçantes / encadrement.
  *
  * Utilisé par tous les écrans qui affichent un effectif, pour qu'ils ne

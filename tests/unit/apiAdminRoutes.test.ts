@@ -426,12 +426,23 @@ describe('GET /api/teams (public)', () => {
     expect((res.body as any).total).toBe(2);
   });
 
-  it('flattens team_members count into member_count', async () => {
+  it('compte les joueuses embarquées dans member_count', async () => {
     store.teams = [
-      { id: 't1', name: 'Alpha', team_members: [{ count: 5 }] },
+      {
+        id: 't1',
+        name: 'Alpha',
+        team_members: [
+          { role: 'player' },
+          { role: 'player' },
+          { role: 'substitute' },
+          // L'encadrement ne consomme pas de place de roster.
+          { role: 'coach' },
+          { role: 'manager' },
+        ],
+      },
     ] as any;
     const res = makeRes();
     await publicTeamsHandler(makeAuthedReq(), res);
-    expect((res.body as any).teams[0].member_count).toBe(5);
+    expect((res.body as any).teams[0].member_count).toBe(3);
   });
 });

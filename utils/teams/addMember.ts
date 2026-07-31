@@ -29,8 +29,14 @@ export {
   isNonPlayingTeamRole,
   roleRequiresBattleTag,
   splitTeamMembers,
+  countPlayingMembers,
 } from './roleKind';
-import { BATTLE_TAG_REGEX, roleRequiresBattleTag } from './roleKind';
+import {
+  BATTLE_TAG_REGEX,
+  roleRequiresBattleTag,
+  isNonPlayingTeamRole,
+  countPlayingMembers,
+} from './roleKind';
 
 export const BATTLE_TAG_FORMAT_HINT =
   'BattleTag required (format Name#0000, alphanumeric + # + 3 to 6 digits)';
@@ -199,16 +205,20 @@ export async function insertTeamMember(
     return { ok: false, error: 'Service unavailable.', status: 503 };
   }
 
-  // Pre-check max_players (UX rapide ; le trigger PG est la source de verite)
-  if (input.enforceMaxPlayersPreCheck && input.role !== 'coach') {
-    const [{ count: currentNonCoachCount }, { data: teamTournaments }] =
+  // Pre-check max_players (UX rapide ; le trigger PG est la source de verite).
+  // L'encadrement (coach ET manager) ne consomme jamais de place : ni comme
+  // arrivant, ni dans le comptage de l'existant.
+  if (input.enforceMaxPlayersPreCheck && !isNonPlayingTeamRole(input.role)) {
+    // On lit les RÔLES et on compte côté JS plutôt que d'exclure l'encadrement
+    // en filtre PostgREST : une seule définition de « joueuse », partagée avec
+    // les autres compteurs (`countPlayingMembers`).
+    const [{ data: existingRows }, { data: teamTournaments }] =
       await Promise.all([
         supabaseAdmin
           .from('team_members')
-          .select('*', { count: 'exact', head: true })
+          .select('role')
           .eq('tenant_id', input.tenantId)
-          .eq('team_id', input.teamId)
-          .neq('role', 'coach'),
+          .eq('team_id', input.teamId),
         supabaseAdmin
           .from('tournament_teams')
           .select('tournament_id, tournaments!inner(max_players)')
@@ -216,10 +226,14 @@ export async function insertTeamMember(
           .eq('team_id', input.teamId),
       ]);
 
+    const currentPlayingCount = countPlayingMembers(
+      (existingRows || []) as { role?: string | null }[]
+    );
+
     for (const tt of teamTournaments ?? []) {
       const maxPlayers = (tt as { tournaments?: { max_players?: number } })
         .tournaments?.max_players;
-      if (maxPlayers && (currentNonCoachCount ?? 0) >= maxPlayers) {
+      if (maxPlayers && currentPlayingCount >= maxPlayers) {
         return {
           ok: false,
           status: 400,

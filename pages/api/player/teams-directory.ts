@@ -42,6 +42,7 @@ import {
 } from '@/utils/teams/teamRhythmStore';
 import { overlappingRhythmSlots } from '@/utils/teams/teamRhythm';
 import { MAX_TEAM_PLAYERS } from '@/utils/constants';
+import { countPlayingMembers } from '@/utils/teams/roleKind';
 import { logger } from '@/utils/logger';
 
 /** Fenêtre sur laquelle « on les a déjà jouées » reste une information utile. */
@@ -171,7 +172,8 @@ export default withAuthRoute(async function handler(
   const { data: teamRows, error: teamsErr } = await supabaseAdmin
     .from('teams')
     .select(
-      'id, name, short_name, logo_url, slug, country, is_joinable, team_members(count)'
+      // Rôles plutôt qu'un agrégat : l'encadrement ne consomme pas de place.
+      'id, name, short_name, logo_url, slug, country, is_joinable, team_members(role)'
     )
     .eq('tenant_id', tenantId)
     .eq('is_active', true)
@@ -190,7 +192,7 @@ export default withAuthRoute(async function handler(
   for (const t of teams) {
     memberCountByTeam.set(
       t.id as string,
-      (t.team_members as Array<{ count: number }> | undefined)?.[0]?.count ?? 0
+      countPlayingMembers(t.team_members as { role?: string | null }[])
     );
   }
 

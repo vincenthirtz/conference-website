@@ -12,6 +12,7 @@ import {
 import { applyRateLimit } from '@/utils/rateLimit';
 import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
 import { MAX_TEAM_PLAYERS } from '@/utils/constants';
+import { countPlayingMembers } from '@/utils/teams/roleKind';
 
 import { logger } from '../../../utils/logger';
 export type PublicTeam = {
@@ -61,8 +62,12 @@ export default async function handler(
 
     let query = supabaseAdmin
       .from('teams')
+      // On embarque les RÔLES plutôt qu'un `team_members(count)` : l'effectif
+      // qui compte pour « équipe pleine » exclut l'encadrement (coach /
+      // manager), et un agrégat PostgREST ne sait pas exprimer ça sans
+      // ambiguïté sur le filtrage de la ressource embarquée.
       .select(
-        'id, name, short_name, logo_url, country, is_joinable, open_for_scrim, team_members(count)',
+        'id, name, short_name, logo_url, country, is_joinable, open_for_scrim, team_members(role)',
         {
           count: 'exact',
         }
@@ -108,7 +113,7 @@ export default async function handler(
       short_name: t.short_name,
       logo_url: t.logo_url,
       country: t.country,
-      member_count: t.team_members?.[0]?.count ?? 0,
+      member_count: countPlayingMembers(t.team_members),
       is_joinable: t.is_joinable ?? false,
       open_for_scrim: t.open_for_scrim ?? false,
     }));

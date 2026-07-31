@@ -6,6 +6,7 @@
 // - DELETE : retirer une ou plusieurs équipes de la phase
 
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { countPlayingMembers } from '@/utils/teams/roleKind';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
@@ -137,14 +138,18 @@ async function handlePost(
       .maybeSingle(),
     supabaseAdmin
       .from('team_members')
-      .select('user_id')
+      .select('user_id, role')
       .eq('tenant_id', ctx.tenantId)
       .eq('team_id', teamId),
   ]);
 
   const tournament = tournamentRes.data;
   const members = membersRes.data || [];
-  const memberCount = members.length;
+  // `min_players` porte sur les JOUEUSES : un coach ou une manager ne remplit
+  // pas une place de roster, donc ne doit pas non plus en tenir lieu.
+  const memberCount = countPlayingMembers(
+    members as { role?: string | null }[]
+  );
 
   // 1. Check min_players requirement
   if (tournament?.min_players && memberCount < tournament.min_players) {

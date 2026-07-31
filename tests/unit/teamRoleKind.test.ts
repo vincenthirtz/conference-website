@@ -10,6 +10,7 @@ import {
   isNonPlayingTeamRole,
   roleRequiresBattleTag,
   splitTeamMembers,
+  countPlayingMembers,
   NON_PLAYING_TEAM_ROLES,
 } from '../../utils/teams/roleKind';
 
@@ -71,5 +72,31 @@ describe('splitTeamMembers', () => {
 
   it('accepte une liste vide', () => {
     expect(splitTeamMembers([])).toEqual({ roster: [], subs: [], staff: [] });
+  });
+});
+
+describe('countPlayingMembers', () => {
+  // Ce compteur pilote « équipe pleine » (MAX_TEAM_PLAYERS), l'éligibilité
+  // `min_players` et le plafond du formulaire de création. Règle produit :
+  // l'encadrement ne consomme JAMAIS de place, quoi qu'il arrive.
+  it('ne compte que les joueuses', () => {
+    expect(
+      countPlayingMembers([
+        { role: 'player' },
+        { role: 'substitute' },
+        { role: 'coach' },
+        { role: 'manager' },
+      ])
+    ).toBe(2);
+  });
+
+  it('compte les rôles inconnus ou vides comme jouants', () => {
+    expect(countPlayingMembers([{ role: null }, {}])).toBe(2);
+  });
+
+  it('tolère un embed absent', () => {
+    expect(countPlayingMembers(undefined)).toBe(0);
+    expect(countPlayingMembers(null)).toBe(0);
+    expect(countPlayingMembers([])).toBe(0);
   });
 });

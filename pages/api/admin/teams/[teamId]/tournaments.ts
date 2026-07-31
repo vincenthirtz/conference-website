@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { countPlayingMembers } from '@/utils/teams/roleKind';
 import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
 import { supabaseAdmin } from '@/utils/supabase';
 import { logStaffAction } from '@/utils/staffLogs';
@@ -202,16 +203,23 @@ async function handlePost(
 
     // Check if team has enough players (min_players validation)
     if (tournament.min_players) {
-      const { count: playerCount, error: countPlayersError } =
+      // `min_players` porte sur les JOUEUSES : l'encadrement (coach /
+      // manager) ne consomme pas de place de roster, il n'en tient donc pas
+      // lieu non plus pour atteindre le minimum.
+      const { data: playingRows, error: countPlayersError } =
         await supabaseAdmin
           .from('team_members')
-          .select('*', { count: 'exact', head: true })
+          .select('role')
           .eq('tenant_id', ctx.tenantId)
           .eq('team_id', teamId);
 
       if (countPlayersError) {
         throw countPlayersError;
       }
+
+      const playerCount = countPlayingMembers(
+        (playingRows || []) as { role?: string | null }[]
+      );
 
       if ((playerCount || 0) < tournament.min_players) {
         return res.status(400).json({

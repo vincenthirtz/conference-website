@@ -10,7 +10,10 @@ import {
   type RegistrationField,
 } from '@/utils/registrationFields';
 import { ACTIVE_WOMEN_TOURNAMENT_ID } from '@/utils/activeEdition';
-import { roleRequiresBattleTag } from '@/utils/teams/addMember';
+import {
+  roleRequiresBattleTag,
+  isNonPlayingTeamRole,
+} from '@/utils/teams/roleKind';
 
 /** Valeur d'une réponse à un champ d'inscription personnalisé. */
 type FieldValue = string | number | boolean;
@@ -308,9 +311,17 @@ export default function PublicCreateTeamPage() {
     });
   }
 
+  // Le plafond de 5 porte sur les JOUEUSES : une ligne coach ou manager ne
+  // consomme pas de place de roster, sinon déclarer un coach coûtait une
+  // joueuse à la création.
+  const playingRowsCount = members.filter(
+    (m) => !isNonPlayingTeamRole(m.role)
+  ).length;
+
   function addMemberRow() {
     setMembers((prev) => {
-      if (prev.length >= 5) return prev;
+      if (prev.filter((m) => !isNonPlayingTeamRole(m.role)).length >= 5)
+        return prev;
       return [
         ...prev,
         {
@@ -1485,9 +1496,9 @@ export default function PublicCreateTeamPage() {
               <button
                 type="button"
                 onClick={addMemberRow}
-                disabled={members.length >= 5}
+                disabled={playingRowsCount >= 5}
                 className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition ${
-                  members.length >= 5
+                  playingRowsCount >= 5
                     ? 'cursor-not-allowed border border-white/10 bg-white/5 text-gray-500'
                     : 'border border-[var(--color-green)]/40 bg-[var(--color-green)]/10 text-[var(--color-green-light)] hover:bg-[var(--color-green)]/20'
                 }`}
