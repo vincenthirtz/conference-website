@@ -2079,7 +2079,9 @@
     "pillPendingRequests": "Pending requests",
     "pillNotifications": "Notifications",
     "notificationsAllClear": "Nothing pending — all caught up for this player.",
-    "viewCaptainLink": "View captain view"
+    "viewCaptainLink": "View captain view",
+    "tabEspace": "Player space",
+    "inspectionNotice": "{name}'s actual player screen, read-only. Every view is recorded in the staff logs."
   },
   "adminUserCaptainView": {
     "roleOwner": "Owner",
@@ -2170,7 +2172,9 @@
     "demandeStatusRejected": "Rejected",
     "demandeStatusCancelled": "Cancelled",
     "noHistoryTitle": "No requests",
-    "noHistoryDesc": "No requests tied to this team."
+    "noHistoryDesc": "No requests tied to this team.",
+    "staffActionsTitle": "Staff actions",
+    "inspectionNotice": "{name}'s actual team-management screen, read-only. Every view is recorded in the staff logs."
   },
   "adminUsersManage": {
     "roleOwner": "Owner",

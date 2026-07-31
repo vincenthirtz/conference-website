@@ -22586,6 +22586,50 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /api/admin/users/{userId}/profile:
+    get:
+      tags:
+        - admin
+      summary: Identite d'un utilisateur cible (vues d'inspection admin).
+      description: |
+        Metadonnees du compte auth de la cible + son equipe dans le tenant
+        ACTIF du staff. Alimente l'en-tete et les actions des pages
+        /admin/users/[id]/player-view et captain-view ; les donnees d'espace
+        joueur, elles, sont lues par les vrais endpoints /api/player/* via le
+        parametre `as`. Remplace les endpoints-miroirs player-view /
+        captain-view (supprimes). Chaque appel est journalise
+        (`view_player_data`).
+      operationId: getAdminUserProfile
+      security:
+        - StaffSession: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Identite + equipe eventuelle.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    type: object
+                    additionalProperties: true
+                  team:
+                    type: object
+                    nullable: true
+                    additionalProperties: true
+        '400':
+          description: userId invalide.
+        '403':
+          description: Role staff insuffisant.
+        '404':
+          description: Utilisateur introuvable.
   /api/admin/users/manage:
     get:
       summary: List users with admin metadata (search & paginate).
@@ -22731,127 +22775,6 @@ paths:
                     type: string
                   teamId:
                     type: string
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-  /api/admin/users/{userId}/captain-view:
-    parameters:
-      - name: userId
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-    get:
-      summary: Read-only snapshot of the team a user captains.
-      description: |
-        Inspection (not impersonation) of the team the target user CAPTAINS:
-        team + members, pending join requests, pending scrim negotiations, next
-        match and the team's demandes history. Scoped to the staff's active
-        tenant. When the target captains no team, `team` is null and
-        `isCaptain` is false.
-      operationId: adminUserCaptainView
-      tags:
-        - admin/users
-      security:
-        - StaffSession: []
-      responses:
-        '200':
-          description: Captain-area snapshot.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  user:
-                    type: object
-                    additionalProperties: true
-                  team:
-                    type: object
-                    nullable: true
-                    additionalProperties: true
-                  isCaptain:
-                    type: boolean
-                  isManager:
-                    type: boolean
-                  joinRequests:
-                    type: array
-                    items:
-                      type: object
-                      additionalProperties: true
-                  pendingScrims:
-                    type: array
-                    items:
-                      type: object
-                      additionalProperties: true
-                  nextMatch:
-                    type: object
-                    additionalProperties: true
-                  demandes:
-                    type: array
-                    items:
-                      type: object
-                      additionalProperties: true
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-  /api/admin/users/{userId}/player-view:
-    parameters:
-      - name: userId
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-    get:
-      summary: Read-only snapshot of a user's player area.
-      description: |
-        Inspection (not impersonation) of a target user's player area:
-        profile, team + members, matches, notification counters and demandes.
-        Scoped to the staff's active tenant.
-      operationId: adminUserPlayerView
-      tags:
-        - admin/users
-      security:
-        - StaffSession: []
-      responses:
-        '200':
-          description: Player-area snapshot.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  user:
-                    type: object
-                    additionalProperties: true
-                  team:
-                    type: object
-                    nullable: true
-                    additionalProperties: true
-                  matches:
-                    type: array
-                    items:
-                      type: object
-                      additionalProperties: true
-                  notifications:
-                    type: object
-                    additionalProperties: true
-                  demandes:
-                    type: array
-                    items:
-                      type: object
-                      additionalProperties: true
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':

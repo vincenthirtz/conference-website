@@ -14,6 +14,7 @@ import MembersSection from '@/components/admin/teams/MembersSection';
 import AddMemberModal from '@/components/admin/teams/AddMemberModal';
 import EditMemberModal from '@/components/admin/teams/EditMemberModal';
 import ImportBattleTagsModal from '@/components/admin/teams/ImportBattleTagsModal';
+import { roleRequiresBattleTag } from '@/utils/teams/addMember';
 import type {
   MemberFormState,
   SearchResult,
@@ -438,7 +439,12 @@ function AdminEditTeamPage({
       setMemberError(t.errEmailOrUserId);
       return;
     }
-    if (!memberForm.battleTag.trim()) {
+    // Coach / manager = encadrement : pas de compte Overwatch exigé, donc pas
+    // de BattleTag (même règle que l'API, cf. utils/teams/addMember).
+    if (
+      !memberForm.battleTag.trim() &&
+      roleRequiresBattleTag(memberForm.role)
+    ) {
       setMemberError(t.errBattleTagRequired);
       return;
     }

@@ -19,6 +19,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabaseClient } from '@/utils/supabase';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { usePlayerArea } from '@/components/player/PlayerAreaContext';
 import type { TeamMemberLite } from '@/components/player/TeamCard';
 
 export type ManagedTeamInfo = {
@@ -59,14 +60,21 @@ type ApiPayload = {
 const CACHE_TTL_MS = 15_000;
 
 type CacheEntry = {
-  token: string;
+  /**
+   * Clé de cache = token d'accès + sujet inspecté. Le token seul suffisait
+   * tant qu'une session ne pouvait voir qu'une équipe ; en inspection staff
+   * (`?as=`), le MÊME token sert à lire l'équipe du staff puis celle de
+   * plusieurs joueuses — sans le sujet dans la clé, la première réponse serait
+   * resservie pour toutes les suivantes.
+   */
+  key: string;
   data: ManagedTeamData;
   fetchedAt: number;
 };
 
 // Module-level (shared across every hook instance / page).
 let cacheEntry: CacheEntry | null = null;
-let inFlight: { token: string; promise: Promise<ManagedTeamData> } | null = null;
+let inFlight: { key: string; promise: Promise<ManagedTeamData> } | null = null;
 
 function normalize(payload: ApiPayload | null): ManagedTeamData {
   return {
@@ -102,6 +110,7 @@ export function useManagedTeam(
   const { enabled = true } = opts;
   const { ready } = usePlayerSession({ redirect: false });
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
+  const { withSubject, subjectId } = usePlayerArea();
 
   const [data, setData] = useState<ManagedTeamData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -129,23 +138,25 @@ export function useManagedTeam(
   const fetchShared = useCallback(
     async (token: string, force: boolean): Promise<ManagedTeamData> => {
       const now = Date.now();
+      const key = `${token}::${subjectId ?? 'self'}`;
 
-      if (!force && cacheEntry && cacheEntry.token === token) {
+      if (!force && cacheEntry && cacheEntry.key === key) {
         if (now - cacheEntry.fetchedAt < CACHE_TTL_MS) {
           return cacheEntry.data;
         }
       }
 
-      if (!force && inFlight && inFlight.token === token) {
+      if (!force && inFlight && inFlight.key === key) {
         return inFlight.promise;
       }
 
-      const promise = adminFetchJson<ApiPayload>('/api/admin/teams/my', {
-        skipAuthRedirect: true,
-      })
+      const promise = adminFetchJson<ApiPayload>(
+        withSubject('/api/admin/teams/my'),
+        { skipAuthRedirect: true }
+      )
         .then((payload) => {
           const normalized = normalize(payload);
-          cacheEntry = { token, data: normalized, fetchedAt: Date.now() };
+          cacheEntry = { key, data: normalized, fetchedAt: Date.now() };
           return normalized;
         })
         .finally(() => {
@@ -154,10 +165,10 @@ export function useManagedTeam(
           }
         });
 
-      inFlight = { token, promise };
+      inFlight = { key, promise };
       return promise;
     },
-    [adminFetchJson]
+    [adminFetchJson, withSubject, subjectId]
   );
 
   const run = useCallback(

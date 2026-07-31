@@ -2079,7 +2079,9 @@
     "pillPendingRequests": "Demandes en attente",
     "pillNotifications": "Notifications",
     "notificationsAllClear": "Rien en attente — tout est à jour pour cette joueuse.",
-    "viewCaptainLink": "Voir la vue capitaine"
+    "viewCaptainLink": "Voir la vue capitaine",
+    "tabEspace": "Espace joueur",
+    "inspectionNotice": "Écran réel de l'espace joueur de {name}, en lecture seule. Chaque consultation est tracée dans les logs staff."
   },
   "adminUserCaptainView": {
     "roleOwner": "Owner",
@@ -2170,7 +2172,9 @@
     "demandeStatusRejected": "Refusée",
     "demandeStatusCancelled": "Annulée",
     "noHistoryTitle": "Aucune demande",
-    "noHistoryDesc": "Aucune demande liée à cette équipe."
+    "noHistoryDesc": "Aucune demande liée à cette équipe.",
+    "staffActionsTitle": "Actions staff",
+    "inspectionNotice": "Écran réel de gestion d'équipe de {name}, en lecture seule. Chaque consultation est tracée dans les logs staff."
   },
   "adminUsersManage": {
     "roleOwner": "Owner",
