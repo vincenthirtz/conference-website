@@ -34,8 +34,8 @@ lequel l'admin entre**, via une résolution de sujet explicite au niveau API.
 | Lot | Contenu | État |
 |---|---|---|
 | S1 | `utils/subject.ts` (`resolveSubject` / `withSubjectRoute`) + `?as=` sur les lectures + audit + tests | ✅ livré |
-| S2 | Extraction des corps de pages `pages/player/*` en composants `subjectId` / `readOnly` | à faire |
-| S3 | `/admin/users/[id]/{player,captain}-view` rendent les vrais composants ; suppression des 4 fichiers dupliqués (~3 470 LOC) | à faire |
+| S2 | Extraction des corps de pages `pages/player/*` en composants `subjectId` / `readOnly` | ✅ livré |
+| S3 | `/admin/users/[id]/{player,captain}-view` rendent les vrais écrans ; suppression des doublons (~3 470 LOC) | ✅ livré |
 | S4 | Écritures staff via `?as=` + toggle explicite « agir en tant que » (débloque les actions roster read-only v1) | à faire |
 | S5 | Kit UI partagé (`components/ui`) — **doit ressembler le plus possible à `/admin`** | à faire |
 
@@ -97,3 +97,46 @@ Codes d'erreur renvoyés : `invalid_subject` (400), `subject_read_only` (403),
   source : `withSubjectRoute` a dû y être reconnu comme `player`.
 - `docs/openapi.yaml` : paramètre partagé `SubjectAs`, référencé par les 15
   opérations GET.
+
+## S2 / S3 — ce qui est en place
+
+**Écrans partagés** (`components/player/screens/`) : `PlayerDashboardScreen`,
+`PlayerMatchesScreen`, `PlayerNotificationsScreen`, `PlayerManageTeamScreen`.
+Les pages `/player/*` n'en sont plus que la coquille (SEO + provider).
+
+**`PlayerAreaProvider`** (`components/player/PlayerAreaContext.tsx`) porte
+`subjectId` / `readOnly` et expose `withSubject(url)`. Choisi plutôt que des
+props parce que le dashboard compose une dizaine de cartes qui fetchent chacune
+leur tranche : une carte oubliée dans un prop-drilling afficherait les données
+du STAFF sous le nom de quelqu'un d'autre.
+
+**Supprimés en S3** : `player-view.ts` (518 l.), `captain-view.ts` (395 l.),
+leurs deux suites de tests (838 l.) et 2 557 lignes de rendu-miroir. Remplacés
+par `/api/admin/users/[userId]/profile` (~140 l., identité auth seule).
+
+**Restent côté admin**, parce qu'aucune UI joueur ne les offre : identité,
+rôle, renvoi d'identifiants, BattleTag, capitanat, transfert d'équipe,
+modération des demandes (via `/api/admin/demandes` filtré, pas un snapshot).
+
+**Masqué en inspection** : ProfileSummaryCard (c'est la session du staff),
+NetworkOnboarding, DiscordLink, TeamMemory, PushOptIn, SupportAsso,
+préférences de notification, vérification Battle.net, section joueuses libres.
+
+### Pièges S2 / S3
+
+- `useManagedTeam` cache au niveau module, clé sur le token : en inspection le
+  même token lit plusieurs équipes → clé re-composée en `token::sujet`.
+- Les écrans posent `Cache-Control: private, max-age=N` APRÈS le wrapper ; d'où
+  l'épinglage `no-store` de `withSubjectRoute` (S1).
+- `PlayerAreaContext` n'est pas testé unitairement : les tests unitaires
+  tournent en node et la politique zéro-dépendance exclut
+  `@testing-library/react`. Couverture par les specs Playwright.
+
+## Reste à faire
+
+- **S4** — écritures staff via `?as=` + bascule explicite « agir en tant que ».
+- **S5** — kit UI partagé, calqué sur `/admin`.
+- Pages joueur non extraites (pas encore nécessaires à l'inspection) :
+  `profile`, `teams`, `requests`, `messages`, `checkin`, `discovery`,
+  `scouting`, `join-team`, `request-captain`, `caster-application`,
+  `scrim-planning`, `[userId]`.
