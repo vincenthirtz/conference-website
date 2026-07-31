@@ -342,4 +342,9 @@ export type TeamMemberRow = {
   battle_tag_verified_at?: string | null;
   /** Flag anti-smurf : compte Blizzard vérifié ≠ tag roster (à investiguer). */
   battle_tag_mismatch?: boolean;
+  /**
+   * Pseudo affichable. L'encadrement (coach / manager) n'a pas forcément de
+   * BattleTag : c'est ce champ qui identifie la ligne dans ce cas.
+   */
+  display_name?: string | null;
 };

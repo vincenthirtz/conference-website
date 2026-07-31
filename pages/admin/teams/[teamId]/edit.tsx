@@ -14,7 +14,10 @@ import MembersSection from '@/components/admin/teams/MembersSection';
 import AddMemberModal from '@/components/admin/teams/AddMemberModal';
 import EditMemberModal from '@/components/admin/teams/EditMemberModal';
 import ImportBattleTagsModal from '@/components/admin/teams/ImportBattleTagsModal';
-import { roleRequiresBattleTag } from '@/utils/teams/addMember';
+import {
+  roleRequiresBattleTag,
+  isNonPlayingTeamRole,
+} from '@/utils/teams/addMember';
 import type {
   MemberFormState,
   SearchResult,
@@ -626,14 +629,21 @@ function AdminEditTeamPage({
       ),
     [selectedMembers, captainUserId]
   );
-  // Roster / remplaçants — mémoïsés pour la section Membres (cf. rendu plus bas).
-  const { rosterMembers, subMembers } = useMemo(
-    () => ({
-      rosterMembers: members.filter((m) => !m.is_substitute),
-      subMembers: members.filter((m) => m.is_substitute),
-    }),
-    [members]
-  );
+  // Roster / remplaçantes / encadrement — mémoïsés pour la section Membres.
+  //
+  // Coach et manager ne sont pas des joueuses : les afficher dans le roster
+  // gonflait l'effectif visible et les rendait échangeables avec une
+  // remplaçante. Même définition que la règle BattleTag côté API
+  // (`isNonPlayingTeamRole`), pour que les deux ne divergent pas.
+  const { rosterMembers, subMembers, staffMembers } = useMemo(() => {
+    const staff = members.filter((m) => isNonPlayingTeamRole(m.role));
+    const playing = members.filter((m) => !isNonPlayingTeamRole(m.role));
+    return {
+      rosterMembers: playing.filter((m) => !m.is_substitute),
+      subMembers: playing.filter((m) => m.is_substitute),
+      staffMembers: staff,
+    };
+  }, [members]);
 
   const runBulk = useCallback(
     async (
@@ -1155,6 +1165,7 @@ function AdminEditTeamPage({
                   membersLoading={membersLoading}
                   rosterMembers={rosterMembers}
                   subMembers={subMembers}
+                  staffMembers={staffMembers}
                   teamRoles={teamRoles}
                   captainUserId={captainUserId}
                   swapSource={swapSource}

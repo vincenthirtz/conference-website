@@ -6971,7 +6971,9 @@
     "rosterTitle": "Roster ({count})",
     "noActivePlayer": "No active player",
     "subsTitle": "Substitutes ({count})",
-    "noSub": "No substitute"
+    "noSub": "No substitute",
+    "staffTitle": "Team staff ({count})",
+    "noStaff": "No coach or manager"
   },
   "adminFfa": {
     "stageTypeFfa": "FFA / Points ranking",

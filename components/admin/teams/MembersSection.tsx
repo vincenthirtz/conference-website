@@ -9,6 +9,8 @@ type MembersSectionProps = {
   membersLoading: boolean;
   rosterMembers: TeamMemberRow[];
   subMembers: TeamMemberRow[];
+  /** Encadrement (coach / manager) — hors roster jouant. */
+  staffMembers: TeamMemberRow[];
   teamRoles: TeamRole[];
   captainUserId: string | null;
   swapSource: TeamMemberRow | null;
@@ -38,6 +40,7 @@ function MembersSectionComponent({
   membersLoading,
   rosterMembers,
   subMembers,
+  staffMembers,
   teamRoles,
   captainUserId,
   swapSource,
@@ -333,6 +336,42 @@ function MembersSectionComponent({
                     isSwapSource={swapSource?.id === member.id}
                     isSwapTarget={swapActive && swapSource!.id !== member.id}
                     canSwap={canSwapSub}
+                    onToggleSelected={onToggleSelected}
+                    onStartSwap={onStartSwap}
+                    onSwapWithSource={onSwapWithSource}
+                    onSetCaptain={onSetCaptain}
+                    onEdit={onEditMember}
+                    onDelete={onDeleteMember}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Encadrement — coach / manager. Hors roster jouant : ils ne
+              comptent ni dans l'effectif, ni dans les échanges titulaire ↔
+              remplaçante, et n'ont pas forcément de BattleTag. */}
+          <div data-testid="team-staff-section">
+            <h3 className="text-sm font-semibold text-violet-300/80 uppercase tracking-wide mb-2">
+              {format(t.staffTitle, { count: staffMembers.length })}
+            </h3>
+            {staffMembers.length === 0 ? (
+              <div className="text-neutral-500 text-sm py-4 text-center bg-neutral-900/30 rounded-xl">
+                {t.noStaff}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {staffMembers.map((member) => (
+                  <MemberRow
+                    key={member.id}
+                    member={member}
+                    variant="staff"
+                    isCaptain={false}
+                    isSelected={selectedIds.has(member.id)}
+                    swapActive={swapActive}
+                    isSwapSource={false}
+                    isSwapTarget={false}
+                    canSwap={false}
                     onToggleSelected={onToggleSelected}
                     onStartSwap={onStartSwap}
                     onSwapWithSource={onSwapWithSource}

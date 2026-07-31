@@ -15,6 +15,7 @@ import {
   rosterLockErrorMessage,
 } from '@/utils/teams/rosterLock';
 import { computeBattleTagMismatch } from '@/utils/auth/battleTagMismatch';
+import { fetchAdminUserProfiles } from '@/utils/adminUserProfiles';
 import {
   validateBattleTagForRole,
   roleRequiresBattleTag,
@@ -32,10 +33,17 @@ type TeamMemberRow = {
   battle_tag_verified_at?: string | null;
   /** Flag anti-smurf : compte Blizzard vérifié ≠ tag roster (calculé au GET). */
   battle_tag_mismatch?: boolean;
+  /**
+   * Pseudo affichable. Le roster identifie les joueuses par BattleTag, mais
+   * l'encadrement (coach / manager) n'en a pas forcément — sans ce champ la
+   * ligne s'affichait vide. Renseigné depuis `team_members.display_name`, à
+   * défaut depuis le compte auth (RPC batch).
+   */
+  display_name?: string | null;
 };
 
 const MEMBER_SELECT =
-  'id, team_id, user_id, role, battle_tag, is_substitute, created_at, battle_tag_verified_at, verified_battle_net_id';
+  'id, team_id, user_id, role, battle_tag, display_name, is_substitute, created_at, battle_tag_verified_at, verified_battle_net_id';
 
 type MembersResponse =
   | {
@@ -113,10 +121,22 @@ async function handler(
       });
     }
 
+    // Pseudo de repli pour les membres sans `display_name` en roster (typique
+    // de l'encadrement, ajouté sans BattleTag) : on résout le nom du compte en
+    // UN appel RPC batch. Best-effort — un échec laisse simplement le champ nul.
+    const missingNameIds = rawMembers
+      .filter((m) => !m.display_name && m.user_id)
+      .map((m) => m.user_id);
+    const authProfiles = missingNameIds.length
+      ? await fetchAdminUserProfiles(missingNameIds)
+      : new Map();
+
     const members: TeamMemberRow[] = rawMembers.map((m) => {
       const { verified_battle_net_id, ...rest } = m;
       return {
         ...rest,
+        display_name:
+          m.display_name ?? authProfiles.get(m.user_id)?.display_name ?? null,
         battle_tag_verified_at: m.battle_tag_verified_at ?? null,
         battle_tag_mismatch: computeBattleTagMismatch({
           battleTag: m.battle_tag ?? null,

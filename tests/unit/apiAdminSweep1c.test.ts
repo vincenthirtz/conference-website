@@ -51,6 +51,7 @@ import {
   resetSupabaseMock,
   setAuthUser,
   setAdminUser,
+  setRpcResult,
 } from './__helpers__/supabaseMock';
 
 import { invalidateStaffCache } from '../../utils/staff';
@@ -161,6 +162,53 @@ describe('/api/admin/teams/[teamId]/members', () => {
     );
     expect(res.statusCode).toBe(200);
     expect((res.body as any).members.length).toBe(1);
+  });
+
+  // L'encadrement (coach / manager) n'a pas forcément de BattleTag : sans
+  // display_name la ligne s'affichait vide dans /admin/teams/[id]/edit.
+  it('GET exposes display_name, falling back to the auth profile', async () => {
+    store.team_members = [
+      {
+        id: 'tm-coach',
+        tenant_id: DEFAULT_TENANT_ID,
+        team_id: TEAM_UUID,
+        user_id: 'u-coach',
+        role: 'coach',
+        battle_tag: null,
+        display_name: null,
+        is_substitute: false,
+        created_at: '2026-04-01',
+      },
+      {
+        id: 'tm-player',
+        tenant_id: DEFAULT_TENANT_ID,
+        team_id: TEAM_UUID,
+        user_id: 'u-player',
+        role: 'player',
+        battle_tag: 'Alice#1234',
+        display_name: 'Alice roster',
+        is_substitute: false,
+        created_at: '2026-04-02',
+      },
+    ] as any;
+    setRpcResult('admin_get_user_profiles', {
+      data: [{ id: 'u-coach', display_name: 'Coach Nyo', email: null }],
+    });
+
+    const res = makeRes();
+    await membersHandler(
+      makeAuthedReq({ method: 'GET', query: { teamId: TEAM_UUID } }),
+      res
+    );
+
+    expect(res.statusCode).toBe(200);
+    const byId = new Map(
+      (res.body as any).members.map((m: any) => [m.id, m.display_name])
+    );
+    // Sans display_name en roster → nom du compte.
+    expect(byId.get('tm-coach')).toBe('Coach Nyo');
+    // Avec display_name en roster → il prime, pas d'appel de repli.
+    expect(byId.get('tm-player')).toBe('Alice roster');
   });
 
   // POST
