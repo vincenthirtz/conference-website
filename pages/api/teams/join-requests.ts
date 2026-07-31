@@ -32,10 +32,11 @@ export default withSubjectRoute(
     )
       return;
 
-    // GET may be inspected by staff (`?as=`) ; the wrapper refuses `?as=` on
-    // writes, so `userId` is always the caller in the write branches below.
-    // The actor rate limit below stays keyed on the CALLER (`user.id`) so an
-    // inspection never burns the inspected captain's quota.
+    // Sujet = l'appelant, ou la capitaine dépannée quand le staff agit à sa
+    // place (`?as=…&act=1`, S4) : accepter / refuser une demande d'adhésion se
+    // fait alors SUR SON équipe. Le quota par acteur reste, lui, sur
+    // l'appelant (`user.id`) — une intervention du staff ne doit pas
+    // consommer le sien.
     const { userId, tenantId } = subject;
 
     // Per-user cap : 5 actions/minute. Évite qu'un capitaine spamme
@@ -83,7 +84,11 @@ export default withSubjectRoute(
     res.setHeader('Allow', 'GET,POST');
     return res.status(405).json({ error: 'Method not allowed' });
   },
-  { tenantResolution: 'async', auditAction: 'view_captain_data' }
+  {
+    tenantResolution: 'async',
+    auditAction: 'view_captain_data',
+    allowActAs: true,
+  }
 );
 
 async function handleGet(

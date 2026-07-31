@@ -10,6 +10,15 @@
 export const SUBJECT_QUERY_PARAM = 'as';
 
 /**
+ * Query param demandant explicitement d'AGIR à la place du sujet (S4).
+ * Sans lui (ou sans le header équivalent), `?as=` reste en lecture seule.
+ */
+export const ACT_AS_QUERY_PARAM = 'act';
+
+/** Header équivalent, pour les appelants qui maîtrisent leurs en-têtes. */
+export const ACT_AS_HEADER = 'x-staff-act-as';
+
+/**
  * Append `?as=<subjectId>` to an API path.
  *
  * No-op when `subjectId` is falsy, so call sites can pass the context value
@@ -19,9 +28,11 @@ export const SUBJECT_QUERY_PARAM = 'as';
  */
 export function withSubjectParam(
   url: string,
-  subjectId?: string | null
+  subjectId?: string | null,
+  actAs = false
 ): string {
   if (!subjectId) return url;
   const sep = url.includes('?') ? '&' : '?';
-  return `${url}${sep}${SUBJECT_QUERY_PARAM}=${encodeURIComponent(subjectId)}`;
+  const base = `${url}${sep}${SUBJECT_QUERY_PARAM}=${encodeURIComponent(subjectId)}`;
+  return actAs ? `${base}&${ACT_AS_QUERY_PARAM}=1` : base;
 }

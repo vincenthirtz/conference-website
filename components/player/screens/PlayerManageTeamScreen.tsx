@@ -78,7 +78,7 @@ export default function PlayerManageTeamScreen() {
   const router = useRouter();
   // `readOnly` = inspection staff : l'écran devient une photo fidèle, sans
   // aucun levier. Le roster et les demandes viennent du sujet via `?as=`.
-  const { withSubject, readOnly } = usePlayerArea();
+  const { withSubject, readOnly, isInspecting } = usePlayerArea();
 
   // Onboarding post-création : le magic-link « accès espace équipe » atterrit ici
   // avec ?welcome=1. C'est le seul moment du parcours où la capitaine vient de
@@ -87,7 +87,7 @@ export default function PlayerManageTeamScreen() {
   // chercher). Refermable, et masquée d'office si elle est déjà vérifiée.
   const [welcomeDismissed, setWelcomeDismissed] = useState(false);
   const showWelcome =
-    !readOnly && router.query.welcome === '1' && !welcomeDismissed;
+    !isInspecting && router.query.welcome === '1' && !welcomeDismissed;
   const { loading: authLoading, ready } = usePlayerSession();
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
   const {
@@ -965,7 +965,7 @@ export default function PlayerManageTeamScreen() {
           </div>
 
           {/* Joueurs cherchant une equipe */}
-          {!readOnly && <FreePlayersSection teamId={team.id} />}
+          {!isInspecting && <FreePlayersSection teamId={team.id} />}
         </main>
       </div>
     </>

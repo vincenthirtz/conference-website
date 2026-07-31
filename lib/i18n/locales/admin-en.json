@@ -2174,7 +2174,10 @@
     "noHistoryTitle": "No requests",
     "noHistoryDesc": "No requests tied to this team.",
     "staffActionsTitle": "Staff actions",
-    "inspectionNotice": "{name}'s actual team-management screen, read-only. Every view is recorded in the staff logs."
+    "inspectionNotice": "{name}'s actual team-management screen, read-only. Every view is recorded in the staff logs.",
+    "actAsToggleLabel": "Act on their behalf",
+    "actAsToggleHelp": "Re-enables the actions on the screen below. You then operate on {name}'s team: every write is logged under your staff account.",
+    "actAsNotice": "You are ACTING on behalf of {name}: the actions below really change their team. Every write is logged."
   },
   "adminUsersManage": {
     "roleOwner": "Owner",

@@ -38,6 +38,7 @@ import { invalidateStaffCache } from '../../utils/staff';
 import { withSubjectRoute, type SubjectContext } from '../../utils/subject';
 
 import matchesHandler from '../../pages/api/player/matches';
+import toggleJoinableHandler from '../../pages/api/teams/toggle-joinable';
 
 /* -----------------------------------------------------------
  * Constants
@@ -189,6 +190,15 @@ const captainProbe = withSubjectRoute(
     res.status(200).json({ ok: true });
   },
   { auditAction: 'view_captain_data' }
+);
+
+/** Route ayant opté pour les écritures « agir en tant que » (S4). */
+const actAsProbe = withSubjectRoute(
+  async (_req, res, { subject }) => {
+    lastSubject = subject;
+    res.status(200).json({ ok: true });
+  },
+  { allowActAs: true }
 );
 
 describe('withSubjectRoute — self path', () => {
@@ -361,6 +371,123 @@ describe('withSubjectRoute — inspection path', () => {
 });
 
 /* -----------------------------------------------------------
+ * A bis. Act-as (S4) — écritures staff à la place du sujet
+ *
+ * Deux clés indépendantes : la route doit l'autoriser (`allowActAs`) ET
+ * l'appelant doit la demander (header ou `act=1`).
+ * ---------------------------------------------------------*/
+
+describe('withSubjectRoute — act-as', () => {
+  beforeEach(() => {
+    lastSubject = null;
+    setAuthUser({ id: STAFF_AUTH_USER_ID });
+    seedStaff('admin');
+  });
+
+  it('403s a write when the route did NOT opt in, even if asked', async () => {
+    const res = makeRes();
+    await probe(
+      makeReq({ method: 'PATCH', query: { as: TARGET_USER_ID, act: '1' } }),
+      res
+    );
+    expect(res.statusCode).toBe(403);
+    expect(res.body).toMatchObject({ code: 'subject_read_only' });
+    expect(logStaffActionMock).not.toHaveBeenCalled();
+  });
+
+  it('403s a write on an opted-in route when the caller did NOT ask', async () => {
+    const res = makeRes();
+    await actAsProbe(
+      makeReq({ method: 'PATCH', query: { as: TARGET_USER_ID } }),
+      res
+    );
+    expect(res.statusCode).toBe(403);
+    expect(res.body).toMatchObject({ code: 'subject_read_only' });
+  });
+
+  it('allows the write when both keys are present (query param)', async () => {
+    const res = makeRes();
+    await actAsProbe(
+      makeReq({ method: 'PATCH', query: { as: TARGET_USER_ID, act: '1' } }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    expect(lastSubject).toMatchObject({
+      userId: TARGET_USER_ID,
+      callerId: STAFF_AUTH_USER_ID,
+      isInspection: true,
+      isActingAs: true,
+    });
+  });
+
+  it('accepts the header form too', async () => {
+    const res = makeRes();
+    const req = makeReq({
+      method: 'POST',
+      query: { as: TARGET_USER_ID },
+    });
+    req.headers['x-staff-act-as'] = '1';
+    await actAsProbe(req, res);
+    expect(res.statusCode).toBe(200);
+    expect(lastSubject?.isActingAs).toBe(true);
+  });
+
+  it('still refuses a non-staff caller', async () => {
+    setAuthUser({ id: PLAIN_USER_ID });
+    const res = makeRes();
+    await actAsProbe(
+      makeReq({ method: 'PATCH', query: { as: TARGET_USER_ID, act: '1' } }),
+      res
+    );
+    expect(res.statusCode).toBe(403);
+    expect(res.body).toMatchObject({ code: 'subject_forbidden' });
+  });
+
+  it('audits a write as act_as_player, with the HTTP method', async () => {
+    const res = makeRes();
+    await actAsProbe(
+      makeReq({ method: 'PATCH', query: { as: TARGET_USER_ID, act: '1' } }),
+      res
+    );
+
+    expect(res.statusCode).toBe(200);
+    expect(logStaffActionMock).toHaveBeenCalledTimes(1);
+    expect(logStaffActionMock.mock.calls[0][0]).toMatchObject({
+      staff_id: STAFF_ID,
+      action: 'act_as_player',
+      entity_id: TARGET_USER_ID,
+      tenant_id: TENANT_A,
+      payload: { method: 'PATCH' },
+    });
+  });
+
+  it('leaves a GET on the same route a plain consultation', async () => {
+    const res = makeRes();
+    await actAsProbe(makeReq({ query: { as: TARGET_USER_ID, act: '1' } }), res);
+    expect(res.statusCode).toBe(200);
+    expect(lastSubject?.isActingAs).toBe(false);
+    expect(logStaffActionMock.mock.calls[0][0]).toMatchObject({
+      action: 'view_player_data',
+    });
+  });
+
+  it('never turns a self call into an act-as', async () => {
+    setAuthUser({ id: PLAIN_USER_ID });
+    const res = makeRes();
+    await actAsProbe(
+      makeReq({ method: 'PATCH', query: { as: PLAIN_USER_ID, act: '1' } }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    expect(lastSubject).toMatchObject({
+      isInspection: false,
+      isActingAs: false,
+    });
+    expect(logStaffActionMock).not.toHaveBeenCalled();
+  });
+});
+
+/* -----------------------------------------------------------
  * B. Through a real endpoint
  * ---------------------------------------------------------*/
 
@@ -415,5 +542,93 @@ describe('/api/player/matches — inspected via ?as=', () => {
 
     expect(res.statusCode).toBe(200);
     expect(logStaffActionMock).not.toHaveBeenCalled();
+  });
+});
+
+/* -----------------------------------------------------------
+ * C. Act-as through a real write endpoint
+ *
+ * La garantie qui compte : l'écriture atterrit sur l'équipe du SUJET, jamais
+ * sur celle du staff.
+ * ---------------------------------------------------------*/
+
+describe('/api/teams/toggle-joinable — act-as', () => {
+  beforeEach(() => {
+    setAuthUser({ id: STAFF_AUTH_USER_ID });
+    seedStaff('admin');
+    // La cible capitaine son équipe ; le staff, lui, en a une AUTRE.
+    store.teams = [
+      {
+        id: TEAM_A_ID,
+        tenant_id: TENANT_A,
+        name: 'Phenix',
+        captain_id: TARGET_USER_ID,
+        is_joinable: false,
+      },
+      {
+        id: TEAM_B_ID,
+        tenant_id: TENANT_A,
+        name: 'Equipe du staff',
+        captain_id: STAFF_AUTH_USER_ID,
+        is_joinable: false,
+      },
+    ] as any;
+    store.team_members = [
+      {
+        id: 'tm-target',
+        team_id: TEAM_A_ID,
+        tenant_id: TENANT_A,
+        user_id: TARGET_USER_ID,
+        role: 'captain',
+        is_captain: true,
+      },
+      {
+        id: 'tm-staff',
+        team_id: TEAM_B_ID,
+        tenant_id: TENANT_A,
+        user_id: STAFF_AUTH_USER_ID,
+        role: 'captain',
+        is_captain: true,
+      },
+    ] as any;
+  });
+
+  it("flips the SUBJECT's team, not the caller's", async () => {
+    const res = makeRes();
+    await toggleJoinableHandler(
+      makeReq({
+        method: 'POST',
+        url: '/api/teams/toggle-joinable',
+        query: { as: TARGET_USER_ID, act: '1' },
+        body: { joinable: true },
+      }),
+      res
+    );
+
+    expect(res.statusCode).toBe(200);
+    expect((res.body as any).teamId).toBe(TEAM_A_ID);
+
+    const target = (store.teams as any[]).find((t) => t.id === TEAM_A_ID);
+    const staffTeam = (store.teams as any[]).find((t) => t.id === TEAM_B_ID);
+    expect(target.is_joinable).toBe(true);
+    expect(staffTeam.is_joinable).toBe(false);
+  });
+
+  it('refuses the same call without the act key', async () => {
+    const res = makeRes();
+    await toggleJoinableHandler(
+      makeReq({
+        method: 'POST',
+        url: '/api/teams/toggle-joinable',
+        query: { as: TARGET_USER_ID },
+        body: { joinable: true },
+      }),
+      res
+    );
+
+    expect(res.statusCode).toBe(403);
+    expect(res.body).toMatchObject({ code: 'subject_read_only' });
+    const target = (store.teams as any[]).find((t) => t.id === TEAM_A_ID);
+    expect(target.is_joinable).toBe(false);
   });
 });

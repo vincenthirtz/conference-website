@@ -2174,7 +2174,10 @@
     "noHistoryTitle": "Aucune demande",
     "noHistoryDesc": "Aucune demande liée à cette équipe.",
     "staffActionsTitle": "Actions staff",
-    "inspectionNotice": "Écran réel de gestion d'équipe de {name}, en lecture seule. Chaque consultation est tracée dans les logs staff."
+    "inspectionNotice": "Écran réel de gestion d'équipe de {name}, en lecture seule. Chaque consultation est tracée dans les logs staff.",
+    "actAsToggleLabel": "Agir en tant que",
+    "actAsToggleHelp": "Réactive les actions de l'écran ci-dessous. Tu interviens alors sur l'équipe de {name} : chaque écriture est journalisée sous ton compte staff.",
+    "actAsNotice": "Tu AGIS à la place de {name} : les actions de cet écran modifient réellement son équipe. Chaque écriture est journalisée."
   },
   "adminUsersManage": {
     "roleOwner": "Owner",

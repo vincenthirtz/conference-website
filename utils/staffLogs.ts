@@ -166,6 +166,7 @@ export const STAFF_LOG_ACTION_LABELS: Record<StaffLogAction, string> = {
   view_admin_page: 'Vue page admin',
   view_player_data: "a consulté l'espace joueur d'un utilisateur",
   view_captain_data: "a consulté l'espace capitaine d'un utilisateur",
+  act_as_player: "a agi à la place d'un utilisateur dans son espace (écriture)",
   // Tournois
   create_tournament: 'Création tournoi',
   update_tournament: 'Modification tournoi',

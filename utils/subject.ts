@@ -16,13 +16,14 @@
 //
 // Rules enforced here, once, for every endpoint that opts in:
 //
-//   1. READ-ONLY. `?as=` is refused on anything but GET (403
-//      `subject_read_only`). Opening writes to staff is a deliberate, separate
-//      decision per endpoint — see S4. A consequence worth stating: in a mixed
-//      GET/POST handler, `subject.userId === user.id` is GUARANTEED inside the
-//      write branch, which is why those handlers can keep sharing a single
-//      `userId` binding. S4 must re-read every such handler before relaxing
-//      this rule, since sharing stops being safe at that moment.
+//   1. READ-ONLY BY DEFAULT. `?as=` is refused on anything but GET (403
+//      `subject_read_only`) unless the endpoint opts in with `allowActAs` AND
+//      the caller asks for it explicitly (S4 — see "ACT-AS" below). A
+//      consequence worth stating: on an endpoint that has NOT opted in,
+//      `subject.userId === user.id` is GUARANTEED inside the write branch,
+//      which is why such handlers can keep sharing a single `userId` binding.
+//      Any handler gaining `allowActAs` must be re-read first: from that
+//      moment its write branch really can act on someone else.
 //   2. TENANT SCOPING. When inspecting, the scope is the STAFF's ACTIVE tenant
 //      (cookie `staff_active_tenant_id` → resolveActiveTenant), NOT the tenant
 //      resolved for the target user. This preserves the guarantee of the
@@ -34,6 +35,31 @@
 //      area) with the endpoint path in the payload. One row PER REQUEST — no
 //      dedupe: an audit trail that silently drops entries is worse than a
 //      verbose one. `payload.endpoint` lets the logs UI group them.
+//
+// ACT-AS (S4) — staff writes on behalf of a member.
+//
+// The captain area is the motivating case: support has to fix a roster (wrong
+// role, member to remove, join request to accept) for a captain who is stuck.
+// Before S4 the only options were "tell them what to click" or a second set of
+// admin-only endpoints — i.e. the duplication this module exists to remove.
+//
+// Two independent keys are required, so nothing mutates by accident:
+//
+//   a. the ENDPOINT declares `allowActAs: true` — an explicit per-route
+//      decision, reviewed with the handler's write branch in hand ;
+//   b. the CALLER asks for it, via `X-Staff-Act-As: 1` or `&act=1`.
+//
+// Why also a query param: the player screens are shared components that build
+// their URLs through `withSubject()` and call `adminFetchJson` from ~20 sites.
+// A header-only contract would mean threading request options through every
+// one of them — more surface, more places to forget. The param is set by the
+// PlayerAreaProvider only when staff has flipped the "act as" switch, and auth
+// is Bearer-only (a browser never attaches it by itself), so there is no
+// CSRF-style accidental path.
+//
+// An act-as write is audited as `act_as_player` with the endpoint AND the HTTP
+// method — a mutation must never be indistinguishable from a consultation in
+// the log.
 //
 // Deliberately NOT opted in (privacy / RGPD / device-scoped):
 //   /api/player/discovery/*, /api/player/follows, /api/player/network-status,
@@ -60,13 +86,22 @@ import {
 } from './tenant';
 import { logStaffAction } from './staffLogs';
 import type { StaffLogAction } from '@/types/staffLogs';
-import { SUBJECT_QUERY_PARAM } from './subjectParam';
+import {
+  SUBJECT_QUERY_PARAM,
+  ACT_AS_QUERY_PARAM,
+  ACT_AS_HEADER,
+} from './subjectParam';
 
 import { logger } from './logger';
 
 // Re-exported so server code has a single import site; the constant itself
 // lives in `subjectParam` because the client imports it too.
-export { SUBJECT_QUERY_PARAM, withSubjectParam } from './subjectParam';
+export {
+  SUBJECT_QUERY_PARAM,
+  ACT_AS_QUERY_PARAM,
+  ACT_AS_HEADER,
+  withSubjectParam,
+} from './subjectParam';
 
 /** uuid v1-v5 shape (Supabase auth issues v4, but stay lenient). */
 const UUID_RE =
@@ -85,6 +120,13 @@ export type SubjectContext = {
   staffId: string | null;
   /** Staff role of the inspecting caller (null when not inspecting). */
   staffRole: StaffRole | null;
+  /**
+   * true when this request is a staff WRITE on behalf of the subject (S4).
+   * Implies `isInspection`. Handlers may surface it (e.g. to tag a record as
+   * staff-initiated) but must not gate on it: the wrapper has already checked
+   * both keys.
+   */
+  isActingAs: boolean;
 };
 
 export type SubjectRouteOptions = {
@@ -104,6 +146,16 @@ export type SubjectRouteOptions = {
    * always the staff's active tenant.
    */
   tenantResolution?: 'sync' | 'async';
+  /**
+   * Autorise les écritures « agir en tant que » (S4) sur cet endpoint.
+   *
+   * Défaut `false` : `?as=` reste refusé hors GET. Passer `true` est une
+   * décision par route — il faut avoir relu la branche d'écriture du handler
+   * et vérifié qu'elle se scope bien sur `subject.userId` / `subject.tenantId`
+   * (et non sur `user.id`). Le client doit EN PLUS demander explicitement
+   * l'act-as (header `X-Staff-Act-As: 1` ou `&act=1`).
+   */
+  allowActAs?: boolean;
 };
 
 /** Error codes returned to the client, so the UI can branch without parsing prose. */
@@ -112,6 +164,22 @@ export type SubjectErrorCode =
   | 'subject_read_only'
   | 'subject_forbidden'
   | 'subject_not_found';
+
+/**
+ * Le client demande-t-il explicitement d'AGIR à la place du sujet ?
+ *
+ * Header ou query : voir le commentaire d'en-tête (les écrans joueur partagés
+ * construisent leurs URLs, pas leurs headers).
+ */
+function isActAsRequested(req: NextApiRequest): boolean {
+  const header = req.headers[ACT_AS_HEADER];
+  const headerValue = Array.isArray(header) ? header[0] : header;
+  if (headerValue === '1' || headerValue === 'true') return true;
+
+  const raw = req.query?.[ACT_AS_QUERY_PARAM];
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  return value === '1' || value === 'true';
+}
 
 /**
  * Resolve the subject of the request.
@@ -136,6 +204,7 @@ export async function resolveSubject(
     isInspection: false,
     staffId: null,
     staffRole: null,
+    isActingAs: false,
   });
 
   const raw = req.query?.[SUBJECT_QUERY_PARAM];
@@ -154,8 +223,12 @@ export async function resolveSubject(
   // `?as=<myself>` is a no-op, not an inspection: no staff check, no audit row.
   if (target === user.id) return self();
 
+  // Écriture : il faut LES DEUX clés — la route l'autorise ET l'appelant la
+  // demande. Sinon on reste sur la garantie S1 (inspection = lecture seule).
   const method = (req.method || 'GET').toUpperCase();
-  if (method !== 'GET') {
+  const isWrite = method !== 'GET';
+  const actingAs = isWrite && !!options.allowActAs && isActAsRequested(req);
+  if (isWrite && !actingAs) {
     res.status(403).json({
       error: 'Subject inspection is read-only.',
       code: 'subject_read_only',
@@ -195,17 +268,22 @@ export async function resolveSubject(
     return null;
   }
 
-  // Audit — never block the response on a logging failure.
+  // Audit — never block the response on a logging failure. Une écriture ne
+  // doit JAMAIS être indiscernable d'une consultation dans le journal : slug
+  // dédié + méthode HTTP dans le payload.
   try {
     await logStaffAction({
       staff_id: staffCtx.staff.id,
-      action: options.auditAction ?? 'view_player_data',
+      action: actingAs
+        ? 'act_as_player'
+        : (options.auditAction ?? 'view_player_data'),
       entity_type: 'user',
       entity_id: target,
       tenant_id: staffCtx.tenantId,
       payload: {
         endpoint: (req.url || '').split('?')[0] || null,
         email: (authData.user.email as string | null) ?? null,
+        ...(actingAs ? { method } : {}),
       },
     });
   } catch (logErr) {
@@ -219,6 +297,7 @@ export async function resolveSubject(
     isInspection: true,
     staffId: staffCtx.staff.id,
     staffRole: staffCtx.role,
+    isActingAs: actingAs,
   };
 }
 

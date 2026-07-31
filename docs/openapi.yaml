@@ -148,6 +148,20 @@ components:
         type: string
         format: uuid
       description: UUID du tenant — requis avec l'env legacy uniquement.
+    ActAs:
+      name: act
+      in: query
+      required: false
+      schema:
+        type: string
+        enum: ['1']
+      description: |
+        Demande explicite d'AGIR a la place du sujet (`as`), pour les routes
+        qui l'autorisent. Sans ce parametre (ou l'en-tete equivalent
+        `X-Staff-Act-As: 1`), `as` reste en lecture seule et toute methode
+        autre que GET renvoie 403 `subject_read_only`. Les ecritures act-as
+        sont journalisees dans `staff_logs` sous `act_as_player`.
+        Voir `utils/subject.ts`.
     SubjectAs:
       name: as
       in: query
@@ -25318,6 +25332,9 @@ paths:
           $ref: '#/components/responses/RateLimited'
   /api/teams/invitations:
     post:
+      parameters:
+        - $ref: '#/components/parameters/SubjectAs'
+        - $ref: '#/components/parameters/ActAs'
       tags:
         - public/teams
       summary: >-
@@ -26472,6 +26489,9 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
     post:
+      parameters:
+        - $ref: '#/components/parameters/SubjectAs'
+        - $ref: '#/components/parameters/ActAs'
       tags:
         - public/teams
       summary: Approuve ou rejette une demande de join (ajoute le membre si approuvee).
@@ -26563,6 +26583,9 @@ paths:
           $ref: '#/components/responses/Forbidden'
   /api/teams/toggle-joinable:
     post:
+      parameters:
+        - $ref: '#/components/parameters/SubjectAs'
+        - $ref: '#/components/parameters/ActAs'
       tags:
         - public/teams
       summary: Bascule le flag is_joinable de l'equipe geree par l'utilisateur.
@@ -26583,6 +26606,9 @@ paths:
           $ref: '#/components/responses/Forbidden'
   /api/teams/toggle-scrim-open:
     post:
+      parameters:
+        - $ref: '#/components/parameters/SubjectAs'
+        - $ref: '#/components/parameters/ActAs'
       tags:
         - public/teams
       summary: Bascule le flag open_for_scrim de l'equipe (opt-in public /scrim).
@@ -26603,6 +26629,9 @@ paths:
           $ref: '#/components/responses/Forbidden'
   /api/teams/transfer-captain:
     patch:
+      parameters:
+        - $ref: '#/components/parameters/SubjectAs'
+        - $ref: '#/components/parameters/ActAs'
       tags:
         - public/teams
       summary: Le capitaine transfere son role a un autre membre.
@@ -26692,6 +26721,9 @@ paths:
           $ref: '#/components/responses/Unauthorized'
   /api/teams/update-member:
     patch:
+      parameters:
+        - $ref: '#/components/parameters/SubjectAs'
+        - $ref: '#/components/parameters/ActAs'
       tags:
         - public/teams
       summary: Le capitaine met a jour un membre de son equipe (role / battle_tag / remplacant).
@@ -26738,6 +26770,9 @@ paths:
           $ref: '#/components/responses/NotFound'
   /api/teams/update-member-role:
     patch:
+      parameters:
+        - $ref: '#/components/parameters/SubjectAs'
+        - $ref: '#/components/parameters/ActAs'
       tags:
         - public/teams
       summary: Le capitaine met a jour le role d'un membre de son equipe.
@@ -26775,6 +26810,9 @@ paths:
           $ref: '#/components/responses/Forbidden'
   /api/teams/update-member-specialty:
     patch:
+      parameters:
+        - $ref: '#/components/parameters/SubjectAs'
+        - $ref: '#/components/parameters/ActAs'
       tags:
         - public/teams
       summary: Le capitaine/manager met a jour la specialite en jeu d'un membre.
@@ -26818,6 +26856,9 @@ paths:
     parameters:
       - $ref: '#/components/parameters/TeamId'
     delete:
+      parameters:
+        - $ref: '#/components/parameters/SubjectAs'
+        - $ref: '#/components/parameters/ActAs'
       tags:
         - public/teams
       summary: Le capitaine/manager retire un membre de l'equipe.

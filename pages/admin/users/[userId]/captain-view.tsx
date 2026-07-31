@@ -113,6 +113,10 @@ function CaptainViewPage({ staff: _staff }: { staff: StaffShape }) {
   const [error, setError] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
+  // Agir à la place de la capitaine (S4). Volontairement NON persisté et
+  // remis à false à chaque arrivée sur la page : ouvrir les écritures doit
+  // rester un geste conscient, pas un état qu'on retrouve par surprise.
+  const [actAs, setActAs] = useState(false);
 
   const load = useCallback(async () => {
     if (!userId) return;
@@ -399,6 +403,35 @@ function CaptainViewPage({ staff: _staff }: { staff: StaffShape }) {
                       {t.staffActionsTitle}
                     </h2>
 
+                    {/* Bascule « agir en tant que » : rend l'écran capitaine
+                        ci-dessous de nouveau actionnable. */}
+                    <div className="mb-6 flex items-start justify-between gap-4 rounded-xl border border-amber-500/30 bg-amber-500/5 px-4 py-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-amber-100">
+                          {t.actAsToggleLabel}
+                        </p>
+                        <p className="mt-0.5 text-xs text-amber-100/70">
+                          {format(t.actAsToggleHelp, { name: headerName })}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={actAs}
+                        aria-label={t.actAsToggleLabel}
+                        onClick={() => setActAs((v) => !v)}
+                        className={`relative h-7 w-12 flex-shrink-0 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60 ${
+                          actAs ? 'bg-amber-500' : 'bg-neutral-600'
+                        }`}
+                      >
+                        <span
+                          className={`absolute top-1 h-5 w-5 rounded-full bg-white transition-transform ${
+                            actAs ? 'left-6' : 'left-1'
+                          }`}
+                        />
+                      </button>
+                    </div>
+
                     {/* Promotion capitaine */}
                     <div className="mb-6">
                       <h3 className="text-sm font-medium text-white mb-2">
@@ -480,14 +513,26 @@ function CaptainViewPage({ staff: _staff }: { staff: StaffShape }) {
                     </div>
                   </section>
 
-                  {/* L'écran capitaine réel, en lecture seule */}
-                  <p className="mb-3 text-xs text-neutral-500">
-                    {format(t.inspectionNotice, { name: headerName })}
+                  {/* L'écran capitaine réel — consultable, et actionnable
+                      seulement si le staff a basculé « agir en tant que ». */}
+                  <p
+                    className={`mb-3 text-xs ${
+                      actAs ? 'font-medium text-amber-200' : 'text-neutral-500'
+                    }`}
+                  >
+                    {format(actAs ? t.actAsNotice : t.inspectionNotice, {
+                      name: headerName,
+                    })}
                   </p>
-                  <div className="overflow-hidden rounded-2xl border border-neutral-700/50">
+                  <div
+                    className={`overflow-hidden rounded-2xl border ${
+                      actAs ? 'border-amber-500/40' : 'border-neutral-700/50'
+                    }`}
+                  >
                     <PlayerAreaProvider
                       subjectId={userId}
                       subjectName={headerName}
+                      actAs={actAs}
                     >
                       <PlayerManageTeamScreen />
                     </PlayerAreaProvider>

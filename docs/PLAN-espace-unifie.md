@@ -36,7 +36,7 @@ lequel l'admin entre**, via une résolution de sujet explicite au niveau API.
 | S1 | `utils/subject.ts` (`resolveSubject` / `withSubjectRoute`) + `?as=` sur les lectures + audit + tests | ✅ livré |
 | S2 | Extraction des corps de pages `pages/player/*` en composants `subjectId` / `readOnly` | ✅ livré |
 | S3 | `/admin/users/[id]/{player,captain}-view` rendent les vrais écrans ; suppression des doublons (~3 470 LOC) | ✅ livré |
-| S4 | Écritures staff via `?as=` + toggle explicite « agir en tant que » (débloque les actions roster read-only v1) | à faire |
+| S4 | Écritures staff via `?as=` + toggle explicite « agir en tant que » | ✅ livré |
 | S5 | Kit UI partagé (`components/ui`) — **doit ressembler le plus possible à `/admin`** | à faire |
 
 ## S1 — ce qui est en place
@@ -132,9 +132,56 @@ préférences de notification, vérification Battle.net, section joueuses libres
   tournent en node et la politique zéro-dépendance exclut
   `@testing-library/react`. Couverture par les specs Playwright.
 
+## S4 — act-as (écritures staff)
+
+Une écriture `?as=` exige **deux clés indépendantes** :
+
+1. la **route** l'autorise : `withSubjectRoute(handler, { allowActAs: true })` —
+   décision par endpoint, prise en relisant sa branche d'écriture ;
+2. l'**appelant** la demande : header `X-Staff-Act-As: 1` ou `&act=1`.
+
+Sans les deux, on reste sur la garantie S1 (403 `subject_read_only`). Une case
+cochée côté admin ne peut donc pas ouvrir une route qui ne s'est pas déclarée,
+et une route ouverte ne mute pas sur une simple lecture.
+
+Le paramètre d'URL existe en plus du header parce que les écrans joueur sont
+partagés : ils construisent leurs URLs via `withSubject()` depuis une vingtaine
+d'appels, mais pas leurs en-têtes. L'auth étant Bearer-only, aucun chemin
+accidentel façon CSRF.
+
+**Audit** : une écriture act-as est journalisée `act_as_player` (slug dédié)
+avec la méthode HTTP dans le payload — une mutation ne doit jamais être
+indiscernable d'une consultation.
+
+### Endpoints ouverts (9)
+
+`teams/update-member`, `teams/update-member-role`,
+`teams/update-member-specialty`, `teams/toggle-joinable`,
+`teams/toggle-scrim-open`, `teams/transfer-captain`, `teams/join-requests`,
+`teams/[teamId]/members` (DELETE), `teams/invitations` — soit exactement les
+mutations de `PlayerManageTeamScreen`.
+
+### UI
+
+Bascule « Agir en tant que » sur `/admin/users/[id]/captain-view`, dans le bloc
+Actions staff. Non persistée : elle repart à `false` à chaque arrivée sur la
+page. Active, elle repasse `readOnly` à false et l'écran capitaine redevient
+actionnable (cadre ambre + bandeau d'avertissement).
+
+### Pièges S4
+
+- `getStaffByUserId(userId)` dans `update-member` et `transfer-captain` :
+  en act-as, `userId` est la capitaine dépannée, qui n'a pas de row staff →
+  l'audit aurait été **silencieusement perdu**. Ces appels prennent maintenant
+  `subject.callerId`.
+- `BattlenetVerifyCard` et `FreePlayersSection` sont masqués sur
+  `isInspecting`, pas sur `readOnly` : leurs écritures ne sont pas ouvertes à
+  l'act-as, et relier un compte Blizzard à la place de quelqu'un n'a aucun sens.
+- Le quota `applyActorRateLimit` reste sur l'appelant : une intervention staff
+  ne consomme pas le quota de la personne dépannée.
+
 ## Reste à faire
 
-- **S4** — écritures staff via `?as=` + bascule explicite « agir en tant que ».
 - **S5** — kit UI partagé, calqué sur `/admin`.
 - Pages joueur non extraites (pas encore nécessaires à l'inspection) :
   `profile`, `teams`, `requests`, `messages`, `checkin`, `discovery`,

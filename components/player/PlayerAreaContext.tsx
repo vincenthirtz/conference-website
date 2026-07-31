@@ -17,9 +17,14 @@
 // a page that claims to show someone else's — the exact class of bug this
 // migration exists to kill.
 //
-// Inspection implies read-only: the API refuses `?as=` on writes anyway (403
-// `subject_read_only`), so a visible action button could only ever produce an
-// error. S4 will make `readOnly` independently controllable.
+// Inspection implique lecture seule PAR DÉFAUT : l'API refuse `?as=` sur les
+// écritures (403 `subject_read_only`), donc un bouton d'action visible ne
+// pourrait produire qu'une erreur.
+//
+// S4 lève ce défaut à la demande : `actAs` rend l'écran de nouveau actionnable
+// et fait suffixer `&act=1` aux URLs, ce que le serveur exige EN PLUS de son
+// propre opt-in par route (`allowActAs`). Deux clés indépendantes : une case
+// cochée côté admin ne peut pas ouvrir une route qui ne s'est pas déclarée.
 
 import { createContext, useContext, useMemo } from 'react';
 import type { ReactNode } from 'react';
@@ -34,7 +39,12 @@ export type PlayerAreaValue = {
   isInspecting: boolean;
   /** true ⇔ every mutation must be hidden or disabled. */
   readOnly: boolean;
-  /** Appends `?as=` to an API path when inspecting; identity otherwise. */
+  /** true ⇔ le staff a explicitement demandé à AGIR à la place du sujet. */
+  isActingAs: boolean;
+  /**
+   * Appends `?as=` (et `&act=1` en mode act-as) to an API path when
+   * inspecting; identity otherwise.
+   */
   withSubject: (url: string) => string;
 };
 
@@ -43,6 +53,7 @@ const SELF: PlayerAreaValue = {
   subjectName: null,
   isInspecting: false,
   readOnly: false,
+  isActingAs: false,
   withSubject: (url) => url,
 };
 
@@ -52,23 +63,33 @@ export function PlayerAreaProvider({
   subjectId = null,
   subjectName = null,
   readOnly = false,
+  actAs = false,
   children,
 }: {
   subjectId?: string | null;
   subjectName?: string | null;
   readOnly?: boolean;
+  /**
+   * Le staff agit à la place du sujet : les actions redeviennent visibles et
+   * les URLs portent `&act=1`. Sans sujet, l'option n'a aucun effet.
+   */
+  actAs?: boolean;
   children: ReactNode;
 }) {
-  const value = useMemo<PlayerAreaValue>(
-    () => ({
+  const value = useMemo<PlayerAreaValue>(() => {
+    const inspecting = !!subjectId;
+    const acting = inspecting && actAs;
+    return {
       subjectId: subjectId || null,
       subjectName: subjectName || null,
-      isInspecting: !!subjectId,
-      readOnly: readOnly || !!subjectId,
-      withSubject: (url: string) => withSubjectParam(url, subjectId),
-    }),
-    [subjectId, subjectName, readOnly]
-  );
+      isInspecting: inspecting,
+      // En act-as l'écran redevient actionnable ; `readOnly` explicite reste
+      // prioritaire (un appelant peut vouloir figer l'écran quoi qu'il arrive).
+      readOnly: readOnly || (inspecting && !acting),
+      isActingAs: acting,
+      withSubject: (url: string) => withSubjectParam(url, subjectId, acting),
+    };
+  }, [subjectId, subjectName, readOnly, actAs]);
 
   return (
     <PlayerAreaContext.Provider value={value}>

@@ -7,6 +7,7 @@ export type StaffLogAction =
   | 'view_admin_page'
   | 'view_player_data'
   | 'view_captain_data'
+  | 'act_as_player'
   // --- Tournois ---
   | 'create_tournament'
   | 'update_tournament'
