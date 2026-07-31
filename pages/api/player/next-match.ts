@@ -9,9 +9,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
-import { withAuthRoute } from '@/utils/staff';
+import { withSubjectRoute } from '@/utils/subject';
 import { CHECKIN_OPEN_MINUTES } from '@/utils/checkin';
-import { resolveTenantIdForUserRequest } from '@/utils/tenant';
 
 import { logger } from '../../../utils/logger';
 export type NextMatchPayload =
@@ -52,10 +51,10 @@ export type NextMatchPayload =
       checkin: null;
     };
 
-export default withAuthRoute(async function handler(
+export default withSubjectRoute(async function handler(
   req: NextApiRequest,
   res: NextApiResponse<NextMatchPayload | { error: string }>,
-  { user }
+  { subject }
 ) {
   if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'next-match')) {
     return;
@@ -66,13 +65,13 @@ export default withAuthRoute(async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const tenantId = resolveTenantIdForUserRequest(req, { authUserId: user.id });
+  const { userId, tenantId } = subject;
 
   // Find the user's active team (member or captain)
   const { data: membership } = await supabaseAdmin
     .from('team_members')
     .select('team_id')
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .eq('tenant_id', tenantId)
     .maybeSingle();
 

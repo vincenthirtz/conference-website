@@ -205,7 +205,10 @@ function detectAuth(src: string): AuthKind {
     if (role === 'caster') return 'staff-caster';
     return 'staff-admin';
   }
-  if (/\bwithAuthRoute\s*\(/.test(src)) return 'player';
+  // `withSubjectRoute` (utils/subject.ts) IS `withAuthRoute` + subject
+  // resolution: same Bearer requirement, plus an optional staff-only `?as=`.
+  // Auth-wise it is indistinguishable from 'player' for a normal caller.
+  if (/\bwith(?:Auth|Subject)Route\s*\(/.test(src)) return 'player';
   if (/\bwithPublicWrite\s*(?:<[^>]*>)?\s*\(/.test(src)) return 'public-token';
   if (/CRON_SECRET|requireCronAuth|isCronAuthorized|x-cron-secret/i.test(src))
     return 'cron';

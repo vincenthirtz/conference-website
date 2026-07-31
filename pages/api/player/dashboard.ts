@@ -20,9 +20,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
-import { withAuthRoute } from '@/utils/staff';
+import { withSubjectRoute } from '@/utils/subject';
 import { loadManagedTeamSlice } from '@/utils/teams/managedTeamSlice';
-import { resolveTenantIdForUserRequest } from '@/utils/tenant';
 import { CHECKIN_OPEN_MINUTES } from '@/utils/checkin';
 import { readScrimNego } from '@/utils/teams/scrimNegotiation';
 import { fetchAdminUserProfiles } from '@/utils/adminUserProfiles';
@@ -454,10 +453,10 @@ export async function loadNextMatch(
   }
 }
 
-export default withAuthRoute(async function handler(
+export default withSubjectRoute(async function handler(
   req: NextApiRequest,
   res: NextApiResponse<PlayerDashboardPayload | { error: string }>,
-  { user }
+  { subject }
 ) {
   if (
     applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'player-dashboard')
@@ -469,8 +468,8 @@ export default withAuthRoute(async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const userId = user.id;
-  const tenantId = resolveTenantIdForUserRequest(req, { authUserId: userId });
+  // Subject = the caller, or the inspected user when staff passes `?as=`.
+  const { userId, tenantId } = subject;
 
   // Resolve the managed team slice once via the shared server helper. It
   // returns team + members + the canonical isCaptain/isManager flags (derived

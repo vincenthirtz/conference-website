@@ -20,8 +20,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
-import { withAuthRoute } from '@/utils/staff';
-import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
+import { withSubjectRoute } from '@/utils/subject';
 import { findMemberTeam } from '@/utils/teams/memberTeam';
 import { loadPlayedGames } from '@/utils/teams/playedGames';
 import {
@@ -64,95 +63,98 @@ const EMPTY: ProgressionResponse = {
   milestones: [],
 };
 
-export default withAuthRoute(async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse,
-  { user }
-) {
-  if (req.method !== 'GET') {
-    res.setHeader('Allow', 'GET');
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+export default withSubjectRoute(
+  async function handler(
+    req: NextApiRequest,
+    res: NextApiResponse,
+    { subject }
+  ) {
+    if (req.method !== 'GET') {
+      res.setHeader('Allow', 'GET');
+      return res.status(405).json({ error: 'Method not allowed' });
+    }
 
-  if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'progression')) {
-    return;
-  }
+    if (
+      applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'progression')
+    ) {
+      return;
+    }
 
-  const tenantId = await resolveTenantIdForUserRequestAsync(req, {
-    authUserId: user.id,
-  });
+    const { userId, tenantId } = subject;
 
-  const [team, historyRes, ratingRes] = await Promise.all([
-    findMemberTeam(user.id, tenantId),
-    supabaseAdmin
-      .from('player_rating_history')
-      .select('occurred_at, rating_after')
-      .eq('tenant_id', tenantId)
-      .eq('user_id', user.id)
-      .order('occurred_at', { ascending: true }),
-    supabaseAdmin
-      .from('player_ratings')
-      .select('rating')
-      .eq('tenant_id', tenantId)
-      .eq('user_id', user.id)
-      .maybeSingle(),
-  ]);
+    const [team, historyRes, ratingRes] = await Promise.all([
+      findMemberTeam(userId, tenantId),
+      supabaseAdmin
+        .from('player_rating_history')
+        .select('occurred_at, rating_after')
+        .eq('tenant_id', tenantId)
+        .eq('user_id', userId)
+        .order('occurred_at', { ascending: true }),
+      supabaseAdmin
+        .from('player_ratings')
+        .select('rating')
+        .eq('tenant_id', tenantId)
+        .eq('user_id', userId)
+        .maybeSingle(),
+    ]);
 
-  if (historyRes.error) {
-    logger.error('[progression] history error', historyRes.error);
-    return res.status(500).json({ error: 'Lecture du niveau impossible.' });
-  }
+    if (historyRes.error) {
+      logger.error('[progression] history error', historyRes.error);
+      return res.status(500).json({ error: 'Lecture du niveau impossible.' });
+    }
 
-  const history: RatingHistoryRow[] = ((historyRes.data || []) as Row[]).map(
-    (row) => ({
-      occurredAt: (row.occurred_at as string | null) ?? null,
-      ratingAfter:
-        row.rating_after === null || row.rating_after === undefined
-          ? null
-          : Number(row.rating_after),
-    })
-  );
+    const history: RatingHistoryRow[] = ((historyRes.data || []) as Row[]).map(
+      (row) => ({
+        occurredAt: (row.occurred_at as string | null) ?? null,
+        ratingAfter:
+          row.rating_after === null || row.rating_after === undefined
+            ? null
+            : Number(row.rating_after),
+      })
+    );
 
-  const rawRating = (ratingRes.data as { rating?: number | null } | null)
-    ?.rating;
-  const rating =
-    typeof rawRating === 'number' && Number.isFinite(rawRating)
-      ? Math.round(rawRating)
-      : null;
+    const rawRating = (ratingRes.data as { rating?: number | null } | null)
+      ?.rating;
+    const rating =
+      typeof rawRating === 'number' && Number.isFinite(rawRating)
+        ? Math.round(rawRating)
+        : null;
 
-  const series = buildRatingSeries(history);
+    const series = buildRatingSeries(history);
 
-  // Sans équipe, on rend quand même MA progression : elle m'appartient et ne
-  // dépend pas d'un roster. Seuls les jalons d'équipe disparaissent.
-  if (!team) {
-    return res.status(200).json({
-      ...EMPTY,
+    // Sans équipe, on rend quand même MA progression : elle m'appartient et ne
+    // dépend pas d'un roster. Seuls les jalons d'équipe disparaissent.
+    if (!team) {
+      return res.status(200).json({
+        ...EMPTY,
+        rating,
+        peak: peakRating(history, rating),
+        delta: ratingDelta(series),
+        series,
+        ratedGames: history.length,
+      } satisfies ProgressionResponse);
+    }
+
+    const games = await loadPlayedGames(tenantId, team.id);
+
+    const payload: ProgressionResponse = {
+      teamId: team.id,
+      teamName: team.name,
       rating,
       peak: peakRating(history, rating),
       delta: ratingDelta(series),
       series,
       ratedGames: history.length,
-    } satisfies ProgressionResponse);
-  }
+      milestones: computeMilestones({
+        games,
+        teamId: team.id,
+        history,
+        currentRating: rating,
+      }),
+    };
 
-  const games = await loadPlayedGames(tenantId, team.id);
-
-  const payload: ProgressionResponse = {
-    teamId: team.id,
-    teamName: team.name,
-    rating,
-    peak: peakRating(history, rating),
-    delta: ratingDelta(series),
-    series,
-    ratedGames: history.length,
-    milestones: computeMilestones({
-      games,
-      teamId: team.id,
-      history,
-      currentRating: rating,
-    }),
-  };
-
-  res.setHeader('Cache-Control', 'private, max-age=60');
-  return res.status(200).json(payload);
-});
+    res.setHeader('Cache-Control', 'private, max-age=60');
+    return res.status(200).json(payload);
+  },
+  { tenantResolution: 'async' }
+);

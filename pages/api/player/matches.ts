@@ -13,9 +13,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
-import { withAuthRoute } from '@/utils/staff';
+import { withSubjectRoute } from '@/utils/subject';
 import { CHECKIN_OPEN_MINUTES } from '@/utils/checkin';
-import { resolveTenantIdForUserRequest } from '@/utils/tenant';
 
 import { logger } from '../../../utils/logger';
 
@@ -57,10 +56,10 @@ function unwrap<T>(value: T | T[] | null | undefined): T | null {
   return Array.isArray(value) ? (value[0] ?? null) : value;
 }
 
-export default withAuthRoute(async function handler(
+export default withSubjectRoute(async function handler(
   req: NextApiRequest,
   res: NextApiResponse<PlayerMatchesPayload | { error: string }>,
-  { user }
+  { subject }
 ) {
   if (
     applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'player-matches')
@@ -73,13 +72,13 @@ export default withAuthRoute(async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const tenantId = resolveTenantIdForUserRequest(req, { authUserId: user.id });
+  const { userId, tenantId } = subject;
 
   // Find the user's team for this tenant.
   const { data: membership } = await supabaseAdmin
     .from('team_members')
     .select('team_id')
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .eq('tenant_id', tenantId)
     .maybeSingle();
 

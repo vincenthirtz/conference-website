@@ -18,8 +18,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
-import { withAuthRoute } from '@/utils/staff';
-import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
+import { withSubjectRoute } from '@/utils/subject';
 import { hasTeamPermission } from '@/utils/teams/permissions';
 import { findMemberTeam } from '@/utils/teams/memberTeam';
 import {
@@ -119,201 +118,209 @@ const EMPTY: Omit<TeamRhythmResponse, 'referenceTimezone'> = {
   canAnnounce: false,
 };
 
-export default withAuthRoute(async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse,
-  { user }
-) {
-  const isGet = req.method === 'GET';
-  const isPut = req.method === 'PUT';
-  if (!isGet && !isPut) {
-    res.setHeader('Allow', 'GET, PUT');
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  if (
-    applyRateLimit(
-      req,
-      res,
-      isPut ? { max: 30, windowMs: 60_000 } : { max: 60, windowMs: 60_000 },
-      'team-rhythm'
-    )
+export default withSubjectRoute(
+  async function handler(
+    req: NextApiRequest,
+    res: NextApiResponse,
+    { subject }
   ) {
-    return;
-  }
+    const isGet = req.method === 'GET';
+    const isPut = req.method === 'PUT';
+    if (!isGet && !isPut) {
+      res.setHeader('Allow', 'GET, PUT');
+      return res.status(405).json({ error: 'Method not allowed' });
+    }
 
-  const tenantId = await resolveTenantIdForUserRequestAsync(req, {
-    authUserId: user.id,
-  });
+    if (
+      applyRateLimit(
+        req,
+        res,
+        isPut ? { max: 30, windowMs: 60_000 } : { max: 60, windowMs: 60_000 },
+        'team-rhythm'
+      )
+    ) {
+      return;
+    }
 
-  const team = await findMemberTeam(user.id, tenantId);
+    // GET may be inspected by staff (`?as=`) ; the wrapper refuses `?as=` on
+    // PUT, so `userId` below is always the caller inside the write branch.
+    const { userId, tenantId } = subject;
 
-  if (!team) {
-    // Pas d'équipe : ce n'est pas une erreur, il n'y a simplement pas de rythme.
-    if (isPut) {
+    const team = await findMemberTeam(userId, tenantId);
+
+    if (!team) {
+      // Pas d'équipe : ce n'est pas une erreur, il n'y a simplement pas de rythme.
+      if (isPut) {
+        return res
+          .status(403)
+          .json({ error: 'Tu dois appartenir à une équipe active.' });
+      }
       return res
-        .status(403)
-        .json({ error: 'Tu dois appartenir à une équipe active.' });
+        .status(200)
+        .json({ ...EMPTY, referenceTimezone: DEFAULT_TIMEZONE });
     }
-    return res
-      .status(200)
-      .json({ ...EMPTY, referenceTimezone: DEFAULT_TIMEZONE });
-  }
 
-  if (isPut) {
-    const body = (req.body ?? {}) as { slots?: unknown; timezone?: unknown };
-    const normalized = normalizeRhythmSlots(body.slots);
-    if (!normalized.ok) {
-      return res.status(400).json({ error: normalized.error });
+    if (isPut) {
+      const body = (req.body ?? {}) as { slots?: unknown; timezone?: unknown };
+      const normalized = normalizeRhythmSlots(body.slots);
+      if (!normalized.ok) {
+        return res.status(400).json({ error: normalized.error });
+      }
+      const timezone = safeTimezone(body.timezone) ?? DEFAULT_TIMEZONE;
+
+      const { error } = await supabaseAdmin.from('team_availability').upsert(
+        {
+          tenant_id: tenantId,
+          team_id: team.id,
+          user_id: userId,
+          timezone,
+          slots: normalized.slots,
+        },
+        { onConflict: 'team_id,user_id' }
+      );
+
+      if (error) {
+        logger.error('[team-rhythm] upsert error', error);
+        return res
+          .status(500)
+          .json({ error: 'Enregistrement de tes créneaux impossible.' });
+      }
+      // On ne renvoie pas la grille recalculée : l'UI recharge, et un PUT qui
+      // renverrait un agrégat coûterait une lecture complète à chaque clic.
+      return res.status(200).json({ ok: true, slots: normalized.slots });
     }
-    const timezone = safeTimezone(body.timezone) ?? DEFAULT_TIMEZONE;
 
-    const { error } = await supabaseAdmin.from('team_availability').upsert(
-      {
-        tenant_id: tenantId,
-        team_id: team.id,
-        user_id: user.id,
-        timezone,
-        slots: normalized.slots,
-      },
-      { onConflict: 'team_id,user_id' }
-    );
+    const [membersRes, availabilityRes, canAnnounce] = await Promise.all([
+      supabaseAdmin
+        .from('team_members')
+        .select('user_id, display_name')
+        .eq('team_id', team.id)
+        .eq('tenant_id', tenantId),
+      supabaseAdmin
+        .from('team_availability')
+        .select('user_id, timezone, slots')
+        .eq('team_id', team.id)
+        .eq('tenant_id', tenantId),
+      hasTeamPermission(userId, team.id, 'manage_scrims'),
+    ]);
 
-    if (error) {
-      logger.error('[team-rhythm] upsert error', error);
+    if (membersRes.error) {
+      logger.error('[team-rhythm] members error', membersRes.error);
+      return res.status(500).json({ error: 'Lecture du roster impossible.' });
+    }
+    if (availabilityRes.error) {
+      logger.error('[team-rhythm] availability error', availabilityRes.error);
       return res
         .status(500)
-        .json({ error: 'Enregistrement de tes créneaux impossible.' });
+        .json({ error: 'Lecture des créneaux impossible.' });
     }
-    // On ne renvoie pas la grille recalculée : l'UI recharge, et un PUT qui
-    // renverrait un agrégat coûterait une lecture complète à chaque clic.
-    return res.status(200).json({ ok: true, slots: normalized.slots });
-  }
 
-  const [membersRes, availabilityRes, canAnnounce] = await Promise.all([
-    supabaseAdmin
-      .from('team_members')
-      .select('user_id, display_name')
-      .eq('team_id', team.id)
-      .eq('tenant_id', tenantId),
-    supabaseAdmin
-      .from('team_availability')
-      .select('user_id, timezone, slots')
-      .eq('team_id', team.id)
-      .eq('tenant_id', tenantId),
-    hasTeamPermission(user.id, team.id, 'manage_scrims'),
-  ]);
+    const members = (membersRes.data || []) as MemberRow[];
+    const memberIds = new Set(
+      members.map((m) => m.user_id).filter((id): id is string => !!id)
+    );
 
-  if (membersRes.error) {
-    logger.error('[team-rhythm] members error', membersRes.error);
-    return res.status(500).json({ error: 'Lecture du roster impossible.' });
-  }
-  if (availabilityRes.error) {
-    logger.error('[team-rhythm] availability error', availabilityRes.error);
-    return res.status(500).json({ error: 'Lecture des créneaux impossible.' });
-  }
+    const rows = (availabilityRes.data || []) as AvailabilityRow[];
+    const mine = rows.find((r) => r.user_id === userId) ?? null;
 
-  const members = (membersRes.data || []) as MemberRow[];
-  const memberIds = new Set(
-    members.map((m) => m.user_id).filter((id): id is string => !!id)
-  );
+    const myTimezone =
+      safeTimezone(mine?.timezone) ??
+      safeTimezone(req.query.tz) ??
+      DEFAULT_TIMEZONE;
 
-  const rows = (availabilityRes.data || []) as AvailabilityRow[];
-  const mine = rows.find((r) => r.user_id === user.id) ?? null;
+    // Fuseau de référence = le mien : la grille est lue par quelqu'un, et c'est
+    // son heure locale qui doit être juste. Les autres sont reprojetés.
+    const referenceTimezone = myTimezone;
 
-  const myTimezone =
-    safeTimezone(mine?.timezone) ??
-    safeTimezone(req.query.tz) ??
-    DEFAULT_TIMEZONE;
+    const inputs: RhythmMemberInput[] = [];
+    for (const row of rows) {
+      // Une déclaration orpheline (membre parti depuis) ne doit pas gonfler le
+      // noyau — on la garde en base (historique) mais on l'ignore ici.
+      if (!memberIds.has(row.user_id)) continue;
+      const normalized = normalizeRhythmSlots(row.slots);
+      if (!normalized.ok || normalized.slots.length === 0) continue;
+      inputs.push({
+        userId: row.user_id,
+        timezone: safeTimezone(row.timezone) ?? DEFAULT_TIMEZONE,
+        slots: normalized.slots,
+      });
+    }
 
-  // Fuseau de référence = le mien : la grille est lue par quelqu'un, et c'est
-  // son heure locale qui doit être juste. Les autres sont reprojetés.
-  const referenceTimezone = myTimezone;
+    const heatmap = buildRhythmHeatmap(inputs, referenceTimezone);
+    const memberCount = memberIds.size;
+    const threshold = rhythmCoreThreshold(memberCount);
+    const core = coreRhythmSlots(heatmap, threshold);
 
-  const inputs: RhythmMemberInput[] = [];
-  for (const row of rows) {
-    // Une déclaration orpheline (membre parti depuis) ne doit pas gonfler le
-    // noyau — on la garde en base (historique) mais on l'ignore ici.
-    if (!memberIds.has(row.user_id)) continue;
-    const normalized = normalizeRhythmSlots(row.slots);
-    if (!normalized.ok || normalized.slots.length === 0) continue;
-    inputs.push({
-      userId: row.user_id,
-      timezone: safeTimezone(row.timezone) ?? DEFAULT_TIMEZONE,
-      slots: normalized.slots,
-    });
-  }
+    // Noms pour l'infobulle « qui est dispo ce créneau ». Sans eux, la heatmap
+    // n'est qu'un compteur : on voit qu'il manque quelqu'un, pas qui.
+    const memberNames: Record<string, string> = {};
+    for (const m of members) {
+      if (m.user_id) memberNames[m.user_id] = m.display_name || '—';
+    }
 
-  const heatmap = buildRhythmHeatmap(inputs, referenceTimezone);
-  const memberCount = memberIds.size;
-  const threshold = rhythmCoreThreshold(memberCount);
-  const core = coreRhythmSlots(heatmap, threshold);
+    const myNormalized = normalizeRhythmSlots(mine?.slots ?? []);
 
-  // Noms pour l'infobulle « qui est dispo ce créneau ». Sans eux, la heatmap
-  // n'est qu'un compteur : on voit qu'il manque quelqu'un, pas qui.
-  const memberNames: Record<string, string> = {};
-  for (const m of members) {
-    if (m.user_id) memberNames[m.user_id] = m.display_name || '—';
-  }
+    // Suggestion d'entraînement (N6) : le créneau où l'équipe est disponible et
+    // ne joue pourtant jamais. C'est la seule information du rythme qui fasse
+    // AGIR — « vous êtes au complet » constate, « et vous n'y jouez jamais »
+    // propose. Best-effort : une erreur de lecture n'empêche pas la grille.
+    const offsetMinutes = getTimeZoneOffsetMinutes(
+      new Date(),
+      referenceTimezone
+    );
+    let suggestion: TrainingSuggestion | null = null;
+    try {
+      const [games, searchesRes] = await Promise.all([
+        loadPlayedGames(tenantId, team.id),
+        supabaseAdmin
+          .from('scrim_searches')
+          .select('team_id, slots, status, expires_at')
+          .eq('tenant_id', tenantId)
+          .eq('team_id', team.id)
+          .eq('status', 'active'),
+      ]);
+      const liveSlots = ((searchesRes.data || []) as ScrimSearchRow[])
+        .filter((s) => isSearchLive(s))
+        .flatMap((s) => s.slots || []);
 
-  const myNormalized = normalizeRhythmSlots(mine?.slots ?? []);
+      suggestion = pickTrainingSlot({
+        coreSlots: core,
+        heatmap,
+        playedBySlot: tallyPlayedBySlot(
+          games.map((g) => g.playedAt),
+          offsetMinutes
+        ),
+        announcedSlots: announcedSlotKeys(liveSlots, offsetMinutes),
+      });
+    } catch (err) {
+      logger.error('[team-rhythm] suggestion error', err);
+    }
 
-  // Suggestion d'entraînement (N6) : le créneau où l'équipe est disponible et
-  // ne joue pourtant jamais. C'est la seule information du rythme qui fasse
-  // AGIR — « vous êtes au complet » constate, « et vous n'y jouez jamais »
-  // propose. Best-effort : une erreur de lecture n'empêche pas la grille.
-  const offsetMinutes = getTimeZoneOffsetMinutes(new Date(), referenceTimezone);
-  let suggestion: TrainingSuggestion | null = null;
-  try {
-    const [games, searchesRes] = await Promise.all([
-      loadPlayedGames(tenantId, team.id),
-      supabaseAdmin
-        .from('scrim_searches')
-        .select('team_id, slots, status, expires_at')
-        .eq('tenant_id', tenantId)
-        .eq('team_id', team.id)
-        .eq('status', 'active'),
-    ]);
-    const liveSlots = ((searchesRes.data || []) as ScrimSearchRow[])
-      .filter((s) => isSearchLive(s))
-      .flatMap((s) => s.slots || []);
-
-    suggestion = pickTrainingSlot({
-      coreSlots: core,
+    const payload: TeamRhythmResponse = {
+      suggestion,
+      /** Prochaines occurrences du seul créneau suggéré, prêtes à annoncer. */
+      suggestionSlots: suggestion
+        ? projectRhythmSlots([suggestion.slot], referenceTimezone, { max: 4 })
+        : [],
+      teamId: team.id,
+      teamName: team.name,
+      referenceTimezone,
+      mySlots: myNormalized.ok ? myNormalized.slots : [],
+      myTimezone,
+      memberNames,
+      memberCount,
+      declaredCount: inputs.length,
+      threshold,
       heatmap,
-      playedBySlot: tallyPlayedBySlot(
-        games.map((g) => g.playedAt),
-        offsetMinutes
-      ),
-      announcedSlots: announcedSlotKeys(liveSlots, offsetMinutes),
-    });
-  } catch (err) {
-    logger.error('[team-rhythm] suggestion error', err);
-  }
+      coreSlots: core,
+      suggestedSlots: projectRhythmSlots(core, referenceTimezone, {
+        max: MAX_SEARCH_SLOTS,
+      }),
+      canAnnounce,
+    };
 
-  const payload: TeamRhythmResponse = {
-    suggestion,
-    /** Prochaines occurrences du seul créneau suggéré, prêtes à annoncer. */
-    suggestionSlots: suggestion
-      ? projectRhythmSlots([suggestion.slot], referenceTimezone, { max: 4 })
-      : [],
-    teamId: team.id,
-    teamName: team.name,
-    referenceTimezone,
-    mySlots: myNormalized.ok ? myNormalized.slots : [],
-    myTimezone,
-    memberNames,
-    memberCount,
-    declaredCount: inputs.length,
-    threshold,
-    heatmap,
-    coreSlots: core,
-    suggestedSlots: projectRhythmSlots(core, referenceTimezone, {
-      max: MAX_SEARCH_SLOTS,
-    }),
-    canAnnounce,
-  };
-
-  res.setHeader('Cache-Control', 'private, max-age=15');
-  return res.status(200).json(payload);
-});
+    res.setHeader('Cache-Control', 'private, max-age=15');
+    return res.status(200).json(payload);
+  },
+  { tenantResolution: 'async' }
+);

@@ -148,6 +148,20 @@ components:
         type: string
         format: uuid
       description: UUID du tenant — requis avec l'env legacy uniquement.
+    SubjectAs:
+      name: as
+      in: query
+      required: false
+      schema:
+        type: string
+        format: uuid
+      description: |
+        Inspection staff, LECTURE SEULE : identifiant de l'utilisateur dont on
+        veut lire les donnees, a la place de l'appelant. Reserve au staff
+        (role `admin` minimum), scope au tenant actif du staff, refuse sur
+        toute methode autre que GET (403 `subject_read_only`) et journalise
+        dans `staff_logs`. Absent = l'appelant lit ses propres donnees.
+        Voir `utils/subject.ts`.
     IdempotencyKey:
       name: idempotency-key
       in: header
@@ -25728,6 +25742,8 @@ paths:
           $ref: '#/components/responses/RateLimited'
   /api/player/scrims:
     get:
+      parameters:
+        - $ref: '#/components/parameters/SubjectAs'
       tags:
         - public/teams
       summary: Les scrims de mon equipe (a rapporter, a venir, recents).
@@ -25964,6 +25980,7 @@ paths:
       security:
         - PlayerBearer: []
       parameters:
+        - $ref: '#/components/parameters/SubjectAs'
         - in: query
           name: tz
           required: false
@@ -26034,6 +26051,8 @@ paths:
           $ref: '#/components/responses/RateLimited'
   /api/player/progression:
     get:
+      parameters:
+        - $ref: '#/components/parameters/SubjectAs'
       tags:
         - public/teams
       summary: Progression — courbe de niveau de l'appelante et jalons d'equipe.
@@ -26123,6 +26142,8 @@ paths:
           $ref: '#/components/responses/RateLimited'
   /api/player/team-health:
     get:
+      parameters:
+        - $ref: '#/components/parameters/SubjectAs'
       tags:
         - public/teams
       summary: Sante d'equipe — constats derives, ordonnes par gravite.
@@ -26315,6 +26336,8 @@ paths:
           $ref: '#/components/responses/RateLimited'
   /api/teams/scrim-plannings:
     get:
+      parameters:
+        - $ref: '#/components/parameters/SubjectAs'
       tags:
         - public/teams
       summary: List open scrim planning sessions visible to the caller (captain or staff).
@@ -26440,6 +26463,8 @@ paths:
           description: Planning not open.
   /api/teams/scrim-requests:
     get:
+      parameters:
+        - $ref: '#/components/parameters/SubjectAs'
       tags:
         - public/teams
       summary: Le capitaine liste les demandes de scrim recues pour son equipe.
@@ -26503,6 +26528,8 @@ paths:
           $ref: '#/components/responses/RateLimited'
   /api/teams/join-requests:
     get:
+      parameters:
+        - $ref: '#/components/parameters/SubjectAs'
       tags:
         - public/teams
       summary: Le capitaine liste les demandes de join pending pour son equipe.
@@ -28311,6 +28338,8 @@ paths:
           $ref: '#/components/responses/NotFound'
   /api/demandes/captain:
     get:
+      parameters:
+        - $ref: '#/components/parameters/SubjectAs'
       tags:
         - public/teams
       summary: Liste les demandes de capitanat (recues/emises) du joueur connecte.
@@ -28456,6 +28485,8 @@ paths:
                     format: uuid
   /api/demandes/join:
     get:
+      parameters:
+        - $ref: '#/components/parameters/SubjectAs'
       tags:
         - public/teams
       summary: Liste les demandes de join du joueur (emises).
@@ -28732,6 +28763,8 @@ paths:
                 $ref: '#/components/schemas/Error'
   /api/player/messages:
     get:
+      parameters:
+        - $ref: '#/components/parameters/SubjectAs'
       tags:
         - public/auth
       summary: Liste les conversations du joueur (messagerie player ↔ player/staff).
@@ -28840,6 +28873,8 @@ paths:
           $ref: '#/components/responses/Unauthorized'
   /api/player/matches:
     get:
+      parameters:
+        - $ref: '#/components/parameters/SubjectAs'
       tags:
         - public/auth
       summary: Matchs du joueur connecte (a venir + passes).
@@ -28957,6 +28992,8 @@ paths:
           $ref: '#/components/responses/ServerError'
   /api/player/dashboard:
     get:
+      parameters:
+        - $ref: '#/components/parameters/SubjectAs'
       tags:
         - public/auth
       summary: Donnees agregees de l'espace joueur (equipe, demandes, scrims, messages, prochain match + readiness).
@@ -28977,6 +29014,8 @@ paths:
           $ref: '#/components/responses/ServerError'
   /api/player/next-match:
     get:
+      parameters:
+        - $ref: '#/components/parameters/SubjectAs'
       tags:
         - public/auth
       summary: Prochain match du joueur connecte + token check-in.
@@ -29003,6 +29042,7 @@ paths:
       security:
         - PlayerBearer: []
       parameters:
+        - $ref: '#/components/parameters/SubjectAs'
         - name: status
           in: query
           required: false
@@ -29031,6 +29071,8 @@ paths:
           $ref: '#/components/responses/Unauthorized'
   /api/player/invitations:
     get:
+      parameters:
+        - $ref: '#/components/parameters/SubjectAs'
       tags:
         - public/auth
       summary: Invitations d'equipe en attente pour le joueur connecte.

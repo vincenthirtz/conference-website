@@ -7,7 +7,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit, applyActorRateLimit } from '@/utils/rateLimit';
 import { isValidUUID, validateRole } from '@/utils/apiHelpers';
-import { withAuthRoute } from '@/utils/staff';
+import { withSubjectRoute } from '@/utils/subject';
 import {
   getManagedTeam,
   assertTeamPermission,
@@ -18,68 +18,73 @@ import {
   rosterLockErrorMessage,
 } from '@/utils/teams/rosterLock';
 import { mapTeamRpcError } from '@/utils/teams/rpcErrors';
-import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
 import { fetchAdminUserProfiles } from '@/utils/adminUserProfiles';
 
 import { logger } from '../../../utils/logger';
-export default withAuthRoute(async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse,
-  { user }
-) {
-  if (applyRateLimit(req, res, { max: 20, windowMs: 60_000 }, 'join-requests'))
-    return;
-
-  const userId = user.id;
-  const tenantId = await resolveTenantIdForUserRequestAsync(req, {
-    authUserId: userId,
-  });
-
-  // Per-user cap : 5 actions/minute. Évite qu'un capitaine spamme
-  // l'approve/reject (et donc trigger team_members + news).
-  if (
-    applyActorRateLimit(
-      res,
-      userId,
-      { max: 5, windowMs: 60_000 },
-      'join-requests'
+export default withSubjectRoute(
+  async function handler(
+    req: NextApiRequest,
+    res: NextApiResponse,
+    { user, subject }
+  ) {
+    if (
+      applyRateLimit(req, res, { max: 20, windowMs: 60_000 }, 'join-requests')
     )
-  )
-    return;
+      return;
 
-  // Check if user can manage a team (captain or manager)
-  const access = await getManagedTeam(userId, tenantId);
-  if (!access) {
-    return res.status(403).json({ error: TEAM_MANAGEMENT_FORBIDDEN });
-  }
+    // GET may be inspected by staff (`?as=`) ; the wrapper refuses `?as=` on
+    // writes, so `userId` is always the caller in the write branches below.
+    // The actor rate limit below stays keyed on the CALLER (`user.id`) so an
+    // inspection never burns the inspected captain's quota.
+    const { userId, tenantId } = subject;
 
-  // Permission fine (R2) : le rôle doit couvrir `manage_join_requests` — un rôle
-  // à privilèges partiels n'ouvre plus l'ensemble de la gestion d'équipe.
-  const denied = assertTeamPermission(access, 'manage_join_requests');
-  if (denied) return res.status(denied.status).json({ error: denied.error });
+    // Per-user cap : 5 actions/minute. Évite qu'un capitaine spamme
+    // l'approve/reject (et donc trigger team_members + news).
+    if (
+      applyActorRateLimit(
+        res,
+        user.id,
+        { max: 5, windowMs: 60_000 },
+        'join-requests'
+      )
+    )
+      return;
 
-  const { data: captainTeam, error: teamErr } = await supabaseAdmin
-    .from('teams')
-    .select('id, name, logo_url')
-    .eq('id', access.teamId)
-    .eq('tenant_id', tenantId)
-    .maybeSingle();
+    // Check if user can manage a team (captain or manager)
+    const access = await getManagedTeam(userId, tenantId);
+    if (!access) {
+      return res.status(403).json({ error: TEAM_MANAGEMENT_FORBIDDEN });
+    }
 
-  if (teamErr || !captainTeam) {
-    return res.status(404).json({ error: 'Team introuvable.' });
-  }
+    // Permission fine (R2) : le rôle doit couvrir `manage_join_requests` — un rôle
+    // à privilèges partiels n'ouvre plus l'ensemble de la gestion d'équipe.
+    const denied = assertTeamPermission(access, 'manage_join_requests');
+    if (denied) return res.status(denied.status).json({ error: denied.error });
 
-  if (req.method === 'GET') {
-    return handleGet(req, res, captainTeam.id, tenantId);
-  }
+    const { data: captainTeam, error: teamErr } = await supabaseAdmin
+      .from('teams')
+      .select('id, name, logo_url')
+      .eq('id', access.teamId)
+      .eq('tenant_id', tenantId)
+      .maybeSingle();
 
-  if (req.method === 'POST') {
-    return handlePost(req, res, captainTeam, userId, tenantId);
-  }
+    if (teamErr || !captainTeam) {
+      return res.status(404).json({ error: 'Team introuvable.' });
+    }
 
-  res.setHeader('Allow', 'GET,POST');
-  return res.status(405).json({ error: 'Method not allowed' });
-});
+    if (req.method === 'GET') {
+      return handleGet(req, res, captainTeam.id, tenantId);
+    }
+
+    if (req.method === 'POST') {
+      return handlePost(req, res, captainTeam, userId, tenantId);
+    }
+
+    res.setHeader('Allow', 'GET,POST');
+    return res.status(405).json({ error: 'Method not allowed' });
+  },
+  { tenantResolution: 'async', auditAction: 'view_captain_data' }
+);
 
 async function handleGet(
   req: NextApiRequest,

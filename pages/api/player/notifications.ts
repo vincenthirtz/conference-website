@@ -16,11 +16,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
-import { withAuthRoute } from '@/utils/staff';
+import { withSubjectRoute } from '@/utils/subject';
 import { CHECKIN_OPEN_MINUTES } from '@/utils/checkin';
 import { getManagedTeam } from '@/utils/teams/managementAccess';
 import { getStaffRole } from '@/utils/staff';
-import { resolveTenantIdForUserRequest } from '@/utils/tenant';
 
 export type PlayerNotificationsPayload = {
   hasTeam: boolean;
@@ -208,10 +207,10 @@ async function countPendingPlannings(
   }
 }
 
-export default withAuthRoute(async function handler(
+export default withSubjectRoute(async function handler(
   req: NextApiRequest,
   res: NextApiResponse<PlayerNotificationsPayload | { error: string }>,
-  { user }
+  { subject }
 ) {
   if (
     applyRateLimit(req, res, { max: 120, windowMs: 60_000 }, 'player-notifs')
@@ -224,16 +223,16 @@ export default withAuthRoute(async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const tenantId = resolveTenantIdForUserRequest(req, { authUserId: user.id });
+  const { userId, tenantId } = subject;
 
   // Phase 1 — resolve everything the downstream blocks need to know WHICH team
   // / privileges apply. These three are mutually independent (all keyed on the
   // user) so they run in parallel; membership always runs and is only consulted
   // when the user manages no team.
   const [access, staffRole, membershipTeamId] = await Promise.all([
-    getManagedTeam(user.id, tenantId),
-    getStaffRole(user.id),
-    countMembership(user.id, tenantId),
+    getManagedTeam(userId, tenantId),
+    getStaffRole(userId),
+    countMembership(userId, tenantId),
   ]);
 
   const managedTeamId = access?.teamId ?? null;
@@ -248,7 +247,7 @@ export default withAuthRoute(async function handler(
   // never takes the whole response down.
   const [pendingInvites, inbox, checkinPending, pendingPlannings] =
     await Promise.all([
-      countPendingInvites(user.id, tenantId),
+      countPendingInvites(userId, tenantId),
       canManageInbox && managedTeamId
         ? countInboxByType(managedTeamId, tenantId)
         : Promise.resolve({
@@ -259,7 +258,7 @@ export default withAuthRoute(async function handler(
       hasTeam && memberTeamId
         ? computeCheckinPending(memberTeamId, tenantId)
         : Promise.resolve(0 as 0 | 1),
-      countPendingPlannings(user.id, tenantId, managedTeamId, staffRole),
+      countPendingPlannings(userId, tenantId, managedTeamId, staffRole),
     ]);
 
   const { unreadMessages, pendingScrims, pendingJoinRequests } = inbox;
