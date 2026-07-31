@@ -12,6 +12,7 @@ import DiscordLinkCard from '@/components/player/DiscordLinkCard';
 import NetworkOnboardingCard from '@/components/player/NetworkOnboardingCard';
 import MyScrimsCard from '@/components/player/MyScrimsCard';
 import TeamRhythmCard from '@/components/player/TeamRhythmCard';
+import TeamMemoryCard from '@/components/player/TeamMemoryCard';
 import TeamCard, { type TeamMemberLite } from '@/components/player/TeamCard';
 import DemandesHistory from '@/components/player/DemandesHistory';
 import QuickAction, {
@@ -629,6 +630,11 @@ function PlayerDashboard() {
           <CategorySection label={t.catCompetition}>
             <NextMatchCard initialData={nextMatch} />
             <MatchReadinessCard nextMatch={nextMatch} t={t} />
+            {/* Mémoire d'équipe (N2) — ouverte à tout le roster, comme le
+                rythme : une revue est le document partagé de l'équipe, pas le
+                carnet de sa capitaine. Se masque d'elle-même tant qu'aucun
+                affrontement n'a été joué. */}
+            {team && <TeamMemoryCard />}
           </CategorySection>
 
           {/* ─────────────  Scrims  ─────────────

@@ -3434,6 +3434,94 @@ components:
             format: date-time
         canAnnounce:
           type: boolean
+    TeamReviews:
+      type: object
+      description: >-
+        Memoire d'equipe : affrontements joues (matchs + scrims meles dans un
+        seul ordre chronologique) et revues privees associees.
+      required:
+        - teamId
+        - encounters
+        - opponents
+        - reviewedCount
+      properties:
+        teamId:
+          type: string
+          format: uuid
+          nullable: true
+        teamName:
+          type: string
+          nullable: true
+        reviewedCount:
+          type: integer
+        opponents:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              name:
+                type: string
+              count:
+                type: integer
+        encounters:
+          type: array
+          items:
+            type: object
+            required:
+              - subjectType
+              - subjectId
+            properties:
+              subjectType:
+                type: string
+                enum: [match, scrim]
+              subjectId:
+                type: string
+                format: uuid
+              playedAt:
+                type: string
+                format: date-time
+                nullable: true
+              opponentTeamId:
+                type: string
+                format: uuid
+                nullable: true
+              opponentName:
+                type: string
+                nullable: true
+              myScore:
+                type: integer
+                nullable: true
+              opponentScore:
+                type: integer
+                nullable: true
+              result:
+                type: string
+                nullable: true
+                enum: [win, loss, draw, null]
+              label:
+                type: string
+                nullable: true
+              review:
+                nullable: true
+                type: object
+                properties:
+                  vodUrl:
+                    type: string
+                    nullable: true
+                  notes:
+                    type: string
+                    nullable: true
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    nullable: true
+                  updatedBy:
+                    type: string
+                    format: uuid
+                    nullable: true
     PlayerScrim:
       type: object
       required:
@@ -25547,6 +25635,130 @@ paths:
                     type: array
                     items:
                       type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: L'appelant n'appartient a aucune equipe active.
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /api/player/team-reviews:
+    get:
+      tags:
+        - public/teams
+      summary: Memoire d'equipe — affrontements joues et revues associees.
+      description: >-
+        Chronologie des matchs termines et scrims clos de l'equipe de
+        l'appelant, chacun avec sa revue (VOD + notes) ou `null`, plus la liste
+        des adversaires rencontres pour filtrer cote client. Ouverte a TOUT
+        membre. Les revues sont STRICTEMENT privees a l'equipe : aucune surface
+        publique ne les expose et l'adversaire n'y a jamais acces.
+      operationId: playerTeamReviews
+      security:
+        - PlayerBearer: []
+      responses:
+        '200':
+          description: Historique et revues de l'equipe de l'appelant.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamReviews'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+    put:
+      tags:
+        - public/teams
+      summary: Ecrire ou mettre a jour la revue d'un affrontement.
+      description: >-
+        `opponent_team_id` et `played_at` sont derives du sujet cote serveur et
+        jamais lus dans le body. Le sujet doit appartenir a l'equipe de
+        l'appelant. Vider les deux champs SUPPRIME la revue.
+      operationId: playerTeamReviewUpsert
+      security:
+        - PlayerBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - subjectType
+                - subjectId
+              properties:
+                subjectType:
+                  type: string
+                  enum: [match, scrim]
+                subjectId:
+                  type: string
+                  format: uuid
+                vodUrl:
+                  type: string
+                  nullable: true
+                  maxLength: 500
+                  description: URL http(s) uniquement.
+                notes:
+                  type: string
+                  nullable: true
+                  maxLength: 4000
+      responses:
+        '200':
+          description: >-
+            Revue enregistree, ou supprimee (`review: null`) si les deux champs
+            sont vides.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  review:
+                    nullable: true
+                    type: object
+                    properties:
+                      vodUrl:
+                        type: string
+                        nullable: true
+                      notes:
+                        type: string
+                        nullable: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: L'appelant n'appartient a aucune equipe active.
+        '404':
+          description: Le sujet n'existe pas ou n'est pas celui de l'equipe.
+        '429':
+          $ref: '#/components/responses/RateLimited'
+    delete:
+      tags:
+        - public/teams
+      summary: Effacer la revue d'un affrontement.
+      operationId: playerTeamReviewDelete
+      security:
+        - PlayerBearer: []
+      parameters:
+        - in: query
+          name: subjectType
+          required: true
+          schema:
+            type: string
+            enum: [match, scrim]
+        - in: query
+          name: subjectId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Revue supprimee (idempotent).
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':

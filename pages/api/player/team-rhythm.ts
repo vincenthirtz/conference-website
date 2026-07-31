@@ -21,6 +21,7 @@ import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
 import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
 import { hasTeamPermission } from '@/utils/teams/permissions';
+import { findMemberTeam } from '@/utils/teams/memberTeam';
 import {
   buildRhythmHeatmap,
   coreRhythmSlots,
@@ -97,53 +98,6 @@ const EMPTY: Omit<TeamRhythmResponse, 'referenceTimezone'> = {
   canAnnounce: false,
 };
 
-/**
- * Équipe de l'utilisateur en tant que MEMBRE (pas en tant que gestionnaire).
- * Règle métier existante : un compte n'appartient qu'à une équipe par tenant.
- */
-async function findMyTeam(
-  userId: string,
-  tenantId: string
-): Promise<{ id: string; name: string } | null> {
-  // Deux lectures plates plutôt qu'un embed PostgREST : la forme d'un embed
-  // (objet ou tableau) dépend de la cardinalité déduite de la FK, ce qui se
-  // prête mal à un cast, et l'appartenance à une équipe est le point d'entrée
-  // de toute la route — mieux vaut qu'il soit trivialement lisible.
-  const { data: member, error } = await supabaseAdmin
-    .from('team_members')
-    .select('team_id')
-    .eq('user_id', userId)
-    .eq('tenant_id', tenantId)
-    .maybeSingle();
-
-  if (error) {
-    logger.error('[team-rhythm] member lookup error', error);
-    return null;
-  }
-  const teamId = (member as { team_id?: string | null } | null)?.team_id;
-  if (!teamId) return null;
-
-  const { data: team, error: teamErr } = await supabaseAdmin
-    .from('teams')
-    .select('id, name, is_active, deleted_at')
-    .eq('id', teamId)
-    .eq('tenant_id', tenantId)
-    .maybeSingle();
-
-  if (teamErr) {
-    logger.error('[team-rhythm] team lookup error', teamErr);
-    return null;
-  }
-  const row = team as {
-    id: string;
-    name: string;
-    is_active: boolean | null;
-    deleted_at: string | null;
-  } | null;
-  if (!row || row.deleted_at || row.is_active === false) return null;
-  return { id: row.id, name: row.name };
-}
-
 export default withAuthRoute(async function handler(
   req: NextApiRequest,
   res: NextApiResponse,
@@ -171,7 +125,7 @@ export default withAuthRoute(async function handler(
     authUserId: user.id,
   });
 
-  const team = await findMyTeam(user.id, tenantId);
+  const team = await findMemberTeam(user.id, tenantId);
 
   if (!team) {
     // Pas d'équipe : ce n'est pas une erreur, il n'y a simplement pas de rythme.

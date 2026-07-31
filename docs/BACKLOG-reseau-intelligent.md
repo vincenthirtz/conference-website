@@ -113,12 +113,20 @@ Le rating est un chiffre, pas un récit — donc il ne motive personne.
 - **Acceptation** : un membre non capitaine peut contribuer ; le noyau se calcule sans saisie
   supplémentaire ; les créneaux proposés à l'annonce sont des instants réels (pas des intentions).
 
-#### N2 · Mémoire d'équipe : revue de match et de scrim
+#### N2 · Mémoire d'équipe : revue de match et de scrim — ✅ LIVRÉ
 
 - **Impact / Effort** : 🟧 / **M**
 - **Problème** : M5 — rien ne capitalise sur les matchs joués.
 - **Proposition** : sur chaque match/scrim terminé, un bloc « revue » : lien VOD, note libre
   partagée avec l'équipe, points travaillés. Historique consultable par adversaire.
+- **Résultat (2026-07-31)** : table `team_reviews` (sujet polymorphe match/scrim, adversaire et date
+  **dérivés du sujet côté serveur**, RLS deny strict), `utils/teams/teamReviews.ts`,
+  `GET`/`PUT`/`DELETE /api/player/team-reviews` ouverts à **tout membre** — une mémoire réservée à la
+  capitaine n'est pas une mémoire d'équipe — et carte `TeamMemoryCard` sur le tableau de bord, qui
+  mêle matchs et scrims dans une seule chronologie et se filtre par adversaire côté client.
+  Deux gardes non négociables : le sujet doit appartenir à l'équipe (sinon on polluerait
+  l'historique d'autrui) et le lien de VOD n'accepte que http(s) (le champ est libre, rendu
+  cliquable pour tout le roster).
 - **Acceptation** : une équipe retrouve en 10 s ce qu'elle avait noté sur son dernier affrontement
   contre X ; rien n'est visible par l'adversaire.
 
