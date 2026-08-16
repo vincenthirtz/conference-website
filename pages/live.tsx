@@ -256,7 +256,7 @@ function LivePage({ channels, loadError }: Props) {
           </div>
         </section>
 
-        {/* ── Nos ambassadrices en direct (DB-driven) ─────── */}
+        {/* ── Nos ambassadeur·rices en direct (DB-driven) ─── */}
         <section>
           {loadError ? (
             <div
@@ -337,11 +337,11 @@ function LivePage({ channels, loadError }: Props) {
 
 const liveSeo: SeoProps = {
   title: {
-    fr: "Devenir Ambassadrice — Women's Cup",
+    fr: "Devenir Ambassadeur·rice — Women's Cup",
     en: "Become an ambassador — Women's Cup",
   },
   description: {
-    fr: "Rejoins le programme d'ambassadrices Twitch de l'OW Women's Cup : un partenariat gagnant-gagnant, tes engagements, tes bonus exclusifs et comment postuler.",
+    fr: "Rejoins le programme d'ambassadeur·rices Twitch de l'OW Women's Cup : un partenariat gagnant-gagnant, tes engagements, tes bonus exclusifs et comment postuler.",
     en: "Join the OW Women's Cup Twitch ambassador program: a win-win partnership, your commitments, exclusive perks and how to apply.",
   },
 };
