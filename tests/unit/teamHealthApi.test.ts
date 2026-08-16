@@ -174,6 +174,31 @@ describe('roster', () => {
     expect(shortfall.count).toBe(2);
   });
 
+  it('n’exige pas de BattleTag de l’encadrement et ne le compte pas dans l’effectif', async () => {
+    // Une manager (ni BattleTag, ni compte Overwatch) rejoint une équipe déjà
+    // au complet : elle ne doit créer aucun constat.
+    store.team_members = [
+      ...store.team_members,
+      {
+        id: 'tm-manager',
+        team_id: TEAM_A,
+        user_id: 'manager-1',
+        role: 'manager',
+        is_substitute: false,
+        battle_tag: null,
+        battle_tag_verified_at: null,
+        tenant_id: CONFERENCE_TENANT_ID,
+      },
+    ] as any;
+    store.user_discord_links = [
+      ...store.user_discord_links,
+      { user_id: 'manager-1', discord_user_id: 'discord-manager-1' },
+    ] as any;
+    const res = await call();
+    expect(codes(res)).not.toContain('missing_battle_tag');
+    expect(codes(res)).not.toContain('unverified_battle_tag');
+  });
+
   it('ne compte pas deux fois la même personne entre les deux constats BattleTag', async () => {
     (store.team_members[0] as any).battle_tag = '';
     (store.team_members[0] as any).battle_tag_verified_at = null;

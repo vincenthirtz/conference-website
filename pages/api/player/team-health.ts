@@ -24,6 +24,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withSubjectRoute } from '@/utils/subject';
 import { getManagedTeam } from '@/utils/teams/managementAccess';
+import { isNonPlayingTeamRole } from '@/utils/teams/roleKind';
 import { resolveCurrentTournamentId } from '@/utils/currentTournament';
 import { MAX_TEAM_PLAYERS } from '@/utils/constants';
 import {
@@ -217,7 +218,7 @@ export default withSubjectRoute(
 
     const { data: memberRows, error: membersErr } = await supabaseAdmin
       .from('team_members')
-      .select('user_id, is_substitute, battle_tag, battle_tag_verified_at')
+      .select('user_id, role, is_substitute, battle_tag, battle_tag_verified_at')
       .eq('team_id', teamId)
       .eq('tenant_id', tenantId);
 
@@ -231,14 +232,21 @@ export default withSubjectRoute(
       .map((m) => m.user_id as string | null)
       .filter((id): id is string => !!id);
 
-    const starters = members.filter((m) => !m.is_substitute).length;
-    const missingBattleTags = members.filter(
+    // L'encadrement (coach / manager) n'aligne personne et n'a pas forcément de
+    // compte Overwatch : il sort de l'effectif ET des constats BattleTag (règle
+    // partagée, cf. utils/teams/roleKind.ts). Les constats « compte dormant » et
+    // « Discord non lié » restent, eux, valables pour tout le monde.
+    const playingMembers = members.filter(
+      (m) => !isNonPlayingTeamRole(m.role as string | null)
+    );
+    const starters = playingMembers.filter((m) => !m.is_substitute).length;
+    const missingBattleTags = playingMembers.filter(
       (m) => !String(m.battle_tag ?? '').trim()
     ).length;
     // Un BattleTag absent est déjà compté ci-dessus : ne pas le recompter ici,
     // sinon la même personne apparaît dans deux constats et l'équipe croit avoir
     // deux problèmes là où elle n'en a qu'un.
-    const unverifiedBattleTags = members.filter(
+    const unverifiedBattleTags = playingMembers.filter(
       (m) => String(m.battle_tag ?? '').trim() && !m.battle_tag_verified_at
     ).length;
 

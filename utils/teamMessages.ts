@@ -17,6 +17,7 @@
 // un appel Discord direct : le site n'a pas de token Discord.
 
 import { supabaseAdmin } from './supabase';
+import { isNonPlayingTeamRole } from './teams/roleKind';
 import { DEFAULT_TENANT_ID } from './tenant';
 import { resolveCurrentTournamentId } from './currentTournament';
 import { emitBotEvent } from './botEvents';
@@ -37,12 +38,13 @@ export type TeamRosterState = {
   discordChannelId: string | null;
   discordRoleId: string | null;
   captainUserId: string | null;
-  /** Membres non `is_substitute`. */
+  /** Membres JOUANTS non `is_substitute` (l'encadrement est exclu). */
   starters: number;
+  /** Membres JOUANTS marqués `is_substitute`. */
   substitutes: number;
   /** Titulaires manquants pour atteindre `min_players` (0 si complet). */
   missingStarters: number;
-  /** Membres du roster sans BattleTag renseigné. */
+  /** Membres JOUANTS sans BattleTag renseigné (coach / manager exclus). */
   missingBattleTags: number;
   /** Membres avec un compte site qui n'a jamais servi à ouvrir une session. */
   neverLoggedIn: number;
@@ -160,13 +162,14 @@ export async function loadTeamRosterStates(
 
   const { data: members, error: membersError } = await supabaseAdmin
     .from('team_members')
-    .select('team_id, user_id, is_substitute, battle_tag')
+    .select('team_id, user_id, role, is_substitute, battle_tag')
     .in('team_id', teamIds);
   if (membersError) throw membersError;
 
   type MemberRow = {
     team_id?: string | null;
     user_id?: string | null;
+    role?: string | null;
     is_substitute?: boolean | null;
     battle_tag?: string | null;
   };
@@ -188,9 +191,18 @@ export async function loadTeamRosterStates(
     if (!m.team_id) continue;
     const acc =
       byTeam.get(m.team_id) ?? { starters: 0, subs: 0, noTag: 0, dormant: 0 };
-    if (m.is_substitute) acc.subs += 1;
-    else acc.starters += 1;
-    if (!m.battle_tag || !m.battle_tag.trim()) acc.noTag += 1;
+    // L'encadrement (coach / manager) n'est pas du roster jouant : il ne compte
+    // ni dans l'effectif (min_players) ni parmi les BattleTags attendus — un
+    // BattleTag n'est exigé que des rôles qui jouent (cf. roleRequiresBattleTag).
+    // Sans ce filtre, le rappel Discord réclamait son BattleTag à une manager.
+    const plays = !isNonPlayingTeamRole(m.role);
+    if (plays) {
+      if (m.is_substitute) acc.subs += 1;
+      else acc.starters += 1;
+      if (!m.battle_tag || !m.battle_tag.trim()) acc.noTag += 1;
+    }
+    // Le compte dormant vaut pour TOUT le monde : sans session, l'encadrement
+    // ne peut pas non plus gérer l'équipe depuis le site.
     if (m.user_id && dormantUserIds.has(m.user_id)) acc.dormant += 1;
     byTeam.set(m.team_id, acc);
   }

@@ -396,6 +396,36 @@ describe('loadTeamRosterStates', () => {
     expect(buildRosterReminder(bravo, result!).deliverable).toBe(false);
   });
 
+  it("n'attend ni effectif ni BattleTag de l'encadrement (coach / manager)", async () => {
+    // Une manager sans BattleTag ne doit apparaître NI dans l'effectif jouant
+    // (min_players), NI dans les BattleTags manquants : le rappel Discord lui
+    // réclamait un BattleTag qu'aucune règle n'exige d'elle.
+    store.team_members = [
+      ...store.team_members,
+      {
+        team_id: 'team-a',
+        user_id: 'u6',
+        role: 'manager',
+        is_substitute: false,
+        battle_tag: null,
+      },
+      {
+        team_id: 'team-a',
+        user_id: 'u7',
+        role: 'coach',
+        is_substitute: false,
+        battle_tag: null,
+      },
+    ];
+    const result = await loadTeamRosterStates(TOURNAMENT, TENANT);
+    const alpha = result!.teams.find((t) => t.teamName === 'Alpha')!;
+    expect(alpha.starters).toBe(2);
+    expect(alpha.missingBattleTags).toBe(1); // u2 seule, pas u6/u7
+    expect(buildRosterReminder(alpha, result!).content).toContain(
+      '1 membre n’a pas'
+    );
+  });
+
   it('missingStarters = 0 quand min_players non configuré', async () => {
     seedTournament({ minPlayers: null });
     const result = await loadTeamRosterStates(TOURNAMENT, TENANT);
