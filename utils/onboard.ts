@@ -12,49 +12,15 @@ import { z } from 'zod';
 // Slug rules
 // ---------------------------------------------------------------------------
 
-/**
- * Slug format : starts with a lowercase letter, then lowercase letters/digits/
- * hyphens, 3-30 chars total (`^[a-z][a-z0-9-]{2,29}$`).
- *
- * Stricter than the DB CHECK on `tenants.slug` (which allows `[a-z0-9-]+`,
- * 2-50 chars) on purpose : the request-side rule should always be a subset
- * of the DB rule so the latter never trips at insert.
- */
-export const ONBOARD_SLUG_RE = /^[a-z][a-z0-9-]{2,29}$/;
-
-/**
- * Slugs we never want users to claim — collide with URL prefixes, brand
- * surface area, or sensitive routes.
- */
-export const RESERVED_SLUGS: ReadonlySet<string> = new Set([
-  'admin',
-  'api',
-  'auth',
-  'bot',
-  'conference',
-  'demo',
-  'docs',
-  'help',
-  'login',
-  'logout',
-  'onboard',
-  'onboarding',
-  'owner',
-  'public',
-  'root',
-  'static',
-  'staff',
-  'staging',
-  'support',
-  'test',
-  'tests',
-  'www',
-  '_next',
-]);
-
-export function isReservedSlug(slug: string): boolean {
-  return RESERVED_SLUGS.has(slug.toLowerCase());
-}
+// Définies dans `./onboardSlug` (module sans dépendance) pour que les pages
+// `/onboard/*` puissent les importer sans embarquer zod. Ré-exportées ici pour
+// les consommateurs serveur.
+export {
+  ONBOARD_SLUG_RE,
+  RESERVED_SLUGS,
+  isReservedSlug,
+} from './onboardSlug';
+import { ONBOARD_SLUG_RE, isReservedSlug } from './onboardSlug';
 
 // ---------------------------------------------------------------------------
 // Zod schema for the POST /api/onboard/tenant-request body

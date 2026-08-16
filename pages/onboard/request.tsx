@@ -19,7 +19,7 @@ import {
   ONBOARD_SLUG_RE,
   RESERVED_SLUGS,
   isReservedSlug,
-} from '@/utils/onboard';
+} from '@/utils/onboardSlug';
 import DiscordSignInCta from '@/components/onboard/DiscordSignInCta';
 import { logger } from '@/utils/logger';
 import { useT, format } from '@/lib/i18n/useT';
