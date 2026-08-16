@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { useCookieConsent, CookiePreferences } from '@/hooks/useCookieConsent';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { useT } from '@/lib/i18n/useT';
+import nsCookieBanner from '@/lib/i18n/locales/fr/cookieBanner';
 
 interface CookieCategoryInfo {
   key: keyof CookiePreferences;
@@ -12,7 +13,7 @@ interface CookieCategoryInfo {
 }
 
 const cookieCategories = (
-  t: ReturnType<typeof useT<'cookieBanner'>>
+  t: typeof nsCookieBanner.fr
 ): CookieCategoryInfo[] => [
   {
     key: 'essential',
@@ -41,7 +42,7 @@ const cookieCategories = (
 ];
 
 export default function CookieBanner() {
-  const t = useT('cookieBanner');
+  const t = useT(nsCookieBanner);
   const {
     hasConsented,
     isLoaded,

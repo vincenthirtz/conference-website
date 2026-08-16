@@ -21,6 +21,7 @@ import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { playChime } from '@/utils/playChime';
 import type { CueWithAck } from '@/hooks/useCueStream';
 import { useT } from '@/lib/i18n/useT';
+import nsUrgentCueModal from '@/lib/i18n/locales/fr/urgentCueModal';
 
 // Nombre d echecs d ack CONSECUTIFS a partir duquel on propose la porte de
 // sortie hors-ligne. En dessous : comportement historique (bouton « Vu » qui
@@ -40,7 +41,7 @@ type Props = {
 };
 
 export default function UrgentCueModal({ cue, onAck, onDeferAck }: Props) {
-  const t = useT('urgentCueModal');
+  const t = useT(nsUrgentCueModal);
   const trapRef = useFocusTrap<HTMLDivElement>();
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const [submitting, setSubmitting] = useState(false);

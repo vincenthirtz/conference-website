@@ -38,7 +38,11 @@ export type TournamentCreateInput = {
 // Rôle minimum : manager (gestion tournois)
 export default withStaffRoute(handler, 'admin');
 
-async function handler(req: NextApiRequest, res: NextApiResponse, ctx: AuthenticatedStaffContext) {
+async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  ctx: AuthenticatedStaffContext
+) {
   try {
     switch (req.method) {
       case 'GET':
@@ -144,7 +148,11 @@ async function handleGet(
  * Body: TournamentCreateInput
  * ---------------------------------------------------------*/
 
-async function handlePost(req: NextApiRequest, res: NextApiResponse, ctx: AuthenticatedStaffContext) {
+async function handlePost(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  ctx: AuthenticatedStaffContext
+) {
   const body = req.body as TournamentCreateInput;
 
   if (!body?.name) {

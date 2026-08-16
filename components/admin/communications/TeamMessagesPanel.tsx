@@ -23,6 +23,7 @@ import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import LoadingSpinner from '@/components/admin/LoadingSpinner';
 import AlertBanner from '@/components/admin/AlertBanner';
 import { logger } from '@/utils/logger';
+import nsAdminTeamMessages from '@/lib/i18n/locales/admin-fr/adminTeamMessages';
 
 type RosterKind = 'incomplete' | 'complete_with_warnings' | 'complete';
 
@@ -70,7 +71,7 @@ type PostResponse = {
   teams?: Array<{ teamId: string; teamName: string; status: string }>;
 };
 
-type Dict = ReturnType<typeof useAdminT<'adminTeamMessages'>>;
+type Dict = typeof nsAdminTeamMessages.fr;
 
 const ENDPOINT = '/api/admin/team-messages';
 
@@ -103,7 +104,7 @@ function kindBadge(
 }
 
 export default function TeamMessagesPanel() {
-  const t = useAdminT('adminTeamMessages');
+  const t = useAdminT(nsAdminTeamMessages);
   const { adminFetchJson } = useAdminFetch();
   const { mutateJson, regenerate } = useIdempotentMutation();
   const { confirm, dialog: confirmDialog } = useConfirmDialog();

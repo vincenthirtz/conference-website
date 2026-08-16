@@ -41,7 +41,9 @@ async function handler(req: BotCrossTenantRequest, res: NextApiResponse) {
   const rawWithin = Number(req.query.withinMinutes);
   if (
     req.query.withinMinutes !== undefined &&
-    (!Number.isFinite(rawWithin) || rawWithin < MIN_WITHIN || rawWithin > MAX_WITHIN)
+    (!Number.isFinite(rawWithin) ||
+      rawWithin < MIN_WITHIN ||
+      rawWithin > MAX_WITHIN)
   ) {
     return res.status(400).json({
       error: `withinMinutes doit etre un nombre entre ${MIN_WITHIN} et ${MAX_WITHIN}.`,
@@ -200,7 +202,9 @@ async function handler(req: BotCrossTenantRequest, res: NextApiResponse) {
       | undefined;
     const casterAuth =
       cm && typeof cm.auth_user_id === 'string' ? cm.auth_user_id : null;
-    const casterDiscord = casterAuth ? discordByAuth.get(casterAuth) ?? null : null;
+    const casterDiscord = casterAuth
+      ? (discordByAuth.get(casterAuth) ?? null)
+      : null;
     return {
       assignmentId: r.id as string,
       tenantId: (r.tenant_id as string | null) ?? null,
@@ -213,8 +217,12 @@ async function handler(req: BotCrossTenantRequest, res: NextApiResponse) {
         : ((s?.scheduled_date as string | null) ?? null),
       casterDiscordUserId: casterDiscord,
       role: (cm?.title as string | null) ?? null,
-      teamA: t1 ? { id: t1.id as string, name: (t1.name as string | null) ?? null } : null,
-      teamB: t2 ? { id: t2.id as string, name: (t2.name as string | null) ?? null } : null,
+      teamA: t1
+        ? { id: t1.id as string, name: (t1.name as string | null) ?? null }
+        : null,
+      teamB: t2
+        ? { id: t2.id as string, name: (t2.name as string | null) ?? null }
+        : null,
       tournamentName: (tn?.name as string | null) ?? null,
       scrimName: isMatch ? null : ((s?.name as string | null) ?? null),
       ackedAt: (r.acked_at as string | null) ?? null,

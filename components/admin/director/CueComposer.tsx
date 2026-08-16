@@ -25,6 +25,7 @@ import type {
   EventCueSeverity,
   EventRunStatus,
 } from '@/types/events';
+import nsAdminDirectorCueComposer from '@/lib/i18n/locales/admin-fr/adminDirectorCueComposer';
 
 const MAX_BODY = 500;
 
@@ -71,7 +72,7 @@ const SEVERITY_BUTTONS: Array<{
 // temps (runId/runStatus primitifs, onCueCreated = setState stable), donc on le
 // decouple du tick pour que la frappe ne subisse pas le re-render 1s.
 function CueComposer({ runId, runStatus, onCueCreated }: Props) {
-  const t = useAdminT('adminDirectorCueComposer');
+  const t = useAdminT(nsAdminDirectorCueComposer);
   const { mutateJson, regenerate } = useIdempotentMutation();
   const { addToast } = useToast();
 

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useToast, useToasts } from './ToastContext';
 import type { Toast, ToastVariant } from './ToastContext';
 import { useT } from '@/lib/i18n/useT';
+import nsToast from '@/lib/i18n/locales/fr/toast';
 
 const VARIANT_STYLES: Record<ToastVariant, string> = {
   success: 'bg-emerald-600 border-emerald-500/50 text-white',
@@ -26,7 +27,7 @@ function ToastItem({
   onDismiss: () => void;
 }) {
   const [visible, setVisible] = useState(false);
-  const t = useT('toast');
+  const t = useT(nsToast);
 
   useEffect(() => {
     // Trigger enter animation on next frame

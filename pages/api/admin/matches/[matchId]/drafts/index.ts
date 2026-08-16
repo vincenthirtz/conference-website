@@ -8,10 +8,7 @@
 //        409 if a draft already exists for (matchId, gameIndex).
 
 import type { NextApiRequest, NextApiResponse } from 'next';
-import {
-  withStaffRoute,
-  AuthenticatedStaffContext,
-} from '@/utils/staff';
+import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { withAdminIdempotency } from '@/utils/adminIdempotency';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { initDraft, DraftEngineError } from '@/utils/draftEngine';

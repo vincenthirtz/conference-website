@@ -19,6 +19,7 @@ import { PlayerSearchResults } from '@/components/admin/teams/my/PlayerSearchRes
 import type { Member, SearchResult } from '@/components/admin/teams/my/types';
 
 import { logger } from '../../../utils/logger';
+import nsAdminTeamsMy from '@/lib/i18n/locales/admin-fr/adminTeamsMy';
 type StaffShape = {
   id: string;
   role: string;
@@ -59,7 +60,7 @@ type ApiResponse = {
 export const getServerSideProps = withStaffPage('caster');
 
 function MyTeamPage({ staff }: StaffProps) {
-  const t = useAdminT('adminTeamsMy');
+  const t = useAdminT(nsAdminTeamsMy);
   const router = useRouter();
   const { adminFetch, adminFetchJson } = useAdminFetch();
   const { addToast } = useToast();

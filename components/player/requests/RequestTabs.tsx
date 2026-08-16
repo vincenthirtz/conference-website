@@ -5,6 +5,7 @@
 // parent. Extrait de pages/player/requests.tsx sans changement de comportement.
 
 import { useT } from '@/lib/i18n/useT';
+import nsPlayerRequests from '@/lib/i18n/locales/fr/playerRequests';
 
 type Tab = 'transfer' | 'scrim';
 
@@ -15,7 +16,7 @@ export default function RequestTabs({
   tab: Tab;
   onTabChange: (tab: Tab) => void;
 }) {
-  const t = useT('playerRequests');
+  const t = useT(nsPlayerRequests);
   return (
     <div role="tablist" aria-label={t.tabsAria} className="flex gap-2 mb-6">
       <button

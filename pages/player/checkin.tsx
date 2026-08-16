@@ -16,8 +16,9 @@ import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import type { NextMatchPayload } from '@/pages/api/player/next-match';
 
 import { logger } from '../../utils/logger';
+import nsCheckin from '@/lib/i18n/locales/fr/checkin';
 
-type T = ReturnType<typeof useT<'checkin'>>;
+type T = typeof nsCheckin.fr;
 
 function formatScheduled(iso: string | null, lang: Lang, t: T): string {
   if (!iso) return t.dateToCome;
@@ -65,7 +66,7 @@ function PlayerCheckin() {
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
   const { addToast } = useToast();
   const { lang } = useLang();
-  const t = useT('checkin');
+  const t = useT(nsCheckin);
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<NextMatchPayload | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);

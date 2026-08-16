@@ -11,6 +11,7 @@ import { useAdminT } from '@/lib/i18n/useAdminT';
 import SeedSlot from './SeedSlot';
 import { parseNotes } from './types';
 import type { ScheduleMatch, TournamentTeam, DragPayload } from './types';
+import nsAdminBracketMatchCard from '@/lib/i18n/locales/admin-fr/adminBracketMatchCard';
 
 type MatchCardProps = {
   match: ScheduleMatch;
@@ -41,7 +42,7 @@ export default function MatchCard({
   availableTeams,
   onAssignTeam,
 }: MatchCardProps) {
-  const t = useAdminT('adminBracketMatchCard');
+  const t = useAdminT(nsAdminBracketMatchCard);
   const info = parseNotes(match.notes);
   const statusCfg = STATUS_CONFIG[match.status];
   const isEditing = editingDateId === match.id;

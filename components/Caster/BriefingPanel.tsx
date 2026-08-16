@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 import { logger } from '@/utils/logger';
 import { maskBattleTag } from '@/utils/battleTag';
 import { useT, format } from '@/lib/i18n/useT';
+import nsBriefingPanel from '@/lib/i18n/locales/fr/briefingPanel';
 
 type TeamMember = {
   id: string;
@@ -63,7 +64,7 @@ type Props = {
 };
 
 export default function BriefingPanel({ matchId, accessToken }: Props) {
-  const t = useT('briefingPanel');
+  const t = useT(nsBriefingPanel);
   const [briefing, setBriefing] = useState<Briefing | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -196,9 +197,7 @@ export default function BriefingPanel({ matchId, accessToken }: Props) {
                       className="flex items-center gap-2 text-[11px] text-gray-200"
                     >
                       <span className="font-mono truncate flex-1">
-                        {maskBattleTag(m.battle_tag) ||
-                          m.display_name ||
-                          '—'}
+                        {maskBattleTag(m.battle_tag) || m.display_name || '—'}
                       </span>
                       <span className="text-[11px] text-gray-300">
                         {m.role}

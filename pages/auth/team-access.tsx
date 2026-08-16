@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { supabaseClient } from '@/utils/supabase';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { useT } from '@/lib/i18n/useT';
+import nsTeamAccess from '@/lib/i18n/locales/fr/teamAccess';
 
 /**
  * Consommateur du magic-link « accès espace équipe » émis après création d'une
@@ -26,7 +27,7 @@ function safeNext(raw: unknown): string {
 
 export default function TeamAccessPage() {
   const router = useRouter();
-  const t = useT('teamAccess');
+  const t = useT(nsTeamAccess);
   const [ready, setReady] = useState(false);
   const [established, setEstablished] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);

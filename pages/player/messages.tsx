@@ -21,6 +21,7 @@ import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
 import { logger } from '../../utils/logger';
+import nsPlayerMessages from '@/lib/i18n/locales/fr/playerMessages';
 
 type Conversation = {
   conversationId: string;
@@ -65,7 +66,7 @@ type Team = {
 
 export default function MessagesPage() {
   const router = useRouter();
-  const t = useT('playerMessages');
+  const t = useT(nsPlayerMessages);
   const locale = useLocale();
   const { loading: authLoading, ready } = usePlayerSession();
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });

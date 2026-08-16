@@ -52,9 +52,7 @@ async function handler(
   if (sideRaw === 1 || sideRaw === 2 || sideRaw === 'both') {
     teamSide = sideRaw;
   } else {
-    return res
-      .status(400)
-      .json({ error: 'teamSide must be 1, 2 or "both"' });
+    return res.status(400).json({ error: 'teamSide must be 1, 2 or "both"' });
   }
 
   try {
@@ -81,8 +79,7 @@ async function handler(
     // Construire la liste effective de sides à nudger en respectant l'état
     // de check-in : si une team a déjà coché, on ne la nudge pas même si
     // l'admin a demandé 'both'.
-    const requested: (1 | 2)[] =
-      teamSide === 'both' ? [1, 2] : [teamSide];
+    const requested: (1 | 2)[] = teamSide === 'both' ? [1, 2] : [teamSide];
     const sidesToNudge: (1 | 2)[] = requested.filter((s) => {
       const checked =
         s === 1 ? match.team1_checked_in_at : match.team2_checked_in_at;
@@ -156,9 +153,7 @@ async function handler(
     }
 
     if (emitted.length === 0) {
-      return res
-        .status(500)
-        .json({ error: 'Failed to emit any nudge event' });
+      return res.status(500).json({ error: 'Failed to emit any nudge event' });
     }
 
     if (ctx?.staff?.id) {

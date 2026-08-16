@@ -29,6 +29,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import nsAdminBroadcastLive from '@/lib/i18n/locales/admin-fr/adminBroadcastLive';
 
 type TwitchChannelRow = {
   channel: string;
@@ -45,7 +46,7 @@ type LiveStatus = {
 const POLL_MS = 60_000;
 
 export default function TwitchStatusPanel() {
-  const t = useAdminT('adminBroadcastLive');
+  const t = useAdminT(nsAdminBroadcastLive);
   const { adminFetch, adminFetchJson } = useAdminFetch();
 
   // channels === null : chargement en cours. [] : aucune chaîne active (masqué).

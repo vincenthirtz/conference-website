@@ -10,8 +10,9 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { useT } from '@/lib/i18n/useT';
 import { logger } from '@/utils/logger';
+import nsLivePage from '@/lib/i18n/locales/fr/livePage';
 
-type LiveDict = ReturnType<typeof useT<'livePage'>>;
+type LiveDict = typeof nsLivePage.fr;
 
 // LiveEventBanner depend de fetch + realtime supabaseClient — pas SSR-friendly,
 // on le charge cote client uniquement.
@@ -144,7 +145,7 @@ function CardGrid({ items, accent }: { items: Engagement[]; accent: string }) {
 }
 
 function LivePage({ channels, loadError }: Props) {
-  const t = useT('livePage');
+  const t = useT(nsLivePage);
   const engagements = getEngagements(t);
   const bonuses = getBonuses(t);
   return (

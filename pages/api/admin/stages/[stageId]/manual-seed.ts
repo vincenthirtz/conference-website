@@ -68,9 +68,7 @@ async function handler(
     return res.status(400).json({ error: 'Invalid stageId' });
   }
   if (!supabaseAdmin) {
-    return res
-      .status(500)
-      .json({ error: 'Database service unavailable.' });
+    return res.status(500).json({ error: 'Database service unavailable.' });
   }
 
   const targetStageId = String(stageId);
@@ -92,15 +90,15 @@ async function handler(
   const assignments: Assignment[] = [];
   for (const raw of rawAssignments) {
     if (!raw || typeof raw !== 'object') {
-      return res
-        .status(400)
-        .json({ error: 'assignments[] : object attendu.' });
+      return res.status(400).json({ error: 'assignments[] : object attendu.' });
     }
     const a = raw as Record<string, unknown>;
     if (typeof a.matchId !== 'string' || !isValidUUID(a.matchId)) {
       return res
         .status(400)
-        .json({ error: `matchId invalide : ${String(a.matchId).slice(0, 40)}` });
+        .json({
+          error: `matchId invalide : ${String(a.matchId).slice(0, 40)}`,
+        });
     }
     if (typeof a.teamId !== 'string' || !isValidUUID(a.teamId)) {
       return res
@@ -108,9 +106,7 @@ async function handler(
         .json({ error: `teamId invalide : ${String(a.teamId).slice(0, 40)}` });
     }
     if (a.slot !== 1 && a.slot !== 2) {
-      return res
-        .status(400)
-        .json({ error: 'slot doit valoir 1 ou 2.' });
+      return res.status(400).json({ error: 'slot doit valoir 1 ou 2.' });
     }
     const seed =
       typeof a.seed === 'number' && Number.isInteger(a.seed) && a.seed > 0
@@ -182,9 +178,7 @@ async function handler(
     for (const a of assignments) {
       const m = matchById.get(a.matchId);
       if (!m) {
-        return res
-          .status(400)
-          .json({ error: `Match inconnu : ${a.matchId}.` });
+        return res.status(400).json({ error: `Match inconnu : ${a.matchId}.` });
       }
       if (m.stage_id !== targetStageId) {
         return res.status(400).json({

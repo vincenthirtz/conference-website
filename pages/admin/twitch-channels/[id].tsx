@@ -6,6 +6,7 @@ import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminT } from '@/lib/i18n/useAdminT';
+import nsAdminTwitchChannelEdit from '@/lib/i18n/locales/admin-fr/adminTwitchChannelEdit';
 
 type Props = {
   staff: {
@@ -16,7 +17,7 @@ type Props = {
 };
 
 function AdminTwitchChannelEditPage({ staff }: Props) {
-  const t = useAdminT('adminTwitchChannelEdit');
+  const t = useAdminT(nsAdminTwitchChannelEdit);
   const router = useRouter();
   const { addToast } = useToast();
   const { adminFetchJson } = useAdminFetch();

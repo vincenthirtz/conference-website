@@ -14,7 +14,8 @@ import { formatDateRange } from '@/utils/tournamentDates';
 import TournamentTabs from '@/components/tournament/TournamentTabs';
 
 import { logger } from '../../../utils/logger';
-type StatsDict = ReturnType<typeof useT<'tournamentStats'>>;
+import nsTournamentStats from '@/lib/i18n/locales/fr/tournamentStats';
+type StatsDict = typeof nsTournamentStats.fr;
 type Tournament = {
   id: string;
   slug?: string | null;
@@ -212,7 +213,7 @@ export default function TournamentStatsPage({
   teamStats,
   hasFfaStage,
 }: Props) {
-  const t = useT('tournamentStats');
+  const t = useT(nsTournamentStats);
   const { lang } = useLang();
   const isCompleted =
     tournament.status === 'finished' || tournament.status === 'completed';
@@ -590,7 +591,7 @@ function StatCard({
 }
 
 function TopTeamCard({ rank, stat }: { rank: number; stat: TeamStat }) {
-  const t = useT('tournamentStats');
+  const t = useT(nsTournamentStats);
   const rankLabel =
     rank === 1
       ? t.rankTeamFirst

@@ -31,8 +31,9 @@ import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { useT } from '@/lib/i18n/useT';
 import { useLang, type Lang } from '@/lib/i18n/LanguageProvider';
 import { localeTag } from '@/lib/i18n/useLocale';
+import nsLeagueDetail from '@/lib/i18n/locales/fr/leagueDetail';
 
-type LeagueDetailDict = ReturnType<typeof useT<'leagueDetail'>>;
+type LeagueDetailDict = typeof nsLeagueDetail.fr;
 
 const getStatusLabels = (
   t: LeagueDetailDict
@@ -132,7 +133,7 @@ export default function LeagueDetailPage({
     when: router.isReady && !!s,
   });
 
-  const t = useT('leagueDetail');
+  const t = useT(nsLeagueDetail);
   const state: FetchState = notFound
     ? { status: 'notfound' }
     : data
@@ -161,7 +162,7 @@ export default function LeagueDetailPage({
 }
 
 function Detail({ data }: { data: LeagueDetailResponse }) {
-  const t = useT('leagueDetail');
+  const t = useT(nsLeagueDetail);
   const { lang } = useLang();
   const statusLabels = getStatusLabels(t);
   const { league, standings, tournaments } = data;
@@ -211,7 +212,7 @@ function Detail({ data }: { data: LeagueDetailResponse }) {
 }
 
 function Standings({ standings }: { standings: LeagueStandingPublic[] }) {
-  const t = useT('leagueDetail');
+  const t = useT(nsLeagueDetail);
   if (standings.length === 0) {
     return (
       <div className="rounded-2xl border border-neutral-800 bg-neutral-900/40 py-12 text-center">
@@ -229,13 +230,25 @@ function Standings({ standings }: { standings: LeagueStandingPublic[] }) {
         <table className="w-full text-sm">
           <thead className="bg-neutral-900/80 text-xs uppercase text-neutral-400">
             <tr>
-              <th scope="col" className="w-16 px-4 py-3 text-left">{t.colRank}</th>
-              <th scope="col" className="px-4 py-3 text-left">{t.colTeam}</th>
-              <th scope="col" className="px-4 py-3 text-right">{t.colPoints}</th>
-              <th scope="col" className="hidden px-4 py-3 text-right sm:table-cell">
+              <th scope="col" className="w-16 px-4 py-3 text-left">
+                {t.colRank}
+              </th>
+              <th scope="col" className="px-4 py-3 text-left">
+                {t.colTeam}
+              </th>
+              <th scope="col" className="px-4 py-3 text-right">
+                {t.colPoints}
+              </th>
+              <th
+                scope="col"
+                className="hidden px-4 py-3 text-right sm:table-cell"
+              >
                 {t.colTournaments}
               </th>
-              <th scope="col" className="hidden px-4 py-3 text-right sm:table-cell">
+              <th
+                scope="col"
+                className="hidden px-4 py-3 text-right sm:table-cell"
+              >
                 {t.colBestRank}
               </th>
             </tr>
@@ -300,7 +313,7 @@ function Standings({ standings }: { standings: LeagueStandingPublic[] }) {
 }
 
 function Tournaments({ tournaments }: { tournaments: LeagueTournamentRef[] }) {
-  const t = useT('leagueDetail');
+  const t = useT(nsLeagueDetail);
   if (tournaments.length === 0) {
     return (
       <p className="rounded-2xl border border-neutral-800 bg-neutral-900/40 p-6 text-sm text-neutral-400">
@@ -352,7 +365,7 @@ function LoadingState() {
 }
 
 function NotFoundState() {
-  const t = useT('leagueDetail');
+  const t = useT(nsLeagueDetail);
   return (
     <section className="py-16 text-center">
       <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-neutral-800 text-2xl">
@@ -373,7 +386,7 @@ function NotFoundState() {
 }
 
 function ErrorState({ onRetry }: { onRetry: () => void }) {
-  const t = useT('leagueDetail');
+  const t = useT(nsLeagueDetail);
   return (
     <section className="py-16 text-center" role="alert">
       <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full border border-red-500/30 bg-red-500/10">

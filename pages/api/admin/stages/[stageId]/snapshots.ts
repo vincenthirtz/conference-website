@@ -119,9 +119,7 @@ async function handleCreate(
     tenantId: ctx.tenantId,
   });
   if (!result) {
-    return res
-      .status(500)
-      .json({ error: 'Échec de la création du snapshot.' });
+    return res.status(500).json({ error: 'Échec de la création du snapshot.' });
   }
 
   await logStaffAction({

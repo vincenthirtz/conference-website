@@ -16,6 +16,7 @@ import {
   segmentTypeLabel,
 } from '@/utils/eventSegmentLabels';
 import type { EventSegment } from '@/types/events';
+import nsAdminDirectorSegmentCard from '@/lib/i18n/locales/admin-fr/adminDirectorSegmentCard';
 
 type Props = {
   segment: EventSegment;
@@ -89,7 +90,7 @@ export default function SegmentCard({
   onDragEnd,
   onDragLeave,
 }: Props) {
-  const t = useAdminT('adminDirectorSegmentCard');
+  const t = useAdminT(nsAdminDirectorSegmentCard);
   const hasOverrun = !!overrunSec && overrunSec > 0;
   const baseClasses =
     'group relative rounded-xl border bg-neutral-800/60 transition-colors';

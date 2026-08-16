@@ -17,6 +17,7 @@ import { supabaseClient } from '@/utils/supabase';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { logger } from '@/utils/logger';
 import { useT } from '@/lib/i18n/useT';
+import nsDiscordSignInCta from '@/lib/i18n/locales/fr/discordSignInCta';
 
 type Props = {
   /** Path the user lands on after the OAuth round-trip. */
@@ -30,7 +31,7 @@ export default function DiscordSignInCta({
   className = '',
   label,
 }: Props) {
-  const t = useT('discordSignInCta');
+  const t = useT(nsDiscordSignInCta);
   const displayLabel = label ?? t.defaultLabel;
   const { user } = useAuthSession();
   const [loading, setLoading] = useState(false);

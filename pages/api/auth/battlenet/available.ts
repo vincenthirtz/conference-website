@@ -22,7 +22,12 @@ export default async function handler(
   }
 
   if (
-    applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'battlenet-available')
+    applyRateLimit(
+      req,
+      res,
+      { max: 60, windowMs: 60_000 },
+      'battlenet-available'
+    )
   )
     return;
 

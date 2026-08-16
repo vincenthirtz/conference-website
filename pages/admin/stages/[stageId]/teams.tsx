@@ -12,6 +12,7 @@ import StageTabsNav from '@/components/admin/stages/StageTabsNav';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 import { logger } from '../../../../utils/logger';
+import nsAdminStageTeams from '@/lib/i18n/locales/admin-fr/adminStageTeams';
 type StaffShape = {
   id: string;
   role: string;
@@ -74,7 +75,7 @@ type TournamentTeamsApiResponse = {
 export const getServerSideProps = withStaffPage('admin');
 
 function AdminStageTeamsPage({ staff }: StaffProps) {
-  const t = useAdminT('adminStageTeams');
+  const t = useAdminT(nsAdminStageTeams);
   const router = useRouter();
   const { stageId } = router.query;
   const { addToast } = useToast();
@@ -570,135 +571,143 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-neutral-750 text-neutral-300">
-                    <tr>
-                      <th scope="col" className="px-3 py-2 text-center w-10">
-                        <input
-                          type="checkbox"
-                          checked={
-                            selectedTeamIds.size === stageTeams.length &&
-                            stageTeams.length > 0
-                          }
-                          onChange={toggleSelectAll}
-                          className="accent-blue-500"
-                        />
-                      </th>
-                      <th scope="col" className="px-4 py-2 text-left">{t.thSeed}</th>
-                      <th scope="col" className="px-4 py-2 text-left">{t.thTeam}</th>
-                      <th scope="col" className="px-4 py-2 text-left">{t.thNotes}</th>
-                      <th scope="col" className="px-4 py-2 text-right">{t.thActions}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {stageTeams.map((st) => (
-                      <tr
-                        key={st.team_id}
-                        className={`border-t border-neutral-700 ${
-                          selectedTeamIds.has(st.team_id)
-                            ? 'bg-blue-900/20'
-                            : ''
-                        }`}
-                      >
-                        {/* Checkbox */}
-                        <td className="px-3 py-2 align-middle text-center">
+                  <table className="w-full text-sm">
+                    <thead className="bg-neutral-750 text-neutral-300">
+                      <tr>
+                        <th scope="col" className="px-3 py-2 text-center w-10">
                           <input
                             type="checkbox"
-                            checked={selectedTeamIds.has(st.team_id)}
-                            onChange={() => toggleTeamSelection(st.team_id)}
+                            checked={
+                              selectedTeamIds.size === stageTeams.length &&
+                              stageTeams.length > 0
+                            }
+                            onChange={toggleSelectAll}
                             className="accent-blue-500"
                           />
-                        </td>
-
-                        {/* Seed editable */}
-                        <td className="px-4 py-2 align-middle">
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="number"
-                              className="w-16 px-2 py-1 rounded bg-neutral-700 border border-neutral-600 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
-                              value={seedInputs[st.team_id] ?? ''}
-                              onChange={(e) =>
-                                onSeedInputChange(st.team_id, e.target.value)
-                              }
-                            />
-                            <button
-                              type="button"
-                              onClick={() => handleUpdateSeed(st.team_id)}
-                              disabled={updatingSeedId === st.team_id}
-                              className={`text-xs px-2 py-1 rounded ${
-                                updatingSeedId === st.team_id
-                                  ? 'bg-blue-800 cursor-wait'
-                                  : 'bg-blue-600 hover:bg-blue-700'
-                              }`}
-                            >
-                              {updatingSeedId === st.team_id
-                                ? t.seedOkSaving
-                                : t.seedOk}
-                            </button>
-                          </div>
-                        </td>
-
-                        {/* Team info */}
-                        <td className="px-4 py-2 align-middle">
-                          <div className="flex items-center gap-3">
-                            {st.team?.logo_url && (
-                              <Image
-                                src={st.team.logo_url}
-                                alt={st.team.name}
-                                width={32}
-                                height={32}
-                                className="w-8 h-8 rounded object-cover border border-neutral-700"
-                              />
-                            )}
-                            <div>
-                              <div className="font-semibold">
-                                {st.team ? st.team.name : st.team_id}
-                              </div>
-                              {st.team?.short_name && (
-                                <div className="text-xs text-neutral-400">
-                                  {st.team.short_name}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </td>
-
-                        {/* Notes (read-only pour l'instant) */}
-                        <td className="px-4 py-2 align-middle text-xs text-neutral-300">
-                          {st.notes || '—'}
-                        </td>
-
-                        {/* Actions */}
-                        <td className="px-4 py-2 align-middle text-right">
-                          <div className="flex justify-end gap-2">
-                            {st.team && (
-                              <Link
-                                href={`/admin/teams/${st.team.id}`}
-                                className="px-2 py-1 text-xs rounded bg-neutral-700 hover:bg-neutral-600"
-                              >
-                                {t.viewTeam}
-                              </Link>
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveTeam(st.team_id)}
-                              disabled={removingTeamId === st.team_id}
-                              className={`px-2 py-1 text-xs rounded ${
-                                removingTeamId === st.team_id
-                                  ? 'bg-red-900 cursor-wait'
-                                  : 'bg-red-700 hover:bg-red-800'
-                              }`}
-                            >
-                              {removingTeamId === st.team_id
-                                ? t.removing
-                                : t.remove}
-                            </button>
-                          </div>
-                        </td>
+                        </th>
+                        <th scope="col" className="px-4 py-2 text-left">
+                          {t.thSeed}
+                        </th>
+                        <th scope="col" className="px-4 py-2 text-left">
+                          {t.thTeam}
+                        </th>
+                        <th scope="col" className="px-4 py-2 text-left">
+                          {t.thNotes}
+                        </th>
+                        <th scope="col" className="px-4 py-2 text-right">
+                          {t.thActions}
+                        </th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {stageTeams.map((st) => (
+                        <tr
+                          key={st.team_id}
+                          className={`border-t border-neutral-700 ${
+                            selectedTeamIds.has(st.team_id)
+                              ? 'bg-blue-900/20'
+                              : ''
+                          }`}
+                        >
+                          {/* Checkbox */}
+                          <td className="px-3 py-2 align-middle text-center">
+                            <input
+                              type="checkbox"
+                              checked={selectedTeamIds.has(st.team_id)}
+                              onChange={() => toggleTeamSelection(st.team_id)}
+                              className="accent-blue-500"
+                            />
+                          </td>
+
+                          {/* Seed editable */}
+                          <td className="px-4 py-2 align-middle">
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="number"
+                                className="w-16 px-2 py-1 rounded bg-neutral-700 border border-neutral-600 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                value={seedInputs[st.team_id] ?? ''}
+                                onChange={(e) =>
+                                  onSeedInputChange(st.team_id, e.target.value)
+                                }
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleUpdateSeed(st.team_id)}
+                                disabled={updatingSeedId === st.team_id}
+                                className={`text-xs px-2 py-1 rounded ${
+                                  updatingSeedId === st.team_id
+                                    ? 'bg-blue-800 cursor-wait'
+                                    : 'bg-blue-600 hover:bg-blue-700'
+                                }`}
+                              >
+                                {updatingSeedId === st.team_id
+                                  ? t.seedOkSaving
+                                  : t.seedOk}
+                              </button>
+                            </div>
+                          </td>
+
+                          {/* Team info */}
+                          <td className="px-4 py-2 align-middle">
+                            <div className="flex items-center gap-3">
+                              {st.team?.logo_url && (
+                                <Image
+                                  src={st.team.logo_url}
+                                  alt={st.team.name}
+                                  width={32}
+                                  height={32}
+                                  className="w-8 h-8 rounded object-cover border border-neutral-700"
+                                />
+                              )}
+                              <div>
+                                <div className="font-semibold">
+                                  {st.team ? st.team.name : st.team_id}
+                                </div>
+                                {st.team?.short_name && (
+                                  <div className="text-xs text-neutral-400">
+                                    {st.team.short_name}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* Notes (read-only pour l'instant) */}
+                          <td className="px-4 py-2 align-middle text-xs text-neutral-300">
+                            {st.notes || '—'}
+                          </td>
+
+                          {/* Actions */}
+                          <td className="px-4 py-2 align-middle text-right">
+                            <div className="flex justify-end gap-2">
+                              {st.team && (
+                                <Link
+                                  href={`/admin/teams/${st.team.id}`}
+                                  className="px-2 py-1 text-xs rounded bg-neutral-700 hover:bg-neutral-600"
+                                >
+                                  {t.viewTeam}
+                                </Link>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveTeam(st.team_id)}
+                                disabled={removingTeamId === st.team_id}
+                                className={`px-2 py-1 text-xs rounded ${
+                                  removingTeamId === st.team_id
+                                    ? 'bg-red-900 cursor-wait'
+                                    : 'bg-red-700 hover:bg-red-800'
+                                }`}
+                              >
+                                {removingTeamId === st.team_id
+                                  ? t.removing
+                                  : t.remove}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </section>

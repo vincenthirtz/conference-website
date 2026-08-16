@@ -13,6 +13,7 @@ import {
   labelClass,
   summaryClass,
 } from './fieldClasses';
+import nsAdminCasterScenes from '@/lib/i18n/locales/admin-fr/adminCasterScenes';
 
 type Props = {
   socials: CasterSocials;
@@ -26,7 +27,7 @@ export default function BrandSocialsFields({
   onSocialsChange,
   hashtag,
 }: Props) {
-  const t = useAdminT('adminCasterScenes');
+  const t = useAdminT(nsAdminCasterScenes);
 
   const socialsFields: Array<{
     key: keyof CasterSocials;

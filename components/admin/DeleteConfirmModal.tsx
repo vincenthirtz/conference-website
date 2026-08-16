@@ -1,6 +1,7 @@
 import { ReactNode, useEffect } from 'react';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { useAdminT } from '@/lib/i18n/useAdminT';
+import nsAdminDeleteConfirmModal from '@/lib/i18n/locales/admin-fr/adminDeleteConfirmModal';
 
 type DeleteConfirmModalProps = {
   title: string;
@@ -21,7 +22,7 @@ export default function DeleteConfirmModal({
   onCancel,
   onConfirm,
 }: DeleteConfirmModalProps) {
-  const t = useAdminT('adminDeleteConfirmModal');
+  const t = useAdminT(nsAdminDeleteConfirmModal);
   const resolvedSubtitle = subtitle ?? t.defaultSubtitle;
   const trapRef = useFocusTrap<HTMLDivElement>();
 

@@ -13,7 +13,8 @@ import { formatDateRange } from '@/utils/tournamentDates';
 import TournamentTabs from '@/components/tournament/TournamentTabs';
 
 import { logger } from '../../../utils/logger';
-type MapsDict = ReturnType<typeof useT<'tournamentMaps'>>;
+import nsTournamentMaps from '@/lib/i18n/locales/fr/tournamentMaps';
+type MapsDict = typeof nsTournamentMaps.fr;
 type Tournament = {
   id: string;
   slug?: string | null;
@@ -230,7 +231,7 @@ export default function TournamentMapsPage({
   hasVetoData,
   hasFfaStage,
 }: Props) {
-  const t = useT('tournamentMaps');
+  const t = useT(nsTournamentMaps);
   const { lang } = useLang();
   const tournamentPath = `/tournament/${tournament.slug || tournament.id}`;
   const isCompleted =
@@ -664,7 +665,7 @@ function StatCard({
 }
 
 function TopMapCard({ rank, stat }: { rank: number; stat: MapStat }) {
-  const t = useT('tournamentMaps');
+  const t = useT(nsTournamentMaps);
   const rankLabel =
     rank === 1 ? t.rankMapFirst : rank === 2 ? t.rankMapSecond : t.rankMapThird;
 

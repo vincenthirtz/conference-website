@@ -18,7 +18,10 @@ import { createYoga } from 'graphql-yoga';
 import type { ValidationRule, SelectionSetNode } from 'graphql';
 import { GraphQLError, Kind, NoSchemaIntrospectionCustomRule } from 'graphql';
 import { publicGraphQLSchema } from '@/utils/graphql/schema';
-import { buildGraphQLContext, type GraphQLContext } from '@/utils/graphql/context';
+import {
+  buildGraphQLContext,
+  type GraphQLContext,
+} from '@/utils/graphql/context';
 
 // yoga lit le corps brut → on désactive le bodyParser de Next.
 export const config = { api: { bodyParser: false } };
@@ -42,10 +45,9 @@ function depthLimitRule(maxDepth: number): ValidationRule {
         if (!selectionSet) return;
         if (depth > maxDepth) {
           context.reportError(
-            new GraphQLError(
-              `Query exceeds maximum depth of ${maxDepth}.`,
-              { nodes: [node] }
-            )
+            new GraphQLError(`Query exceeds maximum depth of ${maxDepth}.`, {
+              nodes: [node],
+            })
           );
           return;
         }

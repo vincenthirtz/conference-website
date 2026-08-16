@@ -1,11 +1,12 @@
 // components/embed/EmbedStandings.tsx
 // Chrome-less, theme-aware standings table for the iframe-embeddable read-only
 // tournament standings page. Mirrors EmbedBracket: no Navbar/Footer/Toast, a
-// discreet "view on site" link, i18n via useT('embedStandings'). Renders only
+// discreet "view on site" link, i18n via useT(nsEmbedStandings). Renders only
 // the public, non-PII fields exposed by PublicStanding (rank, team, prize).
 
 import type { PublicStanding } from '@/utils/public/readStandings';
 import { useT, format } from '@/lib/i18n/useT';
+import nsEmbedStandings from '@/lib/i18n/locales/fr/embedStandings';
 
 export type EmbedTheme = 'light' | 'dark';
 
@@ -28,7 +29,7 @@ export default function EmbedStandings({
   publicUrl,
   siteLabel = 'le site',
 }: EmbedStandingsProps) {
-  const t = useT('embedStandings');
+  const t = useT(nsEmbedStandings);
   const isLight = theme === 'light';
   const accentStyle = accent ? { borderTop: `3px solid ${accent}` } : undefined;
 
@@ -97,12 +98,19 @@ export default function EmbedStandings({
                       : 'border-b border-white/10 text-left text-[11px] uppercase tracking-wider text-neutral-400'
                   }
                 >
-                  <th scope="col" className="w-12 px-3 py-2 text-right tabular-nums">
+                  <th
+                    scope="col"
+                    className="w-12 px-3 py-2 text-right tabular-nums"
+                  >
                     {t.rank}
                   </th>
-                  <th scope="col" className="px-3 py-2">{t.team}</th>
+                  <th scope="col" className="px-3 py-2">
+                    {t.team}
+                  </th>
                   {hasPrize && (
-                    <th scope="col" className="px-3 py-2 text-right">{t.prize}</th>
+                    <th scope="col" className="px-3 py-2 text-right">
+                      {t.prize}
+                    </th>
                   )}
                 </tr>
               </thead>
@@ -130,9 +138,7 @@ export default function EmbedStandings({
                             loading="lazy"
                           />
                         )}
-                        <span className="truncate">
-                          {s.teamName ?? '—'}
-                        </span>
+                        <span className="truncate">{s.teamName ?? '—'}</span>
                       </span>
                     </td>
                     {hasPrize && (

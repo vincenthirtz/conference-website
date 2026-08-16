@@ -1,8 +1,9 @@
 import Link from 'next/link';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { useT } from '@/lib/i18n/useT';
+import nsPlanDuSite from '@/lib/i18n/locales/fr/planDuSite';
 
-type PlanDict = ReturnType<typeof useT<'planDuSite'>>;
+type PlanDict = typeof nsPlanDuSite.fr;
 
 type SiteSection = {
   title: string;
@@ -82,7 +83,7 @@ const getSiteSections = (t: PlanDict): SiteSection[] => [
 ];
 
 function SiteMapPage() {
-  const t = useT('planDuSite');
+  const t = useT(nsPlanDuSite);
   const siteSections = getSiteSections(t);
   return (
     <div className="min-h-screen bg-neutral-950 text-white">

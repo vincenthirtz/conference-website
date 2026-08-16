@@ -8,6 +8,7 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import Breadcrumb from '@/components/admin/Breadcrumb';
 import LogoUpload from '@/components/admin/LogoUpload';
 import { useAdminT } from '@/lib/i18n/useAdminT';
+import nsAdminNewsEdit from '@/lib/i18n/locales/admin-fr/adminNewsEdit';
 
 type Props = {
   staff: {
@@ -34,7 +35,7 @@ const slugifyValue = (value: string) =>
   slugify(value, { lower: true, strict: true });
 
 export default function AdminNewsEdit({ staff }: Props) {
-  const t = useAdminT('adminNewsEdit');
+  const t = useAdminT(nsAdminNewsEdit);
   const router = useRouter();
   const { adminFetchJson } = useAdminFetch();
   const { id } = router.query;

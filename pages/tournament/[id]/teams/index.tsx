@@ -16,6 +16,7 @@ import { findTournamentByIdOrSlug } from '@/utils/tournamentLookup';
 import { logger } from '@/utils/logger';
 import { useT, format } from '@/lib/i18n/useT';
 import TournamentTabs from '@/components/tournament/TournamentTabs';
+import nsTournamentTeams from '@/lib/i18n/locales/fr/tournamentTeams';
 
 type Tournament = {
   id: string;
@@ -130,7 +131,7 @@ export default function TournamentTeamsPage({
   teams,
   hasFfaStage,
 }: Props) {
-  const t = useT('tournamentTeams');
+  const t = useT(nsTournamentTeams);
   const tournamentPath = `/tournament/${tournament.slug || tournament.id}`;
   const isCompleted =
     tournament.status === 'finished' || tournament.status === 'completed';

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { useAdminT } from '@/lib/i18n/useAdminT';
+import nsAdminTournamentNav from '@/lib/i18n/locales/admin-fr/adminTournamentNav';
 
 /**
  * Stable identifiers for the top-level tournament tabs. Several legacy
@@ -106,7 +107,7 @@ export default function TournamentTabsNav({
   active,
   className = '',
 }: Props) {
-  const t = useAdminT('adminTournamentNav');
+  const t = useAdminT(nsAdminTournamentNav);
   const tx = t as Record<string, string>;
 
   const [moreOpen, setMoreOpen] = useState(false);

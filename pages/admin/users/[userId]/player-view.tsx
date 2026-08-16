@@ -47,8 +47,9 @@ import PlayerNotificationsScreen from '@/components/player/screens/PlayerNotific
 import type { AdminUserProfilePayload } from '@/pages/api/admin/users/[userId]/profile';
 
 import { logger } from '../../../../utils/logger';
+import nsAdminUserPlayerView from '@/lib/i18n/locales/admin-fr/adminUserPlayerView';
 
-type Dict = ReturnType<typeof useAdminT<'adminUserPlayerView'>>;
+type Dict = typeof nsAdminUserPlayerView.fr;
 
 type StaffShape = {
   id: string;
@@ -197,7 +198,7 @@ function InspectionFrame({
 }
 
 function PlayerViewPage({ staff }: { staff: StaffShape }) {
-  const t = useAdminT('adminUserPlayerView');
+  const t = useAdminT(nsAdminUserPlayerView);
   const router = useRouter();
   const rawUserId = router.query.userId;
   const userId = Array.isArray(rawUserId) ? rawUserId[0] : rawUserId;

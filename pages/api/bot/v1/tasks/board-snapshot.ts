@@ -58,22 +58,24 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const board = boardRow as { id: string; name: string };
 
   // Colonnes + cartes vivantes du board, en parallèle (tenant-scopées).
-  const [{ data: colsData, error: colsErr }, { data: tasksData, error: tasksErr }] =
-    await Promise.all([
-      supabaseAdmin
-        .from('task_columns')
-        .select('id, name, position, is_done')
-        .eq('tenant_id', tenantId)
-        .eq('board_id', boardId),
-      supabaseAdmin
-        .from('tasks')
-        .select(
-          'id, column_id, title, priority, assignee_staff_id, due_date, position, labels'
-        )
-        .eq('tenant_id', tenantId)
-        .eq('board_id', boardId)
-        .is('deleted_at', null),
-    ]);
+  const [
+    { data: colsData, error: colsErr },
+    { data: tasksData, error: tasksErr },
+  ] = await Promise.all([
+    supabaseAdmin
+      .from('task_columns')
+      .select('id, name, position, is_done')
+      .eq('tenant_id', tenantId)
+      .eq('board_id', boardId),
+    supabaseAdmin
+      .from('tasks')
+      .select(
+        'id, column_id, title, priority, assignee_staff_id, due_date, position, labels'
+      )
+      .eq('tenant_id', tenantId)
+      .eq('board_id', boardId)
+      .is('deleted_at', null),
+  ]);
   if (colsErr || tasksErr) {
     logger.error('[bot/tasks/board-snapshot] load error', colsErr ?? tasksErr);
     return res.status(500).json({ error: 'Erreur de lecture' });
@@ -97,7 +99,9 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
   }>;
 
   // Noms d'assignés (batch, 1 round-trip) via le helper partagé.
-  const nameById = await resolveStaffNames(tasks.map((t) => t.assignee_staff_id));
+  const nameById = await resolveStaffNames(
+    tasks.map((t) => t.assignee_staff_id)
+  );
 
   // Définitions de labels du board (1 round-trip) → map name → color. Le lien
   // carte ↔ définition se fait par NOM (tasks.labels[] porte des noms bruts) ;

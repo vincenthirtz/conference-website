@@ -63,12 +63,10 @@ async function handler(
   });
 
   if (!result.ok) {
-    return res
-      .status(result.status)
-      .json({
-        error: result.error,
-        ...(result.code ? { code: result.code } : {}),
-      });
+    return res.status(result.status).json({
+      error: result.error,
+      ...(result.code ? { code: result.code } : {}),
+    });
   }
   return res.status(200).json({ task: result.task });
 }

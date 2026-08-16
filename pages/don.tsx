@@ -7,8 +7,9 @@ import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { useSiteSetting } from '@/hooks/useSiteSettings';
 import { useToast } from '@/components/Toast';
 import { useT, format } from '@/lib/i18n/useT';
+import nsDonPage from '@/lib/i18n/locales/fr/donPage';
 
-type DonDict = ReturnType<typeof useT<'donPage'>>;
+type DonDict = typeof nsDonPage.fr;
 
 // Idempotency-Key pour le checkout HelloAsso (POST public/anonyme : pas de
 // session Supabase, donc useIdempotentMutation ne s'applique pas). Un
@@ -43,7 +44,7 @@ const COMING_SOON = false;
 
 function DonationPage() {
   const router = useRouter();
-  const t = useT('donPage');
+  const t = useT(nsDonPage);
   const uses = getUses(t);
   const tiers = getTiers(t);
   const { value: contactEmail } = useSiteSetting('contact_email');

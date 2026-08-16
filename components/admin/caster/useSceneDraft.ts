@@ -21,6 +21,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useToast } from '@/components/Toast';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { CasterScene } from '@/types/caster';
+import nsAdminCasterScenes from '@/lib/i18n/locales/admin-fr/adminCasterScenes';
 
 export type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 
@@ -46,7 +47,7 @@ export function useSceneDraft<D extends object>({
   normalize,
   buildPayload,
 }: Options<D>) {
-  const t = useAdminT('adminCasterScenes');
+  const t = useAdminT(nsAdminCasterScenes);
   const { addToast } = useToast();
 
   // normalize/buildPayload sont des fonctions de module côté éditeurs, mais on

@@ -16,10 +16,11 @@ import BattlenetVerifyCard from '@/components/player/BattlenetVerifyCard';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 
 import { logger } from '../../utils/logger';
+import nsPlayerProfile from '@/lib/i18n/locales/fr/playerProfile';
 
 function PlayerProfile() {
   const router = useRouter();
-  const t = useT('playerProfile');
+  const t = useT(nsPlayerProfile);
   const locale = useLocale();
   const { addToast } = useToast();
   const { user, loading: authLoading } = usePlayerSession({

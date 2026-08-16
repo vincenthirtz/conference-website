@@ -6,6 +6,7 @@ import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import Th from '@/components/admin/Th';
 
 import { logger } from '../../../utils/logger';
+import nsAdminStatsTeams from '@/lib/i18n/locales/admin-fr/adminStatsTeams';
 
 type TeamMini = {
   id: string;
@@ -76,7 +77,7 @@ function formatDateTime(iso: string | null) {
  * tournament / search / min-matches filters, sortable table and CSV export.
  */
 export default function TeamStatsPanel() {
-  const t = useAdminT('adminStatsTeams');
+  const t = useAdminT(nsAdminStatsTeams);
   const { adminFetch, adminFetchJson } = useAdminFetch();
 
   const [loading, setLoading] = useState(false);

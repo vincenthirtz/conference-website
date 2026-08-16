@@ -42,7 +42,11 @@ const DEFAULT_RETURN_TO = '/player';
 function sanitizeReturnTo(raw: unknown): string {
   if (typeof raw !== 'string') return DEFAULT_RETURN_TO;
   const value = raw.trim();
-  if (!value.startsWith('/') || value.startsWith('//') || value.includes('\\')) {
+  if (
+    !value.startsWith('/') ||
+    value.startsWith('//') ||
+    value.includes('\\')
+  ) {
     return DEFAULT_RETURN_TO;
   }
   return value;

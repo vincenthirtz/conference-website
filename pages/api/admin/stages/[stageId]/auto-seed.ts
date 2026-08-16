@@ -153,9 +153,7 @@ async function handler(
       reason: 'auto_seed',
       staffId: ctx.staff?.id ?? null,
       tenantId: ctx.tenantId,
-    }).catch((e) =>
-      logger.error('auto-seed: createBracketSnapshot failed', e)
-    );
+    }).catch((e) => logger.error('auto-seed: createBracketSnapshot failed', e));
 
     // Compute proposed slot assignments via the shared util.
     const updates: SeededSlot[] = computeProposedSeeding({
@@ -235,4 +233,3 @@ async function handler(
     return res.status(500).json({ error: 'Internal server error' });
   }
 }
-

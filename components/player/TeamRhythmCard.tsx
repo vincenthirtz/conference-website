@@ -31,6 +31,7 @@ import {
 } from '../../utils/teams/teamRhythm';
 import type { TeamRhythmResponse } from '../../pages/api/player/team-rhythm';
 import { logger } from '../../utils/logger';
+import nsTeamRhythm from '@/lib/i18n/locales/fr/teamRhythm';
 
 /** Lundi 1er janvier 2024 — base neutre pour dériver les noms de jours. */
 const REFERENCE_MONDAY = Date.UTC(2024, 0, 1);
@@ -64,7 +65,7 @@ function cellTone(count: number, threshold: number, mine: boolean): string {
 }
 
 export default function TeamRhythmCard() {
-  const t = useT('teamRhythm');
+  const t = useT(nsTeamRhythm);
   const locale = useLocale();
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
   const { withSubject, readOnly } = usePlayerArea();

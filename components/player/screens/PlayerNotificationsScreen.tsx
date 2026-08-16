@@ -28,6 +28,7 @@ import BattlenetVerifyCard from '@/components/player/BattlenetVerifyCard';
 import type { PlayerNotificationsPayload } from '@/pages/api/player/notifications';
 
 import { logger } from '../../../utils/logger';
+import nsPlayerNotifications from '@/lib/i18n/locales/fr/playerNotifications';
 
 // Réponse du GET /api/player/push/prefs : deux maps event_type -> bool.
 // `push` = opt-OUT (clé absente => activé). `email` = opt-IN (clé absente =>
@@ -59,7 +60,7 @@ export default function PlayerNotificationsScreen() {
   });
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
   const { addToast } = useToast();
-  const t = useT('playerNotifications');
+  const t = useT(nsPlayerNotifications);
   // Les compteurs sont inspectables (`?as=`) ; les préférences push/email ne le
   // sont pas — elles sont liées à l'appareil et au consentement de la personne.
   const { withSubject, readOnly, isInspecting } = usePlayerArea();

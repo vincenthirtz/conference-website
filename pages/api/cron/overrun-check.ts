@@ -110,7 +110,9 @@ async function loadLiveSegmentsForRun(runId: string): Promise<SegmentRow[]> {
   if (!supabaseAdmin) return [];
   const { data, error } = await supabaseAdmin
     .from('event_segments')
-    .select('id, event_run_id, tenant_id, title, duration_min, started_at, status')
+    .select(
+      'id, event_run_id, tenant_id, title, duration_min, started_at, status'
+    )
     .eq('event_run_id', runId)
     .eq('status', 'live')
     .not('started_at', 'is', null)

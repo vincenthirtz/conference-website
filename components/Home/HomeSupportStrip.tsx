@@ -10,6 +10,7 @@ import type { JSX } from 'react';
 import Link from 'next/link';
 import { type HomePartner } from '@/components/Home/HomeSponsors';
 import { useT } from '@/lib/i18n/useT';
+import nsHomeV2 from '@/lib/i18n/locales/fr/homeV2';
 
 type PressLogo = {
   source: string;
@@ -41,7 +42,7 @@ function LogoText({ label }: { label: string }) {
 export default function HomeSupportStrip({
   partners,
 }: HomeSupportStripProps): JSX.Element | null {
-  const t = useT('homeV2');
+  const t = useT(nsHomeV2);
   const uniquePartners = Array.from(
     new Map(partners.map((p) => [p.id, p])).values()
   );

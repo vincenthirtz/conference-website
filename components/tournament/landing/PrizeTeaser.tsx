@@ -5,14 +5,39 @@
 
 import { useT } from '@/lib/i18n/useT';
 import { Section, SectionHeader, Reveal } from './primitives';
+import nsTournamentLanding from '@/lib/i18n/locales/fr/tournamentLanding';
 
 export default function PrizeTeaser() {
-  const t = useT('tournamentLanding');
+  const t = useT(nsTournamentLanding);
 
-  const podium: { place: string; emoji: string; height: string; accent: string; order: number }[] = [
-    { place: t.prizeSecond, emoji: '🥈', height: 'h-24', accent: 'from-gray-300/20', order: 1 },
-    { place: t.prizeFirst, emoji: '🥇', height: 'h-32', accent: 'from-[var(--color-yellow)]/25', order: 2 },
-    { place: t.prizeThird, emoji: '🥉', height: 'h-20', accent: 'from-amber-600/20', order: 3 },
+  const podium: {
+    place: string;
+    emoji: string;
+    height: string;
+    accent: string;
+    order: number;
+  }[] = [
+    {
+      place: t.prizeSecond,
+      emoji: '🥈',
+      height: 'h-24',
+      accent: 'from-gray-300/20',
+      order: 1,
+    },
+    {
+      place: t.prizeFirst,
+      emoji: '🥇',
+      height: 'h-32',
+      accent: 'from-[var(--color-yellow)]/25',
+      order: 2,
+    },
+    {
+      place: t.prizeThird,
+      emoji: '🥉',
+      height: 'h-20',
+      accent: 'from-amber-600/20',
+      order: 3,
+    },
   ];
 
   return (
@@ -41,7 +66,9 @@ export default function PrizeTeaser() {
                 <span className="text-[11px] font-bold uppercase tracking-wider text-white">
                   {p.place}
                 </span>
-                <span className="mt-1 text-[10px] text-gray-500">{t.prizeTbd}</span>
+                <span className="mt-1 text-[10px] text-gray-500">
+                  {t.prizeTbd}
+                </span>
               </div>
             </Reveal>
           ))}

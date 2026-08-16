@@ -8,8 +8,9 @@
 
 import type { StageType } from '@/types/admin';
 import type { useAdminT } from '@/lib/i18n/useAdminT';
+import nsAdminStageDetail from '@/lib/i18n/locales/admin-fr/adminStageDetail';
 
-export type Dict = ReturnType<typeof useAdminT<'adminStageDetail'>>;
+export type Dict = typeof nsAdminStageDetail.fr;
 
 export function formatDateTime(iso: string | null) {
   if (!iso) return '—';

@@ -4,6 +4,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminT } from '@/lib/i18n/useAdminT';
+import nsAdminLogoUpload from '@/lib/i18n/locales/admin-fr/adminLogoUpload';
 
 type LogoUploadProps = {
   value: string; // URL actuelle (externe ou locale)
@@ -24,7 +25,7 @@ export default function LogoUpload({
   endpoint = '/api/admin/upload',
 }: LogoUploadProps) {
   const { adminFetchJson } = useAdminFetch();
-  const t = useAdminT('adminLogoUpload');
+  const t = useAdminT(nsAdminLogoUpload);
   const resolvedLabel = label ?? t.defaultLabel;
   const resolvedHint = hint ?? t.defaultHint;
   const [mode, setMode] = useState<'upload' | 'url'>(

@@ -15,8 +15,9 @@ import AutoSaveIndicator from '@/components/admin/AutoSaveIndicator';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 
 import { logger } from '../../../utils/logger';
+import nsAdminTournamentsCreate from '@/lib/i18n/locales/admin-fr/adminTournamentsCreate';
 
-type Dict = ReturnType<typeof useAdminT<'adminTournamentsCreate'>>;
+type Dict = typeof nsAdminTournamentsCreate.fr;
 type Props = {
   staff: {
     id: string;
@@ -62,7 +63,7 @@ function stageTypeBadge(type: string) {
 export const getServerSideProps = withStaffPage('admin');
 
 function AdminTournamentCreatePage({ staff }: Props) {
-  const t = useAdminT('adminTournamentsCreate');
+  const t = useAdminT(nsAdminTournamentsCreate);
   const router = useRouter();
   const { adminFetchJson } = useAdminFetch();
   const { mutate: mutateIdempotent } = useIdempotentMutation();

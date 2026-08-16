@@ -18,8 +18,9 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminResource } from '@/hooks/useAdminResource';
 import AdminListShell from '@/components/admin/AdminListShell';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import nsAdminPartnershipRequestsList from '@/lib/i18n/locales/admin-fr/adminPartnershipRequestsList';
 
-type Dict = ReturnType<typeof useAdminT<'adminPartnershipRequestsList'>>;
+type Dict = typeof nsAdminPartnershipRequestsList.fr;
 type RequestRow = {
   id: string;
   company_name: string;
@@ -82,7 +83,7 @@ function formatDate(d: string | null) {
 }
 
 export default function PartnershipRequestsPanel() {
-  const t = useAdminT('adminPartnershipRequestsList');
+  const t = useAdminT(nsAdminPartnershipRequestsList);
   const statusLabels = getStatusLabels(t);
   const categoryLabels = getCategoryLabels(t);
   const { adminFetchJson } = useAdminFetch();

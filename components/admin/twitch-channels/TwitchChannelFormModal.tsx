@@ -2,6 +2,7 @@ import { useEffect, useId, useState } from 'react';
 import Modal from '@/components/admin/Modal';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useAdminT } from '@/lib/i18n/useAdminT';
+import nsAdminTwitchChannelsNew from '@/lib/i18n/locales/admin-fr/adminTwitchChannelsNew';
 
 type TwitchChannelFormModalProps = {
   open: boolean;
@@ -30,7 +31,7 @@ export default function TwitchChannelFormModal({
   onClose,
   onCreated,
 }: TwitchChannelFormModalProps) {
-  const t = useAdminT('adminTwitchChannelsNew');
+  const t = useAdminT(nsAdminTwitchChannelsNew);
   const { mutateJson } = useIdempotentMutation();
   const formId = useId();
 

@@ -10,8 +10,10 @@ import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { StaffProps, Tournament } from '@/types/admin';
 
 import { logger } from '../../../utils/logger';
+import nsAdminTournamentsList from '@/lib/i18n/locales/admin-fr/adminTournamentsList';
+import nsAdminQuickBracket from '@/lib/i18n/locales/admin-fr/adminQuickBracket';
 
-type Dict = ReturnType<typeof useAdminT<'adminTournamentsList'>>;
+type Dict = typeof nsAdminTournamentsList.fr;
 type AdminTournamentsProps = StaffProps & {
   tournaments: Tournament[];
   total: number | null;
@@ -96,8 +98,8 @@ function AdminTournamentsPage({
   total,
   errorMsg,
 }: AdminTournamentsProps) {
-  const tx = useAdminT('adminTournamentsList');
-  const tqb = useAdminT('adminQuickBracket');
+  const tx = useAdminT(nsAdminTournamentsList);
+  const tqb = useAdminT(nsAdminQuickBracket);
   const router = useRouter();
   const { filters, setFilter, setFilters } = useUrlFilters(T_FILTER_KEYS);
 

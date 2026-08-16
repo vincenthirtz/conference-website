@@ -12,6 +12,7 @@ import { type UpcomingTournament } from '@/components/Home/HomeUpcomingTournamen
 import { type TwitchLive } from '@/components/Home/useTwitchLive';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
+import nsHomeV2 from '@/lib/i18n/locales/fr/homeV2';
 
 type HomeSpotlightProps = {
   tournament: UpcomingTournament | null;
@@ -55,7 +56,7 @@ function formatPrize(cents: number, locale: string) {
 }
 
 function TwitchPanel({ live }: { live: TwitchLive }) {
-  const t = useT('homeV2');
+  const t = useT(nsHomeV2);
   const locale = useLocale();
   const channelUrl = `https://www.twitch.tv/${live.channel}`;
 
@@ -130,7 +131,7 @@ export default function HomeSpotlight({
   prizeCents,
   live,
 }: HomeSpotlightProps): JSX.Element | null {
-  const t = useT('homeV2');
+  const t = useT(nsHomeV2);
   const locale = useLocale();
 
   if (!tournament) return null;

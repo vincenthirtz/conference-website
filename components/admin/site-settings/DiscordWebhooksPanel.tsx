@@ -13,6 +13,7 @@ import {
   DISCORD_CHANNEL_META,
   type DiscordChannelType,
 } from '@/utils/discord/channels';
+import nsAdminSiteSettingsDiscord from '@/lib/i18n/locales/admin-fr/adminSiteSettingsDiscord';
 
 type WebhookRow = {
   id: string;
@@ -51,7 +52,7 @@ function emptySaving(): Record<DiscordChannelType, boolean> {
 }
 
 export default function DiscordWebhooksPanel() {
-  const t = useAdminT('adminSiteSettingsDiscord');
+  const t = useAdminT(nsAdminSiteSettingsDiscord);
   const { addToast } = useToast();
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
   const { adminFetchJson } = useAdminFetch();

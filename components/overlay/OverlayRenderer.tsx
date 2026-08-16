@@ -11,7 +11,7 @@
 // (starting/pause/end/custom) paint a full dark gradient; live scenes
 // (match/results) keep the centre transparent so the video composites through.
 //
-// All user-visible copy is routed through i18n (`useT('overlay')` + `format`),
+// All user-visible copy is routed through i18n (`useT(nsOverlay)` + `format`),
 // like every other public surface. The overlay is chrome-less with no locale
 // toggle, so it defaults to FR via the app's default locale.
 
@@ -22,6 +22,7 @@ import type {
 } from '@/hooks/useOverlayState';
 import { useT, format } from '@/lib/i18n/useT';
 import { SponsorRotator } from './SponsorRotator';
+import nsOverlay from '@/lib/i18n/locales/fr/overlay';
 
 export type OverlayBranding = {
   name: string;
@@ -56,7 +57,7 @@ function formatBadge(format: string | null): string | null {
 /* ── Cross-scene furniture ─────────────────────────────────────────────── */
 
 function LiveBadge() {
-  const t = useT('overlay');
+  const t = useT(nsOverlay);
   return (
     <div className="fixed right-8 top-8 flex items-center gap-2 rounded-full border border-red-500/40 bg-black/60 px-4 py-1.5 backdrop-blur-sm">
       <span className="relative flex h-2.5 w-2.5">
@@ -86,7 +87,7 @@ function LowerThird({ text }: { text: string }) {
 
 function PipFrame() {
   // Placeholder region only — OBS composites the real camera/video here.
-  const t = useT('overlay');
+  const t = useT(nsOverlay);
   return (
     <div className="fixed bottom-8 right-8 z-10 aspect-video w-80">
       <div className="flex h-full w-full items-center justify-center rounded-xl border-2 border-white/20 bg-black/20 shadow-2xl backdrop-blur-[1px]">
@@ -107,7 +108,7 @@ function TeamLogo({
   name: string;
   size?: 'md' | 'lg';
 }) {
-  const t = useT('overlay');
+  const t = useT(nsOverlay);
   const logoLabel = format(t.logoAlt, { name });
   const dim = size === 'lg' ? 'h-24 w-24' : 'h-14 w-14';
   if (logoUrl) {
@@ -184,7 +185,7 @@ function MatchScene({ match }: { match: OverlayMatch }) {
 }
 
 function ResultsScene({ match }: { match: OverlayMatch }) {
-  const t = useT('overlay');
+  const t = useT(nsOverlay);
   if (!match) {
     return (
       <CenterCard
@@ -314,7 +315,7 @@ export function OverlayRenderer({
   sponsors,
   branding,
 }: Props) {
-  const t = useT('overlay');
+  const t = useT(nsOverlay);
   const isIntermission = INTERMISSION.has(scene);
   const brandName = branding?.name ?? t.brandFallback;
   // Full-frame dark backdrop for standalone graphics (intermission cards +

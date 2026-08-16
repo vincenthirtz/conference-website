@@ -5,8 +5,9 @@
 import type { useAdminT } from '@/lib/i18n/useAdminT';
 import type { MatchStatus } from '@/types/admin';
 import type { RegistrationAnswers as RegistrationAnswerValues } from '@/utils/registrationFields';
+import nsAdminTournamentOverview from '@/lib/i18n/locales/admin-fr/adminTournamentOverview';
 
-export type Dict = ReturnType<typeof useAdminT<'adminTournamentOverview'>>;
+export type Dict = typeof nsAdminTournamentOverview.fr;
 
 export type Team = {
   id: string;

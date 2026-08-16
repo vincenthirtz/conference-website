@@ -18,6 +18,7 @@ import TeamMessagesPanel from '@/components/admin/communications/TeamMessagesPan
 import NotificationsPanel from '@/components/admin/communications/NotificationsPanel';
 import type { StaffProps } from '@/types/admin';
 import { logger } from '@/utils/logger';
+import nsAdminCommunicationsHub from '@/lib/i18n/locales/admin-fr/adminCommunicationsHub';
 
 const ID_BASE = 'admin-communications';
 const NEWS_LIMIT = 20;
@@ -106,7 +107,7 @@ export default function AdminCommunicationsPage({
   newsTotal,
   newsError,
 }: HubProps) {
-  const t = useAdminT('adminCommunicationsHub');
+  const t = useAdminT(nsAdminCommunicationsHub);
   const isAdmin = hasAtLeastRole(staff.role as StaffRole, 'admin');
 
   const tabs = [

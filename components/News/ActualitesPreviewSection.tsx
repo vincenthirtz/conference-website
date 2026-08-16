@@ -3,6 +3,7 @@ import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import type { JSX } from 'react';
 import { useT } from '@/lib/i18n/useT';
+import nsActualitesPreview from '@/lib/i18n/locales/fr/actualitesPreview';
 
 const HEROES = [
   'hero-ana',
@@ -28,7 +29,7 @@ function pickTwoRandom(): [string, string] {
 }
 
 function ActualitesPreviewSection(): JSX.Element {
-  const t = useT('actualitesPreview');
+  const t = useT(nsActualitesPreview);
   const [heroes, setHeroes] = useState<[string, string] | null>(null);
 
   useEffect(() => {

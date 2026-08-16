@@ -1,6 +1,7 @@
 import { ReactNode, useEffect } from 'react';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { useAdminT } from '@/lib/i18n/useAdminT';
+import nsAdminConfirmDialog from '@/lib/i18n/locales/admin-fr/adminConfirmDialog';
 
 type ConfirmDialogVariant = 'danger' | 'warning' | 'info';
 
@@ -112,7 +113,7 @@ export default function ConfirmDialog({
   onCancel,
   onConfirm,
 }: ConfirmDialogProps) {
-  const t = useAdminT('adminConfirmDialog');
+  const t = useAdminT(nsAdminConfirmDialog);
   const resolvedConfirmLabel = confirmLabel ?? t.confirm;
   const resolvedConfirmingLabel = confirmingLabel ?? t.confirming;
   const resolvedCancelLabel = cancelLabel ?? t.cancel;

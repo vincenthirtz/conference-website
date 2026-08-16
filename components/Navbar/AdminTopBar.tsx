@@ -11,6 +11,7 @@ import { useRealtimeChannel } from '@/hooks/useRealtimeChannel';
 import { useT, format } from '@/lib/i18n/useT';
 import { useTenantBranding } from '@/lib/branding/TenantBrandingProvider';
 import ProfileModal from '@/components/admin/profile/ProfileModal';
+import nsAdminTopBar from '@/lib/i18n/locales/fr/adminTopBar';
 
 // TenantSwitcher intentionally not rendered here: on the
 // conference-website domain the active tenant is always DEFAULT_TENANT_ID
@@ -55,7 +56,7 @@ export default function AdminTopBar({
   height,
   onLogout,
 }: AdminTopBarProps) {
-  const t = useT('adminTopBar');
+  const t = useT(nsAdminTopBar);
   const branding = useTenantBranding();
   const router = useRouter();
   const [openMenu, setOpenMenu] = useState<string | null>(null);

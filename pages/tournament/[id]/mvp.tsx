@@ -13,6 +13,7 @@ import { maskBattleTag } from '@/utils/battleTag';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import TournamentTabs from '@/components/tournament/TournamentTabs';
+import nsTournamentMvp from '@/lib/i18n/locales/fr/tournamentMvp';
 
 type LeaderboardEntry = {
   memberId: string | null;
@@ -264,7 +265,7 @@ export default function TournamentMvpPage({
   perMatch,
   hasFfaStage,
 }: Props) {
-  const t = useT('tournamentMvp');
+  const t = useT(nsTournamentMvp);
   const locale = useLocale();
   const matchesWithMvp = perMatch.filter((m) => m.battleTag || m.memberId);
   const tournamentPath = `/tournament/${tournament.slug || tournament.id}`;

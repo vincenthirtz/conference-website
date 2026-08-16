@@ -16,6 +16,8 @@ import TournamentTabsNav from '@/components/admin/tournament/TournamentTabsNav';
 import CheckinSettingsPanel from '@/components/admin/tournament/CheckinSettingsPanel';
 import CheckinLivePanel from '@/components/admin/tournament/CheckinLivePanel';
 import type { StaffProps } from '@/types/admin';
+import nsAdminTournamentCheckin from '@/lib/i18n/locales/admin-fr/adminTournamentCheckin';
+import nsAdminTournamentNav from '@/lib/i18n/locales/admin-fr/adminTournamentNav';
 
 const ID_BASE = 'admin-tournament-checkin';
 
@@ -26,8 +28,8 @@ export default function AdminTournamentCheckinPage(_: StaffProps) {
   const { id } = router.query;
   const tournamentId = Array.isArray(id) ? id[0] : (id ?? '');
 
-  const t = useAdminT('adminTournamentCheckin');
-  const nav = useAdminT('adminTournamentNav');
+  const t = useAdminT(nsAdminTournamentCheckin);
+  const nav = useAdminT(nsAdminTournamentNav);
   const tabs = [
     { id: 'settings', label: nav.subCheckinSettings },
     { id: 'live', label: nav.subCheckinLive },

@@ -260,7 +260,9 @@ async function handleCreate(
   if (!parsed.success) {
     const first = parsed.error.issues[0];
     return res.status(400).json({
-      error: first ? `${first.path.join('.')}: ${first.message}` : 'Données invalides.',
+      error: first
+        ? `${first.path.join('.')}: ${first.message}`
+        : 'Données invalides.',
     });
   }
   const input = parsed.data;
@@ -275,21 +277,23 @@ async function handleCreate(
     return res.status(500).json({ error: 'Echec de la création.' });
   }
 
-  const { error: insErr } = await supabaseAdmin!.from('email_campaigns').insert({
-    id,
-    name: input.name,
-    description: input.description,
-    subject: input.subject,
-    audience: input.audience,
-    status: input.status,
-    heading: input.heading,
-    greeting_enabled: input.greetingEnabled,
-    body_paragraphs: input.bodyParagraphs,
-    cta_label: input.ctaLabel ?? null,
-    cta_url: input.ctaUrl ?? null,
-    footer_note: input.footerNote ?? null,
-    created_by: ctx?.user?.id ?? null,
-  });
+  const { error: insErr } = await supabaseAdmin!
+    .from('email_campaigns')
+    .insert({
+      id,
+      name: input.name,
+      description: input.description,
+      subject: input.subject,
+      audience: input.audience,
+      status: input.status,
+      heading: input.heading,
+      greeting_enabled: input.greetingEnabled,
+      body_paragraphs: input.bodyParagraphs,
+      cta_label: input.ctaLabel ?? null,
+      cta_url: input.ctaUrl ?? null,
+      footer_note: input.footerNote ?? null,
+      created_by: ctx?.user?.id ?? null,
+    });
 
   if (insErr) {
     logger.error('[broadcast/create] insert error:', insErr);
@@ -303,7 +307,11 @@ async function handleCreate(
         action: 'other',
         entity_type: 'broadcast',
         entity_id: id,
-        payload: { campaign: id, campaign_name: input.name, mode: 'campaign-created' },
+        payload: {
+          campaign: id,
+          campaign_name: input.name,
+          mode: 'campaign-created',
+        },
       });
     } catch (logErr) {
       logger.error('[broadcast/create] log error:', logErr);

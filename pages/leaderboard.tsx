@@ -17,6 +17,7 @@ import { readLeaderboard } from '@/utils/rating/readLeaderboard';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { useIsrRefresh } from '@/hooks/useIsrRefresh';
 import { useT } from '@/lib/i18n/useT';
+import nsLeaderboardPage from '@/lib/i18n/locales/fr/leaderboardPage';
 
 const PAGE_SIZE = 50;
 const JSONLD_TOP_N = 10;
@@ -38,7 +39,7 @@ function ratingBadge(rank: number): string {
 export default function LeaderboardPage({
   initialPlayers,
 }: InferGetStaticPropsType<typeof getStaticProps>) {
-  const t = useT('leaderboardPage');
+  const t = useT(nsLeaderboardPage);
   const hasInitial = initialPlayers.length > 0;
 
   // Première page : servie par l'ISR (props fraîches, revalidate:300). Le hook
@@ -253,7 +254,7 @@ function LoadingState() {
 }
 
 function EmptyState() {
-  const t = useT('leaderboardPage');
+  const t = useT(nsLeaderboardPage);
   return (
     <section className="rounded-2xl border border-neutral-800 bg-neutral-900/40 py-16 text-center">
       <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--color-yellow)]/10 text-2xl">
@@ -266,7 +267,7 @@ function EmptyState() {
 }
 
 function ErrorState({ onRetry }: { onRetry: () => void }) {
-  const t = useT('leaderboardPage');
+  const t = useT(nsLeaderboardPage);
   return (
     <section className="py-16 text-center" role="alert">
       <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full border border-red-500/30 bg-red-500/10">

@@ -5,8 +5,9 @@
 import { useEffect, useState } from 'react';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import nsAdminMatchHistoryDrawer from '@/lib/i18n/locales/admin-fr/adminMatchHistoryDrawer';
 
-type Dict = ReturnType<typeof useAdminT<'adminMatchHistoryDrawer'>>;
+type Dict = typeof nsAdminMatchHistoryDrawer.fr;
 
 type FormattedLog = {
   id: string;
@@ -32,7 +33,7 @@ type Props = {
 };
 
 export default function MatchHistoryDrawer({ matchId, open, onClose }: Props) {
-  const t = useAdminT('adminMatchHistoryDrawer');
+  const t = useAdminT(nsAdminMatchHistoryDrawer);
   const { adminFetch } = useAdminFetch();
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);

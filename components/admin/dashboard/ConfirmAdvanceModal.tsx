@@ -8,6 +8,7 @@ import {
   BgSyncQueuedError,
 } from '@/hooks/useIdempotentMutation';
 import { useAdminT } from '@/lib/i18n/useAdminT';
+import nsAdminDashboardConfirmAdvanceModal from '@/lib/i18n/locales/admin-fr/adminDashboardConfirmAdvanceModal';
 
 type Props = {
   open: boolean;
@@ -27,7 +28,7 @@ export default function ConfirmAdvanceModal({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { mutateJson } = useIdempotentMutation();
-  const t = useAdminT('adminDashboardConfirmAdvanceModal');
+  const t = useAdminT(nsAdminDashboardConfirmAdvanceModal);
 
   // La modale n'est pas remontée entre deux ouvertures (pas de key côté
   // appelant) : réarmer les états transitoires à chaque ouverture ou

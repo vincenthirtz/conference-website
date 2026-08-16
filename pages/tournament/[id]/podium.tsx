@@ -17,8 +17,9 @@ import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import TournamentTabs from '@/components/tournament/TournamentTabs';
 import { logger } from '../../../utils/logger';
+import nsTournamentPodium from '@/lib/i18n/locales/fr/tournamentPodium';
 
-type PodiumDict = ReturnType<typeof useT<'tournamentPodium'>>;
+type PodiumDict = typeof nsTournamentPodium.fr;
 
 type Tournament = {
   id: string;
@@ -181,7 +182,7 @@ export default function TournamentPodiumPage({
   rankings,
   hasFfaStage,
 }: Props) {
-  const t = useT('tournamentPodium');
+  const t = useT(nsTournamentPodium);
   const locale = useLocale();
   const tournamentPath = `/tournament/${tournament.slug ?? tournament.id}`;
   const isCompleted =

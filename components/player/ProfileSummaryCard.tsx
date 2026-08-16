@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { User } from '@supabase/supabase-js';
 import { useT } from '@/lib/i18n/useT';
+import nsProfileSummary from '@/lib/i18n/locales/fr/profileSummary';
 
 type Props = {
   user: User;
@@ -8,7 +9,7 @@ type Props = {
 };
 
 export default function ProfileSummaryCard({ user, displayName }: Props) {
-  const t = useT('profileSummary');
+  const t = useT(nsProfileSummary);
   const role = (user.user_metadata?.role as string | undefined) || 'player';
   const battleTag = user.user_metadata?.battle_tag as string | undefined;
   const avatarUrl =

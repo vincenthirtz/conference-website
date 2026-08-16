@@ -18,6 +18,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { useToast } from '@/components/Toast';
 import { useAdminT } from '@/lib/i18n/useAdminT';
+import nsAdminApiTokenReveal from '@/lib/i18n/locales/admin-fr/adminApiTokenReveal';
 
 type Props = {
   token: string;
@@ -27,7 +28,7 @@ type Props = {
 export default function ApiTokenRevealModal({ token, onClose }: Props) {
   const trapRef = useFocusTrap<HTMLDivElement>();
   const { addToast } = useToast();
-  const t = useAdminT('adminApiTokenReveal');
+  const t = useAdminT(nsAdminApiTokenReveal);
   const [copied, setCopied] = useState(false);
 
   // Close on Escape.

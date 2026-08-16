@@ -12,6 +12,7 @@
 import { useEffect, useState } from 'react';
 import type { OverlaySponsor } from '@/hooks/useOverlayState';
 import { useT } from '@/lib/i18n/useT';
+import nsOverlay from '@/lib/i18n/locales/fr/overlay';
 
 type Props = {
   sponsors: OverlaySponsor[];
@@ -25,7 +26,7 @@ export function SponsorRotator({
   intervalMs = 6_000,
   className = '',
 }: Props) {
-  const t = useT('overlay');
+  const t = useT(nsOverlay);
   const [index, setIndex] = useState(0);
   const count = sponsors.length;
 

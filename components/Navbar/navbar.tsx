@@ -12,6 +12,7 @@ import { ADMIN_LINKS, filterAdminLinks } from './adminLinks';
 import { PLAYER_LINKS } from './playerLinks';
 import { useT } from '@/lib/i18n/useT';
 import { useTenantBranding } from '@/lib/branding/TenantBrandingProvider';
+import nsNavbar from '@/lib/i18n/locales/fr/navbar';
 
 const DEFAULT_LOGO_SRC = '/img/logos/2025-logo.png';
 
@@ -25,7 +26,7 @@ const PLAYER_BAR_HEIGHT = 44;
 
 function Navbar(): JSX.Element {
   const router = useRouter();
-  const tNav = useT('navbar');
+  const tNav = useT(nsNavbar);
   const branding = useTenantBranding();
   const logoSrc = branding?.logoUrl ?? DEFAULT_LOGO_SRC;
   const logoAlt = branding?.name ? `${branding.name} logo` : 'conference logo';
@@ -67,7 +68,8 @@ function Navbar(): JSX.Element {
   }, [drawerOpen]);
 
   const visibleAdminLinks = useMemo(
-    () => filterAdminLinks(staffRole, ADMIN_LINKS, activeTenantKind ?? undefined),
+    () =>
+      filterAdminLinks(staffRole, ADMIN_LINKS, activeTenantKind ?? undefined),
     [staffRole, activeTenantKind]
   );
 

@@ -21,6 +21,8 @@ import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import Switch from '@/components/ui/Switch';
 import type { StaffProps } from '@/types/admin';
 import type { EventRun, EventSegment } from '@/types/events';
+import nsAdminBroadcastLive from '@/lib/i18n/locales/admin-fr/adminBroadcastLive';
+import nsAdminTwitchPredictions from '@/lib/i18n/locales/admin-fr/adminTwitchPredictions';
 
 type Scene = 'starting' | 'match' | 'pause' | 'results' | 'end' | 'custom';
 
@@ -94,8 +96,8 @@ const POLL_MS = 15_000;
 export const getServerSideProps = withStaffPage('caster');
 
 function BroadcastLivePage({ staff }: StaffProps) {
-  const t = useAdminT('adminBroadcastLive');
-  const tw = useAdminT('adminTwitchPredictions');
+  const t = useAdminT(nsAdminBroadcastLive);
+  const tw = useAdminT(nsAdminTwitchPredictions);
   const router = useRouter();
   const { adminFetchJson } = useAdminFetch();
   const { mutateJson } = useIdempotentMutation({

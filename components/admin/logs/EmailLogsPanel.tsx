@@ -3,8 +3,9 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminResource } from '@/hooks/useAdminResource';
 import AdminListShell from '@/components/admin/AdminListShell';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import nsAdminEmailLogs from '@/lib/i18n/locales/admin-fr/adminEmailLogs';
 
-type Dict = ReturnType<typeof useAdminT<'adminEmailLogs'>>;
+type Dict = typeof nsAdminEmailLogs.fr;
 
 type BrevoEvent = {
   email: string;
@@ -156,7 +157,7 @@ function groupByMessage(events: BrevoEvent[]): EmailMessage[] {
  */
 export default function EmailLogsPanel() {
   const { adminFetch } = useAdminFetch();
-  const t = useAdminT('adminEmailLogs');
+  const t = useAdminT(nsAdminEmailLogs);
   const eventLabels = getEventLabels(t);
 
   // Vue : « Messages » (1 ligne par email distinct) ou « Événements » (détail
@@ -551,70 +552,70 @@ export default function EmailLogsPanel() {
           )}
 
           {view === 'events' && (
-          <div className="divide-y divide-neutral-700/50">
-            {events.map((ev, i) => {
-              const style = eventLabels[ev.event] || {
-                label: ev.event,
-                color:
-                  'bg-neutral-600/20 text-neutral-300 border-neutral-500/30',
-              };
-              return (
-                <div
-                  key={`${ev.messageId}-${i}`}
-                  className="p-4 hover:bg-neutral-700/30 transition-colors"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-xs font-mono text-neutral-500 bg-neutral-900/50 px-2 py-1 rounded-lg">
-                        {formatDateTime(ev.date)}
-                      </span>
+            <div className="divide-y divide-neutral-700/50">
+              {events.map((ev, i) => {
+                const style = eventLabels[ev.event] || {
+                  label: ev.event,
+                  color:
+                    'bg-neutral-600/20 text-neutral-300 border-neutral-500/30',
+                };
+                return (
+                  <div
+                    key={`${ev.messageId}-${i}`}
+                    className="p-4 hover:bg-neutral-700/30 transition-colors"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-xs font-mono text-neutral-500 bg-neutral-900/50 px-2 py-1 rounded-lg">
+                          {formatDateTime(ev.date)}
+                        </span>
+                        <span
+                          className={`px-2.5 py-1 rounded-lg text-xs font-semibold border ${style.color}`}
+                        >
+                          {style.label}
+                        </span>
+                      </div>
                       <span
-                        className={`px-2.5 py-1 rounded-lg text-xs font-semibold border ${style.color}`}
+                        className="text-sm font-medium text-white truncate max-w-[240px]"
+                        title={ev.email}
                       >
-                        {style.label}
+                        {ev.email}
                       </span>
                     </div>
-                    <span
-                      className="text-sm font-medium text-white truncate max-w-[240px]"
-                      title={ev.email}
-                    >
-                      {ev.email}
-                    </span>
-                  </div>
 
-                  {ev.subject && (
-                    <p
-                      className="text-sm text-neutral-200 mb-1 truncate"
-                      title={ev.subject}
-                    >
-                      {ev.subject}
-                    </p>
-                  )}
-
-                  <div className="flex flex-wrap items-center gap-3 text-xs text-neutral-500">
-                    {ev.from && (
-                      <span>{format(t.from, { from: ev.from })}</span>
-                    )}
-                    {ev.messageId && (
-                      <span
-                        className="font-mono truncate max-w-[200px]"
-                        title={ev.messageId}
+                    {ev.subject && (
+                      <p
+                        className="text-sm text-neutral-200 mb-1 truncate"
+                        title={ev.subject}
                       >
-                        {format(t.idLabel, {
-                          id: ev.messageId.slice(1, 20),
-                        })}
-                      </span>
+                        {ev.subject}
+                      </p>
                     )}
-                    {ev.tag && (
-                      <span className="px-2 py-0.5 rounded-lg bg-neutral-700/50 border border-neutral-600/50">
-                        {ev.tag}
-                      </span>
-                    )}
+
+                    <div className="flex flex-wrap items-center gap-3 text-xs text-neutral-500">
+                      {ev.from && (
+                        <span>{format(t.from, { from: ev.from })}</span>
+                      )}
+                      {ev.messageId && (
+                        <span
+                          className="font-mono truncate max-w-[200px]"
+                          title={ev.messageId}
+                        >
+                          {format(t.idLabel, {
+                            id: ev.messageId.slice(1, 20),
+                          })}
+                        </span>
+                      )}
+                      {ev.tag && (
+                        <span className="px-2 py-0.5 rounded-lg bg-neutral-700/50 border border-neutral-600/50">
+                          {ev.tag}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
           )}
         </AdminListShell>
       </section>

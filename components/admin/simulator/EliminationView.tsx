@@ -6,6 +6,7 @@ import { memo } from 'react';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { SimMatchCard, CARD_H } from './SimMatchCard';
 import type { SimMatch } from '@/utils/simulator';
+import nsAdminSimulatorEliminationView from '@/lib/i18n/locales/admin-fr/adminSimulatorEliminationView';
 
 const CARD_W = 220;
 const GAP_BASE = 16;
@@ -50,7 +51,7 @@ function EliminationViewComponent({
   label?: string;
   accentColor?: string;
 }) {
-  const t = useAdminT('adminSimulatorEliminationView');
+  const t = useAdminT(nsAdminSimulatorEliminationView);
   if (!rounds.length) return null;
 
   const isTree =

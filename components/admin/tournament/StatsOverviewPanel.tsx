@@ -9,6 +9,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/router';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import nsAdminTournamentStats from '@/lib/i18n/locales/admin-fr/adminTournamentStats';
 
 type Tournament = {
   id: string;
@@ -75,7 +76,7 @@ export default function StatsOverviewPanel() {
   const router = useRouter();
   const { adminFetchJson } = useAdminFetch();
   const { id } = router.query;
-  const t = useAdminT('adminTournamentStats');
+  const t = useAdminT(nsAdminTournamentStats);
 
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -208,14 +209,24 @@ export default function StatsOverviewPanel() {
                   <table className="w-full text-sm">
                     <thead className="bg-neutral-750 text-neutral-300">
                       <tr>
-                        <th scope="col" className="px-4 py-2 text-left">#</th>
-                        <th scope="col" className="px-4 py-2 text-left">{t.colTeam}</th>
-                        <th scope="col" className="px-4 py-2 text-center">{t.colWins}</th>
-                        <th scope="col" className="px-4 py-2 text-center">{t.colLosses}</th>
+                        <th scope="col" className="px-4 py-2 text-left">
+                          #
+                        </th>
+                        <th scope="col" className="px-4 py-2 text-left">
+                          {t.colTeam}
+                        </th>
+                        <th scope="col" className="px-4 py-2 text-center">
+                          {t.colWins}
+                        </th>
+                        <th scope="col" className="px-4 py-2 text-center">
+                          {t.colLosses}
+                        </th>
                         <th scope="col" className="px-4 py-2 text-center">
                           {t.colWinrate}
                         </th>
-                        <th scope="col" className="px-4 py-2 text-center">{t.colMaps}</th>
+                        <th scope="col" className="px-4 py-2 text-center">
+                          {t.colMaps}
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
@@ -278,13 +289,21 @@ export default function StatsOverviewPanel() {
                   <table className="w-full text-sm">
                     <thead className="bg-neutral-750 text-neutral-300">
                       <tr>
-                        <th scope="col" className="px-4 py-2 text-left">{t.colMap}</th>
-                        <th scope="col" className="px-4 py-2 text-center">{t.colGames}</th>
-                        <th scope="col" className="px-4 py-2 text-center">{t.colUsage}</th>
+                        <th scope="col" className="px-4 py-2 text-left">
+                          {t.colMap}
+                        </th>
+                        <th scope="col" className="px-4 py-2 text-center">
+                          {t.colGames}
+                        </th>
+                        <th scope="col" className="px-4 py-2 text-center">
+                          {t.colUsage}
+                        </th>
                         <th scope="col" className="px-4 py-2 text-center">
                           {t.colAvgRounds}
                         </th>
-                        <th scope="col" className="px-4 py-2 text-center">{t.colOT}</th>
+                        <th scope="col" className="px-4 py-2 text-center">
+                          {t.colOT}
+                        </th>
                       </tr>
                     </thead>
                     <tbody>

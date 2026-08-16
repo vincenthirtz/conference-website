@@ -2,6 +2,7 @@ import React from 'react';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import Modal from '@/components/admin/Modal';
 import type { ImportLine } from './types';
+import nsAdminTeamsImportBattleTagsModal from '@/lib/i18n/locales/admin-fr/adminTeamsImportBattleTagsModal';
 
 type ImportBattleTagsModalProps = {
   open: boolean;
@@ -24,7 +25,7 @@ function ImportBattleTagsModalComponent({
   onBuildPreview,
   onApply,
 }: ImportBattleTagsModalProps) {
-  const t = useAdminT('adminTeamsImportBattleTagsModal');
+  const t = useAdminT(nsAdminTeamsImportBattleTagsModal);
   return (
     <Modal
       open={open}
@@ -103,64 +104,70 @@ function ImportBattleTagsModalComponent({
             data-testid="import-preview"
           >
             <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-neutral-900/60 text-neutral-400 text-xs uppercase">
-                <tr>
-                  <th scope="col" className="text-left px-3 py-2">{t.colIdentifiant}</th>
-                  <th scope="col" className="text-left px-3 py-2">BattleTag</th>
-                  <th scope="col" className="text-left px-3 py-2">{t.colStatut}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {importPreview.length === 0 ? (
+              <table className="w-full text-sm">
+                <thead className="bg-neutral-900/60 text-neutral-400 text-xs uppercase">
                   <tr>
-                    <td
-                      colSpan={3}
-                      className="px-3 py-4 text-center text-neutral-500"
-                    >
-                      {t.emptyLine}
-                    </td>
+                    <th scope="col" className="text-left px-3 py-2">
+                      {t.colIdentifiant}
+                    </th>
+                    <th scope="col" className="text-left px-3 py-2">
+                      BattleTag
+                    </th>
+                    <th scope="col" className="text-left px-3 py-2">
+                      {t.colStatut}
+                    </th>
                   </tr>
-                ) : (
-                  importPreview.map((line, i) => (
-                    <tr
-                      key={i}
-                      className="border-t border-neutral-800"
-                      data-testid={`import-row-${line.status}`}
-                    >
-                      <td className="px-3 py-2 font-mono text-xs text-neutral-300 truncate max-w-[200px]">
-                        {line.memberLabel || line.key || '—'}
-                      </td>
-                      <td className="px-3 py-2 font-mono text-xs">
-                        {line.tag || '—'}
-                      </td>
-                      <td className="px-3 py-2">
-                        {line.status === 'matched' && (
-                          <span className="px-2 py-0.5 rounded-full text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                            {t.statusMatched}
-                          </span>
-                        )}
-                        {line.status === 'invalid' && (
-                          <span className="px-2 py-0.5 rounded-full text-xs bg-red-500/20 text-red-300 border border-red-500/30">
-                            {t.statusInvalid}
-                          </span>
-                        )}
-                        {line.status === 'not-found' && (
-                          <span className="px-2 py-0.5 rounded-full text-xs bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                            {t.statusNotFound}
-                          </span>
-                        )}
-                        {line.status === 'empty' && (
-                          <span className="px-2 py-0.5 rounded-full text-xs bg-neutral-700 text-neutral-400 border border-neutral-600">
-                            {t.statusEmpty}
-                          </span>
-                        )}
+                </thead>
+                <tbody>
+                  {importPreview.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={3}
+                        className="px-3 py-4 text-center text-neutral-500"
+                      >
+                        {t.emptyLine}
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ) : (
+                    importPreview.map((line, i) => (
+                      <tr
+                        key={i}
+                        className="border-t border-neutral-800"
+                        data-testid={`import-row-${line.status}`}
+                      >
+                        <td className="px-3 py-2 font-mono text-xs text-neutral-300 truncate max-w-[200px]">
+                          {line.memberLabel || line.key || '—'}
+                        </td>
+                        <td className="px-3 py-2 font-mono text-xs">
+                          {line.tag || '—'}
+                        </td>
+                        <td className="px-3 py-2">
+                          {line.status === 'matched' && (
+                            <span className="px-2 py-0.5 rounded-full text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                              {t.statusMatched}
+                            </span>
+                          )}
+                          {line.status === 'invalid' && (
+                            <span className="px-2 py-0.5 rounded-full text-xs bg-red-500/20 text-red-300 border border-red-500/30">
+                              {t.statusInvalid}
+                            </span>
+                          )}
+                          {line.status === 'not-found' && (
+                            <span className="px-2 py-0.5 rounded-full text-xs bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                              {t.statusNotFound}
+                            </span>
+                          )}
+                          {line.status === 'empty' && (
+                            <span className="px-2 py-0.5 rounded-full text-xs bg-neutral-700 text-neutral-400 border border-neutral-600">
+                              {t.statusEmpty}
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         )}

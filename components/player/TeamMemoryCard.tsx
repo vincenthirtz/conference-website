@@ -23,6 +23,7 @@ import { MAX_NOTES_LENGTH } from '../../utils/teams/teamReviews';
 import type { TeamReviewsResponse } from '../../pages/api/player/team-reviews';
 import type { Encounter } from '../../utils/teams/teamReviews';
 import { logger } from '../../utils/logger';
+import nsTeamMemory from '@/lib/i18n/locales/fr/teamMemory';
 
 /** Clé stable d'un affrontement (le sujet est polymorphe). */
 function keyOf(encounter: Encounter): string {
@@ -30,7 +31,7 @@ function keyOf(encounter: Encounter): string {
 }
 
 export default function TeamMemoryCard() {
-  const t = useT('teamMemory');
+  const t = useT(nsTeamMemory);
   const locale = useLocale();
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
   const { addToast } = useToast();

@@ -4,6 +4,7 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import type { Scrim } from '@/types/admin';
+import nsAdminScrimsCreate from '@/lib/i18n/locales/admin-fr/adminScrimsCreate';
 
 type TeamOption = { id: string; name: string; short_name: string | null };
 
@@ -41,7 +42,7 @@ export default function ScrimFormModal({
   onCreated,
   defaults,
 }: ScrimFormModalProps) {
-  const t = useAdminT('adminScrimsCreate');
+  const t = useAdminT(nsAdminScrimsCreate);
   const { adminFetchJson } = useAdminFetch();
   const { mutateJson } = useIdempotentMutation();
   const formId = useId();

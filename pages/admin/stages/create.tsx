@@ -8,6 +8,8 @@ import { useToast } from '@/components/Toast';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useAdminT } from '@/lib/i18n/useAdminT';
+import nsAdminStagesCreate from '@/lib/i18n/locales/admin-fr/adminStagesCreate';
+import nsAdminFfa from '@/lib/i18n/locales/admin-fr/adminFfa';
 
 type StaffShape = {
   id: string;
@@ -75,8 +77,8 @@ type CreateStageResponse = {
 export const getServerSideProps = withStaffPage('admin');
 
 function AdminStageCreatePage({ staff }: StaffProps) {
-  const t = useAdminT('adminStagesCreate');
-  const tf = useAdminT('adminFfa');
+  const t = useAdminT(nsAdminStagesCreate);
+  const tf = useAdminT(nsAdminFfa);
   const router = useRouter();
   const { addToast } = useToast();
   const { adminFetchJson } = useAdminFetch();

@@ -47,9 +47,7 @@ export default async function handler(
     return res.status(404).json({ error: 'Unknown game slug' });
   }
   if (!HERO_GAMES.has(slug)) {
-    return res
-      .status(404)
-      .json({ error: `Game "${slug}" has no hero pool` });
+    return res.status(404).json({ error: `Game "${slug}" has no hero pool` });
   }
 
   const includeDisabled =

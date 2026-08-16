@@ -23,6 +23,7 @@ import {
   AppIcon,
   CodeIcon,
 } from '@/components/Icons';
+import nsFooter from '@/lib/i18n/locales/fr/footer';
 
 type FooterLink = {
   label: string;
@@ -37,7 +38,7 @@ type SocialLink = {
   Icon: (props: Readonly<SVGTypes>) => JSX.Element;
 };
 
-type FooterDict = ReturnType<typeof useT<'footer'>>;
+type FooterDict = typeof nsFooter.fr;
 
 const tournoiLinks = (t: FooterDict): FooterLink[] => [
   { label: t.ambassadors, href: '/live', Icon: LiveIcon },
@@ -137,7 +138,7 @@ function FooterColumn({
 }
 
 function Footer(): JSX.Element {
-  const t = useT('footer');
+  const t = useT(nsFooter);
   const branding = useTenantBranding();
   const siteName = branding?.name ?? "OW Women's Cup";
   return (

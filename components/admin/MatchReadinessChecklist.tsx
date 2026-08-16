@@ -2,6 +2,7 @@
 // Checklist "pret a jouer" affichee avant un match.
 
 import { useAdminT } from '@/lib/i18n/useAdminT';
+import nsAdminMatchReadinessChecklist from '@/lib/i18n/locales/admin-fr/adminMatchReadinessChecklist';
 
 type CheckItem = {
   label: string;
@@ -77,7 +78,7 @@ export default function MatchReadinessChecklist({
   tournamentStatus,
   stageActive,
 }: MatchReadinessProps) {
-  const t = useAdminT('adminMatchReadinessChecklist');
+  const t = useAdminT(nsAdminMatchReadinessChecklist);
   const isBye = match.is_bye === true;
 
   const checks: CheckItem[] = [

@@ -23,6 +23,7 @@ import { useT, format } from '@/lib/i18n/useT';
 import type { HealthCode, HealthSeverity } from '../../utils/teams/teamHealth';
 import type { TeamHealthResponse } from '../../pages/api/player/team-health';
 import { logger } from '../../utils/logger';
+import nsTeamHealth from '@/lib/i18n/locales/fr/teamHealth';
 
 /**
  * Où va-t-on pour réparer. Le diagnostic ne sert à rien s'il faut ensuite
@@ -47,7 +48,7 @@ const SEVERITY_TONE: Record<HealthSeverity, string> = {
 };
 
 export default function TeamHealthCard() {
-  const t = useT('teamHealth');
+  const t = useT(nsTeamHealth);
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
   const { withSubject } = usePlayerArea();
   const [data, setData] = useState<TeamHealthResponse | null>(null);

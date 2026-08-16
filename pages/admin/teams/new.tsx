@@ -14,6 +14,7 @@ import {
   type TeamRole,
 } from '@/utils/teamRoles';
 import { useAdminT } from '@/lib/i18n/useAdminT';
+import nsAdminTeamsNew from '@/lib/i18n/locales/admin-fr/adminTeamsNew';
 
 type StaffShape = {
   id: string;
@@ -49,7 +50,7 @@ export const getServerSideProps = withStaffPage<{ teamRoles: TeamRole[] }>(
 );
 
 function AdminNewTeamPage({ staff, teamRoles }: StaffProps) {
-  const t = useAdminT('adminTeamsNew');
+  const t = useAdminT(nsAdminTeamsNew);
   const router = useRouter();
   const { addToast } = useToast();
   const { mutateJson } = useIdempotentMutation();

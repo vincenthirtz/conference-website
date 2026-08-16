@@ -20,8 +20,9 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminResource } from '@/hooks/useAdminResource';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { logger } from '@/utils/logger';
+import nsAdminAdherentsList from '@/lib/i18n/locales/admin-fr/adminAdherentsList';
 
-type Dict = ReturnType<typeof useAdminT<'adminAdherentsList'>>;
+type Dict = typeof nsAdminAdherentsList.fr;
 type AdherentRow = {
   id: string;
   member_number: string | null;
@@ -78,7 +79,7 @@ function getRoleLabels(t: Dict): Record<string, string> {
 }
 
 export default function AdherentsListPanel() {
-  const t = useAdminT('adminAdherentsList');
+  const t = useAdminT(nsAdminAdherentsList);
   const paymentStatusLabels = getPaymentStatusLabels(t);
   const roleLabels = getRoleLabels(t);
   const [stats, setStats] = useState<Stats | null>(null);
@@ -469,28 +470,52 @@ export default function AdherentsListPanel() {
             <table className="w-full text-sm">
               <thead className="bg-neutral-900/50 border-b border-neutral-700/50">
                 <tr>
-                  <th scope="col" className="text-left px-4 py-3 text-neutral-400 font-medium">
+                  <th
+                    scope="col"
+                    className="text-left px-4 py-3 text-neutral-400 font-medium"
+                  >
                     {t.colMemberNumber}
                   </th>
-                  <th scope="col" className="text-left px-4 py-3 text-neutral-400 font-medium">
+                  <th
+                    scope="col"
+                    className="text-left px-4 py-3 text-neutral-400 font-medium"
+                  >
                     {t.colName}
                   </th>
-                  <th scope="col" className="text-left px-4 py-3 text-neutral-400 font-medium">
+                  <th
+                    scope="col"
+                    className="text-left px-4 py-3 text-neutral-400 font-medium"
+                  >
                     {t.colEmail}
                   </th>
-                  <th scope="col" className="text-left px-4 py-3 text-neutral-400 font-medium">
+                  <th
+                    scope="col"
+                    className="text-left px-4 py-3 text-neutral-400 font-medium"
+                  >
                     {t.colRole}
                   </th>
-                  <th scope="col" className="text-left px-4 py-3 text-neutral-400 font-medium">
+                  <th
+                    scope="col"
+                    className="text-left px-4 py-3 text-neutral-400 font-medium"
+                  >
                     {t.colYear}
                   </th>
-                  <th scope="col" className="text-left px-4 py-3 text-neutral-400 font-medium">
+                  <th
+                    scope="col"
+                    className="text-left px-4 py-3 text-neutral-400 font-medium"
+                  >
                     {t.colPayment}
                   </th>
-                  <th scope="col" className="text-left px-4 py-3 text-neutral-400 font-medium">
+                  <th
+                    scope="col"
+                    className="text-left px-4 py-3 text-neutral-400 font-medium"
+                  >
                     {t.colAmount}
                   </th>
-                  <th scope="col" className="text-right px-4 py-3 text-neutral-400 font-medium">
+                  <th
+                    scope="col"
+                    className="text-right px-4 py-3 text-neutral-400 font-medium"
+                  >
                     {t.colActions}
                   </th>
                 </tr>

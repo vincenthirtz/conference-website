@@ -23,8 +23,9 @@ import {
   type ComputedRunSchedule,
 } from '@/utils/eventSchedule';
 import { useT, format } from '@/lib/i18n/useT';
+import nsLiveSegmentBlock from '@/lib/i18n/locales/fr/liveSegmentBlock';
 
-type LiveSegmentDict = ReturnType<typeof useT<'liveSegmentBlock'>>;
+type LiveSegmentDict = typeof nsLiveSegmentBlock.fr;
 
 type Props = {
   run: EventRun | null;
@@ -111,7 +112,7 @@ export default function LiveSegmentBlock({
   nextSegment,
   schedule,
 }: Props) {
-  const t = useT('liveSegmentBlock');
+  const t = useT(nsLiveSegmentBlock);
   const STATUS_BADGE = getStatusBadge(t);
   const TYPE_LABEL = getTypeLabel(t);
   const tickEnabled = !!run;

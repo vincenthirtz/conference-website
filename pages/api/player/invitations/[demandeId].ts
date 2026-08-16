@@ -68,7 +68,9 @@ export default withAuthRoute(async function handler(
   }
   const { action } = parsed.data;
 
-  const tenantId = await resolveTenantIdForUserRequestAsync(req, { authUserId: user.id });
+  const tenantId = await resolveTenantIdForUserRequestAsync(req, {
+    authUserId: user.id,
+  });
 
   if (action === 'accept') {
     const result = await acceptInvitation(tenantId, demandeId, user.id);

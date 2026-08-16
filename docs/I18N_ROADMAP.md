@@ -6,12 +6,10 @@
 ## 1. Existant (ne pas réinventer)
 
 - **Système maison**, zéro dépendance : `lib/i18n/LanguageProvider.tsx`
-  (contexte React + persistance `localStorage`, clé `cw_player_lang`) +
-  `lib/i18n/useT.ts` (`useT('<namespace>')`, interpolation `format()`,
-  pluriel via clés `_one`/`_other`).
-- **Dictionnaires centraux** : `lib/i18n/locales/fr.json` (source de vérité,
-  typée) et `en.json` — **25 namespaces, ~653 clés**. Garde-fou de parité
-  fr/en : `tests/unit/i18nLocaleParity.test.ts`.
+  (contexte React + persistance `localStorage`, clé `cw_lang`) +
+  `lib/i18n/useT.ts` / `useAdminT.ts` (interpolation `format()`, pluriel via
+  clés `_one`/`_other`).
+
 - **Provider global** : monté dans `_app.tsx` — tout le site peut déjà
   consommer `useT`. SSR et premier rendu toujours `fr` (anti-mismatch
   d'hydratation), `<html lang>` synchronisé côté client.
@@ -22,6 +20,47 @@
   (+ `SupportAssoCard`). **Le site public est en français en dur** (~41 pages).
 - **Pas de routing par locale** (pas de `/en/*`), hreflang limité à `fr-FR` +
   `x-default`. L'admin (`/admin/*`) est FR only — choix assumé, hors scope.
+
+### Où vivent les traductions (mis à jour 2026-08-17)
+
+**Français — un fichier par namespace, c'est la source de vérité :**
+
+```
+lib/i18n/locales/fr/<namespace>.ts         → site public  (157 namespaces)
+lib/i18n/locales/admin-fr/<namespace>.ts   → espace admin (180 namespaces)
+```
+
+```ts
+// lib/i18n/locales/fr/livePage.ts
+import { ns } from '../../ns';
+export default ns('livePage', { heroTitle: 'Devenir Ambassadeur·rice' });
+```
+
+**Anglais — un blob unique**, `locales/en.json` et `admin-en.json`, chargé
+paresseusement à la bascule FR→EN (`lazyLocale.ts`).
+
+**Côté composant**, on importe le SEUL namespace dont on a besoin :
+
+```ts
+import nsLivePage from '@/lib/i18n/locales/fr/livePage';
+const t = useT(nsLivePage);
+```
+
+**Pourquoi ce découpage** : le français doit être synchrone (SSR + premier
+rendu), donc présent dans le bundle de la page. En monolithe, chaque page
+embarquait les 157 namespaces publics (223 KB) pour en utiliser ~18 (~11 KB).
+Un module par namespace laisse le bundler ne retenir que l'utile. L'anglais,
+lui, n'est jamais synchrone : le découper multiplierait les requêtes pour rien.
+
+**Ajouter un namespace** : créer `locales/fr/<ns>.ts` (via `ns()`), ajouter le
+bloc correspondant dans `en.json`, et référencer le fichier dans le barrel
+`locales/fr/index.ts` (un test échoue sinon). Le barrel sert UNIQUEMENT aux
+garde-fous de parité — ne jamais l'importer depuis du code applicatif, ça
+réembarquerait tout le dictionnaire.
+
+**Garde-fous de parité fr/en** : `locales/parity.ts` + `admin-parity.ts`
+(compilation) et `tests/unit/i18nLocaleParity.test.ts` (runtime, nomme les clés
+fautives, et vérifie que le barrel liste tous les fichiers).
 
 ## 2. Décisions à acter avant d'avancer
 
@@ -37,9 +76,10 @@
 
 ## 3. Plan par phases (UI publique, pattern actuel)
 
-Méthode par page : 1 namespace par page/composant dans `fr.json` + `en.json`
-(la parité est testée), remplacer les littéraux par `t.*`, `format()` pour les
-variables. Estimations en volume de clés ≈ ordre de grandeur.
+Méthode par page : 1 namespace par page/composant — un fichier
+`locales/fr/<ns>.ts` + le bloc correspondant dans `en.json` (la parité est
+testée) —, remplacer les littéraux par `t.*`, `format()` pour les variables.
+Estimations en volume de clés ≈ ordre de grandeur.
 
 ### Phase A — Socle transverse public (petit, débloque tout)
 - `components/Navbar` : ajouter le `LanguageToggle` public (la navbar est déjà i18n).
@@ -79,8 +119,9 @@ variables. Estimations en volume de clés ≈ ordre de grandeur.
 
 ## 4. Garde-fous & conventions
 
-- fr.json est la référence typée : ajouter les clés en fr ET en en, sinon le
-  test de parité échoue (`npx vitest run tests/unit/i18nLocaleParity.test.ts`).
+- Le français (`locales/fr/<ns>.ts`) est la référence typée : ajouter les clés
+  en fr ET en en, sinon le test de parité échoue
+  (`npx vitest run tests/unit/i18nLocaleParity.test.ts`).
 - Pas de texte utilisateur concaténé : toujours `format(t.key, { var })`.
 - Les dates/nombres passent par `toLocaleString(lang === 'fr' ? 'fr-FR' : 'en-GB')`
   (pattern déjà en place dans `pages/player/index.tsx`).

@@ -24,10 +24,11 @@ import { usePlayerArea } from '@/components/player/PlayerAreaContext';
 import type { PlayerMatchesPayload } from '@/pages/api/player/matches';
 
 import { logger } from '../../../utils/logger';
+import nsPlayerMatches from '@/lib/i18n/locales/fr/playerMatches';
 
 type PlayerMatch = PlayerMatchesPayload['matches'][number];
 
-type T = ReturnType<typeof useT<'playerMatches'>>;
+type T = typeof nsPlayerMatches.fr;
 
 function formatScheduled(iso: string | null, lang: Lang, t: T): string {
   if (!iso) return t.dateToCome;
@@ -275,7 +276,7 @@ export default function PlayerMatchesScreen() {
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
   const { withSubject, readOnly } = usePlayerArea();
   const { lang } = useLang();
-  const t = useT('playerMatches');
+  const t = useT(nsPlayerMatches);
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<PlayerMatchesPayload | null>(null);
   const [error, setError] = useState<string | null>(null);

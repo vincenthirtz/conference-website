@@ -6,6 +6,7 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
 import { POLE_KEYS, POLE_LABELS, type PoleKey } from '@/utils/associationPoles';
 import { useAdminT } from '@/lib/i18n/useAdminT';
+import nsAdminPoleMemberEdit from '@/lib/i18n/locales/admin-fr/adminPoleMemberEdit';
 
 type Props = {
   staff: {
@@ -16,7 +17,7 @@ type Props = {
 };
 
 function AdminPoleMemberEditPage({ staff }: Props) {
-  const t = useAdminT('adminPoleMemberEdit');
+  const t = useAdminT(nsAdminPoleMemberEdit);
   const router = useRouter();
   const { id } = router.query;
   const { addToast } = useToast();

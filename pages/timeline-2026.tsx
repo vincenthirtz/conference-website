@@ -5,8 +5,9 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
+import nsTimeline2026 from '@/lib/i18n/locales/fr/timeline2026';
 
-type Timeline2026Dict = ReturnType<typeof useT<'timeline2026'>>;
+type Timeline2026Dict = typeof nsTimeline2026.fr;
 
 const WOMEN_TOURNAMENT_ID_2026 = 'e8fa740c-d92b-49d8-a654-05a37d0eea3b';
 const TWITCH_URL = 'https://www.twitch.tv/womens_cup';
@@ -232,7 +233,7 @@ function getMatchStatusInfo(
 }
 
 function MatchRow({ match }: { match: SimpleMatch }) {
-  const t = useT('timeline2026');
+  const t = useT(nsTimeline2026);
   const locale = useLocale();
   const t1 = match.team1?.short_name || match.team1?.name || t.teamFallback1;
   const t2 =
@@ -307,7 +308,7 @@ function MatchRow({ match }: { match: SimpleMatch }) {
 }
 
 function Timeline2026Page({ matches, tournamentSlug }: Props) {
-  const t = useT('timeline2026');
+  const t = useT(nsTimeline2026);
   const locale = useLocale();
   const timeline = getTimeline(t);
   const tournamentIdentifier = tournamentSlug || WOMEN_TOURNAMENT_ID_2026;

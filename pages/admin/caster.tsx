@@ -119,6 +119,7 @@ import {
   StaffUnauthenticatedError,
   StaffUnauthorizedError,
 } from '@/utils/staff';
+import nsAdminCasterScenes from '@/lib/i18n/locales/admin-fr/adminCasterScenes';
 
 // Panneau OBS (lot 3) : WebSocket direct navigateur → OBS local + localStorage
 // — browser-only, donc chargé côté client uniquement (ssr:false).
@@ -187,7 +188,7 @@ const EDITORS: Record<CasterSceneType, ComponentType<SceneEditorProps>> = {
 };
 
 function CasterScenesPage({ staff }: PageProps) {
-  const t = useAdminT('adminCasterScenes');
+  const t = useAdminT(nsAdminCasterScenes);
   const { addToast } = useToast();
 
   // Badge temps réel : SUBSCRIBED = frais ; sinon la page vit sur le dernier

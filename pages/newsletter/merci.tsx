@@ -7,9 +7,10 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { useT } from '@/lib/i18n/useT';
+import nsNewsletterMerci from '@/lib/i18n/locales/fr/newsletterMerci';
 
 function NewsletterMerciPage() {
-  const t = useT('newsletterMerci');
+  const t = useT(nsNewsletterMerci);
   const router = useRouter();
   const isInvalid = router.query.status === 'invalid';
 

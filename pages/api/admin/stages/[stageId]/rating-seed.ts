@@ -16,7 +16,10 @@ import { logStaffAction } from '@/utils/staffLogs';
 import { withAdminIdempotency } from '@/utils/adminIdempotency';
 import { createBracketSnapshot } from '@/utils/bracket/snapshot';
 import { isValidUUID } from '@/utils/apiHelpers';
-import { type ProposedSlot, type SeedingPattern } from '@/utils/stages/autoSeed';
+import {
+  type ProposedSlot,
+  type SeedingPattern,
+} from '@/utils/stages/autoSeed';
 import { type SeedingMethod } from '@/utils/seeding/ratingSeeding';
 import { computeRatingSeedingForStage } from './rating-seeding-preview';
 import { logger } from '../../../../../utils/logger';

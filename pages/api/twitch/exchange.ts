@@ -70,12 +70,10 @@ export default async function handler(
   const creds = clientCreds();
   if (!creds) {
     logger.error('[twitch/exchange] missing Twitch credentials');
-    return res
-      .status(500)
-      .json({
-        error: 'Twitch is not configured',
-        code: 'TWITCH_NOT_CONFIGURED',
-      });
+    return res.status(500).json({
+      error: 'Twitch is not configured',
+      code: 'TWITCH_NOT_CONFIGURED',
+    });
   }
 
   const params = new URLSearchParams({

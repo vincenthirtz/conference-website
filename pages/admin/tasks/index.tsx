@@ -22,8 +22,9 @@ import Breadcrumb from '@/components/admin/Breadcrumb';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import { formatDateHeader, formatTime } from '@/utils/dateFormatters';
+import nsAdminTaskBoard from '@/lib/i18n/locales/admin-fr/adminTaskBoard';
 
-type Dict = ReturnType<typeof useAdminT<'adminTaskBoard'>>;
+type Dict = typeof nsAdminTaskBoard.fr;
 
 type StaffShape = { id: string; role: string; display_name: string | null };
 type StaffProps = { staff: StaffShape };
@@ -639,7 +640,7 @@ function ActivitySection({
 export const getServerSideProps = withStaffPage('admin');
 
 function AdminTasksPage({ staff: currentStaff }: StaffProps) {
-  const t = useAdminT('adminTaskBoard');
+  const t = useAdminT(nsAdminTaskBoard);
   const locale = useLocale();
   const { adminFetchJson } = useAdminFetch();
   const { confirm, dialog } = useConfirmDialog();

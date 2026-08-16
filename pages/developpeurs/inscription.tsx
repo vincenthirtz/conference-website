@@ -22,12 +22,13 @@ import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile';
 import { supabaseClient } from '@/utils/supabase';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { useT } from '@/lib/i18n/useT';
+import nsDeveloperRegisterPage from '@/lib/i18n/locales/fr/developerRegisterPage';
 
-type DevRegisterDict = ReturnType<typeof useT<'developerRegisterPage'>>;
+type DevRegisterDict = typeof nsDeveloperRegisterPage.fr;
 
 function DeveloperRegisterPage() {
   const router = useRouter();
-  const COPY: DevRegisterDict = useT('developerRegisterPage');
+  const COPY: DevRegisterDict = useT(nsDeveloperRegisterPage);
 
   const [orgName, setOrgName] = useState('');
   const [email, setEmail] = useState('');
@@ -299,9 +300,7 @@ function DeveloperRegisterPage() {
               <div className="pt-2">
                 <button
                   type="submit"
-                  disabled={
-                    loading || (!turnstileToken && !turnstileMissing)
-                  }
+                  disabled={loading || (!turnstileToken && !turnstileMissing)}
                   data-test="dev-register-submit"
                   className={`w-full rounded-xl py-2 text-sm font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed ${
                     loading

@@ -11,6 +11,7 @@ import TeamPicker from '@/components/player/TeamPicker';
 import { useT } from '@/lib/i18n/useT';
 import { MessageField, ErrorBanner, SubmitButton } from './formPrimitives';
 import type { Team } from './types';
+import nsPlayerRequests from '@/lib/i18n/locales/fr/playerRequests';
 
 type ErrorField = 'team' | 'player' | 'slots' | null;
 
@@ -51,7 +52,7 @@ export default function ScrimRequestForm({
   submitting: boolean;
   onSubmit: (e: React.FormEvent) => void;
 }) {
-  const t = useT('playerRequests');
+  const t = useT(nsPlayerRequests);
 
   if (!hasTeam) {
     return (

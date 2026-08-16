@@ -16,6 +16,7 @@ import { useT, format } from '@/lib/i18n/useT';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 
 import { logger } from '../../utils/logger';
+import nsJoinTeam from '@/lib/i18n/locales/fr/joinTeam';
 
 type Team = {
   id: string;
@@ -28,7 +29,7 @@ type Team = {
 };
 
 export default function JoinTeamPage() {
-  const t = useT('joinTeam');
+  const t = useT(nsJoinTeam);
   const router = useRouter();
   const { user, token, loading: authLoading, ready } = usePlayerSession();
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });

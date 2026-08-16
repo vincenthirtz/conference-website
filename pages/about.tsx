@@ -5,8 +5,9 @@ import type { GetStaticProps } from 'next';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { supabaseAdmin } from '@/utils/supabase';
 import { useT, format } from '@/lib/i18n/useT';
+import nsAboutPage from '@/lib/i18n/locales/fr/aboutPage';
 
-type AboutDict = ReturnType<typeof useT<'aboutPage'>>;
+type AboutDict = typeof nsAboutPage.fr;
 
 const DEFAULT_VIDEO_URL = 'https://www.youtube.com/watch?v=3j6w7CjXne8';
 
@@ -200,7 +201,7 @@ const getValues = (t: AboutDict) => [
 ];
 
 function AboutPage({ videoUrl }: AboutPageProps) {
-  const t = useT('aboutPage');
+  const t = useT(nsAboutPage);
   const stats = getStats(t);
   const steps = getSteps(t);
   const values = getValues(t);

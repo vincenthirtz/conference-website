@@ -41,7 +41,11 @@ export type StageRow = {
 // rôle minimum : manager (gestion de la structure du tournoi)
 export default withStaffRoute(handler, 'admin');
 
-async function handler(req: NextApiRequest, res: NextApiResponse, ctx: AuthenticatedStaffContext) {
+async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  ctx: AuthenticatedStaffContext
+) {
   const { stageId } = req.query;
 
   if (!stageId || Array.isArray(stageId) || !isValidUUID(stageId)) {
@@ -248,16 +252,20 @@ async function handlePut(
   // Garde "stage engagé" : on refuse de changer settings.match_format dès
   // qu'au moins un match du stage a quitté pending/cancelled. Sinon on
   // peut rétro-modifier le format d'un match déjà joué.
-  if ('settings' in body && body.settings && typeof body.settings === 'object') {
-    const beforeFormat = (before.settings as StageSettings | null)?.match_format ?? null;
+  if (
+    'settings' in body &&
+    body.settings &&
+    typeof body.settings === 'object'
+  ) {
+    const beforeFormat =
+      (before.settings as StageSettings | null)?.match_format ?? null;
     const newFormat =
       (body.settings as StageSettings | null)?.match_format ?? null;
     if (beforeFormat !== newFormat) {
       const snap = await getStageLockSnapshot(id);
       if (snap.locked) {
         return res.status(409).json({
-          error:
-            `Impossible de modifier le format de la phase : ${snap.lockedMatchCount} match(s) ont déjà démarré ou sont terminés. Pour changer le format, annuler / réinitialiser ces matchs d'abord.`,
+          error: `Impossible de modifier le format de la phase : ${snap.lockedMatchCount} match(s) ont déjà démarré ou sont terminés. Pour changer le format, annuler / réinitialiser ces matchs d'abord.`,
           code: 'STAGE_FORMAT_LOCKED',
           lockedMatchCount: snap.lockedMatchCount,
         });

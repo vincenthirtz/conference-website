@@ -18,6 +18,7 @@ import { useToast } from '@/components/Toast';
 import { useT, format } from '@/lib/i18n/useT';
 import { ChannelToggle } from '@/components/player/NotificationPrefsGrid';
 import { logger } from '../../utils/logger';
+import nsPlayerDiscovery from '@/lib/i18n/locales/fr/playerDiscovery';
 
 // Forme renvoyée par GET et PUT /api/player/discovery.
 export type DiscoveryCardData = {
@@ -35,7 +36,7 @@ const TAGLINE_MAX = 160;
 export default function DiscoveryCard() {
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
   const { addToast } = useToast();
-  const t = useT('playerDiscovery');
+  const t = useT(nsPlayerDiscovery);
 
   const [card, setCard] = useState<DiscoveryCardData | null>(null);
   const [loading, setLoading] = useState(true);

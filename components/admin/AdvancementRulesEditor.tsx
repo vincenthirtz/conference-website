@@ -4,8 +4,9 @@
 
 import { memo, useState, useEffect } from 'react';
 import { useAdminT } from '@/lib/i18n/useAdminT';
+import nsAdminAdvancementRulesEditor from '@/lib/i18n/locales/admin-fr/adminAdvancementRulesEditor';
 
-type Dict = ReturnType<typeof useAdminT<'adminAdvancementRulesEditor'>>;
+type Dict = typeof nsAdminAdvancementRulesEditor.fr;
 
 export type AdvancementRules = {
   advance_top?: number;
@@ -50,7 +51,7 @@ function AdvancementRulesEditor({
   disabled = false,
   sourceStageType,
 }: Props) {
-  const t = useAdminT('adminAdvancementRulesEditor');
+  const t = useAdminT(nsAdminAdvancementRulesEditor);
   const seedByOptions = getSeedByOptions(t);
   const isGroup = sourceStageType === 'group';
 

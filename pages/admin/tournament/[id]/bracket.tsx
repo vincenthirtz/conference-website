@@ -17,6 +17,7 @@ import Tabs, {
 import TournamentTabsNav from '@/components/admin/tournament/TournamentTabsNav';
 import LoadingSpinner from '@/components/admin/LoadingSpinner';
 import type { StaffProps } from '@/types/admin';
+import nsAdminTournamentNav from '@/lib/i18n/locales/admin-fr/adminTournamentNav';
 
 // Placeholder de chargement partagé par les panels code-splittés.
 const PanelLoading = () => (
@@ -54,7 +55,7 @@ export default function AdminTournamentBracketPage(_: StaffProps) {
   const { id } = router.query;
   const tournamentId = Array.isArray(id) ? id[0] : (id ?? '');
 
-  const nav = useAdminT('adminTournamentNav');
+  const nav = useAdminT(nsAdminTournamentNav);
   const tabs = [
     { id: 'view', label: nav.subBracketView },
     { id: 'builder', label: nav.subBracketBuilder },

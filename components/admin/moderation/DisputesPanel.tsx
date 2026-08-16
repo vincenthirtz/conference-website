@@ -15,6 +15,7 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminResource } from '@/hooks/useAdminResource';
 import AdminListShell from '@/components/admin/AdminListShell';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import nsAdminDisputes from '@/lib/i18n/locales/admin-fr/adminDisputes';
 
 type Classification = 'breached' | 'approaching' | 'fresh';
 
@@ -56,7 +57,7 @@ type TournamentsApiResponse = {
 const PAGE_SIZE = 50;
 
 export default function DisputesPanel() {
-  const t = useAdminT('adminDisputes');
+  const t = useAdminT(nsAdminDisputes);
   const router = useRouter();
   const { adminFetchJson } = useAdminFetch();
 
@@ -290,7 +291,7 @@ function Stat({
 }
 
 function SLAPill({ cls }: { cls: Classification }) {
-  const t = useAdminT('adminDisputes');
+  const t = useAdminT(nsAdminDisputes);
   const map: Record<Classification, { label: string; className: string }> = {
     breached: {
       label: t.statBreached,
@@ -327,7 +328,7 @@ function formatAge(minutes: number | null): string {
 }
 
 function DisputeCard({ dispute: d }: { dispute: DisputeRow }) {
-  const t = useAdminT('adminDisputes');
+  const t = useAdminT(nsAdminDisputes);
   const matchHref = `/admin/matches/${d.matchId}`;
   const ageLabel = formatAge(d.ageMinutes);
 

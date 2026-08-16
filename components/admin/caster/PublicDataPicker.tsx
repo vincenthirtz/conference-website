@@ -20,6 +20,7 @@ import {
 } from '@/utils/caster/dataSceneOptions';
 
 import { labelClass, inputClass } from './fieldClasses';
+import nsAdminCasterScenes from '@/lib/i18n/locales/admin-fr/adminCasterScenes';
 
 type Props = {
   label: string;
@@ -73,7 +74,7 @@ export default function PublicDataPicker({
   ghostNote,
   testId,
 }: Props) {
-  const t = useAdminT('adminCasterScenes');
+  const t = useAdminT(nsAdminCasterScenes);
   const loading = options === null;
   const list = options || [];
   // Liste chargée mais vide (aucune ligue publique, classement encore vide…) :

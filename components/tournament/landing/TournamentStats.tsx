@@ -8,6 +8,7 @@ import { useT } from '@/lib/i18n/useT';
 import { useReveal } from '@/hooks/useReveal';
 import { useCountUp } from '@/hooks/useCountUp';
 import { Section, SectionHeader, Spotlight } from './primitives';
+import nsTournamentLanding from '@/lib/i18n/locales/fr/tournamentLanding';
 
 type NumericStat = {
   kind: 'number';
@@ -62,25 +63,54 @@ export default function TournamentStats({
   totalMatches: number;
   stagesCount: number;
 }) {
-  const t = useT('tournamentLanding');
+  const t = useT(nsTournamentLanding);
 
   const stats: Stat[] = [
-    { kind: 'number', value: totalTeams, label: t.statTeamsLabel, accent: 'violet' },
     {
       kind: 'number',
-      value: placesRemaining !== null && placesRemaining > 0 ? placesRemaining : 0,
+      value: totalTeams,
+      label: t.statTeamsLabel,
+      accent: 'violet',
+    },
+    {
+      kind: 'number',
+      value:
+        placesRemaining !== null && placesRemaining > 0 ? placesRemaining : 0,
       label: t.statSlotsLabel,
       accent: 'green',
     },
-    { kind: 'number', value: totalMatches, label: t.statMatchesLabel, accent: 'yellow' },
-    { kind: 'number', value: stagesCount, label: t.statStagesLabel, accent: 'violet' },
-    { kind: 'text', value: t.statFemaleValue, label: t.statFemaleLabel, accent: 'green' },
-    { kind: 'text', value: t.statCommunityValue, label: t.statCommunityLabel, accent: 'yellow' },
+    {
+      kind: 'number',
+      value: totalMatches,
+      label: t.statMatchesLabel,
+      accent: 'yellow',
+    },
+    {
+      kind: 'number',
+      value: stagesCount,
+      label: t.statStagesLabel,
+      accent: 'violet',
+    },
+    {
+      kind: 'text',
+      value: t.statFemaleValue,
+      label: t.statFemaleLabel,
+      accent: 'green',
+    },
+    {
+      kind: 'text',
+      value: t.statCommunityValue,
+      label: t.statCommunityLabel,
+      accent: 'yellow',
+    },
   ];
 
   return (
     <Section id="stats">
-      <Spotlight color="violet" className="left-1/2 top-0 h-[380px] w-[600px] -translate-x-1/2 opacity-60" />
+      <Spotlight
+        color="violet"
+        className="left-1/2 top-0 h-[380px] w-[600px] -translate-x-1/2 opacity-60"
+      />
       <SectionHeader
         eyebrow={t.statsEyebrow}
         title={t.statsHeading}

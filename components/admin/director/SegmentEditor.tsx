@@ -31,6 +31,7 @@ import type {
   EventStation,
   EventWave,
 } from '@/types/events';
+import nsAdminDirectorSegmentEditor from '@/lib/i18n/locales/admin-fr/adminDirectorSegmentEditor';
 
 type Props = {
   segment: EventSegment | null;
@@ -181,7 +182,7 @@ export default function SegmentEditor({
   onSave,
   onAssign,
 }: Props) {
-  const t = useAdminT('adminDirectorSegmentEditor');
+  const t = useAdminT(nsAdminDirectorSegmentEditor);
   const [form, setForm] = useState<FormState>(toForm(segment));
   const [saving, setSaving] = useState(false);
   const [assigning, setAssigning] = useState(false);

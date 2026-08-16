@@ -21,8 +21,9 @@ import type {
   TeamMini,
   TournamentMini,
 } from '@/types/admin';
+import nsAdminTournamentMatches from '@/lib/i18n/locales/admin-fr/adminTournamentMatches';
 
-type Dict = ReturnType<typeof useAdminT<'adminTournamentMatches'>>;
+type Dict = typeof nsAdminTournamentMatches.fr;
 
 type MatchesApiResponse = {
   tournament: TournamentMini | null;
@@ -109,7 +110,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
   const { mutate: mutateIdempotent } = useIdempotentMutation();
   const { mutate: csvImportMutate } = useIdempotentMutation();
   const { adminFetch, adminFetchJson } = useAdminFetch();
-  const t = useAdminT('adminTournamentMatches');
+  const t = useAdminT(nsAdminTournamentMatches);
 
   const [loading, setLoading] = useState(true);
   const [matches, setMatches] = useState<Match[]>([]);

@@ -78,7 +78,12 @@ export default withAuthRoute(async function handler(
   }
 
   if (
-    applyRateLimit(req, res, { max: 12, windowMs: 60_000 }, 'team-member-profile')
+    applyRateLimit(
+      req,
+      res,
+      { max: 12, windowMs: 60_000 },
+      'team-member-profile'
+    )
   )
     return;
 
@@ -128,7 +133,8 @@ export default withAuthRoute(async function handler(
   const body = (req.body ?? {}) as Record<string, unknown>;
 
   const displayName = trimOrNull(body.display_name, MEMBER_DISPLAY_NAME_MAX);
-  if (!displayName.ok) return res.status(400).json({ error: displayName.error });
+  if (!displayName.ok)
+    return res.status(400).json({ error: displayName.error });
 
   let specialty: MemberSpecialty | null = null;
   if (body.specialty !== undefined && body.specialty !== null) {
@@ -177,7 +183,7 @@ export default withAuthRoute(async function handler(
     ) {
       return res.status(403).json({
         error:
-          "Seul le capitaine ou un manager peut changer le statut titulaire/remplaçant.",
+          'Seul le capitaine ou un manager peut changer le statut titulaire/remplaçant.',
       });
     }
     isSubstitute = body.is_substitute;
@@ -232,13 +238,15 @@ export default withAuthRoute(async function handler(
   }
 
   if (Object.keys(diff).length > 0) {
-    const { error: logErr } = await supabaseAdmin.from('team_audit_logs').insert({
-      team_id: teamId,
-      user_id: user.id,
-      action: 'update_member_profile',
-      payload: { member_id: memberId, diff },
-      tenant_id: tenantId,
-    });
+    const { error: logErr } = await supabaseAdmin
+      .from('team_audit_logs')
+      .insert({
+        team_id: teamId,
+        user_id: user.id,
+        action: 'update_member_profile',
+        payload: { member_id: memberId, diff },
+        tenant_id: tenantId,
+      });
     if (logErr) {
       logger.error('[team-member-profile] audit log error:', logErr);
     }

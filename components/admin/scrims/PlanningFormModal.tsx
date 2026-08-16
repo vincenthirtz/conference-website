@@ -6,6 +6,7 @@ import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import type { ScrimPlanning } from '@/types/admin';
+import nsAdminScrimPlanningsCreate from '@/lib/i18n/locales/admin-fr/adminScrimPlanningsCreate';
 
 type TeamOption = { id: string; name: string; short_name: string | null };
 
@@ -99,7 +100,7 @@ export default function PlanningFormModal({
   initialTeam2Id,
   sourceDemandeId,
 }: PlanningFormModalProps) {
-  const t = useAdminT('adminScrimPlanningsCreate');
+  const t = useAdminT(nsAdminScrimPlanningsCreate);
   const router = useRouter();
   const { adminFetchJson } = useAdminFetch();
   const { mutateJson } = useIdempotentMutation();

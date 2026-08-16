@@ -10,6 +10,7 @@
 
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { CasterPresenceUser } from '@/types/caster';
+import nsAdminCasterScenes from '@/lib/i18n/locales/admin-fr/adminCasterScenes';
 
 type Props = {
   /** Autres casters (self exclu) ayant la scène courante ouverte. */
@@ -17,7 +18,7 @@ type Props = {
 };
 
 export default function CasterCollabBanner({ others }: Props) {
-  const t = useAdminT('adminCasterScenes');
+  const t = useAdminT(nsAdminCasterScenes);
   if (others.length === 0) return null;
 
   // Un champ focalisé (activeField, trackné par le desktop) = édition imminente.

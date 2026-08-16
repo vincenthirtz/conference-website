@@ -16,6 +16,7 @@ import { useT, format } from '@/lib/i18n/useT';
 import type { ScrimPlanningSummary, ScrimPlanningParty } from '@/types/admin';
 
 import { logger } from '../../utils/logger';
+import nsScrimPlanning from '@/lib/i18n/locales/fr/scrimPlanning';
 
 export type PlanningEntry = {
   planning: ScrimPlanningSummary;
@@ -36,7 +37,7 @@ export default function ScrimPlanningsDashboardCard({
    */
   entries?: PlanningEntry[];
 }) {
-  const t = useT('scrimPlanning');
+  const t = useT(nsScrimPlanning);
   const { withSubject } = usePlayerArea();
   const [fetchedEntries, setFetchedEntries] = useState<PlanningEntry[]>([]);
   const controlled = entriesProp !== undefined;

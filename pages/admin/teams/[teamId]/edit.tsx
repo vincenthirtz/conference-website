@@ -31,6 +31,7 @@ import {
 } from '@/utils/teamRoles';
 import type { StaffProps, TeamRow, TeamMemberRow } from '@/types/admin';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import nsAdminTeamEdit from '@/lib/i18n/locales/admin-fr/adminTeamEdit';
 
 type TournamentRow = {
   id: string;
@@ -67,7 +68,7 @@ function AdminEditTeamPage({
   staff,
   teamRoles,
 }: StaffProps & { teamRoles: TeamRole[] }) {
-  const t = useAdminT('adminTeamEdit');
+  const t = useAdminT(nsAdminTeamEdit);
   const router = useRouter();
   const { teamId } = router.query as { teamId?: string };
 

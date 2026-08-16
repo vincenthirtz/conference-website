@@ -29,6 +29,7 @@ import type { DirectoryTeam } from '../api/player/teams-directory';
 import type { OpponentReason } from '../../utils/teams/opponentMatch';
 
 import { logger } from '../../utils/logger';
+import nsPlayerTeams from '@/lib/i18n/locales/fr/playerTeams';
 
 type DirectoryResponse = {
   teams: DirectoryTeam[];
@@ -58,7 +59,7 @@ function scoreTone(score: number): string {
 }
 
 function PlayerTeamsPage() {
-  const t = useT('playerTeams');
+  const t = useT(nsPlayerTeams);
   const locale = useLocale();
   const router = useRouter();
   const { ready, loading: authLoading } = usePlayerSession();

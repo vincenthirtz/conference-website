@@ -41,12 +41,7 @@ export default async function handler(
   }
 
   if (
-    applyRateLimit(
-      req,
-      res,
-      { max: 20, windowMs: 60_000 },
-      'onboard-secrets'
-    )
+    applyRateLimit(req, res, { max: 20, windowMs: 60_000 }, 'onboard-secrets')
   ) {
     return;
   }

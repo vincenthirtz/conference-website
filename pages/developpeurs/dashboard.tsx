@@ -32,6 +32,7 @@ import AlertBanner from '@/components/admin/AlertBanner';
 import EmptyState from '@/components/admin/EmptyState';
 import { PLAN_LABELS, type TenantPlan } from '@/utils/billing/planFeatures';
 import { logger } from '@/utils/logger';
+import nsDeveloperHub from '@/lib/i18n/locales/admin-fr/developerHub';
 
 type Props = {
   staff: { id: string; role: string; display_name: string };
@@ -102,7 +103,7 @@ const secondaryBtn =
 export const getServerSideProps = withStaffPage('admin');
 
 function DeveloperHubPage({ staff }: Props) {
-  const t = useAdminT('developerHub');
+  const t = useAdminT(nsDeveloperHub);
   const { adminFetchJson } = useAdminFetch();
 
   const [usage, setUsage] = useState<ApiUsage | null>(null);

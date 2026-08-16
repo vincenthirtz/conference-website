@@ -10,7 +10,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { formatDateRange } from '@/utils/tournamentDates';
-import fr from '@/lib/i18n/locales/fr.json';
+import nsTournamentLanding from '@/lib/i18n/locales/fr/tournamentLanding';
 import { logger } from '@/utils/logger';
 
 import TournamentTabs from '@/components/tournament/TournamentTabs';
@@ -561,7 +561,7 @@ function buildTournamentSeo(
     ],
   };
 
-  const faq = fr.tournamentLanding;
+  const faq = nsTournamentLanding.fr;
   const faqPage: Record<string, unknown> = {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',

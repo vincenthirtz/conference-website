@@ -32,8 +32,9 @@ import { useAdminT } from '@/lib/i18n/useAdminT';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { logger } from '../../../utils/logger';
+import nsAdminDirectorMatchPicker from '@/lib/i18n/locales/admin-fr/adminDirectorMatchPicker';
 
-type Dict = ReturnType<typeof useAdminT<'adminDirectorMatchPicker'>>;
+type Dict = typeof nsAdminDirectorMatchPicker.fr;
 
 export type MatchPickerSummary = {
   kickoffAt: string | null;
@@ -106,7 +107,7 @@ export default function MatchPicker({
   initialSummary,
   testId,
 }: Props) {
-  const t = useAdminT('adminDirectorMatchPicker');
+  const t = useAdminT(nsAdminDirectorMatchPicker);
   const { adminFetchJson } = useAdminFetch();
 
   const [query, setQuery] = useState('');

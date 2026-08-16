@@ -9,6 +9,7 @@ import Tabs, {
 import PartnersListPanel from '@/components/admin/partners/PartnersListPanel';
 import PartnershipRequestsPanel from '@/components/admin/partners/PartnershipRequestsPanel';
 import type { StaffProps } from '@/types/admin';
+import nsAdminPartnersHub from '@/lib/i18n/locales/admin-fr/adminPartnersHub';
 
 const ID_BASE = 'admin-partners';
 
@@ -25,7 +26,7 @@ export const getServerSideProps = withStaffPage('admin');
  * l'onglet « Partenaires » — les query params `tab` et `new` coexistent.
  */
 export default function AdminPartnersHubPage(_props: StaffProps) {
-  const t = useAdminT('adminPartnersHub');
+  const t = useAdminT(nsAdminPartnersHub);
 
   const tabs = [
     { id: 'list', label: t.tabList },

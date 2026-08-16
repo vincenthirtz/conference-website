@@ -57,9 +57,7 @@ export default withAuthRoute(async function handler(
     const trimmed = avatar_url.trim();
     if (
       trimmed &&
-      (!(
-        trimmed.startsWith('http://') || trimmed.startsWith('https://')
-      ) ||
+      (!(trimmed.startsWith('http://') || trimmed.startsWith('https://')) ||
         trimmed.length > 2048)
     ) {
       return res.status(400).json({ error: "URL d'avatar invalide." });
@@ -88,7 +86,9 @@ export default withAuthRoute(async function handler(
   // courant — un user pourrait theoriquement avoir un BT different par tenant
   // a terme ; pour l'instant on update juste celui du tenant courant).
   if ('battle_tag' in updates) {
-    const tenantId = resolveTenantIdForUserRequest(req, { authUserId: user.id });
+    const tenantId = resolveTenantIdForUserRequest(req, {
+      authUserId: user.id,
+    });
     await supabaseAdmin
       .from('team_members')
       .update({ battle_tag: updates.battle_tag })

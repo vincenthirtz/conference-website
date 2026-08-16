@@ -13,8 +13,9 @@ import { useUrlFilters } from '@/utils/useUrlFilters';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminResource } from '@/hooks/useAdminResource';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import nsAdminAnnouncementsList from '@/lib/i18n/locales/admin-fr/adminAnnouncementsList';
 
-type Dict = ReturnType<typeof useAdminT<'adminAnnouncementsList'>>;
+type Dict = typeof nsAdminAnnouncementsList.fr;
 
 type AnnouncementRow = {
   id: string;
@@ -65,7 +66,7 @@ function formatDate(d: string | null) {
 }
 
 export default function AnnouncementsListPanel() {
-  const t = useAdminT('adminAnnouncementsList');
+  const t = useAdminT(nsAdminAnnouncementsList);
   const { adminFetch } = useAdminFetch();
   const { filters, setFilters } = useUrlFilters(A_FILTER_KEYS);
 

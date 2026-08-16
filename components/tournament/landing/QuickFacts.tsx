@@ -9,6 +9,7 @@ import { useLang } from '@/lib/i18n/LanguageProvider';
 import { formatDateRange } from '@/utils/tournamentDates';
 import { Reveal } from './primitives';
 import type { LandingTournament } from './types';
+import nsTournamentLanding from '@/lib/i18n/locales/fr/tournamentLanding';
 
 type Fact = { icon: string; label: string; value: string };
 
@@ -21,7 +22,7 @@ export default function QuickFacts({
   totalTeams: number;
   maxTeams: number | null;
 }) {
-  const t = useT('tournamentLanding');
+  const t = useT(nsTournamentLanding);
   const { lang } = useLang();
 
   const dateRange = formatDateRange(
@@ -58,7 +59,10 @@ export default function QuickFacts({
             <p className="mt-2 text-[9px] font-semibold uppercase tracking-widest text-gray-500">
               {f.label}
             </p>
-            <p className="mt-0.5 truncate text-[13px] font-bold text-white" title={f.value}>
+            <p
+              className="mt-0.5 truncate text-[13px] font-bold text-white"
+              title={f.value}
+            >
               {f.value}
             </p>
           </Reveal>

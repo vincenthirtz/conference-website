@@ -8,6 +8,7 @@ import { useT } from '@/lib/i18n/useT';
 import { Section, SectionHeader, Reveal, GlassCard } from './primitives';
 import { COMMUNITY_LINKS } from './types';
 import type { LandingCaster, TournamentPhase } from './types';
+import nsTournamentLanding from '@/lib/i18n/locales/fr/tournamentLanding';
 
 function initials(name: string): string {
   const parts = name.trim().split(/\s+/);
@@ -22,7 +23,7 @@ export default function StreamingSection({
   casters: LandingCaster[];
   phase: TournamentPhase;
 }) {
-  const t = useT('tournamentLanding');
+  const t = useT(nsTournamentLanding);
   if (casters.length === 0) return null;
 
   const isLive = phase === 'live';
@@ -59,8 +60,19 @@ export default function StreamingSection({
             <a href={COMMUNITY_LINKS.twitch} target="_blank" rel="noreferrer">
               <span className="inline-flex items-center gap-2 rounded-full bg-[#9146FF] px-6 py-3 text-sm font-bold text-white transition-transform hover:scale-[1.03]">
                 {t.streamCtaTwitch}
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                <svg
+                  className="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2.5}
+                    d="M13 7l5 5m0 0l-5 5m5-5H6"
+                  />
                 </svg>
               </span>
             </a>
@@ -88,11 +100,15 @@ export default function StreamingSection({
                     className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
                   />
                 ) : (
-                  <span className="text-sm font-bold text-gray-400">{initials(c.name)}</span>
+                  <span className="text-sm font-bold text-gray-400">
+                    {initials(c.name)}
+                  </span>
                 )}
               </div>
               <div className="min-w-0">
-                <p className="truncate text-[13px] font-bold text-white">{c.name}</p>
+                <p className="truncate text-[13px] font-bold text-white">
+                  {c.name}
+                </p>
                 <p className="mt-0.5 truncate text-[11px] text-gray-500">
                   {c.title || t.streamCasterRole}
                 </p>
@@ -102,7 +118,12 @@ export default function StreamingSection({
           return (
             <Reveal key={c.id} stagger={((i % 5) + 1) as 1 | 2 | 3 | 4 | 5}>
               {c.twitch_url ? (
-                <a href={c.twitch_url} target="_blank" rel="noreferrer" className="block h-full">
+                <a
+                  href={c.twitch_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block h-full"
+                >
                   {inner}
                 </a>
               ) : (
@@ -118,7 +139,12 @@ export default function StreamingSection({
 
 function TwitchGlyph() {
   return (
-    <svg className="h-7 w-7" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <svg
+      className="h-7 w-7"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      aria-hidden="true"
+    >
       <path d="M4 2 3 6v13h4v3h3l3-3h4l5-5V2H4zm16 10-3 3h-4l-3 3v-3H6V4h14v8z" />
       <path d="M13 7h2v5h-2zM17 7h2v5h-2z" />
     </svg>

@@ -26,8 +26,9 @@ import type {
 } from '@/components/admin/bracket/types';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { logger } from '@/utils/logger';
+import nsTournamentBracket from '@/lib/i18n/locales/fr/tournamentBracket';
 
-type BracketDict = ReturnType<typeof useT<'tournamentBracket'>>;
+type BracketDict = typeof nsTournamentBracket.fr;
 
 type Tournament = {
   id: string;
@@ -193,7 +194,7 @@ export default function TournamentBracketPage({
   isDoubleElim,
   hasFfaStage,
 }: Props) {
-  const t = useT('tournamentBracket');
+  const t = useT(nsTournamentBracket);
   const { lang } = useLang();
   const tournamentPath = `/tournament/${tournament.slug || tournament.id}`;
   const dateRangeLabel = formatDateRange(

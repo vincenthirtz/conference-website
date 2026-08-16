@@ -19,6 +19,7 @@ import {
 } from '@/utils/billing/planFeatures';
 
 import { logger } from '../../utils/logger';
+import nsAdminBilling from '@/lib/i18n/locales/admin-fr/adminBilling';
 
 type CatalogItem = {
   plan: PurchasablePlan;
@@ -126,7 +127,7 @@ const DashIcon = () => (
 );
 
 function AdminBillingPage({ staff }: Props) {
-  const t = useAdminT('adminBilling');
+  const t = useAdminT(nsAdminBilling);
   const { addToast } = useToast();
   const { adminFetchJson } = useAdminFetch();
   const { mutateJson } = useIdempotentMutation();

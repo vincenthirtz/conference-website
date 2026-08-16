@@ -7,6 +7,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
+import nsCheckinToken from '@/lib/i18n/locales/fr/checkinToken';
 
 type ResolveResponse =
   | {
@@ -42,7 +43,7 @@ function formatDateFr(value: string | null, locale: string): string {
 
 export default function CheckinPage() {
   const router = useRouter();
-  const t = useT('checkinToken');
+  const t = useT(nsCheckinToken);
   const locale = useLocale();
   const { token } = router.query;
   const tokenStr = Array.isArray(token) ? token[0] : token;
@@ -158,10 +159,7 @@ export default function CheckinPage() {
                     value={data.tournamentName || '—'}
                   />
                   <Row label={t.rowYourTeam} value={data.teamName} highlight />
-                  <Row
-                    label={t.rowOpponent}
-                    value={data.opponentName || '—'}
-                  />
+                  <Row label={t.rowOpponent} value={data.opponentName || '—'} />
                   <Row
                     label={t.rowStart}
                     value={formatDateFr(data.scheduledAt, locale)}

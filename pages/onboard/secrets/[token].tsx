@@ -16,6 +16,7 @@ import SecretRevealCard from '@/components/onboard/SecretRevealCard';
 import { getSiteUrl } from '@/utils/onboard';
 import { logger } from '@/utils/logger';
 import { useT, format } from '@/lib/i18n/useT';
+import nsOnboardSecrets from '@/lib/i18n/locales/fr/onboardSecrets';
 
 type SuccessProps = {
   kind: 'success';
@@ -150,7 +151,7 @@ function OnboardSecretsPage(props: ServerProps) {
 }
 
 function ErrorView({ status, message }: ErrorProps) {
-  const t = useT('onboardSecrets');
+  const t = useT(nsOnboardSecrets);
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
       <main className="px-4 pt-28 pb-20 md:pt-32 flex items-center justify-center">
@@ -211,7 +212,7 @@ function ErrorView({ status, message }: ErrorProps) {
 function SuccessView(props: SuccessProps) {
   const { botApiKey, botWebhookSecret, tenantId, tenantSlug, tenantName } =
     props;
-  const t = useT('onboardSecrets');
+  const t = useT(nsOnboardSecrets);
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
       <main className="px-4 pt-28 pb-20 md:pt-32 flex justify-center">

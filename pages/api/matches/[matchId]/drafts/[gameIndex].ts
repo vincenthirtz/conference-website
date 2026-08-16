@@ -35,11 +35,7 @@ export default async function handler(
   }
 
   const { matchId, gameIndex } = req.query;
-  if (
-    !matchId ||
-    Array.isArray(matchId) ||
-    !isValidUUID(matchId as string)
-  ) {
+  if (!matchId || Array.isArray(matchId) || !isValidUUID(matchId as string)) {
     return res.status(400).json({ error: 'Invalid matchId' });
   }
   const gameIndexNum = Number(gameIndex);
@@ -99,7 +95,10 @@ export default async function handler(
 
     // Short cache — Realtime is the primary fan-out, this is the fallback
     // for fresh tabs and reconnecting OBS browser sources.
-    res.setHeader('Cache-Control', 'public, s-maxage=5, stale-while-revalidate=15');
+    res.setHeader(
+      'Cache-Control',
+      'public, s-maxage=5, stale-while-revalidate=15'
+    );
     return res.status(200).json({
       draft: state,
       teams: { team1Name, team2Name },

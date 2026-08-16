@@ -34,6 +34,7 @@ import { DraftBoard } from '@/components/admin/draft/DraftBoard';
 import { SidePicker } from '@/components/admin/draft/SidePicker';
 import { HeroPool } from '@/components/admin/draft/HeroPool';
 import type { GameHero } from '@/types/draft';
+import nsAdminMatchDraft from '@/lib/i18n/locales/admin-fr/adminMatchDraft';
 
 type PageProps = {
   /** Set when the match can't host a draft — page renders a clean explainer. */
@@ -62,7 +63,7 @@ function errMsg(err: unknown): string {
 }
 
 function AdminDraftPage({ blockReason }: PageProps) {
-  const t = useAdminT('adminMatchDraft');
+  const t = useAdminT(nsAdminMatchDraft);
   if (blockReason) {
     const label =
       blockReason.code === 'MATCH_NOT_FOUND'
@@ -78,7 +79,9 @@ function AdminDraftPage({ blockReason }: PageProps) {
             });
     return (
       <main className="mx-auto max-w-3xl p-6 text-neutral-200">
-        <h1 className="text-2xl font-bold text-white">{t.unavailableHeading}</h1>
+        <h1 className="text-2xl font-bold text-white">
+          {t.unavailableHeading}
+        </h1>
         <p className="mt-3 text-neutral-300">{label}</p>
       </main>
     );
@@ -92,7 +95,8 @@ function AdminDraftPageContent() {
   const gameIndexRaw = router.query.gameIndex;
   const matchId = typeof matchIdRaw === 'string' ? matchIdRaw : '';
   const gameIndex = Number(gameIndexRaw);
-  const validIds = isValidUUID(matchId) && Number.isInteger(gameIndex) && gameIndex >= 1;
+  const validIds =
+    isValidUUID(matchId) && Number.isInteger(gameIndex) && gameIndex >= 1;
 
   const { adminFetchJson } = useAdminFetch();
   const initMut = useIdempotentMutation();
@@ -281,7 +285,9 @@ function AdminDraftPageContent() {
           onAutoPick={callAutoPick}
         />
 
-        {state && state.draft.status === 'pending' && state.draft.current_step === 0 ? (
+        {state &&
+        state.draft.status === 'pending' &&
+        state.draft.current_step === 0 ? (
           <SidePicker
             game={state.draft.game}
             currentTeam1Side={state.draft.team1_side}
@@ -332,7 +338,8 @@ export const getServerSideProps = withStaffPage<PageProps>(
     if (!match) {
       return { blockReason: { code: 'MATCH_NOT_FOUND' } };
     }
-    const tournamentId = (match as { tournament_id: string | null }).tournament_id;
+    const tournamentId = (match as { tournament_id: string | null })
+      .tournament_id;
     if (!tournamentId) {
       return { blockReason: { code: 'NO_TOURNAMENT' } };
     }

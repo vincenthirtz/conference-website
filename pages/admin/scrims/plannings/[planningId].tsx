@@ -34,6 +34,7 @@ import type {
   ScrimPlanning,
   ScrimPlanningAvailability,
 } from '@/types/admin';
+import nsAdminScrimPlanningsDetail from '@/lib/i18n/locales/admin-fr/adminScrimPlanningsDetail';
 
 type TeamOption = { id: string; name: string };
 
@@ -61,7 +62,7 @@ function minutesToTime(min: number): string {
 export const getServerSideProps = withStaffPage('admin');
 
 function AdminScrimPlanningDetailPage(_props: StaffProps) {
-  const t = useAdminT('adminScrimPlanningsDetail');
+  const t = useAdminT(nsAdminScrimPlanningsDetail);
   const router = useRouter();
   const { adminFetchJson } = useAdminFetch();
   const { mutateJson } = useIdempotentMutation();
@@ -127,8 +128,7 @@ function AdminScrimPlanningDetailPage(_props: StaffProps) {
 
   const teamName = useMemo(() => {
     const map = new Map(teams.map((tm) => [tm.id, tm.name]));
-    return (teamId: string | null) =>
-      teamId ? map.get(teamId) || '—' : '—';
+    return (teamId: string | null) => (teamId ? map.get(teamId) || '—' : '—');
   }, [teams]);
 
   const config = useMemo(
@@ -325,7 +325,11 @@ function AdminScrimPlanningDetailPage(_props: StaffProps) {
               })}`
             : baseSubtitle,
         variant:
-          conflictCount > 0 ? 'danger' : isFullOverlap(cell) ? 'info' : 'warning',
+          conflictCount > 0
+            ? 'danger'
+            : isFullOverlap(cell)
+              ? 'info'
+              : 'warning',
         confirmLabel: t.confirmValidateConfirm,
         cancelLabel: t.confirmValidateCancel,
       });
@@ -348,7 +352,8 @@ function AdminScrimPlanningDetailPage(_props: StaffProps) {
   async function patchStatus(status: 'cancelled' | 'closed') {
     if (!planning) return;
     const ok = await confirm({
-      title: status === 'cancelled' ? t.confirmCancelTitle : t.confirmCloseTitle,
+      title:
+        status === 'cancelled' ? t.confirmCancelTitle : t.confirmCloseTitle,
       subtitle:
         status === 'cancelled'
           ? t.confirmCancelSubtitle
@@ -571,8 +576,7 @@ function AdminScrimPlanningDetailPage(_props: StaffProps) {
                     : 'bg-neutral-800/70 border border-neutral-700 text-neutral-500'
                 }`}
               >
-                {t.partyTeam1}{' '}
-                {participation.team1 ? t.painted : t.notPainted}
+                {t.partyTeam1} {participation.team1 ? t.painted : t.notPainted}
               </span>
               <span
                 className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium ${
@@ -581,8 +585,7 @@ function AdminScrimPlanningDetailPage(_props: StaffProps) {
                     : 'bg-neutral-800/70 border border-neutral-700 text-neutral-500'
                 }`}
               >
-                {t.partyTeam2}{' '}
-                {participation.team2 ? t.painted : t.notPainted}
+                {t.partyTeam2} {participation.team2 ? t.painted : t.notPainted}
               </span>
               <span
                 title={participation.staffNames.join(', ')}
@@ -608,7 +611,9 @@ function AdminScrimPlanningDetailPage(_props: StaffProps) {
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <h2 className="text-lg font-semibold">{t.bestSlotHeading}</h2>
                 <button
-                  onClick={() => runValidate(planning.id, ranked[0].slot, false)}
+                  onClick={() =>
+                    runValidate(planning.id, ranked[0].slot, false)
+                  }
                   disabled={busy}
                   className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-xs font-semibold"
                 >
@@ -673,7 +678,9 @@ function AdminScrimPlanningDetailPage(_props: StaffProps) {
           )}
           {canValidate && ranked.length === 0 && (
             <section className="bg-neutral-800/50 border border-neutral-700/50 rounded-2xl p-6">
-              <h2 className="text-lg font-semibold mb-2">{t.bestSlotHeading}</h2>
+              <h2 className="text-lg font-semibold mb-2">
+                {t.bestSlotHeading}
+              </h2>
               <p className="text-sm text-neutral-500">{t.noValidatableSlot}</p>
             </section>
           )}

@@ -34,8 +34,9 @@ import {
 } from '@/utils/markdown/teamPublicMarkdown';
 
 import { logger } from '../../../utils/logger';
+import nsTeamDetail from '@/lib/i18n/locales/fr/teamDetail';
 
-type TeamDetailDict = ReturnType<typeof useT<'teamDetail'>>;
+type TeamDetailDict = typeof nsTeamDetail.fr;
 
 const SITE_NAME = "OW Women's Cup";
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') || '';
@@ -624,7 +625,7 @@ export default function TeamPage({
   embedHost,
   announcementActive,
 }: TeamPageProps) {
-  const t = useT('teamDetail');
+  const t = useT(nsTeamDetail);
   const locale = useLocale();
   // `canEdit` is auth-dependent and therefore not part of the statically
   // generated payload. We resolve it client-side after hydration: a captain
@@ -1552,7 +1553,7 @@ function MemberCard({
   accent: string | null;
   substitute?: boolean;
 }) {
-  const t = useT('teamDetail');
+  const t = useT(nsTeamDetail);
   const name = member.display_name || member.battle_tag || t.memberFallback;
   const specialtyStyle =
     member.specialty && getSpecialtyStyle(t)[member.specialty.toLowerCase()];
@@ -1848,7 +1849,7 @@ function StatCard({
 }
 
 function MatchCard({ match, teamId }: { match: RecentMatch; teamId: string }) {
-  const t = useT('teamDetail');
+  const t = useT(nsTeamDetail);
   const locale = useLocale();
   // Consider match finished if status is 'finished' or 'done'
   const isFinished =
@@ -1984,7 +1985,7 @@ function MatchCard({ match, teamId }: { match: RecentMatch; teamId: string }) {
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const t = useT('teamDetail');
+  const t = useT(nsTeamDetail);
   const statusConfig: Record<string, { label: string; color: string }> = {
     running: { label: t.statusRunning, color: 'text-emerald-300' },
     ongoing: { label: t.statusRunning, color: 'text-emerald-300' },

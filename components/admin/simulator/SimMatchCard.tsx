@@ -8,6 +8,7 @@ import { STATUS_CONFIG } from '@/utils/statusConfig';
 import { computeWinProbability } from '@/utils/simulator';
 import type { SimMatch } from '@/utils/simulator';
 import { formatMatchDate } from '@/utils/simulatorFakeData';
+import nsAdminSimulatorSimMatchCard from '@/lib/i18n/locales/admin-fr/adminSimulatorSimMatchCard';
 
 export const CARD_H = 82;
 
@@ -103,12 +104,11 @@ function SimMatchCardComponent({
   onReset: (matchId: string) => void;
   onToggleLock?: (matchId: string) => void;
 }) {
-  const t = useAdminT('adminSimulatorSimMatchCard');
+  const t = useAdminT(nsAdminSimulatorSimMatchCard);
   const statusCfg = STATUS_CONFIG[match.status];
   // A resolved bye is a finished match with a single team; label the empty
   // slot "Bye" rather than "TBD" (which means an opponent is still to come).
-  const isBye =
-    !!match.winner_team_id && !match.team1 !== !match.team2;
+  const isBye = !!match.winner_team_id && !match.team1 !== !match.team2;
   const emptyLabel = isBye ? 'Bye' : 'TBD';
   const t1Name = match.team1?.short_name ?? match.team1?.name ?? emptyLabel;
   const t2Name = match.team2?.short_name ?? match.team2?.name ?? emptyLabel;

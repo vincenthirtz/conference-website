@@ -6,6 +6,7 @@ import type { LinkItem } from '@/types/types';
 import type { INavDropProp } from '@/types/components';
 import { useT } from '@/lib/i18n/useT';
 import LanguageToggle from './LanguageToggle';
+import nsNavbar from '@/lib/i18n/locales/fr/navbar';
 
 const HIDDEN_PUBLIC_LINKS = new Set(['À propos', 'Cast', 'Sponsors']);
 
@@ -42,7 +43,7 @@ const NavDrop = forwardRef<HTMLDivElement, INavDropProp>(function NavDrop(
   ref
 ): JSX.Element {
   const router = useRouter();
-  const tNav = useT('navbar');
+  const tNav = useT(nsNavbar);
   // Titres de config/links.json = FR canonique ; map publicLinks = libellé
   // localisé (fallback : titre tel quel). Même convention que PublicNav.
   const linkLabel = (title: string) =>

@@ -12,7 +12,8 @@ import TwitchChannelFormModal from '@/components/admin/twitch-channels/TwitchCha
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 import { logger } from '../../../utils/logger';
-type Dict = ReturnType<typeof useAdminT<'adminTwitchChannelsList'>>;
+import nsAdminTwitchChannelsList from '@/lib/i18n/locales/admin-fr/adminTwitchChannelsList';
+type Dict = typeof nsAdminTwitchChannelsList.fr;
 
 type TwitchChannelRow = {
   id: string;
@@ -50,7 +51,7 @@ function statusColor(isActive: boolean) {
 }
 
 function AdminTwitchChannelsPage({ staff }: Props) {
-  const t = useAdminT('adminTwitchChannelsList');
+  const t = useAdminT(nsAdminTwitchChannelsList);
   const router = useRouter();
   const [modalOpen, setModalOpen] = useState(false);
   const { adminFetch, adminFetchJson } = useAdminFetch();

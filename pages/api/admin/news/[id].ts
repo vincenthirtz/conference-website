@@ -154,10 +154,7 @@ async function handler(
         : [data.slug]
     );
 
-    if (
-      body.status === 'published' &&
-      existing?.status !== 'published'
-    ) {
+    if (body.status === 'published' && existing?.status !== 'published') {
       void emitBotEvent(
         'news.published',
         {
@@ -170,9 +167,7 @@ async function handler(
           publishedAt: data.published_at,
         },
         ctx.tenantId
-      ).catch((e) =>
-        logger.error('[botEvents] news.published emit error', e)
-      );
+      ).catch((e) => logger.error('[botEvents] news.published emit error', e));
     }
 
     return res.status(200).json(data);

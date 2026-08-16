@@ -13,8 +13,9 @@ import PlanningFormModal from '@/components/admin/scrims/PlanningFormModal';
 import AdminListShell from '@/components/admin/AdminListShell';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { ScrimPlanning } from '@/types/admin';
+import nsAdminScrimPlanningsList from '@/lib/i18n/locales/admin-fr/adminScrimPlanningsList';
 
-type Dict = ReturnType<typeof useAdminT<'adminScrimPlanningsList'>>;
+type Dict = typeof nsAdminScrimPlanningsList.fr;
 type TeamOption = { id: string; name: string };
 
 function statusLabel(status: string, t: Dict) {
@@ -75,7 +76,7 @@ function formatHorizon(start: string, days: number) {
 }
 
 export default function ScrimPlanningsListPanel() {
-  const t = useAdminT('adminScrimPlanningsList');
+  const t = useAdminT(nsAdminScrimPlanningsList);
   const router = useRouter();
   const { adminFetchJson } = useAdminFetch();
   const [statusFilter, setStatusFilter] = useState<string>('');

@@ -9,10 +9,14 @@ import { useT } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import { Section, SectionHeader } from './primitives';
 import type { LandingTournament, TournamentPhase } from './types';
+import nsTournamentLanding from '@/lib/i18n/locales/fr/tournamentLanding';
 
 type StepState = 'done' | 'live' | 'upcoming';
 
-function formatDay(iso: string | null | undefined, locale: string): string | null {
+function formatDay(
+  iso: string | null | undefined,
+  locale: string
+): string | null {
   if (!iso) return null;
   const d = new Date(iso);
   if (isNaN(d.getTime())) return null;
@@ -23,11 +27,15 @@ function formatDay(iso: string | null | undefined, locale: string): string | nul
   });
 }
 
-const STATE_STYLES: Record<StepState, { dot: string; ring: string; badge: string }> = {
+const STATE_STYLES: Record<
+  StepState,
+  { dot: string; ring: string; badge: string }
+> = {
   done: {
     dot: 'bg-[var(--color-green)]',
     ring: 'border-[var(--color-green)]/50',
-    badge: 'bg-[var(--color-green)]/15 text-[var(--color-green-light)] border-[var(--color-green)]/40',
+    badge:
+      'bg-[var(--color-green)]/15 text-[var(--color-green-light)] border-[var(--color-green)]/40',
   },
   live: {
     dot: 'bg-red-400 tl-live-dot',
@@ -48,7 +56,7 @@ export default function ScheduleTimeline({
   tournament: LandingTournament;
   phase: TournamentPhase;
 }) {
-  const t = useT('tournamentLanding');
+  const t = useT(nsTournamentLanding);
   const locale = useLocale();
 
   const stateFor = (step: 'registration' | 'kickoff' | 'final'): StepState => {
@@ -113,7 +121,10 @@ export default function ScheduleTimeline({
           const s = stateFor(step.key);
           const style = STATE_STYLES[s];
           return (
-            <li key={step.key} className="relative mb-6 flex gap-5 pl-1 last:mb-0">
+            <li
+              key={step.key}
+              className="relative mb-6 flex gap-5 pl-1 last:mb-0"
+            >
               <span
                 className={`relative z-[1] mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border bg-[#0d0520] ${style.ring}`}
               >
@@ -121,7 +132,9 @@ export default function ScheduleTimeline({
               </span>
               <div className="flex-1 rounded-2xl border border-white/10 bg-white/[0.03] p-5 backdrop-blur-sm">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h3 className="text-base font-bold text-white">{step.title}</h3>
+                  <h3 className="text-base font-bold text-white">
+                    {step.title}
+                  </h3>
                   <span
                     className={`rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${style.badge}`}
                   >

@@ -45,6 +45,7 @@ import type {
   PlanningParty,
   Heatmap,
 } from '@/utils/teams/scrimPlanningOverlap';
+import nsScrimPlanning from '@/lib/i18n/locales/fr/scrimPlanning';
 
 /** Heatmap joueur : counts/parties seulement (pas de noms). */
 export type AnonHeatmap = Record<
@@ -74,7 +75,7 @@ export default function ScrimPlanningPanel({
   token: string | null;
   onSaved?: (slots: string[]) => void;
 }) {
-  const t = useT('scrimPlanning');
+  const t = useT(nsScrimPlanning);
   const locale = useLocale();
   const { addToast } = useToast();
 

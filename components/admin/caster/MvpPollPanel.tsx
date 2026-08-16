@@ -38,6 +38,7 @@ import {
 import type { CasterScene } from '@/types/caster';
 
 import type { ChatMessageListener } from './useTwitchChat';
+import nsAdminCasterScenes from '@/lib/i18n/locales/admin-fr/adminCasterScenes';
 
 /** Fenêtre de regroupement des publications pendant un flux de votes. */
 export const PUBLISH_DEBOUNCE_MS = 1500;
@@ -60,7 +61,7 @@ export default function MvpPollPanel({
   subscribeMessages,
   chatConnected,
 }: Props) {
-  const t = useAdminT('adminCasterScenes');
+  const t = useAdminT(nsAdminCasterScenes);
   const { addToast } = useToast();
   const { confirm, dialog } = useConfirmDialog();
 

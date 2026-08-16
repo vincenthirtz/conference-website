@@ -217,10 +217,7 @@ export default async function handler(
   if (existingTenant) {
     // Roll back the row we just inserted to keep the table clean (we don't
     // want a stale pending request blocking the same user from retrying).
-    await supabaseAdmin
-      .from('tenant_requests')
-      .delete()
-      .eq('id', inserted.id);
+    await supabaseAdmin.from('tenant_requests').delete().eq('id', inserted.id);
     return res.status(409).json({
       error: 'Ce slug est déjà utilisé par une organisation existante.',
       code: 'SLUG_TAKEN',

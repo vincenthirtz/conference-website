@@ -16,6 +16,7 @@ import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
 import { useT } from '@/lib/i18n/useT';
 import { logger } from '../../utils/logger';
+import nsPlayerDiscovery from '@/lib/i18n/locales/fr/playerDiscovery';
 
 type FollowButtonProps = {
   authUserId: string;
@@ -48,7 +49,7 @@ export default function FollowButton({
 }: FollowButtonProps) {
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
   const { addToast } = useToast();
-  const t = useT('playerDiscovery');
+  const t = useT(nsPlayerDiscovery);
 
   const [following, setFollowing] = useState(initialFollowing);
   const [pending, setPending] = useState(false);

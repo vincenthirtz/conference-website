@@ -1,6 +1,7 @@
 import React from 'react';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { TeamMemberRow } from '@/types/admin';
+import nsAdminTeamsMemberRow from '@/lib/i18n/locales/admin-fr/adminTeamsMemberRow';
 
 function formatVerifiedDate(d: string | null | undefined): string {
   if (!d) return '';
@@ -58,7 +59,7 @@ function MemberRowComponent({
   onEdit,
   onDelete,
 }: MemberRowProps) {
-  const t = useAdminT('adminTeamsMemberRow');
+  const t = useAdminT(nsAdminTeamsMemberRow);
 
   // Identité affichée. Le roster jouant est identifié par son BattleTag ;
   // l'encadrement n'en a pas forcément (c'est même la règle : le BattleTag
@@ -114,10 +115,10 @@ function MemberRowComponent({
                 : 'bg-neutral-900/50'
           } ${isSwapTarget ? 'cursor-pointer hover:border-blue-500/40 hover:bg-blue-900/20 border border-transparent' : ''}`
         : `flex items-center justify-between gap-3 rounded-xl px-4 py-3 group ${
-          isSwapSource
-            ? 'bg-blue-900/30 border border-blue-500/40'
-            : 'bg-neutral-900/30 border border-dashed border-neutral-700'
-        } ${isSwapTarget ? 'cursor-pointer hover:border-blue-500/40 hover:bg-blue-900/20' : ''}`;
+            isSwapSource
+              ? 'bg-blue-900/30 border border-blue-500/40'
+              : 'bg-neutral-900/30 border border-dashed border-neutral-700'
+          } ${isSwapTarget ? 'cursor-pointer hover:border-blue-500/40 hover:bg-blue-900/20' : ''}`;
 
   return (
     <div

@@ -17,8 +17,9 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import LoadingSpinner from '@/components/admin/LoadingSpinner';
 import { logger } from '@/utils/logger';
 import type { EventSegment } from '@/types/events';
+import nsAdminDirectorCasterStatusPanel from '@/lib/i18n/locales/admin-fr/adminDirectorCasterStatusPanel';
 
-type Dict = ReturnType<typeof useAdminT<'adminDirectorCasterStatusPanel'>>;
+type Dict = typeof nsAdminDirectorCasterStatusPanel.fr;
 
 const PRESENCE_POLL_INTERVAL_MS = 15_000;
 
@@ -79,10 +80,7 @@ function formatTime(d: string | null | undefined) {
   }
 }
 
-function formatRelativeShort(
-  iso: string | null | undefined,
-  tx: Dict
-): string {
+function formatRelativeShort(iso: string | null | undefined, tx: Dict): string {
   if (!iso) return tx.unknown;
   const t = Date.parse(iso);
   if (!Number.isFinite(t)) return tx.unknown;
@@ -145,7 +143,7 @@ function CasterStatusPanel({
   runId,
   onAssignedCastersChange,
 }: Props) {
-  const t = useAdminT('adminDirectorCasterStatusPanel');
+  const t = useAdminT(nsAdminDirectorCasterStatusPanel);
   const statusStyles = getStatusStyles(t);
   const { adminFetchJson } = useAdminFetch();
   const [assignLoading, setAssignLoading] = useState(false);
@@ -365,7 +363,9 @@ function CasterStatusPanel({
                             {formatTime(a.acked_at)}
                           </span>
                         ) : (
-                          <span className="text-neutral-500">{t.ackPending}</span>
+                          <span className="text-neutral-500">
+                            {t.ackPending}
+                          </span>
                         )}
                       </span>
                     )}

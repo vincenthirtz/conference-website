@@ -1,6 +1,7 @@
 import { ReactNode, useEffect, useId } from 'react';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { useAdminT } from '@/lib/i18n/useAdminT';
+import nsAdminModal from '@/lib/i18n/locales/admin-fr/adminModal';
 
 export type ModalSize = 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'full';
 
@@ -80,7 +81,7 @@ export default function Modal({
   zIndexClassName = 'z-50',
   dataTestId,
 }: ModalProps) {
-  const t = useAdminT('adminModal');
+  const t = useAdminT(nsAdminModal);
   const trapRef = useFocusTrap<HTMLDivElement>();
   const titleId = useId();
 

@@ -6,20 +6,13 @@
 //   - "AUTO" tag when the engine auto-picked
 //   - a "current step" pulsing border so the operator knows what's next
 
-import type {
-  DraftState,
-  MatchDraftStep,
-  GameHero,
-} from '@/types/draft';
+import type { DraftState, MatchDraftStep, GameHero } from '@/types/draft';
 
 type Props = {
   state: DraftState;
 };
 
-function heroFor(
-  step: MatchDraftStep,
-  state: DraftState
-): GameHero | null {
+function heroFor(step: MatchDraftStep, state: DraftState): GameHero | null {
   if (!step.hero_id) return null;
   return (
     state.bannedHeroes.find((h) => h.id === step.hero_id) ??
@@ -63,9 +56,7 @@ export function DraftBoard({ state }: Props) {
   const isCompleted = state.draft.status === 'completed';
 
   // Group steps by phase for a more legible layout.
-  const phases = Array.from(
-    new Set(state.flow.steps.map((s) => s.phase))
-  );
+  const phases = Array.from(new Set(state.flow.steps.map((s) => s.phase)));
 
   return (
     <div className="space-y-4">
@@ -86,8 +77,7 @@ export function DraftBoard({ state }: Props) {
                   ? sideTone(row, state)
                   : { label: '—', cls: 'border-neutral-700' };
                 const isCurrent =
-                  !isCompleted &&
-                  flowStep.step_number === currentStepNumber;
+                  !isCompleted && flowStep.step_number === currentStepNumber;
                 const isBan = flowStep.action === 'ban';
                 return (
                   <div

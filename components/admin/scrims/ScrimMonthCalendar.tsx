@@ -290,7 +290,7 @@ export default function ScrimMonthCalendar({
 // Décale un 'YYYY-MM-01' de n mois, renvoie le 1er du mois cible.
 function shiftMonth(firstOfMonth: string, n: number): string {
   const [y, m] = firstOfMonth.split('-').map((v) => parseInt(v, 10));
-  const total = (y * 12 + (m - 1)) + n;
+  const total = y * 12 + (m - 1) + n;
   const ny = Math.floor(total / 12);
   const nm = (total % 12) + 1;
   return `${ny}-${pad2(nm)}-01`;

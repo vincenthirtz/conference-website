@@ -4,8 +4,9 @@
 import Link from 'next/link';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import Sparkline from './Sparkline';
+import nsAdminDashboardStageProgressBar from '@/lib/i18n/locales/admin-fr/adminDashboardStageProgressBar';
 
-type Dict = ReturnType<typeof useAdminT<'adminDashboardStageProgressBar'>>;
+type Dict = typeof nsAdminDashboardStageProgressBar.fr;
 
 function getStageTypeLabel(t: Dict): Record<string, string> {
   return {
@@ -48,7 +49,7 @@ export default function StageProgressBar({
   onAdvance,
   hourlyBuckets,
 }: Props) {
-  const t = useAdminT('adminDashboardStageProgressBar');
+  const t = useAdminT(nsAdminDashboardStageProgressBar);
   const stageTypeLabel = getStageTypeLabel(t);
   const percent =
     totalMatches > 0 ? Math.round((finishedMatches / totalMatches) * 100) : 0;

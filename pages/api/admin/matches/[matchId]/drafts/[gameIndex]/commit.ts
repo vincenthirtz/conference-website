@@ -12,10 +12,7 @@
 //     once the last flow step is committed.
 
 import type { NextApiRequest, NextApiResponse } from 'next';
-import {
-  withStaffRoute,
-  AuthenticatedStaffContext,
-} from '@/utils/staff';
+import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { withAdminIdempotency } from '@/utils/adminIdempotency';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { commitDraftStep, DraftEngineError } from '@/utils/draftEngine';
@@ -69,10 +66,7 @@ async function handler(
         .status(err.status)
         .json({ error: err.message, code: err.code, ...(err.detail ?? {}) });
     }
-    logger.error(
-      '[admin/matches/:id/drafts/:gameIndex/commit] error:',
-      err
-    );
+    logger.error('[admin/matches/:id/drafts/:gameIndex/commit] error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }

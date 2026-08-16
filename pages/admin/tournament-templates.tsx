@@ -16,8 +16,9 @@ import {
   type TemplateStage,
   type StageType,
 } from '@/config/tournament-templates';
+import nsAdminTournamentTemplates from '@/lib/i18n/locales/admin-fr/adminTournamentTemplates';
 
-type Dict = ReturnType<typeof useAdminT<'adminTournamentTemplates'>>;
+type Dict = typeof nsAdminTournamentTemplates.fr;
 
 type StaffProps = {
   staff: { id: string; role: string; display_name: string | null };
@@ -54,7 +55,7 @@ function stageTypeBadge(type: string) {
 export const getServerSideProps = withStaffPage('admin');
 
 function AdminTournamentTemplatesPage({ staff }: StaffProps) {
-  const t = useAdminT('adminTournamentTemplates');
+  const t = useAdminT(nsAdminTournamentTemplates);
   const STAGE_TYPES = getStageTypes(t);
   const router = useRouter();
   const { addToast } = useToast();

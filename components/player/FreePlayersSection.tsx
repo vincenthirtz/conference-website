@@ -6,6 +6,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';
 import { useT } from '@/lib/i18n/useT';
+import nsFreePlayers from '@/lib/i18n/locales/fr/freePlayers';
 
 type FreePlayer = {
   discordUserId: string;
@@ -26,7 +27,7 @@ type Props = {
 };
 
 export default function FreePlayersSection({ teamId }: Props) {
-  const t = useT('freePlayers');
+  const t = useT(nsFreePlayers);
   const { adminFetchJson } = useAdminFetch();
 
   const [players, setPlayers] = useState<FreePlayer[]>([]);

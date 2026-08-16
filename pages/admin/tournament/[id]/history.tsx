@@ -7,6 +7,7 @@ import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import TournamentTabsNav from '@/components/admin/tournament/TournamentTabsNav';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import nsAdminTournamentHistory from '@/lib/i18n/locales/admin-fr/adminTournamentHistory';
 
 type StaffShape = {
   id: string;
@@ -55,7 +56,7 @@ function formatDateTime(iso: string) {
 function AdminTournamentHistoryPage({ staff }: StaffProps) {
   const router = useRouter();
   const { id } = router.query;
-  const t = useAdminT('adminTournamentHistory');
+  const t = useAdminT(nsAdminTournamentHistory);
 
   const [logs, setLogs] = useState<FormattedStaffLog[]>([]);
   const [loading, setLoading] = useState(false);

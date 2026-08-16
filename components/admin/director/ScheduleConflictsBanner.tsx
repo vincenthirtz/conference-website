@@ -15,6 +15,7 @@
 import { memo } from 'react';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { TeamScheduleConflict } from '@/utils/eventScheduleConflicts';
+import nsAdminEventDirector from '@/lib/i18n/locales/admin-fr/adminEventDirector';
 
 type Props = {
   conflicts: TeamScheduleConflict[];
@@ -32,7 +33,7 @@ function formatTime(iso: string): string {
 }
 
 function ScheduleConflictsBannerBase({ conflicts }: Props) {
-  const t = useAdminT('adminEventDirector');
+  const t = useAdminT(nsAdminEventDirector);
 
   if (conflicts.length === 0) return null;
 

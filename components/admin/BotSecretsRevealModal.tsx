@@ -20,6 +20,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { useToast } from '@/components/Toast';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import nsAdminBotSecretsRevealModal from '@/lib/i18n/locales/admin-fr/adminBotSecretsRevealModal';
 
 type Props = {
   botApiKey: string;
@@ -34,7 +35,7 @@ export default function BotSecretsRevealModal({
 }: Props) {
   const trapRef = useFocusTrap<HTMLDivElement>();
   const { addToast } = useToast();
-  const t = useAdminT('adminBotSecretsRevealModal');
+  const t = useAdminT(nsAdminBotSecretsRevealModal);
   const [copiedKey, setCopiedKey] = useState<null | 'api' | 'webhook'>(null);
 
   // Close on Escape.

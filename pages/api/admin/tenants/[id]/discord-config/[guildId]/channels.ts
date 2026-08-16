@@ -92,8 +92,7 @@ async function handler(
     .select('bot_webhook_secret')
     .eq('tenant_id', id)
     .maybeSingle();
-  const secret =
-    (secretRow?.bot_webhook_secret as string | undefined) ?? null;
+  const secret = (secretRow?.bot_webhook_secret as string | undefined) ?? null;
   if (!secret) {
     return res
       .status(503)

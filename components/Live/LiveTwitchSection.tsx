@@ -5,6 +5,7 @@ import Button from '@/components/Buttons/button';
 import { useT, format } from '@/lib/i18n/useT';
 
 import { logger } from '../../utils/logger';
+import nsLiveTwitchSection from '@/lib/i18n/locales/fr/liveTwitchSection';
 export type TwitchChannel = {
   channel: string;
   label: string;
@@ -29,7 +30,7 @@ export default function LiveTwitchSection({
   title,
   subtitle,
 }: Props = {}) {
-  const t = useT('liveTwitchSection');
+  const t = useT(nsLiveTwitchSection);
   const eyebrowLabel = eyebrow ?? t.defaultEyebrow;
   const titleLabel = title ?? t.defaultTitle;
   const subtitleLabel = subtitle ?? t.defaultSubtitle;

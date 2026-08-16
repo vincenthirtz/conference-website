@@ -15,10 +15,11 @@ import {
   MEMBER_SPECIALTIES,
   type MemberSpecialty,
 } from '@/utils/markdown/teamPublicMarkdown';
+import nsMemberProfileEditor from '@/lib/i18n/locales/fr/memberProfileEditor';
 
 const HANDLE_MAX = 80;
 
-type MemberEditorDict = ReturnType<typeof useT<'memberProfileEditor'>>;
+type MemberEditorDict = typeof nsMemberProfileEditor.fr;
 
 export type EditableMember = {
   id: string;
@@ -54,7 +55,7 @@ export default function MemberProfileEditor({
 }) {
   const { addToast } = useToast();
   const { adminFetchJson } = useAdminFetch();
-  const t = useT('memberProfileEditor');
+  const t = useT(nsMemberProfileEditor);
   const specialtyLabels = getSpecialtyLabels(t);
 
   const [displayName, setDisplayName] = useState(member.display_name ?? '');

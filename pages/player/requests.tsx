@@ -18,6 +18,7 @@ import { useT, format } from '@/lib/i18n/useT';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 
 import { logger } from '../../utils/logger';
+import nsPlayerRequests from '@/lib/i18n/locales/fr/playerRequests';
 
 type Tab = 'transfer' | 'scrim';
 
@@ -29,7 +30,7 @@ export default function PlayerRequestsPage() {
     loading: teamLoading,
     error: teamError,
   } = useManagedTeam();
-  const t = useT('playerRequests');
+  const t = useT(nsPlayerRequests);
   const { addToast } = useToast();
   const [tab, setTab] = useState<Tab>('transfer');
   // Which field a validation error concerns, so we only flag the relevant input

@@ -7,8 +7,9 @@ import { localeTag } from '@/lib/i18n/useLocale';
 import { useT, format } from '@/lib/i18n/useT';
 
 import { logger } from '../../utils/logger';
+import nsNextMatchCard from '@/lib/i18n/locales/fr/nextMatchCard';
 
-type T = ReturnType<typeof useT<'nextMatchCard'>>;
+type T = typeof nsNextMatchCard.fr;
 type NextMatch = {
   match: {
     id: string;
@@ -80,7 +81,7 @@ export default function NextMatchCard({
   const { adminFetchJson } = useAdminFetch();
   const { withSubject } = usePlayerArea();
   const { lang } = useLang();
-  const t = useT('nextMatchCard');
+  const t = useT(nsNextMatchCard);
   const [data, setData] = useState<NextMatch | null>(initialData ?? null);
   // When parent supplies data, we already have something to render: don't show
   // the loading (hidden) state on mount.

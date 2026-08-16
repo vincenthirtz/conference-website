@@ -26,6 +26,7 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
+import nsBattlenetVerify from '@/lib/i18n/locales/fr/battlenetVerify';
 
 export type BattlenetStatus = {
   configured: boolean;
@@ -66,7 +67,7 @@ export default function BattlenetVerifyCard({
   onDismiss,
 }: Props) {
   const router = useRouter();
-  const t = useT('battlenetVerify');
+  const t = useT(nsBattlenetVerify);
   const locale = useLocale();
   const { addToast } = useToast();
   const { adminFetchJson } = useAdminFetch({ loginPath });

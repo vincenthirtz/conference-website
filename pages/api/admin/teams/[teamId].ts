@@ -36,7 +36,11 @@ export type TeamRow = {
 // rôle minimum : manager (gestion des équipes)
 export default withStaffRoute(handler, 'admin');
 
-async function handler(req: NextApiRequest, res: NextApiResponse, ctx: AuthenticatedStaffContext) {
+async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  ctx: AuthenticatedStaffContext
+) {
   const { teamId } = req.query;
 
   if (!teamId || Array.isArray(teamId) || !isValidUUID(teamId)) {
@@ -412,12 +416,11 @@ async function handleDelete(
         hardDelete: true,
         discordRoleId: (before as TeamRow).discord_role_id ?? null,
         discordChannelId: (before as TeamRow).discord_channel_id ?? null,
-        discordVoiceChannelId: (before as TeamRow).discord_voice_channel_id ?? null,
+        discordVoiceChannelId:
+          (before as TeamRow).discord_voice_channel_id ?? null,
       },
       ctx.tenantId
-    ).catch((e) =>
-      logger.error('[botEvents] team.dissolved emit error:', e)
-    );
+    ).catch((e) => logger.error('[botEvents] team.dissolved emit error:', e));
 
     return res.status(200).json({
       success: true,
@@ -472,7 +475,8 @@ async function handleDelete(
       hardDelete: false,
       discordRoleId: (before as TeamRow).discord_role_id ?? null,
       discordChannelId: (before as TeamRow).discord_channel_id ?? null,
-      discordVoiceChannelId: (before as TeamRow).discord_voice_channel_id ?? null,
+      discordVoiceChannelId:
+        (before as TeamRow).discord_voice_channel_id ?? null,
     },
     ctx.tenantId
   ).catch((e) => logger.error('[botEvents] team.dissolved emit error:', e));

@@ -11,8 +11,9 @@ import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
 import Modal from '@/components/admin/Modal';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import nsAdminTournamentCheckin from '@/lib/i18n/locales/admin-fr/adminTournamentCheckin';
 
-type Dict = ReturnType<typeof useAdminT<'adminTournamentCheckin'>>;
+type Dict = typeof nsAdminTournamentCheckin.fr;
 
 type CheckinRow = {
   matchId: string;
@@ -112,7 +113,7 @@ function statusBadge(
 }
 
 export default function CheckinSettingsPanel() {
-  const t = useAdminT('adminTournamentCheckin');
+  const t = useAdminT(nsAdminTournamentCheckin);
   const router = useRouter();
   const { id } = router.query;
   const tournamentId = Array.isArray(id) ? id[0] : id;
@@ -371,16 +372,36 @@ export default function CheckinSettingsPanel() {
             <table className="w-full text-sm">
               <thead className="bg-neutral-800/80 text-xs uppercase tracking-wide text-neutral-400">
                 <tr>
-                  <th scope="col" className="px-4 py-3 text-left">{t.thDate}</th>
-                  <th scope="col" className="px-4 py-3 text-left">{t.thMatch}</th>
-                  <th scope="col" className="px-4 py-3 text-center">{t.thStatus}</th>
-                  <th scope="col" className="px-4 py-3 text-center">{t.thEmail}</th>
-                  <th scope="col" className="px-4 py-3 text-center">{t.thT30}</th>
-                  <th scope="col" className="px-4 py-3 text-center">{t.thT15}</th>
-                  <th scope="col" className="px-4 py-3 text-center">{t.thTeam1}</th>
-                  <th scope="col" className="px-4 py-3 text-center">{t.thTeam2}</th>
-                  <th scope="col" className="px-4 py-3 text-left">{t.thReason}</th>
-                  <th scope="col" className="px-4 py-3 text-right">{t.thAction}</th>
+                  <th scope="col" className="px-4 py-3 text-left">
+                    {t.thDate}
+                  </th>
+                  <th scope="col" className="px-4 py-3 text-left">
+                    {t.thMatch}
+                  </th>
+                  <th scope="col" className="px-4 py-3 text-center">
+                    {t.thStatus}
+                  </th>
+                  <th scope="col" className="px-4 py-3 text-center">
+                    {t.thEmail}
+                  </th>
+                  <th scope="col" className="px-4 py-3 text-center">
+                    {t.thT30}
+                  </th>
+                  <th scope="col" className="px-4 py-3 text-center">
+                    {t.thT15}
+                  </th>
+                  <th scope="col" className="px-4 py-3 text-center">
+                    {t.thTeam1}
+                  </th>
+                  <th scope="col" className="px-4 py-3 text-center">
+                    {t.thTeam2}
+                  </th>
+                  <th scope="col" className="px-4 py-3 text-left">
+                    {t.thReason}
+                  </th>
+                  <th scope="col" className="px-4 py-3 text-right">
+                    {t.thAction}
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-700/50">
@@ -549,7 +570,7 @@ function Stat({
 }
 
 function CheckinDot({ at }: { at: string | null }) {
-  const t = useAdminT('adminTournamentCheckin');
+  const t = useAdminT(nsAdminTournamentCheckin);
   if (at) {
     return (
       <span

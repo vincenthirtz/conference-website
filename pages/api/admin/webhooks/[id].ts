@@ -25,7 +25,9 @@ async function handler(
   res: NextApiResponse,
   ctx: AuthenticatedStaffContext
 ) {
-  if (applyRateLimit(req, res, { max: 20, windowMs: 60_000 }, 'admin-webhooks-id')) {
+  if (
+    applyRateLimit(req, res, { max: 20, windowMs: 60_000 }, 'admin-webhooks-id')
+  ) {
     return;
   }
   res.setHeader('Cache-Control', 'no-store');
@@ -51,11 +53,18 @@ async function handlePatch(
 ) {
   const parsed = patchSchema.safeParse(req.body);
   if (!parsed.success) {
-    return res.status(400).json({ error: 'Invalid body.', code: 'INVALID_BODY' });
+    return res
+      .status(400)
+      .json({ error: 'Invalid body.', code: 'INVALID_BODY' });
   }
   const nowIso = new Date().toISOString();
   const patch = parsed.data.enabled
-    ? { enabled: true, consecutive_failures: 0, disabled_at: null, last_error: null }
+    ? {
+        enabled: true,
+        consecutive_failures: 0,
+        disabled_at: null,
+        last_error: null,
+      }
     : { enabled: false, disabled_at: nowIso };
 
   const { data, error } = await supabaseAdmin
@@ -67,7 +76,9 @@ async function handlePatch(
     .maybeSingle();
 
   if (error) {
-    logger.error('[admin/webhooks] patch error', error, { tenantId: ctx.tenantId });
+    logger.error('[admin/webhooks] patch error', error, {
+      tenantId: ctx.tenantId,
+    });
     return res.status(500).json({ error: 'Server error.' });
   }
   if (!data) {
@@ -80,7 +91,9 @@ async function handlePatch(
     entity_type: 'webhook_subscription',
     entity_id: id,
     tenant_id: ctx.tenantId,
-    payload: { action: parsed.data.enabled ? 'enable_webhook' : 'disable_webhook' },
+    payload: {
+      action: parsed.data.enabled ? 'enable_webhook' : 'disable_webhook',
+    },
   });
 
   return res.status(200).json({ subscription: data });
@@ -100,7 +113,9 @@ async function handleDelete(
     .maybeSingle();
 
   if (error) {
-    logger.error('[admin/webhooks] delete error', error, { tenantId: ctx.tenantId });
+    logger.error('[admin/webhooks] delete error', error, {
+      tenantId: ctx.tenantId,
+    });
     return res.status(500).json({ error: 'Server error.' });
   }
   if (!data) {

@@ -92,9 +92,7 @@ async function handler(
     scrim?: unknown;
   };
 
-  const flattenedMatches = (
-    (matchRes.data as AssignmentRow[] | null) ?? []
-  )
+  const flattenedMatches = ((matchRes.data as AssignmentRow[] | null) ?? [])
     .map((a) => {
       const m = Array.isArray(a.match) ? a.match[0] : a.match;
       return { assignment: a, entity: m as Record<string, unknown> | null };
@@ -143,9 +141,7 @@ async function handler(
       };
     });
 
-  const flattenedScrims = (
-    (scrimRes.data as AssignmentRow[] | null) ?? []
-  )
+  const flattenedScrims = ((scrimRes.data as AssignmentRow[] | null) ?? [])
     .map((a) => {
       const s = Array.isArray(a.scrim) ? a.scrim[0] : a.scrim;
       return { assignment: a, entity: s as Record<string, unknown> | null };
@@ -186,8 +182,7 @@ async function handler(
     });
 
   const upcoming = [...flattenedMatches, ...flattenedScrims].sort(
-    (a, b) =>
-      new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime()
+    (a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime()
   );
 
   return res.status(200).json({

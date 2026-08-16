@@ -14,6 +14,7 @@ import {
   roleRequiresBattleTag,
   isNonPlayingTeamRole,
 } from '@/utils/teams/roleKind';
+import nsTeamCreate from '@/lib/i18n/locales/fr/teamCreate';
 
 /** Valeur d'une réponse à un champ d'inscription personnalisé. */
 type FieldValue = string | number | boolean;
@@ -152,7 +153,7 @@ function GlobeIcon({ className }: { className?: string }) {
 }
 
 export default function PublicCreateTeamPage() {
-  const t = useT('teamCreate');
+  const t = useT(nsTeamCreate);
   const locale = useLocale();
   const router = useRouter();
   // Source unique de vérité pour l'édition active (comme les landing pages) :

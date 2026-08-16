@@ -19,6 +19,7 @@ import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import type { PlayerScrim } from '../../pages/api/player/scrims/index';
 import { logger } from '../../utils/logger';
+import nsMyScrims from '@/lib/i18n/locales/fr/myScrims';
 
 type ScrimsPayload = {
   toReport: PlayerScrim[];
@@ -33,7 +34,7 @@ type ReportOutcome = {
 };
 
 export default function MyScrimsCard() {
-  const t = useT('myScrims');
+  const t = useT(nsMyScrims);
   const locale = useLocale();
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
   const { withSubject, readOnly } = usePlayerArea();

@@ -24,6 +24,7 @@ import {
   type PurchasablePlan,
 } from '@/utils/billing/planFeatures';
 import { logger } from '@/utils/logger';
+import nsAdminTenantPlanCheckout from '@/lib/i18n/locales/admin-fr/adminTenantPlanCheckout';
 
 type CheckoutResponse = {
   redirectUrl: string;
@@ -44,7 +45,7 @@ function isForbidden(err: unknown): boolean {
 }
 
 export default function PlanCheckoutModal({ tenant, onClose }: Props) {
-  const t = useAdminT('adminTenantPlanCheckout');
+  const t = useAdminT(nsAdminTenantPlanCheckout);
   const { mutateJson } = useIdempotentMutation();
   const { addToast } = useToast();
 

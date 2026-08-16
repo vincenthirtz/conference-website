@@ -6,6 +6,7 @@
 // Extrait sans changement de comportement.
 
 import { useT } from '@/lib/i18n/useT';
+import nsScrimPlanning from '@/lib/i18n/locales/fr/scrimPlanning';
 
 export default function PlanningQuickFill({
   onFillAll,
@@ -22,7 +23,7 @@ export default function PlanningQuickFill({
   hasSlots: boolean;
   loadingSuggest: boolean;
 }) {
-  const t = useT('scrimPlanning');
+  const t = useT(nsScrimPlanning);
   return (
     <div className="mb-3 flex flex-wrap gap-2">
       <button

@@ -61,9 +61,7 @@ type Updates = {
 function normalizeHexInput(
   raw: unknown,
   fieldName: string
-):
-  | { ok: true; value: string | null }
-  | { ok: false; error: string } {
+): { ok: true; value: string | null } | { ok: false; error: string } {
   if (raw === undefined || raw === null) return { ok: true, value: null };
   if (typeof raw !== 'string') {
     return { ok: false, error: `${fieldName} invalide.` };
@@ -143,7 +141,8 @@ export default withAuthRoute(async function handler(
   const body = (req.body ?? {}) as Record<string, unknown>;
 
   const description = trimOrNull(body.description, DESCRIPTION_MAX);
-  if (!description.ok) return res.status(400).json({ error: description.error });
+  if (!description.ok)
+    return res.status(400).json({ error: description.error });
 
   const publicContent = trimOrNull(
     body.public_content,
@@ -176,8 +175,7 @@ export default withAuthRoute(async function handler(
       const normalized = normalizeBannerOverlay(body.banner_overlay);
       if (!normalized) {
         return res.status(400).json({
-          error:
-            'banner_overlay doit être gradient, dark, none, grid ou dots.',
+          error: 'banner_overlay doit être gradient, dark, none, grid ou dots.',
         });
       }
       bannerOverlay = normalized;
@@ -257,7 +255,9 @@ export default withAuthRoute(async function handler(
   let achievements: Achievement[] = [];
   if (body.achievements !== undefined && body.achievements !== null) {
     if (!Array.isArray(body.achievements)) {
-      return res.status(400).json({ error: 'achievements doit être un tableau.' });
+      return res
+        .status(400)
+        .json({ error: 'achievements doit être un tableau.' });
     }
     if (body.achievements.length > ACHIEVEMENTS_MAX) {
       return res
@@ -293,7 +293,11 @@ export default withAuthRoute(async function handler(
   // store provider+id separately so the iframe URL is deterministic.
   let embedProvider: EmbedProvider | null = null;
   let embedId: string | null = null;
-  if (body.embed_url !== undefined && body.embed_url !== null && body.embed_url !== '') {
+  if (
+    body.embed_url !== undefined &&
+    body.embed_url !== null &&
+    body.embed_url !== ''
+  ) {
     if (typeof body.embed_url !== 'string') {
       return res.status(400).json({ error: 'embed_url invalide.' });
     }
@@ -385,13 +389,15 @@ export default withAuthRoute(async function handler(
   }
 
   if (Object.keys(diff).length > 0) {
-    const { error: logErr } = await supabaseAdmin.from('team_audit_logs').insert({
-      team_id: teamId,
-      user_id: user.id,
-      action: 'update_public_page',
-      payload: { diff },
-      tenant_id: tenantId,
-    });
+    const { error: logErr } = await supabaseAdmin
+      .from('team_audit_logs')
+      .insert({
+        team_id: teamId,
+        user_id: user.id,
+        action: 'update_public_page',
+        payload: { diff },
+        tenant_id: tenantId,
+      });
     if (logErr) {
       logger.error('[team-public-page] audit log error:', logErr);
       // Non-blocking: the update already succeeded.

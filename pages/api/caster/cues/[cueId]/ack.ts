@@ -27,9 +27,7 @@ async function handler(
   res: NextApiResponse,
   ctx: AuthenticatedCasterContext
 ) {
-  if (
-    applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'caster-cue-ack')
-  )
+  if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'caster-cue-ack'))
     return;
 
   if (req.method !== 'POST') {

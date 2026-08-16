@@ -8,8 +8,9 @@ import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import DiscordSignInCta from '@/components/onboard/DiscordSignInCta';
 import { useT, format } from '@/lib/i18n/useT';
+import nsOnboardIndex from '@/lib/i18n/locales/fr/onboardIndex';
 
-type OnboardIndexDict = ReturnType<typeof useT<'onboardIndex'>>;
+type OnboardIndexDict = typeof nsOnboardIndex.fr;
 
 const getFeatures = (
   t: OnboardIndexDict
@@ -23,7 +24,7 @@ const getFeatures = (
 ];
 
 function OnboardLandingPage() {
-  const t = useT('onboardIndex');
+  const t = useT(nsOnboardIndex);
   const features = getFeatures(t);
   const { user, loading } = useAuthSession();
   const isSignedIn = !!user;

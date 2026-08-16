@@ -7,9 +7,10 @@
 import { useMemo, useState } from 'react';
 import { useT } from '@/lib/i18n/useT';
 import { Section, SectionHeader } from './primitives';
+import nsTournamentLanding from '@/lib/i18n/locales/fr/tournamentLanding';
 
 export default function TournamentFaq() {
-  const t = useT('tournamentLanding');
+  const t = useT(nsTournamentLanding);
   const [query, setQuery] = useState('');
   const [openId, setOpenId] = useState<number | null>(0);
 
@@ -30,7 +31,8 @@ export default function TournamentFaq() {
     if (!needle) return items;
     return items.filter(
       (it) =>
-        it.q.toLowerCase().includes(needle) || it.a.toLowerCase().includes(needle)
+        it.q.toLowerCase().includes(needle) ||
+        it.a.toLowerCase().includes(needle)
     );
   }, [items, query]);
 
@@ -52,7 +54,12 @@ export default function TournamentFaq() {
             viewBox="0 0 24 24"
             aria-hidden="true"
           >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z"
+            />
           </svg>
           <input
             type="search"
@@ -83,7 +90,9 @@ export default function TournamentFaq() {
                     onClick={() => setOpenId(open ? null : it.id)}
                     className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet)]/60"
                   >
-                    <span className="text-sm font-semibold text-white">{it.q}</span>
+                    <span className="text-sm font-semibold text-white">
+                      {it.q}
+                    </span>
                     <svg
                       className={`h-5 w-5 shrink-0 text-[var(--color-violet-light)] transition-transform duration-300 ${open ? 'rotate-45' : ''}`}
                       fill="none"
@@ -91,12 +100,19 @@ export default function TournamentFaq() {
                       viewBox="0 0 24 24"
                       aria-hidden="true"
                     >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 4v16m8-8H4"
+                      />
                     </svg>
                   </button>
                   <div
                     className={`grid transition-all duration-300 ease-out ${
-                      open ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+                      open
+                        ? 'grid-rows-[1fr] opacity-100'
+                        : 'grid-rows-[0fr] opacity-0'
                     }`}
                   >
                     <div className="overflow-hidden">

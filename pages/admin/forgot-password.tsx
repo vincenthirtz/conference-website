@@ -3,10 +3,11 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useToast } from '@/components/Toast';
 import { useAdminT } from '@/lib/i18n/useAdminT';
+import nsAdminForgotPassword from '@/lib/i18n/locales/admin-fr/adminForgotPassword';
 
 export default function AdminForgotPasswordPage() {
   const { addToast } = useToast();
-  const t = useAdminT('adminForgotPassword');
+  const t = useAdminT(nsAdminForgotPassword);
   const [email, setEmail] = useState('');
   const [sending, setSending] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);

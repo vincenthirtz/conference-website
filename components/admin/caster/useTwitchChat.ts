@@ -39,6 +39,7 @@ import {
   type ChatClearPayload,
 } from '@/utils/caster/twitchChatClient';
 import type { ChatEvent, ChatMessage } from '@/utils/caster/twitchProtocol';
+import nsAdminCasterScenes from '@/lib/i18n/locales/admin-fr/adminCasterScenes';
 
 /** Plafond du flux affiché (les plus anciens tombent). */
 export const FEED_MAX = 300;
@@ -81,7 +82,7 @@ function nextId(): string {
 }
 
 export function useTwitchChat() {
-  const t = useAdminT('adminCasterScenes');
+  const t = useAdminT(nsAdminCasterScenes);
   const { addToast } = useToast();
   const { adminFetchJson } = useAdminFetch();
   const { mutateJson } = useIdempotentMutation();

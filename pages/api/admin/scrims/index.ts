@@ -75,15 +75,8 @@ async function handleGet(
   if (!supabaseAdmin)
     return res.status(500).json({ error: 'Supabase admin not configured' });
 
-  const {
-    status,
-    teamId,
-    dateFrom,
-    dateTo,
-    orderBy,
-    orderDir,
-    includeTotal,
-  } = req.query;
+  const { status, teamId, dateFrom, dateTo, orderBy, orderDir, includeTotal } =
+    req.query;
 
   const { limit: limitNum, offset: offsetNum } = parsePagination(req, {
     limit: 50,

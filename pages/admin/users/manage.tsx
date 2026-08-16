@@ -15,8 +15,9 @@ import Modal from '@/components/admin/Modal';
 import { Skeleton } from '@/components/admin/Skeleton';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { useLang } from '@/lib/i18n/LanguageProvider';
+import nsAdminUsersManage from '@/lib/i18n/locales/admin-fr/adminUsersManage';
 
-type Dict = ReturnType<typeof useAdminT<'adminUsersManage'>>;
+type Dict = typeof nsAdminUsersManage.fr;
 type StaffShape = {
   id: string;
   role: string;
@@ -338,7 +339,9 @@ const UserRow = memo(function UserRow({
             </span>
             <span aria-hidden="true">•</span>
             <span
-              title={u.last_sign_in_at ? formatDate(u.last_sign_in_at) : undefined}
+              title={
+                u.last_sign_in_at ? formatDate(u.last_sign_in_at) : undefined
+              }
               className={u.last_sign_in_at ? '' : 'text-neutral-500 italic'}
             >
               {u.last_sign_in_at
@@ -554,7 +557,7 @@ const UserRow = memo(function UserRow({
 });
 
 export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
-  const t = useAdminT('adminUsersManage');
+  const t = useAdminT(nsAdminUsersManage);
   const { lang } = useLang();
   const [total, setTotal] = useState<number | null>(null);
 
@@ -687,7 +690,12 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
       teamName: string,
       currentTag: string | null
     ) => {
-      setEditingBattleTag({ userId, teamId, teamName, currentTag: currentTag || '' });
+      setEditingBattleTag({
+        userId,
+        teamId,
+        teamName,
+        currentTag: currentTag || '',
+      });
       setNewBattleTag(currentTag || '');
       setBattleTagError(null);
     },

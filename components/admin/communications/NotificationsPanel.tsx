@@ -30,6 +30,7 @@ import {
   getWebPushSupport,
   urlBase64ToUint8Array,
 } from '@/utils/webPush';
+import nsAdminNotifications from '@/lib/i18n/locales/admin-fr/adminNotifications';
 
 type PrefRow = { event_type: WebPushEventType; enabled: boolean };
 type PrefsResponse = { prefs: PrefRow[] };
@@ -39,7 +40,7 @@ type TestResponse = {
   failed: number;
 };
 
-type Dict = ReturnType<typeof useAdminT<'adminNotifications'>>;
+type Dict = typeof nsAdminNotifications.fr;
 
 // Groupement éditorial des event_types pour l'UI. Les labels sont en FR.
 // Source des event_types : utils/webPushEvents.ts (single source of truth).
@@ -180,7 +181,7 @@ function formatStatusLabel(
 }
 
 export default function NotificationsPanel() {
-  const t = useAdminT('adminNotifications');
+  const t = useAdminT(nsAdminNotifications);
   const { adminFetchJson } = useAdminFetch();
   const { addToast } = useToast();
 
@@ -339,9 +340,7 @@ export default function NotificationsPanel() {
       const permission = await Notification.requestPermission();
       if (permission !== 'granted') {
         addToast(
-          permission === 'denied'
-            ? t.permissionDenied
-            : t.permissionNotGranted,
+          permission === 'denied' ? t.permissionDenied : t.permissionNotGranted,
           'warning'
         );
         await refreshSubStatus();
@@ -479,7 +478,11 @@ export default function NotificationsPanel() {
       </div>
 
       {!pwaEnabled && (
-        <AlertBanner variant="warning" message={t.pwaWarning} className="mb-6" />
+        <AlertBanner
+          variant="warning"
+          message={t.pwaWarning}
+          className="mb-6"
+        />
       )}
 
       {/* ===== Section : État ===== */}

@@ -16,6 +16,7 @@ import type { LeaderboardPlayer, LeaderboardResponse } from '@/types/rating';
 import type { RatingCoverageResponse } from '../api/admin/ratings/coverage';
 
 import { logger } from '../../utils/logger';
+import nsAdminRatings from '@/lib/i18n/locales/admin-fr/adminRatings';
 
 export const getServerSideProps = withStaffPage('admin');
 
@@ -27,7 +28,7 @@ function AdminRatingsPage(_props: StaffProps) {
   const rebuild = useIdempotentMutation();
   const { confirm, dialog } = useConfirmDialog();
   const { addToast } = useToast();
-  const t = useAdminT('adminRatings');
+  const t = useAdminT(nsAdminRatings);
   const playerLabel = (n: number) =>
     format(n > 1 ? t.playerCount_other : t.playerCount_one, { count: n });
   const matchLabel = (n: number) =>

@@ -74,11 +74,9 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const rawRole = queryString(req.query.role) ?? 'actor';
   const role = rawRole.toLowerCase();
   if (!VALID_ROLES.has(role)) {
-    return res
-      .status(400)
-      .json({
-        error: `role invalide. Valeurs : ${[...VALID_ROLES].join(', ')}.`,
-      });
+    return res.status(400).json({
+      error: `role invalide. Valeurs : ${[...VALID_ROLES].join(', ')}.`,
+    });
   }
 
   const rawLimit = Number(req.query.limit);

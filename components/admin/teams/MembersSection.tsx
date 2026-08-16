@@ -3,6 +3,7 @@ import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { TeamMemberRow } from '@/types/admin';
 import type { TeamRole } from '@/utils/teamRoles';
 import MemberRow from './MemberRow';
+import nsAdminTeamsMembersSection from '@/lib/i18n/locales/admin-fr/adminTeamsMembersSection';
 
 type MembersSectionProps = {
   membersCount: number;
@@ -64,7 +65,7 @@ function MembersSectionComponent({
   onEditMember,
   onDeleteMember,
 }: MembersSectionProps) {
-  const t = useAdminT('adminTeamsMembersSection');
+  const t = useAdminT(nsAdminTeamsMembersSection);
   const swapActive = Boolean(swapSource);
   const canSwapRoster = subMembers.length > 0;
   const canSwapSub = rosterMembers.length > 0;

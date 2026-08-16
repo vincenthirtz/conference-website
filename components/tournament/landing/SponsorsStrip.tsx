@@ -8,9 +8,14 @@ import Link from 'next/link';
 import { useT } from '@/lib/i18n/useT';
 import { Section, SectionHeader, Reveal } from './primitives';
 import type { LandingPartner } from './types';
+import nsTournamentLanding from '@/lib/i18n/locales/fr/tournamentLanding';
 
-export default function SponsorsStrip({ partners }: { partners: LandingPartner[] }) {
-  const t = useT('tournamentLanding');
+export default function SponsorsStrip({
+  partners,
+}: {
+  partners: LandingPartner[];
+}) {
+  const t = useT(nsTournamentLanding);
   if (partners.length === 0) return null;
 
   return (
@@ -59,8 +64,19 @@ export default function SponsorsStrip({ partners }: { partners: LandingPartner[]
         <Link href="/partenaires">
           <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-6 py-3 text-sm font-semibold text-white transition-colors hover:border-[var(--color-violet)]/50 hover:bg-[var(--color-violet)]/10">
             {t.sponsorsCta}
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2.5}
+                d="M13 7l5 5m0 0l-5 5m5-5H6"
+              />
             </svg>
           </span>
         </Link>

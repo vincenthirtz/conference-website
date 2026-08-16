@@ -2,6 +2,7 @@ import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { useT } from '@/lib/i18n/useT';
 
 import { logger } from '../utils/logger';
+import nsErrorBoundary from '@/lib/i18n/locales/fr/errorBoundary';
 type Props = {
   children: ReactNode;
 };
@@ -14,7 +15,7 @@ type State = {
 // On isole donc l'UI de repli dans un petit composant fonctionnel qui consomme
 // la traduction, rendu par le `render()` de la classe.
 function ErrorFallback({ onRetry }: { onRetry: () => void }) {
-  const t = useT('errorBoundary');
+  const t = useT(nsErrorBoundary);
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center px-4 text-center text-white">
       <h2 className="text-2xl font-bold">{t.title}</h2>

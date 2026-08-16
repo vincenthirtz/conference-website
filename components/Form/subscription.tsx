@@ -1,9 +1,10 @@
 import React, { JSX } from 'react';
 import Button from '../Buttons/button';
 import { useT } from '@/lib/i18n/useT';
+import nsSubscriptionForm from '@/lib/i18n/locales/fr/subscriptionForm';
 
 function Subscription(): JSX.Element {
-  const t = useT('subscriptionForm');
+  const t = useT(nsSubscriptionForm);
   return (
     <div className="mt-0 md:mt-[106px] subscription w-full">
       <div className="mx-auto flex w-full max-w-4xl flex-col items-center px-4 py-12 sm:px-6">

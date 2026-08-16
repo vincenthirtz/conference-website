@@ -6,6 +6,7 @@ import Paragraph from '@/components/Typography/paragraph';
 import { useT } from '@/lib/i18n/useT';
 
 import { logger } from '../../utils/logger';
+import nsPatchNotesSection from '@/lib/i18n/locales/fr/patchNotesSection';
 type PatchNote = {
   id: string;
   title: string;
@@ -19,7 +20,7 @@ const PATCH_NOTES_SOURCE =
   'https://overwatch.blizzard.com/fr-fr/news/patch-notes/';
 
 function PatchNotesSection(): JSX.Element {
-  const t = useT('patchNotesSection');
+  const t = useT(nsPatchNotesSection);
   const [notes, setNotes] = useState<PatchNote[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

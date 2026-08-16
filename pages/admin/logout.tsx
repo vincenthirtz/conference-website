@@ -3,10 +3,11 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { supabaseClient } from '@/utils/supabase';
 import { useAdminT } from '@/lib/i18n/useAdminT';
+import nsAdminLogout from '@/lib/i18n/locales/admin-fr/adminLogout';
 
 export default function AdminLogoutPage() {
   const router = useRouter();
-  const t = useAdminT('adminLogout');
+  const t = useAdminT(nsAdminLogout);
 
   useEffect(() => {
     const run = async () => {

@@ -8,6 +8,7 @@ import { useToast } from '@/components/Toast';
 import type { EventCasterChecklistItem, EventSegment } from '@/types/events';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
+import nsCockpitChecklist from '@/lib/i18n/locales/fr/cockpitChecklist';
 
 type Props = {
   segment: EventSegment;
@@ -21,7 +22,7 @@ export default function CockpitChecklist({
   onUpdated,
 }: Props) {
   const { addToast } = useToast();
-  const t = useT('cockpitChecklist');
+  const t = useT(nsCockpitChecklist);
   const locale = useLocale();
   const [pending, setPending] = useState<Record<string, boolean>>({});
 

@@ -23,6 +23,7 @@ import DirectoryPlayerCard, {
 } from '@/components/player/DirectoryPlayerCard';
 
 import { logger } from '../../utils/logger';
+import nsPlayerDiscovery from '@/lib/i18n/locales/fr/playerDiscovery';
 
 const PAGE_SIZE = 24;
 
@@ -44,7 +45,7 @@ function PlayerDiscovery() {
     redirectTo: '/login?next=/player/discovery',
   });
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
-  const t = useT('playerDiscovery');
+  const t = useT(nsPlayerDiscovery);
 
   const [tab, setTab] = useState<DirectoryTab>('discover');
 

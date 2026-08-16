@@ -6,8 +6,9 @@ import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import nsAdminPartnershipRequestDetail from '@/lib/i18n/locales/admin-fr/adminPartnershipRequestDetail';
 
-type Dict = ReturnType<typeof useAdminT<'adminPartnershipRequestDetail'>>;
+type Dict = typeof nsAdminPartnershipRequestDetail.fr;
 
 type Props = {
   staff: {
@@ -74,7 +75,7 @@ function formatDate(d: string | null) {
 }
 
 function AdminPartnershipRequestDetailPage({ staff }: Props) {
-  const t = useAdminT('adminPartnershipRequestDetail');
+  const t = useAdminT(nsAdminPartnershipRequestDetail);
   const statusLabels = getStatusLabels(t);
   const categoryLabels = getCategoryLabels(t);
   const router = useRouter();

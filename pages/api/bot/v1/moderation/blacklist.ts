@@ -127,9 +127,7 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
       // ne rien scanner). On signale par un ensemble null pour distinguer
       // « vide » de « indisponible ».
       logger.error('[bot/moderation/blacklist] alerted lookup error', alertErr);
-      return res
-        .status(200)
-        .json({ blacklist, alertedDiscordUserIds: null });
+      return res.status(200).json({ blacklist, alertedDiscordUserIds: null });
     }
 
     const alertedDiscordUserIds = [

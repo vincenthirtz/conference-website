@@ -1,8 +1,9 @@
 import { useEffect, useMemo } from 'react';
 import { useT, format } from '@/lib/i18n/useT';
 import { BATTLE_TAG_REGEX } from '@/utils/teams/addMember';
+import nsNewTeamForm from '@/lib/i18n/locales/fr/newTeamForm';
 
-type Tr = ReturnType<typeof useT<'newTeamForm'>>;
+type Tr = typeof nsNewTeamForm.fr;
 
 type TeamMember = {
   /** Identifiant local stable (clé React), généré à l'ajout côté parent. */
@@ -99,7 +100,7 @@ export default function NewTeamForm({
   onRemoveMember,
   onValidityChange,
 }: Props) {
-  const t = useT('newTeamForm');
+  const t = useT(nsNewTeamForm);
   const memberErrors = useMemo(
     () => members.map((m, i) => validateMember(m, i, members, t)),
     [members, t]

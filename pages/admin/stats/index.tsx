@@ -9,6 +9,7 @@ import Tabs, {
 import TeamStatsPanel from '@/components/admin/stats/TeamStatsPanel';
 import MapStatsPanel from '@/components/admin/stats/MapStatsPanel';
 import type { StaffProps } from '@/types/admin';
+import nsAdminStats from '@/lib/i18n/locales/admin-fr/adminStats';
 
 const ID_BASE = 'admin-stats';
 
@@ -20,7 +21,7 @@ export const getServerSideProps = withStaffPage('admin');
  * redirect here (see stats/teams.tsx & stats/maps.tsx shims).
  */
 export default function AdminStatsPage(_: StaffProps) {
-  const t = useAdminT('adminStats');
+  const t = useAdminT(nsAdminStats);
   const tabs = [
     { id: 'teams', label: t.tabTeams },
     { id: 'maps', label: t.tabMaps },

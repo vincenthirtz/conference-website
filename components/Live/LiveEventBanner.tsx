@@ -10,8 +10,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { usePublicEventRunRealtime } from '@/hooks/usePublicEventRunRealtime';
 import { useT, format } from '@/lib/i18n/useT';
 import { logger } from '@/utils/logger';
+import nsLiveEventBanner from '@/lib/i18n/locales/fr/liveEventBanner';
 
-type BannerDict = ReturnType<typeof useT<'liveEventBanner'>>;
+type BannerDict = typeof nsLiveEventBanner.fr;
 
 type PublicSegment = {
   id: string;
@@ -67,7 +68,7 @@ function formatDuration(totalSeconds: number): string {
 }
 
 export default function LiveEventBanner() {
-  const t = useT('liveEventBanner');
+  const t = useT(nsLiveEventBanner);
   const [run, setRun] = useState<PublicRun | null>(null);
   const [segments, setSegments] = useState<PublicSegment[]>([]);
   const [loaded, setLoaded] = useState(false);

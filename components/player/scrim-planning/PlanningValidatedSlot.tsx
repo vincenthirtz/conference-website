@@ -6,6 +6,7 @@
 // Extrait sans changement de comportement.
 
 import { useT, format } from '@/lib/i18n/useT';
+import nsScrimPlanning from '@/lib/i18n/locales/fr/scrimPlanning';
 
 export default function PlanningValidatedSlot({
   validatedSlot,
@@ -22,7 +23,7 @@ export default function PlanningValidatedSlot({
   formatSlot: (iso: string) => string;
   onAddToCalendar: () => void;
 }) {
-  const t = useT('scrimPlanning');
+  const t = useT(nsScrimPlanning);
   return (
     <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
       <span>

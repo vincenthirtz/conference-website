@@ -20,8 +20,9 @@ import Tabs, {
 } from '@/components/admin/Tabs';
 import { listGames } from '@/config/games';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import nsAdminMapPool from '@/lib/i18n/locales/admin-fr/adminMapPool';
 
-type Dict = ReturnType<typeof useAdminT<'adminMapPool'>>;
+type Dict = typeof nsAdminMapPool.fr;
 
 type StaffShape = {
   id: string;
@@ -69,7 +70,7 @@ function typeLabel(t: Dict, type: string | null | undefined) {
 export const getServerSideProps = withStaffPage('admin');
 
 function AdminMapPoolPage(_: StaffProps) {
-  const t = useAdminT('adminMapPool');
+  const t = useAdminT(nsAdminMapPool);
   const { adminFetchJson } = useAdminFetch();
   const { confirm, dialog } = useConfirmDialog();
   const { addToast } = useToast();

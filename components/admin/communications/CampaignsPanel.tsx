@@ -14,8 +14,9 @@ import { useAdminResource } from '@/hooks/useAdminResource';
 import { useToast } from '@/components/Toast';
 import Modal from '@/components/admin/Modal';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import nsAdminCampaigns from '@/lib/i18n/locales/admin-fr/adminCampaigns';
 
-type Dict = ReturnType<typeof useAdminT<'adminCampaigns'>>;
+type Dict = typeof nsAdminCampaigns.fr;
 
 type CampaignStats = {
   totalSent: number;
@@ -151,7 +152,7 @@ function formatDateTime(iso: string | null) {
 }
 
 export default function CampaignsPanel() {
-  const t = useAdminT('adminCampaigns');
+  const t = useAdminT(nsAdminCampaigns);
 
   const [activeId, setActiveId] = useState<string | null>(null);
 
@@ -435,7 +436,7 @@ function CampaignCard({
   onDelete: () => void;
   onDuplicate: () => void | Promise<void>;
 }) {
-  const t = useAdminT('adminCampaigns');
+  const t = useAdminT(nsAdminCampaigns);
   const [duplicating, setDuplicating] = useState(false);
 
   async function handleDuplicate() {
@@ -640,7 +641,7 @@ function Stat({ label, value }: { label: string; value: string }) {
  * proprement tant que l'endpoint n'est pas déployé (état erreur + réessai).
  */
 function SubscriptionsCard() {
-  const t = useAdminT('adminCampaigns');
+  const t = useAdminT(nsAdminCampaigns);
   const { adminFetchJson } = useAdminFetch();
 
   const [data, setData] = useState<SubscriptionsSummary | null>(null);
@@ -802,7 +803,7 @@ function CampaignDrawer({
   onAfterSend: () => void;
   onRefresh: () => void | Promise<void>;
 }) {
-  const t = useAdminT('adminCampaigns');
+  const t = useAdminT(nsAdminCampaigns);
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
   const { mutateJson } = useIdempotentMutation();
   const { adminFetch } = useAdminFetch();
@@ -1553,9 +1554,7 @@ function CampaignDrawer({
                 </button>
               </div>
 
-              <p className="text-xs text-neutral-500">
-                {t.newSubscribersHint}
-              </p>
+              <p className="text-xs text-neutral-500">{t.newSubscribersHint}</p>
 
               {actionError && (
                 <div className="px-3 py-2 rounded-xl bg-red-900/40 border border-red-500/50 text-red-300 text-sm">
@@ -1700,7 +1699,7 @@ function CampaignFormModal({
   onClose: () => void;
   onSaved: () => void | Promise<void>;
 }) {
-  const t = useAdminT('adminCampaigns');
+  const t = useAdminT(nsAdminCampaigns);
   const isEdit = campaign !== null;
   const { mutateJson } = useIdempotentMutation();
   const { addToast } = useToast();

@@ -3,8 +3,9 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useSiteSetting } from '@/hooks/useSiteSettings';
 import { useT } from '@/lib/i18n/useT';
+import nsError404 from '@/lib/i18n/locales/fr/error404';
 
-type Error404Dict = ReturnType<typeof useT<'error404'>>;
+type Error404Dict = typeof nsError404.fr;
 
 const suggestions = (t: Error404Dict) => [
   { label: t.sHome, href: '/', emoji: '🏠' },
@@ -16,7 +17,7 @@ const suggestions = (t: Error404Dict) => [
 ];
 
 export default function NotFoundPage() {
-  const t = useT('error404');
+  const t = useT(nsError404);
   const { value: contactEmail } = useSiteSetting('contact_email');
   const router = useRouter();
 

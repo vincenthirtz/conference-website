@@ -60,6 +60,10 @@ import UpcomingAssignments from '@/components/Caster/UpcomingAssignments';
 import CueBanner from '@/components/Caster/CueBanner';
 import CueFeed from '@/components/Caster/CueFeed';
 import UrgentCueModal from '@/components/Caster/UrgentCueModal';
+import nsAdminRegie from '@/lib/i18n/locales/fr/adminRegie';
+import nsRegieNewRun from '@/lib/i18n/locales/fr/regieNewRun';
+import nsRegieStartPrepared from '@/lib/i18n/locales/fr/regieStartPrepared';
+import nsCasterCockpit from '@/lib/i18n/locales/fr/casterCockpit';
 
 // PushOptIn est dynamic (no-SSR) : il depend de Notification / serviceWorker.
 const PushOptIn = dynamic(() => import('@/components/shared/PushOptIn'), {
@@ -93,7 +97,7 @@ function nowLocalInput(): string {
  * la couleur porte l'info, le label court + aria-live la rendent accessible.
  */
 function ConnectionIndicator({ connection }: { connection: Connection }) {
-  const t = useT('adminRegie');
+  const t = useT(nsAdminRegie);
   const dot =
     connection.level === 'online'
       ? 'bg-emerald-400'
@@ -134,7 +138,7 @@ function ConnectionIndicator({ connection }: { connection: Connection }) {
  * optionnel : un run peut être 100 % libre, l'endpoint ne demande pas de lien.
  */
 function NewRunPanel({ onStarted }: { onStarted: () => Promise<void> }) {
-  const t = useT('regieNewRun');
+  const t = useT(nsRegieNewRun);
   const { addToast } = useToast();
   // Deux (ou trois) intentions successives (create → [from-tournament] →
   // start) : la clé se régénère après chaque 2xx, chaque mutation part donc
@@ -212,7 +216,9 @@ function NewRunPanel({ onStarted }: { onStarted: () => Promise<void> }) {
         } catch (fromErr) {
           const fe = fromErr as AdminFetchError;
           const feError =
-            typeof fe.payload === 'object' && fe.payload && 'error' in fe.payload
+            typeof fe.payload === 'object' &&
+            fe.payload &&
+            'error' in fe.payload
               ? String((fe.payload as { error: string }).error)
               : null;
           addToast(feError || t.fromTournamentError, 'error');
@@ -337,7 +343,7 @@ type DraftRun = {
  * draft, le composant ne rend rien (pas de bruit visuel).
  */
 function StartPreparedPanel({ onStarted }: { onStarted: () => Promise<void> }) {
-  const t = useT('regieStartPrepared');
+  const t = useT(nsRegieStartPrepared);
   const { addToast } = useToast();
   const { adminFetchJson } = useAdminFetch();
   const { mutateJson } = useIdempotentMutation();
@@ -466,8 +472,8 @@ function RegiePage({ staff }: StaffProps) {
   const router = useRouter();
   const { addToast } = useToast();
   const session = useCasterSession();
-  const t = useT('casterCockpit');
-  const tr = useT('adminRegie');
+  const t = useT(nsCasterCockpit);
+  const tr = useT(nsAdminRegie);
 
   // Le panneau « Nouveau run » exige l'endpoint /start (rôle 'admin') : réservé
   // aux admin/owner. Un caster ne le voit pas. L'endpoint /end est lui aussi
@@ -811,15 +817,7 @@ function RegiePage({ staff }: StaffProps) {
     } finally {
       setSegAction(null);
     }
-  }, [
-    liveRunId,
-    nextSegment,
-    segAction,
-    tr,
-    mutateJson,
-    addToast,
-    fetchRun,
-  ]);
+  }, [liveRunId, nextSegment, segAction, tr, mutateJson, addToast, fetchRun]);
 
   // ---- Render ----
 

@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { useAdminT } from '@/lib/i18n/useAdminT';
+import nsAdminBreadcrumb from '@/lib/i18n/locales/admin-fr/adminBreadcrumb';
 
 export type BreadcrumbItem = {
   label: string;
@@ -11,7 +12,7 @@ type BreadcrumbProps = {
 };
 
 export default function Breadcrumb({ items }: BreadcrumbProps) {
-  const t = useAdminT('adminBreadcrumb');
+  const t = useAdminT(nsAdminBreadcrumb);
   if (items.length === 0) return null;
 
   return (

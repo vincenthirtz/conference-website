@@ -22,10 +22,7 @@
 import crypto from 'crypto';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import {
-  withStaffRoute,
-  type AuthenticatedStaffContext,
-} from '@/utils/staff';
+import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { logStaffAction } from '@/utils/staffLogs';
@@ -77,7 +74,10 @@ async function handler(
     .eq('id', id)
     .maybeSingle();
   if (tenantErr) {
-    logger.error('[admin/tenants/rotate-secrets] tenant lookup error', tenantErr);
+    logger.error(
+      '[admin/tenants/rotate-secrets] tenant lookup error',
+      tenantErr
+    );
     return res.status(500).json({ error: 'Server error.' });
   }
   if (!tenantRow) {
@@ -103,14 +103,10 @@ async function handler(
       { onConflict: 'tenant_id' }
     );
   if (upsertErr) {
-    logger.error(
-      '[admin/tenants/rotate-secrets] upsert error',
-      upsertErr,
-      { tenantId: id }
-    );
-    return res
-      .status(500)
-      .json({ error: 'Failed to persist new secrets.' });
+    logger.error('[admin/tenants/rotate-secrets] upsert error', upsertErr, {
+      tenantId: id,
+    });
+    return res.status(500).json({ error: 'Failed to persist new secrets.' });
   }
 
   // Audit. Pas de secret dans le payload.

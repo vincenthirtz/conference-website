@@ -58,6 +58,7 @@ import type {
   EventWave,
   EventWaveStatus,
 } from '@/types/events';
+import nsAdminEventDirector from '@/lib/i18n/locales/admin-fr/adminEventDirector';
 
 export const getServerSideProps = withStaffPage('admin');
 
@@ -82,7 +83,7 @@ const StationBoardMemo = memo(StationBoard);
 const SegmentEditorMemo = memo(SegmentEditor);
 
 function DirectorPage(_props: StaffProps) {
-  const t = useAdminT('adminEventDirector');
+  const t = useAdminT(nsAdminEventDirector);
   const router = useRouter();
   const runId =
     typeof router.query.runId === 'string' ? router.query.runId : null;

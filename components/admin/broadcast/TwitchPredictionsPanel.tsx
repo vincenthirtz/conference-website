@@ -32,6 +32,7 @@ import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useToast } from '@/components/Toast';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import nsAdminTwitchPredictions from '@/lib/i18n/locales/admin-fr/adminTwitchPredictions';
 
 // --- Formes du contrat (figées) ---------------------------------------------
 
@@ -81,7 +82,7 @@ function errorCode(err: unknown): string | null {
 }
 
 export default function TwitchPredictionsPanel() {
-  const t = useAdminT('adminTwitchPredictions');
+  const t = useAdminT(nsAdminTwitchPredictions);
   const { adminFetch, adminFetchJson } = useAdminFetch();
   const { mutateJson } = useIdempotentMutation();
   const { confirm, dialog } = useConfirmDialog();
@@ -616,7 +617,7 @@ function Spinner() {
   );
 }
 
-type CreateFormT = ReturnType<typeof useAdminT<'adminTwitchPredictions'>>;
+type CreateFormT = typeof nsAdminTwitchPredictions.fr;
 
 function CreateForm({
   t,

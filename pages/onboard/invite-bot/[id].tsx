@@ -20,6 +20,7 @@ import { getServerClient, supabaseAdmin } from '@/utils/supabase';
 import { buildBotInviteUrl } from '@/utils/onboard';
 import { logger } from '@/utils/logger';
 import { useT } from '@/lib/i18n/useT';
+import nsOnboardInviteBot from '@/lib/i18n/locales/fr/onboardInviteBot';
 
 type StatusFromApi = {
   id: string;
@@ -131,7 +132,7 @@ function OnboardInviteBotPage({
   requestedName,
   botInviteUrl,
 }: ServerProps) {
-  const t = useT('onboardInviteBot');
+  const t = useT(nsOnboardInviteBot);
   const [status, setStatus] = useState(initialStatus);
   const [createdTenantId, setCreatedTenantId] = useState<string | null>(null);
   const [secretsRevealUrl, setSecretsRevealUrl] = useState<string | null>(null);
@@ -262,7 +263,9 @@ function OnboardInviteBotPage({
                   🔑 {t.revealButton}
                 </a>
               ) : (
-                <p className="text-xs text-emerald-100/80">{t.revealedAlready}</p>
+                <p className="text-xs text-emerald-100/80">
+                  {t.revealedAlready}
+                </p>
               )}
               <p className="text-xs text-emerald-100/80">
                 {t.completedContact}{' '}

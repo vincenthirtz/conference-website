@@ -4,6 +4,7 @@
 
 import { useEffect, useState } from 'react';
 import { useT, format as fmt } from '@/lib/i18n/useT';
+import nsPublicScrimDialog from '@/lib/i18n/locales/fr/publicScrimDialog';
 
 type Props = {
   teamId: string;
@@ -20,7 +21,7 @@ export default function PublicScrimDialog({
   open,
   onClose,
 }: Props) {
-  const t = useT('publicScrimDialog');
+  const t = useT(nsPublicScrimDialog);
   const [captcha, setCaptcha] = useState<Captcha | null>(null);
   const [captchaAnswer, setCaptchaAnswer] = useState('');
   const [fromTeamName, setFromTeamName] = useState('');

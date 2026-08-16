@@ -4,6 +4,7 @@ import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { ACTIVE_WOMEN_TOURNAMENT_ID } from '@/utils/activeEdition';
 import { useT } from '@/lib/i18n/useT';
 import LanguageToggle from '@/components/Navbar/LanguageToggle';
+import nsEspaceCapitaine from '@/lib/i18n/locales/fr/espaceCapitaine';
 
 const DISCORD_INVITE = 'https://discord.gg/gERSsjC3Vd';
 const REGISTER_TEAM_HREF = `/team/create?tournament=${ACTIVE_WOMEN_TOURNAMENT_ID}`;
@@ -93,7 +94,7 @@ function FeatureIcon({ name }: { name: IconName }) {
 }
 
 function EspaceCapitainePage() {
-  const t = useT('espaceCapitaine');
+  const t = useT(nsEspaceCapitaine);
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white">

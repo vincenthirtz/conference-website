@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useT } from '@/lib/i18n/useT';
 import { Reveal, Spotlight } from './primitives';
 import { COMMUNITY_LINKS } from './types';
+import nsTournamentLanding from '@/lib/i18n/locales/fr/tournamentLanding';
 
 export default function FinalCta({
   registrationOpen,
@@ -15,11 +16,14 @@ export default function FinalCta({
   registrationOpen: boolean;
   registerHref: string;
 }) {
-  const t = useT('tournamentLanding');
+  const t = useT(nsTournamentLanding);
 
   return (
     <section id="join" className="relative overflow-hidden py-20 md:py-28">
-      <Spotlight color="violet" className="left-1/2 top-1/2 h-[400px] w-[700px] -translate-x-1/2 -translate-y-1/2 opacity-80" />
+      <Spotlight
+        color="violet"
+        className="left-1/2 top-1/2 h-[400px] w-[700px] -translate-x-1/2 -translate-y-1/2 opacity-80"
+      />
       <div className="tl-grain absolute inset-0" aria-hidden="true" />
       <div className="relative z-[1] mx-auto max-w-3xl px-4 text-center sm:px-6">
         <Reveal>
@@ -39,8 +43,19 @@ export default function FinalCta({
               <Link href={registerHref}>
                 <span className="tl-cta-glow inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[var(--color-green)] to-[var(--color-yellow)] px-8 py-3.5 text-sm font-bold text-black transition-transform hover:scale-[1.03]">
                   {t.finalCtaRegister}
-                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                  <svg
+                    className="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2.5}
+                      d="M13 7l5 5m0 0l-5 5m5-5H6"
+                    />
                   </svg>
                 </span>
               </Link>

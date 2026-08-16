@@ -15,6 +15,7 @@ import { useT } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 
 import { logger } from '../../utils/logger';
+import nsNewsIndex from '@/lib/i18n/locales/fr/newsIndex';
 
 const PAGE_SIZE = 9;
 
@@ -86,7 +87,7 @@ export const getStaticProps: GetStaticProps<NewsIndexProps> = async () => {
 };
 
 function NewsCard({ item }: { item: NewsItem }) {
-  const t = useT('newsIndex');
+  const t = useT(nsNewsIndex);
   const locale = useLocale();
   const dateStr =
     item.publishedAt || item.createdAt
@@ -146,7 +147,7 @@ function NewsCard({ item }: { item: NewsItem }) {
 }
 
 function NewsIndexPage({ news, loadError }: NewsIndexProps) {
-  const t = useT('newsIndex');
+  const t = useT(nsNewsIndex);
   const [visible, setVisible] = useState(PAGE_SIZE);
   const shown = news.slice(0, visible);
   const hasMore = visible < news.length;

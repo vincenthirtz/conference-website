@@ -12,8 +12,9 @@ import ScrimFormModal from '@/components/admin/scrims/ScrimFormModal';
 import AdminListShell from '@/components/admin/AdminListShell';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { ScrimStatus } from '@/types/admin';
+import nsAdminScrimsList from '@/lib/i18n/locales/admin-fr/adminScrimsList';
 
-type Dict = ReturnType<typeof useAdminT<'adminScrimsList'>>;
+type Dict = typeof nsAdminScrimsList.fr;
 
 type ScrimRow = {
   id: string;
@@ -80,7 +81,7 @@ function formatDate(d: string | null) {
 }
 
 export default function ScrimsListPanel() {
-  const t = useAdminT('adminScrimsList');
+  const t = useAdminT(nsAdminScrimsList);
   const router = useRouter();
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [modalOpen, setModalOpen] = useState(false);

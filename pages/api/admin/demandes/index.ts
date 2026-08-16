@@ -353,8 +353,7 @@ async function handleGet(
           userMap.set(row.id, {
             id: row.id,
             email,
-            display_name:
-              row.display_name || row.full_name || email || null,
+            display_name: row.display_name || row.full_name || email || null,
             avatar_url: row.avatar_url || null,
             battle_tag: row.battle_tag || null,
             discord: row.discord || null,

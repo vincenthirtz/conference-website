@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import { isNonPlayingTeamRole } from '@/utils/teams/roleKind';
+import nsTeamCard from '@/lib/i18n/locales/fr/teamCard';
 
 type TeamInfo = {
   id: string;
@@ -95,7 +96,7 @@ export default function TeamCard({
   onLeaveTeam,
   members,
 }: Props) {
-  const t = useT('teamCard');
+  const t = useT(nsTeamCard);
   const locale = useLocale();
   const hasPendingRequest = pendingCaptainRequest || pendingJoinRequest;
   const [leaveConfirm, setLeaveConfirm] = useState(false);

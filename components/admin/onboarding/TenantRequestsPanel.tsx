@@ -27,8 +27,9 @@ import LoadingSpinner from '@/components/admin/LoadingSpinner';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
 import { logger } from '@/utils/logger';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import nsAdminTenantRequestsList from '@/lib/i18n/locales/admin-fr/adminTenantRequestsList';
 
-type Dict = ReturnType<typeof useAdminT<'adminTenantRequestsList'>>;
+type Dict = typeof nsAdminTenantRequestsList.fr;
 
 type TenantRequestStatus =
   | 'pending_email_verification'
@@ -129,7 +130,7 @@ function formatDateTime(s: string | null): string {
 }
 
 export default function TenantRequestsPanel({ currentStaffDiscordId }: Props) {
-  const t = useAdminT('adminTenantRequestsList');
+  const t = useAdminT(nsAdminTenantRequestsList);
   const STATUS_TABS = getStatusTabs(t);
   const STATUS_BADGE = getStatusBadge(t);
   const { adminFetchJson } = useAdminFetch();
@@ -343,14 +344,30 @@ export default function TenantRequestsPanel({ currentStaffDiscordId }: Props) {
             <table className="w-full text-sm">
               <thead className="bg-neutral-900/50 text-neutral-400 text-xs uppercase tracking-wider">
                 <tr>
-                  <th scope="col" className="px-4 py-3 text-left">{t.colStatus}</th>
-                  <th scope="col" className="px-4 py-3 text-left">{t.colSlug}</th>
-                  <th scope="col" className="px-4 py-3 text-left">{t.colName}</th>
-                  <th scope="col" className="px-4 py-3 text-left">{t.colEmail}</th>
-                  <th scope="col" className="px-4 py-3 text-left">{t.colDiscord}</th>
-                  <th scope="col" className="px-4 py-3 text-left">{t.colCreated}</th>
-                  <th scope="col" className="px-4 py-3 text-left">{t.colTenant}</th>
-                  <th scope="col" className="px-4 py-3 text-right">{t.colActions}</th>
+                  <th scope="col" className="px-4 py-3 text-left">
+                    {t.colStatus}
+                  </th>
+                  <th scope="col" className="px-4 py-3 text-left">
+                    {t.colSlug}
+                  </th>
+                  <th scope="col" className="px-4 py-3 text-left">
+                    {t.colName}
+                  </th>
+                  <th scope="col" className="px-4 py-3 text-left">
+                    {t.colEmail}
+                  </th>
+                  <th scope="col" className="px-4 py-3 text-left">
+                    {t.colDiscord}
+                  </th>
+                  <th scope="col" className="px-4 py-3 text-left">
+                    {t.colCreated}
+                  </th>
+                  <th scope="col" className="px-4 py-3 text-left">
+                    {t.colTenant}
+                  </th>
+                  <th scope="col" className="px-4 py-3 text-right">
+                    {t.colActions}
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-700/50">

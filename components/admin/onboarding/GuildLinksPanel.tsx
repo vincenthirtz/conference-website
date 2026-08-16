@@ -17,6 +17,7 @@ import {
   type AccessibleTenant,
 } from '@/hooks/useAccessibleTenants';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import nsAdminPendingGuildLinks from '@/lib/i18n/locales/admin-fr/adminPendingGuildLinks';
 
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
@@ -59,7 +60,7 @@ type ClaimModalState = {
 };
 
 export default function GuildLinksPanel() {
-  const t = useAdminT('adminPendingGuildLinks');
+  const t = useAdminT(nsAdminPendingGuildLinks);
   const { addToast } = useToast();
   const { mutateJson } = useIdempotentMutation();
   const { confirm, dialog } = useConfirmDialog();
@@ -200,10 +201,18 @@ export default function GuildLinksPanel() {
             <table className="w-full text-sm">
               <thead className="bg-neutral-900/50 text-neutral-400 text-xs uppercase tracking-wider">
                 <tr>
-                  <th scope="col" className="px-4 py-3 text-left">{t.colGuild}</th>
-                  <th scope="col" className="px-4 py-3 text-left">{t.colOwner}</th>
-                  <th scope="col" className="px-4 py-3 text-left">{t.colRequested}</th>
-                  <th scope="col" className="px-4 py-3 text-right">{t.colActions}</th>
+                  <th scope="col" className="px-4 py-3 text-left">
+                    {t.colGuild}
+                  </th>
+                  <th scope="col" className="px-4 py-3 text-left">
+                    {t.colOwner}
+                  </th>
+                  <th scope="col" className="px-4 py-3 text-left">
+                    {t.colRequested}
+                  </th>
+                  <th scope="col" className="px-4 py-3 text-right">
+                    {t.colActions}
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-700/50">

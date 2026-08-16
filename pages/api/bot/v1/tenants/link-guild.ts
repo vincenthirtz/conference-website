@@ -292,7 +292,9 @@ async function autoClaimTenant(input: {
         .from('tenants')
         .delete()
         .eq('id', tenantId)
-        .then(undefined, (e) => logger.error('[auto-claim/rollback] tenants', e));
+        .then(undefined, (e) =>
+          logger.error('[auto-claim/rollback] tenants', e)
+        );
     }
   };
 
@@ -341,7 +343,10 @@ async function autoClaimTenant(input: {
   });
   if (secretsErr) {
     await rollback('tenant_secrets.insert');
-    return { ok: false, reason: `tenant_secrets.insert: ${secretsErr.message}` };
+    return {
+      ok: false,
+      reason: `tenant_secrets.insert: ${secretsErr.message}`,
+    };
   }
   createdSecrets = true;
 
@@ -409,12 +414,10 @@ async function autoClaimTenant(input: {
   }
 
   // 6) tenant_discord_config — empty row, FK target for the admin UI.
-  const { error: cfgErr } = await admin
-    .from('tenant_discord_config')
-    .insert({
-      guild_id: guildId,
-      extras: guildName ? { guild_name: guildName } : {},
-    });
+  const { error: cfgErr } = await admin.from('tenant_discord_config').insert({
+    guild_id: guildId,
+    extras: guildName ? { guild_name: guildName } : {},
+  });
   if (cfgErr) {
     // Soft-fail : the admin UI can create the row on first save. Don't
     // rollback the whole tenant for this.
@@ -468,10 +471,10 @@ async function autoClaimTenant(input: {
       revealUrl,
     });
     if (!emailRes.success) {
-      logger.warn(
-        '[bot/tenants/link-guild] auto-claim success email failed',
-        { requestId: request.id, error: emailRes.error }
-      );
+      logger.warn('[bot/tenants/link-guild] auto-claim success email failed', {
+        requestId: request.id,
+        error: emailRes.error,
+      });
     }
   } catch (e) {
     logger.warn('[bot/tenants/link-guild] auto-claim success email threw', e);

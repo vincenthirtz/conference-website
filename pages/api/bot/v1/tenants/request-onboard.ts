@@ -43,7 +43,10 @@ const requestOnboardSchema = z.object({
     .pipe(
       z
         .string()
-        .regex(DISCORD_ID_RE, 'Discord user ID invalide (snowflake 15-25 chiffres).')
+        .regex(
+          DISCORD_ID_RE,
+          'Discord user ID invalide (snowflake 15-25 chiffres).'
+        )
     ),
   requesterDiscordDisplayName: z
     .union([z.string(), z.null()])

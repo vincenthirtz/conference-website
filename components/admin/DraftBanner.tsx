@@ -2,6 +2,7 @@
 // Banner shown when a localStorage draft is available for restoration.
 
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import nsAdminDraftBanner from '@/lib/i18n/locales/admin-fr/adminDraftBanner';
 
 type DraftBannerProps = {
   lastSaved: string | null;
@@ -28,7 +29,7 @@ export default function DraftBanner({
   onRestore,
   onDiscard,
 }: DraftBannerProps) {
-  const t = useAdminT('adminDraftBanner');
+  const t = useAdminT(nsAdminDraftBanner);
   const suffix = lastSaved ? ` (${formatSavedAt(lastSaved)})` : '';
   return (
     <div className="rounded-xl bg-amber-900/40 border border-amber-500/50 px-4 py-3 text-sm flex items-center justify-between gap-4 flex-wrap">

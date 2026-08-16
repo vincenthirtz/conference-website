@@ -14,8 +14,9 @@ import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 
 import { logger } from '../../utils/logger';
+import nsMatchDetail from '@/lib/i18n/locales/fr/matchDetail';
 
-type MatchDict = ReturnType<typeof useT<'matchDetail'>>;
+type MatchDict = typeof nsMatchDetail.fr;
 type SimpleTeam = {
   id: string;
   slug?: string | null;
@@ -202,7 +203,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
 };
 
 export default function MatchPage({ match }: Props) {
-  const t = useT('matchDetail');
+  const t = useT(nsMatchDetail);
   const locale = useLocale();
   if (!match) {
     return (
@@ -264,10 +265,7 @@ export default function MatchPage({ match }: Props) {
               </Heading>
 
               <div className="flex flex-wrap items-center gap-2 text-[11px] text-gray-300 mb-1">
-                <Link
-                  href={tournamentPath}
-                  className="hover:text-white"
-                >
+                <Link href={tournamentPath} className="hover:text-white">
                   {match.tournament.short_name || match.tournament.name}
                 </Link>
                 {match.stage && (
@@ -328,7 +326,11 @@ export default function MatchPage({ match }: Props) {
           <div className="bg-black/60 border border-white/10 rounded-2xl px-4 py-4">
             <div className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,1.5fr)_minmax(0,1.4fr)] gap-3 items-center">
               {/* Team 1 */}
-              <TeamHeader team={t1} fallbackName={t.teamFallback1} align="left" />
+              <TeamHeader
+                team={t1}
+                fallbackName={t.teamFallback1}
+                align="left"
+              />
 
               {/* Score & meta */}
               <div className="flex flex-col items-center">

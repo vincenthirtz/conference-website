@@ -23,8 +23,9 @@ import { useAdminResource } from '@/hooks/useAdminResource';
 import CastMemberFormModal from '@/components/admin/cast-members/CastMemberFormModal';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { logger } from '@/utils/logger';
+import nsAdminCastMembersList from '@/lib/i18n/locales/admin-fr/adminCastMembersList';
 
-type Dict = ReturnType<typeof useAdminT<'adminCastMembersList'>>;
+type Dict = typeof nsAdminCastMembersList.fr;
 
 type CastMemberRow = {
   id: string;
@@ -59,7 +60,7 @@ function statusColor(isActive: boolean) {
 }
 
 export default function CastMembersListPanel() {
-  const tx = useAdminT('adminCastMembersList');
+  const tx = useAdminT(nsAdminCastMembersList);
   const router = useRouter();
   const [modalOpen, setModalOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -573,7 +574,9 @@ export default function CastMembersListPanel() {
 
           <button
             type="button"
-            disabled={loading || (total !== null && offset + PAGE_SIZE >= total)}
+            disabled={
+              loading || (total !== null && offset + PAGE_SIZE >= total)
+            }
             onClick={() => setOffset(offset + PAGE_SIZE)}
             className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >

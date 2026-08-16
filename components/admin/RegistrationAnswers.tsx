@@ -9,6 +9,7 @@
 import type { ReactNode } from 'react';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import type { RegistrationField } from '@/utils/registrationFields';
+import nsAdminRegistrationFields from '@/lib/i18n/locales/admin-fr/adminRegistrationFields';
 
 /** Human-readable fallback label when we don't have the field definition. */
 function humanizeKey(key: string): string {
@@ -46,7 +47,7 @@ export default function RegistrationAnswers({
   /** Compact variant (smaller heading) for the registered-teams list. */
   compact?: boolean;
 }) {
-  const tf = useAdminT('adminRegistrationFields');
+  const tf = useAdminT(nsAdminRegistrationFields);
 
   // Preserve field-def order first, then any leftover answer keys.
   const orderedKeys: string[] = [];

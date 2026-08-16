@@ -38,7 +38,9 @@ function envNumber(name: string, fallback: number): number {
 function isAuthorized(req: NextApiRequest): boolean {
   const secret = process.env.CRON_SECRET;
   if (!secret) {
-    logger.error('[cron/outbox-maintenance] CRON_SECRET not configured — refusing');
+    logger.error(
+      '[cron/outbox-maintenance] CRON_SECRET not configured — refusing'
+    );
     return false;
   }
   const authHeader = req.headers.authorization;
@@ -210,7 +212,8 @@ export default async function handler(
   const p50Ms = percentile(latenciesMs, 0.5);
   const p95Ms = percentile(latenciesMs, 0.95);
   const p99Ms = percentile(latenciesMs, 0.99);
-  const maxMs = latenciesMs.length > 0 ? latenciesMs[latenciesMs.length - 1] : null;
+  const maxMs =
+    latenciesMs.length > 0 ? latenciesMs[latenciesMs.length - 1] : null;
 
   const stats = {
     pendingCount,

@@ -8,6 +8,7 @@ import Button from '@/components/Buttons/button';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { supabaseAdmin } from '@/utils/supabase';
 import { useT } from '@/lib/i18n/useT';
+import nsActualitesPage from '@/lib/i18n/locales/fr/actualitesPage';
 
 type PatchNote = {
   id: string;
@@ -94,7 +95,7 @@ export const getStaticProps: GetStaticProps<ActualitesProps> = async () => {
 };
 
 function ActualitesPage({ patchNotes, news, loadError }: ActualitesProps) {
-  const t = useT('actualitesPage');
+  const t = useT(nsActualitesPage);
   const [activeTab, setActiveTab] = useState<'all' | 'patch' | 'news'>('all');
 
   const renderPatchNoteCard = (note: PatchNote) => {

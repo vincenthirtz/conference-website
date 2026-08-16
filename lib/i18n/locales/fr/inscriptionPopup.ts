@@ -1,0 +1,13 @@
+// lib/i18n/locales/fr/inscriptionPopup.ts
+//
+// Traductions FRANCAISES du namespace `inscriptionPopup` — SOURCE DE VERITE.
+// Le pendant anglais vit dans `../en.json` (blob charge paresseusement).
+// Toute cle ajoutee ici doit l'etre aussi cote anglais : le garde-fou de
+// compilation `../parity.ts` casse le typecheck sinon.
+
+import { ns } from '../../ns';
+
+export default ns('inscriptionPopup', {
+  title: 'Ouverture des inscriptions',
+  registerBtn: "S'inscrire",
+});

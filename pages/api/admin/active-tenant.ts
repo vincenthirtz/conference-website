@@ -62,22 +62,18 @@ async function handler(
       typeof body.tenant_id === 'string' ? body.tenant_id.trim() : '';
 
     if (!isValidTenantUuid(target)) {
-      return res
-        .status(400)
-        .json({
-          error: 'tenant_id must be a valid UUID.',
-          code: 'INVALID_TENANT_ID',
-        });
+      return res.status(400).json({
+        error: 'tenant_id must be a valid UUID.',
+        code: 'INVALID_TENANT_ID',
+      });
     }
 
     const allowed = await canAccessTenant(ctx.staff.id, target);
     if (!allowed) {
-      return res
-        .status(403)
-        .json({
-          error: 'No access to this tenant.',
-          code: 'NO_ACCESS_TO_TENANT',
-        });
+      return res.status(403).json({
+        error: 'No access to this tenant.',
+        code: 'NO_ACCESS_TO_TENANT',
+      });
     }
 
     const tenant = await fetchTenant(target);

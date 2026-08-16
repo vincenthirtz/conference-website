@@ -10,8 +10,9 @@ import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import { useT, format } from '@/lib/i18n/useT';
+import nsGuideManageTeam from '@/lib/i18n/locales/fr/guideManageTeam';
 
-type GuideDict = ReturnType<typeof useT<'guideManageTeam'>>;
+type GuideDict = typeof nsGuideManageTeam.fr;
 
 const REGISTER_TEAM_HREF = '/team/create';
 const PLAYER_HREF = '/player';
@@ -79,7 +80,7 @@ const getFeatures = (
 ];
 
 function GuidePage(): JSX.Element {
-  const t = useT('guideManageTeam');
+  const t = useT(nsGuideManageTeam);
   const steps = getSteps(t);
   const features = getFeatures(t);
   return (
@@ -305,7 +306,7 @@ function FieldRow({
 }
 
 function NewTeamPreview() {
-  const t = useT('guideManageTeam');
+  const t = useT(nsGuideManageTeam);
   return (
     <div className="space-y-3">
       <div className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-200/80">
@@ -347,7 +348,7 @@ function NewTeamPreview() {
 }
 
 function JoinRequestsPreview() {
-  const t = useT('guideManageTeam');
+  const t = useT(nsGuideManageTeam);
   const requests = [
     {
       name: 'Akira',
@@ -415,7 +416,7 @@ function JoinRequestsPreview() {
 }
 
 function RosterPreview() {
-  const t = useT('guideManageTeam');
+  const t = useT(nsGuideManageTeam);
   const members = [
     { tag: 'Lina#21834', role: 'Tank', captain: true },
     { tag: 'Mei#9912', role: 'DPS', captain: false },
@@ -473,7 +474,7 @@ function RosterPreview() {
 }
 
 function MessagesPreview() {
-  const t = useT('guideManageTeam');
+  const t = useT(nsGuideManageTeam);
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
@@ -524,7 +525,7 @@ function MessagesPreview() {
 }
 
 function NextMatchPreview() {
-  const t = useT('guideManageTeam');
+  const t = useT(nsGuideManageTeam);
   return (
     <div className="rounded-xl border border-white/10 bg-gradient-to-br from-purple-500/10 via-white/[0.03] to-cyan-500/10 p-4">
       <div className="flex flex-wrap items-center gap-1.5 text-[10px] uppercase tracking-[0.16em] text-blue-200/80">
@@ -555,7 +556,7 @@ function NextMatchPreview() {
 }
 
 function ScrimPreview() {
-  const t = useT('guideManageTeam');
+  const t = useT(nsGuideManageTeam);
   return (
     <div className="space-y-3">
       <div className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-200/80">

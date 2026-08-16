@@ -3,8 +3,9 @@ import Link from 'next/link';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { ACTIVE_WOMEN_TOURNAMENT_ID } from '@/utils/activeEdition';
 import { useT } from '@/lib/i18n/useT';
+import nsInscription2026 from '@/lib/i18n/locales/fr/inscription2026';
 
-type InscriptionDict = ReturnType<typeof useT<'inscription2026'>>;
+type InscriptionDict = typeof nsInscription2026.fr;
 
 const DISCORD_INVITE = 'https://discord.gg/gERSsjC3Vd';
 const REGISTER_HREF = `/team/create?tournament=${ACTIVE_WOMEN_TOURNAMENT_ID}`;
@@ -120,7 +121,7 @@ const faqSchema = {
 };
 
 function Inscription2026Page() {
-  const t = useT('inscription2026');
+  const t = useT(nsInscription2026);
   const prerequisites = getPrerequisites(t);
   const steps = getSteps(t);
   const faqs = getFaqs(t);
@@ -226,7 +227,9 @@ function Inscription2026Page() {
               {t.stepsTitle}
             </h2>
             <span className="brand-rule mt-3 block" aria-hidden />
-            <p className="mt-3 max-w-2xl text-sm text-gray-300">{t.stepsIntro}</p>
+            <p className="mt-3 max-w-2xl text-sm text-gray-300">
+              {t.stepsIntro}
+            </p>
           </div>
           <ol className="space-y-4">
             {steps.map((step) => (

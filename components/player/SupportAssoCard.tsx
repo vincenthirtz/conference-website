@@ -11,11 +11,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useT } from '@/lib/i18n/useT';
+import nsSupportAssoCard from '@/lib/i18n/locales/fr/supportAssoCard';
 
 const DISMISS_KEY = 'asso-support-dismissed-v1';
 
 export default function SupportAssoCard() {
-  const t = useT('supportAssoCard');
+  const t = useT(nsSupportAssoCard);
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {

@@ -115,13 +115,14 @@ async function handleList(
       .select('id, display_name')
       .in('id', creatorIds);
     for (const s of staffRows ?? []) {
-      if (s.display_name) nameById.set(s.id as string, s.display_name as string);
+      if (s.display_name)
+        nameById.set(s.id as string, s.display_name as string);
     }
   }
 
   const tokens = rows.map((r) => ({
     ...r,
-    created_by_name: r.created_by ? nameById.get(r.created_by) ?? null : null,
+    created_by_name: r.created_by ? (nameById.get(r.created_by) ?? null) : null,
   }));
 
   return res.status(200).json({ tokens });

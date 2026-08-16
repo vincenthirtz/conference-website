@@ -15,6 +15,7 @@ import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import StageTabsNav from '@/components/admin/stages/StageTabsNav';
 import type { StaffProps, StageType } from '@/types/admin';
+import nsAdminStageGroups from '@/lib/i18n/locales/admin-fr/adminStageGroups';
 
 type TeamInfo = {
   teamId: string;
@@ -33,7 +34,7 @@ type GroupsApiResponse = {
 export const getServerSideProps = withStaffPage('admin');
 
 function GroupLabel({ groupKey }: { groupKey: string }) {
-  const t = useAdminT('adminStageGroups');
+  const t = useAdminT(nsAdminStageGroups);
   const colors = [
     'bg-blue-500/20 text-blue-300 border-blue-500/30',
     'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
@@ -55,7 +56,7 @@ function GroupLabel({ groupKey }: { groupKey: string }) {
 }
 
 function AdminStageGroupsPage({ staff }: StaffProps) {
-  const t = useAdminT('adminStageGroups');
+  const t = useAdminT(nsAdminStageGroups);
   const router = useRouter();
   const { stageId } = router.query;
   const { addToast } = useToast();
@@ -774,53 +775,69 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
                             <GroupLabel groupKey={gk} />
                           </div>
                           <div className="overflow-x-auto">
-                          <table className="w-full text-xs">
-                            <thead>
-                              <tr className="text-neutral-500 text-left">
-                                <th scope="col" className="pb-1 font-normal">#</th>
-                                <th scope="col" className="pb-1 font-normal">{t.thTeam}</th>
-                                <th scope="col" className="pb-1 font-normal text-center">
-                                  {t.thWins}
-                                </th>
-                                <th scope="col" className="pb-1 font-normal text-center">
-                                  {t.thLosses}
-                                </th>
-                                <th scope="col" className="pb-1 font-normal text-center">
-                                  {t.thDraws}
-                                </th>
-                                <th scope="col" className="pb-1 font-normal text-right">
-                                  {t.thPoints}
-                                </th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {perGroupStandings[gk].map((s) => (
-                                <tr
-                                  key={s.teamId}
-                                  className="border-t border-neutral-800"
-                                >
-                                  <td className="py-1 text-neutral-400 font-mono">
-                                    {s.rank}
-                                  </td>
-                                  <td className="py-1 truncate max-w-[140px]">
-                                    {s.teamName || s.teamId.slice(0, 6)}
-                                  </td>
-                                  <td className="py-1 text-center text-emerald-300">
-                                    {s.wins}
-                                  </td>
-                                  <td className="py-1 text-center text-red-300">
-                                    {s.losses}
-                                  </td>
-                                  <td className="py-1 text-center text-neutral-400">
-                                    {s.draws}
-                                  </td>
-                                  <td className="py-1 text-right font-semibold">
-                                    {s.score}
-                                  </td>
+                            <table className="w-full text-xs">
+                              <thead>
+                                <tr className="text-neutral-500 text-left">
+                                  <th scope="col" className="pb-1 font-normal">
+                                    #
+                                  </th>
+                                  <th scope="col" className="pb-1 font-normal">
+                                    {t.thTeam}
+                                  </th>
+                                  <th
+                                    scope="col"
+                                    className="pb-1 font-normal text-center"
+                                  >
+                                    {t.thWins}
+                                  </th>
+                                  <th
+                                    scope="col"
+                                    className="pb-1 font-normal text-center"
+                                  >
+                                    {t.thLosses}
+                                  </th>
+                                  <th
+                                    scope="col"
+                                    className="pb-1 font-normal text-center"
+                                  >
+                                    {t.thDraws}
+                                  </th>
+                                  <th
+                                    scope="col"
+                                    className="pb-1 font-normal text-right"
+                                  >
+                                    {t.thPoints}
+                                  </th>
                                 </tr>
-                              ))}
-                            </tbody>
-                          </table>
+                              </thead>
+                              <tbody>
+                                {perGroupStandings[gk].map((s) => (
+                                  <tr
+                                    key={s.teamId}
+                                    className="border-t border-neutral-800"
+                                  >
+                                    <td className="py-1 text-neutral-400 font-mono">
+                                      {s.rank}
+                                    </td>
+                                    <td className="py-1 truncate max-w-[140px]">
+                                      {s.teamName || s.teamId.slice(0, 6)}
+                                    </td>
+                                    <td className="py-1 text-center text-emerald-300">
+                                      {s.wins}
+                                    </td>
+                                    <td className="py-1 text-center text-red-300">
+                                      {s.losses}
+                                    </td>
+                                    <td className="py-1 text-center text-neutral-400">
+                                      {s.draws}
+                                    </td>
+                                    <td className="py-1 text-right font-semibold">
+                                      {s.score}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
                           </div>
                         </div>
                       ))}

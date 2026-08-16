@@ -1,8 +1,9 @@
 import Link from 'next/link';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { useT } from '@/lib/i18n/useT';
+import nsRulesPage from '@/lib/i18n/locales/fr/rulesPage';
 
-type RulesDict = ReturnType<typeof useT<'rulesPage'>>;
+type RulesDict = typeof nsRulesPage.fr;
 
 const getRuleSections = (t: RulesDict) => [
   {
@@ -43,7 +44,7 @@ const getReferences = (t: RulesDict) => [
 ];
 
 function RulesPage() {
-  const t = useT('rulesPage');
+  const t = useT(nsRulesPage);
   const ruleSections = getRuleSections(t);
   const modeDetails = getModeDetails(t);
   const references = getReferences(t);

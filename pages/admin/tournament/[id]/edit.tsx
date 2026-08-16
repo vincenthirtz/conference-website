@@ -17,6 +17,8 @@ import type { StaffProps, Tournament } from '@/types/admin';
 import type { RegistrationField } from '@/utils/registrationFields';
 import { getGame } from '@/config/games';
 import { TOURNAMENT_TIMEZONES } from '@/utils/timezone';
+import nsAdminTournamentEdit from '@/lib/i18n/locales/admin-fr/adminTournamentEdit';
+import nsAdminRegistrationFields from '@/lib/i18n/locales/admin-fr/adminRegistrationFields';
 
 type ApiResponse = {
   tournament: Tournament;
@@ -52,8 +54,8 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
   const { addToast } = useToast();
   const { adminFetchJson } = useAdminFetch();
   const { mutate: uploadRules } = useIdempotentMutation();
-  const t = useAdminT('adminTournamentEdit');
-  const tf = useAdminT('adminRegistrationFields');
+  const t = useAdminT(nsAdminTournamentEdit);
+  const tf = useAdminT(nsAdminRegistrationFields);
 
   const [formReady, setFormReady] = useState(false);
 

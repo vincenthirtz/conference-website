@@ -130,7 +130,10 @@ async function fetchStaffNames(
   if (error) {
     // Non bloquant : le digest part sans les noms d'assignées plutôt que de
     // sauter le tick entier.
-    logger.warn('[cron/task-board-digest] staff names fetch: %s', error.message);
+    logger.warn(
+      '[cron/task-board-digest] staff names fetch: %s',
+      error.message
+    );
     return names;
   }
   for (const row of (data ?? []) as Array<{
@@ -252,7 +255,9 @@ export async function runTaskBoardDigest(): Promise<Counters> {
     }
 
     // Retards : les plus anciens d'abord (le plus urgent en tête de liste).
-    overdueRows.sort((a, b) => (a.due_date ?? '').localeCompare(b.due_date ?? ''));
+    overdueRows.sort((a, b) =>
+      (a.due_date ?? '').localeCompare(b.due_date ?? '')
+    );
 
     const rank = (t: TaskRow) => PRIORITY_RANK[t.priority ?? 'medium'] ?? 2;
     const hasDated = overdueRows.length > 0 || dueTodayRows.length > 0;

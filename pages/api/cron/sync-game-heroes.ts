@@ -14,7 +14,9 @@ import { logger } from '../../../utils/logger';
 function isAuthorized(req: NextApiRequest): boolean {
   const secret = process.env.CRON_SECRET;
   if (!secret) {
-    logger.error('[cron/sync-game-heroes] CRON_SECRET not configured — refusing');
+    logger.error(
+      '[cron/sync-game-heroes] CRON_SECRET not configured — refusing'
+    );
     return false;
   }
   if (req.headers.authorization === `Bearer ${secret}`) return true;

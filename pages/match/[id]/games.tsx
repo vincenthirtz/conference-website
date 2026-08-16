@@ -12,8 +12,9 @@ import type { MatchStatus } from '@/types/admin';
 import { useT, format } from '@/lib/i18n/useT';
 
 import { logger } from '../../../utils/logger';
+import nsMatchGames from '@/lib/i18n/locales/fr/matchGames';
 
-type MatchGamesDict = ReturnType<typeof useT<'matchGames'>>;
+type MatchGamesDict = typeof nsMatchGames.fr;
 type SimpleTeam = {
   id: string;
   name: string;
@@ -151,7 +152,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
 };
 
 export default function MatchGamesPage({ match }: Props) {
-  const t = useT('matchGames');
+  const t = useT(nsMatchGames);
   if (!match) {
     return (
       <div className="min-h-screen bg-black text-white flex items-center justify-center">
@@ -197,7 +198,10 @@ export default function MatchGamesPage({ match }: Props) {
                 </span>
               </div>
 
-              <Heading typeStyle="heading-md" className="mb-1 text-brand-gradient">
+              <Heading
+                typeStyle="heading-md"
+                className="mb-1 text-brand-gradient"
+              >
                 {t.detailHeading} – {t1Name}{' '}
                 {!isBye && <span className="text-gray-400">{t.vs}</span>}{' '}
                 {t2Name}
@@ -205,10 +209,7 @@ export default function MatchGamesPage({ match }: Props) {
               <span className="brand-rule mb-2 block" aria-hidden />
 
               <div className="flex flex-wrap items-center gap-2 text-[11px] text-gray-300 mb-1">
-                <Link
-                  href={tournamentPath}
-                  className="hover:text-white"
-                >
+                <Link href={tournamentPath} className="hover:text-white">
                   {match.tournament.short_name || match.tournament.name}
                 </Link>
                 {match.stage && (
@@ -277,10 +278,7 @@ export default function MatchGamesPage({ match }: Props) {
 
             {match.games.length > 0 && (
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <StatCard
-                  label={t.statMapsPlayed}
-                  value={match.games.length}
-                />
+                <StatCard label={t.statMapsPlayed} value={match.games.length} />
                 <StatCard
                   label={format(t.statRoundsTeam, { team: t1Name })}
                   value={roundsSummary.team1Rounds}
@@ -331,14 +329,24 @@ export default function MatchGamesPage({ match }: Props) {
                 <table className="min-w-full text-[11px]">
                   <thead>
                     <tr className="text-gray-400 border-b border-white/10">
-                      <th scope="col" className="text-left py-1.5 pr-3">#</th>
-                      <th scope="col" className="text-left py-1.5 pr-3">{t.colMap}</th>
-                      <th scope="col" className="text-right py-1.5 px-3">{t1Name}</th>
-                      <th scope="col" className="text-right py-1.5 px-3">{t2Name}</th>
+                      <th scope="col" className="text-left py-1.5 pr-3">
+                        #
+                      </th>
+                      <th scope="col" className="text-left py-1.5 pr-3">
+                        {t.colMap}
+                      </th>
+                      <th scope="col" className="text-right py-1.5 px-3">
+                        {t1Name}
+                      </th>
+                      <th scope="col" className="text-right py-1.5 px-3">
+                        {t2Name}
+                      </th>
                       <th scope="col" className="text-right py-1.5 px-3">
                         {t.colTotalRounds}
                       </th>
-                      <th scope="col" className="text-right py-1.5 pl-3">{t.colTags}</th>
+                      <th scope="col" className="text-right py-1.5 pl-3">
+                        {t.colTags}
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -464,10 +472,7 @@ function StatCard({
   );
 }
 
-function getMatchStatusLabel(
-  t: MatchGamesDict,
-  status: MatchStatus
-): string {
+function getMatchStatusLabel(t: MatchGamesDict, status: MatchStatus): string {
   switch (status) {
     case 'pending':
       return t.statusUpcoming;

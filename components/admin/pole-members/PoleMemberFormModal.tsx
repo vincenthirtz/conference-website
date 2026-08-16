@@ -3,6 +3,7 @@ import Modal from '@/components/admin/Modal';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { POLE_KEYS, POLE_LABELS, type PoleKey } from '@/utils/associationPoles';
 import { useAdminT } from '@/lib/i18n/useAdminT';
+import nsAdminPoleMembersNew from '@/lib/i18n/locales/admin-fr/adminPoleMembersNew';
 
 type PoleMemberFormModalProps = {
   open: boolean;
@@ -23,7 +24,7 @@ export default function PoleMemberFormModal({
   onCreated,
   initialPole = 'direction',
 }: PoleMemberFormModalProps) {
-  const t = useAdminT('adminPoleMembersNew');
+  const t = useAdminT(nsAdminPoleMembersNew);
   const { mutateJson } = useIdempotentMutation();
   const formId = useId();
 

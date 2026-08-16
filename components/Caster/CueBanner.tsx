@@ -16,8 +16,9 @@ import { useCallback, useEffect, useState } from 'react';
 import type { EventCueSeverity } from '@/types/events';
 import type { CueWithAck } from '@/hooks/useCueStream';
 import { useT, format } from '@/lib/i18n/useT';
+import nsCueBanner from '@/lib/i18n/locales/fr/cueBanner';
 
-type CueBannerDict = ReturnType<typeof useT<'cueBanner'>>;
+type CueBannerDict = typeof nsCueBanner.fr;
 
 const RECENT_WINDOW_MS = 10 * 60_000;
 
@@ -40,7 +41,7 @@ type Props = {
 };
 
 export default function CueBanner({ cues, seenLocally }: Props) {
-  const t = useT('cueBanner');
+  const t = useT(nsCueBanner);
   const SEV_LABEL = getSevLabel(t);
   // Tick local pour evaluer la fenetre "recent" sans appeler Date.now() en render.
   const [now, setNow] = useState(() => Date.now());

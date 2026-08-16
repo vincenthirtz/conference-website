@@ -3,6 +3,7 @@ import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { useT, format } from '@/lib/i18n/useT';
+import nsHeroPicker from '@/lib/i18n/locales/fr/heroPicker';
 
 type Hero = {
   name: string;
@@ -60,7 +61,7 @@ const HEROES: Hero[] = [
 ];
 
 export default function HeroPickerPage() {
-  const t = useT('heroPicker');
+  const t = useT(nsHeroPicker);
   const [roleFilter, setRoleFilter] = useState<'All' | Hero['role']>('All');
   const [favoriteHero, setFavoriteHero] = useState<Hero | null>(null);
   const [banHero, setBanHero] = useState<Hero | null>(null);

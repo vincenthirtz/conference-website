@@ -4,8 +4,9 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 
 import { logger } from '../../../utils/logger';
+import nsAdminSiteSettings from '@/lib/i18n/locales/admin-fr/adminSiteSettings';
 
-type Dict = ReturnType<typeof useAdminT<'adminSiteSettings'>>;
+type Dict = typeof nsAdminSiteSettings.fr;
 
 type SiteSetting = {
   key: string;
@@ -59,7 +60,7 @@ function getKnownSettings(t: Dict) {
  * settings (contact email, cotisation, homepage event date, about video).
  */
 export default function GeneralSettingsPanel() {
-  const t = useAdminT('adminSiteSettings');
+  const t = useAdminT(nsAdminSiteSettings);
   const { addToast } = useToast();
   const { adminFetchJson } = useAdminFetch();
   const KNOWN_SETTINGS = useMemo(() => getKnownSettings(t), [t]);

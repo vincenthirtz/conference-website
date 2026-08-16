@@ -71,6 +71,7 @@ import { SummaryCard } from '@/components/admin/simulator/SummaryCard';
 import QuizMode, {
   type QuizOutcome,
 } from '@/components/admin/simulator/QuizMode';
+import nsAdminTournamentSimulator from '@/lib/i18n/locales/admin-fr/adminTournamentSimulator';
 
 export const getServerSideProps = withStaffPage('admin');
 
@@ -91,7 +92,7 @@ type SimHistoryEntry = {
 const MAX_HISTORY = 20;
 const SIM_TABS_ID_BASE = 'tournament-simulator';
 function TournamentSimulatorPage() {
-  const tx = useAdminT('adminTournamentSimulator');
+  const tx = useAdminT(nsAdminTournamentSimulator);
   const { addToast } = useToast();
   const { mutate: simMutate } = useIdempotentMutation();
   const importFileRef = useRef<HTMLInputElement>(null);
@@ -392,10 +393,7 @@ function TournamentSimulatorPage() {
 
     // Mirror handleSimulateAll's per-stage-type simulation.
     const simStages: SimStage[] = builtStages.map((stage) => {
-      if (
-        stage.stage_type === 'bracket' ||
-        stage.stage_type === 'showmatch'
-      ) {
+      if (stage.stage_type === 'bracket' || stage.stage_type === 'showmatch') {
         return {
           ...stage,
           matches: simulateBracketToCompletion(stage.matches),
@@ -449,8 +447,7 @@ function TournamentSimulatorPage() {
         m.status === 'finished' &&
         m.winner_team_id
     );
-    const championId =
-      grandFinal?.winner_team_id ?? standings[0]?.id ?? null;
+    const championId = grandFinal?.winner_team_id ?? standings[0]?.id ?? null;
     const champion = builtTeams.find((t) => t.id === championId) ?? null;
     const podium = [
       ...(champion ? [champion] : []),
@@ -539,7 +536,10 @@ function TournamentSimulatorPage() {
     setStages((prev) =>
       prev.map((stage) => {
         let matches = [...stage.matches];
-        if (stage.stage_type === 'bracket' || stage.stage_type === 'showmatch') {
+        if (
+          stage.stage_type === 'bracket' ||
+          stage.stage_type === 'showmatch'
+        ) {
           // Shared engine: resolves byes, plays ready matches and propagates,
           // handling double elimination and non-power-of-2 fields correctly.
           matches = simulateBracketToCompletion(matches, { skipLocked: true });
@@ -1503,98 +1503,98 @@ function TournamentSimulatorPage() {
                 </button>
               </div>
               {generated && viewMode === 'form' && (
-              <div className="flex gap-2 flex-wrap">
-                <button
-                  onClick={handleSimulateNextRound}
-                  className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-semibold shadow transition-colors"
-                  title={tx.nextRoundTitle}
-                >
-                  {tx.nextRound}
-                </button>
-                <button
-                  onClick={handleSimulateAnimated}
-                  className={`px-4 py-2 rounded-lg text-sm font-semibold shadow transition-colors ${
-                    animating
-                      ? 'bg-red-600 hover:bg-red-700 animate-pulse'
-                      : 'bg-emerald-600 hover:bg-emerald-700'
-                  }`}
-                  title={
-                    animating ? tx.animatedStopTitle : tx.animatedStartTitle
-                  }
-                >
-                  {animating ? tx.stop : tx.simulateAnimated}
-                </button>
-                <button
-                  onClick={handleSimulateAll}
-                  className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-semibold shadow transition-colors"
-                >
-                  {tx.simulateAll}
-                </button>
-                <button
-                  onClick={handleResetAll}
-                  className="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-sm font-semibold shadow transition-colors"
-                >
-                  {tx.resetAll}
-                </button>
-                <button
-                  onClick={handleUndo}
-                  disabled={undoStack.length === 0}
-                  className={`px-3 py-2 rounded-lg text-sm font-semibold shadow transition-colors ${
-                    undoStack.length > 0
-                      ? 'bg-neutral-700 hover:bg-neutral-600 text-white'
-                      : 'bg-neutral-800 text-neutral-600 cursor-not-allowed'
-                  }`}
-                  title={format(tx.undoTitle, { count: undoStack.length })}
-                >
-                  &#x21A9;
-                </button>
-                <button
-                  onClick={handleRedo}
-                  disabled={redoStack.length === 0}
-                  className={`px-3 py-2 rounded-lg text-sm font-semibold shadow transition-colors ${
-                    redoStack.length > 0
-                      ? 'bg-neutral-700 hover:bg-neutral-600 text-white'
-                      : 'bg-neutral-800 text-neutral-600 cursor-not-allowed'
-                  }`}
-                  title={format(tx.redoTitle, { count: redoStack.length })}
-                >
-                  &#x21AA;
-                </button>
-                <div className="w-px bg-white/10 mx-1 print:hidden" />
-                <button
-                  onClick={saveToHistory}
-                  className="px-4 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 text-sm font-semibold shadow transition-colors print:hidden"
-                  title={tx.saveHistoryTitle}
-                >
-                  {tx.save}
-                </button>
-                <button
-                  onClick={handleCreateTournament}
-                  disabled={creatingTournament}
-                  className={`px-4 py-2 rounded-lg text-sm font-semibold shadow transition-colors print:hidden ${
-                    creatingTournament
-                      ? 'bg-neutral-700 text-neutral-400 cursor-wait'
-                      : 'bg-sky-600 hover:bg-sky-700 text-white'
-                  }`}
-                  title={tx.createTournamentTitle}
-                >
-                  {creatingTournament ? tx.creating : tx.createTournament}
-                </button>
-                <button
-                  onClick={handleCopyResults}
-                  className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-semibold shadow transition-colors print:hidden"
-                  title={tx.copyResultsTitle}
-                >
-                  {tx.copyResults}
-                </button>
-                <button
-                  onClick={handlePrint}
-                  className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-semibold shadow transition-colors print:hidden"
-                  title={tx.printTitle}
-                >
-                  PDF
-                </button>
-              </div>
+                <div className="flex gap-2 flex-wrap">
+                  <button
+                    onClick={handleSimulateNextRound}
+                    className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-semibold shadow transition-colors"
+                    title={tx.nextRoundTitle}
+                  >
+                    {tx.nextRound}
+                  </button>
+                  <button
+                    onClick={handleSimulateAnimated}
+                    className={`px-4 py-2 rounded-lg text-sm font-semibold shadow transition-colors ${
+                      animating
+                        ? 'bg-red-600 hover:bg-red-700 animate-pulse'
+                        : 'bg-emerald-600 hover:bg-emerald-700'
+                    }`}
+                    title={
+                      animating ? tx.animatedStopTitle : tx.animatedStartTitle
+                    }
+                  >
+                    {animating ? tx.stop : tx.simulateAnimated}
+                  </button>
+                  <button
+                    onClick={handleSimulateAll}
+                    className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-semibold shadow transition-colors"
+                  >
+                    {tx.simulateAll}
+                  </button>
+                  <button
+                    onClick={handleResetAll}
+                    className="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-sm font-semibold shadow transition-colors"
+                  >
+                    {tx.resetAll}
+                  </button>
+                  <button
+                    onClick={handleUndo}
+                    disabled={undoStack.length === 0}
+                    className={`px-3 py-2 rounded-lg text-sm font-semibold shadow transition-colors ${
+                      undoStack.length > 0
+                        ? 'bg-neutral-700 hover:bg-neutral-600 text-white'
+                        : 'bg-neutral-800 text-neutral-600 cursor-not-allowed'
+                    }`}
+                    title={format(tx.undoTitle, { count: undoStack.length })}
+                  >
+                    &#x21A9;
+                  </button>
+                  <button
+                    onClick={handleRedo}
+                    disabled={redoStack.length === 0}
+                    className={`px-3 py-2 rounded-lg text-sm font-semibold shadow transition-colors ${
+                      redoStack.length > 0
+                        ? 'bg-neutral-700 hover:bg-neutral-600 text-white'
+                        : 'bg-neutral-800 text-neutral-600 cursor-not-allowed'
+                    }`}
+                    title={format(tx.redoTitle, { count: redoStack.length })}
+                  >
+                    &#x21AA;
+                  </button>
+                  <div className="w-px bg-white/10 mx-1 print:hidden" />
+                  <button
+                    onClick={saveToHistory}
+                    className="px-4 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 text-sm font-semibold shadow transition-colors print:hidden"
+                    title={tx.saveHistoryTitle}
+                  >
+                    {tx.save}
+                  </button>
+                  <button
+                    onClick={handleCreateTournament}
+                    disabled={creatingTournament}
+                    className={`px-4 py-2 rounded-lg text-sm font-semibold shadow transition-colors print:hidden ${
+                      creatingTournament
+                        ? 'bg-neutral-700 text-neutral-400 cursor-wait'
+                        : 'bg-sky-600 hover:bg-sky-700 text-white'
+                    }`}
+                    title={tx.createTournamentTitle}
+                  >
+                    {creatingTournament ? tx.creating : tx.createTournament}
+                  </button>
+                  <button
+                    onClick={handleCopyResults}
+                    className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-semibold shadow transition-colors print:hidden"
+                    title={tx.copyResultsTitle}
+                  >
+                    {tx.copyResults}
+                  </button>
+                  <button
+                    onClick={handlePrint}
+                    className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-semibold shadow transition-colors print:hidden"
+                    title={tx.printTitle}
+                  >
+                    PDF
+                  </button>
+                </div>
               )}
             </div>
           </div>
@@ -1655,2121 +1655,2219 @@ function TournamentSimulatorPage() {
 
           {viewMode === 'form' && (
             <>
-          {/* Configuration panel */}
-          <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6 mb-8 space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">{tx.configHeading}</h2>
-              <div className="flex items-center gap-3 flex-wrap">
-                {/* Presets */}
-                <div className="flex gap-1">
-                  {[
-                    {
-                      label: tx.presetRapide,
-                      cfg: {
-                        formatType: 'single_elim' as FormatType,
-                        teamCount: 4,
-                        bestOf: 1,
-                        stageCount: 1,
-                      },
-                    },
-                    {
-                      label: tx.presetStandard,
-                      cfg: {
-                        formatType: 'single_elim' as FormatType,
-                        teamCount: 8,
-                        bestOf: 3,
-                        stageCount: 1,
-                      },
-                    },
-                    {
-                      label: tx.presetLan,
-                      cfg: {
-                        formatType: 'double_elim' as FormatType,
-                        teamCount: 8,
-                        bestOf: 3,
-                        stageCount: 1,
-                        grandFinalReset: true,
-                        escalation: {
-                          enabled: true,
-                          earlyRoundsBo: 1,
-                          semiFinalsBo: 3,
-                          finalsBo: 5,
-                        },
-                      },
-                    },
-                    {
-                      label: tx.presetLigue,
-                      cfg: {
-                        formatType: 'swiss' as FormatType,
-                        teamCount: 16,
-                        bestOf: 3,
-                        swissRounds: 5,
-                        stageCount: 1,
-                      },
-                    },
-                  ].map((preset) => (
-                    <button
-                      key={preset.label}
-                      type="button"
-                      onClick={() =>
-                        setConfig((c) => ({ ...c, ...preset.cfg }))
-                      }
-                      className="px-2.5 py-1 rounded text-[10px] font-semibold bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-neutral-300 transition-colors"
-                    >
-                      {preset.label}
-                    </button>
-                  ))}
-                </div>
-                {/* Export / Import */}
-                <div className="flex gap-1 print:hidden">
-                  <button
-                    type="button"
-                    onClick={() => exportConfigAsJSON(config)}
-                    className="px-2.5 py-1 rounded text-[10px] font-semibold bg-sky-900/50 hover:bg-sky-800/50 border border-sky-700/40 text-sky-300 transition-colors"
-                    title={tx.exportTitle}
-                  >
-                    {tx.export}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => importFileRef.current?.click()}
-                    className="px-2.5 py-1 rounded text-[10px] font-semibold bg-sky-900/50 hover:bg-sky-800/50 border border-sky-700/40 text-sky-300 transition-colors"
-                    title={tx.importTitle}
-                  >
-                    {tx.import}
-                  </button>
-                  <input
-                    ref={importFileRef}
-                    type="file"
-                    accept=".json"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) handleImportConfig(file);
-                      e.target.value = '';
-                    }}
-                  />
-                </div>
-                {importError && (
-                  <span className="text-[10px] text-red-400">
-                    {importError}
-                  </span>
-                )}
-                <button
-                  type="button"
-                  onClick={() => setConfigCollapsed((c) => !c)}
-                  className="text-neutral-400 hover:text-white transition-colors text-sm"
-                >
-                  {configCollapsed ? tx.show : tx.reduce}
-                </button>
-              </div>
-            </div>
-
-            {!configCollapsed && (
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                  {/* Format */}
-                  <div>
-                    <label className="block text-sm font-medium text-neutral-200 mb-2">
-                      {tx.formatLabel}
-                    </label>
-                    <div className="flex flex-wrap gap-2">
-                      {(Object.keys(FORMAT_LABELS) as FormatType[]).map((f) => (
-                        <button
-                          key={f}
-                          type="button"
-                          onClick={() => {
-                            const tc =
-                              f === 'showmatch'
-                                ? 2
-                                : validCountsFor(f).includes(config.teamCount)
-                                  ? config.teamCount
-                                  : 8;
-                            setConfig((c) => ({
-                              ...c,
-                              formatType: f,
-                              teamCount: tc,
-                            }));
-                          }}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
-                            config.formatType === f
-                              ? 'bg-purple-600 border-purple-500 text-white'
-                              : 'bg-neutral-800 border-neutral-700 text-neutral-300 hover:bg-neutral-700'
-                          }`}
-                        >
-                          {FORMAT_LABELS[f]}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Team count */}
-                  {config.formatType !== 'showmatch' && (
-                    <div>
-                      <label className="block text-sm font-medium text-neutral-200 mb-2">
-                        {tx.teamCountLabel}
-                      </label>
-                      <div className="flex flex-wrap gap-2">
-                        {validTeamCounts.map((n) => (
-                          <button
-                            key={n}
-                            type="button"
-                            onClick={() =>
-                              setConfig((c) => ({ ...c, teamCount: n }))
-                            }
-                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
-                              config.teamCount === n
-                                ? 'bg-purple-600 border-purple-500 text-white'
-                                : 'bg-neutral-800 border-neutral-700 text-neutral-300 hover:bg-neutral-700'
-                            }`}
-                          >
-                            {n}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Players per team */}
-                  <div>
-                    <label className="block text-sm font-medium text-neutral-200 mb-2">
-                      {tx.playersPerTeamLabel}
-                    </label>
-                    <div className="flex gap-2">
-                      {[1, 2, 3, 5, 6].map((n) => (
-                        <button
-                          key={n}
-                          type="button"
-                          onClick={() =>
-                            setConfig((c) => ({ ...c, playersPerTeam: n }))
-                          }
-                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
-                            config.playersPerTeam === n
-                              ? 'bg-purple-600 border-purple-500 text-white'
-                              : 'bg-neutral-800 border-neutral-700 text-neutral-300 hover:bg-neutral-700'
-                          }`}
-                        >
-                          {n}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Best of */}
-                  <div>
-                    <label className="block text-sm font-medium text-neutral-200 mb-2">
-                      {tx.matchFormatLabel}
-                    </label>
-                    <div className="flex gap-2">
-                      {[1, 3, 5, 7].map((bo) => (
-                        <button
-                          key={bo}
-                          type="button"
-                          onClick={() =>
-                            setConfig((c) => ({ ...c, bestOf: bo }))
-                          }
-                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
-                            config.bestOf === bo
-                              ? 'bg-purple-600 border-purple-500 text-white'
-                              : 'bg-neutral-800 border-neutral-700 text-neutral-300 hover:bg-neutral-700'
-                          }`}
-                        >
-                          BO{bo}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Map pool */}
-                  <div>
-                    <label className="block text-sm font-medium text-neutral-200 mb-2">
-                      {tx.mapPoolLabel}
-                    </label>
-                    <input
-                      type="range"
-                      min={3}
-                      max={FAKE_MAPS.length}
-                      value={config.mapPoolSize}
-                      onChange={(e) =>
-                        setConfig((c) => ({
-                          ...c,
-                          mapPoolSize: parseInt(e.target.value),
-                        }))
-                      }
-                      className="w-full accent-purple-500"
-                    />
-                    <span className="text-xs text-neutral-400">
-                      {format(tx.mapPoolValue, { count: config.mapPoolSize })}
-                    </span>
-                  </div>
-
-                  {/* Swiss rounds */}
-                  {config.formatType === 'swiss' && (
-                    <div>
-                      <label className="block text-sm font-medium text-neutral-200 mb-2">
-                        {tx.swissRoundsLabel}
-                      </label>
-                      <div className="flex gap-2">
-                        {[3, 5, 7, 9].map((r) => (
-                          <button
-                            key={r}
-                            type="button"
-                            onClick={() =>
-                              setConfig((c) => ({ ...c, swissRounds: r }))
-                            }
-                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
-                              config.swissRounds === r
-                                ? 'bg-purple-600 border-purple-500 text-white'
-                                : 'bg-neutral-800 border-neutral-700 text-neutral-300 hover:bg-neutral-700'
-                            }`}
-                          >
-                            {r}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Grand final reset */}
-                  {config.formatType === 'double_elim' && (
-                    <div>
-                      <label className="flex items-center gap-2 text-sm cursor-pointer mt-6">
-                        <input
-                          type="checkbox"
-                          checked={config.grandFinalReset}
-                          onChange={(e) =>
-                            setConfig((c) => ({
-                              ...c,
-                              grandFinalReset: e.target.checked,
-                            }))
-                          }
-                          className="rounded border-neutral-500 bg-neutral-700"
-                        />
-                        <span className="font-medium text-neutral-200">
-                          {tx.grandFinalReset}
-                        </span>
-                      </label>
-                    </div>
-                  )}
-
-                  {/* Multi-stage */}
-                  {config.formatType !== 'showmatch' && (
-                    <div>
-                      <label className="block text-sm font-medium text-neutral-200 mb-2">
-                        {tx.stagesLabel}
-                      </label>
-                      <div className="flex gap-2">
-                        {[1, 2].map((n) => (
-                          <button
-                            key={n}
-                            type="button"
-                            onClick={() =>
-                              setConfig((c) => ({ ...c, stageCount: n }))
-                            }
-                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
-                              config.stageCount === n
-                                ? 'bg-purple-600 border-purple-500 text-white'
-                                : 'bg-neutral-800 border-neutral-700 text-neutral-300 hover:bg-neutral-700'
-                            }`}
-                          >
-                            {n === 1 ? tx.oneStage : tx.twoStages}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Scheduling section */}
-                <div className="border-t border-white/10 pt-6">
-                  <h3 className="text-sm font-semibold text-neutral-300 uppercase tracking-wider mb-4">
-                    {tx.planningHeading}
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    <div>
-                      <label className="block text-sm font-medium text-neutral-200 mb-2">
-                        {tx.startDateLabel}
-                      </label>
-                      <input
-                        type="datetime-local"
-                        value={config.schedule.startDate}
-                        onChange={(e) =>
-                          setConfig((c) => ({
-                            ...c,
-                            schedule: {
-                              ...c.schedule,
-                              startDate: e.target.value,
-                            },
-                          }))
-                        }
-                        className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-neutral-200 mb-2">
-                        {tx.matchDurationLabel}
-                      </label>
-                      <input
-                        type="number"
-                        min={5}
-                        max={180}
-                        step={5}
-                        value={config.schedule.matchDurationMin}
-                        onChange={(e) =>
-                          setConfig((c) => ({
-                            ...c,
-                            schedule: {
-                              ...c.schedule,
-                              matchDurationMin: parseInt(e.target.value) || 30,
-                            },
-                          }))
-                        }
-                        className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-neutral-200 mb-2">
-                        {tx.breakMatchesLabel}
-                      </label>
-                      <input
-                        type="number"
-                        min={0}
-                        max={120}
-                        step={5}
-                        value={config.schedule.breakBetweenMatchesMin}
-                        onChange={(e) =>
-                          setConfig((c) => ({
-                            ...c,
-                            schedule: {
-                              ...c.schedule,
-                              breakBetweenMatchesMin:
-                                parseInt(e.target.value) || 0,
-                            },
-                          }))
-                        }
-                        className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-neutral-200 mb-2">
-                        {tx.breakRoundsLabel}
-                      </label>
-                      <input
-                        type="number"
-                        min={0}
-                        max={240}
-                        step={5}
-                        value={config.schedule.breakBetweenRoundsMin}
-                        onChange={(e) =>
-                          setConfig((c) => ({
-                            ...c,
-                            schedule: {
-                              ...c.schedule,
-                              breakBetweenRoundsMin:
-                                parseInt(e.target.value) || 0,
-                            },
-                          }))
-                        }
-                        className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-neutral-200 mb-2">
-                        {tx.dayStartLabel}
-                      </label>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="number"
-                          min={0}
-                          max={23}
-                          value={config.schedule.dayStartHour}
-                          onChange={(e) =>
-                            setConfig((c) => ({
-                              ...c,
-                              schedule: {
-                                ...c.schedule,
-                                dayStartHour: parseInt(e.target.value) || 0,
-                              },
-                            }))
-                          }
-                          className="w-20 px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-                        />
-                        <span className="text-neutral-500 text-sm">h</span>
-                        <span className="text-neutral-600 text-xs">
-                          {tx.hourSeparator}
-                        </span>
-                        <input
-                          type="number"
-                          min={1}
-                          max={24}
-                          value={config.schedule.dayEndHour}
-                          onChange={(e) =>
-                            setConfig((c) => ({
-                              ...c,
-                              schedule: {
-                                ...c.schedule,
-                                dayEndHour: parseInt(e.target.value) || 24,
-                              },
-                            }))
-                          }
-                          className="w-20 px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-                        />
-                        <span className="text-neutral-500 text-sm">h</span>
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-neutral-200 mb-2">
-                        {tx.matchesPerDayLabel}
-                      </label>
-                      <input
-                        type="number"
-                        min={0}
-                        max={50}
-                        value={config.schedule.matchesPerDay}
-                        onChange={(e) =>
-                          setConfig((c) => ({
-                            ...c,
-                            schedule: {
-                              ...c.schedule,
-                              matchesPerDay: parseInt(e.target.value) || 0,
-                            },
-                          }))
-                        }
-                        className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Escalation section */}
-                <div className="border-t border-white/10 pt-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={config.escalation.enabled}
-                        onChange={(e) =>
-                          setConfig((c) => ({
-                            ...c,
-                            escalation: {
-                              ...c.escalation,
-                              enabled: e.target.checked,
-                            },
-                          }))
-                        }
-                        className="rounded border-neutral-500 bg-neutral-700"
-                      />
-                      <span className="text-sm font-semibold text-neutral-300 uppercase tracking-wider">
-                        {tx.escalationLabel}
-                      </span>
-                    </label>
-                  </div>
-                  {config.escalation.enabled && (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Configuration panel */}
+              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6 mb-8 space-y-6">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-semibold">{tx.configHeading}</h2>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    {/* Presets */}
+                    <div className="flex gap-1">
                       {[
                         {
-                          label: tx.escEarlyRounds,
-                          key: 'earlyRoundsBo' as const,
+                          label: tx.presetRapide,
+                          cfg: {
+                            formatType: 'single_elim' as FormatType,
+                            teamCount: 4,
+                            bestOf: 1,
+                            stageCount: 1,
+                          },
                         },
                         {
-                          label: tx.escSemiFinals,
-                          key: 'semiFinalsBo' as const,
+                          label: tx.presetStandard,
+                          cfg: {
+                            formatType: 'single_elim' as FormatType,
+                            teamCount: 8,
+                            bestOf: 3,
+                            stageCount: 1,
+                          },
                         },
-                        { label: tx.escFinals, key: 'finalsBo' as const },
-                      ].map(({ label, key }) => (
-                        <div key={key}>
-                          <label className="block text-sm font-medium text-neutral-200 mb-2">
-                            {label}
-                          </label>
-                          <div className="flex gap-2">
-                            {[1, 3, 5, 7].map((bo) => (
+                        {
+                          label: tx.presetLan,
+                          cfg: {
+                            formatType: 'double_elim' as FormatType,
+                            teamCount: 8,
+                            bestOf: 3,
+                            stageCount: 1,
+                            grandFinalReset: true,
+                            escalation: {
+                              enabled: true,
+                              earlyRoundsBo: 1,
+                              semiFinalsBo: 3,
+                              finalsBo: 5,
+                            },
+                          },
+                        },
+                        {
+                          label: tx.presetLigue,
+                          cfg: {
+                            formatType: 'swiss' as FormatType,
+                            teamCount: 16,
+                            bestOf: 3,
+                            swissRounds: 5,
+                            stageCount: 1,
+                          },
+                        },
+                      ].map((preset) => (
+                        <button
+                          key={preset.label}
+                          type="button"
+                          onClick={() =>
+                            setConfig((c) => ({ ...c, ...preset.cfg }))
+                          }
+                          className="px-2.5 py-1 rounded text-[10px] font-semibold bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-neutral-300 transition-colors"
+                        >
+                          {preset.label}
+                        </button>
+                      ))}
+                    </div>
+                    {/* Export / Import */}
+                    <div className="flex gap-1 print:hidden">
+                      <button
+                        type="button"
+                        onClick={() => exportConfigAsJSON(config)}
+                        className="px-2.5 py-1 rounded text-[10px] font-semibold bg-sky-900/50 hover:bg-sky-800/50 border border-sky-700/40 text-sky-300 transition-colors"
+                        title={tx.exportTitle}
+                      >
+                        {tx.export}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => importFileRef.current?.click()}
+                        className="px-2.5 py-1 rounded text-[10px] font-semibold bg-sky-900/50 hover:bg-sky-800/50 border border-sky-700/40 text-sky-300 transition-colors"
+                        title={tx.importTitle}
+                      >
+                        {tx.import}
+                      </button>
+                      <input
+                        ref={importFileRef}
+                        type="file"
+                        accept=".json"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleImportConfig(file);
+                          e.target.value = '';
+                        }}
+                      />
+                    </div>
+                    {importError && (
+                      <span className="text-[10px] text-red-400">
+                        {importError}
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setConfigCollapsed((c) => !c)}
+                      className="text-neutral-400 hover:text-white transition-colors text-sm"
+                    >
+                      {configCollapsed ? tx.show : tx.reduce}
+                    </button>
+                  </div>
+                </div>
+
+                {!configCollapsed && (
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                      {/* Format */}
+                      <div>
+                        <label className="block text-sm font-medium text-neutral-200 mb-2">
+                          {tx.formatLabel}
+                        </label>
+                        <div className="flex flex-wrap gap-2">
+                          {(Object.keys(FORMAT_LABELS) as FormatType[]).map(
+                            (f) => (
                               <button
-                                key={bo}
+                                key={f}
                                 type="button"
-                                onClick={() =>
+                                onClick={() => {
+                                  const tc =
+                                    f === 'showmatch'
+                                      ? 2
+                                      : validCountsFor(f).includes(
+                                            config.teamCount
+                                          )
+                                        ? config.teamCount
+                                        : 8;
                                   setConfig((c) => ({
                                     ...c,
-                                    escalation: { ...c.escalation, [key]: bo },
-                                  }))
-                                }
+                                    formatType: f,
+                                    teamCount: tc,
+                                  }));
+                                }}
                                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
-                                  config.escalation[key] === bo
+                                  config.formatType === f
                                     ? 'bg-purple-600 border-purple-500 text-white'
                                     : 'bg-neutral-800 border-neutral-700 text-neutral-300 hover:bg-neutral-700'
                                 }`}
                               >
-                                BO{bo}
+                                {FORMAT_LABELS[f]}
+                              </button>
+                            )
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Team count */}
+                      {config.formatType !== 'showmatch' && (
+                        <div>
+                          <label className="block text-sm font-medium text-neutral-200 mb-2">
+                            {tx.teamCountLabel}
+                          </label>
+                          <div className="flex flex-wrap gap-2">
+                            {validTeamCounts.map((n) => (
+                              <button
+                                key={n}
+                                type="button"
+                                onClick={() =>
+                                  setConfig((c) => ({ ...c, teamCount: n }))
+                                }
+                                className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                                  config.teamCount === n
+                                    ? 'bg-purple-600 border-purple-500 text-white'
+                                    : 'bg-neutral-800 border-neutral-700 text-neutral-300 hover:bg-neutral-700'
+                                }`}
+                              >
+                                {n}
                               </button>
                             ))}
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                      )}
 
-                {/* Occurrences section */}
-                <div className="border-t border-white/10 pt-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={config.occurrence.enabled}
-                        onChange={(e) =>
-                          setConfig((c) => ({
-                            ...c,
-                            occurrence: {
-                              ...c.occurrence,
-                              enabled: e.target.checked,
-                            },
-                          }))
-                        }
-                        className="rounded border-neutral-500 bg-neutral-700"
-                      />
-                      <span className="text-sm font-semibold text-neutral-300 uppercase tracking-wider">
-                        {tx.recurringLabel}
-                      </span>
-                    </label>
-                  </div>
-                  {config.occurrence.enabled && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Players per team */}
                       <div>
                         <label className="block text-sm font-medium text-neutral-200 mb-2">
-                          {tx.frequencyLabel}
+                          {tx.playersPerTeamLabel}
                         </label>
                         <div className="flex gap-2">
-                          {(
-                            Object.keys(
-                              FREQUENCY_LABELS
-                            ) as OccurrenceConfig['frequency'][]
-                          ).map((f) => (
-                            <button
-                              key={f}
-                              type="button"
-                              onClick={() =>
-                                setConfig((c) => ({
-                                  ...c,
-                                  occurrence: { ...c.occurrence, frequency: f },
-                                }))
-                              }
-                              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
-                                config.occurrence.frequency === f
-                                  ? 'bg-purple-600 border-purple-500 text-white'
-                                  : 'bg-neutral-800 border-neutral-700 text-neutral-300 hover:bg-neutral-700'
-                              }`}
-                            >
-                              {FREQUENCY_LABELS[f]}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-neutral-200 mb-2">
-                          {tx.occurrenceCountLabel}
-                        </label>
-                        <input
-                          type="number"
-                          min={2}
-                          max={52}
-                          value={config.occurrence.count}
-                          onChange={(e) =>
-                            setConfig((c) => ({
-                              ...c,
-                              occurrence: {
-                                ...c.occurrence,
-                                count: Math.max(
-                                  2,
-                                  parseInt(e.target.value) || 2
-                                ),
-                              },
-                            }))
-                          }
-                          className="w-32 px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            <div className="flex items-center gap-3 flex-wrap">
-              <button
-                onClick={handleGenerate}
-                className="px-6 py-3 rounded-lg bg-purple-600 hover:bg-purple-700 text-sm font-semibold shadow transition-colors"
-              >
-                {tx.generate}
-                {config.occurrence.enabled
-                  ? format(tx.generateOccSuffix, {
-                      count: config.occurrence.count,
-                    })
-                  : ''}
-              </button>
-              <button
-                onClick={handleLoadRealTeams}
-                disabled={loadingRealTeams}
-                className={`px-6 py-3 rounded-lg text-sm font-semibold shadow transition-colors ${
-                  loadingRealTeams
-                    ? 'bg-neutral-700 text-neutral-400 cursor-wait'
-                    : 'bg-sky-600 hover:bg-sky-700 text-white'
-                }`}
-                title={tx.loadRealTeamsTitle}
-              >
-                {loadingRealTeams ? tx.loading : tx.loadRealTeams}
-              </button>
-              {realTeamsError && (
-                <span className="text-xs text-red-400">{realTeamsError}</span>
-              )}
-            </div>
-          </div>
-
-          {/* Generated content */}
-          {generated && (
-            <>
-              {/* Occurrence selector */}
-              {occurrences.length > 1 && (
-                <div className="mb-6">
-                  <label className="block text-sm font-medium text-neutral-300 mb-2 uppercase tracking-wider">
-                    {tx.occurrenceLabelHeading}
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {occurrences.map((occ, i) => (
-                      <button
-                        key={i}
-                        type="button"
-                        onClick={() => setActiveOccurrence(i)}
-                        className={`px-3 py-2 rounded-lg text-xs font-semibold border transition-colors ${
-                          activeOccurrence === i
-                            ? 'bg-purple-600 border-purple-500 text-white'
-                            : 'bg-neutral-800 border-neutral-700 text-neutral-300 hover:bg-neutral-700'
-                        }`}
-                      >
-                        {occ.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Summary */}
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-                <SummaryCard label={tx.summaryTeams} value={teams.length} />
-                <SummaryCard label={tx.summaryMatches} value={stats.total} />
-                <SummaryCard
-                  label={tx.summaryFinished}
-                  value={stats.finished}
-                  color="text-emerald-400"
-                />
-                <SummaryCard
-                  label={tx.summaryPending}
-                  value={stats.pending}
-                  color="text-amber-400"
-                />
-                {stats.estimatedDuration && (
-                  <SummaryCard
-                    label={tx.summaryDuration}
-                    value={stats.estimatedDuration}
-                    color="text-sky-400"
-                  />
-                )}
-                {stats.nextRoundName && (
-                  <SummaryCard
-                    label={tx.summaryNextRound}
-                    value={stats.nextRoundName}
-                    color="text-blue-400"
-                  />
-                )}
-              </div>
-
-              {/* Tabs */}
-              <Tabs
-                tabs={
-                  [
-                    { id: 'bracket', label: tx.tabBracket },
-                    { id: 'teams', label: tx.tabTeams },
-                    { id: 'maps', label: tx.tabMaps },
-                    { id: 'stats', label: tx.tabStats },
-                    { id: 'monte-carlo', label: tx.tabMonteCarlo },
-                    {
-                      id: 'history',
-                      label:
-                        simHistory.length > 0
-                          ? format(tx.tabHistoryCount, {
-                              count: simHistory.length,
-                            })
-                          : tx.tabHistory,
-                    },
-                    { id: 'compare', label: tx.tabCompare },
-                    ...(occurrences.length > 1
-                      ? [{ id: 'timeline', label: tx.tabTimeline }]
-                      : []),
-                  ] satisfies TabItem[]
-                }
-                active={activeTab}
-                onChange={(id) => setActiveTab(id as typeof activeTab)}
-                ariaLabel={tx.tablistLabel}
-                idBase={SIM_TABS_ID_BASE}
-                className="mb-6"
-              />
-
-              {/* Tab content */}
-              <div
-                role="tabpanel"
-                id={tabPanelId(SIM_TABS_ID_BASE, activeTab)}
-                aria-labelledby={tabButtonId(SIM_TABS_ID_BASE, activeTab)}
-              >
-              {activeTab === 'bracket' && (
-                <div className="space-y-8">
-                  {stages.map((stage, stageIdx) => (
-                    <div key={stage.id}>
-                      <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                        <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-purple-500/10 text-purple-300 border border-purple-500/20">
-                          {stage.stage_type}
-                        </span>
-                        {stage.name}
-                        <span className="text-sm text-neutral-500 font-normal">
-                          {format(tx.matchesCount, {
-                            count: stage.matches.length,
-                          })}
-                        </span>
-                      </h3>
-
-                      {(stage.stage_type === 'bracket' ||
-                        stage.stage_type === 'showmatch') && (
-                        <>
-                          {/* WB */}
-                          <EliminationView
-                            rounds={groupByRoundMemo(stage.matches, 'wb')}
-                            onSimulate={getStageHandlers(stageIdx).onSimulate}
-                            onReset={getStageHandlers(stageIdx).onReset}
-                            onToggleLock={
-                              getStageHandlers(stageIdx).onToggleLock
-                            }
-                            label={
-                              stage.matches.some((m) => m.bracket_side === 'lb')
-                                ? tx.winnersBracket
-                                : undefined
-                            }
-                          />
-                          {/* LB */}
-                          {stage.matches.some(
-                            (m) => m.bracket_side === 'lb'
-                          ) && (
-                            <div className="mt-6">
-                              <EliminationView
-                                rounds={groupByRoundMemo(stage.matches, 'lb')}
-                                onSimulate={
-                                  getStageHandlers(stageIdx).onSimulate
-                                }
-                                onReset={getStageHandlers(stageIdx).onReset}
-                                onToggleLock={
-                                  getStageHandlers(stageIdx).onToggleLock
-                                }
-                                label={tx.losersBracket}
-                                accentColor="text-red-300"
-                              />
-                            </div>
-                          )}
-                          {/* Grand Final */}
-                          {stage.matches.some(
-                            (m) => m.bracket_side === 'final'
-                          ) && (
-                            <div className="mt-6">
-                              <EliminationView
-                                rounds={groupByRoundMemo(
-                                  stage.matches,
-                                  'final'
-                                )}
-                                onSimulate={
-                                  getStageHandlers(stageIdx).onSimulate
-                                }
-                                onReset={getStageHandlers(stageIdx).onReset}
-                                onToggleLock={
-                                  getStageHandlers(stageIdx).onToggleLock
-                                }
-                                label={tx.grandFinal}
-                                accentColor="text-amber-300"
-                              />
-                            </div>
-                          )}
-                        </>
-                      )}
-
-                      {(stage.stage_type === 'swiss' ||
-                        stage.stage_type === 'round_robin' ||
-                        stage.stage_type === 'group') && (
-                        <EliminationView
-                          rounds={groupByRoundMemo(stage.matches)}
-                          onSimulate={getStageHandlers(stageIdx).onSimulate}
-                          onReset={getStageHandlers(stageIdx).onReset}
-                          onToggleLock={getStageHandlers(stageIdx).onToggleLock}
-                        />
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {activeTab === 'teams' && (
-                <div>
-                  <p className="text-xs text-neutral-500 mb-4">
-                    {tx.teamsDragHint}
-                  </p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                    {teams.map((team, teamIdx) => (
-                      <div
-                        key={team.id}
-                        draggable
-                        onDragStart={() => setDragSeedIdx(teamIdx)}
-                        onDragOver={(e) => {
-                          e.preventDefault();
-                          e.dataTransfer.dropEffect = 'move';
-                        }}
-                        onDrop={(e) => {
-                          e.preventDefault();
-                          if (dragSeedIdx !== null && dragSeedIdx !== teamIdx) {
-                            handleReorderTeams(dragSeedIdx, teamIdx);
-                          }
-                          setDragSeedIdx(null);
-                        }}
-                        onDragEnd={() => setDragSeedIdx(null)}
-                        className={`rounded-xl border p-4 space-y-3 cursor-grab active:cursor-grabbing transition-all ${
-                          dragSeedIdx === teamIdx
-                            ? 'border-purple-500/50 bg-purple-500/10 opacity-50 scale-95'
-                            : dragSeedIdx !== null
-                              ? 'border-purple-500/20 bg-white/[0.02] hover:border-purple-500/40 hover:bg-purple-500/5'
-                              : 'border-white/10 bg-white/[0.02]'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          {/* Drag handle */}
-                          <div
-                            className="flex flex-col gap-0.5 text-neutral-600 flex-shrink-0 cursor-grab"
-                            title={tx.dragToReorder}
-                          >
-                            <div className="flex gap-0.5">
-                              <span className="w-1 h-1 rounded-full bg-current" />
-                              <span className="w-1 h-1 rounded-full bg-current" />
-                            </div>
-                            <div className="flex gap-0.5">
-                              <span className="w-1 h-1 rounded-full bg-current" />
-                              <span className="w-1 h-1 rounded-full bg-current" />
-                            </div>
-                            <div className="flex gap-0.5">
-                              <span className="w-1 h-1 rounded-full bg-current" />
-                              <span className="w-1 h-1 rounded-full bg-current" />
-                            </div>
-                          </div>
-                          <div
-                            className={`w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold border ${
-                              SEED_COLORS[team.seed] ??
-                              'bg-purple-500/20 text-purple-300 border-purple-500/30'
-                            }`}
-                          >
-                            {team.short_name}
-                          </div>
-                          <div>
-                            <div className="text-sm font-semibold">
-                              {team.name}
-                            </div>
-                            <div className="text-[10px] text-neutral-500">
-                              {format(tx.seedLabel, { seed: team.seed })}
-                            </div>
-                          </div>
-                          {stats.wins.has(team.id) && (
-                            <div className="ml-auto text-right">
-                              <div className="text-xs font-bold text-emerald-400">
-                                {stats.wins.get(team.id)}W
-                              </div>
-                              <div className="text-xs font-bold text-red-400">
-                                {stats.losses.get(team.id) ?? 0}L
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                        {/* Strength slider */}
-                        <div className="flex items-center gap-2 pt-1 border-t border-white/[0.05]">
-                          <span className="text-[10px] text-neutral-500 font-semibold w-10">
-                            {tx.strengthLabel}
-                          </span>
-                          <input
-                            type="range"
-                            min={1}
-                            max={100}
-                            value={team.strength}
-                            onChange={(e) =>
-                              handleUpdateTeamStrength(
-                                team.id,
-                                parseInt(e.target.value)
-                              )
-                            }
-                            onClick={(e) => e.stopPropagation()}
-                            onMouseDown={(e) => e.stopPropagation()}
-                            className="flex-1 accent-purple-500 h-1.5"
-                            draggable={false}
-                          />
-                          <span
-                            className={`text-xs font-bold tabular-nums w-8 text-right ${
-                              team.strength >= 70
-                                ? 'text-emerald-400'
-                                : team.strength >= 45
-                                  ? 'text-amber-400'
-                                  : 'text-red-400'
-                            }`}
-                          >
-                            {team.strength}
-                          </span>
-                        </div>
-                        <div className="space-y-1">
-                          {team.players.map((p, i) => (
-                            <div
-                              key={i}
-                              className="flex items-center justify-between text-xs"
-                            >
-                              <span className="text-neutral-300">{p.name}</span>
-                              <span className="text-neutral-600 font-mono text-[10px]">
-                                {p.battleTag}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {activeTab === 'maps' && (
-                <div className="space-y-6">
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-                    {mapPool.map((name) => {
-                      const count = stats.mapCount.get(name) ?? 0;
-                      const maxCount = Math.max(...stats.mapCount.values(), 1);
-                      return (
-                        <div
-                          key={name}
-                          className="rounded-xl border border-white/10 bg-white/[0.02] p-4 space-y-2"
-                        >
-                          <div className="text-sm font-semibold">{name}</div>
-                          <div className="flex items-center gap-2">
-                            <div className="flex-1 h-2 bg-neutral-800 rounded-full overflow-hidden">
-                              <div
-                                className="h-full bg-purple-500 rounded-full transition-all"
-                                style={{
-                                  width: `${(count / maxCount) * 100}%`,
-                                }}
-                              />
-                            </div>
-                            <span className="text-xs text-neutral-400 tabular-nums w-8 text-right">
-                              {count}x
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {activeTab === 'stats' && (
-                <div className="space-y-6">
-                  {/* Standings with score diff */}
-                  <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
-                    <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider text-neutral-400">
-                      {tx.standingsHeading}
-                    </h3>
-                    <div className="space-y-1">
-                      <div className="grid grid-cols-[auto_1fr_50px_50px_50px_70px_50px] gap-2 text-[10px] uppercase tracking-wider text-neutral-600 font-bold px-3 pb-2">
-                        <span className="w-6">#</span>
-                        <span>{tx.thTeam}</span>
-                        <span className="text-center">{tx.thWins}</span>
-                        <span className="text-center">{tx.thLosses}</span>
-                        <span className="text-center">{tx.thPct}</span>
-                        <span className="text-center">{tx.thMaps}</span>
-                        <span className="text-center">{tx.thDiff}</span>
-                      </div>
-                      {teams
-                        .map((t) => ({
-                          team: t,
-                          wins: stats.wins.get(t.id) ?? 0,
-                          losses: stats.losses.get(t.id) ?? 0,
-                          mapsWon: stats.mapWins.get(t.id) ?? 0,
-                          mapsLost: stats.mapLosses.get(t.id) ?? 0,
-                        }))
-                        .sort(
-                          (a, b) =>
-                            b.wins - a.wins ||
-                            a.losses - b.losses ||
-                            b.mapsWon - b.mapsLost - (a.mapsWon - a.mapsLost)
-                        )
-                        .map((row, i) => {
-                          const total = row.wins + row.losses;
-                          const pct =
-                            total > 0
-                              ? Math.round((row.wins / total) * 100)
-                              : 0;
-                          const diff = row.mapsWon - row.mapsLost;
-                          return (
-                            <div
-                              key={row.team.id}
-                              className={`grid grid-cols-[auto_1fr_50px_50px_50px_70px_50px] gap-2 items-center px-3 py-2 rounded-lg text-sm ${
-                                i < 3
-                                  ? 'bg-emerald-500/5 border border-emerald-500/10'
-                                  : i % 2 === 0
-                                    ? 'bg-white/[0.01]'
-                                    : ''
-                              }`}
-                            >
-                              <span className="w-6 text-xs font-bold text-neutral-500">
-                                {i + 1}
-                              </span>
-                              <div className="flex items-center gap-2 truncate">
-                                <span className="font-medium truncate">
-                                  {row.team.name}
-                                </span>
-                                <span className="text-[9px] text-neutral-600">
-                                  #{row.team.seed}
-                                </span>
-                              </div>
-                              <span className="text-center font-bold text-emerald-400">
-                                {row.wins}
-                              </span>
-                              <span className="text-center font-bold text-red-400">
-                                {row.losses}
-                              </span>
-                              <span className="text-center text-neutral-400">
-                                {pct}%
-                              </span>
-                              <span className="text-center text-[11px] text-neutral-500">
-                                {row.mapsWon}-{row.mapsLost}
-                              </span>
-                              <span
-                                className={`text-center font-bold text-xs ${
-                                  diff > 0
-                                    ? 'text-emerald-400'
-                                    : diff < 0
-                                      ? 'text-red-400'
-                                      : 'text-neutral-500'
-                                }`}
-                              >
-                                {diff > 0 ? '+' : ''}
-                                {diff}
-                              </span>
-                            </div>
-                          );
-                        })}
-                    </div>
-                  </div>
-
-                  {/* Progression */}
-                  <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
-                    <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider text-neutral-400">
-                      {tx.progressionHeading}
-                    </h3>
-                    <div className="flex items-center gap-4">
-                      <div className="flex-1 h-4 bg-neutral-800 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full transition-all"
-                          style={{
-                            width: `${stats.total > 0 ? (stats.finished / stats.total) * 100 : 0}%`,
-                          }}
-                        />
-                      </div>
-                      <span className="text-sm font-bold tabular-nums text-neutral-300">
-                        {stats.total > 0
-                          ? Math.round((stats.finished / stats.total) * 100)
-                          : 0}
-                        %
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between mt-2">
-                      <p className="text-xs text-neutral-500">
-                        {format(tx.matchesFinishedProgress, {
-                          finished: stats.finished,
-                          total: stats.total,
-                        })}
-                      </p>
-                      {stats.nextRoundName && (
-                        <p className="text-xs text-blue-400">
-                          {format(tx.nextPrefix, { name: stats.nextRoundName })}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Competitiveness metrics */}
-                  {stats.finished > 0 && (
-                    <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
-                      <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider text-neutral-400">
-                        {tx.competitivenessHeading}
-                      </h3>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div className="space-y-1">
-                          <div className="text-[10px] uppercase tracking-wider text-neutral-500 font-semibold">
-                            {tx.closeMatches}
-                          </div>
-                          <div className="text-xl font-bold text-amber-400">
-                            {stats.competitiveness.closeMatches}
-                          </div>
-                          <div className="text-[10px] text-neutral-500">
-                            {format(tx.statPctOfMatches, {
-                              pct: stats.competitiveness.closeMatchPct,
-                            })}
-                          </div>
-                        </div>
-                        <div className="space-y-1">
-                          <div className="text-[10px] uppercase tracking-wider text-neutral-500 font-semibold">
-                            {tx.upsets}
-                          </div>
-                          <div className="text-xl font-bold text-rose-400">
-                            {stats.competitiveness.upsets}
-                          </div>
-                          <div className="text-[10px] text-neutral-500">
-                            {format(tx.statPctOfMatches, {
-                              pct: stats.competitiveness.upsetPct,
-                            })}
-                          </div>
-                        </div>
-                        <div className="space-y-1">
-                          <div className="text-[10px] uppercase tracking-wider text-neutral-500 font-semibold">
-                            {tx.mapsPerMatch}
-                          </div>
-                          <div className="text-xl font-bold text-sky-400">
-                            {stats.competitiveness.avgMapsPerMatch}
-                          </div>
-                          <div className="text-[10px] text-neutral-500">
-                            {tx.average}
-                          </div>
-                        </div>
-                        <div className="space-y-1">
-                          <div className="text-[10px] uppercase tracking-wider text-neutral-500 font-semibold">
-                            {tx.longestStreak}
-                          </div>
-                          <div className="text-xl font-bold text-emerald-400">
-                            {stats.competitiveness.maxWinStreak}
-                          </div>
-                          <div className="text-[10px] text-neutral-500">
-                            {tx.consecutiveWins}
-                          </div>
-                        </div>
-                        <div className="space-y-1">
-                          <div className="text-[10px] uppercase tracking-wider text-neutral-500 font-semibold">
-                            {tx.avgJourney}
-                          </div>
-                          <div className="text-xl font-bold text-purple-400">
-                            {stats.competitiveness.avgTeamJourney}
-                          </div>
-                          <div className="text-[10px] text-neutral-500">
-                            {tx.matchesPerTeam}
-                          </div>
-                        </div>
-                        <div className="space-y-1">
-                          <div className="text-[10px] uppercase tracking-wider text-neutral-500 font-semibold">
-                            {tx.dominance}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <div className="text-xl font-bold text-neutral-300">
-                              {stats.competitiveness.dominanceScore}%
-                            </div>
-                          </div>
-                          <div className="text-[10px] text-neutral-500">
-                            {stats.competitiveness.dominanceScore < 30
-                              ? tx.domVeryBalanced
-                              : stats.competitiveness.dominanceScore < 50
-                                ? tx.domBalanced
-                                : stats.competitiveness.dominanceScore < 70
-                                  ? tx.domOneFavorite
-                                  : tx.domDomination}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Round-by-round breakdown */}
-                  <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
-                    <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider text-neutral-400">
-                      {tx.roundDetailHeading}
-                    </h3>
-                    <div className="space-y-2">
-                      {(() => {
-                        const allMatches = stages.flatMap((s) => s.matches);
-                        const roundMap = new Map<
-                          string,
-                          { total: number; finished: number; name: string }
-                        >();
-                        for (const m of allMatches) {
-                          const key = `${m.bracket_side}-${m.round_number}`;
-                          const existing = roundMap.get(key) ?? {
-                            total: 0,
-                            finished: 0,
-                            name: m.round_name,
-                          };
-                          existing.total++;
-                          if (m.status === 'finished') existing.finished++;
-                          roundMap.set(key, existing);
-                        }
-                        return Array.from(roundMap.entries()).map(
-                          ([key, data]) => {
-                            const pct =
-                              data.total > 0
-                                ? Math.round((data.finished / data.total) * 100)
-                                : 0;
-                            return (
-                              <div
-                                key={key}
-                                className="flex items-center gap-3"
-                              >
-                                <span className="text-xs text-neutral-400 w-32 truncate">
-                                  {data.name}
-                                </span>
-                                <div className="flex-1 h-2 bg-neutral-800 rounded-full overflow-hidden">
-                                  <div
-                                    className={`h-full rounded-full transition-all ${
-                                      pct === 100
-                                        ? 'bg-emerald-500'
-                                        : pct > 0
-                                          ? 'bg-blue-500'
-                                          : 'bg-neutral-700'
-                                    }`}
-                                    style={{ width: `${pct}%` }}
-                                  />
-                                </div>
-                                <span className="text-[10px] text-neutral-500 tabular-nums w-16 text-right">
-                                  {data.finished}/{data.total}
-                                </span>
-                              </div>
-                            );
-                          }
-                        );
-                      })()}
-                    </div>
-                  </div>
-
-                  {/* Head-to-head matrix */}
-                  {stats.finished > 0 &&
-                    (() => {
-                      const allMatches = stages.flatMap((s) => s.matches);
-                      const h2hRecords = computeHeadToHead(allMatches);
-                      if (h2hRecords.length === 0) return null;
-
-                      // Build a lookup map: "id1-id2" → record
-                      const h2hMap = new Map<string, H2HRecord>();
-                      for (const rec of h2hRecords) {
-                        h2hMap.set(`${rec.team1Id}-${rec.team2Id}`, rec);
-                      }
-
-                      // Sort teams by wins
-                      const sortedTeams = [...teams].sort(
-                        (a, b) =>
-                          (stats.wins.get(b.id) ?? 0) -
-                          (stats.wins.get(a.id) ?? 0)
-                      );
-
-                      return (
-                        <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
-                          <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider text-neutral-400">
-                            {tx.h2hHeading}
-                          </h3>
-                          <div className="overflow-x-auto">
-                            <table className="w-full text-xs">
-                              <thead>
-                                <tr className="border-b border-white/10">
-                                  <th scope="col" className="text-left py-2 pr-2 text-neutral-500 font-semibold sticky left-0 bg-surface-sunken z-10">
-                                    {tx.vs}
-                                  </th>
-                                  {sortedTeams.map((t) => (
-                                    <th
-                                      scope="col"
-                                      key={t.id}
-                                      className="text-center py-2 px-1 text-neutral-500 font-semibold min-w-[50px]"
-                                    >
-                                      <span title={t.name}>{t.short_name}</span>
-                                    </th>
-                                  ))}
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {sortedTeams.map((t1) => (
-                                  <tr
-                                    key={t1.id}
-                                    className="border-b border-white/[0.03]"
-                                  >
-                                    <td className="py-1.5 pr-2 font-medium text-neutral-300 sticky left-0 bg-surface-sunken z-10">
-                                      {t1.short_name}
-                                    </td>
-                                    {sortedTeams.map((t2) => {
-                                      if (t1.id === t2.id) {
-                                        return (
-                                          <td
-                                            key={t2.id}
-                                            className="text-center py-1.5 px-1 text-neutral-800"
-                                          >
-                                            —
-                                          </td>
-                                        );
-                                      }
-                                      const key = [t1.id, t2.id]
-                                        .sort()
-                                        .join('-');
-                                      const rec = h2hMap.get(key);
-                                      if (!rec) {
-                                        return (
-                                          <td
-                                            key={t2.id}
-                                            className="text-center py-1.5 px-1 text-neutral-700"
-                                          >
-                                            -
-                                          </td>
-                                        );
-                                      }
-                                      const isFirst = t1.id === rec.team1Id;
-                                      const w = isFirst
-                                        ? rec.team1Wins
-                                        : rec.team2Wins;
-                                      const l = isFirst
-                                        ? rec.team2Wins
-                                        : rec.team1Wins;
-                                      return (
-                                        <td
-                                          key={t2.id}
-                                          className="text-center py-1.5 px-1"
-                                        >
-                                          <span
-                                            className={`tabular-nums font-semibold ${
-                                              w > l
-                                                ? 'text-emerald-400'
-                                                : w < l
-                                                  ? 'text-red-400'
-                                                  : 'text-neutral-400'
-                                            }`}
-                                          >
-                                            {w}-{l}
-                                          </span>
-                                        </td>
-                                      );
-                                    })}
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        </div>
-                      );
-                    })()}
-                </div>
-              )}
-
-              {activeTab === 'monte-carlo' && (
-                <div className="space-y-6">
-                  <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
-                    <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider text-neutral-400">
-                      {tx.monteCarloHeading}
-                    </h3>
-                    <p className="text-xs text-neutral-500 mb-4">
-                      {tx.monteCarloDesc}
-                      {stages
-                        .flatMap((s) => s.matches)
-                        .some((m) => m.locked) && (
-                        <span className="text-amber-400 ml-1">
-                          {tx.lockedPreserved}
-                        </span>
-                      )}
-                    </p>
-                    <div className="flex items-center gap-4 mb-6">
-                      <div>
-                        <label className="block text-[10px] uppercase tracking-wider text-neutral-500 font-semibold mb-1">
-                          {tx.iterationsLabel}
-                        </label>
-                        <div className="flex gap-2">
-                          {[100, 500, 1000, 5000].map((n) => (
+                          {[1, 2, 3, 5, 6].map((n) => (
                             <button
                               key={n}
                               type="button"
-                              onClick={() => setMonteCarloIterations(n)}
+                              onClick={() =>
+                                setConfig((c) => ({ ...c, playersPerTeam: n }))
+                              }
                               className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
-                                monteCarloIterations === n
+                                config.playersPerTeam === n
                                   ? 'bg-purple-600 border-purple-500 text-white'
                                   : 'bg-neutral-800 border-neutral-700 text-neutral-300 hover:bg-neutral-700'
                               }`}
                             >
-                              {n >= 1000 ? `${n / 1000}k` : n}
+                              {n}
                             </button>
                           ))}
                         </div>
                       </div>
-                      <button
-                        onClick={handleMonteCarlo}
-                        disabled={monteCarloRunning}
-                        className={`px-6 py-3 rounded-lg text-sm font-semibold shadow transition-colors ${
-                          monteCarloRunning
-                            ? 'bg-neutral-700 text-neutral-400 cursor-wait animate-pulse'
-                            : 'bg-purple-600 hover:bg-purple-700 text-white'
-                        }`}
-                      >
-                        {monteCarloRunning
-                          ? tx.calcInProgress
-                          : format(tx.runSimulations, {
-                              count: monteCarloIterations,
-                            })}
-                      </button>
-                    </div>
 
-                    {monteCarloResult && (
-                      <div className="space-y-6">
-                        <p className="text-xs text-neutral-500">
-                          {format(tx.iterationsCompleted, {
-                            count: monteCarloResult.iterations,
-                          })}
-                        </p>
-
-                        {/* Win probability ranking */}
-                        <div>
-                          <h4 className="text-xs font-semibold text-neutral-300 uppercase tracking-wider mb-3">
-                            {tx.winProbability}
-                          </h4>
-                          <div className="space-y-2">
-                            {teams
-                              .map((t) => ({
-                                team: t,
-                                prob:
-                                  monteCarloResult.winProbability.get(t.id) ??
-                                  0,
-                                wins: monteCarloResult.winCounts.get(t.id) ?? 0,
-                              }))
-                              .sort((a, b) => b.prob - a.prob)
-                              .map((row, i) => (
-                                <div
-                                  key={row.team.id}
-                                  className="flex items-center gap-3"
-                                >
-                                  <span className="w-6 text-xs font-bold text-neutral-500">
-                                    {i + 1}
-                                  </span>
-                                  <span
-                                    className={`inline-flex items-center justify-center w-5 h-5 rounded text-[9px] font-extrabold border ${
-                                      SEED_COLORS[row.team.seed] ??
-                                      'bg-neutral-500/20 text-neutral-400 border-neutral-500/30'
-                                    }`}
-                                  >
-                                    {row.team.seed}
-                                  </span>
-                                  <span className="text-sm font-medium w-40 truncate">
-                                    {row.team.name}
-                                  </span>
-                                  <div className="flex-1 h-3 bg-neutral-800 rounded-full overflow-hidden">
-                                    <div
-                                      className="h-full rounded-full transition-all bg-gradient-to-r from-purple-600 to-emerald-500"
-                                      style={{ width: `${row.prob * 100}%` }}
-                                    />
-                                  </div>
-                                  <span className="text-sm font-bold tabular-nums w-16 text-right text-white">
-                                    {(row.prob * 100).toFixed(1)}%
-                                  </span>
-                                  <span className="text-[10px] text-neutral-500 tabular-nums w-16 text-right">
-                                    {row.wins}/{monteCarloResult.iterations}
-                                  </span>
-                                </div>
-                              ))}
-                          </div>
-                        </div>
-
-                        {/* Placement distribution for top 4 */}
-                        <div>
-                          <h4 className="text-xs font-semibold text-neutral-300 uppercase tracking-wider mb-3">
-                            {tx.placementDist}
-                          </h4>
-                          <div className="overflow-x-auto">
-                            <table className="w-full text-xs">
-                              <thead>
-                                <tr className="border-b border-white/10">
-                                  <th scope="col" className="text-left py-2 pr-4 text-neutral-500 font-semibold">
-                                    {tx.thTeam}
-                                  </th>
-                                  {Array.from(
-                                    { length: Math.min(teams.length, 8) },
-                                    (_, i) => (
-                                      <th
-                                        scope="col"
-                                        key={i}
-                                        className="text-center py-2 px-2 text-neutral-500 font-semibold"
-                                      >
-                                        {i === 0
-                                          ? tx.placement1st
-                                          : i === 1
-                                            ? tx.placement2nd
-                                            : format(tx.placementNth, {
-                                                n: i + 1,
-                                              })}
-                                      </th>
-                                    )
-                                  )}
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {teams
-                                  .map((t) => ({
-                                    team: t,
-                                    dist:
-                                      monteCarloResult.placementDist.get(
-                                        t.id
-                                      ) ?? [],
-                                  }))
-                                  .sort(
-                                    (a, b) =>
-                                      (b.dist[0] ?? 0) - (a.dist[0] ?? 0)
-                                  )
-                                  .slice(0, 8)
-                                  .map((row) => (
-                                    <tr
-                                      key={row.team.id}
-                                      className="border-b border-white/[0.03]"
-                                    >
-                                      <td className="py-2 pr-4 font-medium">
-                                        {row.team.short_name}
-                                      </td>
-                                      {Array.from(
-                                        { length: Math.min(teams.length, 8) },
-                                        (_, i) => {
-                                          const count = row.dist[i] ?? 0;
-                                          const pct =
-                                            monteCarloResult.iterations > 0
-                                              ? Math.round(
-                                                  (count /
-                                                    monteCarloResult.iterations) *
-                                                    100
-                                                )
-                                              : 0;
-                                          return (
-                                            <td
-                                              key={i}
-                                              className="text-center py-2 px-2"
-                                            >
-                                              <span
-                                                className={`tabular-nums ${
-                                                  pct > 30
-                                                    ? 'text-emerald-400 font-bold'
-                                                    : pct > 15
-                                                      ? 'text-sky-400'
-                                                      : pct > 5
-                                                        ? 'text-neutral-300'
-                                                        : 'text-neutral-600'
-                                                }`}
-                                              >
-                                                {pct > 0 ? `${pct}%` : '-'}
-                                              </span>
-                                            </td>
-                                          );
-                                        }
-                                      )}
-                                    </tr>
-                                  ))}
-                              </tbody>
-                            </table>
-                          </div>
+                      {/* Best of */}
+                      <div>
+                        <label className="block text-sm font-medium text-neutral-200 mb-2">
+                          {tx.matchFormatLabel}
+                        </label>
+                        <div className="flex gap-2">
+                          {[1, 3, 5, 7].map((bo) => (
+                            <button
+                              key={bo}
+                              type="button"
+                              onClick={() =>
+                                setConfig((c) => ({ ...c, bestOf: bo }))
+                              }
+                              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                                config.bestOf === bo
+                                  ? 'bg-purple-600 border-purple-500 text-white'
+                                  : 'bg-neutral-800 border-neutral-700 text-neutral-300 hover:bg-neutral-700'
+                              }`}
+                            >
+                              BO{bo}
+                            </button>
+                          ))}
                         </div>
                       </div>
-                    )}
-                  </div>
-                </div>
-              )}
 
-              {activeTab === 'history' && (
-                <div className="space-y-6">
-                  <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-sm font-semibold uppercase tracking-wider text-neutral-400">
-                        {tx.historyHeading}
-                      </h3>
-                      {simHistory.length > 0 && (
-                        <button
-                          type="button"
-                          onClick={() => setSimHistory([])}
-                          className="text-[10px] text-neutral-500 hover:text-red-400 transition-colors"
-                        >
-                          {tx.clearHistory}
-                        </button>
+                      {/* Map pool */}
+                      <div>
+                        <label className="block text-sm font-medium text-neutral-200 mb-2">
+                          {tx.mapPoolLabel}
+                        </label>
+                        <input
+                          type="range"
+                          min={3}
+                          max={FAKE_MAPS.length}
+                          value={config.mapPoolSize}
+                          onChange={(e) =>
+                            setConfig((c) => ({
+                              ...c,
+                              mapPoolSize: parseInt(e.target.value),
+                            }))
+                          }
+                          className="w-full accent-purple-500"
+                        />
+                        <span className="text-xs text-neutral-400">
+                          {format(tx.mapPoolValue, {
+                            count: config.mapPoolSize,
+                          })}
+                        </span>
+                      </div>
+
+                      {/* Swiss rounds */}
+                      {config.formatType === 'swiss' && (
+                        <div>
+                          <label className="block text-sm font-medium text-neutral-200 mb-2">
+                            {tx.swissRoundsLabel}
+                          </label>
+                          <div className="flex gap-2">
+                            {[3, 5, 7, 9].map((r) => (
+                              <button
+                                key={r}
+                                type="button"
+                                onClick={() =>
+                                  setConfig((c) => ({ ...c, swissRounds: r }))
+                                }
+                                className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                                  config.swissRounds === r
+                                    ? 'bg-purple-600 border-purple-500 text-white'
+                                    : 'bg-neutral-800 border-neutral-700 text-neutral-300 hover:bg-neutral-700'
+                                }`}
+                              >
+                                {r}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Grand final reset */}
+                      {config.formatType === 'double_elim' && (
+                        <div>
+                          <label className="flex items-center gap-2 text-sm cursor-pointer mt-6">
+                            <input
+                              type="checkbox"
+                              checked={config.grandFinalReset}
+                              onChange={(e) =>
+                                setConfig((c) => ({
+                                  ...c,
+                                  grandFinalReset: e.target.checked,
+                                }))
+                              }
+                              className="rounded border-neutral-500 bg-neutral-700"
+                            />
+                            <span className="font-medium text-neutral-200">
+                              {tx.grandFinalReset}
+                            </span>
+                          </label>
+                        </div>
+                      )}
+
+                      {/* Multi-stage */}
+                      {config.formatType !== 'showmatch' && (
+                        <div>
+                          <label className="block text-sm font-medium text-neutral-200 mb-2">
+                            {tx.stagesLabel}
+                          </label>
+                          <div className="flex gap-2">
+                            {[1, 2].map((n) => (
+                              <button
+                                key={n}
+                                type="button"
+                                onClick={() =>
+                                  setConfig((c) => ({ ...c, stageCount: n }))
+                                }
+                                className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                                  config.stageCount === n
+                                    ? 'bg-purple-600 border-purple-500 text-white'
+                                    : 'bg-neutral-800 border-neutral-700 text-neutral-300 hover:bg-neutral-700'
+                                }`}
+                              >
+                                {n === 1 ? tx.oneStage : tx.twoStages}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
                       )}
                     </div>
-                    {simHistory.length === 0 ? (
-                      <p className="text-sm text-neutral-500">
-                        {tx.historyEmpty}
-                      </p>
-                    ) : (
-                      <div className="space-y-4">
-                        {simHistory.map((entry, idx) => (
-                          <div
-                            key={entry.id}
-                            className="rounded-lg border border-white/10 bg-white/[0.01] p-4"
-                          >
-                            <div className="flex items-center justify-between mb-3">
-                              <div className="flex items-center gap-3">
-                                <span className="text-xs font-bold text-neutral-500">
-                                  #{simHistory.length - idx}
-                                </span>
-                                <span className="text-xs text-neutral-400">
-                                  {new Date(entry.timestamp).toLocaleString(
-                                    'fr-FR',
-                                    {
-                                      hour: '2-digit',
-                                      minute: '2-digit',
-                                      second: '2-digit',
+
+                    {/* Scheduling section */}
+                    <div className="border-t border-white/10 pt-6">
+                      <h3 className="text-sm font-semibold text-neutral-300 uppercase tracking-wider mb-4">
+                        {tx.planningHeading}
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        <div>
+                          <label className="block text-sm font-medium text-neutral-200 mb-2">
+                            {tx.startDateLabel}
+                          </label>
+                          <input
+                            type="datetime-local"
+                            value={config.schedule.startDate}
+                            onChange={(e) =>
+                              setConfig((c) => ({
+                                ...c,
+                                schedule: {
+                                  ...c.schedule,
+                                  startDate: e.target.value,
+                                },
+                              }))
+                            }
+                            className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-neutral-200 mb-2">
+                            {tx.matchDurationLabel}
+                          </label>
+                          <input
+                            type="number"
+                            min={5}
+                            max={180}
+                            step={5}
+                            value={config.schedule.matchDurationMin}
+                            onChange={(e) =>
+                              setConfig((c) => ({
+                                ...c,
+                                schedule: {
+                                  ...c.schedule,
+                                  matchDurationMin:
+                                    parseInt(e.target.value) || 30,
+                                },
+                              }))
+                            }
+                            className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-neutral-200 mb-2">
+                            {tx.breakMatchesLabel}
+                          </label>
+                          <input
+                            type="number"
+                            min={0}
+                            max={120}
+                            step={5}
+                            value={config.schedule.breakBetweenMatchesMin}
+                            onChange={(e) =>
+                              setConfig((c) => ({
+                                ...c,
+                                schedule: {
+                                  ...c.schedule,
+                                  breakBetweenMatchesMin:
+                                    parseInt(e.target.value) || 0,
+                                },
+                              }))
+                            }
+                            className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-neutral-200 mb-2">
+                            {tx.breakRoundsLabel}
+                          </label>
+                          <input
+                            type="number"
+                            min={0}
+                            max={240}
+                            step={5}
+                            value={config.schedule.breakBetweenRoundsMin}
+                            onChange={(e) =>
+                              setConfig((c) => ({
+                                ...c,
+                                schedule: {
+                                  ...c.schedule,
+                                  breakBetweenRoundsMin:
+                                    parseInt(e.target.value) || 0,
+                                },
+                              }))
+                            }
+                            className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-neutral-200 mb-2">
+                            {tx.dayStartLabel}
+                          </label>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="number"
+                              min={0}
+                              max={23}
+                              value={config.schedule.dayStartHour}
+                              onChange={(e) =>
+                                setConfig((c) => ({
+                                  ...c,
+                                  schedule: {
+                                    ...c.schedule,
+                                    dayStartHour: parseInt(e.target.value) || 0,
+                                  },
+                                }))
+                              }
+                              className="w-20 px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            />
+                            <span className="text-neutral-500 text-sm">h</span>
+                            <span className="text-neutral-600 text-xs">
+                              {tx.hourSeparator}
+                            </span>
+                            <input
+                              type="number"
+                              min={1}
+                              max={24}
+                              value={config.schedule.dayEndHour}
+                              onChange={(e) =>
+                                setConfig((c) => ({
+                                  ...c,
+                                  schedule: {
+                                    ...c.schedule,
+                                    dayEndHour: parseInt(e.target.value) || 24,
+                                  },
+                                }))
+                              }
+                              className="w-20 px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            />
+                            <span className="text-neutral-500 text-sm">h</span>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-neutral-200 mb-2">
+                            {tx.matchesPerDayLabel}
+                          </label>
+                          <input
+                            type="number"
+                            min={0}
+                            max={50}
+                            value={config.schedule.matchesPerDay}
+                            onChange={(e) =>
+                              setConfig((c) => ({
+                                ...c,
+                                schedule: {
+                                  ...c.schedule,
+                                  matchesPerDay: parseInt(e.target.value) || 0,
+                                },
+                              }))
+                            }
+                            className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Escalation section */}
+                    <div className="border-t border-white/10 pt-6">
+                      <div className="flex items-center gap-3 mb-4">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={config.escalation.enabled}
+                            onChange={(e) =>
+                              setConfig((c) => ({
+                                ...c,
+                                escalation: {
+                                  ...c.escalation,
+                                  enabled: e.target.checked,
+                                },
+                              }))
+                            }
+                            className="rounded border-neutral-500 bg-neutral-700"
+                          />
+                          <span className="text-sm font-semibold text-neutral-300 uppercase tracking-wider">
+                            {tx.escalationLabel}
+                          </span>
+                        </label>
+                      </div>
+                      {config.escalation.enabled && (
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                          {[
+                            {
+                              label: tx.escEarlyRounds,
+                              key: 'earlyRoundsBo' as const,
+                            },
+                            {
+                              label: tx.escSemiFinals,
+                              key: 'semiFinalsBo' as const,
+                            },
+                            { label: tx.escFinals, key: 'finalsBo' as const },
+                          ].map(({ label, key }) => (
+                            <div key={key}>
+                              <label className="block text-sm font-medium text-neutral-200 mb-2">
+                                {label}
+                              </label>
+                              <div className="flex gap-2">
+                                {[1, 3, 5, 7].map((bo) => (
+                                  <button
+                                    key={bo}
+                                    type="button"
+                                    onClick={() =>
+                                      setConfig((c) => ({
+                                        ...c,
+                                        escalation: {
+                                          ...c.escalation,
+                                          [key]: bo,
+                                        },
+                                      }))
                                     }
-                                  )}
-                                </span>
-                                <span className="px-2 py-0.5 rounded text-[9px] font-bold uppercase bg-purple-500/10 text-purple-300 border border-purple-500/20">
-                                  {FORMAT_LABELS[entry.formatType]}
-                                </span>
-                                <span className="text-[10px] text-neutral-500">
-                                  {format(tx.teamsBoLabel, {
-                                    count: entry.teamCount,
-                                    bo: entry.bestOf,
-                                  })}
-                                </span>
-                              </div>
-                              <div className="flex gap-4 text-[10px]">
-                                <span
-                                  className="text-amber-400"
-                                  title={tx.closeMatches}
-                                >
-                                  {format(tx.closePct, {
-                                    pct: entry.competitiveness.closeMatchPct,
-                                  })}
-                                </span>
-                                <span
-                                  className="text-rose-400"
-                                  title={tx.upsets}
-                                >
-                                  {format(tx.upsetsCount, {
-                                    count: entry.competitiveness.upsets,
-                                  })}
-                                </span>
-                              </div>
-                            </div>
-                            {/* Top 5 standings */}
-                            <div className="flex gap-4 flex-wrap">
-                              {entry.standings.slice(0, 5).map((s, i) => (
-                                <div
-                                  key={i}
-                                  className="flex items-center gap-1.5"
-                                >
-                                  <span
-                                    className={`text-xs font-bold ${
-                                      i === 0
-                                        ? 'text-amber-400'
-                                        : i === 1
-                                          ? 'text-neutral-300'
-                                          : i === 2
-                                            ? 'text-orange-400'
-                                            : 'text-neutral-500'
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                                      config.escalation[key] === bo
+                                        ? 'bg-purple-600 border-purple-500 text-white'
+                                        : 'bg-neutral-800 border-neutral-700 text-neutral-300 hover:bg-neutral-700'
                                     }`}
                                   >
-                                    {i + 1}.
-                                  </span>
-                                  <span className="text-xs text-neutral-300">
-                                    {s.name}
-                                  </span>
-                                  <span className="text-[10px] text-neutral-600">
-                                    {s.wins}V-{s.losses}D
-                                  </span>
-                                </div>
+                                    BO{bo}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Occurrences section */}
+                    <div className="border-t border-white/10 pt-6">
+                      <div className="flex items-center gap-3 mb-4">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={config.occurrence.enabled}
+                            onChange={(e) =>
+                              setConfig((c) => ({
+                                ...c,
+                                occurrence: {
+                                  ...c.occurrence,
+                                  enabled: e.target.checked,
+                                },
+                              }))
+                            }
+                            className="rounded border-neutral-500 bg-neutral-700"
+                          />
+                          <span className="text-sm font-semibold text-neutral-300 uppercase tracking-wider">
+                            {tx.recurringLabel}
+                          </span>
+                        </label>
+                      </div>
+                      {config.occurrence.enabled && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div>
+                            <label className="block text-sm font-medium text-neutral-200 mb-2">
+                              {tx.frequencyLabel}
+                            </label>
+                            <div className="flex gap-2">
+                              {(
+                                Object.keys(
+                                  FREQUENCY_LABELS
+                                ) as OccurrenceConfig['frequency'][]
+                              ).map((f) => (
+                                <button
+                                  key={f}
+                                  type="button"
+                                  onClick={() =>
+                                    setConfig((c) => ({
+                                      ...c,
+                                      occurrence: {
+                                        ...c.occurrence,
+                                        frequency: f,
+                                      },
+                                    }))
+                                  }
+                                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                                    config.occurrence.frequency === f
+                                      ? 'bg-purple-600 border-purple-500 text-white'
+                                      : 'bg-neutral-800 border-neutral-700 text-neutral-300 hover:bg-neutral-700'
+                                  }`}
+                                >
+                                  {FREQUENCY_LABELS[f]}
+                                </button>
                               ))}
                             </div>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-neutral-200 mb-2">
+                              {tx.occurrenceCountLabel}
+                            </label>
+                            <input
+                              type="number"
+                              min={2}
+                              max={52}
+                              value={config.occurrence.count}
+                              onChange={(e) =>
+                                setConfig((c) => ({
+                                  ...c,
+                                  occurrence: {
+                                    ...c.occurrence,
+                                    count: Math.max(
+                                      2,
+                                      parseInt(e.target.value) || 2
+                                    ),
+                                  },
+                                }))
+                              }
+                              className="w-32 px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex items-center gap-3 flex-wrap">
+                  <button
+                    onClick={handleGenerate}
+                    className="px-6 py-3 rounded-lg bg-purple-600 hover:bg-purple-700 text-sm font-semibold shadow transition-colors"
+                  >
+                    {tx.generate}
+                    {config.occurrence.enabled
+                      ? format(tx.generateOccSuffix, {
+                          count: config.occurrence.count,
+                        })
+                      : ''}
+                  </button>
+                  <button
+                    onClick={handleLoadRealTeams}
+                    disabled={loadingRealTeams}
+                    className={`px-6 py-3 rounded-lg text-sm font-semibold shadow transition-colors ${
+                      loadingRealTeams
+                        ? 'bg-neutral-700 text-neutral-400 cursor-wait'
+                        : 'bg-sky-600 hover:bg-sky-700 text-white'
+                    }`}
+                    title={tx.loadRealTeamsTitle}
+                  >
+                    {loadingRealTeams ? tx.loading : tx.loadRealTeams}
+                  </button>
+                  {realTeamsError && (
+                    <span className="text-xs text-red-400">
+                      {realTeamsError}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Generated content */}
+              {generated && (
+                <>
+                  {/* Occurrence selector */}
+                  {occurrences.length > 1 && (
+                    <div className="mb-6">
+                      <label className="block text-sm font-medium text-neutral-300 mb-2 uppercase tracking-wider">
+                        {tx.occurrenceLabelHeading}
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        {occurrences.map((occ, i) => (
+                          <button
+                            key={i}
+                            type="button"
+                            onClick={() => setActiveOccurrence(i)}
+                            className={`px-3 py-2 rounded-lg text-xs font-semibold border transition-colors ${
+                              activeOccurrence === i
+                                ? 'bg-purple-600 border-purple-500 text-white'
+                                : 'bg-neutral-800 border-neutral-700 text-neutral-300 hover:bg-neutral-700'
+                            }`}
+                          >
+                            {occ.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Summary */}
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+                    <SummaryCard label={tx.summaryTeams} value={teams.length} />
+                    <SummaryCard
+                      label={tx.summaryMatches}
+                      value={stats.total}
+                    />
+                    <SummaryCard
+                      label={tx.summaryFinished}
+                      value={stats.finished}
+                      color="text-emerald-400"
+                    />
+                    <SummaryCard
+                      label={tx.summaryPending}
+                      value={stats.pending}
+                      color="text-amber-400"
+                    />
+                    {stats.estimatedDuration && (
+                      <SummaryCard
+                        label={tx.summaryDuration}
+                        value={stats.estimatedDuration}
+                        color="text-sky-400"
+                      />
+                    )}
+                    {stats.nextRoundName && (
+                      <SummaryCard
+                        label={tx.summaryNextRound}
+                        value={stats.nextRoundName}
+                        color="text-blue-400"
+                      />
+                    )}
+                  </div>
+
+                  {/* Tabs */}
+                  <Tabs
+                    tabs={
+                      [
+                        { id: 'bracket', label: tx.tabBracket },
+                        { id: 'teams', label: tx.tabTeams },
+                        { id: 'maps', label: tx.tabMaps },
+                        { id: 'stats', label: tx.tabStats },
+                        { id: 'monte-carlo', label: tx.tabMonteCarlo },
+                        {
+                          id: 'history',
+                          label:
+                            simHistory.length > 0
+                              ? format(tx.tabHistoryCount, {
+                                  count: simHistory.length,
+                                })
+                              : tx.tabHistory,
+                        },
+                        { id: 'compare', label: tx.tabCompare },
+                        ...(occurrences.length > 1
+                          ? [{ id: 'timeline', label: tx.tabTimeline }]
+                          : []),
+                      ] satisfies TabItem[]
+                    }
+                    active={activeTab}
+                    onChange={(id) => setActiveTab(id as typeof activeTab)}
+                    ariaLabel={tx.tablistLabel}
+                    idBase={SIM_TABS_ID_BASE}
+                    className="mb-6"
+                  />
+
+                  {/* Tab content */}
+                  <div
+                    role="tabpanel"
+                    id={tabPanelId(SIM_TABS_ID_BASE, activeTab)}
+                    aria-labelledby={tabButtonId(SIM_TABS_ID_BASE, activeTab)}
+                  >
+                    {activeTab === 'bracket' && (
+                      <div className="space-y-8">
+                        {stages.map((stage, stageIdx) => (
+                          <div key={stage.id}>
+                            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-purple-500/10 text-purple-300 border border-purple-500/20">
+                                {stage.stage_type}
+                              </span>
+                              {stage.name}
+                              <span className="text-sm text-neutral-500 font-normal">
+                                {format(tx.matchesCount, {
+                                  count: stage.matches.length,
+                                })}
+                              </span>
+                            </h3>
+
+                            {(stage.stage_type === 'bracket' ||
+                              stage.stage_type === 'showmatch') && (
+                              <>
+                                {/* WB */}
+                                <EliminationView
+                                  rounds={groupByRoundMemo(stage.matches, 'wb')}
+                                  onSimulate={
+                                    getStageHandlers(stageIdx).onSimulate
+                                  }
+                                  onReset={getStageHandlers(stageIdx).onReset}
+                                  onToggleLock={
+                                    getStageHandlers(stageIdx).onToggleLock
+                                  }
+                                  label={
+                                    stage.matches.some(
+                                      (m) => m.bracket_side === 'lb'
+                                    )
+                                      ? tx.winnersBracket
+                                      : undefined
+                                  }
+                                />
+                                {/* LB */}
+                                {stage.matches.some(
+                                  (m) => m.bracket_side === 'lb'
+                                ) && (
+                                  <div className="mt-6">
+                                    <EliminationView
+                                      rounds={groupByRoundMemo(
+                                        stage.matches,
+                                        'lb'
+                                      )}
+                                      onSimulate={
+                                        getStageHandlers(stageIdx).onSimulate
+                                      }
+                                      onReset={
+                                        getStageHandlers(stageIdx).onReset
+                                      }
+                                      onToggleLock={
+                                        getStageHandlers(stageIdx).onToggleLock
+                                      }
+                                      label={tx.losersBracket}
+                                      accentColor="text-red-300"
+                                    />
+                                  </div>
+                                )}
+                                {/* Grand Final */}
+                                {stage.matches.some(
+                                  (m) => m.bracket_side === 'final'
+                                ) && (
+                                  <div className="mt-6">
+                                    <EliminationView
+                                      rounds={groupByRoundMemo(
+                                        stage.matches,
+                                        'final'
+                                      )}
+                                      onSimulate={
+                                        getStageHandlers(stageIdx).onSimulate
+                                      }
+                                      onReset={
+                                        getStageHandlers(stageIdx).onReset
+                                      }
+                                      onToggleLock={
+                                        getStageHandlers(stageIdx).onToggleLock
+                                      }
+                                      label={tx.grandFinal}
+                                      accentColor="text-amber-300"
+                                    />
+                                  </div>
+                                )}
+                              </>
+                            )}
+
+                            {(stage.stage_type === 'swiss' ||
+                              stage.stage_type === 'round_robin' ||
+                              stage.stage_type === 'group') && (
+                              <EliminationView
+                                rounds={groupByRoundMemo(stage.matches)}
+                                onSimulate={
+                                  getStageHandlers(stageIdx).onSimulate
+                                }
+                                onReset={getStageHandlers(stageIdx).onReset}
+                                onToggleLock={
+                                  getStageHandlers(stageIdx).onToggleLock
+                                }
+                              />
+                            )}
                           </div>
                         ))}
                       </div>
                     )}
-                  </div>
-                </div>
-              )}
 
-              {activeTab === 'compare' && (
-                <div className="space-y-6">
-                  {/* Config selector for comparison */}
-                  <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
-                    <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider text-neutral-400">
-                      {tx.compareHeading}
-                    </h3>
-                    <p className="text-xs text-neutral-500 mb-4">
-                      {format(tx.compareDesc, {
-                        format: FORMAT_LABELS[config.formatType],
-                      })}
-                    </p>
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      {(Object.keys(FORMAT_LABELS) as FormatType[])
-                        .filter(
-                          (f) => f !== config.formatType && f !== 'showmatch'
-                        )
-                        .map((f) => {
-                          const tc = validCountsFor(f).includes(
-                            config.teamCount
-                          )
-                            ? config.teamCount
-                            : 8;
-                          return (
-                            <button
-                              key={f}
-                              type="button"
-                              onClick={() =>
-                                handleCompare({
-                                  formatType: f,
-                                  teamCount: tc,
-                                  ...(f === 'double_elim'
-                                    ? { grandFinalReset: true }
-                                    : {}),
-                                })
-                              }
-                              className={`px-4 py-2 rounded-lg text-xs font-semibold border transition-colors ${
-                                compareConfig?.formatType === f
-                                  ? 'bg-purple-600 border-purple-500 text-white'
-                                  : 'bg-neutral-800 border-neutral-700 text-neutral-300 hover:bg-neutral-700'
+                    {activeTab === 'teams' && (
+                      <div>
+                        <p className="text-xs text-neutral-500 mb-4">
+                          {tx.teamsDragHint}
+                        </p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                          {teams.map((team, teamIdx) => (
+                            <div
+                              key={team.id}
+                              draggable
+                              onDragStart={() => setDragSeedIdx(teamIdx)}
+                              onDragOver={(e) => {
+                                e.preventDefault();
+                                e.dataTransfer.dropEffect = 'move';
+                              }}
+                              onDrop={(e) => {
+                                e.preventDefault();
+                                if (
+                                  dragSeedIdx !== null &&
+                                  dragSeedIdx !== teamIdx
+                                ) {
+                                  handleReorderTeams(dragSeedIdx, teamIdx);
+                                }
+                                setDragSeedIdx(null);
+                              }}
+                              onDragEnd={() => setDragSeedIdx(null)}
+                              className={`rounded-xl border p-4 space-y-3 cursor-grab active:cursor-grabbing transition-all ${
+                                dragSeedIdx === teamIdx
+                                  ? 'border-purple-500/50 bg-purple-500/10 opacity-50 scale-95'
+                                  : dragSeedIdx !== null
+                                    ? 'border-purple-500/20 bg-white/[0.02] hover:border-purple-500/40 hover:bg-purple-500/5'
+                                    : 'border-white/10 bg-white/[0.02]'
                               }`}
                             >
-                              {tx.vs} {FORMAT_LABELS[f]}
-                            </button>
-                          );
-                        })}
-                    </div>
-                    {compareConfig && (
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={() => handleCompare(compareConfig)}
-                          className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-neutral-800 border border-neutral-700 text-neutral-300 hover:bg-neutral-700 transition-colors"
-                        >
-                          {tx.regenerate}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setCompareData(null);
-                            setCompareConfig(null);
-                          }}
-                          className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-neutral-800 border border-neutral-700 text-neutral-300 hover:bg-neutral-700 transition-colors"
-                        >
-                          {tx.clear}
-                        </button>
+                              <div className="flex items-center gap-3">
+                                {/* Drag handle */}
+                                <div
+                                  className="flex flex-col gap-0.5 text-neutral-600 flex-shrink-0 cursor-grab"
+                                  title={tx.dragToReorder}
+                                >
+                                  <div className="flex gap-0.5">
+                                    <span className="w-1 h-1 rounded-full bg-current" />
+                                    <span className="w-1 h-1 rounded-full bg-current" />
+                                  </div>
+                                  <div className="flex gap-0.5">
+                                    <span className="w-1 h-1 rounded-full bg-current" />
+                                    <span className="w-1 h-1 rounded-full bg-current" />
+                                  </div>
+                                  <div className="flex gap-0.5">
+                                    <span className="w-1 h-1 rounded-full bg-current" />
+                                    <span className="w-1 h-1 rounded-full bg-current" />
+                                  </div>
+                                </div>
+                                <div
+                                  className={`w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold border ${
+                                    SEED_COLORS[team.seed] ??
+                                    'bg-purple-500/20 text-purple-300 border-purple-500/30'
+                                  }`}
+                                >
+                                  {team.short_name}
+                                </div>
+                                <div>
+                                  <div className="text-sm font-semibold">
+                                    {team.name}
+                                  </div>
+                                  <div className="text-[10px] text-neutral-500">
+                                    {format(tx.seedLabel, { seed: team.seed })}
+                                  </div>
+                                </div>
+                                {stats.wins.has(team.id) && (
+                                  <div className="ml-auto text-right">
+                                    <div className="text-xs font-bold text-emerald-400">
+                                      {stats.wins.get(team.id)}W
+                                    </div>
+                                    <div className="text-xs font-bold text-red-400">
+                                      {stats.losses.get(team.id) ?? 0}L
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                              {/* Strength slider */}
+                              <div className="flex items-center gap-2 pt-1 border-t border-white/[0.05]">
+                                <span className="text-[10px] text-neutral-500 font-semibold w-10">
+                                  {tx.strengthLabel}
+                                </span>
+                                <input
+                                  type="range"
+                                  min={1}
+                                  max={100}
+                                  value={team.strength}
+                                  onChange={(e) =>
+                                    handleUpdateTeamStrength(
+                                      team.id,
+                                      parseInt(e.target.value)
+                                    )
+                                  }
+                                  onClick={(e) => e.stopPropagation()}
+                                  onMouseDown={(e) => e.stopPropagation()}
+                                  className="flex-1 accent-purple-500 h-1.5"
+                                  draggable={false}
+                                />
+                                <span
+                                  className={`text-xs font-bold tabular-nums w-8 text-right ${
+                                    team.strength >= 70
+                                      ? 'text-emerald-400'
+                                      : team.strength >= 45
+                                        ? 'text-amber-400'
+                                        : 'text-red-400'
+                                  }`}
+                                >
+                                  {team.strength}
+                                </span>
+                              </div>
+                              <div className="space-y-1">
+                                {team.players.map((p, i) => (
+                                  <div
+                                    key={i}
+                                    className="flex items-center justify-between text-xs"
+                                  >
+                                    <span className="text-neutral-300">
+                                      {p.name}
+                                    </span>
+                                    <span className="text-neutral-600 font-mono text-[10px]">
+                                      {p.battleTag}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )}
-                  </div>
 
-                  {/* Side-by-side display */}
-                  {compareData && (
-                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                      {/* Current config */}
-                      <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4 space-y-4">
-                        <div className="flex items-center gap-2">
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-purple-500/10 text-purple-300 border border-purple-500/20">
-                            {tx.badgeCurrent}
-                          </span>
-                          <span className="text-sm font-semibold">
-                            {FORMAT_LABELS[config.formatType]}
-                          </span>
-                          <span className="text-xs text-neutral-500">
-                            {format(tx.teamsBoLabel, {
-                              count: teams.length,
-                              bo: config.bestOf,
-                            })}
-                          </span>
-                        </div>
-                        <div className="text-xs text-neutral-400 space-y-1">
-                          <div>
-                            {format(tx.matchesColon, {
-                              count: stages.flatMap((s) => s.matches).length,
-                            })}
-                          </div>
-                          <div>
-                            {format(tx.roundsColon, {
-                              count: new Set(
-                                stages
-                                  .flatMap((s) => s.matches)
-                                  .map(
-                                    (m) => `${m.bracket_side}-${m.round_number}`
-                                  )
-                              ).size,
-                            })}
-                          </div>
-                        </div>
-                        <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
-                          {stages.map((stage, stageIdx) => (
-                            <div key={stage.id} className="mb-4">
-                              <p className="text-xs font-semibold text-purple-300 mb-2">
-                                {stage.name}
-                              </p>
-                              <EliminationView
-                                rounds={groupByRoundMemo(
-                                  stage.matches,
-                                  stage.stage_type === 'bracket'
-                                    ? 'wb'
-                                    : undefined
-                                )}
-                                onSimulate={
-                                  getStageHandlers(stageIdx).onSimulate
-                                }
-                                onReset={getStageHandlers(stageIdx).onReset}
-                              />
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Compare config */}
-                      <div className="rounded-xl border border-sky-500/20 bg-sky-500/[0.02] p-4 space-y-4">
-                        <div className="flex items-center gap-2">
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-sky-500/10 text-sky-300 border border-sky-500/20">
-                            {tx.badgeComparison}
-                          </span>
-                          <span className="text-sm font-semibold">
-                            {
-                              FORMAT_LABELS[
-                                compareConfig?.formatType ?? config.formatType
-                              ]
-                            }
-                          </span>
-                          <span className="text-xs text-neutral-500">
-                            {format(tx.teamsBoLabel, {
-                              count: compareData.teams.length,
-                              bo: config.bestOf,
-                            })}
-                          </span>
-                        </div>
-                        <div className="text-xs text-neutral-400 space-y-1">
-                          <div>
-                            {format(tx.matchesColon, {
-                              count: compareData.stages.flatMap(
-                                (s) => s.matches
-                              ).length,
-                            })}
-                          </div>
-                          <div>
-                            {format(tx.roundsColon, {
-                              count: new Set(
-                                compareData.stages
-                                  .flatMap((s) => s.matches)
-                                  .map(
-                                    (m) => `${m.bracket_side}-${m.round_number}`
-                                  )
-                              ).size,
-                            })}
-                          </div>
-                        </div>
-                        <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
-                          {compareData.stages.map((stage) => (
-                            <div key={stage.id} className="mb-4">
-                              <p className="text-xs font-semibold text-sky-300 mb-2">
-                                {stage.name}
-                              </p>
-                              <EliminationView
-                                rounds={groupByRoundMemo(
-                                  stage.matches,
-                                  stage.stage_type === 'bracket'
-                                    ? 'wb'
-                                    : undefined
-                                )}
-                                onSimulate={noopSimAction}
-                                onReset={noopSimAction}
-                              />
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {activeTab === 'timeline' && occurrences.length > 1 && (
-                <div className="space-y-6">
-                  <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
-                    <h3 className="text-sm font-semibold mb-6 uppercase tracking-wider text-neutral-400">
-                      {tx.calendarHeading}
-                    </h3>
-                    <div className="relative">
-                      {/* Vertical line */}
-                      <div className="absolute left-4 top-0 bottom-0 w-px bg-purple-500/20" />
-
+                    {activeTab === 'maps' && (
                       <div className="space-y-6">
-                        {occurrences.map((occ, i) => {
-                          const allMatches = occ.stages.flatMap(
-                            (s) => s.matches
-                          );
-                          const finished = allMatches.filter(
-                            (m) => m.status === 'finished'
-                          ).length;
-                          const total = allMatches.length;
-                          const firstDate = allMatches.find(
-                            (m) => m.scheduled_at
-                          )?.scheduled_at;
-                          const lastDate = [...allMatches]
-                            .reverse()
-                            .find((m) => m.scheduled_at)?.scheduled_at;
-                          const pct =
-                            total > 0
-                              ? Math.round((finished / total) * 100)
-                              : 0;
-
-                          return (
-                            <div key={i} className="flex gap-4 items-start">
-                              {/* Dot on the line */}
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+                          {mapPool.map((name) => {
+                            const count = stats.mapCount.get(name) ?? 0;
+                            const maxCount = Math.max(
+                              ...stats.mapCount.values(),
+                              1
+                            );
+                            return (
                               <div
-                                className={`relative z-10 w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 border-2 text-xs font-bold ${
-                                  activeOccurrence === i
-                                    ? 'bg-purple-600 border-purple-400 text-white'
-                                    : pct === 100
-                                      ? 'bg-emerald-600/30 border-emerald-500/50 text-emerald-300'
-                                      : 'bg-neutral-800 border-neutral-600 text-neutral-400'
-                                }`}
+                                key={name}
+                                className="rounded-xl border border-white/10 bg-white/[0.02] p-4 space-y-2"
                               >
-                                {i + 1}
+                                <div className="text-sm font-semibold">
+                                  {name}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <div className="flex-1 h-2 bg-neutral-800 rounded-full overflow-hidden">
+                                    <div
+                                      className="h-full bg-purple-500 rounded-full transition-all"
+                                      style={{
+                                        width: `${(count / maxCount) * 100}%`,
+                                      }}
+                                    />
+                                  </div>
+                                  <span className="text-xs text-neutral-400 tabular-nums w-8 text-right">
+                                    {count}x
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {activeTab === 'stats' && (
+                      <div className="space-y-6">
+                        {/* Standings with score diff */}
+                        <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
+                          <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider text-neutral-400">
+                            {tx.standingsHeading}
+                          </h3>
+                          <div className="space-y-1">
+                            <div className="grid grid-cols-[auto_1fr_50px_50px_50px_70px_50px] gap-2 text-[10px] uppercase tracking-wider text-neutral-600 font-bold px-3 pb-2">
+                              <span className="w-6">#</span>
+                              <span>{tx.thTeam}</span>
+                              <span className="text-center">{tx.thWins}</span>
+                              <span className="text-center">{tx.thLosses}</span>
+                              <span className="text-center">{tx.thPct}</span>
+                              <span className="text-center">{tx.thMaps}</span>
+                              <span className="text-center">{tx.thDiff}</span>
+                            </div>
+                            {teams
+                              .map((t) => ({
+                                team: t,
+                                wins: stats.wins.get(t.id) ?? 0,
+                                losses: stats.losses.get(t.id) ?? 0,
+                                mapsWon: stats.mapWins.get(t.id) ?? 0,
+                                mapsLost: stats.mapLosses.get(t.id) ?? 0,
+                              }))
+                              .sort(
+                                (a, b) =>
+                                  b.wins - a.wins ||
+                                  a.losses - b.losses ||
+                                  b.mapsWon -
+                                    b.mapsLost -
+                                    (a.mapsWon - a.mapsLost)
+                              )
+                              .map((row, i) => {
+                                const total = row.wins + row.losses;
+                                const pct =
+                                  total > 0
+                                    ? Math.round((row.wins / total) * 100)
+                                    : 0;
+                                const diff = row.mapsWon - row.mapsLost;
+                                return (
+                                  <div
+                                    key={row.team.id}
+                                    className={`grid grid-cols-[auto_1fr_50px_50px_50px_70px_50px] gap-2 items-center px-3 py-2 rounded-lg text-sm ${
+                                      i < 3
+                                        ? 'bg-emerald-500/5 border border-emerald-500/10'
+                                        : i % 2 === 0
+                                          ? 'bg-white/[0.01]'
+                                          : ''
+                                    }`}
+                                  >
+                                    <span className="w-6 text-xs font-bold text-neutral-500">
+                                      {i + 1}
+                                    </span>
+                                    <div className="flex items-center gap-2 truncate">
+                                      <span className="font-medium truncate">
+                                        {row.team.name}
+                                      </span>
+                                      <span className="text-[9px] text-neutral-600">
+                                        #{row.team.seed}
+                                      </span>
+                                    </div>
+                                    <span className="text-center font-bold text-emerald-400">
+                                      {row.wins}
+                                    </span>
+                                    <span className="text-center font-bold text-red-400">
+                                      {row.losses}
+                                    </span>
+                                    <span className="text-center text-neutral-400">
+                                      {pct}%
+                                    </span>
+                                    <span className="text-center text-[11px] text-neutral-500">
+                                      {row.mapsWon}-{row.mapsLost}
+                                    </span>
+                                    <span
+                                      className={`text-center font-bold text-xs ${
+                                        diff > 0
+                                          ? 'text-emerald-400'
+                                          : diff < 0
+                                            ? 'text-red-400'
+                                            : 'text-neutral-500'
+                                      }`}
+                                    >
+                                      {diff > 0 ? '+' : ''}
+                                      {diff}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                          </div>
+                        </div>
+
+                        {/* Progression */}
+                        <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
+                          <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider text-neutral-400">
+                            {tx.progressionHeading}
+                          </h3>
+                          <div className="flex items-center gap-4">
+                            <div className="flex-1 h-4 bg-neutral-800 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full transition-all"
+                                style={{
+                                  width: `${stats.total > 0 ? (stats.finished / stats.total) * 100 : 0}%`,
+                                }}
+                              />
+                            </div>
+                            <span className="text-sm font-bold tabular-nums text-neutral-300">
+                              {stats.total > 0
+                                ? Math.round(
+                                    (stats.finished / stats.total) * 100
+                                  )
+                                : 0}
+                              %
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between mt-2">
+                            <p className="text-xs text-neutral-500">
+                              {format(tx.matchesFinishedProgress, {
+                                finished: stats.finished,
+                                total: stats.total,
+                              })}
+                            </p>
+                            {stats.nextRoundName && (
+                              <p className="text-xs text-blue-400">
+                                {format(tx.nextPrefix, {
+                                  name: stats.nextRoundName,
+                                })}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Competitiveness metrics */}
+                        {stats.finished > 0 && (
+                          <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
+                            <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider text-neutral-400">
+                              {tx.competitivenessHeading}
+                            </h3>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                              <div className="space-y-1">
+                                <div className="text-[10px] uppercase tracking-wider text-neutral-500 font-semibold">
+                                  {tx.closeMatches}
+                                </div>
+                                <div className="text-xl font-bold text-amber-400">
+                                  {stats.competitiveness.closeMatches}
+                                </div>
+                                <div className="text-[10px] text-neutral-500">
+                                  {format(tx.statPctOfMatches, {
+                                    pct: stats.competitiveness.closeMatchPct,
+                                  })}
+                                </div>
+                              </div>
+                              <div className="space-y-1">
+                                <div className="text-[10px] uppercase tracking-wider text-neutral-500 font-semibold">
+                                  {tx.upsets}
+                                </div>
+                                <div className="text-xl font-bold text-rose-400">
+                                  {stats.competitiveness.upsets}
+                                </div>
+                                <div className="text-[10px] text-neutral-500">
+                                  {format(tx.statPctOfMatches, {
+                                    pct: stats.competitiveness.upsetPct,
+                                  })}
+                                </div>
+                              </div>
+                              <div className="space-y-1">
+                                <div className="text-[10px] uppercase tracking-wider text-neutral-500 font-semibold">
+                                  {tx.mapsPerMatch}
+                                </div>
+                                <div className="text-xl font-bold text-sky-400">
+                                  {stats.competitiveness.avgMapsPerMatch}
+                                </div>
+                                <div className="text-[10px] text-neutral-500">
+                                  {tx.average}
+                                </div>
+                              </div>
+                              <div className="space-y-1">
+                                <div className="text-[10px] uppercase tracking-wider text-neutral-500 font-semibold">
+                                  {tx.longestStreak}
+                                </div>
+                                <div className="text-xl font-bold text-emerald-400">
+                                  {stats.competitiveness.maxWinStreak}
+                                </div>
+                                <div className="text-[10px] text-neutral-500">
+                                  {tx.consecutiveWins}
+                                </div>
+                              </div>
+                              <div className="space-y-1">
+                                <div className="text-[10px] uppercase tracking-wider text-neutral-500 font-semibold">
+                                  {tx.avgJourney}
+                                </div>
+                                <div className="text-xl font-bold text-purple-400">
+                                  {stats.competitiveness.avgTeamJourney}
+                                </div>
+                                <div className="text-[10px] text-neutral-500">
+                                  {tx.matchesPerTeam}
+                                </div>
+                              </div>
+                              <div className="space-y-1">
+                                <div className="text-[10px] uppercase tracking-wider text-neutral-500 font-semibold">
+                                  {tx.dominance}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <div className="text-xl font-bold text-neutral-300">
+                                    {stats.competitiveness.dominanceScore}%
+                                  </div>
+                                </div>
+                                <div className="text-[10px] text-neutral-500">
+                                  {stats.competitiveness.dominanceScore < 30
+                                    ? tx.domVeryBalanced
+                                    : stats.competitiveness.dominanceScore < 50
+                                      ? tx.domBalanced
+                                      : stats.competitiveness.dominanceScore <
+                                          70
+                                        ? tx.domOneFavorite
+                                        : tx.domDomination}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Round-by-round breakdown */}
+                        <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
+                          <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider text-neutral-400">
+                            {tx.roundDetailHeading}
+                          </h3>
+                          <div className="space-y-2">
+                            {(() => {
+                              const allMatches = stages.flatMap(
+                                (s) => s.matches
+                              );
+                              const roundMap = new Map<
+                                string,
+                                {
+                                  total: number;
+                                  finished: number;
+                                  name: string;
+                                }
+                              >();
+                              for (const m of allMatches) {
+                                const key = `${m.bracket_side}-${m.round_number}`;
+                                const existing = roundMap.get(key) ?? {
+                                  total: 0,
+                                  finished: 0,
+                                  name: m.round_name,
+                                };
+                                existing.total++;
+                                if (m.status === 'finished')
+                                  existing.finished++;
+                                roundMap.set(key, existing);
+                              }
+                              return Array.from(roundMap.entries()).map(
+                                ([key, data]) => {
+                                  const pct =
+                                    data.total > 0
+                                      ? Math.round(
+                                          (data.finished / data.total) * 100
+                                        )
+                                      : 0;
+                                  return (
+                                    <div
+                                      key={key}
+                                      className="flex items-center gap-3"
+                                    >
+                                      <span className="text-xs text-neutral-400 w-32 truncate">
+                                        {data.name}
+                                      </span>
+                                      <div className="flex-1 h-2 bg-neutral-800 rounded-full overflow-hidden">
+                                        <div
+                                          className={`h-full rounded-full transition-all ${
+                                            pct === 100
+                                              ? 'bg-emerald-500'
+                                              : pct > 0
+                                                ? 'bg-blue-500'
+                                                : 'bg-neutral-700'
+                                          }`}
+                                          style={{ width: `${pct}%` }}
+                                        />
+                                      </div>
+                                      <span className="text-[10px] text-neutral-500 tabular-nums w-16 text-right">
+                                        {data.finished}/{data.total}
+                                      </span>
+                                    </div>
+                                  );
+                                }
+                              );
+                            })()}
+                          </div>
+                        </div>
+
+                        {/* Head-to-head matrix */}
+                        {stats.finished > 0 &&
+                          (() => {
+                            const allMatches = stages.flatMap((s) => s.matches);
+                            const h2hRecords = computeHeadToHead(allMatches);
+                            if (h2hRecords.length === 0) return null;
+
+                            // Build a lookup map: "id1-id2" → record
+                            const h2hMap = new Map<string, H2HRecord>();
+                            for (const rec of h2hRecords) {
+                              h2hMap.set(`${rec.team1Id}-${rec.team2Id}`, rec);
+                            }
+
+                            // Sort teams by wins
+                            const sortedTeams = [...teams].sort(
+                              (a, b) =>
+                                (stats.wins.get(b.id) ?? 0) -
+                                (stats.wins.get(a.id) ?? 0)
+                            );
+
+                            return (
+                              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
+                                <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider text-neutral-400">
+                                  {tx.h2hHeading}
+                                </h3>
+                                <div className="overflow-x-auto">
+                                  <table className="w-full text-xs">
+                                    <thead>
+                                      <tr className="border-b border-white/10">
+                                        <th
+                                          scope="col"
+                                          className="text-left py-2 pr-2 text-neutral-500 font-semibold sticky left-0 bg-surface-sunken z-10"
+                                        >
+                                          {tx.vs}
+                                        </th>
+                                        {sortedTeams.map((t) => (
+                                          <th
+                                            scope="col"
+                                            key={t.id}
+                                            className="text-center py-2 px-1 text-neutral-500 font-semibold min-w-[50px]"
+                                          >
+                                            <span title={t.name}>
+                                              {t.short_name}
+                                            </span>
+                                          </th>
+                                        ))}
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {sortedTeams.map((t1) => (
+                                        <tr
+                                          key={t1.id}
+                                          className="border-b border-white/[0.03]"
+                                        >
+                                          <td className="py-1.5 pr-2 font-medium text-neutral-300 sticky left-0 bg-surface-sunken z-10">
+                                            {t1.short_name}
+                                          </td>
+                                          {sortedTeams.map((t2) => {
+                                            if (t1.id === t2.id) {
+                                              return (
+                                                <td
+                                                  key={t2.id}
+                                                  className="text-center py-1.5 px-1 text-neutral-800"
+                                                >
+                                                  —
+                                                </td>
+                                              );
+                                            }
+                                            const key = [t1.id, t2.id]
+                                              .sort()
+                                              .join('-');
+                                            const rec = h2hMap.get(key);
+                                            if (!rec) {
+                                              return (
+                                                <td
+                                                  key={t2.id}
+                                                  className="text-center py-1.5 px-1 text-neutral-700"
+                                                >
+                                                  -
+                                                </td>
+                                              );
+                                            }
+                                            const isFirst =
+                                              t1.id === rec.team1Id;
+                                            const w = isFirst
+                                              ? rec.team1Wins
+                                              : rec.team2Wins;
+                                            const l = isFirst
+                                              ? rec.team2Wins
+                                              : rec.team1Wins;
+                                            return (
+                                              <td
+                                                key={t2.id}
+                                                className="text-center py-1.5 px-1"
+                                              >
+                                                <span
+                                                  className={`tabular-nums font-semibold ${
+                                                    w > l
+                                                      ? 'text-emerald-400'
+                                                      : w < l
+                                                        ? 'text-red-400'
+                                                        : 'text-neutral-400'
+                                                  }`}
+                                                >
+                                                  {w}-{l}
+                                                </span>
+                                              </td>
+                                            );
+                                          })}
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </div>
+                            );
+                          })()}
+                      </div>
+                    )}
+
+                    {activeTab === 'monte-carlo' && (
+                      <div className="space-y-6">
+                        <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
+                          <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider text-neutral-400">
+                            {tx.monteCarloHeading}
+                          </h3>
+                          <p className="text-xs text-neutral-500 mb-4">
+                            {tx.monteCarloDesc}
+                            {stages
+                              .flatMap((s) => s.matches)
+                              .some((m) => m.locked) && (
+                              <span className="text-amber-400 ml-1">
+                                {tx.lockedPreserved}
+                              </span>
+                            )}
+                          </p>
+                          <div className="flex items-center gap-4 mb-6">
+                            <div>
+                              <label className="block text-[10px] uppercase tracking-wider text-neutral-500 font-semibold mb-1">
+                                {tx.iterationsLabel}
+                              </label>
+                              <div className="flex gap-2">
+                                {[100, 500, 1000, 5000].map((n) => (
+                                  <button
+                                    key={n}
+                                    type="button"
+                                    onClick={() => setMonteCarloIterations(n)}
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                                      monteCarloIterations === n
+                                        ? 'bg-purple-600 border-purple-500 text-white'
+                                        : 'bg-neutral-800 border-neutral-700 text-neutral-300 hover:bg-neutral-700'
+                                    }`}
+                                  >
+                                    {n >= 1000 ? `${n / 1000}k` : n}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                            <button
+                              onClick={handleMonteCarlo}
+                              disabled={monteCarloRunning}
+                              className={`px-6 py-3 rounded-lg text-sm font-semibold shadow transition-colors ${
+                                monteCarloRunning
+                                  ? 'bg-neutral-700 text-neutral-400 cursor-wait animate-pulse'
+                                  : 'bg-purple-600 hover:bg-purple-700 text-white'
+                              }`}
+                            >
+                              {monteCarloRunning
+                                ? tx.calcInProgress
+                                : format(tx.runSimulations, {
+                                    count: monteCarloIterations,
+                                  })}
+                            </button>
+                          </div>
+
+                          {monteCarloResult && (
+                            <div className="space-y-6">
+                              <p className="text-xs text-neutral-500">
+                                {format(tx.iterationsCompleted, {
+                                  count: monteCarloResult.iterations,
+                                })}
+                              </p>
+
+                              {/* Win probability ranking */}
+                              <div>
+                                <h4 className="text-xs font-semibold text-neutral-300 uppercase tracking-wider mb-3">
+                                  {tx.winProbability}
+                                </h4>
+                                <div className="space-y-2">
+                                  {teams
+                                    .map((t) => ({
+                                      team: t,
+                                      prob:
+                                        monteCarloResult.winProbability.get(
+                                          t.id
+                                        ) ?? 0,
+                                      wins:
+                                        monteCarloResult.winCounts.get(t.id) ??
+                                        0,
+                                    }))
+                                    .sort((a, b) => b.prob - a.prob)
+                                    .map((row, i) => (
+                                      <div
+                                        key={row.team.id}
+                                        className="flex items-center gap-3"
+                                      >
+                                        <span className="w-6 text-xs font-bold text-neutral-500">
+                                          {i + 1}
+                                        </span>
+                                        <span
+                                          className={`inline-flex items-center justify-center w-5 h-5 rounded text-[9px] font-extrabold border ${
+                                            SEED_COLORS[row.team.seed] ??
+                                            'bg-neutral-500/20 text-neutral-400 border-neutral-500/30'
+                                          }`}
+                                        >
+                                          {row.team.seed}
+                                        </span>
+                                        <span className="text-sm font-medium w-40 truncate">
+                                          {row.team.name}
+                                        </span>
+                                        <div className="flex-1 h-3 bg-neutral-800 rounded-full overflow-hidden">
+                                          <div
+                                            className="h-full rounded-full transition-all bg-gradient-to-r from-purple-600 to-emerald-500"
+                                            style={{
+                                              width: `${row.prob * 100}%`,
+                                            }}
+                                          />
+                                        </div>
+                                        <span className="text-sm font-bold tabular-nums w-16 text-right text-white">
+                                          {(row.prob * 100).toFixed(1)}%
+                                        </span>
+                                        <span className="text-[10px] text-neutral-500 tabular-nums w-16 text-right">
+                                          {row.wins}/
+                                          {monteCarloResult.iterations}
+                                        </span>
+                                      </div>
+                                    ))}
+                                </div>
                               </div>
 
-                              {/* Card */}
+                              {/* Placement distribution for top 4 */}
+                              <div>
+                                <h4 className="text-xs font-semibold text-neutral-300 uppercase tracking-wider mb-3">
+                                  {tx.placementDist}
+                                </h4>
+                                <div className="overflow-x-auto">
+                                  <table className="w-full text-xs">
+                                    <thead>
+                                      <tr className="border-b border-white/10">
+                                        <th
+                                          scope="col"
+                                          className="text-left py-2 pr-4 text-neutral-500 font-semibold"
+                                        >
+                                          {tx.thTeam}
+                                        </th>
+                                        {Array.from(
+                                          { length: Math.min(teams.length, 8) },
+                                          (_, i) => (
+                                            <th
+                                              scope="col"
+                                              key={i}
+                                              className="text-center py-2 px-2 text-neutral-500 font-semibold"
+                                            >
+                                              {i === 0
+                                                ? tx.placement1st
+                                                : i === 1
+                                                  ? tx.placement2nd
+                                                  : format(tx.placementNth, {
+                                                      n: i + 1,
+                                                    })}
+                                            </th>
+                                          )
+                                        )}
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {teams
+                                        .map((t) => ({
+                                          team: t,
+                                          dist:
+                                            monteCarloResult.placementDist.get(
+                                              t.id
+                                            ) ?? [],
+                                        }))
+                                        .sort(
+                                          (a, b) =>
+                                            (b.dist[0] ?? 0) - (a.dist[0] ?? 0)
+                                        )
+                                        .slice(0, 8)
+                                        .map((row) => (
+                                          <tr
+                                            key={row.team.id}
+                                            className="border-b border-white/[0.03]"
+                                          >
+                                            <td className="py-2 pr-4 font-medium">
+                                              {row.team.short_name}
+                                            </td>
+                                            {Array.from(
+                                              {
+                                                length: Math.min(
+                                                  teams.length,
+                                                  8
+                                                ),
+                                              },
+                                              (_, i) => {
+                                                const count = row.dist[i] ?? 0;
+                                                const pct =
+                                                  monteCarloResult.iterations >
+                                                  0
+                                                    ? Math.round(
+                                                        (count /
+                                                          monteCarloResult.iterations) *
+                                                          100
+                                                      )
+                                                    : 0;
+                                                return (
+                                                  <td
+                                                    key={i}
+                                                    className="text-center py-2 px-2"
+                                                  >
+                                                    <span
+                                                      className={`tabular-nums ${
+                                                        pct > 30
+                                                          ? 'text-emerald-400 font-bold'
+                                                          : pct > 15
+                                                            ? 'text-sky-400'
+                                                            : pct > 5
+                                                              ? 'text-neutral-300'
+                                                              : 'text-neutral-600'
+                                                      }`}
+                                                    >
+                                                      {pct > 0
+                                                        ? `${pct}%`
+                                                        : '-'}
+                                                    </span>
+                                                  </td>
+                                                );
+                                              }
+                                            )}
+                                          </tr>
+                                        ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {activeTab === 'history' && (
+                      <div className="space-y-6">
+                        <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
+                          <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-sm font-semibold uppercase tracking-wider text-neutral-400">
+                              {tx.historyHeading}
+                            </h3>
+                            {simHistory.length > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => setSimHistory([])}
+                                className="text-[10px] text-neutral-500 hover:text-red-400 transition-colors"
+                              >
+                                {tx.clearHistory}
+                              </button>
+                            )}
+                          </div>
+                          {simHistory.length === 0 ? (
+                            <p className="text-sm text-neutral-500">
+                              {tx.historyEmpty}
+                            </p>
+                          ) : (
+                            <div className="space-y-4">
+                              {simHistory.map((entry, idx) => (
+                                <div
+                                  key={entry.id}
+                                  className="rounded-lg border border-white/10 bg-white/[0.01] p-4"
+                                >
+                                  <div className="flex items-center justify-between mb-3">
+                                    <div className="flex items-center gap-3">
+                                      <span className="text-xs font-bold text-neutral-500">
+                                        #{simHistory.length - idx}
+                                      </span>
+                                      <span className="text-xs text-neutral-400">
+                                        {new Date(
+                                          entry.timestamp
+                                        ).toLocaleString('fr-FR', {
+                                          hour: '2-digit',
+                                          minute: '2-digit',
+                                          second: '2-digit',
+                                        })}
+                                      </span>
+                                      <span className="px-2 py-0.5 rounded text-[9px] font-bold uppercase bg-purple-500/10 text-purple-300 border border-purple-500/20">
+                                        {FORMAT_LABELS[entry.formatType]}
+                                      </span>
+                                      <span className="text-[10px] text-neutral-500">
+                                        {format(tx.teamsBoLabel, {
+                                          count: entry.teamCount,
+                                          bo: entry.bestOf,
+                                        })}
+                                      </span>
+                                    </div>
+                                    <div className="flex gap-4 text-[10px]">
+                                      <span
+                                        className="text-amber-400"
+                                        title={tx.closeMatches}
+                                      >
+                                        {format(tx.closePct, {
+                                          pct: entry.competitiveness
+                                            .closeMatchPct,
+                                        })}
+                                      </span>
+                                      <span
+                                        className="text-rose-400"
+                                        title={tx.upsets}
+                                      >
+                                        {format(tx.upsetsCount, {
+                                          count: entry.competitiveness.upsets,
+                                        })}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  {/* Top 5 standings */}
+                                  <div className="flex gap-4 flex-wrap">
+                                    {entry.standings.slice(0, 5).map((s, i) => (
+                                      <div
+                                        key={i}
+                                        className="flex items-center gap-1.5"
+                                      >
+                                        <span
+                                          className={`text-xs font-bold ${
+                                            i === 0
+                                              ? 'text-amber-400'
+                                              : i === 1
+                                                ? 'text-neutral-300'
+                                                : i === 2
+                                                  ? 'text-orange-400'
+                                                  : 'text-neutral-500'
+                                          }`}
+                                        >
+                                          {i + 1}.
+                                        </span>
+                                        <span className="text-xs text-neutral-300">
+                                          {s.name}
+                                        </span>
+                                        <span className="text-[10px] text-neutral-600">
+                                          {s.wins}V-{s.losses}D
+                                        </span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {activeTab === 'compare' && (
+                      <div className="space-y-6">
+                        {/* Config selector for comparison */}
+                        <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
+                          <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider text-neutral-400">
+                            {tx.compareHeading}
+                          </h3>
+                          <p className="text-xs text-neutral-500 mb-4">
+                            {format(tx.compareDesc, {
+                              format: FORMAT_LABELS[config.formatType],
+                            })}
+                          </p>
+                          <div className="flex flex-wrap gap-2 mb-4">
+                            {(Object.keys(FORMAT_LABELS) as FormatType[])
+                              .filter(
+                                (f) =>
+                                  f !== config.formatType && f !== 'showmatch'
+                              )
+                              .map((f) => {
+                                const tc = validCountsFor(f).includes(
+                                  config.teamCount
+                                )
+                                  ? config.teamCount
+                                  : 8;
+                                return (
+                                  <button
+                                    key={f}
+                                    type="button"
+                                    onClick={() =>
+                                      handleCompare({
+                                        formatType: f,
+                                        teamCount: tc,
+                                        ...(f === 'double_elim'
+                                          ? { grandFinalReset: true }
+                                          : {}),
+                                      })
+                                    }
+                                    className={`px-4 py-2 rounded-lg text-xs font-semibold border transition-colors ${
+                                      compareConfig?.formatType === f
+                                        ? 'bg-purple-600 border-purple-500 text-white'
+                                        : 'bg-neutral-800 border-neutral-700 text-neutral-300 hover:bg-neutral-700'
+                                    }`}
+                                  >
+                                    {tx.vs} {FORMAT_LABELS[f]}
+                                  </button>
+                                );
+                              })}
+                          </div>
+                          {compareConfig && (
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleCompare(compareConfig)}
+                                className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-neutral-800 border border-neutral-700 text-neutral-300 hover:bg-neutral-700 transition-colors"
+                              >
+                                {tx.regenerate}
+                              </button>
                               <button
                                 type="button"
                                 onClick={() => {
-                                  setActiveOccurrence(i);
-                                  setActiveTab('bracket');
+                                  setCompareData(null);
+                                  setCompareConfig(null);
                                 }}
-                                className={`flex-1 rounded-xl border p-4 text-left transition-all ${
-                                  activeOccurrence === i
-                                    ? 'border-purple-500/30 bg-purple-500/5'
-                                    : 'border-white/10 bg-white/[0.02] hover:bg-white/[0.04]'
-                                }`}
+                                className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-neutral-800 border border-neutral-700 text-neutral-300 hover:bg-neutral-700 transition-colors"
                               >
-                                <div className="flex items-center justify-between mb-2">
-                                  <span className="text-sm font-semibold">
-                                    {occ.label}
-                                  </span>
-                                  <span
-                                    className={`text-xs font-bold tabular-nums ${
-                                      pct === 100
-                                        ? 'text-emerald-400'
-                                        : pct > 0
-                                          ? 'text-amber-400'
-                                          : 'text-neutral-500'
-                                    }`}
-                                  >
-                                    {pct}%
-                                  </span>
-                                </div>
-                                <div className="flex items-center gap-4 text-xs text-neutral-400">
-                                  {firstDate && (
-                                    <span>
-                                      {format(tx.startLabel, {
-                                        date: formatMatchDate(firstDate),
-                                      })}
-                                    </span>
-                                  )}
-                                  {lastDate && lastDate !== firstDate && (
-                                    <span>
-                                      {format(tx.endLabel, {
-                                        date: formatMatchDate(lastDate),
-                                      })}
-                                    </span>
-                                  )}
-                                  <span>
-                                    {format(tx.matchesInline, { count: total })}
-                                  </span>
-                                  <span>
-                                    {format(tx.teamsInline, {
-                                      count: occ.teams.length,
-                                    })}
-                                  </span>
-                                </div>
-                                {/* Progress bar */}
-                                <div className="mt-2 h-1.5 bg-neutral-800 rounded-full overflow-hidden">
-                                  <div
-                                    className="h-full bg-gradient-to-r from-purple-500 to-emerald-400 rounded-full transition-all"
-                                    style={{ width: `${pct}%` }}
-                                  />
-                                </div>
+                                {tx.clear}
                               </button>
                             </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
+                          )}
+                        </div>
 
-                  {/* Summary across all occurrences */}
-                  <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
-                    <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider text-neutral-400">
-                      {tx.globalSummary}
-                    </h3>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      <div>
-                        <div className="text-[10px] uppercase tracking-wider text-neutral-500 font-semibold">
-                          {tx.totalMatches}
+                        {/* Side-by-side display */}
+                        {compareData && (
+                          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                            {/* Current config */}
+                            <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4 space-y-4">
+                              <div className="flex items-center gap-2">
+                                <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-purple-500/10 text-purple-300 border border-purple-500/20">
+                                  {tx.badgeCurrent}
+                                </span>
+                                <span className="text-sm font-semibold">
+                                  {FORMAT_LABELS[config.formatType]}
+                                </span>
+                                <span className="text-xs text-neutral-500">
+                                  {format(tx.teamsBoLabel, {
+                                    count: teams.length,
+                                    bo: config.bestOf,
+                                  })}
+                                </span>
+                              </div>
+                              <div className="text-xs text-neutral-400 space-y-1">
+                                <div>
+                                  {format(tx.matchesColon, {
+                                    count: stages.flatMap((s) => s.matches)
+                                      .length,
+                                  })}
+                                </div>
+                                <div>
+                                  {format(tx.roundsColon, {
+                                    count: new Set(
+                                      stages
+                                        .flatMap((s) => s.matches)
+                                        .map(
+                                          (m) =>
+                                            `${m.bracket_side}-${m.round_number}`
+                                        )
+                                    ).size,
+                                  })}
+                                </div>
+                              </div>
+                              <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
+                                {stages.map((stage, stageIdx) => (
+                                  <div key={stage.id} className="mb-4">
+                                    <p className="text-xs font-semibold text-purple-300 mb-2">
+                                      {stage.name}
+                                    </p>
+                                    <EliminationView
+                                      rounds={groupByRoundMemo(
+                                        stage.matches,
+                                        stage.stage_type === 'bracket'
+                                          ? 'wb'
+                                          : undefined
+                                      )}
+                                      onSimulate={
+                                        getStageHandlers(stageIdx).onSimulate
+                                      }
+                                      onReset={
+                                        getStageHandlers(stageIdx).onReset
+                                      }
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Compare config */}
+                            <div className="rounded-xl border border-sky-500/20 bg-sky-500/[0.02] p-4 space-y-4">
+                              <div className="flex items-center gap-2">
+                                <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-sky-500/10 text-sky-300 border border-sky-500/20">
+                                  {tx.badgeComparison}
+                                </span>
+                                <span className="text-sm font-semibold">
+                                  {
+                                    FORMAT_LABELS[
+                                      compareConfig?.formatType ??
+                                        config.formatType
+                                    ]
+                                  }
+                                </span>
+                                <span className="text-xs text-neutral-500">
+                                  {format(tx.teamsBoLabel, {
+                                    count: compareData.teams.length,
+                                    bo: config.bestOf,
+                                  })}
+                                </span>
+                              </div>
+                              <div className="text-xs text-neutral-400 space-y-1">
+                                <div>
+                                  {format(tx.matchesColon, {
+                                    count: compareData.stages.flatMap(
+                                      (s) => s.matches
+                                    ).length,
+                                  })}
+                                </div>
+                                <div>
+                                  {format(tx.roundsColon, {
+                                    count: new Set(
+                                      compareData.stages
+                                        .flatMap((s) => s.matches)
+                                        .map(
+                                          (m) =>
+                                            `${m.bracket_side}-${m.round_number}`
+                                        )
+                                    ).size,
+                                  })}
+                                </div>
+                              </div>
+                              <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
+                                {compareData.stages.map((stage) => (
+                                  <div key={stage.id} className="mb-4">
+                                    <p className="text-xs font-semibold text-sky-300 mb-2">
+                                      {stage.name}
+                                    </p>
+                                    <EliminationView
+                                      rounds={groupByRoundMemo(
+                                        stage.matches,
+                                        stage.stage_type === 'bracket'
+                                          ? 'wb'
+                                          : undefined
+                                      )}
+                                      onSimulate={noopSimAction}
+                                      onReset={noopSimAction}
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {activeTab === 'timeline' && occurrences.length > 1 && (
+                      <div className="space-y-6">
+                        <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
+                          <h3 className="text-sm font-semibold mb-6 uppercase tracking-wider text-neutral-400">
+                            {tx.calendarHeading}
+                          </h3>
+                          <div className="relative">
+                            {/* Vertical line */}
+                            <div className="absolute left-4 top-0 bottom-0 w-px bg-purple-500/20" />
+
+                            <div className="space-y-6">
+                              {occurrences.map((occ, i) => {
+                                const allMatches = occ.stages.flatMap(
+                                  (s) => s.matches
+                                );
+                                const finished = allMatches.filter(
+                                  (m) => m.status === 'finished'
+                                ).length;
+                                const total = allMatches.length;
+                                const firstDate = allMatches.find(
+                                  (m) => m.scheduled_at
+                                )?.scheduled_at;
+                                const lastDate = [...allMatches]
+                                  .reverse()
+                                  .find((m) => m.scheduled_at)?.scheduled_at;
+                                const pct =
+                                  total > 0
+                                    ? Math.round((finished / total) * 100)
+                                    : 0;
+
+                                return (
+                                  <div
+                                    key={i}
+                                    className="flex gap-4 items-start"
+                                  >
+                                    {/* Dot on the line */}
+                                    <div
+                                      className={`relative z-10 w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 border-2 text-xs font-bold ${
+                                        activeOccurrence === i
+                                          ? 'bg-purple-600 border-purple-400 text-white'
+                                          : pct === 100
+                                            ? 'bg-emerald-600/30 border-emerald-500/50 text-emerald-300'
+                                            : 'bg-neutral-800 border-neutral-600 text-neutral-400'
+                                      }`}
+                                    >
+                                      {i + 1}
+                                    </div>
+
+                                    {/* Card */}
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setActiveOccurrence(i);
+                                        setActiveTab('bracket');
+                                      }}
+                                      className={`flex-1 rounded-xl border p-4 text-left transition-all ${
+                                        activeOccurrence === i
+                                          ? 'border-purple-500/30 bg-purple-500/5'
+                                          : 'border-white/10 bg-white/[0.02] hover:bg-white/[0.04]'
+                                      }`}
+                                    >
+                                      <div className="flex items-center justify-between mb-2">
+                                        <span className="text-sm font-semibold">
+                                          {occ.label}
+                                        </span>
+                                        <span
+                                          className={`text-xs font-bold tabular-nums ${
+                                            pct === 100
+                                              ? 'text-emerald-400'
+                                              : pct > 0
+                                                ? 'text-amber-400'
+                                                : 'text-neutral-500'
+                                          }`}
+                                        >
+                                          {pct}%
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center gap-4 text-xs text-neutral-400">
+                                        {firstDate && (
+                                          <span>
+                                            {format(tx.startLabel, {
+                                              date: formatMatchDate(firstDate),
+                                            })}
+                                          </span>
+                                        )}
+                                        {lastDate && lastDate !== firstDate && (
+                                          <span>
+                                            {format(tx.endLabel, {
+                                              date: formatMatchDate(lastDate),
+                                            })}
+                                          </span>
+                                        )}
+                                        <span>
+                                          {format(tx.matchesInline, {
+                                            count: total,
+                                          })}
+                                        </span>
+                                        <span>
+                                          {format(tx.teamsInline, {
+                                            count: occ.teams.length,
+                                          })}
+                                        </span>
+                                      </div>
+                                      {/* Progress bar */}
+                                      <div className="mt-2 h-1.5 bg-neutral-800 rounded-full overflow-hidden">
+                                        <div
+                                          className="h-full bg-gradient-to-r from-purple-500 to-emerald-400 rounded-full transition-all"
+                                          style={{ width: `${pct}%` }}
+                                        />
+                                      </div>
+                                    </button>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
                         </div>
-                        <div className="text-2xl font-bold mt-1">
-                          {occurrences.reduce(
-                            (sum, occ) =>
-                              sum + occ.stages.flatMap((s) => s.matches).length,
-                            0
-                          )}
+
+                        {/* Summary across all occurrences */}
+                        <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
+                          <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider text-neutral-400">
+                            {tx.globalSummary}
+                          </h3>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div>
+                              <div className="text-[10px] uppercase tracking-wider text-neutral-500 font-semibold">
+                                {tx.totalMatches}
+                              </div>
+                              <div className="text-2xl font-bold mt-1">
+                                {occurrences.reduce(
+                                  (sum, occ) =>
+                                    sum +
+                                    occ.stages.flatMap((s) => s.matches).length,
+                                  0
+                                )}
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-[10px] uppercase tracking-wider text-neutral-500 font-semibold">
+                                {tx.summaryFinished}
+                              </div>
+                              <div className="text-2xl font-bold mt-1 text-emerald-400">
+                                {occurrences.reduce(
+                                  (sum, occ) =>
+                                    sum +
+                                    occ.stages
+                                      .flatMap((s) => s.matches)
+                                      .filter((m) => m.status === 'finished')
+                                      .length,
+                                  0
+                                )}
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-[10px] uppercase tracking-wider text-neutral-500 font-semibold">
+                                {tx.totalDuration}
+                              </div>
+                              <div className="text-2xl font-bold mt-1 text-purple-400">
+                                {(() => {
+                                  const allDates = occurrences.flatMap(
+                                    (occ) =>
+                                      occ.stages
+                                        .flatMap((s) => s.matches)
+                                        .map((m) => m.scheduled_at)
+                                        .filter(Boolean) as string[]
+                                  );
+                                  if (allDates.length < 2) return '—';
+                                  const sorted = allDates.sort();
+                                  const first = new Date(sorted[0]);
+                                  const last = new Date(
+                                    sorted[sorted.length - 1]
+                                  );
+                                  const days = Math.ceil(
+                                    (last.getTime() - first.getTime()) /
+                                      (1000 * 60 * 60 * 24)
+                                  );
+                                  return `${days}j`;
+                                })()}
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-[10px] uppercase tracking-wider text-neutral-500 font-semibold">
+                                {tx.uniqueTeams}
+                              </div>
+                              <div className="text-2xl font-bold mt-1 text-sky-400">
+                                {
+                                  new Set(
+                                    occurrences.flatMap((occ) =>
+                                      occ.teams.map((t) => t.name)
+                                    )
+                                  ).size
+                                }
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       </div>
-                      <div>
-                        <div className="text-[10px] uppercase tracking-wider text-neutral-500 font-semibold">
-                          {tx.summaryFinished}
-                        </div>
-                        <div className="text-2xl font-bold mt-1 text-emerald-400">
-                          {occurrences.reduce(
-                            (sum, occ) =>
-                              sum +
-                              occ.stages
-                                .flatMap((s) => s.matches)
-                                .filter((m) => m.status === 'finished').length,
-                            0
-                          )}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-[10px] uppercase tracking-wider text-neutral-500 font-semibold">
-                          {tx.totalDuration}
-                        </div>
-                        <div className="text-2xl font-bold mt-1 text-purple-400">
-                          {(() => {
-                            const allDates = occurrences.flatMap(
-                              (occ) =>
-                                occ.stages
-                                  .flatMap((s) => s.matches)
-                                  .map((m) => m.scheduled_at)
-                                  .filter(Boolean) as string[]
-                            );
-                            if (allDates.length < 2) return '—';
-                            const sorted = allDates.sort();
-                            const first = new Date(sorted[0]);
-                            const last = new Date(sorted[sorted.length - 1]);
-                            const days = Math.ceil(
-                              (last.getTime() - first.getTime()) /
-                                (1000 * 60 * 60 * 24)
-                            );
-                            return `${days}j`;
-                          })()}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-[10px] uppercase tracking-wider text-neutral-500 font-semibold">
-                          {tx.uniqueTeams}
-                        </div>
-                        <div className="text-2xl font-bold mt-1 text-sky-400">
-                          {
-                            new Set(
-                              occurrences.flatMap((occ) =>
-                                occ.teams.map((t) => t.name)
-                              )
-                            ).size
-                          }
-                        </div>
-                      </div>
-                    </div>
+                    )}
                   </div>
-                </div>
+                </>
               )}
-              </div>
-            </>
-          )}
             </>
           )}
         </div>

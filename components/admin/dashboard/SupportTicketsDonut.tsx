@@ -4,8 +4,9 @@
 
 import type { TicketsBreakdown } from '@/utils/dashboard/buildTournamentDashboard';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import nsAdminDashboardSupportTicketsDonut from '@/lib/i18n/locales/admin-fr/adminDashboardSupportTicketsDonut';
 
-type Dict = ReturnType<typeof useAdminT<'adminDashboardSupportTicketsDonut'>>;
+type Dict = typeof nsAdminDashboardSupportTicketsDonut.fr;
 
 type Props = {
   tickets: TicketsBreakdown;
@@ -36,7 +37,7 @@ export default function SupportTicketsDonut({
   size = 120,
   strokeWidth = 16,
 }: Props) {
-  const t = useAdminT('adminDashboardSupportTicketsDonut');
+  const t = useAdminT(nsAdminDashboardSupportTicketsDonut);
   const categoryLabel = getCategoryLabel(t);
   const total = tickets.totalOpen;
   if (total === 0) {

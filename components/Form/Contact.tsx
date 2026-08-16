@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useToast } from '@/components/Toast';
 import { useT } from '@/lib/i18n/useT';
+import nsContactForm from '@/lib/i18n/locales/fr/contactForm';
 
 type Status = 'idle' | 'loading' | 'success' | 'error';
 
@@ -18,7 +19,7 @@ function genIdempotencyKey(): string {
 }
 
 export default function Contact({ className = '' }: { className?: string }) {
-  const t = useT('contactForm');
+  const t = useT(nsContactForm);
   const [status, setStatus] = useState<Status>('idle');
   const [error, setError] = useState<string | null>(null);
   const liveRef = useRef<HTMLSpanElement | null>(null);

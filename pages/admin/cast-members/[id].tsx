@@ -7,6 +7,7 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
 import CastMemberStaffPicker from '@/components/admin/CastMemberStaffPicker';
 import { useAdminT } from '@/lib/i18n/useAdminT';
+import nsAdminCastMemberEdit from '@/lib/i18n/locales/admin-fr/adminCastMemberEdit';
 
 type Props = {
   staff: {
@@ -17,7 +18,7 @@ type Props = {
 };
 
 function AdminCastMemberEditPage({ staff }: Props) {
-  const t = useAdminT('adminCastMemberEdit');
+  const t = useAdminT(nsAdminCastMemberEdit);
   const router = useRouter();
   const { id } = router.query;
   const { addToast } = useToast();

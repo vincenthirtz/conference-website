@@ -20,7 +20,11 @@ import { notifyVetoStep } from '@/utils/discord';
 import { logger } from '../../../../../utils/logger';
 export default withStaffRoute(handler, 'admin');
 
-async function handler(req: NextApiRequest, res: NextApiResponse, ctx: AuthenticatedStaffContext) {
+async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  ctx: AuthenticatedStaffContext
+) {
   const { matchId } = req.query;
 
   if (!matchId || Array.isArray(matchId) || !isValidUUID(matchId)) {
@@ -68,7 +72,9 @@ async function fetchMatchForVeto(
 ): Promise<MatchForVeto | null> {
   const { data, error } = await supabaseAdmin
     .from('matches')
-    .select('id, tournament_id, match_format, team1_id, team2_id, veto_locked_at')
+    .select(
+      'id, tournament_id, match_format, team1_id, team2_id, veto_locked_at'
+    )
     .eq('id', matchId)
     .eq('tenant_id', tenantId)
     .maybeSingle();
@@ -381,7 +387,11 @@ async function sendVetoStepDiscord(params: {
  * DELETE : reset all veto steps for a match
  * ---------------------------------------------------------*/
 
-async function handleDelete(matchId: string, res: NextApiResponse, ctx: AuthenticatedStaffContext) {
+async function handleDelete(
+  matchId: string,
+  res: NextApiResponse,
+  ctx: AuthenticatedStaffContext
+) {
   // Verrou : meme garde que POST. Le reset est aussi destructeur.
   const match = await fetchMatchForVeto(matchId, ctx.tenantId);
   if (!match) {
@@ -447,7 +457,7 @@ async function handlePatch(
   if (body.unlock !== true) {
     return res
       .status(400)
-      .json({ error: "PATCH requiert { unlock: true } (admin only)." });
+      .json({ error: 'PATCH requiert { unlock: true } (admin only).' });
   }
 
   // Unlock = action exceptionnelle, reservee aux admins+. Manager n'a pas le

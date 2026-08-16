@@ -12,8 +12,9 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { RegistrationField } from '@/utils/registrationFields';
 import RegistrationAnswers from '@/components/admin/RegistrationAnswers';
+import nsAdminDemandeDetail from '@/lib/i18n/locales/admin-fr/adminDemandeDetail';
 
-type Dict = ReturnType<typeof useAdminT<'adminDemandeDetail'>>;
+type Dict = typeof nsAdminDemandeDetail.fr;
 
 type DemandeType =
   | 'join_team'
@@ -171,7 +172,7 @@ type ForwardCandidate = {
 };
 
 function AdminDemandeDetailPage() {
-  const t = useAdminT('adminDemandeDetail');
+  const t = useAdminT(nsAdminDemandeDetail);
   const router = useRouter();
   const { addToast } = useToast();
   const { adminFetchJson } = useAdminFetch();

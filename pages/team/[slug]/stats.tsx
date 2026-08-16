@@ -13,6 +13,7 @@ import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
 import { useT, format } from '@/lib/i18n/useT';
 
 import { logger } from '../../../utils/logger';
+import nsTeamStats from '@/lib/i18n/locales/fr/teamStats';
 type Team = {
   id: string;
   name: string;
@@ -182,7 +183,7 @@ export default function TeamStatsPage({
   mapStats,
   matchesPlayed,
 }: Props) {
-  const t = useT('teamStats');
+  const t = useT(nsTeamStats);
   const name = team.name;
   const shortName = team.short_name || null;
   const logo = team.logo_url || null;
@@ -356,13 +357,27 @@ export default function TeamStatsPage({
                 <table className="min-w-full text-[11px]">
                   <thead>
                     <tr className="text-gray-400 border-b border-white/10">
-                      <th scope="col" className="text-left py-1.5 pr-3">{t.thMap}</th>
-                      <th scope="col" className="text-right py-1.5 px-3">{t.thGames}</th>
-                      <th scope="col" className="text-right py-1.5 px-3">{t.thW}</th>
-                      <th scope="col" className="text-right py-1.5 px-3">{t.thL}</th>
-                      <th scope="col" className="text-right py-1.5 px-3">{t.thWinrate}</th>
-                      <th scope="col" className="text-right py-1.5 px-3">{t.thRounds}</th>
-                      <th scope="col" className="text-right py-1.5 px-3">{t.thOTs}</th>
+                      <th scope="col" className="text-left py-1.5 pr-3">
+                        {t.thMap}
+                      </th>
+                      <th scope="col" className="text-right py-1.5 px-3">
+                        {t.thGames}
+                      </th>
+                      <th scope="col" className="text-right py-1.5 px-3">
+                        {t.thW}
+                      </th>
+                      <th scope="col" className="text-right py-1.5 px-3">
+                        {t.thL}
+                      </th>
+                      <th scope="col" className="text-right py-1.5 px-3">
+                        {t.thWinrate}
+                      </th>
+                      <th scope="col" className="text-right py-1.5 px-3">
+                        {t.thRounds}
+                      </th>
+                      <th scope="col" className="text-right py-1.5 px-3">
+                        {t.thOTs}
+                      </th>
                       <th scope="col" className="text-right py-1.5 pl-3">
                         {t.thTiebreakers}
                       </th>

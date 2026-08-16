@@ -8,10 +8,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import {
-  withStaffRoute,
-  type AuthenticatedStaffContext,
-} from '@/utils/staff';
+import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
 import { logger } from '@/utils/logger';
 
 const MAX_RANGE_MS = 92 * 24 * 3600 * 1000;
@@ -30,7 +27,9 @@ async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const fromRaw = Array.isArray(req.query.from) ? req.query.from[0] : req.query.from;
+  const fromRaw = Array.isArray(req.query.from)
+    ? req.query.from[0]
+    : req.query.from;
   const toRaw = Array.isArray(req.query.to) ? req.query.to[0] : req.query.to;
   const fromMs = fromRaw ? Date.parse(fromRaw) : NaN;
   const toMs = toRaw ? Date.parse(toRaw) : NaN;

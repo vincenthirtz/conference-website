@@ -41,6 +41,7 @@ import AdvanceModal from '@/components/admin/stages/[stageId]/AdvanceModal';
 import type { AdvanceStanding } from '@/components/admin/stages/[stageId]/AdvanceStandingsTable';
 
 import { logger } from '../../../utils/logger';
+import nsAdminStageDetail from '@/lib/i18n/locales/admin-fr/adminStageDetail';
 
 type StageApiResponse = {
   stage: Stage;
@@ -53,7 +54,7 @@ type TournamentApiResponse = {
 export const getServerSideProps = withStaffPage('admin');
 
 function AdminStagePage({ staff }: StaffProps) {
-  const t = useAdminT('adminStageDetail');
+  const t = useAdminT(nsAdminStageDetail);
   const router = useRouter();
   const { stageId } = router.query;
   const { mutate: mutateIdempotent } = useIdempotentMutation();

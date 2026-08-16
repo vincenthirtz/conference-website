@@ -19,10 +19,11 @@ import type {
 } from '@/types/leagues';
 
 import { logger } from '../../../utils/logger';
+import nsAdminLeaguesList from '@/lib/i18n/locales/admin-fr/adminLeaguesList';
 
 export const getServerSideProps = withStaffPage('admin');
 
-type Dict = ReturnType<typeof useAdminT<'adminLeaguesList'>>;
+type Dict = typeof nsAdminLeaguesList.fr;
 
 /* ----------------------------------------------------------------
  * Statut → libellé / couleur
@@ -99,7 +100,7 @@ type CreateFormProps = {
 };
 
 function CreateLeagueForm({ onCreated, onCancel }: CreateFormProps) {
-  const t = useAdminT('adminLeaguesList');
+  const t = useAdminT(nsAdminLeaguesList);
   const { mutateJson } = useIdempotentMutation();
   const { addToast } = useToast();
 
@@ -334,7 +335,7 @@ function CreateLeagueForm({ onCreated, onCancel }: CreateFormProps) {
  * ---------------------------------------------------------------- */
 
 function AdminLeaguesPage(_props: StaffProps) {
-  const t = useAdminT('adminLeaguesList');
+  const t = useAdminT(nsAdminLeaguesList);
   const router = useRouter();
   const { mutate } = useIdempotentMutation();
   const { confirm, dialog } = useConfirmDialog();

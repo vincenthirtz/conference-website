@@ -16,6 +16,7 @@ import {
   type DiscordChannelType,
 } from '@/utils/discord/channels';
 import type { StaffProps } from '@/types/admin';
+import nsAdminTournamentDiscord from '@/lib/i18n/locales/admin-fr/adminTournamentDiscord';
 
 type ChannelType = DiscordChannelType;
 
@@ -44,7 +45,7 @@ function DiscordConfigPage(_: StaffProps) {
   const tournamentId = Array.isArray(id) ? id[0] : id;
   const { addToast } = useToast();
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
-  const t = useAdminT('adminTournamentDiscord');
+  const t = useAdminT(nsAdminTournamentDiscord);
 
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<ApiResponse | null>(null);

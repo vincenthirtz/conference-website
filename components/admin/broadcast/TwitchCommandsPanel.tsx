@@ -47,6 +47,7 @@ import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useToast } from '@/components/Toast';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import Switch from '@/components/ui/Switch';
+import nsAdminTwitchCommands from '@/lib/i18n/locales/admin-fr/adminTwitchCommands';
 
 // --- Formes du contrat (figées) ---------------------------------------------
 
@@ -107,7 +108,7 @@ function errorCode(err: unknown): string | null {
 }
 
 export default function TwitchCommandsPanel() {
-  const t = useAdminT('adminTwitchCommands');
+  const t = useAdminT(nsAdminTwitchCommands);
   const { adminFetchJson } = useAdminFetch();
   const { mutateJson } = useIdempotentMutation();
   const { confirm, dialog } = useConfirmDialog();
@@ -1131,7 +1132,7 @@ export default function TwitchCommandsPanel() {
 
 // --- Sous-composants présentation -------------------------------------------
 
-type CommandsT = ReturnType<typeof useAdminT<'adminTwitchCommands'>>;
+type CommandsT = typeof nsAdminTwitchCommands.fr;
 
 function banDurationLabel(d: (typeof BAN_DURATIONS)[number], t: CommandsT) {
   switch (d) {

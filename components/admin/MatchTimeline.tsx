@@ -5,8 +5,9 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import nsAdminMatchTimeline from '@/lib/i18n/locales/admin-fr/adminMatchTimeline';
 
-type Dict = ReturnType<typeof useAdminT<'adminMatchTimeline'>>;
+type Dict = typeof nsAdminMatchTimeline.fr;
 
 type HistoryLog = {
   id: string;
@@ -69,7 +70,7 @@ const ROLE_COLORS: Record<string, string> = {
 };
 
 export default function MatchTimeline({ matchId }: Props) {
-  const t = useAdminT('adminMatchTimeline');
+  const t = useAdminT(nsAdminMatchTimeline);
   const { adminFetch } = useAdminFetch();
   const [logs, setLogs] = useState<HistoryLog[]>([]);
   const [loading, setLoading] = useState(true);

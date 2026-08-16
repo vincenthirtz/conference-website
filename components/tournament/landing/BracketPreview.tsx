@@ -8,12 +8,16 @@ import Link from 'next/link';
 import { useT } from '@/lib/i18n/useT';
 import { Section, SectionHeader, Reveal } from './primitives';
 import type { LandingStage } from './types';
+import nsTournamentLanding from '@/lib/i18n/locales/fr/tournamentLanding';
 
 function BracketSlot() {
-  const t = useT('tournamentLanding');
+  const t = useT(nsTournamentLanding);
   return (
     <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2">
-      <span className="h-5 w-5 shrink-0 rounded bg-white/8" aria-hidden="true" />
+      <span
+        className="h-5 w-5 shrink-0 rounded bg-white/8"
+        aria-hidden="true"
+      />
       <span className="truncate text-[11px] text-gray-500">{t.bracketTbd}</span>
     </div>
   );
@@ -38,7 +42,10 @@ function BracketColumn({
   stagger: 1 | 2 | 3 | 4 | 5;
 }) {
   return (
-    <Reveal stagger={stagger} className="flex min-w-[150px] flex-1 flex-col gap-3">
+    <Reveal
+      stagger={stagger}
+      className="flex min-w-[150px] flex-1 flex-col gap-3"
+    >
       <p className="text-center text-[10px] font-semibold uppercase tracking-widest text-gray-500">
         {label}
       </p>
@@ -58,7 +65,7 @@ export default function BracketPreview({
   stages: LandingStage[];
   tournamentPath: string;
 }) {
-  const t = useT('tournamentLanding');
+  const t = useT(nsTournamentLanding);
 
   const hasDoubleElim = stages.some(
     (s) =>
@@ -78,8 +85,19 @@ export default function BracketPreview({
           <Link href={`${tournamentPath}/bracket`}>
             <span className="inline-flex items-center gap-2 rounded-full bg-[var(--color-violet)] px-5 py-2.5 text-xs font-bold text-white transition-transform hover:scale-[1.03]">
               {t.bracketCta}
-              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+              <svg
+                className="h-3.5 w-3.5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2.5}
+                  d="M13 7l5 5m0 0l-5 5m5-5H6"
+                />
               </svg>
             </span>
           </Link>
@@ -94,10 +112,25 @@ export default function BracketPreview({
             {t.bracketWinners}
           </p>
           <div className="flex items-stretch gap-4">
-            <BracketColumn label={t.bracketRound.replace('{n}', '1')} count={4} stagger={1} />
-            <BracketColumn label={t.bracketRound.replace('{n}', '2')} count={2} stagger={2} />
-            <BracketColumn label={t.bracketRound.replace('{n}', '3')} count={1} stagger={3} />
-            <Reveal stagger={4} className="flex min-w-[150px] flex-1 flex-col justify-center gap-3">
+            <BracketColumn
+              label={t.bracketRound.replace('{n}', '1')}
+              count={4}
+              stagger={1}
+            />
+            <BracketColumn
+              label={t.bracketRound.replace('{n}', '2')}
+              count={2}
+              stagger={2}
+            />
+            <BracketColumn
+              label={t.bracketRound.replace('{n}', '3')}
+              count={1}
+              stagger={3}
+            />
+            <Reveal
+              stagger={4}
+              className="flex min-w-[150px] flex-1 flex-col justify-center gap-3"
+            >
               <p className="text-center text-[10px] font-semibold uppercase tracking-widest text-[var(--color-yellow)]">
                 {t.bracketFinal}
               </p>
@@ -119,9 +152,21 @@ export default function BracketPreview({
                 {t.bracketLosers}
               </p>
               <div className="flex items-stretch gap-4">
-                <BracketColumn label={t.bracketRound.replace('{n}', '1')} count={3} stagger={1} />
-                <BracketColumn label={t.bracketRound.replace('{n}', '2')} count={2} stagger={2} />
-                <BracketColumn label={t.bracketRound.replace('{n}', '3')} count={1} stagger={3} />
+                <BracketColumn
+                  label={t.bracketRound.replace('{n}', '1')}
+                  count={3}
+                  stagger={1}
+                />
+                <BracketColumn
+                  label={t.bracketRound.replace('{n}', '2')}
+                  count={2}
+                  stagger={2}
+                />
+                <BracketColumn
+                  label={t.bracketRound.replace('{n}', '3')}
+                  count={1}
+                  stagger={3}
+                />
               </div>
             </>
           )}

@@ -5,11 +5,12 @@ import Link from 'next/link';
 import { supabaseClient } from '@/utils/supabase';
 import { useToast } from '@/components/Toast';
 import { useAdminT } from '@/lib/i18n/useAdminT';
+import nsAdminResetPassword from '@/lib/i18n/locales/admin-fr/adminResetPassword';
 
 export default function AdminResetPasswordPage() {
   const router = useRouter();
   const { addToast } = useToast();
-  const t = useAdminT('adminResetPassword');
+  const t = useAdminT(nsAdminResetPassword);
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [loading, setLoading] = useState(false);

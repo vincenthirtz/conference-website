@@ -7,9 +7,10 @@ import Paragraph from '../Typography/paragraph';
 import Button from '../Buttons/button';
 import Link from 'next/link';
 import { useT } from '@/lib/i18n/useT';
+import nsInscriptionPopup from '@/lib/i18n/locales/fr/inscriptionPopup';
 
 function Popup() {
-  const t = useT('inscriptionPopup');
+  const t = useT(nsInscriptionPopup);
   const [isVisible, setIsVisible] = useState<boolean>(false);
   const [isOpen, setIsOpen] = useState<boolean>(true);
 

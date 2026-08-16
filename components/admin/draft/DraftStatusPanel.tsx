@@ -84,8 +84,8 @@ export function DraftStatusPanel({
           {STATUS_LABEL[draft.status] ?? draft.status}
         </span>
         <div className="text-sm text-neutral-300">
-          Game {draft.game_index} · {draft.game.toUpperCase()} ·{' '}
-          {done}/{total} steps
+          Game {draft.game_index} · {draft.game.toUpperCase()} · {done}/{total}{' '}
+          steps
           {draft.fearless ? (
             <span className="ml-2 rounded bg-amber-700/30 px-1.5 py-0.5 text-[10px] uppercase text-amber-300">
               fearless

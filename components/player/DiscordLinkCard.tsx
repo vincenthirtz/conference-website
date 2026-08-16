@@ -8,6 +8,7 @@ import { supabaseClient } from '@/utils/supabase';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useT } from '@/lib/i18n/useT';
 import { logger } from '../../utils/logger';
+import nsDiscordLinkCard from '@/lib/i18n/locales/fr/discordLinkCard';
 
 type LinkState = {
   linked: boolean;
@@ -16,7 +17,7 @@ type LinkState = {
 };
 
 export default function DiscordLinkCard() {
-  const t = useT('discordLinkCard');
+  const t = useT(nsDiscordLinkCard);
   const { adminFetchJson } = useAdminFetch();
   const [state, setState] = useState<LinkState | null>(null);
   const [loading, setLoading] = useState(true);

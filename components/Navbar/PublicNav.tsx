@@ -7,6 +7,7 @@ import { useAuthSession } from '@/hooks/useAuthSession';
 import { useT } from '@/lib/i18n/useT';
 import PlayerBell from './PlayerBell';
 import LanguageToggle from './LanguageToggle';
+import nsNavbar from '@/lib/i18n/locales/fr/navbar';
 
 const HIDDEN_PUBLIC_LINKS = new Set(['À propos', 'Cast', 'Sponsors']);
 
@@ -20,7 +21,7 @@ export default function PublicNav({
   showStaffLogin,
 }: PublicNavProps) {
   const router = useRouter();
-  const tNav = useT('navbar');
+  const tNav = useT(nsNavbar);
   // Les titres de config/links.json sont le FR canonique ; la map publicLinks
   // fournit le libellé localisé (fallback : titre tel quel).
   const linkLabel = (title: string) =>

@@ -23,8 +23,9 @@ import {
 import type { AlertsSummary } from '@/utils/dashboard/buildTournamentDashboard';
 
 import { logger } from '../../utils/logger';
+import nsAdminDashboard from '@/lib/i18n/locales/admin-fr/adminDashboard';
 
-type Dict = ReturnType<typeof useAdminT<'adminDashboard'>>;
+type Dict = typeof nsAdminDashboard.fr;
 
 type StaffShape = {
   id: string;
@@ -330,7 +331,7 @@ function buildAlerts(summary: AlertsSummary | null, t: Dict) {
 
 function AdminDashboardPage({ staff, activeTenantKind }: Props) {
   const { adminFetchJson } = useAdminFetch();
-  const t = useAdminT('adminDashboard');
+  const t = useAdminT(nsAdminDashboard);
 
   const [alertsSummary, setAlertsSummary] = useState<AlertsSummary | null>(
     null

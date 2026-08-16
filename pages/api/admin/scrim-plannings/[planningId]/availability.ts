@@ -10,10 +10,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import {
-  withStaffRoute,
-  type AuthenticatedStaffContext,
-} from '@/utils/staff';
+import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
 import { planningConfigFromRow } from '@/utils/teams/scrimPlanningConfig';
 import { normalizePlanningSlots } from '@/utils/teams/scrimPlanningOverlap';
 import { isValidUUID } from '@/utils/apiHelpers';

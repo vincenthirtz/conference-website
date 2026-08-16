@@ -31,6 +31,7 @@ import {
 import type { CasterApiMatch, CasterScene } from '@/types/caster';
 
 import { inputClass, labelClass } from './fieldClasses';
+import nsAdminCasterScenes from '@/lib/i18n/locales/admin-fr/adminCasterScenes';
 
 const smallBtnClass =
   'px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-xs font-medium disabled:opacity-50';
@@ -54,7 +55,7 @@ export default function MatchPickerPanel({
   onImport,
   onDetach,
 }: Props) {
-  const t = useAdminT('adminCasterScenes');
+  const t = useAdminT(nsAdminCasterScenes);
   const { confirm, dialog } = useConfirmDialog();
 
   const [selectedMatchId, setSelectedMatchId] = useState('');

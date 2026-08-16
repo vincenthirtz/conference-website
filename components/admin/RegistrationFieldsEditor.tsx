@@ -13,6 +13,7 @@ import type {
   RegistrationField,
   RegistrationFieldType,
 } from '@/utils/registrationFields';
+import nsAdminRegistrationFields from '@/lib/i18n/locales/admin-fr/adminRegistrationFields';
 
 const FIELD_TYPES: RegistrationFieldType[] = [
   'text',
@@ -77,7 +78,7 @@ function RegistrationFieldsEditor({
   presets,
   presetsGameLabel,
 }: Props) {
-  const t = useAdminT('adminRegistrationFields');
+  const t = useAdminT(nsAdminRegistrationFields);
 
   // Presets whose key isn't already present in the current fields.
   const missingPresets = useMemo(() => {

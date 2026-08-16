@@ -36,8 +36,9 @@ import MemberProfileEditor, {
   type EditableMember,
 } from '@/components/Team/MemberProfileEditor';
 import { useT, format } from '@/lib/i18n/useT';
+import nsTeamEdit from '@/lib/i18n/locales/fr/teamEdit';
 
-type TeamEditDict = ReturnType<typeof useT<'teamEdit'>>;
+type TeamEditDict = typeof nsTeamEdit.fr;
 
 type EditableTeam = {
   id: string;
@@ -191,7 +192,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
 export default function TeamPublicEditPage({ team, members }: Props) {
   const { addToast } = useToast();
   const { adminFetchJson } = useAdminFetch();
-  const t = useT('teamEdit');
+  const t = useT(nsTeamEdit);
   const overlayLabels = getOverlayLabels(t);
   const focalLabels = getFocalLabels(t);
 
@@ -1002,7 +1003,7 @@ function ColorField({
   placeholder: string;
   hint?: string;
 }) {
-  const t = useT('teamEdit');
+  const t = useT(nsTeamEdit);
   return (
     <div>
       <label htmlFor={id} className="block text-sm text-neutral-300 mb-1">

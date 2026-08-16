@@ -11,6 +11,7 @@ import { useUrlFilters } from '@/utils/useUrlFilters';
 import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import nsAdminSupport from '@/lib/i18n/locales/admin-fr/adminSupport';
 
 type Severity = 'low' | 'medium' | 'high';
 type Category = 'dispute' | 'behavior' | 'technical' | 'other';
@@ -65,7 +66,7 @@ const FILTER_KEYS = ['status', 'severity', 'category', 'search'] as const;
 
 const PAGE_SIZE = 50;
 
-type Dict = ReturnType<typeof useAdminT<'adminSupport'>>;
+type Dict = typeof nsAdminSupport.fr;
 
 function getCategoryLabels(tx: Dict): Record<Category, string> {
   return {
@@ -137,7 +138,7 @@ type TicketsResponse = {
 type TicketUpdateResponse = { ticket: Ticket };
 
 export default function SupportPanel() {
-  const tx = useAdminT('adminSupport');
+  const tx = useAdminT(nsAdminSupport);
   const categoryLabels = getCategoryLabels(tx);
   const statusLabels = getStatusLabels(tx);
   const { addToast } = useToast();

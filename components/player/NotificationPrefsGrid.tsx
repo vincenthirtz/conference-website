@@ -17,6 +17,7 @@
 
 import { useT } from '@/lib/i18n/useT';
 import Switch from '@/components/ui/Switch';
+import nsPlayerNotifications from '@/lib/i18n/locales/fr/playerNotifications';
 
 type NotificationChannel = 'push' | 'email';
 
@@ -66,7 +67,7 @@ export default function NotificationPrefsGrid({
   savingKey,
   onToggle,
 }: Props) {
-  const t = useT('playerNotifications');
+  const t = useT(nsPlayerNotifications);
 
   // Libellés fusionnés : event types push (existants) + extras email.
   const labels: Record<string, string> = {

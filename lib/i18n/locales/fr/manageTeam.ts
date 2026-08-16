@@ -1,0 +1,108 @@
+// lib/i18n/locales/fr/manageTeam.ts
+//
+// Traductions FRANCAISES du namespace `manageTeam` — SOURCE DE VERITE.
+// Le pendant anglais vit dans `../en.json` (blob charge paresseusement).
+// Toute cle ajoutee ici doit l'etre aussi cote anglais : le garde-fou de
+// compilation `../parity.ts` casse le typecheck sinon.
+
+import { ns } from '../../ns';
+
+export default ns('manageTeam', {
+  loadError: 'Erreur de chargement.',
+  recruitmentOpen: 'Recrutement ouvert',
+  recruitmentClosed: 'Recrutement ferme',
+  memberRemoved: 'Membre retire',
+  roleUpdated: 'Role mis a jour',
+  playerAccepted: 'Joueur accepte',
+  requestRejected: 'Demande rejetee',
+  accessDeniedTitle: 'Acces refuse',
+  accessDeniedBody:
+    "Tu dois etre capitaine ou manager d'une equipe pour acceder a cette page.",
+  backToSpace: 'Retour a mon espace',
+  tabTitle: "Gerer {name} | OW Women's Cup",
+  publicPage: 'Page publique →',
+  recruitment: 'Recrutement',
+  recruitmentOpenDesc: 'Ton equipe est ouverte aux demandes de joueurs.',
+  recruitmentClosedDesc: 'Ton equipe est fermee au recrutement.',
+  roster_one: 'Roster ({count} membre)',
+  roster_other: 'Roster ({count} membres)',
+  copyBattleTag: 'Copier le BattleTag',
+  unknown: 'Inconnu',
+  staffTitle: "Staff de l'équipe ({count})",
+  captain: 'Capitaine',
+  optionPlayer: 'Joueur',
+  optionSubstitute: 'Remplacant',
+  optionCoach: 'Coach',
+  removeTitle: 'Retirer',
+  pendingRequests: 'Demandes en attente',
+  noPendingRequests: 'Aucune demande en attente.',
+  defaultPlayerName: 'Joueur',
+  wantsToJoinAs: 'Souhaite rejoindre en tant que ',
+  accept: 'Accepter',
+  reject: 'Refuser',
+  removeConfirm: "Retirer {name} de l'équipe ?",
+  confirmRemove: 'Confirmer',
+  cancelRemove: 'Annuler',
+  promote: 'Nommer capitaine',
+  promoteConfirm: 'Nommer {name} capitaine ?',
+  promoteConfirmYes: 'Confirmer',
+  promoteCancel: 'Annuler',
+  promoteSuccess: '{name} est désormais capitaine.',
+  promoteError: 'Impossible de transférer le capitanat.',
+  designate: 'Désigner capitaine',
+  designateConfirm: 'Désigner {name} comme capitaine ?',
+  designateDialogSubtitle:
+    "L'équipe n'a pas encore de capitaine. Une fois désignée, seule elle pourra transmettre le capitanat.",
+  noCaptainTitle: "Cette équipe n'a pas encore de capitaine",
+  noCaptainBody:
+    'Désigne une joueuse du roster comme capitaine, ou attends que la capitaine invitée accepte son invitation.',
+  noCaptainBodyEmpty:
+    "Dès qu'une joueuse aura accepté son invitation, tu pourras la désigner capitaine.",
+  specialtyLabel: 'Rôle en jeu',
+  specialtyTank: 'Tank',
+  specialtyDps: 'DPS',
+  specialtySupport: 'Support',
+  specialtyFlex: 'Flex',
+  specialtyNone: 'Non précisée',
+  specialtyError: 'Impossible de mettre à jour le rôle en jeu.',
+  onboardingTitle: 'Invite ta première joueuse',
+  onboardingBody:
+    "Ton roster est vide pour l'instant. Ouvre le recrutement et partage la page publique de l'équipe pour recevoir des demandes.",
+  onboardingCta: "Voir la page de l'équipe",
+  removeConsequences:
+    "Conséquences : perte d'éligibilité au tournoi et des messages liés.",
+  scrimOpenLabel: 'Ouverte aux scrims',
+  scrimOpenHelp:
+    'Ton équipe apparaît publiquement sur /scrim et peut recevoir des propositions de scrim.',
+  scrimOpenOn: 'Ton équipe est visible sur la page scrims publique',
+  scrimOpenOff: 'Ton équipe est masquée de la page scrims publique',
+  verifiedBadge: 'vérifié',
+  unverifiedBadge: 'non vérifié',
+  verifiedBadgeTitle: 'BattleTag vérifié via Battle.net',
+  unverifiedBadgeTitle:
+    'BattleTag non vérifié — la joueuse doit lier son compte Battle.net',
+  roleManager: 'Manager',
+  specialtyUpdated: 'Rôle en jeu mis à jour',
+  roleSelectLabel: "Rôle dans l'équipe",
+  errorTitle: "Impossible de charger l'équipe",
+  errorBody:
+    'Une erreur réseau est survenue. Vérifie ta connexion puis réessaie.',
+  retry: 'Réessayer',
+  promoteDialogSubtitle:
+    'Le transfert du capitanat est irréversible : tu perdras tes droits de capitaine.',
+  inviteTitle: "Inviter quelqu'un dans l'équipe",
+  inviteHelp:
+    "Envoie une invitation par email — ou copie le lien privé et transmets-le toi-même (Discord, SMS…). La personne rejoint l'équipe seulement quand elle accepte.",
+  inviteEmailLabel: 'Email',
+  inviteEmailPlaceholder: 'personne@email.tld',
+  inviteRoleLabel: 'Rôle proposé',
+  inviteCta: 'Inviter',
+  invitePending: 'Envoi…',
+  inviteCreated: 'Invitation créée.',
+  inviteSentEmail: 'Invitation envoyée par email.',
+  inviteEmailFailed: "Invitation créée — l'email n'a pas pu être envoyé.",
+  inviteLinkHint:
+    "Lien privé à transmettre (valable 7 jours, une seule personne peut l'utiliser) :",
+  inviteCopyLink: 'Copier le lien',
+  inviteError: "L'invitation n'a pas pu être créée.",
+});

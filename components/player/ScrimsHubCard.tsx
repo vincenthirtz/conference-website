@@ -17,8 +17,9 @@
 
 import Link from 'next/link';
 import type { JSX } from 'react';
-import { useT, format } from '@/lib/i18n/useT';
+import { format } from '@/lib/i18n/useT';
 import Switch from '@/components/ui/Switch';
+import nsPlayerIndex from '@/lib/i18n/locales/fr/playerIndex';
 
 type ScrimsHubTeam = {
   id: string;
@@ -41,7 +42,7 @@ export type ScrimsHubCardProps = {
   onToggle?: () => void;
   /** Vrai pendant la requête de bascule (désactive le switch). */
   toggling?: boolean;
-  t: ReturnType<typeof useT<'playerIndex'>>;
+  t: typeof nsPlayerIndex.fr;
 };
 
 export default function ScrimsHubCard({

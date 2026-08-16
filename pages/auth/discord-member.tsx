@@ -5,10 +5,11 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useT } from '@/lib/i18n/useT';
 
 import { logger } from '../../utils/logger';
+import nsAuthDiscordMember from '@/lib/i18n/locales/fr/authDiscordMember';
 export default function DiscordMemberRedirect() {
   const router = useRouter();
   const { adminFetch } = useAdminFetch();
-  const t = useT('authDiscordMember');
+  const t = useT(nsAuthDiscordMember);
   const [status, setStatus] = useState(t.statusConnecting);
   const [error, setError] = useState<string | null>(null);
 

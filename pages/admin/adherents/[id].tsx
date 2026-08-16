@@ -5,6 +5,7 @@ import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import nsAdminAdherentDetail from '@/lib/i18n/locales/admin-fr/adminAdherentDetail';
 
 type Props = {
   staff: {
@@ -76,7 +77,7 @@ type AdherentData = {
 };
 
 function AdminEditAdherentPage({ staff }: Props) {
-  const t = useAdminT('adminAdherentDetail');
+  const t = useAdminT(nsAdminAdherentDetail);
   const router = useRouter();
   const { adminFetchJson } = useAdminFetch();
   const { id } = router.query;

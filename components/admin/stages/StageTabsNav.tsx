@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import type { StageType } from '@/types/admin';
+import nsAdminStageNav from '@/lib/i18n/locales/admin-fr/adminStageNav';
 
 /**
  * Stable identifiers for the stage sub-screen tabs. Each maps to a real route
@@ -84,7 +85,7 @@ export default function StageTabsNav({
   tournamentName,
   className = '',
 }: Props) {
-  const t = useAdminT('adminStageNav');
+  const t = useAdminT(nsAdminStageNav);
   const tx = t as Record<string, string>;
 
   const backHref = tournamentId

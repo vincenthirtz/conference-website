@@ -10,9 +10,10 @@ import type { GetStaticProps } from 'next';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { useT } from '@/lib/i18n/useT';
 import { buildPublicSpec } from '@/utils/openapi/publicSpec';
+import nsDeveloppeursReference from '@/lib/i18n/locales/fr/developpeursReference';
 
 type Json = Record<string, any>;
-type RefDict = ReturnType<typeof useT<'developpeursReference'>>;
+type RefDict = typeof nsDeveloppeursReference.fr;
 
 const METHODS = ['get', 'post', 'put', 'patch', 'delete'] as const;
 type Method = (typeof METHODS)[number];
@@ -34,7 +35,10 @@ type Operation = {
 };
 
 function slugify(s: string): string {
-  return s.replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-+|-+$/g, '').toLowerCase();
+  return s
+    .replace(/[^a-zA-Z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .toLowerCase();
 }
 
 function resolveRef(components: Json, ref: string): Json | undefined {
@@ -65,7 +69,9 @@ function TypeLabel({ schema }: { schema: Json | undefined }) {
   if (schema.type === 'array') {
     return (
       <span className="text-gray-300">
-        array&lt;<TypeLabel schema={schema.items} />&gt;
+        array&lt;
+        <TypeLabel schema={schema.items} />
+        &gt;
       </span>
     );
   }
@@ -98,22 +104,32 @@ function TypeLabel({ schema }: { schema: Json | undefined }) {
 function PropertiesTable({ schema, t }: { schema: Json; t: RefDict }) {
   const props = schema.properties as Json | undefined;
   if (!props) return null;
-  const required = new Set<string>(Array.isArray(schema.required) ? schema.required : []);
+  const required = new Set<string>(
+    Array.isArray(schema.required) ? schema.required : []
+  );
   return (
     <div className="overflow-x-auto">
       <table className="w-full border-collapse text-left text-sm">
         <thead>
           <tr className="border-b border-white/10 text-gray-400">
-            <th scope="col" className="py-2 pr-4 font-semibold">{t.thProperty}</th>
-            <th scope="col" className="py-2 pr-4 font-semibold">{t.thType}</th>
-            <th scope="col" className="py-2 font-semibold">{t.thDesc}</th>
+            <th scope="col" className="py-2 pr-4 font-semibold">
+              {t.thProperty}
+            </th>
+            <th scope="col" className="py-2 pr-4 font-semibold">
+              {t.thType}
+            </th>
+            <th scope="col" className="py-2 font-semibold">
+              {t.thDesc}
+            </th>
           </tr>
         </thead>
         <tbody>
           {Object.entries(props).map(([name, sub]) => (
             <tr key={name} className="border-b border-white/5 align-top">
               <td className="py-2 pr-4">
-                <code className="rounded bg-white/10 px-1.5 py-0.5 text-purple-200">{name}</code>
+                <code className="rounded bg-white/10 px-1.5 py-0.5 text-purple-200">
+                  {name}
+                </code>
                 {required.has(name) && (
                   <span className="ml-1.5 text-[10px] uppercase tracking-wide text-amber-300/80">
                     {t.requiredYes}
@@ -123,7 +139,9 @@ function PropertiesTable({ schema, t }: { schema: Json; t: RefDict }) {
               <td className="py-2 pr-4 font-mono text-xs">
                 <TypeLabel schema={sub as Json} />
               </td>
-              <td className="py-2 text-gray-400">{(sub as Json)?.description ?? ''}</td>
+              <td className="py-2 text-gray-400">
+                {(sub as Json)?.description ?? ''}
+              </td>
             </tr>
           ))}
         </tbody>
@@ -162,7 +180,9 @@ function OperationCard({
         >
           {method}
         </span>
-        <code className="break-all font-mono text-sm text-purple-200">{path}</code>
+        <code className="break-all font-mono text-sm text-purple-200">
+          {path}
+        </code>
         <span
           className={`rounded-md border px-2 py-1 text-xs ${
             requiresToken
@@ -176,7 +196,9 @@ function OperationCard({
 
       {op.summary && <p className="text-sm text-gray-200">{op.summary}</p>}
       {op.description && (
-        <p className="whitespace-pre-line text-sm text-gray-400">{op.description}</p>
+        <p className="whitespace-pre-line text-sm text-gray-400">
+          {op.description}
+        </p>
       )}
 
       {params.length > 0 && (
@@ -188,15 +210,26 @@ function OperationCard({
             <table className="w-full border-collapse text-left text-sm">
               <thead>
                 <tr className="border-b border-white/10 text-gray-400">
-                  <th scope="col" className="py-2 pr-4 font-semibold">{t.thParam}</th>
-                  <th scope="col" className="py-2 pr-4 font-semibold">{t.thIn}</th>
-                  <th scope="col" className="py-2 pr-4 font-semibold">{t.thType}</th>
-                  <th scope="col" className="py-2 font-semibold">{t.thDesc}</th>
+                  <th scope="col" className="py-2 pr-4 font-semibold">
+                    {t.thParam}
+                  </th>
+                  <th scope="col" className="py-2 pr-4 font-semibold">
+                    {t.thIn}
+                  </th>
+                  <th scope="col" className="py-2 pr-4 font-semibold">
+                    {t.thType}
+                  </th>
+                  <th scope="col" className="py-2 font-semibold">
+                    {t.thDesc}
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {params.map((p) => (
-                  <tr key={`${p.in}-${p.name}`} className="border-b border-white/5 align-top">
+                  <tr
+                    key={`${p.in}-${p.name}`}
+                    className="border-b border-white/5 align-top"
+                  >
                     <td className="py-2 pr-4">
                       <code className="rounded bg-white/10 px-1.5 py-0.5 text-purple-200">
                         {p.name}
@@ -213,7 +246,9 @@ function OperationCard({
                     <td className="py-2 pr-4 font-mono text-xs">
                       <TypeLabel schema={p.schema} />
                     </td>
-                    <td className="py-2 text-gray-400">{p.description ?? ''}</td>
+                    <td className="py-2 text-gray-400">
+                      {p.description ?? ''}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -246,23 +281,41 @@ function OperationCard({
             <table className="w-full border-collapse text-left text-sm">
               <thead>
                 <tr className="border-b border-white/10 text-gray-400">
-                  <th scope="col" className="py-2 pr-4 font-semibold">{t.thStatus}</th>
-                  <th scope="col" className="py-2 pr-4 font-semibold">{t.thSchema}</th>
-                  <th scope="col" className="py-2 font-semibold">{t.thDesc}</th>
+                  <th scope="col" className="py-2 pr-4 font-semibold">
+                    {t.thStatus}
+                  </th>
+                  <th scope="col" className="py-2 pr-4 font-semibold">
+                    {t.thSchema}
+                  </th>
+                  <th scope="col" className="py-2 font-semibold">
+                    {t.thDesc}
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {Object.entries(op.responses).map(([code, raw]) => {
                   let resp = raw as Json;
-                  if (typeof resp?.$ref === 'string') resp = resolveRef(components, resp.$ref) ?? {};
+                  if (typeof resp?.$ref === 'string')
+                    resp = resolveRef(components, resp.$ref) ?? {};
                   const schema = jsonSchema(resp?.content);
                   return (
-                    <tr key={code} className="border-b border-white/5 align-top">
-                      <td className="py-2 pr-4 font-mono text-gray-200">{code}</td>
-                      <td className="py-2 pr-4 font-mono text-xs">
-                        {schema ? <TypeLabel schema={schema} /> : <span className="text-gray-500">—</span>}
+                    <tr
+                      key={code}
+                      className="border-b border-white/5 align-top"
+                    >
+                      <td className="py-2 pr-4 font-mono text-gray-200">
+                        {code}
                       </td>
-                      <td className="py-2 text-gray-400">{resp?.description ?? ''}</td>
+                      <td className="py-2 pr-4 font-mono text-xs">
+                        {schema ? (
+                          <TypeLabel schema={schema} />
+                        ) : (
+                          <span className="text-gray-500">—</span>
+                        )}
+                      </td>
+                      <td className="py-2 text-gray-400">
+                        {resp?.description ?? ''}
+                      </td>
                     </tr>
                   );
                 })}
@@ -284,7 +337,7 @@ export const getStaticProps: GetStaticProps<PageProps> = async () => {
 };
 
 function ApiReferencePage({ spec }: PageProps) {
-  const t = useT('developpeursReference');
+  const t = useT(nsDeveloppeursReference);
   const components: Json = spec.components ?? {};
   const paths: Json = spec.paths ?? {};
   const baseUrl = spec.servers?.[0]?.url ?? '';
@@ -298,7 +351,7 @@ function ApiReferencePage({ spec }: PageProps) {
       if (!op) continue;
       const opParams = Array.isArray(op.parameters) ? op.parameters : [];
       const params = [...pathParams, ...opParams].map((p: Json) =>
-        typeof p?.$ref === 'string' ? resolveRef(components, p.$ref) ?? p : p
+        typeof p?.$ref === 'string' ? (resolveRef(components, p.$ref) ?? p) : p
       );
       operations.push({
         method,
@@ -320,14 +373,21 @@ function ApiReferencePage({ spec }: PageProps) {
           <div className="absolute right-10 top-10 h-[360px] w-[360px] rounded-full bg-pink-500/20 blur-3xl" />
         </div>
         <div className="relative mx-auto max-w-5xl px-6 pt-32 pb-10">
-          <Link href="/developpeurs" className="text-sm text-gray-300 hover:text-white">
+          <Link
+            href="/developpeurs"
+            className="text-sm text-gray-300 hover:text-white"
+          >
             {t.backToGuide}
           </Link>
           <p className="mt-4 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.18em] text-gray-200">
             {t.heroBadge} · v{spec.info?.version}
           </p>
-          <h1 className="mt-3 text-4xl font-bold leading-tight sm:text-5xl">{t.heroTitle}</h1>
-          <p className="mt-4 max-w-3xl text-lg text-gray-300">{t.heroSubtitle}</p>
+          <h1 className="mt-3 text-4xl font-bold leading-tight sm:text-5xl">
+            {t.heroTitle}
+          </h1>
+          <p className="mt-4 max-w-3xl text-lg text-gray-300">
+            {t.heroSubtitle}
+          </p>
           <div className="mt-6 flex flex-wrap items-center gap-3">
             {baseUrl && (
               <span className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-sm">
@@ -358,10 +418,14 @@ function ApiReferencePage({ spec }: PageProps) {
                 href={`#${e.anchor}`}
                 className="flex items-center gap-2 rounded-md px-2 py-1 text-gray-400 hover:bg-white/5 hover:text-white"
               >
-                <span className={`rounded px-1 text-[10px] font-bold uppercase ${METHOD_STYLE[e.method]}`}>
+                <span
+                  className={`rounded px-1 text-[10px] font-bold uppercase ${METHOD_STYLE[e.method]}`}
+                >
                   {e.method}
                 </span>
-                <span className="truncate font-mono text-xs">{e.path.replace('/api/public', '')}</span>
+                <span className="truncate font-mono text-xs">
+                  {e.path.replace('/api/public', '')}
+                </span>
               </a>
             ))}
           </div>
@@ -369,24 +433,37 @@ function ApiReferencePage({ spec }: PageProps) {
 
         <div className="space-y-12">
           <section aria-labelledby="endpoints-heading" className="space-y-5">
-            <h2 id="endpoints-heading" className="text-2xl font-bold">{t.endpointsLabel}</h2>
+            <h2 id="endpoints-heading" className="text-2xl font-bold">
+              {t.endpointsLabel}
+            </h2>
             {operations.map((e) => (
-              <OperationCard key={e.anchor} entry={e} components={components} t={t} />
+              <OperationCard
+                key={e.anchor}
+                entry={e}
+                components={components}
+                t={t}
+              />
             ))}
           </section>
 
           {schemas.length > 0 && (
             <section aria-labelledby="schemas-heading" className="space-y-5">
-              <h2 id="schemas-heading" className="text-2xl font-bold">{t.schemasLabel}</h2>
+              <h2 id="schemas-heading" className="text-2xl font-bold">
+                {t.schemasLabel}
+              </h2>
               {schemas.map(([name, schema]) => (
                 <article
                   key={name}
                   id={`schema-${name}`}
                   className="scroll-mt-24 space-y-3 rounded-2xl border border-white/10 bg-white/[0.03] p-5"
                 >
-                  <h3 className="font-mono text-base font-semibold text-purple-200">{name}</h3>
+                  <h3 className="font-mono text-base font-semibold text-purple-200">
+                    {name}
+                  </h3>
                   {schema.description && (
-                    <p className="text-sm text-gray-400">{schema.description}</p>
+                    <p className="text-sm text-gray-400">
+                      {schema.description}
+                    </p>
                   )}
                   {schema.properties ? (
                     <PropertiesTable schema={schema} t={t} />

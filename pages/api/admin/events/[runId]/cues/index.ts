@@ -50,12 +50,7 @@ async function postHandler(
   runId: string
 ) {
   if (
-    applyRateLimit(
-      req,
-      res,
-      { max: 30, windowMs: 60_000 },
-      'admin-cue-create'
-    )
+    applyRateLimit(req, res, { max: 30, windowMs: 60_000 }, 'admin-cue-create')
   )
     return;
 
@@ -68,7 +63,10 @@ async function postHandler(
 
   // Idempotency-Key obligatoire pour CREATE (pas de no-op naturel cote DB).
   const idempotencyKey = req.headers['idempotency-key'];
-  if (!idempotencyKey || (Array.isArray(idempotencyKey) && idempotencyKey.length === 0)) {
+  if (
+    !idempotencyKey ||
+    (Array.isArray(idempotencyKey) && idempotencyKey.length === 0)
+  ) {
     return res.status(400).json({
       error: 'Idempotency-Key header required.',
       code: 'IDEMPOTENCY_KEY_REQUIRED',
@@ -147,9 +145,7 @@ async function postHandler(
         logger.error('[admin/cues] dedup fetch error', fetchErr);
         return res.status(500).json({ error: 'Failed to resolve dedup cue.' });
       }
-      return res
-        .status(200)
-        .json({ cue: existing, dedupReplayed: true });
+      return res.status(200).json({ cue: existing, dedupReplayed: true });
     }
     logger.error('[admin/cues] insert error', insErr);
     return res.status(500).json({ error: 'Failed to create cue.' });
@@ -180,9 +176,7 @@ async function getHandler(
   ctx: AuthenticatedStaffContext,
   runId: string
 ) {
-  if (
-    applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'admin-cue-list')
-  )
+  if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'admin-cue-list'))
     return;
 
   if (!supabaseAdmin) {
@@ -246,7 +240,11 @@ async function getHandler(
   };
   const acksByCue: Record<
     string,
-    Array<{ cast_member_id: string; cast_member_name: string; acked_at: string }>
+    Array<{
+      cast_member_id: string;
+      cast_member_name: string;
+      acked_at: string;
+    }>
   > = {};
   const ackCount: Record<string, number> = {};
 

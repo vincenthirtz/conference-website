@@ -12,6 +12,7 @@ import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import nsAdminTournamentBracket from '@/lib/i18n/locales/admin-fr/adminTournamentBracket';
 
 export default function BracketPanel() {
   const router = useRouter();
@@ -33,7 +34,7 @@ export default function BracketPanel() {
   const { addToast } = useToast();
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
   const { mutate: generateBracket } = useIdempotentMutation();
-  const t = useAdminT('adminTournamentBracket');
+  const t = useAdminT(nsAdminTournamentBracket);
 
   // Vérifier s'il y a déjà des matchs bracket
   useEffect(() => {

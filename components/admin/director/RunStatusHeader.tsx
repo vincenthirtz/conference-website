@@ -15,6 +15,7 @@ import {
 } from '@/utils/eventSegmentLabels';
 import type { ComputedRunSchedule } from '@/utils/eventSchedule';
 import type { EventRun, EventSegment } from '@/types/events';
+import nsAdminDirectorRunStatusHeader from '@/lib/i18n/locales/admin-fr/adminDirectorRunStatusHeader';
 
 type Props = {
   run: EventRun;
@@ -77,7 +78,7 @@ export default function RunStatusHeader({
   onEndRun,
   busy,
 }: Props) {
-  const t = useAdminT('adminDirectorRunStatusHeader');
+  const t = useAdminT(nsAdminDirectorRunStatusHeader);
   const doneCount = segments.filter(
     (s) => s.status === 'done' || s.status === 'skipped'
   ).length;

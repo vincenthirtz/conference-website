@@ -26,6 +26,7 @@ import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import type { ScoutingResponse } from '../../api/player/scouting';
 import type { GameResult } from '../../../utils/teams/scouting';
 import { logger } from '../../../utils/logger';
+import nsScouting from '@/lib/i18n/locales/fr/scouting';
 
 /** Lundi 1er janvier 2024 — base neutre pour nommer les jours. */
 const REFERENCE_MONDAY = Date.UTC(2024, 0, 1);
@@ -37,7 +38,7 @@ const RESULT_TONE: Record<GameResult, string> = {
 };
 
 function ScoutingPage() {
-  const t = useT('scouting');
+  const t = useT(nsScouting);
   const locale = useLocale();
   const router = useRouter();
   const { ready, loading: authLoading } = usePlayerSession();

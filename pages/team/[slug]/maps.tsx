@@ -8,6 +8,7 @@ import { logger } from '../../../utils/logger';
 import { supabaseAdmin } from '@/utils/supabase'; // adapte le chemin si besoin
 import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
 import { useT } from '@/lib/i18n/useT';
+import nsTeamMaps from '@/lib/i18n/locales/fr/teamMaps';
 
 type Team = {
   id: string;
@@ -35,7 +36,7 @@ type Props = {
 };
 
 const TeamMapsPage: NextPage<Props> = ({ team, mapStats }) => {
-  const t = useT('teamMaps');
+  const t = useT(nsTeamMaps);
   if (!team) {
     return (
       <>
@@ -154,22 +155,40 @@ const TeamMapsPage: NextPage<Props> = ({ team, mapStats }) => {
                 <table className="min-w-full text-sm border-collapse">
                   <thead>
                     <tr className="bg-neutral-900/80">
-                      <th scope="col" className="text-left px-3 py-2 border-b border-neutral-700 font-medium">
+                      <th
+                        scope="col"
+                        className="text-left px-3 py-2 border-b border-neutral-700 font-medium"
+                      >
                         {t.thMap}
                       </th>
-                      <th scope="col" className="text-center px-3 py-2 border-b border-neutral-700 font-medium">
+                      <th
+                        scope="col"
+                        className="text-center px-3 py-2 border-b border-neutral-700 font-medium"
+                      >
                         {t.thPlayed}
                       </th>
-                      <th scope="col" className="text-center px-3 py-2 border-b border-neutral-700 font-medium">
+                      <th
+                        scope="col"
+                        className="text-center px-3 py-2 border-b border-neutral-700 font-medium"
+                      >
                         {t.thW}
                       </th>
-                      <th scope="col" className="text-center px-3 py-2 border-b border-neutral-700 font-medium">
+                      <th
+                        scope="col"
+                        className="text-center px-3 py-2 border-b border-neutral-700 font-medium"
+                      >
                         {t.thL}
                       </th>
-                      <th scope="col" className="text-center px-3 py-2 border-b border-neutral-700 font-medium">
+                      <th
+                        scope="col"
+                        className="text-center px-3 py-2 border-b border-neutral-700 font-medium"
+                      >
                         {t.thWR}
                       </th>
-                      <th scope="col" className="text-center px-3 py-2 border-b border-neutral-700 font-medium">
+                      <th
+                        scope="col"
+                        className="text-center px-3 py-2 border-b border-neutral-700 font-medium"
+                      >
                         {t.thRounds}
                       </th>
                     </tr>

@@ -227,7 +227,10 @@ export default async function handler(
  * ---------------------------------------------------------*/
 
 /** Somme une colonne numérique nullable sur un ensemble de lignes. */
-function sum<T>(rows: T[], pick: (row: T) => number | null | undefined): number {
+function sum<T>(
+  rows: T[],
+  pick: (row: T) => number | null | undefined
+): number {
   return rows.reduce((acc, row) => acc + (pick(row) ?? 0), 0);
 }
 

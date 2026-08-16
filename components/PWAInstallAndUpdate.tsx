@@ -18,6 +18,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { useT } from '@/lib/i18n/useT';
+import nsPwa from '@/lib/i18n/locales/fr/pwa';
 
 // Type local pour `beforeinstallprompt` (pas dans lib.dom standard).
 type BeforeInstallPromptEvent = Event & {
@@ -26,7 +27,7 @@ type BeforeInstallPromptEvent = Event & {
 };
 
 export default function PWAInstallAndUpdate() {
-  const t = useT('pwa');
+  const t = useT(nsPwa);
   const [installPrompt, setInstallPrompt] =
     useState<BeforeInstallPromptEvent | null>(null);
   const [updateAvailable, setUpdateAvailable] = useState(false);
@@ -114,7 +115,17 @@ export default function PWAInstallAndUpdate() {
               aria-label={t.later}
               className="rounded-md p-1 text-white/50 transition hover:bg-white/10 hover:text-white"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
                 <line x1="18" y1="6" x2="6" y2="18" />
                 <line x1="6" y1="6" x2="18" y2="18" />
               </svg>
@@ -142,7 +153,17 @@ export default function PWAInstallAndUpdate() {
           className="fixed bottom-6 right-6 z-[60] inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-cyan-400 via-fuchsia-500 to-violet-600 px-5 py-3 text-sm font-semibold text-white shadow-[0_8px_28px_rgba(194,77,255,0.45)] transition hover:scale-105 active:scale-95"
           aria-label={t.installAria}
         >
-          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg
+            aria-hidden="true"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
             <polyline points="7 10 12 15 17 10" />
             <line x1="12" y1="15" x2="12" y2="3" />

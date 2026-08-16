@@ -34,8 +34,9 @@ import { withSubjectParam } from '@/utils/subjectParam';
 import type { AdminUserProfilePayload } from '@/pages/api/admin/users/[userId]/profile';
 
 import { logger } from '../../../../utils/logger';
+import nsAdminUserCaptainView from '@/lib/i18n/locales/admin-fr/adminUserCaptainView';
 
-type Dict = ReturnType<typeof useAdminT<'adminUserCaptainView'>>;
+type Dict = typeof nsAdminUserCaptainView.fr;
 
 type StaffShape = {
   id: string;
@@ -92,7 +93,7 @@ function formatDate(d: string | null | undefined): string {
 }
 
 function CaptainViewPage({ staff: _staff }: { staff: StaffShape }) {
-  const t = useAdminT('adminUserCaptainView');
+  const t = useAdminT(nsAdminUserCaptainView);
   const router = useRouter();
   const rawUserId = router.query.userId;
   const userId = Array.isArray(rawUserId) ? rawUserId[0] : rawUserId;

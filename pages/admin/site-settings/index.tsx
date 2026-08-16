@@ -10,6 +10,7 @@ import GeneralSettingsPanel from '@/components/admin/site-settings/GeneralSettin
 import DiscordWebhooksPanel from '@/components/admin/site-settings/DiscordWebhooksPanel';
 import TeamRolesPanel from '@/components/admin/site-settings/TeamRolesPanel';
 import type { StaffProps } from '@/types/admin';
+import nsAdminSiteSettings from '@/lib/i18n/locales/admin-fr/adminSiteSettings';
 
 const ID_BASE = 'admin-site-settings';
 
@@ -23,7 +24,7 @@ export const getServerSideProps = withStaffPage('admin');
  * strictest of the three former pages.
  */
 export default function AdminSiteSettingsPage(_: StaffProps) {
-  const t = useAdminT('adminSiteSettings');
+  const t = useAdminT(nsAdminSiteSettings);
   const tabs = [
     { id: 'general', label: t.tabGeneral },
     { id: 'discord', label: t.tabDiscord },

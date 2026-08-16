@@ -12,6 +12,7 @@ import BrandSocialsFields from './BrandSocialsFields';
 import SaveIndicator from './SaveIndicator';
 import { inputClass, labelClass } from './fieldClasses';
 import { useSceneDraft } from './useSceneDraft';
+import nsAdminCasterScenes from '@/lib/i18n/locales/admin-fr/adminCasterScenes';
 
 type Props = {
   scene: CasterScene;
@@ -67,7 +68,7 @@ function buildPayload(
 }
 
 export default function StartingSceneEditor({ scene, onSave }: Props) {
-  const t = useAdminT('adminCasterScenes');
+  const t = useAdminT(nsAdminCasterScenes);
   const { draft, patch, saveState } = useSceneDraft<StartingForm>({
     scene,
     onSave,

@@ -14,6 +14,7 @@ import {
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { useLang } from '@/lib/i18n/LanguageProvider';
+import nsAdminDashboardDisputeResolveModal from '@/lib/i18n/locales/admin-fr/adminDashboardDisputeResolveModal';
 
 type Props = {
   open: boolean;
@@ -54,7 +55,7 @@ export default function DisputeResolveModal({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { mutateJson } = useIdempotentMutation();
-  const t = useAdminT('adminDashboardDisputeResolveModal');
+  const t = useAdminT(nsAdminDashboardDisputeResolveModal);
 
   if (!open) return null;
 
@@ -315,7 +316,7 @@ function EvidenceSection({
   team1Name: string | null;
   team2Name: string | null;
 }) {
-  const t = useAdminT('adminDashboardDisputeResolveModal');
+  const t = useAdminT(nsAdminDashboardDisputeResolveModal);
   const { lang } = useLang();
   const { adminFetchJson } = useAdminFetch();
   const { mutateJson } = useIdempotentMutation();
@@ -595,7 +596,7 @@ function EvidenceRow({
   item: EvidenceItem;
   sideLabel: string;
   lang: 'fr' | 'en';
-  t: ReturnType<typeof useAdminT<'adminDashboardDisputeResolveModal'>>;
+  t: typeof nsAdminDashboardDisputeResolveModal.fr;
 }) {
   const isImage =
     item.kind === 'screenshot' &&

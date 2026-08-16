@@ -9,13 +9,7 @@
 // d'invitation, changement de rôle ou de spécialité, promotion, exclusion,
 // acceptation/refus des demandes, section joueuses libres.
 
-import {
-  useEffect,
-  useState,
-  useCallback,
-  useRef,
-  Fragment,
-} from 'react';
+import { useEffect, useState, useCallback, useRef, Fragment } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -31,10 +25,8 @@ import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import { usePlayerArea } from '@/components/player/PlayerAreaContext';
 import Switch from '@/components/ui/Switch';
-import {
-  isNonPlayingTeamRole,
-  splitTeamMembers,
-} from '@/utils/teams/roleKind';
+import { isNonPlayingTeamRole, splitTeamMembers } from '@/utils/teams/roleKind';
+import nsManageTeam from '@/lib/i18n/locales/fr/manageTeam';
 
 type Specialty = 'tank' | 'dps' | 'support' | 'flex' | null;
 
@@ -89,7 +81,7 @@ type JoinRequest = {
 };
 
 export default function PlayerManageTeamScreen() {
-  const t = useT('manageTeam');
+  const t = useT(nsManageTeam);
   const locale = useLocale();
   const router = useRouter();
   // `readOnly` = inspection staff : l'écran devient une photo fidèle, sans
@@ -365,9 +357,7 @@ export default function PlayerManageTeamScreen() {
         body: JSON.stringify({ newCaptainUserId: member.user_id }),
       });
       await reloadTeam();
-      showSuccess(
-        format(t.promoteSuccess, { name: memberLabel(member) })
-      );
+      showSuccess(format(t.promoteSuccess, { name: memberLabel(member) }));
     } catch (err: unknown) {
       setError((err as Error).message || t.promoteError);
     } finally {
@@ -755,152 +745,152 @@ export default function PlayerManageTeamScreen() {
                     </h3>
                   )}
                   <div className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-8 h-8 rounded-full bg-black/60 border border-white/10 flex items-center justify-center flex-shrink-0">
-                      <span className="text-xs text-gray-500">
-                        {memberLabel(m).slice(0, 2).toUpperCase()}
-                      </span>
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-medium text-sm truncate">
-                          {memberLabel(m)}
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-8 h-8 rounded-full bg-black/60 border border-white/10 flex items-center justify-center flex-shrink-0">
+                        <span className="text-xs text-gray-500">
+                          {memberLabel(m).slice(0, 2).toUpperCase()}
                         </span>
-                        {m.battle_tag && (
-                          <CopyButton
-                            value={m.battle_tag}
-                            label={t.copyBattleTag}
-                            className="h-5 w-5 shrink-0"
-                          />
-                        )}
-                        {/* Badge de vérification Battle.net. Rendu uniquement
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-medium text-sm truncate">
+                            {memberLabel(m)}
+                          </span>
+                          {m.battle_tag && (
+                            <CopyButton
+                              value={m.battle_tag}
+                              label={t.copyBattleTag}
+                              className="h-5 w-5 shrink-0"
+                            />
+                          )}
+                          {/* Badge de vérification Battle.net. Rendu uniquement
                             quand l'API expose battle_tag_verified_at par membre
                             (TODO API : l'ajouter au SELECT de /api/admin/teams/my). */}
-                        {'battle_tag_verified_at' in m &&
-                          (m.battle_tag_verified_at ? (
-                            <span
-                              title={t.verifiedBadgeTitle}
-                              className="shrink-0 inline-flex items-center gap-0.5 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-300"
-                            >
-                              <span aria-hidden="true">✓</span>
-                              {t.verifiedBadge}
-                            </span>
+                          {'battle_tag_verified_at' in m &&
+                            (m.battle_tag_verified_at ? (
+                              <span
+                                title={t.verifiedBadgeTitle}
+                                className="shrink-0 inline-flex items-center gap-0.5 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-300"
+                              >
+                                <span aria-hidden="true">✓</span>
+                                {t.verifiedBadge}
+                              </span>
+                            ) : (
+                              <span
+                                title={t.unverifiedBadgeTitle}
+                                className="shrink-0 inline-flex items-center rounded-full border border-white/15 bg-white/5 px-1.5 py-0.5 text-[10px] font-semibold text-gray-400"
+                              >
+                                {t.unverifiedBadge}
+                              </span>
+                            ))}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {m.is_captain ? (
+                            <span className="text-purple-300">{t.captain}</span>
                           ) : (
-                            <span
-                              title={t.unverifiedBadgeTitle}
-                              className="shrink-0 inline-flex items-center rounded-full border border-white/15 bg-white/5 px-1.5 py-0.5 text-[10px] font-semibold text-gray-400"
-                            >
-                              {t.unverifiedBadge}
-                            </span>
-                          ))}
+                            roleLabel(m.role)
+                          )}
+                        </div>
                       </div>
-                      <div className="text-xs text-gray-500">
-                        {m.is_captain ? (
-                          <span className="text-purple-300">{t.captain}</span>
+                    </div>
+
+                    {!m.is_captain && !readOnly && (
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {pendingRemoval === m.id ? (
+                          <div className="flex flex-wrap items-center justify-end gap-2">
+                            <span className="text-xs text-red-200 basis-full sm:basis-auto">
+                              {format(t.removeConfirm, {
+                                name: memberLabel(m),
+                              })}
+                              <span className="block text-[11px] text-red-300/80 mt-0.5">
+                                {t.removeConsequences}
+                              </span>
+                            </span>
+                            <button
+                              onClick={() => handleRemoveMember(m.id)}
+                              disabled={actionLoading === `remove-${m.id}`}
+                              className="px-2 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-xs font-semibold transition disabled:opacity-50"
+                            >
+                              {t.confirmRemove}
+                            </button>
+                            <button
+                              onClick={() => setPendingRemoval(null)}
+                              disabled={actionLoading === `remove-${m.id}`}
+                              className="px-2 py-1 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-xs transition disabled:opacity-50"
+                            >
+                              {t.cancelRemove}
+                            </button>
+                          </div>
                         ) : (
-                          roleLabel(m.role)
+                          <>
+                            <select
+                              value={m.specialty || ''}
+                              onChange={(e) =>
+                                handleUpdateSpecialty(m.id, e.target.value)
+                              }
+                              disabled={!!actionLoading}
+                              aria-label={t.specialtyLabel}
+                              title={t.specialtyLabel}
+                              className="bg-black/60 border border-white/10 rounded-lg px-2 py-1 text-xs text-gray-300 focus:outline-none focus:ring-1 focus:ring-purple-400"
+                            >
+                              <option value="">{t.specialtyNone}</option>
+                              <option value="tank">{t.specialtyTank}</option>
+                              <option value="dps">{t.specialtyDps}</option>
+                              <option value="support">
+                                {t.specialtySupport}
+                              </option>
+                              <option value="flex">{t.specialtyFlex}</option>
+                            </select>
+                            <select
+                              value={m.role || 'player'}
+                              onChange={(e) =>
+                                handleUpdateRole(m.id, e.target.value)
+                              }
+                              disabled={!!actionLoading}
+                              aria-label={t.roleSelectLabel}
+                              title={t.roleSelectLabel}
+                              className="bg-black/60 border border-white/10 rounded-lg px-2 py-1 text-xs text-gray-300 focus:outline-none focus:ring-1 focus:ring-purple-400"
+                            >
+                              <option value="player">{t.optionPlayer}</option>
+                              <option value="substitute">
+                                {t.optionSubstitute}
+                              </option>
+                              <option value="coach">{t.optionCoach}</option>
+                            </select>
+                            <button
+                              onClick={() => confirmPromote(m)}
+                              disabled={!!actionLoading || !m.user_id}
+                              className="px-2 py-1 rounded-lg border border-purple-500/30 bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 text-xs font-semibold transition disabled:opacity-50"
+                              title={hasCaptain ? t.promote : t.designate}
+                              aria-label={hasCaptain ? t.promote : t.designate}
+                            >
+                              {hasCaptain ? t.promote : t.designate}
+                            </button>
+                            <button
+                              onClick={() => setPendingRemoval(m.id)}
+                              disabled={!!actionLoading}
+                              className="p-1.5 rounded-lg border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-400 transition disabled:opacity-50"
+                              title={t.removeTitle}
+                              aria-label={t.removeTitle}
+                            >
+                              <svg
+                                className="w-4 h-4"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M6 18L18 6M6 6l12 12"
+                                />
+                              </svg>
+                            </button>
+                          </>
                         )}
                       </div>
-                    </div>
-                  </div>
-
-                  {!m.is_captain && !readOnly && (
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      {pendingRemoval === m.id ? (
-                        <div className="flex flex-wrap items-center justify-end gap-2">
-                          <span className="text-xs text-red-200 basis-full sm:basis-auto">
-                            {format(t.removeConfirm, {
-                              name: memberLabel(m),
-                            })}
-                            <span className="block text-[11px] text-red-300/80 mt-0.5">
-                              {t.removeConsequences}
-                            </span>
-                          </span>
-                          <button
-                            onClick={() => handleRemoveMember(m.id)}
-                            disabled={actionLoading === `remove-${m.id}`}
-                            className="px-2 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-xs font-semibold transition disabled:opacity-50"
-                          >
-                            {t.confirmRemove}
-                          </button>
-                          <button
-                            onClick={() => setPendingRemoval(null)}
-                            disabled={actionLoading === `remove-${m.id}`}
-                            className="px-2 py-1 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-xs transition disabled:opacity-50"
-                          >
-                            {t.cancelRemove}
-                          </button>
-                        </div>
-                      ) : (
-                        <>
-                          <select
-                            value={m.specialty || ''}
-                            onChange={(e) =>
-                              handleUpdateSpecialty(m.id, e.target.value)
-                            }
-                            disabled={!!actionLoading}
-                            aria-label={t.specialtyLabel}
-                            title={t.specialtyLabel}
-                            className="bg-black/60 border border-white/10 rounded-lg px-2 py-1 text-xs text-gray-300 focus:outline-none focus:ring-1 focus:ring-purple-400"
-                          >
-                            <option value="">{t.specialtyNone}</option>
-                            <option value="tank">{t.specialtyTank}</option>
-                            <option value="dps">{t.specialtyDps}</option>
-                            <option value="support">
-                              {t.specialtySupport}
-                            </option>
-                            <option value="flex">{t.specialtyFlex}</option>
-                          </select>
-                          <select
-                            value={m.role || 'player'}
-                            onChange={(e) =>
-                              handleUpdateRole(m.id, e.target.value)
-                            }
-                            disabled={!!actionLoading}
-                            aria-label={t.roleSelectLabel}
-                            title={t.roleSelectLabel}
-                            className="bg-black/60 border border-white/10 rounded-lg px-2 py-1 text-xs text-gray-300 focus:outline-none focus:ring-1 focus:ring-purple-400"
-                          >
-                            <option value="player">{t.optionPlayer}</option>
-                            <option value="substitute">
-                              {t.optionSubstitute}
-                            </option>
-                            <option value="coach">{t.optionCoach}</option>
-                          </select>
-                          <button
-                            onClick={() => confirmPromote(m)}
-                            disabled={!!actionLoading || !m.user_id}
-                            className="px-2 py-1 rounded-lg border border-purple-500/30 bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 text-xs font-semibold transition disabled:opacity-50"
-                            title={hasCaptain ? t.promote : t.designate}
-                            aria-label={hasCaptain ? t.promote : t.designate}
-                          >
-                            {hasCaptain ? t.promote : t.designate}
-                          </button>
-                          <button
-                            onClick={() => setPendingRemoval(m.id)}
-                            disabled={!!actionLoading}
-                            className="p-1.5 rounded-lg border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-400 transition disabled:opacity-50"
-                            title={t.removeTitle}
-                            aria-label={t.removeTitle}
-                          >
-                            <svg
-                              className="w-4 h-4"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M6 18L18 6M6 6l12 12"
-                              />
-                            </svg>
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  )}
+                    )}
                   </div>
                 </Fragment>
               ))}

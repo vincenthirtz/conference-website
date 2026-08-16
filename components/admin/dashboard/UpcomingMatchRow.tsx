@@ -3,6 +3,7 @@
 
 import Link from 'next/link';
 import { useAdminT } from '@/lib/i18n/useAdminT';
+import nsAdminDashboardUpcomingMatchRow from '@/lib/i18n/locales/admin-fr/adminDashboardUpcomingMatchRow';
 
 type Props = {
   matchId: string;
@@ -89,7 +90,7 @@ export default function UpcomingMatchRow({
   onScoreClick,
   onResolveClick,
 }: Props) {
-  const t = useAdminT('adminDashboardUpcomingMatchRow');
+  const t = useAdminT(nsAdminDashboardUpcomingMatchRow);
   const dayShort = formatDayShort(scheduledAt);
   const time = formatTime(scheduledAt);
   const showScore =

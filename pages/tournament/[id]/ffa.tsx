@@ -18,6 +18,7 @@ import {
 import { useT } from '@/lib/i18n/useT';
 import { logger } from '@/utils/logger';
 import TournamentTabs from '@/components/tournament/TournamentTabs';
+import nsFfaStandings from '@/lib/i18n/locales/fr/ffaStandings';
 
 type TournamentLite = {
   id: string;
@@ -109,7 +110,7 @@ export default function TournamentFfaPage({
   standings,
   isCompleted,
 }: Props) {
-  const t = useT('ffaStandings');
+  const t = useT(nsFfaStandings);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">

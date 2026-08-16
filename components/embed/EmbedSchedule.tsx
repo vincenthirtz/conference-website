@@ -1,12 +1,13 @@
 // components/embed/EmbedSchedule.tsx
 // Chrome-less, theme-aware match schedule for the iframe-embeddable read-only
 // tournament schedule page. Mirrors EmbedBracket: no Navbar/Footer/Toast, a
-// discreet "view on site" link, i18n via useT('embedSchedule'). Renders only
+// discreet "view on site" link, i18n via useT(nsEmbedSchedule). Renders only
 // the public, non-PII fields exposed by PublicMatch (team names, scores,
 // status, schedule). Dates localized with 'fr-FR' (embed defaults to FR).
 
 import type { PublicMatch } from '@/utils/public/readMatches';
 import { useT, format } from '@/lib/i18n/useT';
+import nsEmbedSchedule from '@/lib/i18n/locales/fr/embedSchedule';
 
 export type EmbedTheme = 'light' | 'dark';
 
@@ -130,7 +131,7 @@ export default function EmbedSchedule({
   publicUrl,
   siteLabel = 'le site',
 }: EmbedScheduleProps) {
-  const t = useT('embedSchedule');
+  const t = useT(nsEmbedSchedule);
   const isLight = theme === 'light';
   const accentStyle = accent ? { borderTop: `3px solid ${accent}` } : undefined;
 

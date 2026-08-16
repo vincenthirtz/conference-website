@@ -2,15 +2,16 @@ import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { useSiteSetting } from '@/hooks/useSiteSettings';
 import { CookieSettingsButton } from '@/components/CookieBanner';
 import { useT } from '@/lib/i18n/useT';
+import nsMentionsLegales from '@/lib/i18n/locales/fr/mentionsLegales';
 
-type MentionsDict = ReturnType<typeof useT<'mentionsLegales'>>;
+type MentionsDict = typeof nsMentionsLegales.fr;
 
 const getDataUses = (t: MentionsDict) => [t.use1, t.use2, t.use3, t.use4];
 
 const getRights = (t: MentionsDict) => [t.right1, t.right2, t.right3, t.right4];
 
 function MentionsLegalesPage() {
-  const t = useT('mentionsLegales');
+  const t = useT(nsMentionsLegales);
   const dataUses = getDataUses(t);
   const rights = getRights(t);
   const { value: contactEmail } = useSiteSetting('contact_email');

@@ -16,6 +16,7 @@ import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import nsAdminTournamentPodium from '@/lib/i18n/locales/admin-fr/adminTournamentPodium';
 
 type Candidate = {
   team_id: string;
@@ -61,7 +62,7 @@ export default function StatsPodiumPanel() {
   const { adminFetchJson } = useAdminFetch();
   const { mutateJson } = useIdempotentMutation();
   const { confirm, dialog } = useConfirmDialog();
-  const t = useAdminT('adminTournamentPodium');
+  const t = useAdminT(nsAdminTournamentPodium);
 
   const [data, setData] = useState<PreviewResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -329,11 +330,21 @@ export default function StatsPodiumPanel() {
             <table className="w-full text-sm">
               <thead className="bg-neutral-900/80 text-xs uppercase text-neutral-400">
                 <tr>
-                  <th scope="col" className="px-3 py-2 text-left w-16">{t.colRank}</th>
-                  <th scope="col" className="px-3 py-2 text-left">{t.colTeam}</th>
-                  <th scope="col" className="px-3 py-2 text-left">{t.colSource}</th>
-                  <th scope="col" className="px-3 py-2 text-left">{t.colPrize}</th>
-                  <th scope="col" className="px-3 py-2 text-left">{t.colNotes}</th>
+                  <th scope="col" className="px-3 py-2 text-left w-16">
+                    {t.colRank}
+                  </th>
+                  <th scope="col" className="px-3 py-2 text-left">
+                    {t.colTeam}
+                  </th>
+                  <th scope="col" className="px-3 py-2 text-left">
+                    {t.colSource}
+                  </th>
+                  <th scope="col" className="px-3 py-2 text-left">
+                    {t.colPrize}
+                  </th>
+                  <th scope="col" className="px-3 py-2 text-left">
+                    {t.colNotes}
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -447,7 +458,7 @@ function seedRowsFrom(preview: PreviewResponse): RowDraft[] {
 }
 
 function StatusPill({ status }: { status: string }) {
-  const t = useAdminT('adminTournamentPodium');
+  const t = useAdminT(nsAdminTournamentPodium);
   const styles: Record<string, string> = {
     draft: 'bg-neutral-700/40 text-neutral-300 border-neutral-600',
     published: 'bg-blue-700/30 text-blue-300 border-blue-500/40',

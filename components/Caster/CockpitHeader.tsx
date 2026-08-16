@@ -11,6 +11,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { CasterProfile } from '@/hooks/useCasterSession';
 import { useT } from '@/lib/i18n/useT';
+import nsCockpitHeader from '@/lib/i18n/locales/fr/cockpitHeader';
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -40,7 +41,7 @@ export default function CockpitHeader({
   onSignOut,
   connection,
 }: Props) {
-  const t = useT('cockpitHeader');
+  const t = useT(nsCockpitHeader);
   const [installEvent, setInstallEvent] =
     useState<BeforeInstallPromptEvent | null>(null);
   const [installed, setInstalled] = useState(false);

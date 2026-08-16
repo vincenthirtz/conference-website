@@ -41,12 +41,10 @@ export default async function handler(
   const body = (req.body ?? {}) as { refresh_token?: unknown };
 
   if (!isNonEmptyString(body.refresh_token)) {
-    return res
-      .status(400)
-      .json({
-        error: 'Invalid `refresh_token`',
-        code: 'INVALID_REFRESH_TOKEN',
-      });
+    return res.status(400).json({
+      error: 'Invalid `refresh_token`',
+      code: 'INVALID_REFRESH_TOKEN',
+    });
   }
 
   const refreshToken: string = body.refresh_token;
@@ -54,12 +52,10 @@ export default async function handler(
   const creds = clientCreds();
   if (!creds) {
     logger.error('[twitch/refresh] missing Twitch credentials');
-    return res
-      .status(500)
-      .json({
-        error: 'Twitch is not configured',
-        code: 'TWITCH_NOT_CONFIGURED',
-      });
+    return res.status(500).json({
+      error: 'Twitch is not configured',
+      code: 'TWITCH_NOT_CONFIGURED',
+    });
   }
 
   const params = new URLSearchParams({

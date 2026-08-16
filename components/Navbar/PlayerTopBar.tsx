@@ -12,6 +12,7 @@ import { useFocusTrap } from '@/hooks/useFocusTrap';
 import LanguageToggle from './LanguageToggle';
 import { useT, format } from '@/lib/i18n/useT';
 import { useTenantBranding } from '@/lib/branding/TenantBrandingProvider';
+import nsPlayerTopBar from '@/lib/i18n/locales/fr/playerTopBar';
 
 const SITE_MENU_KEY = '__site__';
 const MOBILE_MENU_KEY = '__mobile__';
@@ -85,7 +86,7 @@ export default function PlayerTopBar({
   onLogout,
   avatarUrl,
 }: PlayerTopBarProps) {
-  const t = useT('playerTopBar');
+  const t = useT(nsPlayerTopBar);
   const branding = useTenantBranding();
   const router = useRouter();
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });

@@ -3,9 +3,10 @@ import Heading from '../Typography/heading';
 import Paragraph from '../Typography/paragraph';
 import Link from 'next/link';
 import { useT } from '@/lib/i18n/useT';
+import nsHomeHeader from '@/lib/i18n/locales/fr/homeHeader';
 
 function Header(): JSX.Element {
-  const t = useT('homeHeader');
+  const t = useT(nsHomeHeader);
   const currentYear = new Date().getFullYear();
 
   return (

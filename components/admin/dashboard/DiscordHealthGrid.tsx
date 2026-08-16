@@ -8,8 +8,9 @@
 
 import type { DiscordHealth } from '@/utils/dashboard/buildTournamentDashboard';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import nsAdminDashboardDiscordHealthGrid from '@/lib/i18n/locales/admin-fr/adminDashboardDiscordHealthGrid';
 
-type Dict = ReturnType<typeof useAdminT<'adminDashboardDiscordHealthGrid'>>;
+type Dict = typeof nsAdminDashboardDiscordHealthGrid.fr;
 
 type Props = {
   health: DiscordHealth;
@@ -42,7 +43,7 @@ function ageLabel(iso: string | null, nowMs: number, t: Dict): string {
 }
 
 export default function DiscordHealthGrid({ health, nowMs }: Props) {
-  const t = useAdminT('adminDashboardDiscordHealthGrid');
+  const t = useAdminT(nsAdminDashboardDiscordHealthGrid);
   const channelLabel = getChannelLabel(t);
   return (
     <div>

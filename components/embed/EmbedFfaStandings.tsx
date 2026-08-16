@@ -1,11 +1,12 @@
 // components/embed/EmbedFfaStandings.tsx
 // Chrome-less, theme-aware FFA standings table for the iframe-embeddable
 // read-only view. Mirrors EmbedStandings: no Navbar/Footer/Toast, a discreet
-// "view on site" link, i18n via useT('ffaStandings'). Renders only the public,
+// "view on site" link, i18n via useT(nsFfaStandings). Renders only the public,
 // non-PII fields exposed by PublicFfaStandingRow.
 
 import type { PublicFfaStandingRow } from '@/utils/public/readFfaStandings';
 import { useT, format } from '@/lib/i18n/useT';
+import nsFfaStandings from '@/lib/i18n/locales/fr/ffaStandings';
 
 export type EmbedTheme = 'light' | 'dark';
 
@@ -30,13 +31,11 @@ export default function EmbedFfaStandings({
   publicUrl,
   siteLabel = 'le site',
 }: EmbedFfaStandingsProps) {
-  const t = useT('ffaStandings');
+  const t = useT(nsFfaStandings);
   const isLight = theme === 'light';
   const accentStyle = accent ? { borderTop: `3px solid ${accent}` } : undefined;
 
-  const title = stageName
-    ? `${tournamentName} · ${stageName}`
-    : tournamentName;
+  const title = stageName ? `${tournamentName} · ${stageName}` : tournamentName;
 
   return (
     <div
@@ -101,10 +100,15 @@ export default function EmbedFfaStandings({
                       : 'border-b border-white/10 text-left text-[11px] uppercase tracking-wider text-neutral-400'
                   }
                 >
-                  <th scope="col" className="w-12 px-3 py-2 text-right tabular-nums">
+                  <th
+                    scope="col"
+                    className="w-12 px-3 py-2 text-right tabular-nums"
+                  >
                     {t.colRank}
                   </th>
-                  <th scope="col" className="px-3 py-2">{t.colTeam}</th>
+                  <th scope="col" className="px-3 py-2">
+                    {t.colTeam}
+                  </th>
                   <th scope="col" className="px-3 py-2 text-right tabular-nums">
                     {t.colPoints}
                   </th>

@@ -87,11 +87,17 @@ const HEAT_RAMP = [
   'bg-emerald-400/80 border-emerald-200/70', // 3 parties (plein)
 ];
 
-function fmtWeekday(dateStr: string, timezone: string): { dow: string; day: string } {
+function fmtWeekday(
+  dateStr: string,
+  timezone: string
+): { dow: string; day: string } {
   // dateStr = 'YYYY-MM-DD' (date calendaire locale de session). On la rend à
   // midi UTC pour éviter tout glissement de jour à l'affichage.
   const d = new Date(`${dateStr}T12:00:00Z`);
-  const dow = d.toLocaleDateString('fr-FR', { weekday: 'short', timeZone: timezone });
+  const dow = d.toLocaleDateString('fr-FR', {
+    weekday: 'short',
+    timeZone: timezone,
+  });
   const day = d.toLocaleDateString('fr-FR', {
     day: 'numeric',
     month: 'short',
@@ -99,7 +105,6 @@ function fmtWeekday(dateStr: string, timezone: string): { dow: string; day: stri
   });
   return { dow, day };
 }
-
 
 export default function AvailabilityGrid({
   config,
@@ -133,7 +138,8 @@ export default function AvailabilityGrid({
       minute: '2-digit',
       hour12: false,
     });
-    for (const m of rows) out[m] = fmt.format(new Date(slotKey(config, refDay, m)));
+    for (const m of rows)
+      out[m] = fmt.format(new Date(slotKey(config, refDay, m)));
     return out;
   }, [config, days, rows, secondaryTz]);
 
@@ -225,7 +231,9 @@ export default function AvailabilityGrid({
             {HEAT_RAMP.slice(0, Math.min(maxParties + 1, HEAT_RAMP.length)).map(
               (c, i) => (
                 <span key={i} className="flex items-center gap-1">
-                  <span className={`inline-block h-3 w-4 rounded border ${c}`} />
+                  <span
+                    className={`inline-block h-3 w-4 rounded border ${c}`}
+                  />
                   <span>{i}</span>
                 </span>
               )
@@ -241,16 +249,18 @@ export default function AvailabilityGrid({
         onPointerLeave={stopPaint}
         onPointerUp={stopPaint}
       >
-        <div className="inline-grid" style={{ gridTemplateColumns: `4.5rem repeat(${days.length}, minmax(2.6rem, 1fr))` }}>
+        <div
+          className="inline-grid"
+          style={{
+            gridTemplateColumns: `4.5rem repeat(${days.length}, minmax(2.6rem, 1fr))`,
+          }}
+        >
           {/* Coin + en-têtes de jour (sticky top) */}
           <div className="sticky left-0 z-20 bg-black/60 backdrop-blur" />
           {days.map((day) => {
             const { dow, day: dm } = fmtWeekday(day, config.timezone);
             return (
-              <div
-                key={`h-${day}`}
-                className="px-1 pb-2 text-center"
-              >
+              <div key={`h-${day}`} className="px-1 pb-2 text-center">
                 <div className="text-[11px] font-semibold uppercase text-gray-200">
                   {dow}
                 </div>
@@ -265,7 +275,9 @@ export default function AvailabilityGrid({
               <div className="sticky left-0 z-10 -mt-px flex flex-col items-end bg-black/60 pr-2 pt-0.5 text-right tabular-nums leading-tight backdrop-blur">
                 <span className="text-[10px] text-gray-500">{fmtHour(m)}</span>
                 {secByRow[m] && (
-                  <span className="text-[9px] text-sky-400/70">{secByRow[m]}</span>
+                  <span className="text-[9px] text-sky-400/70">
+                    {secByRow[m]}
+                  </span>
                 )}
               </div>
               {days.map((day) => {
@@ -275,7 +287,9 @@ export default function AvailabilityGrid({
                   <button
                     type="button"
                     key={`c-${day}-${m}`}
-                    disabled={disabled || (mode === 'heatmap' && !cellInteractive)}
+                    disabled={
+                      disabled || (mode === 'heatmap' && !cellInteractive)
+                    }
                     aria-label={labels.cellLabel.replace(
                       '{when}',
                       `${fmtWeekday(day, config.timezone).dow} ${fmtHour(m)}`
@@ -294,9 +308,12 @@ export default function AvailabilityGrid({
                     className={`relative m-px h-8 sm:h-6 rounded-md border transition-colors ${cellClass(
                       key
                     )} ${
-                      cellInteractive ? 'cursor-pointer hover:brightness-125' : ''
+                      cellInteractive
+                        ? 'cursor-pointer hover:brightness-125'
+                        : ''
                     } ${
-                      mode === 'heatmap' && isSlotValidatable(cell, requireStaff)
+                      mode === 'heatmap' &&
+                      isSlotValidatable(cell, requireStaff)
                         ? 'after:absolute after:inset-x-1 after:bottom-0.5 after:h-0.5 after:rounded-full after:bg-emerald-200/70 after:content-[""]'
                         : ''
                     }`}
@@ -318,11 +335,12 @@ export default function AvailabilityGrid({
                 {labels.fullOverlap}
               </span>
             )}
-            {!isFullOverlap(hover.cell) && isSlotValidatable(hover.cell, requireStaff) && (
-              <span className="ml-2 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-300">
-                {labels.validatable}
-              </span>
-            )}
+            {!isFullOverlap(hover.cell) &&
+              isSlotValidatable(hover.cell, requireStaff) && (
+                <span className="ml-2 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-300">
+                  {labels.validatable}
+                </span>
+              )}
           </div>
           <div className="flex flex-wrap gap-1.5">
             {hover.cell.participants.map((p, i) => (

@@ -18,15 +18,13 @@ import {
   resolveMissingDisplayNames,
   withFallbackDisplayName,
 } from '@/utils/teams/memberDisplayName';
-import {
-  splitTeamMembers,
-  isNonPlayingTeamRole,
-} from '@/utils/teams/roleKind';
+import { splitTeamMembers, isNonPlayingTeamRole } from '@/utils/teams/roleKind';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import TournamentTabs from '@/components/tournament/TournamentTabs';
+import nsTournamentTeamDetail from '@/lib/i18n/locales/fr/tournamentTeamDetail';
 
-type TeamDetailDict = ReturnType<typeof useT<'tournamentTeamDetail'>>;
+type TeamDetailDict = typeof nsTournamentTeamDetail.fr;
 
 type Tournament = {
   id: string;
@@ -258,7 +256,10 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
   // par équipe, presque toujours nulle. Sans ce repli, un membre sans BattleTag
   // (l'encadrement) n'a aucune identité à afficher.
   const memberNames = await resolveMissingDisplayNames(
-    (members || []) as { user_id?: string | null; display_name?: string | null }[]
+    (members || []) as {
+      user_id?: string | null;
+      display_name?: string | null;
+    }[]
   );
 
   const roster: RosterMember[] = (members || []).map((m: any) => ({
@@ -376,7 +377,7 @@ export default function TournamentTeamPage({
   totalMvpAwards,
   hasFfaStage,
 }: Props) {
-  const t = useT('tournamentTeamDetail');
+  const t = useT(nsTournamentTeamDetail);
   const locale = useLocale();
   // Coach et manager hors roster jouant : ils ont leur propre bloc.
   const {
@@ -622,7 +623,7 @@ function StatCard({
 }
 
 function RosterRow({ member }: { member: RosterMember }) {
-  const t = useT('tournamentTeamDetail');
+  const t = useT(nsTournamentTeamDetail);
   return (
     <li className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg bg-white/5">
       <div className="flex items-center gap-3 min-w-0">

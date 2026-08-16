@@ -39,7 +39,9 @@ async function handler(
   res: NextApiResponse,
   ctx: AuthenticatedStaffContext
 ) {
-  if (applyRateLimit(req, res, { max: 10, windowMs: 60_000 }, 'admin-webhooks')) {
+  if (
+    applyRateLimit(req, res, { max: 10, windowMs: 60_000 }, 'admin-webhooks')
+  ) {
     return;
   }
   res.setHeader('Cache-Control', 'no-store');
@@ -64,7 +66,9 @@ async function handleList(
     .order('created_at', { ascending: false });
 
   if (error) {
-    logger.error('[admin/webhooks] list error', error, { tenantId: ctx.tenantId });
+    logger.error('[admin/webhooks] list error', error, {
+      tenantId: ctx.tenantId,
+    });
     return res.status(500).json({ error: 'Server error.' });
   }
   return res.status(200).json({
@@ -80,7 +84,9 @@ async function handleCreate(
 ) {
   const parsed = createBodySchema.safeParse(req.body);
   if (!parsed.success) {
-    return res.status(400).json({ error: 'Invalid body.', code: 'INVALID_BODY' });
+    return res
+      .status(400)
+      .json({ error: 'Invalid body.', code: 'INVALID_BODY' });
   }
 
   const eventResult = parseWebhookEventTypes(parsed.data.event_types);
@@ -108,7 +114,9 @@ async function handleCreate(
     .single();
 
   if (error || !data) {
-    logger.error('[admin/webhooks] insert error', error, { tenantId: ctx.tenantId });
+    logger.error('[admin/webhooks] insert error', error, {
+      tenantId: ctx.tenantId,
+    });
     return res.status(500).json({ error: 'Failed to create subscription.' });
   }
 

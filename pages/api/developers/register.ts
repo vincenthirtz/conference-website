@@ -94,7 +94,9 @@ export default async function handler(
   }
 
   if (!supabaseAdmin) {
-    return res.status(500).json({ error: 'Service indisponible.', code: 'SERVER' });
+    return res
+      .status(500)
+      .json({ error: 'Service indisponible.', code: 'SERVER' });
   }
   // Réf. explicite pour couper le "unused import" — supabaseAnonServer est
   // conservé par parité avec auth/register.ts (même famille de clients).
@@ -159,7 +161,11 @@ export default async function handler(
     const status = (createErr as { status?: number }).status;
     const raw = (createErr.message || '').toLowerCase();
 
-    if (status === 429 || raw.includes('rate limit') || raw.includes('too many')) {
+    if (
+      status === 429 ||
+      raw.includes('rate limit') ||
+      raw.includes('too many')
+    ) {
       return res.status(429).json({
         error:
           'Trop de tentatives. Patiente quelques instants avant de réessayer.',
@@ -181,7 +187,8 @@ export default async function handler(
 
     logger.error('[api/developers/register] createUser error:', createErr);
     return res.status(500).json({
-      error: 'Impossible de créer le compte pour le moment. Réessaie plus tard.',
+      error:
+        'Impossible de créer le compte pour le moment. Réessaie plus tard.',
       code: 'SERVER',
     });
   }
@@ -190,7 +197,8 @@ export default async function handler(
   if (!newUser?.id) {
     logger.error('[api/developers/register] createUser returned no user');
     return res.status(500).json({
-      error: 'Impossible de créer le compte pour le moment. Réessaie plus tard.',
+      error:
+        'Impossible de créer le compte pour le moment. Réessaie plus tard.',
       code: 'SERVER',
     });
   }
@@ -276,14 +284,20 @@ export default async function handler(
     logger.error('[developers/register] tenants.insert error', tenantErr);
     return res
       .status(500)
-      .json({ error: 'Impossible de créer l’espace développeur.', code: 'SERVER' });
+      .json({
+        error: 'Impossible de créer l’espace développeur.',
+        code: 'SERVER',
+      });
   }
 
   if (!tenantId) {
     logger.error('[developers/register] could not allocate a unique slug');
     return res
       .status(500)
-      .json({ error: 'Impossible de créer l’espace développeur.', code: 'SERVER' });
+      .json({
+        error: 'Impossible de créer l’espace développeur.',
+        code: 'SERVER',
+      });
   }
 
   // 2c) staff (role 'owner' global — confiné à ce tenant via tenant_staff).
@@ -303,7 +317,10 @@ export default async function handler(
     await rollback('staff.insert');
     return res
       .status(500)
-      .json({ error: 'Impossible de créer l’espace développeur.', code: 'SERVER' });
+      .json({
+        error: 'Impossible de créer l’espace développeur.',
+        code: 'SERVER',
+      });
   }
   createdStaffId = insertedStaff.id as string;
 
@@ -318,7 +335,10 @@ export default async function handler(
     await rollback('tenant_staff.insert');
     return res
       .status(500)
-      .json({ error: 'Impossible de créer l’espace développeur.', code: 'SERVER' });
+      .json({
+        error: 'Impossible de créer l’espace développeur.',
+        code: 'SERVER',
+      });
   }
   stampedTenantStaff = true;
 

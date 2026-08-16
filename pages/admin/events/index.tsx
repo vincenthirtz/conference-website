@@ -33,6 +33,7 @@ import {
 } from '@/utils/eventSegmentLabels';
 import type { StaffProps } from '@/types/admin';
 import type { EventRun, EventRunStatus } from '@/types/events';
+import nsAdminEventsList from '@/lib/i18n/locales/admin-fr/adminEventsList';
 
 export const getServerSideProps = withStaffPage('admin');
 
@@ -57,7 +58,7 @@ function formatDate(d: string | null) {
 }
 
 function AdminEventsIndexPage(_props: StaffProps) {
-  const t = useAdminT('adminEventsList');
+  const t = useAdminT(nsAdminEventsList);
   const router = useRouter();
   const { mutate } = useIdempotentMutation({ autoRegenerateOnSuccess: true });
   const { confirm, dialog } = useConfirmDialog();
@@ -218,11 +219,22 @@ function AdminEventsIndexPage(_props: StaffProps) {
               <table className="w-full text-sm">
                 <thead className="text-left text-neutral-400 border-b border-neutral-700/50">
                   <tr>
-                    <th scope="col" className="px-4 py-3 font-medium">{t.colName}</th>
-                    <th scope="col" className="px-4 py-3 font-medium">{t.colSlug}</th>
-                    <th scope="col" className="px-4 py-3 font-medium">{t.colScheduled}</th>
-                    <th scope="col" className="px-4 py-3 font-medium">{t.colStatus}</th>
-                    <th scope="col" className="px-4 py-3 font-medium text-right">
+                    <th scope="col" className="px-4 py-3 font-medium">
+                      {t.colName}
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-medium">
+                      {t.colSlug}
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-medium">
+                      {t.colScheduled}
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-medium">
+                      {t.colStatus}
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-4 py-3 font-medium text-right"
+                    >
                       {t.colActions}
                     </th>
                   </tr>
@@ -324,7 +336,7 @@ type CreateRunModalProps = {
 };
 
 function CreateRunModal({ onClose, onCreated }: CreateRunModalProps) {
-  const t = useAdminT('adminEventsList');
+  const t = useAdminT(nsAdminEventsList);
   const { mutateJson } = useIdempotentMutation();
   const { addToast } = useToast();
   const ref = useFocusTrap<HTMLDivElement>();

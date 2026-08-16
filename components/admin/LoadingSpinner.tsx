@@ -2,6 +2,7 @@
 // Reusable loading spinner for admin pages
 
 import { useAdminT } from '@/lib/i18n/useAdminT';
+import nsAdminLoadingSpinner from '@/lib/i18n/locales/admin-fr/adminLoadingSpinner';
 
 type LoadingSpinnerProps = {
   className?: string;
@@ -20,7 +21,7 @@ export default function LoadingSpinner({
   size = 'md',
   label,
 }: LoadingSpinnerProps) {
-  const t = useAdminT('adminLoadingSpinner');
+  const t = useAdminT(nsAdminLoadingSpinner);
   return (
     <div
       role="status"

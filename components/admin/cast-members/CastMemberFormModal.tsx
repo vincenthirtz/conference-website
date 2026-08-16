@@ -3,6 +3,7 @@ import Modal from '@/components/admin/Modal';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import CastMemberStaffPicker from '@/components/admin/CastMemberStaffPicker';
 import { useAdminT } from '@/lib/i18n/useAdminT';
+import nsAdminCastMembersNew from '@/lib/i18n/locales/admin-fr/adminCastMembersNew';
 
 type CastMemberFormModalProps = {
   open: boolean;
@@ -33,7 +34,7 @@ export default function CastMemberFormModal({
   onClose,
   onCreated,
 }: CastMemberFormModalProps) {
-  const t = useAdminT('adminCastMembersNew');
+  const t = useAdminT(nsAdminCastMembersNew);
   const { mutateJson } = useIdempotentMutation();
   const formId = useId();
 

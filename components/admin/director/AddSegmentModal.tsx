@@ -17,6 +17,7 @@ import {
   segmentTypeLabel,
 } from '@/utils/eventSegmentLabels';
 import type { EventSegmentType } from '@/types/events';
+import nsAdminDirectorAddSegmentModal from '@/lib/i18n/locales/admin-fr/adminDirectorAddSegmentModal';
 
 type Props = {
   onClose: () => void;
@@ -40,7 +41,7 @@ const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export default function AddSegmentModal({ onClose, onSubmit }: Props) {
-  const t = useAdminT('adminDirectorAddSegmentModal');
+  const t = useAdminT(nsAdminDirectorAddSegmentModal);
   const ref = useFocusTrap<HTMLDivElement>();
   const [type, setType] = useState<EventSegmentType>('intro');
   const [title, setTitle] = useState('');
@@ -142,9 +143,7 @@ export default function AddSegmentModal({ onClose, onSubmit }: Props) {
               onChange={(e) => setTitle(e.target.value)}
               data-testid="add-segment-title-input"
               placeholder={
-                type === 'match'
-                  ? t.matchPlaceholder
-                  : segmentTypeLabel(type)
+                type === 'match' ? t.matchPlaceholder : segmentTypeLabel(type)
               }
               className="w-full px-3 py-2.5 rounded-lg bg-neutral-900/80 border border-neutral-700 text-white placeholder:text-neutral-500 focus:outline-none focus:border-purple-500"
               required

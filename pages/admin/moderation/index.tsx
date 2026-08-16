@@ -13,6 +13,7 @@ import BlacklistPanel from '@/components/admin/moderation/BlacklistPanel';
 import EntityBlacklistPanel from '@/components/admin/moderation/EntityBlacklistPanel';
 import SupportPanel from '@/components/admin/moderation/SupportPanel';
 import type { StaffProps } from '@/types/admin';
+import nsAdminModeration from '@/lib/i18n/locales/admin-fr/adminModeration';
 
 const ID_BASE = 'admin-moderation';
 
@@ -34,7 +35,7 @@ export const getServerSideProps = withStaffPage('caster');
  *   - Support     → manager+
  */
 export default function AdminModerationPage({ staff }: StaffProps) {
-  const t = useAdminT('adminModeration');
+  const t = useAdminT(nsAdminModeration);
   const isManager = hasAtLeastRole(staff.role as StaffRole, 'admin');
 
   const tabs = [

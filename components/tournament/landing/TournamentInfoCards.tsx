@@ -6,6 +6,7 @@
 
 import { useT } from '@/lib/i18n/useT';
 import { Section, Reveal } from './primitives';
+import nsTournamentDetail from '@/lib/i18n/locales/fr/tournamentDetail';
 
 type Card = { title: string; content: string; accent: string };
 
@@ -27,13 +28,29 @@ export default function TournamentInfoCards({
   scheduleRules?: string | null;
   formatDetails?: string | null;
 }) {
-  const td = useT('tournamentDetail');
+  const td = useT(nsTournamentDetail);
 
   const cards: Card[] = [
-    descriptionInfo && { title: td.infoTitle, content: descriptionInfo, accent: 'violet' },
-    scheduleDetails && { title: td.scheduleTitle, content: scheduleDetails, accent: 'green' },
-    scheduleRules && { title: td.scheduleRulesTitle, content: scheduleRules, accent: 'yellow' },
-    formatDetails && { title: td.formatDetailsTitle, content: formatDetails, accent: 'pink' },
+    descriptionInfo && {
+      title: td.infoTitle,
+      content: descriptionInfo,
+      accent: 'violet',
+    },
+    scheduleDetails && {
+      title: td.scheduleTitle,
+      content: scheduleDetails,
+      accent: 'green',
+    },
+    scheduleRules && {
+      title: td.scheduleRulesTitle,
+      content: scheduleRules,
+      accent: 'yellow',
+    },
+    formatDetails && {
+      title: td.formatDetailsTitle,
+      content: formatDetails,
+      accent: 'pink',
+    },
   ].filter(Boolean) as Card[];
 
   if (cards.length === 0) return null;

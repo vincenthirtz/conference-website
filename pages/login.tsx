@@ -13,6 +13,7 @@ import { useT } from '@/lib/i18n/useT';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 
 import { logger } from '../utils/logger';
+import nsLoginPage from '@/lib/i18n/locales/fr/loginPage';
 
 // Valide une cible de redirection pour éviter les open redirects : on
 // n'accepte que les chemins internes (commence par '/' mais pas par '//',
@@ -47,7 +48,7 @@ function primeStaffCache(me: {
 
 const LoginPage = () => {
   const router = useRouter();
-  const t = useT('loginPage');
+  const t = useT(nsLoginPage);
   const { value: contactEmail } = useSiteSetting('contact_email');
 
   const [email, setEmail] = useState('');
@@ -97,9 +98,7 @@ const LoginPage = () => {
         }
 
         if (res.status === 401) {
-          await supabaseClient.auth
-            .signOut({ scope: 'local' })
-            .catch(() => {});
+          await supabaseClient.auth.signOut({ scope: 'local' }).catch(() => {});
           purgeSupabaseAuthStorage();
           if (!cancelled) {
             setError(t.errorInvalidCredentials);

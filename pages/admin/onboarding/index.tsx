@@ -30,6 +30,7 @@ import OnboardingQueuePanel from '@/components/admin/onboarding/OnboardingQueueP
 import TenantRequestsPanel from '@/components/admin/onboarding/TenantRequestsPanel';
 import GuildLinksPanel from '@/components/admin/onboarding/GuildLinksPanel';
 import type { StaffProps } from '@/types/admin';
+import nsAdminOnboarding from '@/lib/i18n/locales/admin-fr/adminOnboarding';
 
 const ID_BASE = 'admin-onboarding';
 
@@ -42,7 +43,7 @@ export default function AdminOnboardingPage({
   staff,
   currentStaffDiscordId,
 }: Props) {
-  const t = useAdminT('adminOnboarding');
+  const t = useAdminT(nsAdminOnboarding);
   const isOwner = hasAtLeastRole(staff.role as StaffRole, 'owner');
 
   const tabs = [

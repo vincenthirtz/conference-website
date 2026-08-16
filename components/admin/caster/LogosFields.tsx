@@ -11,6 +11,7 @@ import {
   labelClass,
   summaryClass,
 } from './fieldClasses';
+import nsAdminCasterScenes from '@/lib/i18n/locales/admin-fr/adminCasterScenes';
 
 type Props = {
   team1Logo: string;
@@ -19,7 +20,7 @@ type Props = {
 };
 
 export default function LogosFields({ team1Logo, team2Logo, onChange }: Props) {
-  const t = useAdminT('adminCasterScenes');
+  const t = useAdminT(nsAdminCasterScenes);
   return (
     <details className={detailsClass}>
       <summary className={summaryClass}>{t.logosSummary}</summary>

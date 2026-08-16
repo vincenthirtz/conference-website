@@ -17,7 +17,11 @@ export default withStaffRoute(
   'admin'
 );
 
-async function handler(req: NextApiRequest, res: NextApiResponse, ctx: AuthenticatedStaffContext) {
+async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  ctx: AuthenticatedStaffContext
+) {
   const { stageId } = req.query;
 
   if (!stageId || Array.isArray(stageId) || !isValidUUID(stageId)) {

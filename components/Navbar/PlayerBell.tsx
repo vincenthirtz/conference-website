@@ -4,6 +4,7 @@ import { useAuthSession } from '@/hooks/useAuthSession';
 import { useRealtimeChannel } from '@/hooks/useRealtimeChannel';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useT, format } from '@/lib/i18n/useT';
+import nsPlayerBell from '@/lib/i18n/locales/fr/playerBell';
 
 type Notifications = {
   hasTeam: boolean;
@@ -22,7 +23,7 @@ const POLL_MS = 90_000;
 export default function PlayerBell(): JSX.Element | null {
   const { user, loading } = useAuthSession();
   const { adminFetchJson } = useAdminFetch();
-  const t = useT('playerBell');
+  const t = useT(nsPlayerBell);
   const [data, setData] = useState<Notifications | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 

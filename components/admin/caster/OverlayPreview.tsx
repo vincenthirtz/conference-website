@@ -39,6 +39,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import { logger } from '@/utils/logger';
 import type { CasterScene } from '@/types/caster';
+import nsAdminCasterScenes from '@/lib/i18n/locales/admin-fr/adminCasterScenes';
 
 /** Canevas natif des overlays (identique au desktop). */
 const OVERLAY_W = 1920;
@@ -75,7 +76,7 @@ function probeFraming(url: string): Promise<boolean> {
 type Props = { scene: CasterScene };
 
 export default function OverlayPreview({ scene }: Props) {
-  const t = useAdminT('adminCasterScenes');
+  const t = useAdminT(nsAdminCasterScenes);
 
   // Ouvert par DÉFAUT (l'intérêt de l'aperçu est de ne pas éditer à l'aveugle),
   // mais le choix est mémorisé. Lecture du localStorage dans un effet : le SSR

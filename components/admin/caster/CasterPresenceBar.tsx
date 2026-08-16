@@ -10,6 +10,7 @@
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { presenceColor, presenceInitials } from '@/utils/caster/presence';
 import type { CasterPresenceUser } from '@/types/caster';
+import nsAdminCasterScenes from '@/lib/i18n/locales/admin-fr/adminCasterScenes';
 
 type Props = {
   users: CasterPresenceUser[];
@@ -26,7 +27,7 @@ export default function CasterPresenceBar({
   sceneNameById,
   connected,
 }: Props) {
-  const t = useAdminT('adminCasterScenes');
+  const t = useAdminT(nsAdminCasterScenes);
 
   if (!connected) {
     return (

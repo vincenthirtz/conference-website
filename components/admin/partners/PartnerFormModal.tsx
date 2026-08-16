@@ -2,6 +2,7 @@ import { useEffect, useId, useState } from 'react';
 import Modal from '@/components/admin/Modal';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useAdminT } from '@/lib/i18n/useAdminT';
+import nsAdminPartnersNew from '@/lib/i18n/locales/admin-fr/adminPartnersNew';
 
 type PartnerFormModalProps = {
   open: boolean;
@@ -41,7 +42,7 @@ export default function PartnerFormModal({
   onClose,
   onCreated,
 }: PartnerFormModalProps) {
-  const t = useAdminT('adminPartnersNew');
+  const t = useAdminT(nsAdminPartnersNew);
   const { mutateJson } = useIdempotentMutation();
   const formId = useId();
 

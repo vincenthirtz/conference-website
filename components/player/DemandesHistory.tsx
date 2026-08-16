@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import nsDemandesHistory from '@/lib/i18n/locales/fr/demandesHistory';
 
 type Demande = {
   id: string;
@@ -42,7 +43,7 @@ function isRecent(dateStr?: string | null): boolean {
 }
 
 export default function DemandesHistory({ demandes, onCancel }: Props) {
-  const t = useT('demandesHistory');
+  const t = useT(nsDemandesHistory);
   const dateLocale = useLocale();
   const { confirm, dialog } = useConfirmDialog();
   const [cancellingId, setCancellingId] = useState<string | null>(null);

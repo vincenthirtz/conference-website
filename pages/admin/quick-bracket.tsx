@@ -16,6 +16,7 @@ import { useToast } from '@/components/Toast';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import Breadcrumb from '@/components/admin/Breadcrumb';
 import type { StaffProps } from '@/types/admin';
+import nsAdminQuickBracket from '@/lib/i18n/locales/admin-fr/adminQuickBracket';
 
 export const getServerSideProps = withStaffPage('admin');
 
@@ -53,7 +54,7 @@ function findDuplicates(names: string[]): string[] {
 }
 
 function AdminQuickBracketPage(_props: StaffProps) {
-  const t = useAdminT('adminQuickBracket');
+  const t = useAdminT(nsAdminQuickBracket);
   const router = useRouter();
   const { mutateJson } = useIdempotentMutation();
   const { addToast } = useToast();
@@ -217,9 +218,7 @@ function AdminQuickBracketPage(_props: StaffProps) {
                 className="w-full resize-y rounded-lg border border-neutral-600 bg-neutral-900/50 px-3 py-2.5 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-                <span className="text-neutral-400">
-                  {t.participantsHint}
-                </span>
+                <span className="text-neutral-400">{t.participantsHint}</span>
                 <span
                   className={
                     tooFew || tooMany
@@ -241,9 +240,7 @@ function AdminQuickBracketPage(_props: StaffProps) {
                       <>
                         {' · '}
                         {format(
-                          byes === 1
-                            ? t.bracketByes_one
-                            : t.bracketByes_other,
+                          byes === 1 ? t.bracketByes_one : t.bracketByes_other,
                           { count: byes }
                         )}
                       </>

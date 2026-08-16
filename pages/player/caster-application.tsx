@@ -12,6 +12,7 @@ import { useLocale } from '@/lib/i18n/useLocale';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 
 import { logger } from '../../utils/logger';
+import nsCasterApplication from '@/lib/i18n/locales/fr/casterApplication';
 
 const MOTIVATION_MAX = 1000;
 
@@ -28,7 +29,7 @@ type CasterApplication = {
 export default function CasterApplicationPage() {
   const { user, token, loading: authLoading, ready } = usePlayerSession();
   const { addToast } = useToast();
-  const t = useT('casterApplication');
+  const t = useT(nsCasterApplication);
 
   const [loading, setLoading] = useState(true);
   const [application, setApplication] = useState<CasterApplication | null>(
@@ -290,7 +291,7 @@ export default function CasterApplicationPage() {
 /* ------------------------------------------------------------------ */
 
 function StatusBanner({ application }: { application: CasterApplication }) {
-  const t = useT('casterApplication');
+  const t = useT(nsCasterApplication);
   const locale = useLocale();
   const created = new Date(application.created_at).toLocaleDateString(locale, {
     day: 'numeric',

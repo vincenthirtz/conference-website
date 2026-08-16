@@ -18,6 +18,7 @@ import Link from 'next/link';
 import { supabaseClient } from '@/utils/supabase';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { useT } from '@/lib/i18n/useT';
+import nsBattlenetLogin from '@/lib/i18n/locales/fr/battlenetLogin';
 
 /** N'accepte qu'un chemin interne relatif (anti open-redirect). */
 function safeNext(raw: unknown): string {
@@ -30,7 +31,7 @@ function safeNext(raw: unknown): string {
 
 export default function BattlenetLoginPage() {
   const router = useRouter();
-  const t = useT('battlenetLogin');
+  const t = useT(nsBattlenetLogin);
   const [ready, setReady] = useState(false);
   const [established, setEstablished] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);

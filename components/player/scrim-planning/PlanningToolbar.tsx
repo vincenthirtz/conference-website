@@ -7,6 +7,7 @@
 // fonctionnel).
 
 import { useT } from '@/lib/i18n/useT';
+import nsScrimPlanning from '@/lib/i18n/locales/fr/scrimPlanning';
 
 type View = 'grid' | 'calendar' | 'month';
 type EffectiveMode = 'paint' | 'heatmap';
@@ -24,7 +25,7 @@ export default function PlanningToolbar({
   effectiveMode: EffectiveMode;
   onModeChange: (m: EffectiveMode) => void;
 }) {
-  const t = useT('scrimPlanning');
+  const t = useT(nsScrimPlanning);
   return (
     <div className="mb-4 flex flex-wrap items-center gap-3">
       <div className="inline-flex rounded-xl border border-white/10 bg-white/5 p-1 text-xs">

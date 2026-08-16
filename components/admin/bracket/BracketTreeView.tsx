@@ -9,6 +9,7 @@ import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { parseNotes } from './types';
 import InlineScoreEditor from './InlineScoreEditor';
 import type { ScheduleMatch, BracketRound } from './types';
+import nsAdminBracketTreeView from '@/lib/i18n/locales/admin-fr/adminBracketTreeView';
 
 type BracketTreeViewProps = {
   rounds: BracketRound[];
@@ -77,7 +78,7 @@ function SwissBracketView({
   rounds: BracketRound[];
   onScoreSaved?: () => void;
 }) {
-  const t = useAdminT('adminBracketTreeView');
+  const t = useAdminT(nsAdminBracketTreeView);
   return (
     <div className="space-y-6">
       <div className="overflow-x-auto pb-4">
@@ -344,7 +345,7 @@ function BracketMatchCard({
   fixedHeight?: boolean;
   onScoreSaved?: () => void;
 }) {
-  const t = useAdminT('adminBracketTreeView');
+  const t = useAdminT(nsAdminBracketTreeView);
   const [editingScore, setEditingScore] = useState(false);
   const statusCfg = STATUS_CONFIG[m.status];
   const t1 = bracketTeamLabel(m, 1);

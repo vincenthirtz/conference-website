@@ -10,6 +10,7 @@ import AutoSaveIndicator from '@/components/admin/AutoSaveIndicator';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 import { logger } from '../../../utils/logger';
+import nsAdminAdherentsNew from '@/lib/i18n/locales/admin-fr/adminAdherentsNew';
 type Props = {
   staff: {
     id: string;
@@ -54,7 +55,7 @@ type FormData = {
 };
 
 function AdminNewAdherentPage({ staff }: Props) {
-  const t = useAdminT('adminAdherentsNew');
+  const t = useAdminT(nsAdminAdherentsNew);
   const router = useRouter();
   const { adminFetchJson } = useAdminFetch();
   const [saving, setSaving] = useState(false);

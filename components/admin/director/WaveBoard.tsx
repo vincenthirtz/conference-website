@@ -26,8 +26,9 @@ import {
   waveStatusLabel,
 } from '@/utils/eventSegmentLabels';
 import type { EventSegment, EventWave, EventWaveStatus } from '@/types/events';
+import nsAdminDirectorWaveBoard from '@/lib/i18n/locales/admin-fr/adminDirectorWaveBoard';
 
-type Dict = ReturnType<typeof useAdminT<'adminDirectorWaveBoard'>>;
+type Dict = typeof nsAdminDirectorWaveBoard.fr;
 
 /** Patch envoye au parent pour create/update. */
 export type WaveFormPatch = {
@@ -124,7 +125,7 @@ export default function WaveBoard({
   onDelete,
   onReorder,
 }: Props) {
-  const t = useAdminT('adminDirectorWaveBoard');
+  const t = useAdminT(nsAdminDirectorWaveBoard);
   const [showCreate, setShowCreate] = useState(false);
   const [createForm, setCreateForm] = useState<EditState>(emptyEdit());
   const [createError, setCreateError] = useState<string | null>(null);
@@ -134,7 +135,10 @@ export default function WaveBoard({
 
   // Tri memoisé : la page Director se re-render toutes les secondes, on ne veut
   // pas recloner+retrier `waves` à chaque render (uniquement quand la prop change).
-  const sorted = useMemo(() => [...waves].sort((a, b) => a.ord - b.ord), [waves]);
+  const sorted = useMemo(
+    () => [...waves].sort((a, b) => a.ord - b.ord),
+    [waves]
+  );
   const segCountByWave = new Map<string, number>();
   for (const s of segments) {
     if (s.wave_id) {

@@ -82,7 +82,10 @@ function fmtDayHeader(
 ): { dow: string; day: string } {
   const d = new Date(`${dateStr}T12:00:00Z`);
   return {
-    dow: d.toLocaleDateString('fr-FR', { weekday: 'short', timeZone: timezone }),
+    dow: d.toLocaleDateString('fr-FR', {
+      weekday: 'short',
+      timeZone: timezone,
+    }),
     day: d.toLocaleDateString('fr-FR', {
       day: 'numeric',
       month: 'short',
@@ -173,14 +176,17 @@ export default function AvailabilityCalendar({
           hour12: false,
         })
       : null;
-    const marks: { top: number; label: string; secondary: string | null }[] = [];
+    const marks: { top: number; label: string; secondary: string | null }[] =
+      [];
     const startH = Math.ceil(config.dayStartMin / 60);
     for (let h = startH * 60; h <= config.dayEndMin; h += 60) {
       marks.push({
         top: (h - config.dayStartMin) * pxPerMin,
         label: fmtHour(h),
         secondary:
-          secFmt && refDay ? secFmt.format(new Date(slotKey(config, refDay, h))) : null,
+          secFmt && refDay
+            ? secFmt.format(new Date(slotKey(config, refDay, h)))
+            : null,
       });
     }
     return marks;
@@ -236,7 +242,12 @@ export default function AvailabilityCalendar({
   const onColPointerMove = (day: string) => (e: React.PointerEvent) => {
     if (!drag.current || drag.current.day !== day) return;
     const idx = rowFromClientY(e.clientY, e.currentTarget as HTMLElement);
-    setPreview({ day, from: drag.current.anchor, to: idx, erase: drag.current.erase });
+    setPreview({
+      day,
+      from: drag.current.anchor,
+      to: idx,
+      erase: drag.current.erase,
+    });
   };
 
   const endDrag = () => {
@@ -396,9 +407,7 @@ export default function AvailabilityCalendar({
                             key={key}
                             type="button"
                             disabled={!clickable}
-                            onPointerEnter={() =>
-                              cell && setHover({ cell })
-                            }
+                            onPointerEnter={() => cell && setHover({ cell })}
                             onPointerLeave={() => setHover(null)}
                             onClick={() => clickable && onSlotClick?.(key)}
                             className={`absolute inset-x-0.5 rounded ${HEAT_RAMP[idx]} ${
@@ -483,10 +492,7 @@ export default function AvailabilityCalendar({
       {mode === 'heatmap' && hover && hover.cell.count > 0 && (
         <div className="mt-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-xs text-gray-300">
           <span className="font-medium text-gray-100">
-            {labels.availableCount.replace(
-              '{count}',
-              String(hover.cell.count)
-            )}
+            {labels.availableCount.replace('{count}', String(hover.cell.count))}
           </span>
           {isFullOverlap(hover.cell) && (
             <span className="ml-2 rounded-full bg-emerald-400/20 px-2 py-0.5 text-[10px] font-semibold text-emerald-200">

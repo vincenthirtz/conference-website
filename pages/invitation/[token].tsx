@@ -14,6 +14,7 @@ import { useRouter } from 'next/router';
 import { useSession } from '@/hooks/useSession';
 import { useT, format } from '@/lib/i18n/useT';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
+import nsInvitationLink from '@/lib/i18n/locales/fr/invitationLink';
 
 type InvitationInfo = {
   team_name: string | null;
@@ -28,7 +29,7 @@ type InvitationInfo = {
 };
 
 function InvitationByTokenPage() {
-  const t = useT('invitationLink');
+  const t = useT(nsInvitationLink);
   const router = useRouter();
   const { user, token: authToken, loading: authLoading } = useSession();
 

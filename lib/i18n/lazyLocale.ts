@@ -1,39 +1,34 @@
 // lib/i18n/lazyLocale.ts
 //
-// Chargement PARESSEUX du dictionnaire non-actif.
+// Chargement PARESSEUX du dictionnaire anglais.
 //
-// Pourquoi : `useT` / `useAdminT` importaient statiquement LES DEUX locales.
-// Résultat mesuré sur un build de prod (Next 16 / Turbopack) :
-//
-//   - chunk locales publiques  : 427 KB brut / 138 KB gzip — tiré par 177 pages
-//   - chunk locales admin      : 627 KB brut / 178 KB gzip — tiré par 93 pages
-//
-// …soit ~34 % du First Load JS d'une page publique et ~55 % de celui d'une page
-// admin, dont la MOITIÉ est une langue que le visiteur ne regarde pas.
-//
-// Or `LanguageProvider` rend TOUJOURS 'fr' au SSR et au premier rendu client
-// (la préférence stockée n'est appliquée qu'en `useEffect`, pour éviter tout
+// `LanguageProvider` rend TOUJOURS 'fr' au SSR et au premier rendu client (la
+// préférence stockée n'est appliquée qu'en `useEffect`, pour éviter tout
 // mismatch d'hydratation). L'anglais n'est donc jamais requis de façon
-// synchrone : on peut le charger à la demande, en chunk séparé.
+// synchrone : on le charge à la demande, en chunk séparé, à la bascule FR→EN.
 //
-// Le français reste importé statiquement — c'est la langue par défaut, la
-// source de vérité des types, et le fallback affiché tant que l'anglais n'est
-// pas arrivé (le temps d'un `import()`, invisible en pratique).
+// Il reste volontairement MONOLITHIQUE (un `en.json`, un `admin-en.json`),
+// contrairement au français qui est éclaté par namespace (cf. `ns.ts`) : le
+// français doit tenir dans le bundle de chaque page, l'anglais est une requête
+// unique déclenchée par un clic. Le découper multiplierait les requêtes sans
+// rien économiser.
 
 import { useEffect, useSyncExternalStore } from 'react';
 import { useLang } from './LanguageProvider';
 
+/** Dictionnaire anglais chargé : blocs indexés par clé de namespace. */
+export type EnDict = Record<string, unknown>;
+
 /**
- * Fabrique un hook de dictionnaire à locale paresseuse.
+ * Fabrique un hook qui renvoie le dictionnaire anglais une fois chargé, `null`
+ * tant que la langue active est le français (ou que le chargement est en vol).
  *
- * @param frDict dictionnaire français (importé statiquement — sert aussi de type)
- * @param loadEn loader dynamique de la locale anglaise (`() => import('./en.json')`)
+ * @param loadEn loader dynamique du blob anglais (`() => import('./en.json')`)
  */
-export function createLocaleHook<T>(
-  frDict: T,
+export function createEnDictHook(
   loadEn: () => Promise<unknown>
-): () => T {
-  let enDict: T | null = null;
+): () => EnDict | null {
+  let enDict: EnDict | null = null;
   let started = false;
   const listeners = new Set<() => void>();
 
@@ -55,7 +50,7 @@ export function createLocaleHook<T>(
     started = true;
     void loadEn()
       .then((mod) => {
-        enDict = ((mod as { default?: unknown })?.default ?? mod) as T;
+        enDict = ((mod as { default?: unknown })?.default ?? mod) as EnDict;
         listeners.forEach((notify) => notify());
       })
       .catch(() => {
@@ -65,7 +60,7 @@ export function createLocaleHook<T>(
       });
   }
 
-  return function useLocaleDict(): T {
+  return function useEnDict(): EnDict | null {
     const { lang } = useLang();
     const en = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
@@ -73,6 +68,6 @@ export function createLocaleHook<T>(
       if (lang === 'en') preloadEn();
     }, [lang]);
 
-    return lang === 'en' && en ? en : frDict;
+    return lang === 'en' ? en : null;
   };
 }

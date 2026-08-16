@@ -64,7 +64,9 @@ async function handler(
     throw PublicWriteError.badRequest('Match marqué bye — score inapplicable');
   }
   if (!match.team1_id || !match.team2_id) {
-    throw PublicWriteError.badRequest('Match incomplet (équipes non assignées)');
+    throw PublicWriteError.badRequest(
+      'Match incomplet (équipes non assignées)'
+    );
   }
   if (TERMINAL_STATUSES.has(match.status)) {
     throw PublicWriteError.conflict(

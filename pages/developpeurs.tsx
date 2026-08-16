@@ -7,8 +7,9 @@ import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { useT, format } from '@/lib/i18n/useT';
 import { useStaffSession } from '@/hooks/useStaffSession';
 import { API_RESOURCES, API_ACTIONS } from '@/utils/apiScopes';
+import nsDeveloppeursPage from '@/lib/i18n/locales/fr/developpeursPage';
 
-type DevDict = ReturnType<typeof useT<'developpeursPage'>>;
+type DevDict = typeof nsDeveloppeursPage.fr;
 
 // Base URL affichée dans les exemples : origine réelle du site si connue,
 // sinon un placeholder explicite pour l'utilisateur.
@@ -454,7 +455,7 @@ const graphqlMutationExample = `curl -X POST "${BASE_URL}/api/graphql" \\
   -d '{"query":"mutation($m:ID!){reportMatchResult(matchId:$m,team1Score:2,team2Score:1){status winnerTeamId}}","variables":{"m":"…"}}'`;
 
 function DevelopersPage() {
-  const t = useT('developpeursPage');
+  const t = useT(nsDeveloppeursPage);
   // Staff-only shortcut into the authenticated self-serve hub. UX only — the hub
   // itself is SSR-gated (withStaffPage). Non-staff visitors never see this CTA.
   const { isStaff, loading: staffLoading } = useStaffSession();

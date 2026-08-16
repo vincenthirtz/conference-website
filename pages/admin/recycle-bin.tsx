@@ -9,8 +9,9 @@ import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminResource } from '@/hooks/useAdminResource';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import nsAdminRecycleBin from '@/lib/i18n/locales/admin-fr/adminRecycleBin';
 
-type Dict = ReturnType<typeof useAdminT<'adminRecycleBin'>>;
+type Dict = typeof nsAdminRecycleBin.fr;
 
 type StaffShape = {
   id: string;
@@ -119,7 +120,7 @@ function AdminRecycleBinPage({ staff }: StaffProps) {
   const { addToast } = useToast();
   const { confirm, dialog } = useConfirmDialog();
   const { adminFetchJson } = useAdminFetch();
-  const t = useAdminT('adminRecycleBin');
+  const t = useAdminT(nsAdminRecycleBin);
 
   const [typeFilter, setTypeFilter] = useState<string>('');
   const [restoringId, setRestoringId] = useState<string | null>(null);

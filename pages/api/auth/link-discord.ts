@@ -93,8 +93,7 @@ export default async function handler(
     // surface a clearer message in that case.
     if (result.error?.includes('duplicate key')) {
       return res.status(409).json({
-        error:
-          "Ce compte Discord est déjà lié à un autre utilisateur du site.",
+        error: 'Ce compte Discord est déjà lié à un autre utilisateur du site.',
       });
     }
     return res

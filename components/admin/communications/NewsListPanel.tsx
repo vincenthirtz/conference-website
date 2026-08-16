@@ -18,8 +18,9 @@ import DeleteConfirmModal from '@/components/admin/DeleteConfirmModal';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useUrlFilters } from '@/utils/useUrlFilters';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import nsAdminNewsList from '@/lib/i18n/locales/admin-fr/adminNewsList';
 
-type Dict = ReturnType<typeof useAdminT<'adminNewsList'>>;
+type Dict = typeof nsAdminNewsList.fr;
 
 export type NewsRow = {
   id: string;
@@ -68,7 +69,7 @@ export default function NewsListPanel({
   total,
   errorMsg: ssrError,
 }: Props) {
-  const t = useAdminT('adminNewsList');
+  const t = useAdminT(nsAdminNewsList);
   const router = useRouter();
   const { adminFetchJson } = useAdminFetch();
   const { filters, setFilter, setFilters } = useUrlFilters(N_FILTER_KEYS);

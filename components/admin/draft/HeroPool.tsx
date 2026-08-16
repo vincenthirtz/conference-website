@@ -44,9 +44,7 @@ export function HeroPool({
     const q = query.trim().toLowerCase();
     if (!q) return heroes;
     return heroes.filter(
-      (h) =>
-        h.name.toLowerCase().includes(q) ||
-        h.key.toLowerCase().includes(q)
+      (h) => h.name.toLowerCase().includes(q) || h.key.toLowerCase().includes(q)
     );
   }, [heroes, query]);
 

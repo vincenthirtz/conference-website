@@ -39,6 +39,7 @@ import {
   type CasterScene,
   type CasterSceneType,
 } from '@/types/caster';
+import nsAdminCasterScenes from '@/lib/i18n/locales/admin-fr/adminCasterScenes';
 
 /** Mutateurs de la liste — fournis par `useCasterScenes`. */
 export type SceneCrud = {
@@ -71,7 +72,7 @@ export default function SceneList({
   typeLabel,
   crud,
 }: Props) {
-  const t = useAdminT('adminCasterScenes');
+  const t = useAdminT(nsAdminCasterScenes);
   const { addToast } = useToast();
   const { confirm, dialog } = useConfirmDialog();
 
@@ -397,7 +398,7 @@ function NewSceneMenu({
   disabled: boolean;
   typeLabel: (type: string) => string;
 }) {
-  const t = useAdminT('adminCasterScenes');
+  const t = useAdminT(nsAdminCasterScenes);
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const btnRef = useRef<HTMLButtonElement | null>(null);

@@ -137,7 +137,8 @@ export default async function handler(
 
     logger.error('[api/auth/register] signUp error:', error);
     return res.status(500).json({
-      error: 'Impossible de créer le compte pour le moment. Réessaie plus tard.',
+      error:
+        'Impossible de créer le compte pour le moment. Réessaie plus tard.',
       code: 'SERVER',
     });
   }

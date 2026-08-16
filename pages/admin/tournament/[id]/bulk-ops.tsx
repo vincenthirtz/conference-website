@@ -13,15 +13,16 @@ import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import TournamentTabsNav from '@/components/admin/tournament/TournamentTabsNav';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { StaffProps, StageSummary, TournamentMini } from '@/types/admin';
+import nsAdminTournamentBulkOps from '@/lib/i18n/locales/admin-fr/adminTournamentBulkOps';
 
-type Dict = ReturnType<typeof useAdminT<'adminTournamentBulkOps'>>;
+type Dict = typeof nsAdminTournamentBulkOps.fr;
 
 export const getServerSideProps = withStaffPage('admin');
 
 type RoundOption = { stageId: string; roundNumber: number; matchCount: number };
 
 function BulkOpsPage(_: StaffProps) {
-  const t = useAdminT('adminTournamentBulkOps');
+  const t = useAdminT(nsAdminTournamentBulkOps);
   const router = useRouter();
   const { id } = router.query;
   const tournamentId = Array.isArray(id) ? id[0] : id;

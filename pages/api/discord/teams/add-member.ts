@@ -101,14 +101,22 @@ export default async function handler(
       role,
     });
     if (!insertResult.ok) {
-      return res.status(insertResult.status).json({ error: insertResult.error });
+      return res
+        .status(insertResult.status)
+        .json({ error: insertResult.error });
     }
 
     let captainSet = false;
     if (setCaptain) {
-      const captainResult = await setTeamCaptain(teamId, resolvedUserId, tenantId);
+      const captainResult = await setTeamCaptain(
+        teamId,
+        resolvedUserId,
+        tenantId
+      );
       if (!captainResult.ok) {
-        return res.status(captainResult.status).json({ error: captainResult.error });
+        return res
+          .status(captainResult.status)
+          .json({ error: captainResult.error });
       }
       captainSet = true;
     }

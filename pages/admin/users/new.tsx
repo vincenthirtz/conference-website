@@ -17,8 +17,9 @@ import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { roleRequiresBattleTag } from '@/utils/teams/addMember';
 
 import { logger } from '../../../utils/logger';
+import nsAdminUsersNew from '@/lib/i18n/locales/admin-fr/adminUsersNew';
 
-type Dict = ReturnType<typeof useAdminT<'adminUsersNew'>>;
+type Dict = typeof nsAdminUsersNew.fr;
 type StaffShape = {
   id: string;
   role: string;
@@ -83,7 +84,7 @@ export const getServerSideProps = withStaffPage<{ teamRoles: TeamRole[] }>(
 );
 
 function AdminCreateUserPage({ staff, teamRoles }: StaffProps) {
-  const t = useAdminT('adminUsersNew');
+  const t = useAdminT(nsAdminUsersNew);
   const router = useRouter();
   const { addToast } = useToast();
   const { adminFetch } = useAdminFetch();

@@ -14,8 +14,9 @@ import Modal from '@/components/admin/Modal';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 import { logger } from '../../../utils/logger';
+import nsAdminDemandesList from '@/lib/i18n/locales/admin-fr/adminDemandesList';
 
-type Dict = ReturnType<typeof useAdminT<'adminDemandesList'>>;
+type Dict = typeof nsAdminDemandesList.fr;
 
 type DemandeType =
   | 'join'
@@ -436,7 +437,7 @@ function AdminDemandesPage({
   statusCounts,
   initialError,
 }: Props) {
-  const t = useAdminT('adminDemandesList');
+  const t = useAdminT(nsAdminDemandesList);
   const { addToast } = useToast();
   const { adminFetch, adminFetchJson } = useAdminFetch();
   const router = useRouter();

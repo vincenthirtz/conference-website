@@ -12,6 +12,7 @@
 import { useEffect, useState, type JSX } from 'react';
 import Link from 'next/link';
 import { useT } from '@/lib/i18n/useT';
+import nsHomeV2 from '@/lib/i18n/locales/fr/homeV2';
 
 type HomeHeroV2Props = {
   /** ISO du prochain jalon (coup d'envoi / ouverture des matchs). */
@@ -42,7 +43,7 @@ export default function HomeHeroV2({
   countdownTarget,
   isLive = false,
 }: HomeHeroV2Props): JSX.Element {
-  const t = useT('homeV2');
+  const t = useT(nsHomeV2);
   const currentYear = new Date().getFullYear();
 
   const targetMs = countdownTarget ? new Date(countdownTarget).getTime() : NaN;

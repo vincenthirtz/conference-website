@@ -15,8 +15,9 @@ import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useStaffSession } from '@/hooks/useStaffSession';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { VetoFlowStep, VetoStep, MatchVetoState } from '@/types/veto';
+import nsAdminTournamentVeto from '@/lib/i18n/locales/admin-fr/adminTournamentVeto';
 
-type Dict = ReturnType<typeof useAdminT<'adminTournamentVeto'>>;
+type Dict = typeof nsAdminTournamentVeto.fr;
 
 type TournamentMapRow = {
   id: string;
@@ -111,7 +112,7 @@ function sideLabel(
 }
 
 export default function VetoPanel() {
-  const t = useAdminT('adminTournamentVeto');
+  const t = useAdminT(nsAdminTournamentVeto);
   const router = useRouter();
   const { id } = router.query;
   const tournamentId = Array.isArray(id) ? id[0] : id;

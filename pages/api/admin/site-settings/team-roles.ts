@@ -22,12 +22,7 @@ async function handler(
   ctx: AuthenticatedStaffContext
 ) {
   if (
-    applyRateLimit(
-      req,
-      res,
-      { max: 60, windowMs: 60_000 },
-      'admin-team-roles'
-    )
+    applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'admin-team-roles')
   )
     return;
 
@@ -110,17 +105,15 @@ async function handler(
       return res.status(400).json({ error: 'At least one role required.' });
     }
 
-    const { error } = await supabaseAdmin
-      .from('site_settings')
-      .upsert(
-        {
-          key: TEAM_ROLES_SETTING_KEY,
-          value: serializeTeamRoles(cleaned),
-          description: 'Liste des rôles disponibles pour les membres d\'équipe',
-          updated_by: ctx.staff.id,
-        },
-        { onConflict: 'key' }
-      );
+    const { error } = await supabaseAdmin.from('site_settings').upsert(
+      {
+        key: TEAM_ROLES_SETTING_KEY,
+        value: serializeTeamRoles(cleaned),
+        description: "Liste des rôles disponibles pour les membres d'équipe",
+        updated_by: ctx.staff.id,
+      },
+      { onConflict: 'key' }
+    );
 
     if (error) {
       logger.error('[admin/team-roles] upsert error', error);

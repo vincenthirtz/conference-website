@@ -13,6 +13,7 @@ import { useToast } from '@/components/Toast';
 import TournamentTabsNav from '@/components/admin/tournament/TournamentTabsNav';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { StaffProps } from '@/types/admin';
+import nsAdminTournamentPrizePool from '@/lib/i18n/locales/admin-fr/adminTournamentPrizePool';
 
 type PrizePool = {
   id: string;
@@ -67,7 +68,7 @@ function centsToEurosInput(cents: number | null | undefined): string {
 }
 
 function AdminTournamentPrizePoolPage(_: StaffProps) {
-  const t = useAdminT('adminTournamentPrizePool');
+  const t = useAdminT(nsAdminTournamentPrizePool);
   const router = useRouter();
   const { id } = router.query;
   const tournamentId = Array.isArray(id) ? id[0] : id;

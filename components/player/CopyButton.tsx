@@ -1,5 +1,6 @@
 import { useEffect, useState, type JSX } from 'react';
 import { useT } from '@/lib/i18n/useT';
+import nsCopyButton from '@/lib/i18n/locales/fr/copyButton';
 
 type Props = {
   /** The string copied to the clipboard. */
@@ -18,7 +19,7 @@ export default function CopyButton({
   className = '',
   resetMs = 1500,
 }: Props): JSX.Element {
-  const t = useT('copyButton');
+  const t = useT(nsCopyButton);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState(false);
 

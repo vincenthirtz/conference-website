@@ -7,6 +7,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useT } from '@/lib/i18n/useT';
+import nsTournamentLanding from '@/lib/i18n/locales/fr/tournamentLanding';
 
 export default function StickyRegisterBar({
   registrationOpen,
@@ -17,7 +18,7 @@ export default function StickyRegisterBar({
   registerHref: string;
   placesRemaining: number | null;
 }) {
-  const t = useT('tournamentLanding');
+  const t = useT(nsTournamentLanding);
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -32,10 +33,10 @@ export default function StickyRegisterBar({
 
   const placesLabel =
     placesRemaining !== null && placesRemaining > 0
-      ? (placesRemaining > 1 ? t.stickyPlaces_other : t.stickyPlaces_one).replace(
-          '{count}',
-          String(placesRemaining)
-        )
+      ? (placesRemaining > 1
+          ? t.stickyPlaces_other
+          : t.stickyPlaces_one
+        ).replace('{count}', String(placesRemaining))
       : null;
 
   return (
@@ -57,7 +58,11 @@ export default function StickyRegisterBar({
               </p>
             )}
           </div>
-          <Link href={registerHref} className="shrink-0" tabIndex={visible ? 0 : -1}>
+          <Link
+            href={registerHref}
+            className="shrink-0"
+            tabIndex={visible ? 0 : -1}
+          >
             <span className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[var(--color-green)] to-[var(--color-yellow)] px-5 py-2.5 text-xs font-bold text-black transition-transform hover:scale-[1.03]">
               {t.stickyRegister}
               <svg

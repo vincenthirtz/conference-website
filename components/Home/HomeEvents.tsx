@@ -10,8 +10,9 @@ import { TwitchIcon } from '@/components/Icons';
 import type { SVGTypes } from '@/types/types';
 import { useT } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
+import nsHomeEvents from '@/lib/i18n/locales/fr/homeEvents';
 
-type EventsDict = ReturnType<typeof useT<'homeEvents'>>;
+type EventsDict = typeof nsHomeEvents.fr;
 
 const LOCATION_META: Record<
   HomepageEvent['location'],
@@ -59,7 +60,7 @@ function formatTime(iso: string, locale: string) {
 }
 
 function EventCard({ event }: { event: HomepageEvent }) {
-  const t = useT('homeEvents');
+  const t = useT(nsHomeEvents);
   const locale = useLocale();
   const meta = LOCATION_META[event.location];
   const Icon = meta.Icon;
@@ -130,7 +131,7 @@ type HomeEventsProps = {
 export default function HomeEvents({
   tournament,
 }: HomeEventsProps): JSX.Element | null {
-  const t = useT('homeEvents');
+  const t = useT(nsHomeEvents);
   const buildItems = (filterPast: boolean): AgendaItem[] => {
     const now = Date.now();
     const items: AgendaItem[] = [];

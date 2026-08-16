@@ -8,8 +8,9 @@ import Button from '@/components/Buttons/button';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { supabaseAdmin } from '@/utils/supabase';
 import { useT, format } from '@/lib/i18n/useT';
+import nsLorePage from '@/lib/i18n/locales/fr/lorePage';
 
-type LoreDict = ReturnType<typeof useT<'lorePage'>>;
+type LoreDict = typeof nsLorePage.fr;
 
 type MediaType = 'comic' | 'story' | 'music' | 'screenshot';
 
@@ -98,7 +99,7 @@ export const getStaticProps: GetStaticProps<LorePageProps> = async () => {
 };
 
 export default function LorePage({ media }: LorePageProps) {
-  const t = useT('lorePage');
+  const t = useT(nsLorePage);
   const typeConfig = getTypeConfig(t);
   const [activeTab, setActiveTab] = useState<'all' | MediaType>('all');
   const loading = false;

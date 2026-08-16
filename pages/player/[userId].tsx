@@ -41,8 +41,10 @@ import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import { useToast } from '@/components/Toast';
+import nsPlayerPublicProfile from '@/lib/i18n/locales/fr/playerPublicProfile';
+import nsPlayerDiscovery from '@/lib/i18n/locales/fr/playerDiscovery';
 
-type PlayerProfileDict = ReturnType<typeof useT<'playerPublicProfile'>>;
+type PlayerProfileDict = typeof nsPlayerPublicProfile.fr;
 
 type FetchState =
   | { status: 'loading' }
@@ -65,7 +67,7 @@ function formatDate(iso: string, locale: string): string {
 export default function PlayerProfilePage({
   profile,
 }: InferGetStaticPropsType<typeof getStaticProps>) {
-  const t = useT('playerPublicProfile');
+  const t = useT(nsPlayerPublicProfile);
   const router = useRouter();
   const { userId } = router.query;
   const id = typeof userId === 'string' ? userId : '';
@@ -124,7 +126,7 @@ export default function PlayerProfilePage({
 }
 
 function Profile({ data }: { data: PlayerProfileResponse }) {
-  const t = useT('playerPublicProfile');
+  const t = useT(nsPlayerPublicProfile);
   const { player, history, recentMatches, h2h, achievements } = data;
   const label = coreLabel(player);
 
@@ -175,7 +177,7 @@ type CrossH2HResponse = {
 };
 
 function CrossNetworkH2H({ opponentId }: { opponentId: string }) {
-  const t = useT('playerDiscovery');
+  const t = useT(nsPlayerDiscovery);
   const locale = useLocale();
   const { user, loading: sessionLoading } = useSession();
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
@@ -293,7 +295,7 @@ function CrossNetworkH2H({ opponentId }: { opponentId: string }) {
 }
 
 function H2HResultBadge({ winner }: { winner: 'a' | 'b' | 'draw' }) {
-  const t = useT('playerDiscovery');
+  const t = useT(nsPlayerDiscovery);
   const map = {
     a: {
       short: t.h2hResultWinShort,
@@ -345,7 +347,7 @@ const getBadgeTierLabel = (
 });
 
 function BadgesSection({ badges }: { badges: ProfileBadge[] }) {
-  const t = useT('playerPublicProfile');
+  const t = useT(nsPlayerPublicProfile);
   const badgeTierLabel = getBadgeTierLabel(t);
   if (badges.length === 0) return null;
 
@@ -377,7 +379,7 @@ function BadgesSection({ badges }: { badges: ProfileBadge[] }) {
 
 // --- Palmarès ---------------------------------------------------------------
 function PalmaresSection({ placements }: { placements: ProfilePlacement[] }) {
-  const t = useT('playerPublicProfile');
+  const t = useT(nsPlayerPublicProfile);
   const locale = useLocale();
   if (placements.length === 0) return null;
 
@@ -436,7 +438,7 @@ function PalmaresSection({ placements }: { placements: ProfilePlacement[] }) {
 // masqué aux lecteurs d'écran (aria-hidden) ; le rang réel est fourni en
 // texte alternatif via aria-label sur le conteneur.
 function RankMedal({ rank }: { rank: number }) {
-  const t = useT('playerPublicProfile');
+  const t = useT(nsPlayerPublicProfile);
   const podium: Record<number, { emoji: string; cls: string; word: string }> = {
     1: {
       emoji: '🥇',
@@ -480,7 +482,7 @@ function RankMedal({ rank }: { rank: number }) {
 
 // --- Saisons (leagues) ------------------------------------------------------
 function SeasonsSection({ seasons }: { seasons: ProfileSeason[] }) {
-  const t = useT('playerPublicProfile');
+  const t = useT(nsPlayerPublicProfile);
   if (seasons.length === 0) return null;
 
   return (
@@ -562,7 +564,7 @@ function ShareButtons({
   player: PlayerProfileCore;
   label: string;
 }) {
-  const t = useT('playerPublicProfile');
+  const t = useT(nsPlayerPublicProfile);
   const { addToast } = useToast();
 
   const shareTitle = format(t.shareTitle, { name: label });
@@ -693,7 +695,7 @@ function ProfileHeader({
   player: PlayerProfileCore;
   label: string;
 }) {
-  const t = useT('playerPublicProfile');
+  const t = useT(nsPlayerPublicProfile);
   const total = player.wins + player.losses;
   const winRate = total > 0 ? Math.round((player.wins / total) * 100) : null;
 
@@ -797,7 +799,7 @@ function Stat({
 
 // --- Sparkline SVG maison (pas de dépendance de charts) --------------------
 function RatingChart({ history }: { history: PlayerProfileHistoryPoint[] }) {
-  const t = useT('playerPublicProfile');
+  const t = useT(nsPlayerPublicProfile);
   if (history.length < 2) {
     return (
       <div className="rounded-2xl border border-neutral-800 bg-neutral-900/40 p-8 text-center text-sm text-neutral-400">
@@ -909,7 +911,7 @@ function RatingChart({ history }: { history: PlayerProfileHistoryPoint[] }) {
 }
 
 function RecentMatches({ matches }: { matches: PlayerProfileRecentMatch[] }) {
-  const t = useT('playerPublicProfile');
+  const t = useT(nsPlayerPublicProfile);
   const locale = useLocale();
   return (
     <section>
@@ -963,7 +965,7 @@ function RecentMatches({ matches }: { matches: PlayerProfileRecentMatch[] }) {
 }
 
 function ResultBadge({ result }: { result: 'win' | 'loss' | 'draw' }) {
-  const t = useT('playerPublicProfile');
+  const t = useT(nsPlayerPublicProfile);
   const map = {
     win: { label: t.resultWin, cls: 'bg-emerald-500/15 text-emerald-400' },
     loss: { label: t.resultLoss, cls: 'bg-rose-500/15 text-rose-400' },
@@ -980,7 +982,7 @@ function ResultBadge({ result }: { result: 'win' | 'loss' | 'draw' }) {
 }
 
 function HeadToHead({ rows }: { rows: PlayerProfileH2H[] }) {
-  const t = useT('playerPublicProfile');
+  const t = useT(nsPlayerPublicProfile);
   return (
     <section>
       <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-brand-gradient">
@@ -1054,7 +1056,7 @@ function LoadingState() {
 }
 
 function NotFoundState() {
-  const t = useT('playerPublicProfile');
+  const t = useT(nsPlayerPublicProfile);
   return (
     <section className="py-16 text-center">
       <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-neutral-800 text-2xl">
@@ -1075,7 +1077,7 @@ function NotFoundState() {
 }
 
 function ErrorState({ onRetry }: { onRetry: () => void }) {
-  const t = useT('playerPublicProfile');
+  const t = useT(nsPlayerPublicProfile);
   return (
     <section className="py-16 text-center" role="alert">
       <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full border border-red-500/30 bg-red-500/10">

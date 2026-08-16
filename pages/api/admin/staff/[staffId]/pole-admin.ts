@@ -103,10 +103,7 @@ async function handler(
       .eq('role', 'owner')
       .eq('is_pole_admin', true);
     if (ownersErr) {
-      logger.error(
-        '[admin/staff/pole-admin] owners lookup error',
-        ownersErr
-      );
+      logger.error('[admin/staff/pole-admin] owners lookup error', ownersErr);
       return res.status(500).json({ error: 'Server error.' });
     }
     const activeOtherPoleOwners = (
@@ -137,9 +134,7 @@ async function handler(
     logger.error('[admin/staff/pole-admin] update error', updateErr, {
       staffId: targetRow.id,
     });
-    return res
-      .status(500)
-      .json({ error: 'Failed to update pole_admin flag.' });
+    return res.status(500).json({ error: 'Failed to update pole_admin flag.' });
   }
 
   // Invalide le cache staff de la cible (le flag est lu via

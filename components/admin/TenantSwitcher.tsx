@@ -26,6 +26,7 @@ import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 import { logger } from '../../utils/logger';
+import nsAdminTenantSwitcher from '@/lib/i18n/locales/admin-fr/adminTenantSwitcher';
 
 function ChevronDown({ open }: { open: boolean }) {
   return (
@@ -97,7 +98,7 @@ function TenantSwitcherSkeleton() {
 export default function TenantSwitcher() {
   const router = useRouter();
   const { addToast } = useToast();
-  const tx = useAdminT('adminTenantSwitcher');
+  const tx = useAdminT(nsAdminTenantSwitcher);
   const {
     tenant: active,
     isLoading: loadingActive,

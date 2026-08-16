@@ -29,6 +29,7 @@ import EmptyState from '@/components/admin/EmptyState';
 import ApiTokenRevealModal from '@/components/admin/ApiTokenRevealModal';
 import { ALL_SCOPES } from '@/utils/apiScopes';
 import { logger } from '@/utils/logger';
+import nsAdminApiTokens from '@/lib/i18n/locales/admin-fr/adminApiTokens';
 
 type ApiTokenRow = {
   id: string;
@@ -114,7 +115,7 @@ function AdminApiTokensPage({ staff }: Props) {
   // faux espoir.
   const isOwner = hasAtLeastRole(staff.role as StaffRole, 'owner');
 
-  const t = useAdminT('adminApiTokens');
+  const t = useAdminT(nsAdminApiTokens);
   const { adminFetchJson } = useAdminFetch();
   const { mutateJson } = useIdempotentMutation();
   const { addToast } = useToast();
@@ -442,11 +443,15 @@ function AdminApiTokensPage({ staff }: Props) {
                 >
                   {TTL_OPTIONS.map((d) => (
                     <option key={d} value={d}>
-                      {d === 0 ? t.expiryNever : t.expiryInDays.replace('{d}', String(d))}
+                      {d === 0
+                        ? t.expiryNever
+                        : t.expiryInDays.replace('{d}', String(d))}
                     </option>
                   ))}
                 </select>
-                <p className="text-xs text-neutral-500 mt-1.5">{t.expiryHint}</p>
+                <p className="text-xs text-neutral-500 mt-1.5">
+                  {t.expiryHint}
+                </p>
               </div>
 
               {/* ===== Exemption partenaire (owner uniquement) ===== */}
@@ -546,14 +551,31 @@ function AdminApiTokensPage({ staff }: Props) {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="text-left text-xs uppercase tracking-wider text-neutral-500 border-b border-neutral-700/50">
-                      <th scope="col" className="px-6 py-3 font-medium">{t.colName}</th>
-                      <th scope="col" className="px-6 py-3 font-medium">{t.colPrefix}</th>
-                      <th scope="col" className="px-6 py-3 font-medium">{t.colScopes}</th>
-                      <th scope="col" className="px-6 py-3 font-medium">{t.colCreated}</th>
-                      <th scope="col" className="px-6 py-3 font-medium">{t.colExpires}</th>
-                      <th scope="col" className="px-6 py-3 font-medium">{t.colLastUsed}</th>
-                      <th scope="col" className="px-6 py-3 font-medium">{t.colStatus}</th>
-                      <th scope="col" className="px-6 py-3 font-medium text-right">
+                      <th scope="col" className="px-6 py-3 font-medium">
+                        {t.colName}
+                      </th>
+                      <th scope="col" className="px-6 py-3 font-medium">
+                        {t.colPrefix}
+                      </th>
+                      <th scope="col" className="px-6 py-3 font-medium">
+                        {t.colScopes}
+                      </th>
+                      <th scope="col" className="px-6 py-3 font-medium">
+                        {t.colCreated}
+                      </th>
+                      <th scope="col" className="px-6 py-3 font-medium">
+                        {t.colExpires}
+                      </th>
+                      <th scope="col" className="px-6 py-3 font-medium">
+                        {t.colLastUsed}
+                      </th>
+                      <th scope="col" className="px-6 py-3 font-medium">
+                        {t.colStatus}
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 font-medium text-right"
+                      >
                         {t.colActions}
                       </th>
                     </tr>
@@ -605,19 +627,28 @@ function AdminApiTokensPage({ staff }: Props) {
                             <div>{formatDate(token.created_at, '—')}</div>
                             {token.created_by_name && (
                               <div className="text-xs text-neutral-500">
-                                {t.byCreator.replace('{name}', token.created_by_name)}
+                                {t.byCreator.replace(
+                                  '{name}',
+                                  token.created_by_name
+                                )}
                               </div>
                             )}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             {token.expires_at ? (
                               <span
-                                className={expired ? 'text-amber-300' : 'text-neutral-400'}
+                                className={
+                                  expired
+                                    ? 'text-amber-300'
+                                    : 'text-neutral-400'
+                                }
                               >
                                 {formatDate(token.expires_at, '—')}
                               </span>
                             ) : (
-                              <span className="text-neutral-500">{t.expiryNever}</span>
+                              <span className="text-neutral-500">
+                                {t.expiryNever}
+                              </span>
                             )}
                           </td>
                           <td className="px-6 py-4 text-neutral-400 whitespace-nowrap">

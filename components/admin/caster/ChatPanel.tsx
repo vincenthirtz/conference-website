@@ -30,6 +30,7 @@ import {
   type ChatFeedItem,
   type UseTwitchChatApi,
 } from './useTwitchChat';
+import nsAdminCasterScenes from '@/lib/i18n/locales/admin-fr/adminCasterScenes';
 
 const MAX_CHAT = 500;
 
@@ -147,7 +148,7 @@ export function eventHeadline(evt: AnyEvent, l: EventLabels): string {
 }
 
 export default function ChatPanel({ chat }: { chat: UseTwitchChatApi }) {
-  const t = useAdminT('adminCasterScenes');
+  const t = useAdminT(nsAdminCasterScenes);
   const { confirm, dialog } = useConfirmDialog();
 
   const [draft, setDraft] = useState('');

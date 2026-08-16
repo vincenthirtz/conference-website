@@ -28,6 +28,7 @@ import HomeSteps from '@/components/Home/HomeSteps';
 import HomeNewsV2 from '@/components/Home/HomeNewsV2';
 import HomeSupportStrip from '@/components/Home/HomeSupportStrip';
 import NewsletterSignup from '@/components/NewsletterSignup';
+import nsHomeV2 from '@/lib/i18n/locales/fr/homeV2';
 
 type HomeProps = {
   news: HomeNewsItem[];
@@ -72,7 +73,7 @@ function Home({
   prizeCents,
   loadError,
 }: HomeProps) {
-  const t = useT('homeV2');
+  const t = useT(nsHomeV2);
   const live = useTwitchLive();
   const topAnnouncement = announcements[0] ?? null;
 

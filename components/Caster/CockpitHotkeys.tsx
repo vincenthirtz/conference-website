@@ -18,6 +18,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useToast } from '@/components/Toast';
 import { logger } from '@/utils/logger';
 import { useT, format } from '@/lib/i18n/useT';
+import nsCockpitHotkeys from '@/lib/i18n/locales/fr/cockpitHotkeys';
 
 type HotkeyKind = 'highlight' | 'score' | 'pause';
 
@@ -45,7 +46,7 @@ export default function CockpitHotkeys({
   disabled,
 }: Props) {
   const { addToast } = useToast();
-  const t = useT('cockpitHotkeys');
+  const t = useT(nsCockpitHotkeys);
   const [busy, setBusy] = useState<HotkeyKind | null>(null);
   // Saisie de score inline (remplace window.prompt : bloquant, inaccessible et
   // no-op possible en PWA standalone). Champ maison, focus auto, Entree valide,

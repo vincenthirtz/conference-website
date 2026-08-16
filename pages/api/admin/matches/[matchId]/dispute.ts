@@ -43,7 +43,11 @@ export default withStaffRoute(
   'admin'
 );
 
-async function handler(req: NextApiRequest, res: NextApiResponse, ctx: AuthenticatedStaffContext) {
+async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  ctx: AuthenticatedStaffContext
+) {
   const { matchId } = req.query;
 
   if (!matchId || Array.isArray(matchId) || !isValidUUID(matchId)) {
@@ -189,9 +193,7 @@ async function openDispute(
       },
       ctx.tenantId
     );
-  })().catch((e) =>
-    logger.error('[botEvents] match.disputed emit error:', e)
-  );
+  })().catch((e) => logger.error('[botEvents] match.disputed emit error:', e));
 
   // Auto-director (Feature: Production broadcast automatisée) : bascule la
   // scene overlay vers 'pause' si ce match est celui du segment live.
@@ -200,9 +202,7 @@ async function openDispute(
     tenantId: ctx.tenantId,
     matchId,
     newStatus: 'disputed',
-  }).catch((e) =>
-    logger.error('[autoDirector] disputed react error:', e)
-  );
+  }).catch((e) => logger.error('[autoDirector] disputed react error:', e));
 
   return res.status(200).json({ match: updated });
 }

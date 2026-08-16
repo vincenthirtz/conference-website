@@ -2,9 +2,10 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useSiteSetting } from '@/hooks/useSiteSettings';
 import { useT } from '@/lib/i18n/useT';
+import nsError403 from '@/lib/i18n/locales/fr/error403';
 
 export default function ForbiddenPage() {
-  const t = useT('error403');
+  const t = useT(nsError403);
   const { value: contactEmail } = useSiteSetting('contact_email');
 
   return (

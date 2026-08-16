@@ -29,8 +29,9 @@ import Tabs, {
 import { listGames } from '@/config/games';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { presetScope, type PresetScope } from '@/utils/customGamePresets';
+import nsAdminCustomGamePresets from '@/lib/i18n/locales/admin-fr/adminCustomGamePresets';
 
-type Dict = ReturnType<typeof useAdminT<'adminCustomGamePresets'>>;
+type Dict = typeof nsAdminCustomGamePresets.fr;
 
 type StaffShape = { id: string; role: string; display_name: string | null };
 type StaffProps = { staff: StaffShape };
@@ -84,7 +85,7 @@ function mapPoolToLines(value: unknown): string {
 export const getServerSideProps = withStaffPage('admin');
 
 function AdminCustomGamePresetsPage(_: StaffProps) {
-  const t = useAdminT('adminCustomGamePresets');
+  const t = useAdminT(nsAdminCustomGamePresets);
   const { adminFetchJson } = useAdminFetch();
   const { confirm, dialog } = useConfirmDialog();
   const { addToast } = useToast();

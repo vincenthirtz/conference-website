@@ -10,8 +10,9 @@ import { withStaffPage } from '@/utils/staff';
 import Breadcrumb from '@/components/admin/Breadcrumb';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import tournamentHelp from '@/config/tournament-help.json';
+import nsAdminAideTournoi from '@/lib/i18n/locales/admin-fr/adminAideTournoi';
 
-type Dict = ReturnType<typeof useAdminT<'adminAideTournoi'>>;
+type Dict = typeof nsAdminAideTournoi.fr;
 
 type CommandRole = 'admin' | 'captain' | 'player' | 'public';
 
@@ -140,7 +141,7 @@ function uiImpactToHref(label: string): string | null {
 }
 
 function CommandCard({ command }: { command: HelpCommand }) {
-  const t = useAdminT('adminAideTournoi');
+  const t = useAdminT(nsAdminAideTournoi);
   const anchor = deeplinkAnchor(command.deeplink_admin);
   const [copied, setCopied] = useState<number | null>(null);
   const [openExampleIdx, setOpenExampleIdx] = useState<number | null>(null);
@@ -348,7 +349,7 @@ function TableOfContents({
   activeId: string | null;
   onJump: (id: string) => void;
 }) {
-  const t = useAdminT('adminAideTournoi');
+  const t = useAdminT(nsAdminAideTournoi);
   return (
     <nav
       aria-label={t.tocAriaLabel}
@@ -385,7 +386,7 @@ function TableOfContents({
 }
 
 function AdminAideTournoiPage({ inventory }: Props) {
-  const t = useAdminT('adminAideTournoi');
+  const t = useAdminT(nsAdminAideTournoi);
   const { version, sections } = inventory;
   const [activeId, setActiveId] = useState<string | null>(
     sections[0]?.id ?? null

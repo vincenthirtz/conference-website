@@ -7,6 +7,7 @@ import { useAutoSave } from '@/utils/useAutoSave';
 import DraftBanner from '@/components/admin/DraftBanner';
 import AutoSaveIndicator from '@/components/admin/AutoSaveIndicator';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import nsAdminAnnouncementsNew from '@/lib/i18n/locales/admin-fr/adminAnnouncementsNew';
 
 type Props = {
   staff: {
@@ -30,7 +31,7 @@ type FormState = {
 export const getServerSideProps = withStaffPage('admin');
 
 function AdminAnnouncementCreatePage({ staff }: Props) {
-  const t = useAdminT('adminAnnouncementsNew');
+  const t = useAdminT(nsAdminAnnouncementsNew);
   const router = useRouter();
   const { adminFetch } = useAdminFetch();
 

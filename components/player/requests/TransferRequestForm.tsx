@@ -15,6 +15,7 @@ import type {
   DesiredRole,
   TransferMode,
 } from './types';
+import nsPlayerRequests from '@/lib/i18n/locales/fr/playerRequests';
 
 type ErrorField = 'team' | 'player' | 'slots' | null;
 
@@ -61,7 +62,7 @@ function TransferForm({
   submitting: boolean;
   onSubmit: (e: React.FormEvent) => void;
 }) {
-  const t = useT('playerRequests');
+  const t = useT(nsPlayerRequests);
   const isPropose = mode === 'propose';
 
   return (
@@ -261,7 +262,7 @@ export default function TransferRequestForm({
   setError: (v: string | null) => void;
   setErrorField: (v: ErrorField) => void;
 }) {
-  const t = useT('playerRequests');
+  const t = useT(nsPlayerRequests);
 
   if (!hasTeam) {
     return (

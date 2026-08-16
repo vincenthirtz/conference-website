@@ -17,13 +17,14 @@ import ScrimsListPanel from '@/components/admin/scrims/ScrimsListPanel';
 import ScrimPlanningsListPanel from '@/components/admin/scrims/ScrimPlanningsListPanel';
 import ScrimCalendarPanel from '@/components/admin/scrims/ScrimCalendarPanel';
 import type { StaffProps } from '@/types/admin';
+import nsAdminScrimsList from '@/lib/i18n/locales/admin-fr/adminScrimsList';
 
 const ID_BASE = 'admin-scrims';
 
 export const getServerSideProps = withStaffPage('admin');
 
 function AdminScrimsPage(_props: StaffProps) {
-  const t = useAdminT('adminScrimsList');
+  const t = useAdminT(nsAdminScrimsList);
   const tabs = [
     { id: 'scrims', label: t.tabScrims },
     { id: 'calendar', label: t.tabCalendar },

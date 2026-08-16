@@ -24,6 +24,7 @@ import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import { logger } from '../../utils/logger';
+import nsPlayerNotifications from '@/lib/i18n/locales/fr/playerNotifications';
 
 export type PlayerInvitation = {
   id: string;
@@ -47,7 +48,7 @@ export default function InvitationsSection({ onJoined }: Props = {}) {
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
   const { addToast } = useToast();
   const { confirm, dialog } = useConfirmDialog();
-  const t = useT('playerNotifications');
+  const t = useT(nsPlayerNotifications);
   const locale = useLocale();
 
   const [invites, setInvites] = useState<PlayerInvitation[]>([]);

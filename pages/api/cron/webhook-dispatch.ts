@@ -80,7 +80,9 @@ type Counters = {
   truncated: boolean;
 };
 
-async function loadEnabledSubscriptions(tenantIds: string[]): Promise<SubRow[]> {
+async function loadEnabledSubscriptions(
+  tenantIds: string[]
+): Promise<SubRow[]> {
   if (tenantIds.length === 0) return [];
   const { data, error } = await supabaseAdmin
     .from('webhook_subscriptions')
@@ -170,7 +172,8 @@ async function writeDelivery(
         .update(patch)
         .eq('subscription_id', row.subscription_id)
         .eq('outbox_event_id', row.outbox_event_id);
-      if (retryErr) logger.error('[cron/webhook] delivery retry-update error', retryErr);
+      if (retryErr)
+        logger.error('[cron/webhook] delivery retry-update error', retryErr);
       return;
     }
     logger.error('[cron/webhook] delivery insert error', error);
@@ -257,7 +260,12 @@ export async function runWebhookDispatcher(): Promise<Counters> {
   // par sub par tick au lieu d'un update par event).
   const subOutcome = new Map<
     string,
-    { sub: SubRow; anySuccess: boolean; fails: number; lastError: string | null }
+    {
+      sub: SubRow;
+      anySuccess: boolean;
+      fails: number;
+      lastError: string | null;
+    }
   >();
 
   for (const event of events) {
@@ -307,9 +315,12 @@ export async function runWebhookDispatcher(): Promise<Counters> {
         delivered_at: result.ok ? new Date().toISOString() : null,
       });
 
-      const o =
-        subOutcome.get(sub.id) ??
-        { sub, anySuccess: false, fails: 0, lastError: null };
+      const o = subOutcome.get(sub.id) ?? {
+        sub,
+        anySuccess: false,
+        fails: 0,
+        lastError: null,
+      };
       if (result.ok) {
         o.anySuccess = true;
         counters.delivered += 1;

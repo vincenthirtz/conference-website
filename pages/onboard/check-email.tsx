@@ -10,6 +10,7 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { useT } from '@/lib/i18n/useT';
+import nsOnboardCheckEmail from '@/lib/i18n/locales/fr/onboardCheckEmail';
 
 type StatusResp = {
   id: string;
@@ -23,7 +24,7 @@ const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function OnboardCheckEmailPage() {
-  const t = useT('onboardCheckEmail');
+  const t = useT(nsOnboardCheckEmail);
   const router = useRouter();
   const rawId = router.query.id;
   const id = typeof rawId === 'string' ? rawId : undefined;

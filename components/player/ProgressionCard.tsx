@@ -30,9 +30,10 @@ import {
 import type { Milestone, MilestoneCode } from '../../utils/teams/progression';
 import type { ProgressionResponse } from '../../pages/api/player/progression';
 import { logger } from '../../utils/logger';
+import nsProgression from '@/lib/i18n/locales/fr/progression';
 
 export default function ProgressionCard() {
-  const t = useT('progression');
+  const t = useT(nsProgression);
   const locale = useLocale();
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
   const { withSubject } = usePlayerArea();

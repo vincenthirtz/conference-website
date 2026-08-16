@@ -14,6 +14,7 @@
 
 import { useId, useRef, useState } from 'react';
 import { useT, format as fmt } from '@/lib/i18n/useT';
+import nsNewsletterSignup from '@/lib/i18n/locales/fr/newsletterSignup';
 
 type Props = {
   source?: string;
@@ -29,7 +30,7 @@ export default function NewsletterSignup({
   source = 'footer',
   variant = 'footer',
 }: Props) {
-  const t = useT('newsletterSignup');
+  const t = useT(nsNewsletterSignup);
   const [email, setEmail] = useState('');
   const [honeypot, setHoneypot] = useState('');
   const [captcha, setCaptcha] = useState<Captcha | null>(null);

@@ -4,9 +4,10 @@ import { supabaseClient } from '@/utils/supabase';
 import { BATTLE_TAG_REGEX } from '@/utils/teams/addMember';
 import { useT } from '@/lib/i18n/useT';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
+import nsRegisterPage from '@/lib/i18n/locales/fr/registerPage';
 
 function RegisterPage() {
-  const t = useT('registerPage');
+  const t = useT(nsRegisterPage);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');

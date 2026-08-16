@@ -52,6 +52,7 @@ import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 
 import { logger } from '../../../utils/logger';
+import nsPlayerIndex from '@/lib/i18n/locales/fr/playerIndex';
 
 type TeamInfo = {
   id: string;
@@ -142,7 +143,7 @@ function buildQuickActions(args: {
   isCaptain: boolean;
   isManager: boolean;
   unreadMessages: number;
-  t: ReturnType<typeof useT<'playerIndex'>>;
+  t: typeof nsPlayerIndex.fr;
 }): QuickActionProps[] {
   const { team, isCaptain, isManager, unreadMessages, t } = args;
   const canManage = isCaptain || isManager;
@@ -230,7 +231,7 @@ function MatchReadinessCard({
   t,
 }: {
   nextMatch: NextMatchData | null;
-  t: ReturnType<typeof useT<'playerIndex'>>;
+  t: typeof nsPlayerIndex.fr;
 }) {
   if (!nextMatch?.match || !nextMatch.team) return null;
 
@@ -304,7 +305,7 @@ function MatchReadinessCard({
 }
 
 export default function PlayerDashboardScreen() {
-  const t = useT('playerIndex');
+  const t = useT(nsPlayerIndex);
   const locale = useLocale();
   const { user, token, loading: authLoading, ready } = usePlayerSession();
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });

@@ -10,6 +10,7 @@ import DraftBanner from '@/components/admin/DraftBanner';
 import AutoSaveIndicator from '@/components/admin/AutoSaveIndicator';
 import LogoUpload from '@/components/admin/LogoUpload';
 import { useAdminT } from '@/lib/i18n/useAdminT';
+import nsAdminNewsNew from '@/lib/i18n/locales/admin-fr/adminNewsNew';
 
 type Props = {
   staff: {
@@ -25,7 +26,7 @@ const slugifyValue = (value: string) =>
   slugify(value, { lower: true, strict: true });
 
 export default function AdminNewsCreate({ staff }: Props) {
-  const t = useAdminT('adminNewsNew');
+  const t = useAdminT(nsAdminNewsNew);
   const router = useRouter();
   const { adminFetchJson } = useAdminFetch();
   const [form, setForm] = useState({

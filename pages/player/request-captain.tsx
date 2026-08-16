@@ -15,6 +15,7 @@ import { useT, format } from '@/lib/i18n/useT';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 
 import { logger } from '../../utils/logger';
+import nsRequestCaptain from '@/lib/i18n/locales/fr/requestCaptain';
 
 type Team = {
   id: string;
@@ -43,7 +44,7 @@ export default function RequestCaptainPage() {
   const router = useRouter();
   const { user, token, loading: authLoading, ready } = usePlayerSession();
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
-  const t = useT('requestCaptain');
+  const t = useT(nsRequestCaptain);
   const [loading, setLoading] = useState(true);
 
   // Mode de sélection

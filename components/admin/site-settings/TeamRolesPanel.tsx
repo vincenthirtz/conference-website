@@ -9,6 +9,7 @@ import {
   type TeamRole,
   type TeamPermission,
 } from '@/utils/teamRoles';
+import nsAdminSiteSettingsTeamRoles from '@/lib/i18n/locales/admin-fr/adminSiteSettingsTeamRoles';
 
 type DraftRole = TeamRole & { _key: string };
 
@@ -27,7 +28,7 @@ function toDrafts(roles: TeamRole[]): DraftRole[] {
  * custom team roles and their delegated permissions.
  */
 export default function TeamRolesPanel() {
-  const t = useAdminT('adminSiteSettingsTeamRoles');
+  const t = useAdminT(nsAdminSiteSettingsTeamRoles);
   const { addToast } = useToast();
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
   const { adminFetchJson } = useAdminFetch();

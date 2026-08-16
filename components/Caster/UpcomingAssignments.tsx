@@ -6,8 +6,9 @@
 import type { CasterUpcomingAssignment } from '@/hooks/useCasterSession';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
+import nsUpcomingAssignments from '@/lib/i18n/locales/fr/upcomingAssignments';
 
-type UpcomingDict = ReturnType<typeof useT<'upcomingAssignments'>>;
+type UpcomingDict = typeof nsUpcomingAssignments.fr;
 
 type Props = {
   assignments: CasterUpcomingAssignment[];
@@ -36,7 +37,7 @@ function relativeTime(iso: string | null, t: UpcomingDict): string {
 }
 
 export default function UpcomingAssignments({ assignments }: Props) {
-  const t = useT('upcomingAssignments');
+  const t = useT(nsUpcomingAssignments);
   const locale = useLocale();
   if (assignments.length === 0) {
     return (

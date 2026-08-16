@@ -17,6 +17,7 @@ import SegmentCard from './SegmentCard';
 import EmptyState from '@/components/admin/EmptyState';
 import type { ComputedRunSchedule } from '@/utils/eventSchedule';
 import type { EventSegment } from '@/types/events';
+import nsAdminDirectorTimelineBuilder from '@/lib/i18n/locales/admin-fr/adminDirectorTimelineBuilder';
 
 /**
  * Un segment `live` ou `done` est verrouille : il ne peut ni etre saisi (drag)
@@ -56,7 +57,7 @@ export default function TimelineBuilder({
   onDelete,
   onAddClick,
 }: Props) {
-  const t = useAdminT('adminDirectorTimelineBuilder');
+  const t = useAdminT(nsAdminDirectorTimelineBuilder);
   // Local copy for instant feedback during drag. Sync from props on change.
   const [localSegments, setLocalSegments] = useState(segments);
   const draggingIdRef = useRef<string | null>(null);

@@ -6,6 +6,7 @@
 // ScrimPlanningPanel. Extrait sans changement de comportement.
 
 import { useT, format } from '@/lib/i18n/useT';
+import nsScrimPlanning from '@/lib/i18n/locales/fr/scrimPlanning';
 
 export default function PlanningFooter({
   slotsCount,
@@ -20,7 +21,7 @@ export default function PlanningFooter({
   accent: 'purple' | 'blue';
   onSave: () => void;
 }) {
-  const t = useT('scrimPlanning');
+  const t = useT(nsScrimPlanning);
   return (
     <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
       <span className="flex flex-wrap items-center gap-2 text-xs text-gray-400">

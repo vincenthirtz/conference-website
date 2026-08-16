@@ -25,10 +25,11 @@ import {
   OverlayRenderer,
   type OverlayBranding,
 } from '@/components/overlay/OverlayRenderer';
+import nsOverlay from '@/lib/i18n/locales/fr/overlay';
 
 function OverlayPage() {
   const router = useRouter();
-  const t = useT('overlay');
+  const t = useT(nsOverlay);
   const runIdRaw = router.query.runId;
   const runId = typeof runIdRaw === 'string' ? runIdRaw : '';
   const valid = isValidUUID(runId);

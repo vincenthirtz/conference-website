@@ -20,8 +20,9 @@ import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import StageTabsNav from '@/components/admin/stages/StageTabsNav';
 import type { StaffProps } from '@/types/admin';
+import nsAdminStageSeeding from '@/lib/i18n/locales/admin-fr/adminStageSeeding';
 
-type Dict = ReturnType<typeof useAdminT<'adminStageSeeding'>>;
+type Dict = typeof nsAdminStageSeeding.fr;
 
 type TeamLite = {
   id: string;
@@ -110,7 +111,7 @@ type RatingSeedResponse = {
 export const getServerSideProps = withStaffPage('admin');
 
 function SeedingComparatorPage(_: StaffProps) {
-  const t = useAdminT('adminStageSeeding');
+  const t = useAdminT(nsAdminStageSeeding);
   const router = useRouter();
   const { stageId } = router.query;
   const id = Array.isArray(stageId) ? stageId[0] : stageId;
@@ -780,13 +781,22 @@ function SeedingComparatorPage(_: StaffProps) {
                               <th scope="col" className="py-2 pr-3 font-medium">
                                 {t.thTeam}
                               </th>
-                              <th scope="col" className="py-2 pr-3 font-medium text-right">
+                              <th
+                                scope="col"
+                                className="py-2 pr-3 font-medium text-right"
+                              >
                                 {t.thRating}
                               </th>
-                              <th scope="col" className="py-2 pr-3 font-medium text-right">
+                              <th
+                                scope="col"
+                                className="py-2 pr-3 font-medium text-right"
+                              >
                                 {t.thSos}
                               </th>
-                              <th scope="col" className="py-2 pr-3 font-medium text-right">
+                              <th
+                                scope="col"
+                                className="py-2 pr-3 font-medium text-right"
+                              >
                                 {t.thScore}
                               </th>
                             </tr>
@@ -843,7 +853,7 @@ function SlotRow({
   seed: number | null;
   team: TeamLite | null;
 }) {
-  const t = useAdminT('adminStageSeeding');
+  const t = useAdminT(nsAdminStageSeeding);
   return (
     <div className="flex items-center gap-2 py-1 text-sm">
       <span className="w-5 text-neutral-500">{label}</span>
@@ -872,7 +882,7 @@ function DraftSelect({
   disabled: boolean;
   onChange: (v: string) => void;
 }) {
-  const t = useAdminT('adminStageSeeding');
+  const t = useAdminT(nsAdminStageSeeding);
   return (
     <label className="flex items-center gap-2 text-sm">
       <span className="w-5 text-neutral-500">{label}</span>
@@ -894,7 +904,7 @@ function DraftSelect({
 }
 
 function RatingRow({ row }: { row: RatingBreakdownRow }) {
-  const t = useAdminT('adminStageSeeding');
+  const t = useAdminT(nsAdminStageSeeding);
   const label = row.teamName ?? row.shortName ?? t.teamUnknown;
   return (
     <tr className="text-neutral-200">

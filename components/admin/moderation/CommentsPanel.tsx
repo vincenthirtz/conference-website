@@ -5,6 +5,7 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminResource } from '@/hooks/useAdminResource';
 import DeleteConfirmModal from '@/components/admin/DeleteConfirmModal';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import nsAdminCommentsList from '@/lib/i18n/locales/admin-fr/adminCommentsList';
 
 type CommentRow = {
   id: string;
@@ -36,7 +37,7 @@ function formatDate(d: string | null) {
 }
 
 export default function CommentsPanel() {
-  const t = useAdminT('adminCommentsList');
+  const t = useAdminT(nsAdminCommentsList);
   const { addToast } = useToast();
   const { adminFetchJson } = useAdminFetch();
   const [search, setSearch] = useState('');

@@ -179,7 +179,9 @@ async function transferTeam(
     .eq('tenant_id', tenantId)
     .maybeSingle();
   if (!destTeam) {
-    return res.status(404).json({ error: 'Équipe de destination introuvable.' });
+    return res
+      .status(404)
+      .json({ error: 'Équipe de destination introuvable.' });
   }
 
   // Current membership (if any) → source team + carry-over battle_tag / role.

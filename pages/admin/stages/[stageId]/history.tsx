@@ -7,6 +7,7 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import StageTabsNav from '@/components/admin/stages/StageTabsNav';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { StageType } from '@/types/admin';
+import nsAdminStageHistory from '@/lib/i18n/locales/admin-fr/adminStageHistory';
 
 type StaffShape = {
   id: string;
@@ -57,7 +58,7 @@ function shortId(id: string) {
 }
 
 function AdminStageHistoryPage({ staff }: StaffProps) {
-  const t = useAdminT('adminStageHistory');
+  const t = useAdminT(nsAdminStageHistory);
   const router = useRouter();
   const { stageId } = router.query;
   const { adminFetch } = useAdminFetch();

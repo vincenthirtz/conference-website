@@ -51,7 +51,10 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
     .eq('tenant_id', tenantId)
     .eq('status', 'running');
   if (runningErr) {
-    logger.error('[reconcile/team-channels] tournaments lookup error', runningErr);
+    logger.error(
+      '[reconcile/team-channels] tournaments lookup error',
+      runningErr
+    );
     return res
       .status(500)
       .json({ error: 'Erreur lors de la vérification des tournois.' });

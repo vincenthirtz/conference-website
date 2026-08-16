@@ -218,7 +218,9 @@ export default withSubjectRoute(
 
     const { data: memberRows, error: membersErr } = await supabaseAdmin
       .from('team_members')
-      .select('user_id, role, is_substitute, battle_tag, battle_tag_verified_at')
+      .select(
+        'user_id, role, is_substitute, battle_tag, battle_tag_verified_at'
+      )
       .eq('team_id', teamId)
       .eq('tenant_id', tenantId);
 

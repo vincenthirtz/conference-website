@@ -5,6 +5,7 @@ import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
+import nsHomeNews from '@/lib/i18n/locales/fr/homeNews';
 
 export type HomeNewsItem = {
   id: string;
@@ -52,7 +53,7 @@ type HomeNewsSectionProps = {
 function HomeNewsSection({
   initialNews = [],
 }: HomeNewsSectionProps): JSX.Element {
-  const t = useT('homeNews');
+  const t = useT(nsHomeNews);
   const [selectedTag, setSelectedTag] = useState<string>('all');
 
   const availableTags = useMemo(() => {
@@ -163,7 +164,7 @@ function HomeNewsSection({
 export default HomeNewsSection;
 
 function FeaturedCard({ item }: { item: HomeNewsItem }) {
-  const t = useT('homeNews');
+  const t = useT(nsHomeNews);
   const locale = useLocale();
   const date = formatDate(item, locale);
   return (

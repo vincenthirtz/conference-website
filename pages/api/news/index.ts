@@ -5,7 +5,10 @@ import { supabaseAdmin, getServerClient } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { parsePagination } from '@/utils/apiHelpers';
 import { emitBotEvent } from '@/utils/botEvents';
-import { resolveTenantIdForPublicRequest, resolveTenantId } from '@/utils/tenant';
+import {
+  resolveTenantIdForPublicRequest,
+  resolveTenantId,
+} from '@/utils/tenant';
 
 import { logger } from '../../../utils/logger';
 
@@ -156,7 +159,10 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
     logger.error('[news] ingest tenant lookup error', tenantErr);
     return res.status(500).json({ error: 'Failed to resolve tenant.' });
   }
-  if (!tenantRow || (tenantRow as { is_active?: boolean }).is_active === false) {
+  if (
+    !tenantRow ||
+    (tenantRow as { is_active?: boolean }).is_active === false
+  ) {
     return res
       .status(400)
       .json({ error: 'Unknown or inactive tenant.', code: 'UNKNOWN_TENANT' });

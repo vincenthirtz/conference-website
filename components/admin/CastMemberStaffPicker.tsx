@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { logger } from '../../utils/logger';
+import nsAdminCastMemberStaffPicker from '@/lib/i18n/locales/admin-fr/adminCastMemberStaffPicker';
 
 type AvailableCaster = {
   authUserId: string;
@@ -25,7 +26,7 @@ export default function CastMemberStaffPicker({
   disabled,
 }: Props) {
   const { adminFetchJson } = useAdminFetch();
-  const t = useAdminT('adminCastMemberStaffPicker');
+  const t = useAdminT(nsAdminCastMemberStaffPicker);
   const [casters, setCasters] = useState<AvailableCaster[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

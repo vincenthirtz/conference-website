@@ -8,6 +8,7 @@
 import type { JSX } from 'react';
 import Link from 'next/link';
 import { useT } from '@/lib/i18n/useT';
+import nsHomeV2 from '@/lib/i18n/locales/fr/homeV2';
 
 type Step = {
   n: string;
@@ -26,8 +27,19 @@ const STEPS: Step[] = [
     descKey: 'step1Desc',
     href: '/team/create',
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className={ICON} aria-hidden="true">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-1a4 4 0 0 0-3-3.87M9 20H4v-1a4 4 0 0 1 3-3.87m6-1.13a4 4 0 1 0-4 0M20 8v4M22 10h-4" />
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2}
+        className={ICON}
+        aria-hidden="true"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M17 20h5v-1a4 4 0 0 0-3-3.87M9 20H4v-1a4 4 0 0 1 3-3.87m6-1.13a4 4 0 1 0-4 0M20 8v4M22 10h-4"
+        />
       </svg>
     ),
   },
@@ -37,8 +49,19 @@ const STEPS: Step[] = [
     descKey: 'step2Desc',
     href: '/inscription-2026',
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className={ICON} aria-hidden="true">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2}
+        className={ICON}
+        aria-hidden="true"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M9 12l2 2 4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+        />
       </svg>
     ),
   },
@@ -48,15 +71,26 @@ const STEPS: Step[] = [
     descKey: 'step3Desc',
     href: '/live',
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className={ICON} aria-hidden="true">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.55-2.28A1 1 0 0 1 21 8.62v6.76a1 1 0 0 1-1.45.9L15 14M4 6h9a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Z" />
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2}
+        className={ICON}
+        aria-hidden="true"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M15 10l4.55-2.28A1 1 0 0 1 21 8.62v6.76a1 1 0 0 1-1.45.9L15 14M4 6h9a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Z"
+        />
       </svg>
     ),
   },
 ];
 
 export default function HomeSteps(): JSX.Element {
-  const t = useT('homeV2');
+  const t = useT(nsHomeV2);
 
   return (
     <section
@@ -88,7 +122,9 @@ export default function HomeSteps(): JSX.Element {
               <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-gradient-to-br from-[var(--color-violet)]/25 to-[var(--color-green)]/20 text-[var(--color-green-light)]">
                 {step.icon}
               </span>
-              <h3 className="text-lg font-bold text-white">{t[step.titleKey]}</h3>
+              <h3 className="text-lg font-bold text-white">
+                {t[step.titleKey]}
+              </h3>
               <p className="text-sm leading-relaxed text-gray-400">
                 {t[step.descKey]}
               </p>
@@ -97,8 +133,18 @@ export default function HomeSteps(): JSX.Element {
                   aria-hidden
                   className="absolute -right-3 top-1/2 hidden -translate-y-1/2 text-white/15 sm:block"
                 >
-                  <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 6l6 6-6 6" />
+                  <svg
+                    viewBox="0 0 24 24"
+                    className="h-6 w-6"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M9 6l6 6-6 6"
+                    />
                   </svg>
                 </span>
               )}

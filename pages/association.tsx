@@ -8,7 +8,7 @@ import { useSiteSetting } from '@/hooks/useSiteSettings';
 import { POLE_KEYS, type PoleKey } from '@/utils/associationPoles';
 import { useT } from '@/lib/i18n/useT';
 
-type AssoDict = ReturnType<typeof useT<'associationPage'>>;
+type AssoDict = typeof nsAssociationPage.fr;
 
 const ADHESION_URL =
   'https://www.helloasso.com/associations/women-s-cup/adhesions/adhesion-2026-2027-women-s-cup';
@@ -16,6 +16,7 @@ const ADHESION_URL =
 const getAdhesionPerks = (t: AssoDict) => [t.perk1, t.perk2, t.perk3, t.perk4];
 
 import { logger } from '../utils/logger';
+import nsAssociationPage from '@/lib/i18n/locales/fr/associationPage';
 type CastMember = {
   id: string;
   name: string;
@@ -332,7 +333,7 @@ const getTimeline = (t: AssoDict) => [
 ];
 
 function AssociationPage({ castMembers, poleMembers }: Props) {
-  const t = useT('associationPage');
+  const t = useT(nsAssociationPage);
   const adhesionPerks = getAdhesionPerks(t);
   const pillars = getPillars(t);
   const commitments = getCommitments(t);

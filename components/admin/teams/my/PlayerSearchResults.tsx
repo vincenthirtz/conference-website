@@ -1,6 +1,7 @@
 import React from 'react';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import type { SearchResult } from './types';
+import nsAdminTeamsMy from '@/lib/i18n/locales/admin-fr/adminTeamsMy';
 
 type PlayerSearchResultsProps = {
   results: SearchResult[];
@@ -15,7 +16,7 @@ function PlayerSearchResultsInner({
   searchQuery,
   onSelect,
 }: PlayerSearchResultsProps) {
-  const t = useAdminT('adminTeamsMy');
+  const t = useAdminT(nsAdminTeamsMy);
 
   return (
     <div className="space-y-2">

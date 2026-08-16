@@ -21,6 +21,7 @@ import type { TeamRow } from '@/types/admin';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 import { logger } from '../../../utils/logger';
+import nsAdminTeamsList from '@/lib/i18n/locales/admin-fr/adminTeamsList';
 type AdminTeamsProps = {
   staff: {
     id: string | null;
@@ -66,7 +67,7 @@ function AdminTeamsListPage({
   initialOffset,
   errorMsg: ssrError,
 }: AdminTeamsProps) {
-  const t = useAdminT('adminTeamsList');
+  const t = useAdminT(nsAdminTeamsList);
   const { addToast } = useToast();
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
   const { mutateJson: mutateDelete } = useIdempotentMutation();
@@ -1082,197 +1083,196 @@ function AdminTeamsListPage({
         <>
           {/* Tabs */}
           <div className="flex gap-1 mb-5 border-b border-neutral-700">
-              {(
-                [
-                  ['csv', 'CSV'],
-                  ['toornament', 'Toornament'],
-                  ['challonge', 'Challonge'],
-                  ['startgg', 'start.gg'],
-                ] as [ImportTab, string][]
-              ).map(([key, label]) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => {
-                    setActiveTab(key);
-                    setImportResult(null);
-                  }}
-                  className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
-                    activeTab === key
-                      ? 'border-blue-500 text-white'
-                      : 'border-transparent text-neutral-400 hover:text-white'
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-
-            {/* CSV tab */}
-            {activeTab === 'csv' && (
-              <>
-                <p className="text-sm text-neutral-400 mb-4">
-                  {t.csvFormatPrefix}
-                  <code className="bg-neutral-900 px-1.5 py-0.5 rounded text-xs">
-                    name,short_name,country,joueurs
-                  </code>
-                  <br />
-                  {t.csvPlayersSepBefore}{' '}
-                  <code className="bg-neutral-900 px-1.5 py-0.5 rounded text-xs">
-                    ;
-                  </code>{' '}
-                  {t.csvPlayersSepAfter}
-                </p>
-
-                <div className="mb-4">
-                  <label className="block text-sm text-neutral-400 mb-1">
-                    {t.csvFileLabel}
-                  </label>
-                  <input
-                    type="file"
-                    accept=".csv,.txt,.tsv"
-                    onChange={handleCsvFile}
-                    className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-neutral-700 file:text-white hover:file:bg-neutral-600 file:cursor-pointer"
-                  />
-                </div>
-
-                <div className="mb-4">
-                  <label className="block text-sm text-neutral-400 mb-1">
-                    {t.csvContentLabel}
-                  </label>
-                  <textarea
-                    className="w-full h-40 px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono"
-                    placeholder={`name,short_name,country,joueurs\nTeam Alpha,TA,FR,Player1#1234;Player2#5678\nTeam Beta,TB,BE,Player3#9999`}
-                    value={csvText}
-                    onChange={(e) => setCsvText(e.target.value)}
-                  />
-                </div>
-              </>
-            )}
-
-            {/* Platform tabs */}
-            {activeTab !== 'csv' && (
-              <>
-                <p className="text-sm text-neutral-400 mb-4">
-                  {activeTab === 'toornament' && (
-                    <>
-                      {t.toornamentProseBefore}
-                      <code className="bg-neutral-900 px-1.5 py-0.5 rounded text-xs">
-                        https://www.toornament.com/tournaments/12345/
-                      </code>{' '}
-                      {t.proseOr}{' '}
-                      <code className="bg-neutral-900 px-1.5 py-0.5 rounded text-xs">
-                        12345
-                      </code>
-                      {t.prosePeriod}
-                    </>
-                  )}
-                  {activeTab === 'challonge' && (
-                    <>
-                      {t.challongeProseBefore}
-                      <code className="bg-neutral-900 px-1.5 py-0.5 rounded text-xs">
-                        https://challonge.com/mon-tournoi
-                      </code>{' '}
-                      {t.proseOr}{' '}
-                      <code className="bg-neutral-900 px-1.5 py-0.5 rounded text-xs">
-                        mon-tournoi
-                      </code>
-                      {t.prosePeriod}
-                    </>
-                  )}
-                  {activeTab === 'startgg' && (
-                    <>
-                      {t.startggProseBefore}
-                      <code className="bg-neutral-900 px-1.5 py-0.5 rounded text-xs">
-                        https://www.start.gg/tournament/genesis-9/event/melee-singles
-                      </code>
-                      {t.prosePeriod}
-                    </>
-                  )}
-                  <br />
-                  {t.apiKeyRequiredBefore}
-                  <span className="inline-block">⚙️</span>
-                  {t.apiKeyRequiredAfter}
-                </p>
-
-                <div className="mb-4">
-                  <label className="block text-sm text-neutral-400 mb-1">
-                    {t.urlOrIdLabel}
-                  </label>
-                  <input
-                    type="text"
-                    className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                    placeholder={
-                      activeTab === 'toornament'
-                        ? 'https://www.toornament.com/tournaments/...'
-                        : activeTab === 'challonge'
-                          ? 'https://challonge.com/...'
-                          : 'https://www.start.gg/tournament/.../event/...'
-                    }
-                    value={platformRef}
-                    onChange={(e) => setPlatformRef(e.target.value)}
-                  />
-                </div>
-              </>
-            )}
-
-            {/* Tournoi cible (commun) */}
-            <div className="mb-4">
-              <label className="block text-sm text-neutral-400 mb-1">
-                {t.registerToTournamentLabel}
-              </label>
-              <select
-                className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 text-sm"
-                value={importTournamentId}
-                onFocus={loadTournaments}
-                onChange={(e) => setImportTournamentId(e.target.value)}
+            {(
+              [
+                ['csv', 'CSV'],
+                ['toornament', 'Toornament'],
+                ['challonge', 'Challonge'],
+                ['startgg', 'start.gg'],
+              ] as [ImportTab, string][]
+            ).map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => {
+                  setActiveTab(key);
+                  setImportResult(null);
+                }}
+                className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
+                  activeTab === key
+                    ? 'border-blue-500 text-white'
+                    : 'border-transparent text-neutral-400 hover:text-white'
+                }`}
               >
-                <option value="">{t.none}</option>
-                {tournamentOptions.map((tour) => (
-                  <option key={tour.id} value={tour.id}>
-                    {tour.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+                {label}
+              </button>
+            ))}
+          </div>
 
-            {/* Result (commun) */}
-            {importResult && (
-              <div className="mb-4 rounded-xl bg-neutral-900/50 border border-neutral-700 p-4 text-sm">
-                <div className="flex gap-4 mb-2">
-                  <span className="text-emerald-400">
-                    {format(t.resultCreated, { count: importResult.created })}
+          {/* CSV tab */}
+          {activeTab === 'csv' && (
+            <>
+              <p className="text-sm text-neutral-400 mb-4">
+                {t.csvFormatPrefix}
+                <code className="bg-neutral-900 px-1.5 py-0.5 rounded text-xs">
+                  name,short_name,country,joueurs
+                </code>
+                <br />
+                {t.csvPlayersSepBefore}{' '}
+                <code className="bg-neutral-900 px-1.5 py-0.5 rounded text-xs">
+                  ;
+                </code>{' '}
+                {t.csvPlayersSepAfter}
+              </p>
+
+              <div className="mb-4">
+                <label className="block text-sm text-neutral-400 mb-1">
+                  {t.csvFileLabel}
+                </label>
+                <input
+                  type="file"
+                  accept=".csv,.txt,.tsv"
+                  onChange={handleCsvFile}
+                  className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-neutral-700 file:text-white hover:file:bg-neutral-600 file:cursor-pointer"
+                />
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm text-neutral-400 mb-1">
+                  {t.csvContentLabel}
+                </label>
+                <textarea
+                  className="w-full h-40 px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono"
+                  placeholder={`name,short_name,country,joueurs\nTeam Alpha,TA,FR,Player1#1234;Player2#5678\nTeam Beta,TB,BE,Player3#9999`}
+                  value={csvText}
+                  onChange={(e) => setCsvText(e.target.value)}
+                />
+              </div>
+            </>
+          )}
+
+          {/* Platform tabs */}
+          {activeTab !== 'csv' && (
+            <>
+              <p className="text-sm text-neutral-400 mb-4">
+                {activeTab === 'toornament' && (
+                  <>
+                    {t.toornamentProseBefore}
+                    <code className="bg-neutral-900 px-1.5 py-0.5 rounded text-xs">
+                      https://www.toornament.com/tournaments/12345/
+                    </code>{' '}
+                    {t.proseOr}{' '}
+                    <code className="bg-neutral-900 px-1.5 py-0.5 rounded text-xs">
+                      12345
+                    </code>
+                    {t.prosePeriod}
+                  </>
+                )}
+                {activeTab === 'challonge' && (
+                  <>
+                    {t.challongeProseBefore}
+                    <code className="bg-neutral-900 px-1.5 py-0.5 rounded text-xs">
+                      https://challonge.com/mon-tournoi
+                    </code>{' '}
+                    {t.proseOr}{' '}
+                    <code className="bg-neutral-900 px-1.5 py-0.5 rounded text-xs">
+                      mon-tournoi
+                    </code>
+                    {t.prosePeriod}
+                  </>
+                )}
+                {activeTab === 'startgg' && (
+                  <>
+                    {t.startggProseBefore}
+                    <code className="bg-neutral-900 px-1.5 py-0.5 rounded text-xs">
+                      https://www.start.gg/tournament/genesis-9/event/melee-singles
+                    </code>
+                    {t.prosePeriod}
+                  </>
+                )}
+                <br />
+                {t.apiKeyRequiredBefore}
+                <span className="inline-block">⚙️</span>
+                {t.apiKeyRequiredAfter}
+              </p>
+
+              <div className="mb-4">
+                <label className="block text-sm text-neutral-400 mb-1">
+                  {t.urlOrIdLabel}
+                </label>
+                <input
+                  type="text"
+                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  placeholder={
+                    activeTab === 'toornament'
+                      ? 'https://www.toornament.com/tournaments/...'
+                      : activeTab === 'challonge'
+                        ? 'https://challonge.com/...'
+                        : 'https://www.start.gg/tournament/.../event/...'
+                  }
+                  value={platformRef}
+                  onChange={(e) => setPlatformRef(e.target.value)}
+                />
+              </div>
+            </>
+          )}
+
+          {/* Tournoi cible (commun) */}
+          <div className="mb-4">
+            <label className="block text-sm text-neutral-400 mb-1">
+              {t.registerToTournamentLabel}
+            </label>
+            <select
+              className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 text-sm"
+              value={importTournamentId}
+              onFocus={loadTournaments}
+              onChange={(e) => setImportTournamentId(e.target.value)}
+            >
+              <option value="">{t.none}</option>
+              {tournamentOptions.map((tour) => (
+                <option key={tour.id} value={tour.id}>
+                  {tour.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Result (commun) */}
+          {importResult && (
+            <div className="mb-4 rounded-xl bg-neutral-900/50 border border-neutral-700 p-4 text-sm">
+              <div className="flex gap-4 mb-2">
+                <span className="text-emerald-400">
+                  {format(t.resultCreated, { count: importResult.created })}
+                </span>
+                {importResult.skipped > 0 && (
+                  <span className="text-amber-400">
+                    {format(t.resultSkipped, {
+                      count: importResult.skipped,
+                    })}
                   </span>
-                  {importResult.skipped > 0 && (
-                    <span className="text-amber-400">
-                      {format(t.resultSkipped, {
-                        count: importResult.skipped,
-                      })}
-                    </span>
-                  )}
-                  {importResult.errors.length > 0 && (
-                    <span className="text-red-400">
-                      {format(t.resultErrors, {
-                        count: importResult.errors.length,
-                      })}
-                    </span>
-                  )}
-                </div>
+                )}
                 {importResult.errors.length > 0 && (
-                  <ul className="text-xs text-red-300 space-y-1 max-h-32 overflow-y-auto">
-                    {importResult.errors.map((e, i) => (
-                      <li key={i}>
-                        {e.row > 0
-                          ? format(t.resultLinePrefix, { row: e.row })
-                          : ''}
-                        {e.message}
-                      </li>
-                    ))}
-                  </ul>
+                  <span className="text-red-400">
+                    {format(t.resultErrors, {
+                      count: importResult.errors.length,
+                    })}
+                  </span>
                 )}
               </div>
-            )}
-
+              {importResult.errors.length > 0 && (
+                <ul className="text-xs text-red-300 space-y-1 max-h-32 overflow-y-auto">
+                  {importResult.errors.map((e, i) => (
+                    <li key={i}>
+                      {e.row > 0
+                        ? format(t.resultLinePrefix, { row: e.row })
+                        : ''}
+                      {e.message}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
         </>
       </Modal>
 
@@ -1315,53 +1315,53 @@ function AdminTeamsListPage({
       >
         <>
           <p className="text-xs text-amber-300/80 mb-4">
-              ⚠️ {t.apiKeysWarningBefore}
-              <code className="bg-neutral-900 px-1 rounded">site_settings</code>
-              {t.apiKeysWarningAfter}
-            </p>
+            ⚠️ {t.apiKeysWarningBefore}
+            <code className="bg-neutral-900 px-1 rounded">site_settings</code>
+            {t.apiKeysWarningAfter}
+          </p>
 
-            {apiKeysLoading ? (
-              <p className="text-sm text-neutral-400">{t.loading}</p>
-            ) : (
-              <div className="space-y-4">
-                {(['toornament', 'challonge', 'startgg'] as const).map((k) => {
-                  const labels: Record<typeof k, string> = {
-                    toornament: t.labelToornament,
-                    challonge: t.labelChallonge,
-                    startgg: t.labelStartgg,
-                  };
-                  const isRevealed = revealedKey === k;
-                  return (
-                    <div key={k}>
-                      <label className="block text-sm text-neutral-400 mb-1">
-                        {labels[k]}
-                      </label>
-                      <div className="flex gap-2">
-                        <input
-                          type={isRevealed ? 'text' : 'password'}
-                          className="flex-1 px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono"
-                          value={apiKeys[k]}
-                          onChange={(e) =>
-                            setApiKeys((prev) => ({
-                              ...prev,
-                              [k]: e.target.value,
-                            }))
-                          }
-                          autoComplete="off"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setRevealedKey(isRevealed ? null : k)}
-                          className="px-3 py-2 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-xs font-medium transition-colors"
-                        >
-                          {isRevealed ? t.hide : t.reveal}
-                        </button>
-                      </div>
+          {apiKeysLoading ? (
+            <p className="text-sm text-neutral-400">{t.loading}</p>
+          ) : (
+            <div className="space-y-4">
+              {(['toornament', 'challonge', 'startgg'] as const).map((k) => {
+                const labels: Record<typeof k, string> = {
+                  toornament: t.labelToornament,
+                  challonge: t.labelChallonge,
+                  startgg: t.labelStartgg,
+                };
+                const isRevealed = revealedKey === k;
+                return (
+                  <div key={k}>
+                    <label className="block text-sm text-neutral-400 mb-1">
+                      {labels[k]}
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type={isRevealed ? 'text' : 'password'}
+                        className="flex-1 px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono"
+                        value={apiKeys[k]}
+                        onChange={(e) =>
+                          setApiKeys((prev) => ({
+                            ...prev,
+                            [k]: e.target.value,
+                          }))
+                        }
+                        autoComplete="off"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setRevealedKey(isRevealed ? null : k)}
+                        className="px-3 py-2 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-xs font-medium transition-colors"
+                      >
+                        {isRevealed ? t.hide : t.reveal}
+                      </button>
                     </div>
-                  );
-                })}
-              </div>
-            )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </>
       </Modal>
     </>

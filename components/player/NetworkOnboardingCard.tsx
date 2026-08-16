@@ -20,6 +20,7 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useT } from '@/lib/i18n/useT';
 import type { NetworkStatus } from '../../pages/api/player/network-status';
 import { logger } from '../../utils/logger';
+import nsNetworkOnboarding from '@/lib/i18n/locales/fr/networkOnboarding';
 
 type Step = {
   key: string;
@@ -35,7 +36,7 @@ function dismissKey(userId: string): string {
 }
 
 export default function NetworkOnboardingCard({ userId }: { userId: string }) {
-  const t = useT('networkOnboarding');
+  const t = useT(nsNetworkOnboarding);
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
   const [status, setStatus] = useState<NetworkStatus | null>(null);
   const [dismissed, setDismissed] = useState(true); // fermé tant qu'on ne sait pas

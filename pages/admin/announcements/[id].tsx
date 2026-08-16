@@ -8,6 +8,7 @@ import Button from '@/components/Buttons/button';
 import { useToast } from '@/components/Toast';
 import Breadcrumb from '@/components/admin/Breadcrumb';
 import { useAdminT } from '@/lib/i18n/useAdminT';
+import nsAdminAnnouncementEdit from '@/lib/i18n/locales/admin-fr/adminAnnouncementEdit';
 
 type Props = {
   staff: {
@@ -56,7 +57,7 @@ function toDateTimeLocalValue(isoString: string | null | undefined): string {
 export const getServerSideProps = withStaffPage('admin');
 
 function AdminAnnouncementEditPage({ staff }: Props) {
-  const t = useAdminT('adminAnnouncementEdit');
+  const t = useAdminT(nsAdminAnnouncementEdit);
   const router = useRouter();
   const { addToast } = useToast();
   const { confirm, dialog } = useConfirmDialog();

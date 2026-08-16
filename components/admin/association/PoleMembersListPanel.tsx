@@ -21,6 +21,7 @@ import { useAdminResource } from '@/hooks/useAdminResource';
 import PoleMemberFormModal from '@/components/admin/pole-members/PoleMemberFormModal';
 import { POLE_KEYS, POLE_LABELS, type PoleKey } from '@/utils/associationPoles';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import nsAdminPoleMembersList from '@/lib/i18n/locales/admin-fr/adminPoleMembersList';
 
 type PoleMemberRow = {
   id: string;
@@ -47,7 +48,7 @@ function statusColor(isActive: boolean) {
 }
 
 export default function PoleMembersListPanel() {
-  const t = useAdminT('adminPoleMembersList');
+  const t = useAdminT(nsAdminPoleMembersList);
   const router = useRouter();
   const [modalOpen, setModalOpen] = useState(false);
   const [search, setSearch] = useState('');

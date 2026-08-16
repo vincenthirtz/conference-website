@@ -19,6 +19,7 @@ import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import type { ScrimPlanning, ScrimPlanningParty } from '@/types/admin';
 
 import { logger } from '../../../utils/logger';
+import nsScrimPlanning from '@/lib/i18n/locales/fr/scrimPlanning';
 
 type DetailResponse = {
   planning: ScrimPlanning;
@@ -37,7 +38,7 @@ type LoadState =
 export default function ScrimPlanningDetailPage() {
   const router = useRouter();
   const { user, token, loading: authLoading, ready } = usePlayerSession();
-  const t = useT('scrimPlanning');
+  const t = useT(nsScrimPlanning);
 
   const rawId = router.query.planningId;
   const planningId = Array.isArray(rawId) ? rawId[0] : rawId;
@@ -157,7 +158,9 @@ export default function ScrimPlanningDetailPage() {
       </Head>
       <Shell>
         <header className="mb-6">
-          <h1 className="text-2xl font-bold">{planning.title || t.pageTitle}</h1>
+          <h1 className="text-2xl font-bold">
+            {planning.title || t.pageTitle}
+          </h1>
           <p className="mt-1 text-sm text-gray-400">
             {teamNames[planning.team1_id] || t.dashUnknownTeam}
             <span className="mx-1.5 text-gray-600">vs</span>

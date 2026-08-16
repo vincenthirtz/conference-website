@@ -14,8 +14,9 @@ import { loadLadder, type LadderRow } from '@/utils/scrims/ladder';
 import { useT } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import { logger } from '../utils/logger';
+import nsScrimsPage from '@/lib/i18n/locales/fr/scrimsPage';
 
-type ScrimsDict = ReturnType<typeof useT<'scrimsPage'>>;
+type ScrimsDict = typeof nsScrimsPage.fr;
 
 type ScrimTeam = {
   id: string;
@@ -122,7 +123,7 @@ function statusColor(status: string) {
 }
 
 function ScrimsPage({ scrims, ladder }: ScrimsPageProps) {
-  const t = useT('scrimsPage');
+  const t = useT(nsScrimsPage);
   const { upcoming, running, past } = useMemo(() => {
     const upcoming: PublicScrim[] = [];
     const running: PublicScrim[] = [];
@@ -258,7 +259,7 @@ function ScrimSection({
   title: string;
   scrims: PublicScrim[];
 }) {
-  const t = useT('scrimsPage');
+  const t = useT(nsScrimsPage);
   const locale = useLocale();
   return (
     <section className="mt-10">
@@ -301,7 +302,7 @@ function ScrimSection({
 }
 
 function TeamPill({ team }: { team: ScrimTeam | null }) {
-  const t = useT('scrimsPage');
+  const t = useT(nsScrimsPage);
   if (!team)
     return <span className="text-neutral-500 italic">{t.teamTbd}</span>;
   return (

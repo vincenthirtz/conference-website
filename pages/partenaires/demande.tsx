@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { useT } from '@/lib/i18n/useT';
+import nsPartnerRequest from '@/lib/i18n/locales/fr/partnerRequest';
 
 type FormData = {
   companyName: string;
@@ -25,7 +26,7 @@ const budgetOptions = [
 ];
 
 function PartnershipRequestPage() {
-  const t = useT('partnerRequest');
+  const t = useT(nsPartnerRequest);
 
   const categoryLabels: Record<string, string> = {
     super: t.categorySuper,

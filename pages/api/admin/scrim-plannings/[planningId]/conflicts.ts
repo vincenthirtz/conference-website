@@ -75,10 +75,7 @@ async function handler(
     if (!Number.isNaN(d.getTime())) seen.add(d.toISOString());
   }
 
-  const teamIds = [
-    planning.team1_id as string,
-    planning.team2_id as string,
-  ];
+  const teamIds = [planning.team1_id as string, planning.team2_id as string];
 
   try {
     const entries = await Promise.all(

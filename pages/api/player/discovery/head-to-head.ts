@@ -192,8 +192,12 @@ async function handler(
       return res.status(500).json({ error: 'Erreur serveur.' });
     }
 
-    const aTeamByMatch = teamByMatch((aPartsRes.data as ParticipantRow[]) ?? []);
-    const bTeamByMatch = teamByMatch((bPartsRes.data as ParticipantRow[]) ?? []);
+    const aTeamByMatch = teamByMatch(
+      (aPartsRes.data as ParticipantRow[]) ?? []
+    );
+    const bTeamByMatch = teamByMatch(
+      (bPartsRes.data as ParticipantRow[]) ?? []
+    );
 
     // 3) Confrontations = matches partagés où les DEUX étaient présents sur des
     //    équipes DIFFÉRENTES (camps opposés).

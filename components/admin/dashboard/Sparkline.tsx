@@ -3,6 +3,7 @@
 // horaire. Utilisé sur StageProgressBar (matchs finis sur les 12 dernières heures).
 
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import nsAdminDashboardSparkline from '@/lib/i18n/locales/admin-fr/adminDashboardSparkline';
 
 type Props = {
   values: number[];
@@ -21,7 +22,7 @@ export default function Sparkline({
   className = 'text-purple-300',
   ariaLabel,
 }: Props) {
-  const t = useAdminT('adminDashboardSparkline');
+  const t = useAdminT(nsAdminDashboardSparkline);
   if (!values || values.length === 0) {
     return (
       <span

@@ -8,6 +8,8 @@ import Link from 'next/link';
 import { useT } from '@/lib/i18n/useT';
 import { Section, SectionHeader, Reveal } from './primitives';
 import type { LandingStage } from './types';
+import nsTournamentLanding from '@/lib/i18n/locales/fr/tournamentLanding';
+import nsTournamentDetail from '@/lib/i18n/locales/fr/tournamentDetail';
 
 const STAGE_ICON: Record<string, string> = {
   group: '🎯',
@@ -25,8 +27,8 @@ export default function FormatInfographic({
   stages: LandingStage[];
   tournamentPath: string;
 }) {
-  const t = useT('tournamentLanding');
-  const td = useT('tournamentDetail');
+  const t = useT(nsTournamentLanding);
+  const td = useT(nsTournamentDetail);
 
   const stageTypeLabel = (type: string): string => {
     const map: Record<string, string> = {
@@ -62,7 +64,9 @@ export default function FormatInfographic({
             >
               <div className="flex w-full flex-col rounded-3xl border border-white/10 bg-gradient-to-b from-white/[0.06] to-transparent p-5 transition-colors hover:border-[var(--color-violet)]/40">
                 <div className="flex items-center justify-between">
-                  <span className="text-2xl">{STAGE_ICON[s.stage_type] || '🎮'}</span>
+                  <span className="text-2xl">
+                    {STAGE_ICON[s.stage_type] || '🎮'}
+                  </span>
                   <span className="rounded-full bg-white/5 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
                     {t.formatStepLabel.replace('{n}', String(i + 1))}
                   </span>
@@ -76,7 +80,10 @@ export default function FormatInfographic({
                 </p>
                 {s.default_match_format && (
                   <p className="mt-2 text-[11px] text-gray-500">
-                    {t.formatMatchLabel.replace('{format}', s.default_match_format)}
+                    {t.formatMatchLabel.replace(
+                      '{format}',
+                      s.default_match_format
+                    )}
                   </p>
                 )}
               </div>
@@ -85,8 +92,18 @@ export default function FormatInfographic({
                   className="hidden items-center px-1 text-[var(--color-green)]/70 md:flex"
                   aria-hidden="true"
                 >
-                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                  <svg
+                    className="h-5 w-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2.5}
+                      d="M13 7l5 5m0 0l-5 5m5-5H6"
+                    />
                   </svg>
                 </div>
               )}
@@ -99,8 +116,19 @@ export default function FormatInfographic({
         <Link href={`${tournamentPath}/bracket`}>
           <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-6 py-3 text-sm font-semibold text-white transition-colors hover:border-[var(--color-violet)]/50 hover:bg-[var(--color-violet)]/10">
             {t.formatCta}
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2.5}
+                d="M13 7l5 5m0 0l-5 5m5-5H6"
+              />
             </svg>
           </span>
         </Link>

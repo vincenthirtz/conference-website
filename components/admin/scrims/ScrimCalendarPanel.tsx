@@ -26,6 +26,7 @@ import {
   localInputValue,
   zonedTimeToUtcIso,
 } from '@/utils/teams/scrimCalendar';
+import nsAdminScrimsList from '@/lib/i18n/locales/admin-fr/adminScrimsList';
 
 const TZ = 'Europe/Paris';
 const ALL_STATUSES = [
@@ -66,7 +67,7 @@ type PatchResponse = {
 };
 
 export default function ScrimCalendarPanel() {
-  const t = useAdminT('adminScrimsList');
+  const t = useAdminT(nsAdminScrimsList);
   const router = useRouter();
   const { addToast } = useToast();
   const { mutateJson } = useIdempotentMutation();
@@ -86,9 +87,7 @@ export default function ScrimCalendarPanel() {
 
   // Filtres client-side.
   const [teamFilter, setTeamFilter] = useState<string>('');
-  const [statusFilter, setStatusFilter] = useState<string[]>([
-    ...ALL_STATUSES,
-  ]);
+  const [statusFilter, setStatusFilter] = useState<string[]>([...ALL_STATUSES]);
 
   // Overrides optimistes (déplacement / resize) le temps du refetch.
   const [overrides, setOverrides] = useState<Record<string, PatchBody>>({});
@@ -243,14 +242,17 @@ export default function ScrimCalendarPanel() {
     async (id: string, body: PatchBody, kind: 'move' | 'resize') => {
       setOverrides((prev) => ({ ...prev, [id]: { ...prev[id], ...body } }));
       try {
-        const res = await mutateJson<PatchResponse>(
-          `/api/admin/scrims/${id}`,
-          { method: 'PATCH', body: JSON.stringify(body) }
-        );
+        const res = await mutateJson<PatchResponse>(`/api/admin/scrims/${id}`, {
+          method: 'PATCH',
+          body: JSON.stringify(body),
+        });
         if (res.conflicts && res.conflicts.length > 0) {
           addToast(t.calConflictWarning, 'warning');
         } else {
-          addToast(kind === 'move' ? t.calRescheduled : t.calResized, 'success');
+          addToast(
+            kind === 'move' ? t.calRescheduled : t.calResized,
+            'success'
+          );
         }
         refresh();
       } catch {

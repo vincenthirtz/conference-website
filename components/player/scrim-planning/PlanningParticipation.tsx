@@ -6,6 +6,7 @@
 // comportement.
 
 import { useT } from '@/lib/i18n/useT';
+import nsScrimPlanning from '@/lib/i18n/locales/fr/scrimPlanning';
 
 export default function PlanningParticipation({
   participationRows,
@@ -16,7 +17,7 @@ export default function PlanningParticipation({
   paintedParties: Set<string>;
   myParty: string;
 }) {
-  const t = useT('scrimPlanning');
+  const t = useT(nsScrimPlanning);
   return (
     <div className="mb-4 flex flex-wrap items-center gap-2">
       <span className="text-xs font-medium text-gray-400">

@@ -13,8 +13,9 @@ import { useEffect, useMemo, useState } from 'react';
 import type { EventCueSeverity } from '@/types/events';
 import type { CueWithAck } from '@/hooks/useCueStream';
 import { useT, format } from '@/lib/i18n/useT';
+import nsCueFeed from '@/lib/i18n/locales/fr/cueFeed';
 
-type CueFeedDict = ReturnType<typeof useT<'cueFeed'>>;
+type CueFeedDict = typeof nsCueFeed.fr;
 
 type Props = {
   cues: CueWithAck[];
@@ -64,7 +65,7 @@ export default function CueFeed({
   seenLocally,
   onMarkSeen,
 }: Props) {
-  const t = useT('cueFeed');
+  const t = useT(nsCueFeed);
   const SEV_LABEL = getSevLabel(t);
   const [now, setNow] = useState(() => Date.now());
   const [ackPending, setAckPending] = useState<Record<string, boolean>>({});

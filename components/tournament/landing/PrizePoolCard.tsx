@@ -24,8 +24,9 @@ import { useLang } from '@/lib/i18n/LanguageProvider';
 import { useToast } from '@/components/Toast';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { Section, SectionHeader, Reveal, GlassCard } from './primitives';
+import nsTournamentLanding from '@/lib/i18n/locales/fr/tournamentLanding';
 
-type LandingDict = ReturnType<typeof useT<'tournamentLanding'>>;
+type LandingDict = typeof nsTournamentLanding.fr;
 
 type PublicContributor = {
   name: string | null;
@@ -93,7 +94,7 @@ export default function PrizePoolCard({
 }: {
   tournamentId: string;
 }) {
-  const t = useT('tournamentLanding');
+  const t = useT(nsTournamentLanding);
   const { lang } = useLang();
   const { addToast } = useToast();
   const router = useRouter();

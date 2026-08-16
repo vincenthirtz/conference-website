@@ -24,12 +24,16 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
   }
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET, OPTIONS');
-    res.status(405).json({ error: 'Method not allowed', code: 'METHOD_NOT_ALLOWED' });
+    res
+      .status(405)
+      .json({ error: 'Method not allowed', code: 'METHOD_NOT_ALLOWED' });
     return;
   }
 
   // Same envelope as the public v1 reads: 120 req/min/IP.
-  if (applyRateLimit(req, res, { max: 120, windowMs: 60_000 }, 'public-openapi')) {
+  if (
+    applyRateLimit(req, res, { max: 120, windowMs: 60_000 }, 'public-openapi')
+  ) {
     return;
   }
 
@@ -37,7 +41,8 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
     // Spec changes only at deploy time — safe to cache hard at the edge.
     res.setHeader('Cache-Control', 'public, max-age=300, s-maxage=3600');
 
-    const format = typeof req.query.format === 'string' ? req.query.format : 'json';
+    const format =
+      typeof req.query.format === 'string' ? req.query.format : 'json';
     if (format === 'yaml') {
       res.setHeader('Content-Type', 'text/yaml; charset=utf-8');
       res.status(200).send(publicSpecAsYaml());
@@ -47,6 +52,8 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
     res.status(200).json(buildPublicSpec());
   } catch (err) {
     logger.error('GET /api/public/openapi failed', err);
-    res.status(500).json({ error: 'Failed to build public spec', code: 'INTERNAL' });
+    res
+      .status(500)
+      .json({ error: 'Failed to build public spec', code: 'INTERNAL' });
   }
 }

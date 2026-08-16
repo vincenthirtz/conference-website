@@ -13,8 +13,9 @@ import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import StageTabsNav from '@/components/admin/stages/StageTabsNav';
 import type { MatchStatus } from '@/types/admin';
+import nsAdminStageSwiss from '@/lib/i18n/locales/admin-fr/adminStageSwiss';
 
-type Dict = ReturnType<typeof useAdminT<'adminStageSwiss'>>;
+type Dict = typeof nsAdminStageSwiss.fr;
 
 type StaffShape = {
   id: string;
@@ -141,7 +142,7 @@ function statusColor(status: MatchStatus) {
 }
 
 function AdminSwissStagePage({ staff }: StaffProps) {
-  const t = useAdminT('adminStageSwiss');
+  const t = useAdminT(nsAdminStageSwiss);
   const router = useRouter();
   const { stageId } = router.query;
   const { addToast } = useToast();
@@ -650,7 +651,7 @@ type RoundBlockProps = {
 };
 
 function SwissRoundBlock({ round }: RoundBlockProps) {
-  const t = useAdminT('adminStageSwiss');
+  const t = useAdminT(nsAdminStageSwiss);
   return (
     <div className="border-b border-neutral-700 last:border-b-0">
       <div className="px-4 py-2 bg-neutral-825 flex justify-between items-center">
@@ -678,7 +679,7 @@ type SwissMatchRowProps = {
 };
 
 function SwissMatchRow({ match }: SwissMatchRowProps) {
-  const t = useAdminT('adminStageSwiss');
+  const t = useAdminT(nsAdminStageSwiss);
   const label1 = match.team1?.name || match.team1_id || 'TBD';
   const label2 = match.team2?.name || match.team2_id || 'TBD';
 

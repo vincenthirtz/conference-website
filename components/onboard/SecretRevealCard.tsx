@@ -7,6 +7,7 @@
 import { useCallback, useState } from 'react';
 import { useToast } from '@/components/Toast';
 import { useT, format } from '@/lib/i18n/useT';
+import nsSecretRevealCard from '@/lib/i18n/locales/fr/secretRevealCard';
 
 type Props = {
   botApiKey: string;
@@ -24,7 +25,7 @@ export default function SecretRevealCard({
   tenantSlug,
 }: Props) {
   const { addToast } = useToast();
-  const t = useT('secretRevealCard');
+  const t = useT(nsSecretRevealCard);
   const [copiedKey, setCopiedKey] = useState<null | 'api' | 'webhook' | 'env'>(
     null
   );

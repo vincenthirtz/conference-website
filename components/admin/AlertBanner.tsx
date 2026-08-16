@@ -3,6 +3,7 @@
 
 import type { ReactElement } from 'react';
 import { useAdminT } from '@/lib/i18n/useAdminT';
+import nsAdminAlertBanner from '@/lib/i18n/locales/admin-fr/adminAlertBanner';
 
 type AlertVariant = 'error' | 'success' | 'info' | 'warning';
 
@@ -32,7 +33,11 @@ const VARIANT_ICON: Record<AlertVariant, ReactElement> = {
   success: (
     <>
       <circle cx="8" cy="8" r="6.25" />
-      <path d="M5.25 8.25l1.75 1.75 3.75-4" strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d="M5.25 8.25l1.75 1.75 3.75-4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </>
   ),
   info: (
@@ -57,7 +62,7 @@ export default function AlertBanner({
   className = '',
   onDismiss,
 }: AlertBannerProps) {
-  const t = useAdminT('adminAlertBanner');
+  const t = useAdminT(nsAdminAlertBanner);
   if (!message) return null;
 
   const assertive = variant === 'error';

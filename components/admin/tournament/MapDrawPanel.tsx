@@ -13,8 +13,9 @@ import { useRouter } from 'next/router';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { sanitizeUrl } from '@/utils/apiHelpers';
 import { useAdminT, format as fmt } from '@/lib/i18n/useAdminT';
+import nsAdminTournamentMapDraw from '@/lib/i18n/locales/admin-fr/adminTournamentMapDraw';
 
-type Dict = ReturnType<typeof useAdminT<'adminTournamentMapDraw'>>;
+type Dict = typeof nsAdminTournamentMapDraw.fr;
 
 function escapeHtml(value: string | null | undefined): string {
   if (value == null) return '';
@@ -92,7 +93,7 @@ function makeEmptySlots(count: number): (TournamentMapRow | null)[][] {
 }
 
 export default function MapDrawPanel() {
-  const t = useAdminT('adminTournamentMapDraw');
+  const t = useAdminT(nsAdminTournamentMapDraw);
   const router = useRouter();
   const { id } = router.query;
   const tournamentId = Array.isArray(id) ? id[0] : id;
@@ -582,8 +583,7 @@ ${selectedSlots
                           </p>
 
                           {/* Map image or placeholder (fallback géré par état) */}
-                          {choice?.image_url &&
-                          !brokenImages.has(choice.id) ? (
+                          {choice?.image_url && !brokenImages.has(choice.id) ? (
                             <div className="relative w-full h-20 rounded-lg overflow-hidden mb-2 bg-gradient-to-b from-purple-900/20 to-transparent">
                               <img
                                 src={choice.image_url}

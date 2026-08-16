@@ -9,6 +9,7 @@ import {
 } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
 import { useAdminT } from '@/lib/i18n/useAdminT';
+import nsAdminDashboardScoreEntryModal from '@/lib/i18n/locales/admin-fr/adminDashboardScoreEntryModal';
 
 type Props = {
   open: boolean;
@@ -53,7 +54,7 @@ export default function ScoreEntryModal({
   const [error, setError] = useState<string | null>(null);
   const { mutateJson } = useIdempotentMutation();
   const { addToast } = useToast();
-  const t = useAdminT('adminDashboardScoreEntryModal');
+  const t = useAdminT(nsAdminDashboardScoreEntryModal);
 
   if (!open) return null;
 

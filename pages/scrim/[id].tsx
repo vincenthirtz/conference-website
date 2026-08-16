@@ -12,6 +12,7 @@ import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import { logger } from '../../utils/logger';
+import nsScrimDetail from '@/lib/i18n/locales/fr/scrimDetail';
 
 type TeamMini = {
   id: string;
@@ -109,7 +110,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
   return {
     props: {
       scrim: scrim as unknown as ScrimDetail,
-      matches: ((matches || []) as unknown) as ScrimMatch[],
+      matches: (matches || []) as unknown as ScrimMatch[],
     },
   };
 };
@@ -130,7 +131,7 @@ function formatDate(d: string | null, locale: string, tbd: string) {
 }
 
 function ScrimDetailPage({ scrim, matches }: Props) {
-  const t = useT('scrimDetail');
+  const t = useT(nsScrimDetail);
   const locale = useLocale();
   return (
     <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
@@ -152,7 +153,9 @@ function ScrimDetailPage({ scrim, matches }: Props) {
 
         <div className="mt-8 flex flex-wrap items-center justify-center gap-6 bg-neutral-800/50 border border-neutral-700/50 rounded-2xl p-6">
           <TeamBlock team={scrim.team1} />
-          <span className="text-2xl text-neutral-500 font-semibold">{t.vs}</span>
+          <span className="text-2xl text-neutral-500 font-semibold">
+            {t.vs}
+          </span>
           <TeamBlock team={scrim.team2} />
         </div>
 
@@ -231,7 +234,7 @@ function ScrimDetailPage({ scrim, matches }: Props) {
 }
 
 function TeamBlock({ team }: { team: TeamMini | null }) {
-  const t = useT('scrimDetail');
+  const t = useT(nsScrimDetail);
   if (!team) {
     return (
       <div className="flex flex-col items-center gap-2 min-w-[120px]">

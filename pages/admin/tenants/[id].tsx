@@ -21,6 +21,7 @@ import Tabs, {
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 import { logger } from '../../../utils/logger';
+import nsAdminTenantDetail from '@/lib/i18n/locales/admin-fr/adminTenantDetail';
 
 type Tenant = {
   id: string;
@@ -95,7 +96,7 @@ function formatDate(s: string | null): string {
 }
 
 function AdminTenantDetailPage({ tenantId }: Props) {
-  const t = useAdminT('adminTenantDetail');
+  const t = useAdminT(nsAdminTenantDetail);
   const router = useRouter();
   const { addToast } = useToast();
   const { adminFetchJson } = useAdminFetch();

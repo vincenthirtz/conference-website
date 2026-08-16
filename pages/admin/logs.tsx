@@ -10,6 +10,7 @@ import Tabs, {
 import StaffLogsPanel from '@/components/admin/logs/StaffLogsPanel';
 import EmailLogsPanel from '@/components/admin/logs/EmailLogsPanel';
 import type { StaffProps } from '@/types/admin';
+import nsAdminJournals from '@/lib/i18n/locales/admin-fr/adminJournals';
 
 const ID_BASE = 'admin-journals';
 
@@ -23,7 +24,7 @@ export const getServerSideProps = withStaffPage('admin');
  * /admin/email-logs route remains admin-gated via its redirect shim.
  */
 export default function AdminJournalsPage({ staff }: StaffProps) {
-  const t = useAdminT('adminJournals');
+  const t = useAdminT(nsAdminJournals);
   const canSeeEmails = hasAtLeastRole(staff.role as StaffRole, 'admin');
 
   const tabs = [

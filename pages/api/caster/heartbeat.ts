@@ -69,7 +69,8 @@ async function handler(
     }
     if (!run) {
       return res.status(400).json({
-        error: "L'event_run_id fourni n'existe pas ou n'appartient pas a ce tenant.",
+        error:
+          "L'event_run_id fourni n'existe pas ou n'appartient pas a ce tenant.",
         code: 'RUN_NOT_FOUND',
       });
     }
@@ -87,18 +88,16 @@ async function handler(
 
   const nowIso = new Date().toISOString();
 
-  const { error: upErr } = await admin
-    .from('caster_presence')
-    .upsert(
-      {
-        cast_member_id: ctx.caster.id,
-        tenant_id: ctx.tenantId,
-        event_run_id: eventRunId,
-        last_seen_at: nowIso,
-        user_agent: userAgent,
-      },
-      { onConflict: 'cast_member_id' }
-    );
+  const { error: upErr } = await admin.from('caster_presence').upsert(
+    {
+      cast_member_id: ctx.caster.id,
+      tenant_id: ctx.tenantId,
+      event_run_id: eventRunId,
+      last_seen_at: nowIso,
+      user_agent: userAgent,
+    },
+    { onConflict: 'cast_member_id' }
+  );
 
   if (upErr) {
     logger.error('[caster/heartbeat] upsert error', upErr);

@@ -251,9 +251,7 @@ async function handler(
 
     if (insertErr) {
       logger.error('[finalize] insert error', insertErr);
-      return res
-        .status(500)
-        .json({ error: 'Failed to insert final rankings' });
+      return res.status(500).json({ error: 'Failed to insert final rankings' });
     }
 
     if (tournament.status !== 'completed') {
@@ -332,9 +330,7 @@ async function handler(
   }
 }
 
-async function fetchRankingsWithNames(
-  tournamentId: string
-): Promise<
+async function fetchRankingsWithNames(tournamentId: string): Promise<
   Array<{
     team_id: string;
     team_name: string;
@@ -347,9 +343,7 @@ async function fetchRankingsWithNames(
   if (!supabaseAdmin) return [];
   const { data } = await supabaseAdmin
     .from('final_rankings')
-    .select(
-      'team_id, rank, prize, notes, frozen_at, teams:teams!inner(name)'
-    )
+    .select('team_id, rank, prize, notes, frozen_at, teams:teams!inner(name)')
     .eq('tournament_id', tournamentId)
     .order('rank', { ascending: true });
 

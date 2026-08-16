@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import nsAdminStatsMaps from '@/lib/i18n/locales/admin-fr/adminStatsMaps';
 
 type MapStatsRow = {
   map_name: string;
@@ -43,7 +44,7 @@ function rankBadge(rank: number) {
  * search / min-matches filters, sortable table and CSV export.
  */
 export default function MapStatsPanel() {
-  const t = useAdminT('adminStatsMaps');
+  const t = useAdminT(nsAdminStatsMaps);
   const { adminFetchJson } = useAdminFetch();
 
   const [loading, setLoading] = useState(false);
@@ -323,8 +324,12 @@ export default function MapStatsPanel() {
             <table className="min-w-full text-sm">
               <thead className="bg-neutral-900/50 text-neutral-400">
                 <tr>
-                  <th scope="col" className="px-4 py-3 text-left font-medium">#</th>
-                  <th scope="col" className="px-4 py-3 text-left font-medium">{t.thMap}</th>
+                  <th scope="col" className="px-4 py-3 text-left font-medium">
+                    #
+                  </th>
+                  <th scope="col" className="px-4 py-3 text-left font-medium">
+                    {t.thMap}
+                  </th>
                   <th scope="col" className="px-4 py-3 text-center font-medium">
                     {t.thMatchesPlayed}
                   </th>

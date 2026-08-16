@@ -10,6 +10,7 @@ import Image from 'next/image';
 import { type HomeNewsItem } from '@/components/News/HomeNewsSection';
 import { useT } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
+import nsHomeV2 from '@/lib/i18n/locales/fr/homeV2';
 
 type HomeNewsV2Props = {
   news: HomeNewsItem[];
@@ -39,7 +40,7 @@ function getExcerpt(item: HomeNewsItem, fallback: string, max = 140) {
 }
 
 function NewsCard({ item }: { item: HomeNewsItem }) {
-  const t = useT('homeV2');
+  const t = useT(nsHomeV2);
   const locale = useLocale();
   const date = formatDate(item, locale);
   return (
@@ -84,7 +85,7 @@ function NewsCard({ item }: { item: HomeNewsItem }) {
 }
 
 export default function HomeNewsV2({ news }: HomeNewsV2Props): JSX.Element {
-  const t = useT('homeV2');
+  const t = useT(nsHomeV2);
   const items = news.slice(0, 3);
 
   return (

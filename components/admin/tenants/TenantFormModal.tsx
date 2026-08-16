@@ -4,6 +4,7 @@ import AlertBanner from '@/components/admin/AlertBanner';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import nsAdminTenantsNew from '@/lib/i18n/locales/admin-fr/adminTenantsNew';
 
 type TenantFormModalProps = {
   open: boolean;
@@ -36,7 +37,7 @@ export default function TenantFormModal({
   onClose,
   onCreated,
 }: TenantFormModalProps) {
-  const t = useAdminT('adminTenantsNew');
+  const t = useAdminT(nsAdminTenantsNew);
   const { addToast } = useToast();
   const { mutateJson } = useIdempotentMutation();
   const formId = useId();

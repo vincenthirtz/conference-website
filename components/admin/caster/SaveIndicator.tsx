@@ -5,9 +5,10 @@
 
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import type { SaveState } from './useSceneDraft';
+import nsAdminCasterScenes from '@/lib/i18n/locales/admin-fr/adminCasterScenes';
 
 export default function SaveIndicator({ state }: { state: SaveState }) {
-  const t = useAdminT('adminCasterScenes');
+  const t = useAdminT(nsAdminCasterScenes);
   return (
     <div className="flex items-center justify-end min-h-[1rem]">
       <span

@@ -188,10 +188,12 @@ export async function computeRatingSeedingForStage(params: {
     .eq('round_number', 1)
     .order('created_at', { ascending: true });
 
-  const bracketMatches = ((bracketMatchesRaw ?? []) as {
-    id: string;
-    status: string;
-  }[]).map((m) => ({ id: m.id, status: m.status }));
+  const bracketMatches = (
+    (bracketMatchesRaw ?? []) as {
+      id: string;
+      status: string;
+    }[]
+  ).map((m) => ({ id: m.id, status: m.status }));
 
   const lockedCount = bracketMatches.filter(
     (m) =>
@@ -268,7 +270,9 @@ export async function computeRatingSeedingForStage(params: {
   for (const [teamId, row] of ratingByStageTeam) {
     if (row.rating != null) ratingByTeam.set(teamId, row.rating);
   }
-  const missingRatingIds = [...sosTeamIds].filter((id) => !ratingByTeam.has(id));
+  const missingRatingIds = [...sosTeamIds].filter(
+    (id) => !ratingByTeam.has(id)
+  );
   if (missingRatingIds.length > 0) {
     const { data: oppRatingsRaw } = await client
       .from('team_ratings')

@@ -4,6 +4,7 @@ import Modal from '@/components/admin/Modal';
 import type { TeamMemberRow } from '@/types/admin';
 import type { TeamRole } from '@/utils/teamRoles';
 import type { MemberFormState } from './types';
+import nsAdminTeamsEditMemberModal from '@/lib/i18n/locales/admin-fr/adminTeamsEditMemberModal';
 
 type EditMemberModalProps = {
   open: boolean;
@@ -28,7 +29,7 @@ function EditMemberModalComponent({
   memberError,
   onSubmit,
 }: EditMemberModalProps) {
-  const t = useAdminT('adminTeamsEditMemberModal');
+  const t = useAdminT(nsAdminTeamsEditMemberModal);
   return (
     <Modal
       open={open}

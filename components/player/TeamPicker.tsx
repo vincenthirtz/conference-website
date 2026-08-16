@@ -12,6 +12,7 @@
 
 import { useId, useMemo, useState } from 'react';
 import { useT, format } from '@/lib/i18n/useT';
+import nsTeamPicker from '@/lib/i18n/locales/fr/teamPicker';
 
 export type TeamPickerTeam = {
   id: string;
@@ -88,7 +89,7 @@ export default function TeamPicker({
   onSearchChange,
   searchPlaceholder,
 }: Props) {
-  const t = useT('teamPicker');
+  const t = useT(nsTeamPicker);
   const uid = useId();
   const searchId = `teampicker-search-${uid}`;
   const countryId = `teampicker-country-${uid}`;

@@ -14,8 +14,9 @@ import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminT } from '@/lib/i18n/useAdminT';
+import nsAdminFfa from '@/lib/i18n/locales/admin-fr/adminFfa';
 
-type Dict = ReturnType<typeof useAdminT<'adminFfa'>>;
+type Dict = typeof nsAdminFfa.fr;
 
 type Placement = {
   id?: string;
@@ -107,7 +108,7 @@ function FfaLobbiesManager({
   stageId: string;
   tournamentId: string;
 }) {
-  const t = useAdminT('adminFfa');
+  const t = useAdminT(nsAdminFfa);
   const { adminFetchJson } = useAdminFetch();
   const { mutateJson } = useIdempotentMutation();
   const { addToast } = useToast();
@@ -423,12 +424,18 @@ function FfaLobbiesManager({
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="text-xs text-neutral-500 text-left">
-                          <th scope="col" className="pb-2 font-normal">{t.team}</th>
+                          <th scope="col" className="pb-2 font-normal">
+                            {t.team}
+                          </th>
                           <th scope="col" className="pb-2 font-normal w-24">
                             {t.placement}
                           </th>
-                          <th scope="col" className="pb-2 font-normal w-24">{t.score}</th>
-                          <th scope="col" className="pb-2 font-normal w-20">{t.points}</th>
+                          <th scope="col" className="pb-2 font-normal w-24">
+                            {t.score}
+                          </th>
+                          <th scope="col" className="pb-2 font-normal w-20">
+                            {t.points}
+                          </th>
                           <th scope="col" className="pb-2 font-normal w-10" />
                         </tr>
                       </thead>
@@ -589,12 +596,24 @@ function FfaLobbiesManager({
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-xs text-neutral-500 text-left">
-                    <th scope="col" className="pb-2 font-normal w-12">#</th>
-                    <th scope="col" className="pb-2 font-normal">{t.team}</th>
-                    <th scope="col" className="pb-2 font-normal w-24">{t.totalPoints}</th>
-                    <th scope="col" className="pb-2 font-normal w-24">{t.lobbiesPlayed}</th>
-                    <th scope="col" className="pb-2 font-normal w-24">{t.bestPlacement}</th>
-                    <th scope="col" className="pb-2 font-normal w-16">{t.firsts}</th>
+                    <th scope="col" className="pb-2 font-normal w-12">
+                      #
+                    </th>
+                    <th scope="col" className="pb-2 font-normal">
+                      {t.team}
+                    </th>
+                    <th scope="col" className="pb-2 font-normal w-24">
+                      {t.totalPoints}
+                    </th>
+                    <th scope="col" className="pb-2 font-normal w-24">
+                      {t.lobbiesPlayed}
+                    </th>
+                    <th scope="col" className="pb-2 font-normal w-24">
+                      {t.bestPlacement}
+                    </th>
+                    <th scope="col" className="pb-2 font-normal w-16">
+                      {t.firsts}
+                    </th>
                   </tr>
                 </thead>
                 <tbody>

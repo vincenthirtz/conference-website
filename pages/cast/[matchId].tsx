@@ -13,8 +13,9 @@ import { maskBattleTag } from '@/utils/battleTag';
 import type { StaffProps } from '@/types/admin';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
+import nsCastViewer from '@/lib/i18n/locales/fr/castViewer';
 
-type CastViewerDict = ReturnType<typeof useT<'castViewer'>>;
+type CastViewerDict = typeof nsCastViewer.fr;
 
 type Member = {
   id: string;
@@ -163,7 +164,7 @@ function statusBadge(
 
 function CastPage(_: StaffProps) {
   const router = useRouter();
-  const t = useT('castViewer');
+  const t = useT(nsCastViewer);
   const locale = useLocale();
   const { matchId } = router.query;
   const id = Array.isArray(matchId) ? matchId[0] : matchId;
@@ -723,7 +724,7 @@ function TeamBanner({
 }
 
 function RosterColumn({ team }: { team: Team | null }) {
-  const t = useT('castViewer');
+  const t = useT(nsCastViewer);
   if (!team) return <div className="text-neutral-500 italic">—</div>;
   return (
     <div>
@@ -790,7 +791,7 @@ function VetoTimeline({
   team1Id: string | null;
   team2Id: string | null;
 }) {
-  const t = useT('castViewer');
+  const t = useT(nsCastViewer);
   return (
     <ol className="space-y-1.5">
       {flow.map((f, idx) => {

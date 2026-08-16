@@ -11,6 +11,7 @@ import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { withStaffPage } from '@/utils/staff';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { StaffProps, Scrim } from '@/types/admin';
+import nsAdminScrimDetail from '@/lib/i18n/locales/admin-fr/adminScrimDetail';
 
 type TeamOption = { id: string; name: string; short_name: string | null };
 
@@ -50,7 +51,7 @@ function toLocalInput(iso: string | null): string {
 }
 
 function AdminScrimEditPage(_props: StaffProps) {
-  const t = useAdminT('adminScrimDetail');
+  const t = useAdminT(nsAdminScrimDetail);
   const router = useRouter();
   const { adminFetchJson } = useAdminFetch();
   const { confirm, dialog } = useConfirmDialog();
@@ -367,9 +368,7 @@ function AdminScrimEditPage(_props: StaffProps) {
                     className="flex flex-wrap items-center justify-between gap-2 bg-neutral-900/50 border border-neutral-700/50 rounded-lg px-4 py-3"
                   >
                     <div className="flex items-center gap-3">
-                      <span className="text-xs text-neutral-500">
-                        #{i + 1}
-                      </span>
+                      <span className="text-xs text-neutral-500">#{i + 1}</span>
                       <span className="text-sm">
                         {format(t.matchTeamsVs, {
                           team1: m.team1?.name || t.defaultTeam1,

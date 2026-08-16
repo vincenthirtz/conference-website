@@ -31,6 +31,7 @@ import {
   getWebPushSupport,
   urlBase64ToUint8Array,
 } from '@/utils/webPush';
+import nsPushOptIn from '@/lib/i18n/locales/fr/pushOptIn';
 
 export type PushAudience = 'admin' | 'caster' | 'player' | 'public';
 export type PushVariant = 'banner' | 'card';
@@ -71,7 +72,7 @@ export default function PushOptIn({
   loginPath = '/admin/login',
   message,
 }: Props) {
-  const t = useT('pushOptIn');
+  const t = useT(nsPushOptIn);
   const defaultMessages: Record<PushAudience, string> = {
     admin: t.msgAdmin,
     caster: t.msgCaster,

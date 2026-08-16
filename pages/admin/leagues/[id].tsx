@@ -21,10 +21,11 @@ import type {
 } from '@/types/leagues';
 
 import { logger } from '../../../utils/logger';
+import nsAdminLeagueDetail from '@/lib/i18n/locales/admin-fr/adminLeagueDetail';
 
 export const getServerSideProps = withStaffPage('admin');
 
-type Dict = ReturnType<typeof useAdminT<'adminLeagueDetail'>>;
+type Dict = typeof nsAdminLeagueDetail.fr;
 
 function getStatusOptions(t: Dict): { value: LeagueStatus; label: string }[] {
   return [
@@ -60,7 +61,7 @@ function tableToRows(
 }
 
 function AdminLeagueDetailPage(_props: StaffProps) {
-  const t = useAdminT('adminLeagueDetail');
+  const t = useAdminT(nsAdminLeagueDetail);
   const statusOptions = getStatusOptions(t);
   const router = useRouter();
   const leagueId = typeof router.query.id === 'string' ? router.query.id : '';
@@ -764,13 +765,21 @@ function AdminLeagueDetailPage(_props: StaffProps) {
                 <table className="w-full text-sm">
                   <thead className="bg-neutral-900/50 text-neutral-400">
                     <tr>
-                      <th scope="col" className="text-left px-4 py-2.5 w-16">{t.thRank}</th>
-                      <th scope="col" className="text-left px-4 py-2.5">{t.thTeam}</th>
-                      <th scope="col" className="text-right px-4 py-2.5">{t.thPoints}</th>
+                      <th scope="col" className="text-left px-4 py-2.5 w-16">
+                        {t.thRank}
+                      </th>
+                      <th scope="col" className="text-left px-4 py-2.5">
+                        {t.thTeam}
+                      </th>
+                      <th scope="col" className="text-right px-4 py-2.5">
+                        {t.thPoints}
+                      </th>
                       <th scope="col" className="text-right px-4 py-2.5">
                         {t.thTournaments}
                       </th>
-                      <th scope="col" className="text-right px-4 py-2.5">{t.thBestRank}</th>
+                      <th scope="col" className="text-right px-4 py-2.5">
+                        {t.thBestRank}
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-neutral-700/50">

@@ -7,6 +7,7 @@
 import { useEffect, useState } from 'react';
 import { useT } from '@/lib/i18n/useT';
 import type { TournamentPhase } from './types';
+import nsTournamentLanding from '@/lib/i18n/locales/fr/tournamentLanding';
 
 type Parts = { days: number; hours: number; minutes: number; seconds: number };
 
@@ -32,7 +33,7 @@ export default function TournamentCountdown({
   phase: TournamentPhase;
   size?: 'giant' | 'compact';
 }) {
-  const t = useT('tournamentLanding');
+  const t = useT(nsTournamentLanding);
   const targetMs = targetDate ? new Date(targetDate).getTime() : NaN;
   const [parts, setParts] = useState<Parts | null>(null);
   const [mounted, setMounted] = useState(false);

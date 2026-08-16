@@ -12,6 +12,7 @@
 import Link from 'next/link';
 import { useT, format } from '@/lib/i18n/useT';
 import FollowButton from './FollowButton';
+import nsPlayerDiscovery from '@/lib/i18n/locales/fr/playerDiscovery';
 
 // Objet joueuse partagé, renvoyé par la recherche ET le graphe de suivi.
 export type DirectoryPlayer = {
@@ -48,7 +49,7 @@ export default function DirectoryPlayerCard({
   currentUserId,
   onFollowChange,
 }: DirectoryPlayerCardProps) {
-  const t = useT('playerDiscovery');
+  const t = useT(nsPlayerDiscovery);
   const teams = player.teams ?? [];
 
   return (

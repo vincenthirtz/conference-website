@@ -47,6 +47,7 @@ import {
   summaryClass,
 } from './fieldClasses';
 import { useSceneDraft } from './useSceneDraft';
+import nsAdminCasterScenes from '@/lib/i18n/locales/admin-fr/adminCasterScenes';
 
 type Props = {
   scene: CasterScene;
@@ -100,7 +101,7 @@ function buildPayload(
 }
 
 export default function CameraSceneEditor({ scene, onSave }: Props) {
-  const t = useAdminT('adminCasterScenes');
+  const t = useAdminT(nsAdminCasterScenes);
   const { addToast } = useToast();
   const { draft, patch, saveState } = useSceneDraft<CameraSceneData>({
     scene,

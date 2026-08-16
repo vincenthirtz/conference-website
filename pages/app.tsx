@@ -15,8 +15,9 @@ import Link from 'next/link';
 import { useEffect, useState, type JSX } from 'react';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { useT } from '@/lib/i18n/useT';
+import nsAppPage from '@/lib/i18n/locales/fr/appPage';
 
-type AppDict = ReturnType<typeof useT<'appPage'>>;
+type AppDict = typeof nsAppPage.fr;
 
 // Type local pour `beforeinstallprompt` (pas dans lib.dom standard).
 type BeforeInstallPromptEvent = Event & {
@@ -35,7 +36,15 @@ const getFeatures = (t: AppDict): Feature[] => [
     title: t.feature1Title,
     description: t.feature1Desc,
     icon: (cls) => (
-      <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <svg
+        className={cls}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
         <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
         <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
       </svg>
@@ -45,7 +54,15 @@ const getFeatures = (t: AppDict): Feature[] => [
     title: t.feature2Title,
     description: t.feature2Desc,
     icon: (cls) => (
-      <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <svg
+        className={cls}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
         <rect x="3" y="4" width="14" height="14" rx="2" />
         <circle cx="18" cy="6" r="3.5" fill="#b24be0" stroke="none" />
       </svg>
@@ -55,7 +72,15 @@ const getFeatures = (t: AppDict): Feature[] => [
     title: t.feature3Title,
     description: t.feature3Desc,
     icon: (cls) => (
-      <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <svg
+        className={cls}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
         <path d="M5 12.55a11 11 0 0 1 14 0" />
         <path d="M8.5 16.05a6 6 0 0 1 7 0" />
         <line x1="3" y1="3" x2="21" y2="21" />
@@ -67,7 +92,15 @@ const getFeatures = (t: AppDict): Feature[] => [
     title: t.feature4Title,
     description: t.feature4Desc,
     icon: (cls) => (
-      <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <svg
+        className={cls}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
         <path d="M9 12l2 2 4-4" />
         <circle cx="12" cy="12" r="10" />
       </svg>
@@ -77,7 +110,15 @@ const getFeatures = (t: AppDict): Feature[] => [
     title: t.feature5Title,
     description: t.feature5Desc,
     icon: (cls) => (
-      <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <svg
+        className={cls}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
         <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
       </svg>
     ),
@@ -86,7 +127,15 @@ const getFeatures = (t: AppDict): Feature[] => [
     title: t.feature6Title,
     description: t.feature6Desc,
     icon: (cls) => (
-      <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <svg
+        className={cls}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
         <circle cx="12" cy="12" r="4" />
         <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
       </svg>
@@ -96,7 +145,15 @@ const getFeatures = (t: AppDict): Feature[] => [
     title: t.feature7Title,
     description: t.feature7Desc,
     icon: (cls) => (
-      <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <svg
+        className={cls}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
         <rect x="3" y="4" width="18" height="16" rx="2" />
         <line x1="3" y1="9" x2="21" y2="9" />
       </svg>
@@ -106,7 +163,15 @@ const getFeatures = (t: AppDict): Feature[] => [
     title: t.feature8Title,
     description: t.feature8Desc,
     icon: (cls) => (
-      <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <svg
+        className={cls}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
         <polyline points="23 4 23 10 17 10" />
         <polyline points="1 20 1 14 7 14" />
         <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
@@ -174,7 +239,7 @@ const getFaq = (t: AppDict): FaqItem[] => [
 ];
 
 function AppPage() {
-  const t = useT('appPage');
+  const t = useT(nsAppPage);
   const features = getFeatures(t);
   const audiences = getAudiences(t);
   const faq = getFaq(t);
@@ -259,7 +324,17 @@ function AppPage() {
           <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
             {installed ? (
               <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/40 bg-cyan-500/10 px-5 py-3 text-sm font-medium text-cyan-200">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
                 {t.installedLabel}
@@ -270,7 +345,17 @@ function AppPage() {
                 onClick={handleInstall}
                 className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-cyan-400 via-fuchsia-500 to-violet-600 px-6 py-3 text-sm font-bold text-black shadow-lg shadow-fuchsia-500/30 transition hover:scale-105"
               >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                   <polyline points="7 10 12 15 17 10" />
                   <line x1="12" y1="15" x2="12" y2="3" />
@@ -342,7 +427,16 @@ function AppPage() {
                 <ul className="space-y-2 text-sm text-gray-200 mb-6 flex-1">
                   {a.bullets.map((b) => (
                     <li key={b} className="flex items-start gap-2">
-                      <svg className="w-4 h-4 mt-0.5 flex-shrink-0 text-cyan-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <svg
+                        className="w-4 h-4 mt-0.5 flex-shrink-0 text-cyan-300"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                      >
                         <polyline points="20 6 9 17 4 12" />
                       </svg>
                       <span>{b}</span>
@@ -361,7 +455,10 @@ function AppPage() {
         </section>
 
         {/* ─── INSTALL ─── */}
-        <section id="install" className="rounded-3xl border border-white/10 bg-gradient-to-r from-cyan-500/10 via-fuchsia-500/10 to-violet-500/10 p-8 sm:p-12">
+        <section
+          id="install"
+          className="rounded-3xl border border-white/10 bg-gradient-to-r from-cyan-500/10 via-fuchsia-500/10 to-violet-500/10 p-8 sm:p-12"
+        >
           <h2 className="text-3xl font-bold mb-6">{t.installTitle}</h2>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
             {[
@@ -374,7 +471,9 @@ function AppPage() {
                 <h3 className="text-sm font-semibold uppercase tracking-wider text-cyan-300 mb-2">
                   {s.label}
                 </h3>
-                <p className="text-sm text-gray-200 leading-relaxed">{s.body}</p>
+                <p className="text-sm text-gray-200 leading-relaxed">
+                  {s.body}
+                </p>
               </div>
             ))}
           </div>
@@ -385,7 +484,17 @@ function AppPage() {
                 onClick={handleInstall}
                 className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-cyan-400 via-fuchsia-500 to-violet-600 px-6 py-3 text-sm font-bold text-black shadow-lg shadow-fuchsia-500/30 transition hover:scale-105"
               >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                   <polyline points="7 10 12 15 17 10" />
                   <line x1="12" y1="15" x2="12" y2="3" />

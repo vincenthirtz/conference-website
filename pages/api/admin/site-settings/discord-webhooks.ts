@@ -50,10 +50,7 @@ async function handler(
   }
 }
 
-async function handleGet(
-  res: NextApiResponse,
-  ctx: AuthenticatedStaffContext
-) {
+async function handleGet(res: NextApiResponse, ctx: AuthenticatedStaffContext) {
   const { data, error } = await supabaseAdmin
     .from('discord_webhooks')
     .select('*')

@@ -44,6 +44,7 @@ import {
   summaryClass,
 } from './fieldClasses';
 import { useSceneDraft } from './useSceneDraft';
+import nsAdminCasterScenes from '@/lib/i18n/locales/admin-fr/adminCasterScenes';
 
 // Manifeste statique (aucune requête réseau) — validé une fois au chargement.
 const HERO_LIST: OwHero[] = loadHeroes(owHeroesJson);
@@ -116,7 +117,7 @@ function BanSelect({
   teamName: string;
   onChange: (next: HeroBan) => void;
 }) {
-  const t = useAdminT('adminCasterScenes');
+  const t = useAdminT(nsAdminCasterScenes);
   const b = normalizeBan(ban);
   const currentKey = (ban && typeof ban === 'object' && ban.key) || '';
   const ghost =
@@ -177,7 +178,7 @@ export default function MatchSceneEditor({
   onSave,
   tournamentMaps = null,
 }: Props) {
-  const t = useAdminT('adminCasterScenes');
+  const t = useAdminT(nsAdminCasterScenes);
 
   const { draft, patch, update, saveState } = useSceneDraft<MatchForm>({
     scene,

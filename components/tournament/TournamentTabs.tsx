@@ -7,6 +7,7 @@
 
 import Link from 'next/link';
 import { useT } from '@/lib/i18n/useT';
+import nsTournamentTabs from '@/lib/i18n/locales/fr/tournamentTabs';
 
 export type TournamentTabKey =
   | 'hub'
@@ -38,7 +39,7 @@ export default function TournamentTabs({
   showFfa?: boolean;
   className?: string;
 }) {
-  const t = useT('tournamentTabs');
+  const t = useT(nsTournamentTabs);
 
   const tabs: { key: TournamentTabKey; label: string; href: string }[] = [
     { key: 'hub', label: t.hub, href: tournamentPath },

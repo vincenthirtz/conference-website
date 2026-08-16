@@ -6,6 +6,7 @@
 import { BracketTreeView } from '@/components/admin/bracket';
 import type { BracketRound } from '@/components/admin/bracket/types';
 import { useT, format } from '@/lib/i18n/useT';
+import nsEmbedBracket from '@/lib/i18n/locales/fr/embedBracket';
 
 export type EmbedTheme = 'light' | 'dark';
 
@@ -34,7 +35,7 @@ export default function EmbedBracket({
   publicUrl,
   siteLabel = 'le site',
 }: EmbedBracketProps) {
-  const t = useT('embedBracket');
+  const t = useT(nsEmbedBracket);
   const isLight = theme === 'light';
   // `accent` is already sanitized to strict hex upstream (utils/embed) — safe
   // to interpolate into an inline style. CSP allows inline styles.

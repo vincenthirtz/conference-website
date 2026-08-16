@@ -13,6 +13,7 @@ import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { MatchStatus } from '@/types/admin';
 import MatchHistoryDrawer from '@/components/admin/MatchHistoryDrawer';
 import Modal from '@/components/admin/Modal';
+import nsAdminMatchDetail from '@/lib/i18n/locales/admin-fr/adminMatchDetail';
 
 type TeamMini = {
   id: string;
@@ -102,7 +103,7 @@ function statusColor(status: MatchStatus) {
   }
 }
 
-type Dict = ReturnType<typeof useAdminT<'adminMatchDetail'>>;
+type Dict = typeof nsAdminMatchDetail.fr;
 
 function statusLabel(status: MatchStatus, t: Dict) {
   switch (status) {
@@ -143,7 +144,7 @@ type StaffProps = {
 };
 
 function MatchViewPage(_: StaffProps) {
-  const t = useAdminT('adminMatchDetail');
+  const t = useAdminT(nsAdminMatchDetail);
   const router = useRouter();
   const { matchId } = router.query;
   const matchIdStr = Array.isArray(matchId) ? matchId[0] : matchId;
@@ -747,7 +748,7 @@ function TeamLine({
   side: 'home' | 'away';
   score: number | null | undefined;
 }) {
-  const t = useAdminT('adminMatchDetail');
+  const t = useAdminT(nsAdminMatchDetail);
   return (
     <div className="flex items-center gap-3 min-w-0">
       <div className="w-10 h-10 rounded-full bg-white/10 border border-white/15 flex items-center justify-center text-sm font-semibold">

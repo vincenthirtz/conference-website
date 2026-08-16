@@ -25,8 +25,9 @@ import type {
   EventStation,
   EventStationStatus,
 } from '@/types/events';
+import nsAdminDirectorStationBoard from '@/lib/i18n/locales/admin-fr/adminDirectorStationBoard';
 
-type Dict = ReturnType<typeof useAdminT<'adminDirectorStationBoard'>>;
+type Dict = typeof nsAdminDirectorStationBoard.fr;
 
 /** Ordre de cycle du toggle de statut. */
 const STATUS_CYCLE: EventStationStatus[] = ['idle', 'in_use', 'offline'];
@@ -93,7 +94,7 @@ export default function StationBoard({
   onSetStatus,
   onDelete,
 }: Props) {
-  const t = useAdminT('adminDirectorStationBoard');
+  const t = useAdminT(nsAdminDirectorStationBoard);
   const [showCreate, setShowCreate] = useState(false);
   const [createForm, setCreateForm] = useState<EditState>(emptyEdit());
   const [createError, setCreateError] = useState<string | null>(null);

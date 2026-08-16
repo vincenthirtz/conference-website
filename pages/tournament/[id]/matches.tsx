@@ -25,13 +25,14 @@ import {
 } from '@/utils/teams/scrimCalendar';
 
 import { logger } from '../../../utils/logger';
+import nsTournamentMatches from '@/lib/i18n/locales/fr/tournamentMatches';
 
 // Fuseau de référence pour placer les matchs dans la grille mensuelle.
 const MATCHES_TZ = 'Europe/Paris';
 
 type ViewMode = 'list' | 'agenda' | 'month';
 type MatchStatus = BaseMatchStatus | 'completed';
-type MatchesDict = ReturnType<typeof useT<'tournamentMatches'>>;
+type MatchesDict = typeof nsTournamentMatches.fr;
 
 type Tournament = {
   id: string;
@@ -188,7 +189,7 @@ export default function TournamentMatchesPage({
   matches,
 }: Props) {
   const router = useRouter();
-  const t = useT('tournamentMatches');
+  const t = useT(nsTournamentMatches);
   const locale = useLocale();
   const { lang } = useLang();
   const tournamentPath = `/tournament/${tournament.slug || tournament.id}`;
@@ -647,7 +648,7 @@ function MatchRow({
   match: SimpleMatch;
   showDate?: boolean;
 }) {
-  const t = useT('tournamentMatches');
+  const t = useT(nsTournamentMatches);
   const locale = useLocale();
   const t1 = match.team1?.short_name || match.team1?.name || t.teamPlaceholder1;
   const t2 =

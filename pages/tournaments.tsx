@@ -14,6 +14,7 @@ import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { useT } from '@/lib/i18n/useT';
 import { logger } from '../utils/logger';
+import nsTournamentsList from '@/lib/i18n/locales/fr/tournamentsList';
 
 type TournamentsPageProps = {
   tournaments: Tournament[];
@@ -68,7 +69,7 @@ export const getStaticProps: GetStaticProps<
 };
 
 function TournamentsPage({ tournaments, loadError }: TournamentsPageProps) {
-  const t = useT('tournamentsList');
+  const t = useT(nsTournamentsList);
   if (loadError) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">

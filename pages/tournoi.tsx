@@ -14,6 +14,7 @@ import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 
 import { logger } from '../utils/logger';
+import nsTournoiPage from '@/lib/i18n/locales/fr/tournoiPage';
 // Types
 
 type Match = {
@@ -118,7 +119,7 @@ function linkifyDescription(text: string) {
 }
 
 function Tournoi() {
-  const t = useT('tournoiPage');
+  const t = useT(nsTournoiPage);
   const locale = useLocale();
   const fullTeams = teamsData as TeamType[];
   const teams: TeamType[] = useMemo<TeamType[]>(() => {
@@ -537,8 +538,12 @@ function Tournoi() {
               <table className="min-w-full text-base md:text-[17px]">
                 <thead className="text-left text-gray-200 uppercase tracking-wider text-[11px] md:text-xs">
                   <tr className="text-gray-300">
-                    <th scope="col" className="py-2">#</th>
-                    <th scope="col" className="py-2">{t.colTeam}</th>
+                    <th scope="col" className="py-2">
+                      #
+                    </th>
+                    <th scope="col" className="py-2">
+                      {t.colTeam}
+                    </th>
                     <th scope="col" className="py-2">
                       <abbr title={t.colMJTitle}>{t.colMJ}</abbr>
                     </th>

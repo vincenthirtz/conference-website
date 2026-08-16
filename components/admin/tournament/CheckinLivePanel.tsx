@@ -11,8 +11,9 @@ import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import nsAdminTournamentCheckinLive from '@/lib/i18n/locales/admin-fr/adminTournamentCheckinLive';
 
-type Dict = ReturnType<typeof useAdminT<'adminTournamentCheckinLive'>>;
+type Dict = typeof nsAdminTournamentCheckinLive.fr;
 
 type TeamSide = 1 | 2;
 
@@ -37,7 +38,7 @@ const PAST_WINDOW_MIN = 30;
 const FUTURE_WINDOW_MIN = 120;
 
 export default function CheckinLivePanel() {
-  const t = useAdminT('adminTournamentCheckinLive');
+  const t = useAdminT(nsAdminTournamentCheckinLive);
   const router = useRouter();
   const { id } = router.query;
   const tournamentId = Array.isArray(id) ? id[0] : id;
@@ -303,7 +304,7 @@ function MatchRow({
   onNudge: (matchId: string, side: TeamSide | 'both') => void;
   nudgingSet: Set<string>;
 }) {
-  const t = useAdminT('adminTournamentCheckinLive');
+  const t = useAdminT(nsAdminTournamentCheckinLive);
   const scheduledMs = row.scheduledAt
     ? Date.parse(row.scheduledAt)
     : Number.NaN;
@@ -395,7 +396,7 @@ function TeamLine({
   onNudge: (matchId: string, side: TeamSide | 'both') => void;
   loading: boolean;
 }) {
-  const t = useAdminT('adminTournamentCheckinLive');
+  const t = useAdminT(nsAdminTournamentCheckinLive);
   const checkedIn = !!checkedInAt;
   return (
     <div

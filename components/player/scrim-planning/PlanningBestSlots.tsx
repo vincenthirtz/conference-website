@@ -6,6 +6,7 @@
 
 import { useT } from '@/lib/i18n/useT';
 import type { RankedSlot } from '@/utils/teams/scrimPlanningOverlap';
+import nsScrimPlanning from '@/lib/i18n/locales/fr/scrimPlanning';
 
 export default function PlanningBestSlots({
   topSlots,
@@ -16,7 +17,7 @@ export default function PlanningBestSlots({
   slots: string[];
   formatSlot: (iso: string) => string;
 }) {
-  const t = useT('scrimPlanning');
+  const t = useT(nsScrimPlanning);
   return (
     <div className="mb-4 rounded-xl border border-emerald-500/25 bg-emerald-500/5 px-4 py-3">
       <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-emerald-200">

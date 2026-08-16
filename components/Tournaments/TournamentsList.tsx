@@ -14,8 +14,9 @@ import Paragraph from '@/components/Typography/paragraph';
 import { getGame } from '@/config/games';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
+import nsTournamentsList from '@/lib/i18n/locales/fr/tournamentsList';
 
-type TournamentsDict = ReturnType<typeof useT<'tournamentsList'>>;
+type TournamentsDict = typeof nsTournamentsList.fr;
 
 export type Tournament = {
   id: string;
@@ -43,7 +44,7 @@ function gameLabel(game: string): string {
 }
 
 export default function TournamentsList({ tournaments }: TournamentsListProps) {
-  const t = useT('tournamentsList');
+  const t = useT(nsTournamentsList);
   const now = useMemo(() => new Date(), []);
 
   // Filtres client-side. Initialisés sur « Tous » / « tous les jeux » / recherche
@@ -386,7 +387,7 @@ type TournamentCardProps = {
 };
 
 function TournamentCard({ tournament, status }: TournamentCardProps) {
-  const t = useT('tournamentsList');
+  const t = useT(nsTournamentsList);
   const locale = useLocale();
   const dateLabel = formatTournamentDates(
     tournament.start_date,

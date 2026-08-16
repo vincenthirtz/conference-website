@@ -7,10 +7,8 @@ import { withStaffPage } from '@/utils/staff';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import Breadcrumb from '@/components/admin/Breadcrumb';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
-import {
-  isNonPlayingTeamRole,
-  splitTeamMembers,
-} from '@/utils/teams/roleKind';
+import { isNonPlayingTeamRole, splitTeamMembers } from '@/utils/teams/roleKind';
+import nsAdminTeamDetail from '@/lib/i18n/locales/admin-fr/adminTeamDetail';
 
 type StaffShape = {
   id: string;
@@ -66,7 +64,7 @@ function formatVerifiedDate(d: string | null | undefined): string {
 export const getServerSideProps = withStaffPage('admin');
 
 function AdminTeamDetailPage({ staff }: StaffProps) {
-  const t = useAdminT('adminTeamDetail');
+  const t = useAdminT(nsAdminTeamDetail);
   const router = useRouter();
   const { teamId } = router.query as { teamId?: string };
   const { adminFetchJson } = useAdminFetch();

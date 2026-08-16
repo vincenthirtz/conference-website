@@ -22,6 +22,8 @@ import Modal from '@/components/admin/Modal';
 import ConflictRow from '@/components/admin/tournament/overview/ConflictRow';
 import type { Conflict } from '@/components/admin/tournament/overview/types';
 import { logger } from '@/utils/logger';
+import nsAdminTournamentOverview from '@/lib/i18n/locales/admin-fr/adminTournamentOverview';
+import nsAdminTournamentEmbed from '@/lib/i18n/locales/admin-fr/adminTournamentEmbed';
 
 type TournamentBasics = {
   id: string;
@@ -63,8 +65,8 @@ function TournamentToolsPage({ initialTournament }: Props) {
   const { id } = router.query;
   const tournamentId = Array.isArray(id) ? id[0] : (id ?? '');
 
-  const tov = useAdminT('adminTournamentOverview');
-  const te = useAdminT('adminTournamentEmbed');
+  const tov = useAdminT(nsAdminTournamentOverview);
+  const te = useAdminT(nsAdminTournamentEmbed);
   const { addToast } = useToast();
   const { adminFetchJson } = useAdminFetch();
   const { mutate: mutateIdempotent } = useIdempotentMutation();

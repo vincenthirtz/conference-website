@@ -14,8 +14,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import nsAdminOnboardingQueue from '@/lib/i18n/locales/admin-fr/adminOnboardingQueue';
 
-type Dict = ReturnType<typeof useAdminT<'adminOnboardingQueue'>>;
+type Dict = typeof nsAdminOnboardingQueue.fr;
 
 type TenantRequestStatus =
   | 'pending_email_verification'
@@ -118,7 +119,7 @@ function formatDate(s: string | null): string {
 }
 
 export default function OnboardingQueuePanel() {
-  const t = useAdminT('adminOnboardingQueue');
+  const t = useAdminT(nsAdminOnboardingQueue);
   const { adminFetchJson } = useAdminFetch();
 
   const [items, setItems] = useState<UnifiedItem[]>([]);
@@ -312,7 +313,7 @@ function Stat({
   onClick?: () => void;
   href?: string;
 }) {
-  const t = useAdminT('adminOnboardingQueue');
+  const t = useAdminT(nsAdminOnboardingQueue);
   const accentClass =
     accent === 'amber'
       ? 'border-amber-500/50 bg-amber-900/20 text-amber-200'
@@ -344,7 +345,7 @@ function Stat({
 }
 
 function ItemRow({ item }: { item: UnifiedItem }) {
-  const t = useAdminT('adminOnboardingQueue');
+  const t = useAdminT(nsAdminOnboardingQueue);
   const badge = getStatusBadge(t)[item.status];
   return (
     <div className="rounded-xl border border-neutral-800 bg-neutral-900/40 px-4 py-3">

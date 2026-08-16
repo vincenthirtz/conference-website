@@ -4,6 +4,7 @@ import Modal from '@/components/admin/Modal';
 import type { TeamRole } from '@/utils/teamRoles';
 import { roleRequiresBattleTag } from '@/utils/teams/addMember';
 import type { MemberFormState, SearchResult } from './types';
+import nsAdminTeamsAddMemberModal from '@/lib/i18n/locales/admin-fr/adminTeamsAddMemberModal';
 
 type AddMemberModalProps = {
   open: boolean;
@@ -38,7 +39,7 @@ function AddMemberModalComponent({
   onSelectPlayer,
   onSubmit,
 }: AddMemberModalProps) {
-  const t = useAdminT('adminTeamsAddMemberModal');
+  const t = useAdminT(nsAdminTeamsAddMemberModal);
   // Coach / manager = encadrement : pas forcément de compte Overwatch, donc
   // pas de BattleTag exigé (même règle que l'API, cf. utils/teams/addMember).
   const battleTagRequired = roleRequiresBattleTag(memberForm.role);

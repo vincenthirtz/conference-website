@@ -10,6 +10,7 @@ import type {
   TournamentTeam,
   DragPayload,
 } from './types';
+import nsAdminBracketSeedSlot from '@/lib/i18n/locales/admin-fr/adminBracketSeedSlot';
 
 type SeedSlotProps = {
   match: ScheduleMatch;
@@ -57,7 +58,7 @@ export default function SeedSlot({
   availableTeams,
   onAssignTeam,
 }: SeedSlotProps) {
-  const t = useAdminT('adminBracketSeedSlot');
+  const t = useAdminT(nsAdminBracketSeedSlot);
   const [showPicker, setShowPicker] = useState(false);
   const [pickerSearch, setPickerSearch] = useState('');
   const pickerRef = useRef<HTMLDivElement>(null);

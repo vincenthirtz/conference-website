@@ -58,7 +58,6 @@ function normalizeSortDir(value: string | null | undefined): 'asc' | 'desc' {
   return value === 'asc' ? 'asc' : 'desc';
 }
 
- 
 async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ResponseData>,

@@ -5,6 +5,7 @@
 // sans changement de comportement.
 
 import { useT } from '@/lib/i18n/useT';
+import nsPlayerRequests from '@/lib/i18n/locales/fr/playerRequests';
 
 export function MessageField({
   value,
@@ -17,7 +18,7 @@ export function MessageField({
   label: string;
   placeholder?: string;
 }) {
-  const t = useT('playerRequests');
+  const t = useT(nsPlayerRequests);
   return (
     <div>
       <label className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2">
@@ -58,7 +59,7 @@ export function SubmitButton({
   label: string;
   color?: 'purple' | 'blue';
 }) {
-  const t = useT('playerRequests');
+  const t = useT(nsPlayerRequests);
   const gradient =
     color === 'blue'
       ? 'bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-400 hover:to-cyan-400'

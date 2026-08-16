@@ -13,10 +13,7 @@ import {
   findScrimConflicts,
   type SlotConflict,
 } from '@/utils/teams/scrimConflicts';
-import {
-  emitScrimEvent,
-  statusTransitionEvent,
-} from '@/utils/scrimEvents';
+import { emitScrimEvent, statusTransitionEvent } from '@/utils/scrimEvents';
 import { logger } from '../../../../../utils/logger';
 
 const VALID_STATUSES = [
@@ -139,7 +136,9 @@ async function handlePatch(
 
   if (
     updatePayload.status !== undefined &&
-    !(VALID_STATUSES as readonly string[]).includes(updatePayload.status as string)
+    !(VALID_STATUSES as readonly string[]).includes(
+      updatePayload.status as string
+    )
   ) {
     return res.status(400).json({
       error: `Statut invalide. Valeurs : ${VALID_STATUSES.join(', ')}.`,
@@ -169,12 +168,17 @@ async function handlePatch(
     return res.status(400).json({ error: 'scheduled_date invalide' });
   }
 
-  if (updatePayload.duration_minutes !== undefined && updatePayload.duration_minutes !== null) {
+  if (
+    updatePayload.duration_minutes !== undefined &&
+    updatePayload.duration_minutes !== null
+  ) {
     const dm = Number(updatePayload.duration_minutes);
     if (!Number.isInteger(dm) || dm < 15 || dm > 720) {
       return res
         .status(400)
-        .json({ error: 'duration_minutes doit être un entier entre 15 et 720' });
+        .json({
+          error: 'duration_minutes doit être un entier entre 15 et 720',
+        });
     }
     updatePayload.duration_minutes = dm;
   }
@@ -280,9 +284,7 @@ async function handlePatch(
     });
   }
 
-  return res
-    .status(200)
-    .json({ success: true, scrim: after, conflicts });
+  return res.status(200).json({ success: true, scrim: after, conflicts });
 }
 
 async function handleDelete(
@@ -324,7 +326,11 @@ async function handleDelete(
         entity_type: 'scrim',
         entity_id: id,
         tournament_id: null,
-        payload: { subject: 'delete_scrim', name: before.name, slug: before.slug },
+        payload: {
+          subject: 'delete_scrim',
+          name: before.name,
+          slug: before.slug,
+        },
       });
     } catch (e) {
       logger.error('[admin/scrims/:id] log error:', e);

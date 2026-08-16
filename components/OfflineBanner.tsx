@@ -16,9 +16,10 @@ import { useCallback, useEffect, useState } from 'react';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { countQueuedMutations } from '@/utils/bgSyncQueue';
 import { useT, format } from '@/lib/i18n/useT';
+import nsOfflineBanner from '@/lib/i18n/locales/fr/offlineBanner';
 
 export default function OfflineBanner() {
-  const t = useT('offlineBanner');
+  const t = useT(nsOfflineBanner);
   const online = useOnlineStatus();
   const [queueCount, setQueueCount] = useState(0);
 

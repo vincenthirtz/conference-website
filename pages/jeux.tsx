@@ -3,8 +3,9 @@ import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { listGames } from '@/config/games';
 import type { GameDef, GameSlug, MatchFormat } from '@/config/games';
 import { useT, format } from '@/lib/i18n/useT';
+import nsJeuxPage from '@/lib/i18n/locales/fr/jeuxPage';
 
-type JeuxDict = ReturnType<typeof useT<'jeuxPage'>>;
+type JeuxDict = typeof nsJeuxPage.fr;
 
 const getGameCopy = (
   t: JeuxDict
@@ -39,7 +40,7 @@ function formatLabel(format: MatchFormat): string {
 }
 
 function GameCard({ game }: { game: GameDef }) {
-  const t = useT('jeuxPage');
+  const t = useT(nsJeuxPage);
   const copy = getGameCopy(t)[game.slug] ?? {
     tagline: '',
     pitch: t.fallbackPitch,
@@ -117,7 +118,7 @@ function GameCard({ game }: { game: GameDef }) {
 }
 
 function GamesPage() {
-  const t = useT('jeuxPage');
+  const t = useT(nsJeuxPage);
   const games = listGames();
 
   // Stats calculées dynamiquement depuis le registry : si on ajoute un jeu,

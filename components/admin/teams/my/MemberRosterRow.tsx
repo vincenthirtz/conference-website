@@ -2,6 +2,7 @@ import React from 'react';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import { isNonPlayingTeamRole } from '@/utils/teams/roleKind';
 import type { Member } from './types';
+import nsAdminTeamsMy from '@/lib/i18n/locales/admin-fr/adminTeamsMy';
 
 type MemberRosterRowProps = {
   member: Member;
@@ -48,7 +49,7 @@ function MemberRosterRowInner({
   onSwapWith,
   onTransferCaptain,
 }: MemberRosterRowProps) {
-  const t = useAdminT('adminTeamsMy');
+  const t = useAdminT(nsAdminTeamsMy);
 
   const isCaptain = m.captain || m.is_captain;
   // Encadrement : manager ET coach. Ne pas se limiter à 'manager' — un coach
@@ -122,9 +123,7 @@ function MemberRosterRowInner({
             )}
             {isStaff && (
               <span className="text-[10px] uppercase tracking-wide bg-sky-500/20 text-sky-300 rounded-lg px-2 py-0.5 border border-sky-500/30 font-semibold">
-                {(m.role || '').toLowerCase() === 'coach'
-                  ? t.coach
-                  : t.manager}
+                {(m.role || '').toLowerCase() === 'coach' ? t.coach : t.manager}
               </span>
             )}
             {isSubstitute && (

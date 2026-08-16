@@ -8,6 +8,7 @@ import { useState } from 'react';
 import { useToast } from '@/components/Toast';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useAdminT } from '@/lib/i18n/useAdminT';
+import nsAdminBracketTreeView from '@/lib/i18n/locales/admin-fr/adminBracketTreeView';
 
 type InlineScoreEditorProps = {
   matchId: string;
@@ -28,7 +29,7 @@ export default function InlineScoreEditor({
   onSaved,
   onCancel,
 }: InlineScoreEditorProps) {
-  const t = useAdminT('adminBracketTreeView');
+  const t = useAdminT(nsAdminBracketTreeView);
   const { addToast } = useToast();
   const { mutate } = useIdempotentMutation();
   const [s1, setS1] = useState(String(initialScore1));

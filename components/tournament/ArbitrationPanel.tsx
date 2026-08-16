@@ -20,8 +20,9 @@ import { useEffect, useState } from 'react';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import { useT, format } from '@/lib/i18n/useT';
+import nsTournamentArbitration from '@/lib/i18n/locales/fr/tournamentArbitration';
 
-type ArbitrationDict = ReturnType<typeof useT<'tournamentArbitration'>>;
+type ArbitrationDict = typeof nsTournamentArbitration.fr;
 
 type OpenBreakdown = {
   breached: number;
@@ -69,7 +70,7 @@ function formatDuration(minutes: number | null, t: ArbitrationDict): string {
 }
 
 export default function ArbitrationPanel({ slugOrId }: { slugOrId: string }) {
-  const t = useT('tournamentArbitration');
+  const t = useT(nsTournamentArbitration);
   const [state, setState] = useState<FetchState>({ status: 'loading' });
 
   useEffect(() => {

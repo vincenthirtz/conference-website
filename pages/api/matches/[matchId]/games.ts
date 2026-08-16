@@ -41,7 +41,11 @@ type GameInput = {
 
 type RecomputeMode = 'none' | 'from_games';
 
-async function handler(req: NextApiRequest, res: NextApiResponse, ctx: AuthenticatedStaffContext) {
+async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  ctx: AuthenticatedStaffContext
+) {
   const { matchId } = req.query;
 
   if (!matchId || Array.isArray(matchId)) {
@@ -311,7 +315,11 @@ async function handlePut(
  * DELETE : supprimer toutes les games du match
  * ---------------------------------------------------------*/
 
-async function handleDelete(matchId: string, res: NextApiResponse, ctx: AuthenticatedStaffContext) {
+async function handleDelete(
+  matchId: string,
+  res: NextApiResponse,
+  ctx: AuthenticatedStaffContext
+) {
   const { error } = await supabaseAdmin
     .from('games')
     .delete()

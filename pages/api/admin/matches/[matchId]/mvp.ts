@@ -13,7 +13,11 @@ import { isValidUUID } from '@/utils/apiHelpers';
 import { logger } from '../../../../../utils/logger';
 export default withStaffRoute(handler, 'caster');
 
-async function handler(req: NextApiRequest, res: NextApiResponse, ctx: AuthenticatedStaffContext) {
+async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  ctx: AuthenticatedStaffContext
+) {
   const { matchId } = req.query;
   if (!matchId || Array.isArray(matchId) || !isValidUUID(matchId)) {
     return res.status(400).json({ error: 'Invalid matchId' });
@@ -223,7 +227,11 @@ async function handlePost(
   return res.status(200).json({ poll: result });
 }
 
-async function handleDelete(matchId: string, res: NextApiResponse, ctx: AuthenticatedStaffContext) {
+async function handleDelete(
+  matchId: string,
+  res: NextApiResponse,
+  ctx: AuthenticatedStaffContext
+) {
   const { data, error } = await supabaseAdmin
     .from('match_mvp_polls')
     .update({

@@ -18,6 +18,7 @@ import { useAdminResource } from '@/hooks/useAdminResource';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useUrlFilters } from '@/utils/useUrlFilters';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import nsAdminModerationBlacklist from '@/lib/i18n/locales/admin-fr/adminModerationBlacklist';
 
 type BlacklistEntry = {
   id: string;
@@ -50,7 +51,7 @@ type BlacklistAlert = {
 
 const ALERTS_PAGE_SIZE = 50;
 
-type Dict = ReturnType<typeof useAdminT<'adminModerationBlacklist'>>;
+type Dict = typeof nsAdminModerationBlacklist.fr;
 
 function sourceLabel(source: string, tx: Dict): string {
   const map: Record<AlertSource, string> = {
@@ -79,7 +80,7 @@ function formatDateFr(value: string): string {
 }
 
 export default function BlacklistPanel() {
-  const tx = useAdminT('adminModerationBlacklist');
+  const tx = useAdminT(nsAdminModerationBlacklist);
   const { addToast } = useToast();
   const { confirm, dialog } = useConfirmDialog();
   const { adminFetchJson } = useAdminFetch();

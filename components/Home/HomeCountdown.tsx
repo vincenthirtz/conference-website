@@ -1,6 +1,7 @@
 import { useEffect, useState, type JSX } from 'react';
 import { useT } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
+import nsHomeCountdown from '@/lib/i18n/locales/fr/homeCountdown';
 
 type HomeCountdownProps = {
   /** ISO date string of the target event. If null/empty, the component renders nothing. */
@@ -37,7 +38,7 @@ function CountdownSkeleton({
   targetMs: number;
   label: string;
 }) {
-  const t = useT('homeCountdown');
+  const t = useT(nsHomeCountdown);
   const locale = useLocale();
   return (
     <section
@@ -64,17 +65,17 @@ function CountdownSkeleton({
         >
           {[t.unitDays, t.unitHours, t.unitMinutes, t.unitSeconds].map(
             (cellLabel) => (
-            <div
-              key={cellLabel}
-              className="countdown-cell flex flex-col items-center justify-center rounded-2xl border border-[var(--color-violet)]/25 bg-[var(--bg-elevated)]/60 py-3 sm:py-4"
-            >
-              <span className="text-2xl sm:text-4xl font-extrabold text-white/30 tabular-nums leading-none">
-                ––
-              </span>
-              <span className="mt-1 text-[10px] sm:text-xs uppercase tracking-[0.18em] text-gray-400">
-                {cellLabel}
-              </span>
-            </div>
+              <div
+                key={cellLabel}
+                className="countdown-cell flex flex-col items-center justify-center rounded-2xl border border-[var(--color-violet)]/25 bg-[var(--bg-elevated)]/60 py-3 sm:py-4"
+              >
+                <span className="text-2xl sm:text-4xl font-extrabold text-white/30 tabular-nums leading-none">
+                  ––
+                </span>
+                <span className="mt-1 text-[10px] sm:text-xs uppercase tracking-[0.18em] text-gray-400">
+                  {cellLabel}
+                </span>
+              </div>
             )
           )}
         </div>
@@ -87,7 +88,7 @@ export default function HomeCountdown({
   targetDate,
   label,
 }: HomeCountdownProps): JSX.Element | null {
-  const t = useT('homeCountdown');
+  const t = useT(nsHomeCountdown);
   const locale = useLocale();
   const effectiveLabel = label ?? t.kickoff;
   const targetMs = targetDate ? new Date(targetDate).getTime() : NaN;

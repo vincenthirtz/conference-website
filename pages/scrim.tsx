@@ -11,8 +11,9 @@ import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { useT, format } from '@/lib/i18n/useT';
+import nsScrimLanding from '@/lib/i18n/locales/fr/scrimLanding';
 
-type ScrimDict = ReturnType<typeof useT<'scrimLanding'>>;
+type ScrimDict = typeof nsScrimLanding.fr;
 
 type ScrimTeam = {
   id: string;
@@ -61,7 +62,7 @@ function initials(name: string): string {
 }
 
 function ScrimPage({ teams }: Props) {
-  const t = useT('scrimLanding');
+  const t = useT(nsScrimLanding);
   const steps = getSteps(t);
   const openTeams = teams.filter((team) => team.open_for_scrim === true);
   return (

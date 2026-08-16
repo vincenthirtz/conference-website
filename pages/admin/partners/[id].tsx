@@ -6,6 +6,7 @@ import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import nsAdminPartnerEdit from '@/lib/i18n/locales/admin-fr/adminPartnerEdit';
 
 type Props = {
   staff: {
@@ -27,7 +28,7 @@ type FormData = {
 };
 
 function AdminEditPartnerPage({ staff }: Props) {
-  const t = useAdminT('adminPartnerEdit');
+  const t = useAdminT(nsAdminPartnerEdit);
   const router = useRouter();
   const { addToast } = useToast();
   const { adminFetchJson } = useAdminFetch();

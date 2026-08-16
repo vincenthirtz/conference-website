@@ -195,7 +195,10 @@ export async function runScrimPlanningAutoClose(): Promise<CloseCounters> {
 
     const expiredIds: string[] = [];
     for (const p of plannings ?? []) {
-      const end = addDays(p.horizon_start as string, (p.horizon_days as number) || 0);
+      const end = addDays(
+        p.horizon_start as string,
+        (p.horizon_days as number) || 0
+      );
       if (end <= today) expiredIds.push(p.id as string);
     }
     if (expiredIds.length === 0) continue;

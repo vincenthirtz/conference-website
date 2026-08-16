@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useToast } from '@/components/Toast';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { useT, format } from '@/lib/i18n/useT';
+import nsShareEmbed from '@/lib/i18n/locales/fr/shareEmbed';
 
 type WidgetKey = 'bracket' | 'standings' | 'schedule' | 'ffa';
 
@@ -68,7 +69,7 @@ export default function ShareEmbedPanel({
   variant = 'primary',
   className = '',
 }: ShareEmbedPanelProps) {
-  const t = useT('shareEmbed');
+  const t = useT(nsShareEmbed);
   const { addToast } = useToast();
   const [open, setOpen] = useState(false);
   const [theme, setTheme] = useState<EmbedTheme>('dark');

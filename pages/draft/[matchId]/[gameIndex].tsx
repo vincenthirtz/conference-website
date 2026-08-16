@@ -14,6 +14,7 @@ import { useDraftState } from '@/hooks/useDraftState';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { SpectatorView } from '@/components/draft/SpectatorView';
 import { useT, format } from '@/lib/i18n/useT';
+import nsDraftPage from '@/lib/i18n/locales/fr/draftPage';
 
 type PublicDraftPayload = {
   draft: unknown;
@@ -30,7 +31,7 @@ const PUBLIC_DRAFT_FETCHER = async <T,>(url: string): Promise<T> => {
 
 function PublicDraftPage() {
   const router = useRouter();
-  const t = useT('draftPage');
+  const t = useT(nsDraftPage);
   const matchIdRaw = router.query.matchId;
   const gameIndexRaw = router.query.gameIndex;
   const titleRaw = router.query.title;
@@ -67,7 +68,9 @@ function PublicDraftPage() {
     if (!validIds || titleOverride) return;
     let cancelled = false;
     fetch(endpoint, { headers: { Accept: 'application/json' } })
-      .then((res) => (res.ok ? (res.json() as Promise<PublicDraftPayload>) : null))
+      .then((res) =>
+        res.ok ? (res.json() as Promise<PublicDraftPayload>) : null
+      )
       .then((payload) => {
         if (cancelled || !payload?.teams) return;
         const { team1Name, team2Name } = payload.teams;

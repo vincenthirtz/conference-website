@@ -11,6 +11,7 @@ import {
 import type { StaffLogAction } from '@/types/staffLogs';
 
 import { logger } from '../../../utils/logger';
+import nsAdminLogs from '@/lib/i18n/locales/admin-fr/adminLogs';
 
 /**
  * Shape of a row returned by GET /api/admin/logs. The API selects only these
@@ -96,7 +97,7 @@ function shortId(id: string | null | undefined) {
  */
 export default function StaffLogsPanel() {
   const { adminFetch } = useAdminFetch();
-  const t = useAdminT('adminLogs');
+  const t = useAdminT(nsAdminLogs);
   const { lang } = useLang();
   const dateLocale = DATE_LOCALE[lang];
 

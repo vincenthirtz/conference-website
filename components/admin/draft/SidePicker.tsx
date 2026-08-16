@@ -52,8 +52,7 @@ export function SidePicker({
     setTeam2(side === sideA ? sideB : sideA);
   }
 
-  const dirty =
-    team1 !== currentTeam1Side || team2 !== currentTeam2Side;
+  const dirty = team1 !== currentTeam1Side || team2 !== currentTeam2Side;
   const valid = !!team1 && !!team2 && team1 !== team2;
 
   async function submit() {

@@ -12,6 +12,7 @@ import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 
 import { logger } from '../../utils/logger';
+import nsNewsDetail from '@/lib/i18n/locales/fr/newsDetail';
 const SITE_NAME = "OW Women's Cup";
 
 // Idempotency-Key pour le POST de commentaire (public/anonyme). Stable par
@@ -146,7 +147,7 @@ export default function NewsSlugPage({
   newsId,
   error,
 }: NewsPageProps) {
-  const t = useT('newsDetail');
+  const t = useT(nsNewsDetail);
   const locale = useLocale();
   const displayDate =
     publishedAt || createdAt
@@ -321,7 +322,7 @@ type Comment = {
 };
 
 function Comments({ newsId }: { newsId: string }) {
-  const t = useT('newsDetail');
+  const t = useT(nsNewsDetail);
   const locale = useLocale();
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(false);

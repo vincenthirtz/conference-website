@@ -26,7 +26,14 @@ async function handler(
     res.setHeader('Allow', 'GET');
     return res.status(405).json({ error: 'Method not allowed.' });
   }
-  if (applyRateLimit(req, res, { max: 30, windowMs: 60_000 }, 'admin-webhook-deliveries')) {
+  if (
+    applyRateLimit(
+      req,
+      res,
+      { max: 30, windowMs: 60_000 },
+      'admin-webhook-deliveries'
+    )
+  ) {
     return;
   }
   res.setHeader('Cache-Control', 'no-store');

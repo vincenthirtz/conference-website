@@ -3,6 +3,7 @@ import type { JSX } from 'react';
 import Paragraph from '@/components/Typography/paragraph';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
+import nsHomeEvents from '@/lib/i18n/locales/fr/homeEvents';
 
 export type UpcomingTournament = {
   id: string;
@@ -51,14 +52,10 @@ function formatRange(start: string | null, end: string | null, locale: string) {
 export default function TournamentCard({
   tournament,
 }: TournamentCardProps): JSX.Element {
-  const t = useT('homeEvents');
+  const t = useT(nsHomeEvents);
   const locale = useLocale();
   const isRunning = tournament.status === 'running';
-  const range = formatRange(
-    tournament.startDate,
-    tournament.endDate,
-    locale
-  );
+  const range = formatRange(tournament.startDate, tournament.endDate, locale);
   const slotsLeft =
     tournament.maxTeams != null
       ? Math.max(0, tournament.maxTeams - tournament.teamCount)
@@ -111,7 +108,11 @@ export default function TournamentCard({
                 )}
               </>
             ) : (
-              <>{format(t.teamsRegisteredSimple, { count: tournament.teamCount })}</>
+              <>
+                {format(t.teamsRegisteredSimple, {
+                  count: tournament.teamCount,
+                })}
+              </>
             )}
           </Paragraph>
         </div>

@@ -7,10 +7,7 @@
 //            delete an in_progress draft unless ?force=1 (engine guard).
 
 import type { NextApiRequest, NextApiResponse } from 'next';
-import {
-  withStaffRoute,
-  AuthenticatedStaffContext,
-} from '@/utils/staff';
+import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { isValidUUID } from '@/utils/apiHelpers';
 import {
   getDraftState,
@@ -52,8 +49,7 @@ async function handler(
         return res.status(200).json({ draft: state });
       }
       case 'DELETE': {
-        const force =
-          req.query.force === '1' || req.query.force === 'true';
+        const force = req.query.force === '1' || req.query.force === 'true';
         const result = await deleteDraft({
           matchId,
           gameIndex: gameIndexNum,

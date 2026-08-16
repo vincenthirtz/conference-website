@@ -41,6 +41,8 @@ import {
   fetchDashboardData,
   type DashboardData,
 } from '@/utils/dashboard/buildTournamentDashboard';
+import nsAdminTournamentDashboard from '@/lib/i18n/locales/admin-fr/adminTournamentDashboard';
+import nsAdminTournamentOverview from '@/lib/i18n/locales/admin-fr/adminTournamentOverview';
 
 /* -----------------------------------------------------------
  * Constantes UI
@@ -64,7 +66,7 @@ const STATUS_PILL_STYLE: Record<string, string> = {
   archived: 'bg-neutral-500/20 text-neutral-400 border-neutral-500/30',
 };
 
-type Dict = ReturnType<typeof useAdminT<'adminTournamentDashboard'>>;
+type Dict = typeof nsAdminTournamentDashboard.fr;
 
 function getStatusLabel(tx: Dict): Record<string, string> {
   return {
@@ -79,7 +81,7 @@ function getStatusLabel(tx: Dict): Record<string, string> {
 // Dictionnaire du namespace overview (statut cliquable + gestion d'équipes +
 // création de phase). Les composants TeamRow/AddTeamModal/BulkAddTeamsModal/
 // NewStageModal attendent CE dict, pas celui du dashboard.
-type OverviewDict = ReturnType<typeof useAdminT<'adminTournamentOverview'>>;
+type OverviewDict = typeof nsAdminTournamentOverview.fr;
 
 // Ordre de progression du workflow — sert à détecter une régression de statut
 // (retour en arrière) qui déclenche la confirmation.
@@ -221,10 +223,10 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
   const router = useRouter();
   const { id } = router.query;
   const tournamentId = Array.isArray(id) ? id[0] : id;
-  const tx = useAdminT('adminTournamentDashboard');
+  const tx = useAdminT(nsAdminTournamentDashboard);
   // Dict overview pour les sections restées dans le dashboard (statut cliquable,
   // gestion d'équipes, création de phase + leurs modales/composants).
-  const tov = useAdminT('adminTournamentOverview');
+  const tov = useAdminT(nsAdminTournamentOverview);
   const STATUS_LABEL = getStatusLabel(tx);
   const QUICK_LINKS = getQuickLinks(tx);
   const STAGE_TYPE_OPTIONS = getStageTypeOptions(tov);

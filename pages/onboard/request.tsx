@@ -23,8 +23,9 @@ import {
 import DiscordSignInCta from '@/components/onboard/DiscordSignInCta';
 import { logger } from '@/utils/logger';
 import { useT, format } from '@/lib/i18n/useT';
+import nsOnboardRequest from '@/lib/i18n/locales/fr/onboardRequest';
 
-type OnboardRequestDict = ReturnType<typeof useT<'onboardRequest'>>;
+type OnboardRequestDict = typeof nsOnboardRequest.fr;
 
 type SubmitState =
   | { kind: 'idle' }
@@ -56,7 +57,7 @@ type DiscordLinkState =
   | { kind: 'not-linked' };
 
 function OnboardRequestPage() {
-  const t = useT('onboardRequest');
+  const t = useT(nsOnboardRequest);
   const router = useRouter();
   const { user, loading: authLoading } = useAuthSession();
   const { addToast } = useToast();

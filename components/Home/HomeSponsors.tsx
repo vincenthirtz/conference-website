@@ -4,6 +4,7 @@ import type { JSX } from 'react';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import { useT } from '@/lib/i18n/useT';
+import nsHomeSponsors from '@/lib/i18n/locales/fr/homeSponsors';
 
 export type HomePartner = {
   id: string;
@@ -55,7 +56,7 @@ function PartnerLogo({ partner }: { partner: HomePartner }) {
 export default function HomeSponsors({
   partners,
 }: HomeSponsorsProps): JSX.Element | null {
-  const t = useT('homeSponsors');
+  const t = useT(nsHomeSponsors);
   // De-duplicate by id (defensive: DB or merge could surface dupes)
   const unique = Array.from(new Map(partners.map((p) => [p.id, p])).values());
 

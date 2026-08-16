@@ -20,8 +20,9 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminResource } from '@/hooks/useAdminResource';
 import PartnerFormModal from '@/components/admin/partners/PartnerFormModal';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import nsAdminPartnersList from '@/lib/i18n/locales/admin-fr/adminPartnersList';
 
-type Dict = ReturnType<typeof useAdminT<'adminPartnersList'>>;
+type Dict = typeof nsAdminPartnersList.fr;
 
 type PartnerRow = {
   id: string;
@@ -59,7 +60,7 @@ const categoryColors: Record<string, string> = {
 };
 
 export default function PartnersListPanel() {
-  const tx = useAdminT('adminPartnersList');
+  const tx = useAdminT(nsAdminPartnersList);
   const categoryLabels = getCategoryLabels(tx);
   const router = useRouter();
   const [modalOpen, setModalOpen] = useState(false);

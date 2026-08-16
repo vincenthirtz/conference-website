@@ -15,8 +15,9 @@ import type { League, LeagueStatus } from '@/types/leagues';
 import { readPublicLeagues } from '@/utils/leagues/readPublicLeagues';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { useT } from '@/lib/i18n/useT';
+import nsLeaguesIndex from '@/lib/i18n/locales/fr/leaguesIndex';
 
-type LeaguesIndexDict = ReturnType<typeof useT<'leaguesIndex'>>;
+type LeaguesIndexDict = typeof nsLeaguesIndex.fr;
 
 const getStatusLabels = (
   t: LeaguesIndexDict
@@ -55,7 +56,7 @@ function periodLabel(league: League): string | null {
 export default function LeaguesPage({
   initialLeagues,
 }: InferGetStaticPropsType<typeof getStaticProps>) {
-  const t = useT('leaguesIndex');
+  const t = useT(nsLeaguesIndex);
   const statusLabels = getStatusLabels(t);
   const hasInitial = initialLeagues.length > 0;
   const [leagues, setLeagues] = useState<League[]>(initialLeagues);
@@ -168,7 +169,7 @@ function LoadingState() {
 }
 
 function EmptyState() {
-  const t = useT('leaguesIndex');
+  const t = useT(nsLeaguesIndex);
   return (
     <section className="rounded-2xl border border-neutral-800 bg-neutral-900/40 py-16 text-center">
       <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--color-violet)]/10 text-2xl">
@@ -181,7 +182,7 @@ function EmptyState() {
 }
 
 function ErrorState({ onRetry }: { onRetry: () => void }) {
-  const t = useT('leaguesIndex');
+  const t = useT(nsLeaguesIndex);
   return (
     <section className="py-16 text-center" role="alert">
       <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full border border-red-500/30 bg-red-500/10">

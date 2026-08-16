@@ -6,6 +6,7 @@ import type { SimConfig } from '@/utils/simulatorSerialization';
 import { FORMAT_LABELS } from '@/utils/simulatorSerialization';
 import { FAKE_MAPS } from '@/utils/simulatorFakeData';
 import { SEED_COLORS } from './SimMatchCard';
+import nsAdminTournamentSimulator from '@/lib/i18n/locales/admin-fr/adminTournamentSimulator';
 
 // WebGL backdrop is browser-only and heavy — load it lazily, client-side only.
 const CelebrationCanvas = dynamic(() => import('./CelebrationCanvas'), {
@@ -56,7 +57,7 @@ export default function QuizMode({
   onLaunch,
   onOpenInEditor,
 }: Props) {
-  const tx = useAdminT('adminTournamentSimulator');
+  const tx = useAdminT(nsAdminTournamentSimulator);
   const [stepIdx, setStepIdx] = useState(0);
   const [screen, setScreen] = useState<Screen>({ kind: 'wizard' });
   const rollTimer = useRef<number | null>(null);
@@ -220,10 +221,7 @@ export default function QuizMode({
                   const heights = ['h-20', 'h-28', 'h-14'];
                   const medals = ['🥈', '🥇', '🥉'];
                   return (
-                    <div
-                      key={rank}
-                      className="flex flex-col items-center w-28"
-                    >
+                    <div key={rank} className="flex flex-col items-center w-28">
                       <div className="text-2xl">{medals[rank]}</div>
                       <div className="text-sm font-semibold text-white truncate max-w-[7rem] text-center">
                         {team.name}

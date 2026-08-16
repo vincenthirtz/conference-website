@@ -9,6 +9,7 @@ import Link from 'next/link';
 import { useT } from '@/lib/i18n/useT';
 import { Section, SectionHeader, Reveal } from './primitives';
 import type { LandingTeam } from './types';
+import nsTournamentLanding from '@/lib/i18n/locales/fr/tournamentLanding';
 
 function initials(name: string): string {
   const parts = name.trim().split(/\s+/);
@@ -25,7 +26,7 @@ export default function TeamRoster({
   totalTeams: number;
   tournamentPath: string;
 }) {
-  const t = useT('tournamentLanding');
+  const t = useT(nsTournamentLanding);
   if (totalTeams === 0) return null;
 
   const shown = teams.slice(0, 11);
@@ -42,8 +43,19 @@ export default function TeamRoster({
           <Link href={`${tournamentPath}/teams`}>
             <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-xs font-semibold text-gray-200 transition-colors hover:border-[var(--color-green)]/50 hover:text-white">
               {t.teamsViewAll}
-              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+              <svg
+                className="h-3.5 w-3.5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2.5}
+                  d="M13 7l5 5m0 0l-5 5m5-5H6"
+                />
               </svg>
             </span>
           </Link>

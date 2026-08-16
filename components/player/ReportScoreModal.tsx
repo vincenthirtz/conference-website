@@ -12,7 +12,8 @@ import { useEffect, useState } from 'react';
 import Modal from '@/components/admin/Modal';
 import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
-import { useT, format } from '@/lib/i18n/useT';
+import { format } from '@/lib/i18n/useT';
+import nsPlayerMatches from '@/lib/i18n/locales/fr/playerMatches';
 
 export type ReportOutcome = 'awaiting_opponent' | 'finalized' | 'disputed';
 
@@ -22,7 +23,7 @@ export type LocalReport = {
   opponent: number;
 };
 
-type T = ReturnType<typeof useT<'playerMatches'>>;
+type T = typeof nsPlayerMatches.fr;
 
 type ReportScoreResponse =
   | { status: 'awaiting_opponent'; matchId: string }

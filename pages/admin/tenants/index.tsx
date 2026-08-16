@@ -15,6 +15,7 @@ import TenantFormModal from '@/components/admin/tenants/TenantFormModal';
 import PlanCheckoutModal from '@/components/admin/tenants/PlanCheckoutModal';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { PLAN_LABELS, type TenantPlan } from '@/utils/billing/planFeatures';
+import nsAdminTenantsList from '@/lib/i18n/locales/admin-fr/adminTenantsList';
 
 type TenantRow = {
   id: string;
@@ -94,7 +95,7 @@ function planBadgeClass(status: string | null): string {
 }
 
 function AdminTenantsListPage({ staff }: Props) {
-  const t = useAdminT('adminTenantsList');
+  const t = useAdminT(nsAdminTenantsList);
   const router = useRouter();
   const { adminFetchJson } = useAdminFetch();
   const [pending, setPending] = useState<PendingLink[]>([]);

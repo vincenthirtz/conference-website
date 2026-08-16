@@ -1,33 +1,33 @@
-import fr from './locales/fr.json';
-import { createLocaleHook } from './lazyLocale';
+import { createEnDictHook } from './lazyLocale';
+import type { PublicNs } from './ns';
 
 /**
- * Source de verite des traductions : `lib/i18n/locales/fr.json` et `en.json`,
- * organisees par namespace (un par page/composant). Le francais est la langue
- * de reference ; `en.json` doit avoir exactement les memes cles (garde-fou de
- * parite : cf. `locales/parity.ts`).
+ * Traductions du site PUBLIC.
  *
- * Les valeurs sont des chaines. Pour l'interpolation, on utilise des
- * marqueurs `{nom}` resolus par `format()`. Pour la pluralisation, deux cles
- * `xxx_one` / `xxx_other` selectionnees cote composant.
+ * Source de verite : un fichier par namespace sous `locales/fr/<ns>.ts`, qui se
+ * declare via `ns()` (cf. `ns.ts` pour le pourquoi de ce decoupage). Le
+ * composant importe le namespace dont il a besoin, et lui seul :
  *
- * `en.json` est charge PARESSEUSEMENT (chunk separe, tire seulement quand la
- * langue active passe a 'en') : cf. `lazyLocale.ts` pour le pourquoi et les
- * mesures de bundle.
- */
-const usePublicDict = createLocaleHook<typeof fr>(
-  fr,
-  () => import('./locales/en.json')
-);
-
-/**
- * Renvoie le bloc de traductions d'un namespace pour la langue active.
- *
- *   const t = useT('profileSummary');
+ *   import nsProfileSummary from '@/lib/i18n/locales/fr/profileSummary';
+ *   const t = useT(nsProfileSummary);
  *   <h2>{t.title}</h2>
+ *
+ * `en.json` reste un blob unique, charge paresseusement a la bascule FR→EN
+ * (cf. `lazyLocale.ts`). Il doit avoir exactement les memes cles que le
+ * francais — garde-fou de compilation : `locales/parity.ts`.
+ *
+ * Les valeurs sont des chaines. Pour l'interpolation, on utilise des marqueurs
+ * `{nom}` resolus par `format()`. Pour la pluralisation, deux cles
+ * `xxx_one` / `xxx_other` selectionnees cote composant.
  */
-export function useT<NS extends keyof typeof fr>(ns: NS): (typeof fr)[NS] {
-  return usePublicDict()[ns];
+const useEnDict = createEnDictHook(() => import('./locales/en.json'));
+
+/** Renvoie le bloc de traductions d'un namespace pour la langue active. */
+export function useT<T>(nsDef: PublicNs<string, T>): T {
+  const en = useEnDict();
+  // Fallback FR si l'anglais n'est pas (encore) charge, ou si la cle manque
+  // cote EN : mieux vaut afficher du francais qu'un `undefined`.
+  return ((en?.[nsDef.key] as T | undefined) ?? nsDef.fr) as T;
 }
 
 /**

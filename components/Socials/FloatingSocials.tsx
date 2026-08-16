@@ -11,6 +11,7 @@ import {
   DonationIcon,
 } from '@/components/Icons';
 import { useT } from '@/lib/i18n/useT';
+import nsFloatingSocials from '@/lib/i18n/locales/fr/floatingSocials';
 
 type SocialLink = {
   name: string;
@@ -53,7 +54,7 @@ const SOCIALS: SocialLink[] = [
 ];
 
 function FloatingSocials(): JSX.Element {
-  const t = useT('floatingSocials');
+  const t = useT(nsFloatingSocials);
   return (
     <div className="fixed left-5 top-1/2 -translate-y-1/2 z-40 hidden lg:block">
       <div className="relative">

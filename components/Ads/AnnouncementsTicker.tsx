@@ -6,6 +6,7 @@ import { useRef } from 'react';
 import { useT, format } from '@/lib/i18n/useT';
 
 import { logger } from '../../utils/logger';
+import nsAnnouncementsTicker from '@/lib/i18n/locales/fr/announcementsTicker';
 export type Announcement = {
   id: string;
   title: string;
@@ -25,7 +26,7 @@ type AnnouncementsTickerProps = {
 export default function AnnouncementsTicker({
   initialItems = [],
 }: AnnouncementsTickerProps) {
-  const t = useT('announcementsTicker');
+  const t = useT(nsAnnouncementsTicker);
   const [items, setItems] = useState<Announcement[]>(initialItems);
   const [index, setIndex] = useState(0);
   const [animationReady, setAnimationReady] = useState(false);
@@ -120,7 +121,9 @@ export default function AnnouncementsTicker({
                 type="button"
                 onClick={() => setIndex(i)}
                 className={`h-1 rounded-full transition-all ${
-                  i === index ? 'w-4 bg-[var(--color-violet-light)]' : 'w-2 bg-white/40'
+                  i === index
+                    ? 'w-4 bg-[var(--color-violet-light)]'
+                    : 'w-2 bg-white/40'
                 }`}
                 aria-label={format(t.goToAnnouncement, { n: i + 1 })}
               />

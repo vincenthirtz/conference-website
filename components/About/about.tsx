@@ -5,11 +5,12 @@ import Heading from '../Typography/heading';
 import Paragraph from '../Typography/paragraph';
 import Button from '../Buttons/button';
 import { useT } from '@/lib/i18n/useT';
+import nsAboutPage from '@/lib/i18n/locales/fr/aboutPage';
 
 const DEFAULT_VIDEO_URL = 'https://www.youtube.com/watch?v=3j6w7CjXne8';
 
 function About(): JSX.Element {
-  const t = useT('aboutPage');
+  const t = useT(nsAboutPage);
   const [aboutVideoUrl, setAboutVideoUrl] = useState(DEFAULT_VIDEO_URL);
   const [showMedia, setShowMedia] = useState(false);
   const [mediaLoaded, setMediaLoaded] = useState(false);

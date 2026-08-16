@@ -10,6 +10,7 @@ import { useEffect, useState, type JSX } from 'react';
 import Link from 'next/link';
 import { type Announcement } from '@/components/Ads/AnnouncementsTicker';
 import { useT } from '@/lib/i18n/useT';
+import nsHomeV2 from '@/lib/i18n/locales/fr/homeV2';
 
 type HomeTopAnnounceProps = {
   announcement: Announcement | null;
@@ -20,7 +21,7 @@ const DISMISS_KEY = 'homeV2-topannounce-dismissed';
 export default function HomeTopAnnounce({
   announcement,
 }: HomeTopAnnounceProps): JSX.Element | null {
-  const t = useT('homeV2');
+  const t = useT(nsHomeV2);
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {

@@ -5,13 +5,14 @@
 // dans ScrimPlanningPanel. Extrait sans changement de comportement.
 
 import { useT, format } from '@/lib/i18n/useT';
+import nsScrimPlanning from '@/lib/i18n/locales/fr/scrimPlanning';
 
 export default function PlanningDeadline({
   daysUntilStart,
 }: {
   daysUntilStart: number;
 }) {
-  const t = useT('scrimPlanning');
+  const t = useT(nsScrimPlanning);
   return (
     <div
       className={`mb-4 flex items-center gap-2 rounded-xl border px-4 py-2.5 text-xs ${

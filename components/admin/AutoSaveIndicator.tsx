@@ -2,6 +2,7 @@
 // Small indicator showing last auto-save timestamp.
 
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import nsAdminAutoSaveIndicator from '@/lib/i18n/locales/admin-fr/adminAutoSaveIndicator';
 
 function formatTime(iso: string | null) {
   if (!iso) return null;
@@ -21,7 +22,7 @@ export default function AutoSaveIndicator({
 }: {
   lastSaved: string | null;
 }) {
-  const t = useAdminT('adminAutoSaveIndicator');
+  const t = useAdminT(nsAdminAutoSaveIndicator);
   const time = formatTime(lastSaved);
   if (!time) return null;
 

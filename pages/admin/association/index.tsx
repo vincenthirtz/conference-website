@@ -10,6 +10,7 @@ import CastMembersListPanel from '@/components/admin/association/CastMembersList
 import PoleMembersListPanel from '@/components/admin/association/PoleMembersListPanel';
 import AdherentsListPanel from '@/components/admin/association/AdherentsListPanel';
 import type { StaffProps } from '@/types/admin';
+import nsAdminAssociationHub from '@/lib/i18n/locales/admin-fr/adminAssociationHub';
 
 const ID_BASE = 'admin-association';
 
@@ -28,7 +29,7 @@ export const getServerSideProps = withStaffPage('admin');
  * standalone routes. All three tabs are admin-gated.
  */
 export default function AdminAssociationPage(_props: StaffProps) {
-  const t = useAdminT('adminAssociationHub');
+  const t = useAdminT(nsAdminAssociationHub);
 
   const tabs = [
     { id: 'cast', label: t.tabCast },

@@ -15,8 +15,9 @@ import Modal from '@/components/admin/Modal';
 import TournamentTabsNav from '@/components/admin/tournament/TournamentTabsNav';
 import { getGame, type GameDef } from '@/config/games';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import nsAdminTournamentMaps from '@/lib/i18n/locales/admin-fr/adminTournamentMaps';
 
-type Dict = ReturnType<typeof useAdminT<'adminTournamentMaps'>>;
+type Dict = typeof nsAdminTournamentMaps.fr;
 
 type StaffShape = {
   id: string;
@@ -74,7 +75,7 @@ function typeLabel(t: Dict, type: string | null | undefined) {
 export const getServerSideProps = withStaffPage('admin');
 
 function AdminTournamentMapsPage(_: StaffProps) {
-  const t = useAdminT('adminTournamentMaps');
+  const t = useAdminT(nsAdminTournamentMaps);
   const router = useRouter();
   const { id } = router.query;
   const tournamentId = Array.isArray(id) ? id[0] : id;

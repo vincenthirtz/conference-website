@@ -11,8 +11,9 @@
 import type { DraftState, GameHero, MatchDraftStep } from '@/types/draft';
 import { DraftTimer } from '@/components/admin/draft/DraftTimer';
 import { useT, format } from '@/lib/i18n/useT';
+import nsDraftSpectator from '@/lib/i18n/locales/fr/draftSpectator';
 
-type DraftSpectatorDict = ReturnType<typeof useT<'draftSpectator'>>;
+type DraftSpectatorDict = typeof nsDraftSpectator.fr;
 
 type Props = {
   state: DraftState | null;
@@ -34,10 +35,7 @@ const getSideLabel = (t: DraftSpectatorDict): Record<string, string> => ({
   dire: t.sideDire,
 });
 
-function heroFor(
-  step: MatchDraftStep,
-  state: DraftState
-): GameHero | null {
+function heroFor(step: MatchDraftStep, state: DraftState): GameHero | null {
   if (!step.hero_id) return null;
   return (
     state.team1Picks.find((h) => h.id === step.hero_id) ??
@@ -58,7 +56,7 @@ function PickSlot({
   isCurrent: boolean;
   side: 'left' | 'right';
 }) {
-  const t = useT('draftSpectator');
+  const t = useT(nsDraftSpectator);
   return (
     <div
       className={`relative h-24 overflow-hidden rounded-xl border ${
@@ -97,9 +95,7 @@ function PickSlot({
             {hero?.name ?? '—'}
           </div>
           {hero?.title ? (
-            <div className="text-xs italic text-neutral-300">
-              {hero.title}
-            </div>
+            <div className="text-xs italic text-neutral-300">{hero.title}</div>
           ) : null}
         </div>
       </div>
@@ -116,7 +112,7 @@ function BanSlot({
   hero: GameHero | null;
   isCurrent: boolean;
 }) {
-  const t = useT('draftSpectator');
+  const t = useT(nsDraftSpectator);
   return (
     <div
       className={`relative h-12 w-12 overflow-hidden rounded border ${
@@ -159,11 +155,13 @@ function TeamColumn({
   team: 'team1' | 'team2';
   side: 'left' | 'right';
 }) {
-  const t = useT('draftSpectator');
+  const t = useT(nsDraftSpectator);
   const SIDE_LABEL = getSideLabel(t);
   const sideKey =
     team === 'team1' ? state.draft.team1_side : state.draft.team2_side;
-  const gradient = sideKey ? SIDE_COLOR[sideKey] : 'from-neutral-800/60 via-transparent to-transparent';
+  const gradient = sideKey
+    ? SIDE_COLOR[sideKey]
+    : 'from-neutral-800/60 via-transparent to-transparent';
   const label = sideKey ? SIDE_LABEL[sideKey] : team.toUpperCase();
   const picks = state.steps.filter(
     (s) => s.action === 'pick' && s.side === team
@@ -197,7 +195,7 @@ function TeamColumn({
 }
 
 function BansRow({ state }: { state: DraftState }) {
-  const t = useT('draftSpectator');
+  const t = useT(nsDraftSpectator);
   const bans = state.steps.filter((s) => s.action === 'ban');
   const currentStepNumber = state.draft.current_step + 1;
   return (
@@ -238,7 +236,7 @@ function StatusBadge({ state }: { state: DraftState }) {
 }
 
 export function SpectatorView({ state, title }: Props) {
-  const t = useT('draftSpectator');
+  const t = useT(nsDraftSpectator);
   if (!state) {
     return (
       <div className="flex h-screen items-center justify-center bg-neutral-950 text-neutral-500">
@@ -282,12 +280,19 @@ export function SpectatorView({ state, title }: Props) {
                 {t.step}
               </div>
               <div className="text-3xl font-bold text-white">
-                {Math.min(state.draft.current_step + 1, state.flow.steps.length)}
-                <span className="text-neutral-500"> / {state.flow.steps.length}</span>
+                {Math.min(
+                  state.draft.current_step + 1,
+                  state.flow.steps.length
+                )}
+                <span className="text-neutral-500">
+                  {' '}
+                  / {state.flow.steps.length}
+                </span>
               </div>
               {currentStep ? (
                 <div className="mt-1 text-xs text-neutral-400">
-                  {currentStep.action.toUpperCase()} · {currentStep.phase.replace('_', ' ')}
+                  {currentStep.action.toUpperCase()} ·{' '}
+                  {currentStep.phase.replace('_', ' ')}
                 </div>
               ) : null}
             </div>

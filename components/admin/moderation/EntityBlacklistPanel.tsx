@@ -24,6 +24,7 @@ import { useAdminResource } from '@/hooks/useAdminResource';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useUrlFilters } from '@/utils/useUrlFilters';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import nsAdminModerationEntityBlacklist from '@/lib/i18n/locales/admin-fr/adminModerationEntityBlacklist';
 
 type EntityType = 'team' | 'org';
 
@@ -62,7 +63,7 @@ function formatDateFr(value: string): string {
 }
 
 export default function EntityBlacklistPanel() {
-  const tx = useAdminT('adminModerationEntityBlacklist');
+  const tx = useAdminT(nsAdminModerationEntityBlacklist);
   const { addToast } = useToast();
   const { confirm, dialog } = useConfirmDialog();
   const { adminFetchJson } = useAdminFetch();

@@ -23,6 +23,7 @@ import { logCasterAction } from '@/utils/caster/auditClient';
 
 import { inputClass, labelClass } from './fieldClasses';
 import { useObs } from './useObs';
+import nsAdminCasterScenes from '@/lib/i18n/locales/admin-fr/adminCasterScenes';
 
 /** hh:mm:ss depuis un epoch de départ (durée stream/record). */
 function formatElapsed(startedAt: number, now: number): string {
@@ -40,7 +41,7 @@ const smallBtnClass =
   'px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-xs font-medium disabled:opacity-50';
 
 export default function ObsPanel() {
-  const t = useAdminT('adminCasterScenes');
+  const t = useAdminT(nsAdminCasterScenes);
   const { addToast } = useToast();
   const { confirm, dialog } = useConfirmDialog();
 

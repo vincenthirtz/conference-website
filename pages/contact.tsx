@@ -3,6 +3,7 @@ import Contact from '@/components/Form/Contact';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { useSiteSetting } from '@/hooks/useSiteSettings';
 import { useT } from '@/lib/i18n/useT';
+import nsContactPage from '@/lib/i18n/locales/fr/contactPage';
 
 type ContactChannel = {
   title: string;
@@ -15,7 +16,7 @@ type ContactChannel = {
 
 function getContactChannels(
   contactEmail: string,
-  t: ReturnType<typeof useT<'contactPage'>>
+  t: typeof nsContactPage.fr
 ): ContactChannel[] {
   return [
     {
@@ -57,7 +58,7 @@ function getContactChannels(
 }
 
 function ContactPage() {
-  const t = useT('contactPage');
+  const t = useT(nsContactPage);
   const { value: contactEmail } = useSiteSetting('contact_email');
   const contactChannels = getContactChannels(contactEmail, t);
   const helpPoints = [t.helpPoint1, t.helpPoint2, t.helpPoint3];

@@ -16,6 +16,7 @@ import type {
   LandingLeague,
   TournamentPhase,
 } from './types';
+import nsTournamentLanding from '@/lib/i18n/locales/fr/tournamentLanding';
 
 export default function TournamentHero({
   tournament,
@@ -34,7 +35,7 @@ export default function TournamentHero({
   leagues: LandingLeague[];
   registrationOpen: boolean;
 }) {
-  const t = useT('tournamentLanding');
+  const t = useT(nsTournamentLanding);
   const { lang } = useLang();
 
   const dateRangeLabel = formatDateRange(
@@ -50,10 +51,10 @@ export default function TournamentHero({
       ? null
       : placesRemaining <= 0
         ? t.placesFull
-        : (placesRemaining > 1 ? t.placesRemaining_other : t.placesRemaining_one).replace(
-            '{count}',
-            String(placesRemaining)
-          );
+        : (placesRemaining > 1
+            ? t.placesRemaining_other
+            : t.placesRemaining_one
+          ).replace('{count}', String(placesRemaining));
 
   return (
     <header className="relative overflow-hidden">
@@ -201,7 +202,7 @@ export default function TournamentHero({
                 <p className="mt-6 flex items-center gap-2 text-xs text-gray-400">
                   <span className="h-1 w-1 rounded-full bg-[var(--color-green)]" />
                   {totalTeams > 0
-                    ? (t.teamsMore.replace('{count}', String(totalTeams)))
+                    ? t.teamsMore.replace('{count}', String(totalTeams))
                     : t.scrollHint}
                 </p>
               )}

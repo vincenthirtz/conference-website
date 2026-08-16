@@ -30,6 +30,7 @@ import type {
   BracketRound,
   MatchDay,
 } from '@/components/admin/bracket';
+import nsAdminTournamentBracketBuilder from '@/lib/i18n/locales/admin-fr/adminTournamentBracketBuilder';
 
 type ViewMode = 'planning' | 'list' | 'bracket';
 
@@ -45,7 +46,7 @@ type ApiResponse = {
 export default function BracketBuilderPanel() {
   const router = useRouter();
   const { id } = router.query;
-  const t = useAdminT('adminTournamentBracketBuilder');
+  const t = useAdminT(nsAdminTournamentBracketBuilder);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);

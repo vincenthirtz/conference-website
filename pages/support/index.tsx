@@ -5,8 +5,9 @@
 import { useState } from 'react';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { useT } from '@/lib/i18n/useT';
+import nsSupportPage from '@/lib/i18n/locales/fr/supportPage';
 
-type SupportDict = ReturnType<typeof useT<'supportPage'>>;
+type SupportDict = typeof nsSupportPage.fr;
 
 type Category = 'dispute' | 'behavior' | 'technical' | 'other';
 type Severity = 'low' | 'medium' | 'high';
@@ -74,7 +75,7 @@ const getSeverityOptions = (
 ];
 
 export default function SupportPage() {
-  const t = useT('supportPage');
+  const t = useT(nsSupportPage);
   const categoryOptions = getCategoryOptions(t);
   const severityOptions = getSeverityOptions(t);
   const reportedTypeOptions = getReportedTypeOptions(t);

@@ -22,6 +22,7 @@ import type {
   StageSummary,
   TournamentMini,
 } from '@/types/admin';
+import nsAdminTournamentStagesList from '@/lib/i18n/locales/admin-fr/adminTournamentStagesList';
 
 type MatchesApiResponse = {
   tournament: TournamentMini | null;
@@ -30,7 +31,7 @@ type MatchesApiResponse = {
 
 export const getServerSideProps = withStaffPage('admin');
 
-type Dict = ReturnType<typeof useAdminT<'adminTournamentStagesList'>>;
+type Dict = typeof nsAdminTournamentStagesList.fr;
 
 function typeLabel(t: Dict, type: StageType | null) {
   switch (type) {
@@ -55,7 +56,7 @@ function StagesPage(_: StaffProps) {
   const tournamentId = Array.isArray(id) ? id[0] : id;
   const { mutate: mutateIdempotent } = useIdempotentMutation();
   const { adminFetch, adminFetchJson } = useAdminFetch();
-  const t = useAdminT('adminTournamentStagesList');
+  const t = useAdminT(nsAdminTournamentStagesList);
 
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);

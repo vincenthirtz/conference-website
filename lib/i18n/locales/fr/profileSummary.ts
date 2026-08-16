@@ -1,0 +1,17 @@
+// lib/i18n/locales/fr/profileSummary.ts
+//
+// Traductions FRANCAISES du namespace `profileSummary` — SOURCE DE VERITE.
+// Le pendant anglais vit dans `../en.json` (blob charge paresseusement).
+// Toute cle ajoutee ici doit l'etre aussi cote anglais : le garde-fou de
+// compilation `../parity.ts` casse le typecheck sinon.
+
+import { ns } from '../../ns';
+
+export default ns('profileSummary', {
+  title: 'Mon profil',
+  manage: 'Gérer mon profil',
+  email: 'Email',
+  displayName: 'Nom affiché',
+  role: 'Rôle',
+  battleTag: 'BattleTag',
+});

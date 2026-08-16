@@ -23,8 +23,9 @@ import type {
   StageMini,
   TeamMini,
 } from '@/types/admin';
+import nsAdminMatchEdit from '@/lib/i18n/locales/admin-fr/adminMatchEdit';
 
-type Dict = ReturnType<typeof useAdminT<'adminMatchEdit'>>;
+type Dict = typeof nsAdminMatchEdit.fr;
 
 const STATUS_ORDER: Record<string, number> = {
   pending: 0,
@@ -126,7 +127,7 @@ function statusColor(status: MatchStatus) {
 }
 
 function AdminMatchEditPage({ staff }: StaffProps) {
-  const t = useAdminT('adminMatchEdit');
+  const t = useAdminT(nsAdminMatchEdit);
   const router = useRouter();
   const { matchId } = router.query;
   const { addToast } = useToast();
@@ -850,7 +851,9 @@ function AdminMatchEditPage({ staff }: StaffProps) {
                           </div>
                           <div>
                             <label className="block text-xs text-neutral-400 mb-1">
-                              {team1?.short_name || team1?.name || t.teamShort1Fallback}
+                              {team1?.short_name ||
+                                team1?.name ||
+                                t.teamShort1Fallback}
                             </label>
                             <input
                               type="number"
@@ -869,7 +872,9 @@ function AdminMatchEditPage({ staff }: StaffProps) {
                           </div>
                           <div>
                             <label className="block text-xs text-neutral-400 mb-1">
-                              {team2?.short_name || team2?.name || t.teamShort2Fallback}
+                              {team2?.short_name ||
+                                team2?.name ||
+                                t.teamShort2Fallback}
                             </label>
                             <input
                               type="number"
@@ -1183,7 +1188,7 @@ function TeamSummaryCard({
   score,
   isWinner,
 }: TeamSummaryProps) {
-  const t = useAdminT('adminMatchEdit');
+  const t = useAdminT(nsAdminMatchEdit);
   const displayName = team?.name || teamId || t.tbd;
 
   return (
@@ -1253,7 +1258,7 @@ type MvpPollData = {
 };
 
 function MvpSection({ matchId }: { matchId: string }) {
-  const t = useAdminT('adminMatchEdit');
+  const t = useAdminT(nsAdminMatchEdit);
   const { adminFetchJson } = useAdminFetch();
   const { confirm, dialog } = useConfirmDialog();
   const [data, setData] = useState<MvpPollData | null>(null);
@@ -1335,111 +1340,111 @@ function MvpSection({ matchId }: { matchId: string }) {
   return (
     <>
       {dialog}
-    <section className="bg-neutral-800 border border-neutral-700 rounded-xl p-5">
-      <h2 className="text-lg font-semibold mb-3">{t.mvpHeading}</h2>
+      <section className="bg-neutral-800 border border-neutral-700 rounded-xl p-5">
+        <h2 className="text-lg font-semibold mb-3">{t.mvpHeading}</h2>
 
-      {loading ? (
-        <div className="text-sm text-neutral-400">{t.mvpLoading}</div>
-      ) : (
-        <div className="space-y-3">
-          <div className="text-xs text-neutral-400">
-            {poll?.posted_at ? (
-              <>
-                {t.mvpPollPostedPrefix}{' '}
-                <span className="text-neutral-200">
-                  {new Date(poll.posted_at).toLocaleString('fr-FR', {
-                    day: '2-digit',
-                    month: 'short',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    timeZone: 'Europe/Paris',
-                  })}
-                </span>{' '}
-                {format(t.mvpPollDuration, { hours: poll.duration_hours })}
-              </>
-            ) : (
-              <span>
-                {t.mvpNoPollPrefix} <code>mvp_polls</code> {t.mvpNoPollSuffix}
-              </span>
-            )}
-          </div>
+        {loading ? (
+          <div className="text-sm text-neutral-400">{t.mvpLoading}</div>
+        ) : (
+          <div className="space-y-3">
+            <div className="text-xs text-neutral-400">
+              {poll?.posted_at ? (
+                <>
+                  {t.mvpPollPostedPrefix}{' '}
+                  <span className="text-neutral-200">
+                    {new Date(poll.posted_at).toLocaleString('fr-FR', {
+                      day: '2-digit',
+                      month: 'short',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      timeZone: 'Europe/Paris',
+                    })}
+                  </span>{' '}
+                  {format(t.mvpPollDuration, { hours: poll.duration_hours })}
+                </>
+              ) : (
+                <span>
+                  {t.mvpNoPollPrefix} <code>mvp_polls</code> {t.mvpNoPollSuffix}
+                </span>
+              )}
+            </div>
 
-          {poll?.winner_member_id && winnerMember ? (
-            <div className="rounded-xl bg-amber-900/30 border border-amber-500/40 p-3 flex items-center gap-3">
-              <span className="text-2xl">🏅</span>
-              <div className="flex-1 min-w-0">
-                <div className="text-xs text-amber-300 uppercase tracking-wide">
-                  {t.mvpRegistered}
+            {poll?.winner_member_id && winnerMember ? (
+              <div className="rounded-xl bg-amber-900/30 border border-amber-500/40 p-3 flex items-center gap-3">
+                <span className="text-2xl">🏅</span>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs text-amber-300 uppercase tracking-wide">
+                    {t.mvpRegistered}
+                  </div>
+                  <div className="text-sm font-semibold text-white">
+                    {winnerMember.battleTag || '—'}
+                  </div>
+                  <div className="text-xs text-amber-200/70">
+                    {winnerMember.teamName || ''}{' '}
+                    {poll.winner_imported_at && (
+                      <>
+                        {t.mvpImportedPrefix}{' '}
+                        {new Date(poll.winner_imported_at).toLocaleString(
+                          'fr-FR',
+                          { day: '2-digit', month: 'short' }
+                        )}
+                      </>
+                    )}
+                  </div>
                 </div>
-                <div className="text-sm font-semibold text-white">
-                  {winnerMember.battleTag || '—'}
-                </div>
-                <div className="text-xs text-amber-200/70">
-                  {winnerMember.teamName || ''}{' '}
-                  {poll.winner_imported_at && (
-                    <>
-                      {t.mvpImportedPrefix}{' '}
-                      {new Date(poll.winner_imported_at).toLocaleString(
-                        'fr-FR',
-                        { day: '2-digit', month: 'short' }
-                      )}
-                    </>
-                  )}
-                </div>
+                <button
+                  type="button"
+                  onClick={clear}
+                  disabled={saving}
+                  className="px-3 py-1.5 rounded-lg text-xs bg-neutral-700 hover:bg-neutral-600 transition-colors disabled:opacity-50"
+                >
+                  {t.clearBtn}
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={clear}
-                disabled={saving}
-                className="px-3 py-1.5 rounded-lg text-xs bg-neutral-700 hover:bg-neutral-600 transition-colors disabled:opacity-50"
+            ) : null}
+
+            <div>
+              <label className="block text-xs text-neutral-400 mb-1">
+                {t.mvpSelectLabel}
+              </label>
+              <select
+                value={selected}
+                onChange={(e) => setSelected(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm"
               >
-                {t.clearBtn}
-              </button>
+                <option value="">{t.mvpSelectPlaceholder}</option>
+                {Object.entries(grouped).map(([teamName, members]) => (
+                  <optgroup key={teamName} label={teamName}>
+                    {members.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.battleTag ||
+                          format(t.mvpMemberFallback, { id: m.id.slice(0, 6) })}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
             </div>
-          ) : null}
 
-          <div>
-            <label className="block text-xs text-neutral-400 mb-1">
-              {t.mvpSelectLabel}
-            </label>
-            <select
-              value={selected}
-              onChange={(e) => setSelected(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm"
+            {err && (
+              <div className="text-xs rounded-lg bg-red-900/40 border border-red-500/50 px-3 py-2">
+                {err}
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={save}
+              disabled={
+                saving || !selected || selected === poll?.winner_member_id
+              }
+              className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-sm font-medium transition-colors disabled:opacity-50"
             >
-              <option value="">{t.mvpSelectPlaceholder}</option>
-              {Object.entries(grouped).map(([teamName, members]) => (
-                <optgroup key={teamName} label={teamName}>
-                  {members.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.battleTag ||
-                        format(t.mvpMemberFallback, { id: m.id.slice(0, 6) })}
-                    </option>
-                  ))}
-                </optgroup>
-              ))}
-            </select>
+              {saving ? t.mvpSaving : t.mvpSave}
+            </button>
           </div>
-
-          {err && (
-            <div className="text-xs rounded-lg bg-red-900/40 border border-red-500/50 px-3 py-2">
-              {err}
-            </div>
-          )}
-
-          <button
-            type="button"
-            onClick={save}
-            disabled={
-              saving || !selected || selected === poll?.winner_member_id
-            }
-            className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-sm font-medium transition-colors disabled:opacity-50"
-          >
-            {saving ? t.mvpSaving : t.mvpSave}
-          </button>
-        </div>
-      )}
-    </section>
+        )}
+      </section>
     </>
   );
 }

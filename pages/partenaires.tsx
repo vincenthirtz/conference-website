@@ -3,8 +3,9 @@ import type { GetStaticProps } from 'next';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { supabaseAdmin } from '@/utils/supabase';
 import { useT, format } from '@/lib/i18n/useT';
+import nsPartenairesPage from '@/lib/i18n/locales/fr/partenairesPage';
 
-type PartnersDict = ReturnType<typeof useT<'partenairesPage'>>;
+type PartnersDict = typeof nsPartenairesPage.fr;
 
 type Partner = {
   id: string;
@@ -112,7 +113,7 @@ function groupPartnersByCategory(
 }
 
 function PartnersPage({ partners }: PartnersPageProps) {
-  const t = useT('partenairesPage');
+  const t = useT(nsPartenairesPage);
   const highlights = getHighlights(t);
   const partnerCategories = groupPartnersByCategory(partners, t);
 

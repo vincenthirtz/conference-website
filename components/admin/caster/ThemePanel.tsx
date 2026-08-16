@@ -24,6 +24,7 @@ import { normalizeThemeData } from '@/utils/caster/theme';
 import type { CasterTheme, CasterThemeColors } from '@/types/casterTheme';
 
 import { inputClass, labelClass } from './fieldClasses';
+import nsAdminCasterScenes from '@/lib/i18n/locales/admin-fr/adminCasterScenes';
 
 /** Débounce d'écriture des couleurs : un color picker émet en continu. */
 const SAVE_DEBOUNCE_MS = 600;
@@ -48,7 +49,7 @@ const COLOR_KEYS: Array<keyof CasterThemeColors> = [
 ];
 
 export default function ThemePanel({ themes, activeId, reload }: Props) {
-  const t = useAdminT('adminCasterScenes');
+  const t = useAdminT(nsAdminCasterScenes);
   const { addToast } = useToast();
   const { confirm, dialog } = useConfirmDialog();
 

@@ -21,6 +21,7 @@ import type {
   TournamentAnalyticsMap,
   TournamentAnalyticsTeam,
 } from '@/utils/analytics/tournamentAnalytics';
+import nsAdminTournamentAnalytics from '@/lib/i18n/locales/admin-fr/adminTournamentAnalytics';
 
 type AnalyticsResponse = {
   tournament: { id: string; name: string; slug: string | null };
@@ -41,7 +42,7 @@ export default function StatsAnalyticsPanel() {
   const router = useRouter();
   const { adminFetchJson } = useAdminFetch();
   const { id } = router.query;
-  const t = useAdminT('adminTournamentAnalytics');
+  const t = useAdminT(nsAdminTournamentAnalytics);
 
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -252,7 +253,7 @@ function TableShell({
 }
 
 function TeamsTable({ teams }: { teams: TournamentAnalyticsTeam[] }) {
-  const t = useAdminT('adminTournamentAnalytics');
+  const t = useAdminT(nsAdminTournamentAnalytics);
   return (
     <TableShell
       title={t.teamsTitle}
@@ -263,13 +264,27 @@ function TeamsTable({ teams }: { teams: TournamentAnalyticsTeam[] }) {
       <table className="w-full text-sm">
         <thead className="bg-neutral-750 text-neutral-300">
           <tr>
-            <th scope="col" className="px-4 py-2 text-left">#</th>
-            <th scope="col" className="px-4 py-2 text-left">{t.colTeam}</th>
-            <th scope="col" className="px-4 py-2 text-center">{t.colPlayed}</th>
-            <th scope="col" className="px-4 py-2 text-center">{t.colWins}</th>
-            <th scope="col" className="px-4 py-2 text-center">{t.colLosses}</th>
-            <th scope="col" className="px-4 py-2 text-center">{t.colWinrate}</th>
-            <th scope="col" className="px-4 py-2 text-center">{t.colMaps}</th>
+            <th scope="col" className="px-4 py-2 text-left">
+              #
+            </th>
+            <th scope="col" className="px-4 py-2 text-left">
+              {t.colTeam}
+            </th>
+            <th scope="col" className="px-4 py-2 text-center">
+              {t.colPlayed}
+            </th>
+            <th scope="col" className="px-4 py-2 text-center">
+              {t.colWins}
+            </th>
+            <th scope="col" className="px-4 py-2 text-center">
+              {t.colLosses}
+            </th>
+            <th scope="col" className="px-4 py-2 text-center">
+              {t.colWinrate}
+            </th>
+            <th scope="col" className="px-4 py-2 text-center">
+              {t.colMaps}
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -317,7 +332,7 @@ function TeamsTable({ teams }: { teams: TournamentAnalyticsTeam[] }) {
 }
 
 function MapsTable({ maps }: { maps: TournamentAnalyticsMap[] }) {
-  const t = useAdminT('adminTournamentAnalytics');
+  const t = useAdminT(nsAdminTournamentAnalytics);
   return (
     <TableShell
       title={t.mapsTitle}
@@ -328,12 +343,24 @@ function MapsTable({ maps }: { maps: TournamentAnalyticsMap[] }) {
       <table className="w-full text-sm">
         <thead className="bg-neutral-750 text-neutral-300">
           <tr>
-            <th scope="col" className="px-4 py-2 text-left">{t.colMap}</th>
-            <th scope="col" className="px-4 py-2 text-center">{t.colPicks}</th>
-            <th scope="col" className="px-4 py-2 text-center">{t.colBans}</th>
-            <th scope="col" className="px-4 py-2 text-center">{t.colGames}</th>
-            <th scope="col" className="px-4 py-2 text-center">{t.colAvgDuration}</th>
-            <th scope="col" className="px-4 py-2 text-center">{t.colOvertime}</th>
+            <th scope="col" className="px-4 py-2 text-left">
+              {t.colMap}
+            </th>
+            <th scope="col" className="px-4 py-2 text-center">
+              {t.colPicks}
+            </th>
+            <th scope="col" className="px-4 py-2 text-center">
+              {t.colBans}
+            </th>
+            <th scope="col" className="px-4 py-2 text-center">
+              {t.colGames}
+            </th>
+            <th scope="col" className="px-4 py-2 text-center">
+              {t.colAvgDuration}
+            </th>
+            <th scope="col" className="px-4 py-2 text-center">
+              {t.colOvertime}
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -368,7 +395,7 @@ function MapsTable({ maps }: { maps: TournamentAnalyticsMap[] }) {
 }
 
 function HeroesTable({ heroes }: { heroes: TournamentAnalyticsHero[] }) {
-  const t = useAdminT('adminTournamentAnalytics');
+  const t = useAdminT(nsAdminTournamentAnalytics);
   return (
     <TableShell
       title={t.heroesTitle}
@@ -379,12 +406,24 @@ function HeroesTable({ heroes }: { heroes: TournamentAnalyticsHero[] }) {
       <table className="w-full text-sm">
         <thead className="bg-neutral-750 text-neutral-300">
           <tr>
-            <th scope="col" className="px-4 py-2 text-left">{t.colHero}</th>
-            <th scope="col" className="px-4 py-2 text-center">{t.colPicks}</th>
-            <th scope="col" className="px-4 py-2 text-center">{t.colBans}</th>
-            <th scope="col" className="px-4 py-2 text-center">{t.colWins}</th>
-            <th scope="col" className="px-4 py-2 text-center">{t.colLosses}</th>
-            <th scope="col" className="px-4 py-2 text-center">{t.colWinrate}</th>
+            <th scope="col" className="px-4 py-2 text-left">
+              {t.colHero}
+            </th>
+            <th scope="col" className="px-4 py-2 text-center">
+              {t.colPicks}
+            </th>
+            <th scope="col" className="px-4 py-2 text-center">
+              {t.colBans}
+            </th>
+            <th scope="col" className="px-4 py-2 text-center">
+              {t.colWins}
+            </th>
+            <th scope="col" className="px-4 py-2 text-center">
+              {t.colLosses}
+            </th>
+            <th scope="col" className="px-4 py-2 text-center">
+              {t.colWinrate}
+            </th>
           </tr>
         </thead>
         <tbody>
