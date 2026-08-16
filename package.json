@@ -9,6 +9,8 @@
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,css,md}\"",
     "lint": "eslint . --fix",
+    "typecheck": "tsc --noEmit",
+    "verify": "node scripts/verify.mjs",
     "test": "playwright test",
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",

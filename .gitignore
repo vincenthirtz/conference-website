@@ -42,3 +42,6 @@ test-results/
 # Build cache TypeScript (généré, ne pas suivre)
 tsconfig.tsbuildinfo
 *.tsbuildinfo
+
+# ESLint cache (npm run verify)
+.eslintcache
