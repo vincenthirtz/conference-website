@@ -11,7 +11,7 @@
 //    viewer_count? } } } ; 503 si TWITCH_CLIENT_ID/SECRET absents.
 //
 // Embed : iframe player.twitch.tv muté, en réutilisant EXACTEMENT le mécanisme
-// des composants publics (HomeTwitchEmbed / LiveTwitchSection) — le paramètre
+// des composants publics (useTwitchLive / LiveTwitchSection) — le paramètre
 // `parent` = window.location.hostname est indispensable, sinon Twitch refuse
 // l'embed. La CSP frame-src autorise déjà Twitch (ces composants l'embarquent).
 // Player MUTÉ par défaut : le son de l'antenne est géré ailleurs, un player non
@@ -53,7 +53,7 @@ export default function TwitchStatusPanel() {
   const [statuses, setStatuses] = useState<Record<string, LiveStatus>>({});
   const [notConfigured, setNotConfigured] = useState(false);
   // `parent` du player Twitch : indisponible côté SSR, récupéré après hydratation
-  // (comme HomeTwitchEmbed). Sans lui, Twitch refuse l'embed.
+  // (comme LiveTwitchSection). Sans lui, Twitch refuse l'embed.
   const [parent, setParent] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState(false);
 

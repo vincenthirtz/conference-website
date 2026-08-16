@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useToast } from './ToastContext';
+import { useToast, useToasts } from './ToastContext';
 import type { Toast, ToastVariant } from './ToastContext';
 import { useT } from '@/lib/i18n/useT';
 
@@ -81,7 +81,8 @@ function ToastItem({
 }
 
 export default function ToastContainer() {
-  const { toasts, removeToast } = useToast();
+  const toasts = useToasts();
+  const { removeToast } = useToast();
 
   if (toasts.length === 0) return null;
 

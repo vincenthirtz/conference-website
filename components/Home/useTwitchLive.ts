@@ -1,9 +1,9 @@
 // components/Home/useTwitchLive.ts
 //
 // Détection de live Twitch partagée par la refonte accueil (hero + spotlight).
-// Reprend la logique de polling de `HomeTwitchEmbed` (même endpoint, même
-// canal) mais l'expose comme hook pour piloter à la fois la pastille du hero et
-// le panneau du spotlight sans dupliquer les requêtes.
+// Un seul poll (`/api/twitch/live`) pilote à la fois la pastille du hero et le
+// panneau du spotlight, sans dupliquer les requêtes. Le tick est sauté quand
+// l'onglet n'est pas visible.
 
 import { useEffect, useState } from 'react';
 
@@ -69,7 +69,17 @@ export function useTwitchLive(): TwitchLive {
       }
     };
     load();
-    const id = setInterval(load, POLL_MS);
+    // Onglet en arrière-plan = on saute le tick (même garde que PlayerBell /
+    // AdminTopBar). Sans ça, un onglet home laissé ouvert tapait /api/twitch/live
+    // toutes les 60 s indéfiniment, sans que personne ne regarde la pastille.
+    const id = setInterval(() => {
+      if (
+        typeof document !== 'undefined' &&
+        document.visibilityState !== 'visible'
+      )
+        return;
+      load();
+    }, POLL_MS);
     return () => {
       cancelled = true;
       clearInterval(id);
