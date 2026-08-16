@@ -2,7 +2,7 @@ import React from 'react';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import Modal from '@/components/admin/Modal';
 import type { TeamRole } from '@/utils/teamRoles';
-import { roleRequiresBattleTag } from '@/utils/teams/addMember';
+import { roleRequiresBattleTag } from '@/utils/teams/roleKind';
 import type { MemberFormState, SearchResult } from './types';
 import nsAdminTeamsAddMemberModal from '@/lib/i18n/locales/admin-fr/adminTeamsAddMemberModal';
 

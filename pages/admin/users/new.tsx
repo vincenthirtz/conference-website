@@ -14,7 +14,7 @@ import {
   type TeamRole,
 } from '@/utils/teamRoles';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
-import { roleRequiresBattleTag } from '@/utils/teams/addMember';
+import { roleRequiresBattleTag } from '@/utils/teams/roleKind';
 
 import { logger } from '../../../utils/logger';
 import nsAdminUsersNew from '@/lib/i18n/locales/admin-fr/adminUsersNew';

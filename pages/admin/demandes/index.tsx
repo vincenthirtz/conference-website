@@ -15,6 +15,7 @@ import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 import { logger } from '../../../utils/logger';
 import nsAdminDemandesList from '@/lib/i18n/locales/admin-fr/adminDemandesList';
+import { BATTLE_TAG_REGEX } from '@/utils/teams/roleKind';
 
 type Dict = typeof nsAdminDemandesList.fr;
 
@@ -124,10 +125,6 @@ function sanitizeSearchInput(raw: string) {
   // Strip characters that break PostgREST `or(...)` parsing
   return raw.replace(/[,()*\\]/g, ' ').trim();
 }
-
-// Mirror of utils/teams/addMember.ts BATTLE_TAG_REGEX (that module imports
-// supabase and is server-only, so we can't import it into the client bundle).
-const BATTLE_TAG_REGEX = /^[A-Za-z0-9]{2,}#[0-9]{3,6}$/;
 
 // Only join / captain_request demandes carry a player BattleTag that gets
 // written when the membership is created.

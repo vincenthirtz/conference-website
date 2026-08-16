@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from 'react';
 import { useT, format } from '@/lib/i18n/useT';
-import { BATTLE_TAG_REGEX } from '@/utils/teams/addMember';
+import { BATTLE_TAG_REGEX } from '@/utils/teams/roleKind';
 import nsNewTeamForm from '@/lib/i18n/locales/fr/newTeamForm';
 
 type Tr = typeof nsNewTeamForm.fr;

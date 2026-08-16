@@ -17,7 +17,7 @@ import ImportBattleTagsModal from '@/components/admin/teams/ImportBattleTagsModa
 import {
   roleRequiresBattleTag,
   isNonPlayingTeamRole,
-} from '@/utils/teams/addMember';
+} from '@/utils/teams/roleKind';
 import type {
   MemberFormState,
   SearchResult,

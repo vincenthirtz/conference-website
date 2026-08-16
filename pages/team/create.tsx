@@ -11,6 +11,7 @@ import {
 } from '@/utils/registrationFields';
 import { ACTIVE_WOMEN_TOURNAMENT_ID } from '@/utils/activeEdition';
 import {
+  BATTLE_TAG_REGEX,
   roleRequiresBattleTag,
   isNonPlayingTeamRole,
 } from '@/utils/teams/roleKind';
@@ -80,9 +81,6 @@ type MemberForm = {
   specialty: string;
 };
 
-// Regex partagée BattleTag (Pseudo#0000). Utilisée à la fois pour la
-// validation par étape (client) et la garde finale avant submit.
-const BATTLE_TAG_REGEX = /^[A-Za-z0-9]{2,}#[0-9]{3,6}$/;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /** true si `v` est vide OU une URL http(s) valide. */
