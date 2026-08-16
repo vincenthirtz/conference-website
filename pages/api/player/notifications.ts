@@ -19,6 +19,7 @@ import { applyRateLimit } from '@/utils/rateLimit';
 import { withSubjectRoute } from '@/utils/subject';
 import { CHECKIN_OPEN_MINUTES } from '@/utils/checkin';
 import { getManagedTeam } from '@/utils/teams/managementAccess';
+import { listPendingInvitationsForUser } from '@/utils/teams/invitations';
 import { getStaffRole } from '@/utils/staff';
 
 export type PlayerNotificationsPayload = {
@@ -59,20 +60,21 @@ async function countMembership(userId: string, tenantId: string) {
   }
 }
 
-/** Invitee-side counter: pending invitations addressed TO this user. */
+/**
+ * Invitee-side counter: pending invitations addressed TO this user.
+ *
+ * Same source as the list the bell links to (`GET /api/player/invitations`),
+ * expiry filter included: an expired invitation stays `pending` in the table
+ * until the cleanup cron touches it, so counting raw rows made the badge point
+ * at a page that rendered nothing.
+ */
 async function countPendingInvites(
   userId: string,
   tenantId: string
 ): Promise<number> {
   try {
-    const { count } = await supabaseAdmin!
-      .from('demandes')
-      .select('id', { count: 'exact', head: true })
-      .eq('user_id', userId)
-      .eq('tenant_id', tenantId)
-      .eq('type', 'invite')
-      .eq('status', 'pending');
-    return count ?? 0;
+    const result = await listPendingInvitationsForUser(tenantId, userId);
+    return result.ok ? result.data.length : 0;
   } catch {
     return 0;
   }

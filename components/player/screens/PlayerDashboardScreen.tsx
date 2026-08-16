@@ -22,6 +22,7 @@ import { useToast } from '@/components/Toast';
 import ProfileSummaryCard from '@/components/player/ProfileSummaryCard';
 import DiscordLinkCard from '@/components/player/DiscordLinkCard';
 import NetworkOnboardingCard from '@/components/player/NetworkOnboardingCard';
+import InvitationsSection from '@/components/player/InvitationsSection';
 import MyScrimsCard from '@/components/player/MyScrimsCard';
 import TeamRhythmCard from '@/components/player/TeamRhythmCard';
 import TeamMemoryCard from '@/components/player/TeamMemoryCard';
@@ -598,6 +599,20 @@ export default function PlayerDashboardScreen() {
               aria-live="assertive"
             >
               {error}
+            </div>
+          )}
+
+          {/* Invitations reçues. Elles ne vivaient que sur /player/notifications :
+              une joueuse invitée arrivait ici, ne voyait rien, et finissait par
+              DEMANDER à rejoindre l'équipe qui l'avait déjà invitée. La section
+              ne rend rien quand il n'y a aucune invitation en attente. */}
+          {!isInspecting && (
+            <div className="mb-6">
+              <InvitationsSection
+                onJoined={() => {
+                  void loadData();
+                }}
+              />
             </div>
           )}
 

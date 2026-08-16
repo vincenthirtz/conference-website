@@ -26,21 +26,34 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { sendTeamJoinEmail, sendWelcomeEmail, sendTeamAccessEmail } = vi.hoisted(
-  () => ({
-    sendTeamJoinEmail: vi.fn(async () => undefined),
-    sendWelcomeEmail: vi.fn(async () => ({ success: true as const })),
-    sendTeamAccessEmail: vi.fn(
-      async (_input: { to: string; teamName: string; actionLink: string }) => ({
-        success: true as const,
-      })
-    ),
-  })
-);
+const {
+  sendTeamJoinEmail,
+  sendWelcomeEmail,
+  sendTeamAccessEmail,
+  sendTeamInviteLinkEmail,
+} = vi.hoisted(() => ({
+  sendTeamJoinEmail: vi.fn(async () => undefined),
+  sendWelcomeEmail: vi.fn(async () => ({ success: true as const })),
+  sendTeamAccessEmail: vi.fn(
+    async (_input: { to: string; teamName: string; actionLink: string }) => ({
+      success: true as const,
+    })
+  ),
+  sendTeamInviteLinkEmail: vi.fn(
+    async (_input: {
+      to: string;
+      teamName: string;
+      role: string;
+      asCaptain?: boolean;
+      inviteUrl: string;
+    }) => ({ success: true as const })
+  ),
+}));
 vi.mock('@/utils/email', () => ({
   sendTeamJoinEmail,
   sendWelcomeEmail,
   sendTeamAccessEmail,
+  sendTeamInviteLinkEmail,
 }));
 
 import {
@@ -97,6 +110,7 @@ beforeEach(() => {
   sendTeamJoinEmail.mockClear();
   sendWelcomeEmail.mockClear();
   sendTeamAccessEmail.mockClear();
+  sendTeamInviteLinkEmail.mockClear();
   store.teams = [];
   store.team_members = [];
   store.demandes = [];
@@ -161,6 +175,58 @@ describe('POST /api/teams/create-with-member — mode manager', () => {
     expect((res.body as any).members).toHaveLength(1);
     expect((res.body as any).members[0].role).toBe('manager');
     expect((res.body as any).invitedMembers).toHaveLength(2);
+  });
+
+  it('envoie à chaque invitée son lien privé (sinon personne ne sait qu’elle est invitée)', async () => {
+    const res = makeRes();
+    await createWithMemberHandler(
+      makeReq({
+        body: {
+          name: 'Managed Team',
+          manager_email: 'mgr@example.com',
+          members: [
+            {
+              email: 'cap@example.com',
+              role: 'player',
+              battle_tag: 'Cap#1234',
+              set_captain: true,
+            },
+            { email: 'p2@example.com', role: 'player', battle_tag: 'P2#5678' },
+          ],
+        },
+      }),
+      res
+    );
+
+    expect(res.statusCode).toBe(201);
+    expect(sendTeamInviteLinkEmail).toHaveBeenCalledTimes(2);
+    const calls = sendTeamInviteLinkEmail.mock.calls.map(
+      (c) => c[0] as { to: string; inviteUrl: string; asCaptain?: boolean }
+    );
+    expect(calls.map((c) => c.to).sort()).toEqual([
+      'cap@example.com',
+      'p2@example.com',
+    ]);
+    expect(
+      calls.every((c) => c.inviteUrl.includes('/invitation/'))
+    ).toBe(true);
+    // La capitaine désignée est invitée EN TANT QUE capitaine.
+    expect(calls.find((c) => c.to === 'cap@example.com')!.asCaptain).toBe(true);
+
+    // Le jeton n'est stocké que hashé, avec l'email visé pour la vérification
+    // d'identité à l'ouverture du lien.
+    const invites = (store.demandes as any[]).filter((d) => d.type === 'invite');
+    expect(
+      invites.every(
+        (i) =>
+          typeof i.payload.invite_token_hash === 'string' &&
+          i.payload.invite_token_hash.length === 64
+      )
+    ).toBe(true);
+    expect(invites.map((i) => i.payload.invite_email).sort()).toEqual([
+      'cap@example.com',
+      'p2@example.com',
+    ]);
   });
 
   it("envoie le magic-link au manager, sans l'onboarding Battle.net", async () => {

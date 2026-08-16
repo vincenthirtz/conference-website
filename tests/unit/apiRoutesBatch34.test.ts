@@ -1,22 +1,33 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { sendTeamJoinEmail, sendWelcomeEmail, sendTeamAccessEmail } = vi.hoisted(
-  () => ({
-    sendTeamJoinEmail: vi.fn(async () => undefined),
-    sendWelcomeEmail: vi.fn(async () => ({ success: true as const })),
-    sendTeamAccessEmail: vi.fn(
-      async (_input: {
-        to: string;
-        teamName: string;
-        actionLink: string;
-      }) => ({ success: true as const })
-    ),
-  })
-);
+const {
+  sendTeamJoinEmail,
+  sendWelcomeEmail,
+  sendTeamAccessEmail,
+  sendTeamInviteLinkEmail,
+} = vi.hoisted(() => ({
+  sendTeamJoinEmail: vi.fn(async () => undefined),
+  sendWelcomeEmail: vi.fn(async () => ({ success: true as const })),
+  sendTeamAccessEmail: vi.fn(
+    async (_input: { to: string; teamName: string; actionLink: string }) => ({
+      success: true as const,
+    })
+  ),
+  sendTeamInviteLinkEmail: vi.fn(
+    async (_input: {
+      to: string;
+      teamName: string;
+      role: string;
+      asCaptain?: boolean;
+      inviteUrl: string;
+    }) => ({ success: true as const })
+  ),
+}));
 vi.mock('@/utils/email', () => ({
   sendTeamJoinEmail,
   sendWelcomeEmail,
   sendTeamAccessEmail,
+  sendTeamInviteLinkEmail,
 }));
 
 import {

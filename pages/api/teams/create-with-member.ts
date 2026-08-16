@@ -2,7 +2,11 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import slugify from 'slugify';
 import { supabaseAdmin } from '@/utils/supabase';
 import { findOrCreateUserByEmail } from '@/utils/find-or-create-user';
-import { sendTeamJoinEmail, sendTeamAccessEmail } from '@/utils/email';
+import {
+  sendTeamJoinEmail,
+  sendTeamAccessEmail,
+  sendTeamInviteLinkEmail,
+} from '@/utils/email';
 import { applyRateLimit } from '@/utils/rateLimit';
 import {
   sanitizeUrl,
@@ -12,6 +16,11 @@ import {
 } from '@/utils/apiHelpers';
 import { emitBotEvent } from '@/utils/botEvents';
 import { createInvitation } from '@/utils/teams/invitations';
+import {
+  buildInviteUrl,
+  generateInviteToken,
+  hashInviteToken,
+} from '@/utils/teams/inviteLinks';
 import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
 import { alertIfBlacklisted } from '@/utils/moderation/blacklist';
 import { alertIfEntityBlacklisted } from '@/utils/moderation/entityBlacklist';
@@ -341,6 +350,13 @@ export default async function handler(
     captain: boolean;
     battle_tag: string | null;
     specialty: string | null;
+    /**
+     * Email saisi pour ce membre, quand il y en a un (chemin `user_id` brut
+     * excepté). Porté ici plutôt que re-corrélé plus bas : c'est l'adresse à
+     * laquelle part l'invitation — sans elle, l'invitée n'apprend jamais qu'on
+     * l'a invitée.
+     */
+    email: string | null;
   }[] = [];
   const validateBattleTag = (tag: string) => {
     const trimmed = tag.trim();
@@ -409,6 +425,7 @@ export default async function handler(
         captain: Boolean(body.set_captain),
         battle_tag: resolvedBattleTag,
         specialty: resolvedSpecialty,
+        email: memberEmail || null,
       });
     } else if (memberEmail) {
       try {
@@ -423,6 +440,7 @@ export default async function handler(
           captain: Boolean(body.set_captain),
           battle_tag: resolvedBattleTag,
           specialty: resolvedSpecialty,
+          email: memberEmail,
         });
       } catch (err: unknown) {
         const message =
@@ -461,6 +479,7 @@ export default async function handler(
           captain: Boolean(m.set_captain),
           battle_tag: resolvedBattleTag,
           specialty: resolvedSpecialty,
+          email: m.email || null,
         });
         continue;
       }
@@ -476,6 +495,7 @@ export default async function handler(
           captain: Boolean(m.set_captain),
           battle_tag: resolvedBattleTag,
           specialty: resolvedSpecialty,
+          email: m.email,
         });
       } catch (err: unknown) {
         const message =
@@ -716,6 +736,14 @@ export default async function handler(
         continue;
       }
 
+      // Lien privé : sans lui, l'invitation n'existe QUE derrière une session
+      // que l'invitée n'a pas encore (son compte vient d'être créé pour elle).
+      // C'est ce qui manquait — les invitées ne recevaient rien, l'invitation
+      // expirait au bout de 7 jours et elles finissaient par demander à
+      // rejoindre l'équipe à la main.
+      const inviteToken = m.email ? generateInviteToken() : null;
+      const asCaptain = Boolean(managerUserId && m.captain);
+
       const inviteResult = await createInvitation(tenantId, {
         teamId: createdTeam.id,
         inviteeAuthUserId: m.user_id,
@@ -726,11 +754,29 @@ export default async function handler(
         // Mode manager : la capitaine désignée est invitée comme les autres.
         // Le drapeau lui donne le capitanat au moment où elle accepte (l'équipe
         // n'a pas de capitaine d'ici là).
-        setCaptain: Boolean(managerUserId && m.captain),
+        setCaptain: asCaptain,
+        inviteTokenHash: inviteToken ? hashInviteToken(inviteToken) : null,
+        inviteEmail: m.email,
         source: 'website',
       });
 
       if (inviteResult.ok) {
+        // Best-effort, comme partout ailleurs : un échec Brevo ne remet pas en
+        // cause l'équipe déjà créée ni l'invitation déjà persistée.
+        if (inviteToken && m.email) {
+          sendTeamInviteLinkEmail({
+            to: m.email,
+            teamName: createdTeam.name,
+            role: m.role,
+            asCaptain,
+            inviteUrl: buildInviteUrl(inviteToken),
+          }).catch((err) => {
+            logger.error(
+              '[/api/teams/create-with-member] invite email error:',
+              err
+            );
+          });
+        }
         invitedMembers.push({
           invitation_id: inviteResult.data.id,
           user_id: m.user_id,
@@ -827,16 +873,13 @@ export default async function handler(
   }
 
   // Send team join emails (non-blocking)
-  // Build a userId→email lookup from the input data
+  // userId→email : lu directement sur les enregistrements, qui portent l'email
+  // saisi. L'ancienne corrélation par BattleTag ratait tout membre sans
+  // BattleTag (encadrement, ou création hors tournoi) et pouvait confondre deux
+  // membres partageant le même tag vide.
   const userIdToEmail = new Map<string, string>();
-  for (const cm of cleanedMembers) {
-    if (cm.email) {
-      const rec = memberRecords.find((r) => r.battle_tag === cm.battle_tag);
-      if (rec) userIdToEmail.set(rec.user_id, cm.email);
-    }
-  }
-  if (memberEmail && memberRecords.length === 1) {
-    userIdToEmail.set(memberRecords[0].user_id, memberEmail);
+  for (const rec of memberRecords) {
+    if (rec.email) userIdToEmail.set(rec.user_id, rec.email);
   }
   if (managerUserId && managerEmail) {
     userIdToEmail.set(managerUserId, managerEmail);

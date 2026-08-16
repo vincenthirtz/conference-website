@@ -247,6 +247,38 @@ describe('/api/player/notifications — invitee pending invites', () => {
     // No captain counters, no checkin → total is just the invites.
     expect(res.body.total).toBe(2);
   });
+
+  it('ignores expired invitations, like the list the badge links to', async () => {
+    // An expired invitation stays `pending` in the table until the cleanup cron
+    // touches it. Counting it lit the bell for a page that rendered nothing.
+    store.teams = [];
+    store.team_members = [];
+    store.demandes = [
+      {
+        id: 'inv-fresh',
+        user_id: USER_ID,
+        team_id: TEAM_ID,
+        type: 'invite',
+        status: 'pending',
+        payload: {
+          expires_at: new Date(Date.now() + 86_400_000).toISOString(),
+        },
+      },
+      {
+        id: 'inv-expired',
+        user_id: USER_ID,
+        team_id: OTHER_TEAM_ID,
+        type: 'invite',
+        status: 'pending',
+        payload: {
+          expires_at: new Date(Date.now() - 86_400_000).toISOString(),
+        },
+      },
+    ];
+    const res = makeRes();
+    await notificationsHandler(makeReq(), res);
+    expect(res.body.pendingInvites).toBe(1);
+  });
 });
 
 describe('/api/player/notifications — check-in pending flag', () => {
