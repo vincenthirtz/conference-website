@@ -8,6 +8,7 @@ import type { AdminLink } from '@/types/components';
 import { formatStaffRoleLabel, type StaffRole } from '@/utils/staff';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useRealtimeChannel } from '@/hooks/useRealtimeChannel';
+import { useDocumentVisible } from '@/hooks/useDocumentVisible';
 import { useT, format } from '@/lib/i18n/useT';
 import { useTenantBranding } from '@/lib/branding/TenantBrandingProvider';
 import ProfileModal from '@/components/admin/profile/ProfileModal';
@@ -87,6 +88,7 @@ export default function AdminTopBar({
 
   const [alertsCount, setAlertsCount] = useState<number | null>(null);
   const { adminFetchJson } = useAdminFetch();
+  const visible = useDocumentVisible();
 
   // Récupère le compteur d'alertes via le hook sanctionné : Bearer token
   // automatique + redirection 401. On reste silencieux sur erreur : un badge
@@ -111,38 +113,46 @@ export default function AdminTopBar({
   // Polling de secours (et premier chargement). L'intervalle est volontairement
   // réduit à 60s : le realtime ci-dessous couvre la latence sur les alertes
   // critiques, le poll sert de filet en cas de souscription indisponible.
+  //
+  // Onglet caché = ni poll ni souscription (cf. plus bas). Au retour, l'effet
+  // se relance et rafraîchit IMMÉDIATEMENT : avant, on repartait sur le cycle
+  // de 60 s, donc le badge pouvait rester périmé jusqu'à une minute après le
+  // retour sur l'onglet.
   useEffect(() => {
+    if (!visible) return undefined;
     let active = true;
     const run = () => {
       if (active) refreshAlerts();
     };
     run();
-    const interval = setInterval(() => {
-      if (
-        typeof document !== 'undefined' &&
-        document.visibilityState !== 'visible'
-      )
-        return;
-      run();
-    }, 60_000);
+    const interval = setInterval(run, 60_000);
     return () => {
       active = false;
       clearInterval(interval);
     };
-  }, [refreshAlerts]);
+  }, [refreshAlerts, visible]);
 
   // Réactivité immédiate sur les alertes critiques via Supabase Realtime :
   // un nouveau litige (matches.status -> 'disputed') ou un ticket support
   // haute sévérité (support_tickets) déclenche un refresh sans attendre le
   // prochain poll. Dégradation gracieuse : si la souscription échoue ou que
   // le realtime est indisponible, le polling 60s reste actif.
+  //
+  // `enabled: visible` : ces deux souscriptions ne portent AUCUN filtre serveur
+  // (la navbar veut réagir à n'importe quel litige / ticket), donc chacune fait
+  // tourner `apply_rls` sur toutes les lignes concernées à chaque lecture du WAL
+  // par Realtime. Les garder ouvertes sur un onglet admin oublié en arrière-plan
+  // coûte au serveur sans que personne ne regarde le badge. Au retour, la
+  // souscription se recrée et l'effet de poll ci-dessus rafraîchit le compteur.
   useRealtimeChannel({
+    enabled: visible,
     channel: 'admin-topbar-alerts-matches',
     table: 'matches',
     event: 'UPDATE',
     onChange: refreshAlerts,
   });
   useRealtimeChannel({
+    enabled: visible,
     channel: 'admin-topbar-alerts-support',
     table: 'support_tickets',
     event: '*',

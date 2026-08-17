@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState, type JSX } from 'react';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useRealtimeChannel } from '@/hooks/useRealtimeChannel';
+import { useDocumentVisible } from '@/hooks/useDocumentVisible';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useT, format } from '@/lib/i18n/useT';
 import nsPlayerBell from '@/lib/i18n/locales/fr/playerBell';
@@ -25,6 +26,7 @@ export default function PlayerBell(): JSX.Element | null {
   const { adminFetchJson } = useAdminFetch();
   const t = useT(nsPlayerBell);
   const [data, setData] = useState<Notifications | null>(null);
+  const visible = useDocumentVisible();
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const load = useCallback(async () => {
@@ -39,28 +41,24 @@ export default function PlayerBell(): JSX.Element | null {
     }
   }, [adminFetchJson]);
 
+  // Onglet caché = ni poll ni souscription. Au retour, l'effet se relance et
+  // recharge IMMÉDIATEMENT : avant, on repartait sur le cycle de 90 s, donc la
+  // pastille pouvait rester périmée une minute et demie après le retour.
   useEffect(() => {
-    if (!user) return undefined;
+    if (!user || !visible) return undefined;
     load();
-    intervalRef.current = setInterval(() => {
-      if (
-        typeof document !== 'undefined' &&
-        document.visibilityState !== 'visible'
-      )
-        return;
-      load();
-    }, POLL_MS);
+    intervalRef.current = setInterval(load, POLL_MS);
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [user, load]);
+  }, [user, load, visible]);
 
   // Realtime: refresh counts as soon as Postgres notifies of an inbound
   // demande on the captain's team. Polling stays as a safety net for
   // dropped connections.
   const teamFilterId = data?.captainTeamId ?? null;
   useRealtimeChannel({
-    enabled: !!user && !!teamFilterId,
+    enabled: !!user && !!teamFilterId && visible,
     channel: teamFilterId ? `bell-demandes-${teamFilterId}` : 'bell-demandes',
     table: 'demandes',
     filter: teamFilterId ? `team_id=eq.${teamFilterId}` : undefined,

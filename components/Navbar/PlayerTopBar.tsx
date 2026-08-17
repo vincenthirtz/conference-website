@@ -13,6 +13,7 @@ import LanguageToggle from './LanguageToggle';
 import { useT, format } from '@/lib/i18n/useT';
 import { useTenantBranding } from '@/lib/branding/TenantBrandingProvider';
 import nsPlayerTopBar from '@/lib/i18n/locales/fr/playerTopBar';
+import { useDocumentVisible } from '@/hooks/useDocumentVisible';
 
 const SITE_MENU_KEY = '__site__';
 const MOBILE_MENU_KEY = '__mobile__';
@@ -96,6 +97,7 @@ export default function PlayerTopBar({
   const drawerRef = useFocusTrap<HTMLDivElement>();
 
   const [notifTotal, setNotifTotal] = useState<number | null>(null);
+  const visible = useDocumentVisible();
 
   const poll = useCallback(async () => {
     try {
@@ -111,20 +113,16 @@ export default function PlayerTopBar({
     }
   }, [adminFetchJson]);
 
+  // Onglet caché = pas de poll. Au retour, l'effet se relance et rafraîchit
+  // IMMÉDIATEMENT le compteur, au lieu d'attendre le prochain cycle de 90 s.
   useEffect(() => {
+    if (!visible) return undefined;
     poll();
-    const interval = setInterval(() => {
-      if (
-        typeof document !== 'undefined' &&
-        document.visibilityState !== 'visible'
-      )
-        return;
-      poll();
-    }, 90_000);
+    const interval = setInterval(poll, 90_000);
     return () => {
       clearInterval(interval);
     };
-  }, [poll]);
+  }, [poll, visible]);
 
   useEffect(() => {
     if (!openMenu) return;
