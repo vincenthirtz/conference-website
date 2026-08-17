@@ -134,16 +134,19 @@ export default function AdminTopBar({
 
   // Réactivité immédiate sur les alertes critiques via Supabase Realtime :
   // un nouveau litige (matches.status -> 'disputed') ou un ticket support
-  // haute sévérité (support_tickets) déclenche un refresh sans attendre le
-  // prochain poll. Dégradation gracieuse : si la souscription échoue ou que
-  // le realtime est indisponible, le polling 60s reste actif.
+  // haute sévérité (support_tickets) doit déclencher un refresh sans attendre
+  // le prochain poll. Le polling 60s reste le filet de sécurité.
   //
-  // `enabled: visible` : ces deux souscriptions ne portent AUCUN filtre serveur
-  // (la navbar veut réagir à n'importe quel litige / ticket), donc chacune fait
-  // tourner `apply_rls` sur toutes les lignes concernées à chaque lecture du WAL
-  // par Realtime. Les garder ouvertes sur un onglet admin oublié en arrière-plan
-  // coûte au serveur sans que personne ne regarde le badge. Au retour, la
-  // souscription se recrée et l'effet de poll ci-dessus rafraîchit le compteur.
+  // ⚠️ INACTIF EN PROD (vérifié le 2026-08-17) : `postgres_changes` exige que la
+  // table soit dans la publication `supabase_realtime`, or celle-ci ne contient
+  // que caster_scenes / caster_themes / caster_presence / event_cues /
+  // event_cue_acks. `matches` et `support_tickets` n'y sont PAS — la migration
+  // `database/migrations/add_matches_to_realtime.sql` existe mais n'a jamais été
+  // appliquée. Ces deux canaux s'ouvrent donc sans jamais rien recevoir : le
+  // badge vit en réalité sur le poll 60s ci-dessus.
+  //
+  // `enabled: visible` évite au moins de tenir les canaux ouverts sur un onglet
+  // laissé en arrière-plan. Au retour, l'effet de poll rafraîchit le compteur.
   useRealtimeChannel({
     enabled: visible,
     channel: 'admin-topbar-alerts-matches',

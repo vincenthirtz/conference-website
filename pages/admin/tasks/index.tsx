@@ -9,6 +9,7 @@
 // natif (HTML5) avec update optimiste et rollback en cas d'erreur.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useDebounce } from '@/hooks/useDebounce';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
@@ -1000,8 +1001,14 @@ function AdminTasksPage({ staff: currentStaff }: StaffProps) {
     return Array.from(set).sort((a, b) => a.localeCompare(b));
   }, [detail]);
 
+  // Le champ reste piloté par `filterSearch` (frappe fluide), mais le FILTRAGE
+  // s'appuie sur la valeur débouncée : sans ça, chaque caractère re-rendait le
+  // board entier (toutes les colonnes, toutes les cartes) alors qu'il est
+  // visible et scrollé.
+  const debouncedSearch = useDebounce(filterSearch, 150);
+
   const hasActiveFilters =
-    filterSearch.trim() !== '' ||
+    debouncedSearch.trim() !== '' ||
     filterAssignee !== '' ||
     filterPriority !== '' ||
     filterLabel !== '' ||
@@ -1018,7 +1025,7 @@ function AdminTasksPage({ staff: currentStaff }: StaffProps) {
   // Prédicat de correspondance d'une carte aux filtres actifs.
   const taskMatchesFilters = useCallback(
     (task: BoardTask): boolean => {
-      const q = filterSearch.trim().toLowerCase();
+      const q = debouncedSearch.trim().toLowerCase();
       if (q) {
         const hay = `${task.title} ${task.description ?? ''}`.toLowerCase();
         if (!hay.includes(q)) return false;
@@ -1037,7 +1044,7 @@ function AdminTasksPage({ staff: currentStaff }: StaffProps) {
       return true;
     },
     [
-      filterSearch,
+      debouncedSearch,
       filterMine,
       filterAssignee,
       filterPriority,
@@ -1793,9 +1800,25 @@ function AdminTasksPage({ staff: currentStaff }: StaffProps) {
   // Rendu
   // -------------------------------------------------------------------------
 
-  const sortedColumns = detail
-    ? [...detail.columns].sort((a, b) => a.position - b.position)
-    : [];
+  const sortedColumns = useMemo(
+    () =>
+      detail ? [...detail.columns].sort((a, b) => a.position - b.position) : [],
+    [detail]
+  );
+
+  // Cartes visibles par colonne, calculées UNE fois par changement réel de
+  // données/tri/filtres. Avant, le tri + le filtre tournaient dans le JSX à
+  // chaque rendu du composant — or celui-ci porte une quarantaine d'états (la
+  // modale de carte, les commentaires, la checklist, le panneau de labels…),
+  // donc chaque frappe dans un champ de la modale re-triait tout le board.
+  const visibleTasksByColumn = useMemo(() => {
+    const map = new Map<string, BoardTask[]>();
+    for (const col of sortedColumns) {
+      const all = sortTasksForDisplay(col.tasks, cardSort);
+      map.set(col.id, hasActiveFilters ? all.filter(taskMatchesFilters) : all);
+    }
+    return map;
+  }, [sortedColumns, cardSort, hasActiveFilters, taskMatchesFilters]);
 
   return (
     <>
@@ -2079,14 +2102,14 @@ function AdminTasksPage({ staff: currentStaff }: StaffProps) {
                       <span className="text-xs text-neutral-500">
                         {t.filterActiveLabel}
                       </span>
-                      {filterSearch.trim() && (
+                      {debouncedSearch.trim() && (
                         <button
                           type="button"
                           onClick={() => setFilterSearch('')}
                           className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] bg-indigo-500/15 border border-indigo-500/30 text-indigo-200 hover:bg-indigo-500/25"
                         >
                           {format(t.filterChipSearch, {
-                            value: filterSearch.trim(),
+                            value: debouncedSearch.trim(),
                           })}
                           <span aria-hidden="true">✕</span>
                         </button>
@@ -2203,13 +2226,7 @@ function AdminTasksPage({ staff: currentStaff }: StaffProps) {
                         // Saturation : colonne pleine (au moins à la limite).
                         const atLimit =
                           col.wipLimit != null && totalCount >= col.wipLimit;
-                        const allTasks = sortTasksForDisplay(
-                          col.tasks,
-                          cardSort
-                        );
-                        const tasks = hasActiveFilters
-                          ? allTasks.filter(taskMatchesFilters)
-                          : allTasks;
+                        const tasks = visibleTasksByColumn.get(col.id) ?? [];
                         const count = tasks.length;
                         return (
                           <div
