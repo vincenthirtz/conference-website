@@ -87,6 +87,9 @@ export default function AdminTopBar({
   }, [router]);
 
   const [alertsCount, setAlertsCount] = useState<number | null>(null);
+  const [alertsTournamentId, setAlertsTournamentId] = useState<string | null>(
+    null
+  );
   const { adminFetchJson } = useAdminFetch();
   const visible = useDocumentVisible();
 
@@ -96,7 +99,10 @@ export default function AdminTopBar({
   // (useCallback côté hook), donc refreshAlerts l'est aussi.
   const refreshAlerts = useCallback(async () => {
     try {
-      const json = await adminFetchJson<{ total?: unknown }>(
+      const json = await adminFetchJson<{
+        total?: unknown;
+        tournamentId?: unknown;
+      }>(
         '/api/admin/alerts-summary',
         // Pas de redirection login depuis la navbar : si la session a expiré,
         // on laisse le badge tel quel plutôt que de kicker l'utilisateur.
@@ -105,6 +111,11 @@ export default function AdminTopBar({
       if (typeof json?.total === 'number') {
         setAlertsCount(json.total);
       }
+      // Le tournoi "en cours" est résolu côté serveur ; on le récupère pour
+      // filtrer la souscription realtime ci-dessous.
+      setAlertsTournamentId(
+        typeof json?.tournamentId === 'string' ? json.tournamentId : null
+      );
     } catch {
       // silent — pas d'incidence sur l'UX si ça plante
     }
@@ -132,35 +143,38 @@ export default function AdminTopBar({
     };
   }, [refreshAlerts, visible]);
 
-  // Réactivité immédiate sur les alertes critiques via Supabase Realtime :
-  // un nouveau litige (matches.status -> 'disputed') ou un ticket support
-  // haute sévérité (support_tickets) doit déclencher un refresh sans attendre
-  // le prochain poll. Le polling 60s reste le filet de sécurité.
+  // Réactivité immédiate sur les alertes du tournoi en cours : un litige, un
+  // conflit d'horaire, un check-in ou une fin de stage doit rafraîchir le badge
+  // sans attendre le prochain poll. `matches` a été ajoutée à la publication
+  // `supabase_realtime` le 2026-08-17 (elle n'y était pas, ce canal ne recevait
+  // donc rien jusque-là). Le poll 60 s reste le filet.
   //
-  // ⚠️ INACTIF EN PROD (vérifié le 2026-08-17) : `postgres_changes` exige que la
-  // table soit dans la publication `supabase_realtime`, or celle-ci ne contient
-  // que caster_scenes / caster_themes / caster_presence / event_cues /
-  // event_cue_acks. `matches` et `support_tickets` n'y sont PAS — la migration
-  // `database/migrations/add_matches_to_realtime.sql` existe mais n'a jamais été
-  // appliquée. Ces deux canaux s'ouvrent donc sans jamais rien recevoir : le
-  // badge vit en réalité sur le poll 60s ci-dessus.
+  // FILTRE SERVEUR — on n'écoute QUE le tournoi courant, et surtout pas
+  // `status=eq.disputed` : les 8 signaux du badge (cf. utils/dashboard/
+  // alertsSignals.ts) dépendent aussi de `scheduled_at`, des colonnes
+  // `team*_checked_in_at` et du passage de status hors de 'disputed' — filtrer
+  // sur la valeur ferait rater la RÉSOLUTION d'un litige, et le badge ne
+  // redescendrait jamais. `tournament_id` est en revanche le scope exact de
+  // tous les signaux, et il ne change jamais pour une ligne donnée.
   //
-  // `enabled: visible` évite au moins de tenir les canaux ouverts sur un onglet
-  // laissé en arrière-plan. Au retour, l'effet de poll rafraîchit le compteur.
+  // Tant que le premier poll n'a pas répondu, `alertsTournamentId` est null et
+  // on ne s'abonne pas : mieux vaut pas de canal qu'un canal non filtré.
   useRealtimeChannel({
-    enabled: visible,
-    channel: 'admin-topbar-alerts-matches',
+    enabled: visible && !!alertsTournamentId,
+    channel: `admin-topbar-alerts-matches-${alertsTournamentId ?? 'none'}`,
     table: 'matches',
     event: 'UPDATE',
+    filter: alertsTournamentId
+      ? `tournament_id=eq.${alertsTournamentId}`
+      : undefined,
     onChange: refreshAlerts,
   });
-  useRealtimeChannel({
-    enabled: visible,
-    channel: 'admin-topbar-alerts-support',
-    table: 'support_tickets',
-    event: '*',
-    onChange: refreshAlerts,
-  });
+  // `support_tickets` n'est PAS publiée : Realtime livre une ligne seulement si
+  // le souscripteur peut la SELECT, et cette table (signalements de sécurité)
+  // n'a aucune policy SELECT — en ajouter une ouvrirait aussi la lecture via
+  // l'API REST. La publier sans policy coûterait du WAL pour zéro livraison.
+  // Le volet « ticket support haute sévérité » du badge reste donc porté par le
+  // poll 60 s ci-dessus, ce qui est le comportement réel depuis toujours.
 
   useEffect(() => {
     if (!openMenu) return;
