@@ -107,3 +107,48 @@ describe.each([
     expect(inBarrel).toEqual(onDisk);
   });
 });
+
+// `useT(nsX)` résout l'anglais par `en[nsX.key]`. Si le `key` déclaré dans un
+// fichier de namespace ne correspond pas à une entrée du dictionnaire anglais,
+// la lecture retombe SILENCIEUSEMENT sur le français : l'app reste fonctionnelle
+// mais la page ne se traduit jamais. Aucun autre garde-fou ne couvre ça — la
+// parité compare les CLÉS des dictionnaires, pas le champ `key` des descripteurs
+// (qui a été généré en masse pour 337 namespaces).
+describe.each([
+  { label: 'public', dir: 'fr', en: en as Json },
+  { label: 'admin', dir: 'admin-fr', en: adminEn as Json },
+])('i18n namespace descriptors — $label', ({ dir, en: enJson }) => {
+  const dirPath = path.join(process.cwd(), 'lib/i18n/locales', dir);
+  const files = fs
+    .readdirSync(dirPath)
+    .filter((f) => f.endsWith('.ts') && f !== 'index.ts')
+    .sort();
+
+  it('declares a key matching its filename and the EN dictionary', async () => {
+    const badKey: string[] = [];
+    const missingInEn: string[] = [];
+
+    // Garde anti-test-vide : si la lecture du dossier renvoyait 0 fichier, les
+    // deux assertions ci-dessous passeraient sans rien avoir vérifié.
+    expect(files.length).toBeGreaterThan(100);
+
+    for (const file of files) {
+      const name = file.replace(/\.ts$/, '');
+      const mod = (await import(
+        /* @vite-ignore */ `${dirPath}/${name}.ts`
+      )) as { default: { key: string; fr: unknown } };
+      const declared = mod.default?.key;
+      if (declared !== name) badKey.push(`${file} → key: '${declared}'`);
+      if (!(declared in enJson)) missingInEn.push(declared);
+    }
+
+    expect(
+      badKey,
+      `Descripteurs dont le \`key\` ne correspond pas au nom de fichier :\n  ${badKey.join('\n  ')}`
+    ).toEqual([]);
+    expect(
+      missingInEn,
+      `Namespaces absents du dictionnaire anglais (la bascule EN retomberait en FR) :\n  ${missingInEn.join('\n  ')}`
+    ).toEqual([]);
+  });
+});
