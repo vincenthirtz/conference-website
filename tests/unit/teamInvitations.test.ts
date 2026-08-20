@@ -96,6 +96,45 @@ describe('createInvitation', () => {
     }
   });
 
+  it('porte le rôle `manager` sans le dégrader', async () => {
+    // Le rôle est proposé dans le sélecteur d'invitation de l'espace équipe et
+    // déjà accordable via POST /api/teams/add-member. Il doit donc survivre au
+    // trajet : `validateRole` le connaît, et depuis la migration
+    // `accept_invitation_allow_manager` la RPC ne le rabat plus sur `player`
+    // à l'acceptation (elle coerçait vers player|substitute|coach — l'invitée
+    // arrivait joueuse, sans erreur ni trace).
+    const r = await createInvitation(TENANT, {
+      teamId: TEAM,
+      captainAuthUserId: CAPTAIN,
+      inviteeAuthUserId: INVITEE,
+      role: 'manager',
+      source: 'website',
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      const row = (store.demandes as any[]).find((d) => d.id === r.data.id);
+      expect(row.payload.desired_role).toBe('manager');
+    }
+  });
+
+  it('dégrade en revanche un rôle inconnu vers `player`', async () => {
+    // Garde-fou symétrique : une invitation ne doit jamais poser un rôle
+    // arbitraire. `sub` en est un bon exemple — c'est la valeur que le wizard
+    // envoyait par erreur à la place de `substitute`.
+    const r = await createInvitation(TENANT, {
+      teamId: TEAM,
+      captainAuthUserId: CAPTAIN,
+      inviteeAuthUserId: INVITEE,
+      role: 'sub',
+      source: 'website',
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      const row = (store.demandes as any[]).find((d) => d.id === r.data.id);
+      expect(row.payload.desired_role).toBe('player');
+    }
+  });
+
   it('keeps the discord_bot source + Discord ids for bot callers', async () => {
     const r = await createInvitation(TENANT, {
       teamId: TEAM,

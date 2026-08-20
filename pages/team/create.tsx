@@ -1395,7 +1395,15 @@ export default function PublicCreateTeamPage() {
                           >
                             <option value="player">{t.roleOptionPlayer}</option>
                             <option value="coach">{t.roleOptionCoach}</option>
-                            <option value="sub">{t.roleOptionSub}</option>
+                            {/* `substitute` et PAS `sub` : c'est la valeur que
+                                connaissent validateRole (utils/apiHelpers) et
+                                la contrainte CHECK de team_members. `sub`
+                                retombait silencieusement sur `player` — la
+                                remplaçante était enregistrée titulaire, et
+                                `is_substitute` restait faux. */}
+                            <option value="substitute">
+                              {t.roleOptionSub}
+                            </option>
                           </select>
                         </div>
 

@@ -29,7 +29,9 @@ import { verifyCaptcha } from '@/utils/captcha';
 import {
   roleRequiresBattleTag,
   isNonPlayingTeamRole,
+  countPlayingMembers,
 } from '@/utils/teams/addMember';
+import { MAX_TEAM_PLAYERS } from '@/utils/constants';
 import {
   validateFieldDefinitions,
   validateRegistrationAnswers,
@@ -46,6 +48,14 @@ const SITE_URL =
 
 /** Même forme que la validation client (pages/team/create.tsx). */
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
+ * Plafond ABSOLU de lignes de roster acceptées en une requête, encadrement
+ * compris — garde-fou anti-abus d'un endpoint public qui crée des comptes auth.
+ * Volontairement plus large que MAX_TEAM_PLAYERS : une équipe complète peut
+ * légitimement déclarer un coach et un manager en plus de ses 5 joueuses.
+ */
+const MAX_ROSTER_ROWS = 10;
 
 /**
  * Masque un email pour l'exposer côté client sans divulguer l'adresse complète :
@@ -304,9 +314,29 @@ export default async function handler(
     }))
     .filter((m) => m.email || m.user_id);
 
-  if (cleanedMembers.length > 5) {
+  // Le plafond porte sur les JOUEUSES, pas sur les lignes. Compter les lignes
+  // faisait payer une place de roster à chaque coach ou manager déclaré : un
+  // effectif complet (5) plus un coach était rejeté en TOO_MANY_MEMBERS, alors
+  // que le wizard — qui applique déjà la bonne règle côté client — laissait
+  // saisir la ligne. L'utilisateur voyait donc un formulaire valide refusé à
+  // l'envoi, sans comprendre pourquoi.
+  //
+  // Même définition de « joueuse » que partout ailleurs (countPlayingMembers),
+  // et même exemption que le trigger `enforce_team_max_players` en base.
+  if (countPlayingMembers(cleanedMembers) > MAX_TEAM_PLAYERS) {
     return res.status(400).json({
-      error: 'You can add up to 5 members in one request',
+      error: `You can add up to ${MAX_TEAM_PLAYERS} players in one request`,
+      code: 'TOO_MANY_MEMBERS',
+    });
+  }
+
+  // Plafond ABSOLU sur le nombre de lignes, encadrement compris. Ce endpoint
+  // est PUBLIC et crée des comptes auth à partir des emails reçus : sans borne,
+  // « l'encadrement ne compte pas » deviendrait un vecteur d'abus (200 lignes
+  // `role: coach` = 200 comptes créés).
+  if (cleanedMembers.length > MAX_ROSTER_ROWS) {
+    return res.status(400).json({
+      error: `You can add up to ${MAX_ROSTER_ROWS} members in one request`,
       code: 'TOO_MANY_MEMBERS',
     });
   }
