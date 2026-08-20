@@ -22,6 +22,7 @@ import { useToast } from '@/components/Toast';
 import ProfileSummaryCard from '@/components/player/ProfileSummaryCard';
 import DiscordLinkCard from '@/components/player/DiscordLinkCard';
 import NetworkOnboardingCard from '@/components/player/NetworkOnboardingCard';
+import RegistrationDeadlineBanner from '@/components/player/RegistrationDeadlineBanner';
 import InvitationsSection from '@/components/player/InvitationsSection';
 import MyScrimsCard from '@/components/player/MyScrimsCard';
 import TeamRhythmCard from '@/components/player/TeamRhythmCard';
@@ -614,6 +615,15 @@ export default function PlayerDashboardScreen() {
               <p className="text-gray-400 text-sm mt-1">{t.headerSubtitle}</p>
             </div>
           </div>
+
+          {/* Date butoir des inscriptions 2026 — en tête, avant tout le reste :
+              c'est la seule information de cette page qui périme. Vaut pour
+              les quatre rôles qui atterrissent ici (joueuse, capitaine, coach,
+              manager), d'où l'absence de gate. Se masque tout seul une fois la
+              date passée. */}
+          {!isInspecting && user?.id && (
+            <RegistrationDeadlineBanner userId={user.id} />
+          )}
 
           {/* Sélecteur d'équipe — rendu seulement pour un manager qui en
               encadre plusieurs. Tout ce qui suit (équipe, scrims, prochain

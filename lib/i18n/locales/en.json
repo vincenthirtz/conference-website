@@ -4755,5 +4755,22 @@
     "peakRating": "Best rating reached: {rating}",
     "streakWin": "Current streak: {count} wins",
     "streakLoss": "Current streak: {count} losses"
+  },
+  "registrationDeadline": {
+    "title": "2026 tournament registration",
+    "deadline": "Closes on {date}.",
+    "countdown_one": "{count} day left",
+    "countdown_other": "{count} days left",
+    "lastDay": "Today is the last day",
+    "body": "Player, captain, coach or manager: to be validated on a roster you must be present on BOTH sides — on the Discord server and on the site, with the two accounts linked. Being on only one of them is not enough.",
+    "stepSite": "Site account",
+    "stepSiteDone": "Done — you are signed in.",
+    "stepDiscord": "Discord account linked",
+    "stepDiscordDone": "Done.",
+    "stepDiscordTodo": "Your Discord account is not linked yet: without it we cannot recognise you on the server.",
+    "joinReminder": "And double-check that you have actually joined the tournament's Discord server.",
+    "ctaLink": "Link my Discord account",
+    "ctaJoin": "Join the Discord",
+    "dismiss": "Hide this reminder"
   }
 }
