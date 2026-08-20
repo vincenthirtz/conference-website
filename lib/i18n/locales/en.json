@@ -558,6 +558,7 @@
     "unverifiedBadgeTitle": "BattleTag unverified — the player must link their Battle.net account",
     "roleManager": "Manager",
     "specialtyUpdated": "In-game role updated",
+    "roleLockedPrivileged": "Only the captain can change the role of a member who holds management rights — two managers must not be able to remove each other.",
     "roleSelectLabel": "Role in the team",
     "errorTitle": "Couldn't load the team",
     "errorBody": "A network error occurred. Check your connection and try again.",

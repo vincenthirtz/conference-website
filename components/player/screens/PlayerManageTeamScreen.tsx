@@ -329,6 +329,23 @@ export default function PlayerManageTeamScreen() {
     }
   };
 
+  /**
+   * Miroir client de l'anti-escalation serveur : dégrader ou retirer un membre
+   * PRIVILÉGIÉ reste réservé à la capitaine, pour que deux managers ne puissent
+   * pas se destituer l'un l'autre (update-member-role.ts et
+   * DELETE /api/teams/[teamId]/members).
+   *
+   * On désactive le sélecteur plutôt que de laisser proposer un geste qui
+   * finira en 403 : une option qui échoue toujours se lit comme un bug.
+   *
+   * Approximation assumée : le catalogue des rôles privilégiés est dynamique
+   * (`site_settings.team_roles`) et le client ne le charge pas ici. On couvre
+   * `manager`, le seul privilégié par défaut ; si la config en ajoute un autre,
+   * le serveur reste la garde — l'écran affichera son message d'erreur.
+   */
+  const isRoleLockedFor = (m: Member): boolean =>
+    !isCaptain && (m.role ?? '').trim().toLowerCase() === 'manager';
+
   const handleRemoveMember = async (memberId: string) => {
     if (!team) return;
     setActionLoading(`remove-${memberId}`);
@@ -680,10 +697,14 @@ export default function PlayerManageTeamScreen() {
                     <option value="player">{t.optionPlayer}</option>
                     <option value="substitute">{t.optionSubstitute}</option>
                     <option value="coach">{t.optionCoach}</option>
-                    {/* Confier un rôle de gestion est réservé à la capitaine. */}
-                    {isCaptain && (
-                      <option value="manager">{t.roleManager}</option>
-                    )}
+                    {/* Confier un rôle de gestion est ouvert à qui gère
+                        l'équipe (2026-08-20). La réserve « capitaine
+                        seulement » qui vivait ici ne protégeait rien :
+                        /api/teams/add-member laissait déjà un manager ajouter
+                        un membre AVEC le rôle manager — elle imposait juste le
+                        détour. Retirer ou dégrader un pair reste, lui,
+                        réservé à la capitaine. */}
+                    <option value="manager">{t.roleManager}</option>
                     {/* Le pendant : désigner la capitaine, seulement s'il n'y en a pas. */}
                     {!hasCaptain && (
                       <option value="captain">{t.captain}</option>
@@ -962,16 +983,26 @@ export default function PlayerManageTeamScreen() {
                               onChange={(e) =>
                                 handleUpdateRole(m.id, e.target.value)
                               }
-                              disabled={!!actionLoading}
+                              disabled={!!actionLoading || isRoleLockedFor(m)}
                               aria-label={t.roleSelectLabel}
-                              title={t.roleSelectLabel}
-                              className="bg-black/60 border border-white/10 rounded-lg px-2 py-1 text-xs text-gray-300 focus:outline-none focus:ring-1 focus:ring-purple-400"
+                              title={
+                                isRoleLockedFor(m)
+                                  ? t.roleLockedPrivileged
+                                  : t.roleSelectLabel
+                              }
+                              className="bg-black/60 border border-white/10 rounded-lg px-2 py-1 text-xs text-gray-300 focus:outline-none focus:ring-1 focus:ring-purple-400 disabled:opacity-50"
                             >
                               <option value="player">{t.optionPlayer}</option>
                               <option value="substitute">
                                 {t.optionSubstitute}
                               </option>
                               <option value="coach">{t.optionCoach}</option>
+                              {/* `manager` manquait ici : l'API l'accepte
+                                  (assertTeamPermission `manage_roster`), mais
+                                  aucun écran ne l'offrait — promouvoir un
+                                  membre déjà présent était donc impossible,
+                                  même pour la capitaine. */}
+                              <option value="manager">{t.roleManager}</option>
                             </select>
                             <button
                               onClick={() => confirmPromote(m)}

@@ -357,6 +357,30 @@ describe('/api/teams/update-member-role as manager', () => {
     expect(member.role).toBe('manager');
   });
 
+  it('… y compris dans une équipe SANS capitaine — le cas réel', async () => {
+    // Équipe créée par un manager : `teams.captain_id` reste NULL tant que la
+    // capitaine désignée n'a pas accepté son invitation. C'est précisément la
+    // situation où l'ancienne règle « capitaine seulement » ne laissait
+    // personne promouvoir qui que ce soit.
+    store.teams = (store.teams as any[]).map((t) =>
+      t.id === TEAM_ID ? { ...t, captain_id: null } : t
+    ) as any;
+
+    const res = makeRes();
+    await updateRoleHandler(
+      makeAuthedReq({
+        method: 'PATCH',
+        body: { memberId: TM_PLY, role: 'manager' },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    const member = (store.team_members as any[]).find((m) => m.id === TM_PLY);
+    expect(member.role).toBe('manager');
+    // Et le rôle n'est pas un remplaçant déguisé.
+    expect(member.is_substitute).toBe(false);
+  });
+
   it('manager CANNOT demote another manager', async () => {
     // L'asymétrie avec le test précédent est DÉLIBÉRÉE : accorder un rôle
     // privilégié est une délégation, dégrader un pair est un conflit. Deux

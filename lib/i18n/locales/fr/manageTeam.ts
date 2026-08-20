@@ -103,6 +103,8 @@ export default ns('manageTeam', {
     'BattleTag non vérifié — la joueuse doit lier son compte Battle.net',
   roleManager: 'Manager',
   specialtyUpdated: 'Rôle en jeu mis à jour',
+  roleLockedPrivileged:
+    "Seule la capitaine peut modifier le rôle d'un membre qui a des droits de gestion — deux managers ne doivent pas pouvoir se destituer l'un l'autre.",
   roleSelectLabel: "Rôle dans l'équipe",
   errorTitle: "Impossible de charger l'équipe",
   errorBody:
