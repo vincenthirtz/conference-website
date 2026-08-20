@@ -61,6 +61,12 @@ type Member = {
    * l'absence comme « non lié » : cf. utils/teams/rosterReadiness.ts.
    */
   discord_linked?: boolean | null;
+  /**
+   * Présence constatée sur le serveur Discord, rapportée par le bot. Un compte
+   * peut être LIÉ et la personne avoir quitté le serveur — le site la croyait
+   * alors en règle. `null` = non constaté, jamais « absente ».
+   */
+  discord_in_guild?: boolean | null;
 };
 
 type TeamInfo = {
@@ -745,21 +751,46 @@ export default function PlayerManageTeamScreen() {
                 liés » sans savoir lesquels ne peut rien en faire. Rendu
                 seulement si le serveur a communiqué l'état (il ne le fait que
                 pour qui gère l'équipe) et s'il manque quelqu'un. */}
-            {discordKnown && discordGaps.unlinked > 0 && (
-              <div className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3">
-                <p className="text-sm font-semibold text-amber-100">
-                  {format(
-                    discordGaps.unlinked > 1
-                      ? t.discordGapTitle_other
-                      : t.discordGapTitle_one,
-                    { count: discordGaps.unlinked, total: discordGaps.known }
+            {discordKnown &&
+              (discordGaps.unlinked > 0 || discordGaps.left > 0) && (
+                <div className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3">
+                  {discordGaps.unlinked > 0 && (
+                    <p className="text-sm font-semibold text-amber-100">
+                      {format(
+                        discordGaps.unlinked > 1
+                          ? t.discordGapTitle_other
+                          : t.discordGapTitle_one,
+                        {
+                          count: discordGaps.unlinked,
+                          total: discordGaps.known,
+                        }
+                      )}
+                    </p>
                   )}
-                </p>
-                <p className="mt-1 text-xs text-amber-100/80">
-                  {t.discordGapBody}
-                </p>
-              </div>
-            )}
+                  {/* Parties du serveur : un manque D'UNE AUTRE NATURE. Le
+                      compte est lié — le site les croyait en règle — mais le
+                      bot ne les trouve plus sur le Discord. Elles ne peuvent
+                      pas régler ça depuis leur espace joueur : il faut les
+                      réinviter. */}
+                  {discordGaps.left > 0 && (
+                    <p className="text-sm font-semibold text-amber-100">
+                      {format(
+                        discordGaps.left > 1
+                          ? t.discordLeftTitle_other
+                          : t.discordLeftTitle_one,
+                        { count: discordGaps.left, total: discordGaps.known }
+                      )}
+                    </p>
+                  )}
+                  <p className="mt-1 text-xs text-amber-100/80">
+                    {discordGaps.unlinked > 0 && discordGaps.left > 0
+                      ? t.discordGapBodyBoth
+                      : discordGaps.left > 0
+                        ? t.discordLeftBody
+                        : t.discordGapBody}
+                  </p>
+                </div>
+              )}
             {members.filter((m) => !m.is_captain).length === 0 ? (
               <div className="rounded-xl border border-purple-500/30 bg-purple-500/10 px-4 py-5 text-center">
                 <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-purple-500/20 flex items-center justify-center">
@@ -855,6 +886,19 @@ export default function PlayerManageTeamScreen() {
                               {t.discordUnlinkedBadge}
                             </span>
                           )}
+                          {/* A quitté le serveur : compte lié, mais le bot ne
+                              la trouve plus dans le guild. Exclusif du badge
+                              précédent (`discord_linked === true` requis), donc
+                              jamais deux badges Discord sur la même ligne. */}
+                          {m.discord_linked === true &&
+                            m.discord_in_guild === false && (
+                              <span
+                                title={t.discordLeftBadgeTitle}
+                                className="shrink-0 inline-flex items-center rounded-full border border-red-500/40 bg-red-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-red-300"
+                              >
+                                {t.discordLeftBadge}
+                              </span>
+                            )}
                         </div>
                         <div className="text-xs text-gray-500">
                           {m.is_captain ? (

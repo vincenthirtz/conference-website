@@ -34,6 +34,7 @@ const CAPTAIN = 'c0000000-0000-4000-8000-000000000001';
 const LINKED = 'c0000000-0000-4000-8000-000000000002';
 const UNLINKED_A = 'c0000000-0000-4000-8000-000000000003';
 const UNLINKED_B = 'c0000000-0000-4000-8000-000000000004';
+const LEFT_GUILD = 'c0000000-0000-4000-8000-000000000005';
 
 beforeEach(() => {
   resetSupabaseMock();
@@ -60,10 +61,19 @@ beforeEach(() => {
     // L'encadrement compte comme le reste : un coach absent du serveur est
     // aussi invalidable qu'une joueuse.
     { id: 'm4', team_id: TEAM, user_id: UNLINKED_B, role: 'coach' },
+    { id: 'm5', team_id: TEAM, user_id: LEFT_GUILD, role: 'player' },
   ] as any;
   store.user_discord_links = [
     { auth_user_id: CAPTAIN, discord_user_id: '111' },
     { auth_user_id: LINKED, discord_user_id: '222' },
+    // Liée AUSSI — mais partie du serveur (constat du bot ci-dessous). C'est
+    // le cas que `discord_linked` seul ne pouvait pas voir.
+    { auth_user_id: LEFT_GUILD, discord_user_id: '333' },
+  ] as any;
+  store.discord_guild_presence = [
+    { tenant_id: DEFAULT_TENANT_ID, discord_user_id: '111', in_guild: true },
+    { tenant_id: DEFAULT_TENANT_ID, discord_user_id: '222', in_guild: true },
+    { tenant_id: DEFAULT_TENANT_ID, discord_user_id: '333', in_guild: false },
   ] as any;
 });
 
@@ -79,15 +89,40 @@ describe('pour qui GÈRE l’équipe', () => {
     expect(byUser[LINKED]).toBe(true);
     expect(byUser[UNLINKED_A]).toBe(false);
     expect(byUser[UNLINKED_B]).toBe(false);
+    // Liée, elle aussi — le lien ne dit rien du serveur.
+    expect(byUser[LEFT_GUILD]).toBe(true);
   });
 
-  it('donne le constat « 2 sur 4 » que lit l’écran', async () => {
+  it('distingue « liée » de « encore sur le serveur »', async () => {
+    const slice = await loadManagedTeamSlice(CAPTAIN, DEFAULT_TENANT_ID);
+    const inGuild = Object.fromEntries(
+      slice.members.map((m) => [m.user_id, m.discord_in_guild])
+    );
+    expect(inGuild[LINKED]).toBe(true);
+    // LE cas qui motive toute la brique : compte lié, personne partie.
+    expect(inGuild[LEFT_GUILD]).toBe(false);
+    // Non liée : pas de présence à constater, donc `null` — jamais `false`.
+    expect(inGuild[UNLINKED_A]).toBeNull();
+  });
+
+  it('donne le constat que lit l’écran : 2 non liées, 1 partie, sur 5', async () => {
     const slice = await loadManagedTeamSlice(CAPTAIN, DEFAULT_TENANT_ID);
     expect(hasDiscordLinkInfo(slice.members)).toBe(true);
     expect(discordReadinessSummary(slice.members)).toEqual({
       unlinked: 2,
-      known: 4,
+      left: 1,
+      known: 5,
     });
+  });
+
+  it('sans constat du bot, une liée n’est PAS déclarée partie', async () => {
+    // Régression : le jour où le bot ne rapporte plus (down, sync en échec),
+    // l'écran doit retomber sur « on ne sait pas » et non accuser tout le
+    // roster d'avoir quitté le serveur.
+    store.discord_guild_presence = [] as any;
+    const slice = await loadManagedTeamSlice(CAPTAIN, DEFAULT_TENANT_ID);
+    expect(slice.members.every((m) => m.discord_in_guild === null)).toBe(true);
+    expect(discordReadinessSummary(slice.members).left).toBe(0);
   });
 });
 
@@ -96,17 +131,19 @@ describe('pour une joueuse ordinaire', () => {
     const slice = await loadManagedTeamSlice(UNLINKED_A, DEFAULT_TENANT_ID);
     // Elle voit bien son équipe et son roster…
     expect(slice.teamId).toBe(TEAM);
-    expect(slice.members).toHaveLength(4);
+    expect(slice.members).toHaveLength(5);
     expect(slice.isCaptain).toBe(false);
     expect(slice.isManager).toBe(false);
-    // …mais aucun état de liaison, y compris le sien.
+    // …mais aucun état de liaison ni de présence, y compris le sien.
     expect(slice.members.every((m) => m.discord_linked === null)).toBe(true);
+    expect(slice.members.every((m) => m.discord_in_guild === null)).toBe(true);
   });
 
   it('ne lit même pas la table des liaisons', async () => {
     fromCalls.length = 0;
     await loadManagedTeamSlice(UNLINKED_A, DEFAULT_TENANT_ID);
     expect(fromCalls).not.toContain('user_discord_links');
+    expect(fromCalls).not.toContain('discord_guild_presence');
   });
 
   it('l’écran n’affiche alors AUCUN constat', async () => {
@@ -115,6 +152,7 @@ describe('pour une joueuse ordinaire', () => {
     expect(hasDiscordLinkInfo(slice.members)).toBe(false);
     expect(discordReadinessSummary(slice.members)).toEqual({
       unlinked: 0,
+      left: 0,
       known: 0,
     });
   });

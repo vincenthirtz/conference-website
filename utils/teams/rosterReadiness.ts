@@ -16,9 +16,10 @@
 // D'où deux fonctions plutôt qu'un `filter` en ligne : l'une compte les
 // manquants CONNUS, l'autre dit si l'on sait quoi que ce soit.
 
-/** Le strict nécessaire : le champ tri-état exposé par la tranche équipe. */
+/** Le strict nécessaire : les deux champs tri-état de la tranche équipe. */
 export type RosterReadinessMemberLike = {
   discord_linked?: boolean | null;
+  discord_in_guild?: boolean | null;
 };
 
 /**
@@ -43,15 +44,41 @@ export function countDiscordUnlinked(
 }
 
 /**
- * Le couple à afficher : combien manquent, sur combien de membres dont on
- * connaît l'état. Le dénominateur est CELUI DES LIGNES CONNUES, pas la taille
- * du roster — sinon « 3 sur 7 » mentirait dès qu'une ligne est indéterminée.
+ * Nombre de membres dont on SAIT qu'ils ont quitté le serveur Discord — compte
+ * lié, mais présence constatée fausse par le bot.
+ *
+ * Ce cas est invisible sans le bot : le site voit un lien valide et déclare la
+ * personne en règle, alors qu'elle n'est plus joignable. `null` (jamais
+ * rapporté) ne compte pas — on n'accuse personne sur la foi d'un silence.
+ */
+export function countDiscordLeftGuild(
+  members: readonly RosterReadinessMemberLike[]
+): number {
+  return members.filter(
+    (m) => m.discord_linked === true && m.discord_in_guild === false
+  ).length;
+}
+
+/**
+ * Le constat à afficher : combien de comptes non liés, combien de personnes
+ * parties du serveur, sur combien de membres dont on connaît l'état.
+ *
+ * Le dénominateur est CELUI DES LIGNES CONNUES, pas la taille du roster —
+ * sinon « 3 sur 7 » mentirait dès qu'une ligne est indéterminée.
+ *
+ * `unlinked` et `left` sont DISJOINTS par construction : `left` exige
+ * `discord_linked === true`. Un membre ne peut pas être compté deux fois, et
+ * `unlinked + left` est donc le nombre de personnes non validables.
  */
 export function discordReadinessSummary(
   members: readonly RosterReadinessMemberLike[]
-): { unlinked: number; known: number } {
+): { unlinked: number; left: number; known: number } {
   const known = members.filter(
     (m) => typeof m.discord_linked === 'boolean'
   ).length;
-  return { unlinked: countDiscordUnlinked(members), known };
+  return {
+    unlinked: countDiscordUnlinked(members),
+    left: countDiscordLeftGuild(members),
+    known,
+  };
 }

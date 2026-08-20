@@ -9456,6 +9456,60 @@ paths:
               schema:
                 type: object
                 additionalProperties: true
+  /api/bot/v1/role-sync/presence:
+    post:
+      tags:
+        - bot/misc
+      summary: >-
+        Le bot rapporte qui est effectivement present sur le serveur Discord
+        (full replace par tenant).
+      description: >-
+        Pendant du snapshot, dans l'autre sens. Le site sait qu'un compte
+        Discord est LIE (user_discord_links), pas que la personne est encore
+        sur le serveur : lier son compte puis quitter le Discord la laissait
+        apparaitre en regle. Le bot pousse ici le constat qu'il fait deja a
+        chaque role-sync. FULL REPLACE : les lignes du tenant absentes du
+        payload sont supprimees.
+      operationId: botReportRoleSyncPresence
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - members
+              properties:
+                members:
+                  type: array
+                  maxItems: 5000
+                  items:
+                    type: object
+                    required:
+                      - discordUserId
+                      - inGuild
+                    properties:
+                      discordUserId:
+                        type: string
+                      inGuild:
+                        type: boolean
+                        description: >-
+                          Constat, pas absence d'information : le bot n'envoie
+                          une ligne que lorsque Discord a repondu clairement.
+      responses:
+        '200':
+          description: Presences enregistrees.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                  present:
+                    type: integer
+                  absent:
+                    type: integer
   /api/bot/v1/runs/current:
     get:
       tags:

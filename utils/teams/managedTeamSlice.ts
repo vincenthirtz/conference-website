@@ -97,6 +97,17 @@ export type ManagedTeamMemberRow = {
    * en comptage agrégé (« santé d'équipe ») sans jamais savoir QUI.
    */
   discord_linked: boolean | null;
+  /**
+   * Présence CONSTATÉE sur le serveur Discord du tenant, rapportée par le bot
+   * (POST /api/bot/v1/role-sync/presence). Distinct de `discord_linked` : lier
+   * son compte puis quitter le serveur est un état atteignable, et le site
+   * déclarait alors la personne en règle.
+   *
+   * `null` = on ne sait pas — compte non lié, bot qui n'a pas encore rapporté,
+   * ou appelant qui ne gère pas l'équipe. Jamais « absent » : on n'accuse
+   * personne sur la foi d'un silence.
+   */
+  discord_in_guild: boolean | null;
 };
 
 /**
@@ -179,27 +190,71 @@ async function loadManagedTeamSummaries(
   });
 }
 
+/** Ce que le site sait de la « joignabilité Discord » d'un compte. */
+type DiscordStatus = { linked: boolean; inGuild: boolean | null };
+
 /**
- * Quels `user_id` du roster ont un compte Discord lié.
+ * État Discord du roster : compte lié, et présence constatée sur le serveur.
  *
- * `user_discord_links` est GLOBALE (pas de `tenant_id`) : un compte Discord se
- * lie une fois, pour tous les tenants. Une seule lecture pour tout le roster.
+ * DEUX questions distinctes, et c'est le cœur du sujet :
  *
- * En cas d'erreur on renvoie un ensemble VIDE plutôt que de faire échouer la
- * tranche : l'écran affichera « non lié » à tort, ce qui pousse à une action
- * inutile mais inoffensive — alors qu'un roster qui ne charge plus casse la
- * page entière.
+ *   - LIÉ (`user_discord_links`, table GLOBALE — un compte Discord se lie une
+ *     fois, tous tenants confondus) : le site sait à quel compte Discord
+ *     écrire.
+ *   - PRÉSENT (`discord_guild_presence`, par tenant) : la personne est encore
+ *     sur le serveur. Lier puis quitter le Discord est un état parfaitement
+ *     atteignable, et le site la déclarait alors en règle alors que le bot ne
+ *     pouvait plus rien pour elle.
+ *
+ * `inGuild` vaut `null` quand on ne sait pas — compte non lié, ou bot qui n'a
+ * pas encore rapporté (POST /api/bot/v1/role-sync/presence). Ne JAMAIS lire ce
+ * `null` comme « absent » : on accuserait quelqu'un sur la foi d'un silence.
+ *
+ * En cas d'erreur DB, on dégrade en « on ne sait pas » plutôt que de faire
+ * échouer la tranche : un roster qui ne charge plus casse la page entière.
  */
-async function loadDiscordLinkedUserIds(
-  userIds: string[]
-): Promise<Set<string>> {
-  if (!supabaseAdmin || userIds.length === 0) return new Set<string>();
-  // Passer par le helper canonique et PAS par une query en ligne : la colonne
-  // s'appelle `auth_user_id`, et quatre call sites l'avaient écrite `user_id`
-  // — une colonne qui n'existe pas, donc une erreur PostgREST avalée, donc
-  // « personne n'a lié son Discord » partout (corrigé le 2026-08-20).
+async function loadDiscordStatus(
+  userIds: string[],
+  tenantId: string
+): Promise<Map<string, DiscordStatus>> {
+  const status = new Map<string, DiscordStatus>();
+  if (!supabaseAdmin || userIds.length === 0) return status;
+
+  // Helper canonique et PAS une query en ligne : la colonne s'appelle
+  // `auth_user_id`, et sept call sites l'avaient écrite `user_id` — une
+  // colonne qui n'existe pas, donc une erreur PostgREST avalée, donc
+  // « personne n'a lié son Discord » partout (corrigé le 2026-08-20, cf.
+  // tests/unit/discordLinksColumnGuard.test.ts).
   const links = await getDiscordLinksForUsers(userIds);
-  return new Set(links.keys());
+  if (links.size === 0) return status;
+
+  const discordIds = [...links.values()].map((l) => l.discordUserId);
+  const presenceByDiscordId = new Map<string, boolean>();
+  const { data, error } = await supabaseAdmin
+    .from('discord_guild_presence')
+    .select('discord_user_id, in_guild')
+    .eq('tenant_id', tenantId)
+    .in('discord_user_id', discordIds);
+  if (error) {
+    logger.error('[managedTeamSlice] guild presence error:', error);
+  } else {
+    for (const row of (data || []) as {
+      discord_user_id?: string | null;
+      in_guild?: boolean | null;
+    }[]) {
+      if (row?.discord_user_id && typeof row.in_guild === 'boolean') {
+        presenceByDiscordId.set(row.discord_user_id, row.in_guild);
+      }
+    }
+  }
+
+  for (const [authUserId, link] of links) {
+    status.set(authUserId, {
+      linked: true,
+      inGuild: presenceByDiscordId.get(link.discordUserId) ?? null,
+    });
+  }
+  return status;
 }
 
 /**
@@ -343,13 +398,14 @@ export async function loadManagedTeamSlice(
     // l'équipe (cf. `discord_linked`). Pour les autres, on n'interroge même
     // pas la table : la donnée ne sortirait pas de toute façon.
     const managesThisTeam = isCaptain || isManager;
-    const discordLinkedIds = managesThisTeam
-      ? await loadDiscordLinkedUserIds(
+    const discordStatus = managesThisTeam
+      ? await loadDiscordStatus(
           memberRows
             .map((m) => (m.user_id as string | null) ?? null)
-            .filter((id): id is string => !!id)
+            .filter((id): id is string => !!id),
+          tenantId
         )
-      : new Set<string>();
+      : new Map<string, DiscordStatus>();
 
     const members: ManagedTeamMemberRow[] = memberRows.map((m) => {
       const memberUserId = (m.user_id as string | null) ?? null;
@@ -370,8 +426,12 @@ export async function loadManagedTeamSlice(
         captain: isMemberCaptain,
         is_captain: isMemberCaptain,
         discord_linked: managesThisTeam
-          ? !!memberUserId && discordLinkedIds.has(memberUserId)
+          ? !!memberUserId && discordStatus.has(memberUserId)
           : null,
+        discord_in_guild:
+          managesThisTeam && memberUserId
+            ? (discordStatus.get(memberUserId)?.inGuild ?? null)
+            : null,
       };
     });
 

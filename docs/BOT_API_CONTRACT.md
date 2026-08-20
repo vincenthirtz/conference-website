@@ -1824,6 +1824,7 @@ Idempotent : un 2eme POST avec la meme `actionKey` UPDATE
 | -------------------------------------------------------------------- | ------- | ----- | ------------------------ |
 | [`register-user.ts`](../pages/api/bot/v1/register-user.ts)           | POST    | yes   | `bot-register`           |
 | [`role-sync/snapshot.ts`](../pages/api/bot/v1/role-sync/snapshot.ts) | GET     | —     | `bot-role-sync-snapshot` |
+| [`role-sync/presence.ts`](../pages/api/bot/v1/role-sync/presence.ts) | POST    | yes   | `bot-role-sync-presence` |
 
 ### Demandes & invitations
 

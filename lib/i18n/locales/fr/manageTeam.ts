@@ -86,6 +86,17 @@ export default ns('manageTeam', {
     '{count} membre sur {total} n’a pas lié son compte Discord',
   discordGapTitle_other:
     '{count} membres sur {total} n’ont pas lié leur compte Discord',
+  discordLeftBadge: 'A quitté le Discord',
+  discordLeftBadgeTitle:
+    "Le compte est lié, mais cette personne n'est plus sur le serveur Discord : le bot ne peut plus lui donner ses rôles ni la convoquer.",
+  discordLeftTitle_one:
+    '{count} membre sur {total} a quitté le serveur Discord',
+  discordLeftTitle_other:
+    '{count} membres sur {total} ont quitté le serveur Discord',
+  discordLeftBody:
+    "Leur compte est bien lié — c'est le serveur qu'elles ont quitté. Elles ne peuvent pas régler ça depuis leur espace joueur : il faut les réinviter sur le Discord.",
+  discordGapBodyBoth:
+    "Deux manques différents : lier son compte se fait depuis l'espace joueur, revenir sur le serveur demande une réinvitation. Dans les deux cas, la personne ne reçoit ni rôle, ni salon d'équipe, ni convocation — et ne peut pas être validée.",
   discordGapBody:
     'Repère-les au badge orange ci-dessous. Tant que la liaison manque, la personne ne reçoit ni rôle, ni salon d’équipe, ni convocation — et ne peut pas être validée. Elle la fait elle-même depuis son espace joueur, en une fois.',
   unverifiedBadgeTitle:

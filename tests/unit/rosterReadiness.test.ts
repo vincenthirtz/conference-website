@@ -12,12 +12,17 @@ import { describe, it, expect } from 'vitest';
 import {
   hasDiscordLinkInfo,
   countDiscordUnlinked,
+  countDiscordLeftGuild,
   discordReadinessSummary,
 } from '../../utils/teams/rosterReadiness';
 
-const linked = { discord_linked: true };
-const unlinked = { discord_linked: false };
-const unknown = { discord_linked: null };
+const linked = { discord_linked: true, discord_in_guild: true };
+const unlinked = { discord_linked: false, discord_in_guild: null };
+const unknown = { discord_linked: null, discord_in_guild: null };
+/** Compte lié, mais le bot ne la trouve plus sur le serveur. */
+const left = { discord_linked: true, discord_in_guild: false };
+/** Liée, présence jamais rapportée par le bot. */
+const linkedUnchecked = { discord_linked: true, discord_in_guild: null };
 
 describe('hasDiscordLinkInfo', () => {
   it('faux sur un roster vide', () => {
@@ -55,17 +60,47 @@ describe('discordReadinessSummary', () => {
     // laisserait croire qu'on a vérifié une ligne qu'on n'a pas lue.
     expect(
       discordReadinessSummary([unlinked, unlinked, linked, linked, unknown])
-    ).toEqual({ unlinked: 2, known: 4 });
+    ).toEqual({ unlinked: 2, left: 0, known: 4 });
   });
 
   it('roster entièrement en règle : rien à signaler, mais on le sait', () => {
     expect(discordReadinessSummary([linked, linked])).toEqual({
       unlinked: 0,
+      left: 0,
       known: 2,
     });
   });
 
   it('roster vide', () => {
-    expect(discordReadinessSummary([])).toEqual({ unlinked: 0, known: 0 });
+    expect(discordReadinessSummary([])).toEqual({
+      unlinked: 0,
+      left: 0,
+      known: 0,
+    });
+  });
+
+  it('les deux manques sont DISJOINTS : personne n’est compté deux fois', () => {
+    // `left` exige `discord_linked === true`, donc un non-lié ne peut pas y
+    // tomber. La somme est le nombre de personnes non validables.
+    const summary = discordReadinessSummary([unlinked, left, left, linked]);
+    expect(summary).toEqual({ unlinked: 1, left: 2, known: 4 });
+    expect(summary.unlinked + summary.left).toBe(3);
+  });
+});
+
+describe('countDiscordLeftGuild', () => {
+  it('compte les comptes liés dont le bot dit qu’ils ne sont plus là', () => {
+    expect(countDiscordLeftGuild([left, left, linked, unlinked])).toBe(2);
+  });
+
+  it('un compte lié JAMAIS vérifié n’est pas « parti »', () => {
+    // Tant que le bot n'a rien rapporté, `discord_in_guild` vaut null. Le
+    // compter comme un départ accuserait quelqu'un sur la foi d'un silence —
+    // et enverrait le capitaine réinviter une personne jamais partie.
+    expect(countDiscordLeftGuild([linkedUnchecked, linkedUnchecked])).toBe(0);
+  });
+
+  it('un compte NON lié n’est pas « parti » non plus — c’est l’autre manque', () => {
+    expect(countDiscordLeftGuild([unlinked, unlinked])).toBe(0);
   });
 });

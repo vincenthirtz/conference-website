@@ -54,6 +54,12 @@ export type ManagedTeamMember = TeamMemberLite & {
    * un faux constat : passer par utils/teams/rosterReadiness.ts.
    */
   discord_linked?: boolean | null;
+  /**
+   * Présence constatée sur le serveur Discord, rapportée par le bot. `null` =
+   * on ne sait pas (non lié, pas encore rapporté, ou appelant sans droits de
+   * gestion) — jamais « absent ».
+   */
+  discord_in_guild?: boolean | null;
 };
 
 export type ManagedTeamData = {
