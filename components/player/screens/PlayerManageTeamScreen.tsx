@@ -20,6 +20,7 @@ import { PlayerPageSkeleton } from '@/components/player/Skeletons';
 import CopyButton from '@/components/player/CopyButton';
 import FreePlayersSection from '@/components/player/FreePlayersSection';
 import BattlenetVerifyCard from '@/components/player/BattlenetVerifyCard';
+import RegistrationDeadlineBanner from '@/components/player/RegistrationDeadlineBanner';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
@@ -101,7 +102,7 @@ export default function PlayerManageTeamScreen() {
   const [welcomeDismissed, setWelcomeDismissed] = useState(false);
   const showWelcome =
     !isInspecting && router.query.welcome === '1' && !welcomeDismissed;
-  const { loading: authLoading, ready } = usePlayerSession();
+  const { user: sessionUser, loading: authLoading, ready } = usePlayerSession();
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
   const {
     data: managedTeam,
@@ -531,6 +532,15 @@ export default function PlayerManageTeamScreen() {
               {t.publicPage}
             </Link>
           </div>
+
+          {/* Même rappel de date butoir que le dashboard, et pour la même
+              raison : c'est ici que se compose un roster, donc ici qu'on
+              découvre qu'il manque quelqu'un. La coche porte sur le compte de
+              la personne connectée — capitaine, coach ou manager compris : la
+              validation ne fait pas d'exception pour l'encadrement. */}
+          {!isInspecting && sessionUser?.id && (
+            <RegistrationDeadlineBanner userId={sessionUser.id} />
+          )}
 
           {/* Sélecteur d'équipe — rendu seulement si l'utilisateur en gère
               plusieurs (manager multi-équipes). Placé juste sous l'en-tête :
