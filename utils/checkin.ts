@@ -17,7 +17,11 @@ import {
   sendCheckinReminderEmail,
   sendCheckinForfeitEmail,
 } from './email';
-import { notifyCheckinReminder, notifyCheckinForfeit } from './discord';
+import {
+  notifyCheckinReminder,
+  notifyCheckinForfeit,
+  notifyLineupReminder,
+} from './discord';
 import { applyMatchScore } from './matches/applyScore';
 import { emitBotEvent } from './botEvents';
 
@@ -25,6 +29,17 @@ import { logger } from './logger';
 export const CHECKIN_OPEN_MINUTES = 60;
 export const REMINDER_30_MINUTES = 30;
 export const REMINDER_15_MINUTES = 15;
+
+/**
+ * T-20 : rappel « feuille de match » aux équipes qui ONT fait leur check-in
+ * mais n'ont pas déclaré qui joue.
+ *
+ * Volontairement AVANT le rappel de check-in T-15 : les deux ne s'adressent
+ * jamais aux mêmes équipes (l'un vise celles qui n'ont pas coché, l'autre
+ * celles qui ont coché), et composer demande plus de temps que cliquer sur un
+ * lien de confirmation.
+ */
+export const LINEUP_REMINDER_MINUTES = 20;
 
 // Default auto-forfeit grace window (minutes after kickoff) used as the
 // fallback whenever a tournament has no explicit `checkin_grace_minutes`.
@@ -349,6 +364,12 @@ type MatchLite = {
   checkin_email_sent_at: string | null;
   reminder_30_sent_at: string | null;
   reminder_15_sent_at: string | null;
+  // Rappel « feuille de match », marqué PAR ÉQUIPE : les deux côtés ne font
+  // pas leur check-in au même moment, et c'est le check-in qui ouvre la
+  // feuille. Un marqueur unique partirait sur la première équipe prête et
+  // laisserait l'autre sans relance.
+  team1_lineup_reminder_sent_at?: string | null;
+  team2_lineup_reminder_sent_at?: string | null;
   forfeit_processed_at: string | null;
   team1?: { id: string; name: string; discord_role_id: string | null } | null;
   team2?: { id: string; name: string; discord_role_id: string | null } | null;
@@ -407,7 +428,14 @@ export async function processMatchCheckin(
     await runReminderStep(match, 30, result);
   }
 
-  // Step 3: T-15min — Discord reminder
+  // Step 3: T-20min — rappel « feuille de match » aux équipes qui ONT coché.
+  // Évalué par équipe (et pas gated par un marqueur de match) : une équipe qui
+  // fait son check-in à T-16 doit encore pouvoir être relancée.
+  if (minutesUntil <= LINEUP_REMINDER_MINUTES && minutesUntil > 0) {
+    await runLineupReminderStep(match, result, Math.round(minutesUntil));
+  }
+
+  // Step 4: T-15min — Discord reminder
   if (
     minutesUntil <= REMINDER_15_MINUTES &&
     minutesUntil > 0 &&
@@ -416,7 +444,7 @@ export async function processMatchCheckin(
     await runReminderStep(match, 15, result);
   }
 
-  // Step 4: auto-forfeit. A team that hasn't checked in by kickoff is forfeited;
+  // Step 5: auto-forfeit. A team that hasn't checked in by kickoff is forfeited;
   // the per-tournament grace window only widens the *catch-up* span during which
   // the cron may still act (so a few missed ticks don't skip the match), exactly
   // as the hard-coded `-60` upper bound did before. The grace is read via an
@@ -540,6 +568,111 @@ async function runCheckinOpenStep(
     },
     match.tenant_id
   ).catch((err) => logger.warn('[checkin] checkin.opened emit failed', err));
+}
+
+/**
+ * Relance les équipes qui ont fait leur check-in SANS valider leur feuille.
+ *
+ * Le complément exact de `runReminderStep` : celui-ci pingue qui n'a pas
+ * coché, celui-là pingue qui a coché et n'a rien déclaré. Sans cette relance,
+ * une équipe qui confirme sa présence puis ferme l'onglet repart sans
+ * composition — et le classement retombe sur le roster figé à la saisie du
+ * score, ce que la feuille existe pour corriger.
+ *
+ * Trois précautions :
+ *   1. par ÉQUIPE, marqueur compris : les deux côtés ne cochent pas au même
+ *      instant, et gater sur le match laisserait la seconde sans relance ;
+ *   2. rien pour qui n'a pas coché — la feuille n'est pas encore ouverte, la
+ *      relancer enverrait vers une porte fermée (c'est le rappel de check-in
+ *      qui s'en charge) ;
+ *   3. best-effort de bout en bout : une lecture de `match_lineups` qui échoue
+ *      fait sortir sans rien marquer, plutôt que de risquer un ping en double
+ *      ou, pire, de faire échouer le pipeline de forfait en aval.
+ */
+async function runLineupReminderStep(
+  match: MatchLite,
+  result: ProcessStepResult,
+  minutesLeft: number
+): Promise<void> {
+  const sides = [
+    {
+      teamId: match.team1_id,
+      team: match.team1,
+      checkedIn: match.team1_checked_in_at,
+      sentAt: match.team1_lineup_reminder_sent_at,
+      opponent: match.team2?.name || 'Équipe 2',
+      field: 'team1_lineup_reminder_sent_at' as const,
+    },
+    {
+      teamId: match.team2_id,
+      team: match.team2,
+      checkedIn: match.team2_checked_in_at,
+      sentAt: match.team2_lineup_reminder_sent_at,
+      opponent: match.team1?.name || 'Équipe 1',
+      field: 'team2_lineup_reminder_sent_at' as const,
+    },
+  ].filter((s) => !!s.teamId && !!s.checkedIn && !s.sentAt);
+
+  if (sides.length === 0) return;
+
+  // Qui a DÉJÀ validé : ces équipes n'ont rien à faire.
+  let validated = new Set<string>();
+  try {
+    const { data, error } = await supabaseAdmin!
+      .from('match_lineups')
+      .select('team_id')
+      .eq('match_id', match.id)
+      .eq('status', 'validated');
+    if (error) {
+      result.errors.push(`lineup reminder read: ${error.message}`);
+      return;
+    }
+    validated = new Set(
+      ((data || []) as { team_id?: string | null }[])
+        .map((r) => r.team_id)
+        .filter((id): id is string => !!id)
+    );
+  } catch (err) {
+    result.errors.push(
+      `lineup reminder read: ${err instanceof Error ? err.message : String(err)}`
+    );
+    return;
+  }
+
+  const pending = sides.filter((s) => !validated.has(s.teamId as string));
+  if (pending.length === 0) return;
+
+  const lineupUrl = `${SITE_URL.replace(/\/$/, '')}/player/matches`;
+
+  await Promise.allSettled(
+    pending.map((s) =>
+      notifyLineupReminder({
+        tournamentId: match.tournament_id,
+        matchId: match.id,
+        teamName: s.team?.name || 'Équipe',
+        teamRoleId: s.team?.discord_role_id ?? null,
+        opponentName: s.opponent,
+        scheduledAt: match.scheduled_at!,
+        minutesBeforeKickoff: minutesLeft,
+        lineupUrl,
+      })
+    )
+  );
+
+  // Un UPDATE par côté : les deux marqueurs sont indépendants, et une équipe
+  // relancée ne doit pas dépendre du sort de l'autre.
+  for (const s of pending) {
+    const { error } = await supabaseAdmin!
+      .from('matches')
+      .update({ [s.field]: new Date().toISOString() })
+      .eq('tenant_id', match.tenant_id)
+      .eq('id', match.id);
+    if (error) {
+      result.errors.push(`mark lineup reminder ${s.field}: ${error.message}`);
+    }
+  }
+
+  result.steps.push(`lineup_reminder (${pending.length} pinged)`);
 }
 
 async function runReminderStep(
@@ -887,6 +1020,7 @@ const SELECT_FIELDS = `
   team1_checkin_token, team2_checkin_token,
   team1_checked_in_at, team2_checked_in_at,
   checkin_email_sent_at, reminder_30_sent_at, reminder_15_sent_at,
+  team1_lineup_reminder_sent_at, team2_lineup_reminder_sent_at,
   forfeit_processed_at,
   team1:team1_id(id, name, discord_role_id),
   team2:team2_id(id, name, discord_role_id),

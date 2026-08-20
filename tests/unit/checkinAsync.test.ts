@@ -6,6 +6,7 @@ const {
   sendCheckinForfeitEmail,
   notifyCheckinReminder,
   notifyCheckinForfeit,
+  notifyLineupReminder,
   applyMatchScore,
 } = vi.hoisted(() => ({
   sendMatchCheckinEmail: vi.fn(async () => ({ ok: true as const })),
@@ -13,6 +14,7 @@ const {
   sendCheckinForfeitEmail: vi.fn(async () => ({ ok: true as const })),
   notifyCheckinReminder: vi.fn(async () => undefined),
   notifyCheckinForfeit: vi.fn(async () => undefined),
+  notifyLineupReminder: vi.fn(async () => undefined),
   applyMatchScore: vi.fn(async () => undefined),
 }));
 
@@ -24,6 +26,7 @@ vi.mock('../../utils/email', () => ({
 vi.mock('../../utils/discord', () => ({
   notifyCheckinReminder,
   notifyCheckinForfeit,
+  notifyLineupReminder,
 }));
 vi.mock('../../utils/matches/applyScore', () => ({ applyMatchScore }));
 
@@ -68,6 +71,10 @@ type MatchSeed = {
   checkin_email_sent_at?: string | null;
   reminder_30_sent_at?: string | null;
   reminder_15_sent_at?: string | null;
+  // Rappel « feuille de match » : marqueur PAR ÉQUIPE, parce que les deux
+  // côtés ne font pas leur check-in au même instant.
+  team1_lineup_reminder_sent_at?: string | null;
+  team2_lineup_reminder_sent_at?: string | null;
   forfeit_processed_at?: string | null;
   tournament_id?: string | null;
 };
@@ -117,6 +124,7 @@ beforeEach(() => {
   sendCheckinForfeitEmail.mockClear();
   notifyCheckinReminder.mockClear();
   notifyCheckinForfeit.mockClear();
+  notifyLineupReminder.mockClear();
   applyMatchScore.mockClear();
 
   // Le bulk scanner (cron, sans tournamentId) est désormais gardé par
@@ -971,15 +979,148 @@ describe('hasActiveTournamentWindow', () => {
       in: () => errChain,
       lte: () => errChain,
       gte: () => errChain,
-      limit: () =>
-        Promise.resolve({ data: null, error: { message: 'boom' } }),
+      limit: () => Promise.resolve({ data: null, error: { message: 'boom' } }),
     };
-    const spy = vi
-      .spyOn(supabaseAdmin, 'from')
-      .mockReturnValueOnce(errChain);
+    const spy = vi.spyOn(supabaseAdmin, 'from').mockReturnValueOnce(errChain);
 
     expect(await hasActiveTournamentWindow()).toBe(true);
 
     spy.mockRestore();
+  });
+});
+
+/* -----------------------------------------------------------
+ * Rappel « feuille de match » (T-20)
+ * ---------------------------------------------------------*/
+
+describe('processMatchCheckin — rappel feuille de match', () => {
+  /**
+   * Le complément exact du rappel de check-in : celui-ci vise les équipes qui
+   * ONT coché et n'ont pas déclaré qui joue. Sans lui, une équipe qui confirme
+   * sa présence puis ferme l'onglet repart sans composition, et le classement
+   * retombe sur le roster figé à la saisie du score.
+   */
+  function seedMatchRow() {
+    store.matches = [{ id: 'match-1', tenant_id: TENANT_ID }] as any;
+    store.match_lineups = [] as any;
+  }
+
+  it('relance une équipe qui a coché sans valider sa feuille', async () => {
+    seedMatchRow();
+    const m = buildMatchLite({
+      scheduled_at: scheduledIn(18),
+      team1_checked_in_at: '2026-04-01T12:00:00.000Z',
+      checkin_email_sent_at: '2026-04-01T12:00:00.000Z',
+      reminder_30_sent_at: '2026-04-01T12:00:00.000Z',
+    });
+    const r = await processMatchCheckin(m);
+
+    expect(r.steps).toContain('lineup_reminder (1 pinged)');
+    expect(notifyLineupReminder).toHaveBeenCalledTimes(1);
+    // Marqueur PAR ÉQUIPE : celui de l'équipe 2 reste vierge, elle n'a pas coché.
+    expect(
+      (store.matches[0] as any).team1_lineup_reminder_sent_at
+    ).toBeTruthy();
+    expect((store.matches[0] as any).team2_lineup_reminder_sent_at).toBeFalsy();
+  });
+
+  it('ne relance PAS une équipe qui n’a pas coché — la feuille n’est pas ouverte', async () => {
+    // La relancer l'enverrait vers une porte fermée ; c'est le rappel de
+    // check-in qui s'adresse à elle.
+    seedMatchRow();
+    const m = buildMatchLite({
+      scheduled_at: scheduledIn(18),
+      checkin_email_sent_at: '2026-04-01T12:00:00.000Z',
+      reminder_30_sent_at: '2026-04-01T12:00:00.000Z',
+    });
+    const r = await processMatchCheckin(m);
+
+    expect(r.steps.join(' ')).not.toContain('lineup_reminder');
+    expect(notifyLineupReminder).not.toHaveBeenCalled();
+  });
+
+  it('ne relance PAS une équipe qui a déjà validé', async () => {
+    seedMatchRow();
+    store.match_lineups = [
+      { match_id: 'match-1', team_id: 'team-a', status: 'validated' },
+    ] as any;
+    const m = buildMatchLite({
+      scheduled_at: scheduledIn(18),
+      team1_checked_in_at: '2026-04-01T12:00:00.000Z',
+      checkin_email_sent_at: '2026-04-01T12:00:00.000Z',
+      reminder_30_sent_at: '2026-04-01T12:00:00.000Z',
+    });
+    const r = await processMatchCheckin(m);
+
+    expect(r.steps.join(' ')).not.toContain('lineup_reminder');
+    expect(notifyLineupReminder).not.toHaveBeenCalled();
+  });
+
+  it('un BROUILLON ne dispense pas du rappel', async () => {
+    // « Composée mais pas validée » est le cas qu'on veut justement rattraper :
+    // rien n'engage l'équipe tant que la feuille n'est pas validée.
+    seedMatchRow();
+    store.match_lineups = [
+      { match_id: 'match-1', team_id: 'team-a', status: 'draft' },
+    ] as any;
+    const m = buildMatchLite({
+      scheduled_at: scheduledIn(18),
+      team1_checked_in_at: '2026-04-01T12:00:00.000Z',
+      checkin_email_sent_at: '2026-04-01T12:00:00.000Z',
+      reminder_30_sent_at: '2026-04-01T12:00:00.000Z',
+    });
+    const r = await processMatchCheckin(m);
+
+    expect(r.steps).toContain('lineup_reminder (1 pinged)');
+  });
+
+  it('ne relance qu’une fois — le marqueur tient', async () => {
+    seedMatchRow();
+    const m = buildMatchLite({
+      scheduled_at: scheduledIn(18),
+      team1_checked_in_at: '2026-04-01T12:00:00.000Z',
+      team1_lineup_reminder_sent_at: '2026-04-01T12:00:00.000Z',
+      checkin_email_sent_at: '2026-04-01T12:00:00.000Z',
+      reminder_30_sent_at: '2026-04-01T12:00:00.000Z',
+    });
+    const r = await processMatchCheckin(m);
+
+    expect(r.steps.join(' ')).not.toContain('lineup_reminder');
+    expect(notifyLineupReminder).not.toHaveBeenCalled();
+  });
+
+  it('trop tôt (T-40) : on ne relance pas encore', async () => {
+    seedMatchRow();
+    const m = buildMatchLite({
+      scheduled_at: scheduledIn(40),
+      team1_checked_in_at: '2026-04-01T12:00:00.000Z',
+      checkin_email_sent_at: '2026-04-01T12:00:00.000Z',
+    });
+    const r = await processMatchCheckin(m);
+
+    expect(notifyLineupReminder).not.toHaveBeenCalled();
+    expect(r.steps.join(' ')).not.toContain('lineup_reminder');
+  });
+
+  it('une équipe qui coche TARD est quand même relancée', async () => {
+    // Le marqueur est par équipe et pas par match : c'est ce qui permet de
+    // rattraper l'équipe qui confirme sa présence à T-16, après que l'autre a
+    // déjà été traitée.
+    seedMatchRow();
+    const m = buildMatchLite({
+      scheduled_at: scheduledIn(8),
+      team1_checked_in_at: '2026-04-01T12:00:00.000Z',
+      team1_lineup_reminder_sent_at: '2026-04-01T12:00:00.000Z',
+      team2_checked_in_at: '2026-04-01T12:05:00.000Z',
+      checkin_email_sent_at: '2026-04-01T12:00:00.000Z',
+      reminder_30_sent_at: '2026-04-01T12:00:00.000Z',
+      reminder_15_sent_at: '2026-04-01T12:00:00.000Z',
+    });
+    const r = await processMatchCheckin(m);
+
+    expect(r.steps).toContain('lineup_reminder (1 pinged)');
+    expect(
+      (store.matches[0] as any).team2_lineup_reminder_sent_at
+    ).toBeTruthy();
   });
 });

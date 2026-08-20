@@ -706,6 +706,75 @@ export type CheckinReminderNotification = {
   checkinUrl: string;
 };
 
+/**
+ * Rappel « feuille de match » — le COMPLÉMENT exact du rappel de check-in.
+ *
+ * Celui-ci pingue les équipes qui n'ont PAS confirmé leur présence ; celui-là
+ * pingue celles qui l'ont fait et n'ont pas déclaré qui joue. Sans lui, une
+ * équipe qui coche son check-in et ferme l'onglet repart sans composition — et
+ * le classement retombe sur le roster figé à la saisie du score, ce que la
+ * feuille de match existe précisément pour corriger.
+ *
+ * Même webhook que les rappels de check-in (`checkin_reminders`) : c'est le
+ * même moment du parcours et le même public, en séparer un second n'ajouterait
+ * qu'un réglage à oublier.
+ */
+export type LineupReminderNotification = {
+  tournamentId: string | null;
+  matchId: string;
+  teamName: string;
+  teamRoleId: string | null | undefined;
+  opponentName: string;
+  scheduledAt: string;
+  minutesBeforeKickoff: number;
+  lineupUrl: string;
+};
+
+export async function notifyLineupReminder(
+  data: LineupReminderNotification
+): Promise<void> {
+  const cfg = await resolveWebhook(data.tournamentId, 'checkin_reminders');
+  if (!cfg) return;
+
+  const teamPing = teamRolePing(data.teamRoleId, data.teamName);
+  const channelPing = formatRoleMention(cfg.roleMention);
+
+  const fields: DiscordEmbedField[] = [
+    { name: 'Adversaire', value: data.opponentName, inline: true },
+  ];
+  const dateLabel = formatDateFr(data.scheduledAt);
+  if (dateLabel) {
+    fields.push({ name: 'Début', value: dateLabel, inline: true });
+  }
+  fields.push({
+    name: 'Feuille de match',
+    value: data.lineupUrl,
+    inline: false,
+  });
+
+  const contentParts = [teamPing];
+  if (channelPing) contentParts.unshift(channelPing);
+
+  await postToDiscordWebhook(cfg.url, {
+    username: "OW Women's Cup",
+    content: contentParts.join(' '),
+    embeds: [
+      {
+        title: `📋 Feuille de match : il reste ${data.minutesBeforeKickoff} minutes`,
+        description:
+          `**${data.teamName}** a fait son check-in mais n'a pas encore déclaré ` +
+          `qui joue contre **${data.opponentName}**. Sans feuille validée, le ` +
+          `classement retiendra le roster entier, remplaçantes comprises.`,
+        color: COLORS.checkinReminder,
+        fields,
+        timestamp: new Date().toISOString(),
+        footer: { text: `Match ${data.matchId.slice(0, 8)}` },
+      },
+    ],
+    allowed_mentions: buildAllowedMentions(cfg.roleMention, [data.teamRoleId]),
+  });
+}
+
 export async function notifyCheckinReminder(
   data: CheckinReminderNotification
 ): Promise<void> {
