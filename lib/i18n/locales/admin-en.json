@@ -8137,5 +8137,20 @@
     "previewWebcamShow": "Show anyway (turns the camera on)",
     "previewBlockedTitle": "Preview blocked by the security policy",
     "previewBlockedBody": "The browser refuses to frame the overlay page: the site CSP sets “frame-ancestors none” on /overlay/*. Use “Open in a tab” until the middleware allows same-site framing (proxy.ts)."
+  },
+  "adminMatchLineups": {
+    "heading": "Match sheets",
+    "unknownTeam": "Unknown team",
+    "badgeTeam": "Validated by the team",
+    "badgeAdmin": "Validated by staff",
+    "badgeDraft": "Draft",
+    "awaitingCheckin": "Waiting for the team check-in.",
+    "closed": "Sheet closed for this match.",
+    "noPlayers": "No player declared.",
+    "substitute": "(substitute)",
+    "validatedAt": "Validated on {date}.",
+    "validateForTeam": "Validate on their behalf",
+    "reopen": "Reopen",
+    "footnote": "Validating on a team behalf marks the sheet \"validated by staff\": it does not commit the team the same way. Reopening is the only action that unfreezes a validated sheet."
   }
 }

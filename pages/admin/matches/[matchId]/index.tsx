@@ -12,6 +12,7 @@ import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { MatchStatus } from '@/types/admin';
 import MatchHistoryDrawer from '@/components/admin/MatchHistoryDrawer';
+import MatchLineupsPanel from '@/components/admin/MatchLineupsPanel';
 import Modal from '@/components/admin/Modal';
 import nsAdminMatchDetail from '@/lib/i18n/locales/admin-fr/adminMatchDetail';
 
@@ -527,6 +528,11 @@ function MatchViewPage(_: StaffProps) {
                   />
                 </div>
               </div>
+
+              {/* Feuilles de match : où en sont les deux équipes, et les deux
+                  leviers du staff (valider à leur place, rouvrir). Se tait sur
+                  un match sans équipes (bye, bracket non résolu). */}
+              <MatchLineupsPanel matchId={match.id} />
 
               {match.games && match.games.length > 0 && (
                 <div className="p-4 rounded-xl bg-white/5 border border-white/10">

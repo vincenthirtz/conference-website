@@ -13,6 +13,7 @@ import Link from 'next/link';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
+import MatchLineupCard from '@/components/player/MatchLineupCard';
 import ReportScoreModal, {
   type LocalReport,
   type ReportOutcome,
@@ -261,6 +262,17 @@ function MatchCard({
             {reportState.report.opponent} {t.opponentLabel}
           </span>
         </p>
+      )}
+
+      {/* Feuille de match — montée UNIQUEMENT sur les matchs à venir dont le
+          check-in est fait. C'est exactement la condition d'ouverture côté
+          serveur (utils/matches/lineup.ts), et c'est ce qui évite de lancer
+          une requête par ligne sur un historique entier : la carte se tairait
+          de toute façon, mais après un aller-retour réseau. */}
+      {upcoming && checkin?.alreadyCheckedIn && (
+        <div className="mt-4">
+          <MatchLineupCard matchId={match.id} />
+        </div>
       )}
     </div>
   );
