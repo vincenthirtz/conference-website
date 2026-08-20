@@ -82,6 +82,20 @@ export type ManagedTeamMemberRow = {
   /** `captain` et `is_captain` sont deux alias du même flag (= team.captain_id === user_id). */
   captain: boolean;
   is_captain: boolean;
+  /**
+   * Compte Discord lié (table globale `user_discord_links`).
+   *
+   * `null` = « non communiqué », PAS « non lié » : l'état de liaison d'un
+   * tiers n'est renseigné que pour un appelant qui GÈRE l'équipe. Une
+   * coéquipière ordinaire lit `null` sur toutes les lignes et ne peut donc
+   * rien déduire des comptes des autres.
+   *
+   * Pourquoi l'exposer du tout : sans compte Discord lié, le bot ne peut ni
+   * donner ses rôles à la personne, ni l'ajouter aux salons de l'équipe, ni
+   * la convoquer — elle n'est pas validable. Le capitaine découvrait ce trou
+   * en comptage agrégé (« santé d'équipe ») sans jamais savoir QUI.
+   */
+  discord_linked: boolean | null;
 };
 
 /**
@@ -162,6 +176,36 @@ async function loadManagedTeamSummaries(
       },
     ];
   });
+}
+
+/**
+ * Quels `user_id` du roster ont un compte Discord lié.
+ *
+ * `user_discord_links` est GLOBALE (pas de `tenant_id`) : un compte Discord se
+ * lie une fois, pour tous les tenants. Une seule lecture pour tout le roster.
+ *
+ * En cas d'erreur on renvoie un ensemble VIDE plutôt que de faire échouer la
+ * tranche : l'écran affichera « non lié » à tort, ce qui pousse à une action
+ * inutile mais inoffensive — alors qu'un roster qui ne charge plus casse la
+ * page entière.
+ */
+async function loadDiscordLinkedUserIds(
+  userIds: string[]
+): Promise<Set<string>> {
+  const linked = new Set<string>();
+  if (!supabaseAdmin || userIds.length === 0) return linked;
+  const { data, error } = await supabaseAdmin
+    .from('user_discord_links')
+    .select('user_id')
+    .in('user_id', userIds);
+  if (error) {
+    logger.error('[managedTeamSlice] discord links error:', error);
+    return linked;
+  }
+  for (const row of (data || []) as { user_id?: string | null }[]) {
+    if (row?.user_id) linked.add(row.user_id);
+  }
+  return linked;
 }
 
 /**
@@ -301,6 +345,18 @@ export async function loadManagedTeamSlice(
       memberRows as { user_id?: string | null; display_name?: string | null }[]
     );
 
+    // Liaisons Discord du roster — lues SEULEMENT pour un appelant qui gère
+    // l'équipe (cf. `discord_linked`). Pour les autres, on n'interroge même
+    // pas la table : la donnée ne sortirait pas de toute façon.
+    const managesThisTeam = isCaptain || isManager;
+    const discordLinkedIds = managesThisTeam
+      ? await loadDiscordLinkedUserIds(
+          memberRows
+            .map((m) => (m.user_id as string | null) ?? null)
+            .filter((id): id is string => !!id)
+        )
+      : new Set<string>();
+
     const members: ManagedTeamMemberRow[] = memberRows.map((m) => {
       const memberUserId = (m.user_id as string | null) ?? null;
       const isMemberCaptain = captainId != null && captainId === memberUserId;
@@ -319,6 +375,9 @@ export async function loadManagedTeamSlice(
         is_substitute: Boolean(m.is_substitute),
         captain: isMemberCaptain,
         is_captain: isMemberCaptain,
+        discord_linked: managesThisTeam
+          ? !!memberUserId && discordLinkedIds.has(memberUserId)
+          : null,
       };
     });
 

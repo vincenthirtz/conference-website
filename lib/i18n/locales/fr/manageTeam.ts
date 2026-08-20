@@ -79,6 +79,15 @@ export default ns('manageTeam', {
   verifiedBadge: 'vérifié',
   unverifiedBadge: 'non vérifié',
   verifiedBadgeTitle: 'BattleTag vérifié via Battle.net',
+  discordUnlinkedBadge: 'Discord non lié',
+  discordUnlinkedBadgeTitle:
+    "Cette personne n'a pas lié son compte Discord : le bot ne peut ni lui donner ses rôles, ni l'ajouter aux salons de l'équipe, ni la convoquer.",
+  discordGapTitle_one:
+    '{count} membre sur {total} n’a pas lié son compte Discord',
+  discordGapTitle_other:
+    '{count} membres sur {total} n’ont pas lié leur compte Discord',
+  discordGapBody:
+    'Repère-les au badge orange ci-dessous. Tant que la liaison manque, la personne ne reçoit ni rôle, ni salon d’équipe, ni convocation — et ne peut pas être validée. Elle la fait elle-même depuis son espace joueur, en une fois.',
   unverifiedBadgeTitle:
     'BattleTag non vérifié — la joueuse doit lier son compte Battle.net',
   roleManager: 'Manager',

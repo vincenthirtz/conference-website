@@ -47,6 +47,13 @@ export type ManagedTeamMember = TeamMemberLite & {
   specialty?: string | null;
   /** Pseudo affichable — l'encadrement n'a pas forcément de BattleTag. */
   display_name?: string | null;
+  /**
+   * Compte Discord lié. TRI-état : le serveur ne renseigne `true`/`false` que
+   * pour un appelant qui GÈRE l'équipe, et laisse `null` sinon (cf.
+   * utils/teams/managedTeamSlice.ts). Lire l'absence comme « non lié » serait
+   * un faux constat : passer par utils/teams/rosterReadiness.ts.
+   */
+  discord_linked?: boolean | null;
 };
 
 export type ManagedTeamData = {

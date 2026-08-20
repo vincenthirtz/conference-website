@@ -21,6 +21,10 @@ import CopyButton from '@/components/player/CopyButton';
 import FreePlayersSection from '@/components/player/FreePlayersSection';
 import BattlenetVerifyCard from '@/components/player/BattlenetVerifyCard';
 import RegistrationDeadlineBanner from '@/components/player/RegistrationDeadlineBanner';
+import {
+  discordReadinessSummary,
+  hasDiscordLinkInfo,
+} from '@/utils/teams/rosterReadiness';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
@@ -50,6 +54,13 @@ type Member = {
   // Battle.net est câblée côté back (cf. TODO API). Tant que la clé est
   // absente, le badge ne s'affiche pas ; `null` = non vérifié, string = vérifié.
   battle_tag_verified_at?: string | null;
+  /**
+   * Compte Discord lié. TRI-état : `true` / `false` / absent-ou-`null` quand
+   * le serveur ne l'a pas communiqué — il ne le fait que pour un appelant qui
+   * GÈRE l'équipe (cf. utils/teams/managedTeamSlice.ts). Ne jamais lire
+   * l'absence comme « non lié » : cf. utils/teams/rosterReadiness.ts.
+   */
+  discord_linked?: boolean | null;
 };
 
 type TeamInfo = {
@@ -178,6 +189,13 @@ export default function PlayerManageTeamScreen() {
   const orderedMembers = [...roster, ...subs, ...staff];
   const firstStaffIndex = staff.length ? roster.length + subs.length : -1;
   const playingCount = roster.length + subs.length;
+
+  // Combien de membres ne sont pas joignables sur Discord. Porte sur le roster
+  // ENTIER, encadrement compris : un coach absent du serveur est aussi
+  // invalidable qu'une joueuse. `known` peut valoir 0 — le serveur ne
+  // communique l'état qu'à qui gère l'équipe.
+  const discordKnown = hasDiscordLinkInfo(members);
+  const discordGaps = discordReadinessSummary(members);
 
   // Sync local mirror whenever the shared team payload changes.
   useEffect(() => {
@@ -721,6 +739,27 @@ export default function PlayerManageTeamScreen() {
                 </p>
               </div>
             )}
+            {/* Qui n'est pas joignable sur Discord. La « santé d'équipe » du
+                dashboard donne déjà le COMPTE ; ici on donne les NOMS, via le
+                badge sur chaque ligne — un capitaine qui lit « 3 comptes non
+                liés » sans savoir lesquels ne peut rien en faire. Rendu
+                seulement si le serveur a communiqué l'état (il ne le fait que
+                pour qui gère l'équipe) et s'il manque quelqu'un. */}
+            {discordKnown && discordGaps.unlinked > 0 && (
+              <div className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3">
+                <p className="text-sm font-semibold text-amber-100">
+                  {format(
+                    discordGaps.unlinked > 1
+                      ? t.discordGapTitle_other
+                      : t.discordGapTitle_one,
+                    { count: discordGaps.unlinked, total: discordGaps.known }
+                  )}
+                </p>
+                <p className="mt-1 text-xs text-amber-100/80">
+                  {t.discordGapBody}
+                </p>
+              </div>
+            )}
             {members.filter((m) => !m.is_captain).length === 0 ? (
               <div className="rounded-xl border border-purple-500/30 bg-purple-500/10 px-4 py-5 text-center">
                 <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-purple-500/20 flex items-center justify-center">
@@ -783,9 +822,9 @@ export default function PlayerManageTeamScreen() {
                               className="h-5 w-5 shrink-0"
                             />
                           )}
-                          {/* Badge de vérification Battle.net. Rendu uniquement
-                            quand l'API expose battle_tag_verified_at par membre
-                            (TODO API : l'ajouter au SELECT de /api/admin/teams/my). */}
+                          {/* Badge de vérification Battle.net. Rendu
+                            uniquement quand l'API expose
+                            battle_tag_verified_at par membre. */}
                           {'battle_tag_verified_at' in m &&
                             (m.battle_tag_verified_at ? (
                               <span
@@ -803,6 +842,19 @@ export default function PlayerManageTeamScreen() {
                                 {t.unverifiedBadge}
                               </span>
                             ))}
+                          {/* Discord non lié — seulement le MANQUE : un badge
+                              « lié » sur les autres lignes ferait du bruit sans
+                              rien appeler à faire. `=== false` et pas
+                              `!m.discord_linked` : l'absence d'information
+                              n'est pas un manque constaté. */}
+                          {m.discord_linked === false && (
+                            <span
+                              title={t.discordUnlinkedBadgeTitle}
+                              className="shrink-0 inline-flex items-center rounded-full border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-300"
+                            >
+                              {t.discordUnlinkedBadge}
+                            </span>
+                          )}
                         </div>
                         <div className="text-xs text-gray-500">
                           {m.is_captain ? (
