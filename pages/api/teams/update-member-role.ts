@@ -14,6 +14,7 @@ import {
 } from '@/utils/teams/managementAccess';
 import { getManagedTeamForRequest } from '@/utils/teams/teamScope';
 import {
+  TEAM_ROLE_VALUES,
   loadTeamRolesFromSupabase,
   roleHasAnyPermission,
 } from '@/utils/teamRoles';
@@ -24,7 +25,7 @@ import { logger } from '../../../utils/logger';
 // plutot que de la corriger silencieusement vers 'player' (ce que ferait le
 // helper partage validateRole, conserve pour les appelants comme
 // create-with-member qui s'appuient sur sa coercition).
-const ALLOWED_ROLES = new Set(['player', 'coach', 'substitute', 'manager']);
+const ALLOWED_ROLES: ReadonlySet<string> = new Set(TEAM_ROLE_VALUES);
 export default withSubjectRoute(
   async function handler(
     req: NextApiRequest,

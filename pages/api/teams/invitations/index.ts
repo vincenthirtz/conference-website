@@ -47,8 +47,9 @@ import {
   hashInviteToken,
 } from '@/utils/teams/inviteLinks';
 import { logger } from '@/utils/logger';
+import { TEAM_ROLE_VALUES } from '@/utils/teamRoles';
 
-const ALLOWED_ROLES = ['player', 'substitute', 'coach', 'manager'] as const;
+const ALLOWED_ROLES = TEAM_ROLE_VALUES;
 
 const bodySchema = z.object({
   email: z.string().trim().toLowerCase().email().max(254),

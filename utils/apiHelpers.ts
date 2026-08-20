@@ -3,6 +3,7 @@
 
 import type { NextApiRequest } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
+import { TEAM_ROLE_VALUES } from '@/utils/teamRoles';
 
 /**
  * Extract and validate pagination parameters (limit + offset) from query string.
@@ -132,7 +133,8 @@ export function escapePostgrestValue(value: string): string {
   return value.replace(/[,.*()\\]/g, '');
 }
 
-const ALLOWED_ROLES = new Set(['player', 'coach', 'substitute', 'manager']);
+// Liste unique : cf. utils/teamRoles.ts (miroir de la CHECK `chk_team_members_role`).
+const ALLOWED_ROLES: ReadonlySet<string> = new Set(TEAM_ROLE_VALUES);
 
 /**
  * Validate a member role against the allowed list.

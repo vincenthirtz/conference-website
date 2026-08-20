@@ -33,6 +33,7 @@ import {
 import {
   validateBattleTag,
   roleRequiresBattleTag,
+  isNonPlayingTeamRole,
   BATTLE_TAG_FORMAT_HINT,
 } from '@/utils/teams/addMember';
 import { logStaffAction } from '@/utils/staffLogs';
@@ -146,14 +147,23 @@ export default withSubjectRoute(
       newRole = validateRole(req.body.role);
       const teamRoles = await loadTeamRolesFromSupabase(supabaseAdmin);
 
-      // Anti-escalation : accorder/modifier un role privilegie => capitaine only.
-      if (
-        (roleHasAnyPermission(teamRoles, newRole) ||
-          roleHasAnyPermission(teamRoles, member.role)) &&
-        !access.isCaptain
-      ) {
+      // Anti-escalation, MÊME RÈGLE que /api/teams/update-member-role : les
+      // deux routes font le même geste (changer le rôle d'un membre) et
+      // divergeaient depuis l'ouverture de la promotion aux managers — la
+      // page joueur passait, l'écran staff refusait.
+      //
+      // ACCORDER un rôle privilégié suit `manage_roster`, déjà exigé plus
+      // haut : c'est une délégation, et add-member laisse de toute façon un
+      // manager ajouter un membre AVEC ce rôle.
+      //
+      // DÉGRADER un pair privilégié reste réservé au capitaine : c'est un
+      // conflit, pas une délégation. Deux managers ne doivent pas pouvoir se
+      // destituer l'un l'autre (même règle dans update-member-role.ts et dans
+      // DELETE /api/teams/[teamId]/members).
+      if (roleHasAnyPermission(teamRoles, member.role) && !access.isCaptain) {
         return res.status(403).json({
-          error: 'Seul le capitaine peut modifier un rôle privilégié.',
+          error:
+            "Seul le capitaine peut modifier le rôle d'un membre privilégié.",
         });
       }
       if (member.user_id === userId && newRole !== member.role) {
@@ -171,8 +181,35 @@ export default withSubjectRoute(
     let substituteChanged = false;
     if (hasIsSubstitute) {
       const desired = req.body.is_substitute === true;
-      if (desired !== (member.is_substitute ?? false)) {
+
+      // `is_substitute` n'est PAS un état parallèle au rôle : c'est le même
+      // fait, écrit deux fois. Les laisser bouger indépendamment rendait
+      // atteignables `role='player', is_substitute=true` et son inverse —
+      // deux lignes qui se contredisent, que chaque écran tranchait à sa
+      // façon (splitTeamMembers lit le drapeau, les compteurs lisent le rôle).
+      // Le drapeau PILOTE donc le rôle, et la contrainte
+      // `chk_team_members_substitute_matches_role` interdit la divergence en
+      // base.
+      if (hasRole && desired !== (newRole === 'substitute')) {
+        return res.status(400).json({
+          error:
+            'role et is_substitute se contredisent : « remplaçante » EST le rôle `substitute`, pas un drapeau à part.',
+        });
+      }
+
+      // L'encadrement n'a pas de banc : un coach n'est pas « remplaçant ».
+      if (desired && isNonPlayingTeamRole(newRole)) {
+        return res.status(400).json({
+          error:
+            "Un rôle d'encadrement ne peut pas être marqué remplaçant — change d'abord son rôle.",
+        });
+      }
+
+      const targetRole = desired ? 'substitute' : 'player';
+      if (targetRole !== member.role) {
+        newRole = targetRole;
         newIsSubstitute = desired;
+        updatePayload.role = targetRole;
         updatePayload.is_substitute = desired;
         substituteChanged = true;
       }

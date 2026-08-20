@@ -178,8 +178,13 @@ describe('/api/teams/update-member - substitute', () => {
   });
 
   it('captain can unmark a substitute', async () => {
-    (store.team_members as any[]).find((m) => m.id === TM_PLY).is_substitute =
-      true;
+    // État de départ COHÉRENT : `role='substitute'` ET le drapeau. La fixture
+    // ne posait que le drapeau — exactement la contradiction que la contrainte
+    // `chk_team_members_substitute_matches_role` interdit désormais en base.
+    const target = (store.team_members as any[]).find((m) => m.id === TM_PLY);
+    target.role = 'substitute';
+    target.is_substitute = true;
+
     const res = makeRes();
     await updateMemberHandler(
       makeAuthedReq({ body: { memberId: TM_PLY, is_substitute: false } }),
@@ -188,6 +193,56 @@ describe('/api/teams/update-member - substitute', () => {
     expect(res.statusCode).toBe(200);
     const member = (store.team_members as any[]).find((m) => m.id === TM_PLY);
     expect(member.is_substitute).toBe(false);
+    // Démarquer, c'est REVENIR au rôle joueuse — pas laisser un
+    // `role='substitute'` orphelin derrière soi.
+    expect(member.role).toBe('player');
+  });
+
+  it('marquer remplaçante change le RÔLE, pas seulement le drapeau', async () => {
+    // « Remplaçante » était écrit deux fois sur la même ligne (role +
+    // is_substitute) sans que rien ne les lie. Les lecteurs ne tranchaient pas
+    // pareil : splitTeamMembers classe sur le drapeau, countPlayingMembers et
+    // le quota `enforce_team_max_players` raisonnent sur le rôle. Une même
+    // personne pouvait donc être affichée sur le banc et comptée titulaire.
+    const res = makeRes();
+    await updateMemberHandler(
+      makeAuthedReq({ body: { memberId: TM_PLY, is_substitute: true } }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    const member = (store.team_members as any[]).find((m) => m.id === TM_PLY);
+    expect(member).toMatchObject({ role: 'substitute', is_substitute: true });
+  });
+
+  it('refuse un payload qui se contredit', async () => {
+    // `role: 'player'` + `is_substitute: true` : deviner lequel gagne, c'est
+    // rendre le résultat dépendant de l'ordre du code. On refuse.
+    const res = makeRes();
+    await updateMemberHandler(
+      makeAuthedReq({
+        body: { memberId: TM_PLY, role: 'player', is_substitute: true },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+    expect((res.body as any).error).toMatch(/contredisent/i);
+  });
+
+  it('refuse de mettre un rôle d’encadrement sur le banc', async () => {
+    // Un coach n'est pas « remplaçant » : il n'est pas dans le roster jouant
+    // du tout. Le marquer laisserait une ligne que countPlayingMembers ignore
+    // mais que l'affichage rangerait avec les remplaçantes.
+    const target = (store.team_members as any[]).find((m) => m.id === TM_PLY);
+    target.role = 'coach';
+    target.is_substitute = false;
+
+    const res = makeRes();
+    await updateMemberHandler(
+      makeAuthedReq({ body: { memberId: TM_PLY, is_substitute: true } }),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+    expect((res.body as any).error).toMatch(/encadrement/i);
   });
 
   it('emits manage_substitute audit log on change', async () => {

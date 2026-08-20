@@ -66,6 +66,38 @@ export type TeamRole = {
 
 export const TEAM_ROLES_SETTING_KEY = 'team_roles';
 
+/**
+ * Les rôles d'équipe qui EXISTENT — la liste que la base accepte.
+ *
+ * Source unique volontaire : cette même liste était réécrite à la main dans
+ * `utils/apiHelpers.ts` (validateRole), `pages/api/teams/update-member-role.ts`
+ * et `pages/api/teams/invitations/index.ts`. Quatre copies d'un même fait, dont
+ * aucune ne cassait si les autres bougeaient.
+ *
+ * Elle est le MIROIR de la contrainte `chk_team_members_role`
+ * (database/migrations/enforce_status_check_constraints.sql) : y ajouter une
+ * valeur sans migration ferait échouer l'INSERT en base. La parité est
+ * vérifiée par tests/unit/teamRoleCatalogParity.test.ts, qui lit le SQL.
+ *
+ * À NE PAS CONFONDRE avec `parseTeamRoles` / `site_settings.team_roles`, qui
+ * configure les PERMISSIONS de ces rôles — pas leur existence.
+ */
+export const TEAM_ROLE_VALUES = [
+  'player',
+  'coach',
+  'substitute',
+  'manager',
+] as const;
+
+export type TeamRoleValue = (typeof TEAM_ROLE_VALUES)[number];
+
+const TEAM_ROLE_VALUE_SET: ReadonlySet<string> = new Set(TEAM_ROLE_VALUES);
+
+/** `true` si la valeur est un rôle d'équipe connu de la base. */
+export function isTeamRoleValue(value: unknown): value is TeamRoleValue {
+  return typeof value === 'string' && TEAM_ROLE_VALUE_SET.has(value);
+}
+
 export const DEFAULT_TEAM_ROLES: TeamRole[] = [
   { value: 'player', label: 'Player', permissions: [] },
   { value: 'coach', label: 'Coach', permissions: [] },
