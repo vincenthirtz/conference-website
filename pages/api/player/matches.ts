@@ -12,6 +12,8 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
+import { resolveMembership } from '@/utils/teams/memberships';
+import { readRequestedTeamId } from '@/utils/teams/teamScope';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withSubjectRoute } from '@/utils/subject';
 import { CHECKIN_OPEN_MINUTES } from '@/utils/checkin';
@@ -74,13 +76,13 @@ export default withSubjectRoute(async function handler(
 
   const { userId, tenantId } = subject;
 
-  // Find the user's team for this tenant.
-  const { data: membership } = await supabaseAdmin
-    .from('team_members')
-    .select('team_id')
-    .eq('user_id', userId)
-    .eq('tenant_id', tenantId)
-    .maybeSingle();
+  // Find the user's team for this tenant — the one the screen asked for
+  // (`?teamId=`) when a manager runs several, their own otherwise.
+  const membership = await resolveMembership(
+    userId,
+    tenantId,
+    readRequestedTeamId(req)
+  );
 
   const teamId = membership?.team_id;
   if (!teamId) {

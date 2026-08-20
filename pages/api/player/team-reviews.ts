@@ -38,6 +38,7 @@ import {
   type ReviewSubjectType,
 } from '@/utils/teams/teamReviews';
 import { logger } from '@/utils/logger';
+import { readRequestedTeamId } from '@/utils/teams/teamScope';
 
 /** Profondeur d'historique : au-delà, personne ne fait défiler. */
 const HISTORY_LIMIT = 60;
@@ -199,7 +200,11 @@ export default withAuthRoute(async function handler(
     authUserId: user.id,
   });
 
-  const team = await findMemberTeam(user.id, tenantId);
+  const team = await findMemberTeam(
+    user.id,
+    tenantId,
+    readRequestedTeamId(req)
+  );
   if (!team) {
     if (isGet) {
       // Pas d'équipe : pas d'erreur, simplement aucune mémoire.

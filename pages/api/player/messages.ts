@@ -8,10 +8,10 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withSubjectRoute } from '@/utils/subject';
 import {
-  getManagedTeam,
   assertTeamPermission,
   TEAM_MANAGEMENT_FORBIDDEN,
 } from '@/utils/teams/managementAccess';
+import { getManagedTeamForRequest } from '@/utils/teams/teamScope';
 import type { TeamPermission } from '@/utils/teamRoles';
 
 import { logger } from '../../../utils/logger';
@@ -28,6 +28,7 @@ function conversationId(teamA: string, teamB: string): string {
 type CaptainTeam = { id: string; captain_id: string | null; name: string };
 
 async function loadCaptainTeam(
+  req: NextApiRequest,
   res: NextApiResponse,
   userId: string,
   tenantId: string,
@@ -38,7 +39,7 @@ async function loadCaptainTeam(
    */
   permission?: TeamPermission
 ): Promise<CaptainTeam | null> {
-  const access = await getManagedTeam(userId, tenantId);
+  const access = await getManagedTeamForRequest(req, userId, tenantId);
   if (!access) {
     res.status(403).json({ error: TEAM_MANAGEMENT_FORBIDDEN });
     return null;
@@ -83,7 +84,7 @@ export default withSubjectRoute(
     const { userId, tenantId } = subject;
 
     if (req.method === 'GET') {
-      const team = await loadCaptainTeam(res, userId, tenantId);
+      const team = await loadCaptainTeam(req, res, userId, tenantId);
       if (!team) return;
 
       // Fetch all captain_message demandes involving this captain's team
@@ -172,6 +173,7 @@ export default withSubjectRoute(
     if (req.method === 'POST') {
       // Envoyer un message d'équipe demande `send_captain_messages`.
       const team = await loadCaptainTeam(
+        req,
         res,
         userId,
         tenantId,

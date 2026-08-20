@@ -8,6 +8,7 @@ import { useT, format } from '@/lib/i18n/useT';
 
 import { logger } from '../../utils/logger';
 import nsNextMatchCard from '@/lib/i18n/locales/fr/nextMatchCard';
+import { useActiveTeam } from '@/components/player/ActiveTeamContext';
 
 type T = typeof nsNextMatchCard.fr;
 type NextMatch = {
@@ -80,6 +81,7 @@ export default function NextMatchCard({
 }: Props = {}): JSX.Element | null {
   const { adminFetchJson } = useAdminFetch();
   const { withSubject } = usePlayerArea();
+  const { withTeam } = useActiveTeam();
   const { lang } = useLang();
   const t = useT(nsNextMatchCard);
   const [data, setData] = useState<NextMatch | null>(initialData ?? null);
@@ -92,7 +94,7 @@ export default function NextMatchCard({
   const load = useCallback(async () => {
     try {
       const json = await adminFetchJson<NextMatch>(
-        withSubject('/api/player/next-match'),
+        withTeam(withSubject('/api/player/next-match')),
         { skipAuthRedirect: true }
       );
       setData(json);
@@ -106,7 +108,7 @@ export default function NextMatchCard({
     } finally {
       setLoading(false);
     }
-  }, [adminFetchJson, t, withSubject]);
+  }, [adminFetchJson, t, withSubject, withTeam]);
 
   // Keep in sync if the parent re-supplies a payload (e.g. after loadData).
   useEffect(() => {

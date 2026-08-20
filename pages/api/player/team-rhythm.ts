@@ -44,6 +44,7 @@ import {
 } from '@/utils/teams/trainingSuggestion';
 import { getTimeZoneOffsetMinutes } from '@/utils/timezone';
 import { logger } from '@/utils/logger';
+import { readRequestedTeamId } from '@/utils/teams/teamScope';
 
 const DEFAULT_TIMEZONE = 'Europe/Paris';
 
@@ -146,7 +147,11 @@ export default withSubjectRoute(
     // PUT, so `userId` below is always the caller inside the write branch.
     const { userId, tenantId } = subject;
 
-    const team = await findMemberTeam(userId, tenantId);
+    const team = await findMemberTeam(
+      userId,
+      tenantId,
+      readRequestedTeamId(req)
+    );
 
     if (!team) {
       // Pas d'équipe : ce n'est pas une erreur, il n'y a simplement pas de rythme.

@@ -16,6 +16,10 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
+import {
+  listMemberships,
+  pickExclusiveMembership,
+} from '@/utils/teams/memberships';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
 import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
@@ -65,12 +69,16 @@ export default withAuthRoute(async function handler(
         .select('discord_user_id')
         .eq('user_id', user.id)
         .maybeSingle(),
-      supabaseAdmin
-        .from('team_members')
-        .select('battle_tag, battle_tag_verified_at')
-        .eq('user_id', user.id)
-        .eq('tenant_id', tenantId)
-        .maybeSingle(),
+      // Appartenance EXCLUSIVE : un siège de manager ne porte pas de
+      // BattleTag, et un manager peut en avoir plusieurs — `maybeSingle()`
+      // aurait échoué sur ce compte.
+      listMemberships<{
+        role: string | null;
+        battle_tag: string | null;
+        battle_tag_verified_at: string | null;
+      }>(user.id, tenantId, 'role, battle_tag, battle_tag_verified_at').then(
+        (rows) => ({ data: pickExclusiveMembership(rows) })
+      ),
       supabaseAdmin
         .from('player_discovery_profiles')
         .select('discoverable')

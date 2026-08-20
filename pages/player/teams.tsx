@@ -30,6 +30,7 @@ import type { OpponentReason } from '../../utils/teams/opponentMatch';
 
 import { logger } from '../../utils/logger';
 import nsPlayerTeams from '@/lib/i18n/locales/fr/playerTeams';
+import { useActiveTeam } from '@/components/player/ActiveTeamContext';
 
 type DirectoryResponse = {
   teams: DirectoryTeam[];
@@ -64,6 +65,7 @@ function PlayerTeamsPage() {
   const router = useRouter();
   const { ready, loading: authLoading } = usePlayerSession();
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
+  const { withTeam } = useActiveTeam();
   const { data: managedTeam } = useManagedTeam();
   const { addToast } = useToast();
 
@@ -96,7 +98,7 @@ function PlayerTeamsPage() {
     setLoadError(false);
     try {
       const data = await adminFetchJson<DirectoryResponse>(
-        '/api/player/teams-directory'
+        withTeam('/api/player/teams-directory')
       );
       setTeams(data.teams ?? []);
       setMyTeamId(data.myTeamId ?? null);
@@ -106,13 +108,13 @@ function PlayerTeamsPage() {
     } finally {
       setLoading(false);
     }
-  }, [adminFetchJson]);
+  }, [adminFetchJson, withTeam]);
 
   const loadMySearch = useCallback(async () => {
     if (!managesTeam) return;
     try {
       const data = await adminFetchJson<{ search: MySearch }>(
-        '/api/teams/scrim-searches'
+        withTeam('/api/teams/scrim-searches')
       );
       setMySearch(data.search ?? null);
       if (data.search?.slots?.length) setSlots(data.search.slots);
@@ -120,7 +122,7 @@ function PlayerTeamsPage() {
     } catch (err) {
       logger.error('[player/teams] my search error', err);
     }
-  }, [adminFetchJson, managesTeam]);
+  }, [adminFetchJson, managesTeam, withTeam]);
 
   useEffect(() => {
     if (!ready) return;
@@ -139,7 +141,7 @@ function PlayerTeamsPage() {
       const data = await adminFetchJson<{
         search: MySearch;
         matchedTeams: number;
-      }>('/api/teams/scrim-searches', {
+      }>(withTeam('/api/teams/scrim-searches'), {
         method: 'POST',
         body: JSON.stringify({ slots: filled, note: note.trim() || null }),
       });
@@ -161,7 +163,9 @@ function PlayerTeamsPage() {
   const closeSearch = async () => {
     setSaving(true);
     try {
-      await adminFetchJson('/api/teams/scrim-searches', { method: 'DELETE' });
+      await adminFetchJson(withTeam('/api/teams/scrim-searches'), {
+        method: 'DELETE',
+      });
       setMySearch(null);
       setSlots([]);
       setNote('');

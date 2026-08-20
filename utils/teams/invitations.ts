@@ -34,6 +34,7 @@ import { isTeamRosterLocked, rosterLockErrorMessage } from './rosterLock';
 import { mapTeamRpcError } from './rpcErrors';
 import { validateRole } from '../apiHelpers';
 import { emitRoleSyncEvent } from '../botRoleSync';
+import { findExclusiveMembership } from './memberships';
 
 export const INVITATION_EXPIRY_DAYS = 7;
 
@@ -418,13 +419,12 @@ export async function acceptInvitation(
     };
   }
 
-  // Invitee deja dans une equipe ? Cohérent avec /api/demandes/join.
-  const { data: currentMembership } = await supabaseAdmin
-    .from('team_members')
-    .select('id')
-    .eq('tenant_id', tenantId)
-    .eq('user_id', actorAuthUserId)
-    .maybeSingle();
+  // Invitee deja dans une equipe ? Cohérent avec /api/demandes/join : un siège
+  // de manager ne « prend » pas le compte (index unique partiel).
+  const currentMembership = await findExclusiveMembership(
+    actorAuthUserId,
+    tenantId
+  );
   if (currentMembership) {
     return {
       ok: false,

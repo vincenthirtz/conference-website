@@ -20,7 +20,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
 import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
-import { getManagedTeam } from '@/utils/teams/managementAccess';
+import { getManagedTeamForRequest } from '@/utils/teams/teamScope';
 import {
   expireStaleSearches,
   isSearchLive,
@@ -166,7 +166,7 @@ export default withAuthRoute(async function handler(
   // simple, et c'est ici qu'une dispo morte induirait en erreur).
   await expireStaleSearches(tenantId);
 
-  const access = await getManagedTeam(user.id, tenantId);
+  const access = await getManagedTeamForRequest(req, user.id, tenantId);
   const myTeamId = access?.teamId ?? null;
 
   const { data: teamRows, error: teamsErr } = await supabaseAdmin

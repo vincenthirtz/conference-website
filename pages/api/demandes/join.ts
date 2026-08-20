@@ -5,6 +5,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
+import { findExclusiveMembership } from '@/utils/teams/memberships';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withSubjectRoute } from '@/utils/subject';
 
@@ -87,17 +88,11 @@ export default withSubjectRoute(
         });
       }
 
-      // Verifier si l'utilisateur est deja membre d'une equipe
-      const { data: existingMember, error: memberErr } = await supabaseAdmin
-        .from('team_members')
-        .select('id, team_id')
-        .eq('user_id', userId)
-        .eq('tenant_id', tenantId)
-        .maybeSingle();
-
-      if (memberErr) {
-        logger.error('[demandes/join] check member error:', memberErr);
-      }
+      // Verifier si l'utilisateur est deja membre d'une equipe.
+      // « Membre » au sens de la base : un siège de MANAGER ne compte pas —
+      // l'index unique partiel l'autorise à rejoindre une équipe comme
+      // joueuse, ce serait incohérent de le refuser ici.
+      const existingMember = await findExclusiveMembership(userId, tenantId);
 
       if (existingMember) {
         return res.status(400).json({

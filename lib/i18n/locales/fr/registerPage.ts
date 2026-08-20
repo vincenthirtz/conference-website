@@ -13,6 +13,13 @@ export default ns('registerPage', {
   title: 'Créer un compte',
   subtitle:
     'Inscris-toi avec ton email. Tu recevras un lien pour confirmer ton compte avant de te connecter.',
+  accountTypeLegend: 'Je crée ce compte en tant que',
+  accountTypePlayer: 'Joueuse',
+  accountTypePlayerHint: 'Je joue en équipe ou je cherche une équipe.',
+  accountTypeManager: 'Manager',
+  accountTypeManagerHint: "J'encadre une équipe sans y jouer.",
+  managerNoBattleTagNote:
+    "Pas de BattleTag demandé : en tant que manager tu n'as pas besoin de compte Overwatch. Après confirmation de ton email, tu pourras créer ton équipe — et en encadrer plusieurs.",
   displayNameLabel: 'Nom affiché (optionnel)',
   displayNamePlaceholder: 'Ex: LaKiiroi',
   battleTagLabel: 'BattleTag (format Pseudo#0000)',

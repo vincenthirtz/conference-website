@@ -150,6 +150,40 @@ describe('/api/auth/register', () => {
     expect(call.options?.data?.battle_tag).toBe('Alice#1234');
   });
 
+  it('accountType=manager → rôle manager en metadata', async () => {
+    // Une personne qui encadre une équipe sans y jouer doit pouvoir créer son
+    // compte elle-même (avant, seul /team/create créait ces comptes à la
+    // volée). Le rôle reste une ÉTIQUETTE : il n'accorde aucun droit.
+    const res = makeRes();
+    await registerHandler(
+      makeReq({ body: { ...validBody, accountType: 'manager' } }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    expect(signUpCalls[0].options?.data?.role).toBe('manager');
+  });
+
+  it('accountType hors liste fermée → 400, pas d’escalade', async () => {
+    // La liste est FERMÉE (player | manager) : 'owner', 'developer' ou tout
+    // rôle staff doivent être refusés à la porte, pas coercés en silence.
+    for (const accountType of ['owner', 'developer', 'admin', 'caster']) {
+      const res = makeRes();
+      await registerHandler(
+        makeReq({ body: { ...validBody, accountType } }),
+        res
+      );
+      expect(res.statusCode).toBe(400);
+    }
+    expect(signUpCalls).toHaveLength(0);
+  });
+
+  it('sans accountType → player (appelants antérieurs inchangés)', async () => {
+    const res = makeRes();
+    await registerHandler(makeReq({ body: { ...validBody } }), res);
+    expect(res.statusCode).toBe(200);
+    expect(signUpCalls[0].options?.data?.role).toBe('player');
+  });
+
   it('champs optionnels vides → null en metadata', async () => {
     const res = makeRes();
     await registerHandler(

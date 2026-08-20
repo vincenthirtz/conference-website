@@ -24,6 +24,7 @@ import type { TeamReviewsResponse } from '../../pages/api/player/team-reviews';
 import type { Encounter } from '../../utils/teams/teamReviews';
 import { logger } from '../../utils/logger';
 import nsTeamMemory from '@/lib/i18n/locales/fr/teamMemory';
+import { useActiveTeam } from '@/components/player/ActiveTeamContext';
 
 /** Clé stable d'un affrontement (le sujet est polymorphe). */
 function keyOf(encounter: Encounter): string {
@@ -34,6 +35,7 @@ export default function TeamMemoryCard() {
   const t = useT(nsTeamMemory);
   const locale = useLocale();
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
+  const { withTeam } = useActiveTeam();
   const { addToast } = useToast();
 
   const [data, setData] = useState<TeamReviewsResponse | null>(null);
@@ -46,14 +48,14 @@ export default function TeamMemoryCard() {
   const load = useCallback(async () => {
     try {
       const payload = await adminFetchJson<TeamReviewsResponse>(
-        '/api/player/team-reviews',
+        withTeam('/api/player/team-reviews'),
         { skipAuthRedirect: true }
       );
       setData(payload);
     } catch (err) {
       logger.error('[TeamMemoryCard] load error', err);
     }
-  }, [adminFetchJson]);
+  }, [adminFetchJson, withTeam]);
 
   useEffect(() => {
     void load();
@@ -89,7 +91,7 @@ export default function TeamMemoryCard() {
   const save = async (encounter: Encounter) => {
     setSaving(true);
     try {
-      await adminFetchJson('/api/player/team-reviews', {
+      await adminFetchJson(withTeam('/api/player/team-reviews'), {
         method: 'PUT',
         body: JSON.stringify({
           subjectType: encounter.subjectType,
@@ -116,7 +118,7 @@ export default function TeamMemoryCard() {
         subjectType: encounter.subjectType,
         subjectId: encounter.subjectId,
       });
-      await adminFetchJson(`/api/player/team-reviews?${qs}`, {
+      await adminFetchJson(withTeam(`/api/player/team-reviews?${qs}`), {
         method: 'DELETE',
       });
       addToast(t.deleted, 'success');

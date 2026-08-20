@@ -16,6 +16,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
+import { resolveMembership } from '@/utils/teams/memberships';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
@@ -97,14 +98,11 @@ export default withStaffRoute(async function handler(
     createdAt: (targetUser.created_at as string | null) ?? null,
   };
 
-  // Appartenance d'équipe dans le tenant du staff (une seule par tenant).
+  // Appartenance d'équipe dans le tenant du staff. Une seule est affichée :
+  // celle qui « prend » le compte, à défaut la plus ancienne — un manager peut
+  // en encadrer plusieurs depuis 2026-08-20.
   let team: AdminUserProfilePayload['team'] = null;
-  const { data: membership } = await supabaseAdmin
-    .from('team_members')
-    .select('team_id, role')
-    .eq('user_id', userId)
-    .eq('tenant_id', tenantId)
-    .maybeSingle();
+  const membership = await resolveMembership(userId, tenantId);
 
   if (membership?.team_id) {
     const { data: teamRow } = await supabaseAdmin

@@ -10,6 +10,7 @@ Audit de correction (bugs) sur tout le parcours : inscription → création/rejo
 
 ### DB — `database/migrations/add_team_membership_integrity.sql` (appliquée en prod)
 - **`UNIQUE (tenant_id, user_id)`** sur `team_members` : invariant dur « un joueur = une seule équipe / tenant » (0 violation existante au moment de l'ajout). Toute course multi-équipe devient un `23505` déterministe.
+  > **Amendé le 2026-08-20** (`allow_manager_multi_team.sql`) : la contrainte est devenue un **index unique partiel de même nom**, `WHERE role IS DISTINCT FROM 'manager'`. Un manager peut encadrer plusieurs équipes ; joueuses, subs et coachs restent couverts, et les `23505` gardent le même nom d'index. Corollaire traité dans la même passe : les `.maybeSingle()` sur `(user_id, tenant_id)` — la cause du « joueur soft-locké » décrit plus haut — passent tous par `utils/teams/memberships.ts`. Voir `MANAGER_MULTI_EQUIPES.md`.
 - **3 fonctions PL/pgSQL transactionnelles** (`SECURITY DEFINER`, EXECUTE réservé à `service_role` — `PUBLIC`/`anon`/`authenticated` explicitement révoqués) :
   - `approve_join_request(p_demande_id)` — verrou `FOR UPDATE` + CAS statut + INSERT membre, atomique.
   - `approve_transfer_request(p_demande_id)` — résout l'appartenance **réelle** (pas `payload.from_team_id`), DELETE+INSERT+statut atomiques ; idempotent si déjà dans la cible.

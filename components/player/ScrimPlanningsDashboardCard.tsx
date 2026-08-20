@@ -17,6 +17,7 @@ import type { ScrimPlanningSummary, ScrimPlanningParty } from '@/types/admin';
 
 import { logger } from '../../utils/logger';
 import nsScrimPlanning from '@/lib/i18n/locales/fr/scrimPlanning';
+import { useActiveTeam } from '@/components/player/ActiveTeamContext';
 
 export type PlanningEntry = {
   planning: ScrimPlanningSummary;
@@ -39,6 +40,7 @@ export default function ScrimPlanningsDashboardCard({
 }) {
   const t = useT(nsScrimPlanning);
   const { withSubject } = usePlayerArea();
+  const { withTeam } = useActiveTeam();
   const [fetchedEntries, setFetchedEntries] = useState<PlanningEntry[]>([]);
   const controlled = entriesProp !== undefined;
   const entries = controlled ? entriesProp : fetchedEntries;
@@ -49,9 +51,12 @@ export default function ScrimPlanningsDashboardCard({
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch(withSubject('/api/teams/scrim-plannings'), {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await fetch(
+          withTeam(withSubject('/api/teams/scrim-plannings')),
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
         if (!res.ok) return;
         const data = await res.json();
         if (!cancelled && Array.isArray(data?.plannings)) {
@@ -64,7 +69,7 @@ export default function ScrimPlanningsDashboardCard({
     return () => {
       cancelled = true;
     };
-  }, [token, controlled, withSubject]);
+  }, [token, controlled, withSubject, withTeam]);
 
   const teamNames = useTeamNames(
     entries.flatMap((e) => [e.planning.team1_id, e.planning.team2_id])

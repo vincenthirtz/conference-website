@@ -21,7 +21,11 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withSubjectRoute } from '@/utils/subject';
-import { loadManagedTeamSlice } from '@/utils/teams/managedTeamSlice';
+import {
+  loadManagedTeamSlice,
+  type ManagedTeamSummary,
+} from '@/utils/teams/managedTeamSlice';
+import { readRequestedTeamId } from '@/utils/teams/teamScope';
 import { CHECKIN_OPEN_MINUTES } from '@/utils/checkin';
 import { readScrimNego } from '@/utils/teams/scrimNegotiation';
 import { fetchAdminUserProfiles } from '@/utils/adminUserProfiles';
@@ -118,6 +122,11 @@ export type PlayerDashboardPayload = {
   members: MemberRow[];
   isCaptain: boolean;
   isManager: boolean;
+  /**
+   * Toutes les équipes gérées, `team` comprise (un manager peut en encadrer
+   * plusieurs). Vide pour une joueuse sans droits de gestion.
+   */
+  managedTeams: ManagedTeamSummary[];
   demandesCaptain: Demande[];
   demandesJoin: Demande[];
   pendingScrims: PendingScrim[];
@@ -475,7 +484,9 @@ export default withSubjectRoute(async function handler(
   // returns team + members + the canonical isCaptain/isManager flags (derived
   // through getManagedTeam, tenant-scoped) — the SAME source of truth as
   // /api/admin/teams/my, so the two endpoints can no longer diverge.
-  const teamSlice = await loadManagedTeamSlice(userId, tenantId);
+  const teamSlice = await loadManagedTeamSlice(userId, tenantId, {
+    teamId: readRequestedTeamId(req),
+  });
 
   const { isCaptain, isManager } = teamSlice;
   const canManage = isCaptain || isManager;
@@ -508,6 +519,7 @@ export default withSubjectRoute(async function handler(
     members: teamSlice.members,
     isCaptain,
     isManager,
+    managedTeams: teamSlice.managedTeams,
     demandesCaptain,
     demandesJoin,
     pendingScrims,

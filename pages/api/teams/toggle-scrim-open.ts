@@ -7,10 +7,10 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withSubjectRoute } from '@/utils/subject';
 import {
-  getManagedTeam,
   assertTeamPermission,
   TEAM_MANAGEMENT_FORBIDDEN,
 } from '@/utils/teams/managementAccess';
+import { getManagedTeamForRequest } from '@/utils/teams/teamScope';
 
 import { logger } from '../../../utils/logger';
 
@@ -40,7 +40,7 @@ export default withSubjectRoute(
     // du SUJET : c'est tout l'intérêt — dépanner une capitaine bloquée.
     const { userId, tenantId } = subject;
 
-    const access = await getManagedTeam(userId, tenantId);
+    const access = await getManagedTeamForRequest(req, userId, tenantId);
     if (!access) {
       return res.status(403).json({ error: TEAM_MANAGEMENT_FORBIDDEN });
     }

@@ -11,6 +11,10 @@
 import { z } from 'zod';
 import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
+import {
+  listMemberships,
+  pickExclusiveMembership,
+} from '@/utils/teams/memberships';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotPlayer } from '@/utils/botActor';
 import { discordIdSchema } from '@/utils/botValidation';
@@ -31,20 +35,26 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const actor = await requireBotPlayer(req, res, body);
   if (!actor) return;
 
-  const { data: membership, error: memberErr } = await supabaseAdmin
-    .from('team_members')
-    .select('id, team_id')
-    .eq('tenant_id', req.botContext.tenantId)
-    .eq('user_id', actor.authUserId)
-    .maybeSingle();
-  if (memberErr) {
-    logger.error('[bot/teams/leave] membership lookup error', memberErr);
-    return res
-      .status(500)
-      .json({ error: 'Erreur de chargement du membership' });
-  }
-  if (!membership) {
+  // Quitter est destructeur : on ne devine pas. Un manager multi-équipes n'a
+  // pas d'appartenance « exclusive » à retirer et la commande Discord ne porte
+  // pas d'équipe — on le renvoie vers le site, où le sélecteur d'équipe rend
+  // le choix explicite (`?teamId=` sur /api/teams/leave).
+  const memberships = await listMemberships(
+    actor.authUserId,
+    req.botContext.tenantId
+  );
+  if (memberships.length === 0) {
     return res.status(400).json({ error: "Tu n'es membre d'aucune équipe." });
+  }
+  const membership =
+    pickExclusiveMembership(memberships) ??
+    (memberships.length === 1 ? memberships[0] : null);
+  if (!membership) {
+    return res.status(409).json({
+      error:
+        'Tu encadres plusieurs équipes : quitte celle que tu veux depuis ton espace sur le site.',
+      code: 'TEAM_AMBIGUOUS',
+    });
   }
 
   const { data: team, error: teamErr } = await supabaseAdmin

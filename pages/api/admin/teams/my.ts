@@ -13,7 +13,11 @@ import {
   getManagedTeam,
   TEAM_MANAGEMENT_FORBIDDEN,
 } from '@/utils/teams/managementAccess';
-import { loadManagedTeamSlice } from '@/utils/teams/managedTeamSlice';
+import {
+  loadManagedTeamSlice,
+  type ManagedTeamSummary,
+} from '@/utils/teams/managedTeamSlice';
+import { readRequestedTeamId } from '@/utils/teams/teamScope';
 
 import { logger } from '../../../../utils/logger';
 type MemberRow = {
@@ -45,6 +49,15 @@ type GetResponse = {
   members: MemberRow[];
   isCaptain: boolean;
   isManager: boolean;
+  /**
+   * Toutes les équipes gérées par l'appelant, `team` comprise — le sélecteur
+   * d'équipe du cockpit s'y branche. Un seul élément dans le cas courant.
+   *
+   * Absent de la réponse du PATCH, qui ne renvoie que l'équipe modifiée (comme
+   * `members`, déjà vide dans ce cas) : la liste ne change pas au fil d'une
+   * édition d'infos, le client garde la sienne.
+   */
+  managedTeams?: ManagedTeamSummary[];
 };
 
 type UpdateBody = {
@@ -74,20 +87,26 @@ export default withSubjectRoute(
     const userId = user.id;
 
     if (req.method === 'GET') {
+      // `?teamId=` désigne l'équipe voulue quand l'appelant en gère plusieurs
+      // (manager multi-équipes). Ignoré s'il n'y a pas droit — le helper
+      // retombe alors sur sa première équipe gérée.
       const slice = await loadManagedTeamSlice(
         subject.userId,
-        subject.tenantId
+        subject.tenantId,
+        { teamId: readRequestedTeamId(req) }
       );
 
       // Payload public inchangé en forme : { team, members, isCaptain, isManager }.
       // La tranche renvoyée par le helper est un surensemble (team.captain_id /
-      // open_for_scrim, member.battle_tag_verified_at / captain / is_captain) —
-      // ajouts additifs, non cassants pour les consommateurs existants.
+      // open_for_scrim, member.battle_tag_verified_at / captain / is_captain,
+      // et `managedTeams` pour le sélecteur) — ajouts additifs, non cassants
+      // pour les consommateurs existants.
       return res.status(200).json({
         team: slice.team,
         members: slice.members,
         isCaptain: slice.isCaptain,
         isManager: slice.isManager,
+        managedTeams: slice.managedTeams,
       });
     }
 
@@ -97,8 +116,10 @@ export default withSubjectRoute(
         return res.status(400).json({ error: 'teamId required.' });
       }
 
-      // Vérifier que l'utilisateur peut gérer cette team (capitaine ou manager)
-      const access = await getManagedTeam(userId);
+      // Vérifier que l'utilisateur peut gérer CETTE team (capitaine ou
+      // manager). L'accès est résolu sur `body.teamId` : un manager peut en
+      // gérer plusieurs, « sa » team ne veut plus rien dire.
+      const access = await getManagedTeam(userId, undefined, body.teamId);
       if (!access || access.teamId !== body.teamId) {
         return res.status(403).json({ error: TEAM_MANAGEMENT_FORBIDDEN });
       }

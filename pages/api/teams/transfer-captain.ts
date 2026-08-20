@@ -22,10 +22,8 @@ import {
   rosterLockErrorMessage,
 } from '@/utils/teams/rosterLock';
 import { mapTeamRpcError } from '@/utils/teams/rpcErrors';
-import {
-  getManagedTeam,
-  accessHasPermission,
-} from '@/utils/teams/managementAccess';
+import { accessHasPermission } from '@/utils/teams/managementAccess';
+import { getManagedTeamForRequest } from '@/utils/teams/teamScope';
 import { emitRoleSyncEvent } from '@/utils/botRoleSync';
 
 import { logger } from '../../../utils/logger';
@@ -154,7 +152,7 @@ export default withSubjectRoute(
     // `designate_captain` (captain_already_set → 409).
     let bootstrapTeamId: string | null = null;
     if (!team) {
-      const access = await getManagedTeam(userId, tenantId);
+      const access = await getManagedTeamForRequest(req, userId, tenantId);
       // `permissions` est désormais exposé par getManagedTeam (R2) : plus besoin
       // de relire le rôle du membre ni la config des rôles ici.
       if (accessHasPermission(access, 'manage_roster')) {

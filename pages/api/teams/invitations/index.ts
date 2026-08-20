@@ -28,10 +28,10 @@ import { withSubjectRoute } from '@/utils/subject';
 import { findOrCreateUserByEmail } from '@/utils/find-or-create-user';
 import { sendTeamInviteLinkEmail } from '@/utils/email';
 import {
-  getManagedTeam,
   assertTeamPermission,
   TEAM_MANAGEMENT_FORBIDDEN,
 } from '@/utils/teams/managementAccess';
+import { getManagedTeamForRequest } from '@/utils/teams/teamScope';
 import {
   loadTeamRolesFromSupabase,
   roleHasAnyPermission,
@@ -99,7 +99,7 @@ export default withSubjectRoute(
     // débloquer — et l'act-as est journalisé de son côté.
     const { userId, tenantId } = subject;
 
-    const access = await getManagedTeam(userId, tenantId);
+    const access = await getManagedTeamForRequest(req, userId, tenantId);
     if (!access) {
       return res
         .status(403)

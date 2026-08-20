@@ -15,6 +15,7 @@
 import { supabaseAdmin } from './supabase';
 import { logger } from './logger';
 import { emitBotEvent, type BotEventName } from './botEvents';
+import { pickMembership } from '@/utils/teams/memberships';
 
 export type RoleSyncUser = {
   authUserId: string;
@@ -30,6 +31,15 @@ export type RoleSyncUser = {
   } | null;
   staffRole: string | null;
 };
+
+/** Embed PostgREST `team:team_id(...)` : objet ou tableau selon la cardinalité. */
+type RoleSyncTeamRelRow = {
+  id: string;
+  name: string;
+  captain_id: string | null;
+  discord_role_id: string | null;
+};
+type RoleSyncTeamRel = RoleSyncTeamRelRow | RoleSyncTeamRelRow[] | null;
 
 /**
  * Résout discordUserId + team + staffRole pour un authUserId.
@@ -52,13 +62,31 @@ export async function resolveRoleSyncUser(
   }
   if (!link?.discord_user_id) return null;
 
-  const { data: membership } = await supabaseAdmin
+  // Un rôle Discord d'équipe par compte : le sync en pousse UN. On lit donc
+  // l'appartenance qui « prend » le compte, à défaut la plus ancienne — un
+  // manager peut en encadrer plusieurs depuis 2026-08-20, auquel cas seule la
+  // première équipe reçoit son rôle Discord (limite assumée : Discord n'a pas
+  // de notion de « rôle d'équipe multiple » côté sync).
+  //
+  // La requête reste locale (et NON scopée tenant, comme avant) : ce résolveur
+  // ne reçoit pas de tenant. Seuls le tri et le choix changent, via le
+  // sélecteur pur partagé.
+  const { data: membershipRows } = await supabaseAdmin
     .from('team_members')
     .select(
       'team_id, role, is_substitute, team:team_id(id, name, captain_id, discord_role_id)'
     )
     .eq('user_id', authUserId)
-    .maybeSingle();
+    .order('created_at', { ascending: true });
+
+  const membership = pickMembership(
+    (membershipRows || []) as unknown as {
+      team_id: string;
+      role: string | null;
+      is_substitute: boolean | null;
+      team: RoleSyncTeamRel;
+    }[]
+  );
 
   const teamRel = membership?.team
     ? Array.isArray(membership.team)

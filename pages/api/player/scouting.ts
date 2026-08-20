@@ -39,6 +39,7 @@ import {
 import { loadMyRhythmTimezone } from '@/utils/teams/teamRhythmStore';
 import { getTimeZoneOffsetMinutes } from '@/utils/timezone';
 import { logger } from '@/utils/logger';
+import { readRequestedTeamId } from '@/utils/teams/teamScope';
 
 export type ScoutingResponse = {
   myTeam: { id: string; name: string };
@@ -103,7 +104,11 @@ export default withAuthRoute(async function handler(
     authUserId: user.id,
   });
 
-  const myTeam = await findMemberTeam(user.id, tenantId);
+  const myTeam = await findMemberTeam(
+    user.id,
+    tenantId,
+    readRequestedTeamId(req)
+  );
   if (!myTeam) {
     return res
       .status(403)

@@ -10,10 +10,10 @@ import { applyRateLimit } from '@/utils/rateLimit';
 import { notifyScrimRequest } from '@/utils/discord';
 import { withAuthRoute } from '@/utils/staff';
 import {
-  getManagedTeam,
   assertTeamPermission,
   TEAM_MANAGEMENT_FORBIDDEN,
 } from '@/utils/teams/managementAccess';
+import { getManagedTeamForRequest } from '@/utils/teams/teamScope';
 import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
 import { normalizeSlots } from '@/utils/teams/scrimNegotiation';
 import {
@@ -83,7 +83,7 @@ export default withAuthRoute(async function handler(
     const message = body.message?.trim()?.slice(0, 1000) || null;
 
     // Verifier que l'user est capitaine ou manager d'une equipe active
-    const access = await getManagedTeam(userId, tenantId);
+    const access = await getManagedTeamForRequest(req, userId, tenantId);
     if (!access) {
       return res.status(403).json({ error: TEAM_MANAGEMENT_FORBIDDEN });
     }

@@ -75,6 +75,7 @@ const getFaqs = (t: InscriptionDict): Faq[] => [
   { question: t.faq3Q, answer: t.faq3A },
   { question: t.faq4Q, answer: t.faq4A },
   { question: t.faq5Q, answer: t.faq5A },
+  { question: t.faq6Q, answer: t.faq6A },
 ];
 
 // JSON-LD FAQ pour le SEO : reste en français (langue de référence du site,
@@ -104,6 +105,11 @@ const faqsForSchema: Faq[] = [
     question: 'L’inscription est-elle payante ?',
     answer:
       'Non, l’inscription au tournoi féminin 2026 est gratuite. L’association vit grâce aux dons et aux partenariats.',
+  },
+  {
+    question: 'Je manage une équipe sans y jouer : puis-je inscrire l’équipe ?',
+    answer:
+      'Oui. Crée ton compte en tant que « manager » — aucun BattleTag n’est demandé — puis, dans le formulaire d’équipe, choisis « je gère l’équipe sans y jouer ». Un même manager peut encadrer plusieurs équipes.',
   },
 ];
 

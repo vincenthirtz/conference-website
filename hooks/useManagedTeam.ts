@@ -20,6 +20,10 @@ import { supabaseClient } from '@/utils/supabase';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { usePlayerArea } from '@/components/player/PlayerAreaContext';
+import {
+  useActiveTeam,
+  type ActiveTeamOption,
+} from '@/components/player/ActiveTeamContext';
 import type { TeamMemberLite } from '@/components/player/TeamCard';
 
 export type ManagedTeamInfo = {
@@ -50,6 +54,13 @@ export type ManagedTeamData = {
   members: ManagedTeamMember[];
   isCaptain: boolean;
   isManager: boolean;
+  /**
+   * Toutes les équipes gérées, `team` comprise — un manager peut en encadrer
+   * plusieurs. Le hook la republie dans `ActiveTeamContext`, qui alimente le
+   * sélecteur : la liste et l'équipe affichée viennent ainsi de la MÊME
+   * réponse, elles ne peuvent pas se désynchroniser.
+   */
+  managedTeams: ActiveTeamOption[];
 };
 
 type ApiPayload = {
@@ -57,17 +68,20 @@ type ApiPayload = {
   members?: ManagedTeamMember[];
   isCaptain?: boolean;
   isManager?: boolean;
+  managedTeams?: ActiveTeamOption[];
 };
 
 const CACHE_TTL_MS = 15_000;
 
 type CacheEntry = {
   /**
-   * Clé de cache = token d'accès + sujet inspecté. Le token seul suffisait
-   * tant qu'une session ne pouvait voir qu'une équipe ; en inspection staff
-   * (`?as=`), le MÊME token sert à lire l'équipe du staff puis celle de
-   * plusieurs joueuses — sans le sujet dans la clé, la première réponse serait
-   * resservie pour toutes les suivantes.
+   * Clé de cache = token d'accès + sujet inspecté + équipe active. Le token
+   * seul suffisait tant qu'une session ne pouvait voir qu'une équipe ; en
+   * inspection staff (`?as=`), le MÊME token sert à lire l'équipe du staff
+   * puis celle de plusieurs joueuses — sans le sujet dans la clé, la première
+   * réponse serait resservie pour toutes les suivantes. Même raisonnement pour
+   * l'équipe active d'un manager multi-équipes : changer de sélection doit
+   * changer de réponse, pas resservir la précédente.
    */
   key: string;
   data: ManagedTeamData;
@@ -84,6 +98,7 @@ function normalize(payload: ApiPayload | null): ManagedTeamData {
     members: payload?.members ?? [],
     isCaptain: payload?.isCaptain ?? false,
     isManager: payload?.isManager ?? false,
+    managedTeams: payload?.managedTeams ?? [],
   };
 }
 
@@ -113,6 +128,7 @@ export function useManagedTeam(
   const { ready } = usePlayerSession({ redirect: false });
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
   const { withSubject, subjectId } = usePlayerArea();
+  const { withTeam, activeTeamId, publishManagedTeams } = useActiveTeam();
 
   const [data, setData] = useState<ManagedTeamData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -140,7 +156,7 @@ export function useManagedTeam(
   const fetchShared = useCallback(
     async (token: string, force: boolean): Promise<ManagedTeamData> => {
       const now = Date.now();
-      const key = `${token}::${subjectId ?? 'self'}`;
+      const key = `${token}::${subjectId ?? 'self'}::${activeTeamId ?? 'default'}`;
 
       if (!force && cacheEntry && cacheEntry.key === key) {
         if (now - cacheEntry.fetchedAt < CACHE_TTL_MS) {
@@ -153,7 +169,7 @@ export function useManagedTeam(
       }
 
       const promise = adminFetchJson<ApiPayload>(
-        withSubject('/api/admin/teams/my'),
+        withTeam(withSubject('/api/admin/teams/my')),
         { skipAuthRedirect: true }
       )
         .then((payload) => {
@@ -170,7 +186,7 @@ export function useManagedTeam(
       inFlight = { key, promise };
       return promise;
     },
-    [adminFetchJson, withSubject, subjectId]
+    [adminFetchJson, withSubject, withTeam, subjectId, activeTeamId]
   );
 
   const run = useCallback(
@@ -190,6 +206,9 @@ export function useManagedTeam(
         const result = await fetchShared(token, force);
         if (mountedRef.current) {
           setData(result);
+          // Hors provider (`publishManagedTeams` est alors un no-op), rien ne
+          // change : le sélecteur n'existe pas et le serveur décide seul.
+          publishManagedTeams(result.managedTeams);
         }
       } catch (err) {
         if (mountedRef.current) {
@@ -201,7 +220,7 @@ export function useManagedTeam(
         }
       }
     },
-    [enabled, ready, getToken, fetchShared]
+    [enabled, ready, getToken, fetchShared, publishManagedTeams]
   );
 
   useEffect(() => {

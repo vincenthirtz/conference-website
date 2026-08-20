@@ -20,6 +20,8 @@ import type { Member, SearchResult } from '@/components/admin/teams/my/types';
 
 import { logger } from '../../../utils/logger';
 import nsAdminTeamsMy from '@/lib/i18n/locales/admin-fr/adminTeamsMy';
+import { withTeamParam } from '@/utils/teamScopeParam';
+import { useActiveTeam } from '@/components/player/ActiveTeamContext';
 type StaffShape = {
   id: string;
   role: string;
@@ -75,6 +77,9 @@ function MyTeamPage({ staff }: StaffProps) {
   const [loadingAllTeams, setLoadingAllTeams] = useState(false);
   const [selectedTeamId, setSelectedTeamId] = useState<string>('');
 
+  // Équipe active (sélecteur partagé) : un manager multi-équipes ouvre ce
+  // cockpit sur celle qu'il a choisie, pas sur la première venue.
+  const { withTeam } = useActiveTeam();
   const [data, setData] = useState<ApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -91,6 +96,16 @@ function MyTeamPage({ staff }: StaffProps) {
   // capitaine reste identique à avant.
   const actAsCaptainId =
     isStaffAdmin && selectedTeamId ? (data?.team?.captain_id ?? null) : null;
+
+  // Les routes `/api/teams/*` résolvent l'équipe depuis les droits de
+  // l'appelant. Un manager peut en encadrer plusieurs : on leur nomme donc
+  // explicitement l'équipe AFFICHÉE ici, pour qu'une action ne parte jamais
+  // sur une autre que celle qu'on a sous les yeux. Sans équipe chargée (ou
+  // pour les routes `/api/admin/*`, qui portent déjà leur id), c'est un no-op.
+  const scopeToTeam = useCallback(
+    (url: string) => withTeamParam(url, data?.team?.id ?? null),
+    [data?.team?.id]
+  );
   /** Équipe pilotée par le staff mais SANS capitaine : aucun sujet à emprunter. */
   const captainScopeUnavailable =
     isStaffAdmin && !!selectedTeamId && !!data?.team && !actAsCaptainId;
@@ -180,7 +195,7 @@ function MyTeamPage({ staff }: StaffProps) {
       setError(null);
       try {
         // If admin and a specific team is selected, fetch that team
-        let url = '/api/admin/teams/my';
+        let url = withTeam('/api/admin/teams/my');
         if (isStaffAdmin && teamId) {
           // withMembers=1 : ce chemin lit json.members de la réponse détail
           // (les autres consommateurs rechargent via /members et l'omettent).
@@ -225,7 +240,7 @@ function MyTeamPage({ staff }: StaffProps) {
         setLoading(false);
       }
     },
-    [isStaffAdmin, adminFetchJson, t]
+    [isStaffAdmin, adminFetchJson, t, withTeam]
   );
 
   useEffect(() => {
@@ -286,9 +301,11 @@ function MyTeamPage({ staff }: StaffProps) {
       setSearchLoading(true);
       try {
         const json = await adminFetchJson<{ players?: SearchResult[] }>(
-          withSubjectParam(
-            `/api/teams/search-players?q=${encodeURIComponent(query)}`,
-            actAsCaptainId
+          scopeToTeam(
+            withSubjectParam(
+              `/api/teams/search-players?q=${encodeURIComponent(query)}`,
+              actAsCaptainId
+            )
           ),
           { signal: controller.signal }
         );
@@ -304,7 +321,7 @@ function MyTeamPage({ staff }: StaffProps) {
         if (searchAbortRef.current === controller) setSearchLoading(false);
       }
     },
-    [adminFetchJson, actAsCaptainId]
+    [adminFetchJson, actAsCaptainId, scopeToTeam]
   );
 
   // Debounced search
@@ -336,7 +353,7 @@ function MyTeamPage({ staff }: StaffProps) {
         ? '/api/admin/teams/add-member'
         : '/api/teams/add-member';
 
-      const res = await adminFetch(url, {
+      const res = await adminFetch(scopeToTeam(url), {
         method: 'POST',
         body: JSON.stringify({
           teamId: data.team.id,
@@ -389,7 +406,7 @@ function MyTeamPage({ staff }: StaffProps) {
     try {
       const json = await adminFetchJson<{ demandes?: JoinRequest[] }>(
         withSubjectParam(
-          '/api/teams/join-requests?status=pending',
+          scopeToTeam('/api/teams/join-requests?status=pending'),
           actAsCaptainId
         )
       );
@@ -399,14 +416,16 @@ function MyTeamPage({ staff }: StaffProps) {
     } finally {
       setJoinRequestsLoading(false);
     }
-  }, [adminFetchJson, actAsCaptainId, captainScopeUnavailable]);
+  }, [adminFetchJson, actAsCaptainId, captainScopeUnavailable, scopeToTeam]);
 
   // Toggle joinable status
   const handleToggleJoinable = async () => {
     setTogglingJoinable(true);
     try {
       const res = await adminFetch(
-        withSubjectParam('/api/teams/toggle-joinable', actAsCaptainId, true),
+        scopeToTeam(
+          withSubjectParam('/api/teams/toggle-joinable', actAsCaptainId, true)
+        ),
         {
           method: 'POST',
           body: JSON.stringify({ joinable: !isJoinable }),
@@ -433,7 +452,9 @@ function MyTeamPage({ staff }: StaffProps) {
     setProcessingRequestId(demandeId);
     try {
       const res = await adminFetch(
-        withSubjectParam('/api/teams/join-requests', actAsCaptainId, true),
+        scopeToTeam(
+          withSubjectParam('/api/teams/join-requests', actAsCaptainId, true)
+        ),
         {
           method: 'POST',
           body: JSON.stringify({ demandeId, action }),
@@ -518,7 +539,7 @@ function MyTeamPage({ staff }: StaffProps) {
           isStaffAdmin && selectedTeamId
             ? `/api/admin/teams/${selectedTeamId}/members`
             : '/api/teams/update-member';
-        const res = await adminFetch(url, {
+        const res = await adminFetch(scopeToTeam(url), {
           method: 'PATCH',
           body: JSON.stringify({ memberId: m.id, battle_tag: trimmed }),
         });
@@ -545,6 +566,7 @@ function MyTeamPage({ staff }: StaffProps) {
       t,
       reloadTeam,
       cancelEditBattleTag,
+      scopeToTeam,
     ]
   );
 
@@ -613,14 +635,14 @@ function MyTeamPage({ staff }: StaffProps) {
           // divisée par 2, P3-10). L'ordre de vérification des erreurs est
           // conservé : échec du premier → errSwap, échec du second → swapPartial.
           const [r1, r2] = await Promise.all([
-            adminFetch('/api/teams/update-member', {
+            adminFetch(scopeToTeam('/api/teams/update-member'), {
               method: 'PATCH',
               body: JSON.stringify({
                 memberId: source.id,
                 is_substitute: !(source.is_substitute ?? false),
               }),
             }),
-            adminFetch('/api/teams/update-member', {
+            adminFetch(scopeToTeam('/api/teams/update-member'), {
               method: 'PATCH',
               body: JSON.stringify({
                 memberId: target.id,
@@ -658,6 +680,7 @@ function MyTeamPage({ staff }: StaffProps) {
       addToast,
       t,
       reloadTeam,
+      scopeToTeam,
     ]
   );
 
@@ -691,10 +714,13 @@ function MyTeamPage({ staff }: StaffProps) {
             return;
           }
         } else {
-          const res = await adminFetch('/api/teams/transfer-captain', {
-            method: 'PATCH',
-            body: JSON.stringify({ newCaptainUserId: m.user_id }),
-          });
+          const res = await adminFetch(
+            scopeToTeam('/api/teams/transfer-captain'),
+            {
+              method: 'PATCH',
+              body: JSON.stringify({ newCaptainUserId: m.user_id }),
+            }
+          );
           const json = await res.json().catch(() => ({}));
           if (!res.ok) {
             addToast(json?.error || t.errTransfer, 'error');
@@ -710,7 +736,16 @@ function MyTeamPage({ staff }: StaffProps) {
         setMemberActionId(null);
       }
     },
-    [isStaffAdmin, selectedTeamId, adminFetch, addToast, t, reloadTeam, confirm]
+    [
+      isStaffAdmin,
+      selectedTeamId,
+      adminFetch,
+      addToast,
+      t,
+      reloadTeam,
+      confirm,
+      scopeToTeam,
+    ]
   );
 
   // Load join requests when team data changes

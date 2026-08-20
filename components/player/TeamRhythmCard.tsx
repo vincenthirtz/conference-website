@@ -32,6 +32,7 @@ import {
 import type { TeamRhythmResponse } from '../../pages/api/player/team-rhythm';
 import { logger } from '../../utils/logger';
 import nsTeamRhythm from '@/lib/i18n/locales/fr/teamRhythm';
+import { useActiveTeam } from '@/components/player/ActiveTeamContext';
 
 /** Lundi 1er janvier 2024 — base neutre pour dériver les noms de jours. */
 const REFERENCE_MONDAY = Date.UTC(2024, 0, 1);
@@ -69,6 +70,7 @@ export default function TeamRhythmCard() {
   const locale = useLocale();
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
   const { withSubject, readOnly } = usePlayerArea();
+  const { withTeam } = useActiveTeam();
   const { addToast } = useToast();
 
   const [data, setData] = useState<TeamRhythmResponse | null>(null);
@@ -92,7 +94,9 @@ export default function TeamRhythmCard() {
     try {
       const payload = await adminFetchJson<TeamRhythmResponse>(
         withSubject(
-          `/api/player/team-rhythm?tz=${encodeURIComponent(detectTimezone())}`
+          withTeam(
+            `/api/player/team-rhythm?tz=${encodeURIComponent(detectTimezone())}`
+          )
         ),
         { skipAuthRedirect: true }
       );
@@ -102,7 +106,7 @@ export default function TeamRhythmCard() {
     } catch (err) {
       logger.error('[TeamRhythmCard] load error', err);
     }
-  }, [adminFetchJson, withSubject]);
+  }, [adminFetchJson, withSubject, withTeam]);
 
   useEffect(() => {
     void load();
@@ -157,7 +161,7 @@ export default function TeamRhythmCard() {
   const save = async () => {
     setSaving(true);
     try {
-      await adminFetchJson('/api/player/team-rhythm', {
+      await adminFetchJson(withTeam('/api/player/team-rhythm'), {
         method: 'PUT',
         body: JSON.stringify({
           slots: Array.from(selected),
@@ -178,7 +182,7 @@ export default function TeamRhythmCard() {
     if (slots.length === 0) return;
     setAnnouncing(true);
     try {
-      await adminFetchJson('/api/teams/scrim-searches', {
+      await adminFetchJson(withTeam('/api/teams/scrim-searches'), {
         method: 'POST',
         body: JSON.stringify({ slots }),
       });

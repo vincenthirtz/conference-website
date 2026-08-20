@@ -13,6 +13,7 @@ import { ToastContainer } from '@/components/Toast';
 import { LanguageProvider } from '@/lib/i18n/LanguageProvider';
 import { SessionProvider } from '@/hooks/useSession';
 import { TenantBrandingProvider } from '@/lib/branding/TenantBrandingProvider';
+import { ActiveTeamProvider } from '@/components/player/ActiveTeamContext';
 import type { TenantBranding } from '@/utils/tenant';
 
 const workSans = Work_Sans({
@@ -125,40 +126,47 @@ function MyApp({ Component, pageProps, router, branding }: AppPropsWithSeo) {
       <TenantBrandingProvider branding={branding}>
         <SessionProvider>
           <LanguageProvider>
-            <ToastProvider>
-              <div className={workSans.variable}>
-                <Head>
-                  <link key="manifest" rel="manifest" href={manifestHref} />
-                  {isAppScope && (
-                    <meta
-                      key="apple-wac"
-                      name="apple-mobile-web-app-capable"
-                      content="yes"
-                    />
-                  )}
-                  {isAppScope && (
-                    <meta
-                      key="apple-sbs"
-                      name="apple-mobile-web-app-status-bar-style"
-                      content="default"
-                    />
-                  )}
-                </Head>
-                <DefaultSeo {...effectiveSeo} />
-                {!isCaster && <Navbar />}
-                <main id="main-content">
-                  <Component {...pageProps} />
-                </main>
-                {isAdmin && <PushOptIn />}
-                {(isAdmin || isCaster) && <PWAInstallAndUpdate />}
-                {(isAdmin || isCaster) && <OfflineBanner />}
-                {!isCaster && <Footer />}
-                {!isAdmin && !isCaster && <FloatingSocials />}
-                <BackToTopButton />
-                <CookieBanner />
-                <ToastContainer />
-              </div>
-            </ToastProvider>
+            {/* Équipe active : global (et pas seulement dans l'espace joueuse)
+                parce que la cloche de notifications vit dans la Navbar. Un
+                manager multi-équipes doit voir le compteur de l'équipe qu'il
+                a choisie, pas d'une autre. Sans choix — le cas de tout le
+                monde — le contexte est inerte. */}
+            <ActiveTeamProvider>
+              <ToastProvider>
+                <div className={workSans.variable}>
+                  <Head>
+                    <link key="manifest" rel="manifest" href={manifestHref} />
+                    {isAppScope && (
+                      <meta
+                        key="apple-wac"
+                        name="apple-mobile-web-app-capable"
+                        content="yes"
+                      />
+                    )}
+                    {isAppScope && (
+                      <meta
+                        key="apple-sbs"
+                        name="apple-mobile-web-app-status-bar-style"
+                        content="default"
+                      />
+                    )}
+                  </Head>
+                  <DefaultSeo {...effectiveSeo} />
+                  {!isCaster && <Navbar />}
+                  <main id="main-content">
+                    <Component {...pageProps} />
+                  </main>
+                  {isAdmin && <PushOptIn />}
+                  {(isAdmin || isCaster) && <PWAInstallAndUpdate />}
+                  {(isAdmin || isCaster) && <OfflineBanner />}
+                  {!isCaster && <Footer />}
+                  {!isAdmin && !isCaster && <FloatingSocials />}
+                  <BackToTopButton />
+                  <CookieBanner />
+                  <ToastContainer />
+                </div>
+              </ToastProvider>
+            </ActiveTeamProvider>
           </LanguageProvider>
         </SessionProvider>
       </TenantBrandingProvider>

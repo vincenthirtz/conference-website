@@ -1723,6 +1723,14 @@ Limite de corps **15 Mo**.
 | [`players/by-discord/[discordUserId]/team.ts`](../pages/api/bot/v1/players/by-discord/[discordUserId]/team.ts)                     | GET     | —     | `bot-player-team`                                                  |
 | [`player-actions.ts`](../pages/api/bot/v1/player-actions.ts)                                                                       | GET     | —     | `bot-player-actions` _(shares bucket with the by-discord variant)_ |
 
+> **Manager multi-equipes (2026-08-20).** Un compte au role d'equipe `manager`
+> peut appartenir a PLUSIEURS equipes (index unique partiel, cf.
+> `MANAGER_MULTI_EQUIPES.md`). Les routes `.../team` et `.../next-match`
+> continuent d'en renvoyer **une seule** — contrat inchange : l'appartenance qui
+> « prend » le compte (tout sauf `manager`), a defaut la plus ancienne. Avant ce
+> choix explicite, la lecture ligne unique tombait en `PGRST116` (500) sur ces
+> comptes.
+
 #### `GET /api/bot/v1/players/by-discord/:discordUserId/actions-todo`
 
 Liste agregee des "actions a faire" pour une joueuse (commande Discord
@@ -2747,6 +2755,12 @@ curl -sS -X POST https://site.example/api/bot/v1/tickets/close-log \
 | [`teams/[teamId]/members.ts`](../pages/api/bot/v1/teams/[teamId]/members.ts)                   | DELETE     | yes   | `bot-team-members-kick`     |
 | [`teams/[teamId]/transfer-captain.ts`](../pages/api/bot/v1/teams/[teamId]/transfer-captain.ts) | POST       | yes   | `bot-team-transfer-captain` |
 | [`teams/leave.ts`](../pages/api/bot/v1/teams/leave.ts)                                         | POST       | yes   | `bot-team-leave`            |
+
+> `POST teams/leave` : nouveau `409 TEAM_AMBIGUOUS` quand l'appelant encadre
+> plusieurs equipes. La commande `/equipe quitter` ne porte pas d'equipe, et
+> quitter est destructeur — le bot renvoie vers l'espace du site, ou le
+> selecteur d'equipe rend le choix explicite (`?teamId=` sur
+> `/api/teams/leave`).
 | [`teams/messages.ts`](../pages/api/bot/v1/teams/messages.ts)                                   | POST       | yes   | `bot-team-messages`         |
 
 #### `PATCH /api/bot/v1/teams/:teamId/discord`

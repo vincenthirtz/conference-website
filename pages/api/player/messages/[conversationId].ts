@@ -8,10 +8,8 @@ import type { User } from '@supabase/supabase-js';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
-import {
-  getManagedTeam,
-  TEAM_MANAGEMENT_FORBIDDEN,
-} from '@/utils/teams/managementAccess';
+import { TEAM_MANAGEMENT_FORBIDDEN } from '@/utils/teams/managementAccess';
+import { getManagedTeamForRequest } from '@/utils/teams/teamScope';
 import { resolveTenantIdForUserRequest } from '@/utils/tenant';
 import { isValidUUID } from '@/utils/apiHelpers';
 
@@ -19,11 +17,12 @@ import { logger } from '../../../../utils/logger';
 type CaptainTeam = { id: string; captain_id: string | null; name: string };
 
 async function loadCaptainTeam(
+  req: NextApiRequest,
   res: NextApiResponse,
   user: User,
   tenantId: string
 ): Promise<CaptainTeam | null> {
-  const access = await getManagedTeam(user.id, tenantId);
+  const access = await getManagedTeamForRequest(req, user.id, tenantId);
   if (!access) {
     res.status(403).json({ error: TEAM_MANAGEMENT_FORBIDDEN });
     return null;
@@ -81,7 +80,7 @@ export default withAuthRoute(async function handler(
   const tenantId = resolveTenantIdForUserRequest(req, { authUserId: user.id });
 
   if (req.method === 'GET') {
-    const team = await loadCaptainTeam(res, user, tenantId);
+    const team = await loadCaptainTeam(req, res, user, tenantId);
     if (!team) return;
 
     // Verify captain is part of this conversation
@@ -137,7 +136,7 @@ export default withAuthRoute(async function handler(
   }
 
   if (req.method === 'PATCH') {
-    const team = await loadCaptainTeam(res, user, tenantId);
+    const team = await loadCaptainTeam(req, res, user, tenantId);
     if (!team) return;
 
     if (team.id !== teamIdA && team.id !== teamIdB) {

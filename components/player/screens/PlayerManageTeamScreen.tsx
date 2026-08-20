@@ -24,6 +24,8 @@ import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import { usePlayerArea } from '@/components/player/PlayerAreaContext';
+import { useActiveTeam } from '@/components/player/ActiveTeamContext';
+import ActiveTeamSwitcher from '@/components/player/ActiveTeamSwitcher';
 import Switch from '@/components/ui/Switch';
 import { isNonPlayingTeamRole, splitTeamMembers } from '@/utils/teams/roleKind';
 import nsManageTeam from '@/lib/i18n/locales/fr/manageTeam';
@@ -87,6 +89,9 @@ export default function PlayerManageTeamScreen() {
   // `readOnly` = inspection staff : l'écran devient une photo fidèle, sans
   // aucun levier. Le roster et les demandes viennent du sujet via `?as=`.
   const { withSubject, readOnly, isInspecting } = usePlayerArea();
+  // Équipe sur laquelle l'écran agit — pertinent seulement pour un manager
+  // multi-équipes ; `withTeam` est l'identité dans tous les autres cas.
+  const { withTeam } = useActiveTeam();
 
   // Onboarding post-création : le magic-link « accès espace équipe » atterrit ici
   // avec ?welcome=1. C'est le seul moment du parcours où la capitaine vient de
@@ -186,10 +191,10 @@ export default function PlayerManageTeamScreen() {
     // Let failures propagate so the effect can surface a real error state
     // (distinct from the "no pending requests" empty state).
     const requestsData = await adminFetchJson<{ demandes?: JoinRequest[] }>(
-      withSubject('/api/teams/join-requests')
+      withTeam(withSubject('/api/teams/join-requests'))
     );
     setJoinRequests(requestsData.demandes || []);
-  }, [adminFetchJson, withSubject]);
+  }, [adminFetchJson, withSubject, withTeam]);
 
   useEffect(() => {
     if (!ready) return;
@@ -235,7 +240,7 @@ export default function PlayerManageTeamScreen() {
       const data = await adminFetchJson<{
         invite_url: string;
         email_sent: boolean;
-      }>('/api/teams/invitations', {
+      }>(withTeam('/api/teams/invitations'), {
         method: 'POST',
         body: JSON.stringify({
           email: inviteEmail.trim(),
@@ -258,7 +263,7 @@ export default function PlayerManageTeamScreen() {
     setError(null);
     try {
       const data = await adminFetchJson<{ is_joinable: boolean }>(
-        '/api/teams/toggle-joinable',
+        withTeam('/api/teams/toggle-joinable'),
         {
           method: 'POST',
           body: JSON.stringify({ joinable: !team?.is_joinable }),
@@ -281,7 +286,7 @@ export default function PlayerManageTeamScreen() {
     setError(null);
     try {
       const data = await adminFetchJson<{ open_for_scrim: boolean }>(
-        '/api/teams/toggle-scrim-open',
+        withTeam('/api/teams/toggle-scrim-open'),
         {
           method: 'POST',
           body: JSON.stringify({ open: !team?.open_for_scrim }),
@@ -327,7 +332,7 @@ export default function PlayerManageTeamScreen() {
       const data = await adminFetchJson<{
         newRole: string | null;
         isSubstitute: boolean;
-      }>('/api/teams/update-member-role', {
+      }>(withTeam('/api/teams/update-member-role'), {
         method: 'PATCH',
         body: JSON.stringify({ memberId, role }),
       });
@@ -352,7 +357,7 @@ export default function PlayerManageTeamScreen() {
     setActionLoading(`promote-${member.id}`);
     setError(null);
     try {
-      await adminFetchJson('/api/teams/transfer-captain', {
+      await adminFetchJson(withTeam('/api/teams/transfer-captain'), {
         method: 'PATCH',
         body: JSON.stringify({ newCaptainUserId: member.user_id }),
       });
@@ -391,7 +396,7 @@ export default function PlayerManageTeamScreen() {
     setActionLoading(`specialty-${memberId}`);
     setError(null);
     try {
-      await adminFetchJson('/api/teams/update-member-specialty', {
+      await adminFetchJson(withTeam('/api/teams/update-member-specialty'), {
         method: 'PATCH',
         body: JSON.stringify({ memberId, specialty }),
       });
@@ -411,7 +416,7 @@ export default function PlayerManageTeamScreen() {
     setActionLoading(`join-${demandeId}`);
     setError(null);
     try {
-      await adminFetchJson('/api/teams/join-requests', {
+      await adminFetchJson(withTeam('/api/teams/join-requests'), {
         method: 'POST',
         body: JSON.stringify({ demandeId, action }),
       });
@@ -526,6 +531,11 @@ export default function PlayerManageTeamScreen() {
               {t.publicPage}
             </Link>
           </div>
+
+          {/* Sélecteur d'équipe — rendu seulement si l'utilisateur en gère
+              plusieurs (manager multi-équipes). Placé juste sous l'en-tête :
+              tout ce qui suit porte sur l'équipe choisie. */}
+          <ActiveTeamSwitcher className="mb-6" />
 
           {successMsg && (
             <div

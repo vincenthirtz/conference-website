@@ -7,10 +7,10 @@ import { applyRateLimit } from '@/utils/rateLimit';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { withSubjectRoute } from '@/utils/subject';
 import {
-  getManagedTeam,
   assertTeamPermission,
   TEAM_MANAGEMENT_FORBIDDEN,
 } from '@/utils/teams/managementAccess';
+import { getManagedTeamForRequest } from '@/utils/teams/teamScope';
 import {
   loadTeamRolesFromSupabase,
   roleHasAnyPermission,
@@ -59,7 +59,7 @@ export default withSubjectRoute(
     }
 
     // Vérifier que l'utilisateur gère cette équipe (capitaine ou manager)
-    const access = await getManagedTeam(userId, tenantId);
+    const access = await getManagedTeamForRequest(req, userId, tenantId);
     if (!access || access.teamId !== teamId) {
       return res.status(403).json({ error: TEAM_MANAGEMENT_FORBIDDEN });
     }

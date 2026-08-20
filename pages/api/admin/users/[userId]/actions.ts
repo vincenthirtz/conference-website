@@ -22,6 +22,11 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
+import { findExclusiveMembership } from '@/utils/teams/memberships';
+import {
+  listMemberships,
+  pickExclusiveMembership,
+} from '@/utils/teams/memberships';
 import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { isValidUUID } from '@/utils/apiHelpers';
@@ -97,14 +102,11 @@ async function assignCaptain(
   tenantId: string
 ) {
   // The user must be a member of the team they're being made captain of.
-  const { data: membership } = await supabaseAdmin
-    .from('team_members')
-    .select('team_id')
-    .eq('user_id', userId)
-    .eq('tenant_id', tenantId)
-    .maybeSingle();
+  // Exclusive membership: a captain plays, so a manager seat is not it (and a
+  // manager may hold several — reading a single row would fail).
+  const membership = await findExclusiveMembership(userId, tenantId);
 
-  const teamId = (membership?.team_id as string | undefined) ?? null;
+  const teamId = membership?.team_id ?? null;
   if (!teamId) {
     return res
       .status(400)
@@ -185,14 +187,16 @@ async function transferTeam(
   }
 
   // Current membership (if any) → source team + carry-over battle_tag / role.
-  const { data: current } = await supabaseAdmin
-    .from('team_members')
-    .select('id, team_id, role, battle_tag')
-    .eq('user_id', userId)
-    .eq('tenant_id', tenantId)
-    .maybeSingle();
+  // A transfer moves a PLAYER, so it starts from the exclusive membership.
+  const currentRows = await listMemberships<{
+    id: string;
+    team_id: string;
+    role: string | null;
+    battle_tag: string | null;
+  }>(userId, tenantId, 'id, team_id, role, battle_tag');
+  const current = pickExclusiveMembership(currentRows);
 
-  const sourceTeamId = (current?.team_id as string | undefined) ?? null;
+  const sourceTeamId = current?.team_id ?? null;
   if (sourceTeamId === targetTeamId) {
     return res
       .status(400)

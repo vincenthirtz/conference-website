@@ -9,7 +9,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withSubjectRoute } from '@/utils/subject';
-import { getManagedTeam } from '@/utils/teams/managementAccess';
+import { getManagedTeamForRequest } from '@/utils/teams/teamScope';
 import { getStaffRole } from '@/utils/staff';
 import type { ScrimPlanningSummary } from '@/types/admin';
 import type { PlanningParty } from '@/utils/teams/scrimPlanningOverlap';
@@ -42,7 +42,7 @@ export default withSubjectRoute(
 
     const { userId, tenantId } = subject;
 
-    const managed = await getManagedTeam(userId, tenantId);
+    const managed = await getManagedTeamForRequest(req, userId, tenantId);
     const staffRole = await getStaffRole(userId);
 
     if (!managed && !staffRole) {

@@ -66,7 +66,7 @@ export default ns('teamCreate', {
     "Tu joues dans l'équipe et tu la diriges. Tu es ajoutée tout de suite au roster.",
   creatorRoleManager: 'Manager',
   creatorRoleManagerHint:
-    "Tu encadres l'équipe sans y jouer. Tu gères le roster, les scrims et les inscriptions.",
+    "Tu encadres l'équipe sans y jouer. Tu gères le roster, les scrims et les inscriptions — et tu peux encadrer plusieurs équipes.",
   managerEmailLabel: 'Ton email (manager)',
   managerEmailHint:
     "C'est à cette adresse qu'est envoyé le lien d'accès à ton espace équipe.",

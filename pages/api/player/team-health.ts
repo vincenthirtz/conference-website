@@ -23,7 +23,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withSubjectRoute } from '@/utils/subject';
-import { getManagedTeam } from '@/utils/teams/managementAccess';
+import { getManagedTeamForRequest } from '@/utils/teams/teamScope';
 import { isNonPlayingTeamRole } from '@/utils/teams/roleKind';
 import { resolveCurrentTournamentId } from '@/utils/currentTournament';
 import { MAX_TEAM_PLAYERS } from '@/utils/constants';
@@ -190,7 +190,7 @@ export default withSubjectRoute(
 
     const { userId, tenantId } = subject;
 
-    const access = await getManagedTeam(userId, tenantId);
+    const access = await getManagedTeamForRequest(req, userId, tenantId);
     if (!access) {
       // Pas de rôle de gestion : rien à diagnostiquer ici. La checklist
       // individuelle (R11) couvre déjà ce qu'un membre peut réparer seul.

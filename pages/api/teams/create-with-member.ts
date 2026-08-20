@@ -692,9 +692,14 @@ export default async function handler(
       await cleanupOrphanTeam(createdTeam.id, 'manager-insert-failed');
       const msg = managerInsertErr.message?.toLowerCase() || '';
       const isDuplicate = msg.includes('duplicate') || msg.includes('unique');
+      // Un manager PEUT encadrer plusieurs équipes depuis 2026-08-20 (index
+      // unique partiel, cf. allow_manager_multi_team.sql) : une 23505 ici ne
+      // veut plus dire « il a déjà une équipe » mais « il est déjà dans
+      // CELLE-CI » — quasi impossible sur une équipe qu'on vient de créer,
+      // sauf reprise d'une équipe orpheline. Le message le dit tel quel.
       return res.status(400).json({
         error: isDuplicate
-          ? 'Ce manager appartient déjà à une équipe.'
+          ? 'Ce manager est déjà membre de cette équipe.'
           : "Le manager n'a pas pu être ajouté. L'équipe n'a pas été enregistrée.",
         code: 'MEMBER_INSERT_FAILED',
       });

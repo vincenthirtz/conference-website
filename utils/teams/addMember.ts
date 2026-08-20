@@ -280,10 +280,21 @@ export async function insertTeamMember(
       };
     }
     if (isDuplicate) {
+      // Deux unicités distinctes derrière la même 23505 :
+      //   - (team_id, user_id)  : déjà dans CETTE équipe — vrai pour tous ;
+      //   - (tenant_id, user_id): déjà dans UNE équipe — l'index est partiel
+      //     et exclut le seul rôle `manager`, qui peut en encadrer plusieurs
+      //     depuis 2026-08-20 (allow_manager_multi_team.sql). Le coach reste
+      //     couvert. Dire « déjà dans une équipe » à un manager serait donc
+      //     faux : pour lui, seul le premier cas existe.
+      const isManagerRole =
+        (input.role ?? '').trim().toLowerCase() === 'manager';
       return {
         ok: false,
         status: 400,
-        error: 'Ce joueur est déjà dans une équipe',
+        error: isManagerRole
+          ? 'Ce manager est déjà membre de cette équipe'
+          : 'Ce joueur est déjà dans une équipe',
         isDuplicate: true,
       };
     }

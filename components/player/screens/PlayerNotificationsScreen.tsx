@@ -29,6 +29,7 @@ import type { PlayerNotificationsPayload } from '@/pages/api/player/notification
 
 import { logger } from '../../../utils/logger';
 import nsPlayerNotifications from '@/lib/i18n/locales/fr/playerNotifications';
+import { useActiveTeam } from '@/components/player/ActiveTeamContext';
 
 // Réponse du GET /api/player/push/prefs : deux maps event_type -> bool.
 // `push` = opt-OUT (clé absente => activé). `email` = opt-IN (clé absente =>
@@ -64,6 +65,7 @@ export default function PlayerNotificationsScreen() {
   // Les compteurs sont inspectables (`?as=`) ; les préférences push/email ne le
   // sont pas — elles sont liées à l'appareil et au consentement de la personne.
   const { withSubject, readOnly, isInspecting } = usePlayerArea();
+  const { withTeam } = useActiveTeam();
 
   const [loading, setLoading] = useState(true);
   const [counters, setCounters] = useState<PlayerNotificationsPayload | null>(
@@ -79,7 +81,7 @@ export default function PlayerNotificationsScreen() {
   const load = useCallback(async () => {
     const [countersData, prefsData] = await Promise.all([
       adminFetchJson<PlayerNotificationsPayload>(
-        withSubject('/api/player/notifications'),
+        withTeam(withSubject('/api/player/notifications')),
         { skipAuthRedirect: true }
       ).catch((err) => {
         logger.error('[player/notifications] counters error:', err);
@@ -106,7 +108,7 @@ export default function PlayerNotificationsScreen() {
     if (!countersData && !prefsData && !isInspecting) {
       setError(t.loadError);
     }
-  }, [adminFetchJson, t, withSubject, isInspecting]);
+  }, [adminFetchJson, t, withSubject, isInspecting, withTeam]);
 
   useEffect(() => {
     if (!ready) return;

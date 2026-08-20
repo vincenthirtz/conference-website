@@ -2,8 +2,21 @@
 // Inscription côté serveur : validation + rate-limit + rôle forcé avant le
 // signUp Supabase. Le formulaire (pages/register.tsx) poste ici plutôt que
 // d'appeler supabaseClient.auth.signUp directement depuis le navigateur, ce qui
-// permet (1) un anti-abus applicatif, (2) une validation serveur, (3) de forcer
-// role:'player' (le client ne peut plus écrire un rôle arbitraire en metadata).
+// permet (1) un anti-abus applicatif, (2) une validation serveur, (3) de borner
+// le rôle à une liste fermée (le client ne peut pas écrire un rôle arbitraire
+// en metadata).
+//
+// `accountType` (2026-08-20) : on s'inscrit comme JOUEUSE ou comme MANAGER.
+// Jusqu'ici le rôle était figé à 'player', et une personne qui encadre une
+// équipe sans y jouer n'avait aucune porte d'entrée — elle n'existait qu'en
+// creux, créée à la volée par `/team/create` (findOrCreateUserByEmail(email,
+// 'manager')). Elle peut désormais créer son compte d'abord.
+//
+// Ce que ce rôle est, et n'est pas : une ÉTIQUETTE de compte (affichée dans le
+// cockpit staff, exportée en RGPD). Il n'accorde AUCUN droit — les droits de
+// gestion se lisent sur `team_members.role` (utils/teams/managementAccess.ts),
+// et le staff sur la table `staff`. Un compte 'manager' sans équipe ne peut
+// donc rien de plus qu'un compte 'player' sans équipe.
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { z } from 'zod';
@@ -28,11 +41,20 @@ const optionalTrimmed = (max: number) =>
     z.string().trim().max(max).optional()
   );
 
+/**
+ * Rôles ouverts à l'auto-inscription. Liste FERMÉE : tout le reste
+ * ('developer', rôles staff…) passe par une autre porte.
+ */
+const SELF_SERVICE_ROLES = ['player', 'manager'] as const;
+
 const registerSchema = z.object({
   email: z.string().email(),
   // bcrypt (Supabase) plafonne à 72 octets ; min aligné sur l'UI.
   password: z.string().min(8).max(72),
   displayName: optionalTrimmed(80),
+  // Absent ⇒ 'player' : les clients qui ignorent le champ (et tout appelant
+  // antérieur à 2026-08-20) gardent le comportement exact d'avant.
+  accountType: z.enum(SELF_SERVICE_ROLES).optional(),
   battleTag: z.preprocess(
     (v) => (typeof v === 'string' && v.trim() === '' ? undefined : v),
     z
@@ -70,6 +92,7 @@ export default async function handler(
   }
 
   const { password, displayName, battleTag } = parsed.data;
+  const accountRole = parsed.data.accountType ?? 'player';
   const email = normalizeEmail(parsed.data.email);
 
   // Durcissement email : syntaxe stricte + domaines jetables/placeholder
@@ -101,8 +124,9 @@ export default async function handler(
     options: {
       data: {
         display_name: displayName ?? null,
-        // Rôle forcé côté serveur : le client ne décide pas de son rôle.
-        role: 'player',
+        // Rôle borné côté serveur à SELF_SERVICE_ROLES : le client choisit
+        // entre joueuse et manager, pas au-delà.
+        role: accountRole,
         battle_tag: battleTag ?? null,
       },
     },

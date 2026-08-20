@@ -8,6 +8,7 @@
 
 import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
+import { resolveMembership } from '@/utils/teams/memberships';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { CHECKIN_OPEN_MINUTES } from '@/utils/checkin';
 import { logger } from '@/utils/logger';
@@ -38,12 +39,14 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
     });
   }
 
-  const { data: membership } = await supabaseAdmin
-    .from('team_members')
-    .select('team_id')
-    .eq('tenant_id', req.botContext.tenantId)
-    .eq('user_id', link.auth_user_id)
-    .maybeSingle();
+  // Une seule équipe est renvoyée (contrat bot inchangé) : l'appartenance qui
+  // « prend » le compte, à défaut la plus ancienne. Un manager peut en
+  // encadrer plusieurs depuis 2026-08-20 — sans ce choix explicite, la lecture
+  // ligne unique tombait en erreur sur ces comptes.
+  const membership = await resolveMembership(
+    link.auth_user_id,
+    req.botContext.tenantId
+  );
 
   const teamId = membership?.team_id;
   if (!teamId) {

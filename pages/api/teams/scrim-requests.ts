@@ -15,10 +15,10 @@ import { applyRateLimit, applyActorRateLimit } from '@/utils/rateLimit';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { withSubjectRoute } from '@/utils/subject';
 import {
-  getManagedTeam,
   assertTeamPermission,
   TEAM_MANAGEMENT_FORBIDDEN,
 } from '@/utils/teams/managementAccess';
+import { getManagedTeamForRequest } from '@/utils/teams/teamScope';
 import { readScrimNego, normalizeSlots } from '@/utils/teams/scrimNegotiation';
 import { notifyScrimCounterProposal } from '@/utils/discord';
 import { emitScrimEvent } from '@/utils/scrimEvents';
@@ -124,7 +124,7 @@ export default withSubjectRoute(
       return;
 
     // Check if user can manage a team (captain or manager)
-    const access = await getManagedTeam(userId, tenantId);
+    const access = await getManagedTeamForRequest(req, userId, tenantId);
     if (!access) {
       return res.status(403).json({ error: TEAM_MANAGEMENT_FORBIDDEN });
     }

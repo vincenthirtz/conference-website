@@ -20,6 +20,7 @@ import { useLocale } from '@/lib/i18n/useLocale';
 import type { PlayerScrim } from '../../pages/api/player/scrims/index';
 import { logger } from '../../utils/logger';
 import nsMyScrims from '@/lib/i18n/locales/fr/myScrims';
+import { useActiveTeam } from '@/components/player/ActiveTeamContext';
 
 type ScrimsPayload = {
   toReport: PlayerScrim[];
@@ -38,6 +39,7 @@ export default function MyScrimsCard() {
   const locale = useLocale();
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
   const { withSubject, readOnly } = usePlayerArea();
+  const { withTeam } = useActiveTeam();
   const { addToast } = useToast();
 
   const [data, setData] = useState<ScrimsPayload | null>(null);
@@ -49,14 +51,14 @@ export default function MyScrimsCard() {
   const load = useCallback(async () => {
     try {
       const payload = await adminFetchJson<ScrimsPayload>(
-        withSubject('/api/player/scrims'),
+        withTeam(withSubject('/api/player/scrims')),
         { skipAuthRedirect: true }
       );
       setData(payload);
     } catch (err) {
       logger.error('[MyScrimsCard] load error', err);
     }
-  }, [adminFetchJson, withSubject]);
+  }, [adminFetchJson, withSubject, withTeam]);
 
   useEffect(() => {
     void load();
@@ -94,7 +96,7 @@ export default function MyScrimsCard() {
         : { team1Score: theirs, team2Score: mine };
 
       const result = await adminFetchJson<ReportOutcome>(
-        `/api/player/scrims/${scrim.id}/report`,
+        withTeam(`/api/player/scrims/${scrim.id}/report`),
         { method: 'POST', body: JSON.stringify(body) }
       );
 

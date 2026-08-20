@@ -8,10 +8,11 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
 import {
-  getManagedTeam,
   assertTeamPermission,
   TEAM_MANAGEMENT_FORBIDDEN,
 } from '@/utils/teams/managementAccess';
+import { getManagedTeamForRequest } from '@/utils/teams/teamScope';
+import { findExclusiveMembership } from '@/utils/teams/memberships';
 import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
 
 import { logger } from '../../../utils/logger';
@@ -78,7 +79,7 @@ export default withAuthRoute(async function handler(
       const targetPlayerId = body.targetPlayerId.trim();
 
       // Verifier que le demandeur peut gerer une equipe (capitaine ou manager)
-      const access = await getManagedTeam(userId, tenantId);
+      const access = await getManagedTeamForRequest(req, userId, tenantId);
       if (!access) {
         return res.status(403).json({ error: TEAM_MANAGEMENT_FORBIDDEN });
       }
@@ -245,18 +246,10 @@ export default withAuthRoute(async function handler(
 
     // ─── Self-transfer: le joueur demande son propre transfert ─────────
 
-    // Verifier que le joueur est bien dans une equipe actuellement
-    const { data: currentMembership, error: memberErr } = await supabaseAdmin
-      .from('team_members')
-      .select('id, team_id, role')
-      .eq('user_id', userId)
-      .eq('tenant_id', tenantId)
-      .maybeSingle();
-
-    if (memberErr) {
-      logger.error('[demandes/transfer] check member error:', memberErr);
-      return res.status(500).json({ error: 'Verification error.' });
-    }
+    // Verifier que le joueur est bien dans une equipe actuellement. On lit
+    // l'appartenance EXCLUSIVE : un transfert déplace une joueuse d'une équipe
+    // à l'autre, ce n'est pas ce qu'un siège de manager représente.
+    const currentMembership = await findExclusiveMembership(userId, tenantId);
 
     if (!currentMembership) {
       return res.status(400).json({

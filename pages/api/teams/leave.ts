@@ -12,6 +12,8 @@ import {
 import { withAuthRoute } from '@/utils/staff';
 import { emitBotEvent } from '@/utils/botEvents';
 import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
+import { listMemberships } from '@/utils/teams/memberships';
+import { readRequestedTeamId } from '@/utils/teams/teamScope';
 
 import { logger } from '../../../utils/logger';
 export default withAuthRoute(async function handler(
@@ -32,21 +34,30 @@ export default withAuthRoute(async function handler(
     authUserId: userId,
   });
 
-  // Trouver le membership
-  const { data: membership, error: membershipErr } = await supabaseAdmin
-    .from('team_members')
-    .select('id, team_id')
-    .eq('user_id', userId)
-    .eq('tenant_id', tenantId)
-    .maybeSingle();
+  // Trouver le membership. Un manager peut en avoir plusieurs : « quitter »
+  // devient alors ambigu, et deviner serait destructeur (on retirerait la
+  // personne d'une équipe qu'elle n'avait pas en tête). On exige donc
+  // `?teamId=` dans ce cas — l'écran le pose déjà via le sélecteur d'équipe.
+  const memberships = await listMemberships(userId, tenantId);
 
-  if (membershipErr) {
-    logger.error('[teams/leave] membership error:', membershipErr);
-    return res.status(500).json({ error: 'Failed to check membership.' });
+  if (memberships.length === 0) {
+    return res.status(400).json({ error: "Tu n'es membre d'aucune équipe." });
   }
 
+  const requestedTeamId = readRequestedTeamId(req);
+  const membership = requestedTeamId
+    ? (memberships.find((m) => m.team_id === requestedTeamId) ?? null)
+    : memberships.length === 1
+      ? memberships[0]
+      : null;
+
   if (!membership) {
-    return res.status(400).json({ error: "Tu n'es membre d'aucune équipe." });
+    return res.status(400).json({
+      error: requestedTeamId
+        ? "Tu n'es pas membre de cette équipe."
+        : 'Tu encadres plusieurs équipes : précise celle que tu veux quitter.',
+      code: 'TEAM_AMBIGUOUS',
+    });
   }
 
   // Vérifier si l'utilisateur est capitaine

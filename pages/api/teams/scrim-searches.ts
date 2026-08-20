@@ -19,10 +19,10 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
 import {
-  getManagedTeam,
   assertTeamPermission,
   TEAM_MANAGEMENT_FORBIDDEN,
 } from '@/utils/teams/managementAccess';
+import { getManagedTeamForRequest } from '@/utils/teams/teamScope';
 import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
 import { emitBotEvent } from '@/utils/botEvents';
 import {
@@ -70,7 +70,7 @@ export default withAuthRoute(async function handler(
     authUserId: userId,
   });
 
-  const access = await getManagedTeam(userId, tenantId);
+  const access = await getManagedTeamForRequest(req, userId, tenantId);
   if (!access) {
     return res.status(403).json({ error: TEAM_MANAGEMENT_FORBIDDEN });
   }

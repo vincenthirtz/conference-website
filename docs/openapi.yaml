@@ -176,6 +176,25 @@ components:
         toute methode autre que GET (403 `subject_read_only`) et journalise
         dans `staff_logs`. Absent = l'appelant lit ses propres donnees.
         Voir `utils/subject.ts`.
+    TeamScope:
+      name: teamId
+      in: query
+      required: false
+      schema:
+        type: string
+        format: uuid
+      description: |
+        Equipe sur laquelle porte la requete, quand l'appelant en gere
+        PLUSIEURS. Un compte au role d'equipe `manager` peut en encadrer
+        plusieurs (index unique partiel, cf.
+        `database/migrations/allow_manager_multi_team.sql`) ; sans ce
+        parametre, le serveur retombe sur la premiere equipe geree (ordre
+        stable : capitainerie d'abord, puis anciennete d'adhesion), ce qui est
+        le comportement historique pour quiconque n'en gere qu'une.
+        Une equipe que l'appelant ne gere pas est REFUSEE (403) : le parametre
+        ne peut jamais elargir la portee. Une valeur non-UUID est ignoree.
+        Voir `utils/teamScopeParam.ts` (format) et `utils/teams/teamScope.ts`
+        (lecture serveur).
     IdempotencyKey:
       name: idempotency-key
       in: header
@@ -18293,6 +18312,8 @@ paths:
     get:
       summary: Read the team(s) that the current user captains/operates.
       operationId: adminGetMyTeams
+      parameters:
+        - $ref: '#/components/parameters/TeamScope'
       tags:
         - admin/teams
       security:
@@ -25175,6 +25196,8 @@ paths:
         - public/teams
       summary: Le capitaine/manager ajoute un membre par email ou userId.
       operationId: playerAddTeamMember
+      parameters:
+        - $ref: '#/components/parameters/TeamScope'
       security:
         - PlayerBearer: []
       requestBody:
@@ -25225,6 +25248,8 @@ paths:
         Exclut l'appelant et toute personne déjà dans une équipe du tenant. Les
         rows liées sont enrichies depuis profiles (battle_tag, display_name).
       operationId: playerListFreePlayers
+      parameters:
+        - $ref: '#/components/parameters/TeamScope'
       security:
         - PlayerBearer: []
       responses:
@@ -25284,6 +25309,8 @@ paths:
         roster lock, déjà membre / invitation déjà pending (409), cible non
         joueur libre du tenant (404).
       operationId: playerInviteFreePlayer
+      parameters:
+        - $ref: '#/components/parameters/TeamScope'
       security:
         - PlayerBearer: []
       requestBody:
@@ -25333,6 +25360,7 @@ paths:
   /api/teams/invitations:
     post:
       parameters:
+        - $ref: '#/components/parameters/TeamScope'
         - $ref: '#/components/parameters/SubjectAs'
         - $ref: '#/components/parameters/ActAs'
       tags:
@@ -25576,6 +25604,8 @@ paths:
         - public/teams
       summary: Recherche de scrim active de mon equipe (ou null).
       operationId: playerGetScrimSearch
+      parameters:
+        - $ref: '#/components/parameters/TeamScope'
       security:
         - PlayerBearer: []
       responses:
@@ -25608,6 +25638,8 @@ paths:
         recale en consequence : le booleen devient un derive.
         Permission requise : `manage_scrims`.
       operationId: playerPublishScrimSearch
+      parameters:
+        - $ref: '#/components/parameters/TeamScope'
       security:
         - PlayerBearer: []
       requestBody:
@@ -25659,6 +25691,8 @@ paths:
         - public/teams
       summary: Clore la recherche de scrim active de mon equipe.
       operationId: playerCloseScrimSearch
+      parameters:
+        - $ref: '#/components/parameters/TeamScope'
       security:
         - PlayerBearer: []
       responses:
@@ -25683,6 +25717,7 @@ paths:
   /api/player/scrims:
     get:
       parameters:
+        - $ref: '#/components/parameters/TeamScope'
         - $ref: '#/components/parameters/SubjectAs'
       tags:
         - public/teams
@@ -25878,6 +25913,8 @@ paths:
         avec ma propre annonce, puis par presence d'annonce, puis alphabetique.
         Purge au passage les annonces perimees.
       operationId: playerTeamsDirectory
+      parameters:
+        - $ref: '#/components/parameters/TeamScope'
       security:
         - PlayerBearer: []
       responses:
@@ -25920,6 +25957,7 @@ paths:
       security:
         - PlayerBearer: []
       parameters:
+        - $ref: '#/components/parameters/TeamScope'
         - $ref: '#/components/parameters/SubjectAs'
         - in: query
           name: tz
@@ -25945,6 +25983,8 @@ paths:
         - public/teams
       summary: Declarer MES creneaux recurrents dans mon equipe.
       operationId: playerTeamRhythmUpdate
+      parameters:
+        - $ref: '#/components/parameters/TeamScope'
       security:
         - PlayerBearer: []
       requestBody:
@@ -25992,6 +26032,7 @@ paths:
   /api/player/progression:
     get:
       parameters:
+        - $ref: '#/components/parameters/TeamScope'
         - $ref: '#/components/parameters/SubjectAs'
       tags:
         - public/teams
@@ -26048,6 +26089,7 @@ paths:
       security:
         - PlayerBearer: []
       parameters:
+        - $ref: '#/components/parameters/TeamScope'
         - in: query
           name: team
           required: true
@@ -26083,6 +26125,7 @@ paths:
   /api/player/team-health:
     get:
       parameters:
+        - $ref: '#/components/parameters/TeamScope'
         - $ref: '#/components/parameters/SubjectAs'
       tags:
         - public/teams
@@ -26122,6 +26165,8 @@ paths:
         membre. Les revues sont STRICTEMENT privees a l'equipe : aucune surface
         publique ne les expose et l'adversaire n'y a jamais acces.
       operationId: playerTeamReviews
+      parameters:
+        - $ref: '#/components/parameters/TeamScope'
       security:
         - PlayerBearer: []
       responses:
@@ -26144,6 +26189,8 @@ paths:
         jamais lus dans le body. Le sujet doit appartenir a l'equipe de
         l'appelant. Vider les deux champs SUPPRIME la revue.
       operationId: playerTeamReviewUpsert
+      parameters:
+        - $ref: '#/components/parameters/TeamScope'
       security:
         - PlayerBearer: []
       requestBody:
@@ -26211,6 +26258,7 @@ paths:
       security:
         - PlayerBearer: []
       parameters:
+        - $ref: '#/components/parameters/TeamScope'
         - in: query
           name: subjectType
           required: true
@@ -26240,6 +26288,8 @@ paths:
         - public/teams
       summary: L'utilisateur authentifie quitte son equipe (le capitaine doit transferer avant).
       operationId: playerLeaveTeam
+      parameters:
+        - $ref: '#/components/parameters/TeamScope'
       security:
         - PlayerBearer: []
       responses:
@@ -26277,6 +26327,7 @@ paths:
   /api/teams/scrim-plannings:
     get:
       parameters:
+        - $ref: '#/components/parameters/TeamScope'
         - $ref: '#/components/parameters/SubjectAs'
       tags:
         - public/teams
@@ -26404,6 +26455,7 @@ paths:
   /api/teams/scrim-requests:
     get:
       parameters:
+        - $ref: '#/components/parameters/TeamScope'
         - $ref: '#/components/parameters/SubjectAs'
       tags:
         - public/teams
@@ -26428,6 +26480,8 @@ paths:
         - public/teams
       summary: Accepte ou refuse une demande de scrim recue.
       operationId: respondToScrimRequest
+      parameters:
+        - $ref: '#/components/parameters/TeamScope'
       security:
         - PlayerBearer: []
       requestBody:
@@ -26469,6 +26523,7 @@ paths:
   /api/teams/join-requests:
     get:
       parameters:
+        - $ref: '#/components/parameters/TeamScope'
         - $ref: '#/components/parameters/SubjectAs'
       tags:
         - public/teams
@@ -26490,6 +26545,7 @@ paths:
           $ref: '#/components/responses/Forbidden'
     post:
       parameters:
+        - $ref: '#/components/parameters/TeamScope'
         - $ref: '#/components/parameters/SubjectAs'
         - $ref: '#/components/parameters/ActAs'
       tags:
@@ -26541,6 +26597,7 @@ paths:
       security:
         - PlayerBearer: []
       parameters:
+        - $ref: '#/components/parameters/TeamScope'
         - name: q
           in: query
           required: true
@@ -26584,6 +26641,7 @@ paths:
   /api/teams/toggle-joinable:
     post:
       parameters:
+        - $ref: '#/components/parameters/TeamScope'
         - $ref: '#/components/parameters/SubjectAs'
         - $ref: '#/components/parameters/ActAs'
       tags:
@@ -26607,6 +26665,7 @@ paths:
   /api/teams/toggle-scrim-open:
     post:
       parameters:
+        - $ref: '#/components/parameters/TeamScope'
         - $ref: '#/components/parameters/SubjectAs'
         - $ref: '#/components/parameters/ActAs'
       tags:
@@ -26630,6 +26689,7 @@ paths:
   /api/teams/transfer-captain:
     patch:
       parameters:
+        - $ref: '#/components/parameters/TeamScope'
         - $ref: '#/components/parameters/SubjectAs'
         - $ref: '#/components/parameters/ActAs'
       tags:
@@ -26670,6 +26730,8 @@ paths:
         - public/teams
       summary: Liste les demandes de transfert (capitaine) recues/emises par le joueur.
       operationId: listTransferRequests
+      parameters:
+        - $ref: '#/components/parameters/TeamScope'
       security:
         - PlayerBearer: []
       responses:
@@ -26687,6 +26749,8 @@ paths:
         - public/teams
       summary: Repond a une demande de transfert (accept/reject).
       operationId: respondToTransferRequest
+      parameters:
+        - $ref: '#/components/parameters/TeamScope'
       security:
         - PlayerBearer: []
       requestBody:
@@ -26722,6 +26786,7 @@ paths:
   /api/teams/update-member:
     patch:
       parameters:
+        - $ref: '#/components/parameters/TeamScope'
         - $ref: '#/components/parameters/SubjectAs'
         - $ref: '#/components/parameters/ActAs'
       tags:
@@ -26771,6 +26836,7 @@ paths:
   /api/teams/update-member-role:
     patch:
       parameters:
+        - $ref: '#/components/parameters/TeamScope'
         - $ref: '#/components/parameters/SubjectAs'
         - $ref: '#/components/parameters/ActAs'
       tags:
@@ -26811,6 +26877,7 @@ paths:
   /api/teams/update-member-specialty:
     patch:
       parameters:
+        - $ref: '#/components/parameters/TeamScope'
         - $ref: '#/components/parameters/SubjectAs'
         - $ref: '#/components/parameters/ActAs'
       tags:
@@ -28512,6 +28579,8 @@ paths:
         - public/teams
       summary: Liste les demandes d'inscription equipe a un tournoi du joueur.
       operationId: listRegisterTeamDemandes
+      parameters:
+        - $ref: '#/components/parameters/TeamScope'
       security:
         - PlayerBearer: []
       responses:
@@ -28529,6 +28598,8 @@ paths:
         - public/teams
       summary: Soumet une demande d'inscription equipe a un tournoi.
       operationId: submitRegisterTeamDemande
+      parameters:
+        - $ref: '#/components/parameters/TeamScope'
       security:
         - PlayerBearer: []
       requestBody:
@@ -28566,6 +28637,8 @@ paths:
         - public/teams
       summary: Liste les demandes de scrim emises par le joueur (capitaine).
       operationId: listScrimDemandes
+      parameters:
+        - $ref: '#/components/parameters/TeamScope'
       security:
         - PlayerBearer: []
       responses:
@@ -28583,6 +28656,8 @@ paths:
         - public/teams
       summary: Soumet une demande de scrim a une autre equipe.
       operationId: submitScrimDemande
+      parameters:
+        - $ref: '#/components/parameters/TeamScope'
       security:
         - PlayerBearer: []
       requestBody:
@@ -28622,6 +28697,8 @@ paths:
         - public/teams
       summary: Liste les demandes de transfert (capitaine) du joueur.
       operationId: listTransferDemandes
+      parameters:
+        - $ref: '#/components/parameters/TeamScope'
       security:
         - PlayerBearer: []
       responses:
@@ -28639,6 +28716,8 @@ paths:
         - public/teams
       summary: Soumet une demande de transfert de capitanat.
       operationId: submitTransferDemande
+      parameters:
+        - $ref: '#/components/parameters/TeamScope'
       security:
         - PlayerBearer: []
       requestBody:
@@ -28728,6 +28807,7 @@ paths:
   /api/player/messages:
     get:
       parameters:
+        - $ref: '#/components/parameters/TeamScope'
         - $ref: '#/components/parameters/SubjectAs'
       tags:
         - public/auth
@@ -28750,6 +28830,8 @@ paths:
         - public/auth
       summary: Cree une nouvelle conversation / envoie un message.
       operationId: createPlayerMessage
+      parameters:
+        - $ref: '#/components/parameters/TeamScope'
       security:
         - PlayerBearer: []
       requestBody:
@@ -28795,6 +28877,8 @@ paths:
         - public/auth
       summary: Recupere les messages d'une conversation.
       operationId: getConversationMessages
+      parameters:
+        - $ref: '#/components/parameters/TeamScope'
       security:
         - PlayerBearer: []
       responses:
@@ -28814,6 +28898,8 @@ paths:
         - public/auth
       summary: Marque la conversation comme lue / poste une reply.
       operationId: updateConversation
+      parameters:
+        - $ref: '#/components/parameters/TeamScope'
       security:
         - PlayerBearer: []
       requestBody:
@@ -28838,6 +28924,7 @@ paths:
   /api/player/matches:
     get:
       parameters:
+        - $ref: '#/components/parameters/TeamScope'
         - $ref: '#/components/parameters/SubjectAs'
       tags:
         - public/auth
@@ -28957,6 +29044,7 @@ paths:
   /api/player/dashboard:
     get:
       parameters:
+        - $ref: '#/components/parameters/TeamScope'
         - $ref: '#/components/parameters/SubjectAs'
       tags:
         - public/auth
@@ -28979,6 +29067,7 @@ paths:
   /api/player/next-match:
     get:
       parameters:
+        - $ref: '#/components/parameters/TeamScope'
         - $ref: '#/components/parameters/SubjectAs'
       tags:
         - public/auth
@@ -29006,6 +29095,7 @@ paths:
       security:
         - PlayerBearer: []
       parameters:
+        - $ref: '#/components/parameters/TeamScope'
         - $ref: '#/components/parameters/SubjectAs'
         - name: status
           in: query

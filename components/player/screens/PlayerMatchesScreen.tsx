@@ -25,6 +25,7 @@ import type { PlayerMatchesPayload } from '@/pages/api/player/matches';
 
 import { logger } from '../../../utils/logger';
 import nsPlayerMatches from '@/lib/i18n/locales/fr/playerMatches';
+import { useActiveTeam } from '@/components/player/ActiveTeamContext';
 
 type PlayerMatch = PlayerMatchesPayload['matches'][number];
 
@@ -275,6 +276,7 @@ export default function PlayerMatchesScreen() {
   });
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
   const { withSubject, readOnly } = usePlayerArea();
+  const { withTeam } = useActiveTeam();
   const { lang } = useLang();
   const t = useT(nsPlayerMatches);
   const [loading, setLoading] = useState(true);
@@ -287,7 +289,7 @@ export default function PlayerMatchesScreen() {
     setError(null);
     try {
       const json = await adminFetchJson<PlayerMatchesPayload>(
-        withSubject('/api/player/matches'),
+        withTeam(withSubject('/api/player/matches')),
         { skipAuthRedirect: true }
       );
       setData(json);
@@ -297,7 +299,7 @@ export default function PlayerMatchesScreen() {
     } finally {
       setLoading(false);
     }
-  }, [adminFetchJson, t, withSubject]);
+  }, [adminFetchJson, t, withSubject, withTeam]);
 
   useEffect(() => {
     if (!ready) return;

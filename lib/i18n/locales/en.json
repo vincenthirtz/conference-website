@@ -1163,11 +1163,23 @@
     "battlenetNotLinked": "This Battle.net account isn't linked to any OW Women's Cup account. Sign in with email or Discord, then link your Blizzard account from your profile — this button will work afterwards.",
     "battlenetError": "Battle.net sign-in failed, try again or use your email."
   },
+  "activeTeamSwitcher": {
+    "label": "Team shown",
+    "hint": "You run several teams: pick the one you want to act on.",
+    "captainBadge": "Captain",
+    "managerBadge": "Manager"
+  },
   "registerPage": {
     "badgeRole": "Staff / Player",
     "badgeAction": "Sign-up",
     "title": "Create an account",
     "subtitle": "Sign up with your email. You'll get a link to confirm your account before signing in.",
+    "accountTypeLegend": "I'm creating this account as",
+    "accountTypePlayer": "Player",
+    "accountTypePlayerHint": "I play on a team, or I'm looking for one.",
+    "accountTypeManager": "Manager",
+    "accountTypeManagerHint": "I run a team without playing on it.",
+    "managerNoBattleTagNote": "No BattleTag needed: as a manager you don't need an Overwatch account. Once your email is confirmed you'll be able to create your team — and to run more than one.",
     "displayNameLabel": "Display name (optional)",
     "displayNamePlaceholder": "e.g. LaKiiroi",
     "battleTagLabel": "BattleTag (format Name#0000)",
@@ -1357,8 +1369,8 @@
     "stepsEyebrow": "Process",
     "stepsTitle": "5 steps to register",
     "stepsIntro": "Count about ten minutes if all players are ready. You can pause and resume at any time from your account.",
-    "step1Title": "Create your player account",
-    "step1Desc": "Sign up for free with your email or Discord account. Remember to add your BattleTag right when you create it.",
+    "step1Title": "Create your account",
+    "step1Desc": "Sign up for free with your email or your Discord account. Pick “player” (remember your BattleTag) or “manager” if you run a team without playing on it — no BattleTag is asked in that case.",
     "step1Cta": "Create my account",
     "step2Title": "Build your roster",
     "step2Desc": "Gather 5 starting players (1 Tank, 2 DPS, 2 Support). You can prepare their emails and BattleTags in advance to go faster at registration time.",
@@ -1389,7 +1401,9 @@
     "helpTitle": "We're here to support you",
     "helpBody": "A question about your roster, a BattleTag causing trouble, or need an exception? The staff replies on Discord and by email.",
     "helpContact": "Contact form",
-    "helpTimeline": "Timeline 2026"
+    "helpTimeline": "Timeline 2026",
+    "faq6Q": "I manage a team without playing on it — can I register the team?",
+    "faq6A": "Yes. Create your account as a “manager” — no BattleTag required — then, in the team form, pick “I run the team without playing on it”. You get access to the team space, the players are invited by email, and the designated captain becomes captain as soon as she accepts. One manager can run several teams."
   },
   "associationPage": {
     "heroBadge": "Non-profit (French law 1901)",
@@ -2347,7 +2361,7 @@
     "creatorRoleCaptain": "Captain",
     "creatorRoleCaptainHint": "You play on the team and lead it. You are added to the roster right away.",
     "creatorRoleManager": "Manager",
-    "creatorRoleManagerHint": "You run the team without playing. You manage the roster, scrims and registrations.",
+    "creatorRoleManagerHint": "You run the team without playing on it. You handle the roster, scrims and registrations — and you can run several teams.",
     "managerEmailLabel": "Your email (manager)",
     "managerEmailHint": "This is where the link to your team space is sent.",
     "managerCaptainNote": "Pick the captain among the players if you already know who it is: she becomes captain when she accepts her invitation. Otherwise you can designate her later from your team space.",

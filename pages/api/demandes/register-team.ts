@@ -8,10 +8,10 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
 import {
-  getManagedTeam,
   assertTeamPermission,
   TEAM_MANAGEMENT_FORBIDDEN,
 } from '@/utils/teams/managementAccess';
+import { getManagedTeamForRequest } from '@/utils/teams/teamScope';
 import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
 import { emitBotEvent } from '@/utils/botEvents';
 import {
@@ -96,7 +96,7 @@ export default withAuthRoute(async function handler(
     }
 
     // Verify user can manage the team (captain or manager)
-    const access = await getManagedTeam(userId, tenantId);
+    const access = await getManagedTeamForRequest(req, userId, tenantId);
     if (!access || access.teamId !== team.id) {
       return res.status(403).json({
         error:

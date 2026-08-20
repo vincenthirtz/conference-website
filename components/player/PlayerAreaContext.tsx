@@ -91,6 +91,10 @@ export function PlayerAreaProvider({
     };
   }, [subjectId, subjectName, readOnly, actAs]);
 
+  // NB : l'équipe active (`ActiveTeamContext`) est un contexte SÉPARÉ, monté
+  // une seule fois dans `_app` — la cloche de la Navbar en a besoin, et elle
+  // vit hors de tout écran joueuse. Ne pas le remonter ici : deux providers
+  // imbriqués = deux états, donc un sélecteur qui ne pilote plus rien.
   return (
     <PlayerAreaContext.Provider value={value}>
       {children}

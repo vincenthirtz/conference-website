@@ -19,6 +19,7 @@ import type { SeoProps } from '@/components/Seo/DefaultSeo';
 
 import { logger } from '../../utils/logger';
 import nsPlayerRequests from '@/lib/i18n/locales/fr/playerRequests';
+import { useActiveTeam } from '@/components/player/ActiveTeamContext';
 
 type Tab = 'transfer' | 'scrim';
 
@@ -32,6 +33,7 @@ export default function PlayerRequestsPage() {
   } = useManagedTeam();
   const t = useT(nsPlayerRequests);
   const { addToast } = useToast();
+  const { withTeam } = useActiveTeam();
   const [tab, setTab] = useState<Tab>('transfer');
   // Which field a validation error concerns, so we only flag the relevant input
   // as aria-invalid (not every input on the form).
@@ -198,7 +200,7 @@ export default function PlayerRequestsPage() {
         bodyData.targetPlayerId = selectedPlayerId;
       }
 
-      const res = await fetch('/api/demandes/transfer', {
+      const res = await fetch(withTeam('/api/demandes/transfer'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -267,7 +269,7 @@ export default function PlayerRequestsPage() {
 
     setSubmitting(true);
     try {
-      const res = await fetch('/api/demandes/scrim', {
+      const res = await fetch(withTeam('/api/demandes/scrim'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

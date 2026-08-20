@@ -47,6 +47,11 @@ import ScrimsHubCard from '@/components/player/ScrimsHubCard';
 import SupportAssoCard from '@/components/player/SupportAssoCard';
 import PushOptIn from '@/components/shared/PushOptIn';
 import { usePlayerArea } from '@/components/player/PlayerAreaContext';
+import {
+  useActiveTeam,
+  type ActiveTeamOption,
+} from '@/components/player/ActiveTeamContext';
+import ActiveTeamSwitcher from '@/components/player/ActiveTeamSwitcher';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
@@ -126,6 +131,8 @@ type DashboardResponse = {
   pendingScrims?: PendingScrim[];
   unreadMessages?: number;
   nextMatch?: NextMatchData;
+  /** Équipes gérées — alimente le sélecteur (manager multi-équipes). */
+  managedTeams?: ActiveTeamOption[];
 };
 
 const SVG_PATHS = {
@@ -312,6 +319,8 @@ export default function PlayerDashboardScreen() {
   // `withSubject` redirige chaque lecture vers l'utilisateur inspecté ;
   // `readOnly` masque tout ce qui écrit. En mode self, les deux sont neutres.
   const { withSubject, readOnly, isInspecting, subjectName } = usePlayerArea();
+  // Équipe sur laquelle le tableau de bord travaille (manager multi-équipes).
+  const { withTeam, publishManagedTeams } = useActiveTeam();
   const { addToast } = useToast();
   const { confirm, dialog } = useConfirmDialog();
   const [loading, setLoading] = useState(true);
@@ -339,7 +348,7 @@ export default function PlayerDashboardScreen() {
   // (returned as empty/null) never blanks out the rest of the dashboard.
   const loadData = useCallback(async () => {
     const data = await adminFetchJson<DashboardResponse>(
-      withSubject('/api/player/dashboard')
+      withTeam(withSubject('/api/player/dashboard'))
     ).catch(() => null);
 
     if (!data) {
@@ -368,7 +377,10 @@ export default function PlayerDashboardScreen() {
       typeof data.unreadMessages === 'number' ? data.unreadMessages : 0
     );
     setNextMatch(data.nextMatch ?? null);
-  }, [adminFetchJson, withSubject]);
+    // La liste vient de la MÊME réponse que l'équipe affichée : le sélecteur
+    // ne peut pas proposer une équipe que cet écran ne saurait pas charger.
+    publishManagedTeams(data.managedTeams ?? []);
+  }, [adminFetchJson, withSubject, withTeam, publishManagedTeams]);
 
   useEffect(() => {
     if (!ready) return;
@@ -454,7 +466,7 @@ export default function PlayerDashboardScreen() {
 
       setScrimActionId(demandeId);
       try {
-        await adminFetchJson('/api/teams/scrim-requests', {
+        await adminFetchJson(withTeam('/api/teams/scrim-requests'), {
           method: 'POST',
           body: JSON.stringify(body),
         });
@@ -467,7 +479,7 @@ export default function PlayerDashboardScreen() {
         setScrimActionId(null);
       }
     },
-    [adminFetchJson, confirm, t]
+    [adminFetchJson, confirm, t, withTeam]
   );
 
   // Grilles de dispo ouvertes : chargées une fois pour la catégorie Scrims.
@@ -477,9 +489,12 @@ export default function PlayerDashboardScreen() {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch(withSubject('/api/teams/scrim-plannings'), {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await fetch(
+          withTeam(withSubject('/api/teams/scrim-plannings')),
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
         if (!res.ok) return;
         const data = await res.json();
         if (!cancelled && Array.isArray(data?.plannings)) {
@@ -492,7 +507,7 @@ export default function PlayerDashboardScreen() {
     return () => {
       cancelled = true;
     };
-  }, [ready, token, canManage, withSubject]);
+  }, [ready, token, canManage, withSubject, withTeam]);
 
   // Bascule la disponibilité aux scrims. L'état vit ici (page) : mise à jour
   // optimiste de team.open_for_scrim + feedback toast, cohérent avec le reste.
@@ -501,7 +516,7 @@ export default function PlayerDashboardScreen() {
     setTogglingScrim(true);
     try {
       const data = await adminFetchJson<{ open_for_scrim: boolean }>(
-        '/api/teams/toggle-scrim-open',
+        withTeam('/api/teams/toggle-scrim-open'),
         {
           method: 'POST',
           body: JSON.stringify({ open: !team?.open_for_scrim }),
@@ -520,12 +535,19 @@ export default function PlayerDashboardScreen() {
     } finally {
       setTogglingScrim(false);
     }
-  }, [adminFetchJson, addToast, t, team?.open_for_scrim, togglingScrim]);
+  }, [
+    adminFetchJson,
+    addToast,
+    t,
+    team?.open_for_scrim,
+    togglingScrim,
+    withTeam,
+  ]);
 
   const handleLeaveTeam = async () => {
     setError(null);
     try {
-      await adminFetchJson('/api/teams/leave', { method: 'POST' });
+      await adminFetchJson(withTeam('/api/teams/leave'), { method: 'POST' });
       // Ne pas vider l'état localement avant confirmation : on reconcilie
       // depuis le serveur via loadData (qui remettra team/members/isCaptain).
       await loadData();
@@ -592,6 +614,11 @@ export default function PlayerDashboardScreen() {
               <p className="text-gray-400 text-sm mt-1">{t.headerSubtitle}</p>
             </div>
           </div>
+
+          {/* Sélecteur d'équipe — rendu seulement pour un manager qui en
+              encadre plusieurs. Tout ce qui suit (équipe, scrims, prochain
+              match, messages) porte sur l'équipe choisie. */}
+          <ActiveTeamSwitcher className="mb-6" />
 
           {error && (
             <div

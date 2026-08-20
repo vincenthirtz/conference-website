@@ -7,6 +7,7 @@
 
 import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
+import { listMemberships, pickMembership } from '@/utils/teams/memberships';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { logger } from '@/utils/logger';
 
@@ -37,18 +38,22 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
     });
   }
 
-  // 2) Current team membership
-  const { data: membership, error: memErr } = await supabaseAdmin
-    .from('team_members')
-    .select('id, team_id, role, battle_tag, is_substitute, created_at')
-    .eq('tenant_id', req.botContext.tenantId)
-    .eq('user_id', link.auth_user_id)
-    .maybeSingle();
-
-  if (memErr) {
-    logger.error('[bot/player/team] membership error', memErr);
-    return res.status(500).json({ error: 'Erreur de lecture membership' });
-  }
+  // 2) Current team membership. Une seule est renvoyée (contrat bot
+  // inchangé) : celle qui « prend » le compte, à défaut la plus ancienne — un
+  // manager peut en encadrer plusieurs depuis 2026-08-20.
+  const membershipRows = await listMemberships<{
+    id: string;
+    team_id: string;
+    role: string | null;
+    battle_tag: string | null;
+    is_substitute: boolean | null;
+    created_at: string | null;
+  }>(
+    link.auth_user_id,
+    req.botContext.tenantId,
+    'id, team_id, role, battle_tag, is_substitute, created_at'
+  );
+  const membership = pickMembership(membershipRows);
 
   if (!membership) {
     return res.status(200).json({

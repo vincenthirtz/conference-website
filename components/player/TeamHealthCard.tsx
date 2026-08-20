@@ -24,6 +24,7 @@ import type { HealthCode, HealthSeverity } from '../../utils/teams/teamHealth';
 import type { TeamHealthResponse } from '../../pages/api/player/team-health';
 import { logger } from '../../utils/logger';
 import nsTeamHealth from '@/lib/i18n/locales/fr/teamHealth';
+import { useActiveTeam } from '@/components/player/ActiveTeamContext';
 
 /**
  * Où va-t-on pour réparer. Le diagnostic ne sert à rien s'il faut ensuite
@@ -51,19 +52,20 @@ export default function TeamHealthCard() {
   const t = useT(nsTeamHealth);
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
   const { withSubject } = usePlayerArea();
+  const { withTeam } = useActiveTeam();
   const [data, setData] = useState<TeamHealthResponse | null>(null);
 
   const load = useCallback(async () => {
     try {
       const payload = await adminFetchJson<TeamHealthResponse>(
-        withSubject('/api/player/team-health'),
+        withTeam(withSubject('/api/player/team-health')),
         { skipAuthRedirect: true }
       );
       setData(payload);
     } catch (err) {
       logger.error('[TeamHealthCard] load error', err);
     }
-  }, [adminFetchJson, withSubject]);
+  }, [adminFetchJson, withSubject, withTeam]);
 
   useEffect(() => {
     void load();

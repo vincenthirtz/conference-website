@@ -33,6 +33,7 @@ import {
   type RatingPoint,
 } from '@/utils/teams/progression';
 import { logger } from '@/utils/logger';
+import { readRequestedTeamId } from '@/utils/teams/teamScope';
 
 export type ProgressionResponse = {
   teamId: string | null;
@@ -83,7 +84,7 @@ export default withSubjectRoute(
     const { userId, tenantId } = subject;
 
     const [team, historyRes, ratingRes] = await Promise.all([
-      findMemberTeam(userId, tenantId),
+      findMemberTeam(userId, tenantId, readRequestedTeamId(req)),
       supabaseAdmin
         .from('player_rating_history')
         .select('occurred_at, rating_after')

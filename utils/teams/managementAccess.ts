@@ -84,87 +84,144 @@ const TEAM_PERMISSION_FORBIDDEN: Record<TeamPermission, string> = {
 };
 
 /**
- * Retourne la team que l'user gere (en tant que capitaine OU via un role
- * accordant des permissions de gestion), ou null s'il n'a aucun droit.
+ * Toutes les teams que `userId` gère, dans le tenant donné.
  *
- * Regles :
- *  - Un user n'a au plus qu'une "team manageriale" : on est capitaine d'une
- *    seule equipe, et on n'a un role privilegie que dans une seule equipe
- *    (regle metier).
- *  - Si on est capitaine d'une equipe ET on a un role privilegie dans une
- *    autre, on retourne celle dont on est capitaine (priorite la plus forte).
- *  - On ne considere que les teams actives implicitement (RLS / API en aval).
+ * Règles :
+ *  - Capitaine d'une équipe ⇒ toutes les permissions sur elle.
+ *  - Rôle `team_members` privilégié (≥ 1 permission, config dynamique
+ *    `site_settings.team_roles`) ⇒ les permissions de ce rôle.
+ *  - Une même équipe n'apparaît qu'une fois : la capitainerie l'emporte sur le
+ *    rôle de membre (permissions strictement plus larges).
+ *  - Ordre STABLE et signifiant : les équipes dont on est capitaine d'abord,
+ *    puis les équipes encadrées par ancienneté d'adhésion (`created_at`).
+ *    C'est ce qui rend le repli « sans `teamId`, prends la première » (cf.
+ *    `getManagedTeam`) déterministe.
+ *  - On ne considère que les teams actives implicitement (RLS / API en aval).
  *
- * **Multi-tenant (S5c)** : si `tenantId` est fourni, les deux queries (team
- * dont l'user est capitaine, team_members privilégiés) sont scopées au
- * tenant. En V1 mono-tenant, les callers passent `DEFAULT_TENANT_ID` ; à
- * terme (S7) on lira la team du user pour résoudre son tenant.
+ * **Multi-équipe (2026-08-20)** : un `manager` peut désormais encadrer
+ * plusieurs équipes (index unique partiel, cf.
+ * `database/migrations/allow_manager_multi_team.sql`). Cette fonction est le
+ * seul endroit qui sait le lire — les routes passent, elles, par
+ * `getManagedTeamForRequest` (utils/teams/teamScope.ts) qui résout l'équipe
+ * ciblée par la requête.
+ *
+ * **Multi-tenant (S5c)** : les deux queries sont scopées au tenant.
  */
-export async function getManagedTeam(
+export async function getManagedTeams(
   userId: string,
-  tenantId: string = DEFAULT_TENANT_ID
-): Promise<TeamManagementAccess | null> {
-  if (!userId) return null;
+  tenantId: string = DEFAULT_TENANT_ID,
+  options: { teamId?: string | null } = {}
+): Promise<TeamManagementAccess[]> {
+  if (!userId) return [];
   if (!supabaseAdmin) {
-    logger.error('[getManagedTeam] supabaseAdmin unavailable');
-    return null;
+    logger.error('[getManagedTeams] supabaseAdmin unavailable');
+    return [];
   }
 
-  // 1. Capitaine ?
-  const { data: captainTeam, error: captainErr } = await supabaseAdmin
+  const onlyTeamId = options.teamId || null;
+
+  // Les rôles d'équipe (site_settings) sont chargés en parallèle de la query
+  // capitaine : ils ne servent qu'à la seconde, et la latence ne s'additionne
+  // pas. Avant le multi-équipe, un capitaine court-circuitait tout — ce
+  // raccourci n'est plus valide : on peut être capitaine d'une équipe ET
+  // manager d'une autre.
+  let captainQuery = supabaseAdmin
     .from('teams')
     .select('id')
     .eq('captain_id', userId)
-    .eq('tenant_id', tenantId)
-    .maybeSingle();
+    .eq('tenant_id', tenantId);
+  if (onlyTeamId) captainQuery = captainQuery.eq('id', onlyTeamId);
 
-  if (captainErr) {
-    logger.error('[getManagedTeam] captain query error', captainErr);
+  const [captainRes, roles] = await Promise.all([
+    captainQuery,
+    loadTeamRolesFromSupabase(supabaseAdmin),
+  ]);
+
+  if (captainRes.error) {
+    logger.error('[getManagedTeams] captain query error', captainRes.error);
   }
 
-  if (captainTeam?.id) {
+  const accesses: TeamManagementAccess[] = [];
+  const seen = new Set<string>();
+
+  for (const row of (captainRes.data as { id: string }[] | null) ?? []) {
+    if (!row?.id || seen.has(row.id)) continue;
+    seen.add(row.id);
     // La capitaine a TOUTES les permissions, par définition du rôle.
-    return {
-      teamId: captainTeam.id,
+    accesses.push({
+      teamId: row.id,
       isCaptain: true,
       isManager: false,
       permissions: [...TEAM_PERMISSION_VALUES],
-    };
+    });
   }
 
-  // 2. Role privilegie (>=1 permission) dans une team ?
-  const roles = await loadTeamRolesFromSupabase(supabaseAdmin);
   const privileged = privilegedRoleValues(roles);
-  if (privileged.length === 0) return null;
+  if (privileged.length === 0) return accesses;
 
   // On lit AUSSI le rôle (pas seulement team_id) : c'est lui qui détermine les
   // permissions effectives. Aucune requête supplémentaire.
-  const { data: managerRow, error: mgrErr } = await supabaseAdmin
+  let memberQuery = supabaseAdmin
     .from('team_members')
-    .select('team_id, role')
+    .select('team_id, role, created_at')
     .eq('user_id', userId)
     .eq('tenant_id', tenantId)
     .in('role', privileged)
-    .maybeSingle();
+    .order('created_at', { ascending: true });
+  if (onlyTeamId) memberQuery = memberQuery.eq('team_id', onlyTeamId);
+
+  const { data: memberRows, error: mgrErr } = await memberQuery;
 
   if (mgrErr) {
-    logger.error('[getManagedTeam] manager query error', mgrErr);
+    logger.error('[getManagedTeams] manager query error', mgrErr);
   }
 
-  if (managerRow?.team_id) {
-    const roleValue = (managerRow as { role?: string | null }).role ?? null;
-    const normalized = roleValue?.trim().toLowerCase() ?? '';
-    const permissions =
-      roles.find((r) => r.value === normalized)?.permissions ?? [];
-    return {
-      teamId: managerRow.team_id,
+  for (const row of (memberRows as
+    | { team_id: string | null; role: string | null }[]
+    | null) ?? []) {
+    const teamId = row?.team_id;
+    if (!teamId || seen.has(teamId)) continue;
+    const normalized = row.role?.trim().toLowerCase() ?? '';
+    const permissions = roles.find((r) => r.value === normalized)?.permissions;
+    // Le rôle vient d'un `.in('role', privileged)` : il est forcément dans
+    // `roles` avec >= 1 permission. La garde couvre le cas dégénéré (config
+    // modifiée entre les deux lectures) sans inventer un accès vide, qui
+    // passerait les gardes « access non nul » des appelants.
+    if (!permissions || permissions.length === 0) continue;
+    seen.add(teamId);
+    accesses.push({
+      teamId,
       isCaptain: false,
       isManager: true,
       permissions: [...permissions],
-    };
+    });
   }
 
-  return null;
+  return accesses;
+}
+
+/**
+ * Accès de `userId` à UNE équipe.
+ *
+ * - `teamId` fourni → l'accès à CETTE équipe, ou `null` s'il n'en a aucun.
+ *   C'est le mode à utiliser depuis une route : cf.
+ *   `getManagedTeamForRequest`, qui lit `?teamId=` pour l'appeler.
+ * - `teamId` absent → repli historique « mon équipe » : la première équipe
+ *   gérée dans l'ordre stable de `getManagedTeams` (capitainerie d'abord).
+ *   Conserve le comportement d'avant le multi-équipe pour tout appelant qui
+ *   n'a qu'une équipe — c'est-à-dire l'immense majorité.
+ */
+export async function getManagedTeam(
+  userId: string,
+  tenantId: string = DEFAULT_TENANT_ID,
+  teamId?: string | null
+): Promise<TeamManagementAccess | null> {
+  if (teamId) {
+    const scoped = await getManagedTeams(userId, tenantId, { teamId });
+    return scoped.find((a) => a.teamId === teamId) ?? null;
+  }
+  const all = await getManagedTeams(userId, tenantId);
+  return all[0] ?? null;
 }
 
 /** Petit helper pour les messages d'erreur uniformes. */

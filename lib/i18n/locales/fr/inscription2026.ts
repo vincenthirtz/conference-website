@@ -36,9 +36,9 @@ export default ns('inscription2026', {
   stepsTitle: "5 étapes pour t'inscrire",
   stepsIntro:
     'Compte une dizaine de minutes si toutes les joueuses sont prêtes. Tu peux interrompre et reprendre à tout moment depuis ton compte.',
-  step1Title: 'Crée ton compte joueuse',
+  step1Title: 'Crée ton compte',
   step1Desc:
-    'Inscris-toi gratuitement avec ton email ou ton compte Discord. Pense à renseigner ton BattleTag dès la création.',
+    'Inscris-toi gratuitement avec ton email ou ton compte Discord. Choisis « joueuse » (pense à renseigner ton BattleTag) ou « manager » si tu encadres une équipe sans y jouer — dans ce cas aucun BattleTag n’est demandé.',
   step1Cta: 'Créer mon compte',
   step2Title: 'Constitue ton roster',
   step2Desc:
@@ -75,6 +75,9 @@ export default ns('inscription2026', {
   faq5Q: "L'inscription est-elle payante ?",
   faq5A:
     "Non, l'inscription au tournoi féminin 2026 est gratuite. L'association vit grâce aux dons et aux partenariats.",
+  faq6Q: "Je manage une équipe sans y jouer : puis-je inscrire l'équipe ?",
+  faq6A:
+    "Oui. Crée ton compte en tant que « manager » — aucun BattleTag n'est demandé — puis, dans le formulaire d'équipe, choisis « je gère l'équipe sans y jouer ». Tu reçois l'accès à l'espace équipe, les joueuses sont invitées par email, et la capitaine désignée le devient dès qu'elle accepte. Un même manager peut encadrer plusieurs équipes.",
   helpEyebrow: "Besoin d'aide ?",
   helpTitle: "On est là pour t'accompagner",
   helpBody:

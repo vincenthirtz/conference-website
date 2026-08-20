@@ -7,6 +7,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';
 import { useT } from '@/lib/i18n/useT';
 import nsFreePlayers from '@/lib/i18n/locales/fr/freePlayers';
+import { useActiveTeam } from '@/components/player/ActiveTeamContext';
 
 type FreePlayer = {
   discordUserId: string;
@@ -29,6 +30,7 @@ type Props = {
 export default function FreePlayersSection({ teamId }: Props) {
   const t = useT(nsFreePlayers);
   const { adminFetchJson } = useAdminFetch();
+  const { withTeam } = useActiveTeam();
 
   const [players, setPlayers] = useState<FreePlayer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -45,7 +47,7 @@ export default function FreePlayersSection({ teamId }: Props) {
     setError(null);
     try {
       const data = await adminFetchJson<FreePlayersResponse>(
-        '/api/teams/free-players'
+        withTeam('/api/teams/free-players')
       );
       setPlayers(data.players || []);
     } catch {
@@ -53,7 +55,7 @@ export default function FreePlayersSection({ teamId }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [adminFetchJson, t]);
+  }, [adminFetchJson, t, withTeam]);
 
   useEffect(() => {
     void load();
@@ -64,7 +66,7 @@ export default function FreePlayersSection({ teamId }: Props) {
     setInviting(player.discordUserId);
     setActionError(null);
     try {
-      await adminFetchJson('/api/teams/invite-free-player', {
+      await adminFetchJson(withTeam('/api/teams/invite-free-player'), {
         method: 'POST',
         body: JSON.stringify({ teamId, authUserId: player.authUserId }),
       });

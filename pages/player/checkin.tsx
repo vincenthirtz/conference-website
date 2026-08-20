@@ -17,6 +17,7 @@ import type { NextMatchPayload } from '@/pages/api/player/next-match';
 
 import { logger } from '../../utils/logger';
 import nsCheckin from '@/lib/i18n/locales/fr/checkin';
+import { useActiveTeam } from '@/components/player/ActiveTeamContext';
 
 type T = typeof nsCheckin.fr;
 
@@ -64,6 +65,7 @@ function PlayerCheckin() {
     redirectTo: '/login?next=/player/checkin',
   });
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
+  const { withTeam } = useActiveTeam();
   const { addToast } = useToast();
   const { lang } = useLang();
   const t = useT(nsCheckin);
@@ -80,7 +82,7 @@ function PlayerCheckin() {
   const load = useCallback(async () => {
     try {
       const json = await adminFetchJson<NextMatchPayload>(
-        '/api/player/next-match',
+        withTeam('/api/player/next-match'),
         { skipAuthRedirect: true }
       );
       setData(json);
@@ -90,7 +92,7 @@ function PlayerCheckin() {
     } finally {
       setLoading(false);
     }
-  }, [adminFetchJson, t]);
+  }, [adminFetchJson, t, withTeam]);
 
   useEffect(() => {
     if (!ready) return;

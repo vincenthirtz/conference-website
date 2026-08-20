@@ -19,27 +19,19 @@
 
 import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
+import { resolveMembership } from '@/utils/teams/memberships';
 
 export type MemberTeam = { id: string; name: string };
 
 export async function findMemberTeam(
   userId: string,
-  tenantId: string
+  tenantId: string,
+  requestedTeamId?: string | null
 ): Promise<MemberTeam | null> {
   if (!supabaseAdmin || !userId) return null;
 
-  const { data: member, error } = await supabaseAdmin
-    .from('team_members')
-    .select('team_id')
-    .eq('user_id', userId)
-    .eq('tenant_id', tenantId)
-    .maybeSingle();
-
-  if (error) {
-    logger.error('[memberTeam] member lookup error', error);
-    return null;
-  }
-  const teamId = (member as { team_id?: string | null } | null)?.team_id;
+  const member = await resolveMembership(userId, tenantId, requestedTeamId);
+  const teamId = member?.team_id;
   if (!teamId) return null;
 
   const { data: team, error: teamErr } = await supabaseAdmin

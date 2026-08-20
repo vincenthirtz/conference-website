@@ -41,7 +41,10 @@
 
 import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
-import { getManagedTeam } from '@/utils/teams/managementAccess';
+import {
+  getManagedTeams,
+  type TeamManagementAccess,
+} from '@/utils/teams/managementAccess';
 import {
   resolveMissingDisplayNames,
   withFallbackDisplayName,
@@ -81,12 +84,33 @@ export type ManagedTeamMemberRow = {
   is_captain: boolean;
 };
 
+/**
+ * Entrée du sélecteur d'équipe : le strict nécessaire pour afficher un onglet
+ * ou une ligne de menu. Depuis 2026-08-20 un `manager` peut encadrer plusieurs
+ * équipes — l'écran doit donc pouvoir les lister et en choisir une, puis la
+ * repasser au serveur via `?teamId=` (cf. utils/teamScopeParam.ts).
+ */
+export type ManagedTeamSummary = {
+  id: string;
+  name: string;
+  short_name: string | null;
+  logo_url: string | null;
+  slug: string | null;
+  isCaptain: boolean;
+  isManager: boolean;
+};
+
 export type ManagedTeamSlice = {
   team: ManagedTeamRow | null;
   members: ManagedTeamMemberRow[];
   teamId: string | null;
   isCaptain: boolean;
   isManager: boolean;
+  /**
+   * Toutes les équipes que l'utilisateur GÈRE, `team` comprise. Vide pour une
+   * joueuse sans droits de gestion — l'écran n'affiche alors aucun sélecteur.
+   */
+  managedTeams: ManagedTeamSummary[];
 };
 
 const EMPTY_SLICE: ManagedTeamSlice = {
@@ -95,10 +119,59 @@ const EMPTY_SLICE: ManagedTeamSlice = {
   teamId: null,
   isCaptain: false,
   isManager: false,
+  managedTeams: [],
 };
 
 /**
+ * Résumés des équipes gérées, dans l'ordre de `getManagedTeams` (capitainerie
+ * d'abord). Une seule lecture `teams` pour tout le lot.
+ */
+async function loadManagedTeamSummaries(
+  accesses: { teamId: string; isCaptain: boolean; isManager: boolean }[]
+): Promise<ManagedTeamSummary[]> {
+  if (!supabaseAdmin || accesses.length === 0) return [];
+  const { data, error } = await supabaseAdmin
+    .from('teams')
+    .select('id, name, short_name, logo_url, slug')
+    .in(
+      'id',
+      accesses.map((a) => a.teamId)
+    );
+  if (error) {
+    logger.error('[managedTeamSlice] managed teams error:', error);
+    return [];
+  }
+  const rows = new Map<string, Record<string, unknown>>();
+  for (const row of (data || []) as Record<string, unknown>[]) {
+    rows.set(row.id as string, row);
+  }
+  // On repart de `accesses` et pas de `data` : l'ordre de la liste est celui
+  // des accès (stable, capitainerie d'abord), pas celui que PostgREST renvoie.
+  return accesses.flatMap((a) => {
+    const row = rows.get(a.teamId);
+    if (!row) return [];
+    return [
+      {
+        id: a.teamId,
+        name: (row.name as string) ?? '',
+        short_name: (row.short_name as string | null) ?? null,
+        logo_url: (row.logo_url as string | null) ?? null,
+        slug: (row.slug as string | null) ?? null,
+        isCaptain: a.isCaptain,
+        isManager: a.isManager,
+      },
+    ];
+  });
+}
+
+/**
  * Charge la tranche équipe canonique de `userId` pour `tenantId`.
+ *
+ * `options.teamId` désigne l'équipe voulue quand l'utilisateur en gère
+ * plusieurs (un `manager` le peut depuis 2026-08-20). Elle n'est retenue que
+ * s'il y a effectivement droit — sinon on retombe sur la première équipe
+ * gérée, jamais sur celle demandée : cette fonction est lue par des routes qui
+ * en déduisent `isCaptain` / `isManager`.
  *
  * Dégradation gracieuse : ne throw JAMAIS. Renvoie une tranche vide
  * (`EMPTY_SLICE`) si l'utilisateur n'a pas d'équipe, si `supabaseAdmin` est
@@ -109,7 +182,8 @@ const EMPTY_SLICE: ManagedTeamSlice = {
  */
 export async function loadManagedTeamSlice(
   userId: string,
-  tenantId: string
+  tenantId: string,
+  options: { teamId?: string | null } = {}
 ): Promise<ManagedTeamSlice> {
   if (!userId) return EMPTY_SLICE;
   if (!supabaseAdmin) {
@@ -118,32 +192,48 @@ export async function loadManagedTeamSlice(
   }
 
   try {
-    // `getManagedTeam` tourne en parallèle du reste de la chaîne (membership →
-    // team+members), pour préserver le même profil de concurrence que le
-    // dashboard historique (aucune régression de latence).
-    const accessPromise = getManagedTeam(userId, tenantId);
+    const accesses: TeamManagementAccess[] = await getManagedTeams(
+      userId,
+      tenantId
+    ).catch((err) => {
+      logger.error('[managedTeamSlice] getManagedTeams error:', err);
+      return [];
+    });
 
-    const { data: membership, error: membershipErr } = await supabaseAdmin
-      .from('team_members')
-      .select('team_id')
-      .eq('user_id', userId)
-      .eq('tenant_id', tenantId)
-      .limit(1)
-      .maybeSingle();
+    const requested = options.teamId || null;
+    const requestedAccess = requested
+      ? accesses.find((a) => a.teamId === requested)
+      : undefined;
 
-    if (membershipErr || !membership) {
+    // Équipe retenue : celle demandée si elle est gérée, sinon la première
+    // gérée, sinon — pour une joueuse sans droits — sa seule appartenance.
+    let teamId: string | null =
+      requestedAccess?.teamId ?? accesses[0]?.teamId ?? null;
+
+    if (!teamId) {
+      const { data: membership, error: membershipErr } = await supabaseAdmin
+        .from('team_members')
+        .select('team_id')
+        .eq('user_id', userId)
+        .eq('tenant_id', tenantId)
+        .limit(1)
+        .maybeSingle();
+
       if (membershipErr)
         logger.error('[managedTeamSlice] membership error:', membershipErr);
-      // On attend quand même l'accès pour ne pas laisser de promise pendante,
-      // mais sans équipe la tranche est vide.
-      await accessPromise.catch(() => null);
-      return EMPTY_SLICE;
+
+      teamId =
+        ((membership as Record<string, unknown> | null)?.team_id as
+          | string
+          | undefined) ?? null;
     }
 
-    const teamId = (membership as Record<string, unknown>).team_id as string;
+    if (!teamId) return EMPTY_SLICE;
 
-    // `team` (détail) et `members` (roster) ne dépendent que de teamId : on les
-    // récupère concurremment plutôt qu'en cascade.
+    // `team` (détail), `members` (roster) et les résumés du sélecteur ne
+    // dépendent que d'états déjà résolus : on les récupère concurremment
+    // plutôt qu'en cascade.
+    const summariesPromise = loadManagedTeamSummaries(accesses);
     const [teamRes, membersRes] = await Promise.all([
       supabaseAdmin
         .from('teams')
@@ -163,18 +253,22 @@ export async function loadManagedTeamSlice(
         .order('created_at', { ascending: true }),
     ]);
 
-    const access = await accessPromise.catch((err) => {
-      logger.error('[managedTeamSlice] getManagedTeam error:', err);
-      return null;
-    });
-
-    const isCaptain = !!(access?.isCaptain && access.teamId === teamId);
-    const isManager = !!(access?.isManager && access.teamId === teamId);
+    const access = accesses.find((a) => a.teamId === teamId) ?? null;
+    const isCaptain = !!access?.isCaptain;
+    const isManager = !!access?.isManager;
+    const managedTeams = await summariesPromise;
 
     const { data: teamRowRaw, error: teamErr } = teamRes;
     if (teamErr || !teamRowRaw) {
       if (teamErr) logger.error('[managedTeamSlice] team error:', teamErr);
-      return { team: null, members: [], teamId, isCaptain, isManager };
+      return {
+        team: null,
+        members: [],
+        teamId,
+        isCaptain,
+        isManager,
+        managedTeams,
+      };
     }
 
     const teamRaw = teamRowRaw as Record<string, unknown>;
@@ -196,7 +290,7 @@ export async function loadManagedTeamSlice(
     const { data: membersRaw, error: membersErr } = membersRes;
     if (membersErr) {
       logger.error('[managedTeamSlice] members error:', membersErr);
-      return { team, members: [], teamId, isCaptain, isManager };
+      return { team, members: [], teamId, isCaptain, isManager, managedTeams };
     }
 
     const memberRows = (membersRaw || []) as Record<string, unknown>[];
@@ -228,7 +322,7 @@ export async function loadManagedTeamSlice(
       };
     });
 
-    return { team, members, teamId, isCaptain, isManager };
+    return { team, members, teamId, isCaptain, isManager, managedTeams };
   } catch (err) {
     logger.error('[managedTeamSlice] unexpected error:', err);
     return EMPTY_SLICE;

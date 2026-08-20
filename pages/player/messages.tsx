@@ -22,6 +22,7 @@ import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
 import { logger } from '../../utils/logger';
 import nsPlayerMessages from '@/lib/i18n/locales/fr/playerMessages';
+import { useActiveTeam } from '@/components/player/ActiveTeamContext';
 
 type Conversation = {
   conversationId: string;
@@ -70,6 +71,7 @@ export default function MessagesPage() {
   const locale = useLocale();
   const { loading: authLoading, ready } = usePlayerSession();
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
+  const { withTeam } = useActiveTeam();
   const { data: managedTeam, loading: teamLoading } = useManagedTeam();
   const isCaptain = managedTeam?.isCaptain ?? false;
   const isManager = managedTeam?.isManager ?? false;
@@ -137,7 +139,7 @@ export default function MessagesPage() {
     setConvError(null);
     try {
       const data = await adminFetchJson<{ conversations?: Conversation[] }>(
-        '/api/player/messages'
+        withTeam('/api/player/messages')
       );
       setConversations(data.conversations || []);
     } catch (err) {
@@ -146,7 +148,7 @@ export default function MessagesPage() {
     } finally {
       setConvLoading(false);
     }
-  }, [adminFetchJson, t]);
+  }, [adminFetchJson, t, withTeam]);
 
   const canManage = isCaptain || isManager;
 
@@ -192,7 +194,7 @@ export default function MessagesPage() {
         messages?: Message[];
         otherTeam?: OtherTeam;
         myTeamId: string | null;
-      }>(`/api/player/messages/${convId}`);
+      }>(withTeam(`/api/player/messages/${convId}`));
 
       // A newer open() superseded us while the GET was in flight — drop this
       // stale response so it can't overwrite the now-active conversation.
@@ -203,7 +205,7 @@ export default function MessagesPage() {
       setMyTeamId(data.myTeamId);
 
       // Mark as read
-      await adminFetchJson(`/api/player/messages/${convId}`, {
+      await adminFetchJson(withTeam(`/api/player/messages/${convId}`), {
         method: 'PATCH',
       });
 
@@ -228,12 +230,12 @@ export default function MessagesPage() {
     if (!activeConvId) return;
     try {
       const data = await adminFetchJson<{ messages?: Message[] }>(
-        `/api/player/messages/${activeConvId}`
+        withTeam(`/api/player/messages/${activeConvId}`)
       );
       setMessages(data.messages || []);
       // Mark inbound messages as read on the fly so the unread counter stays
       // accurate without forcing the user to reopen the conversation.
-      await adminFetchJson(`/api/player/messages/${activeConvId}`, {
+      await adminFetchJson(withTeam(`/api/player/messages/${activeConvId}`), {
         method: 'PATCH',
       });
       loadConversations();
@@ -241,7 +243,7 @@ export default function MessagesPage() {
     } catch (err) {
       logger.error('[messages] realtime reload error:', err);
     }
-  }, [activeConvId, adminFetchJson, loadConversations]);
+  }, [activeConvId, adminFetchJson, loadConversations, withTeam]);
 
   // Subscribe to demandes targeting the captain's team. Postgres only
   // gives us coarse filtering on top-level columns, so we further narrow
@@ -339,7 +341,7 @@ export default function MessagesPage() {
 
     try {
       const data = await adminFetchJson<{ conversationId: string }>(
-        '/api/player/messages',
+        withTeam('/api/player/messages'),
         {
           method: 'POST',
           body: JSON.stringify({

@@ -13,6 +13,15 @@ function RegisterPage() {
   const [confirm, setConfirm] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [battleTag, setBattleTag] = useState('');
+  // Type de compte. « manager » = elle encadre une équipe sans y jouer : pas de
+  // BattleTag à saisir (elle n'a pas forcément de compte Overwatch), et
+  // l'après-inscription la mène vers la création d'équipe plutôt que vers la
+  // recherche d'une équipe. Le rôle n'accorde aucun droit en soi
+  // (cf. pages/api/auth/register.ts) — c'est une étiquette de compte.
+  const [accountType, setAccountType] = useState<'player' | 'manager'>(
+    'player'
+  );
+  const isManagerAccount = accountType === 'manager';
 
   const [loading, setLoading] = useState(false);
   const [oauthLoading, setOauthLoading] = useState(false);
@@ -97,7 +106,11 @@ function RegisterPage() {
       return;
     }
 
-    if (battleTag.trim() && !BATTLETAG_PATTERN.test(battleTag.trim())) {
+    if (
+      !isManagerAccount &&
+      battleTag.trim() &&
+      !BATTLETAG_PATTERN.test(battleTag.trim())
+    ) {
       setErrorMsg(t.battleTagInvalid);
       focusFirstError('battleTag');
       return;
@@ -118,7 +131,12 @@ function RegisterPage() {
           email: email.trim(),
           password,
           displayName: displayName.trim() || undefined,
-          battleTag: battleTag.trim() || undefined,
+          // Un compte manager ne porte pas de BattleTag, même si le champ a été
+          // rempli avant de basculer le choix.
+          battleTag: isManagerAccount
+            ? undefined
+            : battleTag.trim() || undefined,
+          accountType,
         }),
       });
 
@@ -129,6 +147,7 @@ function RegisterPage() {
         setPassword('');
         setConfirm('');
         setBattleTag('');
+        setAccountType('player');
         return;
       }
 
@@ -175,6 +194,68 @@ function RegisterPage() {
 
           <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl shadow-2xl shadow-black/40 p-6">
             <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Type de compte : je joue, ou j'encadre. Le second cas n'avait
+                  aucune porte d'entrée avant 2026-08-20. */}
+              <fieldset className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+                <legend className="px-1 text-xs font-medium tracking-[0.12em] uppercase text-gray-300">
+                  {t.accountTypeLegend}
+                </legend>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {(
+                    [
+                      {
+                        value: 'player' as const,
+                        label: t.accountTypePlayer,
+                        hint: t.accountTypePlayerHint,
+                      },
+                      {
+                        value: 'manager' as const,
+                        label: t.accountTypeManager,
+                        hint: t.accountTypeManagerHint,
+                      },
+                    ] as const
+                  ).map((opt) => (
+                    <label
+                      key={opt.value}
+                      className={`cursor-pointer rounded-lg border p-3 transition ${
+                        accountType === opt.value
+                          ? 'border-purple-400/60 bg-purple-400/10'
+                          : 'border-white/10 hover:border-white/30'
+                      }`}
+                    >
+                      <span className="flex items-center gap-2">
+                        <input
+                          type="radio"
+                          name="account-type"
+                          className="sr-only"
+                          value={opt.value}
+                          checked={accountType === opt.value}
+                          onChange={() => setAccountType(opt.value)}
+                        />
+                        <span
+                          aria-hidden="true"
+                          className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
+                            accountType === opt.value
+                              ? 'border-purple-400 bg-purple-400'
+                              : 'border-white/30'
+                          }`}
+                        >
+                          {accountType === opt.value && (
+                            <span className="h-1.5 w-1.5 rounded-full bg-black" />
+                          )}
+                        </span>
+                        <span className="text-sm font-semibold text-white">
+                          {opt.label}
+                        </span>
+                      </span>
+                      <span className="mt-1 block pl-6 text-[11px] leading-snug text-gray-400">
+                        {opt.hint}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+
               <div>
                 <label
                   htmlFor="displayName"
@@ -192,27 +273,33 @@ function RegisterPage() {
                 />
               </div>
 
-              <div>
-                <label
-                  htmlFor="battleTag"
-                  className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2"
-                >
-                  {t.battleTagLabel}
-                </label>
-                <input
-                  ref={battleTagRef}
-                  id="battleTag"
-                  type="text"
-                  value={battleTag}
-                  onChange={(e) => setBattleTag(e.target.value)}
-                  aria-invalid={fieldError === 'battleTag' || undefined}
-                  aria-describedby={
-                    fieldError === 'battleTag' ? 'register-error' : undefined
-                  }
-                  className="w-full rounded-xl border border-white/15 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/80 focus:border-purple-400/80 transition"
-                  placeholder={t.battleTagPlaceholder}
-                />
-              </div>
+              {isManagerAccount ? (
+                <p className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 text-[11px] leading-relaxed text-gray-300">
+                  {t.managerNoBattleTagNote}
+                </p>
+              ) : (
+                <div>
+                  <label
+                    htmlFor="battleTag"
+                    className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2"
+                  >
+                    {t.battleTagLabel}
+                  </label>
+                  <input
+                    ref={battleTagRef}
+                    id="battleTag"
+                    type="text"
+                    value={battleTag}
+                    onChange={(e) => setBattleTag(e.target.value)}
+                    aria-invalid={fieldError === 'battleTag' || undefined}
+                    aria-describedby={
+                      fieldError === 'battleTag' ? 'register-error' : undefined
+                    }
+                    className="w-full rounded-xl border border-white/15 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/80 focus:border-purple-400/80 transition"
+                    placeholder={t.battleTagPlaceholder}
+                  />
+                </div>
+              )}
 
               <div>
                 <label

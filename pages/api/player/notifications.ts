@@ -18,7 +18,9 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withSubjectRoute } from '@/utils/subject';
 import { CHECKIN_OPEN_MINUTES } from '@/utils/checkin';
-import { getManagedTeam } from '@/utils/teams/managementAccess';
+import { getManagedTeamForRequest } from '@/utils/teams/teamScope';
+import { readRequestedTeamId } from '@/utils/teams/teamScope';
+import { resolveMembership } from '@/utils/teams/memberships';
 import { listPendingInvitationsForUser } from '@/utils/teams/invitations';
 import { getStaffRole } from '@/utils/staff';
 
@@ -46,15 +48,16 @@ export type PlayerNotificationsPayload = {
   total: number;
 };
 
-async function countMembership(userId: string, tenantId: string) {
+async function countMembership(
+  userId: string,
+  tenantId: string,
+  teamId: string | null
+) {
   try {
-    const { data } = await supabaseAdmin!
-      .from('team_members')
-      .select('team_id')
-      .eq('user_id', userId)
-      .eq('tenant_id', tenantId)
-      .maybeSingle();
-    return data?.team_id ?? null;
+    // Un manager peut appartenir à plusieurs équipes : on prend celle que
+    // l'écran a désignée, à défaut la sienne.
+    const membership = await resolveMembership(userId, tenantId, teamId);
+    return membership?.team_id ?? null;
   } catch {
     return null;
   }
@@ -232,9 +235,9 @@ export default withSubjectRoute(async function handler(
   // user) so they run in parallel; membership always runs and is only consulted
   // when the user manages no team.
   const [access, staffRole, membershipTeamId] = await Promise.all([
-    getManagedTeam(userId, tenantId),
+    getManagedTeamForRequest(req, userId, tenantId),
     getStaffRole(userId),
-    countMembership(userId, tenantId),
+    countMembership(userId, tenantId, readRequestedTeamId(req)),
   ]);
 
   const managedTeamId = access?.teamId ?? null;

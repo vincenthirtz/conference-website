@@ -11,10 +11,10 @@ import {
   rosterLockErrorMessage,
 } from '@/utils/teams/rosterLock';
 import {
-  getManagedTeam,
   assertTeamPermission,
   TEAM_MANAGEMENT_FORBIDDEN,
 } from '@/utils/teams/managementAccess';
+import { getManagedTeamForRequest } from '@/utils/teams/teamScope';
 import {
   validateBattleTagForRole,
   resolveUserIdByEmail,
@@ -63,7 +63,7 @@ export default withAuthRoute(async function handler(
   });
 
   // Check if user can manage a team (captain OR manager)
-  const access = await getManagedTeam(user.id, tenantId);
+  const access = await getManagedTeamForRequest(req, user.id, tenantId);
   if (!access) {
     return res.status(403).json({ error: TEAM_MANAGEMENT_FORBIDDEN });
   }
