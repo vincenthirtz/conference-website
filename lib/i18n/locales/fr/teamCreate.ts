@@ -76,6 +76,9 @@ export default ns('teamCreate', {
   addMember: 'Ajouter une personne',
   addMemberHint:
     "On recherche l'utilisateur par email ; si aucun compte n'existe, il est créé automatiquement avant d'être ajouté.",
+  addStaff: 'Ajouter du staff',
+  addStaffHint:
+    "Effectif jouant complet. Tu peux quand même déclarer du staff : coach et manager n'occupent pas de place dans le roster.",
   captchaLabel: 'Vérification anti-bot',
   captchaPlaceholder: 'Réponse',
   captchaRefresh: 'Autre question ↻',
@@ -119,6 +122,7 @@ export default ns('teamCreate', {
   roleOptionPlayer: 'Joueuse',
   roleOptionCoach: 'Coach',
   roleOptionSub: 'Remplaçante',
+  roleOptionManager: 'Manager',
   validationNameRequired: "Le nom de l'équipe est requis.",
   validationNameTooShort: 'Le nom doit contenir au moins 2 caractères.',
   validationNameTooLong: 'Le nom ne peut pas dépasser 100 caractères.',

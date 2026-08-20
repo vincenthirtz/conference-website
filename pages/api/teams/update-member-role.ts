@@ -96,13 +96,30 @@ export default withSubjectRoute(
 
     const teamRoles = await loadTeamRolesFromSupabase(supabaseAdmin);
 
-    // Anti-escalation : seul le capitaine peut accorder un role privilegie
-    // (role qui ouvre >=1 permission de gestion).
-    if (roleHasAnyPermission(teamRoles, newRole) && !access.isCaptain) {
-      return res.status(403).json({
-        error: 'Seul le capitaine peut accorder un rôle privilégié.',
-      });
-    }
+    // ACCORDER un rôle privilégié est ouvert à qui gère l'équipe — capitaine
+    // OU manager (décision produit du 2026-08-20).
+    //
+    // Pourquoi c'était réservé au capitaine, et pourquoi ça ne tient plus :
+    // la règle supposait qu'une équipe a toujours un capitaine à qui déléguer.
+    // Depuis les équipes créées PAR UN MANAGER, `teams.captain_id` reste NULL
+    // tant que la capitaine désignée n'a pas accepté — personne ne pouvait
+    // donc promouvoir qui que ce soit pendant ce temps. Et l'autre chemin
+    // contredisait déjà la règle : POST /api/teams/add-member laisse un
+    // manager ajouter un NOUVEAU membre directement avec le rôle `manager`.
+    // Interdire la promotion d'une joueuse déjà présente ne protégeait donc
+    // rien — ça obligeait juste à passer par le détour « retirer puis
+    // rajouter ».
+    //
+    // L'asymétrie qui suit est DÉLIBÉRÉE : accorder un rôle privilégié est une
+    // délégation, retirer ou dégrader un pair est un conflit. Le second reste
+    // réservé au capitaine (ici comme dans DELETE /api/teams/[teamId]/members)
+    // pour que deux managers ne puissent pas se destituer l'un l'autre.
+    //
+    // `captain` n'est toujours pas accordable par cette route : le capitanat
+    // vit dans `teams.captain_id`, et passe par transfer-captain.
+    //
+    // Aucune garde supplémentaire ici : `manage_roster` est déjà exigé plus
+    // haut, et c'est exactement la permission que suppose le geste.
 
     // Fetch the member to verify they belong to this team
     const { data: member, error: memberErr } = await supabaseAdmin

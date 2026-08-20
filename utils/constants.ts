@@ -43,6 +43,22 @@ export const VALID_STAGE_TYPES: StageType[] = [
  */
 export const MAX_TEAM_PLAYERS = 5;
 
+/**
+ * Plafond ABSOLU de lignes de roster acceptées en une création d'équipe,
+ * encadrement compris.
+ *
+ * Distinct de MAX_TEAM_PLAYERS, et volontairement plus large : coach et manager
+ * ne consomment aucune place de roster (cf. `countPlayingMembers` et le trigger
+ * `enforce_team_max_players`), une équipe complète peut donc légitimement
+ * déclarer du staff en plus de ses 5 joueuses.
+ *
+ * Ce plafond-ci n'est pas une règle de jeu mais un garde-fou anti-abus :
+ * /api/teams/create-with-member est PUBLIC et crée un compte auth par email
+ * reçu. Partagé avec le wizard (pages/team/create.tsx) pour que le client
+ * n'autorise jamais une saisie que le serveur refusera.
+ */
+export const MAX_ROSTER_ROWS = 10;
+
 export const VALID_PARTNERSHIP_STATUSES = [
   'new',
   'read',

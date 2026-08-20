@@ -31,7 +31,7 @@ import {
   isNonPlayingTeamRole,
   countPlayingMembers,
 } from '@/utils/teams/addMember';
-import { MAX_TEAM_PLAYERS } from '@/utils/constants';
+import { MAX_TEAM_PLAYERS, MAX_ROSTER_ROWS } from '@/utils/constants';
 import {
   validateFieldDefinitions,
   validateRegistrationAnswers,
@@ -48,14 +48,6 @@ const SITE_URL =
 
 /** Même forme que la validation client (pages/team/create.tsx). */
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-/**
- * Plafond ABSOLU de lignes de roster acceptées en une requête, encadrement
- * compris — garde-fou anti-abus d'un endpoint public qui crée des comptes auth.
- * Volontairement plus large que MAX_TEAM_PLAYERS : une équipe complète peut
- * légitimement déclarer un coach et un manager en plus de ses 5 joueuses.
- */
-const MAX_ROSTER_ROWS = 10;
 
 /**
  * Masque un email pour l'exposer côté client sans divulguer l'adresse complète :

@@ -15,6 +15,7 @@ import {
   roleRequiresBattleTag,
   isNonPlayingTeamRole,
 } from '@/utils/teams/roleKind';
+import { MAX_TEAM_PLAYERS, MAX_ROSTER_ROWS } from '@/utils/constants';
 import nsTeamCreate from '@/lib/i18n/locales/fr/teamCreate';
 
 /** Valeur d'une réponse à un champ d'inscription personnalisé. */
@@ -316,17 +317,40 @@ export default function PublicCreateTeamPage() {
   const playingRowsCount = members.filter(
     (m) => !isNonPlayingTeamRole(m.role)
   ).length;
+  /** Effectif jouant complet — seul l'ajout de JOUEUSES est alors fermé. */
+  const rosterFull = playingRowsCount >= MAX_TEAM_PLAYERS;
+  /** Plafond absolu de lignes, miroir de celui du serveur. */
+  const rowsFull = members.length >= MAX_ROSTER_ROWS;
 
-  function addMemberRow() {
+  /**
+   * Ajoute une ligne de roster.
+   *
+   * Le rôle est un PARAMÈTRE, et c'est le cœur du correctif : la fonction
+   * créait toujours une ligne `player`, donc à 5 joueuses le bouton ne faisait
+   * plus rien — impossible de déclarer un coach ou un manager, alors même que
+   * l'encadrement ne consomme aucune place de roster. Le plafond appliqué
+   * dépend donc de ce qu'on ajoute :
+   *   - une joueuse est bornée par MAX_TEAM_PLAYERS (l'effectif jouant) ;
+   *   - un membre du staff n'est borné que par le plafond ABSOLU de lignes,
+   *     celui que le serveur applique aussi (anti-abus, cf.
+   *     pages/api/teams/create-with-member.ts).
+   */
+  function addMemberRow(role: 'player' | 'coach' = 'player') {
     setMembers((prev) => {
-      if (prev.filter((m) => !isNonPlayingTeamRole(m.role)).length >= 5)
+      if (prev.length >= MAX_ROSTER_ROWS) return prev;
+      if (
+        !isNonPlayingTeamRole(role) &&
+        prev.filter((m) => !isNonPlayingTeamRole(m.role)).length >=
+          MAX_TEAM_PLAYERS
+      ) {
         return prev;
+      }
       return [
         ...prev,
         {
           id: `m-${Date.now().toString(36)}-${prev.length}`,
           email: '',
-          role: 'player',
+          role,
           battleTag: '',
           specialty: '',
         },
@@ -1404,6 +1428,13 @@ export default function PublicCreateTeamPage() {
                             <option value="substitute">
                               {t.roleOptionSub}
                             </option>
+                            {/* L'encadrement peut se déclarer dès la création :
+                                la RPC `accept_invitation` honore `manager`
+                                depuis accept_invitation_allow_manager.sql, et
+                                le rôle ne consomme aucune place de roster. */}
+                            <option value="manager">
+                              {t.roleOptionManager}
+                            </option>
                           </select>
                         </div>
 
@@ -1502,10 +1533,10 @@ export default function PublicCreateTeamPage() {
             <div className="flex flex-wrap items-center gap-3">
               <button
                 type="button"
-                onClick={addMemberRow}
-                disabled={playingRowsCount >= 5}
+                onClick={() => addMemberRow('player')}
+                disabled={rosterFull || rowsFull}
                 className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition ${
-                  playingRowsCount >= 5
+                  rosterFull || rowsFull
                     ? 'cursor-not-allowed border border-white/10 bg-white/5 text-gray-500'
                     : 'border border-[var(--color-green)]/40 bg-[var(--color-green)]/10 text-[var(--color-green-light)] hover:bg-[var(--color-green)]/20'
                 }`}
@@ -1513,7 +1544,27 @@ export default function PublicCreateTeamPage() {
                 <span aria-hidden="true">+</span>
                 {t.addMember}
               </button>
-              <p className="text-xs text-gray-400">{t.addMemberHint}</p>
+              {/* Bouton SÉPARÉ pour l'encadrement, et pas un simple
+                  « ajouter » dont on changerait le rôle ensuite : à effectif
+                  jouant complet, le bouton joueuses est désactivé, et un
+                  bouton unique désactivé laissait croire qu'on ne pouvait plus
+                  ajouter personne. C'est exactement le cul-de-sac signalé. */}
+              <button
+                type="button"
+                onClick={() => addMemberRow('coach')}
+                disabled={rowsFull}
+                className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition ${
+                  rowsFull
+                    ? 'cursor-not-allowed border border-white/10 bg-white/5 text-gray-500'
+                    : 'border border-sky-400/40 bg-sky-500/10 text-sky-200 hover:bg-sky-500/20'
+                }`}
+              >
+                <span aria-hidden="true">+</span>
+                {t.addStaff}
+              </button>
+              <p className="text-xs text-gray-400">
+                {rosterFull ? t.addStaffHint : t.addMemberHint}
+              </p>
             </div>
           </section>
         )}

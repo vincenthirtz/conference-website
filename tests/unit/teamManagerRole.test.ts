@@ -7,7 +7,7 @@
 // Targets:
 //  - utils/teams/managementAccess.ts        (helper)
 //  - pages/api/teams/add-member.ts          (manager can add)
-//  - pages/api/teams/update-member-role.ts  (manager can change roles, but not promote to manager)
+//  - pages/api/teams/update-member-role.ts  (manager can change roles, promotion to manager incluse depuis 2026-08-20 ; dégradation d'un pair toujours réservée au capitaine)
 //  - pages/api/teams/toggle-joinable.ts     (manager can toggle)
 //  - pages/api/teams/join-requests.ts       (manager can list)
 //  - pages/api/teams/scrim-requests.ts      (manager can list)
@@ -336,7 +336,14 @@ describe('/api/teams/update-member-role as manager', () => {
     expect(member.is_substitute).toBe(true);
   });
 
-  it('manager CANNOT promote a player to manager (anti-escalation)', async () => {
+  it('manager PEUT promouvoir une joueuse en manager (décision produit 2026-08-20)', async () => {
+    // C'était réservé au capitaine. La règle supposait qu'une équipe en a
+    // toujours un — faux depuis les équipes créées PAR UN MANAGER, où
+    // `captain_id` reste NULL jusqu'à ce que la capitaine désignée accepte :
+    // personne ne pouvait alors promouvoir qui que ce soit. Et l'interdit ne
+    // protégeait rien, puisque add-member laisse déjà un manager ajouter un
+    // NOUVEAU membre avec le rôle `manager` — il imposait juste le détour
+    // « retirer puis rajouter ».
     const res = makeRes();
     await updateRoleHandler(
       makeAuthedReq({
@@ -345,11 +352,16 @@ describe('/api/teams/update-member-role as manager', () => {
       }),
       res
     );
-    expect(res.statusCode).toBe(403);
-    expect((res.body as any).error).toMatch(/privil/i);
+    expect(res.statusCode).toBe(200);
+    const member = (store.team_members as any[]).find((m) => m.id === TM_PLY);
+    expect(member.role).toBe('manager');
   });
 
   it('manager CANNOT demote another manager', async () => {
+    // L'asymétrie avec le test précédent est DÉLIBÉRÉE : accorder un rôle
+    // privilégié est une délégation, dégrader un pair est un conflit. Deux
+    // managers ne doivent pas pouvoir se destituer l'un l'autre — seul le
+    // capitaine tranche (même règle dans DELETE /api/teams/[teamId]/members).
     // Add a second manager to demote.
     (store.team_members as any[]).push({
       id: TM_MGR2,
