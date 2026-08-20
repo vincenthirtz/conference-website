@@ -17,6 +17,7 @@ export default ns('matchLineup', {
   validatedAt: 'Validée le {date}.',
   substituteBadge: 'Remplaçante',
   unknownMember: 'Membre',
+  goCheckin: 'Faire le check-in',
   save: 'Enregistrer',
   validate: 'Valider la feuille',
   validateHint:

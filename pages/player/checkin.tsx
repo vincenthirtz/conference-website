@@ -14,6 +14,7 @@ import { localeTag } from '@/lib/i18n/useLocale';
 import { useT, format } from '@/lib/i18n/useT';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import type { NextMatchPayload } from '@/pages/api/player/next-match';
+import MatchLineupCard from '@/components/player/MatchLineupCard';
 
 import { logger } from '../../utils/logger';
 import nsCheckin from '@/lib/i18n/locales/fr/checkin';
@@ -226,6 +227,20 @@ function PlayerCheckin() {
               lang={lang}
               t={t}
             />
+
+            {/* Enchaînement immédiat : la feuille de match s'ouvre AU
+                check-in, et elle s'ouvre ICI. Renvoyer la personne vers un
+                autre écran pour composer, c'est perdre le seul moment où
+                l'équipe est réunie et attentive — celui où elle vient de
+                confirmer sa présence.
+
+                Montée seulement une fois le check-in acquis : c'est la
+                condition d'ouverture côté serveur, et `load()` vient de
+                rafraîchir `alreadyCheckedIn`. La carte se tait d'elle-même
+                pour qui n'a pas la permission `validate_lineup`. */}
+            {checkin?.alreadyCheckedIn && match?.id && (
+              <MatchLineupCard matchId={match.id} />
+            )}
           </div>
         ) : null}
       </main>

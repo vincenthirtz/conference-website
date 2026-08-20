@@ -4797,6 +4797,7 @@
     "validatedAt": "Validated on {date}.",
     "substituteBadge": "Substitute",
     "unknownMember": "Member",
+    "goCheckin": "Check in now",
     "save": "Save",
     "validate": "Validate the sheet",
     "validateHint": "Once validated the sheet is frozen: only tournament staff can reopen it."

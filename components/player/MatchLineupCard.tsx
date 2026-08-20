@@ -21,10 +21,12 @@
 //      geste est fait, l'écran doit le refléter et non proposer de le refaire.
 
 import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { usePlayerArea } from '@/components/player/PlayerAreaContext';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
+import { MAX_TEAM_PLAYERS } from '@/utils/constants';
 import { logger } from '../../utils/logger';
 import nsMatchLineup from '@/lib/i18n/locales/fr/matchLineup';
 
@@ -71,7 +73,26 @@ export default function MatchLineupCard({ matchId }: { matchId: string }) {
         { skipAuthRedirect: true }
       );
       setData(payload);
-      setSelected(new Set(payload.starters));
+      // Pré-remplissage : les titulaires du roster. Le geste attendu devient
+      // « confirmer » au lieu de « cocher cinq cases » — c'est la différence
+      // entre une feuille remplie et une feuille oubliée, le jour du match.
+      //
+      // Seulement quand rien n'est encore enregistré : une composition déjà
+      // saisie ne doit jamais être écrasée par un défaut.
+      //
+      // Le plafond compte : un roster de 7 titulaires produirait une
+      // pré-sélection que le serveur refuserait (`too_many`), et la personne
+      // verrait une erreur sur un formulaire qu'elle n'a pas rempli.
+      setSelected(
+        new Set(
+          payload.starters.length > 0
+            ? payload.starters
+            : payload.eligible
+                .filter((m) => !m.isSubstitute)
+                .slice(0, MAX_TEAM_PLAYERS)
+                .map((m) => m.userId)
+        )
+      );
     } catch (err) {
       logger.error('[MatchLineupCard] load', err);
       setHidden(true);
@@ -135,7 +156,21 @@ export default function MatchLineupCard({ matchId }: { matchId: string }) {
       </div>
 
       {!data.open ? (
-        <p className="text-sm text-gray-300">{data.closedMessage}</p>
+        <>
+          <p className="text-sm text-gray-300">{data.closedMessage}</p>
+          {/* Un message qui constate ne suffit pas : le geste qui débloque est
+              à UN clic, autant le donner. Sans ça, « la feuille s'ouvre après
+              le check-in » envoie chercher un bouton dans un autre écran. */}
+          {data.closedReason === 'awaiting_checkin' && !readOnly && (
+            <Link
+              href="/player/checkin"
+              className="mt-3 inline-flex items-center gap-1 rounded-lg bg-white px-3 py-1.5 text-sm font-semibold text-neutral-900 transition hover:-translate-y-0.5"
+            >
+              {t.goCheckin}
+              <span aria-hidden>→</span>
+            </Link>
+          )}
+        </>
       ) : (
         <p className="text-sm text-gray-400">
           {validated ? t.introValidated : t.intro}
