@@ -67,6 +67,8 @@ export type StaffLogAction =
   | 'reassign_captain'
   | 'transfer_player_team'
   | 'manage_substitute'
+  | 'validate_match_lineup'
+  | 'reopen_match_lineup'
   | 'bulk_roster_update'
   | 'add_team_member'
   | 'remove_team_member'

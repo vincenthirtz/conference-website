@@ -41,6 +41,12 @@ export const TEAM_PERMISSION_CATALOG = [
     description:
       "Modifier la description, le contenu riche et l'apparence de la page publique de l'équipe",
   },
+  {
+    value: 'validate_lineup',
+    label: 'Valider la feuille de match',
+    description:
+      'Composer et valider les joueuses alignées sur un match, une fois le check-in fait',
+  },
 ] as const;
 
 export type TeamPermission = (typeof TEAM_PERMISSION_CATALOG)[number]['value'];
@@ -100,7 +106,16 @@ export function isTeamRoleValue(value: unknown): value is TeamRoleValue {
 
 export const DEFAULT_TEAM_ROLES: TeamRole[] = [
   { value: 'player', label: 'Player', permissions: [] },
-  { value: 'coach', label: 'Coach', permissions: [] },
+  {
+    value: 'coach',
+    label: 'Coach',
+    // Un coach avait ZÉRO permission : il était exactement une joueuse qui ne
+    // joue pas. Les deux gestes qui définissent le métier lui reviennent
+    // désormais — organiser l'entraînement (scrims) et décider qui est aligné
+    // (feuille de match). Il reste hors du roster et hors de la gestion
+    // administrative de l'équipe (roster, infos, inscriptions).
+    permissions: ['manage_scrims', 'validate_lineup'],
+  },
   { value: 'substitute', label: 'Sub', permissions: [] },
   {
     value: 'manager',

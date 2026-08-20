@@ -81,6 +81,8 @@ const TEAM_PERMISSION_FORBIDDEN: Record<TeamPermission, string> = {
     "Ton rôle dans l'équipe ne permet pas d'envoyer des messages d'équipe.",
   edit_public_page:
     "Ton rôle dans l'équipe ne permet pas d'éditer sa page publique.",
+  validate_lineup:
+    "Ton rôle dans l'équipe ne permet pas de valider la feuille de match.",
 };
 
 /**

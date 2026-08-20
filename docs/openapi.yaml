@@ -9456,6 +9456,160 @@ paths:
               schema:
                 type: object
                 additionalProperties: true
+  /api/teams/matches/{matchId}/lineup:
+    get:
+      tags:
+        - teams
+      summary: Feuille de match d'une equipe (etat, roster eligible, composition).
+      description: >-
+        S'ouvre une fois le CHECK-IN de l'equipe effectue. Permission d'equipe
+        `validate_lineup` (capitaine, manager, coach).
+      operationId: getTeamMatchLineup
+      security:
+        - PlayerBearer: []
+      parameters:
+        - name: matchId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Etat de la feuille.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '403':
+          description: Role sans permission `validate_lineup`.
+        '404':
+          description: Match introuvable.
+    put:
+      tags:
+        - teams
+      summary: Enregistre la composition (brouillon).
+      operationId: saveTeamMatchLineup
+      security:
+        - PlayerBearer: []
+      parameters:
+        - name: matchId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - starters
+              properties:
+                starters:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+      responses:
+        '200':
+          description: Composition enregistree.
+        '409':
+          description: Feuille close (check-in manquant, match termine) ou deja validee.
+    post:
+      tags:
+        - teams
+      summary: Valide la feuille (validated_by_kind = team).
+      operationId: validateTeamMatchLineup
+      security:
+        - PlayerBearer: []
+      parameters:
+        - name: matchId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                starters:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+      responses:
+        '200':
+          description: Feuille validee.
+        '409':
+          description: Feuille close ou deja validee.
+  /api/admin/matches/{matchId}/lineup:
+    get:
+      tags:
+        - admin
+      summary: Les deux feuilles de match (vue organisation).
+      operationId: adminGetMatchLineups
+      security:
+        - StaffSession: []
+      parameters:
+        - name: matchId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Feuilles des deux equipes.
+    post:
+      tags:
+        - admin
+      summary: Valide la feuille d'une equipe a sa place, ou la rouvre.
+      description: >-
+        `validated_by_kind = admin` : une feuille validee par l'organisation
+        n'engage pas l'equipe de la meme facon. `reopen: true` defige une
+        feuille validee — le seul geste qui le permette.
+      operationId: adminValidateMatchLineup
+      security:
+        - StaffSession: []
+      parameters:
+        - name: matchId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - teamId
+              properties:
+                teamId:
+                  type: string
+                  format: uuid
+                starters:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                reopen:
+                  type: boolean
+      responses:
+        '200':
+          description: Feuille validee ou rouverte.
+        '409':
+          description: Check-in manquant ou match termine.
   /api/bot/v1/role-sync/presence:
     post:
       tags:

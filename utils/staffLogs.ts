@@ -226,6 +226,8 @@ export const STAFF_LOG_ACTION_LABELS: Record<StaffLogAction, string> = {
   reassign_captain: 'Réassignation de capitaine',
   transfer_player_team: "Transfert d'équipe d'un joueur",
   manage_substitute: 'Gestion remplaçant',
+  validate_match_lineup: 'Feuille de match validée (à la place de l’équipe)',
+  reopen_match_lineup: 'Feuille de match rouverte',
   bulk_roster_update: 'Mise à jour roster en masse',
   add_team_member: "Ajout d'un membre d'équipe",
   remove_team_member: "Retrait d'un membre d'équipe",

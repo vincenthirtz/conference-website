@@ -90,9 +90,37 @@ export async function snapshotMatchParticipants(
 ): Promise<void> {
   if (!supabaseAdmin) return;
   try {
-    const teamIds = [match.team1_id, match.team2_id].filter(
+    const allTeamIds = [match.team1_id, match.team2_id].filter(
       (t): t is string => !!t
     );
+    if (allTeamIds.length === 0) return;
+
+    // Une équipe qui a VALIDÉ sa feuille de match a déclaré elle-même qui
+    // jouait — c'est plus juste que ce repli, et surtout ça l'engage. On ne
+    // touche donc pas à ses lignes : les écraser avec le roster courant
+    // annulerait la déclaration, et attribuerait le match à des personnes que
+    // l'équipe avait explicitement laissées hors de la feuille.
+    //
+    // Le repli reste entier pour les équipes SANS feuille validée — matches
+    // anciens, équipes qui n'ont pas composé, backfill.
+    const { data: validatedRows, error: lineupErr } = await supabaseAdmin
+      .from('match_lineups')
+      .select('team_id')
+      .eq('match_id', match.id)
+      .eq('status', 'validated');
+    if (lineupErr) {
+      // Dégradation : sans cette lecture on ne sait pas qui a déclaré. Écraser
+      // serait destructeur, donc on s'abstient plutôt que de deviner.
+      logger.error('[rating] snapshot: lineups read error', lineupErr);
+      return;
+    }
+    const validatedTeamIds = new Set(
+      ((validatedRows || []) as { team_id?: string | null }[])
+        .map((r) => r.team_id)
+        .filter((id): id is string => !!id)
+    );
+
+    const teamIds = allTeamIds.filter((id) => !validatedTeamIds.has(id));
     if (teamIds.length === 0) return;
 
     const { data: members, error: mErr } = await supabaseAdmin
@@ -119,12 +147,15 @@ export async function snapshotMatchParticipants(
         is_substitute: m.is_substitute ?? false,
       }));
 
-    // Remplacement propre : delete existing du match puis insert.
+    // Remplacement propre : delete existing du match puis insert — mais
+    // SEULEMENT pour les équipes qu'on refait. Un `delete` sur tout le match
+    // emporterait la feuille validée de l'autre équipe.
     const { error: delErr } = await supabaseAdmin
       .from('match_participants')
       .delete()
       .eq('tenant_id', tenantId)
-      .eq('match_id', match.id);
+      .eq('match_id', match.id)
+      .in('team_id', teamIds);
     if (delErr) {
       logger.error('[rating] snapshot: delete existing error', delErr);
       return;

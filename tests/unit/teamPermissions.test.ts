@@ -42,21 +42,21 @@ beforeEach(() => {
 
 describe('hasTeamPermission with default config', () => {
   it('captain has every permission, regardless of their team_members.role', async () => {
-    expect(
-      await hasTeamPermission(CAPTAIN_ID, TEAM_ID, 'manage_roster')
-    ).toBe(true);
-    expect(
-      await hasTeamPermission(CAPTAIN_ID, TEAM_ID, 'manage_scrims')
-    ).toBe(true);
+    expect(await hasTeamPermission(CAPTAIN_ID, TEAM_ID, 'manage_roster')).toBe(
+      true
+    );
+    expect(await hasTeamPermission(CAPTAIN_ID, TEAM_ID, 'manage_scrims')).toBe(
+      true
+    );
     expect(
       await hasTeamPermission(CAPTAIN_ID, TEAM_ID, 'register_tournaments')
     ).toBe(true);
   });
 
   it('manager has all permissions via the default catalog', async () => {
-    expect(
-      await hasTeamPermission(MANAGER_ID, TEAM_ID, 'manage_roster')
-    ).toBe(true);
+    expect(await hasTeamPermission(MANAGER_ID, TEAM_ID, 'manage_roster')).toBe(
+      true
+    );
     expect(
       await hasTeamPermission(MANAGER_ID, TEAM_ID, 'manage_team_info')
     ).toBe(true);
@@ -65,19 +65,30 @@ describe('hasTeamPermission with default config', () => {
     ).toBe(true);
   });
 
-  it('coach has no permissions by default', async () => {
+  it('le coach gère les scrims et la feuille de match, rien d’autre', async () => {
+    // Décision produit 2026-08-21. Le coach avait ZÉRO permission : il était
+    // exactement une joueuse qui ne joue pas. Les deux gestes qui définissent
+    // le métier lui reviennent — organiser l'entraînement et décider qui est
+    // aligné. La gestion administrative (roster, infos, inscriptions) reste
+    // hors de son périmètre.
+    expect(await hasTeamPermission(COACH_ID, TEAM_ID, 'manage_scrims')).toBe(
+      true
+    );
+    expect(await hasTeamPermission(COACH_ID, TEAM_ID, 'validate_lineup')).toBe(
+      true
+    );
+    expect(await hasTeamPermission(COACH_ID, TEAM_ID, 'manage_roster')).toBe(
+      false
+    );
     expect(
-      await hasTeamPermission(COACH_ID, TEAM_ID, 'manage_roster')
-    ).toBe(false);
-    expect(
-      await hasTeamPermission(COACH_ID, TEAM_ID, 'manage_scrims')
+      await hasTeamPermission(COACH_ID, TEAM_ID, 'register_tournaments')
     ).toBe(false);
   });
 
   it('non-member returns false', async () => {
-    expect(
-      await hasTeamPermission(STRANGER_ID, TEAM_ID, 'manage_roster')
-    ).toBe(false);
+    expect(await hasTeamPermission(STRANGER_ID, TEAM_ID, 'manage_roster')).toBe(
+      false
+    );
   });
 
   it('returns false on unknown team', async () => {
@@ -116,29 +127,29 @@ describe('hasTeamPermission with custom config', () => {
   });
 
   it('coach can now manage_scrims', async () => {
-    expect(
-      await hasTeamPermission(COACH_ID, TEAM_ID, 'manage_scrims')
-    ).toBe(true);
+    expect(await hasTeamPermission(COACH_ID, TEAM_ID, 'manage_scrims')).toBe(
+      true
+    );
   });
 
   it('coach still cannot manage_roster', async () => {
-    expect(
-      await hasTeamPermission(COACH_ID, TEAM_ID, 'manage_roster')
-    ).toBe(false);
+    expect(await hasTeamPermission(COACH_ID, TEAM_ID, 'manage_roster')).toBe(
+      false
+    );
   });
 
   it('manager loses all permissions when config strips them', async () => {
-    expect(
-      await hasTeamPermission(MANAGER_ID, TEAM_ID, 'manage_roster')
-    ).toBe(false);
-    expect(
-      await hasTeamPermission(MANAGER_ID, TEAM_ID, 'manage_scrims')
-    ).toBe(false);
+    expect(await hasTeamPermission(MANAGER_ID, TEAM_ID, 'manage_roster')).toBe(
+      false
+    );
+    expect(await hasTeamPermission(MANAGER_ID, TEAM_ID, 'manage_scrims')).toBe(
+      false
+    );
   });
 
   it('captain still bypasses everything', async () => {
-    expect(
-      await hasTeamPermission(CAPTAIN_ID, TEAM_ID, 'manage_roster')
-    ).toBe(true);
+    expect(await hasTeamPermission(CAPTAIN_ID, TEAM_ID, 'manage_roster')).toBe(
+      true
+    );
   });
 });

@@ -35,6 +35,7 @@ import QuickAction, {
   type QuickActionProps,
 } from '@/components/player/QuickAction';
 import NextMatchCard from '@/components/player/NextMatchCard';
+import MatchLineupCard from '@/components/player/MatchLineupCard';
 import { PlayerDashboardSkeleton } from '@/components/player/Skeletons';
 import ScrimNegotiationCard, {
   type PendingScrim,
@@ -722,6 +723,12 @@ export default function PlayerDashboardScreen() {
           <CategorySection label={t.catCompetition}>
             <NextMatchCard initialData={nextMatch} />
             <MatchReadinessCard nextMatch={nextMatch} t={t} />
+            {/* Feuille de match : qui joue CE match. Se tait d'elle-même sans
+                match, sans permission `validate_lineup`, ou avant le check-in
+                de l'équipe (cf. MatchLineupCard). */}
+            {nextMatch?.match?.id && (
+              <MatchLineupCard matchId={nextMatch.match.id} />
+            )}
             {/* Progression (N8) — MA courbe de niveau et les jalons de mon
                 équipe. Pas de gate d'équipe : le niveau appartient à la
                 joueuse, la carte se masque d'elle-même si rien n'est mesuré. */}

@@ -203,10 +203,20 @@ describe('permissions catalog', () => {
     expect(manager?.permissions).toEqual(TEAM_PERMISSION_VALUES);
   });
 
-  it('default non-manager roles have no permissions', () => {
-    for (const r of DEFAULT_TEAM_ROLES) {
-      if (r.value !== 'manager') expect(r.permissions).toEqual([]);
-    }
+  it('seuls le manager et le coach portent des permissions par défaut', () => {
+    // Le coach a cessé d'être « une joueuse qui ne joue pas » le 2026-08-21 :
+    // il porte les deux gestes de son métier. Joueuse et remplaçante restent
+    // sans permission — elles ne gèrent rien, par définition.
+    const byValue = Object.fromEntries(
+      DEFAULT_TEAM_ROLES.map((r) => [r.value, r.permissions])
+    );
+    expect(byValue.player).toEqual([]);
+    expect(byValue.substitute).toEqual([]);
+    expect(new Set(byValue.coach)).toEqual(
+      new Set(['manage_scrims', 'validate_lineup'])
+    );
+    // Le manager garde l'intégralité du catalogue.
+    expect(byValue.manager?.length).toBe(TEAM_PERMISSION_VALUES.length);
   });
 });
 
