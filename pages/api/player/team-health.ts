@@ -41,6 +41,7 @@ import {
 } from '@/utils/teams/teamRhythm';
 import { isSearchLive, type ScrimSearchRow } from '@/utils/teams/scrimSearch';
 import { loadPlayedGames } from '@/utils/teams/playedGames';
+import { getDiscordLinksForUsers } from '@/utils/discordLinks';
 import { logger } from '@/utils/logger';
 
 export type TeamHealthResponse = {
@@ -260,13 +261,11 @@ export default withSubjectRoute(
       neverLoggedIn,
       unreviewedEncounters,
     ] = await Promise.all([
-      // `user_discord_links` est GLOBALE (pas de tenant_id).
-      memberIds.length > 0
-        ? supabaseAdmin
-            .from('user_discord_links')
-            .select('user_id')
-            .in('user_id', memberIds)
-        : Promise.resolve({ data: [] as Row[] }),
+      // `user_discord_links` est GLOBALE (pas de tenant_id). Helper canonique :
+      // la colonne est `auth_user_id`. Filtrée sur `user_id` (inexistante), la
+      // query en ligne d'origine renvoyait une erreur avalée — le constat
+      // `discord_unlinked` comptait donc TOUT le roster, en permanence.
+      getDiscordLinksForUsers(memberIds as string[]),
       supabaseAdmin
         .from('team_availability')
         .select('user_id, timezone, slots')
@@ -283,9 +282,7 @@ export default withSubjectRoute(
       countUnreviewedEncounters(tenantId, teamId),
     ]);
 
-    const linkedIds = new Set(
-      ((linksRes.data || []) as Row[]).map((r) => r.user_id as string)
-    );
+    const linkedIds = new Set(linksRes.keys());
     const discordUnlinked = memberIds.filter((id) => !linkedIds.has(id)).length;
 
     const memberIdSet = new Set(memberIds);

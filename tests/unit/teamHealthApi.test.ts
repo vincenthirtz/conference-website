@@ -75,8 +75,11 @@ function seed() {
     battle_tag_verified_at: '2026-07-01T00:00:00.000Z',
     tenant_id: CONFERENCE_TENANT_ID,
   })) as any;
+  // Colonne `auth_user_id` — c'est le nom réel en base. La fixture disait
+  // `user_id`, ce qui « marchait » seulement parce que le handler filtrait sur
+  // la même colonne inexistante (bug corrigé le 2026-08-20).
   store.user_discord_links = store.team_members.map((m: any) => ({
-    user_id: m.user_id,
+    auth_user_id: m.user_id,
     discord_user_id: `discord-${m.user_id}`,
   })) as any;
   store.team_availability = store.team_members.map((m: any) => ({
@@ -192,7 +195,7 @@ describe('roster', () => {
     ] as any;
     store.user_discord_links = [
       ...store.user_discord_links,
-      { user_id: 'manager-1', discord_user_id: 'discord-manager-1' },
+      { auth_user_id: 'manager-1', discord_user_id: 'discord-manager-1' },
     ] as any;
     const res = await call();
     expect(codes(res)).not.toContain('missing_battle_tag');

@@ -49,6 +49,7 @@ import {
 } from '@/utils/teams/teamRhythm';
 import { tallyPlayedBySlot } from '@/utils/teams/trainingSuggestion';
 import { getTimeZoneOffsetMinutes } from '@/utils/timezone';
+import { getDiscordLinksForUsers } from '@/utils/discordLinks';
 
 /** Fenêtre du récap. */
 export const RECAP_WINDOW_DAYS = 7;
@@ -357,12 +358,11 @@ async function collectFacts(
   // personne ne compte qu'une fois — deux manques ne font pas deux profils.
   let identityGaps = 0;
   if (memberIds.length > 0) {
-    const { data: linkRows } = await supabaseAdmin
-      .from('user_discord_links')
-      .select('user_id')
-      .in('user_id', memberIds);
+    // Colonne `auth_user_id` — la query en ligne filtrait sur `user_id`,
+    // inexistante : `linked` était toujours vide et TOUT le roster comptait
+    // comme « sans Discord lié » dans le récap hebdo.
     const linked = new Set(
-      ((linkRows || []) as Row[]).map((r) => r.user_id as string)
+      (await getDiscordLinksForUsers(memberIds as string[])).keys()
     );
     identityGaps = members.filter((m) => {
       const userId = m.user_id as string | null;

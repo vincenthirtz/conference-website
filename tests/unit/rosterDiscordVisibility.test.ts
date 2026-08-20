@@ -62,8 +62,8 @@ beforeEach(() => {
     { id: 'm4', team_id: TEAM, user_id: UNLINKED_B, role: 'coach' },
   ] as any;
   store.user_discord_links = [
-    { user_id: CAPTAIN, discord_user_id: '111' },
-    { user_id: LINKED, discord_user_id: '222' },
+    { auth_user_id: CAPTAIN, discord_user_id: '111' },
+    { auth_user_id: LINKED, discord_user_id: '222' },
   ] as any;
 });
 

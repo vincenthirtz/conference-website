@@ -21,6 +21,7 @@ import {
   pickExclusiveMembership,
 } from '@/utils/teams/memberships';
 import { applyRateLimit } from '@/utils/rateLimit';
+import { getDiscordLinkForUser } from '@/utils/discordLinks';
 import { withAuthRoute } from '@/utils/staff';
 import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
 import { logger } from '@/utils/logger';
@@ -63,12 +64,12 @@ export default withAuthRoute(async function handler(
   try {
     const [linkRes, memberRes, discoveryRes] = await Promise.all([
       // `user_discord_links` est GLOBALE (pas de tenant_id) : un compte Discord
-      // est lié une fois, pour tous les tenants.
-      supabaseAdmin
-        .from('user_discord_links')
-        .select('discord_user_id')
-        .eq('user_id', user.id)
-        .maybeSingle(),
+      // est lié une fois, pour tous les tenants. Le helper canonique porte le
+      // nom de colonne (`auth_user_id`) — la query en ligne qui vivait ici
+      // filtrait sur `user_id`, colonne inexistante : l'erreur PostgREST était
+      // avalée et `discordLinked` valait donc TOUJOURS false, y compris pour
+      // un compte parfaitement lié (corrigé le 2026-08-20).
+      getDiscordLinkForUser(user.id).then((link) => ({ data: link })),
       // Appartenance EXCLUSIVE : un siège de manager ne porte pas de
       // BattleTag, et un manager peut en avoir plusieurs — `maybeSingle()`
       // aurait échoué sur ce compte.

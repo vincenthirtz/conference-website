@@ -87,7 +87,7 @@ function seed() {
     },
   ] as any;
   store.user_discord_links = [
-    { user_id: 'user-1', discord_user_id: 'd1' },
+    { auth_user_id: 'user-1', discord_user_id: 'd1' },
   ] as any;
   store.matches = [] as any;
   store.scrims = [] as any;

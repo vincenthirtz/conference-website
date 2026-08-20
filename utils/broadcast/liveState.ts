@@ -7,6 +7,7 @@
 
 import { supabaseAdmin } from '../supabase';
 import { logger } from '../logger';
+import { getDiscordLinksForUsers } from '@/utils/discordLinks';
 
 /**
  * Production "scene" the overlay renderer switches to. Drives the automated
@@ -254,15 +255,13 @@ export async function fetchLiveBroadcastState(
         const authIds = ((members ?? []) as any[])
           .map((m2) => m2.auth_user_id)
           .filter((v): v is string => typeof v === 'string' && v.length > 0);
+        // Helper canonique : la colonne est `auth_user_id`. Filtrée sur
+        // `user_id` (inexistante), la query en ligne d'origine renvoyait une
+        // erreur avalée — aucun caster de la régie n'avait de Discord, donc
+        // aucune mention ne partait.
         const discordByAuth = new Map<string, string>();
-        if (authIds.length > 0) {
-          const { data: links } = await supabaseAdmin
-            .from('user_discord_links')
-            .select('user_id, discord_user_id')
-            .in('user_id', authIds);
-          for (const l of (links ?? []) as any[]) {
-            discordByAuth.set(l.user_id, l.discord_user_id);
-          }
+        for (const [authId, link] of await getDiscordLinksForUsers(authIds)) {
+          discordByAuth.set(authId, link.discordUserId);
         }
 
         casters = ((members ?? []) as any[]).map((m2) => ({

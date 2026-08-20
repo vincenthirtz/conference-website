@@ -23,6 +23,7 @@ import {
 } from '@/utils/teams/inviteLinks';
 import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
 import { alertIfBlacklisted } from '@/utils/moderation/blacklist';
+import { getDiscordLinkForUser } from '@/utils/discordLinks';
 import { alertIfEntityBlacklisted } from '@/utils/moderation/entityBlacklist';
 import { verifyCaptcha } from '@/utils/captcha';
 import {
@@ -1146,12 +1147,12 @@ export default async function handler(
       authUserId: string | null
     ): Promise<string | null> => {
       if (!authUserId) return null;
-      const { data: link } = await supabaseAdmin
-        .from('user_discord_links')
-        .select('discord_user_id')
-        .eq('user_id', authUserId)
-        .maybeSingle();
-      return (link?.discord_user_id as string | undefined) ?? null;
+      // Helper canonique : la colonne est `auth_user_id`. La query en ligne
+      // d'origine filtrait sur `user_id` (inexistante), donc renvoyait
+      // toujours null — le bot ne recevait jamais le Discord du créateur et
+      // ne pouvait pas lui donner son rôle d'équipe.
+      const link = await getDiscordLinkForUser(authUserId);
+      return link?.discordUserId ?? null;
     };
 
     const captainDiscordUserId = await resolveDiscordId(effectiveCaptainUserId);

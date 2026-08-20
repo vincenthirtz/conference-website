@@ -67,9 +67,12 @@ describe('enrichMatchEvent', () => {
         tournament: { id: 'tour-1', name: 'Spring Cup' },
       },
     ];
+    // Colonne `auth_user_id` — la fixture disait `user_id`, ce qui « marchait »
+    // seulement parce que le code filtrait sur la même colonne inexistante
+    // (bug corrigé le 2026-08-20 ; cf. discordLinksColumnGuard.test.ts).
     store.user_discord_links = [
-      { user_id: 'auth-cap1', discord_user_id: '500000000000000001' },
-      { user_id: 'auth-cap2', discord_user_id: '500000000000000002' },
+      { auth_user_id: 'auth-cap1', discord_user_id: '500000000000000001' },
+      { auth_user_id: 'auth-cap2', discord_user_id: '500000000000000002' },
     ];
 
     const enriched = await enrichMatchEvent('match-1');

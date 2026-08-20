@@ -15,6 +15,7 @@ import { supabaseAdmin } from '../supabase';
 import { logger } from '../logger';
 import { fetchPresetForScope } from './resolveMatchPreset';
 import type { ResolvedPreset } from '../customGamePresets';
+import { getDiscordLinkForUser } from '@/utils/discordLinks';
 
 type EnrichedTeam = {
   id: string;
@@ -86,12 +87,11 @@ async function fetchCaptainDiscordUserId(
   captainAuthId: string | null
 ): Promise<string | null> {
   if (!captainAuthId || !supabaseAdmin) return null;
-  const { data } = await supabaseAdmin
-    .from('user_discord_links')
-    .select('discord_user_id')
-    .eq('user_id', captainAuthId)
-    .maybeSingle();
-  return (data?.discord_user_id as string | undefined) ?? null;
+  // Helper canonique : la colonne est `auth_user_id`. Filtrée sur `user_id`
+  // (inexistante), la query en ligne d'origine renvoyait toujours null — les
+  // events match partaient sans le Discord du capitaine, donc sans mention.
+  const link = await getDiscordLinkForUser(captainAuthId);
+  return link?.discordUserId ?? null;
 }
 
 export async function enrichMatchEvent(

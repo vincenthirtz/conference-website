@@ -49,6 +49,7 @@ import {
   resolveMissingDisplayNames,
   withFallbackDisplayName,
 } from '@/utils/teams/memberDisplayName';
+import { getDiscordLinksForUsers } from '@/utils/discordLinks';
 
 /** Team détaillée, surensemble des deux sources (inclut captain_id + open_for_scrim). */
 export type ManagedTeamRow = {
@@ -192,20 +193,13 @@ async function loadManagedTeamSummaries(
 async function loadDiscordLinkedUserIds(
   userIds: string[]
 ): Promise<Set<string>> {
-  const linked = new Set<string>();
-  if (!supabaseAdmin || userIds.length === 0) return linked;
-  const { data, error } = await supabaseAdmin
-    .from('user_discord_links')
-    .select('user_id')
-    .in('user_id', userIds);
-  if (error) {
-    logger.error('[managedTeamSlice] discord links error:', error);
-    return linked;
-  }
-  for (const row of (data || []) as { user_id?: string | null }[]) {
-    if (row?.user_id) linked.add(row.user_id);
-  }
-  return linked;
+  if (!supabaseAdmin || userIds.length === 0) return new Set<string>();
+  // Passer par le helper canonique et PAS par une query en ligne : la colonne
+  // s'appelle `auth_user_id`, et quatre call sites l'avaient écrite `user_id`
+  // — une colonne qui n'existe pas, donc une erreur PostgREST avalée, donc
+  // « personne n'a lié son Discord » partout (corrigé le 2026-08-20).
+  const links = await getDiscordLinksForUsers(userIds);
+  return new Set(links.keys());
 }
 
 /**
