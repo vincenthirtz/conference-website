@@ -14,6 +14,27 @@ export default adminNs('adminUsersManage', {
   roleCaster: 'Caster',
   rolePlayer: 'Joueur',
   roleMember: 'Membre',
+  // --- Séparation des deux dimensions de rôles (compte vs équipe) ---
+  accountRoleLabel: 'Rôle de compte',
+  roleGroupCommunity: 'Communauté (sans accès back-office)',
+  roleGroupStaff: 'Staff (accès back-office)',
+  roleGroupLegacy: 'Rôle actuel (obsolète)',
+  roleGroupStaffTitle:
+    'Rôle staff : donne accès au back-office (une entrée « staff » est créée).',
+  roleGroupCommunityTitle:
+    'Rôle communauté : aucun accès au back-office, aucune entrée « staff ».',
+  staffRoleBadge: 'Staff · {role}',
+  roleFilterHint:
+    "Rôle du compte uniquement. Les rôles d'équipe (capitaine, coach…) s'éditent sur la fiche de l'équipe.",
+  teamRolesLabel: 'Équipes',
+  teamRoleBadgeTitle:
+    "Rôle dans cette équipe (team_members) — sans lien avec l'accès staff. Modifiable sur la fiche de l'équipe.",
+  teamRoleCaptain: 'Capitaine',
+  teamRolePlayer: 'Joueur',
+  teamRoleCoach: 'Coach',
+  teamRoleSubstitute: 'Remplaçant',
+  teamRoleManager: 'Manager',
+  teamRoleUnknown: 'Membre',
   headTitle: 'Admin – Gestion des inscrits',
   heading: 'Gestion des inscrits',
   userCount_one: '{count} utilisateur',

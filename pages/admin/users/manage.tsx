@@ -58,7 +58,30 @@ type SortDir = 'asc' | 'desc';
 
 export const getServerSideProps = withStaffPage('admin');
 
-const ROLES = ['member', 'player', 'caster', 'admin', 'owner'];
+/* --------------------------------------------------------------------------
+ * Deux dimensions de rôles, à ne surtout pas confondre (cf. l'API
+ * pages/api/admin/users/manage.ts qui synchronise la table `staff`) :
+ *
+ *  1. Le rôle de COMPTE (`user_metadata.role`), édité par le <select> de la
+ *     ligne. Il se scinde lui-même en deux familles :
+ *       - rôles COMMUNAUTÉ (member / player) : aucun accès back-office ;
+ *       - rôles STAFF (caster / admin / owner) : l'API crée/réactive la row
+ *         `staff` correspondante (et la soft-delete en cas de rétrogradation).
+ *  2. Le rôle d'ÉQUIPE (`team_members.role` : captain / player / coach /
+ *     substitute / manager), propre à chaque appartenance. Il n'est PAS
+ *     modifiable ici (cf. /admin/teams/[id]/edit), on l'affiche en lecture.
+ * ------------------------------------------------------------------------ */
+
+/** Rôles de compte n'ouvrant aucun accès au back-office. */
+const COMMUNITY_ROLES = ['member', 'player'];
+/** Rôles de compte qui provisionnent une entrée `staff` (ordre croissant). */
+const STAFF_ROLE_OPTIONS = ['caster', 'admin', 'owner'];
+/** Union à plat — utilisée pour le filtre et les gardes existantes. */
+const ROLES = [...COMMUNITY_ROLES, ...STAFF_ROLE_OPTIONS];
+
+function isStaffRoleValue(role: string | null): boolean {
+  return STAFF_ROLE_OPTIONS.includes((role || '').toLowerCase());
+}
 
 function roleLabel(t: Dict, role: string | null) {
   switch (role?.toLowerCase()) {
@@ -93,6 +116,42 @@ function roleColor(role: string | null) {
       return 'bg-emerald-600 text-white';
     default:
       return 'bg-neutral-600 text-neutral-100';
+  }
+}
+
+/** Libellé d'un rôle d'ÉQUIPE (team_members.role) — dimension distincte du
+ *  rôle de compte : un `manager` d'équipe n'est PAS un staff. */
+function teamRoleLabel(t: Dict, role: string | null) {
+  switch (role?.toLowerCase()) {
+    case 'captain':
+      return t.teamRoleCaptain;
+    case 'player':
+      return t.teamRolePlayer;
+    case 'coach':
+      return t.teamRoleCoach;
+    case 'substitute':
+      return t.teamRoleSubstitute;
+    case 'manager':
+      return t.teamRoleManager;
+    default:
+      return role || t.teamRoleUnknown;
+  }
+}
+
+/** Palette dédiée aux rôles d'équipe : volontairement différente de
+ *  `roleColor` (rôles de compte) pour que l'œil ne confonde pas les deux. */
+function teamRoleColor(role: string | null) {
+  switch (role?.toLowerCase()) {
+    case 'captain':
+      return 'bg-amber-500/15 text-amber-200 border-amber-400/40';
+    case 'manager':
+      return 'bg-sky-500/15 text-sky-200 border-sky-400/40';
+    case 'coach':
+      return 'bg-teal-500/15 text-teal-200 border-teal-400/40';
+    case 'substitute':
+      return 'bg-neutral-500/15 text-neutral-300 border-neutral-400/30';
+    default:
+      return 'bg-indigo-500/15 text-indigo-200 border-indigo-400/40';
   }
 }
 
@@ -211,14 +270,49 @@ function canGrantRole(requesterRole: string | null, role: string): boolean {
 }
 
 /**
- * Options du <select> de rôle d'une ligne. Garantit que le rôle courant figure
- * toujours dans la liste : un compte legacy portant un rôle hors `ROLES` (ex.
- * `manager` supprimé) laisserait sinon le select contrôlé sans option
- * correspondant à sa `value` → warning React + affichage vide.
+ * Options du select de rôle, scindées en deux groupes : rôles communauté
+ * (aucun accès back-office) et rôles staff (provisionnent une row `staff`).
+ *
+ * `currentRole` garantit que le rôle porté par le compte figure toujours dans
+ * la liste : un compte legacy portant un rôle hors `ROLES` (ex. `manager`
+ * supprimé du staff) laisserait sinon le select contrôlé sans option
+ * correspondant à sa `value` → warning React + affichage vide. Il apparaît
+ * alors dans un groupe « obsolète » séparé, jamais mélangé aux deux familles.
+ *
+ * `isGrantable` permet à l'appelant de griser ce qu'il ne peut pas octroyer
+ * (anti-escalade) ; par défaut tout est sélectionnable.
  */
-function roleOptionsFor(currentRole: string | null): string[] {
-  const current = (currentRole || 'member').toLowerCase();
-  return ROLES.includes(current) ? ROLES : [current, ...ROLES];
+function RoleOptionGroups({
+  t,
+  currentRole,
+  isGrantable,
+}: {
+  t: Dict;
+  currentRole?: string | null;
+  isGrantable?: (role: string) => boolean;
+}) {
+  const current = currentRole ? currentRole.toLowerCase() : null;
+  const legacy = current && !ROLES.includes(current) ? current : null;
+  const renderOption = (r: string) => (
+    <option key={r} value={r} disabled={isGrantable ? !isGrantable(r) : false}>
+      {roleLabel(t, r)}
+    </option>
+  );
+  return (
+    <>
+      {legacy && (
+        <optgroup label={t.roleGroupLegacy}>
+          <option value={legacy}>{roleLabel(t, legacy)}</option>
+        </optgroup>
+      )}
+      <optgroup label={t.roleGroupCommunity}>
+        {COMMUNITY_ROLES.map(renderOption)}
+      </optgroup>
+      <optgroup label={t.roleGroupStaff}>
+        {STAFF_ROLE_OPTIONS.map(renderOption)}
+      </optgroup>
+    </>
+  );
 }
 
 /** Vrai si l'appelant (non-owner) ne peut pas toucher cette cible protégée. */
@@ -317,12 +411,22 @@ const UserRow = memo(function UserRow({
                 {name}
               </Link>
             </h3>
+            {/* Badge du rôle de COMPTE. Un rôle staff est explicitement
+                préfixé « Staff · » : on ne distingue jamais les deux familles
+                par la seule couleur. */}
             <span
+              title={
+                isStaffRoleValue(u.role)
+                  ? t.roleGroupStaffTitle
+                  : t.roleGroupCommunityTitle
+              }
               className={`relative z-10 px-2 py-0.5 rounded-full text-xs font-medium ${roleColor(
                 u.role
               )}`}
             >
-              {roleLabel(t, u.role)}
+              {isStaffRoleValue(u.role)
+                ? format(t.staffRoleBadge, { role: roleLabel(t, u.role) })
+                : roleLabel(t, u.role)}
             </span>
           </div>
           <div className="flex items-center gap-3 text-sm text-neutral-400 flex-wrap">
@@ -354,6 +458,9 @@ const UserRow = memo(function UserRow({
           {/* Équipes */}
           {u.team_memberships && u.team_memberships.length > 0 && (
             <div className="relative z-10 flex items-center gap-2 mt-2 flex-wrap">
+              <span className="text-[11px] uppercase tracking-wide text-neutral-500">
+                {t.teamRolesLabel}
+              </span>
               {u.team_memberships.map((tm) => (
                 <div key={tm.team_id} className="flex items-center gap-1">
                   <Link
@@ -362,6 +469,16 @@ const UserRow = memo(function UserRow({
                   >
                     {tm.team_name}
                   </Link>
+                  {/* Rôle d'ÉQUIPE (team_members.role) — lecture seule ici, il
+                      s'édite sur la fiche équipe. Sans rapport avec le staff. */}
+                  <span
+                    title={t.teamRoleBadgeTitle}
+                    className={`px-1.5 py-0.5 rounded border text-xs font-medium ${teamRoleColor(
+                      tm.role
+                    )}`}
+                  >
+                    {teamRoleLabel(t, tm.role)}
+                  </span>
                   {tm.battle_tag ? (
                     <>
                       <button
@@ -471,15 +588,13 @@ const UserRow = memo(function UserRow({
           aria-label={format(t.roleSelectAria, { name })}
           className="px-3 py-1.5 rounded-lg bg-white/[0.06] border border-white/10 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/70 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {roleOptionsFor(u.role).map((r) => {
-            const grantable =
-              r === (u.role || 'member') || canGrantRole(staffRole, r);
-            return (
-              <option key={r} value={r} disabled={!grantable}>
-                {roleLabel(t, r)}
-              </option>
-            );
-          })}
+          <RoleOptionGroups
+            t={t}
+            currentRole={u.role}
+            isGrantable={(r) =>
+              r === (u.role || 'member') || canGrantRole(staffRole, r)
+            }
+          />
         </select>
 
         <button
@@ -980,7 +1095,8 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
         'id',
         'email',
         'display_name',
-        'role',
+        'account_role',
+        'role_scope',
         'created_at',
         'last_sign_in_at',
         'teams',
@@ -993,9 +1109,12 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
             u.email || '',
             u.display_name || '',
             u.role || '',
+            isStaffRoleValue(u.role) ? 'staff' : 'community',
             u.created_at || '',
             u.last_sign_in_at || '',
-            (u.team_memberships || []).map((tm) => tm.team_name).join('; '),
+            (u.team_memberships || [])
+              .map((tm) => `${tm.team_name} (${tm.role || '—'})`)
+              .join('; '),
           ]
             .map((c) => csvCell(String(c)))
             .join(',')
@@ -1132,21 +1251,28 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
               </div>
 
               <div className="min-w-[160px]">
-                <label className="block text-sm text-neutral-300 mb-1.5">
-                  {t.roleLabel}
+                <label
+                  className="block text-sm text-neutral-300 mb-1.5"
+                  htmlFor="role-filter"
+                >
+                  {t.accountRoleLabel}
                 </label>
                 <select
+                  id="role-filter"
+                  aria-describedby="role-filter-hint"
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-950/50 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/70"
                   value={roleFilter || ''}
                   onChange={(e) => setRoleFilter(e.target.value || null)}
                 >
                   <option value="">{t.allRoles}</option>
-                  {ROLES.map((r) => (
-                    <option key={r} value={r}>
-                      {roleLabel(t, r)}
-                    </option>
-                  ))}
+                  <RoleOptionGroups t={t} />
                 </select>
+                <p
+                  id="role-filter-hint"
+                  className="mt-1 text-xs text-neutral-500"
+                >
+                  {t.roleFilterHint}
+                </p>
               </div>
 
               <div className="min-w-[170px]">
@@ -1256,15 +1382,10 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
                       className="px-3 py-1.5 rounded-lg bg-white/[0.06] border border-white/10 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/70 disabled:opacity-50"
                     >
                       <option value="">{t.bulkRolePlaceholder}</option>
-                      {ROLES.map((r) => (
-                        <option
-                          key={r}
-                          value={r}
-                          disabled={!canGrantRole(staff.role, r)}
-                        >
-                          {roleLabel(t, r)}
-                        </option>
-                      ))}
+                      <RoleOptionGroups
+                        t={t}
+                        isGrantable={(r) => canGrantRole(staff.role, r)}
+                      />
                     </select>
                     <button
                       type="button"
