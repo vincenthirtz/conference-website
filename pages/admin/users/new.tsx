@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -14,28 +14,26 @@ import {
   type TeamRole,
 } from '@/utils/teamRoles';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
-import { roleRequiresBattleTag } from '@/utils/teams/roleKind';
+import {
+  roleRequiresBattleTag,
+  BATTLE_TAG_REGEX,
+} from '@/utils/teams/roleKind';
 
 import { logger } from '../../../utils/logger';
 import nsAdminUsersNew from '@/lib/i18n/locales/admin-fr/adminUsersNew';
 
 type Dict = typeof nsAdminUsersNew.fr;
-type StaffShape = {
-  id: string;
-  role: string;
-  display_name: string | null;
-};
 
-type StaffProps = {
-  staff: StaffShape;
+type PageProps = {
   teamRoles: TeamRole[];
 };
 
 type CreateUserResponse = {
   userId: string;
   email: string;
-  tempPassword?: string;
   passwordSentByEmail?: boolean;
+  /** Rôle staff réellement accordé par l'API (row `staff` créée), sinon null. */
+  staffRoleGranted?: string | null;
 };
 
 type TeamOption = {
@@ -54,14 +52,33 @@ type AddMemberResponse = {
 
 const ROLES = ['member', 'player', 'caster', 'admin', 'owner'];
 
+/**
+ * Rôles qui ouvrent le back-office : ils déclenchent la création d'une row
+ * `staff` côté API. Copie CLIENT de `STAFF_ROLES` (utils/staff.ts) — importer
+ * ce module ici embarquerait le client Supabase service-role dans le bundle.
+ */
+const STAFF_LIKE_ROLES = ['caster', 'admin', 'owner'];
+
+/** Codes d'erreur stables renvoyés par POST /api/admin/users. */
+const ERROR_CODE_KEYS: Record<string, keyof Dict> = {
+  invalid_email: 'errInvalidEmail',
+  email_exists: 'errEmailExists',
+  weak_password: 'errWeakPassword',
+  invalid_role: 'errInvalidRole',
+  role_forbidden: 'errRoleForbidden',
+};
+
+const MIN_PASSWORD_LENGTH = 6;
+
+const INPUT_CLASS =
+  'w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500';
+
 function roleLabel(t: Dict, role: string) {
   switch (role) {
     case 'owner':
       return t.roleOwner;
     case 'admin':
       return t.roleAdmin;
-    case 'manager':
-      return t.roleManager;
     case 'caster':
       return t.roleCaster;
     case 'player':
@@ -83,7 +100,7 @@ export const getServerSideProps = withStaffPage<{ teamRoles: TeamRole[] }>(
   }
 );
 
-function AdminCreateUserPage({ staff, teamRoles }: StaffProps) {
+function AdminCreateUserPage({ teamRoles }: PageProps) {
   const t = useAdminT(nsAdminUsersNew);
   const router = useRouter();
   const { addToast } = useToast();
@@ -110,24 +127,34 @@ function AdminCreateUserPage({ staff, teamRoles }: StaffProps) {
 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [teamsError, setTeamsError] = useState<string | null>(null);
+  const [resending, setResending] = useState(false);
   const [success, setSuccess] = useState<{
     user: CreateUserResponse;
     teamAssignment?: AddMemberResponse;
   } | null>(null);
 
+  // Enchaîner plusieurs créations est le cas d'usage courant (import d'un
+  // roster à la main) : on redonne le focus au champ email après chaque succès.
+  const emailInputRef = useRef<HTMLInputElement>(null);
+
   const loadTeams = useCallback(async () => {
     setLoadingTeams(true);
+    setTeamsError(null);
     try {
       const res = await adminFetch('/api/admin/teams?limit=200&includeTotal=0');
-      if (!res.ok) return;
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       setTeams(json.teams || []);
     } catch (e) {
+      // Avant, l'échec était seulement loggé : la liste restait vide sans que
+      // rien ne l'explique, et « Équipe » paraissait simplement dépeuplé.
       logger.error('Failed to load teams list', e);
+      setTeamsError(t.errLoadTeams);
     } finally {
       setLoadingTeams(false);
     }
-  }, [adminFetch]);
+  }, [adminFetch, t]);
 
   useEffect(() => {
     if (assignToTeam && teams.length === 0) {
@@ -153,12 +180,18 @@ function AdminCreateUserPage({ staff, teamRoles }: StaffProps) {
           if (roleRequiresBattleTag(teamRole)) {
             throw new Error(t.errBattleTagRequired);
           }
-        } else {
-          const battleTagRegex = /^[A-Za-z0-9]{2,}#[0-9]{3,6}$/;
-          if (!battleTagRegex.test(battleTag.trim())) {
-            throw new Error(t.errBattleTagInvalid);
-          }
+        } else if (!BATTLE_TAG_REGEX.test(battleTag.trim())) {
+          throw new Error(t.errBattleTagInvalid);
         }
+      }
+
+      // Même plancher que l'API : sans ce garde-fou, un mot de passe trop court
+      // partait en 400 côté serveur (avant : il était silencieusement remplacé
+      // par un aléatoire, et l'admin communiquait un mot de passe inopérant).
+      if (password.trim() && password.trim().length < MIN_PASSWORD_LENGTH) {
+        throw new Error(
+          format(t.errWeakPassword, { min: MIN_PASSWORD_LENGTH })
+        );
       }
 
       // Step 1: Create the user
@@ -174,11 +207,20 @@ function AdminCreateUserPage({ staff, teamRoles }: StaffProps) {
         body: JSON.stringify(userPayload),
       });
 
-      const userJson: CreateUserResponse & { error?: string } =
-        await userRes.json();
+      const userJson: CreateUserResponse & {
+        error?: string;
+        code?: string;
+      } = await userRes.json();
 
       if (!userRes.ok || userJson.error) {
-        throw new Error(userJson.error || t.errCreateUser);
+        // Les cas métier (doublon, mot de passe faible, escalade de rôle)
+        // remontent un `code` stable → message localisé plutôt que la chaîne
+        // technique anglaise du serveur.
+        const key = userJson.code ? ERROR_CODE_KEYS[userJson.code] : undefined;
+        const localized = key
+          ? format(t[key] as string, { min: MIN_PASSWORD_LENGTH })
+          : null;
+        throw new Error(localized || userJson.error || t.errCreateUser);
       }
 
       let teamAssignment: AddMemberResponse | undefined;
@@ -214,12 +256,7 @@ function AdminCreateUserPage({ staff, teamRoles }: StaffProps) {
 
       setSuccess({ user: userJson, teamAssignment });
       addToast(t.toastCreated, 'success');
-      setEmail('');
-      setPassword('');
-      setDisplayName('');
-      setBattleTag('');
-      setSelectedTeamId('');
-      setSetCaptain(false);
+      resetIdentityFields();
     } catch (err: unknown) {
       setErrorMsg((err as Error)?.message ?? t.errUnexpected);
     } finally {
@@ -227,9 +264,64 @@ function AdminCreateUserPage({ staff, teamRoles }: StaffProps) {
     }
   }
 
+  /**
+   * Vide l'identité de la personne créée, mais CONSERVE le contexte de saisie
+   * (équipe sélectionnée, rôles) : on enchaîne le plus souvent plusieurs
+   * membres de la même équipe. `setCaptain` est remis à zéro — il n'y a qu'un
+   * capitaine.
+   */
+  function resetIdentityFields() {
+    setEmail('');
+    setPassword('');
+    setDisplayName('');
+    setBattleTag('');
+    setSetCaptain(false);
+    emailInputRef.current?.focus();
+  }
+
+  /**
+   * Rattrapage quand l'email de bienvenue n'est pas parti : le mot de passe
+   * n'est jamais renvoyé par l'API, donc sans ça le compte reste inaccessible
+   * jusqu'à un détour par /admin/users/manage. Réutilise l'action
+   * `resend_credentials` (réinitialise le mot de passe et renvoie l'email).
+   */
+  async function handleResendCredentials(userId: string) {
+    if (resending) return;
+    setResending(true);
+    try {
+      const res = await adminFetch('/api/admin/users/manage', {
+        method: 'PATCH',
+        body: JSON.stringify({ userId, action: 'resend_credentials' }),
+      });
+      const json = (await res.json()) as {
+        success?: boolean;
+        warning?: string;
+        error?: string;
+      };
+      if (!res.ok || json.error) {
+        throw new Error(json.error || t.errResend);
+      }
+      if (json.warning) {
+        addToast(json.warning, 'warning');
+        return;
+      }
+      addToast(t.toastCredentialsSent, 'success');
+      setSuccess((prev) =>
+        prev
+          ? { ...prev, user: { ...prev.user, passwordSentByEmail: true } }
+          : prev
+      );
+    } catch (err: unknown) {
+      addToast((err as Error)?.message || t.errResend, 'error');
+    } finally {
+      setResending(false);
+    }
+  }
+
   const selectedTeamName = teams.find(
     (team) => team.id === selectedTeamId
   )?.name;
+  const grantsBackOfficeAccess = STAFF_LIKE_ROLES.includes(role);
 
   return (
     <>
@@ -273,7 +365,11 @@ function AdminCreateUserPage({ staff, teamRoles }: StaffProps) {
 
           {/* Success Message */}
           {success && (
-            <div className="mb-6 rounded-xl bg-emerald-900/40 border border-emerald-500/50 px-4 py-4">
+            <div
+              role="status"
+              aria-live="polite"
+              className="mb-6 rounded-xl bg-emerald-900/40 border border-emerald-500/50 px-4 py-4"
+            >
               <div className="flex items-start gap-3">
                 <svg
                   className="w-6 h-6 text-emerald-400 flex-shrink-0 mt-0.5"
@@ -306,7 +402,45 @@ function AdminCreateUserPage({ staff, teamRoles }: StaffProps) {
                         {t.passwordSentByEmail}
                       </p>
                     ) : (
-                      <p className="text-amber-300 text-xs">{t.emailNotSent}</p>
+                      <div className="rounded-lg bg-amber-900/30 border border-amber-500/40 px-3 py-2">
+                        <p className="text-amber-300 text-xs">
+                          {t.emailNotSent}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleResendCredentials(success.user.userId)
+                          }
+                          disabled={resending}
+                          className="mt-2 px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {resending ? t.resending : t.resendCredentials}
+                        </button>
+                      </div>
+                    )}
+                    {success.user.staffRoleGranted ? (
+                      <p className="text-xs text-blue-300">
+                        {format(t.staffAccessGranted, {
+                          role: roleLabel(t, success.user.staffRoleGranted),
+                        })}
+                      </p>
+                    ) : null}
+                  </div>
+
+                  <div className="flex flex-wrap gap-3 text-sm">
+                    <Link
+                      href={`/admin/users/${success.user.userId}/player-view`}
+                      className="text-emerald-400 hover:text-emerald-300 underline underline-offset-2"
+                    >
+                      {t.openUserSpace}
+                    </Link>
+                    {success.teamAssignment && (
+                      <Link
+                        href={`/admin/teams/${success.teamAssignment.teamId}`}
+                        className="text-emerald-400 hover:text-emerald-300 underline underline-offset-2"
+                      >
+                        {t.openTeam}
+                      </Link>
                     )}
                   </div>
 
@@ -325,7 +459,9 @@ function AdminCreateUserPage({ staff, teamRoles }: StaffProps) {
                         <p>
                           {t.roleLabelColon}{' '}
                           <span className="text-white">
-                            {success.teamAssignment.role}
+                            {teamRoles.find(
+                              (r) => r.value === success.teamAssignment?.role
+                            )?.label ?? success.teamAssignment.role}
                           </span>
                         </p>
                         {success.teamAssignment.captainSet && (
@@ -338,7 +474,11 @@ function AdminCreateUserPage({ staff, teamRoles }: StaffProps) {
                   )}
 
                   <button
-                    onClick={() => setSuccess(null)}
+                    type="button"
+                    onClick={() => {
+                      setSuccess(null);
+                      emailInputRef.current?.focus();
+                    }}
                     className="mt-2 text-sm text-emerald-400 hover:text-emerald-300"
                   >
                     {t.createAnother}
@@ -350,7 +490,10 @@ function AdminCreateUserPage({ staff, teamRoles }: StaffProps) {
 
           {/* Error Message */}
           {errorMsg && (
-            <div className="mb-6 rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm flex items-center gap-2">
+            <div
+              role="alert"
+              className="mb-6 rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm flex items-center gap-2"
+            >
               <svg
                 className="w-5 h-5 text-red-400 flex-shrink-0"
                 fill="currentColor"
@@ -377,32 +520,51 @@ function AdminCreateUserPage({ staff, teamRoles }: StaffProps) {
                   </h2>
                   <div className="grid gap-4 md:grid-cols-2">
                     <div>
-                      <label className="block text-sm text-neutral-400 mb-1">
+                      <label
+                        htmlFor="new-user-email"
+                        className="block text-sm text-neutral-400 mb-1"
+                      >
                         {t.emailField} <span className="text-red-400">*</span>
                       </label>
                       <input
+                        id="new-user-email"
+                        ref={emailInputRef}
                         type="email"
                         required
+                        autoComplete="off"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className={INPUT_CLASS}
                         placeholder="player@email.tld"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm text-neutral-400 mb-1">
+                      <label
+                        htmlFor="new-user-password"
+                        className="block text-sm text-neutral-400 mb-1"
+                      >
                         {t.passwordField}
                       </label>
+                      {/* Champ volontairement en clair (l'admin dicte le mot
+                          de passe) : `autoComplete=off` empêche le navigateur
+                          d'y injecter les identifiants enregistrés. */}
                       <input
+                        id="new-user-password"
                         type="text"
+                        autoComplete="off"
+                        minLength={MIN_PASSWORD_LENGTH}
+                        aria-describedby="new-user-password-help"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className={INPUT_CLASS}
                         placeholder={t.passwordPlaceholder}
                       />
-                      <p className="text-xs text-neutral-500 mt-1">
-                        {t.passwordHelp}
+                      <p
+                        id="new-user-password-help"
+                        className="text-xs text-neutral-500 mt-1"
+                      >
+                        {format(t.passwordHelp, { min: MIN_PASSWORD_LENGTH })}
                       </p>
                     </div>
                   </div>
@@ -415,26 +577,39 @@ function AdminCreateUserPage({ staff, teamRoles }: StaffProps) {
                   </h2>
                   <div className="grid gap-4 md:grid-cols-2">
                     <div>
-                      <label className="block text-sm text-neutral-400 mb-1">
+                      <label
+                        htmlFor="new-user-display-name"
+                        className="block text-sm text-neutral-400 mb-1"
+                      >
                         {t.displayNameField}
                       </label>
                       <input
+                        id="new-user-display-name"
                         type="text"
                         value={displayName}
                         onChange={(e) => setDisplayName(e.target.value)}
-                        className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className={INPUT_CLASS}
                         placeholder={t.displayNamePlaceholder}
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm text-neutral-400 mb-1">
+                      <label
+                        htmlFor="new-user-role"
+                        className="block text-sm text-neutral-400 mb-1"
+                      >
                         {t.systemRoleField}
                       </label>
                       <select
+                        id="new-user-role"
                         value={role}
                         onChange={(e) => setRole(e.target.value)}
-                        className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        aria-describedby={
+                          grantsBackOfficeAccess
+                            ? 'new-user-role-warning'
+                            : undefined
+                        }
+                        className={INPUT_CLASS}
                       >
                         {ROLES.map((r) => (
                           <option key={r} value={r}>
@@ -442,6 +617,16 @@ function AdminCreateUserPage({ staff, teamRoles }: StaffProps) {
                           </option>
                         ))}
                       </select>
+                      {grantsBackOfficeAccess && (
+                        <p
+                          id="new-user-role-warning"
+                          className="text-xs text-amber-300 mt-1"
+                        >
+                          {format(t.staffRoleWarning, {
+                            role: roleLabel(t, role),
+                          })}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -467,44 +652,69 @@ function AdminCreateUserPage({ staff, teamRoles }: StaffProps) {
                     <div className="space-y-4 bg-neutral-900/30 rounded-xl p-4 border border-neutral-700/50">
                       <div className="grid gap-4 md:grid-cols-2">
                         <div>
-                          <label className="block text-sm text-neutral-400 mb-1">
+                          <label
+                            htmlFor="new-user-team"
+                            className="block text-sm text-neutral-400 mb-1"
+                          >
                             {t.teamField}{' '}
                             <span className="text-red-400">*</span>
                           </label>
                           <select
+                            id="new-user-team"
                             value={selectedTeamId}
                             onChange={(e) => setSelectedTeamId(e.target.value)}
-                            className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            disabled={loadingTeams}
+                            className={`${INPUT_CLASS} disabled:opacity-60`}
                           >
-                            <option value="">{t.selectTeam}</option>
+                            <option value="">
+                              {loadingTeams ? t.loadingTeams : t.selectTeam}
+                            </option>
                             {teams.map((team) => (
                               <option key={team.id} value={team.id}>
                                 {team.name}
                               </option>
                             ))}
                           </select>
-                          {loadingTeams && (
-                            <p className="text-xs text-neutral-500 mt-1">
-                              {t.loadingTeams}
+                          {teamsError && (
+                            <p
+                              role="alert"
+                              className="text-xs text-red-300 mt-1 flex items-center gap-2"
+                            >
+                              {teamsError}
+                              <button
+                                type="button"
+                                onClick={loadTeams}
+                                className="underline underline-offset-2 hover:text-red-200"
+                              >
+                                {t.retry}
+                              </button>
                             </p>
                           )}
                         </div>
 
                         <div>
-                          <label className="block text-sm text-neutral-400 mb-1">
+                          <label
+                            htmlFor="new-user-battle-tag"
+                            className="block text-sm text-neutral-400 mb-1"
+                          >
                             {t.battleTagField}{' '}
                             {roleRequiresBattleTag(teamRole) && (
                               <span className="text-red-400">*</span>
                             )}
                           </label>
                           <input
+                            id="new-user-battle-tag"
                             type="text"
                             value={battleTag}
                             onChange={(e) => setBattleTag(e.target.value)}
-                            className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            aria-describedby="new-user-battle-tag-help"
+                            className={INPUT_CLASS}
                             placeholder={t.battleTagPlaceholder}
                           />
-                          <p className="text-xs text-neutral-500 mt-1">
+                          <p
+                            id="new-user-battle-tag-help"
+                            className="text-xs text-neutral-500 mt-1"
+                          >
                             {t.battleTagHelp}
                           </p>
                         </div>
@@ -512,13 +722,17 @@ function AdminCreateUserPage({ staff, teamRoles }: StaffProps) {
 
                       <div className="grid gap-4 md:grid-cols-2 items-end">
                         <div>
-                          <label className="block text-sm text-neutral-400 mb-1">
+                          <label
+                            htmlFor="new-user-team-role"
+                            className="block text-sm text-neutral-400 mb-1"
+                          >
                             {t.teamRoleField}
                           </label>
                           <select
+                            id="new-user-team-role"
                             value={teamRole}
                             onChange={(e) => setTeamRole(e.target.value)}
-                            className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className={INPUT_CLASS}
                           >
                             {teamRoles.map((r) => (
                               <option key={r.value} value={r.value}>
@@ -628,6 +842,20 @@ function AdminCreateUserPage({ staff, teamRoles }: StaffProps) {
                     />
                   </svg>
                   {t.infoPasswordGenerated}
+                </li>
+                <li className="flex items-start gap-2">
+                  <svg
+                    className="w-4 h-4 text-emerald-400 mt-0.5 flex-shrink-0"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  {t.infoStaffRole}
                 </li>
               </ul>
 

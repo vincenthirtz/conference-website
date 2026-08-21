@@ -248,6 +248,7 @@ export const STAFF_LOG_ACTION_LABELS: Record<StaffLogAction, string> = {
   checkin_manual_nudge: 'Relance check-in (Discord)',
   // Staff / RBAC
   staff_batch_action: 'Action batch staff',
+  create_user: 'Création de compte',
   update_staff_role: 'Modification rôle staff',
   delete_staff_account: 'Suppression compte staff',
   suspend_user: 'Suspension de compte',

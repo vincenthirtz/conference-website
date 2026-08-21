@@ -89,6 +89,7 @@ export type StaffLogAction =
   | 'checkin_manual_nudge'
   // --- Staff / RBAC ---
   | 'staff_batch_action'
+  | 'create_user'
   | 'update_staff_role'
   | 'delete_staff_account'
   | 'suspend_user'

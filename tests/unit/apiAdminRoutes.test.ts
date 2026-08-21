@@ -2,7 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { StaffMember } from '../../types/staff';
 
 const { sendWelcomeEmail, notifyAnnouncement } = vi.hoisted(() => ({
-  sendWelcomeEmail: vi.fn(async () => undefined),
+  // Contrat réel : ne lève pas, renvoie { success } (cf. utils/email.ts).
+  sendWelcomeEmail: vi.fn(async () => ({ success: true })),
   notifyAnnouncement: vi.fn(async () => undefined),
 }));
 
@@ -157,7 +158,28 @@ describe('POST /api/admin/users', () => {
     expect((res.body as any).passwordSentByEmail).toBe(true);
   });
 
-  it('reports passwordSentByEmail=false when the welcome email fails', async () => {
+  it('reports passwordSentByEmail=false when the provider rejects the send', async () => {
+    // Cas le plus courant : Brevo répond une erreur → { success: false } SANS
+    // lever. L'ancien handler annonçait quand même « email envoyé ».
+    sendWelcomeEmail.mockResolvedValueOnce({
+      success: false,
+      error: 'Brevo 401',
+    } as any);
+    const res = makeRes();
+
+    await adminUsersHandler(
+      makeAuthedReq({
+        method: 'POST',
+        body: { email: 'new@example.com' },
+      }),
+      res
+    );
+
+    expect(res.statusCode).toBe(201);
+    expect((res.body as any).passwordSentByEmail).toBe(false);
+  });
+
+  it('reports passwordSentByEmail=false when the welcome email throws', async () => {
     sendWelcomeEmail.mockRejectedValueOnce(new Error('smtp down'));
     const res = makeRes();
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -173,6 +195,108 @@ describe('POST /api/admin/users', () => {
     consoleSpy.mockRestore();
     expect(res.statusCode).toBe(201);
     expect((res.body as any).passwordSentByEmail).toBe(false);
+  });
+
+  it('returns 409 with code email_exists on a duplicate address', async () => {
+    authCreateUser.mockResolvedValueOnce({
+      data: { user: null as any },
+      error: {
+        status: 422,
+        message: 'A user with this email address has already been registered',
+      } as any,
+    });
+    const res = makeRes();
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    await adminUsersHandler(
+      makeAuthedReq({
+        method: 'POST',
+        body: { email: 'dup@example.com' },
+      }),
+      res
+    );
+
+    consoleSpy.mockRestore();
+    expect(res.statusCode).toBe(409);
+    expect((res.body as any).code).toBe('email_exists');
+  });
+
+  it('rejects an invalid email and a too-short password with 400', async () => {
+    const badEmail = makeRes();
+    await adminUsersHandler(
+      makeAuthedReq({ method: 'POST', body: { email: 'not-an-email' } }),
+      badEmail
+    );
+    expect(badEmail.statusCode).toBe(400);
+    expect((badEmail.body as any).code).toBe('invalid_email');
+
+    const weak = makeRes();
+    await adminUsersHandler(
+      makeAuthedReq({
+        method: 'POST',
+        body: { email: 'ok@example.com', password: '123' },
+      }),
+      weak
+    );
+    expect(weak.statusCode).toBe(400);
+    expect((weak.body as any).code).toBe('weak_password');
+    // Aucun compte ne doit être créé sur une entrée refusée.
+    expect(authCreateUser).not.toHaveBeenCalled();
+  });
+
+  it('creates the matching staff row for a staff role', async () => {
+    store.staff = [makeStaffRow('owner')] as any;
+    const res = makeRes();
+
+    await adminUsersHandler(
+      makeAuthedReq({
+        method: 'POST',
+        body: { email: 'caster@example.com', role: 'caster' },
+      }),
+      res
+    );
+
+    expect(res.statusCode).toBe(201);
+    expect((res.body as any).staffRoleGranted).toBe('caster');
+    // Sans cette row, le rôle « caster » n'ouvrait AUCUN accès back-office :
+    // withStaffRoute lit `staff`, pas user_metadata.
+    const created = (store.staff as any[]).find(
+      (row) => row.auth_user_id === 'user-new'
+    );
+    expect(created?.role).toBe('caster');
+  });
+
+  it('blocks a non-owner from creating an account at or above their own role', async () => {
+    const res = makeRes();
+    await adminUsersHandler(
+      makeAuthedReq({
+        method: 'POST',
+        body: { email: 'owner@example.com', role: 'owner' },
+      }),
+      res
+    );
+
+    expect(res.statusCode).toBe(403);
+    expect((res.body as any).code).toBe('role_forbidden');
+    expect(authCreateUser).not.toHaveBeenCalled();
+  });
+
+  it('writes a create_user entry in the audit log', async () => {
+    const res = makeRes();
+    await adminUsersHandler(
+      makeAuthedReq({
+        method: 'POST',
+        body: { email: 'audited@example.com' },
+      }),
+      res
+    );
+
+    expect(res.statusCode).toBe(201);
+    const logs = (store.staff_logs ?? []) as any[];
+    const entry = logs.find((l) => l.action === 'create_user');
+    expect(entry).toBeTruthy();
+    expect(entry.entity_type).toBe('user');
+    expect(entry.entity_id).toBe('user-new');
   });
 
   it('returns 500 when createUser fails', async () => {
