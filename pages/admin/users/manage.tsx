@@ -1,6 +1,7 @@
-import { memo, useCallback, useEffect, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import {
   withStaffPage,
   STAFF_ROLES,
@@ -58,7 +59,48 @@ type SortField =
   | 'last_sign_in_at';
 type SortDir = 'asc' | 'desc';
 
+/** Axes de tri exposés — miroir de la whitelist du handler GET. */
+const SORT_FIELDS = [
+  'created_at',
+  'display_name',
+  'email',
+  'role',
+  'last_sign_in_at',
+] as const;
+
 export const getServerSideProps = withStaffPage('admin');
+
+/**
+ * État de la vue lu depuis la query string. La page est rendue côté serveur,
+ * donc `router.query` est déjà peuplé au premier rendu client : on peut
+ * initialiser les états directement, sans flash ni second fetch.
+ *
+ * Objectif : un écran filtré/trié/paginé est une URL — partageable dans un fil
+ * de discussion, remise en place par le bouton « précédent » du navigateur.
+ */
+function readViewState(query: Record<string, string | string[] | undefined>) {
+  const one = (v: string | string[] | undefined): string =>
+    Array.isArray(v) ? (v[0] ?? '') : (v ?? '');
+  const sort = one(query.sort);
+  const filters = one(query.filters)
+    .split(',')
+    .map((f) => f.trim())
+    .filter((f): f is QuickFilter =>
+      (QUICK_FILTERS as readonly string[]).includes(f)
+    );
+  const offset = Number.parseInt(one(query.offset), 10);
+  return {
+    search: one(query.search),
+    role: ROLES.includes(one(query.role)) ? one(query.role) : null,
+    filters: Array.from(new Set(filters)),
+    sortField: (SORT_FIELDS as readonly string[]).includes(sort)
+      ? (sort as SortField)
+      : 'created_at',
+    sortDir:
+      one(query.dir) === 'asc' ? ('asc' as SortDir) : ('desc' as SortDir),
+    offset: Number.isFinite(offset) && offset > 0 ? offset : 0,
+  };
+}
 
 /* --------------------------------------------------------------------------
  * Deux dimensions de rôles, à ne surtout pas confondre (cf. l'API
@@ -245,9 +287,21 @@ function formatRelative(d: string | null, lang: string): string | null {
   }
 }
 
-/** Échappe une cellule CSV (RFC 4180). */
+/**
+ * Échappe une cellule CSV (RFC 4180).
+ *
+ * Écrit sans littéral regex À DESSEIN : le garde-fou anti-français en dur
+ * (tests/unit/noHardcodedFrench.test.ts) scanne le source caractère par
+ * caractère sans connaître les regex, si bien qu'un guillemet à l'intérieur
+ * d'une regex — `/["]/` — lui ouvrait une chaîne fantôme qui avalait TOUT le
+ * reste du fichier : plus aucun texte n'y était vérifié.
+ */
+const CSV_SPECIALS = ['"', ',', '\r', '\n'];
+
 function csvCell(v: string): string {
-  if (/[",\r\n]/.test(v)) return `"${v.replace(/"/g, '""')}"`;
+  if (CSV_SPECIALS.some((ch) => v.includes(ch))) {
+    return `"${v.split('"').join('""')}"`;
+  }
   return v;
 }
 
@@ -358,6 +412,78 @@ function isRowLocked(targetRole: string | null, staffRole: string): boolean {
 }
 
 /* -------------------------------------------------------------------------- */
+/* En-tête de tri — l'affordance « je clique sur la colonne pour trier »       */
+/* remplace les listes déroulantes de tri du bandeau de filtres.              */
+/* -------------------------------------------------------------------------- */
+
+/** Sens par défaut au premier clic : récent d'abord pour les dates, A→Z pour
+ *  le texte. Recliquer sur l'axe actif inverse le sens. */
+const DEFAULT_DIR: Record<SortField, SortDir> = {
+  created_at: 'desc',
+  last_sign_in_at: 'desc',
+  display_name: 'asc',
+  email: 'asc',
+  role: 'asc',
+};
+
+function SortHeader({
+  t,
+  field,
+  label,
+  sortField,
+  sortDir,
+  onSort,
+}: {
+  t: Dict;
+  field: SortField;
+  label: string;
+  sortField: SortField;
+  sortDir: SortDir;
+  onSort: (field: SortField) => void;
+}) {
+  const active = sortField === field;
+  return (
+    <button
+      type="button"
+      onClick={() => onSort(field)}
+      aria-pressed={active}
+      title={
+        active
+          ? sortDir === 'asc'
+            ? t.sortAscTitle
+            : t.sortDescTitle
+          : undefined
+      }
+      className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/60 ${
+        active
+          ? 'bg-white/10 text-white'
+          : 'text-neutral-400 hover:text-white hover:bg-white/[0.06]'
+      }`}
+    >
+      {label}
+      {active && (
+        <svg
+          className={`w-3 h-3 transition-transform ${
+            sortDir === 'asc' ? 'rotate-180' : ''
+          }`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M19 9l-7 7-7-7"
+          />
+        </svg>
+      )}
+    </button>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
 /* Ligne utilisateur — mémoïsée : ne re-render que si ses props changent (une  */
 /* frappe dans une modale ne repeint plus toute la liste).                     */
 /* -------------------------------------------------------------------------- */
@@ -372,7 +498,7 @@ type UserRowProps = {
   updating: boolean;
   resending: boolean;
   selected: boolean;
-  onToggleSelect: (id: string) => void;
+  onToggleSelect: (user: UserLite) => void;
   onChangeRole: (u: UserLite, role: string) => void;
   onOpenBattleTag: (
     userId: string,
@@ -414,7 +540,7 @@ const UserRow = memo(function UserRow({
       <input
         type="checkbox"
         checked={selected}
-        onChange={() => onToggleSelect(u.id)}
+        onChange={() => onToggleSelect(u)}
         disabled={isSelf}
         title={isSelf ? t.selfRowTitle : undefined}
         aria-label={format(t.selectRowAria, { name })}
@@ -637,11 +763,7 @@ const UserRow = memo(function UserRow({
           onChange={(e) => onChangeRole(u, e.target.value)}
           disabled={updating || targetLocked}
           title={
-            isSelf
-              ? t.selfRowTitle
-              : targetLocked
-                ? t.lockedTitle
-                : undefined
+            isSelf ? t.selfRowTitle : targetLocked ? t.lockedTitle : undefined
           }
           aria-label={format(t.roleSelectAria, { name })}
           className="px-3 py-1.5 rounded-lg bg-white/[0.06] border border-white/10 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/70 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -735,16 +857,34 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
   const { lang } = useLang();
   const [total, setTotal] = useState<number | null>(null);
 
+  const router = useRouter();
+  // Lu UNE fois : ensuite c'est l'état React qui pilote l'URL, pas l'inverse
+  // (sinon chaque replace() relancerait une réinitialisation).
+  const [initialView] = useState(() => readViewState(router.query));
+
   // filters + tri
-  const [search, setSearch] = useState('');
-  const [roleFilter, setRoleFilter] = useState<string | null>(null);
-  const [quickFilters, setQuickFilters] = useState<QuickFilter[]>([]);
-  const [sortField, setSortField] = useState<SortField>('created_at');
-  const [sortDir, setSortDir] = useState<SortDir>('desc');
+  const [search, setSearch] = useState(initialView.search);
+  const [roleFilter, setRoleFilter] = useState<string | null>(initialView.role);
+  const [quickFilters, setQuickFilters] = useState<QuickFilter[]>(
+    initialView.filters
+  );
+  const [sortField, setSortField] = useState<SortField>(initialView.sortField);
+  const [sortDir, setSortDir] = useState<SortDir>(initialView.sortDir);
 
   const [updating, setUpdating] = useState<string | null>(null);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  /**
+   * Sélection = Map id → ligne, et non un simple Set d'ids : les actions de
+   * masse doivent pouvoir porter sur des lignes cochées à la page 1 alors
+   * qu'on est page 3 (le tableau `users` ne contient que la page courante).
+   */
+  const [selectedRows, setSelectedRows] = useState<Map<string, UserLite>>(
+    new Map()
+  );
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState<{
+    done: number;
+    total: number;
+  } | null>(null);
   const [exporting, setExporting] = useState(false);
 
   /** Compte auth de l'appelant : sa ligne est exclue de tout ce que l'API
@@ -767,6 +907,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
     error: loadError,
   } = useAdminResource<UserLite, ApiResponse>('/api/admin/users/manage', {
     limit: 20,
+    initialOffset: initialView.offset,
     includeTotal: false,
     query: search,
     params: {
@@ -779,16 +920,49 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
     onData: (res) => setTotal(res.total ?? res.items?.length ?? 0),
   });
 
-  // Filtre rôle / tri repartent de la première page.
+  // Filtre rôle / tri repartent de la première page — sauf au montage, où
+  // l'offset vient de l'URL et doit être respecté.
+  const mountedRef = useRef(false);
   useEffect(() => {
+    if (!mountedRef.current) {
+      mountedRef.current = true;
+      return;
+    }
     resetOffset();
   }, [roleFilter, quickFilters, sortField, sortDir, resetOffset]);
 
-  // La sélection est scopée à la page affichée : on la vide dès que le jeu de
-  // lignes change (page, recherche, filtre, tri).
+  // La sélection survit à la pagination (cf. selectedRows) mais pas à un
+  // changement de jeu de résultats : garder des lignes cochées qui ne
+  // correspondent plus au filtre affiché serait un piège.
   useEffect(() => {
-    setSelected(new Set());
-  }, [offset, search, roleFilter, quickFilters, sortField, sortDir]);
+    setSelectedRows(new Map());
+  }, [search, roleFilter, quickFilters, sortField, sortDir]);
+
+  // État de la vue → URL. `replace` et non `push` : on n'empile pas une entrée
+  // d'historique par frappe au clavier (le bouton « précédent » doit sortir de
+  // la page, pas rejouer douze filtres). Débouncé pour la même raison que la
+  // recherche : une réécriture d'URL par caractère saisi est inutile.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const params = new URLSearchParams();
+      if (search) params.set('search', search);
+      if (roleFilter) params.set('role', roleFilter);
+      if (quickFilters.length) params.set('filters', quickFilters.join(','));
+      if (sortField !== 'created_at') params.set('sort', sortField);
+      if (sortDir !== 'desc') params.set('dir', sortDir);
+      if (offset > 0) params.set('offset', String(offset));
+      const qs = params.toString();
+      void router.replace(
+        qs ? `${router.pathname}?${qs}` : router.pathname,
+        undefined,
+        { shallow: true }
+      );
+    }, 300);
+    return () => clearTimeout(timer);
+    // `router` est volontairement hors deps : il change d'identité à chaque
+    // navigation et relancerait l'effet en boucle.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, roleFilter, quickFilters, sortField, sortDir, offset]);
 
   useEffect(() => {
     if (loadError) addToast(loadError, 'error');
@@ -811,12 +985,33 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
 
-  // Delete confirmation
+  // Delete confirmation — la suppression est irréversible (compte + rosters
+  // + accès staff) : on demande de recopier l'identifiant du compte, comme
+  // pour n'importe quelle suppression destructive.
   const [deletingUser, setDeletingUser] = useState<UserLite | null>(null);
+  const [deleteConfirmInput, setDeleteConfirmInput] = useState('');
   const [deleteLoading, setDeleteLoading] = useState(false);
+
+  const openDeleteUser = useCallback((user: UserLite) => {
+    setDeletingUser(user);
+    setDeleteConfirmInput('');
+  }, []);
 
   // Resend credentials
   const [resendingUser, setResendingUser] = useState<string | null>(null);
+
+  const handleSort = useCallback((field: SortField) => {
+    setSortField((prevField) => {
+      setSortDir((prevDir) =>
+        prevField === field
+          ? prevDir === 'asc'
+            ? 'desc'
+            : 'asc'
+          : DEFAULT_DIR[field]
+      );
+      return field;
+    });
+  }, []);
 
   const toggleQuickFilter = useCallback((f: QuickFilter) => {
     setQuickFilters((prev) =>
@@ -1047,11 +1242,11 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
     }
   };
 
-  const toggleSelect = useCallback((id: string) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+  const toggleSelect = useCallback((user: UserLite) => {
+    setSelectedRows((prev) => {
+      const next = new Map(prev);
+      if (next.has(user.id)) next.delete(user.id);
+      else next.set(user.id, user);
       return next;
     });
   }, []);
@@ -1062,45 +1257,76 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
 
   const allPageSelected =
     selectableUsers.length > 0 &&
-    selectableUsers.every((u) => selected.has(u.id));
+    selectableUsers.every((u) => selectedRows.has(u.id));
 
   const toggleSelectAll = () => {
-    setSelected((prev) => {
+    setSelectedRows((prev) => {
+      const next = new Map(prev);
       if (
         selectableUsers.length > 0 &&
         selectableUsers.every((u) => prev.has(u.id))
       ) {
-        const next = new Set(prev);
         selectableUsers.forEach((u) => next.delete(u.id));
         return next;
       }
-      const next = new Set(prev);
-      selectableUsers.forEach((u) => next.add(u.id));
+      selectableUsers.forEach((u) => next.set(u.id, u));
       return next;
     });
   };
 
   // Enchaîne des mutations unitaires sur la sélection (pas d'endpoint bulk
-  // côté API) et renvoie le décompte ok / échecs.
+  // côté API), en publiant l'avancement : sur 30 comptes la boucle dure
+  // plusieurs secondes, un simple spinner ne dit pas où on en est. Renvoie le
+  // décompte ok / échecs + les libellés qui ont échoué (savoir COMBIEN ont
+  // échoué sans savoir LESQUELS n'aide personne).
   const runBulk = async (
     targets: UserLite[],
     fn: (u: UserLite) => Promise<void>
   ) => {
     let ok = 0;
-    let failed = 0;
+    const failures: string[] = [];
+    setBulkProgress({ done: 0, total: targets.length });
     for (const u of targets) {
       try {
         await fn(u);
         ok += 1;
       } catch {
-        failed += 1;
+        failures.push(u.display_name || u.email || u.id);
       }
+      setBulkProgress((prev) =>
+        prev ? { ...prev, done: prev.done + 1 } : prev
+      );
     }
-    return { ok, failed };
+    setBulkProgress(null);
+    return { ok, failed: failures.length, failures };
+  };
+
+  /** Toast de fin d'action de masse — nomme les échecs (3 max) s'il y en a. */
+  const reportBulk = (
+    res: { ok: number; failed: number; failures: string[] },
+    skipped: number
+  ) => {
+    addToast(
+      format(t.toastBulkDone, {
+        ok: res.ok,
+        skipped,
+        failed: res.failed,
+      }),
+      res.failed > 0 ? 'warning' : 'success'
+    );
+    if (res.failures.length) {
+      addToast(
+        format(t.bulkFailures, {
+          names: res.failures.slice(0, 3).join(', '),
+          more: res.failures.length > 3 ? ` (+${res.failures.length - 3})` : '',
+        }),
+        'error'
+      );
+    }
   };
 
   const bulkChangeRole = async (role: string) => {
-    const targets = users.filter((u) => selected.has(u.id));
+    const targets = Array.from(selectedRows.values());
     const eligible = targets.filter(
       (u) =>
         u.id !== selfId &&
@@ -1129,11 +1355,8 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
           body: JSON.stringify({ userId: u.id, role }),
         })
       );
-      addToast(
-        format(t.toastBulkDone, { ok: res.ok, skipped, failed: res.failed }),
-        res.failed > 0 ? 'warning' : 'success'
-      );
-      setSelected(new Set());
+      reportBulk(res, skipped);
+      setSelectedRows(new Map());
       refresh();
     } finally {
       setBulkBusy(false);
@@ -1141,7 +1364,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
   };
 
   const bulkDelete = async () => {
-    const targets = users.filter((u) => selected.has(u.id));
+    const targets = Array.from(selectedRows.values());
     const eligible = targets.filter(
       (u) => u.id !== selfId && !isRowLocked(u.role, staff.role)
     );
@@ -1166,11 +1389,8 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
           body: JSON.stringify({ userId: u.id }),
         })
       );
-      addToast(
-        format(t.toastBulkDone, { ok: res.ok, skipped, failed: res.failed }),
-        res.failed > 0 ? 'warning' : 'success'
-      );
-      setSelected(new Set());
+      reportBulk(res, skipped);
+      setSelectedRows(new Map());
       refresh();
     } finally {
       setBulkBusy(false);
@@ -1267,7 +1487,14 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
     }
   };
 
-  const selectedCount = selected.size;
+  const selectedCount = selectedRows.size;
+
+  /** Ce que l'utilisateur doit recopier pour confirmer la suppression. */
+  const deleteConfirmValue =
+    deletingUser?.email || deletingUser?.display_name || deletingUser?.id || '';
+  const deleteConfirmed =
+    deleteConfirmInput.trim().toLowerCase() ===
+    deleteConfirmValue.trim().toLowerCase();
 
   return (
     <>
@@ -1407,74 +1634,29 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
                 </p>
               </div>
 
-              <div className="min-w-[170px]">
-                <label className="block text-sm text-neutral-300 mb-1.5">
-                  {t.sortLabel}
-                </label>
-                <div className="flex gap-2">
-                  <select
-                    className="w-full px-3 py-2.5 rounded-xl bg-neutral-950/50 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/70"
-                    value={sortField}
-                    onChange={(e) => setSortField(e.target.value as SortField)}
-                  >
-                    <option value="created_at">{t.sortCreatedAt}</option>
-                    <option value="display_name">{t.sortName}</option>
-                    <option value="email">{t.sortEmail}</option>
-                    <option value="role">{t.sortRole}</option>
-                    <option value="last_sign_in_at">{t.sortLastSignIn}</option>
-                  </select>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
-                    }
-                    title={sortDir === 'asc' ? t.sortAscTitle : t.sortDescTitle}
-                    aria-label={
-                      sortDir === 'asc' ? t.sortAscTitle : t.sortDescTitle
-                    }
-                    className="px-3 rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] transition-colors flex-shrink-0"
-                  >
-                    <svg
-                      className={`w-4 h-4 transition-transform ${
-                        sortDir === 'asc' ? 'rotate-180' : ''
-                      }`}
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                      aria-hidden="true"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 9l-7 7-7-7"
-                      />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-sm font-semibold transition-colors flex items-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/60"
-              >
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                  />
-                </svg>
-                {t.searchButton}
-              </button>
+              {/* Le tri a migré vers les en-têtes cliquables de la liste
+                  (ci-dessous) : deux listes déroulantes pour trier, c'est un
+                  détour là où l'affordance naturelle est la colonne. */}
             </form>
+
+            {/* Il n'y a pas de bouton « Rechercher » : la saisie est envoyée
+                automatiquement (debounce 300 ms). Cette zone dit ce qui se
+                passe — et l'annonce aux lecteurs d'écran, qui autrement ne
+                voient rien bouger. */}
+            <p
+              role="status"
+              aria-live="polite"
+              className="mt-3 text-xs text-neutral-500"
+            >
+              {loading
+                ? t.searchingStatus
+                : total !== null
+                  ? format(
+                      total > 1 ? t.resultsStatus_other : t.resultsStatus_one,
+                      { count: total }
+                    )
+                  : ''}
+            </p>
 
             {/* Filtres rapides — cumulables, appliqués côté SQL (donc cohérents
                 avec la pagination et le total). « Identité à vérifier » rend
@@ -1525,6 +1707,32 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
 
           {/* Users List */}
           <section className="rounded-2xl border border-white/10 bg-white/[0.03] overflow-hidden">
+            {/* Barre de tri (remplace les selects « Trier par ») */}
+            <div className="flex flex-wrap items-center gap-1 border-b border-white/5 px-4 py-2">
+              <span className="mr-1 text-[11px] uppercase tracking-wide text-neutral-500">
+                {t.sortLabel}
+              </span>
+              {(
+                [
+                  ['display_name', t.sortName],
+                  ['email', t.sortEmail],
+                  ['role', t.sortRole],
+                  ['created_at', t.sortCreatedAt],
+                  ['last_sign_in_at', t.sortLastSignIn],
+                ] as Array<[SortField, string]>
+              ).map(([field, label]) => (
+                <SortHeader
+                  key={field}
+                  t={t}
+                  field={field}
+                  label={label}
+                  sortField={sortField}
+                  sortDir={sortDir}
+                  onSort={handleSort}
+                />
+              ))}
+            </div>
+
             {/* Barre de sélection */}
             {!loading && users.length > 0 && (
               <div className="flex flex-wrap items-center gap-3 border-b border-white/5 px-4 py-3">
@@ -1545,6 +1753,23 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
                       )
                     : t.selectAllAria}
                 </label>
+                {selectedCount > 0 && (
+                  <span className="text-xs text-neutral-500">
+                    {t.selectionAcrossPages}
+                  </span>
+                )}
+                {bulkProgress && (
+                  <span
+                    role="status"
+                    aria-live="polite"
+                    className="text-xs font-medium text-neutral-300"
+                  >
+                    {format(t.bulkProgress, {
+                      done: bulkProgress.done,
+                      total: bulkProgress.total,
+                    })}
+                  </span>
+                )}
 
                 {selectedCount > 0 && (
                   <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
@@ -1578,7 +1803,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
                     </button>
                     <button
                       type="button"
-                      onClick={() => setSelected(new Set())}
+                      onClick={() => setSelectedRows(new Map())}
                       disabled={bulkBusy}
                       className="px-3 py-1.5 rounded-lg border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-sm font-medium transition-colors disabled:opacity-50"
                     >
@@ -1638,13 +1863,13 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
                     isSelf={u.id === selfId}
                     updating={updating === u.id}
                     resending={resendingUser === u.id}
-                    selected={selected.has(u.id)}
+                    selected={selectedRows.has(u.id)}
                     onToggleSelect={toggleSelect}
                     onChangeRole={changeRole}
                     onOpenBattleTag={openBattleTagEdit}
                     onResend={resendCredentials}
                     onEdit={openEditUser}
-                    onDelete={setDeletingUser}
+                    onDelete={openDeleteUser}
                   />
                 ))}
               </ul>
@@ -1762,7 +1987,10 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
       {/* Delete Confirmation Modal */}
       <Modal
         open={Boolean(deletingUser)}
-        onClose={() => setDeletingUser(null)}
+        onClose={() => {
+          setDeletingUser(null);
+          setDeleteConfirmInput('');
+        }}
         title={
           <h3 className="text-lg font-semibold text-red-400">
             {t.deleteModalTitle}
@@ -1778,7 +2006,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
             </button>
             <button
               onClick={deleteUser}
-              disabled={deleteLoading}
+              disabled={deleteLoading || !deleteConfirmed}
               className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {deleteLoading && (
@@ -1798,7 +2026,23 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
             {deletingUser?.email || deletingUser?.id}
           </p>
         </div>
-        <p className="text-xs text-red-300">{t.deleteWarning}</p>
+        <p className="text-xs text-red-300 mb-4">{t.deleteWarning}</p>
+
+        <label
+          className="block text-sm text-neutral-300 mb-1.5"
+          htmlFor="delete-confirm"
+        >
+          {format(t.deleteConfirmPrompt, { value: deleteConfirmValue })}
+        </label>
+        <input
+          id="delete-confirm"
+          type="text"
+          autoComplete="off"
+          value={deleteConfirmInput}
+          onChange={(e) => setDeleteConfirmInput(e.target.value)}
+          className="w-full px-3 py-2.5 rounded-xl bg-neutral-950/50 border border-white/10 text-white placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-red-500/70 text-sm font-mono"
+          placeholder={deleteConfirmValue}
+        />
       </Modal>
 
       {/* Battle Tag Edit Modal */}

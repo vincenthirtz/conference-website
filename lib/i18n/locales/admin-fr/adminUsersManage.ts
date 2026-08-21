@@ -141,6 +141,13 @@ export default adminNs('adminUsersManage', {
   selfRowTitle:
     "C'est ton propre compte : changer son rôle ou le supprimer est refusé par l'API.",
   battleTagInvalid: 'BattleTag invalide — format attendu : Pseudo#1234.',
+  searchingStatus: 'Recherche…',
+  resultsStatus_one: '{count} résultat',
+  resultsStatus_other: '{count} résultats',
+  selectionAcrossPages: 'conservée entre les pages',
+  bulkProgress: '{done}/{total}',
+  bulkFailures: 'Échecs : {names}{more}',
+  deleteConfirmPrompt: 'Pour confirmer, recopie « {value} » :',
   quickFiltersLabel: 'Filtres rapides :',
   quickFiltersClear: 'Réinitialiser',
   quickFiltersHint:

@@ -2309,7 +2309,14 @@
     "filterNeverSignedIn": "Never signed in",
     "filterInactive6m": "Inactive > 6 months",
     "filterStaff": "Staff",
-    "filterCommunity": "Community"
+    "filterCommunity": "Community",
+    "searchingStatus": "Searching…",
+    "resultsStatus_one": "{count} result",
+    "resultsStatus_other": "{count} results",
+    "selectionAcrossPages": "kept across pages",
+    "bulkProgress": "{done}/{total}",
+    "bulkFailures": "Failed: {names}{more}",
+    "deleteConfirmPrompt": "To confirm, retype “{value}”:"
   },
   "adminUsersNew": {
     "roleOwner": "Owner",
