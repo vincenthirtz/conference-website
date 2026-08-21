@@ -583,6 +583,10 @@ export function withStaffPage<
       const baseProps = {
         staff: {
           id: staffCtx.staff.id,
+          // id du compte AUTH (≠ staff.id) : permet aux pages de reconnaître
+          // « ma » ligne dans une liste d'utilisateurs et de neutraliser les
+          // actions que l'API refuse de toute façon sur soi-même.
+          auth_user_id: staffCtx.user.id,
           role: staffCtx.role,
           display_name: staffCtx.staff.display_name,
         },

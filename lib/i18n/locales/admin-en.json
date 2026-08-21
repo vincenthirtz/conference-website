@@ -2296,7 +2296,11 @@
     "confirmBulkDeleteSubtitle": "Irreversible. Protected accounts (owner/admin) and your own will be skipped if you are not an owner.",
     "confirmBulkBtn": "Confirm",
     "bulkNoEligible": "No eligible account in the selection.",
-    "toastBulkDone": "{ok} done · {skipped} skipped · {failed} failed"
+    "toastBulkDone": "{ok} done · {skipped} skipped · {failed} failed",
+    "selfBadge": "You",
+    "selfRowTitle": "This is your own account: changing its role or deleting it is rejected by the API.",
+    "battleTagInvalid": "Invalid BattleTag — expected format: Name#1234.",
+    "exportTruncated": "Partial export: {count} row(s) exported before the request limit was hit."
   },
   "adminUsersNew": {
     "roleOwner": "Owner",

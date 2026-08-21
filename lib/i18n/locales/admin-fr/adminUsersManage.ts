@@ -137,4 +137,10 @@ export default adminNs('adminUsersManage', {
   confirmBulkBtn: 'Confirmer',
   bulkNoEligible: 'Aucun compte éligible dans la sélection.',
   toastBulkDone: '{ok} traité(s) · {skipped} ignoré(s) · {failed} échec(s)',
+  selfBadge: 'Vous',
+  selfRowTitle:
+    "C'est ton propre compte : changer son rôle ou le supprimer est refusé par l'API.",
+  battleTagInvalid: 'BattleTag invalide — format attendu : Pseudo#1234.',
+  exportTruncated:
+    'Export partiel : {count} ligne(s) exportée(s) avant que la limite de requêtes ne soit atteinte.',
 });

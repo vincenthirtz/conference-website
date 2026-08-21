@@ -8,7 +8,7 @@ import {
   type StaffRole,
 } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';
 import { useAdminResource } from '@/hooks/useAdminResource';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import Modal from '@/components/admin/Modal';
@@ -20,6 +20,8 @@ import nsAdminUsersManage from '@/lib/i18n/locales/admin-fr/adminUsersManage';
 type Dict = typeof nsAdminUsersManage.fr;
 type StaffShape = {
   id: string;
+  /** Compte auth de l'appelant — sert à repérer « ma » ligne (cf. isSelf). */
+  auth_user_id: string;
   role: string;
   display_name: string | null;
 };
@@ -78,6 +80,9 @@ const COMMUNITY_ROLES = ['member', 'player'];
 const STAFF_ROLE_OPTIONS = ['caster', 'admin', 'owner'];
 /** Union à plat — utilisée pour le filtre et les gardes existantes. */
 const ROLES = [...COMMUNITY_ROLES, ...STAFF_ROLE_OPTIONS];
+
+/** Miroir EXACT de la validation serveur (pages/api/admin/users/manage.ts). */
+const BATTLE_TAG_RE = /^[A-Za-z0-9]{2,}#[0-9]{3,6}$/;
 
 function isStaffRoleValue(role: string | null): boolean {
   return STAFF_ROLE_OPTIONS.includes((role || '').toLowerCase());
@@ -330,6 +335,8 @@ type UserRowProps = {
   t: Dict;
   lang: string;
   staffRole: string;
+  /** La ligne est le compte de l'appelant : l'API refuse rôle + suppression. */
+  isSelf: boolean;
   updating: boolean;
   resending: boolean;
   selected: boolean;
@@ -351,6 +358,7 @@ const UserRow = memo(function UserRow({
   t,
   lang,
   staffRole,
+  isSelf,
   updating,
   resending,
   selected,
@@ -362,7 +370,9 @@ const UserRow = memo(function UserRow({
   onDelete,
 }: UserRowProps) {
   const name = u.display_name || u.email || t.defaultUser;
-  const targetLocked = isRowLocked(u.role, staffRole);
+  // Deux verrous distincts : cible protégée (owner/admin vu par un non-owner)
+  // et cible = soi-même (l'API renvoie 403 sur le rôle et la suppression).
+  const targetLocked = isRowLocked(u.role, staffRole) || isSelf;
   const createdRel = formatRelative(u.created_at, lang);
   const lastRel = formatRelative(u.last_sign_in_at, lang);
 
@@ -373,8 +383,10 @@ const UserRow = memo(function UserRow({
         type="checkbox"
         checked={selected}
         onChange={() => onToggleSelect(u.id)}
+        disabled={isSelf}
+        title={isSelf ? t.selfRowTitle : undefined}
         aria-label={format(t.selectRowAria, { name })}
-        className="relative z-10 mt-1 h-4 w-4 flex-shrink-0 rounded border-white/20 bg-neutral-900 accent-purple-500 sm:mt-0"
+        className="relative z-10 mt-1 h-4 w-4 flex-shrink-0 rounded border-white/20 bg-neutral-900 accent-purple-500 disabled:opacity-40 disabled:cursor-not-allowed sm:mt-0"
       />
 
       {/* Avatar + info */}
@@ -428,6 +440,14 @@ const UserRow = memo(function UserRow({
                 ? format(t.staffRoleBadge, { role: roleLabel(t, u.role) })
                 : roleLabel(t, u.role)}
             </span>
+            {isSelf && (
+              <span
+                title={t.selfRowTitle}
+                className="relative z-10 px-2 py-0.5 rounded-full bg-white/10 border border-white/20 text-xs font-medium text-neutral-200"
+              >
+                {t.selfBadge}
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-3 text-sm text-neutral-400 flex-wrap">
             {u.email && (
@@ -584,7 +604,13 @@ const UserRow = memo(function UserRow({
           value={u.role || 'member'}
           onChange={(e) => onChangeRole(u, e.target.value)}
           disabled={updating || targetLocked}
-          title={targetLocked ? t.lockedTitle : undefined}
+          title={
+            isSelf
+              ? t.selfRowTitle
+              : targetLocked
+                ? t.lockedTitle
+                : undefined
+          }
           aria-label={format(t.roleSelectAria, { name })}
           className="px-3 py-1.5 rounded-lg bg-white/[0.06] border border-white/10 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/70 disabled:opacity-50 disabled:cursor-not-allowed"
         >
@@ -646,10 +672,11 @@ const UserRow = memo(function UserRow({
 
         <button
           type="button"
-          title={t.deleteTitle}
+          title={isSelf ? t.selfRowTitle : t.deleteTitle}
           aria-label={t.deleteTitle}
           onClick={() => onDelete(u)}
-          className="p-2 rounded-lg text-neutral-400 hover:text-red-400 hover:bg-white/[0.06] transition-colors"
+          disabled={isSelf}
+          className="p-2 rounded-lg text-neutral-400 hover:text-red-400 hover:bg-white/[0.06] transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-neutral-400"
         >
           <svg
             className="w-4 h-4"
@@ -686,6 +713,10 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
   const [exporting, setExporting] = useState(false);
+
+  /** Compte auth de l'appelant : sa ligne est exclue de tout ce que l'API
+   *  refuse de toute façon sur soi-même (rôle, suppression, bulk). */
+  const selfId = staff.auth_user_id;
 
   const { addToast } = useToast();
   const { adminFetchJson } = useAdminFetch();
@@ -819,17 +850,33 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
 
   const saveBattleTag = async () => {
     if (!editingBattleTag) return;
+    const trimmed = newBattleTag.trim();
+    // Validation locale AVANT l'aller-retour : le serveur applique la même
+    // regex, autant ne pas faire payer un round-trip à une faute de frappe.
+    if (trimmed && !BATTLE_TAG_RE.test(trimmed)) {
+      setBattleTagError(t.battleTagInvalid);
+      return;
+    }
     setBattleTagSaving(true);
     setBattleTagError(null);
     try {
-      await adminFetchJson('/api/admin/users/manage', {
+      const json = await adminFetchJson<{
+        membership?: {
+          battle_tag: string | null;
+          battle_tag_verified_at: string | null;
+          battle_tag_mismatch: boolean;
+        };
+      }>('/api/admin/users/manage', {
         method: 'PATCH',
         body: JSON.stringify({
           userId: editingBattleTag.userId,
           teamId: editingBattleTag.teamId,
-          battleTag: newBattleTag.trim(),
+          battleTag: trimmed,
         }),
       });
+      // Le serveur invalide la vérification Battle.net quand le tag change :
+      // on reprend SON état plutôt que de deviner, sinon la pastille
+      // « ✓ vérifié » survivrait à l'édition jusqu'au prochain refetch.
       mutate((prev) =>
         prev.map((u) => {
           if (u.id === editingBattleTag.userId && u.team_memberships) {
@@ -837,7 +884,15 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
               ...u,
               team_memberships: u.team_memberships.map((tm) =>
                 tm.team_id === editingBattleTag.teamId
-                  ? { ...tm, battle_tag: newBattleTag.trim() || null }
+                  ? {
+                      ...tm,
+                      battle_tag:
+                        json.membership?.battle_tag ?? (trimmed || null),
+                      battle_tag_verified_at:
+                        json.membership?.battle_tag_verified_at ?? null,
+                      battle_tag_mismatch:
+                        json.membership?.battle_tag_mismatch ?? false,
+                    }
                   : tm
               ),
             };
@@ -957,18 +1012,26 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
     });
   }, []);
 
+  // Sa propre ligne n'est jamais sélectionnable : la garder ferait échouer
+  // chaque action de masse sur un 403 prévisible.
+  const selectableUsers = users.filter((u) => u.id !== selfId);
+
   const allPageSelected =
-    users.length > 0 && users.every((u) => selected.has(u.id));
+    selectableUsers.length > 0 &&
+    selectableUsers.every((u) => selected.has(u.id));
 
   const toggleSelectAll = () => {
     setSelected((prev) => {
-      if (users.length > 0 && users.every((u) => prev.has(u.id))) {
+      if (
+        selectableUsers.length > 0 &&
+        selectableUsers.every((u) => prev.has(u.id))
+      ) {
         const next = new Set(prev);
-        users.forEach((u) => next.delete(u.id));
+        selectableUsers.forEach((u) => next.delete(u.id));
         return next;
       }
       const next = new Set(prev);
-      users.forEach((u) => next.add(u.id));
+      selectableUsers.forEach((u) => next.add(u.id));
       return next;
     });
   };
@@ -996,6 +1059,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
     const targets = users.filter((u) => selected.has(u.id));
     const eligible = targets.filter(
       (u) =>
+        u.id !== selfId &&
         !isRowLocked(u.role, staff.role) &&
         canGrantRole(staff.role, role) &&
         (u.role || 'member') !== role
@@ -1034,7 +1098,9 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
 
   const bulkDelete = async () => {
     const targets = users.filter((u) => selected.has(u.id));
-    const eligible = targets.filter((u) => !isRowLocked(u.role, staff.role));
+    const eligible = targets.filter(
+      (u) => u.id !== selfId && !isRowLocked(u.role, staff.role)
+    );
     const skipped = targets.length - eligible.length;
     if (eligible.length === 0) {
       addToast(t.bulkNoEligible, 'warning');
@@ -1069,11 +1135,15 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
 
   const exportCsv = async () => {
     setExporting(true);
+    let truncated = false;
     try {
       const collected: UserLite[] = [];
       const pageSize = 200;
       let off = 0;
       // Rapatrie toutes les lignes correspondant aux filtres/tri courants.
+      // L'endpoint est limité à 60 req/min : sur un gros export on finit par
+      // se prendre un 429. On attend et on retente au lieu de tout perdre —
+      // et si ça persiste, on exporte quand même ce qui a été collecté.
       for (let guard = 0; guard < 100; guard += 1) {
         const qs = new URLSearchParams();
         if (search) qs.set('search', search);
@@ -1082,10 +1152,27 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
         qs.set('dir', sortDir);
         qs.set('limit', String(pageSize));
         qs.set('offset', String(off));
-        const json = await adminFetchJson<ApiResponse>(
-          `/api/admin/users/manage?${qs.toString()}`
-        );
-        const items = json.items || [];
+
+        let items: UserLite[] | null = null;
+        for (let attempt = 0; attempt < 3 && items === null; attempt += 1) {
+          try {
+            const json = await adminFetchJson<ApiResponse>(
+              `/api/admin/users/manage?${qs.toString()}`
+            );
+            items = json.items || [];
+          } catch (err: unknown) {
+            const rateLimited =
+              err instanceof AdminFetchError && err.status === 429;
+            if (!rateLimited || attempt === 2) {
+              if (collected.length === 0) throw err;
+              truncated = true;
+              break;
+            }
+            await new Promise((r) => setTimeout(r, 2000 * (attempt + 1)));
+          }
+        }
+        if (items === null) break; // export partiel (cf. `truncated`)
+
         collected.push(...items);
         if (items.length < pageSize) break;
         off += pageSize;
@@ -1457,6 +1544,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
                     t={t}
                     lang={lang}
                     staffRole={staff.role}
+                    isSelf={u.id === selfId}
                     updating={updating === u.id}
                     resending={resendingUser === u.id}
                     selected={selected.has(u.id)}
