@@ -48,9 +48,65 @@ type ListResponse = {
 type UpdateResponse = {
   success: boolean;
   user?: UserLite;
+  /**
+   * Renvoyé par le PATCH battle_tag : état de la ligne de roster APRÈS
+   * écriture (la vérification Battle.net est invalidée par une édition
+   * manuelle), pour que le client rafraîchisse ses pastilles sans refetch.
+   */
+  membership?: {
+    team_id: string;
+    battle_tag: string | null;
+    battle_tag_verified_at: string | null;
+    battle_tag_mismatch: boolean;
+  };
   error?: string;
   warning?: string;
 };
+
+type TargetAccount = {
+  user: NonNullable<
+    Awaited<
+      ReturnType<typeof supabaseAdmin.auth.admin.getUserById>
+    >['data']['user']
+  >;
+  metadataRole: string | null;
+  staffRole: string | null;
+  /** owner/admin (rôle de compte OU row staff) → seul un owner peut y toucher. */
+  isProtected: boolean;
+};
+
+/**
+ * Charge le compte cible + calcule la garde « owner/admin protégé ».
+ *
+ * Factorisé pour que TOUTES les écritures de ce handler en héritent, et pas
+ * seulement le changement de rôle et la suppression : réinitialiser le mot de
+ * passe d'un owner (`resend_credentials`) ou le renommer, c'est agir sur un
+ * compte plus puissant que le sien.
+ */
+async function loadTarget(userId: string): Promise<TargetAccount | null> {
+  const { data: target, error } =
+    await supabaseAdmin.auth.admin.getUserById(userId);
+  if (error || !target?.user) return null;
+
+  const metadataRole = (target.user.user_metadata as any)?.role ?? null;
+  const { data: targetStaff } = await supabaseAdmin
+    .from('staff')
+    .select('role')
+    .eq('auth_user_id', userId)
+    .maybeSingle();
+  const staffRole = targetStaff?.role ?? null;
+
+  return {
+    user: target.user,
+    metadataRole,
+    staffRole,
+    isProtected:
+      metadataRole === 'owner' ||
+      metadataRole === 'admin' ||
+      staffRole === 'owner' ||
+      staffRole === 'admin',
+  };
+}
 
 export default withStaffRoute(handler, 'admin');
 
@@ -219,10 +275,23 @@ async function handler(
 
     // Resend credentials: reset password and send welcome email
     if (userId && req.body.action === 'resend_credentials') {
-      const { data: target, error: targetErr } =
-        await supabaseAdmin.auth.admin.getUserById(userId);
-      if (targetErr || !target?.user) {
+      const target = await loadTarget(userId);
+      if (!target) {
         return res.status(404).json({ error: 'User not found.' });
+      }
+
+      // Même garde que le PATCH rôle / DELETE : réinitialiser le mot de passe
+      // d'un owner ou d'un admin l'éjecte de son propre compte. Seul un owner
+      // peut le faire — chacun reste libre de relancer ses propres accès.
+      if (
+        target.isProtected &&
+        (ctx.staff?.role ?? null) !== 'owner' &&
+        userId !== ctx.user.id
+      ) {
+        return res.status(403).json({
+          error:
+            'Only an owner can reset the credentials of an owner or admin account.',
+        });
       }
 
       const newPassword = generatePassword(16);
@@ -237,6 +306,22 @@ async function handler(
       }
 
       const email = target.user.email;
+
+      // Audité AVANT l'envoi : le mot de passe est déjà changé, l'échec mail
+      // ne doit pas faire disparaître la trace de qui a réinitialisé quoi.
+      void logStaffAction({
+        staff_id: ctx.staff.id,
+        action: 'resend_credentials',
+        entity_type: 'user',
+        entity_id: userId,
+        tenant_id: ctx.tenantId,
+        payload: {
+          targetEmail: email ?? null,
+          targetMetadataRole: target.metadataRole,
+          targetStaffRole: target.staffRole,
+        },
+      });
+
       if (email) {
         const emailResult = await sendWelcomeEmail(email, newPassword);
         if (!emailResult.success) {
@@ -264,11 +349,53 @@ async function handler(
         }
       }
 
+      // La ligne DOIT exister : sans ce SELECT, un teamId erroné répondait
+      // `success` alors que l'UPDATE ne touchait aucune ligne.
+      const { data: membership, error: memberErr } = await supabaseAdmin
+        .from('team_members')
+        .select(
+          'id, tenant_id, battle_tag, battle_tag_verified_at, verified_battle_net_id'
+        )
+        .eq('user_id', userId)
+        .eq('team_id', teamId)
+        .maybeSingle();
+
+      if (memberErr) {
+        logger.error('[admin/users/manage] membership lookup error:', memberErr);
+        return res.status(500).json({ error: 'Failed to load membership.' });
+      }
+      if (!membership) {
+        return res.status(404).json({ error: 'Team membership not found.' });
+      }
+
+      // Défense en profondeur : pas d'écriture sur le roster d'un autre tenant.
+      // Les lignes historiques sans tenant_id restent modifiables (fail-open
+      // volontaire, cf. le TODO tenant de staff_logs).
+      if (membership.tenant_id && membership.tenant_id !== ctx.tenantId) {
+        return res
+          .status(403)
+          .json({ error: 'This membership belongs to another tenant.' });
+      }
+
+      const previousTag = membership.battle_tag || null;
+      const nextTag = trimmedTag || null;
+      const tagChanged =
+        (previousTag ?? '').toLowerCase() !== (nextTag ?? '').toLowerCase();
+
+      // Une édition manuelle INVALIDE la vérification Battle.net : sans ça la
+      // pastille « ✓ vérifié » restait collée à un tag que personne n'a jamais
+      // vérifié (faux négatif anti-smurf : le mismatch ne se déclenche que si
+      // la joueuse a par ailleurs un lien Battle.net).
+      const updatePayload: Record<string, unknown> = { battle_tag: nextTag };
+      if (tagChanged) {
+        updatePayload.battle_tag_verified_at = null;
+        updatePayload.verified_battle_net_id = null;
+      }
+
       const { error: updateErr } = await supabaseAdmin
         .from('team_members')
-        .update({ battle_tag: trimmedTag || null })
-        .eq('user_id', userId)
-        .eq('team_id', teamId);
+        .update(updatePayload)
+        .eq('id', membership.id);
 
       if (updateErr) {
         logger.error(
@@ -278,7 +405,54 @@ async function handler(
         return res.status(500).json({ error: 'Failed to update BattleTag.' });
       }
 
-      return res.status(200).json({ success: true });
+      if (tagChanged) {
+        // Même slug que /api/teams/update-member : les deux chemins d'édition
+        // du tag atterrissent dans le même journal.
+        void logStaffAction({
+          staff_id: ctx.staff.id,
+          action: 'update_player_battle_tag',
+          entity_type: 'team_member',
+          entity_id: membership.id,
+          tenant_id: ctx.tenantId,
+          payload: {
+            user_id: userId,
+            team_id: teamId,
+            previous: previousTag,
+            next: nextTag,
+            verification_reset: true,
+          },
+        });
+      }
+
+      // État post-écriture renvoyé au client (pastilles vérifié / mismatch).
+      const { data: bnetLink } = await supabaseAdmin
+        .from('user_battlenet_links')
+        .select('battle_tag')
+        .eq('auth_user_id', userId)
+        .limit(1);
+      const linkedTag = (bnetLink as any)?.[0]?.battle_tag ?? null;
+
+      const verifiedAt = tagChanged
+        ? null
+        : membership.battle_tag_verified_at || null;
+      const verifiedBattleNetId = tagChanged
+        ? null
+        : membership.verified_battle_net_id || null;
+
+      return res.status(200).json({
+        success: true,
+        membership: {
+          team_id: String(teamId),
+          battle_tag: nextTag,
+          battle_tag_verified_at: verifiedAt,
+          battle_tag_mismatch: computeBattleTagMismatch({
+            battleTag: nextTag,
+            verifiedAt,
+            verifiedBattleNetId,
+            linkedTag,
+          }),
+        },
+      });
     }
 
     // Handle display_name update
@@ -287,19 +461,34 @@ async function handler(
       typeof req.body.display_name === 'string' &&
       role === undefined
     ) {
-      const { data: target, error: targetErr } =
-        await supabaseAdmin.auth.admin.getUserById(userId);
-      if (targetErr || !target?.user) {
+      const target = await loadTarget(userId);
+      if (!target) {
         return res.status(404).json({ error: 'User not found.' });
       }
 
+      // Renommer un owner/admin (usurpation d'identité dans les journaux et
+      // les listes) suit la même règle que les autres écritures. On garde
+      // évidemment le droit de renommer SON propre compte.
+      if (
+        target.isProtected &&
+        (ctx.staff?.role ?? null) !== 'owner' &&
+        userId !== ctx.user.id
+      ) {
+        return res.status(403).json({
+          error: 'Only an owner can modify an owner or admin account.',
+        });
+      }
+
       const existingMeta = (target.user.user_metadata as any) || {};
+      const previousDisplayName = existingMeta.display_name ?? null;
+      const nextDisplayName = req.body.display_name.trim() || null;
+
       const { data, error } = await supabaseAdmin.auth.admin.updateUserById(
         userId,
         {
           user_metadata: {
             ...existingMeta,
-            display_name: req.body.display_name.trim() || null,
+            display_name: nextDisplayName,
           },
         }
       );
@@ -311,6 +500,19 @@ async function handler(
           .json({ error: 'Failed to update display name.' });
       }
 
+      void logStaffAction({
+        staff_id: ctx.staff.id,
+        action: 'update_member_profile',
+        entity_type: 'user',
+        entity_id: userId,
+        tenant_id: ctx.tenantId,
+        payload: {
+          field: 'display_name',
+          previous: previousDisplayName,
+          next: nextDisplayName,
+        },
+      });
+
       // Sync staff display_name if exists
       const { data: existingStaff } = await supabaseAdmin
         .from('staff')
@@ -320,7 +522,7 @@ async function handler(
       if (existingStaff?.id) {
         await supabaseAdmin
           .from('staff')
-          .update({ display_name: req.body.display_name.trim() || null })
+          .update({ display_name: nextDisplayName })
           .eq('auth_user_id', userId);
         invalidateStaffCache(userId);
       }
@@ -353,33 +555,21 @@ async function handler(
     }
 
     // Récupérer le compte cible (pour vérifier son rôle actuel)
-    const { data: target, error: targetErr } =
-      await supabaseAdmin.auth.admin.getUserById(userId);
-    if (targetErr || !target?.user) {
-      logger.error('[admin/users/manage] get target error:', targetErr);
+    const target = await loadTarget(userId);
+    if (!target) {
+      logger.error('[admin/users/manage] get target error:', userId);
       return res
         .status(404)
         .json({ error: 'Target user not found or inaccessible.' });
     }
 
-    const targetRole = (target.user.user_metadata as any)?.role ?? null;
-    let targetStaffRole: string | null = null;
-    const { data: targetStaff } = await supabaseAdmin
-      .from('staff')
-      .select('role')
-      .eq('auth_user_id', userId)
-      .maybeSingle();
-    if (targetStaff?.role) targetStaffRole = targetStaff.role;
+    const targetRole = target.metadataRole;
+    const targetStaffRole = target.staffRole;
 
     // Seul un owner peut modifier un owner ou un admin
     const requesterRole = ctx.staff?.role ?? null;
-    const targetIsProtected =
-      targetRole === 'owner' ||
-      targetRole === 'admin' ||
-      targetStaffRole === 'owner' ||
-      targetStaffRole === 'admin';
 
-    if (targetIsProtected && requesterRole !== 'owner') {
+    if (target.isProtected && requesterRole !== 'owner') {
       return res.status(403).json({
         error:
           'Only an owner can modify an owner or admin account. Action denied.',
@@ -533,29 +723,16 @@ async function handler(
     }
 
     // Fetch target to check protection
-    const { data: target, error: targetErr } =
-      await supabaseAdmin.auth.admin.getUserById(userId);
-    if (targetErr || !target?.user) {
+    const target = await loadTarget(userId);
+    if (!target) {
       return res.status(404).json({ error: 'User not found.' });
     }
 
-    const targetRole = (target.user.user_metadata as any)?.role ?? null;
-    let targetStaffRole: string | null = null;
-    const { data: targetStaff } = await supabaseAdmin
-      .from('staff')
-      .select('role')
-      .eq('auth_user_id', userId)
-      .maybeSingle();
-    if (targetStaff?.role) targetStaffRole = targetStaff.role;
-
+    const targetRole = target.metadataRole;
+    const targetStaffRole = target.staffRole;
     const requesterRole = ctx.staff?.role ?? null;
-    const targetIsProtected =
-      targetRole === 'owner' ||
-      targetRole === 'admin' ||
-      targetStaffRole === 'owner' ||
-      targetStaffRole === 'admin';
 
-    if (targetIsProtected && requesterRole !== 'owner') {
+    if (target.isProtected && requesterRole !== 'owner') {
       return res.status(403).json({
         error: 'Only an owner can delete an owner or admin account.',
       });

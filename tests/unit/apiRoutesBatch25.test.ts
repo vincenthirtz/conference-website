@@ -688,6 +688,90 @@ describe('/api/admin/users/manage', () => {
     expect((store.team_members[0] as any).battle_tag).toBe('NewTag#9999');
   });
 
+  it('PATCH battle_tag invalide la vérification Battle.net', async () => {
+    // Une édition manuelle du tag ne doit PAS laisser la ligne estampillée
+    // « vérifiée » : la pastille mentirait sur un tag jamais vérifié.
+    setAdminUser('u-target', 't@a.com');
+    store.team_members = [
+      {
+        id: 'tm1',
+        user_id: 'u-target',
+        team_id: 't1',
+        battle_tag: 'Old#1111',
+        battle_tag_verified_at: '2026-01-01T00:00:00.000Z',
+        verified_battle_net_id: 'bnet-1',
+      },
+    ] as any;
+    const res = makeRes();
+    await usersManageHandler(
+      makeReq({
+        method: 'PATCH',
+        body: {
+          userId: 'u-target',
+          teamId: 't1',
+          battleTag: 'NewTag#9999',
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    const row = store.team_members[0] as any;
+    expect(row.battle_tag).toBe('NewTag#9999');
+    expect(row.battle_tag_verified_at).toBeNull();
+    expect(row.verified_battle_net_id).toBeNull();
+    expect((res.body as any).membership).toMatchObject({
+      battle_tag: 'NewTag#9999',
+      battle_tag_verified_at: null,
+      battle_tag_mismatch: false,
+    });
+  });
+
+  it('PATCH battle_tag 404 quand la ligne de roster n\'existe pas', async () => {
+    // Avant : UPDATE sur 0 ligne → `success` trompeur.
+    setAdminUser('u-target', 't@a.com');
+    store.team_members = [] as any;
+    const res = makeRes();
+    await usersManageHandler(
+      makeReq({
+        method: 'PATCH',
+        body: {
+          userId: 'u-target',
+          teamId: 't-unknown',
+          battleTag: 'NewTag#9999',
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(404);
+  });
+
+  it('PATCH battle_tag 403 sur le roster d\'un autre tenant', async () => {
+    setAdminUser('u-target', 't@a.com');
+    store.team_members = [
+      {
+        id: 'tm1',
+        user_id: 'u-target',
+        team_id: 't1',
+        tenant_id: '00000000-0000-0000-0000-0000000000ff',
+        battle_tag: 'Old#1111',
+      },
+    ] as any;
+    const res = makeRes();
+    await usersManageHandler(
+      makeReq({
+        method: 'PATCH',
+        body: {
+          userId: 'u-target',
+          teamId: 't1',
+          battleTag: 'NewTag#9999',
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(403);
+    expect((store.team_members[0] as any).battle_tag).toBe('Old#1111');
+  });
+
   it('PATCH 400 with invalid BattleTag format', async () => {
     setAdminUser('u-target', null);
     const res = makeRes();
@@ -717,6 +801,59 @@ describe('/api/admin/users/manage', () => {
     );
     expect(res.statusCode).toBe(200);
     expect(sendWelcomeEmail).toHaveBeenCalledOnce();
+  });
+
+  it('PATCH resend_credentials 403 quand un admin cible un owner', async () => {
+    // Réinitialiser le mot de passe d'un owner l'éjecte de son compte : la
+    // même garde que le changement de rôle / la suppression s'applique.
+    setAdminUser('u-owner', 'owner@x.com');
+    store.staff = [
+      makeStaffRow('admin'),
+      {
+        id: 'staff-owner',
+        auth_user_id: 'u-owner',
+        email: 'owner@x.com',
+        role: 'owner',
+        display_name: null,
+        avatar_url: null,
+        created_at: '2026',
+      },
+    ] as any;
+    const res = makeRes();
+    await usersManageHandler(
+      makeReq({
+        method: 'PATCH',
+        body: { userId: 'u-owner', action: 'resend_credentials' },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(403);
+    expect(sendWelcomeEmail).not.toHaveBeenCalled();
+  });
+
+  it('PATCH display_name 403 quand un admin renomme un owner', async () => {
+    setAdminUser('u-owner', 'owner@x.com');
+    store.staff = [
+      makeStaffRow('admin'),
+      {
+        id: 'staff-owner',
+        auth_user_id: 'u-owner',
+        email: 'owner@x.com',
+        role: 'owner',
+        display_name: null,
+        avatar_url: null,
+        created_at: '2026',
+      },
+    ] as any;
+    const res = makeRes();
+    await usersManageHandler(
+      makeReq({
+        method: 'PATCH',
+        body: { userId: 'u-owner', display_name: 'Pas moi' },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(403);
   });
 
   it('DELETE 400 when userId missing', async () => {
