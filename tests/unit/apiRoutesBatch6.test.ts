@@ -164,6 +164,65 @@ describe('GET /api/admin/logs', () => {
     expect((res.body as any).logs.map((l: any) => l.id)).toEqual(['l1']);
   });
 
+  it('remappe userId sur entity_type=user + entity_id', async () => {
+    // Alimente le panneau « journal du compte » de /admin/users/manage : la
+    // table n'a pas de colonne user_id, le filtre passe par entity_type.
+    const target = '11111111-2222-3333-4444-555555555555';
+    store.staff_logs = [
+      {
+        id: 'l1',
+        staff_id: 's1',
+        action: 'update_staff_role',
+        entity_type: 'user',
+        entity_id: target,
+        created_at: '2026',
+      },
+      {
+        id: 'l2',
+        staff_id: 's1',
+        action: 'suspend_user',
+        entity_type: 'user',
+        entity_id: '99999999-2222-3333-4444-555555555555',
+        created_at: '2026',
+      },
+      {
+        id: 'l3',
+        staff_id: 's1',
+        action: 'create_team',
+        entity_type: 'team',
+        entity_id: target,
+        created_at: '2026',
+      },
+    ] as any;
+    const res = makeRes();
+    await adminLogsHandler(
+      makeReq({ method: 'GET', query: { userId: target } }, true),
+      res
+    );
+    expect((res.body as any).logs.map((l: any) => l.id)).toEqual(['l1']);
+  });
+
+  it('ignore un userId qui n\'est pas un uuid', async () => {
+    store.staff_logs = [
+      {
+        id: 'l1',
+        staff_id: 's1',
+        action: 'update_staff_role',
+        entity_type: 'user',
+        entity_id: 'u-1',
+        created_at: '2026',
+      },
+    ] as any;
+    const res = makeRes();
+    await adminLogsHandler(
+      makeReq({ method: 'GET', query: { userId: 'pas-un-uuid' } }, true),
+      res
+    );
+    // Filtre ignoré plutôt que 500 PostgREST (entity_id est un uuid).
+    expect(res.statusCode).toBe(200);
+    expect((res.body as any).logs).toHaveLength(1);
+  });
+
   it('filters by date range (from/to)', async () => {
     store.staff_logs = [
       {

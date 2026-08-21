@@ -67,6 +67,16 @@ type ApiResponse = {
   total?: number;
 };
 
+/** Entrée de staff_logs telle que formatée par /api/admin/logs. */
+type AccountLog = {
+  id: string;
+  created_at: string;
+  action: string;
+  readableAction: string;
+  staff_display_name?: string | null;
+  payload?: Record<string, unknown> | null;
+};
+
 type SortField =
   | 'created_at'
   | 'display_name'
@@ -263,6 +273,22 @@ function formatDate(d: string | null) {
       day: 'numeric',
       month: 'short',
       year: 'numeric',
+    });
+  } catch {
+    return d;
+  }
+}
+
+/** Date + heure — un journal d'audit sans l'heure ne sert à rien. */
+function formatDateTime(d: string | null) {
+  if (!d) return '—';
+  try {
+    return new Date(d).toLocaleString('fr-FR', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
     });
   } catch {
     return d;
@@ -532,6 +558,7 @@ type UserRowProps = {
   onEdit: (u: UserLite) => void;
   onSuspend: (u: UserLite) => void;
   onUnsuspend: (u: UserLite) => void;
+  onOpenLogs: (u: UserLite) => void;
   onDelete: (u: UserLite) => void;
 };
 
@@ -551,6 +578,7 @@ const UserRow = memo(function UserRow({
   onEdit,
   onSuspend,
   onUnsuspend,
+  onOpenLogs,
   onDelete,
 }: UserRowProps) {
   const name = u.display_name || u.email || t.defaultUser;
@@ -855,6 +883,29 @@ const UserRow = memo(function UserRow({
 
         <button
           type="button"
+          title={t.logsTitle}
+          aria-label={t.logsTitle}
+          onClick={() => onOpenLogs(u)}
+          className="p-2 rounded-lg text-neutral-400 hover:text-purple-300 hover:bg-white/[0.06] transition-colors"
+        >
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+        </button>
+
+        <button
+          type="button"
           title={t.editTitle}
           aria-label={t.editTitle}
           onClick={() => onEdit(u)}
@@ -1085,6 +1136,30 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
 
   // Resend credentials
   const [resendingUser, setResendingUser] = useState<string | null>(null);
+
+  // Journal du compte — staff_logs filtrés sur entity_type='user' + entity_id.
+  // Répond à « qui a changé ça, et quand ? » sans quitter la liste ni aller
+  // fouiller /admin/logs à la main.
+  const [logsUser, setLogsUser] = useState<UserLite | null>(null);
+  const [logs, setLogs] = useState<AccountLog[] | null>(null);
+  const [logsError, setLogsError] = useState<string | null>(null);
+
+  const openLogs = useCallback(
+    async (user: UserLite) => {
+      setLogsUser(user);
+      setLogs(null);
+      setLogsError(null);
+      try {
+        const json = await adminFetchJson<{ logs: AccountLog[] }>(
+          `/api/admin/logs?userId=${encodeURIComponent(user.id)}&limit=25`
+        );
+        setLogs(json.logs || []);
+      } catch (err: unknown) {
+        setLogsError((err as Error)?.message || t.errLogs);
+      }
+    },
+    [adminFetchJson, t]
+  );
 
   // Suspension (alternative à la suppression : le compte et ses rosters
   // restent intacts, seule la connexion est refusée).
@@ -2029,6 +2104,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
                     onEdit={openEditUser}
                     onSuspend={openSuspend}
                     onUnsuspend={unsuspendUser}
+                    onOpenLogs={openLogs}
                     onDelete={openDeleteUser}
                   />
                 ))}
@@ -2203,6 +2279,56 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
           className="w-full px-3 py-2.5 rounded-xl bg-neutral-950/50 border border-white/10 text-white placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-red-500/70 text-sm font-mono"
           placeholder={deleteConfirmValue}
         />
+      </Modal>
+
+      {/* Account Logs Modal */}
+      <Modal
+        open={Boolean(logsUser)}
+        onClose={() => setLogsUser(null)}
+        title={t.logsModalTitle}
+        subtitle={logsUser?.display_name || logsUser?.email || logsUser?.id}
+        footer={
+          <button
+            onClick={() => setLogsUser(null)}
+            className="px-4 py-2 rounded-lg border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-sm font-medium transition-colors"
+          >
+            {t.close}
+          </button>
+        }
+      >
+        {logsError ? (
+          <div className="rounded-lg bg-red-900/40 border border-red-500/50 px-3 py-2 text-sm text-red-200">
+            {logsError}
+          </div>
+        ) : logs === null ? (
+          <div className="space-y-2">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-10 w-full" />
+            ))}
+          </div>
+        ) : logs.length === 0 ? (
+          <p className="text-sm text-neutral-400">{t.logsEmpty}</p>
+        ) : (
+          <ul role="list" className="divide-y divide-white/5">
+            {logs.map((log) => (
+              <li
+                key={log.id}
+                className="flex flex-wrap items-baseline justify-between gap-2 py-2"
+              >
+                <span className="text-sm text-white">{log.readableAction}</span>
+                <span className="text-xs text-neutral-500">
+                  {log.staff_display_name
+                    ? format(t.logsBy, {
+                        who: log.staff_display_name,
+                        date: formatDateTime(log.created_at),
+                      })
+                    : formatDateTime(log.created_at)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+        <p className="mt-4 text-xs text-neutral-500">{t.logsScopeHint}</p>
       </Modal>
 
       {/* Suspension Modal */}

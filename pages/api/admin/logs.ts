@@ -11,6 +11,8 @@
 //   - matchId?: string (uuid)           → remappé sur entity_type='match'  + entity_id
 //   - stageId?: string (uuid)           → remappé sur entity_type='stage'  + entity_id
 //   - teamId?: string (uuid)            → remappé sur entity_type='team'   + entity_id
+//   - userId?: string (uuid)            → remappé sur entity_type='user'   + entity_id
+//     (journal d'un compte : rôle, suspension, suppression, relance d'accès…)
 //     (la table staff_logs n'a PAS de colonnes match_id/stage_id/team_id : ces
 //      filtres UI historiques sont re-mappés sur entity_type + entity_id.)
 //   - action?: string                   → filtre sur l'action ("update_match", "create_tournament", ...)
@@ -81,6 +83,7 @@ async function handler(
       matchId,
       stageId,
       teamId,
+      userId,
       action,
       from,
       to,
@@ -135,6 +138,8 @@ async function handler(
       ['match', firstParam(matchId)],
       ['stage', firstParam(stageId)],
       ['team', firstParam(teamId)],
+      // `user` alimente le panneau « journal du compte » de /admin/users/manage.
+      ['user', firstParam(userId)],
     ];
     const remapped = entityRemap.find(([, id]) => id && UUID_RE.test(id));
     if (remapped) {

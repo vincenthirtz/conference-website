@@ -2338,7 +2338,14 @@
     "confirmUnsuspendSubtitle": "{name} will be able to sign in again.",
     "confirmUnsuspendBtn": "Lift",
     "filterSuspended": "Suspended",
-    "filterNoDiscord": "No Discord"
+    "filterNoDiscord": "No Discord",
+    "logsTitle": "Account history",
+    "logsModalTitle": "Account history",
+    "logsEmpty": "No action recorded on this account.",
+    "logsBy": "by {who} · {date}",
+    "logsScopeHint": "Staff actions on the account itself (role, suspension, access, profile). Roster changes are logged on the team page.",
+    "errLogs": "Failed to load the history.",
+    "close": "Close"
   },
   "adminUsersNew": {
     "roleOwner": "Owner",
