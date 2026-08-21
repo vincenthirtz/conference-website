@@ -113,10 +113,29 @@ function walk(dir: string): string[] {
  * silently deleting everything between — a false-negative hole in the guard.
  * The scanner enters LINE mode at a line-comment marker first, so a block-open
  * token sitting inside a line comment can never start a block comment.
+ *
+ * REGEX LITERALS get their own mode, and that one is load-bearing: a literal
+ * holding a quote — `/[",\r\n]/` in a CSV escaper — used to open a phantom
+ * string that swallowed the entire rest of the file, so hundreds of lines were
+ * silently exempt from the guard while it still reported green.
+ *
+ * Two rules keep regex detection from over-reaching, which is what makes it
+ * safe to enable at all:
+ *   - a slash only starts a regex when the previous significant character
+ *     cannot END an expression (after an identifier, digit or closing bracket
+ *     it is a division) — the classic regex-vs-division heuristic;
+ *   - a regex never crosses a newline. So even when the heuristic guesses
+ *     wrong, the damage is capped at one line instead of eating the file —
+ *     exactly the failure mode this mode exists to prevent.
  */
 function stripComments(src: string): string {
   let out = '';
-  let mode: 'code' | 'line' | 'block' | 'sq' | 'dq' | 'tmpl' = 'code';
+  let mode: 'code' | 'line' | 'block' | 'sq' | 'dq' | 'tmpl' | 'regex' =
+    'code';
+  /** Dernier caractère non blanc vu en mode code (arbitrage regex / division). */
+  let prevSignificant = '';
+  const canPrecedeRegex = (ch: string): boolean =>
+    ch === '' || !/[A-Za-z0-9_$)\]]/.test(ch);
   for (let i = 0; i < src.length; i++) {
     const c = src[i];
     const n = src[i + 1];
@@ -127,6 +146,9 @@ function stripComments(src: string): string {
       } else if (c === '/' && n === '*') {
         mode = 'block';
         i++;
+      } else if (c === '/' && canPrecedeRegex(prevSignificant)) {
+        mode = 'regex';
+        out += c;
       } else if (c === "'") {
         mode = 'sq';
         out += c;
@@ -138,6 +160,32 @@ function stripComments(src: string): string {
         out += c;
       } else {
         out += c;
+      }
+      if (mode === 'code' && !/\s/.test(c)) prevSignificant = c;
+    } else if (mode === 'regex') {
+      // Le contenu est conservé tel quel : ce qui compte est de ne PAS
+      // interpréter les guillemets qu'il contient comme ouvrant une chaîne.
+      out += c;
+      if (c === '\\') {
+        out += src[i + 1] ?? '';
+        i++;
+      } else if (c === '[') {
+        // Classe de caractères : un `/` à l'intérieur ne ferme pas la regex.
+        while (i + 1 < src.length && src[i + 1] !== ']') {
+          i++;
+          out += src[i];
+          if (src[i] === '\\') {
+            i++;
+            out += src[i] ?? '';
+          }
+        }
+      } else if (c === '/') {
+        mode = 'code';
+        prevSignificant = c;
+      } else if (c === '\n') {
+        // Filet de sécurité : une regex ne franchit pas une fin de ligne.
+        mode = 'code';
+        prevSignificant = '';
       }
     } else if (mode === 'line') {
       if (c === '\n') {
@@ -163,6 +211,7 @@ function stripComments(src: string): string {
         (mode === 'tmpl' && c === '`')
       ) {
         mode = 'code';
+        prevSignificant = c;
       }
     }
   }
@@ -195,6 +244,48 @@ function findOffenders(rel: string): Offender[] {
 
   return found;
 }
+
+describe('stripComments', () => {
+  // Régression : le scanner n'avait pas de mode regex, si bien qu'un guillemet
+  // à l'intérieur d'un littéral regex ouvrait une chaîne fantôme qui avalait
+  // tout le reste du fichier. Le garde-fou restait vert en étant aveugle sur
+  // des centaines de lignes (constaté sur pages/admin/users/manage.tsx).
+  const textNodes = (src: string) =>
+    [...stripComments(src).matchAll(JSX_TEXT_RE)].map((m) => m[1].trim());
+
+  it('voit encore le JSX après une regex contenant un guillemet', () => {
+    const src = [
+      'const csvCell = (v: string) => (/[",\\r\\n]/.test(v) ? v : v);',
+      'export function C() {',
+      '  return <p>Texte français</p>;',
+      '}',
+    ].join('\n');
+    expect(textNodes(src)).toContain('Texte français');
+  });
+
+  it('ne prend pas une division pour une regex', () => {
+    // `total / 2` : le slash suit un identifiant, ce n'est pas une regex. Si on
+    // se trompait ici, tout le reste de la ligne serait avalé.
+    const src = [
+      'const half = total / 2;',
+      'export function C() {',
+      '  return <p>Été</p>;',
+      '}',
+    ].join('\n');
+    expect(textNodes(src)).toContain('Été');
+  });
+
+  it('dépouille toujours les commentaires', () => {
+    const src = [
+      '// Commentaire français ignoré',
+      '/* Bloc français ignoré */',
+      'export function C() {',
+      '  return <p>Visible</p>;',
+      '}',
+    ].join('\n');
+    expect(textNodes(src)).toEqual(['Visible']);
+  });
+});
 
 describe('no hardcoded French in JSX text / visible attributes', () => {
   const files = SCAN_DIRS.flatMap((d) => walk(d));
