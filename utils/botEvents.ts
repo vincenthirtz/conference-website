@@ -21,57 +21,63 @@ import crypto from 'crypto';
 import { supabaseAdmin } from './supabase';
 import { logger } from './logger';
 
-export type BotEventName =
-  | 'match.starting'
-  | 'match.scheduled'
-  | 'match.unscheduled'
-  | 'match.disputed'
-  | 'match.dispute.resolved'
-  | 'match.finished'
-  | 'news.published'
-  | 'team.created'
-  | 'team.dissolved'
-  | 'team.message'
-  | 'team.member.added'
-  | 'team.member.removed'
-  | 'team.captain.changed'
-  | 'staff.role.changed'
-  | 'scrim.created'
-  | 'scrim.scheduled'
-  | 'scrim.starting'
-  | 'scrim.finished'
-  | 'scrim.cancelled'
-  | 'scrim.deleted'
-  | 'scrim.planning.opened'
-  | 'scrim.planning.validated'
-  | 'scrim.planning.reminder'
+// Liste runtime des events sortants — SOURCE UNIQUE : le type `BotEventName`
+// en derive. Expose aussi le dropdown de filtre du journal Discord
+// (/admin/logs ?tab=discord) sans risque de drift avec le type.
+export const BOT_EVENT_NAMES = [
+  'match.starting',
+  'match.scheduled',
+  'match.unscheduled',
+  'match.disputed',
+  'match.dispute.resolved',
+  'match.finished',
+  'news.published',
+  'team.created',
+  'team.dissolved',
+  'team.message',
+  'team.member.added',
+  'team.member.removed',
+  'team.captain.changed',
+  'staff.role.changed',
+  'scrim.created',
+  'scrim.scheduled',
+  'scrim.starting',
+  'scrim.finished',
+  'scrim.cancelled',
+  'scrim.deleted',
+  'scrim.planning.opened',
+  'scrim.planning.validated',
+  'scrim.planning.reminder',
   // R6 — une équipe annonce des créneaux ; on alerte celles dont les créneaux
   // se recoupent. Sans ça, l'annonce attend qu'on vienne la lire.
-  | 'scrim.search.matched'
-  | 'cast.assigned'
-  | 'cast.unassigned'
-  | 'cast.briefing.rescheduled'
-  | 'checkin.opened'
-  | 'team.forfeit'
-  | 'registration.new'
-  | 'registration.blacklisted'
-  | 'registration.entity_blacklisted'
-  | 'helloasso.payment.received'
-  | 'captain.support.opened'
-  | 'tournament.finalized'
-  | 'dispute.sla_breached'
-  | 'checkin.nudge'
-  | 'broadcast.state_changed'
-  | 'task.created'
-  | 'task.moved'
-  | 'task.assigned'
-  | 'task.board_changed'
-  | 'task.due_soon'
-  | 'task.digest'
+  'scrim.search.matched',
+  'cast.assigned',
+  'cast.unassigned',
+  'cast.briefing.rescheduled',
+  'checkin.opened',
+  'team.forfeit',
+  'registration.new',
+  'registration.blacklisted',
+  'registration.entity_blacklisted',
+  'helloasso.payment.received',
+  'captain.support.opened',
+  'tournament.finalized',
+  'dispute.sla_breached',
+  'checkin.nudge',
+  'broadcast.state_changed',
+  'task.created',
+  'task.moved',
+  'task.assigned',
+  'task.board_changed',
+  'task.due_soon',
+  'task.digest',
   // N7 — récap hebdomadaire d'une équipe. Émis par cron, au plus une fois par
   // équipe et par semaine, et UNIQUEMENT si la semaine a quelque chose à
   // raconter (cf. utils/teams/weeklyRecap.ts).
-  | 'team.weekly.recap';
+  'team.weekly.recap',
+] as const;
+
+export type BotEventName = (typeof BOT_EVENT_NAMES)[number];
 
 export type BotEventPayload = Record<string, unknown>;
 

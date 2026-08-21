@@ -18,6 +18,7 @@ import nsAdminRatings from './adminRatings';
 import nsAdminRecycleBin from './adminRecycleBin';
 import nsAdminLogs from './adminLogs';
 import nsAdminEmailLogs from './adminEmailLogs';
+import nsAdminDiscordLogs from './adminDiscordLogs';
 import nsAdminTournamentOverview from './adminTournamentOverview';
 import nsAdminTournamentEmbed from './adminTournamentEmbed';
 import nsAdminTournamentDashboard from './adminTournamentDashboard';
@@ -201,6 +202,7 @@ export const frDict = {
   adminRecycleBin: nsAdminRecycleBin.fr,
   adminLogs: nsAdminLogs.fr,
   adminEmailLogs: nsAdminEmailLogs.fr,
+  adminDiscordLogs: nsAdminDiscordLogs.fr,
   adminTournamentOverview: nsAdminTournamentOverview.fr,
   adminTournamentEmbed: nsAdminTournamentEmbed.fr,
   adminTournamentDashboard: nsAdminTournamentDashboard.fr,

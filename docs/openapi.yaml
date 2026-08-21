@@ -12440,6 +12440,102 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /api/admin/discord-logs:
+    get:
+      summary: Discord bot journal — player actions and outgoing bot events.
+      operationId: adminListDiscordLogs
+      tags:
+        - admin/misc
+      security:
+        - StaffSession: []
+      parameters:
+        - in: query
+          name: source
+          description: >-
+            player = bot_player_actions (what players did from Discord),
+            event = bot_event_outbox (what the site pushed to the bot).
+          schema:
+            type: string
+            enum: [player, event]
+            default: player
+        - in: query
+          name: action
+          description: Action slug (source=player) or event name (source=event).
+          schema:
+            type: string
+        - in: query
+          name: entityType
+          description: source=player only.
+          schema:
+            type: string
+        - in: query
+          name: actorDiscordUserId
+          description: source=player only. Discord snowflake.
+          schema:
+            type: string
+        - in: query
+          name: targetDiscordUserId
+          description: source=player only. Discord snowflake.
+          schema:
+            type: string
+        - in: query
+          name: status
+          description: source=event only. Outbox delivery status.
+          schema:
+            type: string
+            enum: [pending, delivered, failed]
+        - in: query
+          name: from
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: to
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: search
+          schema:
+            type: string
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 100
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            default: 0
+        - in: query
+          name: includeTotal
+          schema:
+            type: string
+            enum: ['1', 'true']
+        - in: query
+          name: format
+          description: csv → CSV download (unpaginated, capped at 5000 rows).
+          schema:
+            type: string
+            enum: [csv]
+      responses:
+        '200':
+          description: Normalised Discord log rows (`{ logs, total }`), or a CSV file.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+            text/csv:
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /api/admin/email-logs:
     get:
       summary: Outgoing email log (transactional + campaigns).

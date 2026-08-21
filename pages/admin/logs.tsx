@@ -9,6 +9,7 @@ import Tabs, {
 } from '@/components/admin/Tabs';
 import StaffLogsPanel from '@/components/admin/logs/StaffLogsPanel';
 import EmailLogsPanel from '@/components/admin/logs/EmailLogsPanel';
+import DiscordLogsPanel from '@/components/admin/logs/DiscordLogsPanel';
 import type { StaffProps } from '@/types/admin';
 import nsAdminJournals from '@/lib/i18n/locales/admin-fr/adminJournals';
 
@@ -17,19 +18,27 @@ const ID_BASE = 'admin-journals';
 export const getServerSideProps = withStaffPage('admin');
 
 /**
- * Merged logs page ("Journaux"). Hosts the former /admin/logs (staff audit) and
- * /admin/email-logs (Brevo email events) as deep-linkable tabs
- * (`?tab=staff|emails`). The page is manager-gated; the Emails tab stays
- * admin-only — it is only listed / rendered for admin+ staff, and the legacy
- * /admin/email-logs route remains admin-gated via its redirect shim.
+ * Merged logs page ("Journaux"). Hosts the former /admin/logs (staff audit),
+ * /admin/email-logs (Brevo email events) and the Discord bot journal as
+ * deep-linkable tabs (`?tab=staff|emails|discord`). The page is manager-gated;
+ * the Emails and Discord tabs stay admin-only — they are only listed /
+ * rendered for admin+ staff (their endpoints are admin-gated too), and the
+ * legacy /admin/email-logs route remains admin-gated via its redirect shim.
  */
 export default function AdminJournalsPage({ staff }: StaffProps) {
   const t = useAdminT(nsAdminJournals);
-  const canSeeEmails = hasAtLeastRole(staff.role as StaffRole, 'admin');
+  // Emails (Brevo) et Discord (IDs Discord des joueuses) exposent des données
+  // plus sensibles que l'audit staff : mêmes gardes que leurs endpoints.
+  const canSeeAdminTabs = hasAtLeastRole(staff.role as StaffRole, 'admin');
 
   const tabs = [
     { id: 'staff', label: t.tabStaff },
-    ...(canSeeEmails ? [{ id: 'emails', label: t.tabEmails }] : []),
+    ...(canSeeAdminTabs
+      ? [
+          { id: 'emails', label: t.tabEmails },
+          { id: 'discord', label: t.tabDiscord },
+        ]
+      : []),
   ];
   const [active, setActive] = useQueryTab(tabs);
 
@@ -62,8 +71,10 @@ export default function AdminJournalsPage({ staff }: StaffProps) {
             id={tabPanelId(ID_BASE, active)}
             aria-labelledby={tabButtonId(ID_BASE, active)}
           >
-            {active === 'emails' && canSeeEmails ? (
+            {active === 'emails' && canSeeAdminTabs ? (
               <EmailLogsPanel />
+            ) : active === 'discord' && canSeeAdminTabs ? (
+              <DiscordLogsPanel />
             ) : (
               <StaffLogsPanel />
             )}

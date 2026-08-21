@@ -10,8 +10,9 @@ import { adminNs } from '../../ns';
 export default adminNs('adminJournals', {
   pageTitle: 'Admin – Journaux',
   heading: 'Journaux',
-  subtitle: 'Journaux d’activité du staff et des emails envoyés.',
+  subtitle: 'Journaux d’activité du staff, des emails envoyés et du bot Discord.',
   tabsAriaLabel: 'Types de journaux',
   tabStaff: 'Staff',
   tabEmails: 'Emails',
+  tabDiscord: 'Discord',
 });
