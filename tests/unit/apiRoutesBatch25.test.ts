@@ -948,6 +948,122 @@ describe('/api/admin/users/manage', () => {
     expect(res.statusCode).toBe(403);
   });
 
+  it('PATCH suspend 403 sur son propre compte', async () => {
+    // ctx.user.id === 'user-1' (staff row du requester).
+    setAdminUser('user-1', 'moi@x.com');
+    const res = makeRes();
+    await usersManageHandler(
+      makeReq({
+        method: 'PATCH',
+        body: { userId: 'user-1', action: 'suspend', duration: '24h' },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(403);
+  });
+
+  it('PATCH suspend 403 quand un admin cible un owner', async () => {
+    setAdminUser('u-owner', 'owner@x.com');
+    store.staff = [
+      makeStaffRow('admin'),
+      {
+        id: 'staff-owner',
+        auth_user_id: 'u-owner',
+        email: 'owner@x.com',
+        role: 'owner',
+        display_name: null,
+        avatar_url: null,
+        created_at: '2026',
+      },
+    ] as any;
+    const res = makeRes();
+    await usersManageHandler(
+      makeReq({
+        method: 'PATCH',
+        body: { userId: 'u-owner', action: 'suspend', duration: '7d' },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(403);
+  });
+
+  it('PATCH suspend 400 sur une durée inconnue', async () => {
+    setAdminUser('u-target', 'p@x.com');
+    const res = makeRes();
+    await usersManageHandler(
+      makeReq({
+        method: 'PATCH',
+        body: { userId: 'u-target', action: 'suspend', duration: '3 ans' },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('PATCH suspend puis unsuspend pose et retire banned_until', async () => {
+    setAdminUser('u-target', 'p@x.com');
+    store.staff = [makeStaffRow('owner')] as any;
+
+    const res = makeRes();
+    await usersManageHandler(
+      makeReq({
+        method: 'PATCH',
+        body: { userId: 'u-target', action: 'suspend', duration: '24h' },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    const banned = (res.body as any).banned_until as string;
+    expect(Date.parse(banned)).toBeGreaterThan(Date.now());
+    expect(logStaffActionMock).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'suspend_user', entity_id: 'u-target' })
+    );
+
+    const res2 = makeRes();
+    await usersManageHandler(
+      makeReq({
+        method: 'PATCH',
+        body: { userId: 'u-target', action: 'unsuspend' },
+      }),
+      res2
+    );
+    expect(res2.statusCode).toBe(200);
+    expect((res2.body as any).banned_until).toBeNull();
+    expect(logStaffActionMock).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'unsuspend_user' })
+    );
+  });
+
+  it('GET expose la liaison Discord et sait filtrer ceux qui n\'en ont pas', async () => {
+    const helper = await import('./__helpers__/supabaseMock');
+    helper.setAuthListUsers([
+      { id: 'u1', email: 'lie@a.com', user_metadata: {} } as any,
+      { id: 'u2', email: 'pas-lie@a.com', user_metadata: {} } as any,
+    ]);
+    store.team_members = [] as any;
+    store.user_discord_links = [
+      {
+        auth_user_id: 'u1',
+        discord_user_id: '123456789012345678',
+        discord_username: 'alice',
+      },
+    ] as any;
+
+    const all = makeRes();
+    await usersManageHandler(makeReq({ method: 'GET' }), all);
+    const u1 = (all.body as any).items.find((u: any) => u.id === 'u1');
+    const u2 = (all.body as any).items.find((u: any) => u.id === 'u2');
+    expect(u1.discord_username).toBe('alice');
+    expect(u2.discord_user_id).toBeNull();
+
+    const filtered = makeRes();
+    await usersManageHandler(
+      makeReq({ method: 'GET', query: { filters: 'no_discord' } }),
+      filtered
+    );
+    expect((filtered.body as any).items.map((u: any) => u.id)).toEqual(['u2']);
+  });
+
   it('DELETE 400 when userId missing', async () => {
     const res = makeRes();
     await usersManageHandler(makeReq({ method: 'DELETE', body: {} }), res);

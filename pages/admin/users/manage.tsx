@@ -43,8 +43,24 @@ type UserLite = {
   display_name: string | null;
   created_at: string | null;
   last_sign_in_at: string | null;
+  /** auth.users.banned_until — date future = connexion refusée. */
+  banned_until?: string | null;
+  discord_username?: string | null;
+  discord_user_id?: string | null;
   team_memberships?: TeamMembership[];
 };
+
+/** Durées proposées à la suspension — miroir de la table du handler. */
+const SUSPEND_DURATIONS = ['24h', '7d', '30d', 'permanent'] as const;
+type SuspendDuration = (typeof SUSPEND_DURATIONS)[number];
+
+/** Vrai si le compte est suspendu À CET INSTANT (une échéance passée ne l'est
+ *  plus : GoTrue laisse la date en base après expiration). */
+function isSuspended(bannedUntil: string | null | undefined): boolean {
+  if (!bannedUntil) return false;
+  const t = Date.parse(bannedUntil);
+  return Number.isFinite(t) && t > Date.now();
+}
 
 type ApiResponse = {
   items: UserLite[];
@@ -130,7 +146,9 @@ const ROLES = [...COMMUNITY_ROLES, ...STAFF_ROLE_OPTIONS];
  */
 const QUICK_FILTERS = [
   'battletag_mismatch',
+  'suspended',
   'no_team',
+  'no_discord',
   'never_signed_in',
   'inactive_6m',
   'staff',
@@ -142,8 +160,12 @@ function quickFilterLabel(t: Dict, f: QuickFilter): string {
   switch (f) {
     case 'battletag_mismatch':
       return t.filterMismatch;
+    case 'suspended':
+      return t.filterSuspended;
     case 'no_team':
       return t.filterNoTeam;
+    case 'no_discord':
+      return t.filterNoDiscord;
     case 'never_signed_in':
       return t.filterNeverSignedIn;
     case 'inactive_6m':
@@ -508,6 +530,8 @@ type UserRowProps = {
   ) => void;
   onResend: (u: UserLite) => void;
   onEdit: (u: UserLite) => void;
+  onSuspend: (u: UserLite) => void;
+  onUnsuspend: (u: UserLite) => void;
   onDelete: (u: UserLite) => void;
 };
 
@@ -525,12 +549,15 @@ const UserRow = memo(function UserRow({
   onOpenBattleTag,
   onResend,
   onEdit,
+  onSuspend,
+  onUnsuspend,
   onDelete,
 }: UserRowProps) {
   const name = u.display_name || u.email || t.defaultUser;
   // Deux verrous distincts : cible protégée (owner/admin vu par un non-owner)
   // et cible = soi-même (l'API renvoie 403 sur le rôle et la suppression).
   const targetLocked = isRowLocked(u.role, staffRole) || isSelf;
+  const suspended = isSuspended(u.banned_until);
   const createdRel = formatRelative(u.created_at, lang);
   const lastRel = formatRelative(u.last_sign_in_at, lang);
 
@@ -604,6 +631,31 @@ const UserRow = memo(function UserRow({
                 className="relative z-10 px-2 py-0.5 rounded-full bg-white/10 border border-white/20 text-xs font-medium text-neutral-200"
               >
                 {t.selfBadge}
+              </span>
+            )}
+            {/* Suspension : jamais signalée par la seule couleur, le mot
+                « Suspendu » est écrit et l'échéance est dans l'infobulle. */}
+            {suspended && (
+              <span
+                title={format(t.suspendedBadgeTitle, {
+                  date: formatDate(u.banned_until ?? null),
+                })}
+                className="relative z-10 px-2 py-0.5 rounded-full bg-red-500/20 border border-red-400/50 text-xs font-medium text-red-200"
+              >
+                {t.suspendedBadge}
+              </span>
+            )}
+            {/* Lien Discord : conditionne la synchro des rôles et les DM du
+                bot. Absent = pas de pastille (le filtre « sans Discord »
+                couvre le négatif sans alourdir chaque ligne). */}
+            {u.discord_user_id && (
+              <span
+                title={format(t.discordBadgeTitle, {
+                  username: u.discord_username || u.discord_user_id,
+                })}
+                className="relative z-10 px-2 py-0.5 rounded-full bg-indigo-500/20 border border-indigo-400/40 text-xs font-medium text-indigo-200"
+              >
+                {t.discordBadge}
               </span>
             )}
           </div>
@@ -826,6 +878,40 @@ const UserRow = memo(function UserRow({
 
         <button
           type="button"
+          title={
+            isSelf
+              ? t.selfRowTitle
+              : suspended
+                ? t.unsuspendTitle
+                : t.suspendTitle
+          }
+          aria-label={suspended ? t.unsuspendTitle : t.suspendTitle}
+          onClick={() => (suspended ? onUnsuspend(u) : onSuspend(u))}
+          disabled={isSelf || targetLocked}
+          className={`p-2 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed ${
+            suspended
+              ? 'text-red-300 hover:text-emerald-400 hover:bg-white/[0.06]'
+              : 'text-neutral-400 hover:text-red-300 hover:bg-white/[0.06]'
+          }`}
+        >
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
+            />
+          </svg>
+        </button>
+
+        <button
+          type="button"
           title={isSelf ? t.selfRowTitle : t.deleteTitle}
           aria-label={t.deleteTitle}
           onClick={() => onDelete(u)}
@@ -999,6 +1085,74 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
 
   // Resend credentials
   const [resendingUser, setResendingUser] = useState<string | null>(null);
+
+  // Suspension (alternative à la suppression : le compte et ses rosters
+  // restent intacts, seule la connexion est refusée).
+  const [suspendingUser, setSuspendingUser] = useState<UserLite | null>(null);
+  const [suspendDuration, setSuspendDuration] =
+    useState<SuspendDuration>('24h');
+  const [suspendSaving, setSuspendSaving] = useState(false);
+  const [suspendError, setSuspendError] = useState<string | null>(null);
+
+  const openSuspend = useCallback((user: UserLite) => {
+    setSuspendingUser(user);
+    setSuspendDuration('24h');
+    setSuspendError(null);
+  }, []);
+
+  const confirmSuspend = async () => {
+    if (!suspendingUser) return;
+    setSuspendSaving(true);
+    setSuspendError(null);
+    try {
+      await adminFetchJson('/api/admin/users/manage', {
+        method: 'PATCH',
+        body: JSON.stringify({
+          userId: suspendingUser.id,
+          action: 'suspend',
+          duration: suspendDuration,
+        }),
+      });
+      setSuspendingUser(null);
+      addToast(t.toastSuspended, 'success');
+      // L'échéance exacte est calculée par GoTrue : on la relit plutôt que de
+      // la deviner côté client.
+      refresh();
+    } catch (err: unknown) {
+      setSuspendError((err as Error)?.message || t.errSuspend);
+    } finally {
+      setSuspendSaving(false);
+    }
+  };
+
+  const unsuspendUser = useCallback(
+    async (user: UserLite) => {
+      const ok = await confirm({
+        title: t.confirmUnsuspendTitle,
+        subtitle: format(t.confirmUnsuspendSubtitle, {
+          name: user.display_name || user.email || user.id,
+        }),
+        variant: 'warning',
+        confirmLabel: t.confirmUnsuspendBtn,
+      });
+      if (!ok) return;
+      try {
+        await adminFetchJson('/api/admin/users/manage', {
+          method: 'PATCH',
+          body: JSON.stringify({ userId: user.id, action: 'unsuspend' }),
+        });
+        mutate((prev) =>
+          prev.map((u) =>
+            u.id === user.id ? { ...u, banned_until: null } : u
+          )
+        );
+        addToast(t.toastUnsuspended, 'success');
+      } catch (err: unknown) {
+        addToast((err as Error)?.message || t.errSuspend, 'error');
+      }
+    },
+    [confirm, adminFetchJson, mutate, addToast, t]
+  );
 
   const handleSort = useCallback((field: SortField) => {
     setSortField((prevField) => {
@@ -1451,6 +1605,8 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
         'role_scope',
         'created_at',
         'last_sign_in_at',
+        'banned_until',
+        'discord',
         'teams',
       ];
       const lines = [
@@ -1464,6 +1620,8 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
             isStaffRoleValue(u.role) ? 'staff' : 'community',
             u.created_at || '',
             u.last_sign_in_at || '',
+            isSuspended(u.banned_until) ? u.banned_until || '' : '',
+            u.discord_username || u.discord_user_id || '',
             (u.team_memberships || [])
               .map((tm) => `${tm.team_name} (${tm.role || '—'})`)
               .join('; '),
@@ -1869,6 +2027,8 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
                     onOpenBattleTag={openBattleTagEdit}
                     onResend={resendCredentials}
                     onEdit={openEditUser}
+                    onSuspend={openSuspend}
+                    onUnsuspend={unsuspendUser}
                     onDelete={openDeleteUser}
                   />
                 ))}
@@ -2043,6 +2203,65 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
           className="w-full px-3 py-2.5 rounded-xl bg-neutral-950/50 border border-white/10 text-white placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-red-500/70 text-sm font-mono"
           placeholder={deleteConfirmValue}
         />
+      </Modal>
+
+      {/* Suspension Modal */}
+      <Modal
+        open={Boolean(suspendingUser)}
+        onClose={() => setSuspendingUser(null)}
+        title={t.suspendModalTitle}
+        subtitle={suspendingUser?.email || suspendingUser?.id}
+        footer={
+          <>
+            <button
+              onClick={() => setSuspendingUser(null)}
+              className="px-4 py-2 rounded-lg border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-sm font-medium transition-colors"
+            >
+              {t.cancel}
+            </button>
+            <button
+              onClick={confirmSuspend}
+              disabled={suspendSaving}
+              className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {suspendSaving && (
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              )}
+              {t.suspendConfirmBtn}
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-neutral-300">{t.suspendHelp}</p>
+          <div>
+            <label
+              className="block text-sm text-neutral-300 mb-1.5"
+              htmlFor="suspend-duration"
+            >
+              {t.suspendDurationLabel}
+            </label>
+            <select
+              id="suspend-duration"
+              value={suspendDuration}
+              onChange={(e) =>
+                setSuspendDuration(e.target.value as SuspendDuration)
+              }
+              className="w-full px-3 py-2.5 rounded-xl bg-neutral-950/50 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-red-500/70 text-sm"
+            >
+              <option value="24h">{t.suspendDuration24h}</option>
+              <option value="7d">{t.suspendDuration7d}</option>
+              <option value="30d">{t.suspendDuration30d}</option>
+              <option value="permanent">{t.suspendDurationPermanent}</option>
+            </select>
+          </div>
+
+          {suspendError && (
+            <div className="rounded-lg bg-red-900/40 border border-red-500/50 px-3 py-2 text-sm text-red-200">
+              {suspendError}
+            </div>
+          )}
+        </div>
       </Modal>
 
       {/* Battle Tag Edit Modal */}

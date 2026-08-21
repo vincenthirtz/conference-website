@@ -37,6 +37,11 @@ type UserLite = {
   display_name: string | null;
   created_at: string | null;
   last_sign_in_at: string | null;
+  /** auth.users.banned_until — date future = compte suspendu. */
+  banned_until?: string | null;
+  /** Pseudo Discord lié (user_discord_links), null si non lié. */
+  discord_username?: string | null;
+  discord_user_id?: string | null;
   team_memberships?: TeamMembership[];
 };
 
@@ -53,6 +58,8 @@ type UpdateResponse = {
    * écriture (la vérification Battle.net est invalidée par une édition
    * manuelle), pour que le client rafraîchisse ses pastilles sans refetch.
    */
+  /** Renvoyé par suspend / unsuspend : nouvel état de la suspension. */
+  banned_until?: string | null;
   membership?: {
     team_id: string;
     battle_tag: string | null;
@@ -161,8 +168,10 @@ async function handler(
       'staff',
       'community',
       'no_team',
+      'no_discord',
       'never_signed_in',
       'inactive_6m',
+      'suspended',
       'battletag_mismatch',
     ]);
     const filters =
@@ -222,6 +231,7 @@ async function handler(
       display_name: string | null;
       created_at: string | null;
       last_sign_in_at: string | null;
+      banned_until?: string | null;
       total_count: number | string | null;
     };
     const rows = (data ?? []) as RpcRow[];
@@ -235,14 +245,36 @@ async function handler(
       display_name: row.display_name ?? null,
       created_at: row.created_at ?? null,
       last_sign_in_at: row.last_sign_in_at ?? null,
+      banned_until: row.banned_until ?? null,
     }));
 
     // Enrich team_memberships ONLY for the user ids on THIS page (≤ lim ids →
     // cheap). Same SELECT + shape as before.
     const pageUserIds = items.map((u) => u.id);
     const teamMembershipsMap = new Map<string, TeamMembership[]>();
+    /** Liaison Discord des comptes de la page (best-effort, comme le reste). */
+    const discordByUser = new Map<
+      string,
+      { discord_user_id: string; discord_username: string | null }
+    >();
 
     if (pageUserIds.length) {
+      // Toute la synchro de rôles Discord et les DM du bot dépendent de ce
+      // lien : savoir qui n'est pas lié explique la moitié des « le bot ne
+      // m'a rien envoyé ».
+      const { data: discordLinks } = await supabaseAdmin
+        .from('user_discord_links')
+        .select('auth_user_id, discord_user_id, discord_username')
+        .in('auth_user_id', pageUserIds);
+      (discordLinks ?? []).forEach((row: any) => {
+        if (row?.auth_user_id && row?.discord_user_id) {
+          discordByUser.set(row.auth_user_id, {
+            discord_user_id: String(row.discord_user_id),
+            discord_username: row.discord_username ?? null,
+          });
+        }
+      });
+
       // Lien identité Battle.net vérifié des joueuses de la page (service-role).
       // Sert à détecter un mismatch « compte vérifié ≠ tag roster » sans
       // rejoindre la table à chaque rendu. Best-effort : en cas d'erreur on
@@ -299,6 +331,8 @@ async function handler(
 
     const enriched: UserLite[] = items.map((u) => ({
       ...u,
+      discord_user_id: discordByUser.get(u.id)?.discord_user_id ?? null,
+      discord_username: discordByUser.get(u.id)?.discord_username ?? null,
       team_memberships: teamMembershipsMap.get(u.id) || [],
     }));
 
@@ -370,6 +404,111 @@ async function handler(
       }
 
       return res.status(200).json({ success: true });
+    }
+
+    // Suspension temporaire — l'alternative à la suppression définitive.
+    // Supabase Auth expose `ban_duration` (durée Go : '24h', ou 'none' pour
+    // lever). Le compte reste intact : rosters, historique et accès staff sont
+    // conservés, seule la connexion est refusée.
+    if (
+      userId &&
+      (req.body.action === 'suspend' || req.body.action === 'unsuspend')
+    ) {
+      const suspending = req.body.action === 'suspend';
+
+      // Se suspendre soi-même = se déconnecter du back-office en pleine action
+      // (même raison que l'interdiction de changer son propre rôle).
+      if (userId === ctx.user.id) {
+        return res
+          .status(403)
+          .json({ error: 'You cannot suspend your own account.' });
+      }
+
+      const target = await loadTarget(userId);
+      if (!target) {
+        return res.status(404).json({ error: 'User not found.' });
+      }
+
+      const requesterRole = ctx.staff?.role ?? null;
+      if (target.isProtected && requesterRole !== 'owner') {
+        return res.status(403).json({
+          error: 'Only an owner can suspend an owner or admin account.',
+        });
+      }
+
+      // Garde « last owner » : suspendre le dernier owner revient à laisser
+      // l'organisation sans personne pour rendre la main.
+      if (suspending && target.staffRole === 'owner') {
+        const { count: ownerCount, error: ownerCountErr } = await supabaseAdmin
+          .from('staff')
+          .select('id', { count: 'exact', head: true })
+          .eq('role', 'owner');
+        if (ownerCountErr) {
+          logger.error(
+            '[admin/users/manage] owner count error:',
+            ownerCountErr
+          );
+          return res
+            .status(500)
+            .json({ error: 'Failed to verify owner count.' });
+        }
+        if ((ownerCount ?? 0) <= 1) {
+          return res.status(409).json({
+            error:
+              'Cannot suspend the last owner. Promote another user to owner first.',
+          });
+        }
+      }
+
+      // Durées proposées par l'UI ; 'permanent' = 100 ans, la convention
+      // GoTrue pour un bannissement sans échéance (levable à tout moment).
+      const DURATIONS: Record<string, string> = {
+        '24h': '24h',
+        '7d': '168h',
+        '30d': '720h',
+        permanent: '876000h',
+      };
+      const durationKey =
+        typeof req.body.duration === 'string' ? req.body.duration : '24h';
+      if (suspending && !DURATIONS[durationKey]) {
+        return res.status(400).json({ error: 'Invalid suspension duration.' });
+      }
+
+      const { data, error } = await supabaseAdmin.auth.admin.updateUserById(
+        userId,
+        {
+          ban_duration: suspending ? DURATIONS[durationKey] : 'none',
+        } as { ban_duration: string }
+      );
+
+      if (error) {
+        logger.error('[admin/users/manage] suspend error:', error);
+        return res
+          .status(500)
+          .json({ error: 'Failed to update suspension state.' });
+      }
+
+      const bannedUntil =
+        (data?.user as { banned_until?: string | null } | undefined)
+          ?.banned_until ?? null;
+
+      void logStaffAction({
+        staff_id: ctx.staff.id,
+        action: suspending ? 'suspend_user' : 'unsuspend_user',
+        entity_type: 'user',
+        entity_id: userId,
+        tenant_id: ctx.tenantId,
+        payload: {
+          targetEmail: target.user.email ?? null,
+          duration: suspending ? durationKey : null,
+          bannedUntil,
+        },
+      });
+
+      return res.status(200).json({
+        success: true,
+        banned_until: suspending ? (bannedUntil ?? 'pending') : null,
+      });
     }
 
     // Special case: update battle_tag for a specific team membership

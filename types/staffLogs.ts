@@ -91,6 +91,8 @@ export type StaffLogAction =
   | 'staff_batch_action'
   | 'update_staff_role'
   | 'delete_staff_account'
+  | 'suspend_user'
+  | 'unsuspend_user'
   | 'toggle_pole_admin'
   // --- Tenants / provisioning ---
   | 'create_tenant'

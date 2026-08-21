@@ -184,6 +184,8 @@ type AdminUserEntry = {
   }>;
   user_metadata?: Record<string, unknown>;
   created_at?: string | null;
+  /** Suspension GoTrue matérialisée par updateUserById({ ban_duration }). */
+  banned_until?: string | null;
 };
 const _adminUsers = new Map<string, AdminUserEntry>();
 
@@ -774,6 +776,9 @@ export const supabaseAdmin = {
         auth_user_id?: string;
         battle_tag?: string | null;
       }>;
+      const discordLinks = (store.user_discord_links ?? []) as Array<{
+        auth_user_id?: string;
+      }>;
       const STAFF_ACCOUNT_ROLES = ['caster', 'admin', 'owner'];
       const SIX_MONTHS_MS = 182 * 24 * 3600 * 1000;
 
@@ -816,9 +821,11 @@ export const supabaseAdmin = {
           last_sign_in_at: ((u as any).last_sign_in_at ?? null) as
             | string
             | null,
+          banned_until: ((u as any).banned_until ?? null) as string | null,
           _battleTags: battleTags,
           _hasTeam: memberships.length > 0,
           _hasMismatch: hasMismatch,
+          _hasDiscord: discordLinks.some((l) => l.auth_user_id === u.id),
         };
       });
 
@@ -849,6 +856,12 @@ export const supabaseAdmin = {
           Date.parse(u.last_sign_in_at) >= Date.now() - SIX_MONTHS_MS
         )
           return false;
+        if (
+          pFilters.includes('suspended') &&
+          !(u.banned_until && Date.parse(u.banned_until) > Date.now())
+        )
+          return false;
+        if (pFilters.includes('no_discord') && u._hasDiscord) return false;
         if (pFilters.includes('battletag_mismatch') && !u._hasMismatch)
           return false;
         return true;
@@ -868,6 +881,7 @@ export const supabaseAdmin = {
         display_name: u.display_name,
         created_at: u.created_at,
         last_sign_in_at: u.last_sign_in_at,
+        banned_until: u.banned_until,
         total_count: totalCount,
       }));
       return Promise.resolve({ data: page as any, error: null as any });
@@ -903,6 +917,25 @@ export const supabaseAdmin = {
         // Echo back a minimal user object so callers that read `data.user`
         // get something meaningful (mirrors Supabase's real behavior).
         const existing = _adminUsers.get(userId);
+        // `ban_duration` (GoTrue) : 'none' lève la suspension, une durée Go
+        // ('24h', '876000h') la pose. On matérialise banned_until pour que les
+        // handlers ET la RPC mockée voient le même état.
+        let bannedUntil = existing?.banned_until ?? null;
+        if (typeof updates?.ban_duration === 'string') {
+          if (updates.ban_duration === 'none') {
+            bannedUntil = null;
+          } else {
+            const hours = Number.parseInt(updates.ban_duration, 10) || 0;
+            bannedUntil = new Date(
+              Date.now() + hours * 3600 * 1000
+            ).toISOString();
+          }
+          if (existing)
+            _adminUsers.set(userId, {
+              ...existing,
+              banned_until: bannedUntil,
+            });
+        }
         return Promise.resolve({
           data: {
             user: {
@@ -910,6 +943,7 @@ export const supabaseAdmin = {
               email: existing?.email ?? null,
               user_metadata: updates?.user_metadata ?? {},
               created_at: '2026-01-01T00:00:00.000Z',
+              banned_until: bannedUntil,
             } as any,
           },
           error: null as any,

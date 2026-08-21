@@ -250,6 +250,8 @@ export const STAFF_LOG_ACTION_LABELS: Record<StaffLogAction, string> = {
   staff_batch_action: 'Action batch staff',
   update_staff_role: 'Modification rôle staff',
   delete_staff_account: 'Suppression compte staff',
+  suspend_user: 'Suspension de compte',
+  unsuspend_user: 'Levée de suspension',
   toggle_pole_admin: 'Bascule admin de pôle',
   // Tenants / provisioning
   create_tenant: 'Création tenant',
