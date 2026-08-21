@@ -512,6 +512,98 @@ describe('/api/admin/users/manage', () => {
     expect(body.total).toBe(1);
   });
 
+  it('GET filters=battletag_mismatch ne garde que les identités douteuses', async () => {
+    const helper = await import('./__helpers__/supabaseMock');
+    helper.setAuthListUsers([
+      { id: 'u1', email: 'ok@a.com', user_metadata: {} } as any,
+      { id: 'u2', email: 'smurf@a.com', user_metadata: {} } as any,
+    ]);
+    store.team_members = [
+      {
+        user_id: 'u1',
+        team_id: 't1',
+        role: 'player',
+        battle_tag: 'Clean#1111',
+        battle_tag_verified_at: '2026-01-01T00:00:00.000Z',
+        verified_battle_net_id: 'bnet-clean',
+        team: { id: 't1', name: 'Alpha' },
+      },
+      {
+        user_id: 'u2',
+        team_id: 't2',
+        role: 'player',
+        battle_tag: 'Roster#2222',
+        team: { id: 't2', name: 'Beta' },
+      },
+    ] as any;
+    // u2 : le compte Blizzard lié porte un AUTRE tag que celui du roster.
+    store.user_battlenet_links = [
+      { auth_user_id: 'u1', battle_tag: 'Clean#1111' },
+      { auth_user_id: 'u2', battle_tag: 'Autre#3333' },
+    ] as any;
+
+    const res = makeRes();
+    await usersManageHandler(
+      makeReq({ method: 'GET', query: { filters: 'battletag_mismatch' } }),
+      res
+    );
+    const body = res.body as any;
+    expect(body.items.map((u: any) => u.id)).toEqual(['u2']);
+    expect(body.total).toBe(1);
+    expect(body.items[0].team_memberships[0].battle_tag_mismatch).toBe(true);
+  });
+
+  it('GET filters cumule no_team et never_signed_in (ET)', async () => {
+    const helper = await import('./__helpers__/supabaseMock');
+    helper.setAuthListUsers([
+      // sans équipe MAIS déjà connectée
+      {
+        id: 'u1',
+        email: 'a@a.com',
+        user_metadata: {},
+        last_sign_in_at: '2026-08-01T00:00:00.000Z',
+      } as any,
+      // sans équipe ET jamais connectée → seule attendue
+      { id: 'u2', email: 'b@b.com', user_metadata: {} } as any,
+      // jamais connectée MAIS dans une équipe
+      { id: 'u3', email: 'c@c.com', user_metadata: {} } as any,
+    ]);
+    store.team_members = [
+      { user_id: 'u3', team_id: 't1', role: 'player', team: { id: 't1', name: 'Alpha' } },
+    ] as any;
+    store.user_battlenet_links = [] as any;
+
+    const res = makeRes();
+    await usersManageHandler(
+      makeReq({
+        method: 'GET',
+        query: { filters: 'no_team,never_signed_in' },
+      }),
+      res
+    );
+    expect((res.body as any).items.map((u: any) => u.id)).toEqual(['u2']);
+  });
+
+  it('GET ignore les filtres inconnus (liste blanche)', async () => {
+    const helper = await import('./__helpers__/supabaseMock');
+    helper.setAuthListUsers([
+      { id: 'u1', email: 'a@a.com', user_metadata: {} } as any,
+      { id: 'u2', email: 'b@b.com', user_metadata: {} } as any,
+    ]);
+    store.team_members = [] as any;
+    const res = makeRes();
+    await usersManageHandler(
+      makeReq({
+        method: 'GET',
+        query: { filters: 'drop_table,staff' },
+      }),
+      res
+    );
+    // 'drop_table' est jeté ; seul 'staff' s'applique → aucun compte staff ici.
+    expect(res.statusCode).toBe(200);
+    expect((res.body as any).items).toHaveLength(0);
+  });
+
   it('GET paginates with limit/offset while reporting full total', async () => {
     const helper = await import('./__helpers__/supabaseMock');
     helper.setAuthListUsers([

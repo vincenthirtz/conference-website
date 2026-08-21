@@ -759,11 +759,23 @@ export const supabaseAdmin = {
       const limit = Number.isFinite(pLimit) && pLimit > 0 ? pLimit : 20;
       const pOffset = Number(p.p_offset);
       const offset = Number.isFinite(pOffset) && pOffset >= 0 ? pOffset : 0;
+      // Filtres rapides cumulables (cf. add_admin_list_users_filters.sql).
+      const pFilters: string[] = Array.isArray(p.p_filters)
+        ? (p.p_filters as unknown[]).map((f) => String(f).toLowerCase())
+        : [];
 
       const teamMembers = (store.team_members ?? []) as Array<{
         user_id?: string;
         battle_tag?: string | null;
+        battle_tag_verified_at?: string | null;
+        verified_battle_net_id?: string | null;
       }>;
+      const bnetLinks = (store.user_battlenet_links ?? []) as Array<{
+        auth_user_id?: string;
+        battle_tag?: string | null;
+      }>;
+      const STAFF_ACCOUNT_ROLES = ['caster', 'admin', 'owner'];
+      const SIX_MONTHS_MS = 182 * 24 * 3600 * 1000;
 
       const normalized = _authListUsers.map((u) => {
         const meta = ((u as any).user_metadata ?? {}) as Record<
@@ -780,6 +792,21 @@ export const supabaseAdmin = {
           .filter((tm) => tm.user_id === u.id)
           .map((tm) => (tm.battle_tag ? String(tm.battle_tag) : ''))
           .filter(Boolean);
+        const memberships = teamMembers.filter((tm) => tm.user_id === u.id);
+        const linkedTag = (
+          bnetLinks.find((l) => l.auth_user_id === u.id)?.battle_tag ?? ''
+        )
+          .toString()
+          .trim()
+          .toLowerCase();
+        // Miroir de computeBattleTagMismatch (utils/auth/battleTagMismatch.ts)
+        // ET de la clause SQL du filtre 'battletag_mismatch'.
+        const hasMismatch = memberships.some((tm) => {
+          if (tm.verified_battle_net_id && !tm.battle_tag_verified_at)
+            return true;
+          const roster = (tm.battle_tag ?? '').toString().trim().toLowerCase();
+          return Boolean(linkedTag && roster && linkedTag !== roster);
+        });
         return {
           id: u.id,
           email: u.email ?? null,
@@ -790,6 +817,8 @@ export const supabaseAdmin = {
             | string
             | null,
           _battleTags: battleTags,
+          _hasTeam: memberships.length > 0,
+          _hasMismatch: hasMismatch,
         };
       });
 
@@ -803,6 +832,25 @@ export const supabaseAdmin = {
             u._battleTags.some((bt) => bt.toLowerCase().includes(pQuery));
           if (!matched) return false;
         }
+        const accountRole = (u.role ?? '').toLowerCase();
+        if (pFilters.includes('staff') && !STAFF_ACCOUNT_ROLES.includes(accountRole))
+          return false;
+        if (
+          pFilters.includes('community') &&
+          STAFF_ACCOUNT_ROLES.includes(accountRole || 'member')
+        )
+          return false;
+        if (pFilters.includes('no_team') && u._hasTeam) return false;
+        if (pFilters.includes('never_signed_in') && u.last_sign_in_at)
+          return false;
+        if (
+          pFilters.includes('inactive_6m') &&
+          u.last_sign_in_at &&
+          Date.parse(u.last_sign_in_at) >= Date.now() - SIX_MONTHS_MS
+        )
+          return false;
+        if (pFilters.includes('battletag_mismatch') && !u._hasMismatch)
+          return false;
         return true;
       });
 

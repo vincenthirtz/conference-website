@@ -81,6 +81,38 @@ const STAFF_ROLE_OPTIONS = ['caster', 'admin', 'owner'];
 /** Union à plat — utilisée pour le filtre et les gardes existantes. */
 const ROLES = [...COMMUNITY_ROLES, ...STAFF_ROLE_OPTIONS];
 
+/**
+ * Filtres rapides cumulables (AND), appliqués côté SQL par la RPC
+ * `admin_list_users` (cf. database/migrations/add_admin_list_users_filters.sql).
+ * L'ordre ci-dessous est celui d'affichage des puces.
+ */
+const QUICK_FILTERS = [
+  'battletag_mismatch',
+  'no_team',
+  'never_signed_in',
+  'inactive_6m',
+  'staff',
+  'community',
+] as const;
+type QuickFilter = (typeof QUICK_FILTERS)[number];
+
+function quickFilterLabel(t: Dict, f: QuickFilter): string {
+  switch (f) {
+    case 'battletag_mismatch':
+      return t.filterMismatch;
+    case 'no_team':
+      return t.filterNoTeam;
+    case 'never_signed_in':
+      return t.filterNeverSignedIn;
+    case 'inactive_6m':
+      return t.filterInactive6m;
+    case 'staff':
+      return t.filterStaff;
+    case 'community':
+      return t.filterCommunity;
+  }
+}
+
 /** Miroir EXACT de la validation serveur (pages/api/admin/users/manage.ts). */
 const BATTLE_TAG_RE = /^[A-Za-z0-9]{2,}#[0-9]{3,6}$/;
 
@@ -706,6 +738,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
   // filters + tri
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<string | null>(null);
+  const [quickFilters, setQuickFilters] = useState<QuickFilter[]>([]);
   const [sortField, setSortField] = useState<SortField>('created_at');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
 
@@ -736,7 +769,12 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
     limit: 20,
     includeTotal: false,
     query: search,
-    params: { role: roleFilter, sort: sortField, dir: sortDir },
+    params: {
+      role: roleFilter,
+      sort: sortField,
+      dir: sortDir,
+      filters: quickFilters.length ? quickFilters.join(',') : null,
+    },
     select: (res) => res.items || [],
     onData: (res) => setTotal(res.total ?? res.items?.length ?? 0),
   });
@@ -744,13 +782,13 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
   // Filtre rôle / tri repartent de la première page.
   useEffect(() => {
     resetOffset();
-  }, [roleFilter, sortField, sortDir, resetOffset]);
+  }, [roleFilter, quickFilters, sortField, sortDir, resetOffset]);
 
   // La sélection est scopée à la page affichée : on la vide dès que le jeu de
   // lignes change (page, recherche, filtre, tri).
   useEffect(() => {
     setSelected(new Set());
-  }, [offset, search, roleFilter, sortField, sortDir]);
+  }, [offset, search, roleFilter, quickFilters, sortField, sortDir]);
 
   useEffect(() => {
     if (loadError) addToast(loadError, 'error');
@@ -779,6 +817,12 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
 
   // Resend credentials
   const [resendingUser, setResendingUser] = useState<string | null>(null);
+
+  const toggleQuickFilter = useCallback((f: QuickFilter) => {
+    setQuickFilters((prev) =>
+      prev.includes(f) ? prev.filter((x) => x !== f) : [...prev, f]
+    );
+  }, []);
 
   function handleSearchSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -1148,6 +1192,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
         const qs = new URLSearchParams();
         if (search) qs.set('search', search);
         if (roleFilter) qs.set('role', roleFilter);
+        if (quickFilters.length) qs.set('filters', quickFilters.join(','));
         qs.set('sort', sortField);
         qs.set('dir', sortDir);
         qs.set('limit', String(pageSize));
@@ -1430,6 +1475,52 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
                 {t.searchButton}
               </button>
             </form>
+
+            {/* Filtres rapides — cumulables, appliqués côté SQL (donc cohérents
+                avec la pagination et le total). « Identité à vérifier » rend
+                enfin atteignable le flag anti-smurf battle_tag_mismatch, qui
+                n'était jusqu'ici qu'un badge repéré à l'œil. */}
+            <div className="mt-4 border-t border-white/5 pt-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm text-neutral-300 mr-1">
+                  {t.quickFiltersLabel}
+                </span>
+                {QUICK_FILTERS.map((f) => {
+                  const active = quickFilters.includes(f);
+                  const alert = f === 'battletag_mismatch';
+                  return (
+                    <button
+                      key={f}
+                      type="button"
+                      aria-pressed={active}
+                      onClick={() => toggleQuickFilter(f)}
+                      className={`px-3 py-1.5 rounded-full border text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/60 ${
+                        active
+                          ? alert
+                            ? 'bg-amber-500/25 border-amber-400/60 text-amber-100'
+                            : 'bg-purple-600/30 border-purple-400/60 text-purple-100'
+                          : 'bg-white/[0.04] border-white/10 text-neutral-300 hover:bg-white/[0.08]'
+                      }`}
+                    >
+                      {alert && <span aria-hidden="true">⚠ </span>}
+                      {quickFilterLabel(t, f)}
+                    </button>
+                  );
+                })}
+                {quickFilters.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setQuickFilters([])}
+                    className="px-3 py-1.5 rounded-full border border-white/10 bg-white/[0.02] text-sm text-neutral-400 hover:text-white hover:bg-white/[0.06] transition-colors"
+                  >
+                    {t.quickFiltersClear}
+                  </button>
+                )}
+              </div>
+              <p className="mt-2 text-xs text-neutral-500">
+                {t.quickFiltersHint}
+              </p>
+            </div>
           </section>
 
           {/* Users List */}

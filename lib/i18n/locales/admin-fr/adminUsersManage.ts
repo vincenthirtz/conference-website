@@ -141,6 +141,16 @@ export default adminNs('adminUsersManage', {
   selfRowTitle:
     "C'est ton propre compte : changer son rôle ou le supprimer est refusé par l'API.",
   battleTagInvalid: 'BattleTag invalide — format attendu : Pseudo#1234.',
+  quickFiltersLabel: 'Filtres rapides :',
+  quickFiltersClear: 'Réinitialiser',
+  quickFiltersHint:
+    'Cumulables (ET) et appliqués côté serveur : le total et la pagination en tiennent compte.',
+  filterMismatch: 'Identité à vérifier',
+  filterNoTeam: 'Sans équipe',
+  filterNeverSignedIn: 'Jamais connecté',
+  filterInactive6m: 'Inactif > 6 mois',
+  filterStaff: 'Staff',
+  filterCommunity: 'Communauté',
   exportTruncated:
     'Export partiel : {count} ligne(s) exportée(s) avant que la limite de requêtes ne soit atteinte.',
 });

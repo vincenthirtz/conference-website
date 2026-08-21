@@ -136,6 +136,7 @@ async function handler(
       offset = '0',
       sort,
       dir,
+      filters: rawFilters,
     } = req.query;
     const lim = Math.max(1, Math.min(200, Number(limit) || 20));
     const off = Math.max(0, Number(offset) || 0);
@@ -153,6 +154,29 @@ async function handler(
       typeof sort === 'string' && SORT_FIELDS.has(sort) ? sort : 'created_at';
     const sortDir = dir === 'asc' ? 'asc' : 'desc';
 
+    // Filtres rapides : liste blanche stricte côté handler (la RPC ignore de
+    // toute façon les entrées inconnues, mais autant ne pas lui envoyer
+    // n'importe quoi). Cumulables — la RPC les combine en AND.
+    const FILTER_FLAGS = new Set([
+      'staff',
+      'community',
+      'no_team',
+      'never_signed_in',
+      'inactive_6m',
+      'battletag_mismatch',
+    ]);
+    const filters =
+      typeof rawFilters === 'string'
+        ? Array.from(
+            new Set(
+              rawFilters
+                .split(',')
+                .map((f) => f.trim().toLowerCase())
+                .filter((f) => FILTER_FLAGS.has(f))
+            )
+          )
+        : [];
+
     // Perf P1 : pagination / recherche / filtre côté SQL via la RPC
     // `admin_list_users`. Elle applique déjà le filtre rôle (égalité
     // insensible à la casse sur user_metadata.role), la recherche sur
@@ -165,6 +189,10 @@ async function handler(
       return t ? t : null;
     };
 
+    // `p_filters` n'est envoyé que s'il y a quelque chose à filtrer : tant que
+    // la migration add_admin_list_users_filters.sql n'est pas appliquée, la
+    // liste continue de fonctionner à l'identique (l'ancienne signature 6-args
+    // n'accepte pas le paramètre).
     const { data, error } = await supabaseAdmin.rpc('admin_list_users', {
       p_query: normParam(search),
       p_role: normParam(roleFilter),
@@ -172,10 +200,18 @@ async function handler(
       p_offset: off,
       p_sort: sortField,
       p_dir: sortDir,
+      ...(filters.length ? { p_filters: filters } : {}),
     });
 
     if (error) {
       logger.error('[admin/users/manage] list error:', error);
+      if (filters.length) {
+        // Cas le plus probable : la RPC n'a pas encore le paramètre p_filters.
+        return res.status(503).json({
+          error:
+            'Filtres avancés indisponibles : la migration add_admin_list_users_filters.sql doit être appliquée.',
+        });
+      }
       return res.status(500).json({ error: 'Failed to load users.' });
     }
 
