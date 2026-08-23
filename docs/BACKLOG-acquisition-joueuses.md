@@ -249,3 +249,12 @@ ils ne remplacent pas le travail de communauté.
   création du site dans Umami, puis `NEXT_PUBLIC_ANALYTICS_{PROVIDER,HOST,SITE_ID}` dans Netlify.
 - **2026-08-23** — tunnel newsletter vérifié en production de bout en bout : il fonctionne
   (cf. A4). Le « 0 inscrite » est un problème d'audience, pas de code.
+- **2026-08-23** — **Lot 0 EN PRODUCTION.** Umami est en ligne sur
+  `https://stats.owwomenscup.fr` (Freebox), les trois `NEXT_PUBLIC_ANALYTICS_*` sont posées
+  dans Netlify, le site est déployé et la CSP autorise le collecteur. Chaîne validée de bout
+  en bout par un événement synthétique (1 pageview / 1 visiteur enregistrés). **La mesure est
+  active** — le constat A1 est levé, et les lots suivants se pilotent désormais sur des
+  chiffres réels plutôt que sur des hypothèses.
+- **Prochain jalon** : laisser tourner quelques jours pour disposer d'une ligne de base
+  (visiteuses/jour, sources, taux `register_start` → `register_done`), puis attaquer le
+  **Lot 1** — le parcours « je joue seule ».
