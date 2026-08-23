@@ -5,6 +5,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
+import ProductionPartner from '@/components/Production/ProductionPartner';
 import nsTimeline2026 from '@/lib/i18n/locales/fr/timeline2026';
 
 type Timeline2026Dict = typeof nsTimeline2026.fr;
@@ -352,6 +353,17 @@ function Timeline2026Page({ matches, tournamentSlug }: Props) {
           <p className="text-neutral-300 text-lg mt-4 max-w-2xl">
             {t.heroSubtitle}
           </p>
+        </div>
+      </div>
+
+      {/* Production — qui diffuse les matchs de l'édition */}
+      <div className="relative max-w-7xl mx-auto px-6 pb-10">
+        {/* `lg:pl-14` : le rail de réseaux sociaux flottant (fixed, left-5, à
+            partir de lg) recouvre le bord gauche de ce conteneur entre 1024 et
+            ~1400 px. Les blocs de la timeline se décalent déjà de la même
+            façon. */}
+        <div className="max-w-6xl lg:pl-14">
+          <ProductionPartner variant="compact" />
         </div>
       </div>
 

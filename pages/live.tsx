@@ -6,6 +6,7 @@ import LiveTwitchSection, {
 } from '@/components/Live/LiveTwitchSection';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
+import ProductionPartner from '@/components/Production/ProductionPartner';
 import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { useT } from '@/lib/i18n/useT';
@@ -255,6 +256,11 @@ function LivePage({ channels, loadError }: Props) {
               </p>
             </div>
           </div>
+        </section>
+
+        {/* ── Qui produit la diffusion ────────────────────── */}
+        <section>
+          <ProductionPartner variant="compact" />
         </section>
 
         {/* ── Nos ambassadeur·rices en direct (DB-driven) ─── */}

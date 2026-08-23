@@ -168,6 +168,7 @@ import nsScouting from './scouting';
 import nsProgression from './progression';
 import nsRegistrationDeadline from './registrationDeadline';
 import nsMatchLineup from './matchLineup';
+import nsProductionPartner from './productionPartner';
 
 export const frDict = {
   profileSummary: nsProfileSummary.fr,
@@ -331,4 +332,5 @@ export const frDict = {
   progression: nsProgression.fr,
   registrationDeadline: nsRegistrationDeadline.fr,
   matchLineup: nsMatchLineup.fr,
+  productionPartner: nsProductionPartner.fr,
 };

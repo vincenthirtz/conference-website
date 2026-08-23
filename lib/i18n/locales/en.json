@@ -4894,5 +4894,16 @@
     "removeContactStaff": "Contact the staff",
     "removeLoading": "Checking the link…",
     "removeError": "Removal failed. Please try again in a moment."
+  },
+  "productionPartner": {
+    "eyebrow": "Production & broadcast",
+    "title": "POGTV runs the 2026 Cup broadcast",
+    "body": "The 2026 matches are produced and broadcast by POGTV, a studio specialising in inclusive esports events and shows. Control room, overlays and directing are in professional hands — so the players can just play.",
+    "role": "Partner production studio",
+    "compactLabel": "Broadcast produced by",
+    "logoAlt": "POGTV logo",
+    "twitchCta": "Twitch channel",
+    "instagramCta": "Instagram",
+    "linkAria": "POGTV on {network} (new tab)"
   }
 }

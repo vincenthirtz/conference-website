@@ -4,6 +4,7 @@ import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { supabaseAdmin } from '@/utils/supabase';
 import { useT, format } from '@/lib/i18n/useT';
 import nsPartenairesPage from '@/lib/i18n/locales/fr/partenairesPage';
+import ProductionPartner from '@/components/Production/ProductionPartner';
 
 type PartnersDict = typeof nsPartenairesPage.fr;
 
@@ -171,6 +172,14 @@ function PartnersPage({ partners }: PartnersPageProps) {
               <p className="mt-2 text-sm text-gray-200">{item.detail}</p>
             </div>
           ))}
+        </section>
+
+        {/* Prestataire de production — pas un partenaire de la table `partners` :
+            POGTV fournit un service (la diffusion), il n'achète pas de
+            visibilité. Le mettre dans une catégorie de partenaires financiers
+            serait faux. */}
+        <section>
+          <ProductionPartner />
         </section>
 
         <section className="space-y-8">

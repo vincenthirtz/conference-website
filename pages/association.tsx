@@ -8,6 +8,7 @@ import { fetchTwitchProfileImages } from '@/utils/twitch';
 import { useSiteSetting } from '@/hooks/useSiteSettings';
 import { POLE_KEYS, type PoleKey } from '@/utils/associationPoles';
 import { useT } from '@/lib/i18n/useT';
+import ProductionPartner from '@/components/Production/ProductionPartner';
 
 type AssoDict = typeof nsAssociationPage.fr;
 
@@ -750,6 +751,14 @@ function AssociationPage({
               );
             })}
           </div>
+        </section>
+
+        {/* ── Production (prestataire) ────────────────────── */}
+        {/* Encart à part du pôle « Production & cast » : POGTV n'est pas une
+            équipe de bénévoles de l'asso mais un studio partenaire qui produit
+            la diffusion. Les mélanger laisserait croire à une adhésion. */}
+        <section>
+          <ProductionPartner />
         </section>
 
         {/* ── Ambassadeur·rices ───────────────────────────── */}
