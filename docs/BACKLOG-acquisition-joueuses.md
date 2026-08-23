@@ -181,9 +181,11 @@ toutes les inscriptions web. (2) L'enrichissement des profils lisait une table `
 **n'existe pas** dans ce projet — la dégradation gracieuse masquait le bug, et le nom de chaque
 joueuse revenait `null` côté capitaine. Passé sur la RPC `admin_get_user_profiles`.
 
-**Reste à faire (hors périmètre de cette passe)** : la notification aux capitaines s'arrête à
-l'émission de l'event côté site — le **handler côté bot Discord** (repo `docker-box`) reste à
-écrire pour l'annoncer dans le salon de recrutement.
+**Boucle fermée le 2026-08-23** : le handler côté bot Discord est livré
+(`docker-box/services/discord-bot/free-player-events.js`). Il annonce chaque nouvelle joueuse
+dans le salon `free_players_channel_id` (env `FREE_PLAYERS_CHANNEL_ID`) et pingue le rôle
+capitaine. L'annonce ne publie **aucun** moyen de contact — la prise de contact passe par
+l'espace capitaine authentifié. Sans salon configuré, c'est un no-op silencieux.
 
 ### Lot 2 — Surfaces publiques indexables — 🟥 / L
 
