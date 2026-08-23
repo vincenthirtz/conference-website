@@ -14,7 +14,10 @@
 import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
-import { fetchTwitchLiveStatus } from '@/utils/twitch';
+import {
+  fetchTwitchLiveStatus,
+  fetchTwitchProfileImages,
+} from '@/utils/twitch';
 import { logger } from '@/utils/logger';
 
 async function handler(req: BotTenantRequest, res: NextApiResponse) {
@@ -55,11 +58,22 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
       description: c.description,
       backgroundUrl: c.background_url,
       live: false as const,
+      profileImageUrl: null,
     }));
     return res
       .status(200)
       .json({ channels: fallback, total: fallback.length, liveCount: 0 });
   }
+
+  // Avatars : appel Helix distinct, et UNIQUEMENT pour les chaînes en live —
+  // c'est le seul cas où l'image sert (annonce Discord). Inutile de payer un
+  // second appel pour des chaînes hors ligne. Best-effort : une map vide fait
+  // simplement une annonce sans vignette.
+  const liveLogins = channels
+    .map((c) => c.channel)
+    .filter((ch) => statuses[ch.toLowerCase()]?.live);
+  const avatars =
+    liveLogins.length > 0 ? await fetchTwitchProfileImages(liveLogins) : {};
 
   const enriched = channels.map((c) => {
     const status = statuses[c.channel.toLowerCase()] ?? { live: false };
@@ -74,6 +88,7 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
       viewerCount: status.viewerCount ?? null,
       gameName: status.gameName ?? null,
       startedAt: status.startedAt ?? null,
+      profileImageUrl: avatars[c.channel.toLowerCase()] ?? null,
     };
   });
 

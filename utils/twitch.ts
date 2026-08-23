@@ -3,6 +3,7 @@
 // Wrapper minimal autour de l'API Helix de Twitch :
 //   - cache du token App (client_credentials) avec buffer 1min
 //   - fetchTwitchLiveStatus(channels[]) -> map<login, LiveStatus>
+//   - fetchTwitchProfileImages(channels[]) -> map<login, url>
 //
 // Partage entre /api/twitch/live (web, requires channels param) et
 // /api/bot/v1/twitch/live (bot, lit tous les channels enregistres en
@@ -17,6 +18,12 @@ export type TwitchLiveStatus = {
   viewerCount?: number;
   gameName?: string;
   startedAt?: string;
+  /**
+   * Avatar de la chaîne. Vient d'un appel Helix SÉPARÉ (`/users`) : l'endpoint
+   * `/streams` ne le renvoie pas. Absent si l'appel échoue — l'affichage doit
+   * dégrader, jamais échouer pour une image.
+   */
+  profileImageUrl?: string;
 };
 
 let cachedToken: { token: string; expiresAt: number } | null = null;
@@ -126,4 +133,59 @@ export async function fetchTwitchLiveStatus(
     if (!result[c]) result[c] = { live: false };
   }
   return result;
+}
+
+/**
+ * Avatars des chaînes données : `map<login (minuscule), profile_image_url>`.
+ *
+ * Appel Helix distinct de `/streams`, qui ne porte pas cette information. Ne
+ * renvoie JAMAIS null : une erreur donne une map vide, parce qu'une vignette
+ * manquante ne doit pas priver l'appelant du statut live lui-même.
+ */
+export async function fetchTwitchProfileImages(
+  channels: string[]
+): Promise<Record<string, string>> {
+  const creds = clientCreds();
+  if (!creds) return {};
+  const clean = channels
+    .map((c) => c.trim().toLowerCase())
+    .filter((c) => c.length > 0)
+    // Helix plafonne à 100 logins par appel, comme /streams.
+    .slice(0, 100);
+  if (clean.length === 0) return {};
+
+  const token = await getAccessToken();
+  if (!token) return {};
+
+  const search = new URLSearchParams();
+  clean.forEach((c) => search.append('login', c));
+
+  try {
+    const resp = await fetch(
+      `https://api.twitch.tv/helix/users?${search.toString()}`,
+      {
+        headers: {
+          'Client-ID': creds.id,
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+    if (!resp.ok) {
+      logger.error('[twitch] users error', resp.status);
+      return {};
+    }
+    const data = await resp.json();
+    const out: Record<string, string> = {};
+    for (const user of (data?.data ?? []) as Array<{
+      login?: string;
+      profile_image_url?: string;
+    }>) {
+      const login = user.login?.toLowerCase();
+      if (login && user.profile_image_url) out[login] = user.profile_image_url;
+    }
+    return out;
+  } catch (err) {
+    logger.error('[twitch] users fetch failed', err);
+    return {};
+  }
 }
