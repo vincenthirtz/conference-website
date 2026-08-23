@@ -9,19 +9,19 @@
 //   - `compact` : bandeau d'attribution (pages tournoi / live), où l'encart ne
 //                 doit pas voler la vedette au calendrier ou aux chaînes.
 //
-// Le logo est servi en local (`/img/logos/pogtv.png`) : une URL distante
-// casserait `next/image` (remotePatterns) — cf. la même règle pour les logos
-// d'équipes.
+// Les coordonnées (logo, Twitch, Instagram) vivent dans `./pogtv` : la bande
+// « soutiens » de l'accueil les réutilise.
 
 import Image from 'next/image';
 import { InstagramIcon, TwitchIcon } from '@/components/Icons';
 import { useT, format } from '@/lib/i18n/useT';
 import nsProductionPartner from '@/lib/i18n/locales/fr/productionPartner';
-
-const POGTV_NAME = 'POGTV';
-const POGTV_LOGO = '/img/logos/pogtv.png';
-const POGTV_TWITCH = 'https://www.twitch.tv/pogtv_lol';
-const POGTV_INSTAGRAM = 'https://www.instagram.com/_pogtv/';
+import {
+  POGTV_INSTAGRAM,
+  POGTV_LOGO,
+  POGTV_NAME,
+  POGTV_TWITCH,
+} from './pogtv';
 
 type Props = {
   variant?: 'full' | 'compact';

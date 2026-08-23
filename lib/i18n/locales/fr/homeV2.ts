@@ -68,6 +68,7 @@ export default ns('homeV2', {
   newsRead: 'Lire',
   newsExcerptFallback: 'Découvre les dernières nouvelles de la compétition.',
   newsEmpty: "Pas encore d'actualité. Reviens bientôt !",
-  supportLead: 'Ils soutiennent la compétition · ils en parlent',
+  supportLead:
+    'Ils soutiennent la compétition · ils la diffusent · ils en parlent',
   supportPartnersLink: 'Voir tous les partenaires',
 });

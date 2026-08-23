@@ -1,16 +1,25 @@
 /* eslint-disable @next/next/no-img-element */
 // components/Home/HomeSupportStrip.tsx
 //
-// Bande "soutiens" de la refonte accueil : sponsors + presse fusionnés en UNE
-// seule bande grise et discrète ("ils soutiennent · ils en parlent"). Logos en
-// grayscale qui se colorent au survol. Rien de bruyant : c'est un bandeau de
-// confiance, pas une section marketing.
+// Bande "soutiens" de la refonte accueil : sponsors + production + presse
+// fusionnés en UNE seule bande grise et discrète ("ils soutiennent · ils la
+// diffusent · ils en parlent"). Logos en grayscale qui se colorent au survol.
+// Rien de bruyant : c'est un bandeau de confiance, pas une section marketing.
+//
+// L'ordre des groupes suit celui des segments de `supportLead` : changer l'un
+// sans l'autre rendrait la phrase fausse.
 
 import type { JSX } from 'react';
 import Link from 'next/link';
 import { type HomePartner } from '@/components/Home/HomeSponsors';
+import {
+  POGTV_LOGO,
+  POGTV_NAME,
+  POGTV_TWITCH,
+} from '@/components/Production/pogtv';
 import { useT } from '@/lib/i18n/useT';
 import nsHomeV2 from '@/lib/i18n/locales/fr/homeV2';
+import nsProductionPartner from '@/lib/i18n/locales/fr/productionPartner';
 
 type PressLogo = {
   source: string;
@@ -41,13 +50,12 @@ function LogoText({ label }: { label: string }) {
 
 export default function HomeSupportStrip({
   partners,
-}: HomeSupportStripProps): JSX.Element | null {
+}: HomeSupportStripProps): JSX.Element {
   const t = useT(nsHomeV2);
+  const tProd = useT(nsProductionPartner);
   const uniquePartners = Array.from(
     new Map(partners.map((p) => [p.id, p])).values()
   );
-
-  if (!uniquePartners.length && !PRESS_LOGOS.length) return null;
 
   return (
     <section className="mt-16 border-y border-white/10 bg-[var(--bg-base)] md:mt-20">
@@ -92,7 +100,33 @@ export default function HomeSupportStrip({
             </li>
           ))}
 
-          {uniquePartners.length > 0 && PRESS_LOGOS.length > 0 && (
+          {uniquePartners.length > 0 && (
+            <li aria-hidden className="h-5 w-px bg-white/15" />
+          )}
+
+          {/* Production : logo + nom, la ou les sponsors n'ont qu'un logo.
+              La marque POGTV est un pictogramme carre — reduit a 36 px et
+              desature comme le reste de la bande, il ne se lit pas seul. */}
+          <li className="group">
+            <a
+              href={POGTV_TWITCH}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`${POGTV_NAME} — ${tProd.role}`}
+              title={tProd.role}
+              className="flex items-center gap-2 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
+            >
+              <img
+                src={POGTV_LOGO}
+                alt=""
+                loading="lazy"
+                className="block h-8 w-8 rounded-md object-cover opacity-60 grayscale transition-all duration-300 group-hover:opacity-100 group-hover:grayscale-0"
+              />
+              <LogoText label={POGTV_NAME} />
+            </a>
+          </li>
+
+          {PRESS_LOGOS.length > 0 && (
             <li aria-hidden className="h-5 w-px bg-white/15" />
           )}
 
