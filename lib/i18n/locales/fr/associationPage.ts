@@ -8,14 +8,15 @@
 import { ns } from '../../ns';
 
 export default ns('associationPage', {
-  // --- Ambassadrices (section dédiée, distincte des pôles) -----------------
-  ambassadorsEyebrow: 'Elles portent la Cup',
-  ambassadorsTitle: 'Nos ambassadrices',
+  // --- Ambassadeur·rices (section dédiée, distincte des pôles) -------------
+  // Écriture inclusive au point médian, convention du site (cf. livePage.ts).
+  ambassadorsEyebrow: 'Iels portent la Cup',
+  ambassadorsTitle: 'Nos ambassadeur·rices',
   ambassadorsIntro:
-    'Des créatrices qui parlent de la Cup sur leurs propres chaînes. Va leur faire un coucou quand elles sont en live.',
+    'Des créateur·rices qui parlent de la Cup sur leurs propres chaînes. Va leur faire un coucou quand iels sont en live.',
   ambassadorsCta: 'Voir la chaîne →',
-  // Titre de repli d'une ambassadrice sans badge (cf. twitch_channels.badge).
-  ambassadorRole: 'Ambassadrice',
+  // Titre de repli d'un·e ambassadeur·rice sans badge (cf. twitch_channels.badge).
+  ambassadorRole: 'Ambassadeur·rice',
   heroBadge: 'Association loi 1901',
   heroTitle1: 'Faire briller',
   heroTitle2: "l'esport féminin",

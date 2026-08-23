@@ -29,7 +29,7 @@ type CastMember = {
 };
 
 /**
- * Ambassadrice : une chaîne Twitch active de `twitch_channels`. Même source que
+ * Ambassadeur·rice : une chaîne Twitch active de `twitch_channels`. Même source que
  * la page /live et que l'annonce Discord des passages en live — un seul endroit
  * à tenir à jour (/admin/twitch-channels).
  */
@@ -752,9 +752,9 @@ function AssociationPage({
           </div>
         </section>
 
-        {/* ── Ambassadrices ───────────────────────────────── */}
+        {/* ── Ambassadeur·rices ───────────────────────────── */}
         {/* Cadre à part, et pas une ligne du pôle Communauté : ce ne sont pas
-            des bénévoles de l'asso mais des créatrices qui portent la Cup sur
+            des bénévoles de l'asso mais des créateur·rices qui portent la Cup sur
             leurs propres chaînes. Les fondre dans un pôle effacerait cette
             différence — et leur visage, qui est justement ce qui les rend
             reconnaissables. */}
@@ -921,7 +921,7 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
       .eq('is_active', true)
       .order('pole_key', { ascending: true })
       .order('sort_order', { ascending: true }),
-    // Ambassadrices = chaînes Twitch actives, tenant-scopées comme le cast.
+    // Ambassadeur·rices = chaînes Twitch actives, tenant-scopées comme le cast.
     supabaseAdmin
       .from('twitch_channels')
       .select('id, channel, label, badge')
