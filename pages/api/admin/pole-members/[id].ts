@@ -7,6 +7,7 @@ import { isPoleKey } from '@/utils/associationPoles';
 import { logStaffAction } from '@/utils/staffLogs';
 
 import { logger } from '../../../../utils/logger';
+import { revalidateAssociationPages } from '@/utils/revalidateAssociation';
 
 type PoleMemberPayload = {
   poleKey?: string;
@@ -115,6 +116,7 @@ async function handler(
       }
     }
 
+    await revalidateAssociationPages(res);
     return res.status(200).json(data);
   }
 
@@ -145,6 +147,7 @@ async function handler(
       }
     }
 
+    await revalidateAssociationPages(res);
     return res.status(204).end();
   }
 

@@ -6,6 +6,7 @@ import { applyRateLimit } from '@/utils/rateLimit';
 import { logStaffAction } from '@/utils/staffLogs';
 
 import { logger } from '../../../../utils/logger';
+import { revalidateAssociationPages } from '@/utils/revalidateAssociation';
 type CastMemberPayload = {
   name?: string;
   title?: string | null;
@@ -132,6 +133,7 @@ async function handler(
       }
     }
 
+    await revalidateAssociationPages(res);
     return res.status(200).json(data);
   }
 
@@ -163,6 +165,7 @@ async function handler(
       }
     }
 
+    await revalidateAssociationPages(res);
     return res.status(204).end();
   }
 

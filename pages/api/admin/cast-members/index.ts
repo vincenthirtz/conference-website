@@ -12,6 +12,7 @@ import { applyRateLimit } from '@/utils/rateLimit';
 import { logStaffAction } from '@/utils/staffLogs';
 
 import { logger } from '../../../../utils/logger';
+import { revalidateAssociationPages } from '@/utils/revalidateAssociation';
 
 // Colonnes effectivement rendues par la page admin (pas de select('*')).
 const CAST_MEMBER_COLUMNS =
@@ -215,6 +216,7 @@ async function handler(
       }
     }
 
+    await revalidateAssociationPages(res);
     return res.status(201).json(data);
   }
 
