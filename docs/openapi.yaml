@@ -4140,6 +4140,94 @@ components:
           type: string
         captchaAnswer:
           type: string
+    PublicFreePlayerSignupInput:
+      type: object
+      required:
+        - displayName
+        - email
+        - roles
+      properties:
+        displayName:
+          type: string
+          minLength: 2
+          maxLength: 40
+        email:
+          type: string
+          format: email
+          maxLength: 200
+          description: >
+            Contact prive. N'est JAMAIS renvoye par le GET de cette route ; seules
+            les capitaines authentifiees y accedent via /api/teams/free-players.
+        roles:
+          type: array
+          minItems: 1
+          maxItems: 4
+          items:
+            type: string
+            enum: [tank, dps, support, flex]
+        level:
+          type: string
+          enum:
+            [
+              unknown,
+              bronze,
+              silver,
+              gold,
+              platinum,
+              diamond,
+              master,
+              grandmaster,
+              champion,
+            ]
+          description: Defaut `unknown` — il n'y a aucun rang minimum pour participer.
+        availability:
+          type: string
+          maxLength: 200
+        note:
+          type: string
+          maxLength: 400
+        contactDiscord:
+          type: string
+          maxLength: 60
+        honeypot:
+          type: string
+          description: Doit etre vide (anti-bot).
+        captchaToken:
+          type: string
+        captchaAnswer:
+          type: string
+    PublicFreePlayer:
+      type: object
+      description: >
+        Projection ANONYMISEE : aucun moyen de contact (ni email, ni pseudo
+        Discord, ni snowflake).
+      required:
+        - id
+        - name
+        - roles
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        name:
+          type: string
+        roles:
+          type: array
+          items:
+            type: string
+            enum: [tank, dps, support, flex]
+        level:
+          type: string
+          nullable: true
+        availability:
+          type: string
+          nullable: true
+        note:
+          type: string
+          nullable: true
+        since:
+          type: string
+          format: date-time
+          nullable: true
     PublicNewsItem:
       type: object
       required:
@@ -27815,6 +27903,73 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /api/public/free-players:
+    get:
+      tags:
+        - public/misc
+      summary: Liste anonymisee des joueuses cherchant une equipe.
+      description: >
+        Vitrine publique du marche des joueuses libres (lot 1 acquisition). Ne
+        renvoie AUCUN moyen de contact — c'est une preuve qu'il y a du monde, pas
+        un carnet d'adresses. Les annonces perimees (60 j) sont exclues.
+      operationId: listPublicFreePlayers
+      security: []
+      responses:
+        '200':
+          description: Liste anonymisee.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - players
+                  - count
+                properties:
+                  players:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PublicFreePlayer'
+                  count:
+                    type: integer
+        '429':
+          $ref: '#/components/responses/RateLimited'
+    post:
+      tags:
+        - public/misc
+      summary: Se signaler comme joueuse libre — SANS COMPTE. Anti-bot captcha + honeypot.
+      description: >
+        Cree (ou rafraichit) une fiche `source='web'` dans `free_players`, sans
+        exiger de compte : c'est tout l'objet du lot 1 — une joueuse sans equipe
+        n'avait aucun chemin sur le site. Une re-soumission avec le meme email met
+        a jour la fiche et repousse sa peremption. Reponse toujours generique
+        `{ success: true }` (enumeration-safe). Un honeypot rempli est
+        silencieusement absorbe (200). Emet l'event bot `free_player.registered`
+        a la premiere inscription.
+      operationId: signupPublicFreePlayer
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PublicFreePlayerSignupInput'
+      responses:
+        '200':
+          description: Toujours renvoye tant que la requete est bien formee (succes generique).
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - success
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '429':
           $ref: '#/components/responses/RateLimited'
   /api/public/newsletter/subscribe:

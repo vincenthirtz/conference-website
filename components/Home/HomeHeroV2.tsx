@@ -115,6 +115,31 @@ export default function HomeHeroV2({
               </svg>
             </button>
           </Link>
+          {/* Lot 1 acquisition : la porte d'entrée des joueuses SANS équipe.
+              Placée juste après « Inscrire mon équipe » et avant Discord —
+              c'est le plus gros gisement, il n'avait aucun CTA. */}
+          <Link href="/rejoindre" className="w-full sm:w-auto">
+            <button
+              type="button"
+              className="hero-secondary-btn hero-secondary-btn--violet group flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-5 py-3 text-sm font-medium text-white backdrop-blur transition-all duration-300 sm:w-auto sm:px-6 sm:text-base"
+            >
+              <svg
+                className="h-4 w-4 transition-transform duration-300 group-hover:scale-110 sm:h-5 sm:w-5"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M19 8v6M22 11h-6" />
+              </svg>
+              {t.heroCtaJoin}
+            </button>
+          </Link>
           <Link
             href={DISCORD_URL}
             target="_blank"

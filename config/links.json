@@ -24,6 +24,10 @@
     "title": "Communauté",
     "subMenu": [
       {
+        "title": "Rejoindre une équipe",
+        "ref": "/rejoindre"
+      },
+      {
         "title": "L'association",
         "ref": "/association"
       },

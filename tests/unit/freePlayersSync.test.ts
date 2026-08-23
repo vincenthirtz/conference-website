@@ -126,6 +126,7 @@ describe('POST /api/bot/v1/free-players/sync', () => {
       {
         id: 'fp-old-1',
         tenant_id: CONFERENCE_TENANT_ID,
+        source: 'discord',
         discord_user_id: D_ALICE,
         discord_username: 'alice',
         auth_user_id: U_ALICE,
@@ -133,6 +134,7 @@ describe('POST /api/bot/v1/free-players/sync', () => {
       {
         id: 'fp-old-2',
         tenant_id: CONFERENCE_TENANT_ID,
+        source: 'discord',
         discord_user_id: D_BOB,
         discord_username: 'bob',
         auth_user_id: U_BOB,
@@ -166,6 +168,7 @@ describe('POST /api/bot/v1/free-players/sync', () => {
       {
         id: 'fp-old-1',
         tenant_id: CONFERENCE_TENANT_ID,
+        source: 'discord',
         discord_user_id: D_ALICE,
         auth_user_id: U_ALICE,
       },
@@ -187,6 +190,7 @@ describe('POST /api/bot/v1/free-players/sync', () => {
       {
         id: 'fp-1',
         tenant_id: CONFERENCE_TENANT_ID,
+        source: 'discord',
         discord_user_id: D_ALICE,
         discord_username: 'old-name',
         auth_user_id: null,

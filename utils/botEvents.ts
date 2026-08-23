@@ -56,6 +56,10 @@ export const BOT_EVENT_NAMES = [
   'cast.briefing.rescheduled',
   'checkin.opened',
   'team.forfeit',
+  // Lot 1 acquisition : une joueuse s'est signalée « sans équipe » depuis le
+  // site. Sert à alerter les capitaines dont le roster est incomplet — sans
+  // ça, l'inscription attend que quelqu'un vienne la lire.
+  'free_player.registered',
   'registration.new',
   'registration.blacklisted',
   'registration.entity_blacklisted',

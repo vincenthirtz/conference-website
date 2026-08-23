@@ -15,6 +15,7 @@ import {
   resetSupabaseMock,
   setAuthUser,
   CONFERENCE_TENANT_ID,
+  setRpcResult,
 } from './__helpers__/supabaseMock';
 import freePlayersHandler from '../../pages/api/teams/free-players';
 
@@ -116,13 +117,24 @@ function seedTeam() {
       auth_user_id: CAPTAIN_ID,
     },
   ] as any;
-  store.profiles = [
-    {
-      id: FP_LINKED,
-      display_name: 'Linked Display',
-      battle_tag: 'Linked#1234',
-    },
-  ] as any;
+  // L'enrichissement passe par la RPC `admin_get_user_profiles` et NON par une
+  // table `profiles` : celle-ci n'existe pas en base (tout le profil vit dans
+  // `auth.users.raw_user_meta_data`). L'ancienne fixture `store.profiles`
+  // faisait passer le test en validant un mock plutôt que la réalité — en
+  // production, le nom de CHAQUE joueuse revenait à null.
+  setRpcResult('admin_get_user_profiles', {
+    data: [
+      {
+        id: FP_LINKED,
+        email: 'linked@example.com',
+        display_name: 'Linked Display',
+        full_name: null,
+        avatar_url: null,
+        battle_tag: 'Linked#1234',
+        discord: null,
+      },
+    ],
+  });
 }
 
 beforeEach(() => {
@@ -166,7 +178,7 @@ describe('GET /api/teams/free-players', () => {
     expect(ids).toEqual([D_LINKED, D_UNLINKED].sort());
   });
 
-  it('enriches linked rows from profiles and degrades for unlinked', async () => {
+  it('enriches linked rows via admin_get_user_profiles and degrades for unlinked', async () => {
     setAuthUser({ id: CAPTAIN_ID });
     const res = makeRes();
     await freePlayersHandler(makeAuthedReq(), res);

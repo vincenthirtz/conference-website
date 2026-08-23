@@ -94,7 +94,7 @@ const faqsForSchema: Faq[] = [
   {
     question: 'Peut-on s’inscrire seule, sans équipe ?',
     answer:
-      'L’inscription se fait par équipe. Si tu cherches un roster, passe sur le Discord : un canal dédié au recrutement permet de trouver des coéquipières.',
+      'Oui. Signale-toi sur la page « Rejoindre une équipe » (/rejoindre) : pseudo, postes joués et disponibilités, sans créer de compte. Les capitaines qui recrutent voient ta fiche et te contactent. Le canal dédié sur le Discord reste une seconde porte d’entrée.',
   },
   {
     question: 'Puis-je modifier mon roster après l’inscription ?',

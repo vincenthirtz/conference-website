@@ -67,8 +67,10 @@ export default ns('inscription2026', {
   faq2A:
     "Aucun rang minimum : le tournoi accueille tous les niveaux. Le format Swiss permet d'affronter des équipes de niveau équivalent au fil des rondes.",
   faq3Q: "Peut-on s'inscrire seule, sans équipe ?",
+  // Lot 1 acquisition : cette réponse disait « non » et renvoyait hors du site.
+  // C'est désormais « oui », avec un chemin on-site sans compte.
   faq3A:
-    "L'inscription se fait par équipe. Si tu cherches un roster, passe sur le Discord : un canal dédié au recrutement permet de trouver des coéquipières.",
+    "Oui. Signale-toi sur la page « Rejoindre une équipe » : pseudo, postes joués et disponibilités, sans créer de compte. Les capitaines qui recrutent voient ta fiche et te contactent. Le canal dédié du Discord reste une seconde porte d'entrée.",
   faq4Q: "Puis-je modifier mon roster après l'inscription ?",
   faq4A:
     'Oui, tant que les check-ins ne sont pas verrouillés. Les changements se font depuis la page de ton équipe. Au-delà de la date limite, contacte le staff sur Discord.',

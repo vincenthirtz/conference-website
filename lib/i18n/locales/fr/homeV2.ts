@@ -17,14 +17,20 @@ export default ns('homeV2', {
   heroTagline: 'La compétition qui met les joueuses au centre du jeu.',
   heroTaglineStrong: 'Des équipes, un cash-prize, des casts en direct.',
   heroCtaRegister: 'Inscrire mon équipe',
+  // Lot 1 acquisition : la joueuse SANS équipe n'avait aucune porte d'entrée
+  // dans le hero. CTA de rang égal, pas un lien de repli.
+  heroCtaJoin: 'Je cherche une équipe',
   heroCtaDiscord: 'Rejoindre le Discord',
   heroTrust: '100 % féminin · Casts FR en direct · Cash-prize communautaire',
   stepsEyebrow: 'Participer',
   stepsTitle: 'Rejoins la compétition en 3 étapes',
   stepsCta: 'Inscrire mon équipe',
-  step1Title: 'Crée ou rejoins une équipe',
+  step1Title: 'Trouve ou monte ton équipe',
+  // Reformulé au lot 1 : la version précédente renvoyait sur Discord pour
+  // trouver un roster, c'est-à-dire hors du site — et laissait sans réponse
+  // celles qui n'ont pas d'équipe, précisément le public à capter.
   step1Desc:
-    "Monte ton roster ou trouve une équipe qui recrute via l'espace « recherche une équipe » sur le Discord.",
+    "Pas d'équipe ? Signale-toi en deux minutes, sans compte : les capitaines qui recrutent te contactent. Tu as déjà un roster ? Monte-le directement.",
   step2Title: 'Inscris ton équipe',
   step2Desc:
     'En quelques clics : nom, joueuses, disponibilités. Ta capitaine valide, et vous êtes sur la grille.',

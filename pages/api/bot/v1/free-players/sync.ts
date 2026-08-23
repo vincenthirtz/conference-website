@@ -1,6 +1,13 @@
 // /api/bot/v1/free-players/sync
 //
-// POST — FULL REPLACE des "joueurs libres" (free_players) du tenant courant.
+// POST — FULL REPLACE des "joueurs libres" (free_players) du tenant courant,
+// POUR LA SEULE PROVENANCE DISCORD (`source = 'discord'`).
+//
+// Depuis le lot 1 du backlog d'acquisition, `free_players` contient aussi des
+// inscriptions faites depuis le site (`source = 'web'`, formulaire /rejoindre,
+// sans compte requis). Elles n'appartiennent PAS au bot : sans le filtre de
+// provenance ci-dessous, la première synchro venue les effacerait toutes en
+// silence — et personne ne s'en apercevrait avant de constater une liste vide.
 //
 // Le bot Discord lit les membres portant le rôle "Recherche une équipe" et
 // pousse la liste complète ici. Le site remplace intégralement la table
@@ -94,7 +101,10 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const { data: existingRows, error: existingErr } = await supabaseAdmin
     .from('free_players')
     .select('discord_user_id, marked_at')
-    .eq('tenant_id', tenantId);
+    .eq('tenant_id', tenantId)
+    // Scopé Discord comme la purge : une inscription web n'a pas de
+    // discord_user_id et n'a rien à faire dans ce calcul.
+    .eq('source', 'discord');
   if (existingErr) {
     logger.error('[bot/free-players/sync] existing lookup error', existingErr);
     return res
@@ -126,6 +136,7 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
     else unlinkedDiscordIds.push(p.discordUserId);
     return {
       tenant_id: tenantId,
+      source: 'discord',
       discord_user_id: p.discordUserId,
       discord_username: p.username,
       auth_user_id: authUserId,
@@ -135,11 +146,14 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
     };
   });
 
-  // FULL REPLACE : on supprime TOUTES les rows du tenant (présentes + stale)…
+  // FULL REPLACE : on supprime les rows DISCORD du tenant (présentes + stale)…
+  // `.eq('source', 'discord')` est le garde-fou décrit en en-tête : les
+  // inscriptions web ne passent jamais par le bot et doivent lui survivre.
   const { error: deleteErr } = await supabaseAdmin
     .from('free_players')
     .delete()
-    .eq('tenant_id', tenantId);
+    .eq('tenant_id', tenantId)
+    .eq('source', 'discord');
   if (deleteErr) {
     logger.error('[bot/free-players/sync] delete error', deleteErr);
     return res

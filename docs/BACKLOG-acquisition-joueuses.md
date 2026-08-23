@@ -150,7 +150,7 @@ Sans mesure, chaque lot suivant est un pari. Contenu :
 **Critère de sortie** : un tableau de bord qui répond « combien de visiteuses / combien de comptes
 créés / où ça décroche », et la réponse tranchée sur la newsletter (trafic nul vs formulaire cassé).
 
-### Lot 1 — Le parcours « je joue seule » — 🟥 / L · **le plus fort levier**
+### Lot 1 — Le parcours « je joue seule » — 🟥 / L · ✅ **LIVRÉ le 2026-08-23**
 
 - Page publique **`/rejoindre`** : « Pas d'équipe ? On te trouve un roster. » CTA de rang égal à
   « Créer une équipe » dans le hero et dans les 3 étapes de la home.
@@ -164,6 +164,26 @@ créés / où ça décroche », et la réponse tranchée sur la newsletter (traf
 - Réécrire la FAQ « peut-on s'inscrire seule » : la réponse devient **oui**, avec un lien.
 
 **Critère de sortie** : ≥ 30 joueuses libres et ≥ 10 mises en relation abouties sur l'édition suivante.
+
+**Ce qui a été livré** — page publique [`/rejoindre`](../pages/rejoindre.tsx) (formulaire sans
+compte + liste anonymisée + filtre par poste), API publique
+[`/api/public/free-players`](../pages/api/public/free-players.ts) (GET anonymisé / POST
+captcha+honeypot+rate-limit), extension de `free_players` à une provenance `web`
+([migration](../database/migrations/add_web_free_player_signups.sql)), event bot
+`free_player.registered` pour alerter les capitaines, entrées de la liste web visibles côté
+capitaine avec un bouton « Contacter », CTA hero + étape 1 de la home réorientés, FAQ
+`/inscription-2026` réécrite (la réponse est passée de « non, va sur Discord » à « oui »),
+sitemap + navigation, i18n FR/EN, 20 tests.
+
+**Deux pièges traités au passage.** (1) La synchro Discord faisait un `delete` sur TOUT le
+tenant : sans le filtre `source='discord'`, la première synchro venue aurait effacé en silence
+toutes les inscriptions web. (2) L'enrichissement des profils lisait une table `profiles` qui
+**n'existe pas** dans ce projet — la dégradation gracieuse masquait le bug, et le nom de chaque
+joueuse revenait `null` côté capitaine. Passé sur la RPC `admin_get_user_profiles`.
+
+**Reste à faire (hors périmètre de cette passe)** : la notification aux capitaines s'arrête à
+l'émission de l'event côté site — le **handler côté bot Discord** (repo `docker-box`) reste à
+écrire pour l'annoncer dans le salon de recrutement.
 
 ### Lot 2 — Surfaces publiques indexables — 🟥 / L
 
@@ -255,6 +275,9 @@ ils ne remplacent pas le travail de communauté.
   en bout par un événement synthétique (1 pageview / 1 visiteur enregistrés). **La mesure est
   active** — le constat A1 est levé, et les lots suivants se pilotent désormais sur des
   chiffres réels plutôt que sur des hypothèses.
+- **2026-08-23** — **Lot 1 livré** : le parcours « je joue seule ». Une joueuse sans équipe a
+  désormais un chemin sur le site, sans créer de compte. Le constat A2 est levé.
 - **Prochain jalon** : laisser tourner quelques jours pour disposer d'une ligne de base
-  (visiteuses/jour, sources, taux `register_start` → `register_done`), puis attaquer le
-  **Lot 1** — le parcours « je joue seule ».
+  (visiteuses/jour, sources, taux `register_start` → `register_done`, et maintenant volume
+  d'inscriptions `/rejoindre`), puis arbitrer entre le **Lot 3** (relance) et le **Lot 2**
+  (surfaces indexables) selon ce que dit la mesure.

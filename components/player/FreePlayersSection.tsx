@@ -1,7 +1,14 @@
 // components/player/FreePlayersSection.tsx
-// Section "Joueurs cherchant une equipe" pour la page de gestion d'equipe.
-// Liste les membres Discord du tenant sans equipe ; le capitaine peut inviter
-// ceux qui ont lie leur compte du site.
+// Section « Joueuses cherchant une équipe » pour la page de gestion d'équipe.
+//
+// Deux provenances depuis le lot 1 d'acquisition :
+//   - `discord` : membres du serveur portant le rôle « Recherche une équipe » ;
+//   - `web` : inscriptions faites depuis /rejoindre, SANS compte.
+//
+// L'invitation en un clic suppose un compte du site (authUserId). Les
+// inscriptions web n'en ont pas encore — d'où le bloc « contacter » : la
+// capitaine écrit, et le compte se crée à l'acceptation. Sans ce chemin, la
+// moitié du marché serait affichée mais injoignable.
 
 import { useCallback, useEffect, useState } from 'react';
 import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';
@@ -10,13 +17,21 @@ import nsFreePlayers from '@/lib/i18n/locales/fr/freePlayers';
 import { useActiveTeam } from '@/components/player/ActiveTeamContext';
 
 type FreePlayer = {
-  discordUserId: string;
+  /** Clé stable : une inscription web n'a pas de discordUserId. */
+  id: string;
+  source: 'discord' | 'web';
+  discordUserId: string | null;
   discordUsername: string | null;
   linked: boolean;
   authUserId: string | null;
   displayName: string | null;
   battleTag: string | null;
   specialty: string | null;
+  roles: string[];
+  level: string | null;
+  availability: string | null;
+  note: string | null;
+  contact: { email: string | null; discord: string | null } | null;
 };
 
 type FreePlayersResponse = {
@@ -63,7 +78,7 @@ export default function FreePlayersSection({ teamId }: Props) {
 
   const handleInvite = async (player: FreePlayer) => {
     if (!player.authUserId) return;
-    setInviting(player.discordUserId);
+    setInviting(player.id);
     setActionError(null);
     try {
       await adminFetchJson(withTeam('/api/teams/invite-free-player'), {
@@ -71,12 +86,12 @@ export default function FreePlayersSection({ teamId }: Props) {
         body: JSON.stringify({ teamId, authUserId: player.authUserId }),
       });
       // Optimistic: mark this player as invited.
-      setInvited((prev) => ({ ...prev, [player.discordUserId]: true }));
+      setInvited((prev) => ({ ...prev, [player.id]: true }));
     } catch (err: unknown) {
       if (err instanceof AdminFetchError && err.status === 409) {
         setActionError(t.alreadyInvited);
         // The player is already invited/member: reflect it on the card.
-        setInvited((prev) => ({ ...prev, [player.discordUserId]: true }));
+        setInvited((prev) => ({ ...prev, [player.id]: true }));
       } else {
         setActionError((err as Error).message || t.inviteError);
       }
@@ -114,10 +129,10 @@ export default function FreePlayersSection({ teamId }: Props) {
       ) : (
         <div className="space-y-3">
           {players.map((p) => {
-            const isInvited = !!invited[p.discordUserId];
+            const isInvited = !!invited[p.id];
             return (
               <div
-                key={p.discordUserId}
+                key={p.id}
                 className="flex items-center justify-between gap-3 p-3 rounded-xl bg-white/5 border border-white/5"
               >
                 <div className="flex items-center gap-3 min-w-0">
@@ -133,6 +148,10 @@ export default function FreePlayersSection({ teamId }: Props) {
                     <div className="text-xs text-gray-500 truncate">
                       {p.discordUsername ? (
                         <span className="font-mono">@{p.discordUsername}</span>
+                      ) : p.roles.length > 0 ? (
+                        <span className="uppercase tracking-wide">
+                          {p.roles.join(' · ')}
+                        </span>
                       ) : (
                         t.noDiscordName
                       )}
@@ -143,11 +162,32 @@ export default function FreePlayersSection({ teamId }: Props) {
                         </span>
                       )}
                     </div>
+                    {p.availability && (
+                      <div className="text-xs text-gray-500 truncate">
+                        {p.availability}
+                      </div>
+                    )}
                   </div>
                 </div>
 
                 <div className="flex-shrink-0">
-                  {!p.linked ? (
+                  {!p.linked && p.contact?.email ? (
+                    // Inscription web : pas encore de compte, donc pas
+                    // d'invitation en un clic — mais un email pour la joindre.
+                    <div className="flex flex-col items-end gap-1 text-right">
+                      <a
+                        href={`mailto:${p.contact.email}`}
+                        className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-xs font-semibold transition"
+                      >
+                        {t.contact}
+                      </a>
+                      {p.contact.discord && (
+                        <span className="text-[11px] text-gray-500 font-mono">
+                          {p.contact.discord}
+                        </span>
+                      )}
+                    </div>
+                  ) : !p.linked ? (
                     <div className="flex flex-col items-end gap-1 text-right">
                       <span className="inline-flex items-center px-2 py-1 rounded-lg bg-white/5 border border-white/10 text-[11px] text-gray-400">
                         {t.notLinkedBadge}
@@ -163,10 +203,10 @@ export default function FreePlayersSection({ teamId }: Props) {
                   ) : (
                     <button
                       onClick={() => handleInvite(p)}
-                      disabled={inviting === p.discordUserId}
+                      disabled={inviting === p.id}
                       className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-xs font-semibold transition disabled:opacity-50"
                     >
-                      {inviting === p.discordUserId ? t.inviting : t.invite}
+                      {inviting === p.id ? t.inviting : t.invite}
                     </button>
                   )}
                 </div>

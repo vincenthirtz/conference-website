@@ -2602,15 +2602,23 @@ curl -sS -X POST "https://site.example/api/bot/v1/tenants/request-onboard" \
 
 #### `POST /api/bot/v1/free-players/sync`
 
-Full-replace, **par tenant**, des « joueurs libres » — les membres Discord
-portant le rôle « Recherche une équipe ». Le bot lit ce rôle côté Discord et
-pousse la liste complète ; le site remplace intégralement la table
-`free_players` du tenant par la liste reçue :
+Full-replace, **par tenant**, des « joueuses libres » de provenance Discord —
+les membres portant le rôle « Recherche une équipe ». Le bot lit ce rôle côté
+Discord et pousse la liste complète ; le site remplace la portion Discord de la
+table `free_players` du tenant par la liste reçue :
 
-- chaque joueur présent est upserté (insert/update de `discord_username` +
-  `auth_user_id` + `updated_at` ; `marked_at` préservé s'il était déjà présent),
-- les rows du tenant absentes du payload sont supprimées (le membre a perdu le
-  rôle côté Discord),
+- chaque joueuse présente est upsertée (insert/update de `discord_username` +
+  `auth_user_id` + `updated_at` ; `marked_at` préservé si elle était déjà là),
+- les rows **`source='discord'`** du tenant absentes du payload sont supprimées
+  (le membre a perdu le rôle côté Discord),
+
+> ⚠ **Portée du full-replace.** Depuis le lot 1 d'acquisition, `free_players`
+> contient aussi des inscriptions faites depuis le site
+> (`source = 'web'`, formulaire public `/rejoindre`, sans compte). Elles
+> n'appartiennent pas au bot : la purge est filtrée sur `source = 'discord'` et
+> ne doit JAMAIS les toucher. Le bot n'a aucune visibilité sur ces rows et n'a
+> rien à en faire — c'est purement une garantie côté site.
+
 - pour chaque joueur, `auth_user_id` est résolu via `user_discord_links` sur
   `discord_user_id` (`null` si le compte Discord n'est pas lié au site).
 
@@ -2674,6 +2682,33 @@ curl -sS -X POST https://site.example/api/bot/v1/free-players/sync \
 > `GET /api/teams/free-players`, invitation `POST /api/teams/invite-free-player`)
 > ne sont **pas** des endpoints bot — elles sont authentifiées par session
 > joueur (Bearer) et ne figurent donc pas dans ce contrat.
+
+#### Event `free_player.registered` (site → bot, via outbox/webhook)
+
+Émis quand une joueuse **se signale depuis le site** (`POST /api/public/free-players`,
+formulaire `/rejoindre`). Sert à annoncer la nouvelle venue dans le salon de
+recrutement : sans ça, l'inscription attend passivement qu'une capitaine vienne
+la lire.
+
+Payload :
+
+```json
+{
+  "displayName": "Nova",
+  "roles": ["tank", "support"],
+  "level": "gold",
+  "availability": "en semaine après 20h"
+}
+```
+
+- `roles` : sous-ensemble ordonné de `tank | dps | support | flex`.
+- `level` : `unknown` quand la joueuse ne l'a pas renseigné (cas fréquent et
+  assumé — il n'y a aucun rang minimum pour participer).
+- `availability` : texte libre, `null` si non renseigné.
+
+> **Aucune donnée de contact dans cet event** — ni email, ni pseudo Discord. Le
+> bot annonce, il ne distribue pas de carnet d'adresses ; la prise de contact
+> passe par une capitaine authentifiée sur le site.
 
 ### Tickets
 

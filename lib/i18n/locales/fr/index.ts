@@ -36,6 +36,7 @@ import nsPlayerTopBar from './playerTopBar';
 import nsNavbar from './navbar';
 import nsFooter from './footer';
 import nsNewsletterSignup from './newsletterSignup';
+import nsRejoindrePage from './rejoindrePage';
 import nsNewsletterMerci from './newsletterMerci';
 import nsCookieBanner from './cookieBanner';
 import nsOfflineBanner from './offlineBanner';
@@ -198,6 +199,7 @@ export const frDict = {
   navbar: nsNavbar.fr,
   footer: nsFooter.fr,
   newsletterSignup: nsNewsletterSignup.fr,
+  rejoindrePage: nsRejoindrePage.fr,
   newsletterMerci: nsNewsletterMerci.fr,
   cookieBanner: nsCookieBanner.fr,
   offlineBanner: nsOfflineBanner.fr,

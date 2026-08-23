@@ -1,17 +1,22 @@
 // pages/api/teams/free-players.ts
 //
-// GET — liste les "joueurs libres" du tenant (membres Discord portant le rôle
-// "Recherche une équipe", synchronisés via /api/bot/v1/free-players/sync) pour
-// que les capitaines puissent les recruter.
+// GET — liste les "joueuses libres" du tenant pour que les capitaines puissent
+// les recruter. DEUX provenances depuis le lot 1 d'acquisition :
+//   - `discord` : membres portant le rôle "Recherche une équipe", synchronisés
+//     par le bot via /api/bot/v1/free-players/sync ;
+//   - `web` : inscriptions faites depuis /rejoindre, SANS compte. Elles n'ont
+//     ni Discord ni auth_user_id — d'où `id` comme clé stable de la réponse, et
+//     un bloc `contact` que seule cette route (authentifiée, gate manage_roster)
+//     est autorisée à exposer.
 //
 // Gate : le caller DOIT gérer une équipe (capitaine ou rôle de gestion), sinon
 // 403. La liste exclut :
 //   - le caller lui-même (par auth_user_id),
 //   - toute personne déjà dans une équipe de ce tenant (join team_members).
 //
-// Pour les rows liées (auth_user_id non null), enrichissement depuis `profiles`
-// (battle_tag, display_name) — dégrade gracieusement si la row profile est
-// absente.
+// Pour les rows liées (auth_user_id non null), enrichissement via la RPC
+// `admin_get_user_profiles` (battle_tag, display_name) — dégrade gracieusement
+// si le compte est introuvable.
 //
 // Auth : Bearer (withAuthRoute). Tenant : resolveTenantIdForUserRequestAsync.
 
@@ -25,16 +30,40 @@ import {
 } from '@/utils/teams/managementAccess';
 import { getManagedTeamForRequest } from '@/utils/teams/teamScope';
 import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
+import { fetchAdminUserProfiles } from '@/utils/adminUserProfiles';
+import {
+  FREE_PLAYER_SELECT,
+  isActive,
+  normalizeRoles,
+  type FreePlayerRole,
+  type FreePlayerRow,
+  type FreePlayerSource,
+} from '@/utils/freePlayers';
 import { logger } from '@/utils/logger';
 
 type FreePlayerOut = {
-  discordUserId: string;
+  /** Clé stable de la réponse : une inscription web n'a pas de discordUserId. */
+  id: string;
+  source: FreePlayerSource;
+  /** null pour une inscription web. */
+  discordUserId: string | null;
   discordUsername: string | null;
   linked: boolean;
   authUserId: string | null;
   displayName: string | null;
   battleTag: string | null;
   specialty: string | null;
+  /** Renseignés uniquement par les inscriptions web. */
+  roles: FreePlayerRole[];
+  level: string | null;
+  availability: string | null;
+  note: string | null;
+  /**
+   * Moyens de contact. PRIVÉS : ils ne sortent que par cette route, jamais par
+   * /api/public/free-players. C'est la contrepartie du « sans compte » — une
+   * capitaine doit pouvoir joindre quelqu'un qui n'a pas encore de compte.
+   */
+  contact: { email: string | null; discord: string | null } | null;
 };
 
 export default withAuthRoute(async function handler(
@@ -73,11 +102,12 @@ export default withAuthRoute(async function handler(
   const denied = assertTeamPermission(access, 'manage_roster');
   if (denied) return res.status(denied.status).json({ error: denied.error });
 
-  // 1) free_players du tenant.
+  // 1) free_players du tenant, les deux provenances confondues.
   const { data: freeRows, error: freeErr } = await supabaseAdmin
     .from('free_players')
-    .select('discord_user_id, discord_username, auth_user_id')
-    .eq('tenant_id', tenantId);
+    .select(FREE_PLAYER_SELECT)
+    .eq('tenant_id', tenantId)
+    .order('marked_at', { ascending: false });
   if (freeErr) {
     logger.error('[teams/free-players] free_players query error', freeErr);
     return res
@@ -85,11 +115,12 @@ export default withAuthRoute(async function handler(
       .json({ error: 'Erreur de chargement des joueurs libres.' });
   }
 
-  const rows = (freeRows ?? []) as Array<{
-    discord_user_id: string;
-    discord_username: string | null;
-    auth_user_id: string | null;
-  }>;
+  // Les annonces périmées disparaissent de la liste (filtre en JS et pas en SQL
+  // pour laisser passer les rows sans `expires_at` — provenance Discord).
+  const now = new Date();
+  const rows = ((freeRows ?? []) as FreePlayerRow[]).filter((r) =>
+    isActive(r, now)
+  );
 
   // 2) Ensemble des auth_user_id déjà membres d'une équipe de ce tenant.
   const { data: memberRows, error: memberErr } = await supabaseAdmin
@@ -113,54 +144,45 @@ export default withAuthRoute(async function handler(
     return true;
   });
 
-  // 4) Enrichissement profils pour les rows liées.
-  const linkedIds = filtered
-    .map((r) => r.auth_user_id)
-    .filter((v): v is string => typeof v === 'string');
-
-  const profileById = new Map<
-    string,
-    { display_name: string | null; battle_tag: string | null }
-  >();
-  if (linkedIds.length > 0) {
-    const { data: profiles, error: profilesErr } = await supabaseAdmin
-      .from('profiles')
-      .select('id, display_name, battle_tag')
-      .in('id', linkedIds);
-    // Dégradation gracieuse : une erreur profils ne casse pas la liste.
-    if (profilesErr) {
-      logger.warn('[teams/free-players] profiles enrich error', profilesErr);
-    } else {
-      for (const p of profiles ?? []) {
-        const id = (p as Record<string, unknown>).id;
-        if (typeof id === 'string') {
-          profileById.set(id, {
-            display_name:
-              ((p as Record<string, unknown>).display_name as string) ?? null,
-            battle_tag:
-              ((p as Record<string, unknown>).battle_tag as string) ?? null,
-          });
-        }
-      }
-    }
-  }
+  // 4) Enrichissement profils pour les rows liées à un compte.
+  //
+  // Via `fetchAdminUserProfiles` (RPC admin_get_user_profiles) et NON via une
+  // table `profiles` : celle-ci n'existe pas dans ce projet — tout le profil
+  // vit dans `auth.users.raw_user_meta_data`. L'ancienne requête échouait donc
+  // systématiquement, et la dégradation gracieuse masquait le bug : la liste
+  // s'affichait, avec le nom de CHAQUE joueuse à null.
+  const profileById = await fetchAdminUserProfiles(
+    filtered.map((r) => r.auth_user_id)
+  );
 
   const players: FreePlayerOut[] = filtered.map((r) => {
     const linked = !!r.auth_user_id;
     const profile = r.auth_user_id
       ? profileById.get(r.auth_user_id)
       : undefined;
+    const isWeb = r.source === 'web';
     return {
-      discordUserId: r.discord_user_id,
+      id: r.id,
+      source: isWeb ? 'web' : 'discord',
+      discordUserId: r.discord_user_id ?? null,
       discordUsername: r.discord_username ?? null,
       linked,
       authUserId: r.auth_user_id ?? null,
-      displayName: profile?.display_name ?? null,
+      // Le nom saisi sur le formulaire fait foi pour une inscription web ; pour
+      // une row Discord on retombe sur le profil du compte lié.
+      displayName: r.display_name ?? profile?.display_name ?? null,
       battleTag: profile?.battle_tag ?? null,
-      // specialty vit sur team_members ; un joueur libre n'est par définition
+      // specialty vit sur team_members ; une joueuse libre n'est par définition
       // pas en équipe, donc toujours null ici. Champ conservé pour un contrat
       // de réponse stable.
       specialty: null,
+      roles: normalizeRoles(r.roles),
+      level: r.level ?? null,
+      availability: r.availability ?? null,
+      note: r.note ?? null,
+      contact: isWeb
+        ? { email: r.contact_email ?? null, discord: r.contact_discord ?? null }
+        : null,
     };
   });
 

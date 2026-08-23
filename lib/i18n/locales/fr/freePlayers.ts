@@ -14,6 +14,9 @@ export default ns('freePlayers', {
   loading: 'Chargement…',
   loadError: 'Erreur de chargement des joueurs.',
   empty: "Aucun joueur ne cherche d'équipe pour le moment.",
+  // Lot 1 : inscriptions web (sans compte) — pas d'invitation en un clic,
+  // mais un mailto pour amorcer le contact.
+  contact: 'Contacter',
   invite: 'Inviter',
   inviting: 'Invitation…',
   invited: 'Invité ✓',

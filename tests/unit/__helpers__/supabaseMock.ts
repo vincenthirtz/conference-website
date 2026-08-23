@@ -31,6 +31,7 @@ export const store: Store = {};
  *   leagues, league_tournaments, league_standings.
  */
 export const KNOWN_TABLES: readonly string[] = [
+  'free_players',
   // rating / H2H
   'match_participants',
   'player_ratings',

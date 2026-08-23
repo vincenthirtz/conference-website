@@ -25,7 +25,11 @@ const STEPS: Step[] = [
     n: '01',
     titleKey: 'step1Title',
     descKey: 'step1Desc',
-    href: '/team/create',
+    // Vers /rejoindre et non /team/create : le CTA « Inscrire mon équipe » du
+    // hero couvre déjà celles qui ont un roster, et /rejoindre renvoie vers la
+    // création d'équipe pour les autres — aucune impasse dans un sens ni dans
+    // l'autre.
+    href: '/rejoindre',
     icon: (
       <svg
         viewBox="0 0 24 24"

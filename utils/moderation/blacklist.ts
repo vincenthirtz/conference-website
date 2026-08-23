@@ -41,7 +41,12 @@ export type BlacklistInput = {
   discordUserId?: string | null;
 };
 
-export type BlacklistContext = 'register' | 'team_create' | 'add_member';
+export type BlacklistContext =
+  | 'register'
+  | 'team_create'
+  | 'add_member'
+  // Inscription publique au marché des joueuses libres (/rejoindre).
+  | 'free_player';
 
 /** Normalise un battletag pour comparaison (entrées stockées lowercase). */
 function normalizeBattleTag(value: string | null | undefined): string | null {
