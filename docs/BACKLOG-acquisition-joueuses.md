@@ -286,6 +286,11 @@ ils ne remplacent pas le travail de communauté.
   chiffres réels plutôt que sur des hypothèses.
 - **2026-08-23** — **Lot 1 livré** : le parcours « je joue seule ». Une joueuse sans équipe a
   désormais un chemin sur le site, sans créer de compte. Le constat A2 est levé.
+- **2026-08-23** — brique de **Lot 3** livrée en avance : audience de campagne
+  « membres d'équipe sans Discord lié » (24 personnes sur 30 au moment de l'ajout).
+  Le lien Discord conditionne les rôles d'équipe, les rôles Capitaine/Manager et le
+  marché des joueuses libres — les non-liées en sont privées sans le savoir. Le message
+  s'écrit depuis `/admin/communications` ; aucune relance automatique n'est armée.
 - **Prochain jalon** : laisser tourner quelques jours pour disposer d'une ligne de base
   (visiteuses/jour, sources, taux `register_start` → `register_done`, et maintenant volume
   d'inscriptions `/rejoindre`), puis arbitrer entre le **Lot 3** (relance) et le **Lot 2**
