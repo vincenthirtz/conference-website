@@ -3,6 +3,8 @@ import Link from 'next/link';
 import { supabaseClient } from '@/utils/supabase';
 import { BATTLE_TAG_REGEX } from '@/utils/teams/roleKind';
 import { useT } from '@/lib/i18n/useT';
+import { ANALYTICS_EVENTS, trackEvent } from '@/lib/analytics/track';
+import { resolveSignupSource } from '@/lib/analytics/attribution';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import nsRegisterPage from '@/lib/i18n/locales/fr/registerPage';
 
@@ -35,6 +37,16 @@ function RegisterPage() {
   const passwordRef = useRef<HTMLInputElement>(null);
   const confirmRef = useRef<HTMLInputElement>(null);
   const errorRef = useRef<HTMLDivElement>(null);
+  // `register_start` ne doit partir qu'UNE fois : c'est « quelqu'un a commencé
+  // à remplir », pas « quelqu'un a tapé une lettre ». Un ref (et pas un state)
+  // pour ne pas re-rendre le formulaire à chaque frappe.
+  const startTrackedRef = useRef(false);
+
+  const markRegistrationStarted = () => {
+    if (startTrackedRef.current) return;
+    startTrackedRef.current = true;
+    trackEvent(ANALYTICS_EVENTS.registerStart, { account_type: accountType });
+  };
 
   // Format BattleTag canonique (Name#0000, alphanumérique + # + 3 à 6
   // chiffres). Constante partagée avec l'API (utils/teams/addMember) pour
@@ -137,11 +149,19 @@ function RegisterPage() {
             ? undefined
             : battleTag.trim() || undefined,
           accountType,
+          // Attribution : première touche mémorisée si consentement analytics,
+          // sinon les utm_* de l'URL courante. `null` quand il n'y a rien.
+          signupSource: resolveSignupSource() ?? undefined,
         }),
       });
 
       if (res.ok) {
         // Succès OU email déjà pris → même message neutre (anti-énumération).
+        // L'événement porte donc la même ambiguïté que la réponse : c'est le
+        // prix de l'anti-énumération, et le biais est marginal en volume.
+        trackEvent(ANALYTICS_EVENTS.registerDone, {
+          account_type: accountType,
+        });
         setSuccessMsg(NEUTRAL_SIGNUP_MSG);
         setEmail('');
         setPassword('');
@@ -193,7 +213,13 @@ function RegisterPage() {
           </div>
 
           <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl shadow-2xl shadow-black/40 p-6">
-            <form onSubmit={handleSubmit} className="space-y-4">
+            {/* onChange sur le <form> : l'événement React remonte depuis
+                chaque champ, ce qui évite d'instrumenter les six onChange. */}
+            <form
+              onSubmit={handleSubmit}
+              onChange={markRegistrationStarted}
+              className="space-y-4"
+            >
               {/* Type de compte : je joue, ou j'encadre. Le second cas n'avait
                   aucune porte d'entrée avant 2026-08-20. */}
               <fieldset className="rounded-xl border border-white/10 bg-white/[0.03] p-3">

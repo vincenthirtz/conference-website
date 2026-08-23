@@ -72,7 +72,7 @@ export default ns('mentionsLegales', {
     'Améliorent votre expérience utilisateur en mémorisant vos préférences (thème, langue, etc.). Soumis à votre consentement.',
   analyticsTitle: 'Cookies analytiques',
   analyticsDesc:
-    "Nous aident à comprendre comment vous utilisez le site pour l'améliorer (pages visitées, durée de visite). Soumis à votre consentement. Actuellement non utilisés.",
+    "Nous aident à comprendre comment vous utilisez le site pour l'améliorer : pages visitées, provenance de votre visite, et étapes du parcours d'inscription. Soumis à votre consentement — aucune mesure n'est effectuée tant que vous ne l'avez pas accepté. La mesure d'audience utilisée est anonyme, sans cookie publicitaire et sans profilage.",
   marketingTitle: 'Cookies marketing',
   marketingDescBefore:
     'Utilisés pour afficher des publicités pertinentes. Soumis à votre consentement.',

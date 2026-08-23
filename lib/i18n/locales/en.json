@@ -2000,7 +2000,7 @@
     "functionalTitle": "Functional cookies",
     "functionalDesc": "Improve your experience by remembering your preferences (theme, language, etc.). Subject to your consent.",
     "analyticsTitle": "Analytics cookies",
-    "analyticsDesc": "Help us understand how you use the site so we can improve it (pages visited, time spent). Subject to your consent. Not currently used.",
+    "analyticsDesc": "Help us understand how you use the site so we can improve it: pages visited, where your visit came from, and the steps of the sign-up journey. Subject to your consent — no measurement happens until you accept it. The analytics we use is anonymous, with no advertising cookie and no profiling.",
     "marketingTitle": "Marketing cookies",
     "marketingDescBefore": "Used to display relevant ads. Subject to your consent.",
     "marketingDescStrong": "No marketing cookie is used",

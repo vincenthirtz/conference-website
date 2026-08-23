@@ -44,6 +44,12 @@ const PWAInstallAndUpdate = dynamic(
 const OfflineBanner = dynamic(() => import('@/components/OfflineBanner'), {
   ssr: false,
 });
+// Mesure d'audience : purement client (lit le consentement en localStorage) et
+// no-op tant que NEXT_PUBLIC_ANALYTICS_* n'est pas configuré.
+const AnalyticsScript = dynamic(
+  () => import('@/components/Analytics/AnalyticsScript'),
+  { ssr: false }
+);
 
 type AppPropsWithSeo = AppProps & {
   Component: AppProps['Component'] & { seo?: SeoProps };
@@ -163,6 +169,10 @@ function MyApp({ Component, pageProps, router, branding }: AppPropsWithSeo) {
                   {!isAdmin && !isCaster && <FloatingSocials />}
                   <BackToTopButton />
                   <CookieBanner />
+                  {/* Ni l'admin ni le cockpit caster ne sont mesurés : ce sont
+                      des surfaces internes, leur trafic fausserait l'entonnoir
+                      d'acquisition. */}
+                  {!isAdmin && !isCaster && <AnalyticsScript />}
                   <ToastContainer />
                 </div>
               </ToastProvider>

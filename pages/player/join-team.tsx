@@ -13,6 +13,7 @@ import { PlayerPageSkeleton } from '@/components/player/Skeletons';
 import TeamPicker from '@/components/player/TeamPicker';
 import { MAX_TEAM_PLAYERS } from '@/utils/constants';
 import { useT, format } from '@/lib/i18n/useT';
+import { ANALYTICS_EVENTS, trackEvent } from '@/lib/analytics/track';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 
 import { logger } from '../../utils/logger';
@@ -168,6 +169,7 @@ export default function JoinTeamPage() {
       });
 
       const team = teams.find((tm) => tm.id === selectedTeamId);
+      trackEvent(ANALYTICS_EVENTS.joinRequestSent, { desired_role: desiredRole });
       setSuccessTeamName(team?.name || t.selectedTeamFallback);
       setSuccess(true);
     } catch (err: unknown) {

@@ -47,6 +47,28 @@ const optionalTrimmed = (max: number) =>
  */
 const SELF_SERVICE_ROLES = ['player', 'manager'] as const;
 
+/**
+ * Attribution d'acquisition envoyée par le formulaire (cf.
+ * lib/analytics/attribution.ts). Champs BORNÉS et liste FERMÉE : cette valeur
+ * finit en metadata de compte, elle ne doit ni grossir ni transporter autre
+ * chose que du signal de canal. Les clés inconnues sont retirées par zod.
+ *
+ * Aucune de ces valeurs n'est un identifiant personnel : le referrer est réduit
+ * à son hôte côté client, la page d'atterrissage à son chemin.
+ */
+const signupSourceSchema = z
+  .object({
+    source: z.string().trim().max(120).optional(),
+    medium: z.string().trim().max(120).optional(),
+    campaign: z.string().trim().max(120).optional(),
+    content: z.string().trim().max(120).optional(),
+    term: z.string().trim().max(120).optional(),
+    referrer: z.string().trim().max(120).optional(),
+    landing: z.string().trim().max(120).optional(),
+    at: z.string().trim().max(40).optional(),
+  })
+  .optional();
+
 const registerSchema = z.object({
   email: z.string().email(),
   // bcrypt (Supabase) plafonne à 72 octets ; min aligné sur l'UI.
@@ -55,6 +77,7 @@ const registerSchema = z.object({
   // Absent ⇒ 'player' : les clients qui ignorent le champ (et tout appelant
   // antérieur à 2026-08-20) gardent le comportement exact d'avant.
   accountType: z.enum(SELF_SERVICE_ROLES).optional(),
+  signupSource: signupSourceSchema,
   battleTag: z.preprocess(
     (v) => (typeof v === 'string' && v.trim() === '' ? undefined : v),
     z
@@ -91,7 +114,7 @@ export default async function handler(
     });
   }
 
-  const { password, displayName, battleTag } = parsed.data;
+  const { password, displayName, battleTag, signupSource } = parsed.data;
   const accountRole = parsed.data.accountType ?? 'player';
   const email = normalizeEmail(parsed.data.email);
 
@@ -128,6 +151,14 @@ export default async function handler(
         // entre joueuse et manager, pas au-delà.
         role: accountRole,
         battle_tag: battleTag ?? null,
+        // Attribution d'acquisition. Stockée en metadata plutôt qu'en table
+        // dédiée : ce projet n'a pas de table `profiles`, tout le profil vit
+        // déjà dans `auth.users.raw_user_meta_data`. Un objet vide est
+        // normalisé en null pour ne pas polluer les metadata.
+        signup_source:
+          signupSource && Object.keys(signupSource).length > 0
+            ? signupSource
+            : null,
       },
     },
   });

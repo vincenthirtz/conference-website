@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useT, format } from '@/lib/i18n/useT';
+import { ANALYTICS_EVENTS, trackEvent } from '@/lib/analytics/track';
 import { useLocale } from '@/lib/i18n/useLocale';
 import nsCheckinToken from '@/lib/i18n/locales/fr/checkinToken';
 
@@ -93,6 +94,9 @@ export default function CheckinPage() {
       if (!res.ok || json.error) {
         setError(json.error || t.errCheckinFailed);
       } else {
+        // Seul le chemin ACTIF est mesuré : `alreadyCheckedIn` (au chargement)
+        // n'est pas une conversion, c'est un retour sur une page déjà validée.
+        trackEvent(ANALYTICS_EVENTS.checkinDone);
         setConfirmed(true);
       }
     } catch {

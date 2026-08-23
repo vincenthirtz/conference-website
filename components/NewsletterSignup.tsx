@@ -14,6 +14,7 @@
 
 import { useId, useRef, useState } from 'react';
 import { useT, format as fmt } from '@/lib/i18n/useT';
+import { ANALYTICS_EVENTS, trackEvent } from '@/lib/analytics/track';
 import nsNewsletterSignup from '@/lib/i18n/locales/fr/newsletterSignup';
 
 type Props = {
@@ -98,6 +99,10 @@ export default function NewsletterSignup({
         await refreshCaptcha();
         throw new Error(data?.error || t.errorGeneric);
       }
+      // Mesure la SOUMISSION, pas la confirmation : le double opt-in se joue
+      // dans la boîte mail, hors du navigateur. `source` distingue le footer
+      // (présent partout) de la section home.
+      trackEvent(ANALYTICS_EVENTS.newsletterSubmit, { source });
       setStatus('success');
       setEmail('');
       setCaptchaAnswer('');

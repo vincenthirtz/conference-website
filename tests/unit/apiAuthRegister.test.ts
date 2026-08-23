@@ -202,6 +202,70 @@ describe('/api/auth/register', () => {
     expect(signUpCalls[0].options?.data?.battle_tag).toBeNull();
   });
 
+  // Attribution d'acquisition (lot 0 — docs/BACKLOG-acquisition-joueuses.md).
+  it('signupSource → metadata, clés inconnues retirées', async () => {
+    const res = makeRes();
+    await registerHandler(
+      makeReq({
+        body: {
+          ...validBody,
+          email: 'attrib@gmail.com',
+          signupSource: {
+            source: 'twitch',
+            medium: 'stream',
+            referrer: 'www.twitch.tv',
+            landing: '/inscription-2026',
+            // Le client n'a aucun moyen d'écrire un champ arbitraire en
+            // metadata : zod ne retient que la liste fermée.
+            email: 'fuite@example.com',
+            admin: true,
+          },
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    expect(signUpCalls[0].options?.data?.signup_source).toEqual({
+      source: 'twitch',
+      medium: 'stream',
+      referrer: 'www.twitch.tv',
+      landing: '/inscription-2026',
+    });
+  });
+
+  it('signupSource absent ou vide → null (pas de metadata polluée)', async () => {
+    const res = makeRes();
+    await registerHandler(
+      makeReq({ body: { ...validBody, email: 'direct@gmail.com' } }),
+      res
+    );
+    expect(signUpCalls[0].options?.data?.signup_source).toBeNull();
+
+    const res2 = makeRes();
+    await registerHandler(
+      makeReq({
+        body: { ...validBody, email: 'vide@gmail.com', signupSource: {} },
+      }),
+      res2
+    );
+    expect(signUpCalls[1].options?.data?.signup_source).toBeNull();
+  });
+
+  it('signupSource trop long → 400 (borne de taille des champs)', async () => {
+    const res = makeRes();
+    await registerHandler(
+      makeReq({
+        body: {
+          ...validBody,
+          email: 'long@gmail.com',
+          signupSource: { source: 'x'.repeat(500) },
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+  });
+
   it('anti-énumération : email déjà pris → 200 neutre (pas de fuite)', async () => {
     setSignUpResult({
       data: { user: null },

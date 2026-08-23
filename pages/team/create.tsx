@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { useToast } from '@/components/Toast';
+import { ANALYTICS_EVENTS, trackEvent } from '@/lib/analytics/track';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
@@ -655,6 +656,7 @@ export default function PublicCreateTeamPage() {
       // pour éviter tout doublon de texte à l'écran. On précise que les
       // co-équipières sont INVITÉES (en attente d'acceptation), pas ajoutées
       // immédiatement à l'équipe.
+      trackEvent(ANALYTICS_EVENTS.teamCreated);
       addToast(t.toastCreated, 'success');
       setName('');
       setShortName('');

@@ -19,9 +19,12 @@ export interface CookieConsentState {
   consentDate: string | null;
 }
 
-const COOKIE_CONSENT_KEY = 'cookie_consent';
-const COOKIE_CONSENT_VERSION = '1.0';
-const COOKIE_CONSENT_CHANGE_EVENT = 'cookie_consent_change';
+// Exportés : `lib/analytics/consent.ts` relit exactement le même stockage
+// depuis du code NON-React (le tracker n'est pas un composant). Une seule
+// source de vérité pour la clé, la version et l'événement de synchronisation.
+export const COOKIE_CONSENT_KEY = 'cookie_consent';
+export const COOKIE_CONSENT_VERSION = '1.0';
+export const COOKIE_CONSENT_CHANGE_EVENT = 'cookie_consent_change';
 
 const defaultPreferences: CookiePreferences = {
   essential: true,

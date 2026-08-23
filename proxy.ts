@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { sanitizeAnalyticsOrigin } from '@/lib/analytics/config';
 
 // The CSP template is static except for the per-request nonce (script-src) and
 // frame-ancestors (embed vs strict). We precompute the static portions once at
@@ -19,8 +20,26 @@ import type { NextRequest } from 'next/server';
 // script-src (l'attaque principale) reste intact.
 const CSP_STATIC_HEAD = "default-src 'self'; script-src 'self' 'nonce-";
 
+// Analytics d'audience (Plausible ou Umami, cf. lib/analytics/config.ts). Le
+// collecteur n'est PAS un host connu à l'avance : il dépend du fournisseur
+// retenu et de son hébergement (cloud ou auto-hébergé). On l'autorise donc
+// depuis l'environnement — et uniquement lui, en script-src et connect-src.
+//
+// Quand la variable est absente (dev local, preview, prod non encore
+// configurée), ANALYTICS_SRC vaut '' et la CSP émise est byte-identique à
+// celle d'avant l'introduction de l'analytics.
+//
+// Filtre strict : https obligatoire (pas de dégradation en clair) et aucun
+// caractère pouvant clore ou injecter une directive — cette valeur part
+// telle quelle dans un en-tête HTTP.
+const ANALYTICS_ORIGIN = sanitizeAnalyticsOrigin(
+  process.env.NEXT_PUBLIC_ANALYTICS_HOST
+);
+const ANALYTICS_SRC = ANALYTICS_ORIGIN ? ` ${ANALYTICS_ORIGIN}` : '';
+
 const CONNECT_SRC_BASE =
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.twitch.tv https://id.twitch.tv https://challenges.cloudflare.com";
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.twitch.tv https://id.twitch.tv https://challenges.cloudflare.com" +
+  ANALYTICS_SRC;
 // Cockpit caster web (/admin/caster) UNIQUEMENT : pilotage d'OBS en local
 // (obs-websocket sur ws://localhost:4455) + chat IRC et EventSub Twitch en
 // WebSocket direct. Le loopback en clair depuis une page HTTPS est permis par
@@ -52,7 +71,9 @@ const buildCspMid = (
   connectSrc: string,
   opts: { casterMedia?: boolean } = {}
 ) =>
-  "' https://challenges.cloudflare.com; " +
+  "' https://challenges.cloudflare.com" +
+  ANALYTICS_SRC +
+  '; ' +
   [
     `style-src 'self' 'unsafe-inline'`,
     `img-src 'self' data: blob: https:`,
