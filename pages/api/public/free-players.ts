@@ -99,9 +99,14 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
     .map(toPublicFreePlayer)
     .filter((p): p is NonNullable<typeof p> => p !== null);
 
-  // Liste publique et peu volatile : un cache court absorbe les rafales sans
-  // rendre une inscription invisible plus d'une minute.
-  res.setHeader('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
+  // PAS de cache CDN, et c'est délibéré. Un `max-age=60` a été essayé : le CDN
+  // Netlify ne varie pas sur la query string, donc une joueuse qui venait de
+  // publier sa fiche recevait la liste d'AVANT — y compris après le
+  // rafraîchissement déclenché par le formulaire. Elle en concluait que son
+  // envoi n'était pas parti, ce qui est précisément le doute que ce parcours
+  // doit lever. La requête est minuscule et le trafic quasi nul : le cache ne
+  // gagnait rien et cassait le seul moment qui compte.
+  res.setHeader('Cache-Control', 'no-store');
   return res.status(200).json({ players, count: players.length });
 }
 
