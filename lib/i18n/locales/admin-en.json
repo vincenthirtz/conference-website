@@ -5872,7 +5872,8 @@
     "subsUnsubCaption": "List of accounts unsubscribed from campaign emails, most recent first.",
     "subsUnsubColEmail": "Email",
     "subsUnsubColLabel": "First name",
-    "subsUnsubColDate": "Unsubscribed on"
+    "subsUnsubColDate": "Unsubscribed on",
+    "audienceTeamMembersWithoutDiscord": "Team members — Discord not linked"
   },
   "adminSiteSettings": {
     "pageTitle": "Admin – Site settings",

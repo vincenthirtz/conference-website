@@ -396,6 +396,44 @@ describe('computeAudienceRecipients', () => {
     expect(recipients.map((r) => r.user_id).sort()).toEqual(['cap1', 'cap3']);
   });
 
+  it('team-members-without-discord: uniquement les membres sans lien Discord', async () => {
+    setAuthListUsers([
+      { id: 'u1', email: 'u1@x.com', email_confirmed_at: '2026-01-01' } as any,
+      { id: 'u2', email: 'u2@x.com', email_confirmed_at: '2026-01-01' } as any,
+      { id: 'u3', email: 'u3@x.com', email_confirmed_at: '2026-01-01' } as any,
+    ]);
+    store.team_members = [
+      { team_id: 't1', user_id: 'u1' },
+      { team_id: 't1', user_id: 'u2' },
+      // Doublon : une manager peut encadrer plusieurs équipes — elle ne doit
+      // pas être relancée deux fois.
+      { team_id: 't2', user_id: 'u2' },
+      { team_id: 't2', user_id: 'u3' },
+    ] as any;
+    store.user_discord_links = [
+      { auth_user_id: 'u2', discord_user_id: '100000000000000001' },
+    ] as any;
+
+    const recipients = await computeAudienceRecipients(
+      'team-members-without-discord'
+    );
+    expect(recipients.map((r) => r.user_id).sort()).toEqual(['u1', 'u3']);
+  });
+
+  it('team-members-without-discord: audience vide quand tout le monde est lié', async () => {
+    setAuthListUsers([
+      { id: 'u1', email: 'u1@x.com', email_confirmed_at: '2026-01-01' } as any,
+    ]);
+    store.team_members = [{ team_id: 't1', user_id: 'u1' }] as any;
+    store.user_discord_links = [
+      { auth_user_id: 'u1', discord_user_id: '100000000000000001' },
+    ] as any;
+
+    expect(
+      await computeAudienceRecipients('team-members-without-discord')
+    ).toEqual([]);
+  });
+
   it('tournament-captains-incomplete-roster: audience vide si min_players non configuré', async () => {
     setAuthListUsers([
       { id: 'cap1', email: 'cap1@x.com', email_confirmed_at: '2026-01-01' } as any,

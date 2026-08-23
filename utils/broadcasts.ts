@@ -83,6 +83,11 @@ export type CampaignAudience =
   | 'tournament-never-logged-in'
   // Relance : capitaines d'une équipe inscrite dont le roster est incomplet.
   | 'tournament-captains-incomplete-roster'
+  // Relance : membres d'équipe dont le compte Discord n'est PAS lié au site.
+  // Sans ce lien, le bot ne peut ni leur poser de rôle (Capitaine, Manager,
+  // équipe), ni les faire apparaître dans le marché des joueuses libres — la
+  // moitié de l'outillage Discord leur est invisible sans qu'elles le sachent.
+  | 'team-members-without-discord'
   // Newsletter externe (abonné·es sans compte site) + combinaisons.
   | 'newsletter'
   | 'all-plus-newsletter'
@@ -489,6 +494,34 @@ async function listTeamMemberIds(): Promise<Set<string>> {
 }
 
 /**
+ * Membres d'équipe SANS compte Discord lié.
+ *
+ * Différence des deux ensembles : `team_members.user_id` moins les
+ * `user_discord_links.auth_user_id`. La table de liens est GLOBALE (pas de
+ * tenant_id), comme le reste de ce catalogue broadcast.
+ *
+ * Pourquoi cette audience existe : le lien Discord conditionne tout
+ * l'outillage serveur (rôles d'équipe, rôle Capitaine/Manager, marché des
+ * joueuses libres). Une personne non liée en est privée sans jamais en être
+ * informée — c'est exactement ce qu'une relance doit corriger.
+ */
+async function listTeamMembersWithoutDiscordIds(): Promise<Set<string>> {
+  const members = await listTeamMemberIds();
+  if (members.size === 0) return members;
+
+  const { data, error } = await supabaseAdmin!
+    .from('user_discord_links')
+    .select('auth_user_id');
+  if (error) throw error;
+
+  for (const r of data ?? []) {
+    const id = (r as { auth_user_id?: string | null }).auth_user_id;
+    if (id) members.delete(id);
+  }
+  return members;
+}
+
+/**
  * Résout l'ensemble des auth user ids du staff actif (non soft-deleted). Global.
  */
 async function listStaffAuthUserIds(): Promise<Set<string>> {
@@ -757,7 +790,8 @@ function mergeRecipientsByEmail(
  *
  * Deux familles d'audiences :
  * - « comptes auth » (all-confirmed-users, team-captains, team-members, staff,
- *   tournament-never-logged-in, tournament-captains-incomplete-roster) :
+ *   tournament-never-logged-in, tournament-captains-incomplete-roster,
+ *   team-members-without-discord) :
  *   résout un Set<authUserId>, filtre les comptes confirmés à ce set, retire les
  *   opt-out RGPD broadcast (notification_prefs), label via profiles.battle_tag
  *   (fallback display_name). Catalogue broadcast GLOBAL → aucun filtre tenant.
@@ -788,6 +822,10 @@ export async function computeAudienceRecipients(
       );
     case 'tournament-captains-incomplete-roster':
       return computeConfirmedRecipients(await listIncompleteRosterCaptainIds());
+    case 'team-members-without-discord':
+      return computeConfirmedRecipients(
+        await listTeamMembersWithoutDiscordIds()
+      );
     case 'adherents':
       return computeAdherentRecipients();
     case 'newsletter':
