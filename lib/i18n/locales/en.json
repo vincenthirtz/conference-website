@@ -1486,7 +1486,11 @@
     "contactTitle": "Want to help or collaborate?",
     "contactBody": "Join the association as a volunteer, propose a partnership or ask your questions. We reply quickly.",
     "ctaAdhere": "Become a member",
-    "ambassadorRole": "Ambassador"
+    "ambassadorRole": "Ambassador",
+    "ambassadorsEyebrow": "They carry the Cup",
+    "ambassadorsTitle": "Our ambassadors",
+    "ambassadorsIntro": "Creators who talk about the Cup on their own channels. Drop by and say hi when they're live.",
+    "ambassadorsCta": "Visit the channel →"
   },
   "leaderboardPage": {
     "eyebrow": "Leaderboard",

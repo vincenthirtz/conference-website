@@ -4,6 +4,7 @@ import type { GetStaticProps } from 'next';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
+import { fetchTwitchProfileImages } from '@/utils/twitch';
 import { useSiteSetting } from '@/hooks/useSiteSettings';
 import { POLE_KEYS, type PoleKey } from '@/utils/associationPoles';
 import { useT } from '@/lib/i18n/useT';
@@ -37,6 +38,8 @@ type Ambassador = {
   channel: string;
   label: string | null;
   badge: string | null;
+  /** Avatar Twitch, résolu au build (Helix). `null` si l'appel a échoué. */
+  profileImageUrl: string | null;
 };
 
 type PoleMember = {
@@ -383,22 +386,6 @@ function AssociationPage({
     ...castAsPoleMembers,
   ];
 
-  // Le pôle "Communauté" inclut aussi les ambassadrices — les chaînes Twitch
-  // actives. Elles portent la Cup hors du serveur : leur place est ici, pas
-  // seulement sur /live. Le `badge` (Streameuse, Player…) sert de titre quand
-  // il existe, sinon un libellé générique.
-  const ambassadorsAsPoleMembers: PoleMember[] = ambassadors.map((a) => ({
-    id: `ambassador-${a.id}`,
-    pole_key: 'communaute',
-    name: a.label || a.channel,
-    title: a.badge || t.ambassadorRole,
-    image_url: null,
-    link_url: `https://twitch.tv/${a.channel}`,
-  }));
-  membersByPole.communaute = [
-    ...membersByPole.communaute,
-    ...ambassadorsAsPoleMembers,
-  ];
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
@@ -765,6 +752,76 @@ function AssociationPage({
           </div>
         </section>
 
+        {/* ── Ambassadrices ───────────────────────────────── */}
+        {/* Cadre à part, et pas une ligne du pôle Communauté : ce ne sont pas
+            des bénévoles de l'asso mais des créatrices qui portent la Cup sur
+            leurs propres chaînes. Les fondre dans un pôle effacerait cette
+            différence — et leur visage, qui est justement ce qui les rend
+            reconnaissables. */}
+        {ambassadors.length > 0 && (
+          <section>
+            <div className="mb-10 text-center">
+              <p className="text-xs uppercase tracking-[0.18em] text-purple-300">
+                {t.ambassadorsEyebrow}
+              </p>
+              <h3 className="text-brand-gradient mt-2 text-2xl font-bold sm:text-3xl">
+                {t.ambassadorsTitle}
+              </h3>
+              <span className="brand-rule mx-auto mt-3" aria-hidden />
+              <p className="mx-auto mt-3 max-w-xl text-sm text-gray-400">
+                {t.ambassadorsIntro}
+              </p>
+            </div>
+
+            <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {ambassadors.map((a) => {
+                const name = a.label || a.channel;
+                return (
+                  <li key={a.id}>
+                    <a
+                      href={`https://twitch.tv/${a.channel}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group flex h-full items-center gap-4 rounded-2xl border border-white/10 bg-gradient-to-br from-purple-500/10 to-transparent p-5 transition hover:-translate-y-0.5 hover:border-purple-400/40 hover:shadow-lg hover:shadow-black/20"
+                    >
+                      {a.profileImageUrl ? (
+                        <Image
+                          src={a.profileImageUrl}
+                          alt=""
+                          width={56}
+                          height={56}
+                          className="h-14 w-14 flex-shrink-0 rounded-full object-cover ring-2 ring-purple-400/30"
+                        />
+                      ) : (
+                        // Initiale en repli : l'avatar vient de Helix, qui peut
+                        // ne pas répondre au build. Une carte sans visuel du
+                        // tout casserait l'alignement de la grille.
+                        <span
+                          aria-hidden
+                          className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full bg-purple-500/20 text-lg font-bold text-purple-200 ring-2 ring-purple-400/30"
+                        >
+                          {name.slice(0, 1).toUpperCase()}
+                        </span>
+                      )}
+                      <span className="min-w-0">
+                        <span className="block truncate font-semibold text-white">
+                          {name}
+                        </span>
+                        <span className="block text-sm text-gray-400">
+                          {a.badge || t.ambassadorRole}
+                        </span>
+                        <span className="mt-1 block text-xs text-purple-300 opacity-0 transition group-hover:opacity-100">
+                          {t.ambassadorsCta}
+                        </span>
+                      </span>
+                    </a>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        )}
+
         {/* ── CTA Contact ─────────────────────────────────── */}
         <section className="relative overflow-hidden rounded-3xl border border-white/10">
           <div className="absolute inset-0 bg-gradient-to-br from-purple-600/20 via-pink-600/10 to-cyan-600/10 pointer-events-none" />
@@ -886,11 +943,29 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
     );
   }
 
+  // Avatars Twitch résolus AU BUILD (ISR 1 h) : un appel Helix, pas un par
+  // visiteuse. Best-effort — `fetchTwitchProfileImages` renvoie une map vide
+  // en cas d'échec, et la carte retombe sur l'initiale.
+  const ambassadorRows = (ambassadorRes.data ?? []) as Array<{
+    id: string;
+    channel: string;
+    label: string | null;
+    badge: string | null;
+  }>;
+  const avatars =
+    ambassadorRows.length > 0
+      ? await fetchTwitchProfileImages(ambassadorRows.map((a) => a.channel))
+      : {};
+  const ambassadorsWithAvatars: Ambassador[] = ambassadorRows.map((a) => ({
+    ...a,
+    profileImageUrl: avatars[a.channel.toLowerCase()] ?? null,
+  }));
+
   return {
     props: {
       castMembers: castRes.data ?? [],
       poleMembers: (poleRes.data ?? []) as PoleMember[],
-      ambassadors: (ambassadorRes.data ?? []) as Ambassador[],
+      ambassadors: ambassadorsWithAvatars,
     },
     revalidate: 3600,
   };
