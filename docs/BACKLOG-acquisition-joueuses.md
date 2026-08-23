@@ -96,9 +96,12 @@ sur **toutes** les pages (footer) plus une section dédiée sur la home
 ([index.tsx:110](../pages/index.tsx#L110)). Or l'endpoint crée une ligne `pending` **avant**
 d'envoyer l'email de confirmation
 ([newsletter/subscribe.ts](../pages/api/public/newsletter/subscribe.ts)) : zéro ligne signifie donc
-que **personne n'a jamais soumis le formulaire avec succès** — le blocage est en amont de l'email
-(trafic quasi nul, ou échec du captcha maison / du rate-limit avant l'insert). À trancher au lot 0,
-une fois la mesure en place.
+que **personne n'a jamais soumis le formulaire avec succès**.
+
+> **Tranché le 2026-08-23** — test réel de bout en bout en production : captcha servi, POST accepté,
+> ligne `pending` créée, email Brevo reçu, lien de confirmation cliqué, ligne passée à `confirmed`.
+> **Le tunnel n'est pas cassé.** Zéro inscrite = zéro soumission = il n'y a personne sur le site.
+> Ce qui déplace le problème là où il est vraiment : l'acquisition, pas la plomberie.
 
 Au-delà de la newsletter : aucun email de cycle de vie. Une joueuse qui crée un compte et ne
 rejoint aucune équipe ne reçoit jamais rien. Une capitaine dont le roster est à 3/6 non plus.
@@ -239,6 +242,10 @@ ils ne remplacent pas le travail de communauté.
 - **2026-08-23** — étude initiale, relevé prod, 7 lots définis (0 → 6).
 - **2026-08-23** — **Lot 0 livré** : analytics consent-gated provider-agnostique
   (`lib/analytics/*`), pageviews SPA, 6 événements de conversion, attribution UTM →
-  `signup_source`, CSP conditionnelle. Reste à faire hors code : choisir l'hébergement du
-  collecteur (Plausible Cloud ou Umami auto-hébergé sur la Freebox) et poser les variables
-  d'environnement Netlify.
+  `signup_source`, CSP conditionnelle.
+- **2026-08-23** — collecteur retenu : **Umami auto-hébergé** sur la Freebox
+  (`docker-box`, unités `umami.service` + `umami-db.service`, vhost `stats.owwomenscup.fr`,
+  mise en service par `scripts/init-umami.sh`). Reste hors code : DNS du sous-domaine,
+  création du site dans Umami, puis `NEXT_PUBLIC_ANALYTICS_{PROVIDER,HOST,SITE_ID}` dans Netlify.
+- **2026-08-23** — tunnel newsletter vérifié en production de bout en bout : il fonctionne
+  (cf. A4). Le « 0 inscrite » est un problème d'audience, pas de code.
