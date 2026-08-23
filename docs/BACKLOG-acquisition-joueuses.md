@@ -181,6 +181,13 @@ toutes les inscriptions web. (2) L'enrichissement des profils lisait une table `
 **n'existe pas** dans ce projet — la dégradation gracieuse masquait le bug, et le nom de chaque
 joueuse revenait `null` côté capitaine. Passé sur la RPC `admin_get_user_profiles`.
 
+**Retrait de fiche (2026-08-23)** — une fiche publique doit avoir une porte de sortie.
+Deux chemins : la joueuse reçoit à l'inscription un email portant un **lien de retrait signé**
+(HMAC, aucun compte requis) qui mène à `/rejoindre/retrait` — le retrait exige un clic, jamais
+un simple GET, parce que les clients mail pré-visitent les liens ; et le staff dispose de
+`/admin/free-players` (liste des deux provenances, coordonnées visibles, suppression journalisée)
+pour les demandes arrivant par un autre canal.
+
 **Boucle fermée le 2026-08-23** : le handler côté bot Discord est livré
 (`docker-box/services/discord-bot/free-player-events.js`). Il annonce chaque nouvelle joueuse
 dans le salon `free_players_channel_id` (env `FREE_PLAYERS_CHANNEL_ID`) et pingue le rôle

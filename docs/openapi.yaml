@@ -16044,6 +16044,69 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /api/admin/free-players:
+    get:
+      summary: Liste staff des joueuses libres (les deux provenances).
+      description: >
+        Vue operateur du marche des joueuses libres. Contrairement a la route
+        publique, elle EXPOSE les coordonnees : c'est ce qui permet de traiter
+        une demande de retrait arrivee par un autre canal que le lien email.
+      operationId: adminListFreePlayers
+      tags:
+        - admin/users
+      security:
+        - StaffSession: []
+      responses:
+        '200':
+          description: Fiches du tenant.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+        '429':
+          $ref: '#/components/responses/RateLimited'
+    delete:
+      summary: Retire une fiche « joueuse libre ».
+      description: >
+        Seconde porte de sortie, cote operateur — la premiere etant le lien de
+        retrait envoye par email a la joueuse. Une fiche de provenance Discord
+        peut etre supprimee mais reviendra a la synchro suivante tant que le
+        role est porte : la reponse le signale via `willReturn`.
+      operationId: adminDeleteFreePlayer
+      tags:
+        - admin/users
+      security:
+        - StaffSession: []
+      parameters:
+        - in: query
+          name: id
+          required: true
+          schema:
+            $ref: '#/components/schemas/Uuid'
+      responses:
+        '200':
+          description: Fiche retiree.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  willReturn:
+                    type: boolean
+                    description: La synchro Discord la repoussera.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
   /api/admin/pole-members:
     get:
       summary: List pole (association staff) members.
@@ -27970,6 +28033,79 @@ paths:
                     example: true
         '400':
           $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /api/public/free-players/remove:
+    get:
+      tags:
+        - public/misc
+      summary: Décrit la fiche visée par un lien de retrait (ne supprime rien).
+      description: >
+        Sert la page de confirmation /rejoindre/retrait : elle doit montrer CE
+        qu'on s'apprête à retirer. La separation GET/POST n'est pas cosmetique —
+        les clients mail et antivirus pre-visitent les liens d'un email, un GET
+        destructeur ferait disparaitre des fiches sans clic humain.
+        Token HMAC recu par email a l'inscription (aucun compte requis).
+      operationId: describePublicFreePlayerRemoval
+      security: []
+      parameters:
+        - in: query
+          name: token
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Fiche trouvee.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name:
+                    type: string
+                    nullable: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+    post:
+      tags:
+        - public/misc
+      summary: Retire définitivement une fiche « joueuse libre ».
+      description: >
+        Porte de sortie autonome du parcours /rejoindre : l'inscription se fait
+        SANS compte, donc sans cette route une joueuse devrait ecrire au staff
+        pour disparaitre d'une liste publique qu'elle a elle-meme alimentee.
+        Token invalide et fiche introuvable renvoient le MEME message : les
+        distinguer transformerait la route en oracle d'existence.
+      operationId: removePublicFreePlayer
+      security: []
+      parameters:
+        - in: query
+          name: token
+          schema:
+            type: string
+          description: 'Accepte aussi dans le corps JSON : { "token": "..." }.'
+      responses:
+        '200':
+          description: Fiche retiree.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - success
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '429':
           $ref: '#/components/responses/RateLimited'
   /api/public/newsletter/subscribe:

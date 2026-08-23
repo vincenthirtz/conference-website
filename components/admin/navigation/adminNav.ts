@@ -372,6 +372,12 @@ export const ADMIN_NAV: AdminNavNode[] = [
             minRole: 'caster',
           },
           {
+            id: 'free-players',
+            topBarLabel: 'Joueuses libres',
+            href: '/admin/free-players',
+            minRole: 'admin',
+          },
+          {
             id: 'demandes',
             topBarLabel: 'Demandes joueurs / équipes',
             href: '/admin/demandes',

@@ -984,6 +984,72 @@ export function sendNewsletterConfirmEmail(opts: {
   });
 }
 
+// ─── Fiche « joueuse libre » publiée ──────────────────────────
+//
+// Email transactionnel envoyé après une inscription sur /rejoindre (lot 1
+// acquisition). Il a DEUX rôles, et le second est le plus important :
+//   1. confirmer que la fiche est bien en ligne ;
+//   2. donner le LIEN DE RETRAIT.
+//
+// L'inscription se fait sans compte : sans ce lien, une joueuse qui change
+// d'avis n'aurait aucun moyen autonome de disparaître de la liste publique et
+// devrait écrire au staff. Le lien est donc la porte de sortie, pas un extra.
+// Pas de double opt-in ici : la fiche est publiée immédiatement (c'est le
+// contenu que la personne vient de saisir volontairement), l'email informe et
+// arme le retrait.
+
+const FREE_PLAYER_PUBLISHED_SUBJECT = 'Ta fiche est en ligne — OW Women\u2019s Cup';
+
+/** HTML de l'email « ta fiche est publiée » + lien de retrait. */
+export function buildFreePlayerPublishedEmailHtml(opts: {
+  displayName: string;
+  removeUrl: string;
+}): string {
+  return emailLayout(`
+    ${gradientBar()}
+    <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;">Ta fiche est en ligne</h1>
+    <p style="margin:0 0 20px;font-size:15px;color:#C6BED9;line-height:1.6;">
+      Salut <strong style="color:#ffffff;">${escapeHtml(opts.displayName)}</strong>, ta fiche appara&icirc;t
+      d&eacute;sormais parmi les joueuses qui cherchent une &eacute;quipe. Les capitaines qui recrutent
+      peuvent te contacter &agrave; partir de maintenant.
+    </p>
+    <p style="margin:0 0 20px;font-size:15px;color:#C6BED9;line-height:1.6;">
+      Ton adresse email n&apos;est <strong style="color:#ffffff;">jamais affich&eacute;e publiquement</strong>&nbsp;:
+      seules les capitaines connect&eacute;es y ont acc&egrave;s. Ta fiche expire toute seule au bout de 60&nbsp;jours.
+    </p>
+    <p style="margin:0 0 20px;font-size:15px;color:#C6BED9;line-height:1.6;">
+      Tu as trouv&eacute; une &eacute;quipe, ou tu changes d&apos;avis&nbsp;? Retire ta fiche quand tu veux&nbsp;:
+    </p>
+    ${ctaButton(opts.removeUrl, 'Retirer ma fiche')}
+    <p style="margin:24px 0 0;font-size:12px;color:#675788;line-height:1.5;text-align:center;">
+      Lien direct&nbsp;: <a href="${escapeHtml(opts.removeUrl)}" style="color:#9081B0;word-break:break-all;">${escapeHtml(opts.removeUrl)}</a>
+    </p>
+    <p style="margin:16px 0 0;font-size:12px;color:#675788;line-height:1.5;text-align:center;">
+      Garde cet email&nbsp;: c&apos;est le seul moyen de retirer ta fiche toi-m&ecirc;me.
+    </p>
+  `);
+}
+
+/**
+ * Envoie l'email « ta fiche est publiée ». Transactionnel et best-effort : un
+ * échec ne doit pas faire échouer l'inscription, qui est déjà enregistrée.
+ */
+export function sendFreePlayerPublishedEmail(opts: {
+  to: string;
+  displayName: string;
+  removeUrl: string;
+}): Promise<SendEmailResult> {
+  return sendEmail({
+    to: opts.to,
+    subject: FREE_PLAYER_PUBLISHED_SUBJECT,
+    tags: ['free-player-published'],
+    html: buildFreePlayerPublishedEmailHtml({
+      displayName: opts.displayName,
+      removeUrl: opts.removeUrl,
+    }),
+  });
+}
+
 /**
  * Default staff inbox for inbound notifications (contact, partnerships,
  * anonymous / HIGH severity support tickets). Override via STAFF_NOTIFY_EMAIL.

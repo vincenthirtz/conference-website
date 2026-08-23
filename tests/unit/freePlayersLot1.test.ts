@@ -29,6 +29,10 @@ vi.mock('@/utils/botEvents', () => ({
   BOT_EVENT_NAMES: [],
 }));
 
+vi.mock('@/utils/email', () => ({
+  sendFreePlayerPublishedEmail: vi.fn(async () => ({ ok: true })),
+}));
+
 vi.mock('@/utils/supabase', async () => {
   const m = await import('./__helpers__/supabaseMock');
   return { supabaseAdmin: m.supabaseAdmin, getServerClient: m.getServerClient };
@@ -51,6 +55,11 @@ import {
   type FreePlayerRow,
 } from '../../utils/freePlayers';
 import publicHandler from '../../pages/api/public/free-players';
+import removeHandler from '../../pages/api/public/free-players/remove';
+import {
+  generateFreePlayerRemovalToken,
+  verifyFreePlayerRemovalToken,
+} from '../../utils/freePlayerRemoval';
 import botSyncHandler from '../../pages/api/bot/v1/free-players/sync';
 
 let ipCounter = 0;
@@ -374,5 +383,121 @@ describe('POST /api/bot/v1/free-players/sync', () => {
 
     expect(res.statusCode).toBe(200);
     expect((store.free_players as any[])[0].source).toBe('discord');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Retrait de fiche : la porte de sortie
+// ---------------------------------------------------------------------------
+
+describe('retrait autonome', () => {
+  it('le token ne vaut que pour SA fiche, et résiste à l’altération', () => {
+    const good = generateFreePlayerRemovalToken('fiche-1');
+    expect(verifyFreePlayerRemovalToken(good)).toBe('fiche-1');
+
+    // Une signature bricolée ne passe pas…
+    const [payload] = good.split('.');
+    expect(verifyFreePlayerRemovalToken(`${payload}.zzzz`)).toBeNull();
+    // …ni un payload réécrit pour viser une autre fiche.
+    const forged = Buffer.from(
+      JSON.stringify({ f: 'fiche-2', v: 1 }),
+      'utf8'
+    ).toString('base64url');
+    expect(
+      verifyFreePlayerRemovalToken(`${forged}.${good.split('.')[1]}`)
+    ).toBeNull();
+
+    for (const junk of ['', 'sans-point', '.', 'a.']) {
+      expect(verifyFreePlayerRemovalToken(junk)).toBeNull();
+    }
+  });
+
+  it('GET décrit la fiche sans rien supprimer', async () => {
+    store.free_players = [
+      { ...row({ id: 'fiche-1' }), tenant_id: CONFERENCE_TENANT_ID },
+    ] as any[];
+    const token = generateFreePlayerRemovalToken('fiche-1');
+
+    const res = makeRes();
+    await removeHandler(
+      makeReq({ method: 'GET', query: { token } }),
+      res
+    );
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toEqual({ name: 'Nova' });
+    // Les clients mail pré-visitent les liens : un GET ne doit JAMAIS supprimer.
+    expect(store.free_players as any[]).toHaveLength(1);
+  });
+
+  it('POST supprime la fiche', async () => {
+    store.free_players = [
+      { ...row({ id: 'fiche-1' }), tenant_id: CONFERENCE_TENANT_ID },
+      { ...row({ id: 'fiche-2' }), tenant_id: CONFERENCE_TENANT_ID },
+    ] as any[];
+
+    const res = makeRes();
+    await removeHandler(
+      makeReq({
+        method: 'POST',
+        body: { token: generateFreePlayerRemovalToken('fiche-1') },
+      }),
+      res
+    );
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toEqual({ success: true });
+    expect((store.free_players as any[]).map((r) => r.id)).toEqual(['fiche-2']);
+  });
+
+  it('refuse un token invalide sans révéler quoi que ce soit', async () => {
+    store.free_players = [
+      { ...row({ id: 'fiche-1' }), tenant_id: CONFERENCE_TENANT_ID },
+    ] as any[];
+
+    const bad = makeRes();
+    await removeHandler(
+      makeReq({ method: 'POST', body: { token: 'nawak' } }),
+      bad
+    );
+    expect(bad.statusCode).toBe(400);
+
+    // Fiche inexistante : MÊME message qu'un token invalide, sinon la route
+    // devient un oracle permettant de tester quels ids existent encore.
+    const missing = makeRes();
+    await removeHandler(
+      makeReq({
+        method: 'POST',
+        body: { token: generateFreePlayerRemovalToken('jamais-existe') },
+      }),
+      missing
+    );
+    expect(missing.statusCode).toBe(404);
+    expect(missing.body.error).toBe(bad.body.error);
+
+    expect(store.free_players as any[]).toHaveLength(1);
+  });
+
+  it('ne retire pas une fiche d’origine Discord', async () => {
+    // Elles appartiennent au bot : les retirer ici ne tiendrait pas (la synchro
+    // les repousserait), et le lien de retrait n'a de sens que côté web.
+    store.free_players = [
+      {
+        ...row({ id: 'fiche-discord', source: 'discord' }),
+        tenant_id: CONFERENCE_TENANT_ID,
+      },
+    ] as any[];
+
+    const res = makeRes();
+    await removeHandler(
+      makeReq({
+        method: 'POST',
+        body: { token: generateFreePlayerRemovalToken('fiche-discord') },
+      }),
+      res
+    );
+
+    expect(res.statusCode).toBe(404);
+    expect(store.free_players as any[]).toHaveLength(1);
   });
 });

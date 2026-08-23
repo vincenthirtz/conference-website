@@ -74,10 +74,10 @@ export default ns('rejoindrePage', {
   submitting: 'Envoi…',
   successTitle: 'C’est publié !',
   successBody:
-    'Ta fiche est en ligne. Les capitaines qui recrutent peuvent te contacter à partir de maintenant.',
+    "Ta fiche est en ligne. Les capitaines qui recrutent peuvent te contacter à partir de maintenant. On t'envoie un email de confirmation : garde-le, il contient le lien pour retirer ta fiche quand tu veux.",
   successAgain: 'Modifier ma fiche',
   privacyNote:
-    'Ton email et ton pseudo Discord ne sont visibles que par les capitaines connectées. Ta fiche expire au bout de 60 jours.',
+    "Ton email et ton pseudo Discord ne sont visibles que par les capitaines connectées. Ta fiche expire au bout de 60 jours, et tu peux la retirer à tout moment depuis le lien envoyé par email.",
 
   // --- Erreurs -------------------------------------------------------------
   errorName: 'Indique un pseudo (2 caractères minimum).',
@@ -97,6 +97,21 @@ export default ns('rejoindrePage', {
   listNoContact:
     'Les coordonnées ne sont pas publiques : seules les capitaines connectées peuvent contacter une joueuse.',
   filterAll: 'Tous les postes',
+
+  // --- Retrait de fiche (/rejoindre/retrait) ------------------------------
+  removeTitle: "Retirer ma fiche",
+  removeIntro: "Tu es sur le point de retirer ta fiche de la liste publique. Les capitaines ne pourront plus te voir ni te contacter.",
+  removeFor: "Fiche de {name}",
+  removeConfirm: "Oui, retirer ma fiche",
+  removeWorking: "Retrait en cours…",
+  removeDoneTitle: "C’est fait",
+  removeDoneBody: "Ta fiche a été retirée. Tu peux te réinscrire quand tu veux, ça ne prend que deux minutes.",
+  removeBackCta: "Retour à la page",
+  removeInvalidTitle: "Ce lien n’est plus valide",
+  removeInvalidBody: "Ta fiche a peut-être déjà été retirée, ou elle a expiré d’elle-même au bout de 60 jours. Si tu penses qu’il s’agit d’une erreur, écris au staff.",
+  removeContactStaff: "Contacter le staff",
+  removeLoading: "Vérification du lien…",
+  removeError: "Le retrait a échoué. Réessaie dans un instant.",
 
   // --- Renvois -------------------------------------------------------------
   altTitle: 'Tu as déjà une équipe ?',

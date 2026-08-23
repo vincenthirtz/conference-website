@@ -275,6 +275,8 @@ export const STAFF_LOG_ACTION_LABELS: Record<StaffLogAction, string> = {
   create_pole_member: 'Création membre de pôle',
   update_pole_member: 'Modification membre de pôle',
   delete_pole_member: 'Suppression membre de pôle',
+  // Joueuses libres
+  delete_free_player: 'Retrait fiche joueuse libre',
   // Contenu éditorial
   publish_news: 'Publication actualité',
   create_announcement: 'Création annonce',

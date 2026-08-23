@@ -116,6 +116,8 @@ export type StaffLogAction =
   | 'create_pole_member'
   | 'update_pole_member'
   | 'delete_pole_member'
+  // Marché des joueuses libres (lot 1 acquisition)
+  | 'delete_free_player'
   // --- Contenu éditorial ---
   | 'publish_news'
   | 'create_announcement'

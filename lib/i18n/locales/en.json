@@ -4854,9 +4854,9 @@
     "submit": "Publish my profile",
     "submitting": "Sending…",
     "successTitle": "You're live!",
-    "successBody": "Your profile is published. Recruiting captains can contact you from now on.",
+    "successBody": "Your profile is published. Recruiting captains can contact you from now on. We're sending you a confirmation email: keep it, it contains the link to remove your profile whenever you want.",
     "successAgain": "Edit my profile",
-    "privacyNote": "Your email and Discord handle are only visible to signed-in captains. Your profile expires after 60 days.",
+    "privacyNote": "Your email and Discord handle are only visible to signed-in captains. Your profile expires after 60 days, and you can remove it at any time using the link sent by email.",
     "errorName": "Enter a nickname (2 characters minimum).",
     "errorEmail": "Please enter a valid email address.",
     "errorRoles": "Pick at least one role.",
@@ -4875,6 +4875,19 @@
     "altCta": "Create my team",
     "discordTitle": "Prefer Discord?",
     "discordDesc": "The server is still there: take the “Looking for a team” role and you'll show up in this list too.",
-    "discordCta": "Join the Discord"
+    "discordCta": "Join the Discord",
+    "removeTitle": "Remove my profile",
+    "removeIntro": "You are about to remove your profile from the public list. Captains will no longer see you or be able to contact you.",
+    "removeFor": "{name}'s profile",
+    "removeConfirm": "Yes, remove my profile",
+    "removeWorking": "Removing…",
+    "removeDoneTitle": "Done",
+    "removeDoneBody": "Your profile has been removed. You can add yourself again whenever you like — it only takes two minutes.",
+    "removeBackCta": "Back to the page",
+    "removeInvalidTitle": "This link is no longer valid",
+    "removeInvalidBody": "Your profile may already have been removed, or it expired on its own after 60 days. If you think this is a mistake, get in touch with the staff.",
+    "removeContactStaff": "Contact the staff",
+    "removeLoading": "Checking the link…",
+    "removeError": "Removal failed. Please try again in a moment."
   }
 }

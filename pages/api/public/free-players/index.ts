@@ -28,6 +28,8 @@ import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
 import { checkEmailQuality, normalizeEmail } from '@/utils/emailQuality';
 import { alertIfBlacklisted } from '@/utils/moderation/blacklist';
 import { emitBotEvent } from '@/utils/botEvents';
+import { sendFreePlayerPublishedEmail } from '@/utils/email';
+import { buildFreePlayerRemovalUrl } from '@/utils/freePlayerRemoval';
 import { logger } from '@/utils/logger';
 import {
   FREE_PLAYER_LEVELS,
@@ -172,11 +174,18 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
   // l'unicité web repose sur un index PARTIEL (`WHERE source='web'`) que
   // PostgREST ne sait pas viser via `onConflict`. Le 23505 est donc le chemin
   // normal d'une ré-inscription, pas une erreur.
-  const { error: insertErr } = await supabaseAdmin
+  const { data: inserted, error: insertErr } = await supabaseAdmin
     .from('free_players')
-    .insert({ ...row, marked_at: nowIso });
+    .insert({ ...row, marked_at: nowIso })
+    .select('id')
+    .maybeSingle();
 
   let isNew = true;
+  // L'id sert à construire le lien de retrait envoyé par email : sans lui, la
+  // joueuse n'aurait aucun moyen autonome de disparaître de la liste.
+  let freePlayerId: string | null =
+    (inserted as { id?: string } | null)?.id ?? null;
+
   if (insertErr) {
     if (insertErr.code !== '23505') {
       logger.error('[api/public/free-players] insert error', insertErr);
@@ -187,18 +196,41 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
     isNew = false;
     // Ré-inscription : on rafraîchit la fiche et on repousse la péremption,
     // sans toucher `marked_at` (l'ancienneté de la démarche reste vraie).
-    const { error: updateErr } = await supabaseAdmin
+    const { data: updated, error: updateErr } = await supabaseAdmin
       .from('free_players')
       .update(row)
       .eq('tenant_id', tenantId)
       .eq('source', 'web')
-      .eq('contact_email', email);
+      .eq('contact_email', email)
+      .select('id')
+      .maybeSingle();
     if (updateErr) {
       logger.error('[api/public/free-players] update error', updateErr);
       return res
         .status(500)
         .json({ error: 'Inscription impossible pour le moment. Réessaie plus tard.' });
     }
+    freePlayerId = (updated as { id?: string } | null)?.id ?? null;
+  }
+
+  // Email de confirmation, qui porte SURTOUT le lien de retrait. Best-effort :
+  // l'inscription est déjà enregistrée, un échec d'envoi ne doit pas la faire
+  // échouer. Envoyé aussi sur une ré-inscription — c'est justement le moment où
+  // quelqu'un qui a perdu son lien vient le récupérer.
+  if (freePlayerId) {
+    void sendFreePlayerPublishedEmail({
+      to: email,
+      displayName: body.displayName,
+      removeUrl: buildFreePlayerRemovalUrl(freePlayerId),
+    }).catch((err) => {
+      logger.error('[api/public/free-players] confirmation email failed', err);
+    });
+  } else {
+    // Ne devrait pas arriver : sans id, la joueuse est publiée SANS porte de
+    // sortie autonome. On le journalise pour que ça ne passe pas inaperçu.
+    logger.error(
+      '[api/public/free-players] id introuvable — aucun lien de retrait envoyé'
+    );
   }
 
   // Modération : alerte (sans bloquer) si le pseudo est sur liste noire.
