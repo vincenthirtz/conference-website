@@ -8,6 +8,8 @@
 import { ns } from '../../ns';
 
 export default ns('associationPage', {
+  // Titre de repli d'une ambassadrice sans badge (cf. twitch_channels.badge).
+  ambassadorRole: 'Ambassadrice',
   heroBadge: 'Association loi 1901',
   heroTitle1: 'Faire briller',
   heroTitle2: "l'esport féminin",

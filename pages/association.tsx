@@ -27,6 +27,18 @@ type CastMember = {
   is_promo: boolean;
 };
 
+/**
+ * Ambassadrice : une chaîne Twitch active de `twitch_channels`. Même source que
+ * la page /live et que l'annonce Discord des passages en live — un seul endroit
+ * à tenir à jour (/admin/twitch-channels).
+ */
+type Ambassador = {
+  id: string;
+  channel: string;
+  label: string | null;
+  badge: string | null;
+};
+
 type PoleMember = {
   id: string;
   pole_key: PoleKey;
@@ -39,6 +51,7 @@ type PoleMember = {
 type Props = {
   castMembers: CastMember[];
   poleMembers: PoleMember[];
+  ambassadors: Ambassador[];
 };
 
 const getPillars = (t: AssoDict) => [
@@ -332,7 +345,11 @@ const getTimeline = (t: AssoDict) => [
   { year: '2027', title: t.timeline3Title, desc: t.timeline3Desc },
 ];
 
-function AssociationPage({ castMembers, poleMembers }: Props) {
+function AssociationPage({
+  castMembers,
+  poleMembers,
+  ambassadors,
+}: Props) {
   const t = useT(nsAssociationPage);
   const adhesionPerks = getAdhesionPerks(t);
   const pillars = getPillars(t);
@@ -364,6 +381,23 @@ function AssociationPage({ castMembers, poleMembers }: Props) {
   membersByPole.production = [
     ...membersByPole.production,
     ...castAsPoleMembers,
+  ];
+
+  // Le pôle "Communauté" inclut aussi les ambassadrices — les chaînes Twitch
+  // actives. Elles portent la Cup hors du serveur : leur place est ici, pas
+  // seulement sur /live. Le `badge` (Streameuse, Player…) sert de titre quand
+  // il existe, sinon un libellé générique.
+  const ambassadorsAsPoleMembers: PoleMember[] = ambassadors.map((a) => ({
+    id: `ambassador-${a.id}`,
+    pole_key: 'communaute',
+    name: a.label || a.channel,
+    title: a.badge || t.ambassadorRole,
+    image_url: null,
+    link_url: `https://twitch.tv/${a.channel}`,
+  }));
+  membersByPole.communaute = [
+    ...membersByPole.communaute,
+    ...ambassadorsAsPoleMembers,
   ];
 
   return (
@@ -805,6 +839,7 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
       props: {
         castMembers: [],
         poleMembers: [],
+        ambassadors: [],
       },
       revalidate: 60,
     };
@@ -815,7 +850,7 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
   //    TODO(S7) — basculer en SSR/ISR per tenant.
   //  - `association_pole_members` est globale (pas de tenant_id) → pas de
   //    filtre tenant.
-  const [castRes, poleRes] = await Promise.all([
+  const [castRes, poleRes, ambassadorRes] = await Promise.all([
     supabaseAdmin
       .from('cast_members')
       .select('id, name, title, image_url, twitch_url, city, is_promo')
@@ -829,6 +864,13 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
       .eq('is_active', true)
       .order('pole_key', { ascending: true })
       .order('sort_order', { ascending: true }),
+    // Ambassadrices = chaînes Twitch actives, tenant-scopées comme le cast.
+    supabaseAdmin
+      .from('twitch_channels')
+      .select('id, channel, label, badge')
+      .eq('tenant_id', DEFAULT_TENANT_ID)
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true }),
   ]);
 
   if (castRes.error) {
@@ -837,11 +879,18 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
   if (poleRes.error) {
     logger.error('[association] Error fetching pole members:', poleRes.error);
   }
+  if (ambassadorRes.error) {
+    logger.error(
+      '[association] Error fetching ambassadors:',
+      ambassadorRes.error
+    );
+  }
 
   return {
     props: {
       castMembers: castRes.data ?? [],
       poleMembers: (poleRes.data ?? []) as PoleMember[],
+      ambassadors: (ambassadorRes.data ?? []) as Ambassador[],
     },
     revalidate: 3600,
   };

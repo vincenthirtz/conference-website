@@ -1485,7 +1485,8 @@
     "role4Desc": "Mentoring, workshops, communication and player/team support.",
     "contactTitle": "Want to help or collaborate?",
     "contactBody": "Join the association as a volunteer, propose a partnership or ask your questions. We reply quickly.",
-    "ctaAdhere": "Become a member"
+    "ctaAdhere": "Become a member",
+    "ambassadorRole": "Ambassador"
   },
   "leaderboardPage": {
     "eyebrow": "Leaderboard",
