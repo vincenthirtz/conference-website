@@ -2,14 +2,18 @@
 //
 // Classement permanent des scrims (R8).
 //
-// Ce que c'est : un classement des ENTRAÎNEMENTS, distinct du rating de
-// tournoi. Les deux ne doivent surtout pas être confondus —
-//   - `team_ratings` / `player_ratings` (Glicko-2) mesurent le niveau
-//     compétitif sur des matchs officiels, à enjeu ;
-//   - le ladder de scrims mesure l'activité et les résultats en entraînement.
-// Mélanger les deux corromprait le rating officiel avec des parties amicales,
-// souvent jouées en roster incomplet. D'où un calcul séparé, et volontairement
-// simple : points, joués, gagnés, nuls, perdus.
+// Ce que c'est : un classement des ENTRAÎNEMENTS, avec son propre barème —
+// points, joués, gagnés, nuls, perdus. Il répond à « qui s'entraîne, et avec
+// quels résultats », là où le Glicko-2 répond à « quel niveau ».
+//
+// NOTE (2026-08-24) : ce module portait la règle inverse — les scrims ne
+// devaient JAMAIS toucher au rating, au motif qu'une partie amicale à roster
+// incomplet corromprait le classement officiel. Décision produit revenue
+// dessus : un scrim CLASSÉ compte désormais aussi pour le rating des joueuses
+// (cf. utils/scrims/ratedMatch.ts). Le garde-fou n'est plus le type d'épreuve
+// mais le drapeau `ranked` : un entraînement à roster incomplet se coche
+// `ranked = false` et ne touche ni au ladder ni au rating. Les deux
+// classements restent calculés séparément, sur la même porte d'entrée.
 //
 // Le classement se calcule À LA VOLÉE depuis `scrims` : pas de table de
 // standings à maintenir en cohérence, donc pas de dérive possible entre le

@@ -15,6 +15,7 @@
 
 import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
+import { syncScrimRatedMatch } from './ratedMatch';
 
 export type ScrimReport = {
   team_side: 1 | 2;
@@ -93,6 +94,12 @@ export async function applyScrimResult(
     };
   }
 
+  // Un scrim classé compte pour le classement des joueuses : on aligne son
+  // miroir `matches` (cf. utils/scrims/ratedMatch.ts). Best-effort et attendu
+  // — le rating doit être là quand la réponse revient, mais un échec ne remet
+  // pas en cause un résultat déjà persisté.
+  await syncScrimRatedMatch(tenantId, scrim.id);
+
   return { ok: true, status: 'completed', winnerTeamId };
 }
 
@@ -109,4 +116,7 @@ export async function markScrimDisputed(
     .eq('id', scrimId)
     .eq('tenant_id', tenantId);
   if (error) logger.error('[scrimResult] dispute error', error);
+  // Un scrim en litige n'est plus un résultat : son miroir noté disparaît,
+  // sinon le classement garderait les points d'une partie contestée.
+  await syncScrimRatedMatch(tenantId, scrimId);
 }

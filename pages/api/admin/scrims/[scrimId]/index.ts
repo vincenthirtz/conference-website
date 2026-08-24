@@ -14,6 +14,7 @@ import {
   type SlotConflict,
 } from '@/utils/teams/scrimConflicts';
 import { emitScrimEvent, statusTransitionEvent } from '@/utils/scrimEvents';
+import { syncScrimRatedMatch } from '@/utils/scrims/ratedMatch';
 import { logger } from '../../../../../utils/logger';
 
 const VALID_STATUSES = [
@@ -267,6 +268,17 @@ async function handlePatch(
     });
   }
 
+  // Le staff peut clore, rouvrir ou annuler un scrim ici : le miroir noté
+  // (cf. utils/scrims/ratedMatch.ts) doit suivre, sinon un scrim annulé
+  // laisserait ses points au classement des joueuses.
+  if (
+    updatePayload.status !== undefined ||
+    updatePayload.team1_id !== undefined ||
+    updatePayload.team2_id !== undefined
+  ) {
+    await syncScrimRatedMatch(ctx.tenantId, id);
+  }
+
   // Replanification : si scheduled_date a changé et que le scrim est planifié,
   // on remonte (sans bloquer) les conflits de créneau détectés (P0 réutilisé) —
   // l'agenda affiche un avertissement « une équipe est déjà prise ».
@@ -336,6 +348,9 @@ async function handleDelete(
       logger.error('[admin/scrims/:id] log error:', e);
     }
   }
+
+  // Corbeille : le scrim redevient invisible, ses points de rating aussi.
+  await syncScrimRatedMatch(ctx.tenantId, id);
 
   void emitScrimEvent('scrim.deleted', before, ctx.tenantId, {
     previousStatus: before.status,
