@@ -26,6 +26,7 @@ import {
   type PlayerRatingState,
 } from './computePlayerRatings';
 import { deriveTeamRatings } from './deriveTeamRatings';
+import { isNonPlayingTeamRole } from '../teams/roleKind';
 
 const SCORED_STATUSES = new Set(['finished', 'walkover']);
 
@@ -78,6 +79,11 @@ type TeamMemberRow = {
  *
  * L'attribution historique utilise le roster ACTUEL (le seul disponible côté
  * DB), ce qui est une approximation assumée pour les matches déjà joués.
+ *
+ * `onlyTeamIds` restreint le geste à un sous-ensemble des deux camps. C'est ce
+ * que veut la réparation d'un snapshot INCOMPLET (un seul camp figé) : refaire
+ * le camp manquant sans écraser celui qui existe déjà — une ligne déjà écrite
+ * est un enregistrement, pas un brouillon.
  */
 export async function snapshotMatchParticipants(
   tenantId: string,
@@ -86,13 +92,15 @@ export async function snapshotMatchParticipants(
     tournament_id: string | null;
     team1_id: string | null;
     team2_id: string | null;
-  }
+  },
+  onlyTeamIds?: readonly string[]
 ): Promise<void> {
   if (!supabaseAdmin) return;
   try {
-    const allTeamIds = [match.team1_id, match.team2_id].filter(
-      (t): t is string => !!t
-    );
+    const restrict = onlyTeamIds ? new Set(onlyTeamIds) : null;
+    const allTeamIds = [match.team1_id, match.team2_id]
+      .filter((t): t is string => !!t)
+      .filter((t) => !restrict || restrict.has(t));
     if (allTeamIds.length === 0) return;
 
     // Une équipe qui a VALIDÉ sa feuille de match a déclaré elle-même qui
@@ -135,7 +143,10 @@ export async function snapshotMatchParticipants(
     }
 
     const rows = ((members || []) as TeamMemberRow[])
-      .filter((m) => !!m.user_id)
+      // L'encadrement (coach / manager) n'entre pas en jeu : le noter lui
+      // donnerait un rating Glicko-2 pour des matches qu'il n'a pas joués.
+      // Même définition que `eligibleForLineup` — volontairement partagée.
+      .filter((m) => !!m.user_id && !isNonPlayingTeamRole(m.role))
       .map((m) => ({
         tenant_id: tenantId,
         match_id: match.id,
@@ -521,31 +532,55 @@ export async function rebuildRatings(
       (m) => !m.is_bye && !!m.winner_team_id && !!m.team1_id && !!m.team2_id
     );
 
-    // 1) Backfill : matches sans aucun snapshot dans match_participants.
+    // 1) Backfill : matches dont le snapshot ne couvre pas LES DEUX camps.
+    //
+    //    On raisonne par CAMP, pas par match. Un match dont un seul camp est
+    //    figé ne produit aucun rating (le moteur exige des participants des
+    //    deux côtés) — mais il compte comme « déjà snapshotté » si on se
+    //    contente de tester la présence d'une ligne, et le rebuild ne le
+    //    répare alors jamais. C'est ce trou qui laissait des matches terminés
+    //    non notés en silence, rebuild après rebuild.
+    //
+    //    On ne refait QUE le camp manquant : le camp déjà figé reste tel quel
+    //    (feuille de match validée, ou snapshot pris à l'époque du match).
     const matchIds = notableMatches.map((m) => m.id);
-    const snapshotted = new Set<string>();
+    const sidesByMatch = new Map<string, Set<string>>();
     if (matchIds.length > 0) {
       const { data: existingParts, error: epErr } = await supabaseAdmin
         .from('match_participants')
-        .select('match_id')
+        .select('match_id, team_id')
         .eq('tenant_id', tenantId)
         .in('match_id', matchIds);
       if (epErr) {
         logger.error('[rating] rebuild: participants probe error', epErr);
       } else {
-        for (const p of (existingParts || []) as Array<{ match_id: string }>) {
-          snapshotted.add(p.match_id);
+        for (const p of (existingParts || []) as Array<{
+          match_id: string;
+          team_id: string | null;
+        }>) {
+          if (!p.team_id) continue;
+          const set = sidesByMatch.get(p.match_id) ?? new Set<string>();
+          set.add(p.team_id);
+          sidesByMatch.set(p.match_id, set);
         }
       }
     }
     for (const m of notableMatches) {
-      if (snapshotted.has(m.id)) continue;
-      await snapshotMatchParticipants(tenantId, {
-        id: m.id,
-        tournament_id: m.tournament_id,
-        team1_id: m.team1_id,
-        team2_id: m.team2_id,
-      });
+      const known = sidesByMatch.get(m.id);
+      const missing = [m.team1_id, m.team2_id]
+        .filter((t): t is string => !!t)
+        .filter((t) => !known?.has(t));
+      if (missing.length === 0) continue;
+      await snapshotMatchParticipants(
+        tenantId,
+        {
+          id: m.id,
+          tournament_id: m.tournament_id,
+          team1_id: m.team1_id,
+          team2_id: m.team2_id,
+        },
+        missing
+      );
     }
 
     // 2) Recharger TOUS les participants (post-backfill).
