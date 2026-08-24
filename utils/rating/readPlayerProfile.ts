@@ -30,6 +30,28 @@ import type {
 const RECENT_MATCHES_LIMIT = 20;
 const H2H_TOP_LIMIT = 10;
 
+/**
+ * Tolérance de comparaison des ratings, en RELATIF.
+ *
+ * `player_ratings.rating` est un `double precision`, et PostgREST le sérialise
+ * avec 15 chiffres significatifs : 1822.2603714784216 en base revient en JSON
+ * « 1822.26037147842 ». Le nombre relu n'est donc PAS le double stocké, et un
+ * `rating > <relu>` renvoyé à la base compte alors comme « au-dessus » des
+ * joueuses qui ont exactement le même rating. Tout un groupe d'ex æquo
+ * basculait du mauvais côté : la 1re du classement s'affichait 6e sur sa fiche.
+ *
+ * 1e-9 en relatif est ~1000× au-dessus de l'erreur de troncature et très en
+ * dessous du moindre écart de rating réel : deux ratings dans cette bande sont
+ * ex æquo, et c'est le tie-break `user_id` qui tranche — exactement comme dans
+ * l'ordre SQL du classement.
+ */
+const RATING_EPSILON_RATIO = 1e-9;
+
+function ratingBand(rating: number): { low: number; high: number } {
+  const eps = Math.abs(rating) * RATING_EPSILON_RATIO;
+  return { low: rating - eps, high: rating + eps };
+}
+
 type HistoryRow = {
   match_id: string;
   tournament_id: string | null;
@@ -320,14 +342,19 @@ export async function readPlayerProfile(
   //      rank = 1 + #{ rating > pr.rating } + #{ rating = pr.rating ∧ uid < pr.uid }
   //    Joueur NON noté (games_played = 0) : comme avant, il est exclu du
   //      classement → rang = (nb de notés) + 1 (position juste après le dernier).
+  //
+  //    Les bornes passent par `ratingBand` et non par la valeur brute : voir
+  //    le commentaire de cette fonction — un `>` / `=` sur le nombre relu
+  //    faisait basculer TOUT un groupe d'ex æquo du mauvais côté.
   let rank: number;
   if (pr.games_played > 0) {
+    const band = ratingBand(pr.rating);
     const { count: higherCount, error: higherErr } = await supabaseAdmin
       .from('player_ratings')
       .select('*', { count: 'exact', head: true })
       .eq('tenant_id', tenantId)
       .gt('games_played', 0)
-      .gt('rating', pr.rating);
+      .gt('rating', band.high);
     if (higherErr) {
       logger.error('[readPlayerProfile] rank higher-count error', higherErr);
       throw new Error('Failed to load player');
@@ -337,7 +364,8 @@ export async function readPlayerProfile(
       .select('*', { count: 'exact', head: true })
       .eq('tenant_id', tenantId)
       .gt('games_played', 0)
-      .eq('rating', pr.rating)
+      .gte('rating', band.low)
+      .lte('rating', band.high)
       .lt('user_id', pr.user_id);
     if (tieErr) {
       logger.error('[readPlayerProfile] rank tie-count error', tieErr);

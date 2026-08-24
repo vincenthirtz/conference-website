@@ -153,6 +153,19 @@ describe('readPlayerProfile rank (COUNT-based)', () => {
     expect((await readPlayerProfile('ccc', TENANT))?.player.rank).toBe(3);
   });
 
+  it('traite comme ex æquo deux ratings que la troncature float sépare', async () => {
+    // PostgREST rend les float8 à 15 chiffres significatifs : deux joueuses
+    // réellement ex æquo peuvent revenir avec des valeurs qui diffèrent au
+    // 16e chiffre. Sans tolérance, l'une comptait l'autre comme « au-dessus »
+    // et tout le groupe d'ex æquo glissait d'un cran (la 1re s'affichait 6e).
+    store.player_ratings = [
+      pr({ user_id: 'aaa', rating: 1822.26037147842 }),
+      pr({ user_id: 'bbb', rating: 1822.2603714784216 }),
+    ];
+    expect((await readPlayerProfile('aaa', TENANT))?.player.rank).toBe(1);
+    expect((await readPlayerProfile('bbb', TENANT))?.player.rank).toBe(2);
+  });
+
   it('ignores unrated players when counting higher/tie', async () => {
     store.player_ratings = [
       pr({ user_id: 'unrated', rating: 1900, games_played: 0 }),
