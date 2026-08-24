@@ -15,6 +15,8 @@ export default ns('scrimDetail', {
   noMatches: 'Programme des matchs à venir.',
   matchNumber: 'Match #{n}',
   vs: 'vs',
+  finalScore: 'Score final',
+  draw: 'Match nul',
   tbd: 'à définir',
   dateTbd: 'Date à définir',
 });

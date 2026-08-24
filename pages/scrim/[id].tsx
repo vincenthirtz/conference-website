@@ -34,6 +34,9 @@ type ScrimDetail = {
   banner_url: string | null;
   logo_url: string | null;
   stream_url: string | null;
+  team1_score: number | null;
+  team2_score: number | null;
+  winner_team_id: string | null;
   team1: TeamMini | null;
   team2: TeamMini | null;
 };
@@ -42,7 +45,6 @@ type ScrimMatch = {
   id: string;
   status: string;
   is_bye: boolean | null;
-  best_of: number | null;
   match_format: string | null;
   team1_score: number | null;
   team2_score: number | null;
@@ -72,6 +74,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
       `
       id, name, slug, status, game,
       scheduled_date, timezone, description, banner_url, logo_url, stream_url,
+      team1_score, team2_score, winner_team_id,
       team1:teams!scrims_team1_id_fkey(id, name, short_name, slug, logo_url),
       team2:teams!scrims_team2_id_fkey(id, name, short_name, slug, logo_url)
       `
@@ -95,7 +98,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
     .from('matches')
     .select(
       `
-      id, status, is_bye, best_of, match_format,
+      id, status, is_bye, match_format,
       team1_score, team2_score, winner_team_id,
       scheduled_at, stream_url, replay_url,
       team1:teams!matches_team1_id_fkey(id, name, short_name, slug, logo_url),
@@ -133,6 +136,11 @@ function formatDate(d: string | null, locale: string, tbd: string) {
 function ScrimDetailPage({ scrim, matches }: Props) {
   const t = useT(nsScrimDetail);
   const locale = useLocale();
+  // Un scrim clos affiche son score, pas un « vs » : c'est le résultat qu'on
+  // vient chercher. Le 0–0 est un vrai score (nul), d'où le test sur null.
+  const hasScore =
+    scrim.team1_score !== null && scrim.team2_score !== null;
+  const isDraw = hasScore && scrim.team1_score === scrim.team2_score;
   return (
     <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-16">
@@ -152,11 +160,34 @@ function ScrimDetailPage({ scrim, matches }: Props) {
         </Paragraph>
 
         <div className="mt-8 flex flex-wrap items-center justify-center gap-6 bg-neutral-800/50 border border-neutral-700/50 rounded-2xl p-6">
-          <TeamBlock team={scrim.team1} />
-          <span className="text-2xl text-neutral-500 font-semibold">
-            {t.vs}
-          </span>
-          <TeamBlock team={scrim.team2} />
+          <TeamBlock
+            team={scrim.team1}
+            winner={
+              !!scrim.winner_team_id &&
+              scrim.winner_team_id === scrim.team1?.id
+            }
+          />
+          {hasScore ? (
+            <div className="flex flex-col items-center">
+              <span className="text-3xl font-bold font-mono">
+                {scrim.team1_score} – {scrim.team2_score}
+              </span>
+              <span className="text-xs uppercase tracking-widest text-neutral-500 mt-1">
+                {isDraw ? t.draw : t.finalScore}
+              </span>
+            </div>
+          ) : (
+            <span className="text-2xl text-neutral-500 font-semibold">
+              {t.vs}
+            </span>
+          )}
+          <TeamBlock
+            team={scrim.team2}
+            winner={
+              !!scrim.winner_team_id &&
+              scrim.winner_team_id === scrim.team2?.id
+            }
+          />
         </div>
 
         {scrim.description && (
@@ -233,7 +264,13 @@ function ScrimDetailPage({ scrim, matches }: Props) {
   );
 }
 
-function TeamBlock({ team }: { team: TeamMini | null }) {
+function TeamBlock({
+  team,
+  winner = false,
+}: {
+  team: TeamMini | null;
+  winner?: boolean;
+}) {
   const t = useT(nsScrimDetail);
   if (!team) {
     return (
@@ -246,7 +283,9 @@ function TeamBlock({ team }: { team: TeamMini | null }) {
   return (
     <Link
       href={team.slug ? `/team/${team.slug}` : '#'}
-      className="flex flex-col items-center gap-2 min-w-[120px] hover:opacity-80"
+      className={`flex flex-col items-center gap-2 min-w-[120px] hover:opacity-80${
+        winner ? ' text-[var(--color-yellow)]' : ''
+      }`}
     >
       {team.logo_url ? (
         <Image

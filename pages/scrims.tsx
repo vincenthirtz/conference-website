@@ -30,6 +30,8 @@ type PublicScrim = {
   name: string;
   slug: string | null;
   status: string;
+  team1_score: number | null;
+  team2_score: number | null;
   scheduled_date: string | null;
   stream_url: string | null;
   team1: ScrimTeam | null;
@@ -53,6 +55,7 @@ export const getStaticProps: GetStaticProps<ScrimsPageProps> = async () => {
     .select(
       `
       id, name, slug, status, scheduled_date, stream_url,
+      team1_score, team2_score,
       team1:teams!scrims_team1_id_fkey(id, name, slug, logo_url),
       team2:teams!scrims_team2_id_fkey(id, name, slug, logo_url)
       `
@@ -291,7 +294,15 @@ function ScrimSection({
             </div>
             <div className="mt-3 flex items-center gap-3 text-sm">
               <TeamPill team={s.team1} />
-              <span className="text-neutral-500">{t.vs}</span>
+              {/* Un scrim clos montre son score, pas un « vs » : sans ça, la
+                  liste ne disait nulle part qui avait gagné. */}
+              {s.team1_score !== null && s.team2_score !== null ? (
+                <span className="font-mono font-semibold text-neutral-200">
+                  {s.team1_score} – {s.team2_score}
+                </span>
+              ) : (
+                <span className="text-neutral-500">{t.vs}</span>
+              )}
               <TeamPill team={s.team2} />
             </div>
           </Link>
