@@ -31,6 +31,9 @@ export type LeagueStandingPublic = {
   logoUrl: string | null;
   points: number;
   tournamentsCounted: number;
+  /** Scrims de la saison joués par l'équipe. Un scrim n'a pas de rang final :
+   *  il compte à part, et n'entre ni dans `tournamentsCounted` ni `bestRank`. */
+  scrimsCounted: number;
   bestRank: number | null;
   rank: number;
 };
@@ -43,6 +46,19 @@ export type LeagueTournamentRef = {
   weight: number;
 };
 
+/** Scrim rattaché à une league, avec son résultat. */
+export type LeagueScrimRef = {
+  id: string;
+  name: string | null;
+  slug: string | null;
+  weight: number;
+  team1Name: string | null;
+  team2Name: string | null;
+  team1Score: number | null;
+  team2Score: number | null;
+  scheduledDate: string | null;
+};
+
 /** Réponse publique `GET /api/leagues`. */
 export type LeaguesListResponse = {
   leagues: League[];
@@ -53,6 +69,7 @@ export type LeagueDetailResponse = {
   league: League;
   standings: LeagueStandingPublic[];
   tournaments: LeagueTournamentRef[];
+  scrims: LeagueScrimRef[];
 };
 
 /**

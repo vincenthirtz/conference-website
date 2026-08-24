@@ -23,6 +23,7 @@ import type {
   LeagueDetailResponse,
   League,
   LeagueStatus,
+  LeagueScrimRef,
   LeagueStandingPublic,
   LeagueTournamentRef,
 } from '@/types/leagues';
@@ -165,7 +166,7 @@ function Detail({ data }: { data: LeagueDetailResponse }) {
   const t = useT(nsLeagueDetail);
   const { lang } = useLang();
   const statusLabels = getStatusLabels(t);
-  const { league, standings, tournaments } = data;
+  const { league, standings, tournaments, scrims } = data;
   const period = periodLabel(league, lang);
 
   return (
@@ -207,6 +208,13 @@ function Detail({ data }: { data: LeagueDetailResponse }) {
         </h2>
         <Tournaments tournaments={tournaments} />
       </section>
+
+      <section className="mt-8">
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-[var(--color-violet-light)]">
+          {t.scrimsHeading}
+        </h2>
+        <Scrims scrims={scrims} />
+      </section>
     </>
   );
 }
@@ -244,6 +252,12 @@ function Standings({ standings }: { standings: LeagueStandingPublic[] }) {
                 className="hidden px-4 py-3 text-right sm:table-cell"
               >
                 {t.colTournaments}
+              </th>
+              <th
+                scope="col"
+                className="hidden px-4 py-3 text-right sm:table-cell"
+              >
+                {t.colScrims}
               </th>
               <th
                 scope="col"
@@ -300,6 +314,9 @@ function Standings({ standings }: { standings: LeagueStandingPublic[] }) {
                     {s.tournamentsCounted}
                   </td>
                   <td className="hidden px-4 py-3 text-right text-neutral-300 sm:table-cell">
+                    {s.scrimsCounted}
+                  </td>
+                  <td className="hidden px-4 py-3 text-right text-neutral-300 sm:table-cell">
                     {s.bestRank !== null ? `#${s.bestRank}` : '—'}
                   </td>
                 </tr>
@@ -348,6 +365,49 @@ function Tournaments({ tournaments }: { tournaments: LeagueTournamentRef[] }) {
             ) : (
               <div className="text-sm">{inner}</div>
             )}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+function Scrims({ scrims }: { scrims: LeagueScrimRef[] }) {
+  const t = useT(nsLeagueDetail);
+  if (scrims.length === 0) {
+    return (
+      <p className="rounded-2xl border border-neutral-800 bg-neutral-900/40 p-6 text-sm text-neutral-400">
+        {t.scrimsEmpty}
+      </p>
+    );
+  }
+
+  return (
+    <ul className="divide-y divide-neutral-800/60 overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-900/40">
+      {scrims.map((sc) => {
+        const hasScore = sc.team1Score !== null && sc.team2Score !== null;
+        const inner = (
+          <div className="flex items-center justify-between gap-3 px-4 py-3">
+            <span className="truncate text-neutral-200">
+              {sc.team1Name && sc.team2Name
+                ? `${sc.team1Name} — ${sc.team2Name}`
+                : (sc.name ?? t.scrimFallback)}
+            </span>
+            {hasScore && (
+              <span className="shrink-0 font-mono text-sm text-neutral-300">
+                {sc.team1Score} – {sc.team2Score}
+              </span>
+            )}
+          </div>
+        );
+        return (
+          <li key={sc.id}>
+            <Link
+              href={`/scrim/${sc.slug ?? sc.id}`}
+              className="block text-sm transition-colors hover:bg-white/[0.03] hover:text-[var(--color-violet-light)]"
+            >
+              {inner}
+            </Link>
           </li>
         );
       })}

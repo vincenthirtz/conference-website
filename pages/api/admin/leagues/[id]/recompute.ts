@@ -1,7 +1,8 @@
 // pages/api/admin/leagues/[id]/recompute.ts
 // POST → recalcule les standings d'une league à partir des final_rankings
-// des tournois liés (moteur pur computeLeagueStandings), puis remplace
-// league_standings. → { standings_count }.
+// des tournois liés ET des scrims rattachés (moteur pur
+// computeLeagueStandings), puis remplace league_standings.
+// → { standings_count }.
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
@@ -13,8 +14,11 @@ import { logStaffAction } from '@/utils/staffLogs';
 import { logger } from '@/utils/logger';
 import {
   computeLeagueStandings,
+  DEFAULT_SCRIM_POINTS,
   type LeagueTournamentRef,
   type LeagueRankingRow,
+  type LeagueScrimResult,
+  type ScrimPointsTable,
 } from '@/utils/leagues/computeStandings';
 
 async function handler(
@@ -98,11 +102,70 @@ async function handler(
     }));
   }
 
+  // 3 bis) Scrims rattachés à la saison. Seuls comptent ceux effectivement
+  //        joués et classés — mêmes critères que le ladder d'entraînement
+  //        (utils/scrims/ladder.ts), pour qu'un scrim ne puisse pas peser
+  //        dans la saison sans peser dans le ladder.
+  const { data: scrimLinks, error: lsErr } = await supabaseAdmin
+    .from('league_scrims')
+    .select('scrim_id, weight')
+    .eq('tenant_id', ctx.tenantId)
+    .eq('league_id', leagueId);
+  if (lsErr) {
+    logger.error('[admin/leagues/recompute] scrim links read error', lsErr);
+    return res.status(500).json({ error: 'Failed to load league scrims' });
+  }
+  const weightByScrim = new Map<string, number>(
+    ((scrimLinks || []) as Array<{ scrim_id: string; weight: number | null }>)
+      .map((r) => [r.scrim_id, r.weight ?? 1])
+  );
+
+  let scrims: LeagueScrimResult[] = [];
+  if (weightByScrim.size > 0) {
+    const { data: scrimRows, error: sErr } = await supabaseAdmin
+      .from('scrims')
+      .select('id, team1_id, team2_id, winner_team_id')
+      .eq('tenant_id', ctx.tenantId)
+      .in('id', [...weightByScrim.keys()])
+      .eq('status', 'completed')
+      .eq('ranked', true)
+      .is('deleted_at', null);
+    if (sErr) {
+      logger.error('[admin/leagues/recompute] scrims read error', sErr);
+      return res.status(500).json({ error: 'Failed to load scrims' });
+    }
+    scrims = (
+      (scrimRows || []) as Array<{
+        id: string;
+        team1_id: string | null;
+        team2_id: string | null;
+        winner_team_id: string | null;
+      }>
+    ).map((r) => ({
+      scrimId: r.id,
+      team1Id: r.team1_id,
+      team2Id: r.team2_id,
+      winnerTeamId: r.winner_team_id,
+      weight: weightByScrim.get(r.id) ?? 1,
+    }));
+  }
+
+  // Barème des scrims : surchargeable par saison via les clés `scrim_win` /
+  // `scrim_draw` / `scrim_loss` de `points_table`, qui sert déjà de réglage
+  // par saison pour les tournois. Une saison qui n'y touche pas garde 3/1/0.
+  const scrimPoints: ScrimPointsTable = {
+    win: Number(pointsTable.scrim_win ?? DEFAULT_SCRIM_POINTS.win),
+    draw: Number(pointsTable.scrim_draw ?? DEFAULT_SCRIM_POINTS.draw),
+    loss: Number(pointsTable.scrim_loss ?? DEFAULT_SCRIM_POINTS.loss),
+  };
+
   // 4) Moteur pur.
   const standings = computeLeagueStandings({
     tournaments,
     rankings,
     pointsTable,
+    scrims,
+    scrimPoints,
   });
 
   // 5) Remplacer league_standings (delete + insert).
@@ -124,6 +187,7 @@ async function handler(
       team_id: s.teamId,
       points: s.points,
       tournaments_counted: s.tournamentsCounted,
+      scrims_counted: s.scrimsCounted,
       best_rank: s.bestRank,
       rank: s.rank,
       updated_at: nowIso,
@@ -146,6 +210,7 @@ async function handler(
     payload: {
       operation: 'recompute_standings',
       standings_count: standings.length,
+      scrims_counted: scrims.length,
     },
   });
 

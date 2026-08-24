@@ -58,7 +58,9 @@ async function handler(
   // 1) Standings (join teams pour les noms).
   const { data: standingRows, error: sErr } = await supabaseAdmin
     .from('league_standings')
-    .select('team_id, points, tournaments_counted, best_rank, rank')
+    .select(
+      'team_id, points, tournaments_counted, scrims_counted, best_rank, rank'
+    )
     .eq('tenant_id', ctx.tenantId)
     .eq('league_id', leagueId);
   if (sErr) {
@@ -69,6 +71,7 @@ async function handler(
     team_id: string;
     points: number;
     tournaments_counted: number;
+    scrims_counted: number | null;
     best_rank: number | null;
     rank: number;
   }>;
@@ -108,6 +111,7 @@ async function handler(
       logoUrl: t?.logo_url ?? null,
       points: s.points,
       tournamentsCounted: s.tournaments_counted,
+      scrimsCounted: s.scrims_counted ?? 0,
       bestRank: s.best_rank,
       rank: s.rank,
     };

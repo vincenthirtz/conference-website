@@ -17,6 +17,7 @@ import { logger } from '@/utils/logger';
 import type {
   League,
   LeagueDetailResponse,
+  LeagueScrimRef,
   LeagueStandingPublic,
   LeagueTournamentRef,
 } from '@/types/leagues';
@@ -52,13 +53,16 @@ export async function readLeagueDetail(
   // 2) Standings (join teams pour les noms).
   const { data: standingRows } = await supabaseAdmin
     .from('league_standings')
-    .select('team_id, points, tournaments_counted, best_rank, rank')
+    .select(
+      'team_id, points, tournaments_counted, scrims_counted, best_rank, rank'
+    )
     .eq('tenant_id', tenantId)
     .eq('league_id', league.id);
   const standingsRaw = (standingRows || []) as Array<{
     team_id: string;
     points: number;
     tournaments_counted: number;
+    scrims_counted: number | null;
     best_rank: number | null;
     rank: number;
   }>;
@@ -98,6 +102,7 @@ export async function readLeagueDetail(
       logoUrl: t?.logo_url ?? null,
       points: s.points,
       tournamentsCounted: s.tournaments_counted,
+      scrimsCounted: s.scrims_counted ?? 0,
       bestRank: s.best_rank,
       rank: s.rank,
     };
@@ -145,9 +150,63 @@ export async function readLeagueDetail(
     };
   });
 
+  // 4) Scrims rattachés (join scrims + noms d'équipes).
+  const { data: scrimLinkRows } = await supabaseAdmin
+    .from('league_scrims')
+    .select('scrim_id, weight')
+    .eq('tenant_id', tenantId)
+    .eq('league_id', league.id);
+  const scrimLinks = (scrimLinkRows || []) as Array<{
+    scrim_id: string;
+    weight: number | null;
+  }>;
+
+  let scrims: LeagueScrimRef[] = [];
+  if (scrimLinks.length > 0) {
+    const weightByScrim = new Map(
+      scrimLinks.map((l) => [l.scrim_id, l.weight ?? 1])
+    );
+    const { data: scrimRows } = await supabaseAdmin
+      .from('scrims')
+      .select(
+        `id, name, slug, team1_score, team2_score, scheduled_date,
+         team1:teams!scrims_team1_id_fkey(name),
+         team2:teams!scrims_team2_id_fkey(name)`
+      )
+      .eq('tenant_id', tenantId)
+      .in('id', [...weightByScrim.keys()])
+      .eq('status', 'completed')
+      .is('deleted_at', null)
+      .order('scheduled_date', { ascending: true, nullsFirst: false });
+
+    scrims = (
+      (scrimRows || []) as unknown as Array<{
+        id: string;
+        name: string | null;
+        slug: string | null;
+        team1_score: number | null;
+        team2_score: number | null;
+        scheduled_date: string | null;
+        team1: { name: string | null } | null;
+        team2: { name: string | null } | null;
+      }>
+    ).map((r) => ({
+      id: r.id,
+      name: r.name ?? null,
+      slug: r.slug ?? null,
+      weight: weightByScrim.get(r.id) ?? 1,
+      team1Name: r.team1?.name ?? null,
+      team2Name: r.team2?.name ?? null,
+      team1Score: r.team1_score ?? null,
+      team2Score: r.team2_score ?? null,
+      scheduledDate: r.scheduled_date ?? null,
+    }));
+  }
+
   return {
     league,
     standings,
     tournaments,
+    scrims,
   };
 }
