@@ -26,4 +26,20 @@ export default ns('leaderboardPage', {
   errorTitle: 'Impossible de charger le classement',
   errorBody: 'Une erreur est survenue. Réessayez dans quelques instants.',
   retry: 'Réessayer',
+  axisNavLabel: 'Axes du classement',
+  axisRating: 'Rating',
+  axisProgress: 'Progression',
+  axisSeason: 'Saison',
+  thDelta: 'Variation',
+  matchCount_one: '{count} match',
+  matchCount_other: '{count} matchs',
+  progressCaption:
+    'Plus fortes progressions de rating sur les {days} derniers jours.',
+  progressEmpty:
+    "Aucun match officiel n'a été joué sur les dernières semaines. Cet onglet se remplira dès la reprise.",
+  seasonCaption: 'Progression de rating cumulée sur les tournois de {season}.',
+  seasonCaptionFallback: 'Progression de rating cumulée sur la saison.',
+  seasonStandingsLink: 'Voir le classement par équipe →',
+  seasonEmpty:
+    "Aucun résultat sur cette saison pour l'instant. Le classement apparaîtra dès le premier tournoi joué.",
 });
