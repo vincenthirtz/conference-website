@@ -25,8 +25,20 @@ export type PlayerRatingRow = {
   updated_at: string;
 };
 
+/**
+ * Identité d'équipe accolée à une joueuse dans les listes publiques.
+ *
+ * Sert de REPLI D'AVATAR : la plupart des joueuses n'ont pas de photo de
+ * profil, et le logo de leur équipe vaut mieux qu'une pastille d'initiales.
+ */
+export type PlayerTeamIdentity = {
+  teamName: string | null;
+  teamSlug: string | null;
+  teamLogoUrl: string | null;
+};
+
 /** Entrée du leaderboard public. */
-export type LeaderboardPlayer = {
+export type LeaderboardPlayer = PlayerTeamIdentity & {
   userId: string;
   displayName: string | null;
   battleTag: string | null;
@@ -37,6 +49,36 @@ export type LeaderboardPlayer = {
   wins: number;
   losses: number;
   rank: number;
+};
+
+/**
+ * Entrée d'un axe SECONDAIRE du classement (progression 30 jours, saison) :
+ * une joueuse et sa variation de rating sur la fenêtre considérée. `rank` est
+ * la position sur CET axe, pas au classement général.
+ */
+export type LeaderboardMover = PlayerTeamIdentity & {
+  userId: string;
+  displayName: string | null;
+  battleTag: string | null;
+  avatarUrl: string | null;
+  /** Rating courant, pour situer la joueuse au classement général. */
+  rating: number;
+  /** Variation de rating cumulée sur la fenêtre (peut être négative). */
+  delta: number;
+  matches: number;
+  wins: number;
+  losses: number;
+  rank: number;
+};
+
+/** Saison (league) mise en avant sur le classement. */
+export type LeaderboardSeason = {
+  leagueId: string;
+  name: string;
+  slug: string;
+  status: string;
+  startDate: string | null;
+  endDate: string | null;
 };
 
 /** Réponse `GET /api/players/leaderboard`. */

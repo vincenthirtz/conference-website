@@ -4863,6 +4863,21 @@ components:
         avatarUrl:
           type: string
           nullable: true
+        teamName:
+          type: string
+          nullable: true
+          description: >-
+            Nom de l'equipe la plus recente de la joueuse. Sert de contexte
+            d'affichage, pas de filtre.
+        teamSlug:
+          type: string
+          nullable: true
+        teamLogoUrl:
+          type: string
+          nullable: true
+          description: >-
+            Logo de l'equipe, utilise comme repli d'avatar quand `avatarUrl`
+            est nul.
         rating:
           type: number
         rd:

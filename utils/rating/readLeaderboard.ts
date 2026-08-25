@@ -13,6 +13,7 @@
 import { maskBattleTag } from '../battleTag';
 import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
+import { readPlayerTeamBadges } from '@/utils/teams/readPlayerTeamBadges';
 import type {
   LeaderboardPlayer,
   LeaderboardResponse,
@@ -75,21 +76,36 @@ export async function readLeaderboard(
     return a.user_id < b.user_id ? -1 : a.user_id > b.user_id ? 1 : 0;
   });
 
-  const players: LeaderboardPlayer[] = rows.map((r, i) => ({
-    userId: r.user_id,
-    displayName: r.display_name ?? null,
-    // Anonymat public (cf. utils/battleTag.ts) : le classement est une surface
-    // PUBLIQUE, on n'y sérialise jamais l'identifiant numérique — sinon
-    // n'importe qui peut ajouter la joueuse en jeu depuis le classement.
-    battleTag: maskBattleTag(r.battle_tag ?? null),
-    avatarUrl: r.avatar_url ?? null,
-    rating: r.rating,
-    rd: r.rd,
-    gamesPlayed: r.games_played,
-    wins: r.wins,
-    losses: r.losses,
-    rank: offset + i + 1,
-  }));
+  // Repli d'avatar : le logo de l'équipe pour les joueuses sans photo. Une
+  // seule requête pour toute la page ; en cas d'échec, la Map est vide et les
+  // vues retombent sur les initiales.
+  const badges = await readPlayerTeamBadges(
+    tenantId,
+    rows.map((r) => r.user_id)
+  );
+
+  const players: LeaderboardPlayer[] = rows.map((r, i) => {
+    const badge = badges.get(r.user_id);
+    return {
+      userId: r.user_id,
+      displayName: r.display_name ?? null,
+      // Anonymat public (cf. utils/battleTag.ts) : le classement est une
+      // surface PUBLIQUE, on n'y sérialise jamais l'identifiant numérique —
+      // sinon n'importe qui peut ajouter la joueuse en jeu depuis le
+      // classement.
+      battleTag: maskBattleTag(r.battle_tag ?? null),
+      avatarUrl: r.avatar_url ?? null,
+      teamName: badge?.teamName ?? null,
+      teamSlug: badge?.teamSlug ?? null,
+      teamLogoUrl: badge?.logoUrl ?? null,
+      rating: r.rating,
+      rd: r.rd,
+      gamesPlayed: r.games_played,
+      wins: r.wins,
+      losses: r.losses,
+      rank: offset + i + 1,
+    };
+  });
 
   return { players };
 }

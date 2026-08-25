@@ -110,6 +110,11 @@ describe('readLeaderboard (DB-paginated)', () => {
       // (cf. utils/battleTag.ts et tests/unit/publicBattleTagPrivacy.test.ts).
       battleTag: 'Top',
       avatarUrl: 'http://x/a.png',
+      // Repli d'avatar : la joueuse n'a pas d'équipe dans ce fixture, donc
+      // aucun logo à substituer (cf. utils/teams/readPlayerTeamBadges.ts).
+      teamName: null,
+      teamSlug: null,
+      teamLogoUrl: null,
       rating: 1600,
       rd: 55,
       gamesPlayed: 10,

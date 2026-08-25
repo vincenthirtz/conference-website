@@ -1047,7 +1047,8 @@
     "contact": "Contact us",
     "legal": "Legal notice",
     "copyright": "WOMEN'S CUP association — All rights reserved — Made with ❤️ by",
-    "leaderboard": "Player rankings"
+    "leaderboard": "Player rankings",
+    "palmares": "Hall of fame"
   },
   "newsletterSignup": {
     "footerTitle": "Newsletter",
@@ -1509,7 +1510,20 @@
     "emptyBody": "The leaderboard will fill up as soon as official matches have been played. Check back soon!",
     "errorTitle": "Unable to load the leaderboard",
     "errorBody": "Something went wrong. Please try again in a moment.",
-    "retry": "Try again"
+    "retry": "Try again",
+    "axisNavLabel": "Leaderboard axes",
+    "axisRating": "Rating",
+    "axisProgress": "Momentum",
+    "axisSeason": "Season",
+    "thDelta": "Change",
+    "matchCount_one": "{count} match",
+    "matchCount_other": "{count} matches",
+    "progressCaption": "Biggest rating gains over the last {days} days.",
+    "progressEmpty": "No official match has been played in recent weeks. This tab will fill up once play resumes.",
+    "seasonCaption": "Rating gained across the {season} tournaments.",
+    "seasonCaptionFallback": "Rating gained across the season.",
+    "seasonStandingsLink": "See the team standings →",
+    "seasonEmpty": "No results for this season yet. The ranking will appear after the first tournament."
   },
   "scrimsPage": {
     "title": "Scrims",
@@ -1641,14 +1655,7 @@
     "newsEmpty": "No news yet. Check back soon!",
     "supportLead": "They support the competition · they broadcast it · they talk about it",
     "supportPartnersLink": "View all partners",
-    "heroCtaJoin": "I'm looking for a team",
-    "playersEyebrow": "The players",
-    "playersTitle": "They make the competition",
-    "playersLead": "The top of the Glicko-2 rankings, updated after every official match. Every player has her own page: rating curve, record and head-to-head.",
-    "playersAll": "Full rankings",
-    "playersRecord": "{rating} pts · {wins}W – {losses}L",
-    "playersUnknown": "Unknown player",
-    "playersMvpTitle": "Latest match MVPs"
+    "heroCtaJoin": "I'm looking for a team"
   },
   "homeHeader": {
     "subtitle1": "The 100% women, French-speaking Overwatch tournament.",
@@ -4202,7 +4209,8 @@
     "linkResetPassword": "Reset password",
     "linkLeaderboard": "Player rankings",
     "linkLeagues": "Leagues & seasons",
-    "linkFindTeam": "I'm looking for a team"
+    "linkFindTeam": "I'm looking for a team",
+    "linkPalmares": "Player hall of fame"
   },
   "adminTopBar": {
     "accueilAria": "Home",
@@ -4934,5 +4942,25 @@
     "twitchCta": "Twitch channel",
     "instagramCta": "Instagram",
     "linkAria": "POGTV on {network} (new tab)"
+  },
+  "palmaresPage": {
+    "eyebrow": "Hall of fame",
+    "title": "The player hall of fame",
+    "subtitle": "Titles, finals and podiums across every tournament of the circuit. A player is credited with the results of the tournaments she actually played with her team.",
+    "leaderboardLink": "See the rating leaderboard →",
+    "rankShort": "#{rank}",
+    "unknownPlayer": "Unknown player",
+    "unknownTournament": "Tournament",
+    "emptyTitle": "No hall of fame yet",
+    "emptyBody": "The hall of fame will fill up as soon as a tournament is closed with its final standings. Come back after the next edition!",
+    "statTitles_one": "title",
+    "statTitles_other": "titles",
+    "statFinals_one": "final",
+    "statFinals_other": "finals",
+    "statPodiums_one": "podium",
+    "statPodiums_other": "podiums",
+    "statMvps_one": "MVP",
+    "statMvps_other": "MVP",
+    "rankFirst": "1st"
   }
 }
