@@ -114,7 +114,9 @@ export default ns('tournamentLanding', {
   streamCtaTwitch: 'Regarder sur Twitch',
   streamCtaWatch: 'Suivre le live',
   streamStatusLive: 'LIVE',
-  streamCasterRole: 'Casteuse',
+  streamCastSoonBadge: 'Annonces à venir',
+  streamCastSoonBody:
+    "Le vivier de caster·euses est fourni par POGTV : les noms de celles et ceux qui commenteront les matchs seront annoncés au fil de l'eau.",
   communityEyebrow: 'La communauté',
   communityHeading: 'Rejoins la communauté',
   communitySubtitle:

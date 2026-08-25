@@ -55,15 +55,6 @@ export type LandingMatch = {
   stage: { id: string; name: string; stage_type: string } | null;
 };
 
-export type LandingCaster = {
-  id: string;
-  name: string;
-  title: string | null;
-  image_url: string | null;
-  twitch_url: string | null;
-  city: string | null;
-};
-
 export type LandingPartner = {
   id: string;
   name: string;

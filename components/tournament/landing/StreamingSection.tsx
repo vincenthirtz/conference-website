@@ -1,30 +1,26 @@
-/* eslint-disable @next/next/no-img-element */
 // components/tournament/landing/StreamingSection.tsx
 //
-// Diffusion : CTA « Regarder en direct » + casting (cast_members). Masquée
-// entièrement si aucun casteur actif (« structure prête, vide si absent »).
+// Diffusion : CTA « Regarder en direct » + attribution du casting.
+//
+// Le casting n'est plus une grille de fiches `cast_members` : le vivier de
+// caster·euses est fourni par POGTV, le studio qui produit la diffusion, et
+// les noms sont annoncés au fil de l'eau. Tant qu'aucune annonce n'est faite,
+// afficher d'anciennes fiches induirait en erreur — on montre donc le bandeau
+// POGTV (source du vivier) + une mention « annonces à venir ».
 
 import { useT } from '@/lib/i18n/useT';
+import ProductionPartner from '@/components/Production/ProductionPartner';
 import { Section, SectionHeader, Reveal, GlassCard } from './primitives';
 import { COMMUNITY_LINKS } from './types';
-import type { LandingCaster, TournamentPhase } from './types';
+import type { TournamentPhase } from './types';
 import nsTournamentLanding from '@/lib/i18n/locales/fr/tournamentLanding';
 
-function initials(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[1][0]).toUpperCase();
-}
-
 export default function StreamingSection({
-  casters,
   phase,
 }: {
-  casters: LandingCaster[];
   phase: TournamentPhase;
 }) {
   const t = useT(nsTournamentLanding);
-  if (casters.length === 0) return null;
 
   const isLive = phase === 'live';
 
@@ -80,59 +76,20 @@ export default function StreamingSection({
         </GlassCard>
       </Reveal>
 
-      {/* Casting */}
+      {/* Casting — vivier POGTV, noms annoncés plus tard */}
       <p className="mb-5 text-center text-xs font-semibold uppercase tracking-widest text-gray-500">
         {t.streamCastersHeading}
       </p>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-        {casters.map((c, i) => {
-          const inner = (
-            <div className="group flex h-full flex-col items-center gap-3 rounded-3xl border border-white/10 bg-white/[0.03] px-3 py-6 text-center transition-all duration-300 hover:-translate-y-1 hover:border-[#9146FF]/50">
-              <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-white/5">
-                {c.image_url ? (
-                  <img
-                    src={c.image_url}
-                    alt={c.name}
-                    width={64}
-                    height={64}
-                    loading="lazy"
-                    decoding="async"
-                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
-                  />
-                ) : (
-                  <span className="text-sm font-bold text-gray-400">
-                    {initials(c.name)}
-                  </span>
-                )}
-              </div>
-              <div className="min-w-0">
-                <p className="truncate text-[13px] font-bold text-white">
-                  {c.name}
-                </p>
-                <p className="mt-0.5 truncate text-[11px] text-gray-500">
-                  {c.title || t.streamCasterRole}
-                </p>
-              </div>
-            </div>
-          );
-          return (
-            <Reveal key={c.id} stagger={((i % 5) + 1) as 1 | 2 | 3 | 4 | 5}>
-              {c.twitch_url ? (
-                <a
-                  href={c.twitch_url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="block h-full"
-                >
-                  {inner}
-                </a>
-              ) : (
-                inner
-              )}
-            </Reveal>
-          );
-        })}
-      </div>
+      <Reveal>
+        <ProductionPartner variant="compact" />
+        <p className="mt-4 flex flex-wrap items-center justify-center gap-2 text-center text-sm text-gray-400">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-gray-300">
+            <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-violet-light)]" />
+            {t.streamCastSoonBadge}
+          </span>
+          <span>{t.streamCastSoonBody}</span>
+        </p>
+      </Reveal>
     </Section>
   );
 }

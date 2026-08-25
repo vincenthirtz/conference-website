@@ -35,7 +35,6 @@ import type {
   LandingTournament,
   LandingStage,
   LandingTeam,
-  LandingCaster,
   LandingPartner,
   LandingLeague,
   TournamentPhase,
@@ -50,7 +49,6 @@ type TournamentPageProps = {
   };
   stages: LandingStage[];
   teams: LandingTeam[];
-  casters: LandingCaster[];
   partners: LandingPartner[];
   totalTeams: number;
   totalMatches: number;
@@ -140,7 +138,6 @@ export const getStaticProps: GetStaticProps<TournamentPageProps> = async (
     teamsResult,
     leaguesResult,
     partnersResult,
-    castersResult,
   ] = await Promise.all([
     supabaseAdmin
       .from('tournament_stages')
@@ -184,17 +181,6 @@ export const getStaticProps: GetStaticProps<TournamentPageProps> = async (
       .eq('is_active', true)
       .order('display_order', { ascending: true })
       .order('created_at', { ascending: true }),
-
-    // Casting — table globale.
-    supabaseAdmin
-      .from('cast_members')
-      .select(
-        'id, name, title, image_url, twitch_url, city, is_active, is_promo, sort_order'
-      )
-      .eq('is_active', true)
-      .eq('is_promo', false)
-      .eq('is_internal', false)
-      .order('sort_order', { ascending: true }),
   ]);
 
   if (stagesResult.error)
@@ -209,8 +195,6 @@ export const getStaticProps: GetStaticProps<TournamentPageProps> = async (
     logger.error('tournament leagues error:', leaguesResult.error);
   if (partnersResult.error)
     logger.error('tournament partners error:', partnersResult.error);
-  if (castersResult.error)
-    logger.error('tournament casters error:', castersResult.error);
 
   const rawStages = (stagesResult.data || []) as unknown as (LandingStage & {
     visible?: boolean | null;
@@ -285,29 +269,11 @@ export const getStaticProps: GetStaticProps<TournamentPageProps> = async (
       websiteUrl: r.website_url ?? null,
     }));
 
-  const casterRows = (castersResult.data ?? []) as unknown as {
-    id: string;
-    name: string;
-    title: string | null;
-    image_url: string | null;
-    twitch_url: string | null;
-    city: string | null;
-  }[];
-  const casters: LandingCaster[] = casterRows.map((r) => ({
-    id: r.id,
-    name: r.name,
-    title: r.title ?? null,
-    image_url: r.image_url ?? null,
-    twitch_url: r.twitch_url ?? null,
-    city: r.city ?? null,
-  }));
-
   return {
     props: {
       tournament,
       stages,
       teams,
-      casters,
       partners,
       totalTeams: teams.length,
       totalMatches,
@@ -324,7 +290,6 @@ export default function TournamentPage({
   tournament,
   stages,
   teams,
-  casters,
   partners,
   totalTeams,
   totalMatches,
@@ -398,7 +363,7 @@ export default function TournamentPage({
 
       <PrizePoolCard tournamentId={tournament.id} />
 
-      <StreamingSection casters={casters} phase={phase} />
+      <StreamingSection phase={phase} />
 
       <SponsorsStrip partners={partners} />
 
