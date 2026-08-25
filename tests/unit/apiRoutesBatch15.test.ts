@@ -487,7 +487,11 @@ describe('GET /api/tournaments/[id]/mvp-leaderboard', () => {
   });
 
   it('404 when tournament is not public', async () => {
-    store.tournaments = [{ id: TID, name: 'Cup', is_public: false }] as any;
+    // La visibilité se lit sur `tournaments.visibility` — il n'existe pas de
+    // colonne `is_public` sur cette table.
+    store.tournaments = [
+      { id: TID, name: 'Cup', visibility: 'private' },
+    ] as any;
     const res = makeRes();
     await mvpLeaderboardHandler(
       makeReq({ method: 'GET', query: { id: TID } }),
@@ -497,7 +501,7 @@ describe('GET /api/tournaments/[id]/mvp-leaderboard', () => {
   });
 
   it('200 aggregates MVP counts per member', async () => {
-    store.tournaments = [{ id: TID, name: 'Cup', is_public: true }] as any;
+    store.tournaments = [{ id: TID, name: 'Cup', visibility: 'public' }] as any;
     store.matches = [
       {
         id: 'm1',
@@ -554,7 +558,7 @@ describe('GET /api/tournaments/[id]/mvp-leaderboard', () => {
   });
 
   it('200 with empty leaderboard when no MVP polls', async () => {
-    store.tournaments = [{ id: TID, name: 'Cup', is_public: true }] as any;
+    store.tournaments = [{ id: TID, name: 'Cup', visibility: 'public' }] as any;
     store.matches = [];
     const res = makeRes();
     await mvpLeaderboardHandler(

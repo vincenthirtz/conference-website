@@ -58,10 +58,16 @@ export default async function handler(
   const tenantId = resolveTenantIdForPublicRequest(req);
 
   try {
-    // Charger le tournoi (juste pour le nom + verifier qu'il est public)
+    // Charger le tournoi (juste pour le nom + verifier qu'il est public).
+    //
+    // La visibilite se lit sur `tournaments.visibility` ('public' | autre) —
+    // il n'y a PAS de colonne `is_public` sur cette table. La selectionner
+    // faisait echouer la requete PostgREST, donc ce handler repondait 404 sur
+    // TOUS les tournois. Meme regle que la page /tournament/[id]/mvp :
+    // `visibility` nulle = public (tournois anterieurs a la colonne).
     const { data: tournament, error: tErr } = await supabaseAdmin
       .from('tournaments')
-      .select('id, name, is_public')
+      .select('id, name, visibility')
       .eq('id', tournamentId)
       .eq('tenant_id', tenantId)
       .maybeSingle();
@@ -70,7 +76,7 @@ export default async function handler(
       return res.status(404).json({ error: 'Tournament not found' });
     }
 
-    if (!tournament.is_public) {
+    if (tournament.visibility != null && tournament.visibility !== 'public') {
       return res
         .status(404)
         .json({ error: 'Tournament not found or not public' });
